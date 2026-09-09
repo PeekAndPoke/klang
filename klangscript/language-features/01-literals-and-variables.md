@@ -18,12 +18,11 @@ exponent follows it, so `2.pow(2)`, `2.5.pow(2)`, `2.exp()` and `2.toString()` a
 literal while `2.5` and `2.e5` stay numbers. A trailing dot (`2.`) or a second dot (`1.2.3`) is a parse
 error. `.5` is not a number (write `0.5`).
 
-**A minus sign in front of a number literal is part of the number**, so the methods apply to the
-negative number: `-1.0.clamp(0, 1)` is `(-1.0).clamp(0, 1)` and `-7.semitones()` is `(-7).semitones()`.
-This is deliberately NOT what Kotlin or JS do (there `-7.0.pow(2)` is `-49`); for a player that
-reading is a plausible wrong number with no diagnostic. Only a literal folds: `-x.abs()` is still
-`-(x.abs())`, `-(7).abs()` is still `-(7.abs())`, and `a -1` is still a subtraction. The second minus of
-`--` folds like a lone one: `--1.abs()` and `- -1.abs()` are both `-((-1).abs())`.
+**A negative receiver needs parentheses.** Precedence is Kotlin's: `-x.abs()` is `-(x.abs())`. On a
+bare literal that reading is ambiguous to a musician (`-6.db()`: the gain of -6 dB, or minus the gain
+of 6 dB?), so `-6.db()` is a syntax error that shows both spellings, `(-6).db()` and `-(6.db())`. A
+bare `-42` is still one literal, and `a -1` is a subtraction. (The literal-wins reading was tried on
+2026-09-08 and reverted on 2026-09-09: it made a literal and a variable disagree.)
 Spec: `parser/NumberLiteralMethodCallSpec.kt`.
 
 ### 1.1b Hex, Octal, Binary Number Literals ✅

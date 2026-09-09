@@ -1,6 +1,11 @@
 # KlangScript — number methods (`2.pow(7/12)`), and the lexer change they need
 
-> **Status (2026-09-08)**: DONE, both halves.
+> **Status (2026-09-09)**: DONE, both halves. **One reversal on 2026-09-09**: the literal-wins minus
+> (`-6.db()` read as `(-6).db()`) is gone. It made a literal and a variable disagree (`-6.db()` against
+> `-g.db()` with `g = 6`), which the maintainer called a design error. KlangScript keeps Kotlin's
+> precedence, and the ambiguous spelling `-6.db()` is a syntax error that names both `(-6).db()` and
+> `-(6.db())`. A bare `-42` stays one literal. The sections below that describe the fold are history;
+> the specs and docs carry the parenthesised form.
 >
 > | Half | State |
 > |---|---|

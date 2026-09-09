@@ -26,8 +26,8 @@ import kotlin.math.pow
  *
  * The methods that overlap `Math.*` (`pow`, `abs`, `sqrt`, `round`, `floor`, `ceil`, `min`, `max`) are
  * an additional spelling of the same call, not a replacement; the others (`clamp`, `rem`, `mod`, the
- * logarithms, the musical conversions) exist only as methods. A minus sign in front of a number
- * literal belongs to the literal, so `-8.abs()` is `(-8).abs()` and gives 8.
+ * logarithms, the musical conversions) exist only as methods. A negative receiver needs parentheses,
+ * `(-8).abs()`: the bare `-8.abs()` is refused as ambiguous, because Kotlin reads it as `-(8.abs())`.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(NumberValue::class)
@@ -68,7 +68,7 @@ internal object KlangScriptNumberExtensions {
      * Returns the absolute value of the number.
      *
      * ```KlangScript(Executable)
-     * -8.abs()  // 8
+     * (-8).abs()  // 8
      * ```
      *
      * @param self The number
@@ -207,7 +207,7 @@ internal object KlangScriptNumberExtensions {
      * `-1.rem(12)` is -1 while `-1.mod(12)` is 11.
      *
      * ```KlangScript(Executable)
-     * -1.rem(12)  // -1
+     * (-1).rem(12)  // -1
      * ```
      *
      * @param self The dividend
@@ -236,7 +236,7 @@ internal object KlangScriptNumberExtensions {
      * takes the sign of the dividend: `-1.mod(12)` is 11 while `-1.rem(12)` is -1.
      *
      * ```KlangScript(Executable)
-     * -1.mod(12)  // 11
+     * (-1).mod(12)  // 11
      * ```
      *
      * @param self The dividend
@@ -320,7 +320,7 @@ internal object KlangScriptNumberExtensions {
      * Returns the sign of the number: -1 below zero, 0 at zero, 1 above zero.
      *
      * ```KlangScript(Executable)
-     * -3.sign()  // -1
+     * (-3).sign()  // -1
      * ```
      *
      * @param self The number
@@ -393,7 +393,7 @@ internal object KlangScriptNumberExtensions {
      * the two. The inverse is `toDb`.
      *
      * ```KlangScript(Executable)
-     * -6.db()  // 0.5012, half the amplitude
+     * (-6).db()  // 0.5012, half the amplitude
      * ```
      *
      * @param self The level in decibels

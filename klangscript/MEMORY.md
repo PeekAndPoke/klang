@@ -26,11 +26,11 @@
 - **Methods on number literals, parser half (2026-09-08)**: the lexer takes a `.` into a number only
   when a digit or an exponent follows it, and only once (companion `scanDecimalEnd()`, not a local
   function: a local that writes the lexer index boxes it for the whole loop), so `2.pow(7/12)`, `2.5.pow(2)`
-  and `2.exp()` are member calls, `2.e5` stays a number, and `2.` / `1.2.3` are parse errors. `parseUnary` folds `-` + `NUMBER` into one negative
-  `NumberLiteral` before the postfix loop (`parsePostfix(start)`), so `-1.0.clamp(0, 1)` is
-  `(-1.0).clamp(0, 1)`: a deliberate divergence from Kotlin/JS (maintainer, 2026-09-08). The `--` token
-  folds its second minus the same way. `-42` is now a `NumberLiteral`, not a `UnaryOperation`; `-x.abs()`
-  stays `-(x.abs())`. Spec
+  and `2.exp()` are member calls, `2.e5` stays a number, and `2.` / `1.2.3` are parse errors. `parseUnary` folds `-` + `NUMBER`
+  into one negative `NumberLiteral` (a bare `-42`, also behind `--`), but REFUSES the spelling when a `.`
+  follows: `-6.db()` is a syntax error naming both `(-6).db()` and `-(6.db())`. Precedence is Kotlin's,
+  `-x.abs()` is `-(x.abs())`. A literal-wins reading shipped on 2026-09-08 and was reverted on
+  2026-09-09: it made a literal and a variable disagree ("a design error", maintainer). Spec
   `parser/NumberLiteralMethodCallSpec`; the stdlib methods themselves are the open half of
   `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.
 

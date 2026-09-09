@@ -509,8 +509,8 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("13.mod(12):", 13.mod(12))    // 1, the same for positives
                     |
                     |// The negative case is the one that bites: mod wraps into the octave, rem does not
-                    |console.log("-1.rem(12):", -1.rem(12))    // -1, the sign follows the dividend
-                    |console.log("-1.mod(12):", -1.mod(12))    // 11, the sign follows the divisor
+                    |console.log("(-1).rem(12):", (-1).rem(12))  // -1, the sign follows the dividend
+                    |console.log("(-1).mod(12):", (-1).mod(12))  // 11, the sign follows the divisor
                 """.trimMargin(),
                 jsCompat = JsCompat.Incompatible,
             ),
@@ -528,7 +528,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("a fifth down:", "-5P".toRatio())          // 0.6674
                     |
                     |// A mixing knob is in dB, an engine gain is linear
-                    |console.log("-6 dB as gain:", -6.db())                 // 0.5012
+                    |console.log("-6 dB as gain:", (-6).db())               // 0.5012
                     |console.log("0.5 as dB:", 0.5.toDb())                  // -6.0206
                     |
                     |// A detune of a perfect fifth is the ratio 2^(7/12)
@@ -538,17 +538,22 @@ val klangScriptDocSections: List<DocSection> = listOf(
                 jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
-                title = "A minus in front of a literal",
-                description = "A minus directly in front of a number literal is part of the literal, so `-8.abs()` is 8. In front of anything else it applies to the result of the call instead. JS note: JavaScript and Kotlin read `-8.abs()` the other way round, as `-(8.abs())`.",
+                title = "A negative receiver needs parentheses",
+                description = "Precedence is Kotlin's: a minus in front of a method call applies to the result, so `-x.abs()` is `-(x.abs())`. On a bare number literal that reading is ambiguous to a musician (`-6.db()`: the gain of -6 dB, or minus the gain of 6 dB?), so KlangScript refuses it and asks for parentheses. A variable and a literal therefore always agree.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |// The minus belongs to the literal: this is (-8).abs()
-                    |console.log("-8.abs():", -8.abs())    // 8
+                    |// The gain of minus six decibels: parentheses around the receiver
+                    |console.log("(-6).db():", (-6).db())      // 0.5012
                     |
-                    |// In front of a variable it applies afterwards: this is -(x.abs())
-                    |const x = -8
-                    |console.log("-x.abs():", -x.abs())    // -8
+                    |// Minus the gain of six decibels: parentheses around the call
+                    |console.log("-(6.db()):", -(6.db()))      // -1.9953
+                    |
+                    |// A variable reads the same way as the second form, exactly as in Kotlin
+                    |const g = 6
+                    |console.log("-g.db():", -g.db())          // -1.9953
+                    |
+                    |// -6.db() without parentheses is a syntax error that shows both spellings
                 """.trimMargin(),
                 jsCompat = JsCompat.Incompatible,
             ),

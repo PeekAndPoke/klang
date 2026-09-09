@@ -111,9 +111,9 @@ The full set: `pow`, `abs`, `sqrt`, `round`, `floor`, `ceil`, `min`, `max`, `cla
 Four things worth knowing:
 
 - `^` is bitwise XOR, not exponentiation, so `2^(7/12)` is 2. Write `2.pow(7/12)` or `2 ** (7/12)`.
-- A minus in front of a number literal belongs to the literal: `-8.abs()` is 8.
+- A negative receiver needs parentheses: `(-8).abs()` is 8, and the ambiguous `-8.abs()` is a syntax error.
 - `rem` takes the sign of the dividend (`-1.rem(12)` is -1), `mod` the sign of the divisor
-  (`-1.mod(12)` is 11). `rem` is the method form of `%`; both throw on a zero divisor.
+  (`(-1).mod(12)` is 11). `rem` is the method form of `%`; both throw on a zero divisor.
 - `7.semitones()` is the frequency ratio 1.4983, and `"P5".toRatio()` says the same thing by name.
 
 Background and the full design: `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.

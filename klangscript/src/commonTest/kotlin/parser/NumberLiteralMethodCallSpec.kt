@@ -28,16 +28,18 @@ import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.NumberValue
 
 /**
- * Methods on number literals: `2.pow(7/12)`, `-1.0.clamp(0, 1)`.
+ * Methods on number literals: `2.pow(7/12)`, `(-6).db()`.
  *
  * Two parser-level pieces make the spelling work (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`):
  *
  * 1. The lexer takes a `.` into a number only when a digit follows it. Before, the scanner ate every dot,
  *    `2.pow` lexed as `2.` `pow`, and no method was reachable on a literal (the statement boundary rule
  *    then reported it as two statements).
- * 2. A minus sign in front of a number literal is part of the number, so `-1.0.clamp(0, 1)` is
- *    `(-1.0).clamp(0, 1)`. Kotlin and JS would read it as `-(1.0.clamp(0, 1))`, a plausible wrong number
- *    with no diagnostic; the maintainer chose the literal reading (2026-09-08). Only a literal folds.
+ * 2. A minus directly before a number literal that is followed by a method call, `-6.db()`, is REFUSED
+ *    as ambiguous: Kotlin and JS read it as `-(6.db())`, a musician as `(-6).db()`. The literal-wins
+ *    reading was tried on 2026-09-08 and reverted on 2026-09-09 because it made a literal and a variable
+ *    disagree (`-6.db()` against `-g.db()`). KlangScript keeps Kotlin's precedence and the ambiguous
+ *    spelling must carry parentheses; a bare `-42` is still one literal.
  *
  * The methods themselves are stdlib work in `klangscript-libs`; this spec pins the AST shape and the
  * literals that must keep lexing as one token.
@@ -124,28 +126,43 @@ class NumberLiteralMethodCallSpec : StringSpec({
         call.callee.shouldBeInstanceOf<MemberAccess>().obj.shouldBeInstanceOf<NumberLiteral>().value shouldBe 2.0
     }
 
-    // -- Negative literals: the minus is part of the number ---------------------------------------------------------
+    // -- Negative literals: Kotlin precedence, and the ambiguous spelling is refused ----------------------------------
 
-    "-1.0.clamp(0, 1) calls clamp on -1.0, not on 1.0" {
-        val (receiver, name, args) = methodCallOnLiteral("-1.0.clamp(0, 1)")
+    "-6.db() is refused as ambiguous, and the message shows both spellings" {
+        // Kotlin and JS read it as -(6.db()), a musician reads it as (-6).db(): a factor of four apart with
+        // no diagnostic. The literal-wins reading (2026-09-08) made a literal and a variable disagree, which
+        // the maintainer called a design error (2026-09-09), so the spelling must carry parentheses.
+        val error = shouldThrow<KlangScriptSyntaxError> { parse("-6.db()") }
 
-        receiver shouldBe -1.0
-        name shouldBe "clamp"
-        args.size shouldBe 2
+        error.message shouldContain "'-6.db(...)' is ambiguous"
+        error.message shouldContain "(-6).db(...)"
+        error.message shouldContain "-(6.db(...))"
+        error.location?.startColumn shouldBe 1
     }
 
-    "-7.semitones() calls semitones on -7" {
-        val (receiver, name, _) = methodCallOnLiteral("-7.semitones()")
-
-        receiver shouldBe -7.0
-        name shouldBe "semitones"
+    "the refusal covers every shape of the ambiguity" {
+        listOf("-1.0.clamp(0, 1)", "-7.semitones()", "- 7.abs()", "--1.abs()", "- -1.abs()", "-6?.db()", "f(-6.db())", "let g = -6.db()")
+            .forEach { code ->
+                withClue(code) {
+                    shouldThrow<KlangScriptSyntaxError> { parse(code) }.message shouldContain "is ambiguous"
+                }
+            }
     }
 
-    "the fold survives whitespace: - 7.abs()" {
-        val (receiver, name, _) = methodCallOnLiteral("- 7.abs()")
+    "(-6).db() calls db on the literal -6" {
+        val call = topExpr("(-6).db()").shouldBeInstanceOf<CallExpression>()
+        val member = call.callee.shouldBeInstanceOf<MemberAccess>()
 
-        receiver shouldBe -7.0
-        name shouldBe "abs"
+        member.property shouldBe "db"
+        member.obj.shouldBeInstanceOf<NumberLiteral>().value shouldBe -6.0
+    }
+
+    "-(6.db()) negates the result of the call" {
+        val negate = topExpr("-(6.db())").shouldBeInstanceOf<UnaryOperation>()
+
+        negate.operator shouldBe UnaryOperator.NEGATE
+        val call = negate.operand.shouldBeInstanceOf<CallExpression>()
+        call.callee.shouldBeInstanceOf<MemberAccess>().obj.shouldBeInstanceOf<NumberLiteral>().value shouldBe 6.0
     }
 
     "a bare negative number is a single literal, not a unary operation" {
@@ -154,14 +171,23 @@ class NumberLiteralMethodCallSpec : StringSpec({
         topExpr("-0xFF").shouldBeInstanceOf<NumberLiteral>().value shouldBe -255.0
     }
 
-    "the folded literal's location spans the minus and the number" {
+    "the negative literal's location spans the minus and the number" {
         val literal = topExpr("  -42").shouldBeInstanceOf<NumberLiteral>()
 
         literal.location?.startColumn shouldBe 3
         literal.location?.endColumn shouldBe 6
     }
 
-    "only a literal folds: -x.abs() stays -(x.abs())" {
+    "the literal behind -- starts behind the first minus" {
+        val negate = topExpr("--42").shouldBeInstanceOf<UnaryOperation>()
+        val literal = negate.operand.shouldBeInstanceOf<NumberLiteral>()
+
+        literal.value shouldBe -42.0
+        literal.location?.startColumn shouldBe 2
+        literal.location?.endColumn shouldBe 5
+    }
+
+    "a variable behaves like Kotlin: -x.abs() is -(x.abs())" {
         val negate = topExpr("-x.abs()").shouldBeInstanceOf<UnaryOperation>()
 
         negate.operator shouldBe UnaryOperator.NEGATE
@@ -169,14 +195,7 @@ class NumberLiteralMethodCallSpec : StringSpec({
         call.callee.shouldBeInstanceOf<MemberAccess>().obj.shouldBeInstanceOf<Identifier>().name shouldBe "x"
     }
 
-    "a parenthesised literal is not a literal: -(7).abs() stays -(7.abs())" {
-        val negate = topExpr("-(7).abs()").shouldBeInstanceOf<UnaryOperation>()
-
-        negate.operator shouldBe UnaryOperator.NEGATE
-        negate.operand.shouldBeInstanceOf<CallExpression>()
-    }
-
-    "a binary minus never folds: a -1 and 3 -1.abs()" {
+    "a binary minus is never ambiguous: a -1 and 3 -1.abs()" {
         val difference = topExpr("a -1").shouldBeInstanceOf<BinaryOperation>()
         difference.left.shouldBeInstanceOf<Identifier>().name shouldBe "a"
         difference.right.shouldBeInstanceOf<NumberLiteral>().value shouldBe 1.0
@@ -192,27 +211,6 @@ class NumberLiteralMethodCallSpec : StringSpec({
         evalNumber("--10") shouldBe 10.0
         evalNumber("- -10") shouldBe 10.0
         evalNumber("-(-10)") shouldBe 10.0
-    }
-
-    "the second minus of -- folds like a lone minus: --1.abs() and - -1.abs() have the same shape" {
-        listOf("--1.abs()", "- -1.abs()").forEach { code ->
-            withClue(code) {
-                val negate = topExpr(code).shouldBeInstanceOf<UnaryOperation>()
-                negate.operator shouldBe UnaryOperator.NEGATE
-
-                val call = negate.operand.shouldBeInstanceOf<CallExpression>()
-                call.callee.shouldBeInstanceOf<MemberAccess>().obj.shouldBeInstanceOf<NumberLiteral>().value shouldBe -1.0
-            }
-        }
-    }
-
-    "the literal folded out of -- starts behind the first minus" {
-        val negate = topExpr("--42").shouldBeInstanceOf<UnaryOperation>()
-        val literal = negate.operand.shouldBeInstanceOf<NumberLiteral>()
-
-        literal.value shouldBe -42.0
-        literal.location?.startColumn shouldBe 2
-        literal.location?.endColumn shouldBe 5
     }
 
     "arithmetic with negative literals is unchanged" {

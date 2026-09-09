@@ -25,11 +25,11 @@ Punctuation: `LPAREN`, `RPAREN`, `LBRACE`, `RBRACE`, `LBRACKET`, `RBRACKET`, `DO
 4. `comparisonExpr` — `==`, `!=`, `<`, `<=`, `>`, `>=`
 5. `additionExpr` — `+`, `-`
 6. `multiplicationExpr` — `*`, `/`, `%`
-7. `unaryExpr` — `-`, `+`, `!`. **`-` directly before a `NUMBER` token folds into one negative
-   literal** and then enters the postfix loop, so `-1.0.clamp(0, 1)` is `(-1.0).clamp(0, 1)` (maintainer
-   decision 2026-09-08, `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`; Kotlin/JS would read `-(...)`).
-   Only a literal folds: `-x.abs()` is `-(x.abs())`. The `--` token folds its second minus the same way
-   (`--1.abs()` is `-((-1).abs())`, helper `negativeLiteral`).
+7. `unaryExpr` — `-`, `+`, `!`. `-` directly before a `NUMBER` token folds into one negative literal
+   (`-42`), but if a `.` follows the number the spelling is REFUSED as ambiguous (`-6.db()`: write
+   `(-6).db()` or `-(6.db())`, helper `refuseAmbiguousNegativeReceiver`). Precedence is Kotlin's, so
+   `-x.abs()` is `-(x.abs())`. The literal-wins reading was tried 2026-09-08 and reverted 2026-09-09
+   (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
 8. `postfixExpr` (`parsePostfix(start)`) — call `foo()` and member `.prop` — **loop pattern, any alternating order**
 9. `primaryExpr` — literals, identifiers, `(...)`, `{...}`, `[...]`
 

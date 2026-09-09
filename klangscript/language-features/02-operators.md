@@ -30,9 +30,10 @@ let postDec = w--;      // 10, w is 9
 
 **Expected:** Results as commented
 
-Note: `-10` is a single negative literal, not a unary operation on `10` (since 2026-09-08, see 1.1),
-so `-10.abs()` is `10` where `-x.abs()` is `-(x.abs())`. Arithmetic is unaffected: `-2 * 3`, `2 - -3`
-and `--10` evaluate as before.
+Note: `-10` is a single negative literal, not a unary operation on `10` (since 2026-09-08, see 1.1).
+Precedence is Kotlin's, `-x.abs()` is `-(x.abs())`, and the ambiguous `-10.abs()` is a syntax error:
+write `(-10).abs()` or `-(10.abs())`. Arithmetic is unaffected: `-2 * 3`, `2 - -3` and `--10` evaluate
+as before.
 
 ### 2.3 Comparison Operators ✅ — `==` `!=` `<` `<=` `>` `>=` `===` `!==`
 

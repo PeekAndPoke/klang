@@ -15,13 +15,14 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.klang.script.runtime.StringValue
 
 /**
- * Methods called on a number literal, end to end: `2.pow(7/12)`, `-1.mod(12)`, `7.semitones()`.
+ * Methods called on a number literal, end to end: `2.pow(7/12)`, `(-1).mod(12)`, `7.semitones()`.
  *
  * `toString` had been registered on numbers for a long time but was unreachable on a literal until the
  * lexer stopped eating the dot (2026-09-08, `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`). The parser side
@@ -49,8 +50,8 @@ class StdLibNumberMethodsTest : StringSpec({
             "2.5.toString()" to "2.5",
             "0.5.toString()" to "0.5",
             "1e3.toString()" to "1000",
-            "-2.toString()" to "-2",
-            "-1.5.toString()" to "-1.5",
+            "(-2).toString()" to "-2",
+            "(-1.5).toString()" to "-1.5",
         ).forEach { (code, expected) ->
             withClue(code) {
                 eval(code).shouldBeInstanceOf<StringValue>().value shouldBe expected
@@ -72,16 +73,16 @@ class StdLibNumberMethodsTest : StringSpec({
             "2.pow(0)" to 1.0,
             "2.pow(-1)" to 0.5,
             // abs, sqrt
-            "-8.abs()" to 8.0,
+            "(-8).abs()" to 8.0,
             "8.abs()" to 8.0,
             "16.sqrt()" to 4.0,
             // rounding
             "1.7.round()" to 2.0,
             "1.2.round()" to 1.0,
             "3.7.floor()" to 3.0,
-            "-3.2.floor()" to -4.0,
+            "(-3.2).floor()" to -4.0,
             "3.2.ceil()" to 4.0,
-            "-3.7.ceil()" to -3.0,
+            "(-3.7).ceil()" to -3.0,
             // min, max: the direction is the whole point
             "7.min(3)" to 3.0,
             "3.min(7)" to 3.0,
@@ -89,13 +90,13 @@ class StdLibNumberMethodsTest : StringSpec({
             "3.max(7)" to 7.0,
             // clamp
             "5.clamp(0, 3)" to 3.0,
-            "-1.clamp(0, 3)" to 0.0,
+            "(-1).clamp(0, 3)" to 0.0,
             "2.clamp(0, 3)" to 2.0,
             // the two remainders, which differ exactly where the sign differs
             "7.rem(12)" to 7.0,
             "7.mod(12)" to 7.0,
-            "-1.rem(12)" to -1.0,
-            "-1.mod(12)" to 11.0,
+            "(-1).rem(12)" to -1.0,
+            "(-1).mod(12)" to 11.0,
             "7.rem(-12)" to 7.0,
             "7.mod(-12)" to -5.0,
             "12.rem(12)" to 0.0,
@@ -106,7 +107,7 @@ class StdLibNumberMethodsTest : StringSpec({
             "1000.log10()" to 3.0,
             "1.ln()" to 0.0,
             "0.exp()" to 1.0,
-            "-3.sign()" to -1.0,
+            "(-3).sign()" to -1.0,
             "0.sign()" to 0.0,
             "3.sign()" to 1.0,
         ).forEach { (code, expected) ->
@@ -130,7 +131,7 @@ class StdLibNumberMethodsTest : StringSpec({
         listOf("-1", "7", "12", "5.5").forEach { left ->
             listOf("12", "-12", "3").forEach { right ->
                 withClue("$left % $right") {
-                    num("$left.rem($right)") shouldBe num("$left % $right")
+                    num("($left).rem($right)") shouldBe num("$left % $right")
                 }
             }
         }
@@ -176,9 +177,9 @@ class StdLibNumberMethodsTest : StringSpec({
             // 2^(n/12)
             "0.semitones()" to 1.0,
             "12.semitones()" to 2.0,
-            "-12.semitones()" to 0.5,
+            "(-12).semitones()" to 0.5,
             "7.semitones()" to 1.4983,
-            "-7.semitones()" to 0.6674,
+            "(-7).semitones()" to 0.6674,
             // 2^(n/1200)
             "1200.cents()" to 2.0,
             "50.cents()" to 1.0293,
@@ -189,8 +190,8 @@ class StdLibNumberMethodsTest : StringSpec({
             "1.5.toSemitones()" to 7.0196,
             // 10^(dB/20)
             "0.db()" to 1.0,
-            "-6.db()" to 0.5012,
-            "-20.db()" to 0.1,
+            "(-6).db()" to 0.5012,
+            "(-20).db()" to 0.1,
             "20.db()" to 10.0,
             // 20 * log10(gain)
             "1.toDb()" to 0.0,
@@ -248,10 +249,19 @@ class StdLibNumberMethodsTest : StringSpec({
         num("7.semitones().toSemitones()") shouldBe (7.0 plusOrMinus 1e-9)
     }
 
-    "a minus in front of a literal belongs to the literal" {
-        // -1.0 clamped into [0, 1] is 0; the parenthesised form negates the clamped 1.0 instead.
-        num("-1.0.clamp(0, 1)") shouldBe 0.0
+    "a negative receiver is spelled with parentheses; the bare form is refused" {
+        // Kotlin precedence: (-1.0).clamp(0, 1) clamps -1.0 into [0, 1]; -(1.0.clamp(0, 1)) negates the
+        // clamped 1.0. The bare -1.0.clamp(0, 1) is a syntax error that names both spellings.
+        num("(-1.0).clamp(0, 1)") shouldBe 0.0
         num("-(1.0.clamp(0, 1))") shouldBe -1.0
+
+        val error = shouldThrow<KlangScriptSyntaxError> { eval("-6.db()") }
+        error.message shouldContain "is ambiguous"
+        error.message shouldContain "(-6).db(...)"
+
+        // A variable behaves the same as in Kotlin: the minus applies to the result
+        num("let g = 6; -g.db()") shouldBe (-1.9953 plusOrMinus 1e-4)
+        num("let g = -6; g.db()") shouldBe (0.5012 plusOrMinus 1e-4)
     }
 
     "Math.* keeps working: the methods are an additional spelling" {

@@ -1458,22 +1458,25 @@ class KlangScriptParser private constructor(
      */
     private fun parseUnary(): Expression {
         when {
-            // -1.0.clamp(0, 1): a minus sign in front of a number literal is part of the number, so the
-            // methods apply to the negative number. Kotlin and JS read it as -(1.0.clamp(0, 1)), which is
-            // a silently wrong number for a player; the maintainer chose the literal reading (2026-09-08,
-            // `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`). Only a literal folds: `-x.abs()` stays -(x.abs()),
-            // and a binary minus (`a -1`) never reaches this rule.
+            // A minus directly before a number literal: `-42` is one literal. But `-6.db()` is REFUSED as
+            // ambiguous. Kotlin and JS read it as -(6.db()), a musician reads it as (-6).db(), and the two
+            // differ by a factor of four with no diagnostic. Making the literal win (tried 2026-09-08) made a
+            // literal and a variable disagree (`-6.db()` versus `-g.db()` with `g = 6`), which the maintainer
+            // called a design error on 2026-09-09. So KlangScript keeps Kotlin's precedence, `-x.db()` is
+            // -(x.db()), and the one spelling where the reader cannot tell must carry parentheses.
+            // A binary minus (`a -1`) never reaches this rule.
             check(TokenType.MINUS) && checkAt(1, TokenType.NUMBER) -> {
                 val minus = advance()
-                return parsePostfix(negativeLiteral(startLine = minus.line, startColumn = minus.column))
+                refuseAmbiguousNegativeReceiver(minus)
+                return negativeLiteral(startLine = minus.line, startColumn = minus.column)
             }
 
-            // `--1.abs()`: the second minus of `--` sits directly before the literal, so it folds the same
-            // way and both spellings, `--1.abs()` and `- -1.abs()`, are -((-1).abs())
+            // `--42`: the second minus of `--` sits directly before the literal, same rule
             check(TokenType.MINUS_MINUS) && checkAt(1, TokenType.NUMBER) -> {
                 val opToken = advance()
+                refuseAmbiguousNegativeReceiver(opToken)
                 val literal = negativeLiteral(startLine = opToken.line, startColumn = opToken.column + 1)
-                return UnaryOperation(UnaryOperator.NEGATE, parsePostfix(literal), opToken.toSourceLocation())
+                return UnaryOperation(UnaryOperator.NEGATE, literal, opToken.toSourceLocation())
             }
 
             match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION, TokenType.TILDE) -> {
@@ -1539,6 +1542,27 @@ class KlangScriptParser private constructor(
      * Fixes: sine2.fromBipolar().range(0.1, 0.9)
      */
     private fun parseCallExpression(): Expression = parsePostfix(parsePrimary())
+
+    /**
+     * The cursor is on a `NUMBER` whose minus sign [minus] was just consumed. If a member access follows
+     * the number, the spelling is ambiguous (`-6.db()`: the gain of -6 dB, or minus the gain of 6 dB?) and
+     * is refused with both unambiguous spellings in the message. Anything else after the number is fine.
+     */
+    private fun refuseAmbiguousNegativeReceiver(minus: Token) {
+        if (!checkAt(1, TokenType.DOT) && !checkAt(1, TokenType.QUESTION_DOT)) {
+            return
+        }
+
+        val number = peek().text
+        val member = tokens.getOrNull(pos + 2)?.takeIf { it.type == TokenType.IDENTIFIER }?.text ?: "method"
+        val spelled = "-$number.$member(...)"
+
+        throw KlangScriptSyntaxError(
+            "'$spelled' is ambiguous: write '(-$number).$member(...)' to call $member on -$number, " +
+                "or '-($number.$member(...))' to negate the result.",
+            location = SourceLocation(currentSource, minus.line, minus.column, peek().endLine, peek().endColumn),
+        )
+    }
 
     /**
      * Consumes the `NUMBER` token at the cursor as a negative literal whose location starts at the minus sign

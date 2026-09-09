@@ -41,13 +41,13 @@ class StdLibNumberMethodsDoorParitySpec : StringSpec({
 
     "tier 3: the pitch conversions are the same on both doors" {
         withClue("semitones") { script("7.semitones()") shouldBe 7.0.semitones() }
-        withClue("semitones, descending") { script("-12.semitones()") shouldBe (-12.0).semitones() }
+        withClue("semitones, descending") { script("(-12).semitones()") shouldBe (-12.0).semitones() }
         withClue("cents") { script("50.cents()") shouldBe 50.0.cents() }
         withClue("toSemitones") { script("1.5.toSemitones()") shouldBe 1.5.toSemitones() }
     }
 
     "tier 3: the gain conversions are the same on both doors" {
-        withClue("db") { script("-6.db()") shouldBe (-6.0).db() }
+        withClue("db") { script("(-6).db()") shouldBe (-6.0).db() }
         withClue("toDb") { script("0.5.toDb()") shouldBe 0.5.toDb() }
     }
 
@@ -59,6 +59,6 @@ class StdLibNumberMethodsDoorParitySpec : StringSpec({
 
     "tier 1: pow and mod delegate to the Kotlin call a reader would expect" {
         withClue("pow") { script("2.pow(7/12)") shouldBe 2.0.pow(7.0 / 12.0) }
-        withClue("mod") { script("-1.mod(12)") shouldBe (-1.0).mod(12.0) }
+        withClue("mod") { script("(-1).mod(12)") shouldBe (-1.0).mod(12.0) }
     }
 })

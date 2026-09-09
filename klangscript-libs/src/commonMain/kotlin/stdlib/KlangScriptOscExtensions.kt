@@ -646,7 +646,7 @@ object KlangScriptOscExtensions {
      *
      * On a signal `mod` and `rem` are the same operation, the engine's `%`: the sign follows the LEFT
      * operand, so a negative value stays negative. This differs from `mod` on a number, which is the
-     * floor modulo (`-1.mod(12)` is 11); to wrap a negative signal into a range, add the range and
+     * floor modulo (`(-1).mod(12)` is 11); to wrap a negative signal into a range, add the range and
      * take `mod` again.
      */
     @KlangScript.Method
