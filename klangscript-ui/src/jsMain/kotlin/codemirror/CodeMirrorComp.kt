@@ -132,7 +132,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
         // Create a linter extension with autoPanel
-        val linterSource: (EditorView) -> Array<Diagnostic> = js("(function(view) { return []; })")
+        val linterSource: (EditorView) -> Array<Diagnostic> = { view -> analyzerDiagnostics(view) }
         val linterConfig = jsObject<dynamic> {
             autoPanel = true
         }
@@ -263,6 +263,46 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 }
             )
         )
+    }
+
+    // ── Analyzer Diagnostics ────────────────────────────────────────────────
+
+    /**
+     * Linter source: renders the diagnostics of the cached `AnalyzedAst` as CodeMirror squiggles
+     * and gutter markers.
+     *
+     * CodeMirror runs this on its own delay after a document change, so it reads whatever
+     * analysis [EditorDocContext] holds at that moment: no analysis yet before the first parse,
+     * and possibly a stale one, since the parse is debounced and a failed parse keeps the last
+     * good AST on purpose. Positions are therefore clamped to the live document rather than
+     * trusted, and everything is wrapped: a linter source that throws kills the editor.
+     */
+    private fun analyzerDiagnostics(view: EditorView): Array<Diagnostic> {
+        return try {
+            val analysis = docContext.lastAnalysis ?: return emptyArray()
+            val doc = CodeMirrorLinterDocument(view.state.doc)
+
+            val diagnostics = analysis.diagnostics.mapNotNull { diagnostic ->
+                val offsets = diagnostic.toOffsets(doc) ?: return@mapNotNull null
+
+                jsObject<Diagnostic> {
+                    this.from = offsets.from
+                    this.to = offsets.to
+                    this.severity = diagnostic.severity.toCodeMirrorSeverity()
+                    this.message = diagnostic.message
+                }
+            }.toTypedArray()
+
+            // Keep the lint-panel click hook working for analyzer diagnostics too.
+            lastDiagnostics = diagnostics.map { d ->
+                d.asDynamic().from.unsafeCast<Int>() to d.asDynamic().message.unsafeCast<String>()
+            }
+
+            diagnostics
+        } catch (e: Throwable) {
+            console.error("Error building analyzer diagnostics:", e)
+            emptyArray()
+        }
     }
 
     // ── Error Diagnostics ───────────────────────────────────────────────────
