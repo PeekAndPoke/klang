@@ -46,7 +46,7 @@ under another name.
 
 ---
 
-## Done 2026-09-07 (uncommitted at the time of writing, review loop pending)
+## Done 2026-09-07, review loop closed 2026-09-08 after three rounds (round 3 clean)
 
 Not option 1 as written. Option 1 (structure from the source, control sampled ONCE at each
 source onset, i.e. `_outerJoin`) was built first and it **reversed two song structures**:
