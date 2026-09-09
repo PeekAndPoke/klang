@@ -403,3 +403,53 @@ well in a chain and tier 3 is where the real value is, but it does mean:
 The parse-level rows and the regression guard (`2.5`, `0.5`, `1e3`, `1.5e-3`, hex/octal/binary all still lex
 as single number tokens) are DONE in `NumberLiteralMethodCallSpec`. The stdlib session adds the value
 rows to `StdLibNumberMethodsTest`.
+
+---
+
+## Precedence reversed 2026-09-09: a checklist, and one trap
+
+The literal-folding rule shipped on 2026-09-08 (`-6.db()` meaning `(-6).db()`) is being reversed to
+match Kotlin and JS, so that `-6.db()` becomes `-(6.db())` and the parenthesised spelling is the only
+way to apply a method to a negative number.
+
+Nothing audible depends on it: no builtin song and no tutorial uses `-N.method()`. The fallout is
+documentation and specs, and it is easy to leave half-done because most of it still RUNS.
+
+### The trap
+
+`KlangScriptDocContentTest` executes every language-reference example but only asserts that it does
+not throw. It never checks a printed value. So after the flip these keep running, and their comments
+quietly become false:
+
+| Example | Comment says | After the flip |
+|---|---|---|
+| `-6.db()` (`KlangScriptDocContent.kt:531`) | `0.5012` | `-1.995`, wrong |
+| `-1.mod(12)` (`:513`) | `11` | `-1`, wrong |
+| `-1.rem(12)` (`:512`) | `-1` | `-1`, right by accident |
+
+The third row is the one to think about: the number still matches, so even a reader who checks the
+output sees agreement, while the example has stopped demonstrating the thing it exists to
+demonstrate (that `rem` follows the dividend's sign). A green test and a correct-looking number, and
+the documentation still lies.
+
+**Fix the examples to `(-6).db()`, `(-1).mod(12)`, `(-1).rem(12)`, and give the mod/rem pair a real
+assertion** rather than a `console.log` with a comment. Otherwise the same drift is available to the
+next person who touches precedence.
+
+### Prose that states the old rule and will contradict the code
+
+- `klangscript/language-features/01-literals-and-variables.md:22-26`, including the sentence saying
+  this is deliberately NOT what Kotlin or JS do, and the `--1.abs()` case
+- `klangscript/language-features/02-operators.md:34`
+- `klangscript/language-features/10-math.md:114-116`
+- the `parseUnary` comment in `KlangScriptParser.kt`, which cites this document and the maintainer's
+  2026-09-08 decision by date; leave a line there recording the reversal, so the old rule is not
+  restored later by someone reading the old rationale
+
+### Why it was reversed
+
+The 2026-09-08 reading was chosen so that a player writing `-6.db()` got the gain of minus six
+decibels rather than the negation of a gain. The reversal says that surprising anyone who knows
+Kotlin or JavaScript costs more than the parentheses do, and that a spelling whose meaning depends on
+whether the receiver is a literal or a variable (`-6.db()` folded, `-x.db()` did not) is worse than a
+rule with no exceptions.
