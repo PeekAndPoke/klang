@@ -120,12 +120,12 @@ data class ArityDispatchItem(
             val receiverLocExpr = if (isTopLevel) {
                 "null"
             } else {
-                "(receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location"
+                "sourceLocationOf(receiver)"
             }
             appendLine("${indent}val callInfo = CallInfo(")
             appendLine("$indent    callLocation = loc,")
             appendLine("$indent    receiverLocation = $receiverLocExpr,")
-            appendLine("$indent    paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+            appendLine("$indent    paramLocations = args.map { arg -> sourceLocationOf(arg) },")
             appendLine("$indent)")
         }
 
@@ -293,8 +293,8 @@ data class FileLevelExtItem(
         if (hasCallInfo) {
             appendLine("${indent}val callInfo = CallInfo(")
             appendLine("$indent    callLocation = loc,")
-            appendLine("$indent    receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
-            appendLine("$indent    paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+            appendLine("$indent    receiverLocation = sourceLocationOf(receiver),")
+            appendLine("$indent    paramLocations = args.map { arg -> sourceLocationOf(arg) },")
             appendLine("$indent)")
         }
 
@@ -406,3 +406,58 @@ internal fun arityCheck(scriptName: String, scriptParams: List<Any?>, requiredCo
     } else {
         "checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)"
     }
+
+/**
+ * Identifiers the generated registration bodies bind themselves. An owner whose simple name is one
+ * of these can never be shortened, because the local binding would win the name lookup.
+ */
+internal val GENERATED_LOCAL_NAMES: Set<String> = setOf(
+    "arg", "args", "builder", "callInfo", "cls", "index", "kotlinArgs", "loc", "receiver", "typedReceiver",
+)
+
+/**
+ * How the generated code should spell a reference to the class or object that owns a registered
+ * function: its simple name when that is guaranteed to resolve to [ownerFqcn], the fully qualified
+ * name otherwise.
+ *
+ * The generated file already imports every owner, so the qualifier is usually pure noise. It is
+ * kept in exactly three cases, each of which would otherwise resolve to the wrong thing silently:
+ *
+ * 1. [ownerFqcn] is not among [importedFqcns]. The file also has a few wildcard imports, but this
+ *    helper cannot see what they contain, so an unimported name stays spelled out.
+ * 2. Two imports share the simple name. Then neither may use it, whichever one we are emitting.
+ * 3. The generated body binds the simple name itself, as a local `val` or a lambda parameter.
+ *    This is the real one: sprudel has `object vowel` with a `vowel` parameter, so the body of
+ *    `vowel(vowel = ...)` reads `val vowel = convertArgToKotlin(...)` and a shortened
+ *    `vowel.invoke(...)` would call through that local instead of the object.
+ *
+ * The result is not keyword-escaped; the caller escapes it, which works the same for one segment
+ * as for many.
+ */
+internal fun ownerReference(
+    ownerFqcn: String,
+    importedFqcns: Set<String>,
+    localNames: Set<String>,
+): String {
+    val simpleName = ownerFqcn.substringAfterLast('.')
+
+    if (simpleName.isEmpty() || simpleName == ownerFqcn) {
+        return ownerFqcn
+    }
+
+    if (ownerFqcn !in importedFqcns) {
+        return ownerFqcn
+    }
+
+    if (simpleName in localNames) {
+        return ownerFqcn
+    }
+
+    val importsWithThisSimpleName = importedFqcns.count { it.substringAfterLast('.') == simpleName }
+
+    if (importsWithThisSimpleName != 1) {
+        return ownerFqcn
+    }
+
+    return simpleName
+}

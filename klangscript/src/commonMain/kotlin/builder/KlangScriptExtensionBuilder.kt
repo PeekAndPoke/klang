@@ -15,13 +15,12 @@ import io.peekandpoke.klang.script.getUniqueClassName
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
 import io.peekandpoke.klang.script.runtime.NativeExtensionProperty
 import io.peekandpoke.klang.script.runtime.NativeTypeInfo
-import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ParamSpec
 import io.peekandpoke.klang.script.runtime.RuntimeValue
-import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.runtime.checkArgsSize
 import io.peekandpoke.klang.script.runtime.checkNoArgs
 import io.peekandpoke.klang.script.runtime.convertArgToKotlin
+import io.peekandpoke.klang.script.runtime.sourceLocationOf
 import io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue
 import kotlin.jvm.JvmName
 import kotlin.reflect.KClass
@@ -343,19 +342,9 @@ class NativeObjectExtensionsBuilder<T : Any>(
         name: String, noinline fn: T.(List<P>, CallInfo) -> R,
     ) {
         builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
-            val receiverLocation = when (receiver) {
-                is StringValue -> receiver.location
-                is NumberValue -> receiver.location
-                else -> null
-            }
+            val receiverLocation = sourceLocationOf(receiver)
 
-            val paramLocations = args.map { arg ->
-                when (arg) {
-                    is StringValue -> arg.location
-                    is NumberValue -> arg.location
-                    else -> null
-                }
-            }
+            val paramLocations = args.map { arg -> sourceLocationOf(arg) }
 
             val callInfo = CallInfo(
                 callLocation = loc,
@@ -664,13 +653,7 @@ inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVara
     name: String, noinline fn: (List<P>, CallInfo) -> R,
 ) {
     registerFunctionRaw(name) { args, loc ->
-        val paramLocations = args.map { arg ->
-            when (arg) {
-                is StringValue -> arg.location
-                is NumberValue -> arg.location
-                else -> null
-            }
-        }
+        val paramLocations = args.map { arg -> sourceLocationOf(arg) }
         val callInfo = CallInfo(callLocation = loc, paramLocations = paramLocations)
         val params = List(args.size) { index ->
             convertArgToKotlin(fn = name, args = args, index = index, cls = P::class, nullable = true, loc = loc)

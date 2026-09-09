@@ -48,4 +48,67 @@ class EmissionHelpersTest : StringSpec({
         arityCheck("clamp", listOf("lo", "hi"), 2) shouldBe
             "checkArgsSize(fn = \"clamp\", args = args, expected = 2, location = loc)"
     }
+
+    // ===== ownerReference =====
+
+    "owner reference: an imported owner is spelled by its simple name" {
+        ownerReference(
+            ownerFqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptStringExtensions",
+            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.KlangScriptStringExtensions"),
+            localNames = emptySet(),
+        ) shouldBe "KlangScriptStringExtensions"
+    }
+
+    "owner reference: two imports sharing a simple name both stay qualified" {
+        val imports = setOf(
+            "io.peekandpoke.klang.script.stdlib.Osc",
+            "io.peekandpoke.klang.sprudel.lang.Osc",
+        )
+
+        ownerReference("io.peekandpoke.klang.script.stdlib.Osc", imports, emptySet()) shouldBe
+            "io.peekandpoke.klang.script.stdlib.Osc"
+
+        ownerReference("io.peekandpoke.klang.sprudel.lang.Osc", imports, emptySet()) shouldBe
+            "io.peekandpoke.klang.sprudel.lang.Osc"
+    }
+
+    "owner reference: an owner the file does not import stays qualified" {
+        ownerReference(
+            ownerFqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptMath",
+            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.KlangScriptOsc"),
+            localNames = emptySet(),
+        ) shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
+    }
+
+    "owner reference: an unimported owner whose simple name IS imported, from elsewhere" {
+        // The dangerous shape: exactly one import spells `Osc`, but it is the other one. Shortening
+        // here would compile and call into the wrong class.
+        ownerReference(
+            ownerFqcn = "io.peekandpoke.klang.sprudel.lang.Osc",
+            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.Osc"),
+            localNames = emptySet(),
+        ) shouldBe "io.peekandpoke.klang.sprudel.lang.Osc"
+    }
+
+    "owner reference: a name the generated body binds itself stays qualified" {
+        // sprudel's `object vowel` has a `vowel` parameter, so the body holds `val vowel = ...`
+        // and a shortened `vowel.invoke(...)` would resolve to that local instead of the object.
+        ownerReference(
+            ownerFqcn = "io.peekandpoke.klang.sprudel.lang.vowel",
+            importedFqcns = setOf("io.peekandpoke.klang.sprudel.lang.vowel"),
+            localNames = GENERATED_LOCAL_NAMES + setOf("vowel", "wet", "floor"),
+        ) shouldBe "io.peekandpoke.klang.sprudel.lang.vowel"
+    }
+
+    "owner reference: an identifier the generated bodies always bind stays qualified" {
+        ownerReference(
+            ownerFqcn = "io.peekandpoke.klang.sprudel.lang.args",
+            importedFqcns = setOf("io.peekandpoke.klang.sprudel.lang.args"),
+            localNames = GENERATED_LOCAL_NAMES,
+        ) shouldBe "io.peekandpoke.klang.sprudel.lang.args"
+    }
+
+    "owner reference: a name with no package is already simple" {
+        ownerReference("Standalone", setOf("Standalone"), emptySet()) shouldBe "Standalone"
+    }
 })

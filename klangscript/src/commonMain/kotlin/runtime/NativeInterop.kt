@@ -103,6 +103,22 @@ fun checkNoArgs(fn: String, args: List<RuntimeValue>, location: SourceLocation? 
 }
 
 /**
+ * The source location a runtime value carries, or null when it carries none.
+ *
+ * Only literals keep a location: a [StringValue] and a [NumberValue] know where they were
+ * written, every other [RuntimeValue] is computed and has nowhere to point. This is the one
+ * definition of that probe. The KSP-generated registration code calls it for the receiver and
+ * for every argument when it builds a `CallInfo`; keeping it here rather than pasting a `when`
+ * into the generated text also keeps the generated code free of the casts that the receiver's
+ * own hard cast made redundant.
+ */
+fun sourceLocationOf(value: Any?): SourceLocation? = when (value) {
+    is StringValue -> value.location
+    is NumberValue -> value.location
+    else -> null
+}
+
+/**
  * Convert a RuntimeValue to a Kotlin type.
  *
  * @param cls Target Kotlin class to convert to

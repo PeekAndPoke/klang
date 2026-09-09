@@ -687,7 +687,7 @@ class KlangScriptProcessor(
                 appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
                 appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
                 for (method in normalMethods) {
-                    val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
+                    val item = buildMethodItem(method, obj.cls, isTypeExtension = false, importedFqcns = imports)
                     appendLine(item.renderRegistration().prependIndent("        "))
                 }
                 for (prop in obj.memberProperties) {
@@ -721,7 +721,7 @@ class KlangScriptProcessor(
                 } else {
                     appendLine("    registerType<$typeName> {")
                     for (method in ext.methods) {
-                        val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
+                        val item = buildMethodItem(method, ext.cls, isTypeExtension = true, importedFqcns = imports)
                         appendLine(item.renderRegistration().prependIndent("        "))
                     }
                     for (prop in ext.memberProperties) {
@@ -809,16 +809,23 @@ class KlangScriptProcessor(
         method: MethodEntry,
         ownerCls: KSClassDeclaration,
         isTypeExtension: Boolean,
+        importedFqcns: Set<String>,
     ): RegistrationItem {
         val fn = method.fn
         val allParams = getScriptParams(fn)
         val hasCallInfo = hasCallInfoParam(fn)
         val ownerName = ownerCls.simpleName.asString()
         val isFileLevelFn = fn.parentDeclaration !is KSClassDeclaration
-        // The owner is spelled out in full: a slot named like its object (`vowel(vowel = ...)`)
-        // becomes a local `val vowel` in the generated call and would shadow the simple name.
+        // The owner is spelled out in full only where its simple name would not resolve to it:
+        // a slot named like its object (`vowel(vowel = ...)`) becomes a local `val vowel` in the
+        // generated call and would shadow it. See [ownerReference] for the whole rule.
         val ownerQualified = ownerCls.qualifiedName?.asString() ?: ownerName
-        val fnQualifier = if (isFileLevelFn) "" else "$ownerQualified."
+        val ownerRef = ownerReference(
+            ownerFqcn = ownerQualified,
+            importedFqcns = importedFqcns,
+            localNames = GENERATED_LOCAL_NAMES + allParams.mapNotNull { it.name?.asString() },
+        )
+        val fnQualifier = if (isFileLevelFn) "" else "${escapeQualifiedNameKeywords(ownerRef)}."
 
         val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
         val selfArg = if (isTypeExtension) {
@@ -989,8 +996,8 @@ class KlangScriptProcessor(
                 if (hasCallInfo) {
                     appendLine("    val callInfo = CallInfo(")
                     appendLine("        callLocation = loc,")
-                    appendLine("        receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
-                    appendLine("        paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+                    appendLine("        receiverLocation = sourceLocationOf(receiver),")
+                    appendLine("        paramLocations = args.map { arg -> sourceLocationOf(arg) },")
                     appendLine("    )")
                 }
                 appendLine("    val kotlinArgs = List(args.size) { index ->")
