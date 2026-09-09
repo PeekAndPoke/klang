@@ -25,6 +25,27 @@ class KlangBenchmark(
     private val sampleRate: Int = 44100,
     private val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
+    companion object {
+        /** Blocks of silence rendered before the first measurement, to wake the JIT and the CPU governor. */
+        private const val WARMUP_BLOCKS = 50
+
+        /** Blocks per measurement: ~145 ms of audio at 44.1 kHz, long enough to average out scheduler noise. */
+        private const val BLOCKS_TO_MEASURE = 50
+
+        /** Voices the ramp starts with. Even a struggling machine carries this many. */
+        private const val INITIAL_VOICES = 16
+
+        /**
+         * Most the ramp may grow in one step. The RTF prediction alone would take a fast machine
+         * from a handful of voices to its limit in four or five steps - correct, but the gauges
+         * jump rather than climb. This paces the early steps so the needle sweeps.
+         */
+        private const val MAX_GROWTH = 1.4
+
+        /** Smallest step the ramp takes, so the endgame cannot crawl one voice at a time. */
+        private const val MIN_STEP = 4
+    }
+
     data class Progress(
         val currentVoices: Int,
         val activeVoices: Int,
@@ -170,67 +191,75 @@ class KlangBenchmark(
 
         val outBuffer = ShortArray(blockFrames * 2)
 
+        var cursorFrame = 0.0
+
         if (iteration == 1) {
             console.log("[Benchmark] Warming up...")
             // 2. Warmup (Crucial for JIT) - only on first iteration
-            // Render 50 blocks of silence to wake up the CPU governor and JIT
-            repeat(50) { frame ->
-                renderer.renderBlock((frame * blockFrames).toDouble(), outBuffer)
+            // Render blocks of silence to wake up the CPU governor and JIT. The ramp keeps rendering
+            // on the same cursor afterwards: the scheduler judges every voice against the render
+            // clock, and that clock must only ever move forward.
+            repeat(WARMUP_BLOCKS) {
+                renderer.renderBlock(cursorFrame, outBuffer)
+                cursorFrame += blockFrames
             }
             console.log("[Benchmark] Warmup complete")
         }
 
         console.log("[Benchmark] Starting measurement for iteration $iteration...")
 
+        // The scheduler snaps this playback's epoch to the clock the first time it sees one of our
+        // voices, and every startTime is measured from there. Stamping from a zero point of our own
+        // would put each step's voices a warmup-length into the future, so they would only turn up
+        // at the very end of the window that is supposed to measure them.
+        val epochFrame = cursorFrame
+
         // 3. Ramp Up Loop
-        var currentVoices = 0
-        var cursorFrame = 0.0
-        val batchSize = 1 // Add 4 voices at a time
-        val blocksToMeasure = 50 // Measure over ~150ms of audio
+        var activeVoices = 0
+        var targetVoices = INITIAL_VOICES
+        // Last measurement that stayed below the target, for the interpolation at the crossing.
+        var safeVoices = 0
+        var safeRtf = 0.0
 
-        while (currentVoices < maxVoicesCap) {
-            // Calculate current time in seconds for scheduling
-            val currentTimeSec = cursorFrame / sampleRate
+        while (true) {
+            // Voices already playing keep sounding (their gate runs for a virtual eternity), so a
+            // step only has to add the difference up to the count it wants to measure. Aimed at the
+            // MIDDLE of the block we are about to render: exactly on the boundary, one ulp of
+            // rounding would make the scheduler read the voice as late and drop the whole step.
+            val startTimeSec = (cursorFrame - epochFrame + blockFrames * 0.5) / sampleRate
 
-            // Clear scheduled voices and add ALL voices starting at current time
-            scheduler.clearScheduled("benchmark")
-            repeat(currentVoices + batchSize) {
-                addHeavyVoice(scheduler, currentTimeSec, it)
+            repeat(targetVoices - activeVoices) {
+                addHeavyVoice(scheduler, startTimeSec, activeVoices + it)
             }
-            currentVoices += batchSize
 
             // Trigger voice scheduling by processing current block
             scheduler.process(cursorFrame)
 
-            // Get actual active voice count
-            val activeCount = scheduler.getActiveVoiceCount()
-            console.log("[Benchmark] Scheduled: $currentVoices, Active: $activeCount")
-
             // Measure Performance - render with all active voices
             val mark = TimeSource.Monotonic.markNow()
 
-            repeat(blocksToMeasure) {
+            repeat(BLOCKS_TO_MEASURE) {
                 scheduler.process(cursorFrame)
                 renderer.renderBlock(cursorFrame, outBuffer)
                 cursorFrame += blockFrames
             }
 
             val elapsedUs = mark.elapsedNow().toDouble(DurationUnit.MICROSECONDS)
-            val audioDurationUs = (blocksToMeasure * blockFrames * 1_000_000.0) / sampleRate
+            val audioDurationUs = (BLOCKS_TO_MEASURE * blockFrames * 1_000_000.0) / sampleRate
 
             val currentRtf = elapsedUs / audioDurationUs
 
-            val finalActiveCount = scheduler.getActiveVoiceCount()
+            activeVoices = scheduler.getActiveVoiceCount()
             console.log(
-                "[Benchmark] $currentVoices voices: RTF = ${
+                "[Benchmark] $activeVoices voices (asked for $targetVoices): RTF = ${
                     currentRtf.asDynamic().toFixed(3)
-                }, Active: $finalActiveCount"
+                }"
             )
 
             // Emit progress
             val progressUpdate = Progress(
-                currentVoices = currentVoices,
-                activeVoices = finalActiveCount,
+                currentVoices = targetVoices,
+                activeVoices = activeVoices,
                 currentRtf = currentRtf,
                 currentIteration = iteration,
                 totalIterations = totalIterations,
@@ -243,30 +272,97 @@ class KlangBenchmark(
             delay(10.milliseconds)
 
             if (currentRtf >= targetRtf) {
-                // Use the actual active voice count, backing off by batchSize to the last safe measurement
-                val safeVoiceCount = (finalActiveCount - batchSize).coerceAtLeast(0)
+                val maxSafeVoices = crossingVoices(
+                    safeVoices = safeVoices,
+                    safeRtf = safeRtf,
+                    voices = activeVoices,
+                    rtf = currentRtf,
+                    targetRtf = targetRtf,
+                )
 
-                console.log("[Benchmark] Iteration $iteration complete: $safeVoiceCount max safe voices (active: $finalActiveCount)")
+                console.log("[Benchmark] Iteration $iteration complete: $maxSafeVoices max safe voices (active: $activeVoices)")
 
                 return Result(
-                    maxSafeVoices = safeVoiceCount,
+                    maxSafeVoices = maxSafeVoices,
                     rtfAtLimit = currentRtf,
-                    details = "Iteration $iteration: Hit limit at $finalActiveCount active voices (RTF: ${
+                    details = "Iteration $iteration: Hit limit at $activeVoices active voices (RTF: ${
                         currentRtf.asDynamic().toFixed(3)
                     })",
                     rounds = iteration,
                 )
             }
+
+            if (targetVoices >= maxVoicesCap) {
+                console.log("[Benchmark] Iteration $iteration complete: $maxVoicesCap max safe voices (maxed out)")
+
+                return Result(
+                    maxSafeVoices = maxVoicesCap,
+                    rtfAtLimit = currentRtf,
+                    details = "Iteration $iteration: Maxed out cap of $maxVoicesCap voices!",
+                    rounds = iteration,
+                )
+            }
+
+            safeVoices = activeVoices
+            safeRtf = currentRtf
+            targetVoices = nextTargetVoices(
+                targetVoices = targetVoices,
+                activeVoices = activeVoices,
+                currentRtf = currentRtf,
+                targetRtf = targetRtf,
+                maxVoicesCap = maxVoicesCap,
+            )
+        }
+    }
+
+    /**
+     * How many voices the next step runs. The load is close enough to linear in the voice count that
+     * the measured RTF predicts where the target sits: `voices * target / measured`. That prediction
+     * ignores the engine's fixed per-block cost, so it always lands a little SHORT of the true limit,
+     * which is exactly what a ramp wants: it closes in from below and its steps shrink by themselves
+     * as the measurement approaches the target. Capped at [MAX_GROWTH] per step so one noisy sample
+     * cannot leap from a handful of voices to the cap, and floored at [MIN_STEP] so the ramp always
+     * makes progress.
+     */
+    private fun nextTargetVoices(
+        targetVoices: Int,
+        activeVoices: Int,
+        currentRtf: Double,
+        targetRtf: Double,
+        maxVoicesCap: Int,
+    ): Int {
+        val predicted = if (currentRtf > 0.0) {
+            (activeVoices * targetRtf / currentRtf).toInt()
+        } else {
+            maxVoicesCap
         }
 
-        console.log("[Benchmark] Iteration $iteration complete: $maxVoicesCap max safe voices (maxed out)")
+        val floor = targetVoices + MIN_STEP
+        val ceiling = maxOf((targetVoices * MAX_GROWTH).toInt(), floor)
 
-        return Result(
-            maxSafeVoices = maxVoicesCap,
-            rtfAtLimit = 0.0,
-            details = "Iteration $iteration: Maxed out cap of $maxVoicesCap voices!",
-            rounds = iteration,
-        )
+        return predicted.coerceIn(floor, ceiling).coerceAtMost(maxVoicesCap)
+    }
+
+    /**
+     * Where the load crosses [targetRtf], read off the line between the last measurement below it and
+     * the one that went over. Linear enough to land within a voice or two of a one-by-one crawl,
+     * without the crawl.
+     */
+    private fun crossingVoices(
+        safeVoices: Int,
+        safeRtf: Double,
+        voices: Int,
+        rtf: Double,
+        targetRtf: Double,
+    ): Int {
+        val voiceSpan = voices - safeVoices
+        val rtfSpan = rtf - safeRtf
+
+        if (voiceSpan <= 0 || rtfSpan <= 0.0) {
+            return safeVoices.coerceAtLeast(0)
+        }
+
+        return (safeVoices + voiceSpan * ((targetRtf - safeRtf) / rtfSpan)).toInt().coerceAtLeast(0)
     }
 
     private fun addHeavyVoice(scheduler: VoiceScheduler, startTimeSec: Double, id: Int) {
