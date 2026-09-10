@@ -559,15 +559,39 @@ object KlangScriptOscExtensions {
     fun power(self: IgnitorDsl, exp: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Pow(base = self, exp = exp.toIgnitorDsl())
 
-    /** Per-sample minimum of this signal and [other]. */
+    /**
+     * Enforces a minimum allowed value per sample: this signal, but at least [other].
+     *
+     * Reads as "take self, at a minimum other", the same meaning `min` carries on a number
+     * and on a pattern. Anything below [other] is raised to it.
+     *
+     * The node crossing is deliberate: a floor is the per-sample *maximum* of the two
+     * signals, so the `min` door builds [IgnitorDsl.Max]. Do not "correct" it.
+     *
+     * ```KlangScript(Playable)
+     * sine.range(-1, 1).min(0)   // half-wave rectify
+     * ```
+     */
     @KlangScript.Method
     fun min(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Min(left = self, right = other.toIgnitorDsl())
+        IgnitorDsl.Max(left = self, right = other.toIgnitorDsl())
 
-    /** Per-sample maximum of this signal and [other]. */
+    /**
+     * Enforces a maximum allowed value per sample: this signal, but at most [other].
+     *
+     * Reads as "take self, at a maximum other", the same meaning `max` carries on a number
+     * and on a pattern. Anything above [other] is lowered to it.
+     *
+     * The node crossing is deliberate: a cap is the per-sample *minimum* of the two
+     * signals, so the `max` door builds [IgnitorDsl.Min]. Do not "correct" it.
+     *
+     * ```KlangScript(Playable)
+     * sine.range(0, 2).max(0.8)   // cap the signal at 0.8
+     * ```
+     */
     @KlangScript.Method
     fun max(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Max(left = self, right = other.toIgnitorDsl())
+        IgnitorDsl.Min(left = self, right = other.toIgnitorDsl())
 
     /** Bounds this signal to the range `[lo, hi]` per sample. */
     @KlangScript.Method

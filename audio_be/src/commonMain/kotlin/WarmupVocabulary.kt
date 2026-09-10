@@ -128,7 +128,9 @@ object WarmupVocabulary {
         val t = sine(1.5)
         val lfo = IgnitorDsl.Sine(freq = Constant(2.0)).unipolar()
         val a = s.mul(Constant(0.5)).div(Constant(2.0)).minus(t.mul(Constant(0.1))).neg().abs()
-        val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).min(t).max(t.neg())
+        // `max(t).min(-t)` bounds to [-t, t]: cap first, then floor. Builds Max(Min(x, t), -t),
+        // the same node pair as before the min/max doors became clamps.
+        val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
         val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(-0.5), Constant(0.5))
         val d = c.bipolar().unipolar().mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))

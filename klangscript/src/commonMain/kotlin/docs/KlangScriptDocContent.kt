@@ -507,7 +507,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Everyday math",
-                description = "The method spelling reads left to right. `abs`, `round`, `min`, `max` and `pow` also exist as `Math.*` calls; `clamp` exists only as a method. JS note: JavaScript numbers have methods too, but not these (`pow` and `clamp` are not on `Number.prototype`).",
+                description = "The method spelling reads left to right. `abs`, `round` and `pow` also exist as `Math.*` calls; `clamp` exists only as a method. `min` and `max` exist as both, but they are not the same operation: as methods they clamp (`a.max(b)` reads `a, at most b`), as `Math.min(a, b)` / `Math.max(a, b)` they select the smaller or larger of the two. JS note: JavaScript numbers have methods too, but not these (`pow` and `clamp` are not on `Number.prototype`).",
                 code = """
                     |import * from "stdlib"
                     |
@@ -525,9 +525,12 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("1.7.round():", 1.7.round())      // 2
                     |console.log("2.5.round():", 2.5.round())      // 2, ties go to the even neighbour
                     |
-                    |// min takes the smaller of the two, max the larger
-                    |console.log("1.4.min(1):", 1.4.min(1))        // 1
-                    |console.log("0.2.max(0.5):", 0.2.max(0.5))    // 0.5
+                    |// min and max are clamps, not selections: "a.max(b)" reads "a, at most b".
+                    |// For the smaller or larger *of* two numbers, use Math.min / Math.max.
+                    |console.log("1.4.min(1):", 1.4.min(1))        // 1.4, already at least 1
+                    |console.log("0.2.max(0.5):", 0.2.max(0.5))    // 0.2, already at most 0.5
+                    |console.log("0.2.min(0.5):", 0.2.min(0.5))    // 0.5, raised to the floor
+                    |console.log("1.4.max(0.5):", 1.4.max(0.5))    // 0.5, lowered to the cap
                     |
                     |console.log("2.pow(10):", 2.pow(10))          // 1024
                 """.trimMargin(),

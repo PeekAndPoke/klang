@@ -83,11 +83,12 @@ class StdLibNumberMethodsTest : StringSpec({
             "(-3.2).floor()" to -4.0,
             "3.2.ceil()" to 4.0,
             "(-3.7).ceil()" to -3.0,
-            // min, max: the direction is the whole point
-            "7.min(3)" to 3.0,
-            "3.min(7)" to 3.0,
-            "7.max(3)" to 7.0,
-            "3.max(7)" to 7.0,
+            // min, max are clamps, not selections: "a.max(b)" reads "a, at most b".
+            // Math.min(a, b) / Math.max(a, b) are the selecting pair, see StdLibTest.
+            "7.min(3)" to 7.0,   // 7 is already at least 3
+            "3.min(7)" to 7.0,   // 3 raised to the floor of 7
+            "7.max(3)" to 3.0,   // 7 lowered to the cap of 3
+            "3.max(7)" to 3.0,   // 3 is already at most 7
             // clamp
             "5.clamp(0, 3)" to 3.0,
             "(-1).clamp(0, 3)" to 0.0,

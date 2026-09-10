@@ -1753,11 +1753,21 @@ fun IgnitorDsl.abs() = IgnitorDsl.Abs(inner = this)
 /** Raises this signal to the power of [exp]. Signed-magnitude (no NaN for negative bases). */
 fun IgnitorDsl.pow(exp: IgnitorDsl) = IgnitorDsl.Pow(base = this, exp = exp)
 
-/** Per-sample minimum of this signal and [other]. */
-fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Min(left = this, right = other)
+/**
+ * Enforces a minimum allowed value per sample: this signal, but at least [other].
+ *
+ * The node crossing is deliberate: a floor is the per-sample *maximum* of the two signals,
+ * so the `min` door builds [IgnitorDsl.Max]. Do not "correct" it.
+ */
+fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = other)
 
-/** Per-sample maximum of this signal and [other]. */
-fun IgnitorDsl.max(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = other)
+/**
+ * Enforces a maximum allowed value per sample: this signal, but at most [other].
+ *
+ * The node crossing is deliberate: a cap is the per-sample *minimum* of the two signals,
+ * so the `max` door builds [IgnitorDsl.Min]. Do not "correct" it.
+ */
+fun IgnitorDsl.max(other: IgnitorDsl) = IgnitorDsl.Min(left = this, right = other)
 
 /** Bounds this signal to the range `[lo, hi]` per sample. */
 fun IgnitorDsl.clamp(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Clamp(inner = this, lo = lo, hi = hi)

@@ -142,36 +142,44 @@ internal object KlangScriptNumberExtensions {
     fun ceil(self: NumberValue): Double = kotlin.math.ceil(self.value)
 
     /**
-     * Returns the smaller of the two numbers.
+     * Enforces a minimum allowed value: this number, but at least [other].
+     *
+     * Reads as "take self, at a minimum other". Anything below [other] is raised to it;
+     * values at or above [other] pass through unchanged. Same meaning as `min` on a
+     * pattern and on a signal. For the smaller *of* two numbers use `Math.min(a, b)`.
      *
      * ```KlangScript(Executable)
-     * 7.min(3)  // 3
+     * 7.min(3)  // 7
      * ```
      *
      * @param self The number
-     * @param other The number to compare with
-     * @return The smaller value
+     * @param other The minimum allowed value (floor)
+     * @return The number, raised to [other] when it was below
      * @category number
-     * @tags comparison
+     * @tags comparison, clamp, floor
      */
     @KlangScript.Method
-    fun min(self: NumberValue, other: Double): Double = kotlin.math.min(self.value, other)
+    fun min(self: NumberValue, other: Double): Double = self.value.coerceAtLeast(other)
 
     /**
-     * Returns the larger of the two numbers.
+     * Enforces a maximum allowed value: this number, but at most [other].
+     *
+     * Reads as "take self, at a maximum other". Anything above [other] is lowered to it;
+     * values at or below [other] pass through unchanged. Same meaning as `max` on a
+     * pattern and on a signal. For the larger *of* two numbers use `Math.max(a, b)`.
      *
      * ```KlangScript(Executable)
-     * 7.max(3)  // 7
+     * 7.max(3)  // 3
      * ```
      *
      * @param self The number
-     * @param other The number to compare with
-     * @return The larger value
+     * @param other The maximum allowed value (cap)
+     * @return The number, lowered to [other] when it was above
      * @category number
-     * @tags comparison
+     * @tags comparison, clamp, cap
      */
     @KlangScript.Method
-    fun max(self: NumberValue, other: Double): Double = kotlin.math.max(self.value, other)
+    fun max(self: NumberValue, other: Double): Double = self.value.coerceAtMost(other)
 
     /**
      * Clamps the number into the range from lo to hi, both inclusive.

@@ -348,6 +348,42 @@ class StdLibOscTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // min / max are clamps, and the node crossing is deliberate
+    //
+    // "sig.max(x)" reads "sig, at most x", so it caps, and a cap is the per-sample
+    // MINIMUM of the two signals. The doors therefore build the opposite-named node.
+    // If a future change makes max() build IgnitorDsl.Max, these tests must fail.
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "max caps, so it builds IgnitorDsl.Min" {
+        val dsl = evalIgnitorDsl("Osc.sine().max(0.8)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Min>()
+        dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
+        (dsl.right as IgnitorDsl.Constant).value shouldBe 0.8
+    }
+
+    "min floors, so it builds IgnitorDsl.Max" {
+        val dsl = evalIgnitorDsl("Osc.sine().min(0)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Max>()
+        dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
+        (dsl.right as IgnitorDsl.Constant).value shouldBe 0.0
+    }
+
+    "min and max keep the receiver on the left" {
+        val capped = evalIgnitorDsl("Osc.saw().max(Osc.sine())")
+        capped.shouldBeInstanceOf<IgnitorDsl.Min>()
+        capped.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        capped.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
+
+        val floored = evalIgnitorDsl("Osc.saw().min(Osc.sine())")
+        floored.shouldBeInstanceOf<IgnitorDsl.Max>()
+        floored.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+        floored.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Complex compositions
     // ═════════════════════════════════════════════════════════════════════════════
 
