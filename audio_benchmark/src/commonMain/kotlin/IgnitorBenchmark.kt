@@ -250,6 +250,19 @@ class IgnitorBenchmark(
                     voiceData = voice("supersaw-spread0", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
                     sounds = mapOf("supersaw-spread0" to IgnitorDsl.SuperSaw(analogSpread = IgnitorDsl.Constant(0.0))),
                 ),
+                // Both pluck rows are inline nodes, so the pair differs in the knob and nothing else.
+                Case(
+                    "superpluck+analog",
+                    voiceData = voice("superpluck-drift", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    sounds = mapOf("superpluck-drift" to IgnitorDsl.SuperPluck()),
+                ),
+                Case(
+                    "superpluck+analog+spread0",
+                    voiceData = voice("superpluck-drift-spread0", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    sounds = mapOf(
+                        "superpluck-drift-spread0" to IgnitorDsl.SuperPluck(analogSpread = IgnitorDsl.Constant(0.0)),
+                    ),
+                ),
                 Case(
                     "sine-harmonics7+analog+spread0",
                     voiceData = voice("sine-harmonics7-spread0", oscParams = mapOf("analog" to 5.0)),

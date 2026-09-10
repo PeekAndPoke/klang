@@ -78,8 +78,9 @@ Schmetterling's bass harmonics (`harmonics(9, 1.0).fundamental(0).analogSpread(0
 
 Two things a reader needs. The endpoints are EXACT, not a limit of the blend: at spread 1 only the
 own lane is advanced, at spread 0 only the shared one, which makes spread 0 measurably CHEAPER
-(JVM, supersaw 8v with analog: 4.76 against 6.22 µs per block, see
-`docs/benchmarks/2026-09-10_drift-lanes_jvm.md`). And the draw order is part of the contract: one int
+(JVM, supersaw 8v with analog: 5.34 against 6.90 µs per block; both platform runs are in
+`docs/benchmarks/2026-09-10_drift-lanes_jvm.md` and `..._nodejs.md`). And the draw order is part of
+the contract: one int
 for the shared lane's SEED at construction, then an own lane whenever `ensureLanes` first reaches its
 index. The shared lane is built lazily from that seed and takes nothing further from the voice
 stream, so WHEN the spread first drops below 1 cannot shift what any other consumer of the voice rng
@@ -87,6 +88,16 @@ gets: without that, lowering `analogSpread` on a superpluck re-rolled its string
 A stack that shrinks retires those lanes (`retireLanes`) and rebuilds them fresh on regrow, so a
 returning voice attacks in tune; the bank and the pluck, whose partial and string state survives a
 shrink, never retire.
+
+**The JS lesson, a sibling of the loop-shape one below.** The first cut read the blend's per-block
+values (the two weights, the two mode flags, the lane out of its array) off the container INSIDE the
+sample loop, through a public inline method. On the JVM that is free; on Kotlin/JS it cost a drifting
+8-voice supersaw about 16 percent and the superpluck about 12, measured against the pre-change engine
+in the same sitting. The fix is the same shape as the loop-shape lesson: hoist every per-block value
+into a LOCAL before the sample loop (`ownLane(n)`, `sharedWalk()`, the two weights) and blend through
+one `inline fun driftStep(...)` whose inputs are all locals. Node run-to-run variance is wide enough
+(two runs of one engine differed by 28 percent on a row) that a claim like this needs the untouched
+`sine+analog` row as a control and a ratio, not a raw number.
 
 `PolyAnalogDrift` went with this change. Nothing ever used it: it advanced all lanes sample-major
 while every hot loop here is voice-major. Its rationale, that independent lanes are what keeps a
