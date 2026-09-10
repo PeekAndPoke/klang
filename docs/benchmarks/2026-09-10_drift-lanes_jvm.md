@@ -1,6 +1,6 @@
 # Audio Benchmark Results
 
-> **The DriftLanes run (2026-09-10, `docs/tasks/drift-lanes-analog-spread.md`).** Taken right
+> **The DriftLanes run (2026-09-10, `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`).** Taken right
 > after the drift lanes moved into one component and `analogSpread` landed on the super family.
 > The rows to read are the four drift ones. Against the same harness on the commit before the
 > change (`0facbd1c`): `sine+analog` 4.41 to 4.33, `supersaw_8v+analog` 6.35 to 6.22,

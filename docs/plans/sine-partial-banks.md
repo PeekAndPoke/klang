@@ -233,7 +233,11 @@ One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per blo
    hand-rolled sound, every `Osc.sine` in the stack owning its drift); at `s = 0` exactly only the
    shared lane is advanced, one walk for the whole bank. The shared walk is sampled into a
    growth-only scratch array once per block so every partial's loop reads the same sequence.
-   `analog = 0` skips all of it.
+   `analog = 0` skips all of it. Since 2026-09-10 this machinery is not the bank's own: it lives in
+   `DriftLanes`, and the super oscillators carry the same `analogSpread` knob over their voices
+   (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`). The draw order moved with
+   it: the own lanes come first and the shared lane is drawn at the first block whose spread is
+   below 1, so spread 1 never draws one.
 
 Rendering is **partial-major**: one tight loop per partial with the phase in a local (radian
 phase, `sin(phase)`, `wrapPhase(TWO_PI)`, the plain sine's own loop), the first audible partial

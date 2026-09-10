@@ -1,6 +1,12 @@
 # DriftLanes: one drift-lane container, `analogSpread` on the whole super family
 
-> Status: **READY TO BUILD (2026-09-10).** Decisions are settled (section 2); no design question is
+> Archived 2026-09-10. Status: **BUILT 2026-09-10** on branch `drift-lanes`, starting at
+> `e5596416`, with 12 mutation checks red. The review loop runs on that branch; what it changes
+> lands there too. Three things came out differently from the plan below, all in the closing
+> section at the end of this file: the partial bank's drift draw order, the superpluck's spec
+> shape, and one behaviour change at `analog = 0` on the superpluck.
+>
+> Original status: **READY TO BUILD (2026-09-10).** Decisions are settled (section 2); no design question is
 > open. Written for an implementing agent that has not seen the sine partial banks work; every
 > anchor below is a file and a line number as of `main` at `edcb5445` (2026-09-10). Re-grep before
 > editing, the numbers drift.
@@ -307,8 +313,42 @@ next to `renderBlock()`.
   `if`; NaN-guard comment where a guard exists; comment findings only when text is factually
   wrong; scaffolding (probe prints, fixture generators) removed in the same change.
 
+## Closing notes: where the build differed from the plan
+
+1. **The partial bank's draw order changed** (section 4.1 hoped it would not). Section 3 asks for a
+   lazily created shared lane, which at spread 1 means no shared draw at all; the bank used to draw
+   its shared lane FIRST, eagerly, at the first block. The two cannot both hold, so the order is now
+   uniform across every adopter: own lanes as `ensureLanes` reaches their index, the shared lane at
+   the first block whose spread is below 1. `SinePartialBankSpec.driftReference` follows the same
+   order and all 26 cases stay green; the bank's KDoc documents it.
+
+2. **The superpluck is pinned by what the knob CHANGES, not by an envelope shape** (section 8 asked
+   for "the same two-string coherence assertion"). Measured: two strings at one pitch have no clean
+   beating envelope to read. A plucked string's own modes are slightly inharmonic, so its block
+   envelope wobbles heavily at EVERY spread setting (block-peak ratio deviations of 8.2 at spread 0
+   against 2.7 at spread 1, the wrong way round and both meaningless). The two sine voices of the
+   stack case give 0.012 percent peak swing at spread 0 against 99.6 percent at spread 1, which is
+   why that assertion works there and not here. The pluck case instead pins, with the excitation rng
+   and the drift rng held apart so nothing else can move: spread 0 differs from `analog = 0` (the
+   shared walk is really there), spread 0 differs from spread 1 (the blend reaches the strings), and
+   at `analog = 0` the two ends of the knob are bit-identical (nothing to spread).
+
+3. **Superpluck at `analog = 0` no longer draws unused lanes.** Each string used to construct an
+   `AnalogDrift` it never advanced, which cost three draws from the voice rng per string. With
+   `DriftLanes` a depth of 0 builds nothing, so a default superpluck's excitation bursts now come
+   from three draws earlier in the stream: the same instrument, a different noise burst. Every other
+   default, the whole super family at spread 1 included, renders sample for sample as before
+   (`SuperStackDriftSpreadSpec` pins the supersaw against a render taken at `0facbd1c`).
+
+Also worth a line: section 8 says "mutating the shared term away makes the 0 case beat: red". It
+does not. Dropping the shared term at spread 0 removes the drift entirely, which makes the stack
+even STEADIER, so the coherence assertion alone stays green under that mutation. The spread-0 case
+therefore also asserts that the render differs from the same stack with the drift off, and that is
+the assertion the mutation turns red.
+
 ## What we built
 
 Named and scoped with the maintainer on 2026-09-10 from the question "can the super oscillators
 reuse `analogSpread`?" and the finding that the one reusable drift container in the tree was the
-one nothing used.
+one nothing used. Built the same day: one component, six nodes, six doors, four specs, and one
+class less in the tree.

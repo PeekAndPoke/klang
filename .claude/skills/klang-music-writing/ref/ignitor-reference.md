@@ -114,7 +114,8 @@ of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmo
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
 rolloff 1 is the sawtooth law, 2 is triangle-soft, 0 is flat. `fundamental(gain)`
 levels the sine itself (0 = overtones only). `analogSpread(0..1)` sets whether the partials drift as one
-oscillator (0) or each on its own lane (1, default) under `analog`. Every knob is a signal read once per block.
+oscillator (0) or each on its own lane (1, default) under `analog`; it is the same knob the super
+oscillators carry, over partials instead of voices. Every knob is a signal read once per block.
 Partials at or above Nyquist stay silent; there is no lower limit. Multiples follow the door's `freq`, so
 `Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`. A sub-octave at a
 comparable level moves the perceived pitch down an octave (the missing-fundamental effect), which is the point of
@@ -129,7 +130,10 @@ Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the p
 ```
 
 **Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`
-(default 0.2), `analog(x)` (per-voice pitch drift), `spreadPower(x)`, `sideAtten(x)`, `gainJitter(x)`,
+(default 0.2), `analog(x)` (per-voice pitch drift), `analogSpread(0..1)` (how much the voices drift AGAINST each
+other under `analog`: 1, the default, is a lane per voice, the organic unison of separate oscillators; 0 is one
+shared walk, so the stack wobbles as a single oscillator and its unison detune stays static),
+`spreadPower(x)`, `sideAtten(x)`, `gainJitter(x)`,
 `centerJitter(x)`, and the combined phase-pool call
 `phasePool(on, kMin, kMax, drawTries, poolSize, refreshEvery, selection, warmup)`, banded start-phase
 selection for consistent low-note fundamentals, off by default. Every param is an optional literal,
@@ -189,7 +193,7 @@ Osc.supersaw(55, x => x.voices(7))
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
 | `Osc.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
-| `Osc.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8) and `spread` (0.2): `Osc.superpluck(x => x.voices(6).decay(0.995))` |
+| `Osc.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Osc.superpluck(x => x.voices(6).decay(0.995))` |
 
 ### Utility
 

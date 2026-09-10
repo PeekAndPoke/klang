@@ -55,6 +55,31 @@ body/analog per superimposed copy.
   Der Schmetterling stack).
 - Effects: delay, reverb, phaser, compressor, ducking, distortion, bit-crush, tremolo
 
+## One drift-lane container: `DriftLanes` (2026-09-10)
+
+Every multi-voice oscillator takes its analog drift from one component
+(`audio_be/.../ignitor/DriftLanes.kt`): N own `AnalogDrift` lanes plus one shared lane, blended per
+sample by `analogSpread` with constant-power weights, in ratio-minus-one space. The unison stacks,
+the sine partial bank and the superpluck strings all plug into it, and `analogSpread` is a knob on
+the whole super family now (`supersaw`, `supersine`, `supersquare`, `supertri`, `superramp`,
+`superpluck`), same word and same 0 to 1 scale as on `Osc.sine`: 0 is one shared walk, so the stack
+wobbles as a single physical oscillator and its unison detune stays static; 1 is a lane per voice,
+the default, and the sound is unchanged there (pinned sample for sample in
+`SuperStackDriftSpreadSpec`).
+
+Two things a reader needs. The endpoints are EXACT, not a limit of the blend: at spread 1 only the
+own lane is advanced, at spread 0 only the shared one, which makes spread 0 measurably CHEAPER
+(JVM, supersaw 8v with analog: 4.76 against 6.22 µs per block, see
+`docs/benchmarks/2026-09-10_drift-lanes_jvm.md`). And the draw order is part of the contract: an own
+lane is drawn when `ensureLanes` first reaches its index, the shared lane at the first block whose
+spread is below 1, and never at spread 1. The partial bank's order changed with that (its shared
+lane used to be drawn first) and its spec's reference model followed.
+
+`PolyAnalogDrift` went with this change. Nothing ever used it: it advanced all lanes sample-major
+while every hot loop here is voice-major. Its rationale, that independent lanes are what keeps a
+unison stack organic, is now the reason `DriftLanes` defaults to spread 1.
+Task: `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`.
+
 ## Loop shape beats block-pass count (2026-09-07, sine partial banks)
 
 `IgnitorBenchmark` case `sine-harmonics7` against `sine-harmonics7-tree` (the hand-rolled

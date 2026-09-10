@@ -8,6 +8,13 @@
 
 ## Recent Work (2026-09)
 
+- **`analogSpread` on the whole super family (2026-09-10)**: the knob `Osc.sine` shipped with on
+  2026-09-07 is now on all six super oscillator builders (`supersaw`, `supersine`, `supersquare`,
+  `supertri`, `superramp`, `superpluck`), same word and same 0 to 1 scale: 1 (the default) is a
+  drift lane per voice, 0 is one shared walk for the stack. `KlangScriptSuperPluckSpec` is new, the
+  family had no door spec for the pluck.
+  Task: `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`.
+
 - **Number methods, stdlib half (2026-09-08)**: `pow abs sqrt round floor ceil min max clamp rem mod
   log2 log10 ln exp sign semitones cents toSemitones db toDb` on `KlangScriptNumberExtensions`
   (`klangscript-libs`), `toRatio()` on strings via `Interval.get` from `tones`; the Kotlin door for the
