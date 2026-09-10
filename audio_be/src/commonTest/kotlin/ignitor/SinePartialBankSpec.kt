@@ -367,14 +367,16 @@ class SinePartialBankSpec : StringSpec({
     // ── drift lanes ──────────────────────────────────────────────────────────────
 
     /**
-     * Test-side model of the bank's drift: the bank creates the SHARED lane first (first block),
-     * then one lane per partial in index order, all from `ctx.random`, so the same seed reproduces
-     * the exact multiplier sequences here. Radian phases, the sine's own accumulate-and-wrap.
+     * Test-side model of the bank's drift, in the order [DriftLanes] documents: one own lane per
+     * partial in index order (the fundamental first), then the SHARED lane, drawn at the first
+     * block whose spread is below 1 and not at all at spread 1. All from `ctx.random`, so the same
+     * seed reproduces the exact multiplier sequences here. Radian phases, the sine's own
+     * accumulate-and-wrap.
      */
     fun driftReference(seed: Int, analog: Double, spread: Double, multiples: DoubleArray, gains: DoubleArray, freqHz: Double): DoubleArray {
         val r = Random(seed)
-        val shared = AnalogDrift(analog, sampleRate, r)
         val lanes = Array(multiples.size) { AnalogDrift(analog, sampleRate, r) }
+        val shared = if (spread < 1.0) AnalogDrift(analog, sampleRate, r) else null
         val ph = DoubleArray(multiples.size)
         val inc = DoubleArray(multiples.size) { TWO_PI * multiples[it] * freqHz / sampleRate.toDouble() }
         val out = DoubleArray(blocks * blockFrames)
@@ -384,7 +386,7 @@ class SinePartialBankSpec : StringSpec({
         val wOwn = sqrt(spread)
 
         for (i in out.indices) {
-            val sharedDev = if (spread < 1.0) shared.nextMultiplier() - 1.0 else 0.0
+            val sharedDev = if (shared != null) shared.nextMultiplier() - 1.0 else 0.0
             var acc = 0.0
 
             for (p in multiples.indices) {

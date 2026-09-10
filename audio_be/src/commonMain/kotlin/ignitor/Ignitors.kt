@@ -209,9 +209,10 @@ object Ignitors {
      * [analogSpread] blends per partial between one SHARED walk (0: the bank wobbles as one physical
      * oscillator, the spectrum stays exactly harmonic) and the partial's OWN walk (1: independent
      * lanes, the beating of the hand-rolled stack), with constant-power weights `sqrt(1 - s)` and
-     * `sqrt(s)` so the depth stays [analog] at every setting. Lanes are created lazily in a fixed
-     * order (shared, fundamental, then each bank's partials by index) so a seeded voice RNG renders
-     * reproducibly.
+     * `sqrt(s)` so the depth stays [analog] at every setting. The lanes live in one [DriftLanes]
+     * and are drawn in a fixed order (the fundamental first, then each bank's partials as the bank
+     * grows, and the shared lane at the first block whose spread is below 1) so a seeded voice RNG
+     * renders reproducibly.
      *
      * The per-sample loop mirrors [SineIgnitor] (radian phase, `sin(phase)`, `wrapPhase(TWO_PI)`),
      * so a bank of one partial with `analog = 0` is bit-identical to the plain sine (with drift the
@@ -252,18 +253,31 @@ object Ignitors {
             var phase: DoubleArray = DoubleArray(0)
             var gain: DoubleArray = DoubleArray(0)
             var inc: DoubleArray = DoubleArray(0)
-            var lanes: Array<AnalogDrift> = emptyArray()
 
-            fun resize(newCount: Int, analogAmt: Double, ctx: IgniteContext) {
+            /** This bank's own drift lane per partial, as an index into the ignitor's [DriftLanes]. */
+            var laneIdx: IntArray = IntArray(0)
+            private var lanesAssigned: Int = 0
+
+            fun resize(newCount: Int, drift: DriftLanes?) {
                 if (newCount > phase.size) {
                     phase = phase.copyOf(newCount)
                     gain = gain.copyOf(newCount)
                     inc = inc.copyOf(newCount)
+                    laneIdx = laneIdx.copyOf(newCount)
                 }
 
-                if (analogAmt > 0.0 && newCount > lanes.size) {
-                    val old = lanes
-                    lanes = Array(newCount) { i -> if (i < old.size) old[i] else AnalogDrift(analogAmt, ctx.sampleRate, ctx.random) }
+                // A partial keeps the lane it was handed for the whole note, so growth in ANOTHER
+                // bank never re-indexes this one's walks (the lanes themselves never shrink).
+                if (drift != null && newCount > lanesAssigned) {
+                    val base = drift.laneCount
+
+                    drift.ensureLanes(base + (newCount - lanesAssigned))
+
+                    for (i in lanesAssigned until newCount) {
+                        laneIdx[i] = base + (i - lanesAssigned)
+                    }
+
+                    lanesAssigned = newCount
                 }
 
                 for (i in count until newCount) {
@@ -277,7 +291,6 @@ object Ignitors {
         private var fundPhase: Double = 0.0
         private var fundGain: Double = 0.0
         private var fundInc: Double = 0.0
-        private var fundLane: AnalogDrift? = null
 
         private val harmonicsBank = Bank()
         private val octavesBank = Bank()
@@ -287,8 +300,9 @@ object Ignitors {
         /** Drift depth, latched at the first block like the plain sine; a NaN read latches as inactive. */
         private var analogAmt: Double = 0.0
         private var latched: Boolean = false
-        private var shared: AnalogDrift? = null
-        private var sharedDevBuf: DoubleArray = DoubleArray(0)
+
+        /** Lane 0 is the fundamental; each bank's partials take the lanes after it as they grow. */
+        private var drift: DriftLanes? = null
 
         /** Coerces a count signal to `0..PARTIAL_BANK_MAX_COUNT`; NaN reads as 0. */
         private fun count(param: Ignitor, freqHz: Double, ctx: IgniteContext): Int =
@@ -304,15 +318,6 @@ object Ignitors {
         private fun gate(partialFreq: Double, g: Double, ctx: IgniteContext): Double =
             if (partialFreq >= ctx.sampleRateD * 0.5) 0.0 else g
 
-        /** Growth-only scratch for the shared drift deviations; sized to the block, allocated once. */
-        private fun sharedDevBuf(size: Int): DoubleArray {
-            if (sharedDevBuf.size < size) {
-                sharedDevBuf = DoubleArray(size)
-            }
-
-            return sharedDevBuf
-        }
-
         /**
          * Renders one partial into [buffer] (writes when [first], adds otherwise) and returns its new
          * phase. One tight loop per partial with the phase in a local: the shape the JIT renders
@@ -321,7 +326,7 @@ object Ignitors {
         private fun renderPartial(
             buffer: AudioBuffer, off: Int, end: Int, first: Boolean,
             phaseIn: Double, d: Double, g: Double,
-            pm: DoubleArray?, sharedDev: DoubleArray?, wShared: Double, own: AnalogDrift?, wOwn: Double,
+            pm: DoubleArray?, drift: DriftLanes?, lane: Int,
         ): Double {
             var ph = phaseIn
 
@@ -335,18 +340,8 @@ object Ignitors {
                     step *= pm[i]
                 }
 
-                if (sharedDev != null || own != null) {
-                    var dev = 0.0
-
-                    if (sharedDev != null) {
-                        dev += wShared * sharedDev[i]
-                    }
-
-                    if (own != null) {
-                        dev += wOwn * (own.nextMultiplier() - 1.0)
-                    }
-
-                    step *= 1.0 + dev
+                if (drift != null) {
+                    step *= drift.step(lane, i)
                 }
 
                 ph = (ph + step).wrapPhase(TWO_PI)
@@ -363,17 +358,19 @@ object Ignitors {
                 analogAmt = readParam(analog, actualFreq, ctx)
 
                 if (analogAmt > 0.0) {
-                    shared = AnalogDrift(analogAmt, ctx.sampleRate, ctx.random)
-                    fundLane = AnalogDrift(analogAmt, ctx.sampleRate, ctx.random)
+                    // Lane 0 is the fundamental, drawn here so it keeps the head of the draw order.
+                    drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random).also { it.ensureLanes(1) }
                 }
             }
 
             val h = count(harmonics, actualFreq, ctx)
             val o = count(octaves, actualFreq, ctx)
             val sub = count(suboctaves, actualFreq, ctx)
-            harmonicsBank.resize(h, analogAmt, ctx)
-            octavesBank.resize(o, analogAmt, ctx)
-            suboctavesBank.resize(sub, analogAmt, ctx)
+            val lanes = drift
+
+            harmonicsBank.resize(h, lanes)
+            octavesBank.resize(o, lanes)
+            suboctavesBank.resize(sub, lanes)
 
             val baseInc = TWO_PI * actualFreq / ctx.sampleRateD
             val fund = readParam(fundamental, actualFreq, ctx)
@@ -411,32 +408,11 @@ object Ignitors {
             val pm = ctx.phaseMod
             val off = ctx.offset
             val end = ctx.windowEnd
-            val sh = shared
 
-            // Shared drift walk, advanced once per sample for the whole bank and sampled into a
-            // scratch array so every partial's loop sees the same sequence.
-            var wShared = 0.0
-            var wOwn = 0.0
-            var sharedDev: DoubleArray? = null
-            var useOwn = false
-
-            if (sh != null) {
-                val rawSpread = readParam(analogSpread, actualFreq, ctx)
-                // NaN-guard: a NaN spread reads as the default (1, independent lanes); coerceIn passes NaN through.
-                val spread = if (rawSpread.isNaN()) 1.0 else rawSpread.coerceIn(0.0, 1.0)
-                wShared = sqrt(1.0 - spread)
-                wOwn = sqrt(spread)
-                useOwn = spread > 0.0
-
-                if (spread < 1.0) {
-                    val dev = sharedDevBuf(end)
-
-                    for (i in off until end) {
-                        dev[i] = sh.nextMultiplier() - 1.0
-                    }
-
-                    sharedDev = dev
-                }
+            // The shared walk is advanced once per sample for the whole bank, BEFORE the partials,
+            // so every partial's loop reads the same sequence.
+            if (lanes != null) {
+                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), off, end)
             }
 
             var first = true
@@ -444,7 +420,7 @@ object Ignitors {
             if (fundGain != 0.0) {
                 fundPhase = renderPartial(
                     buffer, off, end, first, fundPhase, fundInc, fundGain,
-                    pm, sharedDev, wShared, if (useOwn) fundLane else null, wOwn,
+                    pm, lanes, 0,
                 )
                 first = false
             }
@@ -459,7 +435,7 @@ object Ignitors {
 
                     bank.phase[i] = renderPartial(
                         buffer, off, end, first, bank.phase[i], bank.inc[i], g,
-                        pm, sharedDev, wShared, if (useOwn) bank.lanes[i] else null, wOwn,
+                        pm, lanes, bank.laneIdx[i],
                     )
                     first = false
                 }
