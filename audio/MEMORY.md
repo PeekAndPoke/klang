@@ -64,16 +64,29 @@ the sine partial bank and the superpluck strings all plug into it, and `analogSp
 the whole super family now (`supersaw`, `supersine`, `supersquare`, `supertri`, `superramp`,
 `superpluck`), same word and same 0 to 1 scale as on `Osc.sine`: 0 is one shared walk, so the stack
 wobbles as a single physical oscillator and its unison detune stays static; 1 is a lane per voice,
-the default, and the sound is unchanged there (pinned sample for sample in
-`SuperStackDriftSpreadSpec`).
+the default.
+
+**What the default does and does not promise.** Depth, spread and character at spread 1 are exactly
+what they were. The exact WALK is not: a container takes one int off the voice rng when it is built
+(the shared lane's seed, below), so every drifting oscillator seeds its lanes one draw later than it
+did before this change, and a seeded render is a different render. `SuperStackDriftSpreadSpec` pins
+one supersaw case sample for sample against the engine as it stands now, which catches an accidental
+change to the drift path; it is not a claim about the pre-DriftLanes sound, and the sine stack, the
+partial bank and the pluck have no pin of their own. The shipped layer this actually reaches is Der
+Schmetterling's bass harmonics (`harmonics(9, 1.0).fundamental(0).analogSpread(0.1)` under
+`.analog(feel)` with feel 12): same depth, same spread, different walks.
 
 Two things a reader needs. The endpoints are EXACT, not a limit of the blend: at spread 1 only the
 own lane is advanced, at spread 0 only the shared one, which makes spread 0 measurably CHEAPER
 (JVM, supersaw 8v with analog: 4.76 against 6.22 µs per block, see
-`docs/benchmarks/2026-09-10_drift-lanes_jvm.md`). And the draw order is part of the contract: an own
-lane is drawn when `ensureLanes` first reaches its index, the shared lane at the first block whose
-spread is below 1, and never at spread 1. The partial bank's order changed with that (its shared
-lane used to be drawn first) and its spec's reference model followed.
+`docs/benchmarks/2026-09-10_drift-lanes_jvm.md`). And the draw order is part of the contract: one int
+for the shared lane's SEED at construction, then an own lane whenever `ensureLanes` first reaches its
+index. The shared lane is built lazily from that seed and takes nothing further from the voice
+stream, so WHEN the spread first drops below 1 cannot shift what any other consumer of the voice rng
+gets: without that, lowering `analogSpread` on a superpluck re-rolled its string excitation bursts.
+A stack that shrinks retires those lanes (`retireLanes`) and rebuilds them fresh on regrow, so a
+returning voice attacks in tune; the bank and the pluck, whose partial and string state survives a
+shrink, never retire.
 
 `PolyAnalogDrift` went with this change. Nothing ever used it: it advanced all lanes sample-major
 while every hot loop here is voice-major. Its rationale, that independent lanes are what keeps a

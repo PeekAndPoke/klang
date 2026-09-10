@@ -336,9 +336,18 @@ next to `renderBlock()`.
 3. **Superpluck at `analog = 0` no longer draws unused lanes.** Each string used to construct an
    `AnalogDrift` it never advanced, which cost three draws from the voice rng per string. With
    `DriftLanes` a depth of 0 builds nothing, so a default superpluck's excitation bursts now come
-   from three draws earlier in the stream: the same instrument, a different noise burst. Every other
-   default, the whole super family at spread 1 included, renders sample for sample as before
-   (`SuperStackDriftSpreadSpec` pins the supersaw against a render taken at `0facbd1c`).
+   from three draws earlier in the stream: the same instrument, a different noise burst.
+
+4. **Every drifting oscillator reseeds its lanes** (round-1 review, deliberate; the maintainer will
+   want to know). A `DriftLanes` takes ONE int off the voice rng when it is built, the shared lane's
+   seed, so that building the shared lane later costs no voice draw and a modulated `analogSpread`
+   cannot re-roll a superpluck's excitation. Everything downstream of that int seeds one draw later
+   than it did on `main`: same depth, same spread, same character, a different walk. Until this
+   finding landed, the whole super family at spread 1 rendered sample for sample as before, and the
+   spec fixture pinned it against a render taken at `0facbd1c`; the fixture now pins the engine
+   against itself instead. The shipped layer this reaches is Der Schmetterling's bass harmonics
+   (`harmonics(9, 1.0).fundamental(0).analogSpread(0.1)` under `.analog(feel)`, feel 12), which
+   renders with different drift walks from here on.
 
 Also worth a line: section 8 says "mutating the shared term away makes the 0 case beat: red". It
 does not. Dropping the shared term at spread 0 removes the drift entirely, which makes the stack
