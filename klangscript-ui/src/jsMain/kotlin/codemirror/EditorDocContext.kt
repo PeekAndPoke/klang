@@ -42,6 +42,15 @@ class EditorDocContext(
     var lastAnalysis: AnalyzedAst? = null
         private set
 
+    /**
+     * Called after [lastAnalysis] is replaced with a fresh one.
+     *
+     * The parse is debounced, so a new analysis lands well after the keystroke that caused it.
+     * Anything that reads [lastAnalysis] on its own schedule (the CodeMirror linter) would
+     * otherwise keep serving whatever it saw last and never learn that a better answer arrived.
+     */
+    var onAnalysisUpdated: (() -> Unit)? = null
+
     /** Look up a symbol by name in the active (import-based) registry. */
     fun docProvider(name: String): KlangSymbol? = activeRegistry.get(name)
 
@@ -94,6 +103,7 @@ class EditorDocContext(
         // Build analyzed AST with the current registry (after potential registry rebuild)
         if (program != null) {
             lastAnalysis = AnalyzedAst.build(program, code, activeRegistry.snapshot())
+            onAnalysisUpdated?.invoke()
         }
     }
 

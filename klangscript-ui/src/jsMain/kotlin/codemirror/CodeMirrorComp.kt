@@ -106,8 +106,14 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
      */
     private var runtimeErrors: List<EditorError> = emptyList()
 
-    /** Set by [setErrors], cleared by [lintDiagnostics]: tells the lint plugin a re-run is due. */
-    private var runtimeErrorsPending = false
+    /**
+     * Set whenever the linter's answer could have changed, cleared by [lintDiagnostics]: tells the
+     * lint plugin a re-run is due even though the document did not change.
+     *
+     * Two things move independently of the document here: the runtime errors [setErrors] hands us,
+     * and the debounced analysis behind [EditorDocContext.lastAnalysis].
+     */
+    private var lintRefreshPending = false
 
     /** The analyzer diagnostics of the last run, kept so a stale analysis changes nothing. */
     private var analyzerCache: Array<Diagnostic> = emptyArray()
@@ -145,6 +151,12 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         // Create update listener extension
         val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
+        // The analysis is debounced, so it lands after the keystroke that caused it, and after the
+        // lint run that the same keystroke triggers through `setErrors`. Without this wake-up the
+        // linter would only ever see the analysis of the PREVIOUS keystroke, and a run that
+        // happened to read a fresh one would be pure luck.
+        docContext.onAnalysisUpdated = { requestLintRun() }
+
         // Create a linter extension with autoPanel
         val linterSource: (EditorView) -> Array<Diagnostic> = { view -> lintDiagnostics(view) }
         val linterConfig = jsObject<dynamic> {
@@ -152,7 +164,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             // The source depends on more than the document: on the cached analysis, and on the
             // runtime errors [setErrors] hands it. Without this the lint plugin would only ever
             // schedule a run on a document change.
-            needsRefresh = { _: dynamic -> runtimeErrorsPending }
+            needsRefresh = { _: dynamic -> lintRefreshPending }
         }
         val linterExtension = linter(linterSource, linterConfig)
 
@@ -307,7 +319,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     private fun lintDiagnostics(view: EditorView): Array<Diagnostic> {
         // Cleared first, so a throw below cannot leave `needsRefresh` permanently true and
         // re-run the source on every transaction from here on.
-        runtimeErrorsPending = false
+        lintRefreshPending = false
 
         return try {
             analyzerDiagnostics(view) + runtimeErrorDiagnostics(view)
@@ -420,21 +432,29 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
      */
     fun setErrors(errors: List<EditorError>) {
         runtimeErrors = errors
-        runtimeErrorsPending = true
+        requestLintRun()
+    }
+
+    /**
+     * Ask the lint plugin to run because our answer changed while the document did not.
+     *
+     * Two steps, and both are needed. `forceLinting` only shortcuts a run that is already
+     * scheduled, and the lint plugin schedules one on a document change or when the config's
+     * `needsRefresh` reports a change. A call here usually comes with no document change at all,
+     * so the empty transaction gives the plugin an update to inspect, `needsRefresh` answers for
+     * our pending flag, and `forceLinting` then skips the idle delay so the marker shows up now
+     * rather than in three quarters of a second.
+     */
+    private fun requestLintRun() {
+        lintRefreshPending = true
 
         val view = editor ?: return
 
         try {
-            // Two steps, and both are needed. `forceLinting` only shortcuts a run that is already
-            // scheduled, and the lint plugin schedules one on a document change or when the
-            // config's `needsRefresh` reports a change. A call here usually comes with no document
-            // change at all, so the empty transaction gives the plugin an update to inspect,
-            // `needsRefresh` answers for our pending flag, and `forceLinting` then skips the idle
-            // delay so the marker shows up now rather than in three quarters of a second.
             view.dispatch(jsObject<dynamic> {})
             forceLinting(view)
         } catch (e: Throwable) {
-            console.error("Error updating diagnostics:", e)
+            console.error("Error requesting a lint run:", e)
         }
     }
 
