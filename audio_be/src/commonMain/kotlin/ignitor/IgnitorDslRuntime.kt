@@ -431,7 +431,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperSaw -> pitchedSource(
             freq,
             Ignitors.superSaw(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -443,7 +444,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperSine -> pitchedSource(
             freq,
             Ignitors.superSine(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -455,7 +457,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperSquare -> pitchedSource(
             freq,
             Ignitors.superSquare(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -467,7 +470,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperTri -> pitchedSource(
             freq,
             Ignitors.superTri(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -479,7 +483,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.SuperRamp -> pitchedSource(
             freq,
             Ignitors.superRamp(
-                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), rng = cache.random,
+                freq.noMod(), voices.noMod(), spread.noMod(), analog.noMod(), analogSpread.noMod(),
+                rng = cache.random,
                 sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
                 centerJitterScale = centerJitterScale,
                 phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,

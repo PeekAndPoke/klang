@@ -60,6 +60,11 @@ class KlangScriptSuperSawSpec : StringSpec({
         ks("Osc.supersaw(x => x.analog(5.0))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(analog = IgnitorDsl.Constant(5.0))
     }
 
+    "analogSpread(0): the voices drift on ONE shared lane instead of their own" {
+        ks("Osc.supersaw(x => x.analogSpread(0))") shouldBe
+                (node() as IgnitorDsl.SuperSaw).copy(analogSpread = IgnitorDsl.Constant(0.0))
+    }
+
     "spreadPower(1.5)" {
         ks("Osc.supersaw(x => x.spreadPower(1.5))") shouldBe (node() as IgnitorDsl.SuperSaw).copy(spreadPower = 1.5)
     }
@@ -92,6 +97,7 @@ class KlangScriptSuperSawSpec : StringSpec({
 
     "every knob in one lambda, freq on the door" {
         val code = "Osc.supersaw(110, x => x.voices(11).spread(0.12).analog(4.0)" +
+                ".analogSpread(0.25)" +
                 ".spreadPower(1.4).sideAtten(0.2).gainJitter(0.1).centerJitter(0.6)" +
                 ".phasePool(1, 0.2, 0.7, 8, 64, 5, \"random\", 8))"
         ks(code) shouldBe (node() as IgnitorDsl.SuperSaw).copy(
@@ -99,6 +105,7 @@ class KlangScriptSuperSawSpec : StringSpec({
             voices = IgnitorDsl.Constant(11.0),
             spread = IgnitorDsl.Constant(0.12),
             analog = IgnitorDsl.Constant(4.0),
+            analogSpread = IgnitorDsl.Constant(0.25),
             spreadPower = 1.4,
             sideAtten = 0.2,
             gainJitter = 0.1,

@@ -261,7 +261,7 @@ fun OscRampBuilder.shapeMax(shapeMax: Double): OscRampBuilder = copy(node = node
 
 /**
  * Builder for [IgnitorDsl.SuperSaw], handed to the `configure` lambda of `Osc.supersaw(...)`.
- * Knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw)
@@ -277,6 +277,14 @@ fun OscSuperSawBuilder.spread(spread: IgnitorDslLike): OscSuperSawBuilder = copy
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSawBuilder.analog(analog: IgnitorDslLike): OscSuperSawBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperSawBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSawBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function
@@ -342,7 +350,7 @@ fun OscSuperSawBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperSine], handed to the `configure` lambda of `Osc.supersine(...)`.
- * Knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine)
@@ -358,6 +366,14 @@ fun OscSuperSineBuilder.spread(spread: IgnitorDslLike): OscSuperSineBuilder = co
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSineBuilder.analog(analog: IgnitorDslLike): OscSuperSineBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperSineBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSineBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function
@@ -423,7 +439,7 @@ fun OscSuperSineBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperSquare], handed to the `configure` lambda of `Osc.supersquare(...)`.
- * Knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare)
@@ -439,6 +455,14 @@ fun OscSuperSquareBuilder.spread(spread: IgnitorDslLike): OscSuperSquareBuilder 
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperSquareBuilder.analog(analog: IgnitorDslLike): OscSuperSquareBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperSquareBuilder.analogSpread(amount: IgnitorDslLike): OscSuperSquareBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function
@@ -504,7 +528,7 @@ fun OscSuperSquareBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperTri], handed to the `configure` lambda of `Osc.supertri(...)`.
- * Knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri)
@@ -520,6 +544,14 @@ fun OscSuperTriBuilder.spread(spread: IgnitorDslLike): OscSuperTriBuilder = copy
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperTriBuilder.analog(analog: IgnitorDslLike): OscSuperTriBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperTriBuilder.analogSpread(amount: IgnitorDslLike): OscSuperTriBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function
@@ -585,7 +617,7 @@ fun OscSuperTriBuilder.phasePool(
 
 /**
  * Builder for [IgnitorDsl.SuperRamp], handed to the `configure` lambda of `Osc.superramp(...)`.
- * Knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp)
@@ -601,6 +633,14 @@ fun OscSuperRampBuilder.spread(spread: IgnitorDslLike): OscSuperRampBuilder = co
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperRampBuilder.analog(analog: IgnitorDslLike): OscSuperRampBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperRampBuilder.analogSpread(amount: IgnitorDslLike): OscSuperRampBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))
 
 /** Detune spacing shape: 1 = even, above 1 concentrates toward the center, below 1 spreads outward. */
 @KlangScript.Function
@@ -695,7 +735,7 @@ fun OscPluckBuilder.analog(analog: IgnitorDslLike): OscPluckBuilder = copy(node 
 
 /**
  * Builder for [IgnitorDsl.SuperPluck], handed to the `configure` lambda of `Osc.superpluck(...)`.
- * Knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`. Immutable: every knob returns a new builder. `node` is the configured
+ * Knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`. Immutable: every knob returns a new builder. `node` is the configured
  * oscillator.
  */
 data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck)
@@ -727,3 +767,11 @@ fun OscSuperPluckBuilder.stiffness(stiffness: IgnitorDslLike): OscSuperPluckBuil
 /** Analog drift amount (per-voice micro-pitch instability); 0 = perfectly stable. Latches at note-on. */
 @KlangScript.Function
 fun OscSuperPluckBuilder.analog(analog: IgnitorDslLike): OscSuperPluckBuilder = copy(node = node.copy(analog = analog.toIgnitorDsl()))
+
+/** How much the voices drift against each other under `analog`, 0 to 1. `1` (default): every voice walks
+ *  on its own lane, the organic unison of separate oscillators. `0`: one shared walk, the stack wobbles as
+ *  a single oscillator and its unison detune stays static. Between is a blend. Nothing happens while
+ *  `analog` is 0. Same knob as on `Osc.sine`; named apart from `spread`, which is the static unison detune. */
+@KlangScript.Function
+fun OscSuperPluckBuilder.analogSpread(amount: IgnitorDslLike): OscSuperPluckBuilder =
+    copy(node = node.copy(analogSpread = amount.toIgnitorDsl()))

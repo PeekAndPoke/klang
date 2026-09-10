@@ -70,6 +70,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         check(
             IgnitorDsl.SuperSaw(
                 freq = IgnitorDsl.Constant(5.0),
+                analogSpread = IgnitorDsl.Constant(0.25),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
                 poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
@@ -79,6 +80,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "SuperSine" {
         check(
             IgnitorDsl.SuperSine(
+                analogSpread = IgnitorDsl.Constant(0.25),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
                 poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
@@ -88,6 +90,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "SuperSquare" {
         check(
             IgnitorDsl.SuperSquare(
+                analogSpread = IgnitorDsl.Constant(0.25),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
                 poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
@@ -97,6 +100,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "SuperTri" {
         check(
             IgnitorDsl.SuperTri(
+                analogSpread = IgnitorDsl.Constant(0.25),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
                 poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
@@ -106,6 +110,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "SuperRamp" {
         check(
             IgnitorDsl.SuperRamp(
+                analogSpread = IgnitorDsl.Constant(0.25),
                 spreadPower = 1.7, sideAtten = 0.33, gainJitter = 0.21, centerJitterScale = 0.9,
                 phasePool = 1.0, drawTries = 7.0, kMin = 0.22, kMax = 0.66,
                 poolSize = 123.0, refreshEvery = 3.0, selection = "random", warmup = 24.0,
@@ -124,7 +129,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- physical models ------------------------------------------------------------------------------------
     "Pluck" { check(IgnitorDsl.Pluck()) }
-    "SuperPluck" { check(IgnitorDsl.SuperPluck()) }
+    "SuperPluck" { check(IgnitorDsl.SuperPluck(analogSpread = IgnitorDsl.Constant(0.25))) }
 
     // --- arithmetic / math ----------------------------------------------------------------------------------
     "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()) }

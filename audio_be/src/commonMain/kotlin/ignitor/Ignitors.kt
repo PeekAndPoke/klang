@@ -112,6 +112,7 @@ object Ignitors {
     // without that argument. Sprudel's oscParam lookup runs at the DSL layer
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
     private val analogDefault = ConstantIgnitor(0.0)
+    private val analogSpreadDefault = ConstantIgnitor(1.0)
     private val voicesDefault = ConstantIgnitor(7.0)
     private val detuneDefault = ConstantIgnitor(0.2)
     private val dutyDefault = ConstantIgnitor(0.5)
@@ -992,6 +993,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         // Unison character — defaults are the SUPERSAW_* tuning constants; the DSL threads per-voice overrides.
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
@@ -1009,7 +1011,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1024,6 +1026,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         gainJitter: Double = SUPERSAW_GAIN_JITTER,
@@ -1040,7 +1043,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = superSawRaw(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower, centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
@@ -1050,7 +1053,8 @@ object Ignitors {
     /**
      * Shared engine for every unison oscillator: a stack of detuned voices summed to mono with the
      * super-saw character — center-dominant [sideAtten] gains, per-voice amplitude [gainJitter],
-     * independent per-voice [AnalogDrift], even [detune] spacing (shaped by [spreadPower]) with the
+     * per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing (shaped
+     * by [spreadPower]) with the
      * **gain-weighted mean detune removed** so the pitch centroid sits exactly on the note. [polarity]
      * flips the waveform and is baked into the voice gains (no per-sample sign flip).
      *
@@ -1063,6 +1067,7 @@ object Ignitors {
         private val voices: Ignitor,
         private val detune: Ignitor,
         private val analog: Ignitor,
+        private val analogSpread: Ignitor,
         private val rng: Random,
         private val polarity: Double,
         private val sideAtten: Double,
@@ -1088,6 +1093,10 @@ object Ignitors {
         private var v: Int = 0
         private var voiceStates: Array<WaveVoiceState> = emptyArray()
 
+        /** One lane per voice plus the shared walk; null while `analog` is 0, which is the fast path. */
+        private var drift: DriftLanes? = null
+        private var analogLatched: Boolean = false
+
         // Detune-recompute cache keys (NaN forces recompute).
         private var lastFreq: Double = Double.NaN
         private var lastSpread: Double = Double.NaN
@@ -1095,9 +1104,10 @@ object Ignitors {
         /** Set the per-voice shape from its detuned per-sample increment [dt] (control rate). */
         protected abstract fun configureShape(vs: WaveVoiceState, dt: Double)
 
-        /** Render one voice's block: write the buffer when [first], else accumulate onto it. */
+        /** Render voice [n]'s block: write the buffer when [first], else accumulate onto it. */
         protected abstract fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
         )
 
         final override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -1141,11 +1151,20 @@ object Ignitors {
                 // re-seed to centre mid-note) and their gain-jitter draw; only NEW indices draw
                 // from the rng (ledger O4). At note-on `old` is empty, so the draw order below is
                 // bit-identical to the legacy path — the phase-pool bypass guarantee holds.
-                val analogAmt = readParam(analog, actualFreq, ctx)
+                // Drift depth is latched at the first block that sizes the stack, the way the plain
+                // sine latches its own: a later `analog` read never re-depths a lane, and a voice
+                // added mid-note draws its lane at the latched depth.
+                if (!analogLatched) {
+                    analogLatched = true
 
-                for (n in old.size until v) {
-                    voiceStates[n].drift = if (analogAmt > 0.0) AnalogDrift(analogAmt, ctx.sampleRate, ctx.random) else null
+                    val analogAmt = readParam(analog, actualFreq, ctx)
+
+                    if (analogAmt > 0.0) {
+                        drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+                    }
                 }
+
+                drift?.ensureLanes(v)
 
                 drawGainJitterFor(from = old.size)
                 computeVoiceGains()
@@ -1191,14 +1210,21 @@ object Ignitors {
             }
 
             // Voice-major: each voice runs its whole sample block in one call (register residency);
-            // voice 0 writes the buffer, the rest accumulate. Voices are independent (each owns its
-            // drift). `pm` = phaseMod (vibrato/FM/pitch-env/accelerate), null when unmodulated.
+            // voice 0 writes the buffer, the rest accumulate. `pm` = phaseMod (vibrato/FM/pitch-env/
+            // accelerate), null when unmodulated.
             val pm = ctx.phaseMod
             val off = ctx.offset
             val end = off + ctx.length
+            val lanes = drift
+
+            // The shared walk runs once for the whole block, BEFORE the voice loop, so every voice
+            // reads the same sequence out of the scratch.
+            if (lanes != null) {
+                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), off, end)
+            }
 
             for (n in 0 until v) {
-                renderVoice(buffer, off, end, voiceStates[n], n == 0, pm)
+                renderVoice(buffer, off, end, voiceStates[n], n, n == 0, pm, lanes)
             }
         }
 
@@ -1338,13 +1364,13 @@ object Ignitors {
 
     /** A [DetunedStackIgnitor] whose voices render the piecewise-linear [waveTrapezoid] shape. */
     private abstract class TrapezoidStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1352,7 +1378,8 @@ object Ignitors {
         phasePools = phasePools, orbit = orbit,
     ) {
         final override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
         ) {
             var phase = vs.phase
             val dt = vs.dt
@@ -1362,7 +1389,6 @@ object Ignitors {
             val fallEnd = vs.fallEnd
             val riseSlope = vs.riseSlope
             val fallSlope = vs.fallSlope
-            val drift = vs.drift
 
             for (i in off until end) {
                 val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
@@ -1376,7 +1402,7 @@ object Ignitors {
                 }
 
                 if (drift != null) {
-                    inc *= drift.nextMultiplier()
+                    inc *= drift.step(n, i)
                 }
 
                 phase += inc
@@ -1391,14 +1417,14 @@ object Ignitors {
 
     /** Unison saw / ramp ([polarity] ±1): the analog-flyback saw shape per voice. */
     private class SawStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
         private val resetSamples: Double, private val shapeMax: Double,
     ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1412,7 +1438,7 @@ object Ignitors {
 
     /** Unison pulse / square / triangle: the [waveTrapezoid] pulse shape per voice ([duty] + flanks). */
     private class PulseStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
         polarity: Double, sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
@@ -1420,7 +1446,7 @@ object Ignitors {
         private val duty: Double, private val riseFlank: Double, private val fallFlank: Double,
         private val flankSamples: Double,
     ) : TrapezoidStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = polarity, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1434,13 +1460,13 @@ object Ignitors {
 
     /** Unison sine: a pure sine per voice (no shape config; inherently band-limited). */
     private class SineStackIgnitor(
-        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, rng: Random,
+        freq: Ignitor, voices: Ignitor, detune: Ignitor, analog: Ignitor, analogSpread: Ignitor, rng: Random,
         sideAtten: Double, gainJitter: Double, spreadPower: Double, centerJitterScale: Double,
         phasePool: Double, drawTries: Double, kMin: Double, kMax: Double,
         poolSize: Double, refreshEvery: Double, selection: String, warmup: Double,
         phasePools: PhasePools?, orbit: Int,
     ) : DetunedStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0, sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1451,12 +1477,12 @@ object Ignitors {
         }
 
         override fun renderVoice(
-            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, first: Boolean, pm: DoubleArray?,
+            buffer: AudioBuffer, off: Int, end: Int, vs: WaveVoiceState, n: Int, first: Boolean,
+            pm: DoubleArray?, drift: DriftLanes?,
         ) {
             var phase = vs.phase
             val dt = vs.dt
             val gain = vs.gain
-            val drift = vs.drift
 
             for (i in off until end) {
                 val s = sin(phase * TWO_PI) * gain
@@ -1470,7 +1496,7 @@ object Ignitors {
                 }
 
                 if (drift != null) {
-                    inc *= drift.nextMultiplier()
+                    inc *= drift.step(n, i)
                 }
 
                 phase += inc
@@ -1492,6 +1518,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         gainJitter: Double = SUPERSINE_GAIN_JITTER,
@@ -1508,7 +1535,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SineStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
@@ -1528,6 +1555,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
@@ -1544,7 +1572,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
@@ -1565,6 +1593,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         gainJitter: Double = SUPERTRI_GAIN_JITTER,
@@ -1581,7 +1610,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = PulseStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = 1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,
@@ -1602,6 +1631,7 @@ object Ignitors {
         voices: Ignitor = voicesDefault,
         detune: Ignitor = detuneDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
         sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         gainJitter: Double = SUPERRAMP_GAIN_JITTER,
@@ -1618,7 +1648,7 @@ object Ignitors {
         phasePools: PhasePools? = null,
         orbit: Int = 0,
     ): Ignitor = SawStackIgnitor(
-        freq, voices, detune, analog, rng,
+        freq, voices, detune, analog, analogSpread, rng,
         polarity = -1.0,
         sideAtten = sideAtten, gainJitter = gainJitter, spreadPower = spreadPower,
         centerJitterScale = centerJitterScale,

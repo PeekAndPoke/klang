@@ -283,7 +283,7 @@ object KlangScriptOsc {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
      * Osc.supersaw(x => x.voices(9).spread(0.1).spreadPower(1.5).analog(5.0)).lowpass(800)
@@ -299,7 +299,7 @@ object KlangScriptOsc {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
      * Osc.supersine(x => x.voices(9).spread(0.1).analog(5.0))
@@ -315,7 +315,7 @@ object KlangScriptOsc {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
      * Osc.supersquare(x => x.voices(9).spread(0.1).analog(5.0))
@@ -331,7 +331,7 @@ object KlangScriptOsc {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
      * Osc.supertri(x => x.voices(9).spread(0.1).analog(5.0))
@@ -347,7 +347,7 @@ object KlangScriptOsc {
      * subsets work: `x.phasePool()`, `x.phasePool(kMin = 0.2)`. Base wrappers (`.lowpass()`, `.adsr()`, ...) go outside the lambda.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
+     * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
      * Osc.superramp(x => x.voices(9).spread(0.1).analog(5.0))
@@ -387,7 +387,7 @@ object KlangScriptOsc {
      * Creates a unison Karplus-Strong plucked string model.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency.
-     * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
+     * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`) and returns it.
      *
      * ```KlangScript
      * Osc.superpluck(x => x.voices(6).spread(0.15).decay(0.995))

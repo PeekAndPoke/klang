@@ -488,6 +488,8 @@ sealed interface IgnitorDsl {
         /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSAW_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
@@ -527,6 +529,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
@@ -538,6 +541,8 @@ sealed interface IgnitorDsl {
         /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSINE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
@@ -579,6 +584,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
@@ -590,6 +596,8 @@ sealed interface IgnitorDsl {
         /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
@@ -629,6 +637,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
@@ -640,6 +649,8 @@ sealed interface IgnitorDsl {
         /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERTRI_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
@@ -680,6 +691,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
@@ -691,6 +703,8 @@ sealed interface IgnitorDsl {
         /** Unison frequency spread between the voices (the pattern-level `.spread()` sets this). */
         val spread: IgnitorDsl = Slots.spread,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERRAMP_SPREAD_POWER,
         /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
@@ -730,6 +744,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
@@ -770,12 +785,15 @@ sealed interface IgnitorDsl {
         val pickPosition: IgnitorDsl = Slots.pickPosition,
         val stiffness: IgnitorDsl = Slots.stiffness,
         val analog: IgnitorDsl = Slots.analog,
+        /** Drift lane blend, 0 = one shared analog walk for every voice, 1 = independent walks. */
+        val analogSpread: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             freq.collectParams(out); voices.collectParams(out); spread.collectParams(out); decay.collectParams(out); brightness.collectParams(
                 out
             )
             pickPosition.collectParams(out); stiffness.collectParams(out); analog.collectParams(out)
+            analogSpread.collectParams(out)
         }
     }
 
