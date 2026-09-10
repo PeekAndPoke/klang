@@ -237,6 +237,12 @@ class IgnitorBenchmark(
                 Case("impulse", voiceData = voice("impulse")),
                 Case("pulze", voiceData = voice("pulze")),
 
+                // ── Analog drift: one lane per voice, what a lane costs per sample ──
+                Case("sine+analog", voiceData = voice("sine", oscParams = mapOf("analog" to 5.0))),
+                Case("supersaw_8v+analog", voiceData = voice("supersaw", oscParams = mapOf("voices" to 8.0, "analog" to 5.0))),
+                Case("sine-harmonics7+analog", voiceData = voice("sine-harmonics7", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("sine-harmonics7" to IgnitorDsl.Sine(harmonics = IgnitorDsl.Constant(7.0)))),
+
                 // ── Super oscillators (8 internal voices) ─────────────────────
                 Case("supersaw", voiceData = voice("supersaw", oscParams = super8v)),
                 Case("supersine", voiceData = voice("supersine", oscParams = super8v)),
