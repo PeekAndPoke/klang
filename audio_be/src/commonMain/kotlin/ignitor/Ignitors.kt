@@ -211,9 +211,10 @@ object Ignitors {
      * oscillator, the spectrum stays exactly harmonic) and the partial's OWN walk (1: independent
      * lanes, the beating of the hand-rolled stack), with constant-power weights `sqrt(1 - s)` and
      * `sqrt(s)` so the depth stays [analog] at every setting. The lanes live in one [DriftLanes]
-     * and are drawn in a fixed order (the fundamental first, then each bank's partials as the bank
-     * grows, and the shared lane at the first block whose spread is below 1) so a seeded voice RNG
-     * renders reproducibly. A bank never retires a lane: a partial that drops out and comes back
+     * and are drawn in a fixed order: one int for the shared lane's SEED at the first block, then
+     * the fundamental's lane, then each bank's partials as the bank grows. The shared lane itself
+     * runs on that seed and never draws from the voice rng, so a seeded voice renders reproducibly
+     * whatever the spread does. A bank never retires a lane: a partial that drops out and comes back
      * restarts its phase at 0 but resumes the walk it had, which is inaudible at cent scale and
      * keeps a count sweep from re-seeding the whole spectrum.
      *

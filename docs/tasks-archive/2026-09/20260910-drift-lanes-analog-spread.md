@@ -315,12 +315,13 @@ next to `renderBlock()`.
 
 ## Closing notes: where the build differed from the plan
 
-1. **The partial bank's draw order changed** (section 4.1 hoped it would not). Section 3 asks for a
-   lazily created shared lane, which at spread 1 means no shared draw at all; the bank used to draw
-   its shared lane FIRST, eagerly, at the first block. The two cannot both hold, so the order is now
-   uniform across every adopter: own lanes as `ensureLanes` reaches their index, the shared lane at
-   the first block whose spread is below 1. `SinePartialBankSpec.driftReference` follows the same
-   order and all 26 cases stay green; the bank's KDoc documents it.
+1. **The partial bank's draw order changed** (section 4.1 hoped it would not). The bank used to
+   draw its shared lane FIRST, eagerly, at the first block. The order is now uniform across every
+   adopter, and after the round-1 review it is this: one int for the shared lane's SEED at
+   construction, then the own lanes as `ensureLanes` reaches their index. The shared lane is built
+   lazily from that seed and never draws from the voice rng, which is what note 4 is about.
+   `SinePartialBankSpec.driftReference` replays the same order and all 26 cases stay green; the
+   bank's KDoc documents it.
 
 2. **The superpluck is pinned by what the knob CHANGES, not by an envelope shape** (section 8 asked
    for "the same two-string coherence assertion"). Measured: two strings at one pitch have no clean
@@ -342,7 +343,12 @@ next to `renderBlock()`.
    want to know). A `DriftLanes` takes ONE int off the voice rng when it is built, the shared lane's
    seed, so that building the shared lane later costs no voice draw and a modulated `analogSpread`
    cannot re-roll a superpluck's excitation. Everything downstream of that int seeds one draw later
-   than it did on `main`: same depth, same spread, same character, a different walk. Until this
+   than it did on `main`: same depth, same spread, same character, a different walk. On a unison
+   stack it is more than the walk. That int lands in the voice stream right before
+   `drawGainJitterFor`, so the per-voice GAIN BALANCE of every drifting supersaw, supersine,
+   supersquare, supertri and superramp is redrawn too, within its usual range (`SUPERSAW_GAIN_JITTER`
+   is 0.15, so up to 15 percent per voice before renormalisation). A stack with `analog = 0` builds
+   no container, draws nothing extra, and is untouched. Until this
    finding landed, the whole super family at spread 1 rendered sample for sample as before, and the
    spec fixture pinned it against a render taken at `0facbd1c`; the fixture now pins the engine
    against itself instead. The shipped layer this reaches is Der Schmetterling's bass harmonics
@@ -354,6 +360,15 @@ does not. Dropping the shared term at spread 0 removes the drift entirely, which
 even STEADIER, so the coherence assertion alone stays green under that mutation. The spread-0 case
 therefore also asserts that the render differs from the same stack with the drift off, and that is
 the assertion the mutation turns red.
+
+## Accepted, and worth writing down
+
+- **The six unison stacks latch their drift depth once per note.** Before this task each voice-count
+  change re-read `analog` and gave the new voices a lane at whatever depth it read then; now one
+  container holds one depth for the note, the way the plain sine and the partial bank always have.
+  That is the intended design (one depth per container), it was simply never written down. The
+  `analog` param is still READ every block, so a modulated subtree advances like every other one
+  (ledger O2); only the depth is latched.
 
 ## What we built
 

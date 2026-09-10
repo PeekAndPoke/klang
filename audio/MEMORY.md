@@ -67,9 +67,13 @@ wobbles as a single physical oscillator and its unison detune stays static; 1 is
 the default.
 
 **What the default does and does not promise.** Depth, spread and character at spread 1 are exactly
-what they were. The exact WALK is not: a container takes one int off the voice rng when it is built
+what they were. A seeded RENDER is not. A container takes one int off the voice rng when it is built
 (the shared lane's seed, below), so every drifting oscillator seeds its lanes one draw later than it
-did before this change, and a seeded render is a different render. `SuperStackDriftSpreadSpec` pins
+did before this change. On a unison stack that int lands right before `drawGainJitterFor`, so the
+per-voice GAIN BALANCE of every drifting supersaw, supersine, supersquare, supertri and superramp is
+redrawn as well, inside its usual range (`SUPERSAW_GAIN_JITTER` 0.15, up to 15 percent per voice
+before renormalisation), not just the drift walk. A stack with `analog = 0` builds no container,
+draws nothing extra and is untouched. `SuperStackDriftSpreadSpec` pins
 one supersaw case sample for sample against the engine as it stands now, which catches an accidental
 change to the drift path; it is not a claim about the pre-DriftLanes sound, and the sine stack, the
 partial bank and the pluck have no pin of their own. The shipped layer this actually reaches is Der
@@ -86,8 +90,9 @@ index. The shared lane is built lazily from that seed and takes nothing further 
 stream, so WHEN the spread first drops below 1 cannot shift what any other consumer of the voice rng
 gets: without that, lowering `analogSpread` on a superpluck re-rolled its string excitation bursts.
 A stack that shrinks retires those lanes (`retireLanes`) and rebuilds them fresh on regrow, so a
-returning voice attacks in tune; the bank and the pluck, whose partial and string state survives a
-shrink, never retire.
+returning voice attacks in tune, and the superpluck does the same, because a regrown string
+re-plucks. The bank never retires: a partial that comes back resumes its walk, which is inaudible at
+cent scale and keeps a count sweep from re-seeding the whole spectrum.
 
 **The JS lesson, a sibling of the loop-shape one below.** The first cut read the blend's per-block
 values (the two weights, the two mode flags, the lane out of its array) off the container INSIDE the

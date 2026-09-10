@@ -157,9 +157,10 @@ class DriftLanes(
         val lane = shared ?: AnalogDrift(analog, sampleRate, Random(sharedSeed)).also { shared = it }
 
         if (sharedDev.size < end) {
-            // copyOf, not a fresh array: a block rendered in two windows (a voice that starts
-            // mid-block) grows the scratch on the second one, and the first one's values are still
-            // the shared walk for those samples.
+            // copyOf, not a fresh array, defensively: growth here can only widen a window that
+            // was already filled, and keeping what is in it costs nothing. Today it cannot bite,
+            // because `Voice.render` gives a voice exactly ONE window per block, so a mid-block
+            // onset sizes the scratch on its first call and later blocks reuse it.
             sharedDev = sharedDev.copyOf(end)
         }
 

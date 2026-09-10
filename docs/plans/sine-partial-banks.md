@@ -236,8 +236,10 @@ One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per blo
    `analog = 0` skips all of it. Since 2026-09-10 this machinery is not the bank's own: it lives in
    `DriftLanes`, and the super oscillators carry the same `analogSpread` knob over their voices
    (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`). The draw order moved with
-   it: the own lanes come first and the shared lane is drawn at the first block whose spread is
-   below 1, so spread 1 never draws one.
+   it: one int for the shared lane's SEED comes off the voice rng at the first block, whatever the
+   spread, then the own lanes in index order. The shared lane is still built lazily, at the first
+   block below spread 1, but from that seed, so it costs no voice draw and WHEN it appears cannot
+   shift what anything else in the voice draws.
 
 Rendering is **partial-major**: one tight loop per partial with the phase in a local (radian
 phase, `sin(phase)`, `wrapPhase(TWO_PI)`, the plain sine's own loop), the first audible partial

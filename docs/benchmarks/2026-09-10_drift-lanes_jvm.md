@@ -5,18 +5,30 @@
 > The six rows to read are the drift ones.
 >
 > **Against the engine before the change** (`main` at `0facbd1c`, swapped into this same tree and
-> measured back to back, so both numbers come from the same machine state), microseconds per block:
-> `sine+analog` 4.86 to 4.76, `supersaw_8v+analog` 6.81 to 6.90, `sine-harmonics7+analog` 18.77 to
-> 17.44, `superpluck+analog` 10.67 to 10.48. `sine+analog` is the control: the plain sine has no
-> drift lanes at all, so what it does between two runs is this machine's noise floor, and every
-> drift row moved by less.
+> measured the same afternoon). Absolute microseconds do not compare across runs on this machine:
+> the effect rows, which this change does not touch at all, moved by up to 12 percent between these
+> two runs (and 40 on the sub-microsecond copy baseline). So read each drift row against
+> `sine+analog` from its OWN run: the plain sine has no drift lanes, so it carries the machine and
+> nothing else.
+>
+> | row | pre-change | ratio | this table | ratio |
+> |-----|-----------:|------:|-----------:|------:|
+> | `sine+analog` (control) | 4.8608 | 1.000 | 4.7563 | 1.000 |
+> | `supersaw_8v+analog` | 6.8085 | 1.401 | 6.9006 | 1.451 |
+> | `sine-harmonics7+analog` | 18.7663 | 3.861 | 17.8090 | 3.744 |
+> | `superpluck+analog` | 10.6672 | 2.195 | 10.5649 | 2.221 |
+>
+> On the ratio the stack is 3.6 percent dearer, the sine bank 3.0 percent cheaper and the pluck 1.2
+> percent dearer. All three are smaller than what the untouched rows do between runs, so the honest
+> reading is that the JVM cost did not move; the platform where it did move, and where the fix was
+> found, is Node (`2026-09-10_drift-lanes_nodejs.md`).
 >
 > **The `+spread0` rows are the other end of the knob**, where the own lanes are skipped and one
-> shared walk drives every voice. Cheaper than their spread-1 twins here by 23 percent (supersaw),
-> 16 percent (sine bank) and 9 percent (superpluck). The pluck's saving is the small one and it is
-> near the noise: a second run of this same build had the pluck pair the other way round by 11
+> shared walk drives every voice. In this table they come out cheaper than their spread-1 twins by
+> 23 percent (supersaw), 16 percent (sine bank) and 9 percent (superpluck). The pluck's saving is
+> the one to distrust: another run of this same build had that pair the other way round by 11
 > percent, while the supersaw and bank pairs held. Its delay-line read dominates the lane
-> arithmetic, so there is less to save.
+> arithmetic, so there is less there to save.
 
 - **Platform:** JVM 17.0.17 (Amazon.com Inc.) / Linux / AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics (16 cores)
 - **Sample rate:** 44100 Hz
