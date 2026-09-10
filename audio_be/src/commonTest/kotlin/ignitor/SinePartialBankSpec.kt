@@ -367,16 +367,17 @@ class SinePartialBankSpec : StringSpec({
     // ── drift lanes ──────────────────────────────────────────────────────────────
 
     /**
-     * Test-side model of the bank's drift, in the order [DriftLanes] documents: one own lane per
-     * partial in index order (the fundamental first), then the SHARED lane, drawn at the first
-     * block whose spread is below 1 and not at all at spread 1. All from `ctx.random`, so the same
-     * seed reproduces the exact multiplier sequences here. Radian phases, the sine's own
-     * accumulate-and-wrap.
+     * Test-side model of the bank's drift, in the order [DriftLanes] documents: one int off
+     * `ctx.random` for the shared lane's SEED, then one own lane per partial in index order (the
+     * fundamental first), also off `ctx.random`. The shared lane runs on its own seed, so it takes
+     * nothing from the voice stream and exists only when the spread is below 1. Radian phases, the
+     * sine's own accumulate-and-wrap.
      */
     fun driftReference(seed: Int, analog: Double, spread: Double, multiples: DoubleArray, gains: DoubleArray, freqHz: Double): DoubleArray {
         val r = Random(seed)
+        val sharedSeed = r.nextInt()
         val lanes = Array(multiples.size) { AnalogDrift(analog, sampleRate, r) }
-        val shared = if (spread < 1.0) AnalogDrift(analog, sampleRate, r) else null
+        val shared = if (spread < 1.0) AnalogDrift(analog, sampleRate, Random(sharedSeed)) else null
         val ph = DoubleArray(multiples.size)
         val inc = DoubleArray(multiples.size) { TWO_PI * multiples[it] * freqHz / sampleRate.toDouble() }
         val out = DoubleArray(blocks * blockFrames)

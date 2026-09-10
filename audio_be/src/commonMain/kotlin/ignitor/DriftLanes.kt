@@ -31,18 +31,27 @@ import kotlin.random.Random
  * value), at `s = 0` only the shared lane is, one walk for the whole stack, so the unison detune
  * stays static and the stack wobbles as a single physical oscillator.
  *
- * **Draw order.** Each own lane is drawn from [rng] the moment [ensureLanes] first reaches its
- * index, in index order; the shared lane is drawn at the first [prepareBlock] whose spread is
- * below 1, and never at all at spread 1. Adopters call both at fixed points in their block, so a
- * seeded voice renders reproducibly (`SeededVoiceRngSpec` is that contract).
+ * **Draw order.** Construction takes ONE int from [rng], the shared lane's seed. Each own lane is
+ * then drawn from [rng] when [ensureLanes] first reaches its index, in index order. The shared lane
+ * itself is built lazily, at the first [prepareBlock] whose spread is below 1, from its own
+ * `Random(sharedSeed)`, so it consumes no voice draw of its own: WHEN the spread first drops below
+ * 1 cannot shift what any later consumer of the voice rng gets, and a modulated `analogSpread`
+ * cannot re-roll a superpluck's excitation bursts. A seeded voice renders reproducibly
+ * (`SeededVoiceRngSpec` is that contract).
+ *
+ * **Retire and regrow.** [ensureLanes] builds a FRESH lane for every index at or above the live
+ * count, so an adopter that drops voices ([retireLanes]) and later grows back gets lanes that
+ * attack in tune (the slow layer seeds at centre) instead of walks frozen mid-note. Adopters whose
+ * state survives a shrink (the sine partial bank's partials, the superpluck's strings) simply never
+ * retire, and their lanes keep walking.
  *
  * **Depth is latched.** [analog] is read by the adopter once, at the first block that builds this
  * object, exactly like the plain sine latches its own drift. Lanes created later (a mid-note voice
  * count rise) get the latched depth, and a surviving lane keeps its walk: the slow layer must not
  * re-seed to centre mid-note.
  *
- * **Growth only.** Lanes and the shared scratch grow on demand and never shrink, so a voice count
- * that moves up and down allocates once, and no block allocates in steady state.
+ * **No per-block allocation.** The shared scratch grows on demand and never shrinks, and lanes are
+ * built only when the live count rises, so no block allocates in steady state.
  *
  * [active] is false when `analog` is 0. Adopters keep a null [DriftLanes] then and skip the drift
  * path entirely, which is what the mono oscillators do with a null [AnalogDrift].
@@ -63,7 +72,16 @@ class DriftLanes(
     @PublishedApi
     internal var own: Array<AnalogDrift> = emptyArray()
 
-    /** The shared walk, created at the first [prepareBlock] that needs it. */
+    /** How many of [own] are live. Indices at or above this are retired and are rebuilt on regrow. */
+    private var live: Int = 0
+
+    /**
+     * The shared lane's seed, taken from [rng] at construction so that building the lane later
+     * costs no voice draw. Drawn only while [active]: an inactive container consumes nothing.
+     */
+    private val sharedSeed: Int = if (active) rng.nextInt() else 0
+
+    /** The shared walk, built at the first [prepareBlock] that needs it, from [sharedSeed]. */
     private var shared: AnalogDrift? = null
 
     /** Growth-only scratch: the shared lane's deviation (`multiplier - 1`) per sample of the block. */
@@ -83,21 +101,37 @@ class DriftLanes(
     @PublishedApi
     internal var useOwn: Boolean = false
 
-    /** How many own lanes exist. Adopters that hand out stable lane indices count from here. */
-    val laneCount: Int get() = own.size
+    /** How many own lanes are live. Adopters that hand out stable lane indices count from here. */
+    val laneCount: Int get() = live
 
     /**
-     * Grow to [count] own lanes. Only the NEW indices are created, from [rng] in index order;
-     * surviving lanes keep their walk. Never shrinks, and does nothing while [active] is false.
+     * Raise the live count to [count]. Lanes below the current live count keep their walk; every
+     * index from there up is built FRESH from [rng], in index order, whether or not a retired
+     * object still sits at it. Does nothing while [active] is false, or when [count] is not a rise.
      */
     fun ensureLanes(count: Int) {
-        if (!active || count <= own.size) {
+        if (!active || count <= live) {
             return
         }
 
         val old = own
+        val kept = live
 
-        own = Array(count) { i -> if (i < old.size) old[i] else AnalogDrift(analog, sampleRate, rng) }
+        own = Array(count) { i -> if (i < kept) old[i] else AnalogDrift(analog, sampleRate, rng) }
+        live = count
+    }
+
+    /**
+     * Drop the lanes from [from] up. They stop being read, and a later [ensureLanes] rebuilds them
+     * fresh rather than resuming a walk frozen mid-note. Nothing is deallocated and nothing is
+     * drawn here. Call it where the adopter drops the voices themselves.
+     */
+    fun retireLanes(from: Int) {
+        val floor = if (from < 0) 0 else from
+
+        if (floor < live) {
+            live = floor
+        }
     }
 
     /**
@@ -123,10 +157,13 @@ class DriftLanes(
             return
         }
 
-        val lane = shared ?: AnalogDrift(analog, sampleRate, rng).also { shared = it }
+        val lane = shared ?: AnalogDrift(analog, sampleRate, Random(sharedSeed)).also { shared = it }
 
         if (sharedDev.size < end) {
-            sharedDev = DoubleArray(end)
+            // copyOf, not a fresh array: a block rendered in two windows (a voice that starts
+            // mid-block) grows the scratch on the second one, and the first one's values are still
+            // the shared walk for those samples.
+            sharedDev = sharedDev.copyOf(end)
         }
 
         val dev = sharedDev

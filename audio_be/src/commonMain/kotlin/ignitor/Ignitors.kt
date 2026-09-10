@@ -213,11 +213,15 @@ object Ignitors {
      * `sqrt(s)` so the depth stays [analog] at every setting. The lanes live in one [DriftLanes]
      * and are drawn in a fixed order (the fundamental first, then each bank's partials as the bank
      * grows, and the shared lane at the first block whose spread is below 1) so a seeded voice RNG
-     * renders reproducibly.
+     * renders reproducibly. A bank never retires a lane: a partial that drops out and comes back
+     * restarts its phase at 0 but resumes the walk it had, which is inaudible at cent scale and
+     * keeps a count sweep from re-seeding the whole spectrum.
      *
      * The per-sample loop mirrors [SineIgnitor] (radian phase, `sin(phase)`, `wrapPhase(TWO_PI)`),
-     * so a bank of one partial with `analog = 0` is bit-identical to the plain sine (with drift the
-     * two seed their lanes in a different order).
+     * so a bank of one partial with `analog = 0` is bit-identical to the plain sine. With drift they
+     * part: the bank takes one extra int from the voice rng at its first block (its shared lane's
+     * seed, taken whether or not the spread ever drops below 1), so its fundamental lane seeds from
+     * a different point in the stream than the plain sine's lane does.
      */
     fun sinePartials(
         freq: Ignitor = FreqIgnitor,
@@ -410,10 +414,14 @@ object Ignitors {
             val off = ctx.offset
             val end = ctx.windowEnd
 
+            // Read outside the null check: a modulated subtree advances once per block whether or
+            // not anything reads its value this block (ledger O2).
+            val analogSpreadAmt = readParam(analogSpread, actualFreq, ctx)
+
             // The shared walk is advanced once per sample for the whole bank, BEFORE the partials,
             // so every partial's loop reads the same sequence.
             if (lanes != null) {
-                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), off, end)
+                lanes.prepareBlock(analogSpreadAmt, off, end)
             }
 
             var first = true
@@ -1148,9 +1156,10 @@ object Ignitors {
                 // START by design (control-rate observation; block-framing ledger O3) — review
                 // rounds do not re-judge the timing. Guaranteed at a mid-note change instead:
                 // SURVIVING voices keep their phase, their drift lane (the slow OU layer must not
-                // re-seed to centre mid-note) and their gain-jitter draw; only NEW indices draw
-                // from the rng (ledger O4). At note-on `old` is empty, so the draw order below is
-                // bit-identical to the legacy path — the phase-pool bypass guarantee holds.
+                // re-seed to centre mid-note) and their gain-jitter draw; only indices that are NEW,
+                // or that were dropped by a shrink and have come back, draw from the rng (ledger
+                // O4). At note-on `old` is empty, so the draw order below is bit-identical to the
+                // legacy path — the phase-pool bypass guarantee holds.
 
                 // Drift depth is latched at the first block that sizes the stack, the way the plain
                 // sine latches its own: a later `analog` read never re-depths a lane, and a voice
@@ -1165,6 +1174,10 @@ object Ignitors {
                     }
                 }
 
+                // A shrink drops those voice states (the `Array(v)` above keeps only the first v),
+                // so their lanes are retired too: a voice that comes back gets a state AND a lane
+                // built fresh, which is how it attacks in tune again.
+                drift?.retireLanes(v)
                 drift?.ensureLanes(v)
 
                 drawGainJitterFor(from = old.size)
@@ -1217,11 +1230,14 @@ object Ignitors {
             val off = ctx.offset
             val end = off + ctx.length
             val lanes = drift
+            // Read outside the null check: a modulated subtree advances once per block whether or
+            // not anything reads its value this block (ledger O2).
+            val analogSpreadAmt = readParam(analogSpread, actualFreq, ctx)
 
             // The shared walk runs once for the whole block, BEFORE the voice loop, so every voice
             // reads the same sequence out of the scratch.
             if (lanes != null) {
-                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), off, end)
+                lanes.prepareBlock(analogSpreadAmt, off, end)
             }
 
             for (n in 0 until v) {
@@ -1826,6 +1842,7 @@ object Ignitors {
 
         /** One lane per string plus the shared walk; null while `analog` is 0, which is the fast path. */
         private var drift: DriftLanes? = null
+        private var analogLatched: Boolean = false
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1881,26 +1898,36 @@ object Ignitors {
             // O2: param reads hoisted OUT of the per-string loop — a modulated subtree must
             // advance once per block, not v times, and every string samples the same value.
             val analogAmt = readParam(analog, actualFreq, ctx)
+            val analogSpreadAmt = readParam(analogSpread, actualFreq, ctx)
             val pickPosVal = readParam(pickPosition, actualFreq, ctx)
 
-            // The lanes take the depth of the first block that has one, the way each string used to
-            // latch its own AnalogDrift; the shared walk runs once for the whole block, BEFORE the
-            // string loop, so every string reads the same sequence.
-            if (drift == null && analogAmt > 0.0) {
-                drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+            // Drift depth is latched at the FIRST block, like the plain sine and the unison stacks:
+            // an `analog` that starts at 0 leaves this instrument dry for the whole note, and no
+            // lane is ever built inside a later block's callback. The read above still happens every
+            // block, so a modulated subtree keeps advancing (ledger O2); only the depth is latched.
+            if (!analogLatched) {
+                analogLatched = true
+
+                if (analogAmt > 0.0) {
+                    drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+                }
             }
 
             val lanes = drift
 
+            // The shared walk runs once for the whole block, BEFORE the string loop, so every
+            // string reads the same sequence out of the scratch.
             if (lanes != null) {
-                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), ctx.offset, end)
+                lanes.prepareBlock(analogSpreadAmt, ctx.offset, end)
             }
 
             for (n in 0 until v) {
                 val s = strings[n]
 
                 // Drawn just before this string's excitation, the order the strings had when each
-                // one held its own lane.
+                // one held its own lane. No retiring here: a shrink KEEPS the string states (the
+                // DECIDED note above), so a string that comes back kept its walk before this
+                // container existed too, and still does.
                 lanes?.ensureLanes(n + 1)
 
                 val detuneSemitones = getUnisonDetune(v, spread, n)
