@@ -60,9 +60,13 @@ class AnalogDriftSpec : StringSpec({
 
         lanes.ensureLanes(voices)
 
+        // One sample for one lane, the way an adopter's hot loop runs it.
+        fun step(lane: Int): Double =
+            driftStep(lanes.ownLane(lane), lanes.sharedWalk(), lanes.wShared, lanes.wOwn, 0)
+
         // The shared lane first: at spread 0 it is the only walk the whole stack hears.
         lanes.prepareBlock(0.0, 0, 1)
-        abs(cents(lanes.step(0, 0))) shouldBeLessThan 3.5
+        abs(cents(step(0))) shouldBeLessThan 3.5
 
         // Then every own lane, which is what spread 1 (the default) hands each voice.
         lanes.prepareBlock(1.0, 0, 1)
@@ -70,7 +74,7 @@ class AnalogDriftSpec : StringSpec({
         var sum = 0.0
 
         for (n in 0 until voices) {
-            val c = cents(lanes.step(n, 0))
+            val c = cents(step(n))
 
             abs(c) shouldBeLessThan 3.5
             sum += c

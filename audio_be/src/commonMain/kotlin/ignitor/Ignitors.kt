@@ -334,6 +334,11 @@ object Ignitors {
             pm: DoubleArray?, drift: DriftLanes?, lane: Int,
         ): Double {
             var ph = phaseIn
+            // Hoisted once per partial: everything the blend reads is constant for the block.
+            val ownLane = drift?.ownLane(lane)
+            val sharedWalk = drift?.sharedWalk()
+            val wShared = drift?.wShared ?: 0.0
+            val wOwn = drift?.wOwn ?: 0.0
 
             for (i in off until end) {
                 val s = g * sin(ph)
@@ -346,7 +351,7 @@ object Ignitors {
                 }
 
                 if (drift != null) {
-                    step *= drift.step(lane, i)
+                    step *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
                 }
 
                 ph = (ph + step).wrapPhase(TWO_PI)
@@ -1406,6 +1411,11 @@ object Ignitors {
             val fallEnd = vs.fallEnd
             val riseSlope = vs.riseSlope
             val fallSlope = vs.fallSlope
+            // Hoisted once per voice: everything the blend reads is constant for the block.
+            val ownLane = drift?.ownLane(n)
+            val sharedWalk = drift?.sharedWalk()
+            val wShared = drift?.wShared ?: 0.0
+            val wOwn = drift?.wOwn ?: 0.0
 
             for (i in off until end) {
                 val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
@@ -1419,7 +1429,7 @@ object Ignitors {
                 }
 
                 if (drift != null) {
-                    inc *= drift.step(n, i)
+                    inc *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
                 }
 
                 phase += inc
@@ -1500,6 +1510,11 @@ object Ignitors {
             var phase = vs.phase
             val dt = vs.dt
             val gain = vs.gain
+            // Hoisted once per voice: everything the blend reads is constant for the block.
+            val ownLane = drift?.ownLane(n)
+            val sharedWalk = drift?.sharedWalk()
+            val wShared = drift?.wShared ?: 0.0
+            val wOwn = drift?.wOwn ?: 0.0
 
             for (i in off until end) {
                 val s = sin(phase * TWO_PI) * gain
@@ -1513,7 +1528,7 @@ object Ignitors {
                 }
 
                 if (drift != null) {
-                    inc *= drift.step(n, i)
+                    inc *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
                 }
 
                 phase += inc
@@ -1955,6 +1970,11 @@ object Ignitors {
                 }
 
                 val isFirst = n == 0
+                // Hoisted once per string: everything the blend reads is constant for the block.
+                val ownLane = lanes?.ownLane(n)
+                val sharedWalk = lanes?.sharedWalk()
+                val wShared = lanes?.wShared ?: 0.0
+                val wOwn = lanes?.wOwn ?: 0.0
 
                 for (i in ctx.offset until end) {
                     // Effective delay with detune, phaseMod, and per-voice drift
@@ -1965,7 +1985,7 @@ object Ignitors {
                     }
 
                     if (lanes != null) {
-                        dl /= lanes.step(n, i)
+                        dl /= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
                     }
 
                     dl = dl.coerceIn(2.0, (maxDelay - 1.0))

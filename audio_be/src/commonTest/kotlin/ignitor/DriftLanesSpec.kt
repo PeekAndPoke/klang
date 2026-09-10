@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlin.math.abs
 import kotlin.math.log2
@@ -44,6 +45,14 @@ class DriftLanesSpec : StringSpec({
     /** Pitch offset of a multiplier, in cents: how far out of tune this sample is. */
     fun cents(multiplier: Double): Double = 1200.0 * log2(multiplier)
 
+    /**
+     * One sample for one lane, exactly as an adopter's hot loop runs it: hoist the lane, the shared
+     * walk and the weights, then blend. Hoisting per call is the slow way round and only a test
+     * would do it; the point here is that the spec exercises the same two functions production does.
+     */
+    fun step(lanes: DriftLanes, lane: Int, i: Int): Double =
+        driftStep(lanes.ownLane(lane), lanes.sharedWalk(), lanes.wShared, lanes.wOwn, i)
+
     "spread 1: each lane is its own AnalogDrift bit for bit, and the lanes are all the rng pays for" {
         val rng = Random(7)
         val lanes = DriftLanes(analog, sr, rng)
@@ -56,7 +65,7 @@ class DriftLanesSpec : StringSpec({
 
         for (i in 0 until frames) {
             for (n in 0 until 3) {
-                lanes.step(n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
+                step(lanes, n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
             }
         }
 
@@ -75,12 +84,12 @@ class DriftLanesSpec : StringSpec({
 
         for (i in 0 until frames) {
             val expected = ref.shared.nextMultiplier()
-            val first = lanes.step(0, i)
+            val first = step(lanes, 0, i)
 
             first shouldBe (expected plusOrMinus 1e-15)
 
             for (n in 1 until 3) {
-                lanes.step(n, i).toRawBits() shouldBe first.toRawBits()
+                step(lanes, n, i).toRawBits() shouldBe first.toRawBits()
             }
         }
 
@@ -91,7 +100,7 @@ class DriftLanesSpec : StringSpec({
         lanes.prepareBlock(1.0, 0, frames)
 
         for (n in 0 until 3) {
-            lanes.step(n, 0).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
+            step(lanes, n, 0).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
         }
     }
 
@@ -112,7 +121,7 @@ class DriftLanesSpec : StringSpec({
             for (n in 0 until 2) {
                 val expected = 1.0 + wShared * sharedDev + wOwn * (ref.own[n].nextMultiplier() - 1.0)
 
-                lanes.step(n, i) shouldBe (expected plusOrMinus 1e-12)
+                step(lanes, n, i) shouldBe (expected plusOrMinus 1e-12)
             }
         }
     }
@@ -123,7 +132,7 @@ class DriftLanesSpec : StringSpec({
         early.ensureLanes(2)
         early.prepareBlock(0.0, 0, frames)
 
-        val fromTheStart = DoubleArray(frames) { early.step(0, it) }
+        val fromTheStart = DoubleArray(frames) { step(early, 0, it) }
 
         val lateRng = Random(7)
         val late = DriftLanes(analog, sr, lateRng)
@@ -134,7 +143,7 @@ class DriftLanesSpec : StringSpec({
             late.prepareBlock(1.0, 0, frames)
 
             for (i in 0 until frames) {
-                late.step(0, i)
+                step(late, 0, i)
             }
         }
 
@@ -144,7 +153,7 @@ class DriftLanesSpec : StringSpec({
         late.prepareBlock(0.0, 0, frames)
 
         for (i in 0 until frames) {
-            late.step(0, i).toRawBits() shouldBe fromTheStart[i].toRawBits()
+            step(late, 0, i).toRawBits() shouldBe fromTheStart[i].toRawBits()
         }
     }
 
@@ -153,25 +162,26 @@ class DriftLanesSpec : StringSpec({
 
         lanes.ensureLanes(1)
 
-        // Two half-blocks back to back. `sharedDev` is read directly (it is the scratch the voice
-        // loops index into) because the window bounds are what this case is about.
+        // Two half-blocks back to back. The scratch is read through `sharedWalk()`, the same array
+        // a voice loop indexes into, because the window bounds are what this case is about.
         lanes.prepareBlock(0.5, 0, 64)
 
-        val firstHalf = lanes.sharedDev.copyOfRange(0, 64)
+        val firstHalf = lanes.sharedWalk().shouldNotBeNull().copyOfRange(0, 64)
 
         lanes.prepareBlock(0.5, 64, 128)
 
         val ref = Reference(7, 1, analog, sr)
+        val walk = lanes.sharedWalk().shouldNotBeNull()
 
         for (i in 0 until 128) {
             val expected = ref.shared.nextMultiplier() - 1.0
 
-            lanes.sharedDev[i] shouldBe (expected plusOrMinus 1e-15)
+            walk[i] shouldBe (expected plusOrMinus 1e-15)
         }
 
         // The second call left the first window alone.
         for (i in 0 until 64) {
-            lanes.sharedDev[i].toRawBits() shouldBe firstHalf[i].toRawBits()
+            walk[i].toRawBits() shouldBe firstHalf[i].toRawBits()
         }
     }
 
@@ -185,7 +195,7 @@ class DriftLanesSpec : StringSpec({
         val ref = Reference(7, 2, analog, sr)
 
         for (n in 0 until 2) {
-            nan.step(n, 0).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
+            step(nan, n, 0).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
         }
 
         nanRng.nextInt() shouldBe ref.rng.nextInt()
@@ -194,14 +204,14 @@ class DriftLanesSpec : StringSpec({
 
         high.ensureLanes(2)
         high.prepareBlock(4.0, 0, frames)
-        high.step(0, 0).toRawBits() shouldBe Reference(7, 1, analog, sr).own[0].nextMultiplier().toRawBits()
+        step(high, 0, 0).toRawBits() shouldBe Reference(7, 1, analog, sr).own[0].nextMultiplier().toRawBits()
 
         val low = DriftLanes(analog, sr, Random(7))
 
         low.ensureLanes(2)
         low.prepareBlock(-3.0, 0, frames)
-        low.step(0, 1).toRawBits() shouldBe low.step(1, 1).toRawBits()
-        (low.step(0, 1) != 1.0) shouldBe true
+        step(low, 0, 1).toRawBits() shouldBe step(low, 1, 1).toRawBits()
+        (step(low, 0, 1) != 1.0) shouldBe true
     }
 
     "ensureLanes grows without disturbing the lanes that already exist" {
@@ -215,7 +225,7 @@ class DriftLanesSpec : StringSpec({
 
         for (i in 0 until frames) {
             for (n in 0 until 2) {
-                lanes.step(n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
+                step(lanes, n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
             }
         }
 
@@ -227,10 +237,10 @@ class DriftLanesSpec : StringSpec({
         val grown = Array(2) { AnalogDrift(analog, sr, ref.rng) }
 
         for (i in 0 until frames) {
-            lanes.step(0, i).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
-            lanes.step(1, i).toRawBits() shouldBe ref.own[1].nextMultiplier().toRawBits()
-            lanes.step(2, i).toRawBits() shouldBe grown[0].nextMultiplier().toRawBits()
-            lanes.step(3, i).toRawBits() shouldBe grown[1].nextMultiplier().toRawBits()
+            step(lanes, 0, i).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
+            step(lanes, 1, i).toRawBits() shouldBe ref.own[1].nextMultiplier().toRawBits()
+            step(lanes, 2, i).toRawBits() shouldBe grown[0].nextMultiplier().toRawBits()
+            step(lanes, 3, i).toRawBits() shouldBe grown[1].nextMultiplier().toRawBits()
         }
     }
 
@@ -244,7 +254,7 @@ class DriftLanesSpec : StringSpec({
 
         for (i in 0 until frames) {
             for (n in 0 until 3) {
-                lanes.step(n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
+                step(lanes, n, i).toRawBits() shouldBe ref.own[n].nextMultiplier().toRawBits()
             }
         }
 
@@ -261,17 +271,17 @@ class DriftLanesSpec : StringSpec({
         // A regrown lane ATTACKS IN TUNE: its slow layer seeds at centre, so its first multiplier
         // sits inside the fast layer's budget (about 0.2 cents per unit analog, 1.6 cents here),
         // where lane 0, which kept walking, is free to be anywhere.
-        val firstRegrown = lanes.step(1, 0)
+        val firstRegrown = step(lanes, 1, 0)
 
         abs(cents(firstRegrown)) shouldBeLessThan 3.5
         firstRegrown.toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
-        lanes.step(2, 0).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
-        lanes.step(0, 0).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
+        step(lanes, 2, 0).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
+        step(lanes, 0, 0).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
 
         for (i in 1 until frames) {
-            lanes.step(0, i).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
-            lanes.step(1, i).toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
-            lanes.step(2, i).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
+            step(lanes, 0, i).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
+            step(lanes, 1, i).toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
+            step(lanes, 2, i).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
         }
     }
 
@@ -284,8 +294,8 @@ class DriftLanesSpec : StringSpec({
         lanes.laneCount shouldBe 0
         lanes.retireLanes(0)
         lanes.prepareBlock(0.0, 0, frames)
-        lanes.step(0, 0) shouldBe 1.0
-        lanes.step(3, 5) shouldBe 1.0
+        step(lanes, 0, 0) shouldBe 1.0
+        step(lanes, 3, 5) shouldBe 1.0
 
         rng.nextInt() shouldBe Random(7).nextInt()
     }
