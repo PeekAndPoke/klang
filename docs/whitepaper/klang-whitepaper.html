@@ -735,7 +735,7 @@
                 <span>Pre-Alpha</span>
                 <span>Kotlin Multiplatform</span>
                 <span>AGPL-3.0</span>
-                <span>Aug 28th 2026</span>
+                <span>Sep 10th 2026</span>
             </p>
 
             <h1>Klangmotor</h1>
@@ -2038,6 +2038,102 @@ stack(
                 time is a much better problem to have than a large one that must be right the first time. The
                 plan is to ship v1 <em>narrower</em> than feels comfortable — additive evolution means
                 yes-later is always possible, unsaying never is.
+            </p>
+
+            <h4>What a node actually serves</h4>
+
+            <p>
+                Concretely: five HTTP endpoints plus one well-known document. That is the whole surface an
+                operator has to keep running, and the whole surface a third-party implementation has to
+                reproduce. <a href="#s11">§11</a> covers why it is shaped this way; here is the shape.
+            </p>
+
+            <div class="tablewrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Answers</th>
+                        <th>Caching</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>/.well-known/klang</code></td>
+                        <td>Which API versions, which capabilities, which operator policies. The one path that
+                            carries no version prefix, so a client can always start here (RFC 8615, the way Matrix
+                            does it).
+                        </td>
+                        <td>Short TTL</td>
+                    </tr>
+                    <tr>
+                        <td><code>/v1/resolve(name, "latest")</code></td>
+                        <td>What <code>@latest</code> means right now. Edit-time convenience only, since publishing
+                            pins everything.
+                        </td>
+                        <td>Short TTL, ETag</td>
+                    </tr>
+                    <tr>
+                        <td><code>/v1/versions(name)</code></td>
+                        <td>Every tag ever published under a name.</td>
+                        <td>Immutable per entry</td>
+                    </tr>
+                    <tr>
+                        <td><code>/v1/manifest(name, version)</code></td>
+                        <td><code>schemaVersion</code>, the file list, the pinned transitive closure with hashes,
+                            the license, and <code>requires</code>. One request tells an importer everything it
+                            must fetch.
+                        </td>
+                        <td>Forever</td>
+                    </tr>
+                    <tr>
+                        <td><code>/v1/blob(hash)</code></td>
+                        <td>Bytes. Song files and samples alike, addressed by content hash and verified by whoever
+                            fetched them, so a CDN, a mirror or another node can serve them.
+                        </td>
+                        <td>Forever</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                The discovery document is where the operator's dial actually lives. It reports two different
+                kinds of "what does this server do" side by side — <em>capabilities</em>, what the software
+                speaks, and <em>policies</em>, what this operator permits — and clients build their UI from it:
+            </p>
+
+            <figure>
+                <div class="code" data-lang="JSON"><pre><span class="cm">// GET /.well-known/klang</span>
+{
+  <span class="st">"software"</span>:     { <span class="st">"name"</span>: <span class="st">"klangd"</span>, <span class="st">"version"</span>: <span class="st">"1.4.2"</span> },
+  <span class="st">"apiVersions"</span>:  [<span class="st">"v1"</span>],
+  <span class="st">"baseUrl"</span>:      <span class="st">"https://klang.art/v1"</span>,
+
+  <span class="cm">// what the software speaks — asked by feature, never by version number</span>
+  <span class="st">"capabilities"</span>: [<span class="st">"resolve"</span>, <span class="st">"manifest"</span>, <span class="st">"blob"</span>, <span class="st">"versions"</span>],
+
+  <span class="cm">// what this operator permits — the liability dial, as a config file</span>
+  <span class="st">"policies"</span>: {
+    <span class="st">"registration"</span>: <span class="st">"invite"</span>,
+    <span class="st">"byoSamples"</span>:   <span class="kw">false</span>,        <span class="cm">// so: no upload button in the client</span>
+    <span class="st">"maxBlobBytes"</span>: 33554432,
+    <span class="st">"licenseFloor"</span>: <span class="st">"cc-by-sa"</span>
+  }
+}</pre>
+                </div>
+                <figcaption>Feature detection, not version sniffing. A client asks "does this server do X?", never
+                    "is this server new enough?" — which is what lets URL versions stay rare coarse epochs while
+                    everything else evolves by adding fields.
+                </figcaption>
+            </figure>
+
+            <p>
+                The manifest's <code>requires</code> block is the mirror image, on the content side: a song
+                states what it needs (a backend, one day a specific plugin) so that "can I play this?",
+                "can I import this?" and "can this song live on this server?" are one operation — match a
+                manifest against a server's capabilities, policies and license floor. All three answerable
+                before a single byte of audio is fetched.
             </p>
 
             <p>
