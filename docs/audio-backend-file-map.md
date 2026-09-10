@@ -81,7 +81,7 @@ Cmd → PlaybackEngineDispatcher.handle
 - core: `Ignitor.kt`, `Ignitors.kt`, `IgnitorRegistry.kt`, `IgnitorDslRuntime.kt`, `IgnitorDefaults.kt`.
 - synthesis: `FreqIgnitor`, `ConstantIgnitor`, `ParamIgnitor`, `SampleIgnitor`, `MemoizingIgnitor`,
   `ModApplyingIgnitor`, `WaveVoiceState`, `OscillatorTuning`, `PitchModFactories`.
-- character: `AnalogDrift` + `AnalogDriftCoeffs`, `PolyAnalogDrift`, `IgnitorEnvelopes`, `IgnitorEffects`,
+- character: `AnalogDrift` + `AnalogDriftCoeffs`, `DriftLanes`, `IgnitorEnvelopes`, `IgnitorEffects`,
   `IgnitorFilters`, `IgniteContext`, `ScratchBuffers.kt` (per-engine scratch pool).
 
 ## Engines / primitives / math

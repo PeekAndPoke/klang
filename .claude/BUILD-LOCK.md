@@ -14,9 +14,9 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 
 ---
 
-**HOLDER: (none)**
-**SINCE: 2026-09-08**
-**STATE: FREE**
+**HOLDER: drift-lanes (worktree agent-aff6d3d2cf7b13262)**
+**SINCE: 2026-09-10**
+**STATE: BUILDING**
 
 ## Uncommitted in this tree
 
@@ -26,6 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
+| drift-lanes (worktree `agent-aff6d3d2cf7b13262`) | `audio_be/.../ignitor/DriftLanes.kt`, `Ignitors.kt`, `IgnitorDslRuntime.kt`, `audio_bridge/.../IgnitorDsl*.kt`, `klangscript-libs/.../IgnitorBuilders.kt` | `DriftLanes` replaces `PolyAnalogDrift` and the partial bank's private lanes; `analogSpread` lands on the six super nodes. Own branch `drift-lanes`, not `main`. |
 
 ## The two layers
 

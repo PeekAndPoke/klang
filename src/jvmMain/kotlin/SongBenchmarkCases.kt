@@ -232,7 +232,7 @@ object SongBenchmarkCases {
     // anchors keep everything L1-hot, so per-node plumbing measures ~free. What actually scales
     // with K concurrent chain instances: one MemoizingIgnitor cache (~1 KB, full-chain case only
     // — bare `signal` has 1 consumer and takes the direct path), per-voice oscillator + drift
-    // state (unison-15 WaveVoiceStates + PolyAnalogDrift arrays) and ~6 SVF state pairs — about
+    // state (unison-15 WaveVoiceStates + the stack's DriftLanes) and ~6 SVF state pairs — about
     // 2-3 KB per voice. The scratch-buffer pool and the voice buffer are SHARED per engine
     // (VoiceScheduler allocates one of each) and stay hot across voices. So K=16 only REACHES
     // L1 capacity (~32-48 KB); the sweep must go to K=32/64 to genuinely leave L1 and press L2

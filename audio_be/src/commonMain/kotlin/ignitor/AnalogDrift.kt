@@ -18,7 +18,8 @@ import kotlin.random.Random
  *   sustained note feel alive rather than perfectly stable.
  *
  * Total drift peak ≈ ±`analog` cents (clean linear mapping). Tuning constants
- * live in [AnalogDriftCoeffs] — single source of truth shared with [PolyAnalogDrift].
+ * live in [AnalogDriftCoeffs] — single source of truth shared with [DriftLanes], which stacks
+ * these lanes for the multi-voice oscillators.
  *
  * Both layers are smoothed white noise (one-pole on white for the fast layer,
  * Ornstein–Uhlenbeck for the slow one), which is closer to the physical

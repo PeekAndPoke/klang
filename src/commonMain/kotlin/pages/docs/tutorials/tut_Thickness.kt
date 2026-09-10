@@ -25,7 +25,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * - Defaults, from IgnitorDsl.Slots: `voices` 8, `spread` 0.2, `analog` 0.0. So a bare
  *   `sound("supersaw")` is ALREADY eight layers at 0.2 — §1 leans on exactly that.
  * - `spread` is in SEMITONES (±spread/2 per edge layer); `analog` is peak drift in
- *   CENTS (±analog cents, AnalogDrift/PolyAnalogDrift), NOT the 0..1 the sprudel KDoc
+ *   CENTS (±analog cents, AnalogDrift/DriftLanes), NOT the 0..1 the sprudel KDoc
  *   used to claim. That KDoc was wrong and was corrected at source in the same change
  *   as this lesson (lang_synthesis_oscparam.kt), the way A4's `lpe` unit was.
  * - The slow drift layer is seeded at CENTRE so every note attacks in tune, and only

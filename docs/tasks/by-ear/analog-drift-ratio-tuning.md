@@ -55,8 +55,8 @@ on the engine, resolved at construction — the same shape Phase 3 will use, so 
 
 - The two depths become engine-level fields with today's values as defaults, so `modern`/`pedal`
   reproduce today's sound exactly.
-- Threaded to `AnalogDriftCoeffs` construction (`Ignitors.kt:1233 initAnalogDrift`,
-  `PolyAnalogDrift`), which is construction-time — **zero per-sample cost**.
+- Threaded to `AnalogDriftCoeffs` construction (`Ignitors.kt` `initAnalogDrift`,
+  `DriftLanes`), which is construction-time, so **zero per-sample cost**.
 - KlangScript authoring so the pair is reachable from the live editor.
 - `*DefaultsSyncSpec`-family guard + wire round-trip.
 

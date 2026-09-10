@@ -517,6 +517,7 @@ private fun IgnitorDsl.buildRaw(
                 pickPosition.noMod(),
                 stiffness.noMod(),
                 analog.noMod(),
+                analogSpread.noMod(),
                 rng = cache.random,
             ),
         )

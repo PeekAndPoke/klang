@@ -1776,7 +1776,8 @@ object Ignitors {
 
     /**
      * Super Karplus-Strong: multiple detuned plucked strings summed together.
-     * Each string has independent noise excitation and analog drift, creating rich evolving shimmer.
+     * Each string has independent noise excitation and its own drift lane, creating rich evolving
+     * shimmer; [analogSpread] blends those lanes towards one shared walk for the whole instrument.
      * Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     @Suppress("DuplicatedCode")
@@ -1789,8 +1790,11 @@ object Ignitors {
         pickPosition: Ignitor = pickPositionDefault,
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
+        analogSpread: Ignitor = analogSpreadDefault,
         rng: Random = Random,
-    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, detune, decay, brightness, pickPosition, stiffness, analog, rng)
+    ): Ignitor = SuperKarplusStrongIgnitor(
+        freq, voices, detune, decay, brightness, pickPosition, stiffness, analog, analogSpread, rng,
+    )
 
     private class SuperKarplusStrongIgnitor(
         private val freq: Ignitor,
@@ -1801,6 +1805,7 @@ object Ignitors {
         private val pickPosition: Ignitor,
         private val stiffness: Ignitor,
         private val analog: Ignitor,
+        private val analogSpread: Ignitor,
         private val rng: Random,
     ) : Ignitor {
         private val maxDelay = 2500
@@ -1812,12 +1817,14 @@ object Ignitors {
             var lpState: Double = 0.0,
             var apPrevIn: Double = 0.0,
             var apPrevOut: Double = 0.0,
-            var drift: AnalogDrift? = null,
         )
 
         private var v: Int = 0
         private var voiceGain: Double = 0.0
         private var strings: Array<StringState> = emptyArray()
+
+        /** One lane per string plus the shared walk; null while `analog` is 0, which is the fast path. */
+        private var drift: DriftLanes? = null
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1875,9 +1882,26 @@ object Ignitors {
             val analogAmt = readParam(analog, actualFreq, ctx)
             val pickPosVal = readParam(pickPosition, actualFreq, ctx)
 
+            // The lanes take the depth of the first block that has one, the way each string used to
+            // latch its own AnalogDrift; the shared walk runs once for the whole block, BEFORE the
+            // string loop, so every string reads the same sequence.
+            if (drift == null && analogAmt > 0.0) {
+                drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+            }
+
+            val lanes = drift
+
+            if (lanes != null) {
+                lanes.prepareBlock(readParam(analogSpread, actualFreq, ctx), ctx.offset, end)
+            }
+
             for (n in 0 until v) {
                 val s = strings[n]
-                val sd = s.drift ?: AnalogDrift(analogAmt, ctx.sampleRate, ctx.random).also { s.drift = it }
+
+                // Drawn just before this string's excitation, the order the strings had when each
+                // one held its own lane.
+                lanes?.ensureLanes(n + 1)
+
                 val detuneSemitones = getUnisonDetune(v, spread, n)
                 val detunedFreq = actualFreq.applySemitoneDetuneToFrequency(detuneSemitones)
                 val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
@@ -1912,8 +1936,8 @@ object Ignitors {
                         dl /= phaseMod[i]
                     }
 
-                    if (sd.active) {
-                        dl /= sd.nextMultiplier()
+                    if (lanes != null) {
+                        dl /= lanes.step(n, i)
                     }
 
                     dl = dl.coerceIn(2.0, (maxDelay - 1.0))

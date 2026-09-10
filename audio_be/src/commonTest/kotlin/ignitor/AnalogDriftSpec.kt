@@ -16,7 +16,7 @@ import kotlin.math.log2
 import kotlin.random.Random
 
 /**
- * Guards for [AnalogDrift] / [PolyAnalogDrift] stability and the `analog` → cents budget.
+ * Guards for [AnalogDrift] / [DriftLanes] stability and the `analog` → cents budget.
  *
  * Two perceptual properties:
  *  1. **In-tune attack** — a note must START centred (multiplier ≈ 1.0). The slow layer is
@@ -54,16 +54,29 @@ class AnalogDriftSpec : StringSpec({
         maxAbs shouldBeLessThan 3.5
     }
 
-    "attack is in tune - slow layer seeded at centre (poly / unison)" {
-        val drift = PolyAnalogDrift(analog = 8.0, voiceCount = 16, sampleRate = sr, rng = Random(1))
-        drift.advanceAll()
+    "attack is in tune - slow layer seeded at centre (every lane of a unison stack)" {
+        val lanes = DriftLanes(analog = 8.0, sampleRate = sr, rng = Random(1))
+        val voices = 16
+
+        lanes.ensureLanes(voices)
+
+        // The shared lane first: at spread 0 it is the only walk the whole stack hears.
+        lanes.prepareBlock(0.0, 0, 1)
+        abs(cents(lanes.step(0, 0))) shouldBeLessThan 3.5
+
+        // Then every own lane, which is what spread 1 (the default) hands each voice.
+        lanes.prepareBlock(1.0, 0, 1)
+
         var sum = 0.0
-        for (m in drift.multipliers) {
-            val c = cents(m)
+
+        for (n in 0 until voices) {
+            val c = cents(lanes.step(n, 0))
+
             abs(c) shouldBeLessThan 3.5
             sum += c
         }
-        (sum / drift.multipliers.size) shouldBe (0.0 plusOrMinus 0.6)
+
+        (sum / voices) shouldBe (0.0 plusOrMinus 0.6)
     }
 
     "does not run away - centred and bounded over millions of samples" {
