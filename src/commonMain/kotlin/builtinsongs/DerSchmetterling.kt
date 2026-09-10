@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   12    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
@@ -56,11 +56,14 @@ let guitar = (() => {
   let pHpQ        = Osc.param("hpq",          0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
 
-  let saw = Osc.supersaw(x => x.voices(19).spread(0.08)
+  let saw = Osc.supersaw(x => x.voices(19).spread(0.10)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .analog(pAnalog).spreadPower(8.0).sideAtten(0.5).gainJitter(0.05).centerJitter(0.05))
+    .spreadPower(8.0).sideAtten(0.5).gainJitter(0.10).centerJitter(0.10)
+    // analog settings
+    .analog(pAnalog).analogSpread(0.5)
+  )
  
   let signal = saw //.mix(saw2, 1.0)
     // Simulate plucked string
@@ -218,7 +221,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 4 6] 9]!1>/8`
 
 export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.475) // . mute()
-    .oscp("drive", 1.0).oscp("grindlo", 280).oscp("grindhi", 750).oscp("grind", 0.00).oscp("sub", 1.0).oscp("harmonics", 0.90) //  . solo()
+    .oscp("drive", 1.0).oscp("grindlo", 280).oscp("grindhi", 750).oscp("grind", 0.02).oscp("sub", 1.0).oscp("harmonics", 0.90) //  . solo()
     .adsr(0.007, 0.3, 0.5, 0.020).hpf(25)
 
 export bass_arrange = x => x.orbit(3) // . mute()
