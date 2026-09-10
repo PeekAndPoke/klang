@@ -70,12 +70,12 @@ let guitar = (() => {
     .pitchEnvelope(0.5, 0.001, 0.02)
     //.lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Osc.crackle(0.75).highpass(1000).adsr(0.003, 0.1, 0.0, 0.05).mul(0.750))
+    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease).adsrCurves("linear", "linear", "linear")
-            
+           
   // the amp
-  let amped = signal 
+  let amped = signal
     // pre amp
     .distort(0.40, "tube", 4).highpass(100)
     // drive amp
@@ -83,14 +83,14 @@ let guitar = (() => {
     .eq(e => e
       .band(freq = pLowHz,  q = pLowQ,  db = pLow)       // low
       .band(freq = pMidHz,  q = pMidQ,  db = pMid)       // mid
-      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high     
-    ) 
+      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high    
+    )
     // power amp
     //.distort(0.30, "gentle", 2)
-    .drive(0.40)
+    .drive(0.42)
     // cabinet
     .eq(e => e.band(freq = snareHz, q = 5.0, db = -3)) // let the snare cut through
-    .lowpass(5000).lowpass(5000)                       // cabinet speaker sim   
+    .lowpass(5000).lowpass(5000)                       // cabinet speaker sim  
     .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)  // follow freq to avoid low mud ... again
 
   return amped.mul(0.30)
@@ -114,7 +114,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Osc.sine(x => x.harmonics(9, 1.2).fundamental(0).analog(Osc.slot.analog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Osc.sine(x => x.harmonics(11, 1.2).fundamental(0).analog(Osc.slot.analog).analogSpread(0.5)).mul(pHarm)
 
   // Grind: "tube" is an ASYMMETRIC shape, so it generates EVEN harmonics — which is what lets
   // the ear reconstruct a 41 Hz fundamental on a speaker that cannot play 41 Hz.
@@ -133,23 +133,24 @@ let bass = (() => {
 })()
 
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
-export guitarClip = "<0.93!31 0.85 0.93!31 0.83 0.93!30 0.75 0.80>".sub(perlin.range(0.0, 0.02))
+export guitarClip = "<0.92!31 0.84 0.92!31 0.83 0.92!30 0.75 0.80>".sub(perlin.range(0.0, 0.02))
   .mul("<0.985!32 [1.1 0.99!7]!32 0.975!32 [1.1 0.99!7]!32>")
-export guitarDecay = "<0.500!16 0.900!16 0.500!16 1.200!16>"
+export guitarDecay = "<0.450!16 0.550!16 0.450!16 0.550!16>"
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
-export lead_pat = 
-  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|2|2|2|2] [-5 -1 2 4] [-4 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
+export lead_pat =
+  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
-export lead_shape = x => x.gain(0.70).sound("supersaw").unison(voices = 7, spread = 0.1)
-  .distort(0.25, "soft", 4).adsr(0.015, 0.5, 0.5, 0.200)
-  .clip(1.0).velocity(guitarDyna).body(material = "violin", wet = 0.7, floor = 0.5)
-  .hpf(1200, 1.0).lpf(freq = "1300".add(perlin.range(0, 100).slow(4)), env = 6.0, q = 1.2, attack = 0.015, decay = 0.5, sustain = 0.0, release = 0.200)
-  .pan(sine.range(0.4, 0.6).fast(0.5))  // . solo()
+export lead_shape = x => x.gain(0.8).sound("supersaw").unison(voices = 7, spread = 0.1)
+  .distort(0.75, "soft", 4).adsr(0.012, 0.5, 0.66, 0.500).coarse(2, 4)
+  .clip(0.925).velocity(guitarDyna).body(material = "steel", wet = 0.7, floor = 0.5)
+  .hpf(1200, 0.7)
+  .lpf(freq = "2350".add(perlin.range(0, 500).slow(4)), env = 8.0, q = 0.7, attack = 0.012, decay = 0.1, sustain = 0.66, release = 0.200)
+  .pan(0.2).superimpose(pan(0.8)) // . solo()
 
 export lead_arrange = x => x.orbit(0) // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.30!48 0.20!16 0.30!48 0.35!16>") 
-  .shuffle("<1!80 1!1 4/8!14 1!33>")                                                                           
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.25))
+  .shuffle("<1!80 1!1 4/8!14 1!33>")                                                                          
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
@@ -162,10 +163,10 @@ export guitar1_pat =
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-5 -2 0 3] 4]]>/4`
 
 export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 6 / 12)).oscp("hpq", 1.5) //. mute()
-  .oscp("low", 3.5).oscp("lowHz", "1700").oscp("lowQ", 0.6)
-  .oscp("mid", 3.0).oscp("midHz", "2800".sub(saw.pow(0.8).mul(400).slow(4))).oscp("midQ", 0.5)
-  .oscp("high", 1.5).oscp("highHz", "3300").oscp("highQ", 0.7)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 6 / 12)).oscp("hpq", 0.6) //. mute()
+  .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
+  .oscp("mid", 2.5).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
+  .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
   .hpf(320)
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
@@ -183,10 +184,10 @@ export guitar2_pat =
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 6] 9]>/4`
 
 export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 1.0)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 1.1)
   .oscp("low", 1.5).oscp("lowHz",  850).oscp("lowQ", 0.6)
-  .oscp("mid", 3.0).oscp("midHz", 1550).oscp("midQ", 0.5)
-  .oscp("high", 1.5).oscp("highHz", 3100).oscp("highQ", 0.7)
+  .oscp("mid", 2.5).oscp("midHz", 1550).oscp("midQ", 0.7)
+  .oscp("high", 1.25).oscp("highHz", 3000).oscp("highQ", 0.6)
   .hpf(240)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
@@ -202,10 +203,10 @@ export guitar3_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [5 -2 0 3] 6]!1>/4`
 
 export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -3 / 12)).oscp("hpq", 1.0)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -3 / 12)).oscp("hpq", 1.1)
   .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
-  .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.5)
-  .oscp("high", 1.5).oscp("highHz", 3100).oscp("highQ", 0.7)
+  .oscp("mid", 2.5).oscp("midHz", 1350).oscp("midQ", 0.7)
+  .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
   .hpf(180)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
@@ -220,48 +221,49 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 4 6] 9]!1>/8`
 
-export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.475) // . mute()
-    .oscp("drive", 1.0).oscp("grindlo", 280).oscp("grindhi", 750).oscp("grind", 0.02).oscp("sub", 1.0).oscp("harmonics", 0.90) //  . solo()
-    .adsr(0.007, 0.3, 0.5, 0.020).hpf(25)
+// TODO: remove grind from the bass and add eq
+export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.37) // . mute()
+    .oscp("sub", 1.0).oscp("harmonics", 1.00)  // . solo()
+    .adsr(0.003, 0.3, 0.5, 0.020).hpf(25)
 
 export bass_arrange = x => x.orbit(3) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
-  .pan(0.475)// .superimpose(pan(0.575))  // .solo()
-  .clip("<[0.85 0.75 0.65 0.75]>*4".sub(perlin.range(0.0, 0.05))) 
+  .pan(0.5).clip("<[0.85 0.75 0.65 0.75]>*4".sub(perlin.range(0.0, 0.05)))
   .late(berlin.range(0.0002, 0.0005).mul(drunk).seg(4))
 
 export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [x!8]!2 [[x x] x!3]!2>").fast(2).apply(bass_shape).tag("bass")
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.n(0).gain(0.37).velocity("0.98 0.94 0.96 0.94").pan(0.475)
-  .hpf(freq = 35).lpf(8000).adsr(0.001, 0.035, 0.50, 0.25).distort(0.02)
-  .superimpose(x => x.bpf(freq = "85", q = 6.0).vel(0.2))
-export kick_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4))
+export kick_shape = x => x.n(0).gain(0.30).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+  .hpf(freq = 35).lpf(9000).adsr(0.001, 0.035, 0.50, 0.25).distort(0.02)
+  .superimpose(x => x.bpf(freq = "90", q = 1.0).vel(0.5))
+export kick_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  //. solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[~ sd] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.n(5).gain(0.42).pan(0.65)
-  .hpf(120).lpf(freq = 15000, q = 0.5).adsr(0.001, 0.075, 0.50, 0.50)
-  .superimpose(x => x.bpf(freq = pure(snareHz).add(berlin.mul(10).slow(4)), q = 5.0).vel(0.50))
+export snare_shape = x => x.n(5).gain(0.40).pan(0.65)
+  .hpf(200).lpf(freq = 14500, q = 0.6).adsr(0.001, 0.050, 0.50, 0.50) //c. mute()
+  .superimpose(x => x.bpf(freq = pure(snareHz).add(berlin.mul(10).slow(4)), q = 2.0).vel(0.25))
 export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.28).pan(0.35)
-  .hpf(800).lpf(freq = "15000".add(perlin.mul(250).fast(4)), q = 0.5).adsr(0.003, 0.05, 0.80, 1.0)
+export hats_shape = x => x.gain(0.27).pan(0.35)
+  .hpf(600).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(0.003, 0.05, 0.80, 1.0)
 export hats_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
-export clap_pat = `<~!1 [~ ~ ~ cp  cp ~ ~ cp]>`
-export clap_shape = x => x.gain(0.025).pan(0.3).superimpose(pan(0.7)).hpf("500".add(perlin.range(0, 100).slow(4))).lpf("10000")
+export clap_pat = `<[rim rim ~ ~  ~ ~ ~ rim] [rim rim ~ ~  rim ~ ~ rim] [rim [rim!2]  rim [rim!2]]>`
+export clap_shape = x => x.gain(0.10).pan(0.3).superimpose(pan(0.7)) // . mute()
+  .hpf("400".add(perlin.range(0, 100).slow(4))).lpf("6500")
 export clap_arrange = x => x.orbit(8).mute("<0!128 1!32>")
 export clap = sound(clap_pat).apply(clap_shape).tag("clap")
 
-export shaker_pat = `<pink ~ pink pink>*16`
-export shaker_shape = x => x.gain(0.15).velocity("<1.0 0.90 0.95 0.90>*16") // . mute()
-  .hpf(freq = 7000, q = 0.5).lpf(freq = 15000, q = 0.5) //  . solo()
-  .pan(sine.range(0.6, 0.7).slow(8)).adsr(0.010, 0.15, 0.0, 0.01)
+export shaker_pat = `<pink ~ pink ~ pink ~ pink>*8`
+export shaker_shape = x => x.gain(0.08).velocity("<1.0 0.90 0.95 0.90>*16")  // . mute()
+  .hpf(freq = 3000, q = 0.7) //  . solo()
+  .pan(0.5).adsr(0.010, 0.08, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0010, 0.0020).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
@@ -274,9 +276,9 @@ export song_arrange = x => x.late(2).filterWhen(t => t >= 2) // shift the song o
 
 export song_body = stack(
   stack(
-    // Lead - Inspired by: Editors - Papillon     
+    // Lead - Inspired by: Editors - Papillon    
     lead.apply(lead_arrange).room(wet = 0.10, size = 1.0) // . mute() // .solo()
-    // Guitars     
+    // Guitars    
     , stack(
       // Guitar 1
       guitar1.apply(guitar1_arrange) // .solo() .mute()
@@ -295,7 +297,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
-  ).analog(feel / 2).room(wet = 0.20, size = 3.0, lowpass = 4000).compressor(-21, 4, 6, 0.005, 0.12)  //. solo() //  .mute()
+  ).analog(feel / 2).room(wet = 0.20, size = 3.0).compressor(-21, 4, 6, 0.005, 0.12)  //. solo() //  .mute()
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>").swingBy(0.005, 4)
 
 export song = stack(
@@ -305,7 +307,7 @@ export song = stack(
   song_body.apply(song_arrange)
   , // Master
   master(Master(m =>
-    m.reverb(r => r.wet(0.05).damp(0.5).roomSize(8)).gain(2.6)
+    m.reverb(r => r.wet(0.2).damp(0.8).roomSize(7).roomLp(1500)).gain(2.6)
   ))
 )
 
