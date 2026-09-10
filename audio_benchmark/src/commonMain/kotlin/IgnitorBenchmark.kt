@@ -243,6 +243,24 @@ class IgnitorBenchmark(
                 Case("sine-harmonics7+analog", voiceData = voice("sine-harmonics7", oscParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("sine-harmonics7" to IgnitorDsl.Sine(harmonics = IgnitorDsl.Constant(7.0)))),
 
+                // The other end of `analogSpread`: one shared walk instead of a lane per voice or
+                // partial. Must come out CHEAPER than the rows above, the own lanes are skipped.
+                Case(
+                    "supersaw_8v+analog+spread0",
+                    voiceData = voice("supersaw-spread0", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    sounds = mapOf("supersaw-spread0" to IgnitorDsl.SuperSaw(analogSpread = IgnitorDsl.Constant(0.0))),
+                ),
+                Case(
+                    "sine-harmonics7+analog+spread0",
+                    voiceData = voice("sine-harmonics7-spread0", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf(
+                        "sine-harmonics7-spread0" to IgnitorDsl.Sine(
+                            harmonics = IgnitorDsl.Constant(7.0),
+                            analogSpread = IgnitorDsl.Constant(0.0),
+                        ),
+                    ),
+                ),
+
                 // ── Super oscillators (8 internal voices) ─────────────────────
                 Case("supersaw", voiceData = voice("supersaw", oscParams = super8v)),
                 Case("supersine", voiceData = voice("supersine", oscParams = super8v)),
