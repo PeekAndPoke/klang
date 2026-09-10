@@ -102,6 +102,22 @@ class SuperStackDriftSpreadSpec : StringSpec({
         return render(dsl.toExciter(random = rng), 220.0, rng, 5 * sampleRate / blockFrames)
     }
 
+    /**
+     * Funnels every draw through `nextBits`, so lane draws are countable. A sibling of the one in
+     * `SuperStackTransitionSpec`; the unit is whatever this platform's `nextDouble` costs, which is
+     * why the cost of one lane is measured below rather than written down.
+     */
+    class CountingRandom(seed: Int) : Random() {
+        private val inner = Random(seed)
+        var draws = 0
+
+        override fun nextBits(bitCount: Int): Int {
+            draws++
+
+            return inner.nextBits(bitCount)
+        }
+    }
+
     /** Two strings at ONE pitch, two seconds; excitation stream and drift stream kept apart. */
     fun pluck(analog: Double, spread: Double): DoubleArray {
         val ig = Ignitors.superKarplusStrong(
@@ -221,6 +237,67 @@ class SuperStackDriftSpreadSpec : StringSpec({
         for (i in expected.indices) {
             actual[i].toRawBits() shouldBe expected[i].toRawBits()
         }
+    }
+
+    "superpluck: a string that comes back after a shrink draws a FRESH lane" {
+        // Two strings, then one, then two again. A regrown string RE-PLUCKS by design, so it must
+        // also get a lane that attacks in tune, not the walk it had before it went away. Counted
+        // rather than heard: the excitation runs on its own stream, so every draw counted here is
+        // a drift lane.
+        val stepping = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                for (i in ctx.offset until ctx.windowEnd) {
+                    val abs = ctx.voiceElapsedFrames + (i - ctx.offset)
+
+                    buffer[i] = when {
+                        abs < blockFrames -> 2.0
+                        abs < 2 * blockFrames -> 1.0
+                        else -> 2.0
+                    }
+                }
+            }
+        }
+
+        val counting = CountingRandom(4)
+        val ig = Ignitors.superKarplusStrong(
+            freq = ConstantIgnitor(220.0),
+            voices = stepping,
+            detune = ConstantIgnitor(0.0),
+            analog = ConstantIgnitor(20.0),
+            rng = Random(1),
+        )
+
+        val c = ctx(counting)
+        val buf = AudioBuffer(blockFrames)
+
+        fun renderBlock(b: Int) {
+            c.updateOffsetAndLength(0, blockFrames)
+            c.voiceElapsedFrames = b * blockFrames
+            ig.generate(buf, 220.0, c)
+        }
+
+        renderBlock(0)
+
+        val noteOn = counting.draws
+
+        renderBlock(1)
+
+        val shrink = counting.draws - noteOn
+
+        renderBlock(2)
+
+        val regrow = counting.draws - noteOn - shrink
+
+        // What one lane costs on this platform, measured the same way.
+        val laneCost = CountingRandom(9).let { r ->
+            AnalogDrift(20.0, sampleRate, r)
+
+            r.draws
+        }
+
+        (noteOn > 0) shouldBe true      // note-on drew the seed and both strings' lanes
+        shrink shouldBe 0               // dropping a string draws nothing
+        regrow shouldBe laneCost        // and getting it back draws exactly one fresh lane
     }
 
     "superpluck: the blend reaches the strings, and does nothing while analog is 0" {

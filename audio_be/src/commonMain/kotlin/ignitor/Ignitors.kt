@@ -1127,6 +1127,10 @@ object Ignitors {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
             val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            // Read every block, like the bank and the pluck read theirs: a modulated subtree
+            // advances once per block whether or not anything uses its value (ledger O2). Only the
+            // DEPTH is latched, below.
+            val analogAmt = readParam(analog, actualFreq, ctx)
 
             if (newV != v) {
                 v = newV
@@ -1171,8 +1175,6 @@ object Ignitors {
                 // added mid-note draws its lane at the latched depth.
                 if (!analogLatched) {
                     analogLatched = true
-
-                    val analogAmt = readParam(analog, actualFreq, ctx)
 
                     if (analogAmt > 0.0) {
                         drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
@@ -1886,6 +1888,11 @@ object Ignitors {
                     strings = Array(v) { i -> if (i < old.size) old[i] else StringState(AudioBuffer(maxDelay)) }
                 }
 
+                // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
+                // too, exactly like a returning stack voice: retire from the new count up and the
+                // string loop's ensureLanes rebuilds what comes back.
+                drift?.retireLanes(v)
+
                 for (i in oldV until v) {
                     strings[i].excited = false
                 }
@@ -1940,9 +1947,7 @@ object Ignitors {
                 val s = strings[n]
 
                 // Drawn just before this string's excitation, the order the strings had when each
-                // one held its own lane. No retiring here: a shrink KEEPS the string states (the
-                // DECIDED note above), so a string that comes back kept its walk before this
-                // container existed too, and still does.
+                // one held its own lane; a string that came back after a shrink draws a fresh one.
                 lanes?.ensureLanes(n + 1)
 
                 val detuneSemitones = getUnisonDetune(v, spread, n)

@@ -7,11 +7,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import kotlin.math.abs
-import kotlin.math.log2
+import io.kotest.matchers.shouldNotBe
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -41,9 +39,6 @@ class DriftLanesSpec : StringSpec({
         val own = Array(count) { AnalogDrift(analog, sr, rng) }
         val shared = AnalogDrift(analog, sr, Random(sharedSeed))
     }
-
-    /** Pitch offset of a multiplier, in cents: how far out of tune this sample is. */
-    fun cents(multiplier: Double): Double = 1200.0 * log2(multiplier)
 
     /**
      * One sample for one lane, exactly as an adopter's hot loop runs it: hoist the lane, the shared
@@ -157,13 +152,14 @@ class DriftLanesSpec : StringSpec({
         }
     }
 
-    "prepareBlock fills only its own window, and the shared walk runs on across windows" {
+    "prepareBlock fills from its window offset, and the walk continues into the next window" {
         val lanes = DriftLanes(analog, sr, Random(7))
 
         lanes.ensureLanes(1)
 
-        // Two half-blocks back to back. The scratch is read through `sharedWalk()`, the same array
-        // a voice loop indexes into, because the window bounds are what this case is about.
+        // Two half-windows back to back, read through `sharedWalk()`, the array a voice loop
+        // indexes into. What this pins is that the fill honours `off` and that the walk carries on
+        // where the previous window left it, so sample i always gets the i-th value of one walk.
         lanes.prepareBlock(0.5, 0, 64)
 
         val firstHalf = lanes.sharedWalk().shouldNotBeNull().copyOfRange(0, 64)
@@ -179,7 +175,7 @@ class DriftLanesSpec : StringSpec({
             walk[i] shouldBe (expected plusOrMinus 1e-15)
         }
 
-        // The second call left the first window alone.
+        // The second call wrote only its own window; the first window's values are still there.
         for (i in 0 until 64) {
             walk[i].toRawBits() shouldBe firstHalf[i].toRawBits()
         }
@@ -268,13 +264,11 @@ class DriftLanesSpec : StringSpec({
 
         lanes.prepareBlock(1.0, 0, frames)
 
-        // A regrown lane ATTACKS IN TUNE: its slow layer seeds at centre, so its first multiplier
-        // sits inside the fast layer's budget (about 0.2 cents per unit analog, 1.6 cents here),
-        // where lane 0, which kept walking, is free to be anywhere.
-        val firstRegrown = step(lanes, 1, 0)
-
-        abs(cents(firstRegrown)) shouldBeLessThan 3.5
-        firstRegrown.toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
+        // Bit equality against a lane drawn fresh from the same point in the stream IS the oracle:
+        // a resumed walk would be a different number. That a fresh lane attacks in tune is
+        // AnalogDriftSpec's business, and a cents bound here could not tell the two apart anyway,
+        // because over a short block the fast layer keeps EVERY lane inside its budget.
+        step(lanes, 1, 0).toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
         step(lanes, 2, 0).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
         step(lanes, 0, 0).toRawBits() shouldBe ref.own[0].nextMultiplier().toRawBits()
 
@@ -283,6 +277,22 @@ class DriftLanesSpec : StringSpec({
             step(lanes, 1, i).toRawBits() shouldBe regrown[0].nextMultiplier().toRawBits()
             step(lanes, 2, i).toRawBits() shouldBe regrown[1].nextMultiplier().toRawBits()
         }
+    }
+
+    "a retired index hands out no lane at all" {
+        val lanes = DriftLanes(analog, sr, Random(7))
+
+        lanes.ensureLanes(3)
+        lanes.prepareBlock(1.0, 0, frames)
+        lanes.retireLanes(1)
+
+        // The objects are still in the array, waiting to be rebuilt; they are nobody's lane now.
+        lanes.ownLane(0) shouldNotBe null
+        lanes.ownLane(1) shouldBe null
+        lanes.ownLane(2) shouldBe null
+
+        // An adopter that still steps a retired index gets a plain 1.0, never a stale walk.
+        step(lanes, 2, 0) shouldBe 1.0
     }
 
     "analog 0: inactive, every method a no-op, step exactly 1.0 and not one rng draw" {

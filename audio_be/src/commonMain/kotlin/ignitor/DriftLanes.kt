@@ -171,10 +171,11 @@ class DriftLanes(
     }
 
     /**
-     * The own lane a voice advances this block, or null when this block's blend advances none: at
-     * spread 0 exactly (the shared walk alone) and while [active] is false. Hoist once per voice.
+     * The own lane a voice advances this block, or null when there is none to advance: at spread 0
+     * exactly (the shared walk alone), while [active] is false, and at a RETIRED index, whose
+     * object is still in the array but is no longer anybody's lane. Hoist once per voice.
      */
-    fun ownLane(lane: Int): AnalogDrift? = if (useOwn) own[lane] else null
+    fun ownLane(lane: Int): AnalogDrift? = if (useOwn && lane < live) own[lane] else null
 
     /**
      * This block's shared deviations, indexed by absolute sample, or null at spread 1 exactly
