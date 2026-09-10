@@ -1147,10 +1147,11 @@ object Ignitors {
                 // DECIDED (maintainer, 2026-08-28): voice-count changes are OBSERVED AT BLOCK
                 // START by design (control-rate observation; block-framing ledger O3) — review
                 // rounds do not re-judge the timing. Guaranteed at a mid-note change instead:
-                // SURVIVING voices keep their phase, their AnalogDrift (the slow OU layer must not
+                // SURVIVING voices keep their phase, their drift lane (the slow OU layer must not
                 // re-seed to centre mid-note) and their gain-jitter draw; only NEW indices draw
                 // from the rng (ledger O4). At note-on `old` is empty, so the draw order below is
                 // bit-identical to the legacy path — the phase-pool bypass guarantee holds.
+
                 // Drift depth is latched at the first block that sizes the stack, the way the plain
                 // sine latches its own: a later `analog` read never re-depths a lane, and a voice
                 // added mid-note draws its lane at the latched depth.
