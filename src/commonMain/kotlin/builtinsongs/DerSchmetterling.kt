@@ -21,7 +21,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
@@ -88,7 +88,7 @@ let guitar = (() => {
     )
     // power amp
     //.distort(0.30, "gentle", 2)
-    .drive(0.41)
+    .drive(0.40)
     // cabinet
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
     .lowpass(5000).lowpass(5000)                       // cabinet speaker sim  
@@ -115,7 +115,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(Osc.slot.analog).analogSpread(0.5)).mul(pHarm)
+  let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(Osc.slot.analog).analogSpread(0.1)).mul(pHarm)
 
   // Grind: "tube" is an ASYMMETRIC shape, so it generates EVEN harmonics — which is what lets
   // the ear reconstruct a 41 Hz fundamental on a speaker that cannot play 41 Hz.
@@ -185,9 +185,9 @@ export guitar2_pat =
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 6] 9]>/4`
 
 export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -6 / 12)).oscp("hpq", 0.8)
-  .oscp("low", 2.0).oscp("lowHz",  900).oscp("lowQ", 0.6)
-  .oscp("mid", 2.5).oscp("midHz", 1550).oscp("midQ", 0.7)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -0 / 12)).oscp("hpq", 0.8)
+  .oscp("low", 1.5).oscp("lowHz",  900).oscp("lowQ", 0.6)
+  .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
   .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
   .hpf(240)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
@@ -204,9 +204,9 @@ export guitar3_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [5 -2 0 3] 6]!1>/4`
 
 export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -6 / 12)).oscp("hpq", 0.8)
-  .oscp("low", 2.0).oscp("lowHz", 700).oscp("lowQ", 0.6)
-  .oscp("mid", 2.5).oscp("midHz", 1350).oscp("midQ", 0.7)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -3 / 12)).oscp("hpq", 0.8)
+  .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
+  .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
   .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
   .hpf(180)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
@@ -224,7 +224,7 @@ export bass_pat =
 
 // TODO: remove grind from the bass and add eq
 export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.37) // . mute()
-    .oscp("sub", 1.0).oscp("harmonics", 0.80)  // . solo()
+    .oscp("sub", 1.0).oscp("harmonics", 0.90)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
 export bass_arrange = x => x.orbit(3) // . mute()
@@ -236,7 +236,7 @@ export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.n(0).gain(0.22).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.n(0).gain(0.25).velocity("0.98 0.94 0.96 0.94").pan(0.5)
   .hpf(freq = 35).lpf(12000).adsr(0.001, 0.030, 0.30, 0.25).distort(0.02)
   .superimpose(x => x.bpf(freq = "120", q = 3.0).vel(0.2))
 export kick_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
@@ -250,8 +250,8 @@ export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.22).pan(0.35)
-  .hpf(800).lpf(freq = "13500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(0.001, 0.5, 0.80, 1.0)
+export hats_shape = x => x.gain(0.21).pan(0.35)
+  .hpf(800).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(0.001, 0.1, 0.80, 1.0)
 export hats_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
