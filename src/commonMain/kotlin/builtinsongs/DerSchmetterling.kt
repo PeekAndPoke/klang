@@ -25,6 +25,7 @@ let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -0    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
+let pAnalog       = OscSlot.analog   // every instrument drifts with the stack's .analog(feel)
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
 // string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
@@ -150,7 +151,6 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = OscSlot.voices
   let pSpread     = OscSlot.spread
-  let pAnalog     = OscSlot.analog
 
   // ADSR
   let pAttack     = Osc.param("attack",       0.005, "Attack")
@@ -233,11 +233,11 @@ let bass = (() => {
 
   // Sub: a bare sine. No filter — a sine has no harmonics to remove. This is the weight,
   // and it lives at 36–70 Hz where nothing else in the mix is.
-  let sub = Osc.sine(x => x.analog(Osc.slot.analog)).mul(pSub)
+  let sub = Osc.sine(x => x.analog(pAnalog)).mul(pSub)
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(Osc.slot.analog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   // Grind: "tube" is an ASYMMETRIC shape, so it generates EVEN harmonics — which is what lets
   // the ear reconstruct a 41 Hz fundamental on a speaker that cannot play 41 Hz.
@@ -269,9 +269,9 @@ export lead_pat =
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
   let ring = Osc.constant(400).div(Osc.freq())                                  // seconds: 1.2 s on e4, 0.6 s on e5
-  let f1  = Osc.sine(x => x.analog(OscSlot.analog)).adsr(0.001, ring, 0.0, 1.2)
-  let f4  = Osc.sine(Osc.freq().mul(4.0), x => x.analog(OscSlot.analog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
-  let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(OscSlot.analog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
+  let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 1.2)
+  let f4  = Osc.sine(Osc.freq().mul(4.0), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
+  let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(0.6)   // yarn head: a thump, not a click
   let tube = mallet.bandpass(freq = Osc.freq(), q = 20).mul(3.0)                        // the resonator tube
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
