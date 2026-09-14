@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -0    // -2 .. D | 0 .. E | 2 .. F#
+let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -272,22 +272,22 @@ let marimba = (() => {
   let pAnalog = OscSlot.analog
   let ring = Osc.constant(400).div(Osc.freq())                                  // seconds: 1.2 s on e4, 0.6 s on e5
   let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 1.2)
-  let f4  = Osc.sine(Osc.freq().mul(4.0), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
+  let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
-  let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(0.6)   // yarn head: a thump, not a click
-  let tube = mallet.bandpass(freq = Osc.freq(), q = 20).mul(3.0)                        // the resonator tube
+  let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2800).mul(0.6)   // yarn head: a thump, not a click
+  let tube = mallet.bandpass(freq = Osc.freq(), q = 20, analog = pAnalog).mul(3.0)                        // the resonator tube
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
 })()
 
 export lead_shape = x => x.gain(0.35).sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4)
-  .hpf(300, 0.7)
+  .hpf(240, 0.7)
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.7, 0.85))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
   .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.30))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
- // .mute("<1!64 0!32 1!48 0!48>")
+  .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -369,6 +369,36 @@ export bass_arrange = x => x.orbit(3) // . mute()
 
 export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [x!8]!2 [[x x] x!3]!2>").fast(2).apply(bass_shape).tag("bass")
 
+// Orchestertrommel  ------------------------------------------------------------------------------------------------------------------------------------------
+// A concert bass drum. The head drops a sixth into its pitch as the skin settles, then rings for seconds; the membrane
+// modes (1.59 and 2.14 times the fundamental) are gone within a quarter second and are the hit; a felt beater thumps.
+let granCassa = (() => {
+  let pAnalog = OscSlot.analog
+  let ring = Osc.constant(150).div(Osc.freq())                                            // seconds: 2.2 s at 70 Hz
+  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, 0.001, 0.15).adsr(0.002, ring, 0.0, 2.0).mul(0.5)
+  // the harmonics 2f..6f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
+  // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
+  let harms = Osc.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog)).pitchEnvelope(9, 0.001, 0.15).adsr(0.002, 0.45, 0.0, 0.40).mul(0.6)
+  let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.40)
+  let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.25)
+  let beater = Osc.pinknoise().adsr(0.001, 0.030, 0.0, 0.020).lowpass(500).mul(2.0)        // felt: a thump, no click
+  return head.plus(harms).plus(m2).plus(m3).plus(beater)
+    .distort(0.15, "tube", 2)                                                              // the skin gives a little
+})()
+
+// A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
+export trommel_pat = `<[0 ~ ~ 0 ~ ~ 0 ~] [0 ~ ~ -2 ~ ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [4 ~ ~ 2 ~ ~ 0 ~]>`
+
+export trommel_shape = x => x.gain(0.25).sound(granCassa).adsrOff()
+  .velocity("1.0 0.7 0.8").body(material = "membrane", wet = 0.3)
+  .lpf(1200).pan(0.5)
+
+export trommel_arrange = x => x.orbit(4)
+  .scale("e2:minor").postgain("<0.5!128 1.0!32>")
+  .late(berlin.range(0.0005, 0.0010).mul(drunk))
+
+export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
+
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.n(0).gain(0.25).velocity("0.98 0.94 0.96 0.94").pan(0.5)
@@ -385,19 +415,19 @@ export snare_arrange = x => x.orbit(5).mute("<0!128 1!32>").late(berlin.range(0.
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.21).pan(0.35)
-  .hpf(800).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(0.001, 0.1, 0.80, 1.0)
+export hats_shape = x => x.gain(0.22).pan(0.35)
+  .hpf(800).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin.range(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
 export clap_pat = `<[rim rim ~ ~  ~ ~ ~ rim] [rim rim ~ ~  rim ~ ~ rim] [rim [rim!2]  rim [rim!2]]>`
 export clap_shape = x => x.gain(0.15).pan(0.3).superimpose(pan(0.7)) // . mute()
-  .hpf("400".add(perlin.range(0, 100).slow(4))).lpf("12000")
+  .hpf("400".add(perlin.range(0, 100).slow(4))).lpf("8000").adsr(perlin.range(0.006, 0.008), 0.2, 0.80, 2.1)
 export clap_arrange = x => x.orbit(8).mute("<0!128 1!32>")
 export clap = sound(clap_pat).apply(clap_shape).tag("clap")
 
 export shaker_pat = `<pink ~ pink ~ pink ~ pink>*8`
-export shaker_shape = x => x.gain(0.07).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
+export shaker_shape = x => x.gain(0.10).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
   .hpf(freq = 6000, q = 0.7) //  . solo()
   .pan(0.35).adsr(0.010, 0.08, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0010, 0.0020).mul(drunk))
@@ -425,6 +455,8 @@ export song_body = stack(
     ).room(wet = 0.15, size = 3.0).compressor(-21, 3, 6, 0.005, 0.12)
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
+    , // Orchestertrommel
+    trommel.apply(trommel_arrange).room(wet = 0.25, size = 8.0) // .solo() .mute()
   ).analog(feel).transpose(transposition).compressor(-21, 3, 6, 0.005, 0.12)
   , // Drums
   stack(
