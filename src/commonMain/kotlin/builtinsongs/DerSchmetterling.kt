@@ -26,11 +26,98 @@ let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
-// Cabinets  --------------------------------------------------------------------------------------------------------------------------------------------------
-// A cab is the linear half of an amp: a caricature with 2 to 4 tells, tuned by ear. Swap the one handed to makeGuitar below.
-// All of these are static and linear, so they move to the orbit unchanged once the Katalyst DSL lands.
+// Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
+// string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
+// stage has a menu of caricatures with 2 to 4 tells each, tuned by ear. The *Stock preset of every stage is the sound
+// before that stage existed, so a rig of all-stock presets is the A/B reference. Pick presets one stage at a time, in
+// signal order, with the rest held where they are. A preset you cannot name in an A/B gets deleted, not tuned.
 
-// Today's cab: two plain lowpasses at 5 kHz. The A/B reference, identical to the old guitar.
+// Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
+// cancels one harmonic.
+let pickupStock = x => x
+
+// Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
+let pickupSingle = x => x
+  .lowpass(4800, 2.5)                              // the peak, up high and narrow
+  .mul(0.8)                                        // low output, the amp stays cleaner
+
+// Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
+let pickupHumbucker = x => x
+  .lowpass(2600, 1.6)                              // the peak, low and wide
+  .mul(1.2)                                        // hot output
+
+// Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
+let pickupNeck = x => x
+  .lowpass(2200, 1.4)
+  .notch(freq = Osc.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
+  .mul(1.2)
+
+// Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
+// mul is the pedal's level knob, set so the three guitars land within 2 dB of the stock rig (a louder A/B always wins).
+let pedalStock = x => x
+
+// Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
+let pedalScreamer = x => x
+  .plus(x.highpass(720).distort(0.35, "soft", 2)) // the clipper only ever sees the mids
+  .lowpass(3200)                                   // the tone knob, half way
+  .mul(0.5)                                        // level
+
+// Fuzz: everything clips, hard and lopsided, splatty.
+let pedalFuzz = x => x
+  .distort(0.70, "asym", 4)
+  .lowpass(4500)
+  .mul(0.28)                                       // level
+
+// Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
+let pedalBoost = x => x
+  .highpass(400)
+  .mul(1.2)                                        // level
+
+// Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
+// is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
+let preampStock = x => x
+  .distort(0.20, "tube", 4).highpass(100)
+  .distort(0.50, "soft", 4).highpass(100)
+
+// Clean: one lightly driven tube stage and a bright cap that lets the top through.
+let preampClean = x => x
+  .distort(0.12, "tube", 2).highpass(80)
+  .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
+  .mul(3.5)                                        // volume
+
+// Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
+let preampCrunch = x => x
+  .distort(0.30, "tube", 4).highpass(90)
+  .distort(0.30, "tube", 4).highpass(90)
+  .mul(1.9)                                        // volume
+
+// High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
+let preampHighGain = x => x
+  .highpass(180)                                   // tight: no bass into the gain stages
+  .distort(0.35, "tube", 4).highpass(140)
+  .distort(0.45, "softsat", 4).highpass(140)
+  .distort(0.35, "hard", 4)
+  .lowpass(6500)                                   // the fizz
+  .mul(0.45)                                       // volume
+
+// Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
+let powerStock = x => x.drive(0.3)
+
+// Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
+let powerPushPull = x => x
+  .distort(0.25, "soft", 2)
+  .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
+  .mul(1.6)                                        // master
+
+// Class A: a lopsided clip, even harmonics, the chime.
+let powerClassA = x => x
+  .distort(0.25, "asym", 2)
+  .mul(1.3)                                        // master
+
+// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the orbit unchanged once
+// the Katalyst DSL lands.
+
+// Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
 let cabStock = x => x.lowpass(5000).lowpass(5000)
 
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
@@ -58,7 +145,7 @@ let cabCombo = x => x
   .lowpass(3800, 0.707, 2)                         // early roll-off
 
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
-let makeGuitar = cab => {
+let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = OscSlot.voices
@@ -107,21 +194,17 @@ let makeGuitar = cab => {
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease).adsrCurves("linear", "linear", "linear")
            
-  // the amp
-  let amped = signal
-    // pre amp
-    .distort(0.40, "tube", 4).highpass(100)
-    // drive amp
-    .distort(0.20, "gentle", 4).highpass(100)
+  // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
+  let toned = preamp(pedal(pickup(signal)))
     .eq(e => e
       .band(freq = pLowHz,  q = pLowQ,  db = pLow)       // low
       .band(freq = pMidHz,  q = pMidQ,  db = pMid)       // mid
-      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high    
+      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high
     )
-    // power amp
-    //.distort(0.30, "gentle", 2)
-    .drive(0.40)
-    .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
+
+  // the power amp, then let the snare cut through
+  let amped = power(toned)
+    .eq(e => e.band(freq = snareHz, q = 3.0, db = -2))
 
   // the cabinet, then follow freq to avoid low mud ... again
   return cab(amped)
@@ -129,7 +212,13 @@ let makeGuitar = cab => {
     .mul(0.30)
 }
 
-let guitar = makeGuitar(cab4x12)   // A/B: cabStock | cab4x12 | cab1x12 | cabCombo
+// The rig. A/B one stage at a time:
+//   pickup: pickupStock | pickupSingle | pickupHumbucker | pickupNeck
+//   pedal:  pedalStock  | pedalScreamer | pedalFuzz | pedalBoost
+//   preamp: preampStock | preampClean | preampCrunch | preampHighGain
+//   power:  powerStock  | powerPushPull | powerClassA
+//   cab:    cabStock    | cab4x12 | cab1x12 | cabCombo
+let guitar = makeGuitar(pickupStock, pedalStock, preampStock, powerStock, cab4x12)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {
@@ -202,7 +291,7 @@ export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guita
   .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
   .oscp("mid", 2.0).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
   .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
-  .hpf(320)
+  .hpf(240)
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
@@ -223,7 +312,7 @@ export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guita
   .oscp("low", 1.5).oscp("lowHz",  900).oscp("lowQ", 0.6)
   .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
   .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
-  .hpf(240)
+  .hpf(120)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
@@ -238,11 +327,11 @@ export guitar3_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [5 -2 0 3] 6]!1>/4`
 
 export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -3 / 12)).oscp("hpq", 0.8)
+  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 0.8)
   .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
   .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
   .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
-  .hpf(180)
+  .hpf(120)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
