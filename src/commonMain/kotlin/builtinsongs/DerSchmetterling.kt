@@ -269,9 +269,9 @@ export lead_pat =
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
   let ring = Osc.constant(400).div(Osc.freq())                                  // seconds: 1.2 s on e4, 0.6 s on e5
-  let f1  = Osc.sine().adsr(0.001, ring, 0.0, 1.2)
-  let f4  = Osc.sine(Osc.freq().mul(4.0)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
-  let f10 = Osc.sine(Osc.freq().mul(10.1)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
+  let f1  = Osc.sine(x => x.analog(OscSlot.analog)).adsr(0.001, ring, 0.0, 1.2)
+  let f4  = Osc.sine(Osc.freq().mul(4.0), x => x.analog(OscSlot.analog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
+  let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(OscSlot.analog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(0.6)   // yarn head: a thump, not a click
   let tube = mallet.bandpass(freq = Osc.freq(), q = 20).mul(3.0)                        // the resonator tube
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
@@ -279,13 +279,13 @@ let marimba = (() => {
 
 export lead_shape = x => x.gain(0.35).sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4)
-  .hpf(150, 0.7)
+  .hpf(300, 0.7)
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.7, 0.85))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.35))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.30))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!48 0!48>")
+ // .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
