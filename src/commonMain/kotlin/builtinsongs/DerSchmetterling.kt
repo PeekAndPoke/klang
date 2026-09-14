@@ -374,7 +374,7 @@ export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [
 // modes (1.59 and 2.14 times the fundamental) are gone within a quarter second and are the hit; a felt beater thumps.
 let granCassa = (() => {
   let pAnalog = OscSlot.analog
-  let ring = Osc.constant(150).div(Osc.freq())                                            // seconds: 2.2 s at 70 Hz
+  let ring = Osc.constant(150).div(Osc.freq()).mul(0.5)   // seconds: 2.2 s at 70 Hz
   let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, 0.001, 0.15).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
@@ -382,21 +382,22 @@ let granCassa = (() => {
   let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
   let beater = Osc.pinknoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(1.5)      // wood core: a crack, the force of the hit
+  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .mul(0.6).distort(0.10, "tube", 2)                                                     // the skin gives on the hit only; the ring stays clean
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
-export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ ~ -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [4 4 ~ 2 2 ~ 0 ~]>`
+export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [4 4 ~ 2 2 ~ 0 ~]>`
 
 // Far away: the low end and the top do not make it across the hall, the room does.
-export trommel_shape = x => x.gain(0.18).sound(granCassa).adsrOff()
+export trommel_shape = x => x.gain(0.28).sound(granCassa).adsrOff()
   .velocity("1.0 0.7 0.8").body(material = "membrane", wet = 0.3)
-  .hpf(90).lpf(3500).pan(0.5)
+  .hpf(50).lpf(3500).pan(0.5)                      // the highpass sits below the lowest note: a drum without its fundamental reads as distorted
 
 export trommel_arrange = x => x.orbit(4)
   .scale("e2:minor").postgain("<0.5!128 1.0!32>")
-  .mute("<1!96 0!96>")                             // the second half of the song only
+  .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
