@@ -94,10 +94,10 @@ let preampCrunch = x => x
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = x => x
   .highpass(140)                                   // tight: no bass into the gain stages
-  .distort(0.35, "tube", 4).highpass(120)
+  .distort(0.35, "tube", 4).highpass(100)
   .distort(0.45, "softsat", 4).highpass(100)
   .distort(0.35, "hard", 4)
-  .lowpass(6500)                                   // the fizz
+  .lowpass(6000)                                   // the fizz
   .mul(0.45)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -170,10 +170,6 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pHigh       = Osc.param("high",         0.000, "High Volume")
   let pHighHz     = Osc.param("highHz",    2500.000, "High frequency")
   let pHighQ      = Osc.param("highQ",        0.707, "High Q")
-
-  // Low mud filter
-  let pHpTrack    = Osc.param("hptrack",      1.000, "Highpass cutoff as a multiple of the note frequency")
-  let pHpQ        = Osc.param("hpq",          0.707, "Highpass resonance")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(19).spread(0.10)
@@ -206,10 +202,10 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let amped = power(toned)
     .eq(e => e.band(freq = snareHz, q = 2.0, db = -1))
 
-  // the cabinet, then follow freq to avoid low mud ... again
+  // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
+  // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
- //   .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)
-    .mul(0.30)
+    .mul(0.22)
 }
 
 // The rigs. A/B one stage at a time:
@@ -221,7 +217,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 // Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
 let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
-let guitarMelody = makeGuitar(pickupSingle,    pedalStock,    preampCrunch,   powerPushPull, cab4x12)
+let guitarMelody = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {
@@ -275,7 +271,7 @@ export lead_shape = x => x.gain(0.8).sound("supersaw").unison(voices = 7, spread
   .lpf(freq = "2350".add(perlin.range(0, 500).slow(4)), env = 8.0, q = 0.7, attack = 0.012, decay = 0.1, sustain = 0.66, release = 0.200)
   .pan(0.3).superimpose(pan(0.7)) // . solo()
 
-export lead_arrange = x => x.orbit(0)  .mute()
+export lead_arrange = x => x.orbit(0)  // .mute()
   .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.25))
   .shuffle("<1!80 1!1 4/8!14 1!33>")                                                                          
   .mute("<1!64 0!32 1!48 0!48>")
@@ -289,8 +285,8 @@ export guitar1_pat =
     [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 6@3]]]!2
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-5 -2 0 3] 4]]>/4`
 
-export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 3 / 12)).oscp("hpq", 0.7) //. mute()
+export guitar1_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
+  .oscp("decay", guitarDecay) //. mute()
   // .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
   // .oscp("mid", 2.0).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
   // .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
@@ -310,9 +306,9 @@ export guitar2_pat =
     [4 4 6 8  4 4 5 6] [4 4 6 8  11 11 9 10] [4 4 3 6  4 4 2 3]
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 6] 9]>/4`
 
-export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -0 / 12)).oscp("hpq", 0.8)
-  // .oscp("low", 1.5).oscp("lowHz",  900).oscp("lowQ", 0.6)
+export guitar2_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
+  .oscp("decay", guitarDecay)
+  // .oscp("low", 1.5).oscp("lowHz",  700).oscp("lowQ", 0.6)
   // .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
   // .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
   // .hpf(100)
@@ -329,15 +325,15 @@ export guitar3_pat =
   `<[0 0 2 4 0 0 -2 -1]!4
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [5 -2 0 3] 6]!1>/4`
 
-export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
-  .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 0.8)
-  // .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
+export guitar3_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
+  .oscp("decay", guitarDecay)
+  // .oscp("low", 1.5).oscp("lowHz", 700).oscp("lowQ", 0.6)
   // .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
   // .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
   // .hpf(100)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
-export guitar3_arrange = x => x.orbit(3) //  . solo()
+export guitar3_arrange = x => x.orbit(3)  // . solo()
   .scale("<e2:minor>").postgain(0.170).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
@@ -349,7 +345,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 4 6] 9]!1>/8`
 
 // TODO: remove grind from the bass and add eq
-export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.37) // . mute()
+export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.40) // . mute()
     .oscp("sub", 1.0).oscp("harmonics", 0.90)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
