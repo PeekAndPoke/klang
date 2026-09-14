@@ -25,7 +25,6 @@ let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -0    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
-let pAnalog       = OscSlot.analog   // every instrument drifts with the stack's .analog(feel)
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
 // string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
@@ -151,6 +150,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = OscSlot.voices
   let pSpread     = OscSlot.spread
+  let pAnalog     = OscSlot.analog
 
   // ADSR
   let pAttack     = Osc.param("attack",       0.005, "Attack")
@@ -223,6 +223,7 @@ let guitarMelody = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   po
 let bass = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
+  let pAnalog  = OscSlot.analog
   let pSub     = Osc.param("sub",         1.00, "Sub Volume")
   let pDrive   = Osc.param("drive",       0.60, "Saturation amount of the grind layer")
   let pGrindLo = Osc.param("grindlo",   100.00, "Grind highpass — where the bass starts biting")
@@ -268,6 +269,7 @@ export lead_pat =
 // stated at the hit and only the fundamental rings on, longer on low bars. A mallet thump, and the resonator tube
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
+  let pAnalog = OscSlot.analog
   let ring = Osc.constant(400).div(Osc.freq())                                  // seconds: 1.2 s on e4, 0.6 s on e5
   let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 1.2)
   let f4  = Osc.sine(Osc.freq().mul(4.0), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
