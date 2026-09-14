@@ -58,7 +58,7 @@ let pedalStock = x => x
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = x => x
-  .plus(x.highpass(720).distort(0.35, "soft", 2)) // the clipper only ever sees the mids
+  .plus(x.highpass(720).distort(0.35, "soft", 2).mul(0.6)) // the clipper only ever sees the mids, and the clean bass carries
   .lowpass(3200)                                   // the tone knob, half way
   .mul(0.5)                                        // level
 
@@ -93,9 +93,9 @@ let preampCrunch = x => x
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = x => x
-  .highpass(180)                                   // tight: no bass into the gain stages
-  .distort(0.35, "tube", 4).highpass(140)
-  .distort(0.45, "softsat", 4).highpass(140)
+  .highpass(140)                                   // tight: no bass into the gain stages
+  .distort(0.35, "tube", 4).highpass(120)
+  .distort(0.45, "softsat", 4).highpass(100)
   .distort(0.35, "hard", 4)
   .lowpass(6500)                                   // the fizz
   .mul(0.45)                                       // volume
@@ -204,21 +204,24 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // the power amp, then let the snare cut through
   let amped = power(toned)
-    .eq(e => e.band(freq = snareHz, q = 3.0, db = -2))
+    .eq(e => e.band(freq = snareHz, q = 2.0, db = -1))
 
   // the cabinet, then follow freq to avoid low mud ... again
   return cab(amped)
-    .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)
+ //   .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)
     .mul(0.30)
 }
 
-// The rig. A/B one stage at a time:
-//   pickup: pickupStock | pickupSingle | pickupHumbucker | pickupNeck
-//   pedal:  pedalStock  | pedalScreamer | pedalFuzz | pedalBoost
-//   preamp: preampStock | preampClean | preampCrunch | preampHighGain
+// The rigs. A/B one stage at a time:
+//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
+//   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
+//   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
 //   power:  powerStock  | powerPushPull | powerClassA
-//   cab:    cabStock    | cab4x12 | cab1x12 | cabCombo
-let guitar = makeGuitar(pickupStock, pedalStock, preampStock, powerStock, cab4x12)
+//   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
+// Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
+// centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
+let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
+let guitarMelody = makeGuitar(pickupSingle,    pedalStock,    preampCrunch,   powerPushPull, cab4x12)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {
@@ -272,7 +275,7 @@ export lead_shape = x => x.gain(0.8).sound("supersaw").unison(voices = 7, spread
   .lpf(freq = "2350".add(perlin.range(0, 500).slow(4)), env = 8.0, q = 0.7, attack = 0.012, decay = 0.1, sustain = 0.66, release = 0.200)
   .pan(0.3).superimpose(pan(0.7)) // . solo()
 
-export lead_arrange = x => x.orbit(0) // .mute()
+export lead_arrange = x => x.orbit(0)  .mute()
   .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.25))
   .shuffle("<1!80 1!1 4/8!14 1!33>")                                                                          
   .mute("<1!64 0!32 1!48 0!48>")
@@ -286,12 +289,12 @@ export guitar1_pat =
     [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 6@3]]]!2
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-5 -2 0 3] 4]]>/4`
 
-export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
+export guitar1_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 3 / 12)).oscp("hpq", 0.7) //. mute()
-  .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
-  .oscp("mid", 2.0).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
-  .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
-  .hpf(240)
+  // .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
+  // .oscp("mid", 2.0).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
+  // .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
+  // .hpf(160)
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
@@ -309,10 +312,10 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, -0 / 12)).oscp("hpq", 0.8)
-  .oscp("low", 1.5).oscp("lowHz",  900).oscp("lowQ", 0.6)
-  .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
-  .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
-  .hpf(120)
+  // .oscp("low", 1.5).oscp("lowHz",  900).oscp("lowQ", 0.6)
+  // .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
+  // .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
+  // .hpf(100)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
@@ -328,10 +331,10 @@ export guitar3_pat =
 
 export guitar3_shape = x => x.gain(0.5).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
   .oscp("decay", guitarDecay).oscp("hptrack", Math.pow(2, 0 / 12)).oscp("hpq", 0.8)
-  .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
-  .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
-  .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
-  .hpf(120)
+  // .oscp("low", 1.5).oscp("lowHz", 750).oscp("lowQ", 0.6)
+  // .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
+  // .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
+  // .hpf(100)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
