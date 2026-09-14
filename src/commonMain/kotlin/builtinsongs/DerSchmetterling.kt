@@ -26,7 +26,39 @@ let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
-let guitar = (() => {
+// Cabinets  --------------------------------------------------------------------------------------------------------------------------------------------------
+// A cab is the linear half of an amp: a caricature with 2 to 4 tells, tuned by ear. Swap the one handed to makeGuitar below.
+// All of these are static and linear, so they move to the orbit unchanged once the Katalyst DSL lands.
+
+// Today's cab: two plain lowpasses at 5 kHz. The A/B reference, identical to the old guitar.
+let cabStock = x => x.lowpass(5000).lowpass(5000)
+
+// 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
+let cab4x12 = x => x
+  .eq(e => e
+    .band(freq =  110, q = 1.2, db = 3.0)          // thump: closed-back box resonance
+    .band(freq = 2700, q = 2.0, db = 4.0)          // bark: the upper-mid speaker peak
+  )
+  .lowpass(5000, 0.707, 3)                         // the wall: 36 dB/oct, the fizz is gone
+
+// 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
+let cab1x12 = x => x
+  .highpass(120, 0.707, 2)                         // open back: no low end below the box
+  .eq(e => e
+    .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
+  )
+  .lowpass(6500, 0.707, 2)                         // soft, late roll-off, some air stays
+
+// Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
+let cabCombo = x => x
+  .highpass(160, 0.707, 2)                         // small speaker: nothing down low
+  .eq(e => e
+    .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
+  )
+  .lowpass(3800, 0.707, 2)                         // early roll-off
+
+// Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
+let makeGuitar = cab => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = OscSlot.voices
@@ -89,13 +121,15 @@ let guitar = (() => {
     // power amp
     //.distort(0.30, "gentle", 2)
     .drive(0.40)
-    // cabinet
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
-    .lowpass(5000).lowpass(5000)                       // cabinet speaker sim  
-    .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)  // follow freq to avoid low mud ... again
 
-  return amped.mul(0.30)
-})()
+  // the cabinet, then follow freq to avoid low mud ... again
+  return cab(amped)
+    .highpass(freq = Osc.freq().mul(pHpTrack), q = pHpQ, analog = pAnalog)
+    .mul(0.30)
+}
+
+let guitar = makeGuitar(cab4x12)   // A/B: cabStock | cab4x12 | cab1x12 | cabCombo
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {
