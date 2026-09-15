@@ -133,3 +133,41 @@ sit adjacent and linear (fusible under the no-reorder invariant above), which ar
 by a gain or a clip, and what an audit of the actual rendered graph (node count, filter section
 count, scratch buffers per voice) says. Measure before and after with the rig suite
 (`./gradlew runSongBenchmark --args=rig`) and on the device.
+
+### Census and costs, 2026-09-15 (Der Schmetterling, rhythm rig, seeded rig suite `2026-09-15_172412`)
+
+One rhythm guitar note's graph after the optimizer: 90 nodes, 11 `Eq` carrying 18 sections (the
+serial fusion already collapsed every one of the 9 standalone `Lowpass`/`Highpass` into them),
+5 `Drive` + 5 `Shape` (the distortion stages: 2x, 4x, 4x, 4x, 2x), 7 `Times` (the `mul` level
+knobs), 2 `Plus`, 2 `Adsr`, `PitchEnvelope`, `Crackle`, `SuperSaw`; about 35 passes over the
+block per note. The unison count is NOT a factor: 13+11 -> 7+7 voices moved the rhythm guitars
+from 0.0395 to 0.0392 RTF (the stack is one node; everything after it runs once per note).
+
+Where the rhythm guitars' 0.040 RTF goes:
+
+| slice | RTF | share | how measured |
+|---|---|---|---|
+| analog drift (`analog(feel)`, feel = 15) | 0.0075 | 19 % | `rhythm: no analog` |
+| the rig: preamp 0.0050, pedal 0.0028, power 0.0021, cab 0.0019, pickup 0.0007 | 0.012 | 30 % | one stage stock at a time |
+| string extras (pitch envelope, crackle burst) | 0.0025 | 6 % | `rhythm: no string extras` |
+| the rest: supersaw stack, ADSR, stock chain, per-node overhead | 0.018 | 45 % | remainder |
+
+The rig's cost is in its distortion stages, not its EQs: a 4x stage is one linear-interpolation
+upsample, the shaper on 512 samples and two polyphase half-band decimators (9 multiply-adds per
+output each), roughly nine filter sections' worth; the decimator is already polyphase.
+
+What is left for the optimizer on the EQ side is small: the 7 `Times` walls (a pass each to
+scale a block; foldable into the neighbouring Eq's output gain only by giving up the
+bit-identity invariant above), the `Drive` pass in front of every `Shape` (foldable into the
+shaper's oversampled loop), and the 3 tone-stack bands at 0 dB (a passthrough branch per
+sample, still one Eq pass). A rule that fuses two oversampled stages separated by a linear
+section into ONE up/down cycle (`Shape(hp(Shape(x)))` with the highpass run at 4x) would remove
+a decimator pair per fused pair, at the price of the invariant and of running the interstage
+filter at the oversampled rate.
+
+The analog drift is the largest single general item: `DriftLanes` steps every lane per sample
+(`AnalogDrift.nextMultiplier`: xorshift, two one-poles, the blend), 13 lanes per note here, for
+a modulation whose fastest layer has a 50 ms time constant. Stepping the lanes once per block
+and interpolating the multiplier across it is the candidate; not bit-identical, audibly the same
+wander (the per-sample residue is noise sidebands far below the drift depth), to be settled by
+ear on the guitars and the marimba (`lead: no analog` is 13 %, `trommel: no analog` 15 %).

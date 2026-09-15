@@ -586,6 +586,20 @@ object SongBenchmarkCases {
         liveCase("rhythm: power stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerStock", "cab4x12"))),
         liveCase("rhythm: cab stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerPushPull", "cabStock"))),
         liveCase("rhythm: all stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalStock", "preampStock", "powerStock", "cabStock"))),
+
+        // the string side of the same guitars: what the unison count, the analog drift and the
+        // string extras (pitch envelope, crackle burst) cost, the rig untouched
+        liveCase("rhythm: uni 7+7", "string", RHYTHM) {
+            swap("unison(voices = 13, spread = 0.05)", "unison(voices = 7, spread = 0.05)")(
+                swap("unison(voices = 11, spread = 0.05)", "unison(voices = 7, spread = 0.05)")(it),
+            )
+        },
+        liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
+        liveCase("rhythm: no string extras", "string", RHYTHM) {
+            swap("    .pitchEnvelope(0.5, 0.001, 0.02)\n", "")(
+                swap("    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))\n", "")(it),
+            )
+        },
         // the marimba, one component at a time
         liveCase("marimba: full", "marimba", LEAD),
         liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(400)", "let pAnalog = 0\n  let ring = Osc.constant(400)")),
