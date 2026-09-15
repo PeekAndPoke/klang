@@ -32,18 +32,27 @@ import kotlin.random.Random
  * notes into per-note random detune — each note stuck at its seeded offset for its
  * whole (short) life, which read as wandering intonation on melodic lines.
  *
- * Per-sample cost: 3 xorshift ops + 4 muls + 4 adds. No allocations, no `Random.nextX()`
+ * A step costs 3 xorshift ops + 4 muls + 4 adds. No allocations, no `Random.nextX()`
  * dispatch, no perm-table lookups.
  *
  * When [analog] is 0.0, [active] is false. Oscillators should branch on [active]
  * to skip the drift path entirely (zero overhead).
  *
- * Usage in oscillator hot loop:
+ * [stepRate] is how often the caller steps the lane, per second: the coefficients follow it, so
+ * a lane stepped once per block (the oscillators since 2026-09-15, at
+ * [analogDriftStepRate]) wanders with the same time constants and depth as one stepped per
+ * sample. The block form is [beginBlock] once, then a linear ramp from [blockStart] to
+ * [blockEnd] across the block's samples:
  * ```
- * phase += inc * drift.nextMultiplier()
+ * drift.beginBlock()
+ * var m = drift.blockStart
+ * val dm = (drift.blockEnd - m) / length
+ * for (...) { phase += inc * m; m += dm }
  * ```
+ * [nextMultiplier] is the raw step; the filter drift (`FilterModRenderer`) holds one per block
+ * without a ramp.
  */
-class AnalogDrift(analog: Double, sampleRate: Int, rng: Random = Random) {
+class AnalogDrift(analog: Double, stepRate: Int, rng: Random = Random) {
     /** Whether analog drift is active. Check this to skip the drift path entirely. */
     val active: Boolean = analog > 0.0
 
@@ -57,8 +66,16 @@ class AnalogDrift(analog: Double, sampleRate: Int, rng: Random = Random) {
     private var ySlow: Double
     private var rngState: Int
 
+    /** The multiplier this block starts at: where the previous block ended. See [beginBlock]. */
+    var blockStart: Double = 1.0
+        private set
+
+    /** The multiplier this block ends at, one step past [blockStart]. See [beginBlock]. */
+    var blockEnd: Double = 1.0
+        private set
+
     init {
-        val coeffs = AnalogDriftCoeffs(analog, sampleRate)
+        val coeffs = AnalogDriftCoeffs(analog, stepRate)
         alphaFast = coeffs.alphaFast
         alphaSlow = coeffs.alphaSlow
         betaSlow = coeffs.betaSlow
@@ -74,6 +91,18 @@ class AnalogDrift(analog: Double, sampleRate: Int, rng: Random = Random) {
         var s = rng.nextInt()
         if (s == 0) s = 1 // xorshift32 doesn't tolerate a zero seed
         rngState = s
+        // The ramp starts where the seeded state sits, so the first block moves from it, not from 1.
+        blockEnd = 1.0 + yFast * scaleFast + ySlow * scaleSlow
+        blockStart = blockEnd
+    }
+
+    /**
+     * Advances the lane one step and sets up the block's ramp: [blockStart] becomes the previous
+     * [blockEnd] (continuity across blocks), [blockEnd] the new multiplier. Once per block.
+     */
+    fun beginBlock() {
+        blockStart = blockEnd
+        blockEnd = nextMultiplier()
     }
 
     /**

@@ -113,7 +113,7 @@ class FilterEnvSemitoneSpec : StringSpec({
         fun cutoffWithDrift(depth: Double): Double {
             val filter = RecordingFilter()
             val drift = AnalogDrift(
-                analog = 1.0, sampleRate = 48000, rng = Random(1234),
+                analog = 1.0, stepRate = 48000, rng = Random(1234),
             )
             val mod = Voice.FilterModulator(
                 filter = filter,

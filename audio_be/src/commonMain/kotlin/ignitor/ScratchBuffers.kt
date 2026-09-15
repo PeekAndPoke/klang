@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * All external access goes through [use], which guarantees the buffer is returned even on exceptions.
  * Max simultaneous buffers = composition tree depth. E.g. `(a + b).mul(0.5) + c` needs 2.
  */
-class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
+class ScratchBuffers(val blockFrames: Int, initialCapacity: Int = 4) {
 
     private val pool = ArrayList<AudioBuffer>(initialCapacity).apply {
         repeat(initialCapacity) { add(AudioBuffer(blockFrames)) }

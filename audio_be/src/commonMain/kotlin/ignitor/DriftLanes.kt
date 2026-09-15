@@ -9,7 +9,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * N own [AnalogDrift] lanes plus one shared lane, blended per sample by `analogSpread`.
+ * N own [AnalogDrift] lanes plus one shared lane, blended per block by `analogSpread`.
  *
  * The one drift container for every multi-voice site: the unison stacks (a lane per voice), the
  * sine partial bank (a lane per partial), the superpluck (a lane per string). Independent lanes
@@ -17,11 +17,13 @@ import kotlin.random.Random
  * each VCO carries its own pitch instability; one walk shared by every voice wobbles them in
  * lockstep, which kills the analog feel. That is why the default is spread 1, a lane per voice.
  *
- * `spread` blends the two ends per sample, in RATIO MINUS ONE space (the deviations add;
- * multiplying the multipliers would carry a second-order term that means nothing at cent scale):
+ * `spread` blends the two walks, in RATIO MINUS ONE space (the deviations add; multiplying the
+ * multipliers would carry a second-order term that means nothing at cent scale). Every lane steps
+ * ONCE per block (2026-09-15; per sample before) and the voice ramps linearly across the block
+ * between the blend of the two block starts and the blend of the two block ends:
  *
  * ```
- * multiplier = 1 + sqrt(1 - s) * sharedDev[i] + sqrt(s) * (own[lane].nextMultiplier() - 1)
+ * multiplier(block edge) = 1 + sqrt(1 - s) * (shared - 1) + sqrt(s) * (own[lane] - 1)
  * ```
  *
  * The weights are constant-power, so two independent walks sum to the same depth as one and the
@@ -50,20 +52,21 @@ import kotlin.random.Random
  * count rise) get the latched depth, and a surviving lane keeps its walk: the slow layer must not
  * re-seed to centre mid-note.
  *
- * **No per-block allocation.** The shared scratch grows on demand and never shrinks, and lanes are
- * built only when the live count rises, so no block allocates in steady state.
+ * **No per-block allocation.** Lanes are built only when the live count rises, so no block
+ * allocates in steady state.
  *
  * [active] is false when `analog` is 0. Adopters keep a null [DriftLanes] then and skip the drift
  * path entirely, which is what the mono oscillators do with a null [AnalogDrift].
  *
- * **How a hot loop uses it.** Hoist [ownLane], [sharedWalk] and the two weights into locals ONCE
- * per voice, before its sample loop, and call [driftStep] with them. Everything they carry is
- * constant for the block, and a loop that read them off the container per sample paid for it: on
- * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10).
+ * **How a hot loop uses it.** [prepareBlock] once per block, then per voice [advanceLane], and
+ * the ramp `m = startOf(lane)`, `dm = (endOf(lane) - m) / length` hoisted before its sample
+ * loop, which pays one add per sample. Nothing is read off the container per sample: on
+ * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10), and the
+ * per-sample lane steps it replaced cost the Schmetterling guitars 19 percent (2026-09-15).
  */
 class DriftLanes(
     private val analog: Double,
-    private val sampleRate: Int,
+    private val stepRate: Int,
     private val rng: Random,
 ) {
     /** Whether drift is active. When false the adopter should hold null and skip the drift path. */
@@ -84,16 +87,11 @@ class DriftLanes(
     /** The shared walk, built at the first [prepareBlock] that needs it, from [sharedSeed]. */
     private var shared: AnalogDrift? = null
 
-    /** Growth-only scratch: the shared lane's deviation (`multiplier - 1`) per sample of the block. */
-    private var sharedDev: DoubleArray = DoubleArray(0)
+    /** Weight of the shared walk this block, `sqrt(1 - spread)`. */
+    private var wShared: Double = 0.0
 
-    /** Weight of the shared walk this block, `sqrt(1 - spread)`. Hoist it once per voice. */
-    var wShared: Double = 0.0
-        private set
-
-    /** Weight of the own walk this block, `sqrt(spread)`. Hoist it once per voice. */
-    var wOwn: Double = 0.0
-        private set
+    /** Weight of the own walk this block, `sqrt(spread)`. */
+    private var wOwn: Double = 0.0
 
     private var useShared: Boolean = false
     private var useOwn: Boolean = false
@@ -114,7 +112,7 @@ class DriftLanes(
         val old = own
         val kept = live
 
-        own = Array(count) { i -> if (i < kept) old[i] else AnalogDrift(analog, sampleRate, rng) }
+        own = Array(count) { i -> if (i < kept) old[i] else AnalogDrift(analog, stepRate, rng) }
         live = count
     }
 
@@ -133,10 +131,10 @@ class DriftLanes(
 
     /**
      * Once per block, BEFORE the voice loop. Coerces [spread] to `0..1`, derives the constant-power
-     * weights, and (below spread 1) advances the shared lane once per sample for `off until end`
-     * into the scratch, so every voice's loop reads the same shared sequence.
+     * weights, and (below spread 1) steps the shared lane once, so every voice's ramp this block
+     * blends the same shared move.
      */
-    fun prepareBlock(spread: Double, off: Int, end: Int) {
+    fun prepareBlock(spread: Double) {
         if (!active) {
             return
         }
@@ -154,61 +152,48 @@ class DriftLanes(
             return
         }
 
-        val lane = shared ?: AnalogDrift(analog, sampleRate, Random(sharedSeed)).also { shared = it }
+        val lane = shared ?: AnalogDrift(analog, stepRate, Random(sharedSeed)).also { shared = it }
 
-        if (sharedDev.size < end) {
-            // copyOf, not a fresh array, defensively: growth here can only widen a window that
-            // was already filled, and keeping what is in it costs nothing. Today it cannot bite,
-            // because `Voice.render` gives a voice exactly ONE window per block, so a mid-block
-            // onset sizes the scratch on its first call and later blocks reuse it.
-            sharedDev = sharedDev.copyOf(end)
-        }
-
-        val dev = sharedDev
-
-        for (i in off until end) {
-            dev[i] = lane.nextMultiplier() - 1.0
-        }
+        lane.beginBlock()
     }
 
     /**
-     * The own lane a voice advances this block, or null when there is none to advance: at spread 0
-     * exactly (the shared walk alone), while [active] is false, and at a RETIRED index, whose
-     * object is still in the array but is no longer anybody's lane. Hoist once per voice.
+     * Steps voice [lane]'s own lane once for this block, when this block advances own lanes at all
+     * (not at spread 0 exactly, not while [active] is false, not at a RETIRED index, whose object is
+     * still in the array but is no longer anybody's lane). Once per voice per block, before
+     * [startOf] and [endOf].
      */
-    fun ownLane(lane: Int): AnalogDrift? = if (useOwn && lane < live) own[lane] else null
+    fun advanceLane(lane: Int) {
+        if (useOwn && lane < live) {
+            own[lane].beginBlock()
+        }
+    }
+
+    /** Voice [lane]'s multiplier at the start of this block: the blend of both walks' block starts. */
+    fun startOf(lane: Int): Double = blendOf(lane, atEnd = false)
+
+    /** Voice [lane]'s multiplier at the end of this block: the blend of both walks' block ends. */
+    fun endOf(lane: Int): Double = blendOf(lane, atEnd = true)
 
     /**
-     * This block's shared deviations, indexed by absolute sample, or null at spread 1 exactly
-     * (no shared walk in the blend). Hoist once per voice.
+     * The blend, over the two lanes' ramp ends. Endpoints are exact: spread 1 is the own lane's own
+     * multiplier, spread 0 the shared lane's, and a voice with neither (a retired index at spread 1)
+     * sits at 1.
      */
-    fun sharedWalk(): DoubleArray? = if (useShared) sharedDev else null
-}
+    private fun blendOf(lane: Int, atEnd: Boolean): Double {
+        val ownLane = if (useOwn && lane < live) own[lane] else null
+        val sharedLane = if (useShared) shared else null
+        val ownV = if (ownLane == null) 1.0 else if (atEnd) ownLane.blockEnd else ownLane.blockStart
+        val sharedV = if (sharedLane == null) 1.0 else if (atEnd) sharedLane.blockEnd else sharedLane.blockStart
 
-/**
- * The blend itself, over values a hot loop has already hoisted: [own] is the lane to advance (null
- * when this block advances none), [shared] the block's shared deviations (null at spread 1), and
- * the weights are [DriftLanes.wShared] and [DriftLanes.wOwn].
- *
- * One definition for every adopter, and every input a local, so on Kotlin/JS the expansion reads no
- * object property per sample. Endpoints are exact: spread 1 is the own lane's own multiplier, spread
- * 0 is the shared deviation and no own lane advances.
- */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun driftStep(
-    own: AnalogDrift?,
-    shared: DoubleArray?,
-    wShared: Double,
-    wOwn: Double,
-    i: Int,
-): Double {
-    if (shared == null) {
-        return if (own != null) own.nextMultiplier() else 1.0
+        if (sharedLane == null) {
+            return ownV
+        }
+
+        if (ownLane == null) {
+            return sharedV
+        }
+
+        return 1.0 + wShared * (sharedV - 1.0) + wOwn * (ownV - 1.0)
     }
-
-    if (own == null) {
-        return 1.0 + shared[i]
-    }
-
-    return 1.0 + wShared * shared[i] + wOwn * (own.nextMultiplier() - 1.0)
 }

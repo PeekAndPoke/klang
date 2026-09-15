@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
+import io.peekandpoke.klang.audio_be.ignitor.analogDriftStepRate
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
@@ -58,7 +59,7 @@ class VoiceFactory(
      * in `AnalogDriftCoeffs` are derived from the effective update rate, not
      * the audio rate).
      */
-    private val driftUpdateRate: Int = (sampleRate / blockFrames.coerceAtLeast(1)).coerceAtLeast(1)
+    private val driftUpdateRate: Int = analogDriftStepRate(sampleRate, blockFrames)
 
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
@@ -375,6 +376,7 @@ class VoiceFactory(
                     stopFrame = endSample,
                     analog = data.oscParams?.get("analog") ?: 0.0,
                     sampleRate = sampleRate,
+                    blockFrames = blockFrames,
                 )
 
                 buildVoice(

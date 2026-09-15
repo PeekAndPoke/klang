@@ -165,7 +165,9 @@ section into ONE up/down cycle (`Shape(hp(Shape(x)))` with the highpass run at 4
 a decimator pair per fused pair, at the price of the invariant and of running the interstage
 filter at the oversampled rate.
 
-The analog drift is the largest single general item: `DriftLanes` steps every lane per sample
+The analog drift (DONE 2026-09-15, same day: every lane steps per block and ramps across it,
+the rhythm rig 0.040 -> 0.036 with the drift now free, the live song -8 %) was the largest
+single general item: `DriftLanes` stepped every lane per sample
 (`AnalogDrift.nextMultiplier`: xorshift, two one-poles, the blend), 13 lanes per note here, for
 a modulation whose fastest layer has a 50 ms time constant. Stepping the lanes once per block
 and interpolating the multiplier across it is the candidate; not bit-identical, audibly the same

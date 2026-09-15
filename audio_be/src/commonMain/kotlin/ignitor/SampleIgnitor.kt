@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.random.Random
 
@@ -31,11 +32,13 @@ class SampleIgnitor(
     private val stopFrame: Double,
     analog: Double = 0.0,
     sampleRate: Int,
+    /** The engine's block size: the drift lane steps once per block (see [AnalogDrift]). */
+    blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     /** The voice's random stream (seeded-voice-rng) — wow/flutter drift seeds from it. */
     rng: Random = Random,
 ) : Ignitor {
 
-    private val drift = AnalogDrift(analog, sampleRate, rng)
+    private val drift = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), rng)
     private val loopLength = if (isLooping && loopEnd > loopStart) loopEnd - loopStart else 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -45,7 +48,12 @@ class SampleIgnitor(
         var ph = playhead
 
         if (drift.active) {
-            // Analog drift path: wow & flutter on playback rate
+            // Analog drift path: wow & flutter on playback rate, one lane step per block, ramped
+            drift.beginBlock()
+
+            var m = drift.blockStart
+            val dm = (drift.blockEnd - m) / ctx.length.coerceAtLeast(1)
+
             for (i in 0 until ctx.length) {
                 val idxOut = ctx.offset + i
 
@@ -68,8 +76,8 @@ class SampleIgnitor(
                     }
                 }
 
-                val driftMult = drift.nextMultiplier()
-                ph += if (phaseMod != null) rate * phaseMod[idxOut] * driftMult else rate * driftMult
+                ph += if (phaseMod != null) rate * phaseMod[idxOut] * m else rate * m
+                m += dm
             }
         } else {
             // Clean digital path (unchanged)

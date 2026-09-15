@@ -153,16 +153,23 @@ object Ignitors {
             val end = ctx.windowEnd
 
             if (d.active) {
+                d.beginBlock()
+
+                var m = d.blockStart
+                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         buffer[i] = fastSin(phase)
-                        phase += phaseInc * d.nextMultiplier()
+                        phase += phaseInc * m
+                        m += dm
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
                         buffer[i] = fastSin(phase)
-                        phase += phaseInc * phaseMod[i] * d.nextMultiplier()
+                        phase += phaseInc * phaseMod[i] * m
+                        m += dm
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 }
@@ -336,26 +343,27 @@ object Ignitors {
             pm: DoubleArray?, drift: DriftLanes?, lane: Int,
         ): Double {
             var ph = phaseIn
-            // Hoisted once per partial: everything the blend reads is constant for the block.
-            val ownLane = drift?.ownLane(lane)
-            val sharedWalk = drift?.sharedWalk()
-            val wShared = drift?.wShared ?: 0.0
-            val wOwn = drift?.wOwn ?: 0.0
+            // The drift ramp for this partial and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(lane)
+                m = drift.startOf(lane)
+                dm = (drift.endOf(lane) - m) / (end - off).coerceAtLeast(1)
+            }
 
             for (i in off until end) {
                 val s = g * fastSin(ph)
                 buffer[i] = if (first) s else buffer[i] + s
 
-                var step = d
+                var step = d * m
 
                 if (pm != null) {
                     step *= pm[i]
                 }
 
-                if (drift != null) {
-                    step *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
-                }
-
+                m += dm
                 ph = (ph + step).wrapPhase(TWO_PI)
             }
 
@@ -371,7 +379,7 @@ object Ignitors {
 
                 if (analogAmt > 0.0) {
                     // Lane 0 is the fundamental, drawn here so it keeps the head of the draw order.
-                    drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random).also { it.ensureLanes(1) }
+                    drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random).also { it.ensureLanes(1) }
                 }
             }
 
@@ -425,10 +433,10 @@ object Ignitors {
             // not anything reads its value this block (ledger O2).
             val analogSpreadAmt = readParam(analogSpread, actualFreq, ctx)
 
-            // The shared walk is advanced once per sample for the whole bank, BEFORE the partials,
-            // so every partial's loop reads the same sequence.
+            // The shared walk steps once for the whole bank, BEFORE the partials, so every
+            // partial's ramp blends the same shared move.
             if (lanes != null) {
-                lanes.prepareBlock(analogSpreadAmt, off, end)
+                lanes.prepareBlock(analogSpreadAmt)
             }
 
             var first = true
@@ -503,7 +511,7 @@ object Ignitors {
 
                 val amt = readParam(analog, actualFreq, ctx)
 
-                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate, ctx.random) else null
+                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.driftStepRate, ctx.random) else null
             }
 
             val dt = actualFreq / ctx.sampleRateD
@@ -553,6 +561,14 @@ object Ignitors {
                     var phase = voice.phase
                     val drift = voice.drift
                     val pol = polarity
+                    var m = 1.0
+                    var dm = 0.0
+
+                    if (drift != null) {
+                        drift.beginBlock()
+                        m = drift.blockStart
+                        dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+                    }
 
                     for (i in off until end) {
                         val d = dutyBuf[i]
@@ -565,16 +581,13 @@ object Ignitors {
                             phase, voice.riseEnd, voice.highEnd, voice.fallEnd, voice.riseSlope, voice.fallSlope,
                         )
 
-                        var inc = dt
+                        var inc = dt * m
 
                         if (pm != null) {
                             inc *= pm[i]
                         }
 
-                        if (drift != null) {
-                            inc *= drift.nextMultiplier()
-                        }
-
+                        m += dm
                         phase += inc
                         phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
                     }
@@ -591,6 +604,15 @@ object Ignitors {
             var phase = voice.phase
             val drift = voice.drift
             val pol = polarity
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.beginBlock()
+                m = drift.blockStart
+                dm = (drift.blockEnd - m) / (end - off).coerceAtLeast(1)
+            }
+
             val riseEnd = voice.riseEnd
             val highEnd = voice.highEnd
             val fallEnd = voice.fallEnd
@@ -600,16 +622,13 @@ object Ignitors {
             for (i in off until end) {
                 buffer[i] = pol * waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope)
 
-                var inc = dt
+                var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
                 }
 
-                if (drift != null) {
-                    inc *= drift.nextMultiplier()
-                }
-
+                m += dm
                 phase += inc
                 phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
             }
@@ -742,18 +761,25 @@ object Ignitors {
             val end = ctx.windowEnd
 
             if (d.active) {
+                d.beginBlock()
+
+                var m = d.blockStart
+                val dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
-                        phase += phaseInc * d.nextMultiplier()
+                        phase += phaseInc * m
+                        m += dm
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
                         buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
-                        phase += phaseInc * phaseMod[i] * d.nextMultiplier()
+                        phase += phaseInc * phaseMod[i] * m
+                        m += dm
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 }
@@ -1185,7 +1211,7 @@ object Ignitors {
                     analogLatched = true
 
                     if (analogAmt > 0.0) {
-                        drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+                        drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random)
                     }
                 }
 
@@ -1249,10 +1275,10 @@ object Ignitors {
             // not anything reads its value this block (ledger O2).
             val analogSpreadAmt = readParam(analogSpread, actualFreq, ctx)
 
-            // The shared walk runs once for the whole block, BEFORE the voice loop, so every voice
-            // reads the same sequence out of the scratch.
+            // The shared walk steps once for the whole block, BEFORE the voice loop, so every
+            // voice's ramp blends the same shared move.
             if (lanes != null) {
-                lanes.prepareBlock(analogSpreadAmt, off, end)
+                lanes.prepareBlock(analogSpreadAmt)
             }
 
             for (n in 0 until v) {
@@ -1429,27 +1455,28 @@ object Ignitors {
             val fallEnd = vs.fallEnd
             val riseSlope = vs.riseSlope
             val fallSlope = vs.fallSlope
-            // Hoisted once per voice: everything the blend reads is constant for the block.
-            val ownLane = drift?.ownLane(n)
-            val sharedWalk = drift?.sharedWalk()
-            val wShared = drift?.wShared ?: 0.0
-            val wOwn = drift?.wOwn ?: 0.0
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+            }
 
             for (i in off until end) {
                 val s = waveTrapezoid(phase, riseEnd, highEnd, fallEnd, riseSlope, fallSlope) * gain
 
                 buffer[i] = if (first) s else buffer[i] + s
 
-                var inc = dt
+                var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
                 }
 
-                if (drift != null) {
-                    inc *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
-                }
-
+                m += dm
                 phase += inc
                 // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
                 // otherwise the safe wrap (see safeWrap above).
@@ -1536,27 +1563,28 @@ object Ignitors {
             // and infinite dt take the safe branch, which wraps them to 0.
             val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
             val gain = vs.gain
-            // Hoisted once per voice: everything the blend reads is constant for the block.
-            val ownLane = drift?.ownLane(n)
-            val sharedWalk = drift?.sharedWalk()
-            val wShared = drift?.wShared ?: 0.0
-            val wOwn = drift?.wOwn ?: 0.0
+            // The drift ramp for this voice and block: one add per sample (DriftLanes KDoc).
+            var m = 1.0
+            var dm = 0.0
+
+            if (drift != null) {
+                drift.advanceLane(n)
+                m = drift.startOf(n)
+                dm = (drift.endOf(n) - m) / (end - off).coerceAtLeast(1)
+            }
 
             for (i in off until end) {
                 val s = fastSin(phase * TWO_PI) * gain
 
                 buffer[i] = if (first) s else buffer[i] + s
 
-                var inc = dt
+                var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
                 }
 
-                if (drift != null) {
-                    inc *= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
-                }
-
+                m += dm
                 phase += inc
                 phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
             }
@@ -1793,6 +1821,16 @@ object Ignitors {
                 writePos = delayLen % maxDelay
             }
 
+            var m = 1.0
+            var dm = 0.0
+            val hasDrift = d.active
+
+            if (hasDrift) {
+                d.beginBlock()
+                m = d.blockStart
+                dm = (d.blockEnd - m) / (end - ctx.offset).coerceAtLeast(1)
+            }
+
             for (i in ctx.offset until end) {
                 var dl = baseDelay
 
@@ -1800,8 +1838,9 @@ object Ignitors {
                     dl /= phaseMod[i]
                 }
 
-                if (d.active) {
-                    dl /= d.nextMultiplier()
+                if (hasDrift) {
+                    dl /= m
+                    m += dm
                 }
 
                 dl = dl.coerceIn(2.0, (maxDelay - 1.0))
@@ -1955,16 +1994,16 @@ object Ignitors {
                 analogLatched = true
 
                 if (analogAmt > 0.0) {
-                    drift = DriftLanes(analogAmt, ctx.sampleRate, ctx.random)
+                    drift = DriftLanes(analogAmt, ctx.driftStepRate, ctx.random)
                 }
             }
 
             val lanes = drift
 
             // The shared walk runs once for the whole block, BEFORE the string loop, so every
-            // string reads the same sequence out of the scratch.
+            // string's ramp blends the same shared move.
             if (lanes != null) {
-                lanes.prepareBlock(analogSpreadAmt, ctx.offset, end)
+                lanes.prepareBlock(analogSpreadAmt)
             }
 
             for (n in 0 until v) {
@@ -2000,10 +2039,14 @@ object Ignitors {
 
                 val isFirst = n == 0
                 // Hoisted once per string: everything the blend reads is constant for the block.
-                val ownLane = lanes?.ownLane(n)
-                val sharedWalk = lanes?.sharedWalk()
-                val wShared = lanes?.wShared ?: 0.0
-                val wOwn = lanes?.wOwn ?: 0.0
+                var m = 1.0
+                var dm = 0.0
+
+                if (lanes != null) {
+                    lanes.advanceLane(n)
+                    m = lanes.startOf(n)
+                    dm = (lanes.endOf(n) - m) / (end - ctx.offset).coerceAtLeast(1)
+                }
 
                 for (i in ctx.offset until end) {
                     // Effective delay with detune, phaseMod, and per-voice drift
@@ -2014,7 +2057,8 @@ object Ignitors {
                     }
 
                     if (lanes != null) {
-                        dl /= driftStep(ownLane, sharedWalk, wShared, wOwn, i)
+                        dl /= m
+                        m += dm
                     }
 
                     dl = dl.coerceIn(2.0, (maxDelay - 1.0))
@@ -2087,7 +2131,7 @@ object Ignitors {
 
     /** Initialize [AnalogDrift] lazily from the [analog] param on the first block (read once, control rate). */
     internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift =
-        AnalogDrift(readParam(analog, freqHz, ctx), ctx.sampleRate, ctx.random)
+        AnalogDrift(readParam(analog, freqHz, ctx), ctx.driftStepRate, ctx.random)
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Internal helpers

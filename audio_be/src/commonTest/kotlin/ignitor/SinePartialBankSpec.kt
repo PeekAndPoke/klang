@@ -376,8 +376,9 @@ class SinePartialBankSpec : StringSpec({
     fun driftReference(seed: Int, analog: Double, spread: Double, multiples: DoubleArray, gains: DoubleArray, freqHz: Double): DoubleArray {
         val r = Random(seed)
         val sharedSeed = r.nextInt()
-        val lanes = Array(multiples.size) { AnalogDrift(analog, sampleRate, r) }
-        val shared = if (spread < 1.0) AnalogDrift(analog, sampleRate, Random(sharedSeed)) else null
+        val rate = analogDriftStepRate(sampleRate, blockFrames)
+        val lanes = Array(multiples.size) { AnalogDrift(analog, rate, r) }
+        val shared = if (spread < 1.0) AnalogDrift(analog, rate, Random(sharedSeed)) else null
         val ph = DoubleArray(multiples.size)
         val inc = DoubleArray(multiples.size) { TWO_PI * multiples[it] * freqHz / sampleRate.toDouble() }
         val out = DoubleArray(blocks * blockFrames)
@@ -386,18 +387,38 @@ class SinePartialBankSpec : StringSpec({
         val wShared = sqrt(1.0 - spread)
         val wOwn = sqrt(spread)
 
-        for (i in out.indices) {
-            val sharedDev = if (shared != null) shared.nextMultiplier() - 1.0 else 0.0
-            var acc = 0.0
+        // Every lane steps once per block; the multiplier ramps linearly across the block between
+        // the blend of the block starts and the blend of the block ends.
+        fun blend(sharedV: Double, ownV: Double): Double = when {
+            shared == null -> ownV
+            spread <= 0.0 -> sharedV
+            else -> 1.0 + wShared * (sharedV - 1.0) + wOwn * (ownV - 1.0)
+        }
+
+        for (b in 0 until blocks) {
+            shared?.beginBlock()
 
             for (p in multiples.indices) {
-                acc += gains[p] * sin(ph[p])
-                val ownDev = if (spread > 0.0) lanes[p].nextMultiplier() - 1.0 else 0.0
-                val mul = 1.0 + wShared * sharedDev + wOwn * ownDev
-                ph[p] = (ph[p] + inc[p] * mul).wrapPhase(TWO_PI)
+                if (spread > 0.0) {
+                    lanes[p].beginBlock()
+                }
             }
 
-            out[i] = acc
+            for (i in 0 until blockFrames) {
+                var acc = 0.0
+
+                for (p in multiples.indices) {
+                    acc += gains[p] * sin(ph[p])
+
+                    val m0 = blend(shared?.blockStart ?: 1.0, if (spread > 0.0) lanes[p].blockStart else 1.0)
+                    val m1 = blend(shared?.blockEnd ?: 1.0, if (spread > 0.0) lanes[p].blockEnd else 1.0)
+                    val mul = m0 + (m1 - m0) * i / blockFrames
+
+                    ph[p] = (ph[p] + inc[p] * mul).wrapPhase(TWO_PI)
+                }
+
+                out[b * blockFrames + i] = acc
+            }
         }
 
         return out

@@ -1,5 +1,31 @@
 # Klang Audio — Memory
 
+## Analog drift steps per block and ramps across it (2026-09-15)
+
+- Every `AnalogDrift` lane (the two-layer OU pitch drift) is built at the BLOCK rate
+  (`analogDriftStepRate(sampleRate, blockFrames)`, 375 Hz at 48k/128; `AnalogDriftCoeffs` follows
+  the rate, so the time constants in seconds and the peak cents are unchanged) and stepped once
+  per block (`beginBlock`: `blockStart` = the previous `blockEnd`, `blockEnd` = one step). Every
+  consumer ramps the multiplier linearly across its window: `m = start; dm = (end - start) /
+  length; inc = dt * m; m += dm`, one add per sample. `DriftLanes` blends per block
+  (`prepareBlock(spread)`, `advanceLane`, `startOf`, `endOf`; no per-sample shared scratch, no
+  `driftStep`). Sites: the mono sine, the pulse train, `WaveIgnitor`, the sine partial bank, both
+  wave-engine stacks, both strings, the sample player. The filter drift (`FilterModRenderer`) ran
+  per block already (a hold). Maintainer decision: per block and interpolated everywhere; not
+  bit-identical, judged by ear.
+- Why: `DriftLanes` stepped every lane per sample (xorshift, two one-poles, the blend), 13 lanes
+  per note on the Schmetterling guitars, for a modulation whose fastest layer has a 50 ms time
+  constant: 19 % of a drifting guitar, 13 % of the marimba, 15 % of the trommel.
+- Measured (rig and live A/B, seeded, `docs/benchmarks/2026-09-15_1755*` = per sample,
+  `_1759*`/`_1800*` = per block): rhythm rig 0.040 -> 0.036 with "no analog" at 0.035 (the drift
+  is free now), lead 0.028 -> 0.024, trommel 0.042 -> 0.034, bass 0.0087 -> 0.0063, the live song
+  0.106 -> 0.097, the frozen song 0.099 -> 0.082.
+- Guards: `AnalogDriftRampSpec` (mono sine, saw and sample player against block-ramp reference
+  accumulators; a one-voice supersine's increment read off three consecutive samples, wandering
+  across blocks and only ramping within them; the ramp is not a step), `DriftLanesSpec` in block
+  terms, `SinePartialBankSpec`'s drift reference on the ramp, `SuperStackDriftSpreadSpec`'s golden
+  render retaken. Eleven mutations red.
+
 ## Polynomial e^x in the envelopes and the compressor, no fastLn (2026-09-15)
 
 - `fastExp(x) = fastExp2(x · log2 e)` (`DspUtil.kt`) replaces `kotlin.math.exp` per sample in the

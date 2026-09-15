@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -13,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.abs
 import kotlin.math.log2
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -22,7 +24,7 @@ import kotlin.random.Random
  *  1. **In-tune attack** — a note must START centred (multiplier ≈ 1.0). The slow layer is
  *     seeded at centre precisely so short / melodic notes don't inherit a per-note random
  *     detune. Only the tiny fast layer is present at attack.
- *  2. **No runaway** — over millions of samples the multiplier stays centred on 1.0 with a
+ *  2. **No runaway** — over millions of steps the multiplier stays centred on 1.0 with a
  *     bounded excursion. Both layers are stable AR(1); neither is a pure random walk, so it
  *     cannot drift away from centre.
  *
@@ -55,26 +57,29 @@ class AnalogDriftSpec : StringSpec({
     }
 
     "attack is in tune - slow layer seeded at centre (every lane of a unison stack)" {
-        val lanes = DriftLanes(analog = 8.0, sampleRate = sr, rng = Random(1))
+        val lanes = DriftLanes(analog = 8.0, stepRate = sr, rng = Random(1))
         val voices = 16
 
         lanes.ensureLanes(voices)
 
-        // One sample for one lane, the way an adopter's hot loop runs it.
-        fun step(lane: Int): Double =
-            driftStep(lanes.ownLane(lane), lanes.sharedWalk(), lanes.wShared, lanes.wOwn, 0)
+        // The multiplier a lane's first block STARTS at, the way an adopter's ramp reads it.
+        fun start(lane: Int): Double {
+            lanes.advanceLane(lane)
+
+            return lanes.startOf(lane)
+        }
 
         // The shared lane first: at spread 0 it is the only walk the whole stack hears.
-        lanes.prepareBlock(0.0, 0, 1)
-        abs(cents(step(0))) shouldBeLessThan 3.5
+        lanes.prepareBlock(0.0)
+        abs(cents(start(0))) shouldBeLessThan 3.5
 
         // Then every own lane, which is what spread 1 (the default) hands each voice.
-        lanes.prepareBlock(1.0, 0, 1)
+        lanes.prepareBlock(1.0)
 
         var sum = 0.0
 
         for (n in 0 until voices) {
-            val c = cents(step(n))
+            val c = cents(start(n))
 
             abs(c) shouldBeLessThan 3.5
             sum += c
@@ -83,8 +88,80 @@ class AnalogDriftSpec : StringSpec({
         (sum / voices) shouldBe (0.0 plusOrMinus 0.6)
     }
 
-    "does not run away - centred and bounded over millions of samples" {
-        val d = AnalogDrift(analog = 8.0, sampleRate = sr, rng = Random(42))
+    "the statistics at the block rate are the statistics at the sample rate: same depth in cents" {
+        // The lanes step at the block rate since 2026-09-15; the coefficients follow the rate, so
+        // the realised depth must match the design's budget at both rates: 3 sigma = analog cents
+        // (fast 0.2 + slow 0.8 per unit analog, independent layers). Long runs at both rates, the
+        // RMS in cents against sqrt(0.2² + 0.8²) · analog / 3.
+        val analog = 8.0
+        val budgetRms = sqrt(ANALOG_FAST_PEAK_CENTS * ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS * ANALOG_SLOW_PEAK_CENTS) * analog / ANALOG_PEAK_SIGMAS
+
+        for ((rate, seconds) in listOf(375 to 3600, 48_000 to 600)) {
+            val d = AnalogDrift(analog = analog, stepRate = rate, rng = Random(11))
+            val n = rate * seconds
+            // let the slow layer settle from its centre seed before measuring (a few time constants)
+            repeat(rate * 60) { d.nextMultiplier() }
+
+            var sumSq = 0.0
+
+            repeat(n) {
+                val c = cents(d.nextMultiplier())
+
+                sumSq += c * c
+            }
+
+            val rms = sqrt(sumSq / n)
+
+            // The slow layer's 10 s time constant leaves the RMS of a 3600 s run within a few percent
+            // of its expectation; the 600 s run at 48 kHz has fewer slow-layer periods, so a wider band.
+            val tolerance = if (rate == 375) 0.08 else 0.15
+
+            withClue("rate $rate: rms $rms cents vs budget $budgetRms") { rms shouldBe (budgetRms plusOrMinus budgetRms * tolerance) }
+        }
+    }
+
+    "the coefficients' steady-state sigma is the recurrence's, at the block rate and the sample rate" {
+        // The output scales normalise each layer by its steady-state sigma, so the depth in cents
+        // is only right if that sigma IS the recurrence's. The recurrences from the class KDoc,
+        // driven by uniform [-1, 1] noise, against `AnalogDriftCoeffs`: the exact AR(1) forms
+        // (2026-09-15; the small-alpha approximations were 1.4 percent off at the block rate).
+        // The slow layer at the sample rate has a 3.2e5-step correlation length and is left out.
+        fun realisedSigma(steps: Int, correlationSteps: Int, next: (Double) -> Double): Double {
+            var y = 0.0
+
+            repeat(correlationSteps * 20) { y = next(y) }
+
+            var sumSq = 0.0
+
+            repeat(steps) {
+                y = next(y)
+                sumSq += y * y
+            }
+
+            return sqrt(sumSq / steps)
+        }
+
+        for (rate in listOf(375, 48_000)) {
+            val c = AnalogDriftCoeffs(8.0, rate)
+            val rng = Random(5)
+            val fast = realisedSigma(20_000_000, (1.0 / c.alphaFast).toInt()) { y ->
+                y + c.alphaFast * ((rng.nextDouble() * 2.0 - 1.0) - y)
+            }
+
+            withClue("rate $rate: fast layer sigma $fast vs ${c.sigmaYFast}") { fast shouldBe (c.sigmaYFast plusOrMinus c.sigmaYFast * 0.03) }
+        }
+
+        val c = AnalogDriftCoeffs(8.0, 375)
+        val rng = Random(6)
+        val slow = realisedSigma(20_000_000, (1.0 / (c.alphaSlow + c.betaSlow)).toInt()) { y ->
+            y + c.alphaSlow * ((rng.nextDouble() * 2.0 - 1.0) - y) - c.betaSlow * y
+        }
+
+        withClue("slow layer sigma $slow vs ${c.sigmaYSlow}") { slow shouldBe (c.sigmaYSlow plusOrMinus c.sigmaYSlow * 0.03) }
+    }
+
+    "does not run away - centred and bounded over millions of steps" {
+        val d = AnalogDrift(analog = 8.0, stepRate = sr, rng = Random(42))
         val n = 2_000_000
         var sum = 0.0
         var maxAbs = 0.0

@@ -47,15 +47,15 @@ internal const val ANALOG_SIGMA_X: Double = 0.5773502691896257
 internal const val ANALOG_INT_INV: Double = 1.0 / 2147483647.0
 
 /**
- * Computed analog-drift coefficients for the chosen [analog] amount and
- * [sampleRate]. Holds α/β for both layers, output scales, and the
- * steady-state σ used by callers to seed initial state.
+ * Computed analog-drift coefficients for the chosen [analog] amount and [stepRate], the rate the
+ * lane is stepped at (the block rate for every oscillator lane since 2026-09-15). Holds α/β for
+ * both layers, output scales, and the steady-state σ used by callers to seed initial state.
  *
  * [AnalogDrift] reads the fields once during its `init`, then stores the
  * values in its own fields for the hot loop. Keeping this class plain (no
  * inline) is fine — it's only touched at construction.
  */
-internal class AnalogDriftCoeffs(analog: Double, sampleRate: Int) {
+internal class AnalogDriftCoeffs(analog: Double, stepRate: Int) {
     val alphaFast: Double
     val alphaSlow: Double
     val betaSlow: Double
@@ -65,22 +65,35 @@ internal class AnalogDriftCoeffs(analog: Double, sampleRate: Int) {
     val sigmaYSlow: Double
 
     init {
-        val sr = sampleRate.toDouble()
-        alphaFast = 1.0 / (ANALOG_FAST_TAU_SEC * sr)
-        alphaSlow = 1.0 / (ANALOG_SLOW_TAU_SEC * sr)
+        val rate = stepRate.toDouble()
+        alphaFast = 1.0 / (ANALOG_FAST_TAU_SEC * rate)
+        alphaSlow = 1.0 / (ANALOG_SLOW_TAU_SEC * rate)
         betaSlow = alphaSlow * ANALOG_MEAN_REVERSION_RATIO
 
-        // Steady-state RMS of each smoother given uniform [-1, 1] white noise
-        // input (σ²_x = 1/3). One-pole LPF: σ²_y ≈ α/2 × σ²_x.
-        //                            OU: σ²_y ≈ α²/(2(α+β)) × σ²_x.
-        sigmaYFast = sqrt(alphaFast / 2.0) * ANALOG_SIGMA_X
-        sigmaYSlow = alphaSlow / sqrt(2.0 * (alphaSlow + betaSlow)) * ANALOG_SIGMA_X
+        // Steady-state RMS of each smoother given uniform [-1, 1] white noise input (σ²_x = 1/3),
+        // the exact AR(1) forms: y' = (1 - a) y + a x has σ²_y = a² / (1 - (1 - a)²) × σ²_x, which
+        // is a / (2 - a); the OU with a + b in the recurrence likewise. The small-a approximations
+        // (a / 2 and a² / (2 (a + b))) were within 0.01 % at a sample-rate step and 1.4 % off at
+        // the block rate, where the lanes step since 2026-09-15.
+        sigmaYFast = sqrt(alphaFast * alphaFast / (1.0 - (1.0 - alphaFast) * (1.0 - alphaFast))) * ANALOG_SIGMA_X
+        sigmaYSlow = sqrt(alphaSlow * alphaSlow / (1.0 - (1.0 - alphaSlow - betaSlow) * (1.0 - alphaSlow - betaSlow))) * ANALOG_SIGMA_X
 
         // Scale = analog × target_cents × cent_to_mul / (3σ). 3σ ≈ peak amplitude.
         scaleFast = analog * ANALOG_FAST_PEAK_CENTS * ANALOG_CENT_PER_MUL / (ANALOG_PEAK_SIGMAS * sigmaYFast)
         scaleSlow = analog * ANALOG_SLOW_PEAK_CENTS * ANALOG_CENT_PER_MUL / (ANALOG_PEAK_SIGMAS * sigmaYSlow)
     }
 }
+
+/**
+ * The rate an [AnalogDrift] lane is stepped at when it advances once per block (2026-09-15, every
+ * oscillator lane does): blocks per second. The coefficients follow the rate, so the time
+ * constants in seconds and the peak cents are the same as they were per sample; what is gone is
+ * the noise above HALF the block rate (about 1 % of the fast layer's variance, the fast layer
+ * being a fifth of the depth) and, with the linear ramp across the block, a first-order-hold
+ * tilt of up to -3.9 dB at that edge. The filter drift has run at this rate since before.
+ */
+internal fun analogDriftStepRate(sampleRate: Int, blockFrames: Int): Int =
+    (sampleRate / blockFrames.coerceAtLeast(1)).coerceAtLeast(1)
 
 /** Standard-normal sample via Box-Muller. Two `rng.nextDouble()` calls. */
 internal fun analogDriftGaussian(rng: Random): Double {
