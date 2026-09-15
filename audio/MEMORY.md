@@ -1,5 +1,39 @@
 # Klang Audio — Memory
 
+## Polynomial e^x in the envelopes and the compressor, no fastLn (2026-09-15)
+
+- `fastExp(x) = fastExp2(x · log2 e)` (`DspUtil.kt`) replaces `kotlin.math.exp` per sample in the
+  envelopes' exponential curve (`adsrExpShape`, the DEFAULT curve on every stage since 2026-08-24,
+  so every voice paid one `exp` per sample through attack, decay and release), the compressor's
+  dB-to-linear gain (both the envelope and the lookahead path), the `exp()` ignitor and the two
+  exp-based waveshapers (`expClip`, `stompBox`). Fast range `|x| < 22`, beyond it a platform `pow`.
+- `fastExp2`'s polynomial was refitted as `1 + f + f(f-1)·r(f)` (r degree 5, 4.7e-11) so that
+  `p(0) = 1` and `p(1) = 2` are EXACT in floating point: `fastExp(0) = 1`, `fastExp2(n) = 2^n` bit
+  for bit. The envelope specs pin `g(0) = 0`, `g(1) = 1` and the sustain level to 1e-12, and the
+  normaliser `adsrExpNorm` now goes through `fastExp` too (same expression above and below the
+  line: `g(1)` is `A · (1/A)`, 1.0 or one ulp under). For callers: the pinned start makes the
+  absolute error of `fastExp(x) - 1` shrink with `x` (6e-15 at 1e-6); what stays is parts in
+  1e-9 of that small difference (no expm1 accuracy).
+- Measured (voices and live A/B, same run): pink -10 %, hats -6 %, bass -3 %, the live song
+  0.1096 -> 0.1073 (-2 %), frozen 0.0970 -> 0.0949. Less than the linear-curve experiment
+  (`docs/benchmarks/2026-09-15_1539*`, 15 to 20 % on a simple voice) promised: the JVM's `exp` is
+  an intrinsic. Per call (`audio_benchmark`'s `runMathBenchmark`, ns, library -> polynomial,
+  2026-09-15, Ryzen 9 7940HS): JVM sin 6.1 -> 1.7, 2^x 8.9 -> 2.7, e^x 3.7 -> 3.5 (near parity);
+  node 24 (V8, the worklet's engine) sin 7.2 -> 1.8, 2^x 12.1 -> 3.8, e^x 7.1 -> 4.5. The e^x
+  path costs more than 2^x on both platforms because an envelope's `k · x` spans octaves 0 to 4
+  and only octaves 0 and -1 skip the table (on V8 a lazy-init accessor of the top-level val plus
+  `numberToInt` per read); the next step there, if wanted, is a branch ladder for the envelope's
+  octaves or a bit-free `2^n` by conditional doublings.
+- No `fastLn`: the song's orbit compressors (three calls, one instance per orbit covered, nine
+  instances) together are 2.6 % of the song with `fastExp` in place
+  (`docs/benchmarks/2026-09-15_171710`, the rig suite's `song` group, "no compressors": the song
+  ungated and without its count-in so all eight cycles play the band, and its wall-clock seed
+  pinned so both arms render the same 913 onsets; the earlier 5.8 %, `_162314`, was gated, seeded
+  per pass and with the library `exp`), and `ln` is at most half of that. Every rig case renders
+  the pinned seed now: an A/B on the live song was not controlled before. Without bit extraction (`Long` is banned) a log needs a compare
+  ladder for the exponent, a divide and an odd series, about 40 cycles against a 60-cycle
+  library `ln` on the JVM and near parity on V8: under 1 % of the song for real complexity.
+
 ## Table-and-polynomial 2^x in the pitch paths (2026-09-15)
 
 - Vibrato (`2^(sin · depth / 12)`) and the pitch envelope (`2^(semitones · level / 12)`), in the

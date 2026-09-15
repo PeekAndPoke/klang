@@ -19,9 +19,15 @@ import kotlin.math.exp
 // lives here.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Normalisation factor for [adsrExpShape] at curvature [k] — makes `g(0)=0`, `g(1)=1`. */
+/**
+ * Normalisation factor for [adsrExpShape] at curvature [k] — makes `g(0)=0`, `g(1)=1`. Through
+ * [fastExp] like the shape itself, so `g(1)` is `A * (1 / A)` of one value: 1.0 or one ulp under
+ * it (a reciprocal times its base is not exact; k = 7 lands on 0.9999999999999999, the library
+ * `exp` had its own such k). `g(0)` IS exactly 0: `fastExp(0.0)` is exactly 1, which the release's
+ * last frame relies on.
+ */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrExpNorm(k: Double): Double = 1.0 / (exp(k) - 1.0)
+internal inline fun adsrExpNorm(k: Double): Double = 1.0 / (fastExp(k) - 1.0)
 
 /** Normalisation for the global-default curvature [ADSR_EXP_K]. */
 @PublishedApi
@@ -35,17 +41,16 @@ internal val ADSR_EXP_NORM: Double = adsrExpNorm(ADSR_EXP_K)
  * This no-arg form uses the global-default [ADSR_EXP_K] (the filter/FM and ignitor
  * envelopes). The amp VCA passes a per-engine curvature via [adsrExpShape] below.
  *
- * NOTE: one `exp()` per call. In the per-sample renderers that's a transcendental
- * in the hot loop (the rest of the curve family is multiply-only). Acceptable while
- * Exponential is the decay-default experiment; if it shows up in benchmarks, swap
- * for a recursive multiply-only one-pole (per-sample) or a fast-exp approximation.
+ * NOTE: one [fastExp] per call (since 2026-09-15; it was a library `exp`, one transcendental
+ * per sample in every renderer, the rest of the curve family being multiply-only). The next
+ * step down, if the curve ever shows up again, is a recursive multiply-only one-pole per stage.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
+internal inline fun adsrExpShape(x: Double): Double = (fastExp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
 
 /** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (exp(k * x) - 1.0) * norm
+internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (fastExp(k * x) - 1.0) * norm
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Release progress — the time base every release stage shares.

@@ -6,10 +6,10 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.fastExp
 import io.peekandpoke.klang.audio_be.safeDiv
 import io.peekandpoke.klang.audio_be.safeOut
 import kotlin.math.ceil
-import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.pow
@@ -813,14 +813,14 @@ private class ExpIgnitor(private val upstream: Ignitor) : Ignitor {
         upstream.generate(buffer, freqHz, ctx)
         val end = ctx.windowEnd
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(exp(buffer[i]))
+            buffer[i] = safeOut(fastExp(buffer[i]))
         }
     }
 
     override fun controlRateValueOrNull(freqHz: Double): Double? {
         val v = upstream.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(exp(v))
+        return safeOut(fastExp(v))
     }
 }
 

@@ -160,9 +160,9 @@ object ShapingFuncs {
      */
     inline fun expClip(x: Double): Double {
         return if (x >= 0.0) {
-            1.0 - kotlin.math.exp(-x)
+            1.0 - fastExp(-x)
         } else {
-            -(1.0 - kotlin.math.exp(x))
+            -(1.0 - fastExp(x))
         }
     }
 
@@ -304,9 +304,9 @@ object ShapingFuncs {
      */
     inline fun stompBox(x: Double): Double {
         return if (x >= 0.0) {
-            1.0 - kotlin.math.exp(-x * 1.5)
+            1.0 - fastExp(-x * 1.5)
         } else {
-            -(1.0 - kotlin.math.exp(x * 3.0))
+            -(1.0 - fastExp(x * 3.0))
         }
     }
 

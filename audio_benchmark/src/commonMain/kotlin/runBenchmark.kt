@@ -19,8 +19,9 @@ fun runBenchmark() {
     println("Platform: $platform")
     println()
 
-    // Standalone micro-benchmark (prints before the captured "# Audio Benchmark" markdown section).
+    // Standalone micro-benchmarks (print before the captured "# Audio Benchmark" markdown section).
     runVoiceDataCopyBenchmark()
+    runMathBenchmark(platform)
 
     val ignitorMd = runIgnitorBenchmarks(platform)
     println()

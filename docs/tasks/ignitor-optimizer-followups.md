@@ -120,3 +120,16 @@ Before claiming a win from any of the above, read the D0 comparability rule in
 source inside the timed step while the EqCore rows only copy, so raw row ratios overstate the win
 substantially. Subtract the source baseline. This has already caused two wrong numbers to reach
 user-facing docs.
+
+## Next up (maintainer, 2026-09-15): the Schmetterling guitar stages on the Fairphone 4
+
+After the 2026-09-15 CPU round (voice culling, the polynomial sine, `fastExp2`/`fastExp`) the FF4
+can barely run Der Schmetterling again. The maintainer's read: the bottleneck is now the memory
+footprint of the guitars' filter stages (pickup, pedal, preamp, power, cab: each a chain of EQ
+and body sections, times the unison voices), not the per-sample arithmetic. The request: revisit
+this optimizer, especially the rule that combines adjacent EQs into one `EqCore`, against the
+current guitar rigs in `DerSchmetterling.kt`, and look for more that can be combined: which stages
+sit adjacent and linear (fusible under the no-reorder invariant above), which are separated only
+by a gain or a clip, and what an audit of the actual rendered graph (node count, filter section
+count, scratch buffers per voice) says. Measure before and after with the rig suite
+(`./gradlew runSongBenchmark --args=rig`) and on the device.

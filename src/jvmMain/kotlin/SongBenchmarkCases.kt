@@ -506,7 +506,11 @@ object SongBenchmarkCases {
 
     /** The live song with every section gate (`.mute("<...>")`) removed, so each part plays continuously. */
     private val liveUngated: String by lazy {
-        Regex("""\.mute\("<[^"]*>"\)""").replace(derSchmetterlingSong.code, "")
+        // The song seeds its shuffle from the wall clock, so every pass and every arm of an A/B
+        // would render a different realisation: pinned to a constant here, once for every case.
+        swap("seed(timeOfDay.mul(60*60*60*24))", "seed(0.5)")(
+            Regex("""\.mute\("<[^"]*>"\)""").replace(derSchmetterlingSong.code, ""),
+        )
     }
 
     /** A case that renders [expr] on top of the ungated live song, after [edit] has rewritten the song text. */
@@ -523,6 +527,24 @@ object SongBenchmarkCases {
     private fun swap(from: String, to: String): (String) -> String = { src ->
         require(src.contains(from)) { "rig suite anchor not found in the live song: $from" }
         src.replace(from, to)
+    }
+
+    /** Every match of [from] goes, and there must be exactly [expected] of them: a re-authored song fails loudly. */
+    private fun swapAll(from: Regex, to: String, expected: Int): (String) -> String = { src ->
+        val matches = from.findAll(src).count()
+
+        require(matches == expected) { "rig suite anchor matched $matches times in the live song, expected $expected: ${from.pattern}" }
+
+        src.replace(from, to)
+    }
+
+    /**
+     * The song's arrangement without its two-cycle count-in: the band's gate (`late(2).filterWhen(t >= 2)`)
+     * goes, and the count-in's own gate (`filterWhen(t < 2)`) becomes never, so the band plays from cycle 0
+     * and the count-in's orbit config (no compressor, its own room) never claims the hats' orbit.
+     */
+    private val ungateSong: (String) -> String = { src ->
+        swap("filterWhen(t => t < 2)", "filterWhen(t => t < 0)")(swap("x => x.late(2).filterWhen(t => t >= 2)", "x => x")(src))
     }
 
     /** Like [swap] with a pattern, for anchors whose VALUE is tuned by ear (a wet amount, a level). */
@@ -574,6 +596,16 @@ object SongBenchmarkCases {
         liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
         liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(150)", "let pAnalog = 0\n  let ring = Osc.constant(150)")),
+
+        // the whole song, and the whole song without its orbit compressors (three calls, one
+        // compressor per orbit they cover, nine instances; the master limiter stays): what the
+        // compressor's per-sample ln and exp cost across the mix. The song's arrangement holds two
+        // count-in cycles before the band; both cases drop that gate and the count-in itself, so
+        // all eight rendered cycles play the band and nothing else.
+        liveCase("song: full", "song", "song", ungateSong),
+        liveCase("song: no compressors", "song", "song") {
+            swapAll(Regex("""\.compressor\([^)]*\)"""), "", expected = 3)(ungateSong(it))
+        },
     )
 
     fun all(): List<SongBenchmark.Case> = voices() + ladders() + experiments() + frozenSongs()

@@ -51,18 +51,20 @@ class FastExp2Spec : StringSpec({
         withClue("worst relative error at x = $worstAt") { worst shouldBeLessThan FAST_EXP2_MAX_REL_ERROR }
     }
 
-    "the landmarks are exact to the bound" {
-        abs(fastExp2(0.0) - 1.0) shouldBeLessThan FAST_EXP2_MAX_REL_ERROR
-        abs(fastExp2(1.0) - 2.0) shouldBeLessThan 2 * FAST_EXP2_MAX_REL_ERROR
-        abs(fastExp2(-1.0) - 0.5) shouldBeLessThan FAST_EXP2_MAX_REL_ERROR
-        abs(fastExp2(12.0) / 4096.0 - 1.0) shouldBeLessThan FAST_EXP2_MAX_REL_ERROR
+    "every integer is its power of two exactly, and the fifth is exact to the bound" {
+        // The polynomial's ends are pinned (p(0) = 1, p(1) = 2 in floating point), which the
+        // envelope curve's endpoints rely on through fastExp(0) = 1.
+        for (n in -32..31) {
+            withClue("2^$n") { fastExp2(n.toDouble()) shouldBe 2.0.pow(n) }
+        }
+
         // an equal-tempered fifth, the ratio a pitch path asks for most
         abs(fastExp2(7.0 / 12.0) - 1.4983070768766815) shouldBeLessThan FAST_EXP2_MAX_REL_ERROR
     }
 
-    "no step at an integer boundary: the polynomial's two ends agree with the table" {
+    "no step at an integer boundary: the value just below n continues into the exact 2^n" {
         // A sweeping pitch crosses octaves; the value just below n comes from the polynomial's
-        // upper end scaled by 2^(n-1), the value at n from its lower end scaled by 2^n.
+        // upper end scaled by 2^(n-1), the value at n from its pinned lower end scaled by 2^n.
         for (n in -31..31) {
             val below = fastExp2(n - 1e-12)
             val at = fastExp2(n.toDouble())

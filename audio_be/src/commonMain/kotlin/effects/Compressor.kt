@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.DB20_OVER_LN10
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.ENV_COEFF_BLEND_DB
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.FAST_RELEASE_DIVISOR
 import io.peekandpoke.klang.audio_be.effects.Compressor.Companion.LN10_OVER_20
+import io.peekandpoke.klang.audio_be.fastExp
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
@@ -391,7 +392,7 @@ class Compressor(
         // (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped the gain 1.0<->0.99885.
         val gainReductionDb = calculateGainReduction(envelopeDb)
         return if (gainReductionDb < GAIN_SKIP_THRESHOLD_DB) {
-            exp(gainReductionDb * LN10_OVER_20)
+            fastExp(gainReductionDb * LN10_OVER_20)
         } else {
             1.0
         }
@@ -422,7 +423,7 @@ class Compressor(
 
         val inputDb = if (level > SILENCE_LIN) DB20_OVER_LN10 * ln(level) else SILENCE_DB
         val reductionDb = calculateGainReduction(inputDb)
-        val required = if (reductionDb < GAIN_SKIP_THRESHOLD_DB) exp(reductionDb * LN10_OVER_20) else 1.0
+        val required = if (reductionDb < GAIN_SKIP_THRESHOLD_DB) fastExp(reductionDb * LN10_OVER_20) else 1.0
 
         // ── Running MINIMUM over the next (delayFrames + 1) samples ──
         while (minTail != minHead) {
