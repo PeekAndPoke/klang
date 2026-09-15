@@ -38,16 +38,17 @@ class ResourceWarehouseSpec : StringSpec({
     }
 
     /** An allocator that records every size it was asked for and can be told to fail. */
-    class Recording(var failing: Boolean = false) : (Int) -> StereoBuffer? {
+    // Holds the allocator lambda rather than implementing the function type (forbidden on Kotlin/JS).
+    class Recording(var failing: Boolean = false) {
         val asked = mutableListOf<Int>()
-        override fun invoke(frames: Int): StereoBuffer? {
+        val allocate: (Int) -> StereoBuffer? = { frames ->
             asked += frames
-            return if (failing) null else StereoBuffer(frames)
+            if (failing) null else StereoBuffer(frames)
         }
     }
 
     fun shelf(budgetBytes: Int = Int.MAX_VALUE, alloc: Recording = Recording()) =
-        SizedBuffers(baseFrames = base, budgetBytes = budgetBytes, allocate = alloc) to alloc
+        SizedBuffers(baseFrames = base, budgetBytes = budgetBytes, allocate = alloc.allocate) to alloc
 
     fun bytes(frames: Int) = frames * 2 * 8
 

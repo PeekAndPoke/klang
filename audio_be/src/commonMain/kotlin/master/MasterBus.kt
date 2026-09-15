@@ -212,10 +212,15 @@ class MasterBus(
                 chain !== current && chain !== previous && chain !== queued
             } ?: return
 
-            chains.remove(victim.key)
+            // Copy the entry out BEFORE the removal: Kotlin/JS refuses to read a map entry once the
+            // backing map has changed (ConcurrentModificationException, found by the JS suite).
+            val victimName = victim.key
+            val victimChain = victim.value
+
+            chains.remove(victimName)
             // The chain is out of play (not current, not outgoing, not queued): its rings go back
             // to the shelf, where the next master delay of that class finds them without allocating.
-            victim.value.releaseUnits(rings, reverbs)
+            victimChain.releaseUnits(rings, reverbs)
         }
     }
 

@@ -36,15 +36,17 @@ class MasterRingShelfSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    class Recording(var failing: Boolean = false) : (Int) -> StereoBuffer? {
+    // A recording double that HOLDS the allocator lambda rather than implementing the function
+    // type: Kotlin/JS forbids a class implementing `(Int) -> T`, and this file runs there too.
+    class Recording(var failing: Boolean = false) {
         val asked = mutableListOf<Int>()
-        override fun invoke(frames: Int): StereoBuffer? {
+        val allocate: (Int) -> StereoBuffer? = { frames ->
             asked += frames
-            return if (failing || frames == Int.MAX_VALUE) null else StereoBuffer(frames)
+            if (failing || frames == Int.MAX_VALUE) null else StereoBuffer(frames)
         }
     }
 
-    fun shelf(alloc: Recording = Recording()) = SizedBuffers.forRings(sampleRate, allocate = alloc) to alloc
+    fun shelf(alloc: Recording = Recording()) = SizedBuffers.forRings(sampleRate, allocate = alloc.allocate) to alloc
 
     fun delayDsl(time: Double, feedback: Double = 0.3) =
         MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, timeSeconds = time, feedback = feedback))

@@ -35,15 +35,16 @@ class LazyReverbSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    class Recording(var failing: Boolean = false) : (Int) -> Reverb? {
+    // Holds the allocator lambda rather than implementing the function type (forbidden on Kotlin/JS).
+    class Recording(var failing: Boolean = false) {
         var asked = 0
-        override fun invoke(sampleRate: Int): Reverb? {
+        val allocate: (Int) -> Reverb? = { sampleRate ->
             asked++
-            return if (failing) null else Reverb(sampleRate)
+            if (failing) null else Reverb(sampleRate)
         }
     }
 
-    fun shelf(alloc: Recording = Recording()) = ReverbUnits(sampleRate, allocate = alloc) to alloc
+    fun shelf(alloc: Recording = Recording()) = ReverbUnits(sampleRate, allocate = alloc.allocate) to alloc
 
     fun effect(units: ReverbUnits) = KatalystReverbEffect(units = units, blockFrames = blockFrames)
 

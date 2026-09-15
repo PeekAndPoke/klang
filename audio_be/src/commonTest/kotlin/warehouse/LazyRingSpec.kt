@@ -39,17 +39,18 @@ class LazyRingSpec : StringSpec({
     val base = (sampleRate * ResourceWarehouse.MIN_RING_SECONDS).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES
 
     /** A shelf whose allocator records sizes and can be told to fail. */
-    class Recording(var failing: Boolean = false) : (Int) -> StereoBuffer? {
+    // Holds the allocator lambda rather than implementing the function type (forbidden on Kotlin/JS).
+    class Recording(var failing: Boolean = false) {
         val asked = mutableListOf<Int>()
-        override fun invoke(frames: Int): StereoBuffer? {
+        val allocate: (Int) -> StereoBuffer? = { frames ->
             asked += frames
             // A hopeless size is refused here rather than attempted: this is a recording double,
             // and asking the JVM for Int.MAX frames would be a real OOM, not a simulated one.
-            return if (failing || frames == Int.MAX_VALUE) null else StereoBuffer(frames)
+            if (failing || frames == Int.MAX_VALUE) null else StereoBuffer(frames)
         }
     }
 
-    fun shelf(alloc: Recording = Recording()) = SizedBuffers.forRings(sampleRate, allocate = alloc) to alloc
+    fun shelf(alloc: Recording = Recording()) = SizedBuffers.forRings(sampleRate, allocate = alloc.allocate) to alloc
 
     fun effect(rings: SizedBuffers) = KatalystDelayEffect(rings = rings, sampleRate = sampleRate, blockFrames = blockFrames)
 
