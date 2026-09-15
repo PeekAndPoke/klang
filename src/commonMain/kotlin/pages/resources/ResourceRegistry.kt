@@ -21,7 +21,7 @@ val allResources: List<Resource> = listOf(
         authorUrl = "https://www.klippel.de",
         source = ResourceSource.Website(
             url = "https://www.klippel.de/listeningtest/",
-            imageUrl = "/images/resources/klippel-listening-test.jpg",
+            imageUrl = "/images/resources/klippel-listening-test.svg",
         ),
         tags = listOf(ResourceTag.EarTraining),
     ),
