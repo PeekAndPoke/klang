@@ -19,6 +19,9 @@ JVM_FILE="$DOCS_DIR/${DATETIME}_jvm.md"
 NODE_FILE="$DOCS_DIR/${DATETIME}_nodejs.md"
 COMPARE_FILE="$DOCS_DIR/${DATETIME}_compare.md"
 
+# A full run is what the docs record: an exported case filter would leave the effect section out.
+unset KLANG_BENCH_FILTER
+
 echo "=== Running JVM benchmark ==="
 ./gradlew :audio_benchmark:jvmRun --quiet 2>/dev/null | sed -n '/^# Audio Benchmark/,$ p' > "$JVM_FILE"
 echo "Saved: $JVM_FILE"

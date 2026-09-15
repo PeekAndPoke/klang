@@ -13,3 +13,13 @@ actual fun platformInfo(): String {
         "JS / Node.js"
     }
 }
+
+actual fun benchmarkCaseFilter(): String? {
+    val raw = try {
+        js("(typeof process !== 'undefined' && process.env && process.env.KLANG_BENCH_FILTER) || null") as? String
+    } catch (_: Throwable) {
+        null
+    }
+
+    return raw?.trim()?.takeIf { it.isNotEmpty() }
+}

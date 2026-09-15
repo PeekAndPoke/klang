@@ -233,10 +233,30 @@ parity, a mutation check, a rig A/B, a commit.
      every positive one, which a `Silence` cannot reproduce, and the upstream's state advances
      (a NaN or infinite upstream is already scrubbed to 0 by the multiply's `safeOut`, so that is
      not the reason); `safeOut` once, at the multiply.
-3. `Affine` into `Eq`: an input gain/offset in the first section's read, an output gain/offset in
-   the last section's write; with the `mul` walls gone the serial rule fuses the Eqs on both sides.
-4. `Affine` into `Shape`: an input gain applied where the upsampler reads its input (once per
-   input sample); `distort` lowers to `Shape(Drive(x))`, so every distortion stage takes it.
+3. WON'T IMPLEMENT (2026-09-15, measured): `Affine` into `Eq` (an input gain/offset in the first
+   section's read, an output gain/offset in the last section's write, the serial rule fusing the
+   Eqs on both sides of a former `mul` wall). The ceiling was measured before touching EqCore's
+   section-major loops: `audio_benchmark` rows `guitar-rig*` build the rhythm rig of Der
+   Schmetterling as an inline tree and DELETE the nodes outright, which is more than any fold can
+   buy. Node 24, one voice, µs per block (three runs, the spread is about 1 µs):
+
+   | row                          | µs/block | what it says                                   |
+   |------------------------------|---------:|------------------------------------------------|
+   | `guitar-rig-string-only`     |     18.7 | the 19-voice supersaw, burst and envelope       |
+   | `guitar-rig`                 |     53.2 | the rig adds 34.5                               |
+   | `guitar-rig-no-mul`          |     54.3 | all seven level knobs deleted: nothing          |
+   | `guitar-rig-no-drive`        |     53.3 | all five drives deleted: nothing                |
+   | `guitar-rig-no-mul-no-drive` |     52.3 | both: about 1 to 2, under 4% of the voice       |
+   | `guitar-rig-no-oversample`   |     31.6 | every shaper at 1x: 21.6, 63% of the rig's cost (the upsampler, the FIR stages and the 2x to 4x shaper evaluations together) |
+
+   JVM agrees (29.7 / 30.5 / 30.9 / 28.4 / 20.6 / 10.2 in the same order). A multiply pass over
+   128 doubles is nothing next to five oversampled shapers and a dozen filter passes; ten loop
+   variants in `EqCore` and a Shape input gain would buy a rounding error. Oversampling is the
+   cost, and its decimator was the general target that paid (the polyphase pass in
+   `Oversampler.kt`, 2026-09-15: the rig 53 -> 44 µs on node); the shaper evaluations at the
+   high rate are the rest of that row and stay.
+4. WON'T IMPLEMENT (2026-09-15, same measurement): `Affine` into `Shape` as an input gain where
+   the upsampler reads its input. The `Drive` pass it would remove is the `no-drive` row: nothing.
 5. Dead and identity nodes (maintainer, 2026-09-15): `add(Constant(0))` and `mul(Constant(1))`
    drop; `mul(Constant(0))` makes its upstream `Silence`. And at BUILD time, where `Osc.param`
    values are known (per voice, constant for the voice): a `Times` whose block-constant operand

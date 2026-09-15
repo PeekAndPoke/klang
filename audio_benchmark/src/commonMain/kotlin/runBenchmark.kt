@@ -19,6 +19,17 @@ fun runBenchmark() {
     println("Platform: $platform")
     println()
 
+    val filter = benchmarkCaseFilter()
+
+    if (filter != null) {
+        // A filtered run is a focused A/B: only the matching ignitor cases, nothing else.
+        println("Case filter: \"$filter\" (KLANG_BENCH_FILTER)")
+        println()
+        println(runIgnitorBenchmarks(platform, filter))
+
+        return
+    }
+
     // Standalone micro-benchmarks (print before the captured "# Audio Benchmark" markdown section).
     runVoiceDataCopyBenchmark()
     runMathBenchmark(platform)
@@ -34,13 +45,19 @@ fun runBenchmark() {
     println(effectMd)
 }
 
-private fun runIgnitorBenchmarks(platform: String): String {
+private fun runIgnitorBenchmarks(platform: String, filter: String? = null): String {
     val bench = IgnitorBenchmark()
-    val cases = IgnitorBenchmark.defaultCases()
+    val cases = IgnitorBenchmark.defaultCases().filter { filter == null || it.name.contains(filter) }
 
     println("=== Ignitor benchmarks ===")
     println("Running ${cases.size} cases (3x each, median)...")
     println()
+
+    if (cases.isEmpty()) {
+        println("No ignitor case matches \"$filter\".")
+
+        return ""
+    }
 
     val results = bench.run(cases)
 

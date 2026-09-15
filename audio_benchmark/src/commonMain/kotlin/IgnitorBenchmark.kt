@@ -13,6 +13,10 @@ import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.adsr
+import io.peekandpoke.klang.audio_bridge.band
+import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -345,7 +349,104 @@ class IgnitorBenchmark(
                     "sine+vibrato+tremolo",
                     voiceData = voice("sine", vibrato = 6.0, vibratoMod = 0.3, tremoloSync = 4.0, tremoloDepth = 0.5)
                 ),
+
+                // ── A guitar rig, and what its level knobs and drive stages cost ──
+                // The rhythm rig of Der Schmetterling (humbucker, screamer, high gain, push-pull, 4x12), authored
+                // as the song authors it: a level `mul` after most stages and a `distort` (Drive then Shape) in
+                // every gain stage. The three ablations delete those nodes outright, which is the ceiling of what
+                // folding them into their neighbours (Affine into Eq gain, Affine into Shape input gain) can buy.
+                // They are cost rows, not sound rows: without the drives the shapers see a quieter signal.
+                Case("guitar-rig-string-only", voiceData = voice("guitar-rig-string-only", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig-string-only" to guitarString())),
+                Case("guitar-rig", voiceData = voice("guitar-rig", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig" to guitarRig(muls = true, drives = true))),
+                Case("guitar-rig-no-mul", voiceData = voice("guitar-rig-no-mul", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig-no-mul" to guitarRig(muls = false, drives = true))),
+                Case("guitar-rig-no-drive", voiceData = voice("guitar-rig-no-drive", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig-no-drive" to guitarRig(muls = true, drives = false))),
+                Case("guitar-rig-no-mul-no-drive", voiceData = voice("guitar-rig-no-mul-no-drive", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig-no-mul-no-drive" to guitarRig(muls = false, drives = false))),
+                // Where the rest of the rig's cost sits: the same rig with every shaper at oversample 0.
+                Case("guitar-rig-no-oversample", voiceData = voice("guitar-rig-no-oversample", oscParams = mapOf("analog" to 5.0)),
+                    sounds = mapOf("guitar-rig-no-oversample" to guitarRig(muls = true, drives = true, oversample = false))),
             )
+        }
+
+        /**
+         * The rhythm guitar of Der Schmetterling as an inline tree. [muls] keeps the level knobs
+         * (`mul` after a stage), [drives] keeps the Drive half of every `distort`; either off deletes
+         * those nodes and leaves the rest of the chain as it is (every Eq is opened explicitly, so a
+         * deleted `mul` between two of them does not let `eq()` merge them). [oversample] off runs
+         * every shaper at oversample 0.
+         */
+        private fun guitarRig(muls: Boolean, drives: Boolean, oversample: Boolean = true): IgnitorDsl {
+            fun IgnitorDsl.level(gain: Double): IgnitorDsl = if (muls) mul(IgnitorDsl.Constant(gain)) else this
+
+            fun IgnitorDsl.newEq(): IgnitorDsl.Eq = IgnitorDsl.Eq(inner = this)
+
+            fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
+                val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
+
+                return IgnitorDsl.Shape(inner = driven, shape = shape, oversample = if (oversample) os else 0)
+            }
+
+            val string = guitarString(muls)
+
+            // pickupHumbucker
+            val pickup = string.lowpass(2600.0, 1.6).level(1.2)
+            // pedalScreamer
+            val pedal = pickup
+                .plus(pickup.highpass(720.0).distortion(0.35, "soft", 2).level(0.6))
+                .lowpass(3200.0)
+                .level(0.5)
+            // preampHighGain
+            val preamp = pedal
+                .highpass(120.0)
+                .distortion(0.35, "tube", 4).highpass(100.0)
+                .distortion(0.45, "softsat", 4).highpass(100.0)
+                .distortion(0.35, "hard", 4)
+                .lowpass(6400.0)
+                .level(0.45)
+            // powerPushPull, then the snare's room
+            val power = preamp
+                .distortion(0.25, "soft", 2)
+                .newEq().band(4000.0, 0.7, 2.0)
+                .level(1.6)
+                .newEq().band(210.0, 2.0, -1.0)
+            // cab4x12
+
+            return power
+                .newEq().band(110.0, 1.2, 3.0).band(2700.0, 2.0, 4.0)
+                .lowpass(5000.0, 0.707, 3)
+                .level(0.19)
+        }
+
+        /** The string that feeds [guitarRig]: the 19-voice supersaw, its pluck burst and the note envelope. */
+        private fun guitarString(muls: Boolean = true): IgnitorDsl {
+            val saw = IgnitorDsl.SuperSaw(
+                voices = IgnitorDsl.Constant(19.0),
+                spread = IgnitorDsl.Constant(0.10),
+                analogSpread = IgnitorDsl.Constant(0.5),
+                spreadPower = 8.0,
+                sideAtten = 0.5,
+                gainJitter = 0.05,
+                centerJitterScale = 0.10,
+                phasePool = 1.0,
+                kMin = 0.60,
+                kMax = 0.85,
+            )
+            val burst = IgnitorDsl.Crackle(chaos = IgnitorDsl.Constant(1.25))
+                .highpass(1000.0)
+                .adsr(0.005, 0.1, 0.0, 0.05)
+            val plucked = IgnitorDsl.PitchEnvelope(
+                inner = saw,
+                semitones = IgnitorDsl.Constant(0.5),
+                attackSec = IgnitorDsl.Constant(0.001),
+                decaySec = IgnitorDsl.Constant(0.02),
+            ).plus(if (muls) burst.mul(IgnitorDsl.Constant(1.0)) else burst)
+
+            // Sustain held: the song's 0.0 would end the voice during warmup and leave an empty renderer to measure.
+            return plucked.adsr(0.005, 1.0, 1.0, 0.03)
         }
     }
 }

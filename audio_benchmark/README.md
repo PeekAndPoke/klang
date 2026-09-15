@@ -23,6 +23,15 @@ Measures real-time factor (RTF) — values below 1.0 mean faster than real-time.
 ./gradlew :audio_benchmark:jsBrowserDevelopmentRun
 ```
 
+### One family of cases only
+
+`KLANG_BENCH_FILTER` runs just the ignitor cases whose name contains it and skips everything
+else, which is what an A/B wants (a pair of rows, a minute, both platforms):
+
+```bash
+KLANG_BENCH_FILTER=guitar-rig ./gradlew :audio_benchmark:jsNodeProductionRun
+```
+
 ## Output
 
 The benchmark prints:

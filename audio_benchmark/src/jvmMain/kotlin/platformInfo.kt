@@ -24,3 +24,5 @@ actual fun platformInfo(): String {
 
     return "JVM $jvm ($jvmVendor) / $os / $cpu ($cores cores)"
 }
+
+actual fun benchmarkCaseFilter(): String? = System.getenv("KLANG_BENCH_FILTER")?.trim()?.takeIf { it.isNotEmpty() }

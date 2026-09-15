@@ -25,8 +25,29 @@
   `x [.add] .mul [.add]`, never across an addition, composes literal multiply runs only where the
   chain's clamp cannot differ (growing runs; attenuating runs over a clamped input), folds a Param
   multiply alone, and leaves a left-hand scalar with a Param where it was written (param order).
-  On its own it changes nothing measurable (a lone `mul` was one pass already); it is the shape
-  the Eq and shaper gain folds (steps 3 and 4) remove entirely.
+  On its own it changes nothing measurable (a lone `mul` was one pass already); it was meant as
+  the shape the Eq and shaper gain folds (steps 3 and 4) remove entirely.
+- Steps 3 and 4 are WON'T IMPLEMENT (2026-09-15): the ceiling was measured before touching
+  EqCore. `audio_benchmark` rows `guitar-rig*` (the rhythm rig of Der Schmetterling as an inline
+  tree, `KLANG_BENCH_FILTER=guitar-rig` runs only them) DELETE every level `mul` and every
+  `Drive` outright, and that buys about 1 to 2 µs of a 53 µs voice on node, under 4 %. The
+  same rows put 22 µs of the rig's 35 in the shapers' oversampling, so that is where the work
+  went (next entry). Measure the ceiling of a fold by deleting the nodes before building it.
+
+## The oversampler's decimator is polyphase and indexed (2026-09-15)
+
+- `Oversampler.decimate2x` no longer pushes every sample through a 15-slot ring with wrapping
+  reads; output `m` is the FIR at `s[2m-13 .. 2m+1]` read straight out of the work buffer, with
+  13 samples of per-stage history and a prefix view for the first 13 outputs (before that point
+  an in-place write would land under an unread tap). Same taps, same summation order, so the
+  output is bit-identical to the ring form for every block length; `OversamplerDecimatorParitySpec`
+  keeps the ring implementation as its oracle over ragged block lengths (1 to 128, both sides of
+  13 and 26) and goes red for a history one short, the in-place boundary one early, a tap off by
+  one, or the short-block history shift dropped.
+- Node 24, µs per block, one voice: `pluck+distort_4x` 13.4 -> 10.1, `pluck+distort_2x`
+  9.4 -> 8.6, the guitar rig 53 -> 44 (its oversampling share 22 -> 12). Every oversampled
+  shaper, crush and coarse stage (ignitor and strip doors) takes it. The copies into the prefix
+  view and the history are plain loops: `copyInto` allocates a typed-array view per call on JS.
 
 ## Analog drift steps per block and ramps across it (2026-09-15)
 
