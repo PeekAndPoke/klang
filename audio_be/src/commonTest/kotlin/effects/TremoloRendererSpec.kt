@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.FAST_SIN_MAX_ERROR
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.filters.NoOpAudioFilter
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -83,12 +84,13 @@ class TremoloRendererSpec : StringSpec({
         buffer.all { it.isFinite() } shouldBe true
     }
 
-    // ── W10: the neutral settings are the shipped tremolo, bit for bit ────────────────────
+    // ── W10: the neutral settings are the shipped tremolo, to the polynomial sine's bound ──
 
-    "the default sine is bit-identical to the shipped renderer — the DrunkenSailor guard" {
-        // The reference is an INDEPENDENT transcription of the pre-W10 loop, not a call back
-        // into the code under test. DrunkenSailor is the only shipped tremolo
-        // (tremolo(depth = 0.33, sync = 8, shape = "sine")) and must not move.
+    "the default sine is the shipped renderer to the polynomial sine's bound — the DrunkenSailor guard" {
+        // The reference is an INDEPENDENT transcription of the pre-W10 loop with the library
+        // sine, not a call back into the code under test. DrunkenSailor is the only shipped
+        // tremolo (tremolo(depth = 0.33, sync = 8, shape = "sine")) and must not move beyond
+        // what the polynomial sine moves it (parts in 10^11 of the gain, FAST_SIN_MAX_ERROR).
         val n = 8820
         val input = AudioBuffer(n) { 0.8 }
 
@@ -102,13 +104,19 @@ class TremoloRendererSpec : StringSpec({
         }
 
         // null, the canonical name, its alias and a shouty spelling all resolve to the same
-        // waveform — and all four must hit the bit-identical fast path, not the round trip.
-        for (name in listOf(null, "sine", "SINE", "sin")) {
+        // waveform — and all four must hit the same fast path, not the round trip: identical to
+        // each other bit for bit, and to the library-sine reference within the bound.
+        val canonical = AudioBuffer(n) { 0.8 }
+        renderer(rate = 8.0, depth = 0.33, shape = null, sampleRate = 44100).renderInPlace(canonical)
+
+        (0 until n).all { abs(canonical[it] - expected[it]) < FAST_SIN_MAX_ERROR } shouldBe true
+
+        for (name in listOf("sine", "SINE", "sin")) {
             val buffer = AudioBuffer(n) { 0.8 }
             renderer(rate = 8.0, depth = 0.33, shape = name, sampleRate = 44100)
                 .renderInPlace(buffer)
 
-            (0 until n).all { buffer[it] == expected[it] } shouldBe true
+            (0 until n).all { buffer[it] == canonical[it] } shouldBe true
         }
     }
 
@@ -121,7 +129,7 @@ class TremoloRendererSpec : StringSpec({
         renderer(startPhase = 0.25).renderInPlace(buffer, lfoRate)
 
         val seeded = 0.25 * TWO_PI + TWO_PI / lfoRate
-        abs(buffer[0] - (sin(seeded) + 1.0) * 0.5) shouldBeLessThan 1e-12
+        abs(buffer[0] - (sin(seeded) + 1.0) * 0.5) shouldBeLessThan FAST_SIN_MAX_ERROR
     }
 
     "a seed outside 0..1 folds into the cycle, and a non-finite one heals to 0" {

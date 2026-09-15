@@ -471,12 +471,29 @@ object SongBenchmarkCases {
         ),
     )
 
+    /** The audio-rate modulator paths the song does not use: one FM voice, one LFO-modulated voice. */
+    private val fmBell = voice(
+        "FM BELL (sine, fm 200:1.4)", "voice",
+        """
+        n("<0 2 4 5 7 5 4 2>").fast(2).orbit(6).scale("e4:minor").sound("sine").fm(200, 1.4, 0.01, 0.6, 0.2)
+          .adsr(0.005, 0.8, 0.3, 0.3).gain(0.4).pan(0.5)
+        """,
+    )
+
+    private val lfoPad = voice(
+        "LFO PAD (saw, vibrato + tremolo)", "voice",
+        """
+        n("<[0,4,7] [-3,2,5]>").orbit(6).scale("e3:minor").sound("saw").vibrato(5.5, 0.3).tremolo(0.5, 4)
+          .adsr(0.05, 0.5, 0.7, 0.4).gain(0.4).pan(0.5)
+        """,
+    )
+
     fun voices(): List<SongBenchmark.Case> = listOf(
         // isolated voices — the full lead/gtr1 chains are the top rung of their ladders, relabelled
         // into the shared "voice" group so they sit alongside the other isolated voices.
         leadLadder.last().copy(name = "LEAD (full, superramp uni5)", group = "voice"),
         guitar1Ladder.last().copy(name = "GTR1 (full, supersaw uni9)", group = "voice"),
-        guitar2, bass, drumsKick, hats, pink,
+        guitar2, bass, drumsKick, hats, pink, fmBell, lfoPad,
     )
 
     fun ladders(): List<SongBenchmark.Case> = leadLadder + guitar1Ladder + gtrFxLadder

@@ -46,8 +46,20 @@
   end, so swapping its `sin` needs a per-sample wrap first.
 - Why not a lookup table: same op count with linear interpolation, worse accuracy (3e-7 at 4096
   entries), memory traffic against the audio buffers, bounds checks on JS.
-- The phase-pool selection at note-on (`Ignitors.kt`, `im += g * sin(a)`) and the `sineshaper`
-  waveshaper keep the library `sin`: not per sample, or not a phase.
+- The modulators followed (2026-09-15, later the same day): the FM modulator (`FmRenderer`), both
+  vibrato LFOs (`VibratoRenderer`, `VibratoModIgnitor`), both tremolo LFOs (`TremoloRenderer` via
+  `lfoNorm`, the `tremolo` ignitor) and the grain Hann window (`cos(2πp)` as `fastSin(2πp + π/2)`,
+  inside the fold for `p` in `[0, 1)`). The FM modulator wrapped at block end only and the
+  vibratos never wrapped a negative rate, which `sin` tolerated and the polynomial does not: each
+  now wraps per sample with the same hoisted `safeWrap` as the stacks (`!(abs(inc) < TWO_PI)`).
+  Guard: `ModulatorPhaseWrapSpec` (FM against a `sin` accumulator, both signs past the sample
+  rate, negative LFO rates over seconds, both vibrato buffer paths). Measured (`voices` A/B):
+  FM bell 0.0026 -> 0.0022, vibrato + tremolo pad 0.0064 -> 0.0042, the lead 0.022 -> 0.019.
+  `TremoloRendererSpec`'s DrunkenSailor guard now holds the shipped tremolo to the polynomial's
+  bound instead of bit-identity (the four spellings still must be bit-identical to each other).
+- The phase-pool selection at note-on (`Ignitors.kt`, `im += g * sin(a)`), the phaser LFO (two
+  `sin` per block) and the `sineshaper` waveshaper keep the library `sin`: not per sample, or
+  not a phase.
 
 ## Silence culling (2026-09-15)
 

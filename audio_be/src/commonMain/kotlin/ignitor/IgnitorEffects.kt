@@ -11,6 +11,8 @@ import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.HALF_PI
+import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
@@ -19,11 +21,9 @@ import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
-import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.round
-import kotlin.math.sin
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion
@@ -549,7 +549,7 @@ private class TremoloIgnitor(
                 // (a level change, not silence), healing the moment the rate returns.
                 phase = (phase + phaseInc).wrapPhase(TWO_PI)
 
-                val lfoNorm = (sin(phase) + 1.0) * 0.5
+                val lfoNorm = (fastSin(phase) + 1.0) * 0.5
                 val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
                 buffer[i] = (input[i] * gain)
             }
@@ -740,7 +740,8 @@ private class ShimmerIgnitor(
                     val sample = ring[idx1] + frac * (ring[idx2] - ring[idx1])
 
                     val phase = grainElapsed[g] * invGrainTotal
-                    val win = 0.5 - 0.5 * cos(TWO_PI * phase)
+                    // cos(2πp) = sin(2πp + π/2); p in [0, 1) keeps the argument inside the fold
+                    val win = 0.5 - 0.5 * fastSin(TWO_PI * phase + HALF_PI)
                     wetSample += sample * win
 
                     var nextPos = pos + grainRate[g]

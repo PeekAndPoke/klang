@@ -11,9 +11,12 @@ import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.fastExp2
+import io.peekandpoke.klang.audio_be.fastSin
+import io.peekandpoke.klang.audio_be.smallNumFastMod
+import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.pow
-import kotlin.math.sin
+import kotlin.math.abs
 
 /**
  * Mod-factory functions for the build-time pitch-mod approach.
@@ -69,6 +72,9 @@ private class VibratoModIgnitor(
         val end = ctx.windowEnd
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val depthOctaves = depthSemitones / 12.0
+        // The one-subtract wrap holds while |inc| < 2π; a rate past the sample rate (raw-Motor,
+        // either sign) takes the full wrap. NaN and infinite inc take it too.
+        val safeWrap = !(abs(lfoInc) < TWO_PI)
 
         if (depthSemitones <= 0.0) {
             // The LFO still ADVANCES: state moves once per rendered sample, whatever the output
@@ -78,16 +84,14 @@ private class VibratoModIgnitor(
             for (i in ctx.offset until end) {
                 buffer[i] = 1.0
                 lfoPhase += lfoInc
-                if (lfoPhase >= TWO_PI) {
-                    lfoPhase -= TWO_PI
-                }
+                lfoPhase = if (safeWrap) lfoPhase.wrapPhase(TWO_PI) else lfoPhase.smallNumFastMod(TWO_PI)
             }
             return
         }
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(fastExp2(sin(lfoPhase) * depthOctaves))
+            buffer[i] = safeOut(fastExp2(fastSin(lfoPhase) * depthOctaves))
             lfoPhase += lfoInc
-            if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
+            lfoPhase = if (safeWrap) lfoPhase.wrapPhase(TWO_PI) else lfoPhase.smallNumFastMod(TWO_PI)
         }
     }
 }

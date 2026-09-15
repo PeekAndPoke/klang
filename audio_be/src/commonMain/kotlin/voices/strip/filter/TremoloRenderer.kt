@@ -21,8 +21,9 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  *
  * The LFO is an [LfoShape] evaluated at a phase that advances every sample, seeded by
  * [startPhase] and warped by [skew]. At the neutral settings ([skew] 0.0, [startPhase] 0.0,
- * [shape] null or `"sine"`) the output is the shipped sine tremolo BIT for bit — see the fast
- * path in [lfoNorm], which is what makes that guarantee rather than approximates it.
+ * [shape] null or `"sine"`) the output is the shipped sine tremolo to the polynomial sine's
+ * bound (`FAST_SIN_MAX_ERROR`), and every spelling of that neutral sine renders the same
+ * samples: see the fast path in [lfoNorm].
  *
  * Unit conversions live HERE, once (parameter parity: one conversion site per quantity).
  * [rate] arrives in Hz and [startPhase] in cycles (`0..1` = one full LFO cycle, the sprudel

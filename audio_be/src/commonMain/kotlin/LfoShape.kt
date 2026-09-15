@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be
 
-import kotlin.math.sin
 
 /**
  * LFO waveforms for modulation sources. Internal-only enum — the DSL surface stays
@@ -120,8 +119,9 @@ internal inline fun skewPhase(t: Double, duty: Double, scaleFirst: Double, scale
  * PRECONDITION: [phase] is already wrapped into `[0, TWO_PI)`, which is what keeps every
  * branch inside `[0, 1]`. `wrapPhase` delivers that for any rate the audio range can produce,
  * but its modulo arm rounds for absurd arguments (|rate| past ~1e7 Hz), and a phase that
- * escapes the period carries a LINEAR shape out of range with it — sine is the only branch
- * immune by construction. Not clamped: the reachable regime is the audio one.
+ * escapes the period carries a LINEAR shape out of range with it, and the sine further: the
+ * polynomial `fastSin` is exact only a quarter period past the range and diverges beyond it.
+ * Not clamped: the reachable regime is the audio one.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun lfoNorm(
@@ -133,15 +133,16 @@ internal inline fun lfoNorm(
 ): Double {
     // The unskewed sine is the shipped tremolo, evaluated on the radian accumulator ITSELF.
     // The normalized round trip (phase * INV_TWO_PI, then * TWO_PI) can move the argument by
-    // an ulp, so this fast path is what keeps existing content bit-identical.
+    // an ulp; this fast path skips it, so every spelling of the neutral sine renders the same
+    // samples (the shipped tremolo itself moved to the polynomial sine's bound, 2026-09-15).
     if (shape == LfoShape.SINE && duty == LFO_SYMMETRIC_DUTY) {
-        return (sin(phase) + 1.0) * 0.5
+        return (fastSin(phase) + 1.0) * 0.5
     }
 
     val t = skewPhase(phase * INV_TWO_PI, duty, scaleFirst, scaleSecond)
 
     return when (shape) {
-        LfoShape.SINE -> (sin(t * TWO_PI) + 1.0) * 0.5
+        LfoShape.SINE -> (fastSin(t * TWO_PI) + 1.0) * 0.5
 
         LfoShape.TRIANGLE -> when {
             t < 0.25 -> 0.5 + 2.0 * t

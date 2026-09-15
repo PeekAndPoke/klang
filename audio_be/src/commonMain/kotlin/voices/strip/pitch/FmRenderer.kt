@@ -6,12 +6,14 @@
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.fastSin
+import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
 import io.peekandpoke.klang.audio_be.wrapPhase
-import kotlin.math.sin
+import kotlin.math.abs
 
 /**
  * FM (Frequency Modulation) synthesis.
@@ -38,18 +40,25 @@ class FmRenderer(
         val modFreq = freqHz * fm.ratio
         val modInc = (TWO_PI * modFreq) / sampleRate
         var modPhase = fm.modPhase
+        // The one-subtract wrap holds while |inc| < 2π; a modulator past the sample rate (a
+        // raw-Motor ratio, either sign) takes the full wrap. NaN and infinite inc take it too.
+        val safeWrap = !(abs(modInc) < TWO_PI)
 
         // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
         val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame)
-        val effectiveDepth = fm.depth * envLevel
+        // Hoisted: the divide and the offset read are loop-invariant, and after the sine swap
+        // the divide would be the loop's largest remaining cost.
+        val depthOverFreq = fm.depth * envLevel / freqHz
+        val off = ctx.offset
 
         for (i in 0 until ctx.length) {
-            val modSignal = sin(modPhase) * effectiveDepth
+            val fmMult = 1.0 + fastSin(modPhase) * depthOverFreq
+
             modPhase += modInc
-            val fmMult = 1.0 + (modSignal / freqHz)
-            buf[ctx.offset + i] *= fmMult
+            modPhase = if (safeWrap) modPhase.wrapPhase(TWO_PI) else modPhase.smallNumFastMod(TWO_PI)
+            buf[off + i] *= fmMult
         }
 
-        fm.modPhase = modPhase.wrapPhase(TWO_PI)
+        fm.modPhase = modPhase
     }
 }
