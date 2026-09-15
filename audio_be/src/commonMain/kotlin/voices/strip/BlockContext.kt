@@ -141,4 +141,18 @@ class BlockContext(
 
     /** Whether any Pitch renderer has written to [freqModBuffer] this block. Reset per block. */
     var freqModBufferWritten: Boolean = false
+
+    /**
+     * Set per block by `Voice.render` BEFORE the strip runs: true only when the block's output
+     * peak will be read for silence culling (a cullable voice; `noCull()` voices pay nothing per
+     * sample). The Send stage measures only then.
+     */
+    var measurePeak: Boolean = false
+
+    /**
+     * Peak `|sample|` of the voice's own output this block: post-VCA, times `postGain`, `gain` and
+     * the largest send amount, BEFORE the solo/mute multiplier. Zeroed per block by `Voice.render`,
+     * written by the Send stage when [measurePeak] is set, read back for silence culling.
+     */
+    var voiceOutputPeak: Double = 0.0
 }

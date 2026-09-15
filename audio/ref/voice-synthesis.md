@@ -228,3 +228,45 @@ nobody can hear.
 path — extends amp ADSR to cover ignitor-internal `Adsr` nodes via
 `IgnitorDsl.maxReleaseSec()` at `audio_bridge/.../IgnitorDsl.kt:1304`).
 Per-block envelope math at `voices/strip/EnvelopeCalc.kt:14-34`.
+
+### Silence culling (2026-09-15)
+
+The scheduled lifetime above is an upper bound. A voice also ends itself EARLY once it is in
+its release and its own output has stayed under the audibility floor for the cull window:
+
+- **Measure:** `SendRenderer`, the last strip stage, keeps the block's peak `|output|`
+  (post-VCA, times `postGain`, `gain` and the largest send amount, so it bounds the mix bus AND
+  the send buses; BEFORE the solo/mute multiplier, so a voice a solo faded out is not taken for
+  a dead one) in `BlockContext.voiceOutputPeak`. A separate pass, run only on the blocks that
+  read it (`BlockContext.measurePeak`): until the voice has been heard, then in the release; a
+  heard voice pays nothing for the rest of its gate, `noCull()` voices pay nothing at all.
+- **Decide:** `Voice.render`, after the strip loop, only when `blockStart >= gateEndFrame`.
+  Silent frames accumulate (frames, not blocks, so the window has the same length at any block
+  size and the cut lands within one block of the same frame); an audible block resets them; when
+  they cover the window, `Voice.culled` is set and the scheduler counts it
+  (`VoiceScheduler.culledVoicesTotal`, `renderingVoiceCount`).
+- **A culled voice is a ZOMBIE, not a removal.** It runs no strip any more, but it keeps its slot
+  in the scheduler's active list and renews its orbit lease every block until its scheduled
+  `endFrame`, where it expires like any voice. Removing it early was measured to change the
+  MIX: the orbit lease passes to whichever voice renders first after an owner dies, that order
+  is the active list, and a swap-remove reorders it, so a culled hat on orbit 7 changed which of
+  guitar 3 and the bass owned orbit 3 (-32 dBFS difference on Der Schmetterling). With the zombie
+  the null-diff against no culling is at the floor: only the sub-floor tails are gone.
+- **Never in the gate, and never before the voice has sounded.** The held part of a note may be
+  silent on purpose (a slow attack, a silent lead-in). Only the release, which has been told to
+  stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample
+  with leading silence pitched down, or an ignitor attack outliving a short gate, is silent at
+  gate end and sounds later; the gate says "told to stop", the latch says "has started". A release that goes
+  silent and comes back is cut at its first gap: the factory excludes voices with a `tremolo`
+  (a square shape at full depth is exact silence for half a cycle) unless `cull` is set
+  explicitly; a sparse source inside an ignitor is the author's call (`noCull()`).
+- **Tails on the orbit are untouched:** reverb and delay live on the cylinder buses; culling
+  only stops future ~zero sends. The orbit lease does not move either (the zombie renews it), so
+  the handover sequence on an orbit with mixed bus configs is the same as without culling.
+- **Knobs:** `cull(seconds)` sets the window per voice (`VoiceData.cull`, default
+  `VOICE_CULL_SECONDS` = 50 ms), `noCull()` writes `VOICE_CULL_NEVER` (negative = never). Floor
+  `VOICE_CULL_FLOOR` = `ORBIT_SILENCE_FLOOR` = 1e-5 (-100 dBFS; one constant shared with the
+  cylinder's silence test, so per voice and per bus a culled voice is already below what keeps an
+  orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
+  are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.
+- Guard: `VoiceCullingSpec`. Record: `docs/tasks-archive/2026-09/20260915-voice-culling.md`.

@@ -195,6 +195,30 @@ class VoiceScheduler(
 
     fun getActiveVoiceCount(): Int = active.size
 
+    // Voices whose release stayed silent through the cull window (Voice.culled): zombies that
+    // stay in [active] until their scheduled end but render nothing.
+    private var culledVoices: Int = 0
+
+    /**
+     * Voices culled since this scheduler was created, counted at the moment they turned into
+     * zombies. Read by the song benchmark (its `culled` column); not yet on the diagnostics feed,
+     * which reports dropped voices only.
+     */
+    fun culledVoicesTotal(): Int = culledVoices
+
+    /** Active voices that still run their strip: [getActiveVoiceCount] minus the zombies. */
+    fun renderingVoiceCount(): Int {
+        var count = 0
+
+        for (activeVoice in active) {
+            if (!activeVoice.voice.culled) {
+                count++
+            }
+        }
+
+        return count
+    }
+
     /**
      * Voices dropped at admission for [playbackId] because their start had already been rendered
      * past (block-framing B2). Zero on a healthy link; a rising count is the only visible trace of
@@ -444,7 +468,12 @@ class VoiceScheduler(
                 activeVoice.voice.setGainMultiplier(currentBackgroundGain)
             }
 
+            val wasCulled = activeVoice.voice.culled
             val isAlive = activeVoice.voice.render(ctx)
+
+            if (!wasCulled && activeVoice.voice.culled) {
+                culledVoices++
+            }
 
             if (isAlive) {
                 i++

@@ -359,5 +359,6 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         value = SprudelVoiceValue.Num(b + 87)
         tags = setOf("t$seed")
         tweaks = listOf("tw$seed")
+        cull = b + 94
     }
 }

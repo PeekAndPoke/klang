@@ -1,5 +1,31 @@
 # Klang Audio — Memory
 
+## Silence culling (2026-09-15)
+
+- A voice stops rendering once it is in its RELEASE and its own output has stayed under
+  `VOICE_CULL_FLOOR` (-100 dBFS, the same constant as the cylinder's silence test) for the cull window (`VOICE_CULL_SECONDS` = 50 ms, per voice via
+  `cull(seconds)`, off via `noCull()` = `VOICE_CULL_NEVER`; a voice with a `tremolo` is excluded
+  unless `cull` is set). Measured in `SendRenderer` (`BlockContext.voiceOutputPeak`, only until
+  the voice has been heard and then in its release, pre solo-multiplier, bounded by the largest send), decided in
+  `Voice.render`, counted by `VoiceScheduler.culledVoicesTotal`; the benchmark tables carry a
+  `culled` column.
+- **A culled voice is a zombie, never an early removal.** It keeps its active-list slot and renews
+  its orbit lease until its scheduled end. Removing it early reorders the active list, and the
+  orbit lease goes to whoever renders first after an owner dies: measured on Der Schmetterling, a
+  culled hat changed which of guitar 3 and the bass owned orbit 3, a -32 dBFS difference. With the
+  zombie the null-diff against no culling sits at the floor. Lesson: any change to WHEN a voice
+  leaves `active` is a mix change on every orbit with mixed bus configs.
+- **The gate is never culled, and a voice that has not sounded yet is never culled** (`Voice.heard`
+  latch). Decided over the July `cullAfter` fraction: the gate says "told to stop", the latch says
+  "has started"; together they need no parameter and protect slow attacks, delayed sample onsets and
+  ignitor attacks that outlive a short gate. Residual risk: a release tail with gaps longer than the
+  window (a `tremolo` voice is excluded for that reason).
+- Where it pays (Der Schmetterling, 2026-09-15 rig suite): sample drums with 2 s releases (85 to 90%
+  silent), the Orchestertrommel (about 40%), the marimba (20 to 40%). Where it cannot: the guitars,
+  whose notes live 170 ms (gate 116 ms + 30 to 50 ms release) and are audible throughout.
+- Guard: `VoiceCullingSpec` (mutation-checked: gate rule, pre-multiplier peak, frames-not-blocks,
+  negative-means-never). Doors: `LangCullSpec`. Record: `docs/tasks-archive/2026-09/20260915-voice-culling.md`.
+
 ## Body / Vowel resonators + live-update fixes (2026-07-04)
 
 - **Body & vowel are ORBIT-level Katalyst effects**, not per-voice filters: `KatalystBodyEffect` /

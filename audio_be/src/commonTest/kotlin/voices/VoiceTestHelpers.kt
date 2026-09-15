@@ -98,6 +98,9 @@ object VoiceTestHelpers {
         // Cut group
         cut: Int? = null,
 
+        // Silence culling window in seconds (null = engine default, negative = never)
+        cull: Double? = null,
+
         // Orbit-level resonators (carried to the Cylinder, not baked per-voice)
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
@@ -173,6 +176,7 @@ object VoiceTestHelpers {
             body = body,
             vowel = vowel,
             cut = cut,
+            cull = cull,
             pipeline = pipeline,
             blockCtx = blockCtx,
         )

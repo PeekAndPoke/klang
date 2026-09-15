@@ -68,7 +68,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
             compressorThreshold = -12.0; compressorRatio = 4.0; compressorKnee = 2.5
             compressorAttack = 0.01; compressorRelease = 0.31
-            solo = 1.0; pipeline = PipelineValue.Named("pedal")
+            solo = 1.0; pipeline = PipelineValue.Named("pedal"); cull = 0.2
         }.toVoiceData()
 
         // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → Body → LP).

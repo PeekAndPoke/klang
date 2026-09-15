@@ -84,9 +84,11 @@ class SongBenchmark(
         val renderUsPerCycle: Double,
         val audioMsPerCycle: Double,
         val error: String? = null,
+        /** Voices that ended early because their release stayed silent (`VoiceScheduler.culledVoicesTotal`). */
+        val culled: Int = 0,
     )
 
-    private data class PassMetrics(val totalRenderUs: Double, val maxBlockUs: Double, val onsets: Int)
+    private data class PassMetrics(val totalRenderUs: Double, val maxBlockUs: Double, val onsets: Int, val culled: Int)
 
     fun run(cases: List<Case>): List<Result> = cases.map { runCase(it) }
 
@@ -119,6 +121,7 @@ class SongBenchmark(
             name = case.name,
             group = case.group,
             onsets = passes.first().onsets,
+            culled = passes.first().culled,
             medianRtf = medianRtf,
             peakBlockRtf = peakBlockRtf,
             renderUsPerCycle = renderUsPerCycle,
@@ -247,7 +250,10 @@ class SongBenchmark(
         }
 
         val totalRenderUs = startAll.elapsedNow().toDouble(DurationUnit.MICROSECONDS)
-        return PassMetrics(totalRenderUs = totalRenderUs, maxBlockUs = maxBlockUs, onsets = events.size)
+        return PassMetrics(
+            totalRenderUs = totalRenderUs, maxBlockUs = maxBlockUs, onsets = events.size,
+            culled = voiceScheduler.culledVoicesTotal(),
+        )
     }
 
     /**

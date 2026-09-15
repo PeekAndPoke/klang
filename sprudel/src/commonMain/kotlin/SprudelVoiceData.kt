@@ -187,6 +187,12 @@ data class SprudelVoiceData(
      * list on write).
      */
     var tweaks: List<String>?,
+
+    /**
+     * Silence-culling window in seconds (`cull(seconds)`); `null` = engine default, negative
+     * (`noCull()`) = never. Mirrors `VoiceData.cull`, see there for the semantics.
+     */
+    var cull: Double?,
 ) {
     // --- Flat-field accessors over the grouped storage -------------------------------------------------
     // Bridge so the rest of the engine/DSL/tests keep using the flat names (data.attack, data.cutoff, …)
@@ -788,6 +794,7 @@ data class SprudelVoiceData(
             value = other.value ?: value,
             tags = mergeTags(tags, other.tags),
             tweaks = mergeTweaks(tweaks, other.tweaks),
+            cull = other.cull ?: cull,
         )
     }
 
@@ -842,6 +849,7 @@ data class SprudelVoiceData(
         value = other.value ?: value
         tags = mergeTags(tags, other.tags)
         tweaks = mergeTweaks(tweaks, other.tweaks)
+        cull = other.cull ?: cull
     }
 
     fun isTruthy(): Boolean {
@@ -1122,6 +1130,7 @@ data class SprudelVoiceData(
             master = masterName,
             control = control,
             tags = tags,
+            cull = cull,
         )
     }
 
@@ -1501,6 +1510,7 @@ internal val blueprint = SprudelVoiceData(
     value = null,
     tags = null,
     tweaks = null,
+    cull = null,
 )
 
 /**

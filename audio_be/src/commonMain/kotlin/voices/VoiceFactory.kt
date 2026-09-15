@@ -28,6 +28,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
@@ -187,6 +188,11 @@ class VoiceFactory(
             shape = data.tremoloShape,
         )
 
+        // Silence culling: a tremolo gates the output (a square shape at full depth is exact silence
+        // for half a cycle), and a gated RELEASE would be culled at its first off-half. So a voice
+        // with a tremolo is not culled unless the author set `cull(...)` themselves.
+        val cull = data.cull ?: if (tremolo.depth > 0.0) VOICE_CULL_NEVER else null
+
         // Ducking / Sidechain
         val duckCylinderParam = data.duckCylinder
         val duckDepthParam = data.duckDepth
@@ -282,6 +288,7 @@ class VoiceFactory(
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
+                    cull = cull,
                     body = bodyDef, vowel = vowelDef,
                 )
             }
@@ -377,6 +384,7 @@ class VoiceFactory(
                     fm, signal, baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
+                    cull = cull,
                     body = bodyDef, vowel = vowelDef,
                 )
             }
@@ -533,6 +541,7 @@ class VoiceFactory(
          *  the global and split the build/render channels. */
         voiceRandom: Random,
         cut: Int? = null,
+        cull: Double? = null,
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
     ): Voice {
@@ -608,6 +617,7 @@ class VoiceFactory(
             ducking = ducking,
             compressor = compressor,
             cut = cut,
+            cull = cull,
             pipeline = pipeline,
             blockCtx = blockCtx,
             mainFilter = bakedFilters,

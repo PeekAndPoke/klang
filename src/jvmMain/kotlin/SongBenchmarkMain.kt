@@ -98,38 +98,39 @@ private fun printGroup(group: String, rows: List<SongBenchmark.Result>, md: Stri
     md.appendLine()
 
     val header = if (isLadder) {
-        "%-42s %7s %10s %10s %12s %10s".format("case", "onsets", "medRTF", "peakRTF", "us/cycle", "Δ medRTF")
+        "%-42s %7s %7s %10s %10s %12s %10s".format("case", "onsets", "culled", "medRTF", "peakRTF", "us/cycle", "Δ medRTF")
     } else {
-        "%-42s %7s %10s %10s %12s".format("case", "onsets", "medRTF", "peakRTF", "us/cycle")
+        "%-42s %7s %7s %10s %10s %12s".format("case", "onsets", "culled", "medRTF", "peakRTF", "us/cycle")
     }
     println(header)
     println("-".repeat(header.length))
 
     if (isLadder) {
-        md.appendLine("| case | onsets | medRTF | peakRTF | µs/cycle | Δ medRTF |")
-        md.appendLine("|------|-------:|-------:|--------:|---------:|---------:|")
+        md.appendLine("| case | onsets | culled | medRTF | peakRTF | µs/cycle | Δ medRTF |")
+        md.appendLine("|------|-------:|-------:|-------:|--------:|---------:|---------:|")
     } else {
-        md.appendLine("| case | onsets | medRTF | peakRTF | µs/cycle |")
-        md.appendLine("|------|-------:|-------:|--------:|---------:|")
+        md.appendLine("| case | onsets | culled | medRTF | peakRTF | µs/cycle |")
+        md.appendLine("|------|-------:|-------:|-------:|--------:|---------:|")
     }
 
     var prev = 0.0
     for ((i, r) in rows.withIndex()) {
         if (r.error != null) {
             println("%-42s  ERROR: %s".format(r.name.take(42), r.error))
-            md.appendLine("| ${r.name} | — | — | — | — | ERROR: ${r.error} |")
+            val blanks = if (isLadder) "| — | — | — | — | — " else "| — | — | — | — "
+            md.appendLine("| ${r.name} $blanks| ERROR: ${r.error} |")
             continue
         }
         val shortName = r.name.substringAfter(": ").ifBlank { r.name }.take(42)
         if (isLadder) {
             val delta = if (i == 0) 0.0 else r.medianRtf - prev
             println(
-                "%-42s %7d %10.5f %10.5f %12.1f %+10.5f".format(
-                    shortName, r.onsets, r.medianRtf, r.peakBlockRtf, r.renderUsPerCycle, delta
+                "%-42s %7d %7d %10.5f %10.5f %12.1f %+10.5f".format(
+                    shortName, r.onsets, r.culled, r.medianRtf, r.peakBlockRtf, r.renderUsPerCycle, delta
                 )
             )
             md.appendLine(
-                "| $shortName | ${r.onsets} | ${"%.5f".format(r.medianRtf)} | ${"%.5f".format(r.peakBlockRtf)} | ${"%.1f".format(r.renderUsPerCycle)} | ${
+                "| $shortName | ${r.onsets} | ${r.culled} | ${"%.5f".format(r.medianRtf)} | ${"%.5f".format(r.peakBlockRtf)} | ${"%.1f".format(r.renderUsPerCycle)} | ${
                     "%+.5f".format(
                         delta
                     )
@@ -138,12 +139,12 @@ private fun printGroup(group: String, rows: List<SongBenchmark.Result>, md: Stri
             prev = r.medianRtf
         } else {
             println(
-                "%-42s %7d %10.5f %10.5f %12.1f".format(
-                    shortName, r.onsets, r.medianRtf, r.peakBlockRtf, r.renderUsPerCycle
+                "%-42s %7d %7d %10.5f %10.5f %12.1f".format(
+                    shortName, r.onsets, r.culled, r.medianRtf, r.peakBlockRtf, r.renderUsPerCycle
                 )
             )
             md.appendLine(
-                "| $shortName | ${r.onsets} | ${"%.5f".format(r.medianRtf)} | ${"%.5f".format(r.peakBlockRtf)} | ${"%.1f".format(r.renderUsPerCycle)} |"
+                "| $shortName | ${r.onsets} | ${r.culled} | ${"%.5f".format(r.medianRtf)} | ${"%.5f".format(r.peakBlockRtf)} | ${"%.1f".format(r.renderUsPerCycle)} |"
             )
         }
     }

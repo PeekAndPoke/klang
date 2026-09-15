@@ -5,10 +5,12 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.send
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -56,6 +58,10 @@ class SendRenderer(
         val offset = ctx.offset
         val length = ctx.length
 
+        if (ctx.measurePeak) {
+            measurePeak(ctx, audioBuffer, offset, length, delayAmount, reverbAmount)
+        }
+
         for (i in 0 until length) {
             val idx = offset + i
 
@@ -84,5 +90,42 @@ class SendRenderer(
                 reverbSendR[idx] = (reverbSendR[idx] + right * reverbAmount)
             }
         }
+    }
+
+    /**
+     * The block's output peak for silence culling (`Voice.render`): an upper bound on what the
+     * cylinder receives from this voice on the mix bus AND the send buses, BEFORE the solo/mute
+     * multiplier (so a soloed-away voice is not taken for a dead one). A separate pass, run only
+     * on the blocks that read it, so the mix loop above stays untouched.
+     */
+    private fun measurePeak(
+        ctx: BlockContext,
+        audioBuffer: AudioBuffer,
+        offset: Int,
+        length: Int,
+        delayAmount: Double,
+        reverbAmount: Double,
+    ) {
+        var peak = 0.0
+        val end = offset + length
+
+        for (i in offset until end) {
+            val sample = audioBuffer[i]
+            val magnitude = if (sample < 0.0) -sample else sample
+
+            // NaN-guard: a NaN sample fails this compare and counts as silence, so a voice that blew
+            // up in its release is culled rather than kept poisoning the bus.
+            if (magnitude > peak) {
+                peak = magnitude
+            }
+        }
+
+        // Raw-Motor: gain, postGain and the send amounts are unclamped and may be negative or above 1;
+        // the bound is a magnitude, and a send above 1 puts more on its bus than the mix gets. A NaN
+        // gain makes the peak NaN, which reads as audible (never culled): NaN-guard by inaction.
+        val gainMagnitude = abs(voice.gain * voice.postGain)
+        val sendMagnitude = maxOf(1.0, abs(delayAmount), abs(reverbAmount))
+
+        ctx.voiceOutputPeak = peak * gainMagnitude * sendMagnitude
     }
 }

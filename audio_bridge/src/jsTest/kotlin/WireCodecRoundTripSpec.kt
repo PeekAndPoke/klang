@@ -80,7 +80,7 @@ class WireCodecRoundTripSpec : StringSpec({
 
     "ScheduledVoice round-trips a populated VoiceData (adsr + all filter kinds + enum + map)" {
         val data = VoiceData.empty.copy(
-            note = "c3", freqHz = 130.81, gain = 0.7, velocity = 0.9, soundIndex = 2,
+            note = "c3", freqHz = 130.81, gain = 0.7, velocity = 0.9, soundIndex = 2, cull = 0.2,
             oscParams = mapOf("voices" to 7.0, "spread" to 0.3),
             adsr = AdsrDef.Std(
                 attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,

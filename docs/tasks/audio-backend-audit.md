@@ -381,7 +381,7 @@ Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
   [`../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
 - Overlapping open work: [`master-dsl-followups.md`](master-dsl-followups.md) (§2 shared orbit+master tail hole), [
   `../plans/resource-warehouse.md`](../plans/resource-warehouse.md) (audio-thread allocation),
-  [`audio-pipeline-open-topics.md`](audio-pipeline-open-topics.md), [`voice-culling.md`](voice-culling.md)
+  [`audio-pipeline-open-topics.md`](audio-pipeline-open-topics.md), [`voice-culling.md`](../tasks-archive/2026-09/20260915-voice-culling.md) (done 2026-09-15)
 - Orientation for a fresh reviewer — signal flow + file-by-file map:
   [`../audio-backend-file-map.md`](../audio-backend-file-map.md)
 - Engine knowledge: `audio/MEMORY.md`, `audio/ref/performance.md`, `audio/ref/numerical-safety.md`

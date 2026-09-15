@@ -89,7 +89,7 @@ Not "unimportant". These fail the sorting rule, so they can run underneath the f
 tutorial phase instead of blocking it.
 
 **Pure performance, invisible to the surface:** unified-eq **D9** and its ramp phase (cut
-2026-08-31 with the sprudel `band`/`tap` decision), `voice-culling`,
+2026-08-31 with the sprudel `band`/`tap` decision), `voice-culling` (✅ DONE 2026-09-15, [archived](../tasks-archive/2026-09/20260915-voice-culling.md)),
 `constant-control-fast-path`, `reduce-js-bundle-size`, and
 `svf-coefficient-cache-never-engages.md` (opened 2026-08-31; the hottest path in the engine, but
 it changes no surface and no sound, so it fails the rule).

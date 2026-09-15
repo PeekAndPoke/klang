@@ -16,6 +16,8 @@ import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
 // object), causing heap allocation on every operation. Int maps directly to a JS number.
@@ -67,6 +69,11 @@ class Voice(
     val cut: Int? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Silence culling: the `cull(seconds)` window; null = VOICE_CULL_SECONDS, negative = never (noCull()).
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    cull: Double? = null,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Strip pipeline: Pitch → Ignite → Filter (Send is appended in init)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     pipeline: List<BlockRenderer>,
@@ -92,6 +99,47 @@ class Voice(
 
     // Full pipeline: Pitch → Ignite → Filter → Send
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
+
+    /**
+     * True once this voice's release has stayed under [VOICE_CULL_FLOOR] for the whole cull window.
+     * From then on [render] runs no strip: the voice is a ZOMBIE that only renews its orbit lease
+     * and keeps its slot in the scheduler's active list until its scheduled [endFrame], where it
+     * expires like any other voice. Staying in the list is the point: the orbit lease passes to
+     * whichever voice renders FIRST after an owner dies, and that order is the active list, so an
+     * early removal would reorder it and hand orbits to different successors (measured 2026-09-15
+     * on Der Schmetterling: a culled hat changed which of guitar 3 and the bass owned orbit 3, at
+     * -32 dBFS). The zombie's per-block cost is the lease renewal, and as the owner the bus config
+     * re-application that comes with it, exactly what a sounding tail paid; the strip it skips is
+     * the win.
+     */
+    var culled: Boolean = false
+        private set
+
+    /**
+     * True once any block of this voice has been audible (peak at or above [VOICE_CULL_FLOOR]).
+     * A voice that has not sounded yet is never culled, whatever its gate says: a sample with
+     * leading silence pitched two octaves down, or an ignitor envelope whose attack outlives a
+     * short gate, is silent at gate end and sounds only later. The gate marks "the note was told
+     * to stop", not "the sound has started"; this latch marks the latter. A voice whose gain
+     * product is exactly zero (`gain(0)`, the hand mute) can never be heard and starts latched, so
+     * its silent tail is culled like any other.
+     */
+    private var heard: Boolean = gain * postGain == 0.0
+
+    /**
+     * The cull window in frames. Negative = never cull (`noCull()`); `0` = end at the first silent
+     * block of the release; otherwise the consecutive silent frames the release must show first.
+     * Counted in FRAMES, not blocks, so the window has the same length at any block size and the
+     * cut lands within one block of the same frame.
+     */
+    private val cullWindowFrames: Int = when {
+        cull == null || cull != cull -> (VOICE_CULL_SECONDS * blockCtx.sampleRateD).toInt() // NaN-guard: default
+        cull < 0.0 -> -1
+        else -> (cull * blockCtx.sampleRateD).toInt()
+    }
+
+    /** Consecutive release frames whose output stayed under the floor. Reset by any audible block. */
+    private var silentFrames: Int = 0
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
     private var _gainMultiplier: Double = 1.0
@@ -154,6 +202,13 @@ class Voice(
         if (ctx.blockStart >= endFrame) return false
         if (blockEnd <= startFrame) return true
 
+        // A culled voice renews its orbit lease and nothing else (see [culled]).
+        if (culled) {
+            ctx.cylinders.getOrInit(cylinderId, this, ctx.blockStart)
+
+            return true
+        }
+
         val vStart = maxOf(ctx.blockStart, startFrame)
         val vEnd = minOf(blockEnd, endFrame)
         // Relative to this block / this voice — Int, and everything downstream of here is Int.
@@ -167,10 +222,46 @@ class Voice(
         blockCtx.renderContext = ctx
         blockCtx.freqModBufferWritten = false
 
+        // Silence culling reads the output peak only on a cullable voice, and only while it is
+        // needed: until the voice has been heard (the [heard] latch), then in the release. A heard
+        // voice pays nothing for the rest of its gate.
+        val measure = cullWindowFrames >= 0 && (!heard || ctx.blockStart >= gateEndFrame)
+        blockCtx.measurePeak = measure
+        blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
+
         // ── Pitch → Ignite → Filter → Send ────────────────────────────────────────
 
         for (renderer in pipeline) {
             renderer.render(blockCtx)
+        }
+
+        // ── Silence culling ───────────────────────────────────────────────────────
+        // Only in the release: the gate is the held part of the note, and a note may be silent
+        // there on purpose (a slow attack, a gated tremolo, sparse crackle). The release has been
+        // told to stop; once its output has stayed under the floor for the window, the rest of
+        // the scheduled tail is work that produces nothing: the voice turns into a zombie (see
+        // [culled]). Reverb and delay tails live on the cylinder buses and keep ringing; only
+        // future ~zero sends are removed. A release that goes silent and comes back (a gated
+        // tremolo: excluded by the factory; a sparse source inside an ignitor: `noCull()`) is the
+        // author's call. A voice that has not sounded yet is not silent, it is late (see [heard]).
+        if (measure) {
+            val silent = blockCtx.voiceOutputPeak < VOICE_CULL_FLOOR
+
+            if (!silent) {
+                heard = true
+            }
+
+            if (heard && ctx.blockStart >= gateEndFrame) {
+                if (silent) {
+                    silentFrames += length
+
+                    if (silentFrames >= cullWindowFrames) {
+                        culled = true
+                    }
+                } else {
+                    silentFrames = 0
+                }
+            }
         }
 
         return true

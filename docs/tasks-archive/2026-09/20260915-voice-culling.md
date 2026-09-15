@@ -1,5 +1,26 @@
 # Voice culling — terminate voices whose output has gone (and will stay) inaudible
 
+> Archived 2026-09-15. Status: **BUILT 2026-09-15**, guard `VoiceCullingSpec` (four mutation checks red),
+> doors `cull(seconds)` / `noCull()` with `LangCullSpec`, benchmark tables carry a `culled` column.
+> Two things came out differently from the design below, both decided with the maintainer on
+> 2026-09-15: there is NO `cullAfter` life fraction. Culling happens only in the RELEASE phase
+> (`blockStart >= gateEndFrame`), which is the real "the sound has started" signal, needs no
+> parameter, and protects slow attacks, gated tremolo and sparse crackle by construction. And the
+> per-voice knob is the WINDOW, `cull(seconds)`, default 50 ms (the design's 3 blocks were 32 ms at
+> a 512-frame block; the window is counted in frames now, so it is block-size independent), with
+> `noCull()` as the off switch. The peak is measured BEFORE the solo/mute multiplier so a soloed-away
+> voice is not culled. And a culled voice is a ZOMBIE that keeps its active-list slot and its orbit
+> lease until its scheduled end: the first build removed it early, and the null-diff render showed a
+> -32 dBFS mix change, because the orbit lease goes to whichever voice renders first after an owner
+> dies and the removal had reordered the active list (`audio/MEMORY.md`). Where it pays and where it
+> cannot (the guitars): `audio/MEMORY.md`.
+>
+> Not built, by maintainer decision on 2026-09-15: masking-aware culling (a floor relative to the
+> previous block's master peak, so a tail under a loud mix is culled earlier). The absolute floor
+> stays; a relative one is a future topic, if at all.
+>
+> Original design below, kept as the reasoning record.
+
 Status: **planned / ready to build.** Created 2026-07-04 (design worked out 2026-07-03 during the orbit-body
 work). Sound-preserving, all-platform CPU win (helps JVM, JS, and any future native/Wasm backend by doing
 *less work*). Self-contained; resumable cold. Engine work-stream — belongs in the Q3 nice-to-have track.

@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
 
 /**
  * Mixing channel / Effect bus — called "Cylinder" in strudel.
@@ -380,7 +381,9 @@ class Cylinder(
     }
 
     private fun isMixBufferSilent(): Boolean {
-        val threshold = 0.00001
+        // Shared with the voice cull floor (VOICE_CULL_FLOOR), so a culled voice is by definition
+        // below what keeps an orbit alive.
+        val threshold = ORBIT_SILENCE_FLOOR
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
         }

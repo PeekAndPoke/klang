@@ -192,6 +192,16 @@ data class VoiceData(
      * the synthesis engine ignores them.
      */
     val tags: Set<String>? = null,
+
+    /**
+     * Silence-culling window in seconds (the `cull(seconds)` door). Once the voice is in its
+     * release and its output has stayed under the audibility floor for this long, it ends itself
+     * instead of rendering the rest of its scheduled tail. `null` = the engine default
+     * ([io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS]); a negative value
+     * (`noCull()`, [io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER]) never culls.
+     * The gate (the held part of the note) is never culled, whatever the value.
+     */
+    val cull: Double? = null,
 ) {
     companion object {
         val empty = VoiceData(
