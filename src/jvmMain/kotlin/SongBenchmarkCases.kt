@@ -483,5 +483,72 @@ object SongBenchmarkCases {
 
     fun experiments(): List<SongBenchmark.Case> = distortSweep + unisonSweep + fxIsolation + interactionSweep
 
+    // ────────────────────────────────────────────────────────────────────────────────────────
+    // Live rig ablation (2026-09-15): where the cycles go in the CURRENT Der Schmetterling
+    // ────────────────────────────────────────────────────────────────────────────────────────
+
+    /** The live song with every section gate (`.mute("<...>")`) removed, so each part plays continuously. */
+    private val liveUngated: String by lazy {
+        Regex("""\.mute\("<[^"]*>"\)""").replace(derSchmetterlingSong.code, "")
+    }
+
+    /** A case that renders [expr] on top of the ungated live song, after [edit] has rewritten the song text. */
+    private fun liveCase(name: String, group: String, expr: String, edit: (String) -> String = { it }): SongBenchmark.Case =
+        SongBenchmark.Case(
+            name = name,
+            group = group,
+            rpm = derSchmetterlingSong.rpm,
+            cycles = 8,
+            code = edit(liveUngated) + "\n\n" + expr + "\n",
+        )
+
+    /** Text swap that fails loudly when the song no longer contains the anchor: the suite tracks the live song. */
+    private fun swap(from: String, to: String): (String) -> String = { src ->
+        require(src.contains(from)) { "rig suite anchor not found in the live song: $from" }
+        src.replace(from, to)
+    }
+
+    private const val RHYTHM_RIG =
+        "let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)"
+
+    private fun rhythmRig(pickup: String, pedal: String, preamp: String, power: String, cab: String): String =
+        "let guitar       = makeGuitar($pickup, $pedal, $preamp, $power, $cab)"
+
+    private const val BAND = ".analog(feel).transpose(transposition)"
+    private const val RHYTHM = "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange))$BAND"
+    private const val LEAD = "lead.apply(lead_arrange)$BAND"
+    private const val TROMMEL = "trommel.apply(trommel_arrange)$BAND"
+
+    fun rig(): List<SongBenchmark.Case> = listOf(
+        // each part solo
+        liveCase("guitar1 (melody rig, uni 15)", "part", "guitar1.apply(guitar1_arrange)$BAND"),
+        liveCase("guitar2+3 (rhythm rig, uni 13+11)", "part", RHYTHM),
+        liveCase("lead (marimba)", "part", LEAD),
+        liveCase("trommel", "part", TROMMEL),
+        liveCase("bass", "part", "bass.apply(bass_arrange)$BAND"),
+        liveCase(
+            "drums (samples)", "part",
+            "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)",
+        ),
+        // the rhythm rig, one stage at a time back to stock
+        liveCase("rhythm: full rig", "rig", RHYTHM),
+        liveCase("rhythm: pickup stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalScreamer", "preampHighGain", "powerPushPull", "cab4x12"))),
+        liveCase("rhythm: pedal stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalStock", "preampHighGain", "powerPushPull", "cab4x12"))),
+        liveCase("rhythm: preamp stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampStock", "powerPushPull", "cab4x12"))),
+        liveCase("rhythm: power stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerStock", "cab4x12"))),
+        liveCase("rhythm: cab stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupHumbucker", "pedalScreamer", "preampHighGain", "powerPushPull", "cabStock"))),
+        liveCase("rhythm: all stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalStock", "preampStock", "powerStock", "cabStock"))),
+        // the marimba, one component at a time
+        liveCase("marimba: full", "marimba", LEAD),
+        liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(400)", "let pAnalog = 0\n  let ring = Osc.constant(400)")),
+        liveCase("marimba: no body", "marimba", LEAD, swap(".body(material = \"wood\", wet = 0.4)", "")),
+        // the drum, one component at a time
+        liveCase("trommel: full", "trommel", TROMMEL),
+        liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
+        liveCase("trommel: no distort", "trommel", TROMMEL, swap(".distort(0.10, \"tube\", 2)", "")),
+        liveCase("trommel: no body", "trommel", TROMMEL, swap(".body(material = \"membrane\", wet = 0.225)", "")),
+        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(150)", "let pAnalog = 0\n  let ring = Osc.constant(150)")),
+    )
+
     fun all(): List<SongBenchmark.Case> = voices() + ladders() + experiments() + frozenSongs()
 }

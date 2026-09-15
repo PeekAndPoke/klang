@@ -49,6 +49,7 @@ fun main(args: Array<String>) {
         "gtrpoly" -> SongBenchmarkCases.gtrPoly()
         "songs", "full" -> SongBenchmarkCases.frozenSongs()
         "live" -> SongBenchmarkCases.live()
+        "rig" -> SongBenchmarkCases.rig()
         else -> SongBenchmarkCases.all()
     }
 
