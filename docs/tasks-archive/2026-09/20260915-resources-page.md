@@ -52,7 +52,16 @@ and got the same one-line fix.
 
 `EarTraining("Ear training")` joined `Mixing` and `Frequencies`. The Klippel listening test
 carries it alone; the Sara Carter video carries it as well, because its second half is exactly
-that. The rule from the videos note still holds: only tags a resource actually carries.
+that. `Tone("Tone")` came with the Jim Lill channel (added 2026-09-15 on the maintainer's
+request): a Nashville session guitarist's "Tested: where does the tone come from in ..." series,
+guitar, amp, cab, mic, preamp, one variable at a time. The rule from the videos note still
+holds: only tags a resource actually carries.
+
+**A YouTube channel is a `Website`, not a `Video`.** It has nothing to embed, so it takes the
+plain link door. `Website.platform` derives `youtube.com` from the URL, which is what the card
+footer should say. Its preview is drawn like the Klippel one: the channel's running question as
+a signal chain with a gold question mark, because the channel avatar would be a hotlinked
+Google image that goes stale.
 
 ## Adding a website
 

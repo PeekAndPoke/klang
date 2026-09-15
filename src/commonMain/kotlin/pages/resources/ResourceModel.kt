@@ -16,6 +16,7 @@ enum class ResourceTag(val label: String) {
     Mixing("Mixing"),
     Frequencies("Frequencies"),
     EarTraining("Ear training"),
+    Tone("Tone"),
 }
 
 /**

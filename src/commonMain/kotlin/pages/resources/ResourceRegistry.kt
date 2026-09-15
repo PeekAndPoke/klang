@@ -13,6 +13,19 @@ package io.peekandpoke.klang.pages.resources
  */
 val allResources: List<Resource> = listOf(
     Resource(
+        id = "jim-lill",
+        title = "Jim Lill",
+        description = "A Nashville session guitarist who tests where the tone actually comes from: guitar, amp, " +
+                "cab, mic, preamp, one variable at a time, with the myths falling as he goes. Rigorous, funny, " +
+                "and the best argument for trusting your ears over the spec sheet.",
+        author = "Jim Lill",
+        source = ResourceSource.Website(
+            url = "https://www.youtube.com/@JimLill",
+            imageUrl = "/images/resources/jim-lill.svg",
+        ),
+        tags = listOf(ResourceTag.Tone, ResourceTag.EarTraining),
+    ),
+    Resource(
         id = "klippel-listening-test",
         title = "Klippel Listening Test",
         description = "A double blind A/B test that finds the lowest distortion level you can still hear. " +
