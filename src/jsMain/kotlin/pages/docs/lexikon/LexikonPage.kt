@@ -244,7 +244,7 @@ class LexikonPage(ctx: NoProps) : PureComponent(ctx) {
 
             LexikonTag.entries.forEach { tag ->
                 val isSelected = tag in selectedTags
-                ui.mini.basic.given(isSelected) { with(laf.styles.goldButton()) }
+                ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }
                     .button {
                         onClick { selectedTags = selectedTags.toggle(tag) }
                         +tag.label

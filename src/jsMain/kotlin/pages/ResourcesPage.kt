@@ -14,6 +14,8 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.urlParam
+import io.peekandpoke.kraft.routing.urlParams
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.common.toggle
@@ -81,9 +83,24 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val laf by subscribingTo(KlangTheme)
 
-    private var searchText: String by value("")
+    companion object {
+        const val PARAM_SEARCH = "search"
+        const val PARAM_TAGS = "tags"
 
-    private var selectedTags: Set<ResourceTag> by value(emptySet())
+        /** Unknown names are dropped, so a stale link never selects a tag that no longer exists. */
+        fun tagsFromParam(param: String?): Set<ResourceTag> = param.orEmpty()
+            .split(",")
+            .mapNotNull { name -> ResourceTag.entries.find { it.name.equals(name.trim(), ignoreCase = true) } }
+            .toSet()
+    }
+
+    /** Search and tags live in the URL, so a filtered shelf can be shared and survives a reload. */
+    private var searchText: String by urlParam(name = PARAM_SEARCH, default = "")
+
+    private var selectedTags: Set<ResourceTag> by urlParams(
+        fromParams = { tagsFromParam(it[PARAM_TAGS]) },
+        toParams = { tags -> mapOf(PARAM_TAGS to tags.map { it.name }) },
+    )
 
     /** Id of the resource whose player is open. One at a time, so no two soundtracks collide. */
     private var playingId: String? by value(null)
@@ -132,7 +149,8 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
 
                 div {
                     ResourceTag.entries.forEach { tag ->
-                        ui.mini.basic.given(tag in selectedTags) { with(laf.styles.goldButton()) }.button {
+                        val isSelected = tag in selectedTags
+                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
                             onClick { toggleTag(tag) }
                             +tag.label
                         }

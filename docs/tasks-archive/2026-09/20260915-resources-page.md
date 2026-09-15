@@ -33,6 +33,21 @@ link in the card footer says `klippel.de` without anyone typing it a second time
 The shared fields on every source were renamed to what they mean for both kinds: `watchUrl` is
 `url`, `thumbnailUrl` is `imageUrl` (non-null on `Video`, nullable on the base).
 
+## Filters live in the URL
+
+Follow-up 2026-09-15, maintainer: "the selected tags are not highlighted but they should be. Also
+the search and the tags must be synced as url params."
+
+`search` and `tags` are `urlParam` / `urlParams` delegates, the way `TutorialsListPage` and
+`KlangScriptLibraryDocsPage` do it: `?search=hear&tags=Mixing,EarTraining`. Tag names are the
+enum names, matched case insensitively, and unknown names are dropped so a stale link never
+selects a tag that no longer exists. An empty value removes the parameter from the URL.
+
+The highlight bug: a button that is always `basic` never shows the gold style. The house pattern
+is `ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }`,
+used by the tutorials list and the sprudel editor tools. The lexikon tag row had the same defect
+and got the same one-line fix.
+
 ## Tags
 
 `EarTraining("Ear training")` joined `Mixing` and `Frequencies`. The Klippel listening test
