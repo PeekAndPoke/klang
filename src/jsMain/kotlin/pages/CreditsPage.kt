@@ -339,6 +339,9 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         - **Chebyshev-polynomial waveshaping** — harmonic distortion
                         - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh
                         from the musicdsp.org / KVR community, used in Klang's soft-clipping (`ShapingFuncs.fastTanh`)
+                        - **Minimax polynomial sine** — the oscillators' `fastSin` (`DspUtil.kt`): an odd polynomial on
+                        the folded half period, the classic method of Cecil Hastings Jr., *Approximations for Digital
+                        Computers* (Princeton, 1955); the degree-11 coefficients were fitted for Klang, no third-party code
                         - **Perlin noise** (Ken Perlin) — organic drift and noise textures
                         - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
                         - **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**

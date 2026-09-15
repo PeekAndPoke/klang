@@ -1,5 +1,33 @@
 # Klang Audio — Memory
 
+## Polynomial sine in the oscillators (2026-09-15)
+
+- Every oscillator sine (`SineIgnitor`, the partial bank `sinePartials`, the wave-engine sine behind
+  `supersine`) calls `fastSin(phase)` (`DspUtil.kt`) instead of `kotlin.math.sin`: a degree-11 odd
+  minimax polynomial on the folded half period, max error 1.3e-11 (-217 dB), bound asserted at
+  `FAST_SIN_MAX_ERROR` = 1e-10 by `FastSinSpec` against a dense sweep and against the ignitor's own
+  render. The phase accumulator, drift and modulation are untouched; only the function changed, so
+  the per-sample drift multiplier and per-sample pitch modulation keep working (a rotation
+  oscillator would not: it needs a constant increment). The function is bit-identical on JVM
+  and JS (pure arithmetic; `Math.sin` never promised that); a whole voice still is not, `pow`,
+  `ln` and `cos` upstream of the phase remain platform transcendentals.
+- The fold is exact for a quarter period past either end of `[0, 2π)` and diverges fast beyond, so
+  every oscillator wraps first. Review found the one site that did not always: the wave-engine
+  stacks used the one-subtract `smallNumFastMod` wrap, unsafe once `|dt| >= 1` (a frequency past
+  the sample rate in either sign, or `spread(200)` with cents typed into the semitone door), where
+  the library sine gave bounded aliasing and the polynomial gave 1.8e34; the trapezoids (stacks and
+  the single-voice `WaveIgnitor`) parked on the low plateau (a DC offset) for a positive dt and rode
+  the rise ramp without bound for a negative one, and now alias instead. All three sites hoist
+  `safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)` per block (drift can hold a near-1
+  dt over the edge for seconds). Guard: `SuperSineOutOfRangePhaseSpec` (red first, both signs,
+  drift, sine and trapezoid, stack and single voice). Trap for a later
+  "finish the job": `FmRenderer` accumulates its modulator phase per sample and wraps only at block
+  end, so swapping its `sin` needs a per-sample wrap first.
+- Why not a lookup table: same op count with linear interpolation, worse accuracy (3e-7 at 4096
+  entries), memory traffic against the audio buffers, bounds checks on JS.
+- The phase-pool selection at note-on (`Ignitors.kt`, `im += g * sin(a)`) and the `sineshaper`
+  waveshaper keep the library `sin`: not per sample, or not a phase.
+
 ## Silence culling (2026-09-15)
 
 - A voice stops rendering once it is in its RELEASE and its own output has stayed under

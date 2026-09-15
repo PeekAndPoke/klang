@@ -13,6 +13,68 @@ import kotlin.math.pow
 // ── DSP Constants ────────────────────────────────────────────────────────────
 
 const val TWO_PI = PI * 2.0
+const val HALF_PI = PI * 0.5
+
+/**
+ * The largest `|fastSin(x) - sin(x)|` over the engine's phase range, asserted by `FastSinSpec`:
+ * -200 dB, an order above the polynomial's fitted error (1.3e-11), so the bound stays honest
+ * across platforms and rounding.
+ */
+const val FAST_SIN_MAX_ERROR = 1e-10
+
+// Degree-11 odd minimax polynomial for sin on [-π/2, π/2] (fitted 2026-09-15, max error 1.3e-11):
+// sin(x) ≈ x · (S1 + x²·(S3 + x²·(S5 + x²·(S7 + x²·(S9 + x²·S11))))). Published for the inline body only.
+@PublishedApi
+internal const val SIN_S1 = 0.9999999998893945
+@PublishedApi
+internal const val SIN_S3 = -0.1666666654102997
+@PublishedApi
+internal const val SIN_S5 = 0.00833332925508402
+@PublishedApi
+internal const val SIN_S7 = -0.00019840702003847582
+@PublishedApi
+internal const val SIN_S9 = 2.7518821382393724e-06
+@PublishedApi
+internal const val SIN_S11 = -2.37942173904353e-08
+
+/**
+ * `sin` for an oscillator phase, six multiply-adds instead of a transcendental call.
+ *
+ * The oscillators spend their per-sample budget almost entirely in `kotlin.math.sin`: an
+ * 8-partial bank is 384 000 calls per second per voice (measured 2026-09-15, the Orchestertrommel's
+ * bank alone cost 0.027 RTF). This is the same phase-accumulator sine with the function swapped:
+ * the phase, the drift and every modulation stay exactly what they were, only the waveform's
+ * shape differs, by parts in 10^11 (-217 dB), which no bus carries. Pure arithmetic with a fixed
+ * evaluation order, so the FUNCTION is bit-identical on JVM and JS, which `Math.sin` never
+ * promised (a whole voice still is not: `pow`, `ln` and `cos` upstream of the phase, in the
+ * partial gains, the detune and the drift seed, stay platform transcendentals).
+ *
+ * Contract: [phase] in the engine's wrapped range `[0, 2π)` (`wrapPhase(TWO_PI)`), where the
+ * error is under [FAST_SIN_MAX_ERROR]. The fold below is exact for one more quarter period on
+ * either side, `[-π/2, 5π/2]`; beyond that the polynomial diverges fast (-75 dB off at `3π`,
+ * over full scale past `4π`), so a caller wraps FIRST and never feeds a runaway phase.
+ * `wrapPhase` may miss `[0, 2π)` by an ulp, which the fold absorbs, and keeps the quarter-period
+ * margin up to a magnitude of a few 1e15; an increment that large takes a frequency at the
+ * `SAFE_MAX` ceiling (1e15) under a huge pitch-mod ratio on top, deep abuse that gives bounded
+ * garbage. NaN in, NaN out, like `sin`; an infinite phase gives an infinity where `sin` gave
+ * NaN, another reason the wrap comes first.
+ * Not for waveshaping (`ShapingFuncs.sineShaper`), whose input is not a phase.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun fastSin(phase: Double): Double {
+    // [0, 2π) -> x in [-π, π) with sin(phase) = -sin(x), then fold to [-π/2, π/2]: sin(π - x) = sin(x).
+    var x = phase - PI
+
+    if (x > HALF_PI) {
+        x = PI - x
+    } else if (x < -HALF_PI) {
+        x = -PI - x
+    }
+
+    val x2 = x * x
+
+    return -x * (SIN_S1 + x2 * (SIN_S3 + x2 * (SIN_S5 + x2 * (SIN_S7 + x2 * (SIN_S9 + x2 * SIN_S11)))))
+}
 
 // ── DSP Utilities ────────────────────────────────────────────────────────────
 

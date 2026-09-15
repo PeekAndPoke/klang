@@ -85,6 +85,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
+import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.waveTrapezoid
@@ -154,13 +155,13 @@ object Ignitors {
             if (d.active) {
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase)
+                        buffer[i] = fastSin(phase)
                         phase += phaseInc * d.nextMultiplier()
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase)
+                        buffer[i] = fastSin(phase)
                         phase += phaseInc * phaseMod[i] * d.nextMultiplier()
                         phase = phase.wrapPhase(TWO_PI)
                     }
@@ -168,13 +169,13 @@ object Ignitors {
             } else {
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase)
+                        buffer[i] = fastSin(phase)
                         phase += phaseInc
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase)
+                        buffer[i] = fastSin(phase)
                         phase += phaseInc * phaseMod[i]
                         phase = phase.wrapPhase(TWO_PI)
                     }
@@ -218,7 +219,7 @@ object Ignitors {
      * restarts its phase at 0 but resumes the walk it had, which is inaudible at cent scale and
      * keeps a count sweep from re-seeding the whole spectrum.
      *
-     * The per-sample loop mirrors [SineIgnitor] (radian phase, `sin(phase)`, `wrapPhase(TWO_PI)`),
+     * The per-sample loop mirrors [SineIgnitor] (radian phase, `fastSin(phase)`, `wrapPhase(TWO_PI)`),
      * so a bank of one partial with `analog = 0` is bit-identical to the plain sine. With drift they
      * part: the bank takes one extra int from the voice rng at its first block (its shared lane's
      * seed, taken whether or not the spread ever drops below 1), so its fundamental lane seeds from
@@ -342,7 +343,7 @@ object Ignitors {
             val wOwn = drift?.wOwn ?: 0.0
 
             for (i in off until end) {
-                val s = g * sin(ph)
+                val s = g * fastSin(ph)
                 buffer[i] = if (first) s else buffer[i] + s
 
                 var step = d
@@ -507,6 +508,10 @@ object Ignitors {
 
             val dt = actualFreq / ctx.sampleRateD
             val pm = ctx.phaseMod
+            // Same hoist as the wave-engine stacks (see TrapezoidStackIgnitor.renderVoice): the
+            // one-subtract wrap holds only while |inc| < 1. Past that a positive dt parks the
+            // trapezoid on its low plateau and a negative one rides the rise ramp without bound.
+            val safeWrap = pm != null || voice.drift != null || !(abs(dt) < 1.0)
             val off = ctx.offset
             val end = off + ctx.length
 
@@ -516,7 +521,7 @@ object Ignitors {
                     voice.setSawShape((flankSamples * dt).coerceAtMost(shapeMax))
                 }
 
-                renderHoisted(buffer, off, end, dt, pm)
+                renderHoisted(buffer, off, end, dt, pm, safeWrap)
                 return
             }
 
@@ -534,7 +539,7 @@ object Ignitors {
                     voice.setPulseShape(d, riseFlank, fallFlank, flankSamples * dt)
                 }
 
-                renderHoisted(buffer, off, end, dt, pm)
+                renderHoisted(buffer, off, end, dt, pm, safeWrap)
             } else {
                 if (dt != lastDt) {
                     lastDt = dt; lastDuty = Double.NaN
@@ -571,7 +576,7 @@ object Ignitors {
                         }
 
                         phase += inc
-                        phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                        phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
                     }
 
                     voice.phase = phase
@@ -580,7 +585,9 @@ object Ignitors {
         }
 
         /** Tight loop with the shape hoisted into locals (constant within the block). */
-        private fun renderHoisted(buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?) {
+        private fun renderHoisted(
+            buffer: AudioBuffer, off: Int, end: Int, dt: Double, pm: DoubleArray?, safeWrap: Boolean,
+        ) {
             var phase = voice.phase
             val drift = voice.drift
             val pol = polarity
@@ -604,7 +611,7 @@ object Ignitors {
                 }
 
                 phase += inc
-                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
             }
 
             voice.phase = phase
@@ -1408,6 +1415,14 @@ object Ignitors {
         ) {
             var phase = vs.phase
             val dt = vs.dt
+            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
+            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
+            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
+            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
+            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
+            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
+            // and infinite dt take the safe branch, which wraps them to 0.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
             val gain = vs.gain
             val riseEnd = vs.riseEnd
             val highEnd = vs.highEnd
@@ -1436,9 +1451,9 @@ object Ignitors {
                 }
 
                 phase += inc
-                // No phaseMod ⇒ inc is small & positive ⇒ one conditional subtract; with phaseMod,
-                // mod can be large/negative ⇒ keep the safe wrap.
-                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                // No phaseMod, no drift and |dt| < 1 ⇒ |inc| < 1 ⇒ one conditional subtract or add;
+                // otherwise the safe wrap (see safeWrap above).
+                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
             }
 
             vs.phase = phase
@@ -1512,6 +1527,14 @@ object Ignitors {
         ) {
             var phase = vs.phase
             val dt = vs.dt
+            // The one-subtract wrap keeps the class invariant phase in [0, 1) only while |inc| < 1. A
+            // frequency past the sample rate in either sign, or a spread typed in cents (raw-Motor,
+            // uncoerced), gives |dt| >= 1, and a drifting voice can hold a near-1 dt over the edge for
+            // seconds (the slow drift layer is a 10 s walk). Then the phase escapes: the trapezoid parks on
+            // its low plateau (positive dt) or rides the rise ramp without bound (negative dt), the
+            // polynomial sine diverges (1.8e34 measured in review). Hoisted: dt is block-constant. NaN
+            // and infinite dt take the safe branch, which wraps them to 0.
+            val safeWrap = pm != null || drift != null || !(abs(dt) < 1.0)
             val gain = vs.gain
             // Hoisted once per voice: everything the blend reads is constant for the block.
             val ownLane = drift?.ownLane(n)
@@ -1520,7 +1543,7 @@ object Ignitors {
             val wOwn = drift?.wOwn ?: 0.0
 
             for (i in off until end) {
-                val s = sin(phase * TWO_PI) * gain
+                val s = fastSin(phase * TWO_PI) * gain
 
                 buffer[i] = if (first) s else buffer[i] + s
 
@@ -1535,7 +1558,7 @@ object Ignitors {
                 }
 
                 phase += inc
-                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                phase = if (safeWrap) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
             }
 
             vs.phase = phase
