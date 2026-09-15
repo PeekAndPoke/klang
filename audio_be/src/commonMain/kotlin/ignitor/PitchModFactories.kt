@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.safeOut
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.pow
 import kotlin.math.sin
@@ -67,6 +68,7 @@ private class VibratoModIgnitor(
         val depthSemitones = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.windowEnd
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
+        val depthOctaves = depthSemitones / 12.0
 
         if (depthSemitones <= 0.0) {
             // The LFO still ADVANCES: state moves once per rendered sample, whatever the output
@@ -83,7 +85,7 @@ private class VibratoModIgnitor(
             return
         }
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0))
+            buffer[i] = safeOut(fastExp2(sin(lfoPhase) * depthOctaves))
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }
@@ -196,6 +198,17 @@ private class PitchEnvelopeModIgnitor(
         val attackFrames = attackSecVal * ctx.sampleRate
         val decayFrames = decaySecVal * ctx.sampleRate
 
+        if (ctx.voiceElapsedFrames >= attackFrames + decayFrames) {
+            // Settled on the anchor for the whole block: one ratio, not one per sample.
+            val settled = safeOut(fastExp2(amountVal * anchorVal / 12.0))
+
+            for (i in ctx.offset until end) {
+                buffer[i] = settled
+            }
+
+            return
+        }
+
         for (i in ctx.offset until end) {
             val sampleOffset = i - ctx.offset
             val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
@@ -209,7 +222,7 @@ private class PitchEnvelopeModIgnitor(
                 envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
             }
 
-            buffer[i] = safeOut(2.0.pow((amountVal * envLevel) / 12.0))
+            buffer[i] = safeOut(fastExp2(amountVal * envLevel / 12.0))
         }
     }
 }

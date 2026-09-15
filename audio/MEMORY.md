@@ -1,5 +1,26 @@
 # Klang Audio — Memory
 
+## Table-and-polynomial 2^x in the pitch paths (2026-09-15)
+
+- Vibrato (`2^(sin · depth / 12)`) and the pitch envelope (`2^(semitones · level / 12)`), in the
+  voice strip (`VibratoRenderer`, `PitchEnvelopeRenderer`) and the Ignitor twins
+  (`PitchModFactories.kt`), call `fastExp2(x)` (`DspUtil.kt`) instead of `2.0.pow(x)`: integer
+  octave from a 64-entry table (`n` in `[-32, 32)`), fraction by a degree-7 minimax polynomial,
+  relative error 4.0e-11 (7e-8 cents), bound `FAST_EXP2_MAX_REL_ERROR` = 1e-10 (1.7e-7 cents) asserted by
+  `FastExp2Spec` (sweep, octave boundaries, both renderers against the pow law). Outside
+  `(-32, 32)`, NaN and the infinities fall back to `pow` itself.
+- Both pitch-envelope renderers skip the per-sample work once a block starts past attack + decay:
+  the anchor ratio once per block. Same law (mutation-checked on both renderers, both buffer paths).
+- Measured (one rig A/B pair, back to back, `docs/benchmarks/2026-09-15_1509*` = pow,
+  `_1508*` = fastExp2): trommel 0.046 -> 0.044 medRTF (-5.5 %). Cases without a pitch path moved
+  between -2 % and +14 % between the same two runs, so the whole-song figure (-1 %) is inside that
+  noise. `pow` was a twentieth of a pitch-enveloped voice; the drum's cost is its partial bank,
+  drift and body. The octaves 0 and -1 skip the table read (on JS a top-level val is read through
+  a lazy-init accessor per call).
+- Still on `pow`: the `accelerate` renderers (one `pow` per block, then a multiply per sample),
+  `applySemitoneDetuneToFrequency` (per note), the generic `PowIgnitor`/`ExpIgnitor` (user
+  arithmetic, any base).
+
 ## Polynomial sine in the oscillators (2026-09-15)
 
 - Every oscillator sine (`SineIgnitor`, the partial bank `sinePartials`, the wave-engine sine behind

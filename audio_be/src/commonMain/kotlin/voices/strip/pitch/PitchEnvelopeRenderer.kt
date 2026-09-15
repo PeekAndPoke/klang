@@ -5,10 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
+import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import kotlin.math.pow
 
 /**
  * Pitch envelope: attack/decay transient pitch modulation.
@@ -28,6 +28,25 @@ class PitchEnvelopeRenderer(
 
         // Compute voice-relative position as Int (once per block)
         val blockRelStart = (ctx.blockStart + ctx.offset - startFrame).toInt()
+
+        if (blockRelStart >= pEnv.attackFrames + pEnv.decayFrames) {
+            // Settled on the anchor for the whole block: one ratio, not one per sample.
+            val settled = fastExp2(pEnv.semitones * pEnv.anchor / 12.0)
+
+            if (ctx.freqModBufferWritten) {
+                for (i in 0 until ctx.length) {
+                    buf[ctx.offset + i] *= settled
+                }
+            } else {
+                for (i in 0 until ctx.length) {
+                    buf[ctx.offset + i] = settled
+                }
+
+                ctx.freqModBufferWritten = true
+            }
+
+            return
+        }
 
         if (ctx.freqModBufferWritten) {
             for (i in 0 until ctx.length) {
@@ -56,6 +75,6 @@ class PitchEnvelopeRenderer(
             envLevel = 1.0 - (1.0 - pEnv.anchor) * decayProgress
         }
 
-        return 2.0.pow((pEnv.semitones * envLevel) / 12.0)
+        return fastExp2(pEnv.semitones * envLevel / 12.0)
     }
 }

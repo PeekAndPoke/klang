@@ -70,6 +70,10 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
   folded half period, the classic method of Cecil Hastings Jr., *Approximations for Digital
   Computers* (Princeton, 1955); the degree-11 coefficients were fitted for Klang (least squares
   with Remez-style reweighting), no third-party code
+- **Table-and-polynomial `2^x`** — the pitch paths' `fastExp2` (`DspUtil.kt`): the integer octave from
+  a table of powers of two, the fraction by a minimax polynomial, the range reduction of William J.
+  Cody and William Waite, *Software Manual for the Elementary Functions* (Prentice-Hall, 1980); the
+  degree-7 coefficients were fitted for Klang (Remez exchange), no third-party code
 - **Perlin noise** (Ken Perlin) — organic drift and noise textures
 - **Euclidean rhythms** via the Bjorklund algorithm — rhythm generation
 - **Lookahead limiting** after **[Geraint Luff](https://signalsmith-audio.co.uk/writing/2022/limiter/)**

@@ -510,7 +510,10 @@ object SongBenchmarkCases {
 
     /** Like [swap] with a pattern, for anchors whose VALUE is tuned by ear (a wet amount, a level). */
     private fun swap(from: Regex, to: String): (String) -> String = { src ->
-        require(from.containsMatchIn(src)) { "rig suite anchor not found in the live song: ${from.pattern}" }
+        val matches = from.findAll(src).count()
+
+        require(matches == 1) { "rig suite anchor matched $matches times in the live song, needs exactly one: ${from.pattern}" }
+
         src.replace(from, to)
     }
 
@@ -551,7 +554,7 @@ object SongBenchmarkCases {
         // the drum, one component at a time
         liveCase("trommel: full", "trommel", TROMMEL),
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
-        liveCase("trommel: no distort", "trommel", TROMMEL, swap(".distort(0.10, \"tube\", 2)", "")),
+        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
         liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(150)", "let pAnalog = 0\n  let ring = Osc.constant(150)")),
     )

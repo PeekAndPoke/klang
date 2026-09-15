@@ -76,6 +76,84 @@ inline fun fastSin(phase: Double): Double {
     return -x * (SIN_S1 + x2 * (SIN_S3 + x2 * (SIN_S5 + x2 * (SIN_S7 + x2 * (SIN_S9 + x2 * SIN_S11)))))
 }
 
+/**
+ * The bound [fastExp2] promises against `2.0.pow(x)`, as a RELATIVE error: 1e-10, two and a half
+ * times the polynomial's fitted error (4.0e-11). A pitch ratio off by 1e-10 is 1.7e-7 cents.
+ */
+const val FAST_EXP2_MAX_REL_ERROR = 1e-10
+
+/** Half the width of [EXP2_POW_TABLE]: `fastExp2` covers `(-32, 32)` itself and falls back outside. */
+@PublishedApi
+internal const val EXP2_TABLE_HALF = 32
+
+/**
+ * `2^n` for `n` in `[-32, 32)`, indexed by `n + 32`, built by exact doubling from `2^-32` (a power
+ * of two is exact in a double; `pow` would make the table's bits a platform's business).
+ * Published for the inline body only.
+ */
+@PublishedApi
+internal val EXP2_POW_TABLE: DoubleArray = DoubleArray(2 * EXP2_TABLE_HALF).also { table ->
+    var v = 1.0
+
+    repeat(EXP2_TABLE_HALF) { v *= 0.5 }
+
+    for (i in table.indices) {
+        table[i] = v
+        v *= 2.0
+    }
+}
+
+// Degree-7 minimax polynomial for 2^f on [0, 1] (fitted 2026-09-15, max relative error 4.0e-11):
+// 2^f ≈ E0 + f·(E1 + f·(E2 + f·(E3 + f·(E4 + f·(E5 + f·(E6 + f·E7)))))). Published for the inline body only.
+@PublishedApi
+internal const val EXP2_E0 = 0.9999999999597889
+@PublishedApi
+internal const val EXP2_E1 = 0.6931471860838887
+@PublishedApi
+internal const val EXP2_E2 = 0.24022638461800497
+@PublishedApi
+internal const val EXP2_E3 = 0.05550512685953342
+@PublishedApi
+internal const val EXP2_E4 = 0.009614017011914364
+@PublishedApi
+internal const val EXP2_E5 = 0.0013422634823946383
+@PublishedApi
+internal const val EXP2_E6 = 0.00014352314034646327
+@PublishedApi
+internal const val EXP2_E7 = 2.1498763706405082e-05
+
+/**
+ * `2^x` for a pitch ratio, seven multiply-adds and a table read instead of `pow`.
+ *
+ * The pitch paths turn semitones into a frequency ratio per sample: vibrato (`2^(sin · depth / 12)`)
+ * and the pitch envelope (`2^(semitones · level / 12)`), one `pow` per sample per voice. This
+ * splits `x` into an integer octave `n = floor(x)` and a fraction `f` in `[0, 1)`, evaluates `2^f`
+ * by the polynomial and scales by `2^n` (the octaves 0 and -1 inline, the rest from
+ * [EXP2_POW_TABLE]). Relative error under
+ * [FAST_EXP2_MAX_REL_ERROR] everywhere in `(-32, 32)`; across an integer boundary the two
+ * polynomial ends agree to the same bound, so a sweeping pitch has no step there. Outside
+ * `(-32, 32)`, and for NaN and the infinities (the guard reads `!(inside)`), it IS `2.0.pow(x)`:
+ * the fallback is exact, the fast path is for the ratios a pitch path produces. Pure arithmetic
+ * with a fixed evaluation order on the fast path, so it is bit-identical on JVM and JS.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun fastExp2(x: Double): Double {
+    if (!(x > -EXP2_TABLE_HALF.toDouble() && x < EXP2_TABLE_HALF.toDouble())) { // NaN-guard (NaN ≠ NaN), and ±Inf
+        return 2.0.pow(x)
+    }
+
+    val n = floor(x)
+    val f = x - n
+    val p = EXP2_E0 + f * (EXP2_E1 + f * (EXP2_E2 + f * (EXP2_E3 + f * (EXP2_E4 + f * (EXP2_E5 + f * (EXP2_E6 + f * EXP2_E7))))))
+
+    // A pitch path's argument is within an octave of 0 almost always (a vibrato depth, a pitch
+    // envelope inside ±12 semitones): those two octaves skip the table, whose read on Kotlin/JS
+    // goes through the lazy-init accessor of a top-level val.
+    val scale = if (n == 0.0) 1.0 else if (n == -1.0) 0.5 else EXP2_POW_TABLE[n.toInt() + EXP2_TABLE_HALF]
+
+    return p * scale
+}
+
 // ── DSP Utilities ────────────────────────────────────────────────────────────
 
 /** Threshold below which filter state is flushed to zero to avoid denormal slowdowns. */
