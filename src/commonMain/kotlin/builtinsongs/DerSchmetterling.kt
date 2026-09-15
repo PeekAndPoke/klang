@@ -21,8 +21,8 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
+let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -97,7 +97,7 @@ let preampHighGain = x => x
   .distort(0.35, "tube", 4).highpass(100)
   .distort(0.45, "softsat", 4).highpass(100)
   .distort(0.35, "hard", 4)
-  .lowpass(6500)                                   // the fizz
+  .lowpass(6400)                                   // the fizz
   .mul(0.45)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -157,19 +157,6 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pDecay      = Osc.param("decay",        1.000, "Decay")
   let pSustain    = Osc.param("sustain",      0.000, "sustain")
   let pRelease    = Osc.param("release",      0.030, "Release")
-
-  // Amp EQ
-  let pLow        = Osc.param("low",          0.000, "Low Volume")
-  let pLowHz      = Osc.param("lowHz",      650.000, "Low frequency")
-  let pLowQ       = Osc.param("lowQ",         0.707, "Low Q")
-
-  let pMid        = Osc.param("mid",          0.000, "Mid Volume")
-  let pMidHz      = Osc.param("midHz",     1250.000, "Mid frequency")
-  let pMidQ       = Osc.param("midQ",         0.707, "Mid Q")
-
-  let pHigh       = Osc.param("high",         0.000, "High Volume")
-  let pHighHz     = Osc.param("highHz",    2500.000, "High frequency")
-  let pHighQ      = Osc.param("highQ",        0.707, "High Q")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(19).spread(0.10)
@@ -192,11 +179,6 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
            
   // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
   let toned = preamp(pedal(pickup(signal)))
-    .eq(e => e
-      .band(freq = pLowHz,  q = pLowQ,  db = pLow)       // low
-      .band(freq = pMidHz,  q = pMidQ,  db = pMid)       // mid
-      .band(freq = pHighHz, q = pHighQ, db = pHigh)      // high
-    )
 
   // the power amp, then let the snare cut through
   let amped = power(toned)
@@ -270,7 +252,7 @@ export lead_pat =
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
   let pAnalog = OscSlot.analog
-  let ring = Osc.constant(400).div(Osc.freq()).mul(0.8)                                  // seconds: 1.2 s on e4, 0.6 s on e5
+  let ring = Osc.constant(400).div(Osc.freq())                                  // seconds: 1.2 s on e4, 0.6 s on e5
   let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.5)
   let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
@@ -281,11 +263,11 @@ let marimba = (() => {
 
 export lead_shape = x => x.gain(0.35).sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4)
-  .hpf(240, 0.7)
-  .pan(saw.range(0.15, 0.3)).superimpose(pan(saw.range(0.85, 0.7))) // . solo()
+  .hpf(600, 0.7)
+  .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.26))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.35))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
@@ -300,10 +282,6 @@ export guitar1_pat =
 
 export guitar1_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
   .oscp("decay", guitarDecay) //. mute()
-  // .oscp("low", 2.5).oscp("lowHz", "1700").oscp("lowQ", 0.7)
-  // .oscp("mid", 2.0).oscp("midHz", "3000".sub(saw.pow(0.8).mul(200).slow(4))).oscp("midQ", 0.7)
-  // .oscp("high", 1.25).oscp("highHz", "3200").oscp("highQ", 0.6)
-  // .hpf(160)
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
@@ -321,14 +299,10 @@ export guitar2_pat =
 
 export guitar2_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
   .oscp("decay", guitarDecay)
-  // .oscp("low", 1.5).oscp("lowHz",  700).oscp("lowQ", 0.6)
-  // .oscp("mid", 3.0).oscp("midHz", 1500).oscp("midQ", 0.7)
-  // .oscp("high", 1.25).oscp("highHz", 2800).oscp("highQ", 0.6)
-  // .hpf(100)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").postgain(0.170).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").postgain(0.160).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
@@ -340,14 +314,10 @@ export guitar3_pat =
 
 export guitar3_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
   .oscp("decay", guitarDecay)
-  // .oscp("low", 1.5).oscp("lowHz", 700).oscp("lowQ", 0.6)
-  // .oscp("mid", 3.0).oscp("midHz", 1350).oscp("midQ", 0.7)
-  // .oscp("high", 1.25).oscp("highHz", 2500).oscp("highQ", 0.6)
-  // .hpf(100)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3)  // . solo()
-  .scale("<e2:minor>").postgain(0.170).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").postgain(0.160).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
@@ -384,15 +354,15 @@ let granCassa = (() => {
   let beater = Osc.pinknoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(1.75)     // wood core: a crack, the force of the hit
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.10, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .distort(0.05, "tube", 2)                                                              // the skin gives, and the hit reads as hard
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
 export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [4 4 ~ 2 2 ~ 0 ~]>`
 
 // Far away: the low end and the top do not make it across the hall, the room does.
-export trommel_shape = x => x.gain(0.275).sound(granCassa).adsrOff() // .solo()
-  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.25)
+export trommel_shape = x => x.gain(0.30).sound(granCassa).adsrOff() // .solo()
+  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.35)
   .hpf(150).lpf(3800).pan(0.5)
 
 export trommel_arrange = x => x.orbit(4)
@@ -455,7 +425,7 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).room(wet = 0.20, size = 3.0).compressor(-21, 3, 6, 0.005, 0.12)
+    ).room(wet = 0.15, size = 3.0).compressor(-21, 3, 6, 0.005, 0.12)
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
