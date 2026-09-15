@@ -11,6 +11,12 @@ here should be started until *after* launch.
      > work (orbit-level body/vowel: done; voice culling: next) — that helps every backend, native included.
      > See memory notes `project_sound_first`, `project_perf_native_backend`, `project_song_cpu_benchmark`.
 
+> **Concrete plan (2026-09-15): `docs/plans/future/zig-motor-one-engine.md`.** Supersedes the "keep
+> Kotlin as the reference engine" idea below: the decision is ONE backend implementation, in Zig, with the
+> dispatcher as the seam, a validated byte wire generated from the Kotlin schema, and no strings crossing
+> into the engine. Path A and path B from one source. Read that plan first; this note keeps the
+> performance reasoning and the daemon security model.
+
 ## One-line goal
 
 Give Klang a path to native-DAW-class DSP performance (order-of-magnitude headroom over the browser
