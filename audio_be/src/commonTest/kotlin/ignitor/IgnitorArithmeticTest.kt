@@ -68,6 +68,35 @@ class IgnitorArithmeticTest : StringSpec({
         out[0] shouldBe (0.4 plusOrMinus 1e-6)
     }
 
+    "neg is a multiply by minus one: it clamps at SAFE_MAX and scrubs a NaN (no bare negate since 2026-09-15)" {
+        // a signal, so the parent's constant fold cannot hide the op
+        val huge = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                for (i in ctx.offset until ctx.windowEnd) {
+                    buffer[i] = if (i % 2 == 0) 1e300 else Double.NaN
+                }
+            }
+        }
+        val out = render(huge.neg())
+
+        out[0] shouldBe -SAFE_MAX
+        out[1] shouldBe 0.0
+    }
+
+    "div by a literal zero on the scalar door is a block-constant zero, whatever the dividend" {
+        // a SIGNAL dividend: a constant one would make any wrapper block-constant and prove nothing
+        val signal = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                for (i in ctx.offset until ctx.windowEnd) {
+                    buffer[i] = i.toDouble()
+                }
+            }
+        }
+
+        signal.div(0.0).isBlockConstant shouldBe true
+        signal.div(0.0).controlRateValueOrNull(0.0) shouldBe 0.0
+    }
+
     "abs of negative becomes positive" {
         val out = render(const(-0.6).abs())
         out[0] shouldBe (0.6 plusOrMinus 1e-6)
@@ -366,9 +395,67 @@ class IgnitorArithmeticTest : StringSpec({
         out[0].shouldBeLessThanOrEqual(SAFE_MAX)
     }
 
-    "div by zero is finite (epsilon-substituted divisor)" {
-        val out = render((const(1.0) * const(1.0)).div(const(0.0)))
-        out.allFinite() shouldBe true
+    "div by a zero divisor is zero, whatever the dividend, on every path" {
+        // a per-sample signal: neither block-constant nor silent
+        val ramp = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                for (i in ctx.offset until ctx.windowEnd) {
+                    buffer[i] = i - 8.0
+                }
+            }
+        }
+
+        // both constant, signal over a constant, the scalar door, minus zero, zero over zero
+        render(const(1.0).div(const(0.0))).all { it == 0.0 } shouldBe true
+        render(ramp.div(const(0.0))).all { it == 0.0 } shouldBe true
+        render(ramp.div(0.0)).all { it == 0.0 } shouldBe true
+        render(ramp.div(const(-0.0))).all { it == 0.0 } shouldBe true
+        render(const(0.0).div(const(0.0))).all { it == 0.0 } shouldBe true
+
+        // a divisor signal crossing zero: that sample is zero, its neighbours are the true quotients
+        val overRamp = render(const(1.0).div(ramp))
+
+        overRamp[8] shouldBe 0.0
+        overRamp[7] shouldBe (-1.0 plusOrMinus 1e-12)
+        overRamp[9] shouldBe (1.0 plusOrMinus 1e-12)
+
+        val rampOverRamp = render(ramp.div(ramp))
+
+        rampOverRamp[8] shouldBe 0.0
+        rampOverRamp[9] shouldBe (1.0 plusOrMinus 1e-12)
+    }
+
+    "a block-constant zero divisor or multiplier is a dead branch: nothing upstream renders, the block is zero" {
+        var upstreamBlocks = 0
+        val counting = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                upstreamBlocks++
+                buffer.fill(1.0, ctx.offset, ctx.windowEnd)
+            }
+        }
+
+        val dead = listOf(
+            counting.div(const(0.0)) to 0.0,
+            counting.div(0.0) to 0.0,
+            counting.div(const(Double.POSITIVE_INFINITY)) to 0.0,
+            counting.div(const(Double.NEGATIVE_INFINITY)) to 0.0,
+            counting.mul(const(0.0)) to 0.0,
+            const(0.0).mul(counting) to 0.0,
+            counting.mul(0.0) to 0.0,
+            counting.affine(pre = const(0.5), mul = const(0.0), add = const(0.25)) to 0.25,
+        )
+
+        for ((sig, expected) in dead) {
+            render(sig).all { it == expected } shouldBe true
+        }
+
+        upstreamBlocks shouldBe 0
+
+        // the same shapes with a live coefficient do render upstream
+        render(counting.mul(const(0.5)))
+        render(counting.affine(pre = const(0.5), mul = const(2.0), add = const(0.25)))
+
+        upstreamBlocks shouldBe 2
     }
 
     "div by tiny near-zero is finite (clamped to SAFE_MAX via output clamp)" {

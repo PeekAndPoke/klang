@@ -67,7 +67,9 @@ import io.peekandpoke.klang.audio_be.safeOut
  * POSITION — the position pin is the DEFINITION, making every wire-supplied section order
  * well-defined. Bit-parity with the legacy graph `Plus(chainSoFar, Times(bandpass(input),
  * gain))`: Plus is a bare add, Times applies safeOut to the per-sample PRODUCT. Tap gain 0 is
- * NOT skipped — legacy adds `safeOut(v1 * 0)`, and `-0.0 + 0.0` flips to `+0.0`, so a skip
+ * a dead branch on both sides since 2026-09-15 (a block-constant zero multiplier renders
+ * nothing upstream): the tap adds a bare `+ 0.0` and leaves its state alone, and `-0.0 + 0.0`
+ * still flips to `+0.0`, so a section that adds nothing at all
  * would break bit-parity. The loop captures the input up front (in-place processing destroys
  * it — see [captureInput]). THREE FUSION PRECONDITIONS (same structural-not-evaluated class
  * as `analog` below): (1) the GAIN operand must be structurally block-constant
@@ -370,15 +372,29 @@ class EqCore(
                     // field-load discipline the shape was measured with).
                     val cg = gain[s]
                     val src = inputCopy
-                    for (i in offset until end) {
-                        val v0 = src[i - offset]
-                        val v3 = v0 - s2
-                        val v1 = ca1 * s1 + ca2 * v3
-                        val v2 = s2 + ca2 * s1 + ca3 * v3
-                        s1 = (2.0 * v1 - s1).flushState()
-                        s2 = (2.0 * v2 - s2).flushState()
-                        // C2: ck * v1 = unity-peak band (see BANDPASS); gain rides on top.
-                        buffer[i] += safeOut(ck * v1 * cg)
+
+                    if (cg == 0.0) {
+                        // A zero gain is a dead branch (2026-09-15), as the legacy Times node
+                        // is: the band is not computed, its state STANDS STILL (unlike BELL at
+                        // 0 dB below, whose db can move per block and whose state keeps
+                        // running; a tap gain is per-voice constant), and the chain gets the
+                        // +0.0 the Times fills (a bare `+ 0.0`, which turns a -0.0 sample into
+                        // +0.0 exactly as the legacy add does). The shared write-back below
+                        // stores the unread snapshot.
+                        for (i in offset until end) {
+                            buffer[i] += 0.0
+                        }
+                    } else {
+                        for (i in offset until end) {
+                            val v0 = src[i - offset]
+                            val v3 = v0 - s2
+                            val v1 = ca1 * s1 + ca2 * v3
+                            val v2 = s2 + ca2 * s1 + ca3 * v3
+                            s1 = (2.0 * v1 - s1).flushState()
+                            s2 = (2.0 * v2 - s2).flushState()
+                            // C2: ck * v1 = unity-peak band (see BANDPASS); gain rides on top.
+                            buffer[i] += safeOut(ck * v1 * cg)
+                        }
                     }
                 }
 

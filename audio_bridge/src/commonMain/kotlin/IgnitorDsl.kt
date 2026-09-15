@@ -898,7 +898,10 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Divides the left signal by the right signal (per-sample division). */
+    /**
+     * Divides the left signal by the right signal (per-sample division). A divisor of exactly
+     * zero yields zero: a block-constant zero is a dead branch, nothing upstream renders.
+     */
     @WireName("div")
     data class Div(
         val left: IgnitorDsl,
@@ -917,7 +920,7 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Negates the inner signal (flips polarity). */
+    /** Negates the inner signal (flips polarity): a multiply by `-1`, clamped like [Times]. */
     @WireName("neg")
     data class Neg(val inner: IgnitorDsl) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {

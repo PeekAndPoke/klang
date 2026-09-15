@@ -1145,13 +1145,13 @@ class ExcitersTest : StringSpec({
         buf.all { it >= -0.001 } shouldBe true
     }
 
-    "div by zero produces finite values via epsilon substitution, not NaN/Inf" {
+    "div by a zero divisor signal is zero, not NaN/Inf and not a spike" {
         val dividend = Ignitors.sine()
         val divResult = dividend.div(Ignitors.silence())
         val buf = generate(divResult, freqHz = 440.0)
-        // Zero divisor → epsilon (1e-30); result is finite (large) but never NaN/Inf.
-        // The master limiter is responsible for clamping the resulting spike.
-        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
+        // A zero divisor yields zero (2026-09-15); before that it took the SAFE_MIN substitution
+        // and produced a clamped spike for the master limiter to deal with.
+        buf.all { it == 0.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

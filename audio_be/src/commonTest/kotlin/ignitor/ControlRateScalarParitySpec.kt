@@ -248,7 +248,7 @@ class ControlRateScalarParitySpec : StringSpec({
     "div by NaN divisor takes the safeDiv substitution" {
         // Discriminates safeDiv from the downstream safeOut mask: WITH safeDiv, NaN -> SAFE_MIN
         // -> 1e10/1e-15 clamps to SAFE_MAX; WITHOUT it, 1e10/NaN = NaN -> safeOut scrubs to 0.0.
-        // (A zero divisor cannot discriminate: +Inf also clamps to SAFE_MAX.)
+        // (A zero divisor is zero by rule since 2026-09-15, so it discriminates nothing here.)
         ConstantIgnitor(1e10).div(ParamIgnitor("p", Double.NaN))
             .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }

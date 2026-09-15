@@ -257,6 +257,40 @@ parity, a mutation check, a rig A/B, a commit.
    high rate are the rest of that row and stay.
 4. WON'T IMPLEMENT (2026-09-15, same measurement): `Affine` into `Shape` as an input gain where
    the upsampler reads its input. The `Drive` pass it would remove is the `no-drive` row: nothing.
+4b. DONE 2026-09-15: `div`, `minus` and `neg` in the current form (maintainer: "fully support
+   div() and minus() in the current form", "neg() is an alias of mul(-1) and we should not even
+   have a dedicated ignitor for it", "div(0) should result in a constant(0) no matter what the
+   graph before is"). The engine first: `DivIgnitor` renders a divisor of exactly zero as zero
+   (a block-constant zero is a dead branch, nothing upstream renders; a zero sample in a divisor
+   signal zeroes that sample; tiny non-zero divisors keep the `SAFE_MIN` clamp), `Ignitor.div(0.0)`
+   is silence, `Ignitor.neg()` is `mul(-1.0)` and `NegIgnitor` is gone. And, so that a Param
+   divisor at zero is the same dead branch after the fold: a block-constant multiplier of exactly
+   zero is a dead branch in `Times`, the scalar `mul(0.0)` door and `Affine` as well (the per-block
+   half of step 5, found by the round-1 review: the authored `Div` skipped the upstream noise, the
+   optimized `Affine` drew from the voice's stream, and the next noise node read a different
+   position). Then the rules: a subtract after the multiply fills the add with `-k`, bare: a literal
+   negated, anything else as `-0.0 - k` (a `Neg` is a multiply now and would scrub a NaN the
+   subtract passes through); `x / k` is a multiply by the expression `1 / k` (the runtime's own
+   guard, once per block; a literal `div(4)` therefore does not compose with a following literal
+   run, which would need the safety constants in the bridge); `x / 0` literal is a multiply by a
+   literal zero, a dead branch that is still BUILT (a bare `Constant(0)` would skip the build-time
+   draws of a phase pool under it and shift every pool built after it, round 2); a block-constant
+   INFINITE divisor is the same dead branch in the engine, since its reciprocal is a zero
+   multiplier (round 2); a literal run whose product underflows to zero does not compose, since
+   that would be a dead branch the chain never was (round 2);
+   `neg()` is a multiply by `-1` that composes with a literal it FOLLOWS (an outer sign flip keeps
+   every magnitude the chain clamps; an inner one before an attenuation does not, the chain clamps
+   the input first, so that stays two nodes unless the input is clamped). Not folded: `k - x` (it
+   would put a clamp on a bare subtract, and cost more than the subtract), `k / x`, `x / lfo`, a
+   scalar-only negation.
+   The parity oracle moved with it: RELATIVE TO THE BLOCK'S LOUDEST SAMPLE, AT MOST FULL SCALE,
+   instead of to the sample itself, because the reciprocal multiply is an ulp off and a filter
+   carries that to a zero crossing (fuzz seed 433 found it within the first run); the cap keeps
+   the law in a saturated block (both reviewers: one sample at SAFE_MAX must not buy the musical
+   samples next to it a tolerance of 1e3), and every corpus passes with it. The laws did not
+   move in the end (constancy and params equal on both sides, since the zero divisor keeps its
+   subtree). The rules did not move: still nothing merges across an addition;
+   `mul(2).add(2).mul(2).add(2)` stays two Affines.
 5. Dead and identity nodes (maintainer, 2026-09-15): `add(Constant(0))` and `mul(Constant(1))`
    drop; `mul(Constant(0))` makes its upstream `Silence`. And at BUILD time, where `Osc.param`
    values are known (per voice, constant for the voice): a `Times` whose block-constant operand

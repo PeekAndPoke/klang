@@ -462,6 +462,87 @@ class IgnitorDslOptimizerSpec : StringSpec({
             IgnitorDsl.Plus(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(1.0)), c(2.0))
     }
 
+    "R2: a subtract after the multiply fills the add with the negation, bare (no Neg: that clamps now)" {
+        IgnitorDsl.Sawtooth().mul(c(2.0)).minus(c(3.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(-3.0))
+        IgnitorDsl.Sawtooth().mul(c(2.0)).minus(IgnitorDsl.Param("off", 0.5)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(2.0), add = c(-0.0).minus(IgnitorDsl.Param("off", 0.5)))
+    }
+
+    "R2: a constant minus the signal stays a Minus: the fold would clamp a bare subtract" {
+        // k - x as -1 · (x + (-k)) turns a NaN into 0 and an infinity into SAFE_MAX, and it is more
+        // work than the subtract; a Param on the left stays for the same reason and for param order
+        val literalLeft = c(2.0).minus(IgnitorDsl.Sawtooth())
+        val paramLeft = IgnitorDsl.Param("off", 0.5).minus(IgnitorDsl.Sawtooth())
+
+        literalLeft.optimize() shouldBe literalLeft
+        paramLeft.optimize() shouldBe paramLeft
+    }
+
+    "R2: a divide by a block-constant divisor is a multiply by its reciprocal, evaluated once per block" {
+        // the reciprocal is an expression node so the runtime's own divisor guard applies to it
+        IgnitorDsl.Sawtooth().div(c(4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(1.0).div(c(4.0)), add = none)
+        IgnitorDsl.Sawtooth().plus(c(1.0)).div(c(4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = c(1.0), mul = c(1.0).div(c(4.0)), add = none)
+        IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(1.0).div(IgnitorDsl.Param("d", 4.0)), add = none)
+    }
+
+    "R2: a divide by a literal zero is a multiply by a literal zero: a dead branch that is still built" {
+        // the engine renders neither (nothing upstream renders); keeping the subtree keeps the
+        // build-time draws of the nodes after it (a phase pool) in step with the authored tree
+        val filtered = IgnitorDsl.Sawtooth().lowpass(1000.0)
+
+        filtered.div(c(0.0)).optimize() shouldBe
+            IgnitorDsl.Affine(filtered.optimize(), pre = none, mul = c(0.0), add = none)
+        IgnitorDsl.Sawtooth().div(c(-0.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.0), add = none)
+    }
+
+    "R2: a literal run whose product underflows to zero does not compose: it would be a dead branch the chain never was" {
+        val run = IgnitorDsl.Sawtooth().mul(c(0.5)).mul(c(1e-200)).mul(c(1e-200))
+        val optimized = run.optimize()
+
+        optimized shouldBe IgnitorDsl.Affine(
+            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(1e-200), add = none),
+            pre = none, mul = c(1e-200), add = none,
+        )
+        // a zero that IS one of the factors composes where the run's rules allow (an attenuating
+        // run over a clamped input): both sides are dead already
+        IgnitorDsl.Sawtooth().mul(c(0.5)).mul(c(0.5)).mul(c(0.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(0.5), add = none), pre = none, mul = c(0.0), add = none)
+    }
+
+    "R2: a negation is a multiply by minus one and composes like one" {
+        IgnitorDsl.Sawtooth().neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-1.0), add = none)
+        // a sign flip composes with any literal: the magnitudes the chain clamps are the fold's
+        IgnitorDsl.Sawtooth().mul(c(2.0)).neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-2.0), add = none)
+        IgnitorDsl.Sawtooth().mul(c(0.3)).neg().optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-0.3), add = none)
+        IgnitorDsl.Sawtooth().neg().plus(c(1.0)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Sawtooth(), pre = none, mul = c(-1.0), add = c(1.0))
+        // the INNER sign flip does not compose with an attenuation over an unclamped input:
+        // 0.5 · safeOut(-x) clamps x first where -0.5 · x does not (x can exceed SAFE_MAX here)
+        val hot = IgnitorDsl.Sawtooth().plus(c(1e300)).abs()
+
+        hot.neg().mul(c(0.5)).optimize() shouldBe
+            IgnitorDsl.Affine(IgnitorDsl.Affine(hot, pre = none, mul = c(-1.0), add = none), pre = none, mul = c(0.5), add = none)
+    }
+
+    "R2: a divide by a signal, a scalar over a signal, and a scalar-only negation stay what they are" {
+        val lfo = IgnitorDsl.Sine(freq = c(3.0))
+        val bySignal = IgnitorDsl.Sawtooth().div(lfo)
+        val overSignal = c(2.0).div(IgnitorDsl.Sawtooth())
+        val scalarNeg = c(2.0).neg()
+
+        bySignal.optimize() shouldBe bySignal
+        overSignal.optimize() shouldBe overSignal
+        scalarNeg.optimize() shouldBe scalarNeg
+    }
+
     "R2: no multiply, no Affine: adds and subtracts stay what they are" {
         val adds = IgnitorDsl.Sawtooth().plus(c(1.0)).plus(c(2.0))
         val sub = IgnitorDsl.Sawtooth().minus(c(1.0))

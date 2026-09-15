@@ -131,7 +131,8 @@ object WarmupVocabulary {
         // `max(t).min(-t)` bounds to [-t, t]: cap first, then floor. Builds Max(Min(x, t), -t),
         // the same node pair as before the min/max doors became clamps.
         val b = a.clamp(Constant(-1.0), Constant(1.0)).pow(Constant(2.0)).max(t).min(t.neg())
-        val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(-0.5), Constant(0.5))
+        // `Constant(0.5).neg()`: a negation the optimizer leaves standing (a signal's folds into an Affine)
+        val c = b.exp().log().sqrt().sign().mul(b.tanh()).lerp(t, lfo).range(Constant(0.5).neg(), Constant(0.5))
         val d = c.bipolar().unipolar().mul(Constant(4.0)).floor().mul(Constant(0.1))
             .mul(t.ceil().round().mul(Constant(0.1)).mul(t.frac()))
             .mod(Constant(0.5)).mul(t.sq().plus(Constant(2.0)).recip().mul(Constant(0.5))) // recip of `+2`: never near zero

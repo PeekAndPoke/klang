@@ -34,6 +34,36 @@
   same rows put 22 µs of the rig's 35 in the shapers' oversampling, so that is where the work
   went (next entry). Measure the ceiling of a fold by deleting the nodes before building it.
 
+## div, minus and neg fold; a zero divisor is zero (2026-09-15)
+
+- Engine rule (maintainer): a divisor of EXACTLY zero yields zero. `DivIgnitor` fills zero for a
+  block-constant zero and renders nothing upstream (a dead branch), zeroes the sample for a zero
+  in a divisor signal, and keeps the `SAFE_MIN` clamp for tiny non-zero divisors. `Ignitor.div(0.0)`
+  is a block-constant zero. `Ignitor.neg()` is `mul(-1.0)`, clamp included; `NegIgnitor` is gone.
+  A block-constant MULTIPLIER of exactly zero is the same dead branch in `Times`, `mul(0.0)`,
+  `Affine` and an `EqCore` tap at gain zero (the band is not run, a bare `+ 0.0` is added, bit
+  for bit the chain): without that, a Param divisor at zero skipped its upstream authored and rendered it
+  optimized, and the voice's noise stream went out of step (round-1 review). `Recip` at zero is
+  the deliberate exception, still the `SAFE_MIN` substitution.
+- Rule R2 now covers `x.mul(k).minus(b)` (add `-b`, bare: `-0.0 - b` for a non-literal, never a
+  `Neg`, which is a clamping multiply now), `x / k` (a multiply by the expression `1 / k`, so the
+  runtime's guard applies once per block), a literal `x / 0` (a multiply by a literal zero: dead,
+  but still built, so a phase pool under it and every pool after it draw as authored) and `neg()`
+  (a multiply by `-1`, composing with a literal it follows; an inner flip before an attenuation
+  over an unclamped input stays two nodes, the chain clamps the input first). `k - x` stays a
+  Minus: the fold would clamp a bare subtract and cost more. A literal run whose product
+  underflows to zero does not compose (a dead branch the chain never was). Nothing merges across
+  an addition still. The lesson of the two review rounds: every place the optimizer SYNTHESIZES
+  a coefficient (a reciprocal, a composed product) must not be a zero unless the authored
+  coefficient was, or the dead branch renders on one side only and the noise stream slips.
+- The parity oracle is relative to the block's loudest sample, at most full scale, not to the
+  sample itself: the reciprocal multiply is an ulp off and a filter carries that to a zero
+  crossing, where a per-sample relative measure blows up on nothing (fuzz seed 433); the cap keeps
+  a saturated sample from buying its neighbours a tolerance of 1e3. Constancy and params stay
+  equal on both sides, and scalar-only arithmetic, however deep, counts as no work.
+- A lesson from the constant-fold parity rows: a SineIgnitor shared between the folded and the
+  reference chain advances twice per block; build a fresh instance per chain.
+
 ## The oversampler's decimator is polyphase and indexed (2026-09-15)
 
 - `Oversampler.decimate2x` no longer pushes every sample through a 15-slot ring with wrapping

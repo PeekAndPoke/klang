@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
@@ -47,10 +48,34 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames), random = random,
     )
 
-    fun withinParity(a: Double, b: Double): Boolean = when {
+    fun withinParity(a: Double, b: Double, scale: Double = 0.0): Boolean = when {
         a.isNaN() || b.isNaN() -> a.isNaN() && b.isNaN()
         a.isInfinite() || b.isInfinite() -> a == b
-        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), 1e-300)
+        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), scale, 1e-300)
+    }
+
+    /**
+     * The block's scale: its loudest finite sample on either side, at most full scale (1.0), what
+     * the margin is relative to. The cap keeps the law in a saturated block: one sample at
+     * SAFE_MAX must not buy the musical samples next to it a tolerance of 1e3.
+     */
+    fun scaleOf(bufA: AudioBuffer, bufB: AudioBuffer, from: Int, until: Int): Double {
+        var peak = 0.0
+
+        for (i in from until until) {
+            val a = abs(bufA[i])
+            val b = abs(bufB[i])
+
+            if (a.isFinite() && a > peak) {
+                peak = a
+            }
+
+            if (b.isFinite() && b > peak) {
+                peak = b
+            }
+        }
+
+        return if (peak > 1.0) 1.0 else peak
     }
 
     /** Mostly ordinary values, sometimes the ones that break a careless fold. */
@@ -167,6 +192,13 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         return node
     }
 
+    /** Arithmetic over leaves that are one value per block, however deep: no pass of its own. */
+    fun isScalar(dsl: IgnitorDsl): Boolean = when (dsl) {
+        is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> true
+        is IgnitorDsl.Times, is IgnitorDsl.Plus, is IgnitorDsl.Minus, is IgnitorDsl.Div, is IgnitorDsl.Neg -> dsl.childNodes().all { isScalar(it) }
+        else -> false
+    }
+
     /**
      * The work a tree renders: one unit per node that is a pass over the block, an Eq counting
      * its sections and a filter its passes, and the scalar leaves (a Constant, a Param, Freq) counting nothing on either
@@ -191,6 +223,10 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
 
                     seen.add(node)
                     n += when (node) {
+                        // arithmetic over scalars only is one value per block, not a pass (the
+                        // reciprocal a divide folds into an Affine's coefficient is such a node)
+                        is IgnitorDsl.Times, is IgnitorDsl.Plus, is IgnitorDsl.Minus, is IgnitorDsl.Div, is IgnitorDsl.Neg ->
+                            if (node.childNodes().all { isScalar(it) }) 0 else 1
                         is IgnitorDsl.Eq -> node.sections.size
                         // a filter with passes = N renders N cascaded stages, which the pass
                         // expands into N sections: the same work before and after
@@ -243,9 +279,11 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
 
+                val scale = scaleOf(bufA, bufB, offset, blockFrames)
+
                 for (i in offset until blockFrames) {
-                    withClue("seed $seed freq $f block $block sample $i: ${bufA[i]} vs ${bufB[i]}") {
-                        withinParity(bufA[i], bufB[i]) shouldBe true
+                    withClue("seed $seed freq $f block $block sample $i: ${bufA[i]} vs ${bufB[i]} (scale $scale)") {
+                        withinParity(bufA[i], bufB[i], scale) shouldBe true
                     }
                 }
 

@@ -46,10 +46,34 @@ class OptimizerSongParitySpec : StringSpec({
         registerBuiltInSongsAsModules()
     }
 
-    fun withinParity(a: Double, b: Double): Boolean = when {
+    fun withinParity(a: Double, b: Double, scale: Double = 0.0): Boolean = when {
         a.isNaN() || b.isNaN() -> a.isNaN() && b.isNaN()
         a.isInfinite() || b.isInfinite() -> a == b
-        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), 1e-300)
+        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), scale, 1e-300)
+    }
+
+    /**
+     * The block's scale: its loudest finite sample on either side, at most full scale (1.0), what
+     * the margin is relative to. The cap keeps the law in a saturated block: one sample at
+     * SAFE_MAX must not buy the musical samples next to it a tolerance of 1e3.
+     */
+    fun scaleOf(bufA: AudioBuffer, bufB: AudioBuffer, from: Int, until: Int): Double {
+        var peak = 0.0
+
+        for (i in from until until) {
+            val a = abs(bufA[i])
+            val b = abs(bufB[i])
+
+            if (a.isFinite() && a > peak) {
+                peak = a
+            }
+
+            if (b.isFinite() && b > peak) {
+                peak = b
+            }
+        }
+
+        return if (peak > 1.0) 1.0 else peak
     }
 
     fun ctx(random: Random): IgniteContext = IgniteContext(
@@ -77,9 +101,11 @@ class OptimizerSongParitySpec : StringSpec({
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
 
+                val scale = scaleOf(bufA, bufB, offset, blockFrames)
+
                 for (i in offset until blockFrames) {
-                    withClue("$clue freq $f block $block sample $i: ${bufA[i]} vs ${bufB[i]}") {
-                        withinParity(bufA[i], bufB[i]) shouldBe true
+                    withClue("$clue freq $f block $block sample $i: ${bufA[i]} vs ${bufB[i]} (scale $scale)") {
+                        withinParity(bufA[i], bufB[i], scale) shouldBe true
                     }
                 }
 

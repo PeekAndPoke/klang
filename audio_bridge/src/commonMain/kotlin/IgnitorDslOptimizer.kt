@@ -24,8 +24,8 @@ import kotlin.math.sqrt
  *
  * Until 2026-09-15 the promise was bit-identity, which forbade any rewrite that moves a
  * multiply. The maintainer replaced it with a margin: the rendered samples of the optimized
- * graph may differ from the authored graph's by rounding, at most [OPTIMIZER_PARITY] relative
- * (-240 dB, no musical meaning), NaN for NaN and infinity for infinity. That admits folding
+ * graph may differ from the authored graph's by rounding, at most [OPTIMIZER_PARITY] of the
+ * block's scale (-240 dB, no musical meaning), NaN for NaN and infinity for infinity. That admits folding
  * block-constant arithmetic (`x.mul(2).mul(2).add(10)` as one affine pass) and folding an
  * affine into a neighbouring linear node's gain, which bit-identity could not. Every rule is
  * held to the margin by `IgnitorDslOptimizerRenderSpec` (the shapes people write, the warmup
@@ -55,7 +55,11 @@ import kotlin.math.sqrt
  */
 /**
  * The margin an optimized graph may differ from its authored graph by, per sample, relative to
- * the larger magnitude: rounding, not sound. NaN must stay NaN and an infinity an infinity.
+ * the block's scale (its loudest sample, at most full scale): rounding, not sound. NaN must stay NaN and an
+ * infinity an infinity. Relative to the block and not to the sample itself since 2026-09-15: a
+ * fold that is inexact by an ulp (a divide as a multiply by the reciprocal) passes through a
+ * filter and lands next to a zero crossing, where the sample is tiny and the deviation is not,
+ * though it is still -240 dB below the loudest sample of that block.
  */
 const val OPTIMIZER_PARITY: Double = 1e-12
 
@@ -419,7 +423,7 @@ private fun IgnitorDsl.literalOrNull(): Double? = (this as? IgnitorDsl.Constant)
  * Affine without an add is bounded (`2x + 8e15` is not).
  */
 private fun IgnitorDsl.isClamped(): Boolean =
-    (this is IgnitorDsl.Affine && add.isAbsent()) || this is IgnitorDsl.Times
+    (this is IgnitorDsl.Affine && add.isAbsent()) || this is IgnitorDsl.Times || this is IgnitorDsl.Div
 
 /** Sees through dissolved hints (as [fuseSerialFilters] does) and answers whether [original] may be absorbed. */
 private fun RefCounts.owns(original: IgnitorDsl): Boolean {
@@ -470,7 +474,53 @@ private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: Re
         }
     }
 
+    // x - k is x + (-k), bitwise. k - x stays a Minus: it would be -1 · (x + (-k)), a clamp on a
+    // bare subtract (NaN to 0, an infinity to SAFE_MAX) and more work than the subtract.
+    is IgnitorDsl.Minus -> {
+        val orig = original as? IgnitorDsl.Minus
+
+        when {
+            orig == null || node.left.isControlRate() || !node.right.isControlRate() -> node
+            else -> foldAdd(node, node.left, node.right.negated(), orig.left, refCounts)
+        }
+    }
+
+    // x / k is x · (1 / k); the reciprocal stays an expression so the runtime's own divisor guard
+    // applies to it once per block. A literal zero divisor is a multiply by a literal zero: the
+    // engine renders neither (a dead branch), and the subtree is still BUILT on both sides, so
+    // the build-time draws of everything after it (a phase pool, a noise table) stay in step.
+    is IgnitorDsl.Div -> {
+        val orig = original as? IgnitorDsl.Div
+
+        when {
+            orig == null || node.left.isControlRate() || !node.right.isControlRate() -> node
+            node.right.isLiteralZero() -> foldMultiply(node.left, IgnitorDsl.Constant(0.0), orig.left, refCounts)
+            else -> foldMultiply(node.left, IgnitorDsl.Constant(1.0).div(node.right), orig.left, refCounts)
+        }
+    }
+
+    // -x is x · -1: the runtime lowers a negation to that multiply, clamp included
+    is IgnitorDsl.Neg -> {
+        val orig = original as? IgnitorDsl.Neg
+
+        when {
+            orig == null || node.inner.isControlRate() -> node
+            else -> foldMultiply(node.inner, IgnitorDsl.Constant(-1.0), orig.inner, refCounts)
+        }
+    }
+
     else -> node
+}
+
+/**
+ * `-k` for a block-constant [this], BARE: a literal negates in place, anything else becomes
+ * `-0.0 - k`, which is `-k` bitwise for every k (signed zeros, NaN and infinities included) and
+ * carries no clamp. A `Neg` node would not do: it is a multiply by -1 at runtime, so it would
+ * scrub a NaN and clamp at SAFE_MAX where the subtract it replaces passes both through.
+ */
+private fun IgnitorDsl.negated(): IgnitorDsl = when (this) {
+    is IgnitorDsl.Constant -> IgnitorDsl.Constant(-value)
+    else -> IgnitorDsl.Minus(IgnitorDsl.Constant(-0.0), this)
 }
 
 /** `signal · k`, [signal] already rewritten, [originalSignal] its pre-rewrite node. */
@@ -491,10 +541,7 @@ private fun foldMultiply(signal: IgnitorDsl, k: IgnitorDsl, originalSignal: Igni
         }
 
         if (signal is IgnitorDsl.Minus && signal.right.isControlRate() && !signal.left.isControlRate()) {
-            val b = signal.right
-            val negated: IgnitorDsl = if (b is IgnitorDsl.Constant) IgnitorDsl.Constant(-b.value) else IgnitorDsl.Neg(b)
-
-            return IgnitorDsl.Affine(signal.left, pre = negated, mul = k, add = ABSENT)
+            return IgnitorDsl.Affine(signal.left, pre = signal.right.negated(), mul = k, add = ABSENT)
         }
 
         // a literal run of multiplies composes into the inner node's coefficient while the
@@ -510,11 +557,22 @@ private fun foldMultiply(signal: IgnitorDsl, k: IgnitorDsl, originalSignal: Igni
                 val growing = abs(m) >= 1.0 && abs(factor) >= 1.0
                 val attenuating = abs(m) <= 1.0 && abs(product) <= 1.0 && signal.inner.isClamped()
 
-                // the composed constant must be a normal double: an overflow saturates where the
-                // chain does not, a subnormal carries a rounding error far above the margin
-                val normal = product.isFinite() && (product == 0.0 || abs(product) >= 2.2250738585072014e-308)
+                // an outer sign flip or identity: -(m · x) is (-m) · x for every finite sample
+                // and the clamp sees the same magnitudes (a NaN sample is scrubbed to a zero
+                // whose sign the two forms may not share; only a negative odd `pow` after it
+                // could tell). Not the INNER one: k · safeOut(-x) clamps x before an
+                // attenuating k, (-k) · x does not (the attenuating rule above covers it when the
+                // input is clamped)
+                val flip = abs(factor) == 1.0
 
-                if ((growing || attenuating) && normal) {
+                // the composed constant must be a normal double: an overflow saturates where the
+                // chain does not, a subnormal carries a rounding error far above the margin, and
+                // a product that UNDERFLOWS to zero would be a dead branch the chain never was
+                // (a zero is composed only when one factor is a zero already)
+                val zeroFactor = m == 0.0 || factor == 0.0
+                val normal = product.isFinite() && ((product == 0.0 && zeroFactor) || abs(product) >= 2.2250738585072014e-308)
+
+                if ((growing || attenuating || flip) && normal) {
                     return signal.copy(mul = IgnitorDsl.Constant(product))
                 }
             }

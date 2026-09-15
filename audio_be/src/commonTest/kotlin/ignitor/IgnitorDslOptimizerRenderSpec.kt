@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.distort
@@ -19,6 +20,9 @@ import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.neg
+import io.peekandpoke.klang.audio_bridge.minus
+import io.peekandpoke.klang.audio_bridge.div
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
@@ -84,11 +88,40 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
      * [expectFused] is the liveness half: without it every row here would pass if `optimize()`
      * were the identity function, and `register()` degrades to exactly that on a throw.
      */
-    /** Same sample within the margin: NaN for NaN, an infinity for the same infinity, else relative. */
-    fun withinParity(a: Double, b: Double): Boolean = when {
+    /**
+     * Same sample within the margin: NaN for NaN, an infinity for the same infinity, else within
+     * [OPTIMIZER_PARITY] of the block's [scale] (or of the sample itself when no scale is given,
+     * the control-rate form). The scale is what makes a rounding deviation through a filter pass
+     * at a zero crossing, where a per-sample relative measure would blow up on nothing.
+     */
+    fun withinParity(a: Double, b: Double, scale: Double = 0.0): Boolean = when {
         a.isNaN() || b.isNaN() -> a.isNaN() && b.isNaN()
         a.isInfinite() || b.isInfinite() -> a == b
-        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), 1e-300)
+        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), scale, 1e-300)
+    }
+
+    /**
+     * The block's scale: its loudest finite sample on either side, at most full scale (1.0), what
+     * the margin is relative to. The cap keeps the law in a saturated block: one sample at
+     * SAFE_MAX must not buy the musical samples next to it a tolerance of 1e3.
+     */
+    fun scaleOf(bufA: AudioBuffer, bufB: AudioBuffer, from: Int, until: Int): Double {
+        var peak = 0.0
+
+        for (i in from until until) {
+            val a = abs(bufA[i])
+            val b = abs(bufB[i])
+
+            if (a.isFinite() && a > peak) {
+                peak = a
+            }
+
+            if (b.isFinite() && b > peak) {
+                peak = b
+            }
+        }
+
+        return if (peak > 1.0) 1.0 else peak
     }
 
     fun assertOptimizeIsInaudible(
@@ -154,14 +187,16 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 a.generate(bufA, f, ca)
                 b.generate(bufB, f, cb)
 
+                val scale = scaleOf(bufA, bufB, curOffset, curOffset + curLength)
+
                 for (i in curOffset until curOffset + curLength) {
                     val a0 = bufA[i]
                     if (a0.isFinite() && abs(a0) > peak) {
                         peak = abs(a0)
                     }
                     // NaN compares as NaN: payload bits are outside the contract (EqCoreSpec).
-                    withClue("freq=$f sample=$i: ${bufA[i]} vs ${bufB[i]}") {
-                        withinParity(bufA[i], bufB[i]) shouldBe true
+                    withClue("freq=$f sample=$i: ${bufA[i]} vs ${bufB[i]} (scale $scale)") {
+                        withinParity(bufA[i], bufB[i], scale) shouldBe true
                     }
                 }
                 // The fused path renders upstream into the CALLER's buffer where the chained
@@ -528,6 +563,61 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             IgnitorDsl.Sawtooth().lowpass(2000.0).mul(IgnitorDsl.Constant(0.5)).highpass(120.0).mul(IgnitorDsl.Constant(1.2)),
             minPeak = 0.05,
         )
+    }
+
+    "R2: a subtract after the multiply folds within the margin; a constant minus the signal is left alone" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.4)).minus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Constant(0.5).minus(IgnitorDsl.Sawtooth()), minPeak = 0.1, expectFused = false)
+        // a Param subtrahend at NaN, at an infinity and beyond SAFE_MAX: the subtract is bare on
+        // both sides (a Neg coefficient would scrub the NaN and clamp the rest)
+        for (off in listOf(Double.NaN, Double.NEGATIVE_INFINITY, 1e300)) {
+            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5)).minus(IgnitorDsl.Param("off", 0.0)), oscParams = mapOf("off" to off))
+            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().minus(IgnitorDsl.Param("off", 0.0)).mul(IgnitorDsl.Constant(1e-10)), oscParams = mapOf("off" to off))
+        }
+    }
+
+    "R2: a divide by a literal, by a Param, after an add, and by zero, fold within the margin" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
+        // 1/3 is not representable: the reciprocal multiply is an ulp off, and the filter carries
+        // that to the zero crossings, which is why the margin is relative to the block's scale
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Constant(3.0)).lowpass(1000.0), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(0.5)).div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)), oscParams = mapOf("d" to 4.0), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().lowpass(1000.0).div(IgnitorDsl.Constant(0.0)))
+        // a literal zero divisor over a node that draws at BUILD time (the supersaw's phase pool),
+        // with a second such node after it: the subtree is built on both sides, so the second
+        // pool draws the same phases authored and optimized
+        assertOptimizeIsInaudible(
+            IgnitorDsl.SuperSaw(phasePool = 1.0).div(IgnitorDsl.Constant(0.0)).plus(IgnitorDsl.SuperSaw(phasePool = 1.0)),
+            oscParams = mapOf("voices" to 7.0),
+            minPeak = 0.1,
+        )
+    }
+
+    "R2: a Param divisor at an infinity is a dead branch on both sides too (its reciprocal is a zero multiplier)" {
+        assertOptimizeIsInaudible(
+            IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", 1.0)).plus(IgnitorDsl.WhiteNoise()),
+            oscParams = mapOf("p" to Double.POSITIVE_INFINITY),
+            minPeak = 0.1,
+        )
+    }
+
+    "R2: a Param divisor at zero is a dead branch on both sides: the voice's noise stream stays in step" {
+        // authored: DivIgnitor skips the upstream noise; optimized: the Affine's zero multiplier
+        // skips it too. Were either side to render it, the second noise would read a different
+        // stream position and the two renders would differ grossly, not by rounding.
+        assertOptimizeIsInaudible(
+            IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", 0.0)).plus(IgnitorDsl.WhiteNoise()),
+            oscParams = mapOf("p" to 0.0),
+            minPeak = 0.1,
+        )
+    }
+
+    "R2: a negation, alone and composed with a level, folds within the margin; the inner flip over a hot input does not compose" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().neg(), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.3)).neg().plus(IgnitorDsl.Constant(0.2)), minPeak = 0.1)
+        // x beyond SAFE_MAX: 0.5 · safeOut(-x) is -5e14 where a composed -0.5 · x would be -1e15
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(1e300)).abs().neg().mul(IgnitorDsl.Constant(0.5)))
     }
 
     "the warmup vocabulary: every sound the engine can build renders within the margin under the pass" {

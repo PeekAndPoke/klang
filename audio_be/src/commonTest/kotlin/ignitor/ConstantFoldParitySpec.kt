@@ -354,15 +354,25 @@ class ConstantFoldParitySpec : StringSpec({
             folded = Ignitors.sine() .div(ParamIgnitor("k", Double.NaN)),
             reference = Ignitors.sine().div(OpaqueIgnitor(ParamIgnitor("k", Double.NaN))),
         )
-        // a-const arm: per-sample safeDiv over a signal crossing zero -> SAFE_MAX peaks; must
-        // be bit-equal AND actually clamp.
+        // a-const arm: per-sample safeDiv over a signal passing 1e-20 (an EXACT zero is zero since
+        // 2026-09-15, so the sine is lifted off it) -> SAFE_MAX peaks; must be bit-equal AND
+        // actually clamp.
+        // a fresh instance per chain: a shared sine would advance twice per block
+        fun nearZero(): Ignitor = Ignitors.sine().plus(ConstantIgnitor(1e-20))
+
         assertBitParity(
-            folded = ParamIgnitor("k", 1e10).div(Ignitors.sine()),
-            reference = OpaqueIgnitor(ParamIgnitor("k", 1e10)).div(Ignitors.sine()),
+            folded = ParamIgnitor("k", 1e10).div(nearZero()),
+            reference = OpaqueIgnitor(ParamIgnitor("k", 1e10)).div(nearZero()),
         )
         val buf = AudioBuffer(blockFrames)
-        (ParamIgnitor("k", 1e10).div(Ignitors.sine())).generate(buf, 220.0, ctx())
+        (ParamIgnitor("k", 1e10).div(nearZero())).generate(buf, 220.0, ctx())
         (0 until blockFrames).any { buf[it] == SAFE_MAX }.shouldBeTrue()
+
+        // an exact zero in the divisor signal is zero, not 1e10 / SAFE_MIN (silence is a signal
+        // to the a-const arm: not block-constant)
+        val atZero = AudioBuffer(blockFrames)
+        (ParamIgnitor("k", 1e10).div(Ignitors.silence())).generate(atZero, 220.0, ctx())
+        atZero[0] shouldBe 0.0
     }
 
     "guards engage on the D1b arms at discriminating values (batch)" {
@@ -393,19 +403,22 @@ class ConstantFoldParitySpec : StringSpec({
 
         // Div fill + a-arm: safeDiv discriminators (safeOut masks safeDiv at big numerators —
         // a NaN divisor separates them on the fill; a SMALL numerator separates them on the
-        // a-arm, where the zero-crossing sample gives 1/SAFE_MIN < SAFE_MAX with safeDiv but
-        // Inf -> SAFE_MAX without).
+        // a-arm, where the sample at 1e-20 (the sine lifted off its exact zero, which is zero
+        // by rule since 2026-09-15) gives 1/SAFE_MIN < SAFE_MAX with safeDiv but Inf -> SAFE_MAX
+        // without).
         val divNaNFill = AudioBuffer(blockFrames)
         (ConstantIgnitor(1e10).div(ParamIgnitor("k", Double.NaN))).generate(divNaNFill, 220.0, ctx())
         for (i in 0 until blockFrames) {
             divNaNFill[i] shouldBe SAFE_MAX
         }
+        fun nearZero(): Ignitor = Ignitors.sine().plus(ConstantIgnitor(1e-20))
+
         assertBitParity(
-            folded = ParamIgnitor("k", 1.0).div(Ignitors.sine()),
-            reference = OpaqueIgnitor(ParamIgnitor("k", 1.0)).div(Ignitors.sine()),
+            folded = ParamIgnitor("k", 1.0).div(nearZero()),
+            reference = OpaqueIgnitor(ParamIgnitor("k", 1.0)).div(nearZero()),
         )
         val divSmall = AudioBuffer(blockFrames)
-        (ParamIgnitor("k", 1.0).div(Ignitors.sine())).generate(divSmall, 220.0, ctx())
+        (ParamIgnitor("k", 1.0).div(nearZero())).generate(divSmall, 220.0, ctx())
         (0 until blockFrames).any { divSmall[it] == 1.0 / SAFE_MIN }.shouldBeTrue()
 
         // Mod b-const: zero divisor takes the safeDiv substitution (finite, parity holds).

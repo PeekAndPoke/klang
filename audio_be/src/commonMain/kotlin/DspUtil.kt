@@ -340,9 +340,11 @@ fun Double.applySemitoneDetuneToFrequency(detuneSemitones: Double): Double =
 //
 // Every arithmetic operator that can produce `NaN`/`Inf` clamps either its inputs
 // (divisor-class ops: Div, Mod, Recip) or its output (output-clamp ops: Times,
-// Pow, Exp, Sq, Mul-by-constant). Naturally bounded ops (Plus, Minus, Lerp,
-// Range, Clamp, Min, Max, Abs, Neg, Sign, Floor, Ceil, Round, Frac, Tanh, Sqrt,
-// Log) need no extra guard.
+// Pow, Exp, Sq, Mul-by-constant, and Neg, which is a multiply by -1 since 2026-09-15).
+// Naturally bounded ops (Plus, Minus, Lerp, Range, Clamp, Min, Max, Abs, Sign, Floor,
+// Ceil, Round, Frac, Tanh, Sqrt, Log) need no extra guard. Div alone treats a divisor
+// of exactly zero (and a block-constant infinity) as a zero result, not a clamp; a
+// block-constant zero multiplier is a dead branch (see `audio/ref/numerical-safety.md`).
 //
 // Values match the SuperCollider / ChucK / STK convention (`zapgremlins`,
 // `CK_DDN_*`): ±300 dBFS, well below any audible signal, well above subnormal.

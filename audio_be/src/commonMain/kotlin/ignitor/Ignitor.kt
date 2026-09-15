@@ -109,7 +109,8 @@ interface Ignitor {
 // lambdas. See `audio/ref/performance.md` for the rationale (Rule 1).
 //
 // CONSTANT-FOLD POLICY: binary ops (and the const-heavy ternary slots — Clamp/Range bounds,
-// Lerp t) carry fold branches in `generate()`. UNARY ops (Neg, Abs, Sqrt, …) deliberately do
+// Lerp t) carry fold branches in `generate()`. UNARY ops (Abs, Sqrt, …; `neg()` is a multiply
+// by -1 since 2026-09-15, so it is not one) deliberately do
 // NOT: they override `controlRateValueOrNull`/`isBlockConstant`, so a constant unary subtree
 // folds AT ITS PARENT, which never calls the unary's `generate` at all — an internal
 // fill-branch would be near-dead code that still costs a parity case, a liveness probe and a
@@ -255,9 +256,18 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
             }
         }
 
+        // A block-constant factor of exactly zero is a dead branch (maintainer, 2026-09-15): the
+        // signal side renders nothing, the block is zero. What that costs is the sign of those
+        // zeros and the signal side's state (a noise node draws nothing from the voice's stream).
         if (bConst) {
             val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
+                if (kb == 0.0) {
+                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
+
+                    return
+                }
+
                 a.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, kb)
 
@@ -268,6 +278,12 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
         if (aConst) {
             val ka = a.controlRateValueOrNull(freqHz)
             if (ka != null) {
+                if (ka == 0.0) {
+                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
+
+                    return
+                }
+
                 b.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, ka)
 
@@ -342,6 +358,14 @@ internal class AffineIgnitor(
                     }
                 }
 
+                // a multiplier of exactly zero is a dead branch, as in TimesIgnitor: the inner
+                // renders nothing and the block is the add alone
+                if (km == 0.0) {
+                    buffer.fill(0.0 + ka, ctx.offset, ctx.windowEnd)
+
+                    return
+                }
+
                 inner.generate(buffer, freqHz, ctx)
 
                 // the window is read AFTER the child render, like every sibling combinator
@@ -398,6 +422,11 @@ fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
 fun Ignitor.mul(factor: Double): Ignitor {
     if (factor == 1.0) return this
 
+    // a factor of exactly zero is a dead branch: nothing upstream renders (see TimesIgnitor)
+    if (factor == 0.0) {
+        return ConstantIgnitor(0.0)
+    }
+
     return MulConstIgnitor(this, factor)
 }
 
@@ -419,9 +448,10 @@ private class MulConstIgnitor(private val upstream: Ignitor, private val factor:
 /**
  * Divide signal amplitude per-sample by an audio-rate [divisor].
  *
- * Divisor magnitudes below `SAFE_MIN` are clamped (sign preserved) so the engine
- * never produces `NaN`/`Inf`. The output is also clamped to `±SAFE_MAX`.
- * See `audio/ref/numerical-safety.md`.
+ * A divisor of exactly zero yields zero (a block-constant zero or infinity is a dead branch:
+ * nothing upstream renders). Other divisor magnitudes below `SAFE_MIN` are clamped (sign
+ * preserved) so the engine never produces `NaN`/`Inf`. The output is also clamped to
+ * `±SAFE_MAX`. See `audio/ref/numerical-safety.md`.
  */
 fun Ignitor.div(divisor: Ignitor): Ignitor = DivIgnitor(this, divisor)
 
@@ -435,12 +465,16 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         // Constant-fold ladder — same contract and breach policy as PlusIgnitor. Div keeps TRUE
         // division (never reciprocal-multiply: different rounding) and the per-op guards exactly:
         // safeDiv on the divisor (hoisted once when the divisor is the constant side), safeOut
-        // on the output.
+        // on the output. A divisor of exactly zero yields zero (maintainer, 2026-09-15): a
+        // block-constant zero is a dead branch and renders nothing upstream, a zero sample in a
+        // divisor signal zeroes that sample. Tiny non-zero divisors keep the SAFE_MIN clamp. A
+        // block-constant INFINITE divisor is the same dead branch: its quotient is a zero, and
+        // the optimizer's reciprocal (1 / k, a zero multiplier) renders nothing upstream either.
         if (aConst && bConst) {
             val ka = a.controlRateValueOrNull(freqHz)
             val kb = b.controlRateValueOrNull(freqHz)
             if (ka != null && kb != null) {
-                buffer.fill(safeOut(ka / safeDiv(kb)), ctx.offset, ctx.windowEnd)
+                buffer.fill(divide(ka, kb), ctx.offset, ctx.windowEnd)
 
                 return
             }
@@ -449,6 +483,12 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         if (bConst) {
             val kb = b.controlRateValueOrNull(freqHz)
             if (kb != null) {
+                if (kb == 0.0 || kb.isInfinite()) {
+                    buffer.fill(0.0, ctx.offset, ctx.windowEnd)
+
+                    return
+                }
+
                 val d = safeDiv(kb)
                 a.generate(buffer, freqHz, ctx)
                 val end = ctx.windowEnd
@@ -466,7 +506,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
                 b.generate(buffer, freqHz, ctx)
                 val end = ctx.windowEnd
                 for (i in ctx.offset until end) {
-                    buffer[i] = safeOut(ka / safeDiv(buffer[i]))
+                    buffer[i] = divide(ka, buffer[i])
                 }
 
                 return
@@ -479,7 +519,7 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
             b.generate(tmp, freqHz, ctx)
             val end = ctx.windowEnd
             for (i in ctx.offset until end) {
-                buffer[i] = safeOut(buffer[i] / safeDiv(tmp[i]))
+                buffer[i] = divide(buffer[i], tmp[i])
             }
         }
     }
@@ -488,15 +528,24 @@ private class DivIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignit
         val x = a.controlRateValueOrNull(freqHz) ?: return null
         val y = b.controlRateValueOrNull(freqHz) ?: return null
 
-        return safeOut(x / safeDiv(y))
+        return divide(x, y)
     }
+
+    /** The guarded quotient: zero for a zero divisor, else `safeOut(a / safeDiv(b))`. */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun divide(a: Double, b: Double): Double = if (b == 0.0) 0.0 else safeOut(a / safeDiv(b))
 }
 
 /**
  * Divide signal amplitude by a constant [divisor].
- * Zero divisor is substituted with `±SAFE_MIN`; output clamped to `±SAFE_MAX`.
+ * A zero divisor is a dead branch (silence, nothing upstream renders); any other divisor is
+ * clamped to `±SAFE_MIN` and the output to `±SAFE_MAX`.
  */
 fun Ignitor.div(divisor: Double): Ignitor {
+    if (divisor == 0.0) {
+        return ConstantIgnitor(0.0)
+    }
+
     val safeFactor = 1.0 / safeDiv(divisor)
 
     return mul(safeFactor)
@@ -569,26 +618,11 @@ private class MinusIgnitor(private val a: Ignitor, private val b: Ignitor) : Ign
     }
 }
 
-/** Negate this signal (flip polarity, per-sample). */
-fun Ignitor.neg(): Ignitor = NegIgnitor(this)
-
-private class NegIgnitor(private val upstream: Ignitor) : Ignitor {
-    override val isBlockConstant: Boolean = upstream.isBlockConstant
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        upstream.generate(buffer, freqHz, ctx)
-        val end = ctx.windowEnd
-        for (i in ctx.offset until end) {
-            buffer[i] = -buffer[i]
-        }
-    }
-
-    override fun controlRateValueOrNull(freqHz: Double): Double? {
-        val x = upstream.controlRateValueOrNull(freqHz) ?: return null
-
-        return -x
-    }
-}
+/**
+ * Negate this signal (flip polarity, per-sample). A multiply by `-1`, clamp included: there is
+ * no dedicated negation (maintainer, 2026-09-15), so the optimizer folds it like any level.
+ */
+fun Ignitor.neg(): Ignitor = mul(-1.0)
 
 /** Absolute value of this signal (per-sample, full-wave rectification). */
 fun Ignitor.abs(): Ignitor = AbsIgnitor(this)

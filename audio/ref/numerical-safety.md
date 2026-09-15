@@ -67,13 +67,29 @@ The constants live in `audio_be/src/commonMain/kotlin/DspUtil.kt`.
 
 - **Divisor-class ops** (`Div`, `Mod`, `Recip`) — divisor magnitude is clamped
   to `≥ SAFE_MIN`, sign preserved. Prevents `1/0` or `1/subnormal` overflow.
+  `Div` alone treats a divisor of EXACTLY zero as zero (maintainer, 2026-09-15): a
+  block-constant zero is a dead branch that renders nothing upstream (a block-constant
+  infinity too, its quotient is a zero and the optimizer's reciprocal of it is a zero
+  multiplier), a zero sample in a divisor signal zeroes that sample. Tiny non-zero divisors
+  keep the clamp. The optimizer folds a literal zero divisor to a zero multiplier on the same
+  rule, the subtree still built so build-time draws stay in step. `Recip` is the deliberate
+  exception: `x.recip()` at zero still takes the `SAFE_MIN` substitution (about `SAFE_MAX`),
+  so `1 / x` written two ways gives two answers at exactly zero; do not "fix" it.
+- **A zero multiplier is a dead branch** (same date): `Times`, the scalar `mul(0.0)` door and
+  an `Affine` with a block-constant multiplier of exactly zero render nothing upstream and
+  fill zero (the add alone for the Affine); an `EqCore` parallel tap at gain zero does not run
+  its band and adds a bare `+ 0.0`, bit for bit what the chain does. The sign of those zeros
+  and the upstream's state (a noise node's draws from the voice's stream) are what that costs.
+  The one op that can tell `-0.0` from `+0.0` is `Pow` with a negative odd exponent
+  (`±SAFE_MAX`); everything else (`Div`, `Recip`, `Mod`, `Log`, `Sqrt`, `Sign`) treats them alike.
 - **Output-clamp ops** (`Times`, `Pow`, `Exp`, `Sq`) — output magnitude is
   clamped to `≤ SAFE_MAX`, sign preserved. Prevents runaway products from
   overflowing Float.
 - **Naturally bounded ops** — `Plus`, `Minus`, `Lerp`, `Range`, `Min`, `Max`,
-  `Clamp`, `Bipolar`, `Unipolar`, `Tanh`, `Abs`, `Neg`, `Sign`, `Floor`,
+  `Clamp`, `Bipolar`, `Unipolar`, `Tanh`, `Abs`, `Sign`, `Floor`,
   `Ceil`, `Round`, `Frac`, `Sqrt`, `Log` — output bounded by their inputs
-  or by their algebraic properties; no extra guard needed.
+  or by their algebraic properties; no extra guard needed. `Neg` is a multiply by
+  `-1` since 2026-09-15 (no dedicated ignitor), so it clamps like `Times`.
 
 ### Round-trip guarantees
 

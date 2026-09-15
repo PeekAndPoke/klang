@@ -293,11 +293,11 @@ class EqCoreSpec : StringSpec({
         )
     }
 
-    "tap gain 0 is NOT skipped" {
-        // Legacy adds safeOut(v1 * 0) = SIGNED zero; on a -0.0 input sample where the
-        // tap's band is positive, -0.0 + 0.0 flips to +0.0 — a gain-0 skip would keep
-        // -0.0 and break bit-parity. Data: an impulse ringing the band over a bed of
-        // NEGATIVE zeros, so many samples exercise the flip.
+    "tap gain 0 is a dead branch that still adds its +0.0, bit for bit like the chain" {
+        // Since 2026-09-15 the legacy Times renders nothing for a zero factor and fills +0.0;
+        // the Plus adds that, so -0.0 + 0.0 flips to +0.0. A tap that skipped its add entirely
+        // would keep -0.0 and break bit-parity. Data: an impulse over a bed of NEGATIVE zeros,
+        // so many samples exercise the flip.
         val negZeros = DoubleArray(blockFrames * (blocks + 1)) { -0.0 }.also { it[0] = 1.0 }
         assertChainParity(
             listOf(Section(EqCore.RAW_TAP, 850.0, 0.9, gain = 0.0)),
