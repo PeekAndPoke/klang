@@ -41,10 +41,23 @@ that. The rule from the videos note still holds: only tags a resource actually c
 
 ## Adding a website
 
-Append a `Resource` with `ResourceSource.Website(url)` to `allResources`. Author and author URL
-are required in spirit as much as for videos: a company page credits the company. Pass an
-`imageUrl` only if the site offers a stable one; the globe placeholder is the default and it does
-not go stale.
+Append a `Resource` with `ResourceSource.Website(url, imageUrl)` to `allResources`. Author and
+author URL are required in spirit as much as for videos: a company page credits the company.
+
+The preview image is ours to make, not the site's to serve: most pages offer no `og:image`, and
+a hotlinked one goes stale or vanishes. Take a headless screenshot at 16:9 and ship it as a
+static asset next to `klang-icon.png`:
+
+```bash
+google-chrome-stable --headless=new --hide-scrollbars --window-size=1280,720 \
+    --screenshot=page.png "<url>"
+convert page.png -resize 800x450 -quality 82 \
+    src/jsMain/resources/images/resources/<resource id>.jpg
+```
+
+and reference it as `/images/resources/<resource id>.jpg`. Static resources are served from the
+root, the same way the favicon is. The globe placeholder remains the fallback for an entry
+without an image.
 
 ## Verification note
 

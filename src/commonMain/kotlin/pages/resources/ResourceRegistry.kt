@@ -19,7 +19,10 @@ val allResources: List<Resource> = listOf(
                 "Pick a device under test, listen, and watch your threshold move as your ear gets sharper.",
         author = "Klippel GmbH",
         authorUrl = "https://www.klippel.de",
-        source = ResourceSource.Website("https://www.klippel.de/listeningtest/"),
+        source = ResourceSource.Website(
+            url = "https://www.klippel.de/listeningtest/",
+            imageUrl = "/images/resources/klippel-listening-test.jpg",
+        ),
         tags = listOf(ResourceTag.EarTraining),
     ),
     Resource(
