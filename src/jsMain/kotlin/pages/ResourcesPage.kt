@@ -148,7 +148,7 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.divider()
 
                 div {
-                    ResourceTag.entries.forEach { tag ->
+                    ResourceTag.entries.sortedBy { it.label }.forEach { tag ->
                         val isSelected = tag in selectedTags
                         ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
                             onClick { toggleTag(tag) }
@@ -232,7 +232,7 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 div {
-                    resource.tags.forEach { tag ->
+                    resource.tags.sortedBy { it.label }.forEach { tag ->
                         ui.mini.basic.label { +tag.label }
                     }
                 }
