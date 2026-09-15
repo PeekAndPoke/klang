@@ -87,7 +87,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Songs : State
         data object Samples : State
         data object MidiPlayground : State
-        data object Videos : State
+        data object Resources : State
         data object Tutorials : State
         data object Docs : State
         data object Credits : State
@@ -99,7 +99,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         currentRoute.route.pattern.startsWith(Nav.tutorialsBase) -> State.Tutorials
         currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
         currentRoute.route == Nav.midiPlayground -> State.MidiPlayground
-        currentRoute.route == Nav.videos -> State.Videos
+        currentRoute.route == Nav.resources -> State.Resources
         currentRoute.route == Nav.credits -> State.Credits
         else -> State.Main
     }
@@ -219,9 +219,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             for (entry in entries) {
                 val isSelected = when (entry.targetState) {
-                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Videos, or Credits
+                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Resources, or Credits
                     State.Main -> state in listOf(
-                        State.Main, State.Samples, State.MidiPlayground, State.Videos, State.Credits,
+                        State.Main, State.Samples, State.MidiPlayground, State.Resources, State.Credits,
                     )
                     else -> state == entry.targetState
                 }
@@ -315,7 +315,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                         flexGrow = 1.0
                     }
                     when (state) {
-                        State.Main, State.MidiPlayground, State.Videos, State.Credits -> renderDefaultMenu()
+                        State.Main, State.MidiPlayground, State.Resources, State.Credits -> renderDefaultMenu()
                         State.Songs -> renderSongsMenu()
                         State.Samples -> renderSamplesMenu()
                         State.Tutorials -> renderTutorialsMenu()
@@ -341,9 +341,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 state = State.MidiPlayground
                 router.navToUri(Nav.midiPlayground())
             }
-            menuItem(state == State.Videos, "Videos", { film }) {
-                state = State.Videos
-                router.navToUri(Nav.videos())
+            menuItem(state == State.Resources, "Resources", { bookmark }) {
+                state = State.Resources
+                router.navToUri(Nav.resources())
             }
             menuItem(state == State.Credits, "Credits", { bullhorn }) {
                 state = State.Credits

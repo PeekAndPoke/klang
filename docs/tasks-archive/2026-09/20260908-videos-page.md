@@ -1,6 +1,10 @@
 # The Videos page: a shelf of external tutorial videos
 
-Status: DONE 2026-09-08. Maintainer side quest: "in the ui i want to add an additional page with
+Status: DONE 2026-09-08. Superseded 2026-09-15 by `20260915-resources-page.md`: the shelf became
+`/resources` and takes websites next to videos; every decision below still holds, the names are
+now `Resource*`.
+
+Original record. Maintainer side quest: "in the ui i want to add an additional page with
 useful tutorial videos i found online. We will diaply the videos as cards. The videos will have
 tags. We will also need to tell 'external' content from our own content (should this ever be a
 thing). The page will be mounted in the main menu under the '...' and the above 'Credits'."

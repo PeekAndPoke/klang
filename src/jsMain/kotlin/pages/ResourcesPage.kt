@@ -5,10 +5,11 @@
 
 package io.peekandpoke.klang.pages
 
-import io.peekandpoke.klang.pages.videos.Video
-import io.peekandpoke.klang.pages.videos.VideoOrigin
-import io.peekandpoke.klang.pages.videos.VideoTag
-import io.peekandpoke.klang.pages.videos.allVideos
+import io.peekandpoke.klang.pages.resources.Resource
+import io.peekandpoke.klang.pages.resources.ResourceOrigin
+import io.peekandpoke.klang.pages.resources.ResourceSource
+import io.peekandpoke.klang.pages.resources.ResourceTag
+import io.peekandpoke.klang.pages.resources.allResources
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -63,17 +64,18 @@ import kotlinx.html.span
 import kotlinx.html.title
 
 @Suppress("FunctionName")
-fun Tag.VideosPage() = comp {
-    VideosPage(it)
+fun Tag.ResourcesPage() = comp {
+    ResourcesPage(it)
 }
 
 /**
- * The video shelf: cards for videos worth watching, playing in place.
+ * The resources shelf: cards for videos worth watching and pages worth visiting. Videos play
+ * in place, websites open in a new tab.
  *
- * External material stays visibly external: the card credits its author, carries an
- * [VideoOrigin] label, and always offers the way out to the platform it lives on.
+ * External material stays visibly external: the card credits its author, carries a
+ * [ResourceOrigin] label, and always offers the way out to the place it lives.
  */
-class VideosPage(ctx: NoProps) : PureComponent(ctx) {
+class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -81,44 +83,44 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
 
     private var searchText: String by value("")
 
-    private var selectedTags: Set<VideoTag> by value(emptySet())
+    private var selectedTags: Set<ResourceTag> by value(emptySet())
 
-    /** Id of the video whose player is open. One at a time, so no two soundtracks collide. */
+    /** Id of the resource whose player is open. One at a time, so no two soundtracks collide. */
     private var playingId: String? by value(null)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun toggleTag(tag: VideoTag) {
+    private fun toggleTag(tag: ResourceTag) {
         selectedTags = selectedTags.toggle(tag)
     }
 
-    private fun matches(video: Video): Boolean {
+    private fun matches(resource: Resource): Boolean {
         val matchesSearch = searchText.isBlank() ||
-                video.title.contains(searchText, ignoreCase = true) ||
-                video.description.contains(searchText, ignoreCase = true) ||
-                video.author.contains(searchText, ignoreCase = true) ||
-                video.tags.any { it.label.contains(searchText, ignoreCase = true) }
+                resource.title.contains(searchText, ignoreCase = true) ||
+                resource.description.contains(searchText, ignoreCase = true) ||
+                resource.author.contains(searchText, ignoreCase = true) ||
+                resource.tags.any { it.label.contains(searchText, ignoreCase = true) }
 
-        val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in video.tags }
+        val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in resource.tags }
 
         return matchesSearch && matchesTags
     }
 
     override fun VDom.render() {
         ui.fluid.container {
-            key = "videos-page"
+            key = "resources-page"
 
             css { padding = Padding(2.rem) }
 
             ui.segment {
-                ui.header { +"Videos" }
-                ui.sub.header { +"Videos worth watching. Everything here is other people's work, credited and linked." }
+                ui.header { +"Resources" }
+                ui.sub.header { +"Videos worth watching, tools worth trying, pages worth reading. Everything here is other people's work, credited and linked." }
             }
 
             ui.segment {
                 ui.form {
                     UiInputField(value = searchText, onChange = { searchText = it }) {
-                        placeholder("Search videos...")
+                        placeholder("Search resources...")
                         rightClearingIcon()
                         leftLabel {
                             ui.grey.label { icon.search(); +"Search" }
@@ -129,7 +131,7 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.divider()
 
                 div {
-                    VideoTag.entries.forEach { tag ->
+                    ResourceTag.entries.forEach { tag ->
                         ui.mini.basic.given(tag in selectedTags) { with(laf.styles.goldButton()) }.button {
                             onClick { toggleTag(tag) }
                             +tag.label
@@ -138,43 +140,47 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            val videos = allVideos.filter { matches(it) }
+            val resources = allResources.filter { matches(it) }
 
-            if (videos.isEmpty()) {
+            if (resources.isEmpty()) {
                 ui.placeholder.segment {
                     ui.icon.header {
                         icon.search()
-                        if (allVideos.isEmpty()) {
-                            +"No videos yet"
+                        if (allResources.isEmpty()) {
+                            +"No resources yet"
                         } else {
-                            +"No videos match your filters"
+                            +"No resources match your filters"
                         }
                     }
                 }
             } else {
                 ui.three.stackable.cards {
-                    videos.forEach { renderVideoCard(it) }
+                    resources.forEach { renderResourceCard(it) }
                 }
             }
         }
     }
 
-    private fun FlowContent.renderVideoCard(video: Video) {
+    private fun FlowContent.renderResourceCard(resource: Resource) {
         ui.card {
-            key = "video-${video.id}"
+            key = "resource-${resource.id}"
 
             css { backgroundColor = Color(laf.cardBackground) }
 
-            if (playingId == video.id) {
-                renderPlayer(video)
-            } else {
-                renderThumbnail(video)
+            when (val source = resource.source) {
+                is ResourceSource.Video -> if (playingId == resource.id) {
+                    renderPlayer(resource, source)
+                } else {
+                    renderThumbnail(resource, source)
+                }
+
+                is ResourceSource.Website -> renderWebsiteHeader(resource, source)
             }
 
             noui.content {
                 ui.small.header {
                     css { color = Color(laf.textPrimary) }
-                    +video.title
+                    +resource.title
                 }
 
                 noui.meta {
@@ -185,8 +191,8 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                         marginTop = 0.25.rem
                     }
 
-                    renderOriginLabel(video.origin)
-                    renderAuthor(video)
+                    renderOriginLabel(resource.origin)
+                    renderAuthor(resource)
                 }
 
                 noui.description {
@@ -194,7 +200,7 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                         marginTop = 0.5.rem
                         color = Color(laf.textSecondary)
                     }
-                    +video.description
+                    +resource.description
                 }
             }
 
@@ -208,28 +214,28 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 div {
-                    video.tags.forEach { tag ->
+                    resource.tags.forEach { tag ->
                         ui.mini.basic.label { +tag.label }
                     }
                 }
 
-                a(href = video.source.watchUrl, target = "_blank") {
+                a(href = resource.source.url, target = "_blank") {
                     css {
                         // Pushed right whatever the tag row does, and never gold:
                         // the global `a` rule carries !important, so this one has to as well
                         marginLeft = LinearDimension.auto
                         put("color", "${laf.textPrimary} !important")
                     }
-                    title = "Watch on ${video.source.platform}"
+                    title = "Open on ${resource.source.platform}"
                     icon.external_alternate()
-                    +video.source.platform
+                    +resource.source.platform
                 }
             }
         }
     }
 
     /** The still, with a play overlay. Clicking swaps it for the embedded player. */
-    private fun FlowContent.renderThumbnail(video: Video) {
+    private fun FlowContent.renderThumbnail(resource: Resource, source: ResourceSource.Video) {
         noui.image {
             css {
                 position = Position.relative
@@ -238,9 +244,9 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
                 put("aspect-ratio", "16 / 9")
                 put("overflow", "hidden")
             }
-            onClick { playingId = video.id }
+            onClick { playingId = resource.id }
 
-            img(src = video.source.thumbnailUrl, alt = video.title) {
+            img(src = source.imageUrl, alt = resource.title) {
                 css {
                     width = 100.pct
                     height = 100.pct
@@ -270,13 +276,13 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /** The embedded player. Autoplays: it only ever appears right after a click. */
-    private fun FlowContent.renderPlayer(video: Video) {
+    private fun FlowContent.renderPlayer(resource: Resource, source: ResourceSource.Video) {
         noui.image {
             css { put("aspect-ratio", "16 / 9") }
 
             iframe {
-                src = video.source.embedUrl(autoplay = true)
-                title = video.title
+                src = source.embedUrl(autoplay = true)
+                title = resource.title
                 attributes["allow"] = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
                 attributes["allowfullscreen"] = "true"
                 attributes["referrerpolicy"] = "strict-origin-when-cross-origin"
@@ -290,32 +296,75 @@ class VideosPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun FlowContent.renderOriginLabel(origin: VideoOrigin) {
+    /**
+     * The card top for a website: its image when it has one, a globe on the card background
+     * otherwise. Either way the whole area is the link, opening in a new tab.
+     */
+    private fun FlowContent.renderWebsiteHeader(resource: Resource, source: ResourceSource.Website) {
+        noui.image {
+            css {
+                put("aspect-ratio", "16 / 9")
+                put("overflow", "hidden")
+            }
+
+            a(href = source.url, target = "_blank") {
+                title = "Open on ${source.platform}"
+
+                css {
+                    width = 100.pct
+                    height = 100.pct
+                    display = Display.flex
+                    alignItems = Align.center
+                    justifyContent = JustifyContent.center
+                    backgroundColor = Color(laf.cardBackground)
+                }
+
+                val imageUrl = source.imageUrl
+
+                if (imageUrl == null) {
+                    icon.huge.globe {
+                        css { put("color", "${laf.textTertiary} !important") }
+                    }
+                } else {
+                    img(src = imageUrl, alt = resource.title) {
+                        css {
+                            width = 100.pct
+                            height = 100.pct
+                            display = Display.block
+                            put("object-fit", "cover")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.renderOriginLabel(origin: ResourceOrigin) {
         when (origin) {
-            VideoOrigin.Klang -> ui.mini.with(laf.styles.goldButton()).label {
+            ResourceOrigin.Klang -> ui.mini.with(laf.styles.goldButton()).label {
                 icon.bolt()
                 +origin.label
             }
 
-            VideoOrigin.External -> ui.mini.basic.label {
+            ResourceOrigin.External -> ui.mini.basic.label {
                 icon.external_alternate()
                 +origin.label
             }
         }
     }
 
-    private fun FlowContent.renderAuthor(video: Video) {
-        val authorUrl = video.authorUrl
+    private fun FlowContent.renderAuthor(resource: Resource) {
+        val authorUrl = resource.authorUrl
 
         if (authorUrl == null) {
             span {
                 css { color = Color(laf.textSecondary) }
-                +video.author
+                +resource.author
             }
         } else {
             a(href = authorUrl, target = "_blank") {
                 css { color = Color(laf.textSecondary) }
-                +video.author
+                +resource.author
             }
         }
     }
