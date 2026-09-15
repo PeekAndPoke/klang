@@ -187,13 +187,42 @@ Step 0 (DONE 2026-09-15): the invariant above, `OPTIMIZER_PARITY`, the corpora a
 Each later step is its own deliverable: rule-table rows first (red), then the rule, its render
 parity, a mutation check, a rig A/B, a commit.
 
-1. `IgnitorDsl.Affine(inner, mul, add)` = `mul · x + add`, one pass, coefficients block-constant
-   and evaluated once per block; `isBlockConstant`/`controlRateValueOrNull` propagate. Wire type,
-   KSP codec, warmup vocabulary entry. No rule yet.
-2. The chain fold: `Times`/`Plus`/`Minus`/`Div` with a block-constant operand collapse into
-   `Affine`, composing as the walk unwinds (`Affine(Affine(x, a1, b1), a2, b2)` =
-   `Affine(x, a2·a1, a2·b1 + b2)`); `mul(lfo)` stays `Times`; refcount 1 only. Never elide a
-   multiply because its constant is 0 (`Inf · 0 = NaN` stays), keep `safeOut` at the write.
+1. DONE 2026-09-15: `IgnitorDsl.Affine(inner, pre, mul, add)` = `mul · (x + pre) + add`, one
+   pass, sanitised exactly like the `Plus`/`Times`/`Plus` chain (`safeOut(mul · (x + pre)) + add`),
+   an absent pre-add or add being `Constant(-0.0)`, the bitwise identity of the add (`+ 0.0` would
+   turn `-0.0` into `+0.0`); `mul` has no default. The pre-add exists because review showed that
+   folding `x.add(b).mul(a)` as `a·x + a·b` cancels near `x = -b`, every zero crossing of an
+   offset-then-scale shape, which no relative margin survives. Wire type, KSP codec, walk arms,
+   warmup vocabulary (all three fast shapes), `EqIgnitor` sees through it for the static
+   cascade q, `AffineIgnitorSpec` (both orders bit for bit, the sign of zero included).
+2. The chain fold, with the rule the round-2 review derived (what one node covers exactly, what
+   composition loses, where the clamp bites):
+   - One node folds exactly the authored shape `x [.add(p)] .mul(m) [.add(a)]`: at most one add
+     before the multiply, exactly one multiply, at most one add after. `minus(b)` folds as
+     `pre = -b` (a bare subtract is a bare add of the negation, bitwise); a leading
+     `Constant(k).plus(x)` as `pre = k`.
+   - Two nodes MUST NOT merge across an addition: not an inner `add` with an outer `pre`, not an
+     inner `add` pushed through an outer `mul`, not two adjacent adds. An addition fold has no
+     relative bound (cancellation at the sample; measured 4.6e-2 relative on ordinary values). A
+     second add stays a second `Affine`, still cheaper than the chain.
+   - A chain with no multiply stays `Plus`: `mul = 1` would insert the clamp `Plus` refuses.
+     `neg()` is not `mul = -1` for the same reason (and it maps `+0.0` to `-0.0`, bare).
+   - A run of literal-constant multiplies composes into one `mul` only when the chain's
+     intermediate clamp cannot differ from the fold's: the condition is on `x · product`, not on
+     the product (`m1 = 100, m2 = 0.01` with `x = 1e14` differs by 0.9 relative). With the run's
+     input bounded by `SAFE_MAX` (the output of a clamping op or a bounded oscillator): every
+     prefix product `|m1 … mk| <= 1`, an attenuating run, composes freely; otherwise only a purely
+     growing run (`|m| >= 1` throughout); the mixed run, up then down, does not compose. Rounding
+     is never the binding constraint (about `2n` ulp for `n` factors). A `Param` multiply folds
+     alone (its value is unknown at optimize time).
+   - A rule builds an ABSENT pre-add or add as the node's default (`Constant(-0.0)`), never as an
+     explicit `Constant(0.0)`, which would reintroduce the sign-of-zero divergence the node's
+     design removed; the rule-table row for the forward fold must assert the default.
+   - `mul(lfo)`, `add(signal)` stay `Times`/`Plus`; refcount 1 only; never elide a multiply
+     because its constant is 0: `x · 0.0` is `-0.0` for every negative sample and `+0.0` for
+     every positive one, which a `Silence` cannot reproduce, and the upstream's state advances
+     (a NaN or infinite upstream is already scrubbed to 0 by the multiply's `safeOut`, so that is
+     not the reason); `safeOut` once, at the multiply.
 3. `Affine` into `Eq`: an input gain/offset in the first section's read, an output gain/offset in
    the last section's write; with the `mul` walls gone the serial rule fuses the Eqs on both sides.
 4. `Affine` into `Shape`: an input gain applied where the upsampler reads its input (once per
@@ -203,8 +232,9 @@ parity, a mutation check, a rig A/B, a commit.
    values are known (per voice, constant for the voice): a `Times` whose block-constant operand
    is exactly 0 never renders its upstream, a `Plus` skips a dead branch, so a stage switched off
    by a param costs nothing instead of being rendered and zeroed. Two consequences the maintainer
-   accepted in principle: an `Inf` upstream gives 0 instead of NaN, and a dead branch with a noise
-   node stops drawing from the voice's stream (other noise in the voice gets a different, still
-   seeded, realisation).
+   accepted in principle: the zeros lose the sign the upstream sample would have given them
+   (`x · 0.0` is `±0.0` with `x`'s sign; a NaN or infinite upstream was already 0 through the
+   multiply's `safeOut`), and a dead branch with a noise node stops drawing from the voice's
+   stream (other noise in the voice gets a different, still seeded, realisation).
 6. The remaining linear neighbours only if the numbers say so (`Affine` into `Adsr`, the tap
    gain); then MEMORY, this catalogue, the census redone, a before/after on the device.

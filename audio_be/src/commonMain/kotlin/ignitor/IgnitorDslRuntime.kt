@@ -526,6 +526,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
         is IgnitorDsl.Times -> left.withMod() * right.withMod()
+        is IgnitorDsl.Affine -> inner.withMod().affine(pre.withMod(), mul.withMod(), add.withMod())
         is IgnitorDsl.Div -> left.withMod().div(right.withMod())
         is IgnitorDsl.Minus -> left.withMod().minus(right.withMod())
         is IgnitorDsl.Neg -> inner.withMod().neg()

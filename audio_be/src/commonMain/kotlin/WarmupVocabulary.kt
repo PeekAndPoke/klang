@@ -138,7 +138,15 @@ object WarmupVocabulary {
         val chosen = lfo.select(whenTrue = d, whenFalse = c)
         val variants = IgnitorDsl.Variants(listOf(chosen, s))
         val withParam = variants.mul(IgnitorDsl.Param(name = "warm", default = 0.5))
-        withParam.detune(7.0).optimizer(on = 1).mul(Constant(0.5))
+        // the optimizer's own node, block-constant coefficients (its only production shape): once
+        // with every coefficient set, once in the forward-fold shape (absent pre-add and add, the
+        // -0.0 identities), and once with a constant signal (the fill path)
+        val affine = IgnitorDsl.Affine(withParam, pre = Constant(0.05), mul = Constant(0.5), add = IgnitorDsl.Param(name = "offset", default = 0.1))
+        val forward = IgnitorDsl.Affine(affine, mul = Constant(0.9))
+        // the fill shape is block-constant, and a Plus folds a block-constant operand as a scalar
+        // without rendering it: a filter consumes it unconditionally, so the fill really runs
+        val filled = IgnitorDsl.Affine(Constant(0.25), pre = Constant(0.1), mul = Constant(0.2)).lowpass(1000.0)
+        forward.plus(filled).detune(7.0).optimizer(on = 1).mul(Constant(0.5))
     }
 
     /**

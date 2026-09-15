@@ -131,8 +131,9 @@ class ResourceWarehouse(
      * The one shared scratch pool. Engines render sequentially within a block, so one is enough.
      *
      * Sized HERE, once, to [SCRATCH_DEPTH] — not per voice at build. The plan said "the factory
-     * knows its graph's depth"; it does not, cheaply: the DSL tree has no walker, and a per-voice
-     * count would be a 78-arm `when` that every new node type must maintain, for a 1 KB buffer. The
+     * knows its graph's depth"; it does not, cheaply: a per-voice depth count would be a recursion
+     * over `IgnitorDsl.childNodes()` at every build, for a 1 KB buffer, and would still not know
+     * how deep the RUNTIME nests scratch (an affine's three coefficients, an oversampler). The
      * depth bound is a property of the corpus, not of one voice, and this pool is shared and never
      * shrinks, so one generous pre-size covers every graph a song has — the deepest shipped chain
      * nests well under half of it. The proof is not the number but the counter:

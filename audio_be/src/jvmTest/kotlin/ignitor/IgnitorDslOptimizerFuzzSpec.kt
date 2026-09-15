@@ -31,7 +31,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
     val blockFrames = 128
     val blocks = 3
     val sr = 44100
-    val trees = 1000
+    val trees = 1500
 
     /** What the generator actually produced over the run: the corpus must contain what it claims to. */
     class Stats {
@@ -39,6 +39,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         var reuses = 0
         var adversarialConstants = 0
         var hintsOff = 0
+        var affines = 0
     }
 
     fun ctx(random: Random): IgniteContext = IgniteContext(
@@ -101,7 +102,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
 
         val inner = tree(r, depth - 1, pool, stats)
         val k = IgnitorDsl.Constant(constant(r, stats))
-        val node: IgnitorDsl = when (r.nextInt(24)) {
+        val node: IgnitorDsl = when (r.nextInt(25)) {
             0 -> IgnitorDsl.Times(inner, k)
             1 -> IgnitorDsl.Times(k, inner)
             2 -> IgnitorDsl.Plus(inner, k)
@@ -146,7 +147,19 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                 )
             }
 
-            else -> IgnitorDsl.Lowpass(IgnitorDsl.Times(inner, k), freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 5000.0))
+            23 -> IgnitorDsl.Lowpass(IgnitorDsl.Times(inner, k), freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 5000.0))
+            // the optimizer's own node, authored (a wire may carry one; a fold must compose with it)
+            else -> {
+                stats.affines++
+
+                // the shapes a fold produces: absent pre-add or add is the -0.0 identity
+                IgnitorDsl.Affine(
+                    inner,
+                    pre = if (r.nextBoolean()) IgnitorDsl.Constant(-0.0) else IgnitorDsl.Constant(constant(r, stats)),
+                    mul = k,
+                    add = if (r.nextBoolean()) IgnitorDsl.Constant(-0.0) else IgnitorDsl.Constant(constant(r, stats)),
+                )
+            }
         }
 
         pool.add(node)
@@ -271,5 +284,6 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         withClue("reuses ${stats.reuses}") { (stats.reuses >= 50) shouldBe true }
         withClue("adversarial constants ${stats.adversarialConstants}") { (stats.adversarialConstants >= 100) shouldBe true }
         withClue("hints off ${stats.hintsOff}") { (stats.hintsOff >= 5) shouldBe true }
+        withClue("affines ${stats.affines}") { (stats.affines >= 20) shouldBe true }
     }
 })

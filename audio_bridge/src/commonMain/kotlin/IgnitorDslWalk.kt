@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge
  * Generic child enumeration and rebuild for [IgnitorDsl] trees, the substrate the graph
  * optimizer walks on.
  *
- * Both functions are EXHAUSTIVE expression-form `when`s over all 78 node types, with NO
+ * Both functions are EXHAUSTIVE expression-form `when`s over all 79 node types, with NO
  * `else` arm on purpose: a fallback would silently stop descending into any node added later,
  * so optimizations would quietly stop firing under it with nothing failing to compile. Adding a
  * node type must break this file.
@@ -36,6 +36,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Abs -> listOf(inner)
         is IgnitorDsl.Accelerate -> listOf(inner, semitones)
         is IgnitorDsl.Adsr -> listOf(inner, attackSec, decaySec, sustainLevel, releaseSec, declickSeconds, expK)
+        is IgnitorDsl.Affine -> listOf(inner, pre, mul, add)
         is IgnitorDsl.Bandpass -> listOf(inner, freq, q, analog)
         is IgnitorDsl.BerlinNoise -> listOf(rate, octaves, persistence)
         is IgnitorDsl.Bipolar -> listOf(inner)
@@ -153,6 +154,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
             declickSeconds = new[5],
             expK = new[6],
         )
+        is IgnitorDsl.Affine -> copy(inner = new[0], pre = new[1], mul = new[2], add = new[3])
         is IgnitorDsl.Bandpass -> copy(inner = new[0], freq = new[1], q = new[2], analog = new[3])
         is IgnitorDsl.BerlinNoise -> copy(rate = new[0], octaves = new[1], persistence = new[2])
         is IgnitorDsl.Bipolar -> copy(inner = new[0])

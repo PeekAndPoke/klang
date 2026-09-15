@@ -26,7 +26,7 @@ class IgnitorDslWalkSpec : StringSpec({
 
     // Distinct, order-revealing markers. PARAM-backed, not Constant, and that is load-bearing:
     // Constant.collectParams is a no-op, so with Constant markers the collectParams cross-check
-    // below would compare emptySet() against emptySet() for all 77 non-Param rows and guard
+    // below would compare emptySet() against emptySet() for all 78 non-Param rows and guard
     // exactly nothing. The name carries the slot index so a swapped pair is visible.
     fun m(i: Int): IgnitorDsl = IgnitorDsl.Param("p$i", 100.0 + i)
 
@@ -51,6 +51,7 @@ class IgnitorDslWalkSpec : StringSpec({
                 decayCurve = AdsrCurve.Linear,
                 releaseCurve = AdsrCurve.Linear,
             ), 7),
+        Triple("Affine", IgnitorDsl.Affine(inner = m(0), pre = m(1), mul = m(2), add = m(3)), 4),
         Triple("Bandpass", IgnitorDsl.Bandpass(inner = m(0), freq = m(1), q = m(2), analog = m(3)), 4),
         Triple("BerlinNoise", IgnitorDsl.BerlinNoise(rate = m(0), octaves = m(1), persistence = m(2)), 3),
         Triple("Bipolar", IgnitorDsl.Bipolar(inner = m(0)), 1),
@@ -182,8 +183,8 @@ class IgnitorDslWalkSpec : StringSpec({
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 78
-        corpus.map { it.first }.toSet().size shouldBe 78
+        corpus.size shouldBe 79
+        corpus.map { it.first }.toSet().size shouldBe 79
     }
 
     "every node reports exactly the declared number of children" {

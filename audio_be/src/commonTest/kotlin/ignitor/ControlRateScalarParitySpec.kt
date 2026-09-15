@@ -88,6 +88,13 @@ class ControlRateScalarParitySpec : StringSpec({
         )
     }
 
+    "affine scalar is bit-equal to the scratch render" {
+        assertScalarBitEqualsScratchRender(
+            sig = ConstantIgnitor(a).affine(ConstantIgnitor(0.25), ParamIgnitor("p", b), ConstantIgnitor(-1.5)),
+            reference = opq(a).affine(opq(0.25), opq(b), opq(-1.5)),
+        )
+    }
+
     "mul-by-constant scalar is bit-equal to the scratch render" {
         assertScalarBitEqualsScratchRender(
             sig = ParamIgnitor("p", b).mul(a),
@@ -221,6 +228,11 @@ class ControlRateScalarParitySpec : StringSpec({
 
     "times scalar clamps at SAFE_MAX" {
         (ConstantIgnitor(1e10) * ParamIgnitor("p", 1e10))
+            .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
+    }
+
+    "affine scalar clamps at SAFE_MAX" {
+        ConstantIgnitor(1e10).affine(ConstantIgnitor(-0.0), ParamIgnitor("p", 1e10), ConstantIgnitor(-0.0))
             .controlRateValueOrNull(0.0) shouldBe SAFE_MAX
     }
 

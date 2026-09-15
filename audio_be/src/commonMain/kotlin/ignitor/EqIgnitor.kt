@@ -27,9 +27,10 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * (four of the guitar tail's six). PER SECTION, not per Eq: the guitar chain has ONE
  * expression-backed param among ~6 sections; a per-Eq predicate would recompute every
  * section's tan() every block. The predicate looks THROUGH `MemoizingIgnitor` (which
- * `buildIgnitor` puts around every non-leaf node) and through a product of two
- * voice-constants — otherwise a composite that cannot change after note-on, such as the C5
- * `passes` cascade's staggered q, would be classified dynamic purely because of its wrapper.
+ * `buildIgnitor` puts around every non-leaf node), through a product of two voice-constants
+ * and through an affine of voice-constants (the same product once the optimizer folds it) —
+ * otherwise a composite that cannot change after note-on, such as the C5 `passes` cascade's
+ * staggered q, would be classified dynamic purely because of its wrapper.
  */
 internal class EqIgnitor(
     private val upstream: Ignitor,
@@ -71,6 +72,11 @@ internal class EqIgnitor(
             // section of an oscparam-driven cascade would re-derive its coefficients (a
             // `tan`) every block for a value that cannot change after note-on.
             is TimesIgnitor -> isVoiceConstant(p.a) && isVoiceConstant(p.b)
+
+            // The same product once the optimizer folds it into one affine node (step 2 of the
+            // arithmetic folds): voice-constant iff every operand is.
+            is AffineIgnitor ->
+                isVoiceConstant(p.inner) && isVoiceConstant(p.pre) && isVoiceConstant(p.mul) && isVoiceConstant(p.add)
 
             // Everything else — including FreqIgnitor, which is block-constant but NOT
             // voice-constant (note tracking must keep tracking).

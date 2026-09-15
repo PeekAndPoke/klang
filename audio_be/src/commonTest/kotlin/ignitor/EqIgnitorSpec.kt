@@ -682,6 +682,20 @@ class EqIgnitorSpec : StringSpec({
             ParamIgnitor("f", 1000.0),
             MemoizingIgnitor(FreqIgnitor * ConstantIgnitor(0.5412)),
         ).isStatic shouldBe false
+
+        // The staged cascade q as the optimizer will fold it (an affine of voice-constants) stays
+        // static; an affine over Freq stays dynamic. Without the arm every oscparam-driven
+        // cascade would re-derive its tan() per block once step 2 lands.
+        EqIgnitor.Section(
+            EqCore.LOWPASS,
+            ParamIgnitor("f", 1000.0),
+            MemoizingIgnitor(ParamIgnitor("q", 1.2).affine(ConstantIgnitor(-0.0), ConstantIgnitor(0.5412), ConstantIgnitor(-0.0))),
+        ).isStatic shouldBe true
+        EqIgnitor.Section(
+            EqCore.LOWPASS,
+            ParamIgnitor("f", 1000.0),
+            MemoizingIgnitor(FreqIgnitor.affine(ConstantIgnitor(-0.0), ConstantIgnitor(0.5412), ConstantIgnitor(-0.0))),
+        ).isStatic shouldBe false
     }
 
     "C5 production path: an oscparam-driven passes cascade configures ONCE per voice" {

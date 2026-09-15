@@ -860,6 +860,44 @@ sealed interface IgnitorDsl {
         }
     }
 
+    /**
+     * `mul · (x + pre) + add` in one pass: the optimizer's node for block-constant arithmetic (no
+     * door builds it; the fold rules of `optimize()` will, from step 2 of the arithmetic folds).
+     * One pre-add, one multiply, one add, in that order, so that BOTH authored orders fold bit for
+     * bit: `x.mul(a).add(b)` is `Affine(x, -0.0, a, b)` and `x.add(b).mul(a)` is
+     * `Affine(x, b, a, -0.0)`. Folding the second as `a · x + a · b` instead would be off by
+     * cancellation wherever `x ≈ -b`, every zero crossing of an offset-then-scale shape, which no
+     * relative margin survives.
+     *
+     * An ABSENT pre-add or add is `Constant(-0.0)`, the defaults: `v + (-0.0)` is `v` bit for bit
+     * for every `v` (both zeros, NaN, the infinities), where `v + 0.0` turns `-0.0` into `+0.0`.
+     * An authored `add(0.0)` therefore stays `Constant(0.0)` and keeps its effect. [mul] has no
+     * default: a chain without a multiply stays `Plus` nodes, because the multiply's clamp is
+     * what `Plus` refuses.
+     *
+     * The sample is sanitised the way the `Plus`/`Times`/`Plus` chain it replaces was: the
+     * multiply clamps once (`safeOut`, the `Times` contract), the adds do not (the `Plus` contract):
+     * `safeOut(mul · (x + pre)) + add`. A run of several multiplies composes to rounding only while
+     * no intermediate reaches the clamp at `SAFE_MAX`, which a rule has to guarantee before it
+     * composes them (the condition is on `x · product`, not on the product).
+     *
+     * [pre], [mul] and [add] are block-constant trees (a [Constant], a [Param], a [Freq]-derived
+     * expression), read once per block; a modulated coefficient still renders the chain's values,
+     * per sample through the node's own scratch path, slower than the chain and never what the
+     * optimizer builds.
+     */
+    @WireName("affine")
+    data class Affine(
+        val inner: IgnitorDsl,
+        val pre: IgnitorDsl = Constant(-0.0),
+        val mul: IgnitorDsl,
+        val add: IgnitorDsl = Constant(-0.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); pre.collectParams(out); mul.collectParams(out); add.collectParams(out)
+        }
+    }
+
     /** Divides the left signal by the right signal (per-sample division). */
     @WireName("div")
     data class Div(

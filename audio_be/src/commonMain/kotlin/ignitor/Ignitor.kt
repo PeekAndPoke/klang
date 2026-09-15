@@ -294,6 +294,103 @@ internal class TimesIgnitor(internal val a: Ignitor, internal val b: Ignitor) : 
     }
 }
 
+/**
+ * `mul · (x + pre) + add` in one pass: the runtime of `IgnitorDsl.Affine`, the optimizer's fold of
+ * block-constant arithmetic. Sanitised exactly like the `Plus`/`Times`/`Plus` chain it replaces:
+ * `safeOut(mul · (x + pre)) + add` (the Times contract scrubs per op, the Plus contract
+ * deliberately does not). An absent pre-add or add arrives as `-0.0`, which the two adds pass
+ * through bit for bit (`v + (-0.0)` is `v` for every `v`), so there is no branch for it.
+ *
+ * Cost, with all three coefficients block-constant (the only shape the optimizer builds): three
+ * scalar reads per block and, per sample, two adds, one multiply and one clamp, in one pass
+ * where the chain took two or three. With ANY modulated coefficient every coefficient renders
+ * per sample through scratch, three buffers held at once where the chain holds one: correct, and
+ * slower than the chain; a node for the optimizer, not a door.
+ */
+fun Ignitor.affine(pre: Ignitor, mul: Ignitor, add: Ignitor): Ignitor = AffineIgnitor(this, pre, mul, add)
+
+/**
+ * `internal` with `internal` operands, like [TimesIgnitor]: `EqIgnitor` looks through it to tell a
+ * voice-constant section coefficient (the C5 passes cascade, once the optimizer folds its
+ * `Times(q, Constant)` into this), and the spec asserts the DSL node lowers to this class.
+ */
+internal class AffineIgnitor(
+    internal val inner: Ignitor,
+    internal val pre: Ignitor,
+    internal val mul: Ignitor,
+    internal val add: Ignitor,
+) : Ignitor {
+    private val innerConst = inner.isBlockConstant
+    private val coefficientsConst = pre.isBlockConstant && mul.isBlockConstant && add.isBlockConstant
+
+    override val isBlockConstant: Boolean = innerConst && coefficientsConst
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        if (coefficientsConst) {
+            val kp = pre.controlRateValueOrNull(freqHz)
+            val km = mul.controlRateValueOrNull(freqHz)
+            val ka = add.controlRateValueOrNull(freqHz)
+
+            if (kp != null && km != null && ka != null) {
+                if (innerConst) {
+                    val kx = inner.controlRateValueOrNull(freqHz)
+
+                    if (kx != null) {
+                        buffer.fill(safeOut(km * (kx + kp)) + ka, ctx.offset, ctx.windowEnd)
+
+                        return
+                    }
+                }
+
+                inner.generate(buffer, freqHz, ctx)
+
+                // the window is read AFTER the child render, like every sibling combinator
+                val end = ctx.windowEnd
+
+                for (i in ctx.offset until end) {
+                    buffer[i] = safeOut(km * (buffer[i] + kp)) + ka
+                }
+
+                return
+            }
+
+            // A block-constant coefficient whose scalar came back null is a contract breach; the
+            // scratch path below is correct for any child: degrade, never throw on the render
+            // thread (the Plus policy).
+        }
+
+        // A modulated coefficient: per sample, all three through scratch.
+        inner.generate(buffer, freqHz, ctx)
+
+        ctx.scratchBuffers.use { p ->
+            pre.generate(p, freqHz, ctx)
+
+            ctx.scratchBuffers.use { m ->
+                mul.generate(m, freqHz, ctx)
+
+                ctx.scratchBuffers.use { a ->
+                    add.generate(a, freqHz, ctx)
+
+                    val end = ctx.windowEnd
+
+                    for (i in ctx.offset until end) {
+                        buffer[i] = safeOut(m[i] * (buffer[i] + p[i])) + a[i]
+                    }
+                }
+            }
+        }
+    }
+
+    override fun controlRateValueOrNull(freqHz: Double): Double? {
+        val x = inner.controlRateValueOrNull(freqHz) ?: return null
+        val p = pre.controlRateValueOrNull(freqHz) ?: return null
+        val m = mul.controlRateValueOrNull(freqHz) ?: return null
+        val a = add.controlRateValueOrNull(freqHz) ?: return null
+
+        return safeOut(m * (x + p)) + a
+    }
+}
+
 /** Scale signal amplitude per-sample by an audio-rate [factor]. Delegates to [times]. */
 fun Ignitor.mul(factor: Ignitor): Ignitor = this * factor
 

@@ -134,6 +134,10 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- arithmetic / math ----------------------------------------------------------------------------------
     "Plus" { check(IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()) }
     "Times" { check(IgnitorDsl.Sine() * IgnitorDsl.Triangle()) }
+    "Affine" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), pre = IgnitorDsl.Constant(0.1), mul = IgnitorDsl.Param("level", 0.5), add = IgnitorDsl.Constant(-2.0))) }
+    // the absent pre-add and add are -0.0, and the sign must survive the wire (Constant is a data
+    // class, and Double equality on JVM and JS tells -0.0 from 0.0, so a normalising codec fails here)
+    "Affine, the -0.0 identities" { check(IgnitorDsl.Affine(IgnitorDsl.Sine(), mul = IgnitorDsl.Constant(2.0))) }
     "Div" { check(IgnitorDsl.Sine().div(IgnitorDsl.Param("divisor", 2.0))) }
     "Minus" { check(IgnitorDsl.Sine().minus(IgnitorDsl.Sawtooth())) }
     "Neg" { check(IgnitorDsl.Sine().neg()) }
