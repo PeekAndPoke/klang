@@ -17,6 +17,16 @@
   structure or the fuzz's work count can see it).
 - Lesson from the first fuzz run: the `passes = N` expansion repeats a section's `Param` per
   section in `collectParams`; consumers dedupe by name, and the laws compare distinct names.
+- Steps 1 and 2 (2026-09-15): `IgnitorDsl.Affine(inner, pre, mul, add)` = `mul · (x + pre) + add`
+  in one pass, sanitised like the `Plus`/`Times`/`Plus` chain (`safeOut(mul · (x + pre)) + add`),
+  an absent pre-add or add being `Constant(-0.0)` (the bitwise identity of the add; `+ 0.0`
+  flips `-0.0`), `mul` without a default. The pre-add exists because `a·x + a·b` for
+  `x.add(b).mul(a)` cancels at every zero crossing. Rule R2 folds one node per
+  `x [.add] .mul [.add]`, never across an addition, composes literal multiply runs only where the
+  chain's clamp cannot differ (growing runs; attenuating runs over a clamped input), folds a Param
+  multiply alone, and leaves a left-hand scalar with a Param where it was written (param order).
+  On its own it changes nothing measurable (a lone `mul` was one pass already); it is the shape
+  the Eq and shaper gain folds (steps 3 and 4) remove entirely.
 
 ## Analog drift steps per block and ramps across it (2026-09-15)
 

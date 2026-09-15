@@ -195,8 +195,18 @@ parity, a mutation check, a rig A/B, a commit.
    offset-then-scale shape, which no relative margin survives. Wire type, KSP codec, walk arms,
    warmup vocabulary (all three fast shapes), `EqIgnitor` sees through it for the static
    cascade q, `AffineIgnitorSpec` (both orders bit for bit, the sign of zero included).
-2. The chain fold, with the rule the round-2 review derived (what one node covers exactly, what
-   composition loses, where the clamp bites):
+2. DONE 2026-09-15 (rule R2 in `IgnitorDslOptimizer.kt`; 14 rule-table rows, 5 render-parity
+   rows, the fuzz and the song corpus at the margin, nine mutations red). Measured (rig and live
+   A/B, seeded): no change on its own (rhythm rig 0.0345 -> 0.0348, `all stock` 0.0219 ->
+   0.0219, the live song 0.0786 -> 0.0791, all inside noise), and that is the arithmetic: a lone
+   `mul(k)` was already one pass (`generate` plus an in-place multiply) and an Affine over it is
+   one pass with two more adds. The rule pays only where it merges (`mul` then `add` in one pass,
+   a composed run), which the guitar has few of; its job is to be the shape steps 3 and 4 fold
+   into the Eq and the shaper, where the pass disappears. One thing the fuzz taught the rule: a
+   scalar on the LEFT of a multiply or an add that carries a `Param` stays where it was written,
+   because an Affine lists its signal's params before its coefficients' and first-occurrence
+   order is a contract the UI keys on. The rule, as derived by the round-2 review of step 1
+   (what one node covers exactly, what composition loses, where the clamp bites):
    - One node folds exactly the authored shape `x [.add(p)] .mul(m) [.add(a)]`: at most one add
      before the multiply, exactly one multiply, at most one add after. `minus(b)` folds as
      `pre = -b` (a bare subtract is a bare add of the negation, bitwise); a leading

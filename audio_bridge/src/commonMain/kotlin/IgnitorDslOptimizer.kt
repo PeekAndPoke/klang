@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sqrt
 
@@ -45,7 +46,9 @@ import kotlin.math.sqrt
  *
  * ## Scope today, and what is deliberately left
  *
- * This pass implements serial filter fusion (R1). It is intentionally not a complete optimizer;
+ * This pass implements serial filter fusion (R1) and the arithmetic fold into [IgnitorDsl.Affine]
+ * (R2, 2026-09-15; an Affine is a wall for R1 until the Eq gain fold lands). It is intentionally
+ * not a complete optimizer;
  * see `docs/tasks/ignitor-optimizer-followups.md` for the catalogue of cases it does NOT yet
  * claim, each with the reason. The kill switch [IgnitorDsl.OptimizerHint] disables it for a
  * whole graph so any suspicion can be settled by ear.
@@ -187,7 +190,7 @@ private fun rewrite(node: IgnitorDsl, refCounts: RefCounts, memo: IdentityMemo):
         return dissolved
     }
 
-    val result = fuseSerialFilters(rebuilt, node, refCounts)
+    val result = foldArithmetic(fuseSerialFilters(rebuilt, node, refCounts), node, refCounts)
 
     memo.put(node, result)
     return result
@@ -353,3 +356,179 @@ private fun IgnitorDsl.filterInner(): IgnitorDsl? = when (this) {
  */
 private fun IgnitorDsl.isLiteralZero(): Boolean = this is IgnitorDsl.Constant && value == 0.0
 
+
+// ═════════════════════════════════════════════════════════════════════════════
+// R2 — the arithmetic fold (2026-09-15)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Whether a tree is a control-rate scalar: a [IgnitorDsl.Constant], a [IgnitorDsl.Param],
+ * [IgnitorDsl.Freq], or pointwise arithmetic over those. Such a tree is a coefficient the runtime
+ * reads once per block; anything else (a source, a filter, an envelope) is a signal.
+ */
+private fun IgnitorDsl.isControlRate(): Boolean = when (this) {
+    is IgnitorDsl.Constant, is IgnitorDsl.Param, IgnitorDsl.Freq -> true
+    is IgnitorDsl.Plus -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Minus -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Times -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Div -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Min -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Max -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Pow -> base.isControlRate() && exp.isControlRate()
+    is IgnitorDsl.Mod -> left.isControlRate() && right.isControlRate()
+    is IgnitorDsl.Neg -> inner.isControlRate()
+    is IgnitorDsl.Abs -> inner.isControlRate()
+    is IgnitorDsl.Sq -> inner.isControlRate()
+    is IgnitorDsl.Sqrt -> inner.isControlRate()
+    is IgnitorDsl.Exp -> inner.isControlRate()
+    is IgnitorDsl.Log -> inner.isControlRate()
+    is IgnitorDsl.Recip -> inner.isControlRate()
+    is IgnitorDsl.Sign -> inner.isControlRate()
+    is IgnitorDsl.Tanh -> inner.isControlRate()
+    is IgnitorDsl.Bipolar -> inner.isControlRate()
+    is IgnitorDsl.Unipolar -> inner.isControlRate()
+    is IgnitorDsl.Floor -> inner.isControlRate()
+    is IgnitorDsl.Ceil -> inner.isControlRate()
+    is IgnitorDsl.Round -> inner.isControlRate()
+    is IgnitorDsl.Frac -> inner.isControlRate()
+    is IgnitorDsl.Clamp -> inner.isControlRate() && lo.isControlRate() && hi.isControlRate()
+    is IgnitorDsl.Lerp -> left.isControlRate() && right.isControlRate() && t.isControlRate()
+    is IgnitorDsl.Affine -> inner.isControlRate() && pre.isControlRate() && mul.isControlRate() && add.isControlRate()
+    else -> false
+}
+
+/**
+ * Whether a scalar operand may move to the RIGHT of the signal in the folded node. `collectParams`
+ * order (first occurrence) is a contract the UI keys on, and an Affine lists its signal's params
+ * before its coefficients': a left-hand scalar that carries a Param would change that order, so
+ * it stays where it was written; a literal carries none and folds either way.
+ */
+private fun IgnitorDsl.carriesNoParams(): Boolean = mutableListOf<IgnitorDsl.Param>().also { collectParams(it) }.isEmpty()
+
+/** The absent pre-add or add: `Constant(-0.0)`, the bitwise identity of the add (see [IgnitorDsl.Affine]). */
+private val ABSENT: IgnitorDsl = IgnitorDsl.Constant(-0.0)
+
+private fun IgnitorDsl.isAbsent(): Boolean = this is IgnitorDsl.Constant && value == 0.0 && 1.0 / value < 0.0
+
+/** A finite literal multiply coefficient, the only kind a run composes. */
+private fun IgnitorDsl.literalOrNull(): Double? = (this as? IgnitorDsl.Constant)?.value?.takeIf { it.isFinite() }
+
+/**
+ * The output of a clamping op is bounded by `SAFE_MAX`; an attenuating run composes over it only.
+ * Every `Times` path clamps; an `Affine` clamps at its multiply and adds AFTER it, so only an
+ * Affine without an add is bounded (`2x + 8e15` is not).
+ */
+private fun IgnitorDsl.isClamped(): Boolean =
+    (this is IgnitorDsl.Affine && add.isAbsent()) || this is IgnitorDsl.Times
+
+/** Sees through dissolved hints (as [fuseSerialFilters] does) and answers whether [original] may be absorbed. */
+private fun RefCounts.owns(original: IgnitorDsl): Boolean {
+    var node = original
+
+    while (node is IgnitorDsl.OptimizerHint && isExclusivelyOwned(node)) {
+        node = node.inner
+    }
+
+    return isExclusivelyOwned(node)
+}
+
+/**
+ * Folds block-constant arithmetic into [IgnitorDsl.Affine], one node per authored shape
+ * `x [.add(p)] .mul(m) [.add(a)]`, on the post-order walk: a `Times` with exactly one
+ * control-rate side folds its signal side, absorbing a directly preceding constant add or
+ * subtract as the pre-add and composing a literal run of multiplies where the chain's clamp
+ * cannot differ from the fold's; a `Plus` with a control-rate side fills an owned Affine's
+ * absent add. Never across an addition, never without a multiply, never a modulated operand,
+ * never a shared node (the guard consults the ORIGINAL child's refcount, like R1).
+ *
+ * [original] is the pre-rewrite node; its children correspond to [node]'s by position.
+ */
+private fun foldArithmetic(node: IgnitorDsl, original: IgnitorDsl, refCounts: RefCounts): IgnitorDsl = when (node) {
+    is IgnitorDsl.Times -> {
+        val orig = original as? IgnitorDsl.Times
+        val leftScalar = node.left.isControlRate()
+        val rightScalar = node.right.isControlRate()
+
+        when {
+            orig == null || leftScalar == rightScalar -> node
+            rightScalar -> foldMultiply(node.left, node.right, orig.left, refCounts)
+            node.left.carriesNoParams() -> foldMultiply(node.right, node.left, orig.right, refCounts)
+            else -> node
+        }
+    }
+
+    is IgnitorDsl.Plus -> {
+        val orig = original as? IgnitorDsl.Plus
+        val leftScalar = node.left.isControlRate()
+        val rightScalar = node.right.isControlRate()
+
+        when {
+            orig == null || leftScalar == rightScalar -> node
+            rightScalar -> foldAdd(node, node.left, node.right, orig.left, refCounts)
+            node.left.carriesNoParams() -> foldAdd(node, node.right, node.left, orig.right, refCounts)
+            else -> node
+        }
+    }
+
+    else -> node
+}
+
+/** `signal · k`, [signal] already rewritten, [originalSignal] its pre-rewrite node. */
+private fun foldMultiply(signal: IgnitorDsl, k: IgnitorDsl, originalSignal: IgnitorDsl, refCounts: RefCounts): IgnitorDsl {
+    if (refCounts.owns(originalSignal)) {
+        // a constant add or subtract directly under the multiply becomes the pre-add
+        if (signal is IgnitorDsl.Plus) {
+            val leftScalar = signal.left.isControlRate()
+            val rightScalar = signal.right.isControlRate()
+
+            if (rightScalar && !leftScalar) {
+                return IgnitorDsl.Affine(signal.left, pre = signal.right, mul = k, add = ABSENT)
+            }
+
+            if (leftScalar && !rightScalar && signal.left.carriesNoParams()) {
+                return IgnitorDsl.Affine(signal.right, pre = signal.left, mul = k, add = ABSENT)
+            }
+        }
+
+        if (signal is IgnitorDsl.Minus && signal.right.isControlRate() && !signal.left.isControlRate()) {
+            val b = signal.right
+            val negated: IgnitorDsl = if (b is IgnitorDsl.Constant) IgnitorDsl.Constant(-b.value) else IgnitorDsl.Neg(b)
+
+            return IgnitorDsl.Affine(signal.left, pre = negated, mul = k, add = ABSENT)
+        }
+
+        // a literal run of multiplies composes into the inner node's coefficient while the
+        // chain's per-op clamp and the fold's single clamp cannot differ: a growing run always
+        // (both saturate at SAFE_MAX), an attenuating run only over an input a clamping op has
+        // already bounded, never a mixed run (the condition is on x · product, not on the product)
+        if (signal is IgnitorDsl.Affine && signal.add.isAbsent() && signal.pre.isAbsent()) {
+            val m = signal.mul.literalOrNull()
+            val factor = k.literalOrNull()
+
+            if (m != null && factor != null) {
+                val product = m * factor
+                val growing = abs(m) >= 1.0 && abs(factor) >= 1.0
+                val attenuating = abs(m) <= 1.0 && abs(product) <= 1.0 && signal.inner.isClamped()
+
+                // the composed constant must be a normal double: an overflow saturates where the
+                // chain does not, a subnormal carries a rounding error far above the margin
+                val normal = product.isFinite() && (product == 0.0 || abs(product) >= 2.2250738585072014e-308)
+
+                if ((growing || attenuating) && normal) {
+                    return signal.copy(mul = IgnitorDsl.Constant(product))
+                }
+            }
+        }
+    }
+
+    return IgnitorDsl.Affine(signal, pre = ABSENT, mul = k, add = ABSENT)
+}
+
+/** `signal + k`: fills an owned Affine's absent add; any other add stays a Plus (no multiply, no Affine). */
+private fun foldAdd(node: IgnitorDsl, signal: IgnitorDsl, k: IgnitorDsl, originalSignal: IgnitorDsl, refCounts: RefCounts): IgnitorDsl {
+    if (signal is IgnitorDsl.Affine && signal.add.isAbsent() && refCounts.owns(originalSignal)) {
+        return signal.copy(add = k)
+    }
+
+    return node
+}

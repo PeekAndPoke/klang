@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
+import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.tap
 import kotlin.math.abs
 import kotlin.random.Random
@@ -500,6 +501,32 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 q = IgnitorDsl.Constant(0.707),
             ).lowpass(5300.0, 0.707),
             freqs = listOf(110.0, 220.0, 440.0, 880.0),
+        )
+    }
+
+    "R2: a multiply then an add folds into one Affine within the margin" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.4)).plus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
+    }
+
+    "R2: an add then a multiply folds with the pre-add, exact at the zero crossings" {
+        // the offset-then-scale shape whose zero crossings a distributed fold would miss
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(0.5)).mul(IgnitorDsl.Constant(-2.0)), minPeak = 0.1)
+    }
+
+    "R2: a growing literal run composes; a mixed run stays two nodes; both within the margin" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(2.0)).mul(IgnitorDsl.Constant(2.0)).plus(IgnitorDsl.Constant(1.0)), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(100.0)).mul(IgnitorDsl.Constant(0.01)), minPeak = 0.1)
+    }
+
+    "R2: a Param level and a Freq-tracking coefficient fold and render within the margin" {
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Param("level", 0.6)), oscParams = mapOf("level" to 0.6), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Freq.mul(IgnitorDsl.Constant(0.001))), minPeak = 0.1)
+    }
+
+    "R2: a level knob between two filters folds and the filters stay put, within the margin" {
+        assertOptimizeIsInaudible(
+            IgnitorDsl.Sawtooth().lowpass(2000.0).mul(IgnitorDsl.Constant(0.5)).highpass(120.0).mul(IgnitorDsl.Constant(1.2)),
+            minPeak = 0.05,
         )
     }
 
