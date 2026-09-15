@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -20,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.tap
@@ -28,10 +30,16 @@ import kotlin.random.Random
 
 /**
  * THE promise of the optimizer, at the only level that can prove it: a tree and its optimized
- * twin must render the SAME BITS through the real runtime.
+ * twin must render the same samples through the real runtime, within `OPTIMIZER_PARITY`
+ * (1e-12 relative, NaN for NaN, infinity for infinity; bit-identity until 2026-09-15, a margin
+ * since, so that block-constant arithmetic may fold). The rules that ship today still render
+ * bit-identical; the margin is what the arithmetic folds will be held to.
  *
  * `IgnitorDslOptimizerSpec` (audio_bridge) pins the tree shapes; this pins that the rewrite is
  * inaudible. A rule that fuses the wrong thing shows up here even when the shape looks right.
+ * The harness also pins that control-rate semantics survive (a block-constant tree stays
+ * block-constant with the same value) and, on the warmup vocabulary, that nothing the engine
+ * can build drifts under the pass.
  *
  * Both trees are rendered with their OWN same-seeded `Random`, which D3c made possible
  * (`toExciter(random = ...)` + `IgniteContext(random = ...)`). That matters: dossier item 10's
@@ -75,20 +83,30 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
      * [expectFused] is the liveness half: without it every row here would pass if `optimize()`
      * were the identity function, and `register()` degrades to exactly that on a throw.
      */
+    /** Same sample within the margin: NaN for NaN, an infinity for the same infinity, else relative. */
+    fun withinParity(a: Double, b: Double): Boolean = when {
+        a.isNaN() || b.isNaN() -> a.isNaN() && b.isNaN()
+        a.isInfinite() || b.isInfinite() -> a == b
+        else -> abs(a - b) <= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), 1e-300)
+    }
+
     fun assertOptimizeIsInaudible(
         authored: IgnitorDsl,
         freqs: List<Double> = listOf(220.0, 440.0),
         offset: Int = 0,
         length: Int = blockFrames,
-        expectFused: Boolean = true,
+        // null: this row does not care whether the pass rewrote the tree (a corpus row)
+        expectFused: Boolean? = true,
         oscParams: Map<String, Double>? = null,
         minPeak: Double = 0.0,
     ) {
         val optimized = authored.optimize()
         var peak = 0.0
 
-        withClue("optimizer must actually have rewritten this tree") {
-            (optimized !== authored) shouldBe expectFused
+        if (expectFused != null) {
+            withClue("optimizer must actually have rewritten this tree") {
+                (optimized !== authored) shouldBe expectFused
+            }
         }
 
         for (f in freqs) {
@@ -141,10 +159,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                         peak = abs(a0)
                     }
                     // NaN compares as NaN: payload bits are outside the contract (EqCoreSpec).
-                    if (!(bufA[i].isNaN() && bufB[i].isNaN())) {
-                        withClue("freq=$f sample=$i") {
-                            bufA[i].toRawBits() shouldBe bufB[i].toRawBits()
-                        }
+                    withClue("freq=$f sample=$i: ${bufA[i]} vs ${bufB[i]}") {
+                        withinParity(bufA[i], bufB[i]) shouldBe true
                     }
                 }
                 // The fused path renders upstream into the CALLER's buffer where the chained
@@ -166,6 +182,29 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         if (minPeak > 0.0) {
             withClue("both trees rendered (near) silence — the parity assertion was vacuous") {
                 peak shouldBeGreaterThan minPeak
+            }
+        }
+
+        // Control-rate semantics survive: a parameter consumer reads a block-constant tree as one
+        // scalar per block and never renders it, so the optimized twin must be block-constant too,
+        // with the same value.
+        val a = authored.toExciter(oscParams, random = Random(seed))
+        val b = optimized.toExciter(oscParams, random = Random(seed))
+
+        withClue("block-constant survives the pass") { b.isBlockConstant shouldBe a.isBlockConstant }
+
+        if (a.isBlockConstant) {
+            for (f in freqs) {
+                val va = a.controlRateValueOrNull(f)
+                val vb = b.controlRateValueOrNull(f)
+
+                withClue("control-rate value at $f: $va vs $vb") {
+                    (va == null) shouldBe (vb == null)
+
+                    if (va != null && vb != null) {
+                        withinParity(va, vb) shouldBe true
+                    }
+                }
             }
         }
     }
@@ -462,6 +501,14 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             ).lowpass(5300.0, 0.707),
             freqs = listOf(110.0, 220.0, 440.0, 880.0),
         )
+    }
+
+    "the warmup vocabulary: every sound the engine can build renders within the margin under the pass" {
+        // The vocabulary executes every IgnitorDsl node kind (WarmupVocabularySpec keeps it
+        // complete), so a rule that touches a node kind no hand-written row covers is caught here.
+        for ((name, dsl) in WarmupVocabulary.sounds) {
+            withClue(name) { assertOptimizeIsInaudible(dsl, expectFused = null) }
+        }
     }
 
     "the production sub-block onset shape is inaudible (offset != 0, partial length)" {

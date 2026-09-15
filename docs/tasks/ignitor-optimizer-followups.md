@@ -4,11 +4,18 @@ The optimizer (`audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt`) deli
 covering the common case reliably rather than every case. This is the catalogue of what it leaves
 on the table, each with the reason and the trap to watch for. Ordered by expected value.
 
-**The invariant every entry below must respect:** nothing ever moves. Only adjacent fusible
-filters collapse. That is stricter than the maths requires, because a gain multiply commutes with
-a linear filter on paper but `k * lowpass(x)` and `lowpass(k * x)` do not produce the same bits,
-and bit-identity is the hard promise. Any future rule that reorders is a different project with a
-different guarantee.
+**The invariant every entry below must respect (revised 2026-09-15):** only adjacent nodes
+combine, only under linear algebra, never across a nonlinear node, never absorbing a shared
+subtree, and the optimized graph renders within `OPTIMIZER_PARITY` (1e-12 relative, NaN for
+NaN, infinity for infinity) of the authored one. Until 2026-09-15 the promise was bit-identity;
+the maintainer replaced it with that margin ("off by a margin that has no musical meaning"), which
+admits folding block-constant arithmetic and gains into neighbouring linear nodes. The guards:
+`IgnitorDslOptimizerSpec` (the rule table: what folds and, the more important half, what must
+not), `IgnitorDslOptimizerRenderSpec` (authored vs optimized within the margin on the shapes
+people write, the warmup vocabulary, and control-rate semantics), `OptimizerSongParitySpec`
+(every inlined instrument of every builtin song), `IgnitorDslOptimizerFuzzSpec` (a thousand
+generated graphs with adversarial constants, the pass's laws, and `IgnitorRegistry` swallowing no
+failure). Every new rule brings rows to the table and is mutation-checked against these.
 
 ## 1. R2 — parallel tap fusion (biggest win, not implemented)
 
@@ -173,3 +180,31 @@ a modulation whose fastest layer has a 50 ms time constant. Stepping the lanes o
 and interpolating the multiplier across it is the candidate; not bit-identical, audibly the same
 wander (the per-sample residue is noise sidebands far below the drift depth), to be settled by
 ear on the guitars and the marimba (`lead: no analog` is 13 %, `trommel: no analog` 15 %).
+
+## The arithmetic folds (plan, 2026-09-15, maintainer: "folding pure arithmetic into each ignitor")
+
+Step 0 (DONE 2026-09-15): the invariant above, `OPTIMIZER_PARITY`, the corpora and the fuzz.
+Each later step is its own deliverable: rule-table rows first (red), then the rule, its render
+parity, a mutation check, a rig A/B, a commit.
+
+1. `IgnitorDsl.Affine(inner, mul, add)` = `mul · x + add`, one pass, coefficients block-constant
+   and evaluated once per block; `isBlockConstant`/`controlRateValueOrNull` propagate. Wire type,
+   KSP codec, warmup vocabulary entry. No rule yet.
+2. The chain fold: `Times`/`Plus`/`Minus`/`Div` with a block-constant operand collapse into
+   `Affine`, composing as the walk unwinds (`Affine(Affine(x, a1, b1), a2, b2)` =
+   `Affine(x, a2·a1, a2·b1 + b2)`); `mul(lfo)` stays `Times`; refcount 1 only. Never elide a
+   multiply because its constant is 0 (`Inf · 0 = NaN` stays), keep `safeOut` at the write.
+3. `Affine` into `Eq`: an input gain/offset in the first section's read, an output gain/offset in
+   the last section's write; with the `mul` walls gone the serial rule fuses the Eqs on both sides.
+4. `Affine` into `Shape`: an input gain applied where the upsampler reads its input (once per
+   input sample); `distort` lowers to `Shape(Drive(x))`, so every distortion stage takes it.
+5. Dead and identity nodes (maintainer, 2026-09-15): `add(Constant(0))` and `mul(Constant(1))`
+   drop; `mul(Constant(0))` makes its upstream `Silence`. And at BUILD time, where `Osc.param`
+   values are known (per voice, constant for the voice): a `Times` whose block-constant operand
+   is exactly 0 never renders its upstream, a `Plus` skips a dead branch, so a stage switched off
+   by a param costs nothing instead of being rendered and zeroed. Two consequences the maintainer
+   accepted in principle: an `Inf` upstream gives 0 instead of NaN, and a dead branch with a noise
+   node stops drawing from the voice's stream (other noise in the voice gets a different, still
+   seeded, realisation).
+6. The remaining linear neighbours only if the numbers say so (`Affine` into `Adsr`, the tap
+   gain); then MEMORY, this catalogue, the census redone, a before/after on the device.

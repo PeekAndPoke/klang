@@ -11,18 +11,24 @@ import kotlin.math.sqrt
 
 /**
  * Pure `IgnitorDsl -> IgnitorDsl` rewrite pass: collapses filter chains that were authored as
- * separate nodes into fused [IgnitorDsl.Eq] sections, without changing a single sample.
+ * separate nodes into fused [IgnitorDsl.Eq] sections, without changing what the graph renders.
  *
- * ## The one rule that makes this safe
+ * ## The rule that makes this safe (revised 2026-09-15)
  *
- * **Nothing ever moves. Only ADJACENT fusible filters collapse.**
+ * **Only ADJACENT nodes combine, only under linear algebra, and the result renders within
+ * [OPTIMIZER_PARITY] of the authored graph.** The pass never reorders across a node it does
+ * not recognise and never crosses a nonlinear one: `sine().bandpass().distort().lowpass()`
+ * yields two independent one-section Eqs, because the distort between them is a wall. A shared
+ * subtree (refcount above one) is never absorbed.
  *
- * That is stricter than it needs to be mathematically, and deliberately so. A gain multiply
- * commutes with a linear filter on paper, but `k * lowpass(x)` and `lowpass(k * x)` do not
- * produce the same BITS, and bit-identity is a hard requirement here. So the pass never
- * reorders, never hoists, and never crosses a node it does not recognise. A chain like
- * `sine().bandpass().distort().lowpass()` yields two independent one-section Eqs, because the
- * distort between them is a wall.
+ * Until 2026-09-15 the promise was bit-identity, which forbade any rewrite that moves a
+ * multiply. The maintainer replaced it with a margin: the rendered samples of the optimized
+ * graph may differ from the authored graph's by rounding, at most [OPTIMIZER_PARITY] relative
+ * (-240 dB, no musical meaning), NaN for NaN and infinity for infinity. That admits folding
+ * block-constant arithmetic (`x.mul(2).mul(2).add(10)` as one affine pass) and folding an
+ * affine into a neighbouring linear node's gain, which bit-identity could not. Every rule is
+ * held to the margin by `IgnitorDslOptimizerRenderSpec` (the shapes people write, the warmup
+ * vocabulary) and `IgnitorDslOptimizerFuzzSpec` (generated graphs, adversarial constants).
  *
  * ## Two passes
  *
@@ -44,6 +50,12 @@ import kotlin.math.sqrt
  * claim, each with the reason. The kill switch [IgnitorDsl.OptimizerHint] disables it for a
  * whole graph so any suspicion can be settled by ear.
  */
+/**
+ * The margin an optimized graph may differ from its authored graph by, per sample, relative to
+ * the larger magnitude: rounding, not sound. NaN must stay NaN and an infinity an infinity.
+ */
+const val OPTIMIZER_PARITY: Double = 1e-12
+
 fun IgnitorDsl.optimize(): IgnitorDsl {
     val scan = scanTree()
 

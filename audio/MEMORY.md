@@ -1,5 +1,23 @@
 # Klang Audio — Memory
 
+## The ignitor optimizer's promise is a margin now (2026-09-15)
+
+- `OPTIMIZER_PARITY` (audio_bridge, 1e-12 relative, NaN for NaN, infinity for infinity) replaces
+  bit-identity as what `IgnitorDsl.optimize()` promises, so that block-constant arithmetic and
+  gains may fold into neighbouring linear nodes (the plan and its steps:
+  `docs/tasks/ignitor-optimizer-followups.md`). The shipped rules still render bit-identical.
+- Guards, all green on the current pass: the rule table (`IgnitorDslOptimizerSpec`), render
+  parity within the margin plus control-rate semantics and the warmup vocabulary
+  (`IgnitorDslOptimizerRenderSpec`), every builtin song's instruments (`OptimizerSongParitySpec`,
+  root module), and a thousand generated graphs with adversarial constants, the pass's laws
+  (idempotent, work never grows, params survive) and a zero `optimizerFailures` count
+  (`IgnitorDslOptimizerFuzzSpec`, jvmTest: it counts by reflection). Mutation-checked: a fused
+  coefficient one percent off goes red in the render rows and the fuzz; the sharing guard
+  disabled goes red in the rule table (a forked LINEAR subtree renders the same bits, so only
+  structure or the fuzz's work count can see it).
+- Lesson from the first fuzz run: the `passes = N` expansion repeats a section's `Param` per
+  section in `collectParams`; consumers dedupe by name, and the laws compare distinct names.
+
 ## Analog drift steps per block and ramps across it (2026-09-15)
 
 - Every `AnalogDrift` lane (the two-layer OU pitch drift) is built at the BLOCK rate
