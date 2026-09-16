@@ -42,12 +42,12 @@
   the master's `damp` went because `lowpass` spans the same range. A third positional argument is now
   `lowpass`. `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
 
-- **Send-effect defaults are musical and shared (2026-09-16).** A voice that touches `delay` or `reverb`
-  gets, for every slot it leaves unset, the master stage's default: delay wet 0.25, time 0.25, feedback
-  0.3, cap 1; reverb wet 0.25, size 5. The fill is engine-side (`VoiceFactory`, constants in
-  `audio_bridge/constants/SendEffectDefaults.kt`), so sprudel voice data and the slot readers stay raw:
-  `reverb.size` on a voice that never set it reads nothing, not 5. A bare `reverb(0.4)` or `delay(0.4)` is
-  audible now. `docs/tasks/delay-names-and-send-defaults.md`.
+- **A `delay(...)` / `reverb(...)` call sets every slot (2026-09-16).** Every slot still unset takes the
+  shared default (`audio_bridge/constants/SendEffectDefaults.kt`, the master stages' too): delay wet 0.25,
+  time 0.25, feedback 0.3, cap 1; reverb wet 0.25, size 5. Filled at WRITE time in the slot mutations, so a
+  slot an earlier call set keeps its value, a rest in a control pattern or a mapper on a never-set slot fills
+  nothing, `merge` carries filled defaults, and `reverb.size` reads 5 after `reverb(0.3)`. `VoiceFactory`
+  applies the same fill as the wire contract for non-sprudel producers. `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in

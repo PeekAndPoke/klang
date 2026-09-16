@@ -7,14 +7,15 @@ package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Defaults of the two send effects, delay and reverb, on EVERY surface: the
-// master stages (`MasterStageDsl.Delay` / `.Reverb` and their builders), an
-// orbit voice that touches the effect (`VoiceFactory` fills the slots it left
-// unset), the fallback for a non-finite value on both buses, and the sprudel
-// editor tools. One edit here retunes all of them; they cannot drift apart.
+// master stages (`MasterStageDsl.Delay` / `.Reverb` and their builders), a
+// sprudel `delay(...)` / `reverb(...)` call (it sets every slot it leaves unset),
+// the engine's fill for any other producer (`VoiceFactory`), the fallback for a
+// non-finite value on both buses, and the sprudel editor tools. One edit here
+// retunes all of them; they cannot drift apart.
 //
 // Musical, not neutral (maintainer, 2026-09-16): an unset slot means a usable
 // sound. A voice that never touches an effect still sends nothing to it.
-// `docs/tasks/delay-names-and-send-defaults.md`.
+// `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Delay send, 0..1. */

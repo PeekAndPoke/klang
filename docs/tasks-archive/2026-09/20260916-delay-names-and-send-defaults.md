@@ -1,7 +1,7 @@
 # Delay names, and one set of defaults for delay and reverb on every surface
 
-> Status: **IMPLEMENTED 2026-09-16, one open decision** (below). Follow-up of
-> [`20260916-reverb-naming-unification.md`](../tasks-archive/2026-09/20260916-reverb-naming-unification.md).
+> Archived 2026-09-16. Status: **COMPLETE 2026-09-16.** Follow-up of
+> [`20260916-reverb-naming-unification.md`](20260916-reverb-naming-unification.md).
 > Decisions by the maintainer on 2026-09-16 (below). Priority: **SHOULD** (DSL hygiene, parameter parity).
 
 ## Why
@@ -31,6 +31,7 @@ An audit of the delay after the reverb unification found the doors already consi
 | D3 | **The default is the same on every surface, and it is musical**: unset means a usable sound. Delay wet 0.25, time 0.25 s, feedback 0.3, cap 1.0; reverb wet 0.25, size 5, lowpass unset. One set of constants in `audio_bridge/constants`. |
 | D4 | Applies to the reverb too. |
 | D5 | Editor labels match the door's slot names. |
+| D6 | (later the same day) **A sprudel `delay(...)` / `reverb(...)` call sets every slot**: the given ones, and every slot still unset takes the default, filled at WRITE time. A slot an earlier call set keeps its value; an event the call writes nothing to (a rest in a control pattern, a mapper on a never-set slot) is not filled; `merge` carries filled defaults like any set value; a zero send fills too. Readers return what was set, so `reverb.size` reads 5 after `reverb(0.3)` and nothing before any call. `VoiceFactory`'s fill stays as the wire contract for every non-sprudel producer. |
 
 ## Design
 
@@ -76,11 +77,12 @@ An audit of the delay after the reverb unification found the doors already consi
 - Mutation-checked: orbit default fill (feedback, wet, size), non-finite reads as unset, every part of both touched
   gates, the delay door's non-finite feedback and time guards, the master feedback fallback.
 
-## Open
+## Resolved by D6
 
-- **User decision (parked):** a voice whose only slot is a zero send (`delay(0)`, `reverb(0)`) counts as touching
-  the effect, so as orbit owner it switches the orbit's effect on at the defaults (a ring or a Freeverb unit runs;
-  a tail another owner left ringing jumps to the default time and feedback without a crossfade). The master builds
-  no stage for a zero wet. Option: treat "only a zero send" as untouched. No shipped content hits it.
-- The slot readers stay raw: `reverb.size` on a voice that never set it reads nothing, not the default 5.
+- The zero-send question: `delay(0)` writes a slot, so it fills; no exemption.
+- The readers: they read what the call set, defaults included.
+- Before D6 a static check found no song, tutorial or benchmark that reads, maps or merges these slots, so filling
+  at write time changes nothing audible against the engine-side fill. Specs: `LangReverbSpec`, `LangDelaySpec`
+  ("the call sets every slot"), mutation-checked (the combiner fill, the size fill, the rest guard, the feedback
+  fill, keep-earlier-value).
 

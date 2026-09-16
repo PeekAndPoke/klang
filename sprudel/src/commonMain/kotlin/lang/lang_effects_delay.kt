@@ -8,18 +8,53 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
+// -- the call sets every slot ----------------------------------------------------------------------------------------
+
+/**
+ * A delay slot was just written on this event: every delay slot still unset takes the shared default
+ * (`constants/SendEffectDefaults.kt`, the same the master delay uses), so one call sets them all. A slot
+ * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
+ * a mapper on a slot that was never set) is not filled.
+ */
+private fun SprudelVoiceData.fillDelayDefaults() {
+    if (delay == null) {
+        delay = DELAY_WET
+    }
+
+    if (delayTime == null) {
+        delayTime = DELAY_TIME_SECONDS
+    }
+
+    if (delayFeedback == null) {
+        delayFeedback = DELAY_FEEDBACK
+    }
+
+    if (delayCap == null) {
+        delayCap = DELAY_CAP
+    }
+}
+
 // -- delay, the wet slot ---------------------------------------------------------------------------------------------
 
 private val delayMutation = voiceSetter {
-    val str = it?.toString() ?: return@voiceSetter
-    delay = str.toDoubleOrNull() ?: delay
+    val wet = it?.toString()?.toDoubleOrNull()
+
+    if (wet != null) {
+        delay = wet
+        fillDelayDefaults()
+    }
 }
 
 private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -39,8 +74,12 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its
  * own delay by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
- * A slot you never set takes the same default as on the master delay: wet 0.25, time 0.25 s,
- * feedback 0.3, cap 1. So a bare `delay(0.4)` already echoes a quarter second later.
+ * The call sets every slot: the ones you leave out take the same default as on the master delay,
+ * wet 0.25, time 0.25 s, feedback 0.3 and cap 1, unless an earlier call already set them. So a bare
+ * `delay(0.4)` already echoes a quarter second later, and `delay.time` reads 0.25 after it. Slots
+ * apply in order, wet first, so a mapper on a later slot sees a default an earlier slot of the same
+ * call filled in. A call whose only slot rests in its control pattern writes nothing on that event,
+ * and fills nothing.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`delay(time = mul(2))`), and the numeric slots read back as `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
@@ -154,7 +193,13 @@ object delay {
 
 // -- delay.time ------------------------------------------------------------------------------------------------------
 
-private val delayTimeMutation = voiceSetter { delayTime = it?.asDoubleOrNull() }
+private val delayTimeMutation = voiceSetter {
+    delayTime = it?.asDoubleOrNull()
+
+    if (delayTime != null) {
+        fillDelayDefaults()
+    }
+}
 
 private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -166,7 +211,13 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
 // -- delay.feedback --------------------------------------------------------------------------------------------------
 
-private val delayFeedbackMutation = voiceSetter { delayFeedback = it?.asDoubleOrNull() }
+private val delayFeedbackMutation = voiceSetter {
+    delayFeedback = it?.asDoubleOrNull()
+
+    if (delayFeedback != null) {
+        fillDelayDefaults()
+    }
+}
 
 private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -178,7 +229,13 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
 
 // -- delay.cap -------------------------------------------------------------------------------------------------------
 
-private val delayCapMutation = voiceSetter { delayCap = it?.asDoubleOrNull() }
+private val delayCapMutation = voiceSetter {
+    delayCap = it?.asDoubleOrNull()
+
+    if (delayCap != null) {
+        fillDelayDefaults()
+    }
+}
 
 private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->

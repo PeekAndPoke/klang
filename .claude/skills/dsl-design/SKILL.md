@@ -126,9 +126,9 @@ the bug.
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
   wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
-  master stage, an orbit voice that leaves a slot unset (`VoiceFactory` fills it) and the editor
-  tools all read the same constant; a non-finite value reads as unset. Never a literal default
-  per host.
+  master stage, a sprudel call (it sets every slot it leaves unset at write time), the engine's
+  wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
+  value reads as unset. Never a literal default per host.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
   on the master only because a per-orbit lookahead would shift that orbit late). See

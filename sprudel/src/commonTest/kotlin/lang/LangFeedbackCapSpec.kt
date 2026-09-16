@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 
 /**
  * `delay(cap = ...)`, the ceiling a runaway delay saturates toward.
@@ -55,13 +56,16 @@ class LangFeedbackCapSpec : StringSpec({
         // The merge helpers are the easy place to forget a new field: `clone()` uses copy() so it is
         // safe automatically, and the "mergeFrom matches merge" oracle compares two paths that call
         // the SAME helper, so neither notices an omission. This asserts the value directly.
+        // `plain` HAS a delay group but no cap, built directly: a `delay(...)` call would fill its cap
+        // with the default (2026-09-16), and a voice without a group would take merge's copy branch
+        // and never reach the field-by-field constructor this row exists to guard.
         val withCap = note("c3").delay(cap = 2.5).queryArc(0.0, 1.0)[0].data
-        val plain = note("c3").delay(0.4).queryArc(0.0, 1.0)[0].data
+        val plain = createSprudelVoiceData { delay = 0.4 }
 
         plain.merge(withCap).delayCap shouldBe 2.5
         withCap.merge(plain).delayCap shouldBe 2.5
 
-        val inPlace = note("c3").delay(0.4).queryArc(0.0, 1.0)[0].data
+        val inPlace = createSprudelVoiceData { delay = 0.4 }
         inPlace.mergeFrom(withCap)
         inPlace.delayCap shouldBe 2.5
     }

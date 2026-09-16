@@ -234,7 +234,7 @@ stages must not carry it.
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) Until 2026-09-16 BOTH space effects were sends WITH A GATE (an unset `size` or `time` was 0, so a
   bare `reverb(0.4)` or `delay(0.4)` was SILENT) and that trap was the lesson's §2. Since the shared
-  musical defaults (`docs/tasks/delay-names-and-send-defaults.md`) an unset slot takes size 5, time
+  musical defaults (`docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`) an unset slot takes size 5, time
   0.25 s, feedback 0.3, wet 0.25, and §2 ("What you leave out") teaches the default by ear instead.
   Needs a by-ear pass in the review loop.
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the

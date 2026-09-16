@@ -8,19 +8,45 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
+// -- the call sets every slot ----------------------------------------------------------------------------------------
+
+/**
+ * A reverb slot was just written on this event: every reverb slot still unset takes the shared default
+ * (`constants/SendEffectDefaults.kt`, the same the master reverb uses), so one call sets them all. A slot
+ * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
+ * a mapper on a slot that was never set) is not filled. Lowpass has no default and stays unset.
+ */
+private fun SprudelVoiceData.fillReverbDefaults() {
+    if (reverb == null) {
+        reverb = REVERB_WET
+    }
+
+    if (reverbSize == null) {
+        reverbSize = REVERB_SIZE
+    }
+}
+
 // -- reverb, the wet slot --------------------------------------------------------------------------------------------
 
 private val reverbMutation = voiceSetter {
-    reverb = it?.toString()?.toDoubleOrNull() ?: reverb
+    val wet = it?.toString()?.toDoubleOrNull()
+
+    if (wet != null) {
+        reverb = wet
+        fillReverbDefaults()
+    }
 }
 
 private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -31,12 +57,24 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     // No args: reinterpret pattern's own values as the reverb send
     if (args.isEmpty()) {
         return source.reinterpretVoice {
-            it.clone().apply { reverb = value?.asDouble }
+            it.clone().apply {
+                reverb = value?.asDouble
+
+                if (reverb != null) {
+                    fillReverbDefaults()
+                }
+            }
         }
     }
 
     return source._applyControlFromParams(args, reverbMutation) { src, ctrl ->
-        src.reverb = ctrl.reverb ?: src.reverb
+        val wet = ctrl.reverb
+
+        if (wet != null) {
+            src.reverb = wet
+            src.fillReverbDefaults()
+        }
+
         src
     }
 }
@@ -50,8 +88,12 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its own
  * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
- * A slot you never set takes the same default as on the master reverb: wet 0.25, size 5, no
- * lowpass. So a bare `reverb(0.4)` already plays in a medium room. `size` sets the tail: 3 is
+ * The call sets every slot: the ones you leave out take the same default as on the master reverb,
+ * wet 0.25 and size 5 (lowpass has none), unless an earlier call already set them. So a bare
+ * `reverb(0.4)` already plays in a medium room, and `reverb.size` reads 5 after it. Slots apply in
+ * order, wet first, so a mapper on a later slot sees a default an earlier slot of the same call
+ * filled in (`reverb(0.3, size = mul(2))` is size 10). A call whose only slot rests in its control
+ * pattern writes nothing on that event, and fills nothing. `size` sets the tail: 3 is
  * roughly 1 s, 5 roughly 1.4 s, 10 roughly 12.5 s, the longest there is. `lowpass` darkens the
  * tail: the lower the cutoff, the duller the room.
  *
@@ -160,7 +202,13 @@ object reverb {
 
 // -- reverb.size -----------------------------------------------------------------------------------------------------
 
-private val reverbSizeMutation = voiceSetter { reverbSize = it?.asDoubleOrNull() }
+private val reverbSizeMutation = voiceSetter {
+    reverbSize = it?.asDoubleOrNull()
+
+    if (reverbSize != null) {
+        fillReverbDefaults()
+    }
+}
 
 private fun applyReverbSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -172,7 +220,13 @@ private fun applyReverbSize(source: SprudelPattern, args: List<SprudelDslArg<Any
 
 // -- reverb.lowpass --------------------------------------------------------------------------------------------------
 
-private val reverbLowpassMutation = voiceSetter { reverbLowpass = it?.asDoubleOrNull() }
+private val reverbLowpassMutation = voiceSetter {
+    reverbLowpass = it?.asDoubleOrNull()
+
+    if (reverbLowpass != null) {
+        fillReverbDefaults()
+    }
+}
 
 private fun applyReverbLowpass(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
