@@ -1,4 +1,4 @@
-# UI look: vintage, a little dirty, with real affordances
+# UI look: vintage, a little dirty, dense as a game, with real affordances
 
 Status: **future / reference point, not scheduled.** Created 2026-09-16. Captures a design
 conversation with the maintainer so the direction and the sources are not re-derived. Nothing here
@@ -68,6 +68,54 @@ rubber buttons with a bezel and a red LED, labels printed flat beside them.
   strip is a strong device for a section header.
 - **Type.** Futura and Helvetica on the panels, Eurostile for the retro-future, OCR-B and
   seven-segment (the DSEG font family) for readouts, IBM Plex Mono for the code side.
+
+## Second brief, 2026-09-16: dense, game-like, a full DAW in the browser
+
+Maintainer: "i like the idea of computer game aesthetics somehow. We need a design that is very
+dense, so that a full DAW can be displayed in the browser. The current editor only frontend is just
+a small sub-set of what the product will become. The scripting is the low-level access to the
+engine, but i imagine there to be many other (more traditional) layers of editing music."
+
+Density and game aesthetics are not in tension. Density is the constraint that decides the most.
+
+### Games that are dense and readable
+
+| Source | What it teaches |
+|---|---|
+| Factorio | The gold standard: dense, iconographic, industrial, slightly dirty, legible for hundreds of hours. Small icons, tight grids, tooltips carry the detail. |
+| Zachtronics (Shenzhen I/O, TIS-100, Exapunks) | Code as low-level access to hardware, datasheet and manual aesthetics. The closest analogue to "scripting is the low-level door". |
+| FTL, Into the Breach, RimWorld, Dwarf Fortress (Steam UI) | Dense panels, warm palettes, pixel precision. |
+| EVE Online, Elite Dangerous, Homeworld | Sci-fi HUD density; hierarchy through brightness, not size. |
+
+### Music tools that already are dense games
+
+| Source | What it teaches |
+|---|---|
+| Trackers: Renoise, Fasttracker II, LSDJ, SunVox, Dirtywave M8, Polyend Tracker | The precedent for dense music editing with a game feel. M8 and LSDJ do a whole workstation on a tiny screen. |
+| Elektron sequencers | A full workstation on a grid of LED buttons; pages and parameter locks instead of screen space. |
+| Reaper | The densest DAW, fully themeable. Study how it packs a mixer and a timeline. |
+| Blender node editor, Unreal Blueprints | How a graph editor and dense inspectors coexist in one window. |
+
+### What density implies
+
+- **Two densities, not one.** Reading surfaces (docs, tutorials, resources) stay spacious. Working
+  surfaces (editor, timeline, mixer, patch graph) go to 12 to 13 px type, a 4 px spacing grid,
+  16 px icons, a condensed or mono face (IBM Plex Condensed, JetBrains Mono, Iosevka, Berkeley Mono).
+- **Semantic UI will not survive the working surfaces.** Its padding and scale are built for
+  marketing pages. A DAW surface needs its own compact component kit on Kraft. This is the largest
+  single consequence of the brief and the reason the style-guide page should be built compact first.
+- **Hierarchy through brightness and weight, not size.** At 12 px there is no room for a type scale;
+  games solve it with contrast, colour and position.
+- **The dirt scales down.** Grain and vignette survive density; worn edges and Dymo strips do not,
+  they become chrome. Keep them for headers on the reading surfaces.
+
+### Layers of editing, and the rule that binds them
+
+Piano roll, step grid, tracker view, arrangement timeline, mixer, patch graph, notation over the
+Klangbuch model. Scripting stays the door that reaches everything. The stone rule holds for every
+layer: the engine is the horse, a frontend never gets DSP of its own, only seconds cross the wire.
+Every layer is a view that maps onto existing engine components. This note is a reference for the
+day the UI work starts, not platform or launch planning (sound first, `docs/tasks/_priorities.md`).
 
 ## Cheap dirt in CSS
 
