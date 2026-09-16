@@ -230,7 +230,7 @@ export guitarDecay = "<0.450!16 0.550!16 0.450!16 0.550!16>"
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
-  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
+  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|[4 6]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
 
 // Marimba: a wooden bar with three tuned modes (1 : 4 : 10). The upper two are gone within 100 ms, so the pitch is
 // stated at the hit and only the fundamental rings on, longer on low bars. A mallet thump, and the resonator tube
@@ -252,7 +252,7 @@ export lead_shape = x => x.gain(0.8).sound(marimba).adsrOff()
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.225!16 0.40!48 0.60!16>").postgain(mul(0.21))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.20!16 0.40!48 0.70!16>").postgain(mul(0.21))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
@@ -335,7 +335,7 @@ let granCassa = (() => {
   let harms = Osc.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog)).pitchEnvelope(9, 0.001, 0.10).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
   let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
-  let beater = Osc.pinknoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(1.75)     // wood core: a crack, the force of the hit
+  let beater = Osc.whitenoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(3000).mul(3.00)     // wood core: a crack, the force of the hit
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
@@ -347,10 +347,10 @@ export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] 
 // Far away: the low end and the top do not make it across the hall, the room does.
 export trommel_shape = x => x.gain(0.50).sound(granCassa).adsrOff() // .solo()
   .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4)
-  .hpf(140).lpf(3500).pan("0.75 0.25")
+  .hpf(160).lpf(3500).pan("0.75 0.25 0.85 0.15")
 
 export trommel_arrange = x => x.orbit(4)
-  .scale("e2:minor").postgain(0.22)
+  .scale("e2:minor").postgain(0.20)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
