@@ -1,0 +1,13 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130; nodesep=0.3; ranksep=0.5;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7, fontname="monospace", fontsize=9, fontcolor="#14202B"];
+  subgraph cluster_m { label="main thread (the page)"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    pat [label="pattern query\nScheduledVoice"]; enc [label="encode\n(generated codec)"]; }
+  subgraph cluster_w { label="audio thread (the worklet): a block every few milliseconds, no allocation, no waiting"; fontname="monospace"; fontsize=10; color="#B23A32";
+    dec [label="decode\n(generated codec)", fillcolor="#F6E4E2", color="#B23A32"]; sched [label="VoiceScheduler"]; render [label="render the block"]; }
+  clone [label="postMessage\nstructuredClone", fillcolor="#F3EEE0", color="#A8791C"];
+  pat -> enc -> clone -> dec -> sched -> render;
+  hash [label="#v = WIRE_SCHEMA_HASH\nstamped on send, checked on receive", shape=note, fillcolor="#E4EFE8", color="#2F7A4F"];
+  enc -> hash [style=dashed, arrowhead=none]; hash -> dec [style=dashed];
+}
