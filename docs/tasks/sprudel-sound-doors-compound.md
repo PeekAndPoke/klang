@@ -36,7 +36,11 @@ spread, pan)` and `analog`, `duty`, `onepole` write today.
    (`sound("supersaw")` + `unison(...)` for the rest) or it keeps the convenience and the two
    doors share one set of readers (`unison.voices`), never a second set.
 3. **The `params` doors.** `sndSine(params)` and friends take a single opaque slot; decide what it
-   is (a string of oscillator params?) and whether it survives as a named slot or goes.
+   is (a string of oscillator params?) and whether it survives as a named slot or goes. Note
+   (2026-09-16): since a rest in a setter's control pattern leaves the event untouched, a rest in
+   `params` means that event gets no sound from the door at all (`sndPink("<1 ~>")`), while
+   `sndNoise(color = "<0.3 ~>")` keeps its sound. `LangControlRestSpec` pins the current behaviour
+   (its `fresh` rows); the reformulation decides it.
 4. **Readers.** Numeric slots get children like every compound (`Snd.pluck.decay`); `color` on
    `sndNoise` is a name and gets none (`docs/tasks/future/string-slot-readers.md`).
 5. **Retirement.** The per-sound functions go when the objects land (replaced surfaces are removed);
