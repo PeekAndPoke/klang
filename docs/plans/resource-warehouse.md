@@ -19,7 +19,7 @@ one cylinder per orbit as voices first arrive — each a 1M-element `DoubleArray
 callback. That is the "Der Schmetterling" stutter.
 
 And the delay times songs actually use: every `delaytime` in the corpus is WRITTEN as 1/8 to 1/4 of
-a cycle — **0.25–0.5 s**. The ring is 15–30× larger than anything ever asked for, allocated for orbits
+a cycle — **0.25–0.5 s**. The ring is 20–40× larger than anything ever asked for (the first draft said 15–30×, an arithmetic slip corrected 2026-09-16), allocated for orbits
 that have no delay at all. `MasterChain` already does it right (ring sized to `time + margin`).
 
 > Review round 2 claimed these were Kotlin integer divisions (`pure(3/16)` → 0). **Wrong, withdrawn
@@ -37,7 +37,7 @@ that have no delay at all. `MasterChain` already does it right (ring sized to `t
 - **Class ladder: powers of two from 0.5 s, no ceiling.** `0.5, 1, 2, 4, 8, …` A request is rounded
   up to its class. Ratio 2 was chosen over Fibonacci (≈1.6) because the ladder's job is *headroom*:
   a coarser ratio means a time change crosses a class boundary — and forces a regrow — less often.
-  Fibonacci's tighter packing solves a memory problem right-sizing already solved 15×. `log2`
+  Fibonacci's tighter packing solves a memory problem right-sizing already solved 20×. `log2`
   indexing is a bonus. Class 0 holds a 0.5 s delay INCLUDING the 64-frame interpolation margin
   (review round 2: flat 0.5 s pushed exactly-0.5 s, a quarter at 120 BPM, into class 1).
 - **No maximum.** `delay(time = 60)` gets a 46 MB ring and the one-time allocation it asked for.

@@ -1,0 +1,29 @@
+digraph G {
+  rankdir=TB; bgcolor="white"; dpi=130; nodesep=0.35; ranksep=0.4;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7, fontname="monospace", fontsize=9, fontcolor="#14202B"];
+  req [label="an orbit asks for a delay\nof t seconds", fillcolor="#E4EFE8", color="#2F7A4F"];
+  cls [label="round t up to a class\n0.5, 1, 2, 4, 8 ... s"];
+  shelf [label="the shelf: idle rings,\nclean or dirty", fillcolor="#F3EEE0", color="#A8791C"];
+  hit [label="best fit up:\nan idle ring that fits,\nat most one class above,\nclean before dirty"];
+  alloc [label="allocate the class\n(the one catch site)"];
+  zero [label="dirty? zero it now;\nclean: hand it over"];
+  null [label="allocation failed:\nnull, the orbit stays dry", fillcolor="#F6E4E2", color="#B23A32"];
+  grow [label="a later, longer delay:\nmigrate into the next class,\ncontents copied in"];
+  back [label="return, O(1):\nmarked dirty, onto the shelf"];
+  hk [label="housekeep, once per block:\nzero a bounded slice"];
+  req -> cls -> shelf;
+  shelf -> hit [label="a ring fits"];
+  shelf -> alloc [label="nothing fits"];
+  hit -> zero;
+  alloc -> zero [label="ok"];
+  alloc -> null [label="out of memory,\nnothing oversized idle"];
+  alloc -> hit [label="out of memory:\nan oversized idle ring", constraint=false];
+  zero -> grow [label="in use"];
+  grow -> back [label="the old ring"];
+  zero -> back [label="playback ends, master chain evicted"];
+  back -> shelf;
+  shelf -> hk [style=dashed, constraint=false];
+  hk -> shelf [style=dashed, constraint=false];
+  { rank=same; shelf; hk; }
+}

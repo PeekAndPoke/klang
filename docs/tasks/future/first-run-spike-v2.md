@@ -56,3 +56,10 @@ per session, not per playback.
 ## Rule
 
 Maintainer: if the fix would introduce undue complexity, keep as is and defer. Measure first.
+
+## Noted 2026-09-16 (blog fact check)
+
+`WarmupVocabulary`'s class KDoc says the completeness guard is "an exhaustive `when` over every
+`IgnitorDsl` kind, so adding a kind without deciding whether it is warmed does not compile";
+`WarmupVocabularySpec` enumerates the sealed hierarchy by reflection and fails at test time instead.
+The spec is the guard; the KDoc sentence is stale and should say so.
