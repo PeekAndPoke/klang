@@ -1,0 +1,14 @@
+digraph G {
+  rankdir=TB; bgcolor="white"; dpi=130; nodesep=0.3; ranksep=0.45;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7, fontname="monospace", fontsize=8, fontcolor="#B23A32"];
+  r0 [label="Double cycles\nuntil 2026-01-08\nStrudelPatternEvent.begin: Double", fillcolor="#F6E3E1", color="#B23A32"];
+  r1 [label="32.32 fixed point in a Long\n2026-01-08, value class\none step = 2^-32 of a cycle", fillcolor="#F6E3E1", color="#B23A32"];
+  r2 [label="numerator / denominator, Long\n2026-02-05, data class\ngcd after every operation", fillcolor="#F6E3E1", color="#B23A32"];
+  r3 [label="expect / actual\n2026-03-16: Long on the JVM,\nBigInt on JS", fillcolor="#F6E3E1", color="#B23A32"];
+  r4 [label="CycleTime\n2026-05-29, value class, ticks in a Double\nT = 2^13 * 3 * 5 * 7, from 2026-05-30 2^20 * 3 * 5 * 7", fillcolor="#E4EFE8", color="#2F7A4F"];
+  r0 -> r1 [label="a boundary compare flips\nafter thirds and sevenths accumulate,\nan event lands in the wrong cycle"];
+  r1 -> r2 [label="a third is not a step,\nthree thirds are not one;\na 1e-7 guard in SequencePattern"];
+  r2 -> r3 [label="Kotlin/JS emulates Long:\nan object per operation"];
+  r3 -> r4 [label="every plus is a gcd,\nevery gcd is BigInt:\n92 ns a plus on node"];
+}
