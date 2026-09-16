@@ -15,7 +15,7 @@ import kotlin.math.sin
 /**
  * The polyphase decimator against the ring-buffer form it replaced, bit for bit.
  *
- * [RingOversampler] is the previous implementation kept verbatim as the oracle: a 15-tap
+ * [RingOversampler] is the previous implementation kept as the oracle, its arithmetic unchanged: a 15-tap
  * circular delay line per stage, two pushes and one FIR evaluation per output. The new pass
  * indexes the work buffer directly and reads its first outputs from a prefix view; the ragged
  * block lengths below cross every boundary that view has (a block shorter than the history, a

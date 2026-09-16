@@ -164,9 +164,9 @@ parity, a mutation check, a rig A/B, a commit.
    | `guitar-rig-no-mul-no-drive` |     52.3 | both: about 1 to 2, under 4% of the voice       |
    | `guitar-rig-no-oversample`   |     31.6 | every shaper at 1x: 21.6, 63% of the rig's cost (the upsampler, the FIR stages and the 2x to 4x shaper evaluations together) |
 
-   JVM agrees (29.7 / 30.5 / 30.9 / 28.4 / 20.6 / 10.2 in the same order). A multiply pass over
-   128 doubles is nothing next to five oversampled shapers and a dozen filter passes; ten loop
-   variants in `EqCore` and a Shape input gain would buy a rounding error. Oversampling is the
+   JVM agrees (in the table's order: 10.2 / 29.7 / 30.5 / 30.9 / 28.4 / 20.6). A multiply pass over
+   128 doubles is nothing next to five oversampled shapers and a dozen filter passes; the eight
+   loop bodies in `EqCore` and a Shape input gain would buy a rounding error. Oversampling is the
    cost, and its decimator was the general target that paid (the polyphase pass in
    `Oversampler.kt`, 2026-09-15: the rig 53 -> 44 µs on node); the shaper evaluations at the
    high rate are the rest of that row and stay.

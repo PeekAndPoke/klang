@@ -101,9 +101,11 @@
   13 and 26) and goes red for a history one short, the in-place boundary one early, a tap off by
   one, or the short-block history shift dropped.
 - Node 24, µs per block, one voice: `pluck+distort_4x` 13.4 -> 10.1, `pluck+distort_2x`
-  9.4 -> 8.6, the guitar rig 53 -> 44 (its oversampling share 22 -> 12). Every oversampled
-  shaper, crush and coarse stage (ignitor and strip doors) takes it. The copies into the prefix
-  view and the history are plain loops: `copyInto` allocates a typed-array view per call on JS.
+  9.4 -> 8.6, the guitar rig 53.2 -> 44.3 (its oversampling share 22 -> 12). Every oversampled
+  stage takes it: the shaper on the voice doors, the shaper, crush and coarse on the strip (the
+  ignitor crush and coarse doors have no oversampler). The copies into the prefix view and the
+  history are plain loops: `copyInto` allocates a typed-array view per call on JS, and the
+  guitar rig went from 45.5 to 44.3 µs when they went.
 
 ## Analog drift steps per block and ramps across it (2026-09-15)
 
