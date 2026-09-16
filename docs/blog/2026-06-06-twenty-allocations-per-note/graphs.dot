@@ -1,0 +1,13 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130; nodesep=0.25; ranksep=0.4;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7, fontname="monospace", fontsize=8, fontcolor="#B23A32"];
+  // declared after-first: graphviz packs disconnected LR clusters bottom-up, so "before" renders on top
+  subgraph cluster_b { label="after (v0.1.0): the leaf clones once per emission, every modifier mutates in place"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    edge [fontcolor="#2F7A4F"];
+    b0 [label="note(\"c3\")\nleaf: data.clone()", fillcolor="#E4EFE8", color="#2F7A4F"]; b1 [label="sound(\"supersaw\")"]; b2 [label="gain(0.7)"]; b3 [label="lpf(1625)"]; b4 [label="adsr(...)"]; b5 [label="... room(0.3)"]; b6 [label="the event", fillcolor="#F3EEE0", color="#A8791C"];
+    b0 -> b1 [label="this"]; b1 -> b2 [label="this"]; b2 -> b3 [label="this"]; b3 -> b4 [label="this"]; b4 -> b5 [label="this"]; b5 -> b6 [label="this"]; }
+  subgraph cluster_a { label="before: every modifier copies the voice data, about twenty allocations per event"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    a0 [label="note(\"c3\")\nleaf: the stored data"]; a1 [label="sound(\"supersaw\")"]; a2 [label="gain(0.7)"]; a3 [label="lpf(1625)"]; a4 [label="adsr(...)"]; a5 [label="... room(0.3)"]; a6 [label="the event", fillcolor="#F3EEE0", color="#A8791C"];
+    a0 -> a1 [label="copy()"]; a1 -> a2 [label="copy()"]; a2 -> a3 [label="copy()"]; a3 -> a4 [label="copy()"]; a4 -> a5 [label="copy()"]; a5 -> a6 [label="copy()"]; }
+}
