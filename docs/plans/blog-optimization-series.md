@@ -64,7 +64,7 @@ BEFORE, the before link goes to the last tag WITHOUT the change.
 | mutable `SprudelVoiceData` | `e9fa560c` .. `c303c333`, 2026-06-06/07 | `v0.1.0` | none (commit `e9fa560c^`) |
 | worklet trust codec | `096e5e7d`, `59e85839`, 2026-06-07, then the KSP generator | `v0.1.0` | none (commit `096e5e7d^`) |
 | body and vowel to the orbit | `af1c08dc` .. `c1e67c4f`, 2026-07-03/04 | `v0.1.2` (2026-07-04) | `v0.1.1` (2026-06-30) |
-| constant folding D1a/D1b | `2daaf761`, `974a18db`, `d3f664f4`, 2026-08-19 | `v0.3.1.4` (2026-08-19) | `v0.3.1.3` (2026-08-18) |
+| constant folding D1a/D1b | `2daaf761`, `974a18db`, `d3f664f4`, 2026-08-19 | `v0.3.1.5` (2026-08-20; `v0.3.1.4` was cut earlier on 2026-08-19, before the fold commits, and is byte-identical to `v0.3.1.3` for the engine) | `v0.3.1.4` (2026-08-19) |
 | EqCore fusion D2 to D5 and rule R1 | `c2e94a72` .. `076683ab`, `03e995ca`, 2026-08-19..21 | `v0.3.2` (2026-08-23) for R1; `v0.3.1.5` (2026-08-20) for the BELL section | `v0.3.1.4` |
 | resource warehouse | `111c7355` .. `0354c9da`, 2026-09-03/04 | `v0.3.7` (2026-09-05) | `v0.3.6` (2026-08-31) |
 | sine partial banks | `6d4056f9`, `39119aef` (harness fix), 2026-09-07 | `v0.3.8.2` (2026-09-08) | `v0.3.8` (2026-09-07) |
@@ -421,7 +421,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   `runSongBenchmark --args=ladders` today for the "and today" column. (sonnet) Fig. 1, graphviz
   of the guitar tone chain as 11 ignitor nodes, each a loop and a scratch buffer, the
   block-constant operands marked; Fig. 2, the ladder rungs before and after.
-- **Code specimens.** `TimesIgnitor.generate` at `v0.3.1.3` (before) and `v0.3.1.4` (after); the
+- **Code specimens.** `TimesIgnitor.generate` at `v0.3.1.4` (before) and `v0.3.1.5` (after); the
   `MemoizingIgnitor.controlRateValueOrNull` propagation.
 - **Writing.** Fable. The first appearance of the graph optimizer idea: a fold is what you do when
   you know something at build time the render loop does not.

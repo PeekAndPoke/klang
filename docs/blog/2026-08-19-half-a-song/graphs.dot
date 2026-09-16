@@ -1,0 +1,15 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130; nodesep=0.25; ranksep=0.35;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7, fontname="monospace", fontsize=8, fontcolor="#8D9BA3"];
+  sig [label="signal\n(the string, distorted)", fillcolor="#E4EFE8", color="#2F7A4F"];
+  bp1 [label="Bandpass\nmidsHz, midsQ"]; t1 [label="Times\nmids", fillcolor="#F3EEE0", color="#A8791C"]; p1 [label="Plus"];
+  bp2 [label="Bandpass\npresenceHz, presenceQ"]; t2 [label="Times\npresence", fillcolor="#F3EEE0", color="#A8791C"]; p2 [label="Plus"];
+  n [label="Notch\nsnareHz, 2.5"]; ft [label="Times\nfreq x hptrack", fillcolor="#F3EEE0", color="#A8791C"]; hp [label="Highpass\ncutoff, hpq"]; lp1 [label="Lowpass\n5300"]; lp2 [label="Lowpass\n5300"];
+  freq [label="Freq", shape=ellipse, fillcolor="#F3EEE0", color="#A8791C"];
+  sig -> bp1 -> t1 -> p1; sig -> p1;
+  sig -> bp2 -> t2 -> p2; p1 -> p2;
+  p2 -> n -> hp -> lp1 -> lp2;
+  freq -> ft; ft -> hp [label="cutoff, once per block after the fold"];
+  { rank=same; bp1; bp2; }
+}
