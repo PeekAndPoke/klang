@@ -6,7 +6,7 @@ numbers so far agree. Parked here so the reasoning is not redone.
 
 ## The shape
 
-After rule R2 (`docs/tasks/ignitor-optimizer-followups.md`, steps 1, 2 and 4b) an authored chain
+After rule R2 (`docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md`, steps 1, 2 and 4b) an authored chain
 `x.add(a).mul(m).add(b).mul(k)` lowers to two nested `Affine` nodes, since nothing merges across
 an addition. `mul(2).add(2).mul(2).add(2)` is two passes over the block where one would do.
 

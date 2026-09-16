@@ -448,7 +448,7 @@ What makes that decision cheap:
   on both sides.
 - The fusion hint is nearly free today: the only rewrite is serial filter fusion, and a fused
   `Eq` node carries one section per authored filter. "This Eq was three filters" is the section
-  count. Later rewrites (the catalogue in `docs/tasks/ignitor-optimizer-followups.md`) would each
+  count. Later rewrites (the catalogue in `docs/tasks/future/ignitor-optimizer-open-items.md`) would each
   decide whether to keep a provenance note; none is required.
 - The optimiser's kill switch (`IgnitorDsl.OptimizerHint`) gives the inspector an authored-graph
   view for free when someone wants to compare by eye.

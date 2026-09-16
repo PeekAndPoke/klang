@@ -64,5 +64,5 @@ real song, say so and close this; the tidiness argument alone does not justify t
 hottest path in the engine.
 
 Related: `docs/plans/filter-unification.md` (C5 review, finding rejected as out-of-scope),
-`docs/tasks/ignitor-optimizer-followups.md` §4 (which cites this same `is ParamIgnitor` check
+`docs/tasks/future/ignitor-optimizer-open-items.md` §8 (`analog > 0` filters) (which cites this same `is ParamIgnitor` check
 while arguing a DIFFERENT relaxation is unsafe — read it before touching either).

@@ -5,7 +5,7 @@
 - `OPTIMIZER_PARITY` (audio_bridge, 1e-12 relative, NaN for NaN, infinity for infinity) replaces
   bit-identity as what `IgnitorDsl.optimize()` promises, so that block-constant arithmetic and
   gains may fold into neighbouring linear nodes (the plan and its steps:
-  `docs/tasks/ignitor-optimizer-followups.md`). The shipped rules still render bit-identical.
+  `docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md`, the open items in `docs/tasks/future/ignitor-optimizer-open-items.md`). The shipped rules still render bit-identical.
 - Guards, all green on the current pass: the rule table (`IgnitorDslOptimizerSpec`), render
   parity within the margin plus control-rate semantics and the warmup vocabulary
   (`IgnitorDslOptimizerRenderSpec`), every builtin song's instruments (`OptimizerSongParitySpec`,

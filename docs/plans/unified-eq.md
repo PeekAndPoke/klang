@@ -523,7 +523,7 @@ house-consistent).
 Walkers + optimizer + kill switch + registry seam + R1 serial fusion, all in one commit.
 **Der Schmetterling's guitar tail now fuses to ONE node** (6 sections), bit-identical.
 R2 (parallel tap fusion) is NOT implemented and is the top item in
-`docs/tasks/ignitor-optimizer-followups.md`, along with the Eq-merge trap (a tap reads the
+`docs/tasks/future/ignitor-optimizer-open-items.md`, along with the Eq-merge trap (a tap reads the
 input of ITS OWN Eq, so merging nested Eqs is only safe when the outer list has no taps),
 one-pole sections, the Bandpass/Notch analog nuance, and pitch-mod walls.
 Standing rule minted here: **bit-identity is a testing hazard** — where right and wrong render

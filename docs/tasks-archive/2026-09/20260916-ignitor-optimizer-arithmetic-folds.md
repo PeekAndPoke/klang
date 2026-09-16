@@ -1,8 +1,26 @@
-# Ignitor graph optimizer — what it does NOT claim yet
+# Ignitor graph optimizer: the arithmetic folds and the margin (2026-09-15 / 16)
 
-The optimizer (`audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt`) deliberately ships
-covering the common case reliably rather than every case. This is the catalogue of what it leaves
-on the table, each with the reason and the trap to watch for. Ordered by expected value.
+> Archived 2026-09-16. Status: **BUILT**, steps 0, 1, 2 and 4b; steps 3 and 4 **WON'T IMPLEMENT**
+> by measurement; the per-block half of step 5 landed inside 4b. What stays open moved to
+> `docs/tasks/future/ignitor-optimizer-open-items.md`. Commits: `bb9bdbb3` (step 0), `a645a97d`
+> (step 1), `1056a1c0` (step 2), `6c1ae38b` (the oversampler's polyphase decimator, found by the
+> step-3 measurement), `841cdb8b` (step 4b), `e861b139` (the chain fusion parked). The optimizer
+> itself: `audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt`; the memory entries in
+> `audio/MEMORY.md`.
+>
+> The one-paragraph version. The optimizer's promise moved from bit-identity to a margin
+> (`OPTIMIZER_PARITY`, 1e-12 of the block's loudest sample, at most full scale), with a harness
+> that holds every rule to it (rule table, render parity, every builtin song, a seeded fuzz with
+> adversarial constants). On that promise the arithmetic of a chain folds into one `Affine` pass,
+> `mul · (x + pre) + add`, including `div`, `minus` and `neg`, and a zero divisor or multiplier is
+> a dead branch. The folds into the Eq and the shaper were measured before being built and turned
+> out to be worth under 4 % of a guitar voice; the same measurement put the cost in the shapers'
+> oversampling, and the decimator rewrite that followed took the guitar voice from 53 to 44 µs per
+> block on node. Three review rounds on 4b taught the rule that matters for any future fold: every
+> coefficient the optimizer SYNTHESIZES must be zero exactly when the authored one is, or a dead
+> branch renders on one side only and the voice's noise stream slips.
+
+## The invariant
 
 **The invariant every entry below must respect (revised 2026-09-15):** only adjacent nodes
 combine, only under linear algebra, never across a nonlinear node, never absorbing a shared
@@ -16,117 +34,6 @@ people write, the warmup vocabulary, and control-rate semantics), `OptimizerSong
 (every inlined instrument of every builtin song), `IgnitorDslOptimizerFuzzSpec` (a thousand
 generated graphs with adversarial constants, the pass's laws, and `IgnitorRegistry` swallowing no
 failure). Every new rule brings rows to the table and is mutation-checked against these.
-
-## 1. R2 — parallel tap fusion (biggest win, not implemented)
-
-> **Re-specified NON-PARITY by C2 (filter unification, 2026-08-24):** the bandpass family is
-> unity-peak now (EqCore RAW_TAP, the ignitor svf kernel and SvfBPF all scale the v1 tap by
-> the stored k), so R2's acceptance criterion is NO LONGER bit-parity with the legacy
-> Plus/Times graph — both sides are normalised, and a fused tap must match the NORMALISED
-> unfused chain. The old coupled behaviour is not an oracle for anything any more.
-
-`Plus(base, Times(Bandpass(source, f, q, analog = 0), gain))` where the base chain reads the same
-`source` is exactly a `RawTap` section, and `EqCore` already implements RAW_TAP. Without this
-rule, any song that hand-built a parallel boost bank keeps paying separate `Plus`/`Times`/
-`Bandpass` nodes plus a `MemoizingIgnitor` copy per extra consumer.
-
-Der Schmetterling's guitar is the live example: it still ships the hand-built
-`signal.add(signal.bandpass(...).mul(...))` form in the repo (the maintainer has a `.tap()`
-migration in progress locally, but song files are the maintainer's to commit). Until either
-R2 lands or that migration is committed, that song pays the unfused parallel bank — and every
-other song with the shape does too. R2 is what makes them all fuse with zero edits.
-
-Preconditions, all mandatory and all learned the hard way:
-- match the tap source by REFERENCE identity (`===`), never structural equality: two structurally
-  equal noise nodes are independently phased and independently seeded, so a structural match
-  would fuse a tap of B onto A, audibly wrong and invisible to a structural spec;
-- only from a LEFT-NESTED `Plus` spine, because IEEE addition is not associative;
-- `gain` must be structurally `Constant`/`Param`, never an expression: the section resolves it
-  once per block while the `Times` node multiplies per sample, so an LFO gain would become a
-  staircase (this is documented on `.tap()` itself);
-- `Plus`, `Times` and `Bandpass` must each be refcount-1.
-
-## 2. Merging adjacent `Eq` nodes — WITH A REAL TRAP
-
-`Eq(Eq(x, s1), s2)` arises from `.eq(e => e.band(a)).lowpass(b).eq(e => e.band(c))` and similar. Merging the
-section lists looks trivially safe for serial sections, and is.
-
-**It is NOT safe when `s2` contains a `RawTap`.** A tap reads the input of ITS OWN Eq. In the
-nested form that input is the inner Eq's OUTPUT; after merging it would be the outer input `x`.
-Different sound, no error. So this rule must refuse when the outer section list contains any tap,
-or reproduce the inner chain for the tap's source, which is not free.
-
-## 3. One-pole sections
-
-`onepole()` (the one-pole lowpass) never fuses, because `EqCore` has no one-pole section type and
-substituting an SVF would change the sound. Adding `ONEPOLE_LP` / `ONEPOLE_HP` section types is
-mechanical; note that `OnePoleHPF` carries a documented cutoff bias that is deliberate raw-engine
-character and must be reproduced exactly, not "fixed".
-
-## 4. `analog > 0` filters
-
-Permanently excluded for `Lowpass`/`Highpass`: a non-zero analog switches on the state-dependent
-saturating branch, which is character `EqCore` does not implement, and the house rule is that the
-Motor stays raw.
-
-`Bandpass`/`Notch` are a different case, and the reason matters because the obvious relaxation
-is a trap. At the ignitor level `saturate = analogVal > 0.0 && (mode == LOWPASS || mode ==
-HIGHPASS)` (`IgnitorFilters.kt`), so `analog` contributes NOTHING to a bandpass or notch output.
-It is nonetheless read every block, unconditionally — and for an EXPRESSION-backed analog that
-read is a full scratch render which advances LFO phase and consumes the voice RNG stream.
-Dropping it therefore breaks bit-identity and shifts every later draw, which is the bug class
-this workstream already shipped once.
-
-So: only a structurally BLOCK-CONSTANT analog on Bandpass/Notch could ever be safe to relax,
-plus a proof that no read is lost. Block-constant, not literally `Constant`: a `Param`-backed
-analog is equally free of scratch render, state and RNG (it reports a control-rate scalar, which
-is exactly why `EqIgnitor.Section.isStatic` groups `ParamIgnitor` with `ConstantIgnitor` and why
-`SvfIgnitor` caches on `is ParamIgnitor`). Do not relax it on the grounds that "analog does
-nothing here".
-
-## 5. Pitch-mod nodes are walls, but they vanish at runtime (a real missed win)
-
-`x.lowpass(a).vibrato(5, 0.2).lowpass(b)` emits TWO Eqs, because the optimizer treats `Vibrato`
-as an opaque node. But `Vibrato` never becomes an Ignitor: `buildIgnitor` absorbs it into
-`accumulatedMod` and bubbles it to the source, so at RUNTIME the two filters are adjacent and
-could have been one Eq. Same for `Accelerate`, `PitchEnvelope`, `PitchMod` and `Fm`.
-
-Fusing across them looks bit-safe on inspection — the fused form threads the mod through
-`inner.withMod()` while section params stay `noMod()`, which is the shape `EqIgnitorSpec`
-already pins — but "looks safe" is not the standard here, and it is not claimed. Anyone
-implementing it must prove the mod-threading equivalence with a rendered parity row per
-pitch-mod node type, not by reading the builder.
-
-⚠ And it carries the trap that already bit this pass once with `OptimizerHint`: a pitch-mod
-node that vanishes at runtime is refcount-1 EVEN WHEN THE NODE BELOW IT IS SHARED, so a guard
-that refcounts `original.filterInner()` would wave a shared subtree straight through and fork
-it. Any see-through rule must require EVERY unwrapped link to be exclusively owned, not just
-the last — see the `while (originalInner is OptimizerHint && ...)` loop in the optimizer.
-
-## 6. `passes` expansion
-
-Not applicable yet — the field does not exist. When `passes` lands (plan D6), the rule "R1 learns
-to expand `passes = N` into N sections in the SAME commit that adds the field" is the protection
-against a window where a `passes = 2` filter fuses as one section and quietly loses 6 dB/octave.
-
-## 7. Variants
-
-Each variant subtree is rewritten independently, which is correct, but sections are never shared
-between variants even when identical. Harmless; noted only so nobody assumes otherwise.
-
-## 8. Cross-`Eq` section deduplication
-
-Two identical sections in one list (the song really does write `.lowpass(5250).lowpass(5250)`)
-are kept as two sections, correctly: cascading two identical filters is a steeper slope, not a
-redundancy. Do NOT "optimize" this away.
-
-## Measurement note
-
-Before claiming a win from any of the above, read the D0 comparability rule in
-`audio_benchmark/src/commonMain/kotlin/EffectBenchmark.kt`: the chained benchmark rows render a
-source inside the timed step while the EqCore rows only copy, so raw row ratios overstate the win
-substantially. Subtract the source baseline. This has already caused two wrong numbers to reach
-user-facing docs.
 
 ## Next up (maintainer, 2026-09-15): the Schmetterling guitar stages on the Fairphone 4
 
@@ -180,6 +87,14 @@ a modulation whose fastest layer has a 50 ms time constant. Stepping the lanes o
 and interpolating the multiplier across it is the candidate; not bit-identical, audibly the same
 wander (the per-sample residue is noise sidebands far below the drift depth), to be settled by
 ear on the guitars and the marimba (`lead: no analog` is 13 %, `trommel: no analog` 15 %).
+
+## Measurement note
+
+Before claiming a win from any of the above, read the D0 comparability rule in
+`audio_benchmark/src/commonMain/kotlin/EffectBenchmark.kt`: the chained benchmark rows render a
+source inside the timed step while the EqCore rows only copy, so raw row ratios overstate the win
+substantially. Subtract the source baseline. This has already caused two wrong numbers to reach
+user-facing docs.
 
 ## The arithmetic folds (plan, 2026-09-15, maintainer: "folding pure arithmetic into each ignitor")
 
@@ -293,14 +208,3 @@ parity, a mutation check, a rig A/B, a commit.
    `mul(2).add(2).mul(2).add(2)` stays two Affines. Merging them, algebraically or as a fused
    runtime pass, is parked with its reasoning in `docs/tasks/future/affine-chain-fusion.md`
    (maintainer, 2026-09-16: last in line, more complexity than gain).
-5. Dead and identity nodes (maintainer, 2026-09-15): `add(Constant(0))` and `mul(Constant(1))`
-   drop; `mul(Constant(0))` makes its upstream `Silence`. And at BUILD time, where `Osc.param`
-   values are known (per voice, constant for the voice): a `Times` whose block-constant operand
-   is exactly 0 never renders its upstream, a `Plus` skips a dead branch, so a stage switched off
-   by a param costs nothing instead of being rendered and zeroed. Two consequences the maintainer
-   accepted in principle: the zeros lose the sign the upstream sample would have given them
-   (`x · 0.0` is `±0.0` with `x`'s sign; a NaN or infinite upstream was already 0 through the
-   multiply's `safeOut`), and a dead branch with a noise node stops drawing from the voice's
-   stream (other noise in the voice gets a different, still seeded, realisation).
-6. The remaining linear neighbours only if the numbers say so (`Affine` into `Adsr`, the tap
-   gain); then MEMORY, this catalogue, the census redone, a before/after on the device.

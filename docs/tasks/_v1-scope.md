@@ -96,7 +96,7 @@ it changes no surface and no sound, so it fails the rule).
 
 **Additive, so a tutorial written before them does not become wrong:** `filter-envelope-configuration`
 (lpadsr curves), `sprudel-field-accessors` and its `klangscript-native-object-operators`
-prerequisite, `ignitor-dsl-open-items`, `ignitor-optimizer-followups`, `master-dsl-followups`
+prerequisite, `ignitor-dsl-open-items`, `future/ignitor-optimizer-open-items`, `master-dsl-followups`
 (except the parity audit, which is the gate above), `klangscript-named-args-docs-polish`.
 
 **New capability, not V1 stability:** `pluck-release-tail` (blocks credible physical modelling,

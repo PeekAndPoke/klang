@@ -49,7 +49,7 @@ import kotlin.math.sqrt
  * This pass implements serial filter fusion (R1) and the arithmetic fold into [IgnitorDsl.Affine]
  * (R2, 2026-09-15; an Affine is a wall for R1 until the Eq gain fold lands). It is intentionally
  * not a complete optimizer;
- * see `docs/tasks/ignitor-optimizer-followups.md` for the catalogue of cases it does NOT yet
+ * see `docs/tasks/future/ignitor-optimizer-open-items.md` for the catalogue of cases it does NOT yet
  * claim, each with the reason. The kill switch [IgnitorDsl.OptimizerHint] disables it for a
  * whole graph so any suspicion can be settled by ear.
  */

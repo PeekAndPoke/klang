@@ -525,7 +525,7 @@ pure width change, which is the point. So C1 and C2 are two sections of one comm
   `EqCoreSpec` tap parity rows against the legacy `Plus/Times` graph WILL redden and are
   re-based: the legacy graph is the old coupled behaviour, no longer the oracle. The RAW_TAP KDoc
   and the tap-to-bell conversion KDocs are rewritten in this commit; R2 is re-specified as
-  non-parity in `docs/tasks/ignitor-optimizer-followups.md`.
+  non-parity in `docs/tasks/future/ignitor-optimizer-open-items.md`.
 - Songs: Der Schmetterling's tap params (7 defaults + ~14 overrides) retuned by ear; note the
   direction differs per voice (guitars get louder, the lead's high-q tap drops ~11 dB). Every
   bare `bandf` in the corpus is checked by ear after the default-q change.
