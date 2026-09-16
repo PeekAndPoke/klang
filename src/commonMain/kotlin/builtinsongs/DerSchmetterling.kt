@@ -187,7 +187,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.19)
+    .mul(0.17)
 }
 
 // The rigs. A/B one stage at a time:
@@ -207,10 +207,6 @@ let bass = (() => {
   // --- Overridable params ----------------------------------------------------------------------
   let pAnalog  = OscSlot.analog
   let pSub     = Osc.param("sub",         1.00, "Sub Volume")
-  let pDrive   = Osc.param("drive",       0.60, "Saturation amount of the grind layer")
-  let pGrindLo = Osc.param("grindlo",   100.00, "Grind highpass — where the bass starts biting")
-  let pGrindHi = Osc.param("grindhi",  1100.00, "Grind lowpass — where the bass stops biting")
-  let pGrind   = Osc.param("grind",       0.00, "Grind Volume")
   let pHarm    = Osc.param("harmonics",   1.00, "Harmonics Volume")
   // ----------------------------------------------------------------------------------------------
 
@@ -222,18 +218,7 @@ let bass = (() => {
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
   let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
-  // Grind: "tube" is an ASYMMETRIC shape, so it generates EVEN harmonics — which is what lets
-  // the ear reconstruct a 41 Hz fundamental on a speaker that cannot play 41 Hz.
-  // Band-limited to land in the mid scoop and NOT in the 120–250 Hz mud band.
-  // Asymmetric shapes also produce DC; the highpass removes it.
-  let grind = Osc.saw()
-    .pitchEnvelope(12, 0.001, 0.02)
-    .distort(pDrive, "tube", 4)
-    .lowpass(freq = pGrindHi, q = 0.707)
-    .highpass(freq = pGrindLo, q = 0.707)
-    .mul(pGrind)
-     
-  return sub.plus(harmonics).plus(grind)
+  return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
     .mul(0.2)
 })()
@@ -261,13 +246,13 @@ let marimba = (() => {
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
 })()
 
-export lead_shape = x => x.gain(0.35).sound(marimba).adsrOff()
+export lead_shape = x => x.gain(0.8).sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4)
   .hpf(600, 0.7)
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.35))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.25!16 0.40!48 0.50!16>").postgain(mul(0.21))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
@@ -327,9 +312,8 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-// TODO: remove grind from the bass and add eq
 export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.40) // . mute()
-    .oscp("sub", 1.0).oscp("harmonics", 0.95)  // . solo()
+    .oscp("sub", 1.0).oscp("harmonics", 1.0)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
 export bass_arrange = x => x.orbit(3) // . mute()
@@ -348,22 +332,22 @@ let granCassa = (() => {
   let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, 0.001, 0.10).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Osc.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog)).pitchEnvelope(9.1, 0.001, 0.15).adsr(0.002, 0.45, 0.0, 0.40).mul(0.8)
+  let harms = Osc.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog)).pitchEnvelope(9, 0.001, 0.10).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
   let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
   let beater = Osc.pinknoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(1.75)     // wood core: a crack, the force of the hit
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.05, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .distort(0.10, "tube", 2)                                                              // the skin gives, and the hit reads as hard
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
-export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [4 4 ~ 2 2 ~ 0 ~]>`
+export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [0 0 ~ 2 2 ~ -2 ~]>`
 
 // Far away: the low end and the top do not make it across the hall, the room does.
-export trommel_shape = x => x.gain(0.30).sound(granCassa).adsrOff() // .solo()
-  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.35)
-  .hpf(150).lpf(3800).pan(0.5)
+export trommel_shape = x => x.gain(0.50).sound(granCassa).adsrOff() // .solo()
+  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4)
+  .hpf(140).lpf(3500).pan("0.75 0.25")
 
 export trommel_arrange = x => x.orbit(4)
   .scale("e2:minor").postgain(0.25)
@@ -448,7 +432,7 @@ export song = stack(
   song_body.apply(song_arrange)
   , // Master
   master(Master(m =>
-    m.reverb(r => r.wet(0.2).damp(0.8).roomSize(7).roomLp(3500)).gain(3.0)
+    m.reverb(r => r.wet(0.2).damp(0.8).roomSize(7).roomLp(3500)).gain(3.5)
   ))
 )
 
