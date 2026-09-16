@@ -26,9 +26,24 @@ Every post answers the same three questions, in this order, before anything else
 3. **What did it cost in sound?** Bit-identical, within a margin, or judged by ear; and how that
    was guarded (a parity spec with the old implementation as its oracle, a fuzz, a golden).
 
-Two threads run across the posts and get one figure each in the closing post: the **RTF of Der
-Schmetterling over time** (the same frozen song measured at every tag, see §2.3) and the **phone
-timeline** (stall, half the song, 75 %, barely, smooth).
+**RTF alone is not the score.** The real-time factor (render time over audio time, §2.8) of the
+live song mixes two things that moved in opposite directions: the engine got faster and the song
+got heavier (the guitars alone went from a filtered supersaw to a five-stage rig). Plotted as
+one line it says the optimizations went the wrong way. So the series never shows a live-song
+RTF without the work it bought, and the closing post separates the two effects (§3, P16):
+
+- **the engine on fixed work**: the same frozen song and the same benchmark rows rendered by
+  every engine version (the tags), which isolates the engine;
+- **the work the song asked for**: every snapshot of the song rendered by the same engine
+  (HEAD), in RTF and in structural work units (passes over the block per note, voices per block),
+  which isolates the song;
+- **the phone timeline** (stall, half the song, 75 %, barely, smooth), annotated with the song's
+  work at each date, so "barely" on 2026-09-15 reads as what it was: a heavier song on the same
+  engine speed, then a faster engine.
+
+Every per-post result is stated on fixed work by construction (the same voice or chain, before
+and after), so only the live-song numbers need this care; where a post quotes one, it names the
+song version next to it.
 
 Tags for the front matter: every post carries `series-fairphone` plus its own. Every post links
 its predecessor and successor with relative links (`../YYYY-MM-DD-slug/index.md`), and the
@@ -135,7 +150,23 @@ copy, so subtract the source baseline before comparing them.
   produced is a draft until then.
 - Every figure has an italic caption `*Fig. N: what you see, and what to notice.*`
 
-### 2.5 The post skeleton, series flavour
+### 2.5 Work units
+
+A structural measure of what a song asks of the engine, so RTF can be put in proportion. For one
+voice: the number of passes over the block its optimized graph renders (one per node that is a
+pass, an `Eq` counting its sections, a filter its `passes`, scalar leaves and scalar-only
+arithmetic counting nothing), which is the fuzz's `workCount` in
+`IgnitorDslOptimizerFuzzSpec` made production-grade; for a block: that number summed over the
+voices active in the block; for a song: the median and the peak over the run. A `work` column in
+`runSongBenchmark` next to `medRTF`/`peakRTF` gives RTF per work unit, the engine's cost per
+pass, which is the number that must go DOWN across the series even while the song's RTF goes
+up. Mechanics: (opus) add the counter to `SongBenchmark` at HEAD (the walk exists in the fuzz;
+move it to `audio_bridge` as `IgnitorDsl.workUnits()` with a spec row, since the benchmark module
+may not depend on a test source set); it is only needed at HEAD, since the song snapshots are
+rendered by HEAD for the song axis (P16). The census table in the archive record (90 nodes, 35
+passes per rhythm-guitar note) is the hand-counted precedent.
+
+### 2.6 The post skeleton, series flavour
 
 The howto's arc, with the series' three questions on top:
 
@@ -150,7 +181,15 @@ The howto's arc, with the series' three questions on top:
 
 120 to 220 lines. Longer is two posts.
 
-### 2.6 Review before publish
+### 2.8 RTF, defined once
+
+Render time divided by the audio time rendered. A 128-frame block at 48 kHz is 2.67 ms of sound;
+rendering it in 0.27 ms is an RTF of 0.1, a tenth of the time available. 1.0 is the deadline.
+`medRTF` is the steady-state average (the CPU share); `peakRTF` is the busiest single block after
+the first 32 (the one-time allocations skipped), and the peak is what makes a phone stutter. P1
+defines it for the reader; every other post links there.
+
+### 2.7 Review before publish
 
 One reviewer (opus) with the post, the artifacts it cites and the checklist from the howto:
 every number traced to its artifact, every quote verbatim against `git show`, every link
@@ -166,8 +205,11 @@ tells the story in the order it happened. Working titles are Fable's to change.
 
 - **Story.** Why a 2021 phone is the target and what it forces: songs grow, the phone does not, so
   every added complexity must be paid for in the engine. The measurement stack that makes the
-  series possible: RTF, the `audio_benchmark` rows, the song suites, `docs/benchmarks`, JVM
-  against node and why node is the number that counts. The day the goal was written down
+  series possible: RTF (defined here, §2.8), work units (§2.5), the `audio_benchmark` rows, the
+  song suites, `docs/benchmarks`, JVM against node and why node is the number that counts. And
+  the warning the whole series rests on: the live song's RTF got WORSE over the summer while the
+  engine got faster, because the song got heavier; the honest scoreboard is cost per unit of
+  work on fixed work, which is how every later post reports. The day the goal was written down
   (`docs/plans/unified-eq.md` opens with "Der Schmetterling runs on an older Fairphone 4 again";
   the D0 baseline `316cc8d8` is 2026-08-19).
 - **Artifacts.** `docs/plans/unified-eq.md` (goal, the on-device notes of 2026-08-19 and 2026-08-20),
@@ -487,21 +529,38 @@ tells the story in the order it happened. Working titles are Fable's to change.
 ### P16. `2026-09-16-the-score-so-far` (the closing ledger)
 
 - **Story.** One table of every optimization in the series with its number, unit, platform and
-  sound cost; the two threads as figures: the frozen Der Schmetterling's RTF at every tag from
-  `v0.1.2` to `v0.3.14` on one machine in one session (the series' single most expensive
-  measurement, see below), and the phone timeline. What is open
+  sound cost; then the decomposition of §0 as three figures: the engine on fixed work across the
+  tags, the song's work across its snapshots on one engine, and the phone timeline with the
+  song's work at each date. The sentence the post exists for: the live song's RTF rose over the
+  summer AND the engine's cost per pass fell, and both are true. What is open
   (`docs/tasks/future/ignitor-optimizer-open-items.md`, `affine-chain-fusion.md`,
   `optimizer-on-the-frontend.md`, `high-performance-audio-backend.md`) and what the next
-  complexity increase will cost.
-- **Mechanics.** (opus, the big one) the RTF-over-tags measurement: for each tag in the map,
-  `git worktree add`, build, run `runSongBenchmark --args=songs` (the frozen songs, so the song
-  itself does not move; where a tag predates `FrozenSongs.kt`, record "not measurable at this
-  tag" rather than substituting the live song), record medRTF and peakRTF, remove the worktree.
-  Same machine, same JDK, one session, the machine otherwise idle, three runs per tag. Tags whose
-  build fails with today's toolchain are recorded as such. Expect a day of wall clock; run it
-  last, after every other post is drafted, so the ledger has final numbers. (sonnet) Fig. 1, the
-  RTF line over tags with the optimizations annotated; Fig. 2, the phone timeline from P1
-  extended to the end; Fig. 3, the ledger as a table image if the markdown table is too wide.
+  complexity increase will cost at the current cost per pass.
+- **Mechanics, the engine axis** (opus, the big one). For each tag in the map: `git worktree
+  add`, build, run `runSongBenchmark --args=songs` (the FROZEN Der Schmetterling and Seltsamere
+  Dinge of 2026-07-03, `src/jvmMain/kotlin/FrozenSongs.kt`, whose text has been migrated through
+  the door renames so the sound stays identical; a tag before 2026-07-03 has no frozen song and
+  is recorded as "not measurable") and `:audio_benchmark:jvmRun` for a fixed set of rows that
+  exist at every tag (`sine`, `supersaw_8v`, `pluck+distort_4x`, `supersaw+lpf+adsr`; on node
+  too where the tag builds it), record medRTF, peakRTF and the row µs/block, remove the
+  worktree. Same machine, same JDK, one session, the machine otherwise idle, three runs per tag.
+  The harness fix `39119aef` (2026-09-07) halves every ignitor-row absolute before it: apply the
+  known factor of two to the earlier rows and say so in the caption, or, better, transplant the
+  fixed harness loop into the older worktree for the run. Tags whose build fails with today's
+  toolchain are recorded as such, not skipped silently. Expect a day of wall clock; run it last,
+  after every other post is drafted.
+- **Mechanics, the song axis** (opus). At HEAD only: render every snapshot of Der Schmetterling
+  the repository can reproduce (the 2026-07-03 frozen text; the live text at each tag from
+  `git show <tag>:src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`, migrated where a
+  door was renamed, exactly as `FrozenSongs.kt` was; where a snapshot no longer parses, say so)
+  through `runSongBenchmark` with the `work` column of §2.5: medRTF, peakRTF, median and peak
+  work units per block, voices per block. This is the figure that shows the guitars growing from
+  a filtered supersaw into a five-stage rig, in passes per note.
+- **Figures** (sonnet drafts, Fable's eyes). Fig. 1, the engine axis: cost per work unit (or the
+  fixed rows' µs/block) over tags, the optimizations annotated at their tags; Fig. 2, the song
+  axis: work units per block over the song's snapshots, with the live RTF at HEAD beside it;
+  Fig. 3, the phone timeline from P1 with the song's work at each date; Fig. 4, the ledger as a
+  table image if the markdown table is too wide.
 - **Writing.** Fable. Last.
 
 ## 4. Order of work
@@ -522,5 +581,6 @@ tells the story in the order it happened. Working titles are Fable's to change.
 - Working titles, figure counts and the split of P10 into two posts are Fable's calls while
   writing.
 - Publishing (`status: published`) is the maintainer's.
-- Whether P16's RTF-over-tags measurement is worth its day is the maintainer's call; the series
-  stands without it, with the phone timeline as the closing figure instead.
+- Whether P16's engine-axis measurement is worth its day is the maintainer's call; the series
+  stands without it, with the song axis (HEAD only, an afternoon) and the phone timeline as the
+  closing figures instead. The work-units counter (§2.5) is needed for the song axis either way.
