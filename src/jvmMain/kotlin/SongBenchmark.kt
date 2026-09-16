@@ -7,6 +7,8 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.ignitor.GraphCensus
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.PipelineValue
@@ -86,9 +88,43 @@ class SongBenchmark(
         val error: String? = null,
         /** Voices that ended early because their release stayed silent (`VoiceScheduler.culledVoicesTotal`). */
         val culled: Int = 0,
-    )
+        /** Rendering voices per block (zombies excluded), the median block. */
+        val medianVoices: Double = 0.0,
+        /** Passes over the block per block, summed over the rendering voices (`GraphCensus.passes`), the median block. */
+        val medianWork: Double = 0.0,
+        /** Block-buffer reads and writes per sample, summed over the rendering voices, the median block. */
+        val medianTraffic: Double = 0.0,
+        /** Bytes of state the rendering voices hold, the busiest block. */
+        val peakBytes: Int = 0,
+    ) {
+        /**
+         * Nanoseconds of render time per sample per rendering voice. The numerator is the WHOLE
+         * render (the voices, their strips, the orbit effects, the master), so a piece with little
+         * voice work reads high; compare within a piece, not across pieces.
+         */
+        fun nsPerSamplePerVoice(sampleRate: Int): Double =
+            if (medianVoices > 0.0) medianRtf * 1e9 / sampleRate / medianVoices else 0.0
 
-    private data class PassMetrics(val totalRenderUs: Double, val maxBlockUs: Double, val onsets: Int, val culled: Int)
+        /**
+         * Nanoseconds of render time per sample per pass over the block, the engine's cost per unit
+         * of counted work. The census counts the ignitor graphs only, while the render time includes
+         * the strips, the orbit effects and the master, so a sample voice (one pass) carries all of
+         * its strip in this number; it compares an engine against itself on one piece.
+         */
+        fun nsPerSamplePerPass(sampleRate: Int): Double =
+            if (medianWork > 0.0) medianRtf * 1e9 / sampleRate / medianWork else 0.0
+    }
+
+    private data class PassMetrics(
+        val totalRenderUs: Double,
+        val maxBlockUs: Double,
+        val onsets: Int,
+        val culled: Int,
+        val medianVoices: Double = 0.0,
+        val medianWork: Double = 0.0,
+        val medianTraffic: Double = 0.0,
+        val peakBytes: Int = 0,
+    )
 
     fun run(cases: List<Case>): List<Result> = cases.map { runCase(it) }
 
@@ -117,15 +153,21 @@ class SongBenchmark(
         val peakBlockRtf = medianPeakUs / audioUsPerBlock
         val renderUsPerCycle = medianTotalUs / case.cycles
 
+        val census = passes.first()
+
         return Result(
             name = case.name,
             group = case.group,
-            onsets = passes.first().onsets,
-            culled = passes.first().culled,
+            onsets = census.onsets,
+            culled = census.culled,
             medianRtf = medianRtf,
             peakBlockRtf = peakBlockRtf,
             renderUsPerCycle = renderUsPerCycle,
             audioMsPerCycle = audioMsPerCycle,
+            medianVoices = census.medianVoices,
+            medianWork = census.medianWork,
+            medianTraffic = census.medianTraffic,
+            peakBytes = census.peakBytes,
         )
     }
 
@@ -206,6 +248,7 @@ class SongBenchmark(
         val numBlocks = totalFrames / blockFrames
 
         var maxBlockUs = 0.0
+        var renderUsSum = 0.0
         val startAll = TimeSource.Monotonic.markNow()
 
         // NB: renderBlock() → PlaybackEngine.renderInto() already calls scheduler.process(cursorFrame)
@@ -230,16 +273,53 @@ class SongBenchmark(
         val peakSkipBlocks = (PEAK_SKIP_SECONDS * sampleRate / blockFrames).toInt()
             .coerceAtMost(numBlocks - 1)
 
+        // The work columns: after each measured block, the rendering voices are summed through the
+        // census of their OPTIMIZED graphs, resolved with each voice's oscParams (the unison count
+        // lives there) and its sound index (the variant that plays); a sample voice counts as one
+        // pass that writes the block. The pass's render time is the SUM of the per-block timings, so
+        // the census, which sits between two blocks, costs the numbers nothing; it allocates, which
+        // is why it never runs on the render path.
+        val censusByVoice = HashMap<String, GraphCensus>()
+        val sampleVoice = GraphCensus(1, 1, 0)
+        val workPerBlock = IntArray(numBlocks)
+        val trafficPerBlock = IntArray(numBlocks)
+        val bytesPerBlock = IntArray(numBlocks)
+        val voicesPerBlock = IntArray(numBlocks)
+
         if (capture) {
             var frame = 0.0
             for (b in 0 until numBlocks) {
                 val t = TimeSource.Monotonic.markNow()
                 renderer.renderBlock(cursorFrame = frame, out = out)
                 val us = t.elapsedNow().toDouble(DurationUnit.MICROSECONDS)
+                renderUsSum += us
                 if (b >= peakSkipBlocks && us > maxBlockUs) {
                     maxBlockUs = us
                 }
                 frame += blockFrames
+
+                val rendering = voiceScheduler.renderingVoiceData()
+                var work = 0
+                var traffic = 0
+                var bytes = 0
+
+                for (data in rendering) {
+                    val sound = data.sound ?: IgnitorRegistry.DEFAULT_SOUND
+                    val params = data.oscParams ?: emptyMap()
+                    val index = data.soundIndex ?: 0
+                    val census = censusByVoice.getOrPut("$sound|$index|$params") {
+                        ignitorRegistry.optimized(sound)?.let { GraphCensus.of(it, blockFrames, params, index) } ?: sampleVoice
+                    }
+
+                    work += census.passes
+                    traffic += census.traffic
+                    bytes += census.bytes
+                }
+
+                workPerBlock[b] = work
+                trafficPerBlock[b] = traffic
+                bytesPerBlock[b] = bytes
+                voicesPerBlock[b] = rendering.size
             }
         } else {
             var frame = 0.0
@@ -249,10 +329,29 @@ class SongBenchmark(
             }
         }
 
-        val totalRenderUs = startAll.elapsedNow().toDouble(DurationUnit.MICROSECONDS)
+        if (!capture) {
+            return PassMetrics(
+                totalRenderUs = startAll.elapsedNow().toDouble(DurationUnit.MICROSECONDS), maxBlockUs = maxBlockUs,
+                onsets = events.size, culled = voiceScheduler.culledVoicesTotal(),
+            )
+        }
+
+        // the measured passes: the render time is the sum of the timed blocks, the census excluded
+        val totalRenderUs = renderUsSum
+
+        fun median(values: IntArray): Double {
+            val sorted = values.sorted()
+
+            return sorted[sorted.size / 2].toDouble()
+        }
+
         return PassMetrics(
             totalRenderUs = totalRenderUs, maxBlockUs = maxBlockUs, onsets = events.size,
             culled = voiceScheduler.culledVoicesTotal(),
+            medianVoices = median(voicesPerBlock),
+            medianWork = median(workPerBlock),
+            medianTraffic = median(trafficPerBlock),
+            peakBytes = bytesPerBlock.max(),
         )
     }
 

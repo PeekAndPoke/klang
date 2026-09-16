@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangMinHeap
 import io.peekandpoke.klang.common.math.ValueRamp
@@ -205,6 +206,28 @@ class VoiceScheduler(
      * which reports dropped voices only.
      */
     fun culledVoicesTotal(): Int = culledVoices
+
+    /**
+     * The voice data of the timeline voices that still run their strip (zombies excluded), one
+     * entry per voice. A diagnostic for the song benchmark's work columns: it allocates, so it is
+     * never called on the render path. A live (non-timeline) voice has no scheduled data and is
+     * left out.
+     */
+    fun renderingVoiceData(): List<VoiceData> {
+        val out = ArrayList<VoiceData>(active.size)
+
+        for (activeVoice in active) {
+            if (!activeVoice.voice.culled) {
+                val origin = activeVoice.origin
+
+                if (origin is VoiceOrigin.Timeline) {
+                    out.add(origin.source.data)
+                }
+            }
+        }
+
+        return out
+    }
 
     /** Active voices that still run their strip: [getActiveVoiceCount] minus the zombies. */
     fun renderingVoiceCount(): Int {

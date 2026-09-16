@@ -504,14 +504,18 @@ object SongBenchmarkCases {
     // Live rig ablation (2026-09-15): where the cycles go in the CURRENT Der Schmetterling
     // ────────────────────────────────────────────────────────────────────────────────────────
 
-    /** The live song with every section gate (`.mute("<...>")`) removed, so each part plays continuously. */
-    private val liveUngated: String by lazy {
-        // The song seeds its shuffle from the wall clock, so every pass and every arm of an A/B
-        // would render a different realisation: pinned to a constant here, once for every case.
+    /**
+     * A song text with every section gate (`.mute("<...>")`) removed, so each part plays continuously,
+     * and its shuffle seed pinned: the song seeds it from the wall clock, so every pass and every arm
+     * of an A/B would otherwise render a different realisation.
+     */
+    private fun ungated(code: String): String =
         swap("seed(timeOfDay.mul(60*60*60*24))", "seed(0.5)")(
-            Regex("""\.mute\("<[^"]*>"\)""").replace(derSchmetterlingSong.code, ""),
+            Regex("""\.mute\("<[^"]*>"\)""").replace(code, ""),
         )
-    }
+
+    /** The live song, ungated. */
+    private val liveUngated: String by lazy { ungated(derSchmetterlingSong.code) }
 
     /** A case that renders [expr] on top of the ungated live song, after [edit] has rewritten the song text. */
     private fun liveCase(name: String, group: String, expr: String, edit: (String) -> String = { it }): SongBenchmark.Case =
@@ -621,6 +625,42 @@ object SongBenchmarkCases {
             swapAll(Regex("""\.compressor\([^)]*\)"""), "", expected = 3)(ungateSong(it))
         },
     )
+
+    /**
+     * The ledger suite (`--args=ledger`): the instrument pieces of Der Schmetterling, each solo and
+     * ungated, on the FROZEN song text of `FrozenPieces` (so the engine is the only thing that can
+     * move a piece's numbers between runs) and on the LIVE text (so the same run shows how far the
+     * song has moved since the snapshot). Rows are appended to `docs/benchmarks/ledger.md`.
+     */
+    fun ledger(): List<SongBenchmark.Case> {
+        val pieces = listOf(
+            "guitar melody (rig)" to "guitar1.apply(guitar1_arrange)$BAND",
+            "guitars rhythm (rig)" to RHYTHM,
+            "marimba" to LEAD,
+            "trommel" to TROMMEL,
+            "bass" to "bass.apply(bass_arrange)$BAND",
+            "drums (samples)" to "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)",
+        )
+        val frozen = ungated(FrozenPieces.derSchmetterling_2026_09_16)
+
+        return pieces.map { (name, expr) ->
+            SongBenchmark.Case(
+                name = "$name @ frozen 2026-09-16",
+                group = "ledger",
+                rpm = FrozenPieces.derSchmetterlingRpm_2026_09_16,
+                cycles = 8,
+                code = frozen + "\n\n" + expr + "\n",
+            )
+        } + pieces.map { (name, expr) ->
+            SongBenchmark.Case(
+                name = "$name @ live",
+                group = "ledger-live",
+                rpm = derSchmetterlingSong.rpm,
+                cycles = 8,
+                code = liveUngated + "\n\n" + expr + "\n",
+            )
+        }
+    }
 
     fun all(): List<SongBenchmark.Case> = voices() + ladders() + experiments() + frozenSongs()
 }

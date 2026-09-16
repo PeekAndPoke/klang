@@ -214,15 +214,39 @@ loudly), record it and take the nearest older tag that parses it as the "before"
   attribution, not for these counters). Cache misses per sample per voice is the closest thing
   to what the A55 feels.
 
-Mechanics: (opus) the rig suite at HEAD with the `work`, `bytes` and `traffic` columns (one walk,
-three weight tables, in `audio_bridge` next to `workUnits()`, with a spec row each against a
-hand-counted graph), then the same rig suite in a `v0.3.12` worktree with the HEAD instrument
-texts transplanted into `SongBenchmarkCases.kt` (the suite already isolates instrument groups
-and ungates them; `swapAll` and the ablation rows are the precedent); the old engine has no
-`work` column, so the structural columns come from HEAD's walk over the old engine's graph shape
-(the optimizer differs between the tags, which is part of the story: count both); three runs
-each, same machine, one session; the table lands in P16 and in whichever post the instrument
-belongs to (P11, P12, P13, P15).
+**DONE 2026-09-16, the harness.** `GraphCensus` (audio_be, `ignitor/GraphCensus.kt`, a
+diagnostic never on the render path; `GraphCensusSpec` pins hand-counted graphs, seven mutations
+red) counts passes, buffer traffic and held bytes per voice from the optimized tree; the song
+benchmark sums it over the rendering voices after every measured block (`voices`, `work`,
+`traffic`, `KiB`, `ns/smp/voice`, `ns/smp/pass` columns in every report); and
+`./gradlew runSongBenchmark --args=ledger` renders the six instrument pieces of Der
+Schmetterling on the FROZEN song text (`FrozenPieces.kt`, the text at `v0.3.14`) and on the live
+text, and APPENDS a row per piece to `docs/benchmarks/ledger.md` with `git describe` and the CPU.
+That is the command to run after every optimization round; a piece's history reads down one
+column. The "before" of the September round (`v0.3.12`) was measured by the transplant recipe
+of §2.3 (a worktree at the tag, the frozen pieces and a minimal ledger suite copied in, no census
+there) and pasted into the ledger marked "transplant"; three runs each side, medians:
+
+| piece | v0.3.12 medRTF | v0.3.14 medRTF | change |
+|---|---:|---:|---:|
+| guitar melody (rig) | 0.01961 | 0.01612 | -18 % |
+| guitars rhythm (rig) | 0.04352 | 0.03746 | -14 % |
+| marimba | 0.03388 | 0.02897 | -14 % |
+| trommel | 0.06037 | 0.03365 | -44 % |
+| bass | 0.01009 | 0.00451 | -55 % |
+| drums (samples) | 0.03968 | 0.01726 | -57 % |
+
+Same pieces, same machine (Ryzen 9 PRO 7940HS, JVM), back to back, the spread of the three runs
+about 10 % (one marimba run caught a pause, peak RTF 1.2, and reads high); the drums went from 24
+active voices to 6 rendering (culling). The census at HEAD: a
+rhythm guitar note is 57 passes (19 of them the unison stack's voices), a melody guitar note 48,
+a marimba note 18, a trommel note 24, the bass 7; ns per sample per pass 6.4 to 8.0 on the
+guitars, 5.0 on the marimba, 6.0 on the trommel, 14.6 on the bass. The old engine's graphs for
+the same text had a few more passes per note (no `Affine`, so every level knob was its own
+`Times`); the ledger's structural columns are HEAD's.
+
+Not measured: `perf stat` cache misses (the machine has `perf`; a later run), and the node side
+(the song benchmark is JVM; the `guitar-rig*` rows in `audio_benchmark` are the node precedent).
 
 ### 2.6 The post skeleton, series flavour
 

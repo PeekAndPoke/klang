@@ -34,6 +34,32 @@
   same rows put 22 µs of the rig's 35 in the shapers' oversampling, so that is where the work
   went (next entry). Measure the ceiling of a fold by deleting the nodes before building it.
 
+## The ledger: a per-instrument harness for every optimization round (2026-09-16)
+
+- `./gradlew runSongBenchmark --args=ledger` renders the six instrument pieces of Der Schmetterling
+  (both guitar rigs, marimba, trommel, bass, drums) solo and ungated on the FROZEN song text of
+  `FrozenPieces.kt` (the text at `v0.3.14`; a materially changed instrument gets a new dated
+  snapshot, the old one stays) and on the live text, and APPENDS a row per piece to
+  `docs/benchmarks/ledger.md` with `git describe` and the CPU. Run it after every optimization
+  round; within one piece and one machine the engine is the only thing that moves between rows.
+- `GraphCensus` (`ignitor/GraphCensus.kt`, a diagnostic, never on the render path) counts what a
+  note asks of the engine from its OPTIMIZED tree: passes over the block, block-buffer reads plus
+  writes per sample, bytes of held state, with a weight per node kind read off the runtime
+  lowering (shared nodes once plus a memo read per extra consumer, scalar-only arithmetic
+  nothing, the first variant only). `GraphCensusSpec` pins hand-counted graphs. The song
+  benchmark sums it over the rendering voices after each measured block
+  (`VoiceScheduler.renderingVoiceSounds()`, zombies excluded) and reports `voices`, `work`,
+  `traffic`, `KiB`, `ns/smp/voice` and `ns/smp/pass`, the last being the engine's cost per unit
+  of work, the number that must fall while a song's RTF may rise with the song.
+- Why: a live song's RTF over time mixes a faster engine with a heavier song and can read as if
+  the optimizations went the wrong way. The ledger holds the work still. First reading, the
+  September round (`v0.3.12` by a worktree transplant against `v0.3.14`, medians of three, same
+  machine, the spread of three runs about 10 %): melody guitar -18 %, rhythm guitars -14 %,
+  marimba -14 % (one run caught a pause; its clean runs say -28 % and -14 %), trommel -44 %, bass
+  -55 %, drums -56 % (culling: 24 active voices became 6 rendering). The drums' ns per sample per voice ROSE while their RTF
+  halved, which is the case for counting work, not voices. A rhythm guitar note is 57 passes, 19
+  of them the unison stack's voices, which the first census draft priced as one.
+
 ## div, minus and neg fold; a zero divisor is zero (2026-09-15)
 
 - Engine rule (maintainer): a divisor of EXACTLY zero yields zero. `DivIgnitor` fills zero for a
