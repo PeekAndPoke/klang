@@ -544,7 +544,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 ### P13. `2026-09-15-drift-for-free`
 
 - **Story.** The analog drift stepped every lane per sample: xorshift, two one-poles, the blend,
-  13 lanes per guitar note, for a modulation whose fastest layer has a 50 ms time constant. 19 %
+  20 lanes per guitar note (19 unison voices and the shared lane), for a modulation whose fastest layer has a 50 ms time constant. 19 %
   of a drifting guitar, 13 % of the marimba, 15 % of the trommel. Stepping once per block at
   375 Hz and ramping the multiplier across the block: the rhythm rig 0.040 to 0.036, the "no
   analog" floor at 0.035, so the drift is free; the live song 0.106 to 0.097. Not bit-identical,

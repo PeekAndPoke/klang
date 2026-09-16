@@ -120,8 +120,10 @@
   wave-engine stacks, both strings, the sample player. The filter drift (`FilterModRenderer`) ran
   per block already (a hold). Maintainer decision: per block and interpolated everywhere; not
   bit-identical, judged by ear.
-- Why: `DriftLanes` stepped every lane per sample (xorshift, two one-poles, the blend), 13 lanes
-  per note on the Schmetterling guitars, for a modulation whose fastest layer has a 50 ms time
+- Why: `DriftLanes` stepped every lane per sample (xorshift, two one-poles, the blend), 20 lanes
+  per note on the Schmetterling rhythm guitars (the stack's 19 unison voices and the shared lane;
+  an earlier count of 13 read the pattern-level `unison(voices = 13)`, which the sound's literal
+  `voices(19)` replaces), for a modulation whose fastest layer has a 50 ms time
   constant: 19 % of a drifting guitar, 13 % of the marimba, 15 % of the trommel.
 - Measured (rig and live A/B, seeded, `docs/benchmarks/2026-09-15_1755*` = per sample,
   `_1759*`/`_1800*` = per block): rhythm rig 0.040 -> 0.036 with "no analog" at 0.035 (the drift
