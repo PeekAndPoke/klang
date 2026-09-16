@@ -251,7 +251,8 @@
   ignitor attacks that outlive a short gate. Residual risk: a release tail with gaps longer than the
   window (a `tremolo` voice is excluded for that reason).
 - Where it pays (Der Schmetterling, 2026-09-15 rig suite): sample drums with 2 s releases (85 to 90%
-  silent), the Orchestertrommel (about 40%), the marimba (20 to 40%). Where it cannot: the guitars,
+  silent), the Orchestertrommel (about 40%). The marimba was estimated at 20 to 40% and culled
+  nothing in the day's rig suite (`docs/benchmarks/2026-09-15_172412`, lead (marimba) 0 of 128). Where it cannot: the guitars,
   whose notes live 170 ms (gate 116 ms + 30 to 50 ms release) and are audible throughout.
 - Guard: `VoiceCullingSpec` (mutation-checked: gate rule, pre-multiplier peak, frames-not-blocks,
   negative-means-never). Doors: `LangCullSpec`. Record: `docs/tasks-archive/2026-09/20260915-voice-culling.md`.
