@@ -349,7 +349,6 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         cylinder = seed + 71; pan = b + 72
         delay = b + 73; delayTime = b + 74; delayFeedback = b + 75; delayCap = b + 175
         reverb = b + 76; reverbSize = b + 77; reverbLowpass = b + 79
-        iResponse = "ir$seed"
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86
         vowel = "v$seed"

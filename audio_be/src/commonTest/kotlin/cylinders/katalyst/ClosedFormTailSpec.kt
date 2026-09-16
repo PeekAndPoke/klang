@@ -166,7 +166,7 @@ class ClosedFormTailSpec : StringSpec({
 
     fun reverbEffect(size: Double) =
         KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
-            .apply { configure(size = size, lowpass = null, iResponse = null) }
+            .apply { configure(size = size, lowpass = null) }
 
     fun KatalystReverbEffect.feed(ctx: KatalystContext, level: Double) {
         ctx.reverbSendBuffer.left.fill(level)

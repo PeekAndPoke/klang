@@ -53,7 +53,7 @@ Of ~180 implemented concepts, only ~14% are well-covered by existing tutorials. 
 ### Missing Effects & Synthesis
 
 Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duck()`, `vowel()`, `distort(shape = ...)`,
-`iresponse()`, `mode()`, `bank()`, `freq()`, `accelerate()`, `unison()`, `detune()`
+`mode()`, `bank()`, `freq()`, `accelerate()`, `unison()`, `detune()`
 
 ### Missing Pattern Functions
 
@@ -114,7 +114,7 @@ grouping, `<>` alternation
 |-----|--------------------|--------------|----------------------------------|-------------------|------------------------------------------------------------------------|
 | L1  | Sample Slicing     | Intermediate | `slice()`, `splice()`, `loop()`  | **Jungle**        | Slicing the Amen break at 160 BPM IS jungle                            |
 | L2  | Compressor         | Intermediate | `compressor()`                   | **Punk Rock**     | Punk is LOUD — compression as weapon, not subtlety                     |
-| L3  | Convolution Reverb | Intermediate | `iresponse()`, `ir()`            | **Neo-Classical** | Nils Frahm's music lives and dies by the space (cathedral vs bedroom)  |
+| L3  | ~~Convolution Reverb~~ | Intermediate | none: `iresponse()`/`ir()` removed 2026-09-16, no convolution reverb exists | **Neo-Classical** | Dropped until the engine has a convolution reverb and its own door |
 | L4  | Vowel Sounds       | Intermediate | `vowel()`                        | **Funk**          | Wah-wah pedal IS a formant sweep. "Wacka-wacka" = vowel cycling        |
 | L5  | Distortion Shapes  | Intermediate | `distort(shape = ...)`, all 9 shapes   | **Industrial**    | NIN treats distortion as composition. 9 shapes = 9 different beasts    |
 | L6  | Seeds              | Intermediate | `seed()`, `withSeed()`           | **Krautrock**     | Motorik beat = seeded pattern. Generative but reproducible (NEU!, Can) |
@@ -173,7 +173,7 @@ Complete pieces combining multiple concepts. Created AFTER their prerequisites e
 | G16 | Make a Jungle Track     | Jungle            | slice, fast, stut, echo, breaks         | L1, L10 |
 | G17 | Make a Trance Anthem    | Trance            | SuperSaw, filter sweep, arrange, duck   | A3, M8  |
 | G18 | Make an Afrobeat Jam    | Afrobeat          | euclid, polymeter, stack, percussion    | H5, L8  |
-| G19 | Make a Cinematic Score  | Film Score        | legato, room, ir, slow attacks, arrange | L3      |
+| G19 | Make a Cinematic Score  | Film Score        | legato, reverb, slow attacks, arrange   | none (L3 dropped) |
 | G20 | Make a Dancehall Riddim | Dancehall         | stut, echo, struct, samples, swing      | L10, H6 |
 
 ### Pro Showcases
@@ -181,8 +181,8 @@ Complete pieces combining multiple concepts. Created AFTER their prerequisites e
 | #   | Title                    | Genre          | Combines                               | After          |
 |-----|--------------------------|----------------|----------------------------------------|----------------|
 | G21 | Make a Complete EDM Drop | EDM/Big Room   | arrange, duck, supersaw, filter, every | multiple       |
-| G22 | Make Generative Ambient  | Ambient        | signals, seed, sometimes, room, ir     | H1, H7, L6, L3 |
-| G23 | Make an FM Piano Ballad  | Ballad/80s Pop | FM, chord, voicing, room, arrange      | A2             |
+| G22 | Make Generative Ambient  | Ambient        | signals, seed, sometimes, reverb       | H1, H7, L6     |
+| G23 | Make an FM Piano Ballad  | Ballad/80s Pop | FM, chord, voicing, reverb, arrange    | A2             |
 | G24 | Make a Live Coding Set   | Live Coding    | every, sometimes, jux, superimpose     | multiple       |
 
 ---
@@ -197,7 +197,7 @@ Complete pieces combining multiple concepts. Created AFTER their prerequisites e
 | Gospel Trance        | Gospel + Trance        | M2, A3        |
 | Punk Funk            | Punk + Funk            | L2, L4        |
 | Balkan Breaks        | Balkan Folk + Jungle   | L8, L1        |
-| Neo-Classical Glitch | Neo-Classical + Glitch | L3, L11       |
+| Neo-Classical Glitch | Neo-Classical + Glitch | L11 (L3 dropped) |
 | Synthwave Jazz       | Synthwave + Jazz       | A1, H7        |
 
 ---

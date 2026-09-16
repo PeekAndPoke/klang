@@ -26,11 +26,13 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  *   are objects with named slots; `comp`, `uni`, `vib`, `pamt` stay as their aliases.
  * - 2026-09-16, reverb: `room` became `reverb(wet, size, lowpass)`; its `fade` and `dim` slots are
  *   refused by name (`LangReverbSpec`). `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
+ * - 2026-09-16, impulse response: `iresponse` and its alias `ir` named a sample no engine path ever read
+ *   (there is no convolution reverb); removed with the `iResponse` wire field.
  */
 class LangRetiredDoorsSpec : StringSpec({
     val envelope = listOf("attack", "decay", "sustain", "release")
     val effects = listOf(
-        "room", "roomWet", "roomsize", "rsize", "sz", "size", "roomfade", "rfade", "roomlp", "rlp", "roomdim", "rdim",
+        "room", "iresponse", "ir", "roomWet", "roomsize", "rsize", "sz", "size", "roomfade", "rfade", "roomlp", "rlp", "roomdim", "rdim",
         "delayWet", "delaytime", "delayfeedback", "delayfb", "dfb", "delaycap", "dcap",
         "ph", "phaserWet", "phasercenter", "phc", "phasersweep", "phs", "phaserFloor",
         "tremolosync", "tremsync", "tremolodepth", "tremdepth", "tremoloskew", "tremskew", "tremolophase", "tremphase",

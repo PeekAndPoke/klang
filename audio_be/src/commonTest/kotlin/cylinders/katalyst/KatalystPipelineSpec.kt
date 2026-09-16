@@ -41,7 +41,7 @@ class BusPipelineSpec : StringSpec({
             configure(timeSeconds = delayTime, feedback = 0.0, cap = 1.0)
         }
         val reverb = KatalystReverbEffect(Reverb(sampleRate), blockFrames).apply {
-            configure(size = reverbRoom, lowpass = null, iResponse = null)
+            configure(size = reverbRoom, lowpass = null)
         }
         val phaser = KatalystPhaserEffect(Phaser(sampleRate).apply {
             depth = phaserDepth

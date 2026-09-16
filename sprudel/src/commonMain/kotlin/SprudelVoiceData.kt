@@ -660,11 +660,6 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || reverbFx != null) reverbFxOrNew().reverbLowpass = v
         }
-    var iResponse: String?
-        get() = reverbFx?.iResponse
-        set(v) {
-            if (v != null || reverbFx != null) reverbFxOrNew().iResponse = v
-        }
 
     var begin: Double?
         get() = sample?.begin
@@ -1099,7 +1094,6 @@ data class SprudelVoiceData(
             reverb = reverb,
             reverbSize = reverbSize,
             reverbLowpass = reverbLowpass,
-            iResponse = iResponse,
             begin = begin,
             end = end,
             speed = speed,

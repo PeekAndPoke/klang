@@ -316,7 +316,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `reverb(wet, size, lowpass)`; readers `reverb.wet/.size/.lowpass`; `iresponse()` / `ir`
+- `reverb(wet, size, lowpass)`; readers `reverb.wet/.size/.lowpass` (`iresponse`/`ir` removed 2026-09-16, never read)
 
 ### Audio Effects — Delay
 

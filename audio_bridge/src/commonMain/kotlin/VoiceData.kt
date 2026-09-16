@@ -126,7 +126,6 @@ data class VoiceData(
     val reverb: Double?, // Send amount (0.0 to 1.0)
     val reverbSize: Double?, // Tail length, authored ~0..10 scale (normalized in VoiceFactory)
     val reverbLowpass: Double?, // Tail damping cutoff in Hz
-    val iResponse: String?,
 
     // Sample manipulation
     val begin: Double?,
@@ -259,7 +258,6 @@ data class VoiceData(
             reverb = null,
             reverbSize = null,
             reverbLowpass = null,
-            iResponse = null,
             begin = null,
             end = null,
             speed = null,

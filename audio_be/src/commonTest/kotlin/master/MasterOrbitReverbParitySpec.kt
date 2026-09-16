@@ -136,10 +136,10 @@ class MasterOrbitReverbParitySpec : StringSpec({
 
         val orbit = KatalystReverbEffect(Reverb(sampleRate), blockFrames)
         // A finite lowpass first, so the +Inf outcome is provably "unset", not a fresh default.
-        orbit.configure(size = 0.5, lowpass = 3000.0, iResponse = null)
+        orbit.configure(size = 0.5, lowpass = 3000.0)
         orbit.reverb!!.lowpass shouldBe 3000.0
 
-        orbit.configure(size = 0.5, lowpass = Double.POSITIVE_INFINITY, iResponse = null)
+        orbit.configure(size = 0.5, lowpass = Double.POSITIVE_INFINITY)
         orbit.reverb!!.lowpass shouldBe null
     }
 

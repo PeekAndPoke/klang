@@ -29,7 +29,7 @@ Known asymmetries already spotted, as a starting list:
   word is `reverb` everywhere. Was: **`damp` is master-only**; sprudel reaches damping through `room(lowpass)` (Hz) instead.
 - RESOLVED 2026-09-07: `cap` is the fourth slot of `delay(wet, time, feedback, cap)`. Was: **`delaycap`/`dcap` is not a `delay()` parameter** (the per-param C0 form covers amount/time/feedback only), while
   the reverb family exposes all five of its knobs.
-- HALF RESOLVED 2026-09-16: `roomDim` is gone end to end; `iResponse` stays (not part of that decision). Was:
+- RESOLVED 2026-09-16: `roomDim` and `iResponse` (with the `iresponse`/`ir` doors) are gone end to end. Was:
   **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 

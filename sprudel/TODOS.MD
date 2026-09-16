@@ -67,8 +67,8 @@
 
 ### Audio Engine Enhancements
 
-- [ ] **Convolution Reverb (FFT-based)** - Implement true convolution reverb to support `iResponse()` with impulse
-  response samples. Current implementation uses Freeverb (algorithmic reverb). Requires FFT-based convolution processing
+- [ ] **Convolution Reverb (FFT-based)** - Implement true convolution reverb with impulse response samples. The
+  reserved `iresponse()`/`ir()` doors were removed 2026-09-16 (they stored a name nothing read); this designs its own. Current implementation uses Freeverb (algorithmic reverb). Requires FFT-based convolution processing
   and IR loading/management. Significantly larger task than current reverb.
 
 ### Tempo Control

@@ -99,7 +99,8 @@ knobs, `dist`, `distos`, `distortshape`/`dshape`, `crushos`, `coarseos`, the `*O
 `delay(time = 0.3)` sets, `delay.time` reads); the reverb's `room` object with its `fade` and `dim` slots and the
 master reverb knobs `roomSize`, `roomFade`, `roomLp`, `damp` (gone 2026-09-16: `reverb(wet, size, lowpass)` on both
 doors, `fade = x` is `size = 10x`, `lowpass` is the one damping knob, see
-`docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
+`docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`); `iresponse` and its alias `ir` with the wire field
+`iResponse` (gone 2026-09-16: no convolution reverb ever read the name; a future one designs its own door); the filter per-knob doors `lpq`, `lpx`, `lpe`, `lpadsr`, `hpq`, `hpx`, `hpe`,
 `hpadsr`, `bpq`, `bpe`, `bpadsr`, `notchf`, `nresonance`/`nres`/`notchq`/`ntq`, `ntf`, `nfadsr`, `nfattack`/`nfa`, `nfdecay`/`nfd`,
 `nfsustain`/`nfs`, `nfrelease`/`nfr`, `nfenv`/`nfe` (gone 2026-09-07: `lpf` and `hpf` carry `q`, `passes`, `env` and the envelope
 stages as slots, `bpf` and `notch` the same without `passes`); the singular `adsrCurve` on every surface (`adsrCurves(a, d, r)` only); the batch G per-knob doors `vibratoMod`,

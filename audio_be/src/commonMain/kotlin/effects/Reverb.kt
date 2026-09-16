@@ -117,10 +117,6 @@ class Reverb(
             field = value
         }
 
-    // TODO(klang): future hook — see docs/tasks/ignitor-dsl-open-items.md.
-    //   iResponse — IR-convolution reverb (FIR / partitioned-FFT path).
-    var iResponse: String? = null
-
     /**
      * Returns true if the internal reverb buffers still contain audio above
      * [threshold]. Used by cylinder cleanup to detect a tail that should keep
@@ -275,7 +271,6 @@ class Reverb(
     fun restoreDefaults() {
         size = 0.5
         lowpass = null
-        iResponse = null
     }
 
     /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one

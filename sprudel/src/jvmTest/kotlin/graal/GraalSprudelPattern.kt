@@ -186,8 +186,6 @@ class GraalSprudelPattern(
         // roomdim was never read by the engine and has no sprudel slot.
         val roomFade = value.safeGetMember("roomfade").safeNumberOrNull()
         val roomLp = value.safeGetMember("roomlp").safeNumberOrNull()
-        val iResponse = value.safeGetMember("iresponse").safeStringOrNull()
-            ?: value.safeGetMember("ir").safeStringOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Distortion
@@ -423,7 +421,6 @@ class GraalSprudelPattern(
                 it.reverb = room
                 it.reverbSize = roomFade?.let { fade -> fade * 10.0 } ?: roomSize
                 it.reverbLowpass = roomLp
-                it.iResponse = iResponse
                 // Sample manipulation
                 it.begin = sampleBeginPos
                 it.end = sampleEndPos

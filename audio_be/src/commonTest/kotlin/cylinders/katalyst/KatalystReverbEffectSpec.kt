@@ -27,7 +27,7 @@ class KatalystReverbEffectSpec : StringSpec({
     // The production door takes every param explicitly (no defaults, mirroring the delay);
     // this trims the boilerplate for rows that only care about the lifecycle-deciding size.
     fun KatalystReverbEffect.configureSize(size: Double) {
-        configure(size = size, lowpass = null, iResponse = null)
+        configure(size = size, lowpass = null)
     }
 
     fun createEffect(size: Double = 0.5): KatalystReverbEffect {
@@ -262,10 +262,10 @@ class KatalystReverbEffectSpec : StringSpec({
 
     "a NaN lowpass reads as unset, never as the previous owner's damping" {
         val effect = createEffect(size = 0.5)
-        effect.configure(size = 0.5, lowpass = 500.0, iResponse = null)
+        effect.configure(size = 0.5, lowpass = 500.0)
         effect.reverb!!.lowpass shouldBe 500.0
 
-        effect.configure(size = 0.5, lowpass = Double.NaN, iResponse = null)
+        effect.configure(size = 0.5, lowpass = Double.NaN)
         effect.reverb!!.lowpass shouldBe null
     }
 
@@ -408,13 +408,12 @@ class KatalystReverbEffectSpec : StringSpec({
         // Reverb setters DROP non-finite writes, so a NaN param from the next life would
         // otherwise keep THIS life's value.
         val effect = createEffect(size = 0.8)
-        effect.configure(size = 0.8, lowpass = 5000.0, iResponse = "hall")
+        effect.configure(size = 0.8, lowpass = 5000.0)
 
         effect.reset()
 
         effect.reverb!!.size shouldBe 0.0
         effect.reverb!!.lowpass shouldBe null
-        effect.reverb!!.iResponse shouldBe null
     }
 
     "a quiet network drains in proportion to its content, not the saturated worst case" {

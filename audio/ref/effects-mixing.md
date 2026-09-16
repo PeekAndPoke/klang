@@ -114,14 +114,13 @@ Fixed-size circular buffer delay with feedback and multi-tap mixing.
 
 ### Reverb
 
-Freeverb-style algorithmic reverb with optional impulse response.
+Freeverb-style algorithmic reverb (no impulse-response path).
 
 | Parameter   | Meaning                                        |
 |-------------|------------------------------------------------|
 | `reverb`        | Send amount per voice (`SendRenderer`)                          |
 | `reverbSize`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
 | `reverbLowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
-| `iResponse`     | Impulse response name (reserved, not read yet)                  |
 
 ### Phaser
 

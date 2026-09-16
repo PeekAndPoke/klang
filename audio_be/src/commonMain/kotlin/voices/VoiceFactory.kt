@@ -166,7 +166,6 @@ class VoiceFactory(
             amount = data.reverb ?: 0.0,
             size = Reverb.normalizeSize(data.reverbSize ?: 0.0),
             lowpass = data.reverbLowpass,
-            iResponse = data.iResponse,
         )
 
         // Phaser

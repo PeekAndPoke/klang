@@ -49,7 +49,7 @@ class LazyReverbSpec : StringSpec({
     fun effect(units: ReverbUnits) = KatalystReverbEffect(units = units, blockFrames = blockFrames)
 
     fun KatalystReverbEffect.configureSize(size: Double) =
-        configure(size = size, lowpass = null, iResponse = null)
+        configure(size = size, lowpass = null)
 
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,

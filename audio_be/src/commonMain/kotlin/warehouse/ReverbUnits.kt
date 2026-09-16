@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
  *
  * Same rules as [SizedBuffers], simpler because every unit is the same size: **stocked by return,
  * never by prediction**; a rented unit is indistinguishable from a new one — parameters back to
- * constructor defaults at return (three fields, O(1)), state zeroed by DEFERRED housekeeping
+ * constructor defaults at return (two fields, O(1)), state zeroed by DEFERRED housekeeping
  * ([housekeep], one unit per call, called once per block by the backend) or on the spot by [rent]
  * when nothing clean is idle (review round 3: a unit's `reset()` is ~27 k stores, and sixteen of
  * them inside one render callback was the warmup's teardown stall); the shelf holds at most

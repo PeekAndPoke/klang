@@ -116,14 +116,12 @@ class KatalystReverbEffect(
     fun configure(
         size: Double,
         lowpass: Double?,
-        iResponse: String?,
     ) {
         if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             val unit = reverb ?: rentUnit() ?: return
 
             unit.size = size.coerceIn(0.0, 1.0)
             unit.lowpass = lowpass?.takeIf { it.isFinite() }
-            unit.iResponse = iResponse
             state = State.Active
             return
         }
@@ -223,7 +221,6 @@ class KatalystReverbEffect(
             unit.reset()
             unit.size = 0.0
             unit.lowpass = null
-            unit.iResponse = null
         }
         state = State.Off
         drainRemaining = 0.0

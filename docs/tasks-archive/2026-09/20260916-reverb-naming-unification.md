@@ -241,9 +241,18 @@ S1 leaves the engine `Reverb` properties alone; it only stops writing `damp` and
 
 ## Out of scope (recorded, not scheduled)
 
-- `iresponse()`/`ir` and the engine `iResponse` field: equally dead ("reserved, not read yet"), but not part of the
-  decision. Candidate for the same treatment later.
+- ~~`iresponse()`/`ir` and the engine `iResponse` field~~: DONE the same day, see the follow-up below.
 - The size floor at 0 (shorter rooms need a separate on/off switch first).
 - The engine names the delay's and the reverb's send `amount` while both doors say `wet`; the flat carriers use the
   bare concept word. Pre-existing delay convention, kept for symmetry.
 - The master delay's wire field `timeSeconds` against the door knob `time`: unchanged.
+
+## Follow-up 2026-09-16: `iresponse` / `ir` removed
+
+Maintainer, same day: "please remove the ir / iresponse dsl". The doors stored an impulse-response name that no engine
+path ever read (there is no convolution reverb), so they went end to end like `dim`: the `iresponse`/`ir` doors on
+all three receivers, `SprudelVoiceData.iResponse` and its `SvdReverb` field, `VoiceData.iResponse`,
+`Voice.Reverb.iResponse`, `Reverb.iResponse` and its TODO hook, and the `iResponse` parameter of
+`KatalystReverbEffect.configure`. No song, tutorial, benchmark or golden fixture used them. Guard: `iresponse` and `ir`
+in `LangRetiredDoorsSpec`. The planned L3 "Convolution Reverb" lesson in `tutorial-master-plan.md` is marked dropped
+until a convolution reverb exists; `sprudel/TODOS.MD` keeps the engine idea, which designs its own door.

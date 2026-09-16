@@ -18,7 +18,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
- * `reverb(wet, size, lowpass)`, the orbit reverb, and `iresponse()`. The size slot has its own
+ * `reverb(wet, size, lowpass)`, the orbit reverb. The size slot has its own
  * [LangReverbSizeSpec]. `reverb` replaced `room` on 2026-09-16 (`docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`).
  */
 class LangReverbSpec : StringSpec({
@@ -257,49 +257,6 @@ class LangReverbSpec : StringSpec({
         }
     }
 
-    // -- iresponse() ------------------------------------------------------------------------------------------------------
-
-    "iresponse() sets VoiceData.iResponse correctly" {
-        val p = note("c3").iresponse("hall")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.iResponse shouldBe "hall"
-    }
-
-    "iresponse() alias 'ir' works" {
-        val p = note("c3").ir("plate")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.iResponse shouldBe "plate"
-    }
-
-    "iresponse() works as top-level function" {
-        val p = note("a").apply(iresponse("chamber"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.iResponse shouldBe "chamber"
-    }
-
-    "iresponse() works with control pattern (string sequence)" {
-        val p = note("c3 e3").iresponse("hall plate")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events[0].data.iResponse shouldBe "hall"
-        events[1].data.iResponse shouldBe "plate"
-    }
-
-    "iresponse() works as string extension" {
-        val p = "c3".iresponse("spring")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.iResponse shouldBe "spring"
-    }
-
     // -- chaining ---------------------------------------------------------------------------------------------------------
 
     "reverb slots can be chained together" {
@@ -307,24 +264,21 @@ class LangReverbSpec : StringSpec({
             .reverb("0.8")
             .reverb(size = "0.9")
             .reverb(lowpass = "1000")
-            .iresponse("hall")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.reverb shouldBe 0.8
         events[0].data.reverbSize shouldBe 0.9
         events[0].data.reverbLowpass shouldBe 1000.0
-        events[0].data.iResponse shouldBe "hall"
     }
 
     "reverb slots work named in compiled code" {
-        val p = SprudelPattern.compile("""note("c3").reverb(wet = 0.8, size = 4, lowpass = 1000).iresponse("hall")""")
+        val p = SprudelPattern.compile("""note("c3").reverb(wet = 0.8, size = 4, lowpass = 1000)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
         events[0].data.reverb shouldBe 0.8
         events[0].data.reverbSize shouldBe 4.0
         events[0].data.reverbLowpass shouldBe 1000.0
-        events[0].data.iResponse shouldBe "hall"
     }
 })

@@ -133,7 +133,6 @@ data class SvdReverb(
     var reverb: Double? = null,
     var reverbSize: Double? = null,
     var reverbLowpass: Double? = null,
-    var iResponse: String? = null,
 )
 
 /** Body resonator: material + dry/wet mix + broadband dry floor. */
@@ -295,7 +294,6 @@ fun mergeSvdReverb(base: SvdReverb?, over: SvdReverb?): SvdReverb? {
         reverb = over.reverb ?: base.reverb,
         reverbSize = over.reverbSize ?: base.reverbSize,
         reverbLowpass = over.reverbLowpass ?: base.reverbLowpass,
-        iResponse = over.iResponse ?: base.iResponse,
     )
 }
 

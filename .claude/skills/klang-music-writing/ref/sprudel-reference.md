@@ -188,7 +188,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking, `ir` |
+> | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `reverb` (`wet` is the per-voice send; `size`/`lowpass` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
@@ -384,7 +384,6 @@ at the cutoff). Same third slot on the ignitor door.
 | `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
 | `vowel(vowel, wet, floor)`                                             |            | Vowel formant: the vowel name (no reader), send 0..1, dry floor; readers `vowel.wet`, `.floor`                                                         | `note("c3").s("saw").vowel("a", 0.8)`                                                                |
 | `body(material, wet, floor)`                                           |            | Resonant body: material name (no reader), send 0..1, dry floor; readers `body.wet`, `.floor`                                                           | `note("c3").s("saw").body("wood", 0.7)`                                                              |
-| `iresponse(path)`       | `ir`                                                                                     | Impulse response convolution                  | `note("c3").ir("hall.wav")`               |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
 

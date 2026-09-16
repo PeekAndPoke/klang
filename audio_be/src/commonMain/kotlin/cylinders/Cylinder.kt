@@ -187,7 +187,6 @@ class Cylinder(
         reverb.configure(
             size = voice.reverb.size,
             lowpass = voice.reverb.lowpass,
-            iResponse = voice.reverb.iResponse,
         )
 
         // Phaser — depth (the on/off + amount knob) is always the owner's; the KERNEL params are

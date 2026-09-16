@@ -132,7 +132,6 @@ data class ScheduledVoice(
 | `reverb`        | `Double?` | Reverb send amount (0..1)               |
 | `reverbSize`    | `Double?` | Reverb tail length, authored ~0..10     |
 | `reverbLowpass` | `Double?` | Reverb tail damping cutoff (Hz)         |
-| `iResponse`     | `String?` | Impulse response name (reserved)        |
 
 ### Sample Manipulation
 

@@ -64,7 +64,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             duckCylinder = 0; duckAttack = 0.05; duckDepth = 0.5
             cylinder = 1; pan = 0.3
             delay = 0.3; delayTime = 0.25; delayFeedback = 0.4; delayCap = 2.5
-            reverb = 0.5; reverbSize = 0.8; reverbLowpass = 8000.0; iResponse = "hall"
+            reverb = 0.5; reverbSize = 0.8; reverbLowpass = 8000.0
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
             compressorThreshold = -12.0; compressorRatio = 4.0; compressorKnee = 2.5
             compressorAttack = 0.01; compressorRelease = 0.31
