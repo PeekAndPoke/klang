@@ -12,8 +12,14 @@ have yet: knobs, sliders, etc."
 
 Fits the standing guideline "design for adults that kids also enjoy (Pixar, not PBS Kids)". What we
 have today: dark palette (`--klang-bg-app` #191C22 and friends), gold accent #EBC773, blue accent
-#528bff, Semantic UI as the base, `RoundGauge`, icon buttons. The gold already sits close to Moog
-cream on black, so the direction builds on the palette rather than replacing it.
+#528bff, Semantic UI as the base, `RoundGauge`, icon buttons. The gold happens to sit close to Moog
+cream on black, which is one possible starting point, not a constraint.
+
+**Nothing in the current design is binding.** Maintainer, 2026-09-16: "the current design is in
+no way binding... everything is open for discussion." That covers the palette, the accents, the
+dark theme itself, Semantic UI as the base, the gauge proportions, the icon set and the type. A
+proposal that throws any of it out is as welcome as one that builds on it. Only the brief above and
+the legibility rule below are the fixed points, and even those are the maintainer's to revise.
 
 ## The one rule that keeps it legible
 
