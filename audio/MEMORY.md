@@ -175,7 +175,7 @@
   voice strip (`VibratoRenderer`, `PitchEnvelopeRenderer`) and the Ignitor twins
   (`PitchModFactories.kt`), call `fastExp2(x)` (`DspUtil.kt`) instead of `2.0.pow(x)`: integer
   octave from a 64-entry table (`n` in `[-32, 32)`), fraction by a degree-7 minimax polynomial,
-  relative error 4.0e-11 (7e-8 cents), bound `FAST_EXP2_MAX_REL_ERROR` = 1e-10 (1.7e-7 cents) asserted by
+  relative error 4.0e-11 (7e-8 cents; the first fit, refitted the same day with pinned ends as `1 + f + f(f-1)·r(f)`, r degree 5, 4.7e-11, see the e^x entry above), bound `FAST_EXP2_MAX_REL_ERROR` = 1e-10 (1.7e-7 cents) asserted by
   `FastExp2Spec` (sweep, octave boundaries, both renderers against the pow law). Outside
   `(-32, 32)`, NaN and the infinities fall back to `pow` itself.
 - Both pitch-envelope renderers skip the per-sample work once a block starts past attack + decay:
