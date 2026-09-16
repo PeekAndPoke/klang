@@ -1010,7 +1010,7 @@ fun SprudelPattern._liftData(
  * ```
  *
  * @param args DSL arguments to convert to control pattern
- * @param update Function to update voice data with the numeric value (may be null)
+ * @param update Function to update voice data with the numeric value; not called for a rest or a non-number in the control
  * @return Pattern with outer join applied, preserving source structure and metadata
  */
 fun SprudelPattern._liftNumericField(
@@ -1020,11 +1020,14 @@ fun SprudelPattern._liftNumericField(
     if (args.isEmpty()) return this
     val control = args.toPattern()
 
-    // Use outer join to sample control at each source event's time
+    // Use outer join to sample control at each source event's time. A rest in the control pattern (no
+    // event) or a control value that is not a number leaves the event untouched: nothing is written,
+    // so a value an earlier call set survives (decided 2026-09-16).
     return _outerJoin(control) { sourceEvent, controlEvent ->
-        val value = controlEvent?.data?.value?.asDouble
+        val value = controlEvent?.data?.value?.asDouble ?: return@_outerJoin sourceEvent
+
         sourceEvent.copy(data = sourceEvent.data.update(value))
-            .prependLocations(controlEvent?.sourceLocations)
+            .prependLocations(controlEvent.sourceLocations)
     }
 }
 
@@ -1087,7 +1090,7 @@ fun SprudelPattern._liftOrReinterpretNumericalField(
  * ```
  *
  * @param args DSL arguments to convert to control pattern
- * @param update Function to update voice data with the numeric value (may be null)
+ * @param update Function to update voice data with the string value; not called for a rest in the control
  * @return Pattern with outer join applied, preserving source structure and metadata
  */
 fun SprudelPattern._liftStringField(
@@ -1097,11 +1100,14 @@ fun SprudelPattern._liftStringField(
     if (args.isEmpty()) return this
     val control = args.toPattern()
 
-    // Use outer join to sample control at each source event's time
+    // Use outer join to sample control at each source event's time. A rest in the control pattern (no
+    // event) or a control event without a value leaves the event untouched: nothing is written, so a
+    // value an earlier call set survives (decided 2026-09-16).
     return _outerJoin(control) { sourceEvent, controlEvent ->
-        val value = controlEvent?.data?.value?.asString
+        val value = controlEvent?.data?.value?.asString ?: return@_outerJoin sourceEvent
+
         sourceEvent.copy(data = sourceEvent.data.update(value))
-            .prependLocations(controlEvent?.sourceLocations)
+            .prependLocations(controlEvent.sourceLocations)
     }
 }
 

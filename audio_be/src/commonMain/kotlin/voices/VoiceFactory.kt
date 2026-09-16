@@ -165,7 +165,7 @@ class VoiceFactory(
         // touch an effect sends nothing and configures nothing: otherwise every voice would feed
         // every orbit's delay and reverb. Sprudel's `delay(...)`/`reverb(...)` already fill unset slots
         // at write time; this is the wire contract for every other producer, and it still covers what a
-        // sprudel voice can carry unset or non-finite (a rest on a later slot, a NaN value).
+        // sprudel voice can carry non-finite (a NaN value).
         val delayTouched = data.delay != null || data.delayTime != null ||
                 data.delayFeedback != null || data.delayCap != null
 

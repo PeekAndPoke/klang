@@ -126,7 +126,7 @@ class LangDelaySpec : StringSpec({
             cycle0.size shouldBe 2
             cycle0[0].data.delay shouldBe 0.3
             cycle0[0].data.delayTime shouldBe 0.125
-            cycle0[0].data.delayFeedback shouldBe null    // rest in the feedback pattern leaves it unset
+            cycle0[0].data.delayFeedback shouldBe DELAY_FEEDBACK // the rest leaves the default the send write filled
 
             cycle1.size shouldBe 2
             cycle1[0].data.delay shouldBe 0.6

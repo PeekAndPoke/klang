@@ -42,6 +42,16 @@
   the master's `damp` went because `lowpass` spans the same range. A third positional argument is now
   `lowpass`. `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
 
+- **A rest in a setter's control pattern leaves the field untouched (2026-09-16).** `_liftNumericField` and
+  `_liftStringField`, behind every per-field setter and compound slot, write nothing on an event where the
+  control has no event (a `~`), so a value an earlier call set survives: `gain(0.5).gain("<0.8 ~>")` keeps
+  0.5 in the rest cycle. Before, the setter was called with null and most setters cleared the field. The
+  numeric helper also skips a control value that is not a number; numeric slots that sit on the STRING
+  helper (`orbit`/`o`/`cylinder`, the `adsr` stages) still clear on a non-number like `x` (known asymmetry).
+  Not covered: the structural `_lift` / `_liftData` family (`degradeByWith`, `undegradeByWith`, `unit`,
+  `loop`, `adsrOn`) and `hurry`'s `fast`, where a rest still drops the notes. Guard: `LangControlRestSpec`,
+  one test per setter and per compound slot (187), mutation-checked.
+
 - **A `delay(...)` / `reverb(...)` call sets every slot (2026-09-16).** Every slot still unset takes the
   shared default (`audio_bridge/constants/SendEffectDefaults.kt`, the master stages' too): delay wet 0.25,
   time 0.25, feedback 0.3, cap 1; reverb wet 0.25, size 5. Filled at WRITE time in the slot mutations, so a
