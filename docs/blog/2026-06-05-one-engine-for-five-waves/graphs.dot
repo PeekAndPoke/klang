@@ -1,0 +1,14 @@
+digraph G {
+  rankdir=TB; bgcolor="white"; dpi=130; nodesep=0.3; ranksep=0.4;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7];
+  subgraph cluster_a { label="before (8d4c4dae, the commit before the unification): four classes, two shape functions"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    a1 [label="DetunedSawStackIgnitor\nsupersaw, superramp\nanalogSawShape"]; a2 [label="SuperSineIgnitor\nsin, flat 1/v gain\none shared drift", fillcolor="#F6E4E2", color="#B23A32"];
+    a3 [label="SuperSquareIgnitor\nPolyBLEP, flat gain", fillcolor="#F6E4E2", color="#B23A32"]; a4 [label="SuperTriIgnitor\ninline triangle formula,\nflat gain", fillcolor="#F6E4E2", color="#B23A32"];
+    { rank=same; a1; a2; a3; a4; } }
+  subgraph cluster_b { label="after (v0.1.0): one unison engine, one shape function"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    d [label="DetunedStackIgnitor (abstract)\nvoices, gains and jitter, centroid-anchored detune,\nper-voice drift, voice-major loop", fillcolor="#E4EFE8", color="#2F7A4F"];
+    t [label="TrapezoidStackIgnitor (abstract)\nthe waveTrapezoid per-voice loop", fillcolor="#E4EFE8", color="#2F7A4F"];
+    saw [label="SawStackIgnitor\nsupersaw, superramp"]; pulse [label="PulseStackIgnitor\nsupersquare, supertri"]; sine [label="SineStackIgnitor\nsupersine"];
+    d -> t; t -> saw; t -> pulse; d -> sine; }
+}
