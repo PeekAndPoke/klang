@@ -6,13 +6,10 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.throwables.shouldThrowAny
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -244,17 +241,6 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.reverbLowpass shouldBe 1500.0
-    }
-
-    // -- retired slots ----------------------------------------------------------------------------------------------------
-
-    // `fade` was `size / 10` with an override, `dim` was never read (2026-09-16). Both must be refused
-    // by name, so a song that still carries one fails loudly instead of losing a slot silently.
-    listOf("fade", "dim").forEach { slot ->
-        "the retired slot '$slot' is refused on reverb(...)" {
-            val error = shouldThrowAny { SprudelPattern.compile("""note("c").reverb(wet = 0.5, $slot = 0.5)""") }
-            withClue("error should name the unknown parameter") { (error.message ?: "") shouldContain slot }
-        }
     }
 
     // -- chaining ---------------------------------------------------------------------------------------------------------

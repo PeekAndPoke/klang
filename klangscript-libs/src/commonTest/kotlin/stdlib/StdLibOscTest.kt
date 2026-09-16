@@ -518,9 +518,6 @@ class StdLibOscTest : StringSpec({
         // TYPE and the method name matter: a bare shouldThrow<Exception> would also pass
         val onSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Osc.sine().band(1200)") }
         onSound.message shouldContain "has no method 'band'"
-        // the pre-builder chain form is gone: .eq() returns the sound, knobs live in the lambda
-        val onEq = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Osc.sine().eq().band(1200)") }
-        onEq.message shouldContain "has no method 'band'"
         val tapOnSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Osc.sine().tap(850)") }
         tapOnSound.message shouldContain "has no method 'tap'"
     }

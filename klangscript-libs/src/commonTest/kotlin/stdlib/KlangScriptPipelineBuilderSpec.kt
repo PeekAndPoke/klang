@@ -13,7 +13,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
@@ -99,10 +98,5 @@ class KlangScriptPipelineBuilderSpec : StringSpec({
     "a lambda that returns nothing is a script-level type error naming the door" {
         val err = shouldThrow<KlangScriptTypeError> { ks("Pipeline(p => { p.distort() })") }
         err.message shouldContain "the configure lambda of Pipeline returned nothing"
-    }
-
-    "Pipeline.of and Stage are gone" {
-        shouldThrow<KlangScriptTypeError> { ks("Pipeline.of()") }
-        shouldThrow<KlangScriptReferenceError> { ks("Stage.vca()") }
     }
 })

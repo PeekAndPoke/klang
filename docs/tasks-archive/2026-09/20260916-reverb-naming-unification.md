@@ -256,3 +256,14 @@ all three receivers, `SprudelVoiceData.iResponse` and its `SvdReverb` field, `Vo
 `KatalystReverbEffect.configure`. No song, tutorial, benchmark or golden fixture used them. Guard: `iresponse` and `ir`
 in `LangRetiredDoorsSpec`. The planned L3 "Convolution Reverb" lesson in `tutorial-master-plan.md` is marked dropped
 until a convolution reverb exists; `sprudel/TODOS.MD` keeps the engine idea, which designs its own door.
+
+## Follow-up 2026-09-16: no specs for names that are gone
+
+Maintainer, same day: "There is no need for LangRetiredDoorsSpec. This will only cause confusion in the future." A
+removed name is simply gone; no spec asserts that it stays gone. Deleted: `LangRetiredDoorsSpec`,
+`LangDeletedWetNamesSpec`, `LangDeletedFilterAliasesSpec`, and the "X is gone" tests in `LangReverbSpec` (`fade`/`dim`),
+`KlangScriptMasterBuilderSpec` (retired knobs, `Master.of`, `MasterFx`), `KlangScriptPipelineBuilderSpec`
+(`Pipeline.of`, `Stage`), `KlangScriptEffectBuilderSpec` (old chain knobs), `StdLibOscTest` (`.eq().band`),
+`LangAdsrCurveDefaultSpec` (singular `adsrCurve`), `LangPitchParamNamesSpec` (old param names) and `LangWetKnobSpec`
+(`blend`). The guard sentence in the `CLAUDE.md` retired list went with them. The guard rows named in the sections above
+describe what this task did at the time and no longer exist.

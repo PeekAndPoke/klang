@@ -6,16 +6,12 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.assertions.throwables.shouldThrowAny
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
@@ -92,20 +88,5 @@ class KlangScriptMasterBuilderSpec : StringSpec({
     "a stage lambda that returns nothing names its stage" {
         val err = shouldThrow<KlangScriptTypeError> { ks("Master(m => m.limiter(l => { l.ratio(4) }))") }
         err.message shouldBe "the configure lambda of Master limiter returned nothing; return the builder it received (`x => x.analog(3)`)"
-    }
-
-    // Retired 2026-09-16 (docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md): the room-prefixed knobs became
-    // `size` and `lowpass`, `roomFade` folded into `size`, and `damp` went (`lowpass` is the one
-    // damping knob, on both doors).
-    listOf("roomSize", "roomFade", "roomLp", "damp").forEach { name ->
-        "the retired reverb knob '$name' is gone" {
-            val error = shouldThrowAny { ks("Master(m => m.reverb(r => r.$name(0.5)))") }
-            withClue("error should name the missing knob") { (error.message ?: "") shouldContain name }
-        }
-    }
-
-    "Master.of and MasterFx are gone" {
-        shouldThrow<KlangScriptTypeError> { ks("Master.of()") }
-        shouldThrow<KlangScriptReferenceError> { ks("MasterFx.gain(2)") }
     }
 })

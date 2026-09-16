@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -107,16 +106,5 @@ class LangWetKnobSpec : StringSpec({
 
         val sh = eval("""Osc.saw().shimmer(x => x.wet(0.3))""") as IgnitorDsl.Shimmer
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
-    }
-
-    "ignitor script door: the old blend parameter is GONE from the builders" {
-        val engine = klangScript()
-        engine.execute("""import * from "stdlib"""")
-        shouldThrowAny {
-            engine.execute("""Osc.saw().phaser(1.0, blend = 0.5)""")
-        }
-        shouldThrowAny {
-            engine.execute("""Osc.saw().shimmer(blend = 0.5)""")
-        }
     }
 })

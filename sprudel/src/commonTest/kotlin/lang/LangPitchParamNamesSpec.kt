@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -20,7 +19,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
  * (unit converted from octaves, values ×12), the vibrato depth, which is the `depth` slot of `vibrato(rate, depth)` since 2026-09-07 (semitones,
  * named for what it is on the compound), and the filter envelope depth, which is the `env` slot of `lpf`/`hpf`/`bpf`/`notch` since 2026-09-07 (semitones, named for the envelope it scales rather than the unit). The one-pole lowpass is
  * `onepole(freq)` in Hz on both doors (formerly sprudel `warmth(0..1 coefficient)` and
- * ignitor `warmth`/`onePoleLowpass`). Old param/function names must FAIL, not alias.
+ * ignitor `warmth`/`onePoleLowpass`).
  */
 class LangPitchParamNamesSpec : StringSpec({
 
@@ -32,13 +31,6 @@ class LangPitchParamNamesSpec : StringSpec({
         firstData(SprudelPattern.compile("""note("c").accelerate(semitones = 12)""")).accelerate shouldBe 12.0
         firstData(SprudelPattern.compile("""note("c").lpf(freq = 800, env = 24)""")).lpenv shouldBe 24.0
         firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).oscParams?.get("onepole") shouldBe 3743.0
-    }
-
-    "sprudel script door: the OLD param names fail dispatch" {
-        shouldThrowAny { SprudelPattern.compile("""note("c").vibrato(semitones = 0.5)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c").accelerate(amount = 12)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c").lpf(freq = 800, depth = 24)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c").warmth(0.5)""") }
     }
 
     "ignitor doors: semitone params on the nodes, freq on onepole" {
@@ -57,11 +49,5 @@ class LangPitchParamNamesSpec : StringSpec({
 
         val op = eval("""Osc.saw().onepole(freq = 3743)""") as IgnitorDsl.OnePoleLowpass
         op.freq shouldBe IgnitorDsl.Constant(3743.0)
-
-        // old names are gone
-        shouldThrowAny { engine.execute("""Osc.saw().pitchEnvelope(amount = 24)""") }
-        shouldThrowAny { engine.execute("""Osc.saw().vibrato(rate = 5, depth = 0.5)""") }
-        shouldThrowAny { engine.execute("""Osc.saw().warmth(3000)""") }
-        shouldThrowAny { engine.execute("""Osc.saw().onePoleLowpass(3000)""") }
     }
 })

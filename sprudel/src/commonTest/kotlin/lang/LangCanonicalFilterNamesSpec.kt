@@ -14,8 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 /**
  * The long filter names (`lowpass`, `highpass`, `bandpass`) and the short ones (`lpf`, `hpf`,
  * `bpf`) are one object under two names, NOT a deprecation: both spellings must build exactly
- * the same wire definition. Since 2026-09-07 the notch has one name only (`notch`); its old
- * spellings are guarded by `LangRetiredDoorsSpec`.
+ * the same wire definition. Since 2026-09-07 the notch has one name only (`notch`).
  */
 class LangCanonicalFilterNamesSpec : StringSpec({
 

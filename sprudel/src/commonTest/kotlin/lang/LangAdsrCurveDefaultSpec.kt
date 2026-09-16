@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -47,12 +46,6 @@ class LangAdsrCurveDefaultSpec : StringSpec({
         data.attackCurve shouldBe null
         data.decayCurve shouldBe null
         data.releaseCurve shouldBe null
-    }
-
-    "ignitor door: the singular adsrCurve() is gone (parity with sprudel, 2026-09-07)" {
-        val engine = klangScript()
-        engine.execute("""import * from "stdlib"""")
-        shouldThrowAny { engine.execute("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurve("linear")""") }
     }
 
     "ignitor node: unset curves are null — and the script door's bare adsrCurves() means exp" {

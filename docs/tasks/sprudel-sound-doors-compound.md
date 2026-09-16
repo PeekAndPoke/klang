@@ -39,8 +39,8 @@ spread, pan)` and `analog`, `duty`, `onepole` write today.
    is (a string of oscillator params?) and whether it survives as a named slot or goes.
 4. **Readers.** Numeric slots get children like every compound (`Snd.pluck.decay`); `color` on
    `sndNoise` is a name and gets none (`docs/tasks/future/string-slot-readers.md`).
-5. **Retirement.** The per-sound functions go when the objects land (replaced surfaces are removed,
-   `LangRetiredDoorsSpec`); the corpus (songs, tutorials, skill refs) migrates in the same change.
+5. **Retirement.** The per-sound functions go when the objects land (replaced surfaces are removed);
+   the corpus (songs, tutorials, skill refs) migrates in the same change.
 
 ## Not before
 

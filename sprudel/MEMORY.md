@@ -17,7 +17,7 @@
 - **Filters are objects with named slots (batch F).** `lpf(freq, q, passes, env, attack, decay,
   sustain, release)`, `hpf` the same, `bpf(freq, q, env, attack, decay, sustain, release)`,
   `notch` the same; `lpf(q = mul(2))` maps, `hpf(lpf.freq.div(2))` reads. Per-knob doors and
-  aliases (`lpq`, `lpe`, `lpadsr`, `notchf`, `nfenv`, ...) are GONE (`LangRetiredDoorsSpec`).
+  aliases (`lpq`, `lpe`, `lpadsr`, `notchf`, `nfenv`, ...) are GONE.
   The long names `lowpass`/`highpass`/`bandpass` stay as constants. Compound objects have NO bare
   read: children only, one rule for every compound. `adsrCurves` is an object with the setter
   only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
@@ -29,7 +29,7 @@
   `crush(amount, oversample)`, `coarse(amount, oversample)`: `reverb(lowpass = 3000)` sets one slot,
   `reverb(size = mul(2))` maps it on its own value, `lpf(reverb.lowpass)` reads it. Every per-knob
   door and alias (`roomWet`, `rsize`, `delayfb`, `ph`, `tremsync`, `dist`, `crushos`, ...) is
-  GONE from both doors (`LangRetiredDoorsSpec`). Slots apply in declaration order inside one
+  GONE from both doors. Slots apply in declaration order inside one
   call, so `reverb(lowpass = 4000, size = reverb.lowpass)` reads the old lowpass: chain two calls for that. A slot name that is also a top-level symbol (`lowpass`, the
   `lpf` alias) shows two property variants under one docs symbol; intel tests filter on
   `owner == null`. Tutorials name the object in `teaches`/`previews` (`reverb`, `delay`), not the
@@ -53,7 +53,7 @@
 
 - **Compound pilot: `adsr` is an object with children.** `adsr.attack/.decay/.sustain/.release`
   read the slots, `adsr(attack = mul(2))` maps one slot, and the single doors `attack()`,
-  `decay()`, `sustain()`, `release()` are GONE from both doors (`LangRetiredDoorsSpec`).
+  `decay()`, `sustain()`, `release()` are GONE from both doors.
   Sakura's `adsr("0.1:1:1:0.1")` never meant four values (no colon form exists; the string went to
   the attack slot and the mini-notation kept 0.1); rewritten as `adsr(0.1, 1, 1, 0.1)` per the
   maintainer, which changes those three noise beds.
@@ -294,7 +294,7 @@ return applyCat(patterns)
 ### Audio Effects — Filter Envelopes
 
 - The envelope of each filter is its own slots (`lpf(env = 24, attack = 0.01, decay = 0.3, sustain = 0.2)`);
-  the old stage doors and `lpadsr`/`hpadsr`/`bpadsr`/`nfadsr` are retired (2026-09-07, `LangRetiredDoorsSpec`)
+  the old stage doors and `lpadsr`/`hpadsr`/`bpadsr`/`nfadsr` are retired (2026-09-07)
 
 ### Audio Effects — Pitch Envelope
 

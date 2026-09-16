@@ -76,10 +76,4 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         dsl.tone shouldBe IgnitorDsl.Constant(3000.0)
         dsl.dryFloor shouldBe IgnitorDsl.Constant(0.2)
     }
-
-    "the old chain knobs are gone from the nodes" {
-        shouldThrow<KlangScriptTypeError> { ks("Osc.saw().phaser(0.3).wet(0.25)") }
-        shouldThrow<KlangScriptTypeError> { ks("Osc.saw().shimmer().wet(0.3)") }
-        shouldThrow<KlangScriptTypeError> { ks("Osc.saw().eq().band(1200)") }
-    }
 })
