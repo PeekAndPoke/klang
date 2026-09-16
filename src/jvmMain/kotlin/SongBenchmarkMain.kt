@@ -20,7 +20,8 @@ import java.time.format.DateTimeFormatter
  * Run with:  `./gradlew runSongBenchmark`            (all suites)
  *            `./gradlew runSongBenchmark --args=ladders`   (one suite)
  *
- * Suites: `voices`, `ladders`, `experiments`, `gtrpoly`, `songs`, `live`, `rig`, `ledger` (appends to
+ * Suites: `voices`, `ladders`, `experiments`, `gtrpoly`, `songs`, `live`, `rig`, `snapshots` (the song
+ * texts in `KLANG_SNAPSHOT_DIR`, one engine), `ledger` (appends to
  * `docs/benchmarks/ledger.md`), `all` (default).
  *
  * Prints a table per suite (with ladder deltas) and saves a markdown report to docs/benchmarks/.
@@ -53,6 +54,7 @@ fun main(args: Array<String>) {
         "live" -> SongBenchmarkCases.live()
         "rig" -> SongBenchmarkCases.rig()
         "ledger" -> SongBenchmarkCases.ledger()
+        "snapshots" -> SongBenchmarkCases.snapshots()
         else -> SongBenchmarkCases.all()
     }
 

@@ -517,6 +517,47 @@ object SongBenchmarkCases {
     /** The live song, ungated. */
     private val liveUngated: String by lazy { ungated(derSchmetterlingSong.code) }
 
+    /**
+     * The song axis of the optimization series (`docs/plans/blog-optimization-series.md`, P16): every
+     * snapshot of Der Schmetterling the caller drops into `KLANG_SNAPSHOT_DIR` as `NN__<rpm>__<label>.klang`
+     * (the song text as it stood at a tag, extracted from `builtinsongs/DerSchmetterling.kt` at that tag),
+     * rendered ungated with the seed pinned, on ONE engine, eight cycles each, so the census columns show
+     * the song's work growing while the engine stays put. A snapshot that no longer parses fails the run
+     * loudly rather than silently dropping out. Use `--args=snapshots`.
+     */
+    fun snapshots(): List<SongBenchmark.Case> {
+        val dir = System.getenv("KLANG_SNAPSHOT_DIR")
+            ?: error("snapshots: set KLANG_SNAPSHOT_DIR to a directory of NN__<rpm>__<label>.klang files")
+        val files = java.io.File(dir).listFiles { f -> f.name.endsWith(".klang") }?.sortedBy { it.name }
+            ?: error("snapshots: $dir is not a directory")
+
+        // Older texts have no wall-clock seed to pin, so the seed swap is lenient here; the gates go always.
+        fun ungatedLenient(code: String): String =
+            Regex("""seed\(timeOfDay[^)]*\)\)""").replace(Regex("""\.mute\("<[^"]*>"\)""").replace(code, ""), "seed(0.5)")
+
+        val frozen = SongBenchmark.Case(
+            name = "frozen 2026-07-03",
+            group = "snapshots",
+            rpm = 34.5,
+            cycles = 8,
+            code = ungatedLenient(FrozenSongs.derSchmetterling_2026_07_03),
+        )
+
+        return listOf(frozen) + files.map { file ->
+            val parts = file.name.removeSuffix(".klang").split("__", limit = 3)
+
+            require(parts.size == 3) { "snapshots: ${file.name} is not NN__<rpm>__<label>.klang" }
+
+            SongBenchmark.Case(
+                name = parts[2],
+                group = "snapshots",
+                rpm = parts[1].toDouble(),
+                cycles = 8,
+                code = ungatedLenient(file.readText()),
+            )
+        }
+    }
+
     /** A case that renders [expr] on top of the ungated live song, after [edit] has rewritten the song text. */
     private fun liveCase(name: String, group: String, expr: String, edit: (String) -> String = { it }): SongBenchmark.Case =
         SongBenchmark.Case(
