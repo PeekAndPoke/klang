@@ -188,11 +188,40 @@ the drums, the decimator on the guitars, the polynomial sine on the bass's harmo
 an instrument's HEAD text uses a door that `v0.3.12` lacks (check by parsing; the rig suite fails
 loudly), record it and take the nearest older tag that parses it as the "before".
 
-Mechanics: (opus) the rig suite at HEAD with the `work` column, then the same rig suite in a
-`v0.3.12` worktree with the HEAD instrument texts transplanted into `SongBenchmarkCases.kt`
-(the suite already isolates instrument groups and ungates them; `swapAll` and the ablation rows
-are the precedent); three runs each, same machine, one session; the table lands in P16 and in
-whichever post the instrument belongs to (P11, P12, P13, P15).
+**Memory, two faces (maintainer, 2026-09-16), the same four instruments, the same two engines:**
+
+- *footprint per note*, what a note holds while it plays, which is the cache question on the
+  A55: the voice's scratch depth (`ScratchBuffers` high-water mark, times the block in doubles,
+  times 8 bytes), the oversampler work buffers its shapers borrow (block times factor times 8,
+  per distinct factor), and the per-node state (a filter section's two state doubles and its
+  coefficients, an oversampler stage's 13 history doubles, a delay or a sample player's ring,
+  the drift lanes), summed by a walk over the optimized graph with a per-kind size table. A
+  model count, not a heap measurement, and said so; the JVM heap per active voice from a
+  `runSongBenchmark` run (`Runtime.totalMemory - freeMemory` before and after the voices are
+  built, three runs) is the cross-check where it can be had.
+- *buffer traffic per sample*, what a sample moves: reads plus writes of block buffers per
+  sample, from a per-kind table over the optimized graph (an in-place pass reads and writes one
+  buffer: 2; a scratch pass reads two and writes one: 3; an `Eq` of N sections in place: 2N; a
+  shaper at factor F: the upsample writes F, the shaper reads and writes F, each decimation
+  stage reads its input and writes half, plus the copy back; a `MemoizingIgnitor` copy: 2). The
+  same walk as the work units, a different weight per kind. This is the number the optimizer's
+  passes actually saved (a fused Eq pass against a chain of filters is the same arithmetic and
+  a fraction of the traffic), and the one that explains why a 5 % desktop win was run-or-not-run
+  on the phone (P7).
+- *measured, where the machine allows*: `perf stat -e cache-misses,cache-references,instructions`
+  around one isolated rig row on the JVM, per instrument, both engines, if `perf` is installed
+  on the measuring machine (it is not on the one this plan was written on; record that or install
+  it). Cache misses per sample per voice is the closest thing to what the A55 feels.
+
+Mechanics: (opus) the rig suite at HEAD with the `work`, `bytes` and `traffic` columns (one walk,
+three weight tables, in `audio_bridge` next to `workUnits()`, with a spec row each against a
+hand-counted graph), then the same rig suite in a `v0.3.12` worktree with the HEAD instrument
+texts transplanted into `SongBenchmarkCases.kt` (the suite already isolates instrument groups
+and ungates them; `swapAll` and the ablation rows are the precedent); the old engine has no
+`work` column, so the structural columns come from HEAD's walk over the old engine's graph shape
+(the optimizer differs between the tags, which is part of the story: count both); three runs
+each, same machine, one session; the table lands in P16 and in whichever post the instrument
+belongs to (P11, P12, P13, P15).
 
 ### 2.6 The post skeleton, series flavour
 
@@ -586,14 +615,16 @@ tells the story in the order it happened. Working titles are Fable's to change.
   a filtered supersaw into a five-stage rig, in passes per note.
 - **Mechanics, the instrument table** (opus): the per-instrument before and after of §2.5 for
   the guitars, the bass, the marimba and the Orchestertrommel: passes per note, active voices per
-  block, ns per sample per voice on `v0.3.12` and on `v0.3.14`, and ns per sample per pass. This
-  is the table that answers "did the optimizations go the wrong way" instrument by instrument,
-  with the instrument held still.
+  block, ns per sample per voice on `v0.3.12` and on `v0.3.14`, ns per sample per pass, bytes
+  held per note, buffer reads and writes per sample, and cache misses per sample where `perf`
+  is available. This is the table that answers "did the optimizations go the wrong way"
+  instrument by instrument, with the instrument held still.
 - **Figures** (sonnet drafts, Fable's eyes). Fig. 1, the engine axis: cost per work unit (or the
   fixed rows' µs/block) over tags, the optimizations annotated at their tags; Fig. 2, the song
   axis: work units per block over the song's snapshots, with the live RTF at HEAD beside it;
   Fig. 3, the instrument table as grouped bars: ns per sample per voice before and after, one
-  group per instrument, the passes per note printed above each group; Fig. 4, the phone timeline
+  group per instrument, the passes per note printed above each group; Fig. 3b, the same for
+  bytes per note and buffer traffic per sample; Fig. 4, the phone timeline
   from P1 with the song's work at each date; Fig. 5, the ledger as a table image if the markdown
   table is too wide.
 - **Writing.** Fable. Last.
