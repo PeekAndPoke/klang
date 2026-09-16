@@ -293,7 +293,7 @@ Full writeup: `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md`.
 (GTR2 > GTR1 > LEAD); bass/drums/pink are negligible. Cost ranking:
 `superimpose` (voice-count multiplier — each copy re-runs the WHOLE per-voice chain; GTR2's nested
 superimpose = 1088 voices) ≫ `body` (8-band parallel SVF/voice) ≈ `analog` (per-voice drift) >
-multi-band filters > distort-oversample/room > `unison` (cheap — shares one effect chain) >
+multi-band filters > distort-oversample/reverb > `unison` (cheap — shares one effect chain) >
 `pipeline("pedal")` (~free, just reorders). **Key combination = per-voice effect (`body`/`analog`)
 UNDER a `superimpose` stack → paid once per copy (proven super-additive by a 2×2).** Fix levers: cut
 superimpose depth on the guitars, prefer `unison`/`spread` over width-superimposes, don't recompute

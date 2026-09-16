@@ -759,7 +759,7 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
                 "chain of effects: body, vowel, delay, reverb, phaser, compressor, and ducking last. " +
                 "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
                 "shared. The settings belong to the FIRST voice that sounds on the orbit while it lives " +
-                "(first-writer-wins): a second voice asking for a different room size is simply ignored, " +
+                "(first-writer-wins): a second voice asking for a different reverb size is simply ignored, " +
                 "it is not averaged and it does not take over. If you want different bus settings, that " +
                 "is what a second orbit is for. This is the opposite of a per-voice setting, and it is " +
                 "the single most common surprise when a pattern sounds wetter or more compressed than " +
@@ -773,9 +773,9 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
         summary = "How much of one voice is fed into a shared effect — per voice, not per orbit.",
         detail = "Reverb and delay sit on the orbit bus, but each voice decides how much of itself to " +
-                "send into them. That amount is the send, and it is the `wet` slot of `room` and " +
+                "send into them. That amount is the send, and it is the `wet` slot of `reverb` and " +
                 "`delay`. So a dry voice on a wet orbit stays dry: only voices with a send above zero " +
-                "are mixed into the effect at all. The effect's character (room size, delay time, " +
+                "are mixed into the effect at all. The effect's character (reverb size, delay time, " +
                 "feedback) is a bus setting and belongs to the orbit; only the amount is yours. " +
                 "Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs is a " +
                 "bus mix knob, not a send, because those effects process the whole orbit mix.",

@@ -81,16 +81,15 @@ class MasterDefaultsSyncSpec : StringSpec({
         // 5.0 authored / 10 == 0.5, the DSP's own default — so changing the literal from 0.5 to 5.0
         // was behaviour-preserving. If either side moves without the other, the master's default
         // reverb silently changes length.
-        Reverb.normalizeRoomSize(MasterStageDsl.Reverb().roomSize) shouldBe Reverb(44100).roomSize
-        MasterStageDsl.Reverb().damp shouldBe Reverb(44100).damp
+        Reverb.normalizeSize(MasterStageDsl.Reverb().size) shouldBe Reverb(44100).size
     }
 
     "the feedback ceilings default to the DSP's own" {
         MasterStageDsl.Delay().cap shouldBe DelayLine(maxDelaySeconds = 1.0, sampleRate = 44100).feedbackCap
     }
 
-    "the new reverb overrides default to absent" {
-        MasterStageDsl.Reverb().roomFade shouldBe null
-        MasterStageDsl.Reverb().roomLp shouldBe null
+    "the reverb lowpass defaults to absent on both sides — the DSP's fixed default damping applies" {
+        MasterStageDsl.Reverb().lowpass shouldBe null
+        Reverb(44100).lowpass shouldBe null
     }
 })

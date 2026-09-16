@@ -179,18 +179,14 @@ class Cylinder(
             cap = voice.delay.cap,
         )
 
-        // Reverb (reverb.room is used by SendRenderer for send amount) — routed through the
+        // Reverb (reverb.amount is used by SendRenderer for send amount) — routed through the
         // effect's lifecycle like the delay: an off-config drains the tail out on its own
         // timeline instead of freezing the combs (see KatalystReverbEffect).
-        // roomSize is already normalized (and clamped) by `Reverb.normalizeRoomSize` in
-        // VoiceFactory — a comb network above unity has no steady state, it runs away to
-        // Inf/NaN. roomFade lives on the same axis and gets the same bound INSIDE configure
-        // (review round 1 moved it to the door, so every caller shares one conversion).
+        // size is already normalized (and bounded) by `Reverb.normalizeSize` in VoiceFactory, and
+        // configure bounds it again at the door, so every caller shares one conversion.
         reverb.configure(
-            roomSize = voice.reverb.roomSize,
-            roomFade = voice.reverb.roomFade,
-            roomLp = voice.reverb.roomLp,
-            roomDim = voice.reverb.roomDim,
+            size = voice.reverb.size,
+            lowpass = voice.reverb.lowpass,
             iResponse = voice.reverb.iResponse,
         )
 
@@ -364,7 +360,7 @@ class Cylinder(
 
         // State-aware like the delay's: a draining reverb reports its tail BY CONSTRUCTION, so
         // the orbit stays alive until the countdown's terminal reset — the old param-gated scan
-        // hid a still-charged network the moment a no-reverb owner zeroed roomSize.
+        // hid a still-charged network the moment a no-reverb owner zeroed size.
         fun reverbHasTail() = reverb.hasTail()
 
         if (reverbHasTail() || delayHasTail()) {

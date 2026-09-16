@@ -13,25 +13,26 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
  * C4.2 guard: the pre-C4 wet-knob names are DELETED, not deprecated — the knob has ONE name
- * per door (`room(wet)`, `delay(wet)`, `phaser(wet)`, `bodyWet`, `vowelWet`). Each old name must
+ * per door (`reverb(wet)`, `delay(wet)`, `phaser(wet)`, `body(wet)`, `vowel(wet)`). Each old name must
  * fail script dispatch as a member call and as a free mapper-factory call; if one resolves
  * again, an alias crept back in (docs/plans/filter-unification.md, chunk C4).
  *
  * C6 finished the job: `phd`/`phasdp` are deleted, and so are `reverb` (a full-signature
- * duplicate of the reverb send) and `vibmod` (of `vibratoMod`). All four join the list below.
+ * duplicate of the reverb send; it returned 2026-09-16 as the compound object that replaced
+ * `room`, guarded in [LangRetiredDoorsSpec]) and `vibmod` (of `vibratoMod`).
  * The `roomWet`/`delayWet`/`phaserWet` spellings themselves retired 2026-09-07 into the compound
  * objects; [LangRetiredDoorsSpec] guards those.
  *
- * NOTE for anyone reading a song: `Master(m => m.reverb(...))` is a DIFFERENT function on the Master
- * door and is untouched — only the sprudel pattern-level `reverb` went away. The wire
- * fields (`room`, `delay`, `phaserDepth`, `bodyMix`, `vowelMix`) keep their old
- * spelling on purpose; only the DSL surface renamed.
+ * The wire fields (`delay`, `phaserDepth`, `bodyMix`, `vowelMix`) keep their old spelling on
+ * purpose; only the DSL surface renamed. The reverb's wire fields follow its door word since
+ * 2026-09-16 (`reverb`, `reverbSize`, `reverbLowpass`).
  */
 class LangDeletedWetNamesSpec : StringSpec({
 
     val deleted = listOf(
-        // "room" and "delay" returned 2026-09-07 as the compound objects room(...) and delay(...).
-        "phaserdepth", "bodyMix", "vowelMix", "phd", "phasdp", "reverb", "vibmod",
+        // "room" and "delay" returned 2026-09-07 as the compound objects room(...) and delay(...);
+        // "reverb" returned 2026-09-16 as the compound object reverb(...), replacing room(...).
+        "phaserdepth", "bodyMix", "vowelMix", "phd", "phasdp", "vibmod",
     )
 
     deleted.forEach { name ->

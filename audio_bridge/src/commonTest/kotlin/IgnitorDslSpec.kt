@@ -37,7 +37,7 @@ class IgnitorDslSpec : StringSpec({
 
     "the Bell wire default and the band() surface default are the SAME q" {
         // Parameter-parity: one bell, one omitted-field sound. These drifted apart once
-        // already (wire ctor 1.0 vs surface 0.707), which is the roomSize-10x bug class:
+        // already (wire ctor 1.0 vs surface 0.707), which is the reverb-size-10x bug class:
         // Kotlin code building EqSection.Bell(...) directly and a song writing .band(...)
         // would have produced two different bandwidths from identical-looking source.
         // The Kotlin and script surfaces are pinned to each other by StdLibOscTest.
@@ -63,7 +63,7 @@ class IgnitorDslSpec : StringSpec({
     "the DSL-typed and scalar overloads carry the SAME defaults" {
         // Each method ships two overloads, each with its own default literals. The rows below
         // exercise only the scalar ones, so without this the DSL-typed copy could drift alone
-        // and every other parity row would stay green (the roomSize-10x class again).
+        // and every other parity row would stay green (the reverb-size-10x class again).
         val bandDsl = IgnitorDsl.Sine().eq().band(IgnitorDsl.Constant(1200.0)).sections.single()
                 as IgnitorDsl.EqSection.Bell
         val bandScalar = IgnitorDsl.Sine().eq().band(1200.0).sections.single()

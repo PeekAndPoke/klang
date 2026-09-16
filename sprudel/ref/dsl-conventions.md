@@ -86,14 +86,14 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
 - Every compound door is an object with the slot accessors as children (`adsr` was the pilot,
-  the seven effects followed 2026-09-07): `@KlangScript.Object("room") object room {
-  @KlangScript.Property val wet: FieldAccessor = FieldAccessor { it.room } ... @Invoke
+  the seven effects followed 2026-09-07): `@KlangScript.Object("reverb") object reverb {
+  @KlangScript.Property val wet: FieldAccessor = FieldAccessor { it.reverb } ... @Invoke
   operator fun invoke(wet, size, ...) }`; the slot helpers stay private and take the mapper
-  branch, so `room(size = mul(2))` works and `room.size` reads. Slots apply in declaration order
-  inside one call. No single doors for slots, and no bare-object read (`pan(room)` is nothing):
+  branch, so `reverb(size = mul(2))` works and `reverb.size` reads. Slots apply in declaration order
+  inside one call. No single doors for slots, and no bare-object read (`pan(reverb)` is nothing):
   the children read. String slots (`shape`) get no child. `SprudelPattern.X`, `String.X`,
   `PatternMapperFn.X` and `X.invoke` carry the same parameter list in the same order; the
-  tail-only guard on the first slot keeps `seq("3 4").room(size = 4)` from reinterpreting the
+  tail-only guard on the first slot keeps `seq("3 4").reverb(size = 4)` from reinterpreting the
   head. `@param-tool` lines sit on the compound's setter, one per slot that has an editor. A
   compound whose slots are all names (`adsrCurves`) carries the setter only, no children
   (maintainer, 2026-09-07).

@@ -61,7 +61,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("bpf.q", """note("c e").bpf(q = 5).lpf(q = bpf.q)""", { it.resonance }, 5.0, note("c e").bpf(q = 5).lpf(q = bpf.q)),
     )
 
-    // Effects: one row per slot of the seven compound objects (distort, crush, coarse, room, delay, phaser, tremolo).
+    // Effects: one row per slot of the seven compound objects (distort, crush, coarse, reverb, delay, phaser, tremolo).
     val mappedEffects = listOf(
         row("distort.amount", """s("bd sd").distort(0.4).distort(mul(0.5))""", { it.distort }, 0.2, s("bd sd").distort(0.4).distort(mul(0.5))),
         row("distort.oversample", """s("bd sd").distort(oversample = 2).distort(oversample = mul(2))""", { it.distortOversample?.toDouble() }, 4.0, s("bd sd").distort(oversample = 2).distort(oversample = mul(2))),
@@ -69,11 +69,9 @@ class LangFieldAccessorsSpec : StringSpec({
         row("crush.oversample", """s("bd sd").crush(oversample = 2).crush(oversample = mul(2))""", { it.crushOversample?.toDouble() }, 4.0, s("bd sd").crush(oversample = 2).crush(oversample = mul(2))),
         row("coarse.amount", """s("bd sd").coarse(4).coarse(mul(2))""", { it.coarse }, 8.0, s("bd sd").coarse(4).coarse(mul(2))),
         row("coarse.oversample", """s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))""", { it.coarseOversample?.toDouble() }, 4.0, s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))),
-        row("room.wet", """s("bd sd").room(0.3).room(add(0.2))""", { it.room }, 0.5, s("bd sd").room(0.3).room(add(0.2))),
-        row("room.size", """s("bd sd").room(size = 4).room(size = mul(2))""", { it.roomSize }, 8.0, s("bd sd").room(size = 4).room(size = mul(2))),
-        row("room.fade", """s("bd sd").room(fade = 1).room(fade = mul(2))""", { it.roomFade }, 2.0, s("bd sd").room(fade = 1).room(fade = mul(2))),
-        row("room.lowpass", """s("bd sd").room(lowpass = 4000).room(lowpass = div(2))""", { it.roomLp }, 2000.0, s("bd sd").room(lowpass = 4000).room(lowpass = div(2))),
-        row("room.dim", """s("bd sd").room(dim = 3000).room(dim = sub(1000))""", { it.roomDim }, 2000.0, s("bd sd").room(dim = 3000).room(dim = sub(1000))),
+        row("reverb.wet", """s("bd sd").reverb(0.3).reverb(add(0.2))""", { it.reverb }, 0.5, s("bd sd").reverb(0.3).reverb(add(0.2))),
+        row("reverb.size", """s("bd sd").reverb(size = 4).reverb(size = mul(2))""", { it.reverbSize }, 8.0, s("bd sd").reverb(size = 4).reverb(size = mul(2))),
+        row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))""", { it.reverbLowpass }, 2000.0, s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))),
         row("delay.wet", """s("bd sd").delay(0.3).delay(add(0.2))""", { it.delay }, 0.5, s("bd sd").delay(0.3).delay(add(0.2))),
         row("delay.time", """s("bd sd").delay(time = 0.25).delay(time = mul(2))""", { it.delayTime }, 0.5, s("bd sd").delay(time = 0.25).delay(time = mul(2))),
         row("delay.feedback", """s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))""", { it.delayFeedback }, 0.2, s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))),
@@ -98,13 +96,11 @@ class LangFieldAccessorsSpec : StringSpec({
         row("crush.oversample", """s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)),
         row("coarse.amount", """s("bd sd").coarse(4).crush(coarse.amount)""", { it.crush }, 4.0, s("bd sd").coarse(4).crush(coarse.amount)),
         row("coarse.oversample", """s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)),
-        row("room.wet", """s("bd sd").room(0.3).delay(room.wet)""", { it.delay }, 0.3, s("bd sd").room(0.3).delay(room.wet)),
-        row("room.size", """s("bd sd").room(size = 4, fade = room.size)""", { it.roomFade }, 4.0, s("bd sd").room(size = 4, fade = room.size)),
-        row("room.fade", """s("bd sd").room(fade = 1).delay(time = room.fade)""", { it.delayTime }, 1.0, s("bd sd").room(fade = 1).delay(time = room.fade)),
-        row("room.lowpass", """s("bd sd").room(lowpass = 4000).lpf(room.lowpass)""", { it.cutoff }, 4000.0, s("bd sd").room(lowpass = 4000).lpf(room.lowpass)),
-        row("room.dim", """s("bd sd").room(dim = 3000).room(lowpass = room.dim)""", { it.roomLp }, 3000.0, s("bd sd").room(dim = 3000).room(lowpass = room.dim)),
-        row("delay.wet", """s("bd sd").delay(0.3).room(delay.wet)""", { it.room }, 0.3, s("bd sd").delay(0.3).room(delay.wet)),
-        row("delay.time", """s("bd sd").delay(time = 0.25).room(fade = delay.time)""", { it.roomFade }, 0.25, s("bd sd").delay(time = 0.25).room(fade = delay.time)),
+        row("reverb.wet", """s("bd sd").reverb(0.3).delay(reverb.wet)""", { it.delay }, 0.3, s("bd sd").reverb(0.3).delay(reverb.wet)),
+        row("reverb.size", """s("bd sd").reverb(size = 4, lowpass = reverb.size)""", { it.reverbLowpass }, 4.0, s("bd sd").reverb(size = 4, lowpass = reverb.size)),
+        row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)""", { it.cutoff }, 4000.0, s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)),
+        row("delay.wet", """s("bd sd").delay(0.3).reverb(delay.wet)""", { it.reverb }, 0.3, s("bd sd").delay(0.3).reverb(delay.wet)),
+        row("delay.time", """s("bd sd").delay(time = 0.25).reverb(size = delay.time)""", { it.reverbSize }, 0.25, s("bd sd").delay(time = 0.25).reverb(size = delay.time)),
         row("delay.feedback", """s("bd sd").delay(feedback = 0.4).pan(delay.feedback)""", { it.pan }, 0.4, s("bd sd").delay(feedback = 0.4).pan(delay.feedback)),
         row("delay.cap", """s("bd sd").delay(cap = 0.5).pan(delay.cap)""", { it.pan }, 0.5, s("bd sd").delay(cap = 0.5).pan(delay.cap)),
         row("phaser.rate", """s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)""", { it.tremoloSync }, 0.5, s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)),
@@ -406,12 +402,12 @@ class LangFieldAccessorsSpec : StringSpec({
             it.bandq shouldBe 3.0
         }
         // batch two: the compound effect doors, positional and named
-        both(s("bd sd").apply(room(0.3, 4)), """s("bd sd").apply(room(0.3, 4))""") {
-            it.room shouldBe 0.3
-            it.roomSize shouldBe 4.0
+        both(s("bd sd").apply(reverb(0.3, 4)), """s("bd sd").apply(reverb(0.3, 4))""") {
+            it.reverb shouldBe 0.3
+            it.reverbSize shouldBe 4.0
         }
-        both(s("bd sd").apply(room(size = 4)), """s("bd sd").apply(room(size = 4))""") {
-            it.roomSize shouldBe 4.0
+        both(s("bd sd").apply(reverb(size = 4)), """s("bd sd").apply(reverb(size = 4))""") {
+            it.reverbSize shouldBe 4.0
         }
         both(s("bd sd").apply(delay(0.3, 0.25, 0.4)), """s("bd sd").apply(delay(0.3, 0.25, 0.4))""") {
             it.delay shouldBe 0.3
@@ -549,10 +545,10 @@ class LangFieldAccessorsSpec : StringSpec({
     "effects: a mapper on one slot leaves the other slots alone, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val check: (SprudelVoiceData) -> Unit)
         listOf(
-            Case("room(size = mul(2))", s("bd sd").room(0.3, 4, 1.5).room(size = mul(2)), """s("bd sd").room(0.3, 4, 1.5).room(size = mul(2))""") {
-                it.room shouldBe 0.3
-                it.roomSize shouldBe 8.0
-                it.roomFade shouldBe 1.5
+            Case("reverb(size = mul(2))", s("bd sd").reverb(0.3, 4, 1500).reverb(size = mul(2)), """s("bd sd").reverb(0.3, 4, 1500).reverb(size = mul(2))""") {
+                it.reverb shouldBe 0.3
+                it.reverbSize shouldBe 8.0
+                it.reverbLowpass shouldBe 1500.0
             },
             Case("delay(feedback = mul(2))", s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2)), """s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2))""") {
                 it.delay shouldBe 0.3
@@ -596,7 +592,7 @@ class LangFieldAccessorsSpec : StringSpec({
     "effects: every compound head keeps its value where the control pattern has a gap, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         listOf(
-            Case("room", s("bd sd").room(0.8).room("<0.5 ~>"), """s("bd sd").room(0.8).room("<0.5 ~>")""") { it.room },
+            Case("reverb", s("bd sd").reverb(0.8).reverb("<0.5 ~>"), """s("bd sd").reverb(0.8).reverb("<0.5 ~>")""") { it.reverb },
             Case("delay", s("bd sd").delay(0.8).delay("<0.5 ~>"), """s("bd sd").delay(0.8).delay("<0.5 ~>")""") { it.delay },
             Case("phaser", s("bd sd").phaser(0.8).phaser("<0.5 ~>"), """s("bd sd").phaser(0.8).phaser("<0.5 ~>")""") { it.phaserRate },
             Case("tremolo", s("bd sd").tremolo(0.8).tremolo("<0.5 ~>"), """s("bd sd").tremolo(0.8).tremolo("<0.5 ~>")""") { it.tremoloDepth },
@@ -916,11 +912,9 @@ class LangFieldAccessorsSpec : StringSpec({
     "effects: every numeric slot takes a control pattern per event, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         listOf(
-            Case("room.wet", s("bd sd").room(wet = "0.1 0.5"), """s("bd sd").room(wet = "0.1 0.5")""") { it.room },
-            Case("room.size", s("bd sd").room(size = "0.1 0.5"), """s("bd sd").room(size = "0.1 0.5")""") { it.roomSize },
-            Case("room.fade", s("bd sd").room(fade = "0.1 0.5"), """s("bd sd").room(fade = "0.1 0.5")""") { it.roomFade },
-            Case("room.lowpass", s("bd sd").room(lowpass = "0.1 0.5"), """s("bd sd").room(lowpass = "0.1 0.5")""") { it.roomLp },
-            Case("room.dim", s("bd sd").room(dim = "0.1 0.5"), """s("bd sd").room(dim = "0.1 0.5")""") { it.roomDim },
+            Case("reverb.wet", s("bd sd").reverb(wet = "0.1 0.5"), """s("bd sd").reverb(wet = "0.1 0.5")""") { it.reverb },
+            Case("reverb.size", s("bd sd").reverb(size = "0.1 0.5"), """s("bd sd").reverb(size = "0.1 0.5")""") { it.reverbSize },
+            Case("reverb.lowpass", s("bd sd").reverb(lowpass = "0.1 0.5"), """s("bd sd").reverb(lowpass = "0.1 0.5")""") { it.reverbLowpass },
             Case("delay.wet", s("bd sd").delay(wet = "0.1 0.5"), """s("bd sd").delay(wet = "0.1 0.5")""") { it.delay },
             Case("delay.time", s("bd sd").delay(time = "0.1 0.5"), """s("bd sd").delay(time = "0.1 0.5")""") { it.delayTime },
             Case("delay.feedback", s("bd sd").delay(feedback = "0.1 0.5"), """s("bd sd").delay(feedback = "0.1 0.5")""") { it.delayFeedback },

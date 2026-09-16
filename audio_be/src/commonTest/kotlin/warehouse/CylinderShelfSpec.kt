@@ -73,7 +73,7 @@ class CylinderShelfSpec : StringSpec({
         playbackId = pid, startTime = start, gateEndTime = start + 0.05,
         data = VoiceData.empty.copy(
             sound = sound, freqHz = 330.0, cylinder = cylinder,
-            delay = 0.5, delayTime = 0.3, delayFeedback = 0.3, room = 0.5, roomSize = 0.6,
+            delay = 0.5, delayTime = 0.3, delayFeedback = 0.3, reverb = 0.5, reverbSize = 0.6,
             phaser = 0.5, phaserDepth = 0.6, cutoff = 1500.0, resonance = 0.2,
         ),
         playbackStartTime = 0.0,
@@ -142,7 +142,7 @@ class CylinderShelfSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     sound = "supersaw", freqHz = 110.0 + 50.0 * orbit, cylinder = orbit, gain = 2.0,
                     delay = 0.9, delayTime = 0.05 + 0.1 * orbit, delayFeedback = 0.8,
-                    room = 0.9, roomSize = 0.95, phaser = 0.9, phaserDepth = 0.9, cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
+                    reverb = 0.9, reverbSize = 0.95, phaser = 0.9, phaserDepth = 0.9, cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
                 ),
                 playbackStartTime = 0.0,
             )

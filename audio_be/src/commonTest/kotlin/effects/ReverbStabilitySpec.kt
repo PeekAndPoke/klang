@@ -12,14 +12,13 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
 
 /**
- * The bound on the reverb's tail parameter, and why it exists.
+ * The bound on the reverb's size parameter, and why it exists.
  *
- * This is the one place the engine's raw-by-default rule yields: past a normalized 1.0 the comb
- * feedback exceeds unity, and a Freeverb network above unity does **not** make a bigger room. Every
- * comb sample latches at the saturation rail, so the output is pure DC — measured AC-RMS 0.0, both
- * channels bit-identical — which the master DC blocker strips while the limiter ducks the rest of
- * the mix. The `ANTI_DENORMAL` bias alone ramps it there out of silence in ~4 s. There is no sound
- * above 1.0 to preserve, so [Reverb.normalizeRoomSize] bounds it.
+ * [Reverb.normalizeSize] bounds the normalized size to 1.0, a comb feedback of 0.98: canonical
+ * Freeverb's top, kept deliberately (maintainer, 2026-09-16). Unity feedback sits a little higher,
+ * at a normalized ~1.071, and a Freeverb network above unity does **not** make a bigger room: with
+ * no saturator in the comb loop the buffers grow without bound to Inf/NaN. (A soft-capped variant
+ * was measured and reverted: its combs latched at the rail and the output was pure DC, AC-RMS 0.0.)
  */
 class ReverbStabilitySpec : StringSpec({
 
@@ -31,24 +30,24 @@ class ReverbStabilitySpec : StringSpec({
 
 
 
-    "the authored room-size scale is the one both buses share" {
-        Reverb.normalizeRoomSize(5.0) shouldBe 0.5
-        Reverb.normalizeRoomSize(3.0) shouldBe 0.3
-        Reverb.normalizeRoomSize(0.0) shouldBe 0.0
-        // Bounded at the top: past 1.0 there is no longer tail, only DC.
-        Reverb.normalizeRoomSize(30.0) shouldBe 1.0
+    "the authored size scale is the one both buses share" {
+        Reverb.normalizeSize(5.0) shouldBe 0.5
+        Reverb.normalizeSize(3.0) shouldBe 0.3
+        Reverb.normalizeSize(0.0) shouldBe 0.0
+        // Bounded at the top: normalized 1.0 (authored 10) is the longest tail there is.
+        Reverb.normalizeSize(30.0) shouldBe 1.0
     }
 
 
     "the authored scale is bounded, so a Freeverb comb can never exceed unity" {
-        // feedback = normalized * 0.28 + 0.7, so normalized must stay <= 1.0 for feedback <= 0.98.
-        Reverb.normalizeRoomSize(30.0) shouldBe 1.0
-        Reverb.normalizeRoomSize(-5.0) shouldBe 0.0
+        // feedback = normalized * 0.28 + 0.7, so normalized <= 1.0 keeps feedback <= 0.98 (unity at ~1.071).
+        Reverb.normalizeSize(30.0) shouldBe 1.0
+        Reverb.normalizeSize(-5.0) shouldBe 0.0
     }
 
-    "an out-of-range room size stays finite and free of a DC pedestal" {
+    "an out-of-range size stays finite and free of a DC pedestal" {
         val reverb = Reverb(sampleRate = sampleRate).also {
-            it.roomSize = Reverb.normalizeRoomSize(30.0)
+            it.size = Reverb.normalizeSize(30.0)
         }
 
         val input = StereoBuffer(blockFrames)
@@ -85,28 +84,26 @@ class ReverbStabilitySpec : StringSpec({
     "drainSamplesUntilSilent: revolutions from the measured peak plus one slack revolution, in samples" {
         val rev = Reverb(sampleRate)
 
-        // fb = roomSize x 0.28 + 0.7 = 0.84; ceil(ln(1e-5 / 1.0) / ln(0.84)) + 1 = 68 revolutions
+        // fb = size x 0.28 + 0.7 = 0.84; ceil(ln(1e-5 / 1.0) / ln(0.84)) + 1 = 68 revolutions
         // of the longest comb (1617 + 23 stereo spread = 1640 samples at 44.1 kHz).
-        rev.roomSize = 0.5
+        rev.size = 0.5
         rev.drainSamplesUntilSilent(peak = 1.0) shouldBe (68.0 * 1640.0)
 
-        // roomFade OVERRIDES roomSize — the same override process() applies (fb 0.728 -> 38).
-        rev.roomFade = 0.1
-        rev.roomSize = 0.9
+        // A smaller room drains in fewer revolutions (fb 0.728 -> 38).
+        rev.size = 0.1
         rev.drainSamplesUntilSilent(peak = 1.0) shouldBe (38.0 * 1640.0)
-        rev.roomFade = null
 
         // Proportional to content: a -60 dB peak needs 28 revolutions, not 68.
-        rev.roomSize = 0.5
+        rev.size = 0.5
         rev.drainSamplesUntilSilent(peak = 0.001) shouldBe (28.0 * 1640.0)
 
         // At or below the threshold there is nothing to drain.
         rev.drainSamplesUntilSilent(peak = 0.00001) shouldBe 0.0
         rev.drainSamplesUntilSilent(peak = 0.0) shouldBe 0.0
 
-        // Production-unreachable (normalizeRoomSize clamps to <= 1.0, so fb <= 0.98), but the
+        // Production-unreachable (normalizeSize bounds to <= 1.0, so fb <= 0.98), but the
         // formula must never claim a supra-unity network drains.
-        rev.roomSize = 2.0
+        rev.size = 2.0
         rev.drainSamplesUntilSilent(peak = 1.0) shouldBe Double.POSITIVE_INFINITY
     }
 

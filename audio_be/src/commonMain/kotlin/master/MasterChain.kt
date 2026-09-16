@@ -157,7 +157,7 @@ internal class MasterChain private constructor(
         /** At or below this send level the effect is inaudible and is dropped from the chain. */
         private const val MIN_WET = 0.0001
 
-        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` and
+        /** Matches the Katalyst off-thresholds (`KatalystReverbEffect.MIN_ACTIVE_SIZE` and
          *  `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS`) — one contract, kept in prose sync
          *  because importing a katalyst constant here would invert the layering. */
         private const val MIN_TIME_FX = 0.01
@@ -292,38 +292,29 @@ internal class MasterChain private constructor(
          * bus scaled by `wet`, and lets the unchanged DSP mix the tail back in.
          *
          * Skipped entirely when inaudible — the same off-test as
-         * `KatalystReverbEffect.MIN_ACTIVE_ROOM_SIZE` (there an off-config starts a drain of the
+         * `KatalystReverbEffect.MIN_ACTIVE_SIZE` (there an off-config starts a drain of the
          * live tail; here the stage is decided at build time, so no tail exists to drain), so an
          * "off" master reverb costs nothing (Freeverb is the heaviest single DSP unit in the
          * engine).
          */
         private fun buildReverb(stage: MasterStageDsl.Reverb, blockFrames: Int, units: ReverbUnits): BuiltReverb? {
             val wet = finite(stage.wet, 0.0)
-            // The authored value is on the sprudel ~0..10 scale; ONE shared conversion for both
-            // buses. The fallback must be the *authored* default, not the normalized one — a 0.5
-            // here would normalize to 0.05, fall under MIN_TIME_FX and silently delete the stage.
-            val roomSize = Reverb.normalizeRoomSize(
-                finite(stage.roomSize, MasterStageDsl.Reverb.DEFAULT_ROOM_SIZE)
+            // The authored value is on the ~0..10 scale; ONE shared conversion for both buses. The
+            // fallback must be the *authored* default, not the normalized one — a 0.5 here would
+            // normalize to 0.05, fall under MIN_TIME_FX and silently delete the stage.
+            val size = Reverb.normalizeSize(
+                finite(stage.size, MasterStageDsl.Reverb.DEFAULT_SIZE)
             )
 
-            // `roomFade` overrides `roomSize` in the DSP, so an explicit fade means "render", at any
-            // value — 0.0 is the shortest tail (~0.7 s), not "off". Gating on roomSize alone dropped
-            // stages that would have been audible. Same question `KatalystReverbEffect` asks.
-            val hasFade = stage.roomFade?.isFinite() == true
-            if (wet <= MIN_WET || (!hasFade && roomSize < MIN_TIME_FX)) {
+            if (wet <= MIN_WET || size < MIN_TIME_FX) {
                 return null
             }
 
-            // roomFade/roomLp are assigned through their setters, which drop non-finite values;
-            // do NOT move them into the constructor. roomFade overrides roomSize for the comb
-            // feedback, so it carries the same 0..1 bound (past unity the combs run away to NaN —
-            // see `Reverb.normalizeRoomSize`); damp is bounded because past 2.5 the comb one-pole
-            // coefficient exceeds 1 and the filter diverges.
+            // lowpass is assigned through its setter, which drops non-finite values; do NOT move it
+            // into the constructor.
             val reverb = (units.rent() ?: return BuiltReverb.Denied).also {
-                it.roomSize = roomSize
-                it.damp = finite(stage.damp, 0.5).coerceIn(0.0, 1.0)
-                it.roomFade = stage.roomFade?.takeIf { fade -> fade.isFinite() }?.coerceIn(0.0, 1.0)
-                it.roomLp = stage.roomLp?.takeIf { lp -> lp.isFinite() }
+                it.size = size
+                it.lowpass = stage.lowpass?.takeIf { lp -> lp.isFinite() }
             }
             val send = StereoBuffer(blockFrames)
             val tail = TailCeiling()

@@ -65,7 +65,7 @@ fun runVoiceDataCopyBenchmark() {
         tremoloSync = 4.0; tremoloDepth = 0.4                                      // tremolo
         duckDepth = 0.5; duckAttack = 0.05                                         // duck
         delay = 0.3; delayTime = 0.25; delayFeedback = 0.4                         // delayFx
-        room = 0.5; roomSize = 0.8                                                 // reverb
+        reverb = 0.5; reverbSize = 0.8                                             // reverbFx
         begin = 0.0; end = 1.0; speed = 1.0; loop = true                          // sample
     }
 

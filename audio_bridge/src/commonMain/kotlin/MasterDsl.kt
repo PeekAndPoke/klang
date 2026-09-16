@@ -124,40 +124,32 @@ sealed interface MasterStageDsl {
      * Master reverb — the shared Freeverb `Reverb` (audio_be `effects/`) used as an *insert*: the
      * backend feeds it a copy of the bus scaled by [wet] and mixes its output back.
      *
-     * **Every parameter here is the twin of a sprudel one, on the same scale** — a number means the
-     * same thing whether you write it on an orbit or on the master. (It did not always: `roomSize`
-     * was once raw 0..1 here while sprudel's was 0..10, so the same `3` meant a 1 s tail on an orbit
-     * and a 12.5 s one on the master.)
+     * **Every parameter here is the twin of a sprudel `reverb(...)` slot, with the same name on the
+     * same scale** — a number means the same thing whether you write it on an orbit or on the
+     * master. (It did not always: `size` was once raw 0..1 here while sprudel's was 0..10, so the
+     * same `3` meant a 1 s tail on an orbit and a 12.5 s one on the master.)
      *
-     * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `room(wet = x)`.
-     * @param roomSize tail length on the **sprudel `room(size = ...)` scale, ~0..10** (the backend divides
-     *   by 10 — see `Reverb.normalizeRoomSize`). 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest
-     *   reachable tail is ~0.7 s. Values above 10 are bounded — past unity the comb network has no
-     *   steady state and runs away (see `Reverb.normalizeRoomSize`). Orbit twin: `room(size = ...)`.
-     * @param damp Freeverb high-frequency damping, 0 = bright .. 1 = dark. **Ignored when [roomLp]
-     *   is set.** No orbit twin (sprudel reaches damping through `room(lowpass = ...)` instead).
-     * @param roomFade **overrides [roomSize]** for the tail, and is NOT on the same scale — it is
-     *   the normalized 0..1 value directly, and despite the name it is not a time. Orbit twin:
-     *   `room(fade = ...)`. Null = no override.
-     * @param roomLp high-frequency damping as an absolute cutoff **in Hz**; overrides [damp].
-     *   Orbit twin: `room(lowpass = ...)`. Null = no override.
+     * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `reverb(wet = x)`.
+     * @param size tail length on the **authored ~0..10 scale** (the backend divides by 10, see
+     *   `Reverb.normalizeSize`). 3 ≈ 1 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is
+     *   ~0.7 s. Values above 10 are bounded at 10 (see `Reverb.normalizeSize`). Orbit twin:
+     *   `reverb(size = ...)`.
+     * @param lowpass high-frequency damping of the tail as a cutoff **in Hz**. Null = the engine's
+     *   fixed default damping. Orbit twin: `reverb(lowpass = ...)`.
      */
     @WireName("reverb")
     data class Reverb(
         val wet: Double = 0.25,
-        val roomSize: Double = DEFAULT_ROOM_SIZE,
-        val damp: Double = 0.5,
-        val roomFade: Double? = null,
-        val roomLp: Double? = null,
+        val size: Double = DEFAULT_SIZE,
+        val lowpass: Double? = null,
     ) : MasterStageDsl {
         companion object {
             /**
-             * Default room size on the **authored** scale.
+             * Default size on the **authored** scale.
              *
-             * `5.0 / 10 == 0.5`, the Freeverb default — so this is behaviour-preserving despite the
-             * literal changing. Guarded by `MasterDefaultsSyncSpec`.
+             * `5.0 / 10 == 0.5`, the Freeverb default. Guarded by `MasterDefaultsSyncSpec`.
              */
-            const val DEFAULT_ROOM_SIZE: Double = 5.0
+            const val DEFAULT_SIZE: Double = 5.0
         }
     }
 

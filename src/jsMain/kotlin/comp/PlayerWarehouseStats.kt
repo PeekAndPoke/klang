@@ -145,7 +145,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                     "${w.ringSyncCleans}z" to "rents that had to zero a dirty ring on the spot",
                 )
                 line(
-                    "reverb", "Reverb networks: one size each, lazy on the first room()",
+                    "reverb", "Reverb networks: one size each, lazy on the first reverb()",
                     "${w.reverbIdleCount}i" to "networks idle on the shelf",
                     "${w.reverbDirtyCount}d" to "idle networks not yet zeroed",
                     "${w.reverbAllocations}a" to "networks allocated since start",
@@ -178,7 +178,7 @@ class PlayerWarehouseStats(ctx: NoProps) : PureComponent(ctx) {
                     warn = w.droppedVoices > 0,
                 )
                 line(
-                    "dry", "Delay or room rents the warehouse refused for lack of memory: that orbit plays dry",
+                    "dry", "Delay or reverb rents the warehouse refused for lack of memory: that orbit plays dry",
                     "${w.deniedRents}" to "refused rents since start (across all live orbits)",
                     warn = w.deniedRents > 0,
                 )

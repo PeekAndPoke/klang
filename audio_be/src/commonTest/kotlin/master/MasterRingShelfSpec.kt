@@ -28,7 +28,7 @@ import kotlin.math.ceil
  *
  * The headline is parity. Between 2b and 2e the orbit delay had lost its 10 s ceiling while the
  * master kept `MAX_DELAY_SECONDS = 10.0`: `delay(20)` was a real 20 s echo on an orbit and a
- * silently re-timed 10 s one on the master — the roomSize-10× class of bug the project has a
+ * silently re-timed 10 s one on the master — the reverb-size-10× class of bug the project has a
  * standing rule against (same parameter, same meaning, on every surface).
  */
 class MasterRingShelfSpec : StringSpec({

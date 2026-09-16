@@ -129,12 +129,10 @@ data class ScheduledVoice(
 | `delay`         | `Double?` | Dry/wet mix for cylinder delay          |
 | `delayTime`     | `Double?` | Delay time (s)                          |
 | `delayFeedback` | `Double?` | Delay feedback (0–1)                    |
-| `room`          | `Double?` | Reverb dry/wet mix                      |
-| `roomSize`      | `Double?` | Reverb room size                        |
-| `roomFade`      | `Double?` | Reverb fade/tail length                 |
-| `roomLp`        | `Double?` | Reverb internal low-pass cutoff         |
-| `roomDim`       | `Double?` | Reverb dimension / diffusion            |
-| `iResponse`     | `Double?` | Impulse response selector (convolution) |
+| `reverb`        | `Double?` | Reverb send amount (0..1)               |
+| `reverbSize`    | `Double?` | Reverb tail length, authored ~0..10     |
+| `reverbLowpass` | `Double?` | Reverb tail damping cutoff (Hz)         |
+| `iResponse`     | `String?` | Impulse response name (reserved)        |
 
 ### Sample Manipulation
 

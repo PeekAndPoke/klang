@@ -39,7 +39,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  *
  * This is the answer whenever two patterns fight over a bus effect. Reverb, delay, phaser,
  * compressor, body, vowel and ducking exist once per orbit and take their settings from the first
- * voice that sounds there, so a second pattern asking for a different room size is ignored. Move it
+ * voice that sounds there, so a second pattern asking for a different reverb size is ignored. Move it
  * to another orbit and it gets its own.
  *
  * ```KlangScript(Playable)
@@ -47,7 +47,7 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").orbit(2).room(wet = 0.8, size = 4)  // melodic line on orbit 2 with reverb
+ * note("c3 e3").orbit(2).reverb(wet = 0.8, size = 4)  // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -87,7 +87,7 @@ fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd").orbit("0 1").room(orbit.mul(0.3))                         // more reverb on the higher orbit
+ * s("bd sd").orbit("0 1").reverb(orbit.mul(0.3), 4)                    // more reverb on the higher orbit
  * ```
  *
  * @category dynamics
@@ -132,7 +132,7 @@ fun PatternMapperFn.orbit(index: PatternLike? = null, callInfo: CallInfo? = null
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
+ * note("c3 e3").o(2).reverb(0.8, 4)     // melodic line on orbit 2 with reverb
  * ```
  *
  * @param index The orbit index to route events to.
@@ -298,7 +298,7 @@ object duck {
  * (called "orbit" in Strudel/Tidal Cycles). Each cylinder has its own effect pipeline (Katalyst).
  *
  * ```KlangScript(Playable)
- * note("c3 e3").cylinder(2).room(wet = 0.8, size = 4)  // melodic line on cylinder 2 with reverb
+ * note("c3 e3").cylinder(2).reverb(wet = 0.8, size = 4)  // melodic line on cylinder 2 with reverb
  * ```
  *
  * @param index The cylinder index to route events to.

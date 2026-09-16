@@ -397,7 +397,7 @@ export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0010, 0.0020).mul(dr
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
-export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").room("0.1")
+export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb("0.1")
 export countin_arrange = x => x.orbit(7).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -406,7 +406,7 @@ export song_arrange = x => x.late(2).filterWhen(t => t >= 2) // shift the song o
 export song_body = stack(
   stack(
     // Lead - Inspired by: Editors - Papillon    
-    lead.apply(lead_arrange).room(wet = 0.10, size = 1.0) // . mute() // .solo()
+    lead.apply(lead_arrange).reverb(wet = 0.10, size = 1.0) // . mute() // .solo()
     // Guitars    
     , stack(
       // Guitar 1
@@ -415,11 +415,11 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).room(wet = 0.15, size = 3.0).compressor(-21, 3, 6, 0.005, 0.12)
+    ).reverb(wet = 0.15, size = 3.0).compressor(-21, 3, 6, 0.005, 0.12)
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
-    trommel.apply(trommel_arrange).room(wet = 0.40, size = 8.0) // .solo() .mute()
+    trommel.apply(trommel_arrange).reverb(wet = 0.40, size = 8.0) // .solo() .mute()
   ).analog(feel).transpose(transposition).compressor(-21, 3, 6, 0.005, 0.12)
   , // Drums
   stack(
@@ -428,7 +428,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
-  ).analog(feel / 2).room(wet = 0.25, size = 4.0).compressor(-21, 4, 6, 0.005, 0.12)  //. solo() //  .mute()
+  ).analog(feel / 2).reverb(wet = 0.25, size = 4.0).compressor(-21, 4, 6, 0.005, 0.12)  //. solo() //  .mute()
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>").swingBy(0.005, 4)
 
 export song = stack(
@@ -438,7 +438,7 @@ export song = stack(
   song_body.apply(song_arrange)
   , // Master
   master(Master(m =>
-    m.reverb(r => r.wet(0.2).damp(0.8).roomSize(7).roomLp(3500)).gain(3.5)
+    m.reverb(r => r.wet(0.2).size(7).lowpass(3500)).gain(3.5)
   ))
 )
 

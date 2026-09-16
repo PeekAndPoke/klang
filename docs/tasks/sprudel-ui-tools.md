@@ -102,11 +102,11 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 | `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | slots `(wet, time, feedback)`; the `cap` slot has no control yet (2026-09-07) |
 | `delay(time = ...)`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
 | `delay(feedback = ...)`           | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
-| `room()`                          | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
-| `room(size = ...)`                | `SprudelRoomSizeEditor`      | `SprudelRoomSizeSequenceEditor`      | single value    |
+| `reverb()`                        | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
+| `reverb(size = ...)`              | `SprudelReverbSizeEditor`    | `SprudelReverbSizeSequenceEditor`    | single value    |
 
 Named arguments resolve by position today (`docs/tasks/editor-tools-named-arguments.md`).
-Compound slots carry no aliases since 2026-09-07 (`room(size = ...)`, `delay(feedback = ...)`, ...
+Compound slots carry no aliases since 2026-09-07 (`reverb(size = ...)`, `delay(feedback = ...)`, ...
 are the only spellings); the phaser editor has no `floor` control and the delay editor no `cap`.
 
 ## Low Pass Filter
@@ -171,7 +171,7 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | `SprudelCompressorEditorTool.kt`   | Compressor editor with transfer function curve + 8 presets                                                          |
 | `SprudelDelayEditorTool.kt`        | Delay editor with smooth decay curve                                                                                |
 | `SprudelReverbEditorTool.kt`       | Reverb editor                                                                                                       |
-| `SprudelNumericEditorTool.kt`      | Configurable numeric editor with drag bar (gain, pan, room size, delay time/feedback, all individual filter params) |
+| `SprudelNumericEditorTool.kt`      | Configurable numeric editor with drag bar (gain, pan, reverb size, delay time/feedback, all individual filter params) |
 | `SprudelScaleEditorTool.kt`        | Scale picker                                                                                                        |
 | `SprudelNoteEditorTool.kt`         | Note picker                                                                                                         |
 | `SprudelScaleDegreeEditorTool.kt`  | Scale degree picker                                                                                                 |

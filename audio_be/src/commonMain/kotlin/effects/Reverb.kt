@@ -52,20 +52,16 @@ import kotlin.math.ln
  *   (24× ABS + compare + branch) — the rest of the engine uses
  *   `flushState` because those components have only 1–2 IIR stages.
  *
- * **Parameter mapping — note the two different scales.** Everything a user authors goes through
- * [normalizeRoomSize] or lands here raw; both buses (per-orbit and master) MUST agree:
- * - `room` / `wet` → send amount (caller-side; not a parameter here), 0..1.
- * - `room(size)` / `roomSize` → [roomSize]. Authored on the **~0..10** scale
- *   ([AUTHORED_ROOM_SIZE_SCALE]), normalized to 0..1 here. Tail length, via comb feedback
- *   `feedback = (roomFade ?: roomSize) · FEEDBACK_SCALE + FEEDBACK_OFFSET`: authored 3 ≈ 1.0 s,
- *   5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s ([FEEDBACK_OFFSET]).
- * - `room(fade)` / `roomFade` → [roomFade]. **Overrides [roomSize], and is NOT on the same scale** —
- *   it is the normalized 0..1 value directly, and it is *not* a time despite the name.
- * - `room(lowpass)` / `roomLp` → [roomLp] (HF damping cutoff in Hz; overrides [damp]).
+ * **Parameter mapping.** Everything a user authors goes through [normalizeSize] or lands here raw;
+ * both buses (per-orbit and master) MUST agree:
+ * - `reverb(wet)` → send amount (caller-side; not a parameter here), 0..1.
+ * - `reverb(size)` → [size]. Authored on the **~0..10** scale ([AUTHORED_SIZE_SCALE]), normalized
+ *   to 0..1 here. Tail length, via comb feedback `feedback = size · FEEDBACK_SCALE + FEEDBACK_OFFSET`:
+ *   authored 3 ≈ 1.0 s, 5 ≈ 1.4 s, 10 ≈ 12.5 s. The shortest reachable tail is ~0.7 s
+ *   ([FEEDBACK_OFFSET]).
+ * - `reverb(lowpass)` → [lowpass] (HF damping cutoff in Hz; unset = [DEFAULT_DAMP]).
  *
- * Values above the normalized 1.0 are clamped by [normalizeRoomSize] — not for taste, but because a
- * comb network above unity has no steady state: it grows without bound to Inf/NaN (see that
- * function's KDoc).
+ * Authored sizes above 10 are bounded by [normalizeSize] (see there for why the bound sits at 10).
  */
 class Reverb(
     val sampleRate: Int,
@@ -104,39 +100,25 @@ class Reverb(
 
     // --- Parameters ---
 
-    /** Decay tail length (comb feedback). 0 = short tail, 1 = long tail. NaN/Inf silently ignored. */
-    var roomSize: Double = 0.5
+    /** Decay tail length (comb feedback), normalized. 0 = short tail, 1 = long tail. NaN/Inf silently ignored. */
+    var size: Double = 0.5
         set(value) {
             if (!value.isFinite()) return
             field = value
         }
 
-    /** High-frequency damping (air absorption). 0 = bright, 1 = dark. NaN/Inf silently ignored. */
-    var damp: Double = 0.5
-        set(value) {
-            if (!value.isFinite()) return
-            field = value
-        }
-
-    /** Strudel `roomFade` — when set, overrides [roomSize]. NaN/Inf silently ignored. */
-    var roomFade: Double? = null
+    /**
+     * High-frequency damping of the tail as a lowpass cutoff in Hz; lower = darker. Null = the fixed
+     * [DEFAULT_DAMP]. NaN/Inf silently ignored.
+     */
+    var lowpass: Double? = null
         set(value) {
             if (value != null && !value.isFinite()) return
             field = value
         }
 
-    /** Strudel `roomLp` — when set, overrides [damp] (lower cutoff = more damping). NaN/Inf silently ignored. */
-    var roomLp: Double? = null
-        set(value) {
-            if (value != null && !value.isFinite()) return
-            field = value
-        }
-
-
-    // TODO(klang): future hooks — see docs/agent-tasks/ignitor-dsl-open-items.md.
-    //   roomDim   — dimensional / modulated-allpass reverb variant.
+    // TODO(klang): future hook — see docs/tasks/ignitor-dsl-open-items.md.
     //   iResponse — IR-convolution reverb (FIR / partitioned-FFT path).
-    var roomDim: Double? = null
     var iResponse: String? = null
 
     /**
@@ -229,9 +211,8 @@ class Reverb(
      * The damping LPF is a convex combination of already-read cells whose pre-revolution memory
      * weight is `damping^N` — indistinguishable from zero for every supported comb length
      * (the SHORTEST comb is N ~ 558 at the 22.05 kHz support floor, damping <= 0.4 via
-     * DAMP_SCALE; the convexity additionally needs `damping < 1`, i.e. `damp < 2.5` — the orbit
-     * path never writes damp and the master clamps it to [0, 1], and a supra-unity damping
-     * diverges and self-limits at the terminal reset anyway) — so cell peaks
+     * DAMP_SCALE; the convexity additionally needs `damping < 1`, which holds structurally: the
+     * effective damp is [DEFAULT_DAMP] or derived from [lowpass] bounded to [0, 1]) — so cell peaks
      * contract by at least `|feedback|` per revolution REGARDLESS of damping (round 2 settled
      * this after round 1's dominant-root stretch argument, which is real only for toy-sized
      * combs where `damping^N` still matters). What makes the `+ 1` spare revolution
@@ -242,8 +223,8 @@ class Reverb(
      * often: `n = ceil(ln(threshold/peak) / ln(|feedback|)) + 1` periods.
      *
      * The feedback is the same [effectiveFeedback] that [process] applies — structurally within
-     * `[0.7, 0.98]` through the production path ([normalizeRoomSize] clamps roomSize, the
-     * configure door coerces roomFade), so unlike the delay there is no self-oscillating regime
+     * `[0.7, 0.98]` through the production path ([normalizeSize] bounds size, and the orbit
+     * configure door bounds it again), so unlike the delay there is no self-oscillating regime
      * to sentinel. The `|feedback| >= 1` arm exists only so the formula can never claim a
      * (test-rigged, production-unreachable) growing network drains.
      */
@@ -292,18 +273,15 @@ class Reverb(
      * (`ReverbUnits.giveBack`). Keep in sync with the property initialisers above.
      */
     fun restoreDefaults() {
-        roomSize = 0.5
-        damp = 0.5
-        roomFade = null
-        roomLp = null
-        roomDim = null
+        size = 0.5
+        lowpass = null
         iResponse = null
     }
 
-    /** The comb feedback [process] runs at: `(roomFade ?: roomSize) x FEEDBACK_SCALE +
-     *  FEEDBACK_OFFSET` — one definition shared with [drainSamplesUntilSilent], so the drain
-     *  math can never diverge from the DSP it predicts. */
-    private fun effectiveFeedback(): Double = (roomFade ?: roomSize) * FEEDBACK_SCALE + FEEDBACK_OFFSET
+    /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one
+     *  definition shared with [drainSamplesUntilSilent], so the drain math can never diverge from
+     *  the DSP it predicts. */
+    private fun effectiveFeedback(): Double = size * FEEDBACK_SCALE + FEEDBACK_OFFSET
 
     /** The comb feedback right now, for [TailCeiling] — one definition with [process] and the drain. */
     val tailFeedback: Double get() = effectiveFeedback()
@@ -332,17 +310,18 @@ class Reverb(
 
         // --- 1. Control-rate calculations (once per block) ---
 
-        // Comb feedback ← roomSize (or roomFade override)
+        // Comb feedback ← size
         val feedback = effectiveFeedback()
 
-        // Damping ← damp (or roomLp override). roomLp = nyquist → no damping;
-        // roomLp = 0 → max damping. Then scale to the comb LPF range.
-        val effectiveDamp = if (roomLp != null) {
+        // Damping ← DEFAULT_DAMP, or lowpass when set. lowpass = nyquist → no damping;
+        // lowpass = 0 → max damping. Then scale to the comb LPF range.
+        val lp = lowpass
+        val effectiveDamp = if (lp != null) {
             val nyquist = sampleRate / 2.0
-            val normalised = (roomLp!! / nyquist).coerceIn(0.0, 1.0)
+            val normalised = (lp / nyquist).coerceIn(0.0, 1.0)
             1.0 - normalised
         } else {
-            damp
+            DEFAULT_DAMP
         }
         val damping = effectiveDamp * DAMP_SCALE
         val invDamping = 1.0 - damping
@@ -355,7 +334,7 @@ class Reverb(
             // stores keep `+ ANTI_DENORMAL` (converting them to `flushState` was measured at
             // ~+11%/sample and reverted 2026-05-19), so they have no per-store guard of their
             // own — but they do not need one: the comb/allpass network is a stable linear
-            // system (|feedback| < 1 via normalizeRoomSize, damping in [0,1], coefficients
+            // system (|feedback| < 1 via normalizeSize, damping in [0,1], coefficients
             // guarded at configure), so a FINITE input can never drive the state non-finite.
             // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
             // sample latched every comb and allpass for the life of the orbit.
@@ -456,38 +435,44 @@ class Reverb(
 
     companion object {
         /**
-         * The **authored** room-size scale — what `room(size = ...)` (sprudel) and
-         * the master reverb's `roomSize` knob speak: roughly 0..10.
+         * The **authored** size scale — what `reverb(size = ...)` speaks on both doors (sprudel and
+         * the master reverb builder): roughly 0..10.
          *
-         * [roomSize] itself is normalized 0..1. Keeping the conversion here means both buses go
-         * through one definition instead of each inventing its own — the two silently disagreed
-         * before (sprudel divided by 10, the master did not), so the same number meant a ~1 s tail
-         * on an orbit and a ~12.5 s tail on the master.
+         * [size] itself is normalized 0..1. Keeping the conversion here means both buses go through
+         * one definition instead of each inventing its own — the two silently disagreed before
+         * (sprudel divided by 10, the master did not), so the same number meant a ~1 s tail on an
+         * orbit and a ~12.5 s tail on the master.
          */
-        const val AUTHORED_ROOM_SIZE_SCALE: Double = 10.0
+        const val AUTHORED_SIZE_SCALE: Double = 10.0
 
         /**
-         * Authored room size (the ~0..10 [AUTHORED_ROOM_SIZE_SCALE]) → the normalized 0..1 that
-         * [roomSize] consumes.
+         * Authored size (the ~0..10 [AUTHORED_SIZE_SCALE]) → the normalized 0..1 that [size] consumes.
          *
-         * **Clamped to 0..1, and that is not a taste clamp.** Past 1.0 the comb feedback exceeds unity and the network has
-         * no steady state at all: the comb buffers grow without bound until they reach Inf/NaN, at
-         * which point the reverb is dead and — on the master, which feeds the shared mix — every
-         * playback is railed until a reload. There is no "bigger room" up there to preserve.
+         * **Bounded to 0..1, deliberately (maintainer, 2026-09-16).** Normalized 1.0 is a comb
+         * feedback of 0.98 (about a 12.5 s tail), the top of canonical Freeverb's 0.70..0.98 range,
+         * and the range the drain countdown ([drainSamplesUntilSilent]) and `TailCeiling` are proven
+         * for. It is NOT the stability edge: unity feedback sits at normalized ~1.071 (authored
+         * ~10.71), and the sliver between holds ever longer tails (authored ~10.36 ≈ 25 s, ~10.54 ≈
+         * 50 s) approaching a freeze. Past unity the network has no steady state at all: the comb
+         * buffers grow without bound until they reach Inf/NaN, and on the master, which feeds the
+         * shared mix, every playback is railed until a reload. Record: `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
          *
          * (An earlier attempt kept it unclamped and soft-capped the feedback instead, so extreme
          * values would self-oscillate. Measured, they do not: the saturator rails at exactly ±1.0,
          * so every comb sample latches and the output is pure DC with zero AC content. Reverted —
          * see docs/tasks/master-dsl.md.)
+         *
+         * The floor at 0 (a 0.7 s tail) is also inside the stable range; it stays because `size`
+         * doubles as the orbit reverb's on switch.
          */
-        fun normalizeRoomSize(authored: Double): Double {
+        fun normalizeSize(authored: Double): Double {
             // NaN-guard — coerceIn passes NaN straight through, and a NaN here would be dropped by
-            // the roomSize setter, silently leaving a pooled reverb on its previous owner's room.
+            // the size setter, silently leaving a pooled reverb on its previous owner's room.
             if (authored != authored) {
                 return 0.0
             }
 
-            return (authored / AUTHORED_ROOM_SIZE_SCALE).coerceIn(0.0, 1.0)
+            return (authored / AUTHORED_SIZE_SCALE).coerceIn(0.0, 1.0)
         }
 
         /** The silence threshold [hasTail] and [drainSamplesUntilSilent] share (~-100 dBFS). */
@@ -497,18 +482,25 @@ class Reverb(
         private const val REFERENCE_SAMPLE_RATE: Int = 44100
 
         /**
-         * Comb-feedback mapping: `feedback = roomSize · FEEDBACK_SCALE + FEEDBACK_OFFSET`.
-         * For `roomSize ∈ [0, 1]`, feedback ∈ [0.70, 0.98] — the canonical Jezar range.
+         * Comb-feedback mapping: `feedback = size · FEEDBACK_SCALE + FEEDBACK_OFFSET`.
+         * For `size ∈ [0, 1]`, feedback ∈ [0.70, 0.98] — the canonical Jezar range.
          */
 
         private const val FEEDBACK_SCALE: Double = 0.28
         private const val FEEDBACK_OFFSET: Double = 0.7
 
         /**
-         * Comb-damping mapping: `damping = damp · DAMP_SCALE` (so `damp = 1` → 0.4).
-         * Limits HF roll-off in the comb LPF feedback path to a musical maximum.
+         * Comb-damping mapping: `damping = damp · DAMP_SCALE` (so `damp = 1` → 0.4), where damp is
+         * [DEFAULT_DAMP] or derived from [lowpass]. Limits HF roll-off in the comb LPF feedback path
+         * to a musical maximum.
          */
         private const val DAMP_SCALE: Double = 0.4
+
+        /**
+         * Damping (0 = bright .. 1 = dark) when no [lowpass] is set: the Freeverb default. Equivalent
+         * to a lowpass at half the Nyquist frequency.
+         */
+        private const val DEFAULT_DAMP: Double = 0.5
 
         /** Output normalisation — sum of 8 resonant combs has high peak amplitude. */
         private const val FIXED_GAIN: Double = 0.015

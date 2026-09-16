@@ -113,7 +113,7 @@ stack(
   , sound("pink!3").gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
   , sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
  
-).room(0.35, 7, 0.75).delay(wet = 0.3, time = pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
+).reverb(0.35, 7.5).delay(wet = 0.3, time = pure(1/8).div(cps)).compressor(-15, 2, 6, 0.01, 0.2).analog(8)
 
 
 

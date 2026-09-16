@@ -23,8 +23,8 @@ import kotlin.math.min
  * reclaimed it, displaced by the (block-quantised, framing-dependent) freeze length — and the
  * cylinder's param-gated tail check could not see the frozen energy either.
  *
- * - **Active** — the owner wants reverb ([configure] with an explicit finite `roomFade`, at any
- *   value including 0.0, or a FINITE `roomSize >= MIN_ACTIVE_ROOM_SIZE`): process normally.
+ * - **Active** — the owner wants reverb ([configure] with a FINITE `size >= MIN_ACTIVE_SIZE`):
+ *   process normally.
  * - **Draining** — the owner turned it off while the combs still hold a tail: keep processing
  *   with SILENT input under the retained last-active parameters, so the tail mixes out on its
  *   own timeline (live sends are discarded — the owner said off). A closed-form sample-counted
@@ -32,7 +32,7 @@ import kotlin.math.min
  *   and [hasTail] answers true for the whole countdown BY CONSTRUCTION (round 2 measured that a
  *   live scan would beat the countdown by only ~one revolution for real content — see there).
  *   Unlike the delay there is NO self-oscillating regime: comb feedback is structurally < 1
- *   ([Reverb.normalizeRoomSize] clamps roomSize in VoiceFactory, [configure] bounds roomFade),
+ *   ([Reverb.normalizeSize] bounds size in VoiceFactory, [configure] bounds it again),
  *   so every finite drain terminates — and a NON-finite countdown (an Inf or NaN comb cell from
  *   a hot send: neither ever decays) resets immediately instead: the heal the old gate's
  *   takeover path provided, and the only exit such an orbit would otherwise ever have.
@@ -104,40 +104,25 @@ class KatalystReverbEffect(
      * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on.
      *
-     * The active test must ask the same question the DSP decays from (`roomFade ?: roomSize`):
-     * testing roomSize alone made `room(wet = 0.6, fade = 0.1)` — no `size` — silent, because
-     * roomSize defaults to 0.0 and the override was never reached. An explicit roomFade is
-     * intent to reverberate at ANY value: 0.0 is the engine's SHORTEST tail (~0.7 s), not "off".
-     *
-     * Non-finite params read as OFF (or as unset, for the overrides), never as the previous
+     * Non-finite params read as OFF (or as unset, for [Reverb.lowpass]), never as the previous
      * owner's room: [Reverb]'s setters drop NaN/Inf writes, so before the lifecycle a non-finite
      * param left the DSP on whatever the previous owner set — the same leak shape the phaser's
-     * depth gate had (ledger D2 round 2). Both room axes get the 0..1 stability bound HERE, at
-     * the door (conversions in one place): they are the normalized comb-feedback axis directly,
-     * and above 1.0 the network has no steady state at all (see [Reverb.normalizeRoomSize],
-     * which production roomSize already passes through in VoiceFactory — the door bound is
-     * bit-identical there and protects a future direct caller). One accepted letter-gap: an
-     * Active-by-roomFade config with a NON-finite roomSize leaves that field on its previous
-     * value — provably never read, because the DSP consults roomSize only while roomFade is
-     * null, and every path that nulls roomFade also writes a finite roomSize (review round 2
-     * traced it).
+     * depth gate had (ledger D2 round 2). Size gets the 0..1 bound HERE too, at the door
+     * (conversions in one place): it is the normalized comb-feedback axis directly, and the bound
+     * keeps the feedback inside the range the drain countdown is proven for (see
+     * [Reverb.normalizeSize], which production size already passes through in VoiceFactory — the
+     * door bound is bit-identical there and protects a future direct caller).
      */
     fun configure(
-        roomSize: Double,
-        roomFade: Double?,
-        roomLp: Double?,
-        roomDim: Double?,
+        size: Double,
+        lowpass: Double?,
         iResponse: String?,
     ) {
-        val fade = roomFade?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
-
-        if (fade != null || (roomSize.isFinite() && roomSize >= MIN_ACTIVE_ROOM_SIZE)) {
+        if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             val unit = reverb ?: rentUnit() ?: return
 
-            unit.roomSize = roomSize.coerceIn(0.0, 1.0)
-            unit.roomFade = fade
-            unit.roomLp = roomLp?.takeIf { it.isFinite() }
-            unit.roomDim = roomDim
+            unit.size = size.coerceIn(0.0, 1.0)
+            unit.lowpass = lowpass?.takeIf { it.isFinite() }
             unit.iResponse = iResponse
             state = State.Active
             return
@@ -167,7 +152,7 @@ class KatalystReverbEffect(
     /**
      * True while the combs can still contribute audio — the state-aware replacement for the
      * cylinder's old param-gated scan, which reported "no tail" the moment a no-reverb owner
-     * zeroed roomSize and so hid a still-charged network from cleanup. Off is empty by
+     * zeroed size and so hid a still-charged network from cleanup. Off is empty by
      * construction ([Reverb.reset] on every entry); Active asks the network; Draining is tailed
      * BY CONSTRUCTION for the whole countdown, mirroring [KatalystDelayEffect.hasTail].
      *
@@ -236,11 +221,8 @@ class KatalystReverbEffect(
         val unit = reverb
         if (unit != null) {
             unit.reset()
-            unit.roomSize = 0.0
-            unit.damp = 0.5
-            unit.roomFade = null
-            unit.roomLp = null
-            unit.roomDim = null
+            unit.size = 0.0
+            unit.lowpass = null
             unit.iResponse = null
         }
         state = State.Off
@@ -292,11 +274,10 @@ class KatalystReverbEffect(
 
     companion object {
         /**
-         * Below this, an authored roomSize means "off" — the comb feedback floor (0.7, see
-         * `Reverb.FEEDBACK_OFFSET`) makes even roomSize 0.0 ring for ~0.7 s, so "no reverb"
-         * must be a threshold decision. An explicit roomFade bypasses this test entirely
-         * (see [configure]).
+         * Below this normalized size the reverb is "off" — the comb feedback floor (0.7, see
+         * `Reverb.FEEDBACK_OFFSET`) makes even size 0.0 ring for ~0.7 s, so "no reverb" must be a
+         * threshold decision (see [configure]). Authored, that is a `reverb(size = ...)` below 0.1.
          */
-        const val MIN_ACTIVE_ROOM_SIZE = 0.01
+        const val MIN_ACTIVE_SIZE = 0.01
     }
 }

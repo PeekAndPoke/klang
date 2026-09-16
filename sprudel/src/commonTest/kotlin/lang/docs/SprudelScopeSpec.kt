@@ -17,13 +17,13 @@ import io.peekandpoke.klang.script.annotations.KlangScope
  * Where each audio setting takes effect, asserted on the GENERATED docs rather than on the KDoc.
  *
  * This is the end of a four-link chain: a `@scope` tag in a KDoc block, parsed by `KDocParser`,
- * emitted by the processor, then merged (a name like `room` is emitted twice, once as a function and
+ * emitted by the processor, then merged (a name like `reverb` is emitted twice, once as a function and
  * once as its accessor object, and `KlangSymbol.mergeWith` keeps whichever side carries the scope).
  * Reading any one link cannot tell you the badge is right; only the merged symbol can, which is what
  * the popup and the library page actually render.
  *
  * The expectations come from the engine, not from a doc: a voice runs its own strip (`Voice.kt`),
- * each orbit owns ONE shared bus configured by its first sounding voice (`Cylinder.kt`), and `room`
+ * each orbit owns ONE shared bus configured by its first sounding voice (`Cylinder.kt`), and `reverb`
  * and `delay` are the pair whose processor is the orbit's while the wet amount is per voice
  * (`SendRenderer.kt`).
  */
@@ -58,7 +58,7 @@ class SprudelScopeSpec : StringSpec({
         "duck" to KlangScope.ORBIT,
 
         // Orbit processor, per-voice send amount
-        "room" to KlangScope.ORBIT_SEND,
+        "reverb" to KlangScope.ORBIT_SEND,
         "delay" to KlangScope.ORBIT_SEND,
 
         // The whole playback
@@ -74,9 +74,9 @@ class SprudelScopeSpec : StringSpec({
     }
 
     "the scope survives the merge of a function and its accessor object" {
-        // `room(...)` and `room.wet` are emitted as two symbols under one name. Only one of them
+        // `reverb(...)` and `reverb.wet` are emitted as two symbols under one name. Only one of them
         // needs the tag for the badge to appear, so this row is what proves the merge keeps it.
-        listOf("room", "delay", "body", "vowel", "phaser", "compressor", "duck", "tremolo").forEach { name ->
+        listOf("reverb", "delay", "body", "vowel", "phaser", "compressor", "duck", "tremolo").forEach { name ->
             withClue(name) {
                 generatedSprudelDocs[name].shouldNotBeNull().scope.shouldNotBeNull()
             }

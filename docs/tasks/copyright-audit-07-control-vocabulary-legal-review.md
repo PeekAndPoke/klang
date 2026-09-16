@@ -54,6 +54,9 @@ Compound `:`-field orderings that match (the ordering is arbitrary expression):
   `delay → delay:delaytime:delayfeedback`; `phaser → phaserrate:phaserdepth:phasercenter:phasersweep`.
 - Divergences where Klang already did its own thing: `distort → distort:distortShape:distortOversample`
   (Strudel `['distort','distortvol','distorttype']`), `room → room:size:fade:lp:dim` (Strudel `['room','size']`).
+  Note 2026-09-16: the colon packing was already gone (C0), and the reverb door is now `reverb(wet, size, lowpass)`; the
+  word `room` and the `fade`/`dim` slots left the surface (`../tasks-archive/2026-09/20260916-reverb-naming-unification.md`). Recorded as a fact for
+  counsel, not as a legal conclusion.
 - `compressor → threshold:ratio:knee:attack:release` is dictated by the Web Audio `DynamicsCompressorNode` →
   a fact, closer to Bucket A.
 

@@ -59,36 +59,36 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.coarse } shouldBe listOf(3.0, 4.0, 3.0, 4.0)
     }
 
-    // room
-    "top-level room() sets VoiceData.room correctly" {
-        val p = note("a b").apply(room("0.1 0.9"))
+    // reverb
+    "top-level reverb() sets VoiceData.reverb correctly" {
+        val p = note("a b").apply(reverb("0.1 0.9"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.room } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
     }
 
-    "control pattern room() sets VoiceData.room on existing pattern" {
+    "control pattern reverb() sets VoiceData.reverb on existing pattern" {
         val base = note("c3 e3")
-        val p = base.room("0.3 0.6")
+        val p = base.reverb("0.3 0.6")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.room } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
+        events.map { it.data.reverb } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
     }
 
-    // room(size = ...)
-    "top-level room(size = ...) sets VoiceData.roomSize correctly" {
-        val p1 = note("a b").apply(room(size = "0.2 0.8"))
+    // reverb(size = ...)
+    "top-level reverb(size = ...) sets VoiceData.reverbSize correctly" {
+        val p1 = note("a b").apply(reverb(size = "0.2 0.8"))
         val e1 = p1.queryArc(0.0, 1.0)
         e1.size shouldBe 2
-        e1.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
+        e1.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
     }
 
-    "control pattern room(size = ...) sets VoiceData.roomSize on existing pattern" {
+    "control pattern reverb(size = ...) sets VoiceData.reverbSize on existing pattern" {
         val base = note("c3 e3")
-        val p = base.room(size = "0.1 0.3")
+        val p = base.reverb(size = "0.1 0.3")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.roomSize } shouldBe listOf(0.1, 0.3, 0.1, 0.3)
+        events.map { it.data.reverbSize } shouldBe listOf(0.1, 0.3, 0.1, 0.3)
     }
 
     // delay
@@ -209,40 +209,40 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
     }
 
-    "room() works within compiled code as top-level PatternMapper" {
-        val p = SprudelPattern.compile("""note("a b").apply(room("0.1 0.9"))""")
+    "reverb() works within compiled code as top-level PatternMapper" {
+        val p = SprudelPattern.compile("""note("a b").apply(reverb("0.1 0.9"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.room } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
     }
 
-    "room() works within compiled code as chained-level function" {
-        val p = SprudelPattern.compile("""note("a b").room("0.1 0.9")""")
+    "reverb() works within compiled code as chained-level function" {
+        val p = SprudelPattern.compile("""note("a b").reverb("0.1 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.room } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
     }
 
-    "room(size = ...) works within compiled code as top-level PatternMapper" {
-        val p = SprudelPattern.compile("""note("a b").apply(room(size = "0.2 0.8"))""")
+    "reverb(size = ...) works within compiled code as top-level PatternMapper" {
+        val p = SprudelPattern.compile("""note("a b").apply(reverb(size = "0.2 0.8"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
     }
 
-    "room(size = ...) works within compiled code as chained-level function" {
-        val p = SprudelPattern.compile("""note("a b").room(size = "0.2 0.8")""")
+    "reverb(size = ...) works within compiled code as chained-level function" {
+        val p = SprudelPattern.compile("""note("a b").reverb(size = "0.2 0.8")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
     }
 
     "delay() works within compiled code as top-level function" {
@@ -327,12 +327,12 @@ class LangEffectsRoutingSpec : StringSpec({
         events[0].data.delayFeedback shouldBe 0.6
     }
 
-    "room().room(size = ...) can be chained as PatternMapperFn" {
-        val p = note("c3 e3").apply(room(0.5).room(size = 4.0))
+    "reverb().reverb(size = ...) can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(reverb(0.5).reverb(size = 4.0))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.room shouldBe 0.5
-        events[0].data.roomSize shouldBe 4.0
+        events[0].data.reverb shouldBe 0.5
+        events[0].data.reverbSize shouldBe 4.0
     }
 
     "phaser().phaser(wet = ...) can be chained as PatternMapperFn" {

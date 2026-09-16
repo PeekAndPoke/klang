@@ -163,11 +163,9 @@ class VoiceFactory(
 
         // Reverb
         val reverb = Voice.Reverb(
-            room = data.room ?: 0.0,
-            roomSize = Reverb.normalizeRoomSize(data.roomSize ?: 0.0),
-            roomFade = data.roomFade,
-            roomLp = data.roomLp,
-            roomDim = data.roomDim,
+            amount = data.reverb ?: 0.0,
+            size = Reverb.normalizeSize(data.reverbSize ?: 0.0),
+            lowpass = data.reverbLowpass,
             iResponse = data.iResponse,
         )
 

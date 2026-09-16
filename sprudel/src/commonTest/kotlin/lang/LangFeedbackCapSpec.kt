@@ -18,7 +18,7 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
  * The delay is where self-oscillation is genuinely musical: `delay(feedback)` at or above 1.0
  * recirculates without loss, and this is how the author says how loud that sits. (The reverb has no
  * twin: a Freeverb comb past unity latches to DC rather than ringing, so its range is bounded
- * instead — see `Reverb.normalizeRoomSize`.) The master bus has the same knob as
+ * instead — see `Reverb.normalizeSize`.) The master bus has the same knob as
  * `Master(m => m.delay(d => d.cap()))`.
  */
 class LangFeedbackCapSpec : StringSpec({

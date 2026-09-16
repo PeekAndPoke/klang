@@ -67,7 +67,7 @@ stack(
   note("a1 ~ ~ ~").sound(kick).gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
-).room(wet = 0.2, size = 5)
+).reverb(wet = 0.2, size = 5)
 ```
 
 ---
@@ -189,7 +189,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > | Scope | Effects |
 > |-------|---------|
 > | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking, `ir` |
-> | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `room` (`wet` is the per-voice send; `size`/`fade`/`lowpass`/`dim` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
+> | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `reverb` (`wet` is the per-voice send; `size`/`lowpass` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
 > | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
@@ -325,7 +325,7 @@ selection — extended to ignitor variants and per-note gain.
 | `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
-| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).room(0.5, 4)`       |
+| `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).reverb(0.5, 4)`       |
 | `adsr(a, d, s, r)` |          | Amplitude envelope; omitted slots keep their value, named slots take a mapper | `note("c3").adsr(0.01, 0.2, 0.7, 0.5)`, `.adsr(attack = mul(2))` |
 | `adsr.attack` `.decay` `.sustain` `.release` | | Read a slot back into another setter | `note("c3").adsr(0.3, 0.2).adsr(release = adsr.attack)` |
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
@@ -367,11 +367,11 @@ at the cutoff). Same third slot on the ignitor door.
 
 | Function                | Aliases                                                                                  | Description                                   | Example                                   |
 |-------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------|
-| `room(wet, size, fade, lowpass, dim)`                                       |          | Reverb: send 0..1, room size ~0..10, tail override 0..1 (`fade` wins over `size`), damping cutoff Hz, `dim` (reserved). A bare `room(wet)` is silent: the engine gates on `size`/`fade` | `note("c3").room(wet = 0.3, size = 5)`                       |
-| `room(size = mul(2))`                                                       |          | A mapper on one slot maps that slot on its own value; the other slots stay                                                                                       | `p.room(0.3, 4).room(size = mul(2))`                         |
-| `room.wet` / `room.size` / `room.fade` / `room.lowpass` / `room.dim`        |          | Read a reverb slot into another setter                                                                                                                           | `p.room(size = 4).delay(time = room.size.div(8))`            |
+| `reverb(wet, size, lowpass)`                                                |          | Reverb: send 0..1, tail length ~0..10 (3 ≈ 1 s, 10 ≈ 12.5 s, bounded at 10), damping cutoff Hz. A bare `reverb(wet)` is silent: the engine gates on `size` | `note("c3").reverb(wet = 0.3, size = 5)`                     |
+| `reverb(size = mul(2))`                                                     |          | A mapper on one slot maps that slot on its own value; the other slots stay                                                                                       | `p.reverb(0.3, 4).reverb(size = mul(2))`                     |
+| `reverb.wet` / `reverb.size` / `reverb.lowpass`                             |          | Read a reverb slot into another setter                                                                                                                           | `p.reverb(size = 4).delay(time = reverb.size.div(8))`        |
 | `delay(wet, time, feedback, cap)`                                           |          | Delay: send 0..1, time in seconds, feedback 0..1, feedback cap. A bare `delay(wet)` is silent until `time` is set                                                | `s("sd").delay(wet = 0.5, time = 0.33, feedback = 0.3)`      |
-| `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).room(fade = delay.time)`               |
+| `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).reverb(size = delay.time.mul(20))`     |
 | `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
 | `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
 | `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor; readers `crush.amount`, `crush.oversample`                                                                                   | `s("hh").crush(8)`                                           |
@@ -608,7 +608,7 @@ n("0 ~ 0 3 ~ 0 5 ~").scale("C2:minor")
 n("<0 3 5 7>").scale("C3:minor")
   .sound("supersaw").lpf(sine.range(400, 1200).slow(8))
   .adsr(0.5, 0.5, 0.8, 1.0).legato(2)
-  .room(wet = 0.3, size = 8).gain(0.2)
+  .reverb(wet = 0.3, size = 8).gain(0.2)
 ```
 
 ### Polyrhythmic pattern
@@ -646,7 +646,7 @@ let chorus = stack(
 )
 
 arrange([8, verse], [8, chorus], [8, verse], [8, chorus])
-  .room(wet = 0.15, size = 4)
+  .reverb(wet = 0.15, size = 4)
 ```
 
 ### Timed layer entry with filterWhen
@@ -659,7 +659,7 @@ stack(
     .filterWhen(x => x >= 8),                              // enters at cycle 8
   chord("<Am C F G>").voicing().s("supersaw").gain(0.15)
     .filterWhen(x => x >= 16)                              // enters at cycle 16
-).room(wet = 0.1, size = 5)
+).reverb(wet = 0.1, size = 5)
 ```
 
 ### Delay synced to tempo
@@ -707,5 +707,5 @@ stack(
   // Kick-snare
   , s("<[[bd sd]!2]!8>").adsr(0.02, 0.1, 0.7, 1.0).gain(0.75)
 )
-  .room(wet = 0.02, size = 3)  // subtle room reverb
+  .reverb(wet = 0.02, size = 3)  // subtle reverb
 ```

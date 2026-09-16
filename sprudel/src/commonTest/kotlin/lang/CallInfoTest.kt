@@ -142,8 +142,8 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").onepole("12000")""")
     }
 
-    "room passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").room(0.5, 2)""")
+    "reverb passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").reverb(0.5, 2)""")
     }
 
     "lpf(attack, decay, sustain, release) passes CallInfo from KlangScript" {

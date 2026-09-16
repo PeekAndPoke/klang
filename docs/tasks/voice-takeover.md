@@ -88,7 +88,8 @@ expect to hear the difference.
 ## Naming history
 
 `cut` (taken, and hard), `choke` (drum-machine baggage, names the violence not the quantity), `damp`
-(collides with `MasterStageDsl.Reverb.damp` = reverb HF damping — violates the one-word-one-meaning rule), `mute` /
+(collided with `MasterStageDsl.Reverb.damp` = reverb HF damping — violates the one-word-one-meaning rule; that knob
+was removed 2026-09-16), `mute` /
 `hush` (taken as structural pattern ops), `ringOut` (reads as an extra ADSR stage, i.e. unconditional — but the
 behaviour is conditional), `handover` (right idea, but the time felt like a property of the outgoing note).
 

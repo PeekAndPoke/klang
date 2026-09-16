@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * A stage with knobs of its own takes its own configure lambda:
  *
  *     master(Master(m => m
- *         .reverb(r => r.wet(0.05).roomSize(9))
+ *         .reverb(r => r.wet(0.05).size(9))
  *         .gain(2.5)
  *         .limiter(l => l.thresholdDb(-3))
  *     ))
@@ -56,7 +56,7 @@ fun MasterBuilder.limiter(configure: ((MasterLimiterBuilder) -> MasterLimiterBui
 
 /**
  * Appends a master reverb (shared Freeverb, used as an insert).
- * @param configure receives the [MasterReverbBuilder] (knobs: `wet`, `roomSize`, `damp`, `roomFade`, `roomLp`) and returns it.
+ * @param configure receives the [MasterReverbBuilder] (knobs: `wet`, `size`, `lowpass`) and returns it.
  */
 @KlangScript.Function
 fun MasterBuilder.reverb(configure: ((MasterReverbBuilder) -> MasterReverbBuilder)? = null): MasterBuilder =
@@ -114,38 +114,28 @@ fun MasterLimiterBuilder.release(seconds: Double): MasterLimiterBuilder = copy(n
 
 // ── Reverb ───────────────────────────────────────────────────────────────────
 
-/** Builder for a [MasterStageDsl.Reverb] stage. Knobs: `wet`, `roomSize`, `damp`, `roomFade`, `roomLp`. */
+/** Builder for a [MasterStageDsl.Reverb] stage. Knobs: `wet`, `size`, `lowpass`. */
 data class MasterReverbBuilder(val node: MasterStageDsl.Reverb)
 
-/** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `room(wet = ...)`. */
+/** How much of the bus is sent into the reverb (default 0.25; 0.0 = off). Orbit twin: `reverb(wet = ...)`. */
 @KlangScript.Function
 fun MasterReverbBuilder.wet(wet: Double): MasterReverbBuilder = copy(node = node.copy(wet = wet))
 
 /**
- * Tail length, on the SAME scale as sprudel `room(size = ...)`: typical 1..10, default 5.
+ * Tail length, on the SAME scale as sprudel `reverb(size = ...)`: typical 1..10, default 5.
  *
  * 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the shortest reachable is about 0.7 s.
- * Above 10 is bounded: past unity the comb network has no steady state and runs away, so there
- * is nothing there.
+ * Above 10 is bounded at 10. Orbit twin: `reverb(size = ...)`.
  */
 @KlangScript.Function
-fun MasterReverbBuilder.roomSize(size: Double): MasterReverbBuilder = copy(node = node.copy(roomSize = size))
-
-/** High-frequency damping, 0 = bright .. 1 = dark (default 0.5). Ignored when `roomLp` is set. */
-@KlangScript.Function
-fun MasterReverbBuilder.damp(damp: Double): MasterReverbBuilder = copy(node = node.copy(damp = damp))
+fun MasterReverbBuilder.size(size: Double): MasterReverbBuilder = copy(node = node.copy(size = size))
 
 /**
- * OVERRIDES `roomSize` for the tail, and is NOT on the same scale: this is the normalized 0..1
- * value (0 is about 0.7 s, 1 about 12.5 s), and despite the name it is not a time.
- * Orbit twin: `room(fade = ...)`.
+ * High-frequency damping of the tail as a lowpass cutoff in Hz: lower is darker. Unset, the
+ * engine's fixed default damping applies. Orbit twin: `reverb(lowpass = ...)`.
  */
 @KlangScript.Function
-fun MasterReverbBuilder.roomFade(amount: Double): MasterReverbBuilder = copy(node = node.copy(roomFade = amount))
-
-/** High-frequency damping as an absolute cutoff in Hz; overrides `damp`. Orbit twin: `room(lowpass = ...)`. */
-@KlangScript.Function
-fun MasterReverbBuilder.roomLp(hz: Double): MasterReverbBuilder = copy(node = node.copy(roomLp = hz))
+fun MasterReverbBuilder.lowpass(hz: Double): MasterReverbBuilder = copy(node = node.copy(lowpass = hz))
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 

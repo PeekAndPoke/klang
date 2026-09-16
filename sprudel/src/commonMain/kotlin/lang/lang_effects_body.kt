@@ -50,7 +50,7 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * included, is set once for everyone by the orbit's owning voice.
  *
  * `wet` here is a mix, not a [send](/manuals/lexikon/send): the body processes the whole orbit mix,
- * so unlike `room` and `delay` there is no per-voice amount. Give a pattern its own body by giving
+ * so unlike `reverb` and `delay` there is no per-voice amount. Give a pattern its own body by giving
  * it its own orbit.
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
@@ -71,7 +71,7 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("tube", "0.2 0.9").room(wet = body.wet)      // as much reverb as body
+ * note("c3 e3").s("saw").body("tube", "0.2 0.9").reverb(wet = body.wet, size = 4)   // as much reverb as body
  * ```
  *
  * @param material Material name. See the list above.

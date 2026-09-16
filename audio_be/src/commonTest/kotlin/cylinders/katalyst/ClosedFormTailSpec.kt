@@ -164,9 +164,9 @@ class ClosedFormTailSpec : StringSpec({
 
     // ── Reverb ───────────────────────────────────────────────────────────────────────────────────
 
-    fun reverbEffect(roomSize: Double) =
+    fun reverbEffect(size: Double) =
         KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
-            .apply { configure(roomSize = roomSize, roomFade = null, roomLp = null, roomDim = null, iResponse = null) }
+            .apply { configure(size = size, lowpass = null, iResponse = null) }
 
     fun KatalystReverbEffect.feed(ctx: KatalystContext, level: Double) {
         ctx.reverbSendBuffer.left.fill(level)
@@ -176,7 +176,7 @@ class ClosedFormTailSpec : StringSpec({
     }
 
     "a running reverb: tail while fed, through the decay after the input stops, then provably none" {
-        val fx = reverbEffect(roomSize = 0.5)
+        val fx = reverbEffect(size = 0.5)
         val ctx = ctx()
         fx.hasTail() shouldBe false
         repeat(20) { fx.feed(ctx, 0.5) }
@@ -198,7 +198,7 @@ class ClosedFormTailSpec : StringSpec({
 
     "a master chain: no tail before input, tail while fed and through the echoes, then provably none" {
         val chain = MasterChain.build(
-            MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.05, feedback = 0.5), MasterStageDsl.Reverb(wet = 0.4, roomSize = 5.0)),
+            MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.05, feedback = 0.5), MasterStageDsl.Reverb(wet = 0.4, size = 5.0)),
             sampleRate, blockFrames,
         )
         chain.hasActiveTail() shouldBe false

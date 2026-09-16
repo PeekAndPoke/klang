@@ -21,13 +21,16 @@ Known asymmetries already spotted, as a starting list:
 
 - ~~**`room` (orbit) vs `wet` (master)** — same thing, two words.~~ RESOLVED by C4.2
   (2026-08-24): the orbit knob is the `wet` slot of `room`/`delay` (2026-09-07; `roomWet`/`delayWet` between 2026-08-24 and then); both doors say `wet`.
-- **`room(size)` is ~0..10 but `room(fade)` is 0..1**, and `fade` silently makes `size` inert. Inherited from the
+- RESOLVED 2026-09-16 ([`20260916-reverb-naming-unification.md`](../tasks-archive/2026-09/20260916-reverb-naming-unification.md)): `fade` is gone, `fade = x` is
+  `size = 10x`. Was: **`room(size)` is ~0..10 but `room(fade)` is 0..1**, and `fade` silently makes `size` inert. Inherited from the
   old `room("a:b:c")` colon packing (removed in C0, semantics kept); documented rather than fixed, because redefining it
   would retune shipped songs.
-- **`damp` is master-only**; sprudel reaches damping through `room(lowpass)` (Hz) instead.
+- RESOLVED 2026-09-16: the master's `damp` is gone, `lowpass` (Hz) is the one damping knob on both doors, and the door
+  word is `reverb` everywhere. Was: **`damp` is master-only**; sprudel reaches damping through `room(lowpass)` (Hz) instead.
 - RESOLVED 2026-09-07: `cap` is the fourth slot of `delay(wet, time, feedback, cap)`. Was: **`delaycap`/`dcap` is not a `delay()` parameter** (the per-param C0 form covers amount/time/feedback only), while
   the reverb family exposes all five of its knobs.
-- **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
+- HALF RESOLVED 2026-09-16: `roomDim` is gone end to end; `iResponse` stays (not part of that decision). Was:
+  **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 
 **A DELIBERATE exception, recorded so nobody "fixes" it:** `lookahead` exists on the master limiter **only** — not on

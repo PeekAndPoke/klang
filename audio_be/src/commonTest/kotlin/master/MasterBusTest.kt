@@ -438,7 +438,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "hall",
-                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, roomSize = 9.0, damp = 0.2)),
+                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, size = 9.0, lowpass = 17640.0)),
             )
         )
         // A short note, then nothing — the reverb tail is all that is left.
@@ -473,7 +473,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "smallroom",
-                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.5, roomSize = 1.0, damp = 0.9)),
+                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.5, size = 1.0, lowpass = 2205.0)),
             )
         )
         val shortNote = ScheduledVoice(
@@ -542,7 +542,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "hall",
-                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.9, roomSize = 9.5, damp = 0.1)),
+                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.9, size = 9.5, lowpass = 19845.0)),
             )
         )
         d.handle(
@@ -599,7 +599,7 @@ class MasterBusTest : StringSpec({
                 name = "noop",
                 dsl = MasterDsl.of(
                     MasterStageDsl.Gain(gain = 1.0),                              // unity
-                    MasterStageDsl.Reverb(wet = 0.0, roomSize = 9.0),             // no send
+                    MasterStageDsl.Reverb(wet = 0.0, size = 9.0),             // no send
                     MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.0),           // no time
                 ),
             )
@@ -712,7 +712,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "hall",
-                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, roomSize = 8.5, damp = 0.2)),
+                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, size = 8.5, lowpass = 17640.0)),
             )
         )
         // A note near the END of a long piece: the engine has been rendering for ~25 s before it.
@@ -748,7 +748,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "hall",
-                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, roomSize = 9.0, damp = 0.2)),
+                dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.6, size = 9.0, lowpass = 17640.0)),
             )
         )
         // "master off": every stage is inaudible, so the built chain is empty.

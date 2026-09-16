@@ -82,7 +82,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "distort" to listOf("amount", "oversample"),
             "crush" to listOf("amount", "oversample"),
             "coarse" to listOf("amount", "oversample"),
-            "room" to listOf("wet", "size", "fade", "lowpass", "dim"),
+            "reverb" to listOf("wet", "size", "lowpass"),
             "delay" to listOf("wet", "time", "feedback", "cap"),
             "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
             "tremolo" to listOf("depth", "sync", "skew", "phase"),

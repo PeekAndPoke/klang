@@ -149,7 +149,7 @@ class PlaybackEngine(
          *
          * Counted from the moment the engine fell quiet, so an ordinary song of any length keeps its
          * full tail; the bound only ends the pathological case of a tail that never decays (a delay
-         * with `feedback >= 1.0` recirculates without loss). A `roomSize` 1.0 Freeverb is ~96 dB down
+         * with `feedback >= 1.0` recirculates without loss). A normalized `size` 1.0 Freeverb is ~96 dB down
          * after this long, so a reverb can never be audibly cut by it.
          */
         private const val MAX_MASTER_TAIL_HOLD_SECONDS = 20.0

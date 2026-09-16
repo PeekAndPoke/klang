@@ -71,11 +71,11 @@ object SprudelDistortAmountEditorTool : KlangUiToolEmbeddable by SprudelNumericE
     centerValue = null,
 )
 
-/** Editor for room size (0–10). */
-object SprudelRoomSizeEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
-    title = "Room Size Editor",
+/** Editor for reverb size (0–10). */
+object SprudelReverbSizeEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
+    title = "Reverb Size Editor",
     iconFn = { microphone },
-    fieldLabel = "Room Size",
+    fieldLabel = "Reverb Size",
     maxValue = 10.0,
     defaultValue = 1.0,
     step = 0.1,

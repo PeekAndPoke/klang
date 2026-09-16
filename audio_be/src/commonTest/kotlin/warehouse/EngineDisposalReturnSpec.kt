@@ -30,7 +30,7 @@ import kotlin.math.abs
  * Resource warehouse step 2f: **the end of a playback is the return path.** Until now every ring
  * and reverb network a playback rented became garbage when its engine was disposed, and the next
  * playback allocated the same things again inside render. Now `PlaybackEngine.dispose()` hands
- * them back to the backend's one warehouse, and the next playback's first delay or room of that
+ * them back to the backend's one warehouse, and the next playback's first delay or reverb of that
  * class is a shelf hit. `docs/plans/resource-warehouse.md`.
  *
  * Through the real dispatcher: schedule, render, `Cleanup`, drain, observe the shelf.
@@ -61,7 +61,7 @@ class EngineDisposalReturnSpec : StringSpec({
         return Fixture(dispatcher, warehouse, ShortArray(blockFrames * 2))
     }
 
-    /** A short sine on orbit [cylinder] with a delay and a room — both units get rented. */
+    /** A short sine on orbit [cylinder] with a delay and a reverb — both units get rented. */
     fun wetVoice(pid: String, cylinder: Int = 0) = ScheduledVoice(
         playbackId = pid,
         startTime = 0.0,
@@ -69,7 +69,7 @@ class EngineDisposalReturnSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine", freqHz = 440.0, cylinder = cylinder,
             delay = 0.5, delayTime = 0.3, delayFeedback = 0.0,
-            room = 0.5, roomSize = 0.6,
+            reverb = 0.5, reverbSize = 0.6,
         ),
         playbackStartTime = 0.0,
     )
@@ -111,7 +111,7 @@ class EngineDisposalReturnSpec : StringSpec({
         f.warehouse.reverbs.rent() shouldBeSameInstanceAs unit
     }
 
-    "the NEXT playback's first delay and room are shelf hits — no allocation in render" {
+    "the NEXT playback's first delay and reverb are shelf hits — no allocation in render" {
         val f = fixture()
         f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "first", voice = wetVoice("first")))
         f.render(4)
@@ -148,7 +148,7 @@ class EngineDisposalReturnSpec : StringSpec({
                 playbackId = "song", name = "wet",
                 dsl = MasterDsl.of(
                     MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.3),
-                    MasterStageDsl.Reverb(wet = 0.4, roomSize = 5.0),
+                    MasterStageDsl.Reverb(wet = 0.4, size = 5.0),
                 ),
             )
         )

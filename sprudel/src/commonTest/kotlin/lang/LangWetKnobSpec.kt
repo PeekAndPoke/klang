@@ -22,7 +22,8 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
  * C4.2 guard (docs/plans/filter-unification.md): the shared wet knob has ONE name per door —
  * prefixed `xxxWet`/`xxxFloor` on sprudel (fields on one unordered voice), typed `.wet()` /
  * `.dryFloor()` on the ignitor. These rows pin that every renamed surface still writes the
- * SAME wire field (wire names deliberately keep their old spelling), that the new
+ * SAME wire field (wire names deliberately keep their old spelling; the reverb's follow its door word since
+ * 2026-09-16, `reverb` and `reverbSize`), that the new
  * `phaserFloor` reaches the wire, and that the ignitor knobs land on the node.
  */
 class LangWetKnobSpec : StringSpec({
@@ -31,7 +32,7 @@ class LangWetKnobSpec : StringSpec({
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data
 
     "sprudel Kotlin door: wet knobs write the (unchanged) wire fields" {
-        firstData(note("c").room(0.4)).room shouldBe 0.4
+        firstData(note("c").reverb(0.4)).reverb shouldBe 0.4
         firstData(note("c").delay(0.3)).delay shouldBe 0.3
         firstData(note("c").phaser(wet = 0.8)).phaserDepth shouldBe 0.8
         firstData(note("c").phaser(floor = 0.3)).phaserFloor shouldBe 0.3
@@ -40,7 +41,7 @@ class LangWetKnobSpec : StringSpec({
     }
 
     "sprudel script door: wet knobs dispatch and write the same fields" {
-        firstData(SprudelPattern.compile("""note("c").room(0.4)""")).room shouldBe 0.4
+        firstData(SprudelPattern.compile("""note("c").reverb(0.4)""")).reverb shouldBe 0.4
         firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).delay shouldBe 0.3
         firstData(SprudelPattern.compile("""note("c").phaser(wet = 0.8)""")).phaserDepth shouldBe 0.8
         firstData(SprudelPattern.compile("""note("c").phaser(floor = 0.3)""")).phaserFloor shouldBe 0.3
@@ -49,9 +50,9 @@ class LangWetKnobSpec : StringSpec({
     }
 
     "compound heads: the wet slot stays the head's first/second slot" {
-        val room = firstData(note("c").room(0.4, 5.0))
-        room.room shouldBe 0.4
-        room.roomSize shouldBe 5.0
+        val reverb = firstData(note("c").reverb(0.4, 5.0))
+        reverb.reverb shouldBe 0.4
+        reverb.reverbSize shouldBe 5.0
 
         val delay = firstData(note("c").delay(0.5, 0.25, 0.6))
         delay.delay shouldBe 0.5

@@ -16,18 +16,18 @@ parameter by POSITION and ignores the argument's name:
 
 Before batch E every knob had a door of its own with the tool on parameter 0, so position and
 name agreed. Since batch E the compound effects are objects with named slots, and a tail slot is
-reachable ONLY by name: `room(size = 4)`, `delay(time = 0.25)`, `delay(feedback = 0.4)`,
+reachable ONLY by name: `reverb(size = 4)`, `delay(time = 0.25)`, `delay(feedback = 0.4)`,
 `tremolo(sync = 4)`. The shipped tutorials use exactly these (`tut_SpaceAndDirt.kt`). Batch F
 (2026-09-07, the filters) added the worse shape: a SKIPPED middle slot shifts every later argument, so
 in `lpf(freq = 400, env = 36).lpf(attack = 0.001, decay = 0.15, sustain = 0, release = 0.1)`
 (`tut_TheFilterEnvelope.kt`) `env = 36` resolves to `q` and opens the resonance editor on a depth in
 semitones, and `decay = 0.15` on the second call resolves to `q` as well.
 
-Failure: cursor on the `4` in `.room(size = 4)` resolves argument 0, the `wet` parameter, whose
+Failure: cursor on the `4` in `.reverb(size = 4)` resolves argument 0, the `wet` parameter, whose
 tool is `SprudelReverbEditor` (a 0..1 send editor) opened on a 0..10 size. `.delay(time = ...)`
 and `.delay(feedback = ...)` both open `SprudelDelayEditor` (the wet editor); `tremolo(sync = 4)`
 opens `SprudelTremoloEditor` (the 0..1 depth editor) on a rate in Hz. The scalar and sequence
-paths are affected the same way (an atom inside `.room(size = "1 2 4")` gets the send sequence
+paths are affected the same way (an atom inside `.reverb(size = "1 2 4")` gets the send sequence
 editor).
 
 What still holds (verified in the review): the whole-call modal path is name-aware

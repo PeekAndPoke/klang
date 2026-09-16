@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import kotlin.math.abs
 
 /**
- * Resource warehouse step 2d: a reverb network exists only once an owner asks for `room`, rented
+ * Resource warehouse step 2d: a reverb network exists only once an owner asks for `reverb`, rented
  * from the backend's one unit shelf, and refused gracefully. A Freeverb unit is ~200 KB; every
  * `Cylinder` used to build one in its constructor, eight of them per playback before any note.
  * `docs/plans/resource-warehouse.md`.
@@ -48,8 +48,8 @@ class LazyReverbSpec : StringSpec({
 
     fun effect(units: ReverbUnits) = KatalystReverbEffect(units = units, blockFrames = blockFrames)
 
-    fun KatalystReverbEffect.room(roomSize: Double, roomFade: Double? = null) =
-        configure(roomSize = roomSize, roomFade = roomFade, roomLp = null, roomDim = null, iResponse = null)
+    fun KatalystReverbEffect.configureSize(size: Double) =
+        configure(size = size, lowpass = null, iResponse = null)
 
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,
@@ -72,7 +72,7 @@ class LazyReverbSpec : StringSpec({
 
     // ── Nothing until asked ──────────────────────────────────────────────────────────────────────
 
-    "eight cylinders without a room build ZERO reverb networks" {
+    "eight cylinders without a reverb build ZERO reverb networks" {
         val (units, alloc) = shelf()
         val eight = List(8) { id ->
             Cylinder(id = id, blockFrames = blockFrames, sampleRate = sampleRate, reverbs = units)
@@ -102,33 +102,23 @@ class LazyReverbSpec : StringSpec({
         val (units, alloc) = shelf()
         val fx = effect(units)
 
-        fx.room(roomSize = 0.6)
+        fx.configureSize(size = 0.6)
         val unit = fx.reverb.shouldNotBeNull()
-        unit.roomSize shouldBe 0.6
+        unit.size shouldBe 0.6
 
-        fx.room(roomSize = 0.3)
-        fx.room(roomSize = 0.9)
+        fx.configureSize(size = 0.3)
+        fx.configureSize(size = 0.9)
 
         fx.reverb shouldBeSameInstanceAs unit
         alloc.asked shouldBe 1
         units.allocations shouldBe 1
     }
 
-    "an explicit roomFade activates too — at any value, including 0.0 — and rents" {
-        val (units, alloc) = shelf()
-        val fx = effect(units)
-
-        fx.room(roomSize = 0.0, roomFade = 0.0)
-
-        fx.reverb.shouldNotBeNull()
-        alloc.asked shouldBe 1
-    }
-
     "an off-config on a fresh effect rents nothing — 'off' does not need a network" {
         val (units, alloc) = shelf()
         val fx = effect(units)
 
-        fx.room(roomSize = 0.005)
+        fx.configureSize(size = 0.005)
 
         fx.reverb.shouldBeNull()
         alloc.asked shouldBe 0
@@ -137,14 +127,14 @@ class LazyReverbSpec : StringSpec({
     "reset() keeps the unit — a re-leased orbit does not re-rent" {
         val (units, alloc) = shelf()
         val fx = effect(units)
-        fx.room(roomSize = 0.6)
+        fx.configureSize(size = 0.6)
         val unit = fx.reverb!!
 
         fx.reset()
         fx.reverb shouldBeSameInstanceAs unit
-        unit.roomSize shouldBe 0.0 // params to factory, as before
+        unit.size shouldBe 0.0 // params to factory, as before
 
-        fx.room(roomSize = 0.4)
+        fx.configureSize(size = 0.4)
         fx.reverb shouldBeSameInstanceAs unit
         alloc.asked shouldBe 1
     }
@@ -159,7 +149,7 @@ class LazyReverbSpec : StringSpec({
         ctx.reverbSendBuffer.left.fill(0.5)
 
         repeat(100) {
-            fx.room(roomSize = 0.6) // the owner re-applies every block
+            fx.configureSize(size = 0.6) // the owner re-applies every block
             fx.process(ctx)
         }
 
@@ -172,7 +162,7 @@ class LazyReverbSpec : StringSpec({
 
         alloc.failing = false
         fx.reset()
-        fx.room(roomSize = 0.6)
+        fx.configureSize(size = 0.6)
         fx.reverb.shouldNotBeNull()
         alloc.asked shouldBe 2
     }
@@ -183,14 +173,14 @@ class LazyReverbSpec : StringSpec({
         val (units, _) = shelf()
 
         // Used hard under other parameters, then returned.
-        val used = units.rent().shouldNotBeNull().apply { roomSize = 0.95; damp = 0.1; roomLp = 900.0; roomFade = 0.9 }
+        val used = units.rent().shouldNotBeNull().apply { size = 0.95; lowpass = 900.0 }
         val sink = StereoBuffer(blockFrames)
         repeat(200) { used.process(noise(blockFrames, seed = it + 1), sink, blockFrames) }
         units.giveBack(used)
 
         // Review round 3: the return is O(1) — parameters back now, the network still charged —
         // and housekeep() zeroes it later, one unit per call.
-        used.roomSize shouldBe 0.5
+        used.size shouldBe 0.5
         used.hasTail(0.0) shouldBe true
         units.isClean shouldBe false
         units.housekeep() shouldBe true
@@ -201,10 +191,8 @@ class LazyReverbSpec : StringSpec({
         val again = units.rent().shouldNotBeNull()
         units.syncCleans shouldBe 0
         again shouldBeSameInstanceAs used
-        again.roomSize shouldBe 0.5 // constructor defaults
-        again.damp shouldBe 0.5
-        again.roomLp shouldBe null
-        again.roomFade shouldBe null
+        again.size shouldBe 0.5 // constructor defaults
+        again.lowpass shouldBe null
         again.hasTail(0.0) shouldBe false
 
         // Same input, same output as a unit that was never used: the shelf leaves no fingerprint.
@@ -261,7 +249,7 @@ class LazyReverbSpec : StringSpec({
         val alloc = Recording(failing = true)
         val (units, _) = shelf(alloc)
         val fx = effect(units)
-        fx.room(roomSize = 0.6)
+        fx.configureSize(size = 0.6)
         fx.reverb.shouldBeNull()
         fx.deniedRents shouldBe 1
 
@@ -271,7 +259,7 @@ class LazyReverbSpec : StringSpec({
         alloc.failing = true
         val askedBefore = alloc.asked
 
-        fx.room(roomSize = 0.6)
+        fx.configureSize(size = 0.6)
 
         fx.reverb shouldBeSameInstanceAs returned
         alloc.asked shouldBe askedBefore // no allocation attempted
@@ -316,7 +304,7 @@ class LazyReverbSpec : StringSpec({
     "a master reverb rents from the shelf; a refused unit skips the stage, counted" {
         val alloc = Recording()
         val (units, _) = shelf(alloc)
-        val dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, roomSize = 7.0))
+        val dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 7.0))
 
         val chain = MasterChain.build(dsl, sampleRate, blockFrames, reverbs = units)
         chain.reverbs.size shouldBe 1
@@ -334,12 +322,12 @@ class LazyReverbSpec : StringSpec({
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = MasterRegistry(), reverbs = units)
 
         for (i in 0 until 8) {
-            bus.register("m$i", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, roomSize = 5.0 + i * 0.1)))
+            bus.register("m$i", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 5.0 + i * 0.1)))
         }
         units.idleCount shouldBe 0
         val askedBefore = alloc.asked
 
-        bus.register("m8", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, roomSize = 6.0)))
+        bus.register("m8", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 6.0)))
 
         units.hits shouldBe 1
         units.idleCount shouldBe 0

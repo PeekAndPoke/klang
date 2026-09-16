@@ -26,7 +26,7 @@ import * from "sprudel"
 //
 // Click "Update" on top to hear the change!
 
-const roomSize = 6.0  
+const reverbSize = 6.0  
 
 // Oh yeah
 // ... Headphones are advisable
@@ -43,7 +43,7 @@ stack(
   // Hover the param and click the little icon!
   .adsr(0.07, 0.2, 0.5, 0.15)
 
-).room(wet = 0.25, size = roomSize).analog(5)
+).reverb(wet = 0.25, size = reverbSize).analog(5)
 
 
 

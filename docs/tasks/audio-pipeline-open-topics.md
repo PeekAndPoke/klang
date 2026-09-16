@@ -20,7 +20,7 @@ The topics below are still open.
 
 ## 1. Bus-Level Configuration
 
-Voice currently carries cylinder config (delay.time, reverb.roomSize, phaser.*, compressor.*,
+Voice currently carries cylinder config (delay.time, reverb.size, phaser.*, compressor.*,
 ducking.*) that should move to Bus-level configuration. This would decouple voice data from
 bus parameters and allow per-cylinder effect settings independent of voice scheduling.
 

@@ -52,7 +52,7 @@ class SendRenderer(
         // Delay and Reverb send amounts
         val delayAmount = voice.delay.amount
         val sendToDelay = delayAmount > 0.0
-        val reverbAmount = voice.reverb.room
+        val reverbAmount = voice.reverb.amount
         val sendToReverb = reverbAmount > 0.0
 
         val offset = ctx.offset

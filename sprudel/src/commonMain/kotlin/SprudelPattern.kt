@@ -995,7 +995,7 @@ fun SprudelPattern._liftData(
  * at each source event's begin time.
  *
  * Use this for functions that set numeric fields in voice data: filters (lpf, hpf), effects
- * (delay, room), dynamics (gain, pan), synthesis (fmh, fmenv), and tonal parameters (note, octave).
+ * (delay, reverb), dynamics (gain, pan), synthesis (fmh, fmenv), and tonal parameters (note, octave).
  *
  * **Why outer join?**
  * - Continuous patterns like `sine` produce a single event covering [0,1) with average value

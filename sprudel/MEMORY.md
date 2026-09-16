@@ -23,17 +23,24 @@
   only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
   Filter curve objects wait for engine fields (`docs/tasks/filter-envelope-configuration.md`).
 
-- **Compound effects are objects with named slots (batch E).** `room(wet, size, fade, lowpass,
-  dim)`, `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
+- **Compound effects are objects with named slots (batch E).** `reverb(wet, size, lowpass)`,
+  `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
   `tremolo(depth, sync, shape, skew, phase)`, `distort(amount, shape, oversample)`,
-  `crush(amount, oversample)`, `coarse(amount, oversample)`: `room(fade = 0.3)` sets one slot,
-  `room(size = mul(2))` maps it on its own value, `lpf(room.lowpass)` reads it. Every per-knob
+  `crush(amount, oversample)`, `coarse(amount, oversample)`: `reverb(lowpass = 3000)` sets one slot,
+  `reverb(size = mul(2))` maps it on its own value, `lpf(reverb.lowpass)` reads it. Every per-knob
   door and alias (`roomWet`, `rsize`, `delayfb`, `ph`, `tremsync`, `dist`, `crushos`, ...) is
   GONE from both doors (`LangRetiredDoorsSpec`). Slots apply in declaration order inside one
-  call, so `room(dim = 3000, lowpass = room.dim)` reads the old dim: chain two calls for that. A slot name that is also a top-level symbol (`lowpass`, the
+  call, so `reverb(lowpass = 4000, size = reverb.lowpass)` reads the old lowpass: chain two calls for that. A slot name that is also a top-level symbol (`lowpass`, the
   `lpf` alias) shows two property variants under one docs symbol; intel tests filter on
-  `owner == null`. Tutorials name the object in `teaches`/`previews` (`room`, `delay`), not the
+  `owner == null`. Tutorials name the object in `teaches`/`previews` (`reverb`, `delay`), not the
   slots: the curriculum lint reads call names.
+
+- **The reverb is `reverb`, not `room` (2026-09-16).** One word on every surface: the sprudel door, the
+  master builder (`r.size().lowpass()`), the wire (`VoiceData.reverb`/`reverbSize`/`reverbLowpass`,
+  `SprudelVoiceData.reverbFx` as the group, mirroring `delayFx`) and the engine (`Reverb.size`/`lowpass`).
+  `fade` was `size / 10` with an override and is gone (`fade = x` is `size = 10x`); `dim` was never read;
+  the master's `damp` went because `lowpass` spans the same range. A third positional argument is now
+  `lowpass`. `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in
@@ -309,7 +316,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Reverb
 
-- `room(wet, size, fade, lowpass, dim)`; readers `room.wet/.size/.fade/.lowpass/.dim`; `iresponse()` / `ir`
+- `reverb(wet, size, lowpass)`; readers `reverb.wet/.size/.lowpass`; `iresponse()` / `ir`
 
 ### Audio Effects — Delay
 

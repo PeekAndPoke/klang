@@ -415,10 +415,8 @@ class Voice(
     )
 
     class Delay(val amount: Double, val time: Double, val feedback: Double, val cap: Double = 1.0)
-    class Reverb(
-        val room: Double, val roomSize: Double, val roomFade: Double? = null,
-        val roomLp: Double? = null, val roomDim: Double? = null, val iResponse: String? = null,
-    )
+    /** [size] is normalized 0..1 (`Reverb.normalizeSize` ran in VoiceFactory); [lowpass] is the tail damping cutoff in Hz. */
+    class Reverb(val amount: Double, val size: Double, val lowpass: Double? = null, val iResponse: String? = null)
 
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain

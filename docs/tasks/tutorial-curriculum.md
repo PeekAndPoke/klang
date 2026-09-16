@@ -162,7 +162,7 @@ stages must not carry it.
 | B5 | Alternation & repetition | `<>`, `!`, `@` | — | Bassline that changes per cycle (Sandsturm's `<bar1 bar2 bar3 bar4>` idiom). *Listen for: the 4-bar rotation.* |
 | A3 | Filters — LPF & HPF | `lpf`, `hpf` (with the `q` slot) | — | Saw phrase under a moving blanket; then thin it from below. *Listen for: which disappears first — the body or the sparkle.* (The old `tut_FilterPlayground` had good bones — same idea, fresh writing.) |
 | A4 | The filter envelope | the `env`, `attack`, `decay`, `sustain`, `release` slots of `lpf` | `q` | The classic synth pluck: cutoff rides its own envelope. *Listen for: the "öw" the filter sweep adds to each note.* (Zero coverage today.) |
-| B6 | Layers — stack & orbit | `stack`, `orbit` | `room(wet, size)` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
+| B6 | Layers — stack & orbit | `stack`, `orbit` | `reverb(wet, size)` on the lead's own orbit | Beat + bass + melody combined; reverb on melody's orbit only. *Listen for: dry drums under a wet lead.* |
 | B7 | Chords in one step | comma-chords `[0,7,12]`, random pick `\|` | — | Power-chord stabs; a step that gambles. *Listen for: which variant played this cycle.* |
 
 ### Stage 3 — Where the tracks meet
@@ -222,18 +222,18 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + docs/tasks-archive/2026-09/20260908-orbit-level-effect-docs.md): reverb processor is
-  per-orbit but `room(wet)` is a per-voice SEND; a bare `room(wet)` is SILENT (gate needs `size`); orbit
+  per-orbit but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` is SILENT (gate needs `size`); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
-  `room(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
+  `reverb(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
   `onepole` and `postgain`. One of the two biggest `teaches` lists in the corpus (5) and the only `Standard`
   depth (the field was called `scope` until 2026-09-08, renamed so that "scope" means one thing:
   where audio runs, see `KlangScope`); if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
-  send: reverb is inactive unless `roomSize >= 0.01` (defaults to 0.0) and delay is Off
-  unless `time >= 0.01` (defaults to 0.0), so a bare `room(0.4)` and a bare
+  send: reverb is inactive unless the normalized `size >= 0.01` (defaults to 0.0) and delay is Off
+  unless `time >= 0.01` (defaults to 0.0), so a bare `reverb(0.4)` and a bare
   `delay(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
   three silent `KlangScript(Playable)` KDoc examples were fixed at source in the reverb and delay
   files (`lang_effects_reverb.kt`, `lang_effects_delay.kt`).
@@ -245,7 +245,7 @@ stages must not carry it.
   and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
   "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
   Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
-- **A7 (space & dirt):** B6 previews `room(wet, size)` ("how much goes in" / "how big the room is")
+- **A7 (space & dirt):** B6 previews `reverb(wet, size)` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
 - **B11 (chords & voicing):** B7 defers harmony ("Which notes agree like this, and which clash …
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11

@@ -104,7 +104,7 @@ object KlangScript {
     annotation class Method(val name: String = "")
 
     /**
-     * Marks the call form of a callable object: `room(0.3)` in KlangScript dispatches to the
+     * Marks the call form of a callable object: `reverb(0.3)` in KlangScript dispatches to the
      * annotated member. The member must be `operator fun invoke` inside an `@Object` or
      * `@TypeExtensions` class, and a class carries at most one, because KlangScript has no
      * overloads. The script-side name is fixed to [NAME]; the runtime looks it up as an

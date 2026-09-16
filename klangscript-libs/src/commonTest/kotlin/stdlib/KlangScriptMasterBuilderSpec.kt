@@ -6,8 +6,11 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.throwables.shouldThrowAny
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
@@ -39,13 +42,13 @@ class KlangScriptMasterBuilderSpec : StringSpec({
     }
 
     "Master(m => ...) == Master.build(m => ...), node for node" {
-        val code = "m => m.reverb(r => r.wet(0.05).damp(0.5).roomSize(9)).gain(2.5).limiter(l => l.thresholdDb(-3))"
+        val code = "m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter(l => l.thresholdDb(-3))"
         ks("Master($code)") shouldBe ks("Master.build($code)")
     }
 
     "stages append in written order, script == Kotlin data classes" {
-        ks("Master(m => m.reverb(r => r.wet(0.05).damp(0.5).roomSize(9)).gain(2.5).limiter())") shouldBe MasterDsl.of(
-            MasterStageDsl.Reverb(wet = 0.05, damp = 0.5, roomSize = 9.0),
+        ks("Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter())") shouldBe MasterDsl.of(
+            MasterStageDsl.Reverb(wet = 0.05, size = 9.0),
             MasterStageDsl.Gain(gain = 2.5),
             MasterStageDsl.Limiter(),
         )
@@ -62,9 +65,9 @@ class KlangScriptMasterBuilderSpec : StringSpec({
     }
 
     "every reverb and delay knob" {
-        ks("Master(m => m.reverb(r => r.wet(0.3).roomSize(8).damp(0.4).roomFade(0.12).roomLp(6000)).delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0)))") shouldBe
+        ks("Master(m => m.reverb(r => r.wet(0.3).size(8).lowpass(6000)).delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0)))") shouldBe
                 MasterDsl.of(
-                    MasterStageDsl.Reverb(wet = 0.3, roomSize = 8.0, damp = 0.4, roomFade = 0.12, roomLp = 6000.0),
+                    MasterStageDsl.Reverb(wet = 0.3, size = 8.0, lowpass = 6000.0),
                     MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.5, feedback = 1.0, cap = 3.0),
                 )
     }
@@ -89,6 +92,16 @@ class KlangScriptMasterBuilderSpec : StringSpec({
     "a stage lambda that returns nothing names its stage" {
         val err = shouldThrow<KlangScriptTypeError> { ks("Master(m => m.limiter(l => { l.ratio(4) }))") }
         err.message shouldBe "the configure lambda of Master limiter returned nothing; return the builder it received (`x => x.analog(3)`)"
+    }
+
+    // Retired 2026-09-16 (docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md): the room-prefixed knobs became
+    // `size` and `lowpass`, `roomFade` folded into `size`, and `damp` went (`lowpass` is the one
+    // damping knob, on both doors).
+    listOf("roomSize", "roomFade", "roomLp", "damp").forEach { name ->
+        "the retired reverb knob '$name' is gone" {
+            val error = shouldThrowAny { ks("Master(m => m.reverb(r => r.$name(0.5)))") }
+            withClue("error should name the missing knob") { (error.message ?: "") shouldContain name }
+        }
     }
 
     "Master.of and MasterFx are gone" {

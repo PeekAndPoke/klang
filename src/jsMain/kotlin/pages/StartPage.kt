@@ -22,7 +22,7 @@ import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.gain
-import io.peekandpoke.klang.sprudel.lang.room
+import io.peekandpoke.klang.sprudel.lang.reverb
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.version
@@ -339,7 +339,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
                 .gain(0.7)
                 .adsr(0.005, 0.2, 0.3, 10.0)
-                .room(wet = 0.2, size = 3.0, lowpass = 5000.0)
+                .reverb(wet = 0.2, size = 3.0, lowpass = 5000.0)
 
             val playback = Player.get()?.playOnce(song)
 

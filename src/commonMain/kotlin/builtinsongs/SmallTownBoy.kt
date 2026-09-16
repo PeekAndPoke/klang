@@ -36,7 +36,7 @@ stack(
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
      .orbit(4).pan(0.5).gain(0.95)
      .delay(wet = 0.2, time = pure(1/8).div(cps), feedback = 0.3),
-).room(wet = 0.1, size = 5.0)
+).reverb(wet = 0.1, size = 5.0)
 
     """.trimIndent(),
 )

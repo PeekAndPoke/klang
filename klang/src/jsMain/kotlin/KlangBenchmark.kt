@@ -385,8 +385,8 @@ class KlangBenchmark(
                 ),
                 adsr = AdsrDef.defaultSynth,
                 // Enable reverb send (expensive mixing)
-                room = 0.2,
-                roomSize = 0.5
+                reverb = 0.2,
+                reverbSize = 0.5
             )
         )
         scheduler.scheduleVoice(voice)

@@ -65,7 +65,7 @@ envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pit
 | `KatalystBodyEffect`       | `BodyFilter`    | any voice on the orbit sets `body(…)`  |
 | `KatalystFormantEffect`    | `FormantFilter` | any voice on the orbit sets `vowel(…)` |
 | `KatalystDelayEffect`      | `DelayLine`     | `VoiceData.delay > 0`                  |
-| `KatalystReverbEffect`     | `Reverb`        | `VoiceData.room > 0`                   |
+| `KatalystReverbEffect`     | `Reverb`        | `VoiceData.reverbSize >= 0.1`          |
 | `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
 | `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
 | `KatalystDuckingEffect`    | `Ducking`       | sidechain from duckCylinder voice      |
@@ -118,12 +118,10 @@ Freeverb-style algorithmic reverb with optional impulse response.
 
 | Parameter   | Meaning                                        |
 |-------------|------------------------------------------------|
-| `room`      | Dry/wet mix                                    |
-| `roomSize`  | Room size (controls comb filter lengths)       |
-| `roomFade`  | Tail length / decay                            |
-| `roomLp`    | Internal low-pass cutoff (brightness)          |
-| `roomDim`   | Diffusion / dimension                          |
-| `iResponse` | Impulse response selector (convolution reverb) |
+| `reverb`        | Send amount per voice (`SendRenderer`)                          |
+| `reverbSize`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
+| `reverbLowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
+| `iResponse`     | Impulse response name (reserved, not read yet)                  |
 
 ### Phaser
 

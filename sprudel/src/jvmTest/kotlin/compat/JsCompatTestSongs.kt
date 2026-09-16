@@ -56,7 +56,7 @@ object JsCompatTestSongs {
                          .pan(0.5)
                          .gain(0.4)
                          .delay(wet = "0.2", time = 0.25, feedback = 0.3),
-                    ).room(wet = 0.025, size = 5.0)
+                    ).reverb(wet = 0.025, size = 5.0)
             """.trimIndent()
         ),
         Example(
@@ -74,7 +74,7 @@ object JsCompatTestSongs {
                         >`).sound("triangle").orbit(0)
                         .gain("0.3")
                         .fast(0.5)
-                        .room(wet = 0.01, size = 3.0)
+                        .reverb(wet = 0.01, size = 3.0)
                         .delay(wet = "0.25", time = 0.25, feedback = 0.75),
 
                         note(`<
@@ -88,11 +88,11 @@ object JsCompatTestSongs {
                             [[a1 a2]*4]
                         >`).sound("supersaw").orbit(1)
                         .pan(0.6).gain(0.6)
-                        .room(wet = 0.01, size = 3.0),
+                        .reverb(wet = 0.01, size = 3.0),
 
                         sound("bd hh sd hh").orbit(2)
                         .pan(-0.7).gain(0.8)
-                        .room(wet = 0.01, size = 3.0)
+                        .reverb(wet = 0.01, size = 3.0)
                         .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
                         .fast(2),
                     )
@@ -155,7 +155,7 @@ object JsCompatTestSongs {
             "Drums with Reverb", """
                 sound("bd hh sd oh")
                     .gain(0.8)
-                    .room(wet = 0.01, size = 3.0)
+                    .reverb(wet = 0.01, size = 3.0)
                     .pan(sine.slow(8))
                     .fast(2)
             """.trimIndent()

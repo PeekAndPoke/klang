@@ -33,7 +33,8 @@ import kotlin.random.Random
  * The shared Freeverb is driven from two hosts — the per-orbit bus and the master bus. For a while
  * the same authored number meant different things on each: sprudel divided `roomsize` by 10, the
  * master did not, so `roomSize(3)` was a ~1 s tail on an orbit and a ~12.5 s one on the master (it
- * clamped to the maximum). Nothing compared the two, so nothing noticed.
+ * clamped to the maximum). Nothing compared the two, so nothing noticed. Since 2026-09-16 both doors
+ * also share the knob names: `reverb(size, lowpass)` on an orbit, `r.size().lowpass()` on the master.
  *
  * Both sides here go through their **real** production path — `VoiceFactory` for the orbit,
  * `MasterChain.build` for the master — so a regression in either one fails this spec.
@@ -43,8 +44,8 @@ class MasterOrbitReverbParitySpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    /** What the ORBIT path hands the Freeverb for a given authored room size. */
-    fun orbitRoomSize(authored: Double): Double {
+    /** The Freeverb the ORBIT path configures for a given authored size and lowpass. */
+    fun orbitReverb(authored: Double, lowpass: Double? = null): Reverb {
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
@@ -64,8 +65,9 @@ class MasterOrbitReverbParitySpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = 440.0,
                     sound = "triangle",
-                    room = 0.5,
-                    roomSize = authored,
+                    reverb = 0.5,
+                    reverbSize = authored,
+                    reverbLowpass = lowpass,
                 ),
                 startTime = 0.0,
                 gateEndTime = 1.0,
@@ -80,83 +82,65 @@ class MasterOrbitReverbParitySpec : StringSpec({
         // never writes the DSP, so this helper would return the previous/default value, not the
         // normalized one (drain lifecycle, review round 3).
         // ...and then through the cylinder, which is what actually writes the DSP. Reading
-        // `voice.reverb.roomSize` here would stop one step short and miss a second /10 introduced
+        // `voice.reverb.size` here would stop one step short and miss a second /10 introduced
         // in `Cylinder` — exactly the class of bug this spec exists to catch.
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        return cylinder.reverb.reverb!!.roomSize
+        return cylinder.reverb.reverb!!
     }
 
-    /** What the MASTER path hands the Freeverb for the same authored room size. */
-    fun masterReverb(
-        roomSize: Double,
-        damp: Double = 0.5,
-        roomFade: Double? = null,
-        roomLp: Double? = null,
-    ) = MasterChain.build(
-        dsl = MasterDsl.of(
-            MasterStageDsl.Reverb(
-                wet = 0.5, roomSize = roomSize, damp = damp,
-                roomFade = roomFade, roomLp = roomLp
-            )
-        ),
+    /** The master chain for one reverb stage with the given authored size and lowpass. */
+    fun masterChain(size: Double, lowpass: Double? = null) = MasterChain.build(
+        dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.5, size = size, lowpass = lowpass)),
         sampleRate = sampleRate,
         blockFrames = blockFrames,
-    ).reverbs.firstOrNull().shouldNotBeNull()
+    )
 
-    "the same authored roomSize reaches the DSP identically on both buses" {
+    /** The Freeverb the MASTER path configures for the same authored size and lowpass. */
+    fun masterReverb(size: Double, lowpass: Double? = null) =
+        masterChain(size, lowpass).reverbs.firstOrNull().shouldNotBeNull()
+
+    "the same authored size reaches the DSP identically on both buses" {
         listOf(3.0, 5.0, 8.0, 10.0).forEach { authored ->
-            masterReverb(authored).roomSize shouldBe orbitRoomSize(authored)
+            masterReverb(authored).size shouldBe orbitReverb(authored).size
         }
     }
 
     "an authored 3 is the ~1 s tail it reads like, on both buses" {
         // 3 / 10 = 0.3 -> comb feedback 0.784 -> ~1 s. Before the fix the master clamped this to
         // 1.0 (feedback 0.98, ~12.5 s) — the reported symptom.
-        masterReverb(3.0).roomSize shouldBe 0.3
-        orbitRoomSize(3.0) shouldBe 0.3
+        masterReverb(3.0).size shouldBe 0.3
+        orbitReverb(3.0).size shouldBe 0.3
     }
 
-    "both buses apply the same bound — a comb can never be driven past unity on either" {
-        // Not a taste clamp: past 1.0 the comb feedback exceeds unity and the network latches to
-        // DC (AC-RMS 0.0) instead of ringing longer. What matters for parity is that BOTH buses
-        // agree on where that boundary is.
-        masterReverb(30.0).roomSize shouldBe 1.0
-        orbitRoomSize(30.0) shouldBe 1.0
+    "both buses apply the same bound at authored 10" {
+        // Normalized 1.0 is comb feedback 0.98, canonical Freeverb's top, kept deliberately
+        // (maintainer, 2026-09-16, see `Reverb.normalizeSize`); unity feedback would sit at about
+        // 10.71. What matters for parity is that BOTH buses agree on where the bound is.
+        masterReverb(30.0).size shouldBe 1.0
+        orbitReverb(30.0).size shouldBe 1.0
     }
 
-    "a non-finite roomFade is UNSET on both buses, never a coerced room" {
-        // Review round 2: the master door coerced +Inf to 1.0 (the LONGEST room) while its own
-        // build gate already treated non-finite fade as absent — and the orbit door reads it as
-        // unset. One meaning now: non-finite fade = no override, roomSize governs the tail.
-        // The +Inf half is the mutant-killer (coerceIn alone turns it into 1.0); the NaN half
-        // documents the shared reading (the setter would drop a NaN write either way).
-        masterReverb(roomSize = 3.0, roomFade = Double.POSITIVE_INFINITY).roomFade shouldBe null
-        masterReverb(roomSize = 3.0, roomFade = Double.NaN).roomFade shouldBe null
+    "the same lowpass reaches the DSP identically on both buses" {
+        masterReverb(size = 8.0, lowpass = 3500.0).lowpass shouldBe 3500.0
+        orbitReverb(8.0, lowpass = 3500.0).lowpass shouldBe 3500.0
+
+        masterReverb(size = 8.0).lowpass shouldBe null
+        orbitReverb(8.0).lowpass shouldBe null
+    }
+
+    "a non-finite lowpass is UNSET on both buses" {
+        masterReverb(size = 3.0, lowpass = Double.POSITIVE_INFINITY).lowpass shouldBe null
+        masterReverb(size = 3.0, lowpass = Double.NaN).lowpass shouldBe null
 
         val orbit = KatalystReverbEffect(Reverb(sampleRate), blockFrames)
-        // A finite fade first, so the +Inf outcome is provably "unset", not a fresh default.
-        orbit.configure(roomSize = 0.5, roomFade = 0.3, roomLp = null, roomDim = null, iResponse = null)
-        orbit.reverb!!.roomFade shouldBe 0.3
+        // A finite lowpass first, so the +Inf outcome is provably "unset", not a fresh default.
+        orbit.configure(size = 0.5, lowpass = 3000.0, iResponse = null)
+        orbit.reverb!!.lowpass shouldBe 3000.0
 
-        orbit.configure(
-            roomSize = 0.5, roomFade = Double.POSITIVE_INFINITY,
-            roomLp = null, roomDim = null, iResponse = null,
-        )
-        orbit.reverb!!.roomFade shouldBe null
-        orbit.reverb!!.roomSize shouldBe 0.5 // active via roomSize; the non-finite fade is no override
-    }
-
-    "the master exposes the orbit's tail/damping vocabulary, unchanged" {
-        val reverb = masterReverb(
-            roomSize = 8.0, damp = 0.3, roomFade = 0.12, roomLp = 12000.0
-        )
-
-        // roomFade / roomLp are raw pass-throughs on BOTH buses — same number, same meaning.
-        reverb.roomFade shouldBe 0.12
-        reverb.roomLp shouldBe 12000.0
-        reverb.damp shouldBe 0.3
+        orbit.configure(size = 0.5, lowpass = Double.POSITIVE_INFINITY, iResponse = null)
+        orbit.reverb!!.lowpass shouldBe null
     }
 
     "the delay keeps its ceiling — there, unlike the reverb, self-oscillation is real" {
@@ -171,30 +155,16 @@ class MasterOrbitReverbParitySpec : StringSpec({
         chain.delays.firstOrNull().shouldNotBeNull().feedbackCap shouldBe 3.0
     }
 
-    "roomFade alone is audible on both buses — it overrides roomSize, so it must gate on itself" {
-        // The parity defect this spec exists to catch, in its second form: the orbit's roomSize
-        // defaults to 0, so gating audibility on roomSize alone made `room(wet = 0.6, fade = 0.1)`
-        // silent on an orbit while the identical intent worked on the master (whose roomSize
-        // defaults to 5). Both gates now ask `roomFade ?: roomSize`.
-        val chain = MasterChain.build(
-            dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.5, roomSize = 0.0, roomFade = 0.5)),
-            sampleRate = sampleRate,
-            blockFrames = blockFrames,
-        )
-
-        chain.isActive shouldBe true
-        chain.reverbs.firstOrNull().shouldNotBeNull().roomFade shouldBe 0.5
-    }
-
-    "an explicit roomFade renders on the ORBIT bus, at any value including 0.0" {
-        // The orbit half of the gate fix. roomSize defaults to 0.0 there, so testing it alone made
-        // a roomfade-only voice silent; and 0.0 is the engine's SHORTEST tail, not "off".
-        fun rendersWith(roomFade: Double?, roomSize: Double): Boolean {
+    "both buses switch the reverb on at the same authored size" {
+        // Below authored 0.1 (normalized 0.01) the reverb is off on both buses: the comb feedback
+        // floor would otherwise ring a 0.7 s tail for a size nobody asked for. Authored 0.1 sits ON
+        // the threshold (0.1 / 10 == 0.01 exactly), so a `>` on either gate breaks the agreement.
+        fun orbitRenders(authored: Double): Boolean {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
             cylinder.updateFromVoice(
                 VoiceTestHelpers.createSynthVoice(
                     blockFrames = blockFrames,
-                    reverb = Voice.Reverb(room = 0.6, roomSize = roomSize, roomFade = roomFade),
+                    reverb = Voice.Reverb(amount = 0.6, size = Reverb.normalizeSize(authored)),
                 ),
                 blockStart = 0.0,
             )
@@ -220,9 +190,9 @@ class MasterOrbitReverbParitySpec : StringSpec({
             return heard
         }
 
-        rendersWith(roomFade = 0.0, roomSize = 0.0) shouldBe true    // shortest tail, still a tail
-        rendersWith(roomFade = 0.3, roomSize = 0.0) shouldBe true    // roomfade-only
-        rendersWith(roomFade = null, roomSize = 0.0) shouldBe false  // genuinely nothing set
-        rendersWith(roomFade = null, roomSize = 0.5) shouldBe true
+        listOf(0.0 to false, 0.05 to false, 0.1 to true, 0.2 to true, 5.0 to true).forEach { (authored, on) ->
+            orbitRenders(authored) shouldBe on
+            masterChain(authored).isActive shouldBe on
+        }
     }
 })

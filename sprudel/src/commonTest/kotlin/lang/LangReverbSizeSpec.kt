@@ -1,0 +1,75 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.sprudel.lang
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.dslInterfaceTests
+
+class LangReverbSizeSpec : StringSpec({
+
+    "reverb(size = ...) dsl interface" {
+        dslInterfaceTests(
+            "pattern.reverb(size = amount)" to note("c").reverb(size = 4.0),
+            "script pattern.reverb(size = amount)" to SprudelPattern.compile("""note("c").reverb(size = 4)"""),
+            "string.reverb(size = amount)" to "c".reverb(size = 4.0),
+            "script string.reverb(size = amount)" to SprudelPattern.compile(""""c".reverb(size = 4)"""),
+            "reverb(size = amount)" to note("c").apply(reverb(size = 4.0)),
+            "script reverb(size = amount)" to SprudelPattern.compile("""note("c").apply(reverb(size = 4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "reverb(size = ...) sets VoiceData.reverbSize" {
+        val p = note("a b").reverb(size = "2.0 4.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.reverbSize } shouldBe listOf(2.0, 4.0)
+    }
+
+    "reverb(size = ...) works as pattern extension" {
+        val p = note("c").reverb(size = "2.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.reverbSize shouldBe 2.0
+    }
+
+    "reverb(size = ...) works as string extension" {
+        val p = "c".reverb(size = "2.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.reverbSize shouldBe 2.0
+    }
+
+    "reverb(size = ...) works in compiled code" {
+        val p = SprudelPattern.compile("""note("c").reverb(size = "2.0")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.reverbSize shouldBe 2.0
+    }
+
+    "reverb(size = ...) with continuous pattern sets reverbSize correctly" {
+        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
+        val p = note("a b c d").reverb(size = sine)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 4
+        // t=0.0: sine(0) = 0.5
+        events[0].data.reverbSize shouldBe (0.5 plusOrMinus EPSILON)
+        // t=0.25: sine(0.25) = 1.0
+        events[1].data.reverbSize shouldBe (1.0 plusOrMinus EPSILON)
+        // t=0.5: sine(0.5) = 0.5
+        events[2].data.reverbSize shouldBe (0.5 plusOrMinus EPSILON)
+        // t=0.75: sine(0.75) = 0.0
+        events[3].data.reverbSize shouldBe (0.0 plusOrMinus EPSILON)
+    }
+})

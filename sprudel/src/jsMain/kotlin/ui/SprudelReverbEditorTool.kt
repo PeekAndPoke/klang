@@ -43,12 +43,12 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the room(wet, size, fade, lowpass, dim) call.
+ * [KlangUiToolEmbeddable] for the reverb(wet, size, lowpass) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the reverb send (wet) and size
- *   plus the optional fade/lowpass/dim params of the host call and commits the full argument
- *   list. Unset optionals stay omitted (null slots).
+ *   plus the optional lowpass param of the host call and commits the full argument list. An unset
+ *   lowpass stays omitted (null slot).
  * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelReverbEditorTool : KlangUiToolEmbeddable {
@@ -97,30 +97,22 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
         text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
-    private val parsedRoom
+    private val parsedWet
         get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
 
     private val parsedSize
         get() = parseNum(call?.args?.getOrNull(1), 1.0)
 
-    private val parsedFade
+    private val parsedLowpass
         get() = parseNumOrNull(call?.args?.getOrNull(2))
 
-    private val parsedLowpass
-        get() = parseNumOrNull(call?.args?.getOrNull(3))
-
-    private val parsedDim
-        get() = parseNumOrNull(call?.args?.getOrNull(4))
-
-    private var room by value(parsedRoom)
+    private var wet by value(parsedWet)
     private var size by value(parsedSize)
-    private var fade by value(parsedFade)
     private var lowpass by value(parsedLowpass)
-    private var dim by value(parsedDim)
 
     // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
     // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
-    private val parseable: List<Boolean> = List(5) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val parseable: List<Boolean> = List(3) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
     private val dirty = mutableSetOf<Int>()
     private var hasCommitted = false
 
@@ -133,9 +125,9 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     private fun buildValue(): String =
         if (call != null) {
-            "${room.fmt()}, ${size.fmt()}, ${fade?.fmt() ?: "-"}, ${lowpass?.fmt() ?: "-"}, ${dim?.fmt() ?: "-"}"
+            "${wet.fmt()}, ${size.fmt()}, ${lowpass?.fmt() ?: "-"}"
         } else {
-            room.fmt()
+            wet.fmt()
         }
 
     /**
@@ -154,15 +146,13 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
         val c = call
         if (c != null) {
             val texts = c.args.toMutableList()
-            while (texts.size < 5) texts.add(null)
-            put(texts, 0, room.fmt())
+            while (texts.size < 3) texts.add(null)
+            put(texts, 0, wet.fmt())
             put(texts, 1, size.fmt())
-            put(texts, 2, fade?.fmt())
-            put(texts, 3, lowpass?.fmt())
-            put(texts, 4, dim?.fmt())
+            put(texts, 2, lowpass?.fmt())
             c.onCommitCall(texts)
         } else {
-            props.toolCtx.onCommit(room.fmt())
+            props.toolCtx.onCommit(wet.fmt())
         }
         hasCommitted = true
         lastCommitted = buildValue()
@@ -196,11 +186,9 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     private fun onReset() {
         dirty.clear()
-        room = parsedRoom
+        wet = parsedWet
         size = parsedSize
-        fade = parsedFade
         lowpass = parsedLowpass
-        dim = parsedDim
         formCtrl.resetAllFields()
         commitValue()
         resetCounter++
@@ -237,12 +225,12 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
             key = "reverb-editor-content-$resetCounter"
 
             ui.form {
-                ui.five.stackable.fields {
-                    UiInputField(room, { room = it; dirty += 0; liveUpdate() }) {
-                        domKey("room")
+                ui.three.stackable.fields {
+                    UiInputField(wet, { wet = it; dirty += 0; liveUpdate() }) {
+                        domKey("wet")
                         step(0.01)
                         label {
-                            +"Room (send)"
+                            +"Wet (send)"
                             paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
@@ -255,9 +243,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
                                 paramInfoIcon("size", props.toolCtx, infoPopup)
                             }
                         }
-                        nullableField("fade", "Fade (s)", 0.01, fade, subField = "fade") { fade = it; dirty += 2; liveUpdate() }
-                        nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass, subField = "lowpass") { lowpass = it; dirty += 3; liveUpdate() }
-                        nullableField("dim", "Dim (Hz)", 100.0, dim, subField = "dim") { dim = it; dirty += 4; liveUpdate() }
+                        nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass, subField = "lowpass") { lowpass = it; dirty += 2; liveUpdate() }
                     }
                 }
             }
@@ -315,16 +301,14 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
         val drawW = w - padL - padR
         val drawH = h - padT - padB
 
-        val clampedRoom = room.coerceIn(0.0, 1.0)
+        val clampedWet = wet.coerceIn(0.0, 1.0)
         val clampedSize = size.coerceIn(0.1, 10.0)
-        // Room (wet/dry) controls the starting level.
+        // Wet (the send) controls the starting level.
         // Size controls the tail length: higher size = longer, softer decay.
-        // Fade overrides size for the decay rate when set.
-        val effectiveFade = fade ?: clampedSize
         // Normalize to 0..1 for the decay curve (size is 0..10)
-        val normalizedFade = (effectiveFade / 10.0).coerceIn(0.01, 1.0)
-        // Decay rate: higher normalizedFade = slower decay (longer tail)
-        val decayRate = 1.0 + normalizedFade * 9.0 // 1..10: stretch factor for the tail
+        val normalizedSize = (clampedSize / 10.0).coerceIn(0.01, 1.0)
+        // Decay rate: higher normalizedSize = slower decay (longer tail)
+        val decayRate = 1.0 + normalizedSize * 9.0 // 1..10: stretch factor for the tail
 
         val numPoints = 100
         val points = (0..numPoints).map { i ->
@@ -332,7 +316,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
             val x = padL + t * drawW
             // Exponential decay shaped by size — bigger room = gentler slope
             val envelope = exp(-t * 10.0 / decayRate)
-            val level = (clampedRoom * envelope).coerceIn(0.0, 1.0)
+            val level = (clampedWet * envelope).coerceIn(0.0, 1.0)
             val y = padT + drawH - drawH * level
             x to y
         }

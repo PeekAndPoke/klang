@@ -184,8 +184,8 @@ class IgnitorBenchmark(
             oscParams: Map<String, Double>? = null,
             filters: FilterDefs = FilterDefs.empty,
             adsr: AdsrDef = AdsrDef.defaultSynth,
-            room: Double? = null,
-            roomSize: Double? = null,
+            reverb: Double? = null,
+            reverbSize: Double? = null,
             distort: Double? = null,
             distortShape: String? = null,
             distortOversample: Int? = null,
@@ -205,8 +205,8 @@ class IgnitorBenchmark(
             oscParams = oscParams,
             filters = filters,
             adsr = adsr,
-            room = room,
-            roomSize = roomSize,
+            reverb = reverb,
+            reverbSize = reverbSize,
             distort = distort,
             distortShape = distortShape,
             distortOversample = distortOversample,
@@ -327,7 +327,7 @@ class IgnitorBenchmark(
                 Case("supersaw+lpf+adsr", voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k)),
                 Case(
                     "supersaw+lpf+adsr+reverb",
-                    voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k, room = 0.5, roomSize = 0.5)
+                    voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k, reverb = 0.5, reverbSize = 0.5)
                 ),
                 Case("pluck+distort", voiceData = voice("pluck", distort = 0.5, distortShape = "soft")),
                 Case(

@@ -251,9 +251,9 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                // roomFade set so the reset's `roomFade = null` line has something to clear —
+                // lowpass set so the reset's `lowpass = null` line has something to clear —
                 // a fresh-default null would make that assert vacuous (review round 3).
-                reverb = Voice.Reverb(room = 1.0, roomSize = 0.5, roomFade = 0.3),
+                reverb = Voice.Reverb(amount = 1.0, size = 0.5, lowpass = 3000.0),
             ),
             blockStart = 0.0,
         )
@@ -276,8 +276,8 @@ class OrbitCleanupTest : StringSpec({
         // Factory params too, not just the buffers: a network-only `reverb.reverb.reset()`
         // passes the buffer assert while the dead owner's room survives into the next life
         // (review round 2).
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.0
-        cylinder.reverb.reverb!!.roomFade shouldBe null
+        cylinder.reverb.reverb!!.size shouldBe 0.0
+        cylinder.reverb.reverb!!.lowpass shouldBe null
     }
 
     "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {

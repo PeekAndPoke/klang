@@ -63,7 +63,7 @@ Filter envelopes, pitch envelope, FM synthesis, `compressor()`, `duck()`, `vowel
 ### Covered Well (no tutorial needed)
 
 `sound()`, `note()`, `stack()`, `fast()`/`slow()`, `every()`, `cat()`, `arrange()`, `scale()`, `chord()`, `voicing()`,
-`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delay()`, `room()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
+`transpose()`, `lpf()`, `hpf()`, `gain()`, `pan()`, `delay()`, `reverb()`, `adsr()`, `shuffle()`/`scramble()`, `[]`
 grouping, `<>` alternation
 
 ---
@@ -221,4 +221,4 @@ These didn't get dedicated tutorials — fold into related tutorials or leave fo
 
 `s_cat()`/`timeCat()`, `stackLeft/Right/Centre/By`, `pure()`, `gap()`, `run()`/`binary()`, `pickF()`, `pace()`/
 `steps()`, `take()`/`drop()`, `repeatCycles()`, `linger()`, `ribbon()`, `clip()`, `postgain()`, advanced reverb params (
-`room(fade)`, `room(lowpass)`, `room(dim)`), bitwise operators, `compress()`/`focus()`/`zoom()`
+`reverb(lowpass)`), bitwise operators, `compress()`/`focus()`/`zoom()`

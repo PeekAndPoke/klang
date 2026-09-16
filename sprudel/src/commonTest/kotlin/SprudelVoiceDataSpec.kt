@@ -250,8 +250,8 @@ class SprudelVoiceDataSpec : StringSpec({
             delay = 0.3
             delayTime = 0.25
             delayFeedback = 0.5
-            room = 0.7
-            roomSize = 5.0
+            reverb = 0.7
+            reverbSize = 5.0
             begin = 0.0
             end = 1.0
             speed = 1.0
@@ -284,8 +284,8 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.delay shouldBe 0.3
         voiceData.delayTime shouldBe 0.25
         voiceData.delayFeedback shouldBe 0.5
-        voiceData.room shouldBe 0.7
-        voiceData.roomSize shouldBe 5.0
+        voiceData.reverb shouldBe 0.7
+        voiceData.reverbSize shouldBe 5.0
         voiceData.begin shouldBe 0.0
         voiceData.end shouldBe 1.0
         voiceData.speed shouldBe 1.0
@@ -348,7 +348,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         nfattack = b + 66; nfdecay = b + 67; nfsustain = b + 68; nfrelease = b + 69; nfenv = b + 70
         cylinder = seed + 71; pan = b + 72
         delay = b + 73; delayTime = b + 74; delayFeedback = b + 75; delayCap = b + 175
-        room = b + 76; roomSize = b + 77; roomFade = b + 78; roomLp = b + 79; roomDim = b + 80
+        reverb = b + 76; reverbSize = b + 77; reverbLowpass = b + 79
         iResponse = "ir$seed"
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86

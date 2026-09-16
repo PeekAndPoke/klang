@@ -34,7 +34,7 @@ class MasterChainSpec : StringSpec({
     "stages that cannot be heard are dropped at build time" {
         val chain = build(
             MasterStageDsl.Gain(gain = 1.0),                        // unity — nothing to do
-            MasterStageDsl.Reverb(wet = 0.0, roomSize = 9.0),       // nothing sent into it
+            MasterStageDsl.Reverb(wet = 0.0, size = 9.0),       // nothing sent into it
             MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.0),     // no delay time
         )
 
@@ -48,7 +48,7 @@ class MasterChainSpec : StringSpec({
     "audible stages survive and a time-based one is marked as having a tail" {
         val chain = build(
             MasterStageDsl.Gain(gain = 2.0),
-            MasterStageDsl.Reverb(wet = 0.4, roomSize = 7.0),
+            MasterStageDsl.Reverb(wet = 0.4, size = 7.0),
         )
 
         chain.isActive shouldBe true
@@ -70,7 +70,7 @@ class MasterChainSpec : StringSpec({
         val chain = build(
             MasterStageDsl.Gain(gain = Double.NaN),
             MasterStageDsl.Delay(wet = 0.5, timeSeconds = Double.NaN, feedback = Double.NaN),
-            MasterStageDsl.Reverb(wet = Double.NaN, roomSize = Double.POSITIVE_INFINITY),
+            MasterStageDsl.Reverb(wet = Double.NaN, size = Double.POSITIVE_INFINITY),
         )
 
         val bus = StereoBuffer(blockFrames).also { buffer ->
@@ -91,7 +91,7 @@ class MasterChainSpec : StringSpec({
     }
 
     "reset clears a chain so a re-adopted one cannot replay an old tail" {
-        val chain = build(MasterStageDsl.Reverb(wet = 0.9, roomSize = 9.0, damp = 0.1))
+        val chain = build(MasterStageDsl.Reverb(wet = 0.9, size = 9.0, lowpass = 19845.0))
         val bus = StereoBuffer(blockFrames)
 
         // Push a burst through it, then let it run dry for a moment.
@@ -107,46 +107,42 @@ class MasterChainSpec : StringSpec({
         chain.hasActiveTail() shouldBe false
     }
 
-    "roomSize is the sprudel scale — the number a user writes means the same on both buses" {
+    "size is the sprudel scale — the number a user writes means the same on both buses" {
         // The regression this whole change exists for: authored 3 must be a ~1 s tail (0.3), not the
         // 12.5 s maximum it became when the master skipped the /10.
-        build(MasterStageDsl.Reverb(wet = 0.5, roomSize = 3.0)).reverbs[0].roomSize shouldBe 0.3
-        build(MasterStageDsl.Reverb(wet = 0.5, roomSize = 8.0)).reverbs[0].roomSize shouldBe 0.8
+        build(MasterStageDsl.Reverb(wet = 0.5, size = 3.0)).reverbs[0].size shouldBe 0.3
+        build(MasterStageDsl.Reverb(wet = 0.5, size = 8.0)).reverbs[0].size shouldBe 0.8
     }
 
-    "an authored roomSize under the audible floor drops the stage" {
+    "an authored size under the audible floor drops the stage" {
         // 0.05 authored -> 0.005 normalized, below MIN_TIME_FX. The comparison must happen AFTER
         // normalization, or the master would build a Freeverb the orbit would have skipped.
-        val chain = build(MasterStageDsl.Reverb(wet = 0.5, roomSize = 0.05))
+        val chain = build(MasterStageDsl.Reverb(wet = 0.5, size = 0.05))
 
         chain.isActive shouldBe false
         chain.hasTail shouldBe false
     }
 
-    "a NaN roomSize still builds a reverb — it must not silently delete the stage" {
+    "a NaN size still builds a reverb — it must not silently delete the stage" {
         // The trap: if the finite() fallback were the NORMALIZED default (0.5) instead of the
         // authored one (5.0), it would normalize to 0.05, fall under MIN_TIME_FX, and the reverb
         // would vanish with no error.
-        val chain = build(MasterStageDsl.Reverb(wet = 0.5, roomSize = Double.NaN))
+        val chain = build(MasterStageDsl.Reverb(wet = 0.5, size = Double.NaN))
 
         chain.isActive shouldBe true
-        chain.reverbs[0].roomSize shouldBe 0.5
+        chain.reverbs[0].size shouldBe 0.5
     }
 
-    "roomFade, roomLp and cap reach the DSP unchanged" {
-        val reverb = build(
-            MasterStageDsl.Reverb(wet = 0.5, roomSize = 8.0, damp = 0.3, roomFade = 0.12, roomLp = 9000.0)
-        ).reverbs[0]
+    "lowpass reaches the DSP unchanged" {
+        val reverb = build(MasterStageDsl.Reverb(wet = 0.5, size = 8.0, lowpass = 9000.0)).reverbs[0]
 
-        reverb.roomFade shouldBe 0.12
-        reverb.roomLp shouldBe 9000.0
-        reverb.damp shouldBe 0.3
+        reverb.lowpass shouldBe 9000.0
     }
 
-    "a non-finite roomLp is ignored rather than written" {
+    "a non-finite lowpass is ignored rather than written" {
         // Assigned through the property setter, which drops non-finite. A constructor initializer
         // would bypass that guard — the same trap the delay KDoc flags.
-        build(MasterStageDsl.Reverb(wet = 0.5, roomSize = 8.0, roomLp = Double.NaN)).reverbs[0].roomLp shouldBe null
+        build(MasterStageDsl.Reverb(wet = 0.5, size = 8.0, lowpass = Double.NaN)).reverbs[0].lowpass shouldBe null
     }
 
     "the delay feedback ceiling reaches the DSP" {

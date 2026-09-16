@@ -60,7 +60,7 @@ door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```javascript
 Osc.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
-master(Master(m => m.reverb(r => r.wet(0.05).roomSize(9)).gain(2.5).limiter()))
+master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
 ```
 
 **Rules:**
@@ -114,15 +114,15 @@ script-only surface forces raw constructor calls and splits the vocabulary.
 **Maintainer, 2026-08-02:** "The same params must be available in the sprudel DSL, Ignitor, Master
 etc. and they need to mean the same thing."
 
-**Why:** `roomSize` once meant a ~1 s tail on an orbit and ~12.5 s on the master because sprudel
-divided by 10 and the master did not, and `roomFade` existed on only one bus. A shipped song had
+**Why:** the reverb size once meant a ~1 s tail on an orbit and ~12.5 s on the master because
+sprudel divided by 10 and the master did not, and the tail override existed on only one bus. A shipped song had
 the bug.
 
 **Rules:**
 
 - When adding a param to one surface, check every other surface for the same concept and match
   name, scale, and availability.
-- Shared conversions live in ONE place (`Reverb.normalizeRoomSize` serves both buses). Never let
+- Shared conversions live in ONE place (`Reverb.normalizeSize` serves both buses). Never let
   each host convert on its own.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
@@ -155,8 +155,11 @@ Two complementary rules that are often confused:
   Crashing the engine because someone typed `oversample(-1)` is unacceptable. `require()` is for
   internal invariants only.
 - **Do not add safety clamps to audio parameters without asking.** The Motor is raw with sharp
-  edges by design; reverb feedback above 1.0 or extreme drive is a creative choice, the master
-  limiter is the safety net. When a review flags a parameter as "could clip", ask, do not clamp.
+  edges by design; delay feedback above 1.0 (bounded by its `cap`) or extreme drive is a creative
+  choice, the master limiter is the safety net. When a review flags a parameter as "could clip",
+  ask, do not clamp. The reverb is the recorded exception: above unity comb feedback it has no
+  sound, only a network running away to Inf/NaN, and its size bound sits at 10 (feedback 0.98) by
+  maintainer decision (2026-09-16, `Reverb.normalizeSize`).
 
 Rule of thumb: coerce the range into something the engine can execute; never neuter what it
 executes.

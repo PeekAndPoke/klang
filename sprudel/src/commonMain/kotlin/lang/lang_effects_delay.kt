@@ -52,7 +52,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * ```KlangScript(Playable)
- * s("sd sd").delay("0.1 0.4", 0.25).room(wet = delay.wet)                  // as much reverb as delay
+ * s("sd sd").delay("0.1 0.4", 0.25).reverb(wet = delay.wet, size = 4)       // as much reverb as delay
  * ```
  *
  * @param wet Send into the orbit delay, 0 to 1. Per voice.

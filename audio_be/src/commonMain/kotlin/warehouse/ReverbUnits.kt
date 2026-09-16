@@ -13,11 +13,11 @@ import io.peekandpoke.klang.audio_be.effects.Reverb
  * A Freeverb network is ~200 KB of comb and allpass lines at 44.1 kHz, and every `Cylinder` used
  * to build one in its constructor — eight orbits, 1.6 MB, zero-filled on the audio thread on the
  * first play, reverb or not. A unit now exists only once an orbit (or a master chain) asks for
- * `room`, and comes from here.
+ * `reverb`, and comes from here.
  *
  * Same rules as [SizedBuffers], simpler because every unit is the same size: **stocked by return,
  * never by prediction**; a rented unit is indistinguishable from a new one — parameters back to
- * constructor defaults at return (six fields, O(1)), state zeroed by DEFERRED housekeeping
+ * constructor defaults at return (three fields, O(1)), state zeroed by DEFERRED housekeeping
  * ([housekeep], one unit per call, called once per block by the backend) or on the spot by [rent]
  * when nothing clean is idle (review round 3: a unit's `reset()` is ~27 k stores, and sixteen of
  * them inside one render callback was the warmup's teardown stall); the shelf holds at most

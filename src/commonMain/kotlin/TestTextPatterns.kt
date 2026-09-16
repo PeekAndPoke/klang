@@ -38,7 +38,7 @@ object TestTextPatterns {
                     >`).sound("triangle").orbit(0)
                     .gain("0.3")
                     .fast(1)
-                    .room(wet = 0.01, size = 3.0)
+                    .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.25", time = 0.25, feedback = 0.75),
 
                     note(`<
@@ -52,11 +52,11 @@ object TestTextPatterns {
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
                     .pan(0.6).gain(0.6)
-                    .room(wet = 0.01, size = 3.0),
+                    .reverb(wet = 0.01, size = 3.0),
 
                     sound("bd hh sd hh").orbit(2)
                     .pan(-0.7).gain(0.9)
-                    .room(wet = 0.01, size = 3.0)
+                    .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
                     .fast(2),
                 )
@@ -77,7 +77,7 @@ object TestTextPatterns {
                     >`).sound("triangle").orbit(0)
                     .gain("0.3")
                     .fast(0.5)
-                    .room(wet = 0.01, size = 3.0)
+                    .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.25", time = 0.25, feedback = 0.75),
 
                     note(`<
@@ -91,11 +91,11 @@ object TestTextPatterns {
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
                     .pan(0.6).gain(0.6)
-                    .room(wet = 0.01, size = 3.0),
+                    .reverb(wet = 0.01, size = 3.0),
 
                     sound("bd hh sd hh").orbit(2)
                     .pan(-0.7).gain(0.8)
-                    .room(wet = 0.01, size = 3.0)
+                    .reverb(wet = 0.01, size = 3.0)
                     .delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.75)
                     .fast(2),
                 )
@@ -163,7 +163,7 @@ object TestTextPatterns {
     val simpleDrumsReverb = """
         sound("bd hh sd oh")
         .gain(0.8)
-        .room(wet = 0.01, size = 3.0)
+        .reverb(wet = 0.01, size = 3.0)
         .pan(sine.slow(8))
         .fast(2)
     """.trimIndent()
@@ -290,13 +290,13 @@ object TestTextPatterns {
         stack(        
           n("1 3 5 7 8 10 12 14").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(0).room(wet = 0.01, size = 10.0).sound("sine")
+           .orbit(0).reverb(wet = 0.01, size = 10.0).sound("sine")
            .slow(8)
            // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
            .accelerate(3),
          n("8 10 12 14 1 3 5 7").scale("C4:minor")
            .adsr(0.1, 0.5, 0.2, 0.5).gain(0.5)
-           .orbit(2).room(wet = 0.01, size = 10.0).sound("sine")
+           .orbit(2).reverb(wet = 0.01, size = 10.0).sound("sine")
            .slow(8)
            // was `3 / 12` = 0.25 octaves (KlangScript divides as doubles) - exactly 3 semitones, same sound
            .accelerate(3)

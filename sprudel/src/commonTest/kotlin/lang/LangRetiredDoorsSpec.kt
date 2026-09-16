@@ -24,11 +24,13 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  *   `LangAdsrCurveDefaultSpec`).
  * - 2026-09-07, batch G: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`, `vowel`, `body`
  *   are objects with named slots; `comp`, `uni`, `vib`, `pamt` stay as their aliases.
+ * - 2026-09-16, reverb: `room` became `reverb(wet, size, lowpass)`; its `fade` and `dim` slots are
+ *   refused by name (`LangReverbSpec`). `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
  */
 class LangRetiredDoorsSpec : StringSpec({
     val envelope = listOf("attack", "decay", "sustain", "release")
     val effects = listOf(
-        "roomWet", "roomsize", "rsize", "sz", "size", "roomfade", "rfade", "roomlp", "rlp", "roomdim", "rdim",
+        "room", "roomWet", "roomsize", "rsize", "sz", "size", "roomfade", "rfade", "roomlp", "rlp", "roomdim", "rdim",
         "delayWet", "delaytime", "delayfeedback", "delayfb", "dfb", "delaycap", "dcap",
         "ph", "phaserWet", "phasercenter", "phc", "phasersweep", "phs", "phaserFloor",
         "tremolosync", "tremsync", "tremolodepth", "tremdepth", "tremoloskew", "tremskew", "tremolophase", "tremphase",

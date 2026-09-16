@@ -25,7 +25,7 @@ import io.peekandpoke.klang.sprudel.lang.orbit
 import io.peekandpoke.klang.sprudel.lang.pan
 import io.peekandpoke.klang.sprudel.lang.perlin
 import io.peekandpoke.klang.sprudel.lang.range
-import io.peekandpoke.klang.sprudel.lang.room
+import io.peekandpoke.klang.sprudel.lang.reverb
 import io.peekandpoke.klang.sprudel.lang.s
 import io.peekandpoke.klang.sprudel.lang.scale
 import io.peekandpoke.klang.sprudel.lang.silence
@@ -59,7 +59,7 @@ object TestKotlinPatterns {
             .orbit(0).gain(0.375)
             .pan(sine.slow(48).range(0.3, 0.7).flipSign())
             .delay(wet = 0.2, time = 0.4, feedback = 0.1)
-            .room(wet = 0.2, size = 0.1)
+            .reverb(wet = 0.2, size = 0.1)
             .clip(0.3)
             .hpf(600)
 //            .adsr(0.025, 0.2, 0.5, 0.0)
@@ -86,7 +86,7 @@ object TestKotlinPatterns {
             .pan(sine.slow(48).range(0.3, 0.7))
             .adsr(0.01, 0.3, 0.4, 0.5)
 //            .lpf(4000)
-            .room(wet = 0.02, size = 0.5)
+            .reverb(wet = 0.02, size = 0.5)
             .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
 //            .rev(4).rev(3)
         ,
@@ -113,7 +113,7 @@ object TestKotlinPatterns {
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3).pan(-0.0).gain(1.0)
-            .room(wet = 0.02, size = 0.5)
+            .reverb(wet = 0.02, size = 0.5)
             .adsr(0.01, 0.2, 0.8, 0.5)
             .fast(2)
 //            .rev(4).rev(3),
@@ -156,7 +156,7 @@ object TestKotlinPatterns {
             .pan(0.5)
             .gain(0.8)
             .delay(wet = "0.2", time = 0.25, feedback = 0.3),
-    ).room(wet = 0.025, size = 5.0)
+    ).reverb(wet = 0.025, size = 5.0)
 
     val strangerThings = stack(
         n("0 2 4 6 7 6 4 2")

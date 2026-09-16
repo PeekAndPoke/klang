@@ -111,8 +111,8 @@ data class SprudelVoiceData(
     // Delay — grouped (see SvdDelay). Property is `delayFx` (the flat `delay` mix-amount is an accessor below).
     var delayFx: SvdDelay?,
 
-    // Reverb — grouped (see SvdReverb).
-    var reverb: SvdReverb?,
+    // Reverb — grouped (see SvdReverb). Property is `reverbFx` (the flat `reverb` send amount is an accessor below).
+    var reverbFx: SvdReverb?,
 
     // Sample manipulation — grouped (see SvdSample).
     var sample: SvdSample?,
@@ -212,7 +212,7 @@ data class SprudelVoiceData(
     private fun tremoloOrNew(): SvdTremolo = tremolo ?: SvdTremolo().also { tremolo = it }
     private fun duckOrNew(): SvdDuck = duck ?: SvdDuck().also { duck = it }
     private fun delayFxOrNew(): SvdDelay = delayFx ?: SvdDelay().also { delayFx = it }
-    private fun reverbOrNew(): SvdReverb = reverb ?: SvdReverb().also { reverb = it }
+    private fun reverbFxOrNew(): SvdReverb = reverbFx ?: SvdReverb().also { reverbFx = it }
     private fun sampleOrNew(): SvdSample = sample ?: SvdSample().also { sample = it }
     private fun bodyFxOrNew(): SvdBody = bodyFx ?: SvdBody().also { bodyFx = it }
     private fun vowelFxOrNew(): SvdVowel = vowelFx ?: SvdVowel().also { vowelFx = it }
@@ -645,35 +645,25 @@ data class SprudelVoiceData(
             if (v != null || delayFx != null) delayFxOrNew().delayCap = v
         }
 
-    var room: Double?
-        get() = reverb?.room
+    var reverb: Double?
+        get() = reverbFx?.reverb
         set(v) {
-            if (v != null || reverb != null) reverbOrNew().room = v
+            if (v != null || reverbFx != null) reverbFxOrNew().reverb = v
         }
-    var roomSize: Double?
-        get() = reverb?.roomSize
+    var reverbSize: Double?
+        get() = reverbFx?.reverbSize
         set(v) {
-            if (v != null || reverb != null) reverbOrNew().roomSize = v
+            if (v != null || reverbFx != null) reverbFxOrNew().reverbSize = v
         }
-    var roomFade: Double?
-        get() = reverb?.roomFade
+    var reverbLowpass: Double?
+        get() = reverbFx?.reverbLowpass
         set(v) {
-            if (v != null || reverb != null) reverbOrNew().roomFade = v
-        }
-    var roomLp: Double?
-        get() = reverb?.roomLp
-        set(v) {
-            if (v != null || reverb != null) reverbOrNew().roomLp = v
-        }
-    var roomDim: Double?
-        get() = reverb?.roomDim
-        set(v) {
-            if (v != null || reverb != null) reverbOrNew().roomDim = v
+            if (v != null || reverbFx != null) reverbFxOrNew().reverbLowpass = v
         }
     var iResponse: String?
-        get() = reverb?.iResponse
+        get() = reverbFx?.iResponse
         set(v) {
-            if (v != null || reverb != null) reverbOrNew().iResponse = v
+            if (v != null || reverbFx != null) reverbFxOrNew().iResponse = v
         }
 
     var begin: Double?
@@ -739,7 +729,7 @@ data class SprudelVoiceData(
         tremolo = tremolo?.copy(),
         duck = duck?.copy(),
         delayFx = delayFx?.copy(),
-        reverb = reverb?.copy(),
+        reverbFx = reverbFx?.copy(),
         sample = sample?.copy(),
         bodyFx = bodyFx?.copy(),
         vowelFx = vowelFx?.copy(),
@@ -774,7 +764,7 @@ data class SprudelVoiceData(
             cylinder = other.cylinder ?: cylinder,
             pan = other.pan ?: pan,
             delayFx = mergeSvdDelay(delayFx, other.delayFx),
-            reverb = mergeSvdReverb(reverb, other.reverb),
+            reverbFx = mergeSvdReverb(reverbFx, other.reverbFx),
             sample = mergeSvdSample(sample, other.sample),
             vowelFx = mergeSvdVowel(vowelFx, other.vowelFx),
             bodyFx = mergeSvdBody(bodyFx, other.bodyFx),
@@ -832,7 +822,7 @@ data class SprudelVoiceData(
         cylinder = other.cylinder ?: cylinder
         pan = other.pan ?: pan
         delayFx = mergeSvdDelay(delayFx, other.delayFx)
-        reverb = mergeSvdReverb(reverb, other.reverb)
+        reverbFx = mergeSvdReverb(reverbFx, other.reverbFx)
         sample = mergeSvdSample(sample, other.sample)
         vowelFx = mergeSvdVowel(vowelFx, other.vowelFx)
         bodyFx = mergeSvdBody(bodyFx, other.bodyFx)
@@ -1106,11 +1096,9 @@ data class SprudelVoiceData(
             delayTime = delayTime,
             delayFeedback = delayFeedback,
             delayCap = delayCap,
-            room = room,
-            roomSize = roomSize,
-            roomFade = roomFade,
-            roomLp = roomLp,
-            roomDim = roomDim,
+            reverb = reverb,
+            reverbSize = reverbSize,
+            reverbLowpass = reverbLowpass,
             iResponse = iResponse,
             begin = begin,
             end = end,
@@ -1493,7 +1481,7 @@ internal val blueprint = SprudelVoiceData(
     cylinder = null,
     pan = null,
     delayFx = null,
-    reverb = null,
+    reverbFx = null,
     sample = null,
     vowelFx = null,
     bodyFx = null,

@@ -166,8 +166,8 @@ class WarmupRunner(
                         delay = 0.5,
                         delayTime = 0.3,
                         delayFeedback = 0.2,
-                        room = 0.5,
-                        roomSize = 0.6,
+                        reverb = 0.5,
+                        reverbSize = 0.6,
                     )
                     val data = when (orbit % EXTRA_EFFECT_KINDS) {
                         0 -> base.copy(phaser = 0.5, phaserDepth = 0.5)

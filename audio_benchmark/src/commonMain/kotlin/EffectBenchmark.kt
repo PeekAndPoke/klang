@@ -451,8 +451,7 @@ class EffectBenchmark(
             // Stereo effects with separate input/output
             stereoIoCase("Reverb (default)") { sr ->
                 val r = Reverb(sr).apply {
-                    roomSize = 0.5
-                    damp = 0.5
+                    size = 0.5
                 }
                 StereoIoEffect { input, output, length -> r.process(input, output, length) }
             },

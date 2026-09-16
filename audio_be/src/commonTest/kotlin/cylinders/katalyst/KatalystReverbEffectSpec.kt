@@ -25,19 +25,19 @@ class KatalystReverbEffectSpec : StringSpec({
     )
 
     // The production door takes every param explicitly (no defaults, mirroring the delay);
-    // this trims the boilerplate for rows that only care about the lifecycle-deciding pair.
-    fun KatalystReverbEffect.configureRoom(roomSize: Double, roomFade: Double? = null) {
-        configure(roomSize = roomSize, roomFade = roomFade, roomLp = null, roomDim = null, iResponse = null)
+    // this trims the boilerplate for rows that only care about the lifecycle-deciding size.
+    fun KatalystReverbEffect.configureSize(size: Double) {
+        configure(size = size, lowpass = null, iResponse = null)
     }
 
-    fun createEffect(roomSize: Double = 0.5, roomFade: Double? = null): KatalystReverbEffect {
+    fun createEffect(size: Double = 0.5): KatalystReverbEffect {
         return KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames).apply {
-            configureRoom(roomSize = roomSize, roomFade = roomFade)
+            configureSize(size = size)
         }
     }
 
-    "an off-config (roomSize < 0.01, no roomFade) on a fresh network stays off — nothing is processed" {
-        val effect = createEffect(roomSize = 0.005)
+    "an off-config (size < 0.01) on a fresh network stays off — nothing is processed" {
+        val effect = createEffect(size = 0.005)
         val ctx = createCtx()
 
         // 25 hot blocks: an ACTIVE reverb is audibly wet from ~block 9 (shortest comb 1116
@@ -57,8 +57,8 @@ class KatalystReverbEffectSpec : StringSpec({
         anySignal shouldBe false
     }
 
-    "processes reverb when roomSize is above threshold" {
-        val effect = createEffect(roomSize = 0.5)
+    "processes reverb when size is above threshold" {
+        val effect = createEffect(size = 0.5)
         val ctx = createCtx()
 
         // Feed signal through multiple blocks — reverb comb filters need time to build up
@@ -75,28 +75,10 @@ class KatalystReverbEffectSpec : StringSpec({
         hasSignal shouldBe true
     }
 
-    "an explicit roomFade of 0.0 is ACTIVE — it overrides roomSize; 0.0 is the shortest tail, not off" {
-        // The parity defect's second form: roomSize defaults to 0.0, so gating on it alone made
-        // `room(wet = 0.6, fade = 0.1)` silent (see MasterOrbitReverbParitySpec).
-        val effect = createEffect(roomSize = 0.0, roomFade = 0.0)
-        val ctx = createCtx()
-
-        repeat(20) {
-            ctx.reverbSendBuffer.left.fill(0.5)
-            ctx.reverbSendBuffer.right.fill(0.5)
-            ctx.mixBuffer.clear()
-            effect.process(ctx)
-        }
-
-        // Audible wet, not the anti-denormal residue (round 2).
-        val hasSignal = ctx.mixBuffer.left.any { it > 1e-6 || it < -1e-6 }
-        hasSignal shouldBe true
-    }
-
     "reverb parameters are accessible" {
-        val effect = createEffect(roomSize = 0.7)
+        val effect = createEffect(size = 0.7)
 
-        effect.reverb!!.roomSize shouldBe 0.7
+        effect.reverb!!.size shouldBe 0.7
         effect.reverb!!.sampleRate shouldBe sampleRate
     }
 
@@ -104,11 +86,11 @@ class KatalystReverbEffectSpec : StringSpec({
 
     "an off-config drains the tail on schedule — identical to staying active with silent sends" {
         // Reference: the owner keeps the reverb and the send simply goes silent.
-        val ref = createEffect(roomSize = 0.05)
+        val ref = createEffect(size = 0.05)
         val refCtx = createCtx()
 
         // Drained: a no-reverb owner takes over after the hot block.
-        val drained = createEffect(roomSize = 0.05)
+        val drained = createEffect(size = 0.05)
         val drainedCtx = createCtx()
 
         refCtx.reverbSendBuffer.left[0] = 1.0
@@ -118,10 +100,10 @@ class KatalystReverbEffectSpec : StringSpec({
         ref.process(refCtx)
         drained.process(drainedCtx)
 
-        drained.configureRoom(roomSize = 0.0, roomFade = null)
+        drained.configureSize(size = 0.0)
 
         // The off-config must not have reached the DSP: the drain decays at the RETAINED room.
-        drained.reverb!!.roomSize shouldBe 0.05
+        drained.reverb!!.size shouldBe 0.05
 
         // 40 blocks ≈ 3 revolutions of the longest comb — well inside the countdown, so the two
         // runs must be BIT-identical: the drain is by construction "active with silent input".
@@ -147,18 +129,18 @@ class KatalystReverbEffectSpec : StringSpec({
     }
 
     "the countdown ends: comb network literally empty, processing short-circuits" {
-        val effect = createEffect(roomSize = 0.05)
+        val effect = createEffect(size = 0.05)
         val ctx = createCtx()
 
         ctx.reverbSendBuffer.left[0] = 1.0
         ctx.reverbSendBuffer.right[0] = 1.0
         effect.process(ctx)
 
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
 
         // The retained (last-active) params + the measured comb peak drive the countdown, so this
         // recomputes the same value the effect captured at the off-transition. Pinned: peak 1.0
-        // (the impulse cell) at fb 0.714 (roomSize 0.05) is 36 revolutions of the 1640-sample
+        // (the impulse cell) at fb 0.714 (size 0.05) is 36 revolutions of the 1640-sample
         // longest comb (1617 + 23 stereo spread at 44.1 kHz).
         val drainSamples = effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs())
         drainSamples shouldBe (36.0 * 1640.0)
@@ -190,7 +172,7 @@ class KatalystReverbEffectSpec : StringSpec({
     }
 
     "re-enabling after off resurrects nothing" {
-        val effect = createEffect(roomSize = 0.05)
+        val effect = createEffect(size = 0.05)
         val ctx = createCtx()
 
         repeat(4) {
@@ -199,7 +181,7 @@ class KatalystReverbEffectSpec : StringSpec({
             effect.process(ctx)
         }
 
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
 
         val drainBlocks = ceil(
             effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
@@ -214,7 +196,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
         // New owner with the LONGEST room (fb 0.98): any surviving cell would recirculate loudly
         // and near-indefinitely. Sweep for well over a full revolution of every buffer.
-        effect.configureRoom(roomSize = 1.0, roomFade = null)
+        effect.configureSize(size = 1.0)
 
         var residue = 0.0
 
@@ -233,68 +215,65 @@ class KatalystReverbEffectSpec : StringSpec({
         (residue < 1.0e-12) shouldBe true
     }
 
-    "non-finite params read as off, never as the previous owner's room" {
-        // Reverb's setters DROP non-finite writes, so before the lifecycle a non-finite param
-        // left the DSP on whatever the previous owner set (the phaser's D2 leak shape). +Inf is
-        // the sharp half (review round 1): `Inf >= 0.01` is TRUE, so without the isFinite test
-        // it reads as ACTIVE while the dropped write keeps the old room. Production cannot
-        // reach this (normalizeRoomSize clamps in VoiceFactory) — this is the DOOR's own
-        // contract for future callers. Both non-finite kinds must behave exactly like a clean
-        // off-config: drain, discard sends.
-        val poisoned = createEffect(roomSize = 0.05)
-        val poisonedCtx = createCtx()
-        val off = createEffect(roomSize = 0.05)
-        val offCtx = createCtx()
+    listOf(Double.POSITIVE_INFINITY, Double.NaN).forEach { bad ->
+        "a non-finite size ($bad) reads as off, never as the previous owner's room" {
+            // Reverb's setters DROP non-finite writes, so before the lifecycle a non-finite param
+            // left the DSP on whatever the previous owner set (the phaser's D2 leak shape). +Inf is
+            // the sharp half (review round 1): `Inf >= 0.01` is TRUE, so without the isFinite test
+            // it reads as ACTIVE while the dropped write keeps the old room. Production cannot
+            // reach this (normalizeSize bounds it in VoiceFactory) — this is the DOOR's own
+            // contract for future callers. Both non-finite kinds must behave exactly like a clean
+            // off-config: drain, discard sends.
+            val poisoned = createEffect(size = 0.05)
+            val poisonedCtx = createCtx()
+            val off = createEffect(size = 0.05)
+            val offCtx = createCtx()
 
-        poisonedCtx.reverbSendBuffer.left[0] = 1.0
-        offCtx.reverbSendBuffer.left[0] = 1.0
-        poisoned.process(poisonedCtx)
-        off.process(offCtx)
-
-        poisoned.configureRoom(roomSize = Double.POSITIVE_INFINITY, roomFade = Double.NaN)
-        off.configureRoom(roomSize = 0.0, roomFade = null)
-
-        poisoned.reverb!!.roomSize shouldBe 0.05 // retained — the non-finite config never reached the DSP
-        poisoned.hasTail() shouldBe true // draining
-
-        var maxDiff = 0.0
-
-        repeat(30) {
-            poisonedCtx.reverbSendBuffer.fill(0.6)
-            poisonedCtx.mixBuffer.clear()
+            poisonedCtx.reverbSendBuffer.left[0] = 1.0
+            offCtx.reverbSendBuffer.left[0] = 1.0
             poisoned.process(poisonedCtx)
-
-            offCtx.reverbSendBuffer.fill(0.6)
-            offCtx.mixBuffer.clear()
             off.process(offCtx)
 
-            for (i in 0 until blockFrames) {
-                maxDiff = maxOf(maxDiff, abs(poisonedCtx.mixBuffer.left[i] - offCtx.mixBuffer.left[i]))
+            poisoned.configureSize(size = bad)
+            off.configureSize(size = 0.0)
+
+            poisoned.reverb!!.size shouldBe 0.05 // retained — the non-finite config never reached the DSP
+            poisoned.hasTail() shouldBe true // draining
+
+            var maxDiff = 0.0
+
+            repeat(30) {
+                poisonedCtx.reverbSendBuffer.fill(0.6)
+                poisonedCtx.mixBuffer.clear()
+                poisoned.process(poisonedCtx)
+
+                offCtx.reverbSendBuffer.fill(0.6)
+                offCtx.mixBuffer.clear()
+                off.process(offCtx)
+
+                for (i in 0 until blockFrames) {
+                    maxDiff = maxOf(maxDiff, abs(poisonedCtx.mixBuffer.left[i] - offCtx.mixBuffer.left[i]))
+                }
             }
+
+            maxDiff shouldBe 0.0
         }
-
-        maxDiff shouldBe 0.0
     }
 
-    "a NaN roomLp reads as unset, never as the previous owner's damping" {
-        val effect = createEffect(roomSize = 0.5)
-        effect.configure(roomSize = 0.5, roomFade = null, roomLp = 500.0, roomDim = null, iResponse = null)
-        effect.reverb!!.roomLp shouldBe 500.0
+    "a NaN lowpass reads as unset, never as the previous owner's damping" {
+        val effect = createEffect(size = 0.5)
+        effect.configure(size = 0.5, lowpass = 500.0, iResponse = null)
+        effect.reverb!!.lowpass shouldBe 500.0
 
-        effect.configure(roomSize = 0.5, roomFade = null, roomLp = Double.NaN, roomDim = null, iResponse = null)
-        effect.reverb!!.roomLp shouldBe null
+        effect.configure(size = 0.5, lowpass = Double.NaN, iResponse = null)
+        effect.reverb!!.lowpass shouldBe null
     }
 
-    "roomFade is bounded to the stable 0..1 at the door — above unity the network has no steady state" {
-        val effect = createEffect(roomSize = 0.0, roomFade = 5.0)
-        effect.reverb!!.roomFade shouldBe 1.0
-    }
-
-    "roomSize is bounded to the stable 0..1 at the door too" {
+    "size is bounded to 0..1 at the door too" {
         // Production pre-normalizes in VoiceFactory, so this pins the door contract for the
         // future direct caller the KDoc cites (review round 3: the clamp had no guard).
-        val effect = createEffect(roomSize = 5.0)
-        effect.reverb!!.roomSize shouldBe 1.0
+        val effect = createEffect(size = 5.0)
+        effect.reverb!!.size shouldBe 1.0
     }
 
     "a non-finite SEND can no longer poison the network at all" {
@@ -305,7 +284,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // a stable linear system: a finite input can never drive the state non-finite.
         // Before it, one Inf send latched every comb for the life of the orbit.
         for (hostile in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
-            val effect = createEffect(roomSize = 0.5)
+            val effect = createEffect(size = 0.5)
             val ctx = createCtx()
 
             ctx.reverbSendBuffer.fill(0.8)
@@ -327,7 +306,7 @@ class KatalystReverbEffectSpec : StringSpec({
         // code. `Inf x fb` never decays, so the countdown is infinite and the off-transition
         // must heal (reset + Off) — without it the orbit and its PlaybackEngine are pinned
         // forever, feeding Inf/NaN into the mix (review round 1).
-        val effect = createEffect(roomSize = 0.5)
+        val effect = createEffect(size = 0.5)
         val ctx = createCtx()
 
         repeat(16) {
@@ -338,7 +317,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
         effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) shouldBe Double.POSITIVE_INFINITY
 
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
 
         effect.hasTail() shouldBe false
         // hasTail(0.0) is itself NaN-blind (NaN > 0.0 is false), so the heal is pinned with the
@@ -347,7 +326,7 @@ class KatalystReverbEffectSpec : StringSpec({
     }
 
     "a reverb owner arriving MID-drain goes straight to Active with the network kept" {
-        val effect = createEffect(roomSize = 0.05)
+        val effect = createEffect(size = 0.05)
         val ctx = createCtx()
 
         repeat(4) {
@@ -356,7 +335,7 @@ class KatalystReverbEffectSpec : StringSpec({
             effect.process(ctx)
         }
 
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
         // The original countdown: a mutant that stays Draining would terminally reset by then.
         val originalDrainBlocks = ceil(
             effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs()) / blockFrames
@@ -370,9 +349,9 @@ class KatalystReverbEffectSpec : StringSpec({
         effect.hasTail() shouldBe true // mid-drain
 
         // New owner takes the lease with the LONGEST room: network kept, params written, sends live.
-        effect.configureRoom(roomSize = 1.0, roomFade = null)
+        effect.configureSize(size = 1.0)
 
-        effect.reverb!!.roomSize shouldBe 1.0 // the new owner's params reached the DSP
+        effect.reverb!!.size shouldBe 1.0 // the new owner's params reached the DSP
         effect.hasTail() shouldBe true // the tail was NOT cut
 
         repeat(originalDrainBlocks) {
@@ -396,13 +375,13 @@ class KatalystReverbEffectSpec : StringSpec({
         // clamps its processing to 64, so the countdown must tick by 64 too (a countdown
         // outrunning the DSP would fire the terminal reset while the tail is still audible).
         val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = 64).apply {
-            configureRoom(roomSize = 0.05, roomFade = null)
+            configureSize(size = 0.05)
         }
         val ctx = createCtx()
 
         ctx.reverbSendBuffer.left[0] = 1.0
         effect.process(ctx)
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
 
         val drainSamples = effect.reverb!!.drainSamplesUntilSilent(peak = effect.reverb!!.combPeakAbs())
         // Enough 128-frame calls that a countdown ticking by ctx.blockFrames would have flipped
@@ -428,22 +407,18 @@ class KatalystReverbEffectSpec : StringSpec({
     "reset restores the factory params — the next orbit life cannot inherit them" {
         // Reverb setters DROP non-finite writes, so a NaN param from the next life would
         // otherwise keep THIS life's value.
-        val effect = createEffect(roomSize = 0.8, roomFade = 0.3)
-        effect.configure(roomSize = 0.8, roomFade = 0.3, roomLp = 5000.0, roomDim = 1.0, iResponse = "hall")
-        effect.reverb!!.damp = 0.9 // not on the configure surface; still guarded, still restored
+        val effect = createEffect(size = 0.8)
+        effect.configure(size = 0.8, lowpass = 5000.0, iResponse = "hall")
 
         effect.reset()
 
-        effect.reverb!!.roomSize shouldBe 0.0
-        effect.reverb!!.damp shouldBe 0.5
-        effect.reverb!!.roomFade shouldBe null
-        effect.reverb!!.roomLp shouldBe null
-        effect.reverb!!.roomDim shouldBe null
+        effect.reverb!!.size shouldBe 0.0
+        effect.reverb!!.lowpass shouldBe null
         effect.reverb!!.iResponse shouldBe null
     }
 
     "a quiet network drains in proportion to its content, not the saturated worst case" {
-        val effect = createEffect(roomSize = 0.5)
+        val effect = createEffect(size = 0.5)
         val ctx = createCtx()
 
         // Charge QUIETLY: peak ~1e-3.
@@ -451,7 +426,7 @@ class KatalystReverbEffectSpec : StringSpec({
         ctx.reverbSendBuffer.right[0] = 0.001
         effect.process(ctx)
 
-        effect.configureRoom(roomSize = 0.0, roomFade = null)
+        effect.configureSize(size = 0.0)
 
         // From 1e-3 at fb 0.84: ceil(ln(1e-5/1e-3)/ln(0.84)) + 1 = 28 revolutions. The worst-case
         // bound (from peak 1.0) would be 68 — assert we are done well before THAT.
@@ -472,24 +447,24 @@ class KatalystReverbEffectSpec : StringSpec({
     "an empty network goes straight to Off — no drain hold on a silent orbit; a charged one reports its tail" {
         // The delay round's engine-leak shape: a drain entered with nothing to drain would hold
         // the orbit (and its PlaybackEngine) alive for the whole countdown.
-        val empty = createEffect(roomSize = 0.5)
+        val empty = createEffect(size = 0.5)
         // Never processed a send: the combs are all zeros — the off-config lands in Off directly.
-        empty.configureRoom(roomSize = 0.0, roomFade = null)
+        empty.configureSize(size = 0.0)
         empty.hasTail() shouldBe false
 
-        val charged = createEffect(roomSize = 0.5)
+        val charged = createEffect(size = 0.5)
         val ctx = createCtx()
         ctx.reverbSendBuffer.left[0] = 1.0
         ctx.reverbSendBuffer.right[0] = 1.0
         charged.process(ctx)
-        charged.configureRoom(roomSize = 0.0, roomFade = null)
+        charged.configureSize(size = 0.0)
         charged.hasTail() shouldBe true
     }
 
     "the drain is sample-counted: block size changes neither the audio nor the off point" {
         fun runDrain(bf: Int): Pair<DoubleArray, Int> {
             val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = bf).apply {
-                configureRoom(roomSize = 0.05, roomFade = null)
+                configureSize(size = 0.05)
             }
             val ctx = KatalystContext(
                 blockFrames = bf,
@@ -517,7 +492,7 @@ class KatalystReverbEffectSpec : StringSpec({
 
                 // The takeover lands at the SAME absolute sample for every block size.
                 if (absSample == 128) {
-                    effect.configureRoom(roomSize = 0.0, roomFade = null)
+                    effect.configureSize(size = 0.0)
                 }
 
                 effect.process(ctx)

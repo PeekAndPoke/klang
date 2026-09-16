@@ -340,8 +340,9 @@ Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
   convention; the consistent version cost ~+11%/sample and was reverted 2026-05-19.
 - **The SVF is purely linear by design.** Two saturation attempts failed and were reverted; the
   `analog`/`bpFb` infrastructure is kept for a future re-introduction. Warmth comes from upstream.
-- **`roomSize`/`roomFade` clamped to 0..1 is NOT a taste clamp** — past unity the comb network has no steady state. The
-  soft-cap alternative was measured (DC rail, AC-RMS 0.0) and reverted 2026-08-03.
+- **The reverb `size` bounded to normalized 0..1 (authored 0..10) is deliberate** (maintainer, 2026-09-16). Normalized 1.0
+  is comb feedback 0.98; unity sits at ~1.071, and past it the comb network has no steady state. The soft-cap
+  alternative was measured (DC rail, AC-RMS 0.0) and reverted 2026-08-03. See `Reverb.normalizeSize`.
 - **Accepted/intentional, each documented:** triangle aliasing (no PolyBLEP), hard clip at
   `IgniteRenderer`, unconditional DC-block on distort, cylinder last-writer-wins,
   `Ducking.attackSeconds`'s misleading name, `rectify()`'s hard clip, body-filter fixed (non-note-tracking) resonances,

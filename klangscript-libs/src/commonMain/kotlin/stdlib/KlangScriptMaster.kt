@@ -70,7 +70,7 @@ object KlangScriptMaster {
      * `Master(m => ...)`: the callable form of [build]. `Master()` is [default].
      *
      * ```
-     * master(Master(m => m.reverb(r => r.wet(0.05).roomSize(9)).gain(2.5).limiter(l => l.thresholdDb(-3))))
+     * master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter(l => l.thresholdDb(-3))))
      * ```
      */
     @KlangScript.Invoke

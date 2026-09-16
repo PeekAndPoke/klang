@@ -130,11 +130,9 @@ data class SvdDelay(
 
 /** Reverb. */
 data class SvdReverb(
-    var room: Double? = null,
-    var roomSize: Double? = null,
-    var roomFade: Double? = null,
-    var roomLp: Double? = null,
-    var roomDim: Double? = null,
+    var reverb: Double? = null,
+    var reverbSize: Double? = null,
+    var reverbLowpass: Double? = null,
     var iResponse: String? = null,
 )
 
@@ -294,11 +292,9 @@ fun mergeSvdReverb(base: SvdReverb?, over: SvdReverb?): SvdReverb? {
     if (base == null) return over?.copy()
     if (over == null) return base.copy()
     return SvdReverb(
-        room = over.room ?: base.room,
-        roomSize = over.roomSize ?: base.roomSize,
-        roomFade = over.roomFade ?: base.roomFade,
-        roomLp = over.roomLp ?: base.roomLp,
-        roomDim = over.roomDim ?: base.roomDim,
+        reverb = over.reverb ?: base.reverb,
+        reverbSize = over.reverbSize ?: base.reverbSize,
+        reverbLowpass = over.reverbLowpass ?: base.reverbLowpass,
         iResponse = over.iResponse ?: base.iResponse,
     )
 }

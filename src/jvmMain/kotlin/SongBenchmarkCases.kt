@@ -80,7 +80,7 @@ object SongBenchmarkCases {
                     """.superimpose(x => x.transpose(12).unison(spread = 0.12).velocity(0.10).pan(0.15).superimpose(pan(0.85)))""",
             "5 +analog(feel)" to """.analog(feel)""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
-            "7 +room(0.3:5:0.1)" to """.room(0.3, 5, 0.1)""",
+            "7 +room(0.3:5:0.1)" to """.reverb(0.3, 1)""",
             // The ladder had NO delay coverage before the master round needed to price a
             // per-sample guard on DelayLine's ring store (2026-08-31). Feedback is deliberately
             // real (0.35) so the recirculating path — the one that carries the store cost — is
@@ -116,7 +116,7 @@ object SongBenchmarkCases {
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).postgain(0.03))""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
             "7 +body(wood, mix0.3)" to """.body(material = "wood", wet = 0.3)""",
-            "8 +room(0.10:8:0.12)" to """.room(0.10, 8, 0.12)""",
+            "8 +room(0.10:8:0.12)" to """.reverb(0.10, 1.2)""",
         ),
     )
 
@@ -401,8 +401,8 @@ object SongBenchmarkCases {
         voice("FX: base +body(wood)", "exp-fx", """$fxBase.body(material = "wood", wet = 0.3)"""),
         voice("FX: base +body(glass)", "exp-fx", """$fxBase.body(material = "glass", wet = 0.3)"""),
         voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel(vowel = "a", wet = 0.3)"""),
-        voice("FX: base +room", "exp-fx", """$fxBase.room(0.10, 8, 0.12)"""),
-        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body(material = "wood", wet = 0.3).room(0.10, 8, 0.12)"""),
+        voice("FX: base +room", "exp-fx", """$fxBase.reverb(0.10, 1.2)"""),
+        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body(material = "wood", wet = 0.3).reverb(0.10, 1.2)"""),
     )
 
     // 2x2 interaction: does `superimpose` MULTIPLY the cost of a per-voice effect (`body`)?

@@ -182,9 +182,10 @@ class GraalSprudelPattern(
         // Room size is between [0 and 10]
         val room = value.safeGetMember("room").safeNumberOrNull()
         val roomSize = value.safeGetMember("roomsize").safeNumberOrNull()
+        // Strudel's roomfade overrides roomsize on the 0..1 scale; sprudel folds it into size (x10).
+        // roomdim was never read by the engine and has no sprudel slot.
         val roomFade = value.safeGetMember("roomfade").safeNumberOrNull()
         val roomLp = value.safeGetMember("roomlp").safeNumberOrNull()
-        val roomDim = value.safeGetMember("roomdim").safeNumberOrNull()
         val iResponse = value.safeGetMember("iresponse").safeStringOrNull()
             ?: value.safeGetMember("ir").safeStringOrNull()
 
@@ -419,11 +420,9 @@ class GraalSprudelPattern(
                 it.delayTime = delayTime
                 it.delayFeedback = delayFeedback
                 // Reverb
-                it.room = room
-                it.roomSize = roomSize
-                it.roomFade = roomFade
-                it.roomLp = roomLp
-                it.roomDim = roomDim
+                it.reverb = room
+                it.reverbSize = roomFade?.let { fade -> fade * 10.0 } ?: roomSize
+                it.reverbLowpass = roomLp
                 it.iResponse = iResponse
                 // Sample manipulation
                 it.begin = sampleBeginPos

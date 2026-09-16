@@ -123,11 +123,9 @@ data class VoiceData(
     val delayCap: Double? = null,
 
     // Reverb
-    val room: Double?,
-    val roomSize: Double?,
-    val roomFade: Double?,
-    val roomLp: Double?,
-    val roomDim: Double?,
+    val reverb: Double?, // Send amount (0.0 to 1.0)
+    val reverbSize: Double?, // Tail length, authored ~0..10 scale (normalized in VoiceFactory)
+    val reverbLowpass: Double?, // Tail damping cutoff in Hz
     val iResponse: String?,
 
     // Sample manipulation
@@ -258,11 +256,9 @@ data class VoiceData(
             delay = null,
             delayTime = null,
             delayFeedback = null,
-            room = null,
-            roomSize = null,
-            roomFade = null,
-            roomLp = null,
-            roomDim = null,
+            reverb = null,
+            reverbSize = null,
+            reverbLowpass = null,
             iResponse = null,
             begin = null,
             end = null,

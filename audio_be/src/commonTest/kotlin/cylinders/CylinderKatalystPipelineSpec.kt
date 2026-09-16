@@ -80,23 +80,23 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                reverb = Voice.Reverb(room = 0.5, roomSize = 0.7),
+                reverb = Voice.Reverb(amount = 0.5, size = 0.7),
                 delay = Voice.Delay(amount = 0.5, time = 0.3, feedback = 0.4),
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.size shouldBe 0.7
         cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
 
         // Different voice, same block → denied → owner's settings persist.
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                reverb = Voice.Reverb(room = 0.5, roomSize = 0.2),
+                reverb = Voice.Reverb(amount = 0.5, size = 0.2),
                 delay = Voice.Delay(amount = 0.5, time = 0.9, feedback = 0.1),
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.size shouldBe 0.7
         cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.3
     }
 
@@ -104,14 +104,14 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         val bf = blockFrames
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.7)), blockStart = 0.0,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.7)), blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
+        cylinder.reverb.reverb!!.size shouldBe 0.7
 
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.5, roomSize = 0.2)), blockStart = 2.0 * bf,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.2)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.2 // new owner's
+        cylinder.reverb.reverb!!.size shouldBe 0.2 // new owner's
     }
 
     "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
@@ -123,7 +123,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner A: reverb on — build up a comb-filter tail (small room = a drain the test can afford).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.8, roomSize = 0.05)), blockStart = 0.0,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.8, size = 0.05)), blockStart = 0.0,
         )
         repeat(20) {
             cylinder.reverbSendBuffer.left.fill(0.5)
@@ -134,11 +134,11 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.reverb.hasTail() shouldBe true
 
         // Owner A ends; a no-reverb voice takes over → the off-config starts the DRAIN under the
-        // RETAINED params (the countdown decays at owner A's room, not the new owner's 0.0).
+        // RETAINED params (the countdown decays at owner A's size, not the new owner's 0.0).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(room = 0.0, roomSize = 0.0)), blockStart = 2.0 * bf,
+            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.0, size = 0.0)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.05 // retained
+        cylinder.reverb.reverb!!.size shouldBe 0.05 // retained
         cylinder.reverb.hasTail() shouldBe true // draining — VISIBLE to cleanup now
 
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
@@ -187,7 +187,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            reverb = Voice.Reverb(room = 0.5, roomSize = 0.5),
+            reverb = Voice.Reverb(amount = 0.5, size = 0.5),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -396,14 +396,12 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures reverb parameters" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            reverb = Voice.Reverb(room = 0.5, roomSize = 0.7, roomFade = 0.3, roomLp = 5000.0, roomDim = 0.2),
+            reverb = Voice.Reverb(amount = 0.5, size = 0.7, lowpass = 5000.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.reverb.reverb!!.roomSize shouldBe 0.7
-        cylinder.reverb.reverb!!.roomFade shouldBe 0.3
-        cylinder.reverb.reverb!!.roomLp shouldBe 5000.0
-        cylinder.reverb.reverb!!.roomDim shouldBe 0.2
+        cylinder.reverb.reverb!!.size shouldBe 0.7
+        cylinder.reverb.reverb!!.lowpass shouldBe 5000.0
     }
 
     "updateFromVoice configures phaser parameters" {

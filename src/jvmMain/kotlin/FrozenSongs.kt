@@ -27,7 +27,9 @@ package io.peekandpoke.klang
  * same day (`lpf(f).lpq(q).lpe(e).lpadsr(a, d, s, r)` -> `lpf(freq = f, q = q, env = e, attack = a, ...)`, same values;
  * the local `notch` in Seltsamere Dinge renamed `notchFreq`, it shadowed the new `notch` object), and the batch G
  * compounds (`fmh(2).fmenv(e)` -> `fm(env = e, h = 2)`, `vibrato(r).vibratoMod(d)` -> `vibrato(rate = r, depth = d)`,
- * `duckorbit`/`duckdepth`/`duckattack` -> `duck(...)`, `vowelWet`/`bodyWet` -> `vowel(wet = ...)`/`body(wet = ...)`, same values).
+ * `duckorbit`/`duckdepth`/`duckattack` -> `duck(...)`, `vowelWet`/`bodyWet` -> `vowel(wet = ...)`/`body(wet = ...)`, same values),
+ * and the 2026-09-16 reverb unification (`room(...)` -> `reverb(...)`; `fade = f` -> `size = 10f`, which the engine
+ * divides back to the same f, bit-exact for the values here; `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`).
  *
  * Source at snapshot time:
  *  - Der Schmetterling  → builtinsongs/DerSchmetterling.kt  (rpm 34.5)
@@ -53,7 +55,7 @@ stack(                                                                          
     .adsr(release = "<0.04!16 0.11!16>").vibrato(rate = 8, depth = 0.01)                                                                           //   //.         //  //.
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>")                                                                                        // //.              // //.
     .superimpose(x => x.transpose(12).unison(spread = 0.12).mute("<1!16 0!16>").velocity(0.10).pan(0.15).superimpose(pan(0.85)))           //.                      //.
-    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").room(0.3, 5, 0.1)
+    .mute("<1!32 0!192>").analog(feel).pipeline("pedal").reverb(0.3, 1)
   , // Guitar 1
   n(`<[7 [4@4 2 -1] 2 1 [0 -1 -3 -1] [0 -3] -2 <[-1 5@3] [5 6@3] [[4 5] 8@3] [[3 4] 3@3]>]!4
       [[4@2 [2 0] 0] [-1 -4] [-3 1 -3 1 -3!10 1 -3] [2 [2 6@3]]]!2
@@ -94,7 +96,7 @@ stack(                                                                          
     .pan(0.515).late(0.0005).orbit(5).gain(0.33).hpf(800).lpf("11500".add(perlin.mul(300))).adsr(0.005, 0.15, 0.8, 0.2), // . mute()
   sound("pink!8").orbit(6).gain(0.08).hpf(8000).pan(sine.range(0.25, 0.75).slow(3)).adsr(0.007, 0.3, 0.0, 0.05) //  .solo(),
   // Master
-).room(wet = 0.10, size = 8, fade = 0.12, lowpass = 12500).seed(timeOfDay.mul(60*60*24))
+).reverb(wet = 0.10, size = 1.2, lowpass = 12500).seed(timeOfDay.mul(60*60*24))
  .compressor(-6, 2, 5, 0.02, 0.05)
 
 
@@ -177,7 +179,7 @@ stack(
     .orbit(0).gain(0.12).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(48), q = sine.range(0.25, 5.0).slow(48).early(12))
   ,
-).delay(wet = 0.2, feedback = 0.5, time = pure(1/8).div(cps)).room(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
+).delay(wet = 0.2, feedback = 0.5, time = pure(1/8).div(cps)).reverb(0.1, 10.0).compressor(-10, 2, 6, 0.01, 0.05)
 
 
 
