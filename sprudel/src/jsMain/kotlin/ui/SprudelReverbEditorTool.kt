@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -98,10 +100,10 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
     // Whole-call mode reads the params from the host call's args; scalar mode reads the single arg.
     private val parsedWet
-        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, REVERB_WET)
 
     private val parsedSize
-        get() = parseNum(call?.args?.getOrNull(1), 1.0)
+        get() = parseNum(call?.args?.getOrNull(1), REVERB_SIZE)
 
     private val parsedLowpass
         get() = parseNumOrNull(call?.args?.getOrNull(2))
@@ -230,7 +232,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
                         domKey("wet")
                         step(0.01)
                         label {
-                            +"Wet (send)"
+                            +"Wet"
                             paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
@@ -239,7 +241,7 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
                             domKey("size")
                             step(0.1)
                             label {
-                                +"Size (0–10)"
+                                +"Size"
                                 paramInfoIcon("size", props.toolCtx, infoPopup)
                             }
                         }

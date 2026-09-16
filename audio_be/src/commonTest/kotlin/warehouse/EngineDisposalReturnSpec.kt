@@ -147,7 +147,7 @@ class EngineDisposalReturnSpec : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song", name = "wet",
                 dsl = MasterDsl.of(
-                    MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.3),
+                    MasterStageDsl.Delay(wet = 0.5, time = 0.3),
                     MasterStageDsl.Reverb(wet = 0.4, size = 5.0),
                 ),
             )

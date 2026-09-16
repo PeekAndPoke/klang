@@ -5,6 +5,10 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -43,12 +47,12 @@ import kotlin.math.exp
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the delay(wet, time, feedback, cap) call (no control for cap yet).
+ * [KlangUiToolEmbeddable] for the delay(wet, time, feedback, cap) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits the wet (send) plus the optional
- *   time/feedback params of the host call and commits the full argument list. Unset optionals
- *   stay omitted (null slots).
+ *   time/feedback/cap params of the host call and commits the full argument list. Unset optionals
+ *   stay omitted (null slots), so the shared defaults apply (`constants/SendEffectDefaults.kt`).
  * - Scalar fallback (embedded / sequence atom): edits a single wet (send) value.
  */
 object SprudelDelayEditorTool : KlangUiToolEmbeddable {
@@ -96,9 +100,9 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
     private fun parseNumOrNull(text: String?): Double? =
         text?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toDoubleOrNull()
 
-    // Whole-call mode reads wet/time/feedback from the host call's args; scalar mode reads the single arg.
+    // Whole-call mode reads wet/time/feedback/cap from the host call's args; scalar mode reads the single arg.
     private val parsedWet
-        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, 0.5)
+        get() = parseNum(call?.args?.getOrNull(0) ?: initialValue, DELAY_WET)
 
     private val parsedTime
         get() = parseNumOrNull(call?.args?.getOrNull(1))
@@ -106,13 +110,17 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
     private val parsedFeedback
         get() = parseNumOrNull(call?.args?.getOrNull(2))
 
+    private val parsedCap
+        get() = parseNumOrNull(call?.args?.getOrNull(3))
+
     private var wet by value(parsedWet)
     private var time by value(parsedTime)
     private var feedback by value(parsedFeedback)
+    private var cap by value(parsedCap)
 
     // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
     // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
-    private val parseable: List<Boolean> = List(3) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
+    private val parseable: List<Boolean> = List(4) { parseNumOrNull(call?.args?.getOrNull(it)) != null }
     private val dirty = mutableSetOf<Int>()
     private var hasCommitted = false
 
@@ -125,7 +133,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
 
     private fun buildValue(): String =
         if (call != null) {
-            "${wet.fmt()}, ${time?.fmt() ?: "-"}, ${feedback?.fmt() ?: "-"}"
+            "${wet.fmt()}, ${time?.fmt() ?: "-"}, ${feedback?.fmt() ?: "-"}, ${cap?.fmt() ?: "-"}"
         } else {
             wet.fmt()
         }
@@ -146,10 +154,11 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
         val c = call
         if (c != null) {
             val texts = c.args.toMutableList()
-            while (texts.size < 3) texts.add(null)
+            while (texts.size < 4) texts.add(null)
             put(texts, 0, wet.fmt())
             put(texts, 1, time?.fmt())
             put(texts, 2, feedback?.fmt())
+            put(texts, 3, cap?.fmt())
             c.onCommitCall(texts)
         } else {
             props.toolCtx.onCommit(wet.fmt())
@@ -189,6 +198,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
         wet = parsedWet
         time = parsedTime
         feedback = parsedFeedback
+        cap = parsedCap
         formCtrl.resetAllFields()
         commitValue()
         resetCounter++
@@ -225,18 +235,19 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
             key = "delay-editor-content-$resetCounter"
 
             ui.form {
-                ui.three.stackable.fields {
+                ui.four.stackable.fields {
                     UiInputField(wet, { wet = it; dirty += 0; liveUpdate() }) {
                         domKey("wet")
                         step(0.01)
                         label {
-                            +"Send"
+                            +"Wet"
                             paramInfoIcon("wet", props.toolCtx, infoPopup)
                         }
                     }
                     if (call != null) {
-                        nullableField("time", "Time (s)", 0.01, time, subField = "time") { time = it; dirty += 1; liveUpdate() }
-                        nullableField("feedback", "Feedback", 0.01, feedback, subField = "feedback") { feedback = it; dirty += 2; liveUpdate() }
+                        nullableField("time", "Time (s)", 0.01, time, seed = DELAY_TIME_SECONDS, subField = "time") { time = it; dirty += 1; liveUpdate() }
+                        nullableField("feedback", "Feedback", 0.01, feedback, seed = DELAY_FEEDBACK, subField = "feedback") { feedback = it; dirty += 2; liveUpdate() }
+                        nullableField("cap", "Cap", 0.01, cap, seed = DELAY_CAP, subField = "cap") { cap = it; dirty += 3; liveUpdate() }
                     }
                 }
             }
@@ -253,6 +264,8 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
         labelText: String,
         stepVal: Double,
         current: Double?,
+        /** What the "+" button fills in: the shared default, the value an unset slot gets in the engine. */
+        seed: Double,
         subField: String? = null,
         onChange: (Double?) -> Unit,
     ) {
@@ -274,7 +287,7 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
                 ui.basic.icon.label {
                     css { cursor = Cursor.pointer }
                     onClick {
-                        if (current != null) onChange(null) else onChange(0.0)
+                        if (current != null) onChange(null) else onChange(seed)
                     }
                     if (current != null) icon.times() else icon.plus()
                 }
@@ -294,8 +307,8 @@ private class SprudelDelayEditorComp(ctx: Ctx<Props>) : Component<SprudelDelayEd
         val drawW = w - padL - padR
         val drawH = h - padT - padB
 
-        val clampedTime = (time ?: 0.25).coerceIn(0.01, 1.0)
-        val clampedFeedback = (feedback ?: 0.5).coerceIn(0.0, 0.99)
+        val clampedTime = (time ?: DELAY_TIME_SECONDS).coerceIn(0.01, 1.0)
+        val clampedFeedback = (feedback ?: DELAY_FEEDBACK).coerceIn(0.0, 0.99)
         val clampedWet = wet.coerceIn(0.0, 1.0)
         val goldHex = laf.gold
 

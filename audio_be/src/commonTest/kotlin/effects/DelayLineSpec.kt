@@ -20,7 +20,7 @@ class DelayLineSpec : StringSpec({
         val delaySeconds = 0.01 // 10ms
         val delaySamples = (delaySeconds * sampleRate).toInt() // 441 samples
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = delaySeconds
+        delay.time = delaySeconds
         delay.feedback = 0.0
 
         // We need enough blocks to cover the delay
@@ -63,7 +63,7 @@ class DelayLineSpec : StringSpec({
         val delaySeconds = 0.01
         val delaySamples = (delaySeconds * sampleRate).toInt()
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = delaySeconds
+        delay.time = delaySeconds
         delay.feedback = 0.5
 
         // Collect peak amplitudes for multiple repeats
@@ -112,7 +112,7 @@ class DelayLineSpec : StringSpec({
         val delaySeconds = 0.01
         val delaySamples = (delaySeconds * sampleRate).toInt()
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = delaySeconds
+        delay.time = delaySeconds
         delay.feedback = 0.0
 
         // Process enough blocks for 3x the delay time
@@ -148,7 +148,7 @@ class DelayLineSpec : StringSpec({
     "safety clamp prevents values exceeding 2.0 with high feedback" {
         val delaySeconds = 0.005
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = delaySeconds
+        delay.time = delaySeconds
         delay.feedback = 1.5 // Unstable feedback — would explode without clamping
 
         val send = StereoBuffer(blockSize)
@@ -174,7 +174,7 @@ class DelayLineSpec : StringSpec({
 
     "hasTail returns true when buffer has content" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = 0.1
+        delay.time = 0.1
         delay.feedback = 0.5
 
         val send = StereoBuffer(blockSize)
@@ -190,7 +190,7 @@ class DelayLineSpec : StringSpec({
 
     "hasTail returns false when buffer is silent" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = 0.1
+        delay.time = 0.1
         delay.feedback = 0.0
 
         // Never send any signal
@@ -199,7 +199,7 @@ class DelayLineSpec : StringSpec({
 
     "very short delay below 1ms works without crash" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = 0.0005 // 0.5ms — flanger range
+        delay.time = 0.0005 // 0.5ms — flanger range
         delay.feedback = 0.3
 
         val send = StereoBuffer(blockSize)
@@ -237,7 +237,7 @@ class DelayLineSpec : StringSpec({
 
     "delay time change is smooth - no crash on parameter change" {
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = 0.1
+        delay.time = 0.1
         delay.feedback = 0.4
 
         val send = StereoBuffer(blockSize)
@@ -254,7 +254,7 @@ class DelayLineSpec : StringSpec({
         }
 
         // Change delay time dramatically
-        delay.delayTimeSeconds = 0.5
+        delay.time = 0.5
 
         repeat(5) {
             send.clear()
@@ -271,7 +271,7 @@ class DelayLineSpec : StringSpec({
         }
 
         // Change to a very short delay
-        delay.delayTimeSeconds = 0.001
+        delay.time = 0.001
 
         repeat(5) {
             send.clear()
@@ -287,7 +287,7 @@ class DelayLineSpec : StringSpec({
 
     "drainSamplesUntilSilent: periods from the measured peak plus one slack period, in samples" {
         val dl = DelayLine(maxDelaySeconds = 10.0, sampleRate = 44100)
-        dl.delayTimeSeconds = 0.05 // 2205 samples, no coercion
+        dl.time = 0.05 // 2205 samples, no coercion
 
         // ceil(ln(1e-5 / 1) / ln(0.5)) = ceil(16.61) = 17 periods to cross the threshold, +1 slack.
         dl.feedback = 0.5
@@ -324,7 +324,7 @@ class DelayLineSpec : StringSpec({
     "tapWindowPeakAbs sees only what the drain tap can still reach" {
         // maxDelaySeconds 0.05 -> ring 2205; delayTime 0.01 -> tap window 441 + 2 samples.
         val dl = DelayLine(maxDelaySeconds = 0.05, sampleRate = 44100)
-        dl.delayTimeSeconds = 0.01
+        dl.time = 0.01
         dl.feedback = 0.0
         dl.tapWindowPeakAbs() shouldBe 0.0
 
@@ -353,7 +353,7 @@ class DelayLineSpec : StringSpec({
         // reachable sample sends configure straight to Off and reset() destroys an echo that
         // was one sample from being emitted.
         val dl = DelayLine(maxDelaySeconds = 0.05, sampleRate = 44100)
-        dl.delayTimeSeconds = 0.01
+        dl.time = 0.01
         dl.feedback = 0.0
 
         // One loud sample at ring position 50 (fb = 0, so every later write is an exact zero).
@@ -396,7 +396,7 @@ class DelayLineSpec : StringSpec({
         // so without the store guard one NaN never scrolls out and every later sample is NaN.
         // `flushState` cannot reach this: the ring is FIR-shaped state, not an IIR carry.
         val delay = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate)
-        delay.delayTimeSeconds = 0.01
+        delay.time = 0.01
         delay.feedback = 0.4
 
         val poison = StereoBuffer(blockSize)

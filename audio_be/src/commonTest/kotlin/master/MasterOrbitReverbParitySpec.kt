@@ -146,13 +146,13 @@ class MasterOrbitReverbParitySpec : StringSpec({
     "the delay keeps its ceiling — there, unlike the reverb, self-oscillation is real" {
         val chain = MasterChain.build(
             dsl = MasterDsl.of(
-                MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.25, feedback = 1.0, cap = 3.0)
+                MasterStageDsl.Delay(wet = 0.5, time = 0.25, feedback = 1.0, cap = 3.0)
             ),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
         )
 
-        chain.delays.firstOrNull().shouldNotBeNull().feedbackCap shouldBe 3.0
+        chain.delays.firstOrNull().shouldNotBeNull().cap shouldBe 3.0
     }
 
     "both buses switch the reverb on at the same authored size" {

@@ -56,7 +56,7 @@ class WireCodecRoundTripSpec : StringSpec({
                 MasterStageDsl.Reverb(wet = 0.4, size = 8.0, lowpass = 9000.0),
                 // ...and the nullable branch: lowpass absent
                 MasterStageDsl.Reverb(wet = 0.4, size = 8.0),
-                MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.375, feedback = 0.45, cap = 3.0),
+                MasterStageDsl.Delay(wet = 0.2, time = 0.375, feedback = 0.45, cap = 3.0),
                 MasterStageDsl.Limiter(
                     thresholdDb = -0.5, ratio = 12.0, kneeDb = 1.0,
                     attackSeconds = 0.002, releaseSeconds = 0.25,

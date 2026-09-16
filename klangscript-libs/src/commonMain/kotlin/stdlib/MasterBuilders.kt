@@ -142,13 +142,13 @@ fun MasterReverbBuilder.lowpass(hz: Double): MasterReverbBuilder = copy(node = n
 /** Builder for a [MasterStageDsl.Delay] stage. Knobs: `wet`, `time`, `feedback`, `cap`. */
 data class MasterDelayBuilder(val node: MasterStageDsl.Delay)
 
-/** How much of the bus is sent into the delay (default 0.25; 0.0 = off). */
+/** How much of the bus is sent into the delay (default 0.25; 0.0 = off). Orbit twin: `delay(wet = ...)`. */
 @KlangScript.Function
 fun MasterDelayBuilder.wet(wet: Double): MasterDelayBuilder = copy(node = node.copy(wet = wet))
 
-/** Delay time in seconds (default 0.25). */
+/** Delay time in seconds (default 0.25). Orbit twin: `delay(time = ...)`. */
 @KlangScript.Function
-fun MasterDelayBuilder.time(seconds: Double): MasterDelayBuilder = copy(node = node.copy(timeSeconds = seconds))
+fun MasterDelayBuilder.time(seconds: Double): MasterDelayBuilder = copy(node = node.copy(time = seconds))
 
 /**
  * Feedback amount (default 0.3). At or above 1.0 the delay recirculates without loss and
@@ -157,6 +157,6 @@ fun MasterDelayBuilder.time(seconds: Double): MasterDelayBuilder = copy(node = n
 @KlangScript.Function
 fun MasterDelayBuilder.feedback(feedback: Double): MasterDelayBuilder = copy(node = node.copy(feedback = feedback))
 
-/** Ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin: `delay(cap = ...)`. */
+/** Level the recirculating signal saturates toward (default 1.0). Orbit twin: `delay(cap = ...)`. */
 @KlangScript.Function
 fun MasterDelayBuilder.cap(cap: Double): MasterDelayBuilder = copy(node = node.copy(cap = cap))

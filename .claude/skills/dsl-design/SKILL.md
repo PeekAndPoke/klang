@@ -124,6 +124,11 @@ the bug.
   name, scale, and availability.
 - Shared conversions live in ONE place (`Reverb.normalizeSize` serves both buses). Never let
   each host convert on its own.
+- **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
+  wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
+  master stage, an orbit voice that leaves a slot unset (`VoiceFactory` fills it) and the editor
+  tools all read the same constant; a non-finite value reads as unset. Never a literal default
+  per host.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
   on the master only because a per-orbit lookahead would shift that orbit late). See
@@ -218,8 +223,7 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 8. No frontend DSP, no cycles over the wire.
 9. Docs that feed the editor popup (KDoc on the door and the builder) updated in the same diff.
 10. Every example in the diff is AUDIBLE, not just compilable: the stage the knob drives is
-    actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a delay needs a time,
-    a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
+    actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
     trigger on the named orbit) and the comment describes what the engine does. Lesson of the
     accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
     queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear.

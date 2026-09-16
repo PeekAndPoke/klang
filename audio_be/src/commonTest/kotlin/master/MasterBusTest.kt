@@ -507,7 +507,7 @@ class MasterBusTest : StringSpec({
             KlangCommLink.Cmd.RegisterMaster(
                 playbackId = "song",
                 name = "echo",
-                dsl = MasterDsl.of(MasterStageDsl.Delay(wet = 0.6, timeSeconds = 0.5, feedback = 0.6)),
+                dsl = MasterDsl.of(MasterStageDsl.Delay(wet = 0.6, time = 0.5, feedback = 0.6)),
             )
         )
         val blip = ScheduledVoice(
@@ -600,7 +600,7 @@ class MasterBusTest : StringSpec({
                 dsl = MasterDsl.of(
                     MasterStageDsl.Gain(gain = 1.0),                              // unity
                     MasterStageDsl.Reverb(wet = 0.0, size = 9.0),             // no send
-                    MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.0),           // no time
+                    MasterStageDsl.Delay(wet = 0.5, time = 0.0),           // no time
                 ),
             )
         )
@@ -675,7 +675,7 @@ class MasterBusTest : StringSpec({
                 name = "runaway",
                 // feedback 1.0 recirculates without loss — the ring never empties, so an unbounded
                 // tail hold would keep a stopped playback rendering and leak an engine per stop.
-                dsl = MasterDsl.of(MasterStageDsl.Delay(wet = 0.6, timeSeconds = 0.25, feedback = 1.0)),
+                dsl = MasterDsl.of(MasterStageDsl.Delay(wet = 0.6, time = 0.25, feedback = 1.0)),
             )
         )
         val blip = ScheduledVoice(

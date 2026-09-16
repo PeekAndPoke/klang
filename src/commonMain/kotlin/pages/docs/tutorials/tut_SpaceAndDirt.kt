@@ -12,16 +12,15 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * "how big the room is" and pointed at a Sound-track lesson still to come. This is it,
  * and it opens under exactly those two intuitions.
  *
- * Engine truth (verified in audio_be, and it is what gave the lesson its spine):
+ * Engine truth (verified in audio_be):
  *
- * - BOTH space effects are SENDS WITH A GATE, and the gate is the second number, not the
- *   send. The reverb is inactive unless the normalized `size >= 0.01`
- *   (KatalystReverbEffect.MIN_ACTIVE_SIZE), and size defaults to 0.0; the delay
- *   is Off unless `time >= 0.01` (KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS), and the
- *   time defaults to 0.0. So a bare `reverb(0.4)` and a bare `delay(0.4)` are both
- *   SILENT. §1 introduces the pair and §2 proves it by ear.
- *   Two `KlangScript(Playable)` KDoc examples were silent for this reason and were fixed
- *   at source in the same change (lang_effects_reverb.kt, lang_effects_delay.kt).
+ * - An unset slot of either space effect takes the shared musical default
+ *   (`audio_bridge` `constants/SendEffectDefaults.kt`, maintainer 2026-09-16): reverb wet 0.25
+ *   and size 5; delay wet 0.25, time 0.25 s, feedback 0.3. So a bare `reverb(0.4)` and a bare
+ *   `delay(0.4)` both sound. §1 introduces wet and size, §2 lets the reader hear the default
+ *   size take over (4 deleted, 5 heard), §3's `time = 0.25` equals the default, which at this
+ *   lesson's 30 RPM is one step. (Until 2026-09-16 an unset size or time was a silent gate and
+ *   §2 taught that trap; it no longer exists.)
  * - `reverb(size)` scale is ~0..10 (3 ≈ 1 s tail, 5 ≈ 1.4 s, 10 ≈ 12.5 s). Prose stays at
  *   "bigger room", never at seconds, per the flux ruling.
  * - `onepole` is a one-pole lowpass in Hz, deliberately NOT `lpf` (which is the resonant
@@ -90,15 +89,15 @@ val spaceAndDirtTutorial = Tutorial(
             ),
         ),
         TutorialSection(
-            heading = "Why it takes two numbers",
+            heading = "What you leave out",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    That pairing is not decoration, and it is the one thing in this lesson worth memorizing. A send says how much sound to hand over. It does not say what receives it, and with no room to receive it there is nowhere for the sound to go.
+                    You do not have to give every number. Each setting you leave out takes a default that already sounds like something: a `reverb()` without `size` puts the sound in a medium room, size 5, and one without `wet` sends a quarter of it in. You only have to write the numbers you want to be different.
 
                     **Try it:** delete `.reverb(size = 4)` from the line below and press **Update**. Then put it back.
 
-                    **Listen for:** total silence from the room. Not a smaller tail, no tail: the send is turned up and there is nothing on the other end of it. Every send in Klang works this way, and the next section is the same trap wearing different clothes.
+                    **Listen for:** a slightly longer tail, not silence. With `size` gone the room falls back to its default, 5, one size bigger than the 4 you took away. The delay in the next section works the same way.
                     """.trimIndent(),
                 ),
                 Block.Code(
@@ -106,7 +105,7 @@ val spaceAndDirtTutorial = Tutorial(
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")        // the same melody all lesson
                       .adsr(0.001, 0.3, 0, 0.1)                        // the pluck: clean ends, so tails show
                       .reverb(0.4)                                     // how much goes in
-                      .reverb(size = 4)                                // what it goes into: delete this and the room disappears
+                      .reverb(size = 4)                                // how big the room is: delete this and the default takes over
                       .gain(0.5)                                       // synths sit at 0.5
                     """.trimIndent(),
                 ),
@@ -131,7 +130,7 @@ val spaceAndDirtTutorial = Tutorial(
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the same melody
                       .adsr(0.001, 0.3, 0, 0.1)                           // the pluck shape
                       .delay(0.4)                                         // how much goes in, exactly like reverb
-                      .delay(time = 0.25)                                 // and what it goes into: one step, at 30 RPM
+                      .delay(time = 0.25)                                 // how long until the echo: one step, at 30 RPM
                       .delay(feedback = 0.4)                              // how much of each echo echoes again
                       .gain(0.5)                                          // synths sit at 0.5
                     """.trimIndent(),
@@ -223,8 +222,7 @@ val spaceAndDirtTutorial = Tutorial(
                     note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw")           // the melody, unchanged all course
                       .adsr(0.001, 0.3, 0, 0.1)                           // the pluck shape
                       .reverb(wet = 0.3, size = 3)                        // a small room: how much, and what into
-                      .delay(wet = 0.25, time = 0.25)                     // an echo one step behind
-                      .delay(feedback = 0.3)                              // a couple of repeats, no more
+                      .delay(wet = 0.25, time = 0.25, feedback = 0.3)     // an echo one step behind, a couple of repeats
                       .distort(0.4)                                       // driven, but not shouting
                       .onepole(3500)                                      // the glare taken off the drive
                       .gain(0.5)                                          // how hard it is played

@@ -39,6 +39,9 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its
  * own delay by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
+ * A slot you never set takes the same default as on the master delay: wet 0.25, time 0.25 s,
+ * feedback 0.3, cap 1. So a bare `delay(0.4)` already echoes a quarter second later.
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`delay(time = mul(2))`), and the numeric slots read back as `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
@@ -55,10 +58,10 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * s("sd sd").delay("0.1 0.4", 0.25).reverb(wet = delay.wet, size = 4)       // as much reverb as delay
  * ```
  *
- * @param wet Send into the orbit delay, 0 to 1. Per voice.
- * @param time Delay time in seconds. Orbit-wide.
- * @param feedback Feedback, 0 to 1. Above 1 builds up. Orbit-wide.
- * @param cap Ceiling the repeats may not exceed. Orbit-wide.
+ * @param wet Send into the orbit delay, 0 to 1, default 0.25. Per voice.
+ * @param time Delay time in seconds, default 0.25. Orbit-wide.
+ * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
+ * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
  * @param-tool wet SprudelDelayEditor, SprudelDelaySequenceEditor
  * @param-tool time SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
  * @param-tool feedback SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor

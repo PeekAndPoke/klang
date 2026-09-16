@@ -37,7 +37,7 @@ class ClosedFormTailSpec : StringSpec({
 
     fun delayEffect(time: Double, feedback: Double) =
         KatalystDelayEffect(delayLine = DelayLine(maxDelaySeconds = 2.0, sampleRate = sampleRate), blockFrames = blockFrames)
-            .apply { configure(timeSeconds = time, feedback = feedback, cap = 1.0) }
+            .apply { configure(time = time, feedback = feedback, cap = 1.0) }
 
     fun KatalystDelayEffect.feed(ctx: KatalystContext, level: Double) {
         ctx.delaySendBuffer.left.fill(level)
@@ -105,7 +105,7 @@ class ClosedFormTailSpec : StringSpec({
         val ctx = ctx()
         repeat(10) { fast.feed(ctx, 0.5) }
         fast.feed(ctx, 0.0) // decaying at fb 0.1
-        fast.configure(timeSeconds = 0.05, feedback = 0.9, cap = 1.0) // the owner turns it up
+        fast.configure(time = 0.05, feedback = 0.9, cap = 1.0) // the owner turns it up
         var blocks = 0
         while (fast.hasTail()) {
             fast.feed(ctx, 0.0)
@@ -124,7 +124,7 @@ class ClosedFormTailSpec : StringSpec({
         // 300 blocks: 38 400 samples into the 1 s window (no close yet). Before the seal, the
         // shrink closed 17 new windows at once and decayed the ceiling to ~1e-17.
         repeat(300) { fx.feed(ctx, 0.5) }
-        fx.configure(timeSeconds = 0.05, feedback = 0.1, cap = 1.0)
+        fx.configure(time = 0.05, feedback = 0.1, cap = 1.0)
         fx.feed(ctx, 0.0)
 
         (fx.delayLine!!.tapWindowPeakAbs() > TailCeiling.SILENCE) shouldBe true
@@ -137,16 +137,16 @@ class ClosedFormTailSpec : StringSpec({
         repeat(10) { fx.feed(ctx, 0.5) }
         repeat(3000) { fx.feed(ctx, 0.0) } // 8.7 s of silence
         fx.hasTail() shouldBe true
-        fx.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0) // off → Draining, infinite → stays
+        fx.configure(time = 0.0, feedback = 0.0, cap = 1.0) // off → Draining, infinite → stays
         fx.hasTail() shouldBe true
     }
 
     "the ceiling never reads the ring: a ring far bigger than the delay decays exactly like a small one" {
         // No timing assertion (not a benchmark); the structural fact: nothing about the ring's
         // size enters the answer — only the input, the period and the feedback.
-        val huge = DelayLine(StereoBuffer(4 * sampleRate), sampleRate, delayTimeSeconds = 0.05, feedback = 0.5)
+        val huge = DelayLine(StereoBuffer(4 * sampleRate), sampleRate, time = 0.05, feedback = 0.5)
         val fx = KatalystDelayEffect(delayLine = huge, blockFrames = blockFrames)
-            .apply { configure(timeSeconds = 0.05, feedback = 0.5, cap = 1.0) }
+            .apply { configure(time = 0.05, feedback = 0.5, cap = 1.0) }
         val ctx = ctx()
         repeat(10) { fx.feed(ctx, 0.5) }
         fx.feed(ctx, 0.0)
@@ -198,7 +198,7 @@ class ClosedFormTailSpec : StringSpec({
 
     "a master chain: no tail before input, tail while fed and through the echoes, then provably none" {
         val chain = MasterChain.build(
-            MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.05, feedback = 0.5), MasterStageDsl.Reverb(wet = 0.4, size = 5.0)),
+            MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, time = 0.05, feedback = 0.5), MasterStageDsl.Reverb(wet = 0.4, size = 5.0)),
             sampleRate, blockFrames,
         )
         chain.hasActiveTail() shouldBe false

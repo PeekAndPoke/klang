@@ -49,12 +49,12 @@ class MasterRingShelfSpec : StringSpec({
     fun shelf(alloc: Recording = Recording()) = SizedBuffers.forRings(sampleRate, allocate = alloc.allocate) to alloc
 
     fun delayDsl(time: Double, feedback: Double = 0.3) =
-        MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, timeSeconds = time, feedback = feedback))
+        MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, time = time, feedback = feedback))
 
     /** What the ORBIT delay rents for [time] — the reference the master must match. */
     fun orbitRingFrames(time: Double, rings: SizedBuffers): Int {
         val fx = KatalystDelayEffect(rings = rings, sampleRate = sampleRate, blockFrames = blockFrames)
-        fx.configure(timeSeconds = time, feedback = 0.0, cap = 1.0)
+        fx.configure(time = time, feedback = 0.0, cap = 1.0)
         return fx.delayLine!!.capacityFrames
     }
 
@@ -92,7 +92,7 @@ class MasterRingShelfSpec : StringSpec({
         val (rings, _) = shelf()
         val chain = MasterChain.build(delayDsl(20.0), sampleRate, blockFrames, rings)
 
-        chain.delays[0].delayTimeSeconds shouldBe 20.0
+        chain.delays[0].time shouldBe 20.0
         chain.delays[0].effectiveDelaySeconds shouldBe 20.0
         (chain.delays[0].capacityFrames >= ceil(20.0 * sampleRate).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES) shouldBe true
     }
@@ -107,7 +107,7 @@ class MasterRingShelfSpec : StringSpec({
         val feedback = 0.6
         val (rings, _) = shelf()
         val chain = MasterChain.build(delayDsl(time, feedback), sampleRate, blockFrames, rings)
-        val old = DelayLine(maxDelaySeconds = time + 0.05, sampleRate = sampleRate, delayTimeSeconds = time, feedback = feedback)
+        val old = DelayLine(maxDelaySeconds = time + 0.05, sampleRate = sampleRate, time = time, feedback = feedback)
 
         val busNew = StereoBuffer(blockFrames)
         val busOld = StereoBuffer(blockFrames)
@@ -138,7 +138,7 @@ class MasterRingShelfSpec : StringSpec({
         val alloc = Recording(failing = true)
         val (rings, _) = shelf(alloc)
         val chain = MasterChain.build(
-            MasterDsl.of(MasterStageDsl.Gain(gain = 2.0), MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.3)),
+            MasterDsl.of(MasterStageDsl.Gain(gain = 2.0), MasterStageDsl.Delay(wet = 0.5, time = 0.3)),
             sampleRate, blockFrames, rings,
         )
 
@@ -188,8 +188,8 @@ class MasterRingShelfSpec : StringSpec({
         val (rings, _) = shelf()
         val chain = MasterChain.build(
             MasterDsl.of(
-                MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.3),
-                MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.7),
+                MasterStageDsl.Delay(wet = 0.5, time = 0.3),
+                MasterStageDsl.Delay(wet = 0.5, time = 0.7),
             ),
             sampleRate, blockFrames, rings,
         )

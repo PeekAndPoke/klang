@@ -64,7 +64,7 @@ class KlangScriptMasterBuilderSpec : StringSpec({
         ks("Master(m => m.reverb(r => r.wet(0.3).size(8).lowpass(6000)).delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0)))") shouldBe
                 MasterDsl.of(
                     MasterStageDsl.Reverb(wet = 0.3, size = 8.0, lowpass = 6000.0),
-                    MasterStageDsl.Delay(wet = 0.2, timeSeconds = 0.5, feedback = 1.0, cap = 3.0),
+                    MasterStageDsl.Delay(wet = 0.2, time = 0.5, feedback = 1.0, cap = 3.0),
                 )
     }
 

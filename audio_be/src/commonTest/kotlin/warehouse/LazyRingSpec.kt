@@ -110,12 +110,12 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 0.3, feedback = 0.4, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.4, cap = 1.0)
 
         // 0.3 s + the 64-frame margin fits class 0 (0.5 s + margin = 22 114 frames).
         alloc.asked shouldBe listOf(base)
         fx.delayLine.shouldNotBeNull().capacityFrames shouldBe base
-        fx.delayLine!!.delayTimeSeconds shouldBe 0.3
+        fx.delayLine!!.time shouldBe 0.3
     }
 
     "exactly 0.5 s fits class 0, and one frame past it takes class 1 — the margin is inside the class" {
@@ -124,11 +124,11 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 0.5, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.5, feedback = 0.0, cap = 1.0)
         alloc.asked shouldBe listOf(base)
 
         val second = effect(rings)
-        second.configure(timeSeconds = 0.5 + 1.0 / sampleRate, feedback = 0.0, cap = 1.0)
+        second.configure(time = 0.5 + 1.0 / sampleRate, feedback = 0.0, cap = 1.0)
         alloc.asked shouldBe listOf(base, 2 * base)
     }
 
@@ -136,7 +136,7 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         alloc.asked shouldBe emptyList()
         fx.delayLine.shouldBeNull()
@@ -147,10 +147,10 @@ class LazyRingSpec : StringSpec({
     "a shorter time keeps the ring it has — never shrink" {
         val (rings, alloc) = shelf()
         val fx = effect(rings)
-        fx.configure(timeSeconds = 0.9, feedback = 0.0, cap = 1.0) // class 1 (1 s)
+        fx.configure(time = 0.9, feedback = 0.0, cap = 1.0) // class 1 (1 s)
         val ring = fx.delayLine.shouldNotBeNull()
 
-        fx.configure(timeSeconds = 0.1, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.1, feedback = 0.0, cap = 1.0)
 
         fx.delayLine shouldBeSameInstanceAs ring
         alloc.asked.size shouldBe 1
@@ -160,12 +160,12 @@ class LazyRingSpec : StringSpec({
     "off then on again re-uses the same ring — reset keeps it, eviction is what returns it" {
         val (rings, alloc) = shelf()
         val fx = effect(rings)
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
         val ring = fx.delayLine.shouldNotBeNull()
 
-        fx.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0) // off
+        fx.configure(time = 0.0, feedback = 0.0, cap = 1.0) // off
         fx.reset()
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0) // on
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0) // on
 
         fx.delayLine shouldBeSameInstanceAs ring
         alloc.asked.size shouldBe 1
@@ -176,10 +176,10 @@ class LazyRingSpec : StringSpec({
     "a longer time past the class rents the next class and returns the old ring to the shelf" {
         val (rings, alloc) = shelf()
         val fx = effect(rings)
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
         val small = fx.delayLine.shouldNotBeNull()
 
-        fx.configure(timeSeconds = 1.5, feedback = 0.0, cap = 1.0) // needs class 2 (2 s)
+        fx.configure(time = 1.5, feedback = 0.0, cap = 1.0) // needs class 2 (2 s)
 
         val big = fx.delayLine.shouldNotBeNull()
         big shouldNotBeSameInstanceAs small
@@ -194,7 +194,7 @@ class LazyRingSpec : StringSpec({
         val (rings, _) = shelf()
         val fx = effect(rings)
         val c = ctx()
-        fx.configure(timeSeconds = 0.05, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.05, feedback = 0.0, cap = 1.0)
 
         c.delaySendBuffer.left.fill(0.5)
         repeat(20) { fx.process(c) }
@@ -204,13 +204,13 @@ class LazyRingSpec : StringSpec({
         val tailBefore = c.mixBuffer.left.maxOf { abs(it) }
         tailBefore shouldBeGreaterThan 1e-3
 
-        fx.configure(timeSeconds = 0.06, feedback = 0.0, cap = 1.0) // still class 0 — no grow yet
-        fx.configure(timeSeconds = 1.5, feedback = 0.0, cap = 1.0)  // grow to class 2
+        fx.configure(time = 0.06, feedback = 0.0, cap = 1.0) // still class 0 — no grow yet
+        fx.configure(time = 1.5, feedback = 0.0, cap = 1.0)  // grow to class 2
 
         // The new tap reaches 1.5 s back, past everything the old ring recorded, so the FIRST block
         // after the grow reads the honest zeros of never-recorded history. What must survive is
         // the history itself: shorten the time back into the recorded span and the tail is there.
-        fx.configure(timeSeconds = 0.05, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.05, feedback = 0.0, cap = 1.0)
         c.mixBuffer.clear()
         fx.process(c)
         val tailAfter = c.mixBuffer.left.maxOf { abs(it) }
@@ -240,13 +240,13 @@ class LazyRingSpec : StringSpec({
 
         val cg = ctx()
         val cb = ctx()
-        grown.configure(timeSeconds = 0.05, feedback = 0.6, cap = 1.0)
-        big.configure(timeSeconds = 0.05, feedback = 0.6, cap = 1.0)
+        grown.configure(time = 0.05, feedback = 0.6, cap = 1.0)
+        big.configure(time = 0.05, feedback = 0.6, cap = 1.0)
         repeat(30) { block -> step(grown, cg, block); step(big, cb, block) }
 
         // The grow: same instant, same new time, on both. Only one of them changes rings.
-        grown.configure(timeSeconds = 0.9, feedback = 0.6, cap = 1.0) // class 1: this is the grow
-        big.configure(timeSeconds = 0.9, feedback = 0.6, cap = 1.0)
+        grown.configure(time = 0.9, feedback = 0.6, cap = 1.0) // class 1: this is the grow
+        big.configure(time = 0.9, feedback = 0.6, cap = 1.0)
         grown.delayLine.shouldNotBeNull().capacityFrames shouldBe 2 * base // it did grow
 
         // Then shorten the tap back INSIDE the old ring's span, on both. This is the part that
@@ -255,8 +255,8 @@ class LazyRingSpec : StringSpec({
         // zeros to zeros for 270 blocks and could not tell a migrated ring from an empty one (two
         // mutations survived it). At 0.06 s the tap reads the history itself, which exists in
         // `big` because it recorded it and in `grown` only if the migration carried it.
-        grown.configure(timeSeconds = 0.06, feedback = 0.6, cap = 1.0)
-        big.configure(timeSeconds = 0.06, feedback = 0.6, cap = 1.0)
+        grown.configure(time = 0.06, feedback = 0.6, cap = 1.0)
+        big.configure(time = 0.06, feedback = 0.6, cap = 1.0)
 
         var readSomething = false
         for (block in 30 until 300) {
@@ -282,7 +282,7 @@ class LazyRingSpec : StringSpec({
         val fx = effect(rings)
         val c = ctx()
 
-        fx.configure(timeSeconds = 0.3, feedback = 0.4, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.4, cap = 1.0)
 
         fx.delayLine.shouldBeNull()
         fx.deniedRents shouldBe 1
@@ -297,17 +297,17 @@ class LazyRingSpec : StringSpec({
         val alloc = Recording()
         val (rings, _) = shelf(alloc)
         val fx = effect(rings)
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
         val ring = fx.delayLine.shouldNotBeNull()
         alloc.failing = true
 
-        fx.configure(timeSeconds = 5.0, feedback = 0.0, cap = 1.0) // needs 8 s; refused
+        fx.configure(time = 5.0, feedback = 0.0, cap = 1.0) // needs 8 s; refused
 
         fx.delayLine shouldBeSameInstanceAs ring
         fx.deniedRents shouldBe 1
         // DelayLine's own physical bound is the clamp: the REQUESTED time is kept (5.0, so the
         // frontend can show what was asked), the EFFECTIVE time cannot exceed the ring.
-        ring.delayTimeSeconds shouldBe 5.0
+        ring.time shouldBe 5.0
         ring.effectiveDelaySeconds shouldBeLessThan 5.0
         (ring.effectiveDelaySeconds * sampleRate <= ring.capacityFrames) shouldBe true
     }
@@ -320,7 +320,7 @@ class LazyRingSpec : StringSpec({
         val (rings, _) = shelf(alloc)
         val fx = effect(rings)
 
-        repeat(100) { fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0) } // 100 blocks
+        repeat(100) { fx.configure(time = 0.3, feedback = 0.0, cap = 1.0) } // 100 blocks
 
         alloc.asked.size shouldBe 1 // asked ONCE
         fx.deniedRents shouldBe 1
@@ -329,14 +329,14 @@ class LazyRingSpec : StringSpec({
         // The latch is keyed on the CLASS: a shorter time inside the same class is the same
         // allocation, and must not slip past into a retry that is certain to fail (round 2).
         alloc.asked.clear()
-        fx.configure(timeSeconds = 0.1, feedback = 0.0, cap = 1.0) // class 0 again: still latched
+        fx.configure(time = 0.1, feedback = 0.0, cap = 1.0) // class 0 again: still latched
         alloc.asked shouldBe emptyList()
         fx.deniedRents shouldBe 1
 
         // reset() clears the latch — a new owner life starts clean.
         alloc.failing = false
         fx.reset()
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
         fx.delayLine.shouldNotBeNull()
     }
 
@@ -348,7 +348,7 @@ class LazyRingSpec : StringSpec({
         val (rings, _) = shelf(alloc)
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
         fx.delayLine.shouldBeNull()
         fx.deniedRents shouldBe 1
 
@@ -359,7 +359,7 @@ class LazyRingSpec : StringSpec({
         alloc.failing = true
         alloc.asked.clear()
 
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
 
         fx.delayLine.shouldNotBeNull().ring shouldBeSameInstanceAs returned
         alloc.asked shouldBe emptyList() // a shelf hit, no allocation attempted
@@ -375,11 +375,11 @@ class LazyRingSpec : StringSpec({
         val (rings, _) = shelf(alloc)
         val fx = effect(rings)
 
-        fx.configure(timeSeconds = 0.7, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.7, feedback = 0.0, cap = 1.0)
         alloc.asked shouldBe listOf(2 * base)
 
         alloc.failing = false
-        fx.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        fx.configure(time = 0.3, feedback = 0.0, cap = 1.0)
 
         alloc.asked shouldBe listOf(2 * base, base)
         fx.delayLine.shouldNotBeNull().capacityFrames shouldBe base
@@ -396,13 +396,13 @@ class LazyRingSpec : StringSpec({
             val (rings, _) = shelf(alloc)
             val fx = effect(rings)
 
-            fx.configure(timeSeconds = hopeless, feedback = 0.0, cap = 1.0)
+            fx.configure(time = hopeless, feedback = 0.0, cap = 1.0)
 
             withClue("time = $hopeless") {
-                // NaN is not >= MIN_ACTIVE: it is the OFF branch and asks for nothing, as before.
-                // The other two ask for Int.MAX_VALUE, which the recording allocator (like
-                // production's allocateOrNull) cannot serve.
-                alloc.asked shouldBe if (hopeless.isNaN()) emptyList() else listOf(Int.MAX_VALUE)
+                // A non-finite time is the OFF branch (2026-09-16: never the previous owner's
+                // time) and asks for nothing. The finite one asks for Int.MAX_VALUE, which the
+                // recording allocator (like production's allocateOrNull) cannot serve.
+                alloc.asked shouldBe if (hopeless.isFinite()) listOf(Int.MAX_VALUE) else emptyList()
                 fx.delayLine.shouldBeNull()
             }
         }
@@ -418,7 +418,7 @@ class LazyRingSpec : StringSpec({
         alloc.failing = true
 
         val second = effect(rings)
-        second.configure(timeSeconds = 0.3, feedback = 0.0, cap = 1.0)
+        second.configure(time = 0.3, feedback = 0.0, cap = 1.0)
 
         second.delayLine.shouldNotBeNull()
         second.deniedRents shouldBe 0

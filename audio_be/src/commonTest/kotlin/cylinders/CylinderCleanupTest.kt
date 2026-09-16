@@ -236,7 +236,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.delay.delayLine!!.hasTail(0.0) shouldBe false
         // Factory params too, not just the ring: a core-only reset would leave the dead owner's
         // time for the next life's first non-finite param to inherit (round-2 retrofit).
-        cylinder.delay.delayLine!!.delayTimeSeconds shouldBe 0.0
+        cylinder.delay.delayLine!!.time shouldBe 0.0
     }
 
     "an inaudibly-charged reverb network is cleared LITERALLY on deactivation" {

@@ -29,6 +29,12 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -153,20 +159,36 @@ class VoiceFactory(
             null
         }
 
-        // Delay
-        val delay = Voice.Delay(
-            amount = data.delay ?: 0.0,
-            time = data.delayTime ?: 0.0,
-            feedback = data.delayFeedback ?: 0.0,
-            cap = data.delayCap ?: 1.0,
-        )
+        // Delay and reverb. A voice that touches an effect (sets any of its slots) gets the shared
+        // defaults for every slot it left unset, the same ones the master stages use
+        // (constants/SendEffectDefaults.kt); a non-finite slot reads as unset. A voice that does not
+        // touch an effect sends nothing and configures nothing: otherwise every voice would feed
+        // every orbit's delay and reverb.
+        val delayTouched = data.delay != null || data.delayTime != null ||
+                data.delayFeedback != null || data.delayCap != null
 
-        // Reverb
-        val reverb = Voice.Reverb(
-            amount = data.reverb ?: 0.0,
-            size = Reverb.normalizeSize(data.reverbSize ?: 0.0),
-            lowpass = data.reverbLowpass,
-        )
+        val delay = if (delayTouched) {
+            Voice.Delay(
+                amount = data.delay.orDefault(DELAY_WET),
+                time = data.delayTime.orDefault(DELAY_TIME_SECONDS),
+                feedback = data.delayFeedback.orDefault(DELAY_FEEDBACK),
+                cap = data.delayCap.orDefault(DELAY_CAP),
+            )
+        } else {
+            Voice.Delay(amount = 0.0, time = 0.0, feedback = 0.0, cap = DELAY_CAP)
+        }
+
+        val reverbTouched = data.reverb != null || data.reverbSize != null || data.reverbLowpass != null
+
+        val reverb = if (reverbTouched) {
+            Voice.Reverb(
+                amount = data.reverb.orDefault(REVERB_WET),
+                size = Reverb.normalizeSize(data.reverbSize.orDefault(REVERB_SIZE)),
+                lowpass = data.reverbLowpass,
+            )
+        } else {
+            Voice.Reverb(amount = 0.0, size = 0.0)
+        }
 
         // Phaser
         val phaser = Voice.Phaser(
@@ -423,6 +445,10 @@ class VoiceFactory(
                 error("Body/Formant are orbit-level resonators, not per-voice filters")
         }
     }
+
+    /** A send-effect slot: its value when set and finite, otherwise the shared [default]. */
+    private fun Double?.orDefault(default: Double): Double =
+        if (this != null && this.isFinite()) this else default
 
     /**
      * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`

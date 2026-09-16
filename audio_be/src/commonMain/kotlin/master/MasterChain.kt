@@ -16,6 +16,12 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import kotlin.math.ceil
 
 /**
@@ -242,7 +248,9 @@ internal class MasterChain private constructor(
         }
 
         /**
-         * Finite-guards a user-supplied parameter, falling back to [fallback].
+         * Finite-guards a user-supplied parameter, falling back to [fallback]. For the send effects
+         * the fallback is the shared default (`constants/SendEffectDefaults.kt`): a non-finite value
+         * reads as unset, the same meaning `VoiceFactory` gives it on an orbit.
          *
          * NOT a magnitude clamp — the engine is raw, so any finite value passes through untouched.
          * Non-finite input, however, is written into feedback state that has no reset path on the
@@ -298,13 +306,11 @@ internal class MasterChain private constructor(
          * engine).
          */
         private fun buildReverb(stage: MasterStageDsl.Reverb, blockFrames: Int, units: ReverbUnits): BuiltReverb? {
-            val wet = finite(stage.wet, 0.0)
+            val wet = finite(stage.wet, REVERB_WET)
             // The authored value is on the ~0..10 scale; ONE shared conversion for both buses. The
             // fallback must be the *authored* default, not the normalized one — a 0.5 here would
-            // normalize to 0.05, fall under MIN_TIME_FX and silently delete the stage.
-            val size = Reverb.normalizeSize(
-                finite(stage.size, MasterStageDsl.Reverb.DEFAULT_SIZE)
-            )
+            // normalize to 0.05 and silently build a tiny room instead of the default one.
+            val size = Reverb.normalizeSize(finite(stage.size, REVERB_SIZE))
 
             if (wet <= MIN_WET || size < MIN_TIME_FX) {
                 return null
@@ -357,8 +363,8 @@ internal class MasterChain private constructor(
             blockFrames: Int,
             rings: SizedBuffers,
         ): BuiltDelay? {
-            val wet = finite(stage.wet, 0.0)
-            val time = finite(stage.timeSeconds, 0.25)
+            val wet = finite(stage.wet, DELAY_WET)
+            val time = finite(stage.time, DELAY_TIME_SECONDS)
 
             if (wet <= MIN_WET || time < MIN_TIME_FX) {
                 return null
@@ -375,11 +381,11 @@ internal class MasterChain private constructor(
             val delayLine = DelayLine(
                 ring = ring,
                 sampleRate = sampleRate,
-                delayTimeSeconds = time,
+                time = time,
                 // A property initializer bypasses the class's own non-finite setter guard.
-                feedback = finite(stage.feedback, 0.0),
+                feedback = finite(stage.feedback, DELAY_FEEDBACK),
             ).also {
-                it.feedbackCap = finite(stage.cap, 1.0)
+                it.cap = finite(stage.cap, DELAY_CAP)
             }
             val send = StereoBuffer(blockFrames)
             val tail = TailCeiling()

@@ -50,9 +50,10 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its own
  * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
  *
- * A bare `reverb(0.4)` is silent. The reverb only runs with a room to run in, so pair the send with
- * `size`: 3 is roughly 1 s of tail, 5 roughly 1.4 s, 10 roughly 12.5 s, the longest there is.
- * `lowpass` darkens the tail: the lower the cutoff, the duller the room.
+ * A slot you never set takes the same default as on the master reverb: wet 0.25, size 5, no
+ * lowpass. So a bare `reverb(0.4)` already plays in a medium room. `size` sets the tail: 3 is
+ * roughly 1 s, 5 roughly 1.4 s, 10 roughly 12.5 s, the longest there is. `lowpass` darkens the
+ * tail: the lower the cutoff, the duller the room.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`reverb(size = mul(2))`), and the numeric slots read back as `reverb.wet`, `reverb.size`, `reverb.lowpass`.
@@ -74,9 +75,9 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * s("bd sd").reverb("0.1 0.5", 4).delay(wet = reverb.wet, time = 0.25)       // as much delay as reverb
  * ```
  *
- * @param wet Send into the orbit reverb, 0 to 1. Per voice.
- * @param size Tail length, about 0 to 10; above 10 is bounded at 10. Orbit-wide.
- * @param lowpass Lowpass on the tail, Hz. Lower is darker. Orbit-wide.
+ * @param wet Send into the orbit reverb, 0 to 1, default 0.25. Per voice.
+ * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
+ * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
  * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param-tool size SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
  *

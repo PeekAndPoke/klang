@@ -391,7 +391,7 @@ export shaker_arrange = x => x.orbit(9).late(berlin.range(0.0010, 0.0020).mul(dr
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
-export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb("0.1")
+export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb(wet = "0.1", size = 0)
 export countin_arrange = x => x.orbit(7).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------

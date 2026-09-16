@@ -36,7 +36,7 @@ class DelayLineMigrationSpec : StringSpec({
      * zeros-vs-zeros in a new costume; the positive control below now pins that samples differ.
      */
     fun rampedLine(size: Int, frames: Int): DelayLine {
-        val line = DelayLine(StereoBuffer(size), sampleRate, delayTimeSeconds = 0.001, feedback = 0.0)
+        val line = DelayLine(StereoBuffer(size), sampleRate, time = 0.001, feedback = 0.0)
         val input = StereoBuffer(1)
         val output = StereoBuffer(1)
         for (t in 0 until frames) {

@@ -35,7 +35,7 @@ class MasterChainSpec : StringSpec({
         val chain = build(
             MasterStageDsl.Gain(gain = 1.0),                        // unity — nothing to do
             MasterStageDsl.Reverb(wet = 0.0, size = 9.0),       // nothing sent into it
-            MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.0),     // no delay time
+            MasterStageDsl.Delay(wet = 0.5, time = 0.0),     // no delay time
         )
 
         // Nothing survives, so the engine keeps its zero-copy fast path and the chain can never
@@ -69,7 +69,7 @@ class MasterChainSpec : StringSpec({
         // ring → `coerceIn(min > max)` throwing inside the render callback, which kills the worklet.
         val chain = build(
             MasterStageDsl.Gain(gain = Double.NaN),
-            MasterStageDsl.Delay(wet = 0.5, timeSeconds = Double.NaN, feedback = Double.NaN),
+            MasterStageDsl.Delay(wet = 0.5, time = Double.NaN, feedback = Double.NaN),
             MasterStageDsl.Reverb(wet = Double.NaN, size = Double.POSITIVE_INFINITY),
         )
 
@@ -147,8 +147,8 @@ class MasterChainSpec : StringSpec({
 
     "the delay feedback ceiling reaches the DSP" {
         build(
-            MasterStageDsl.Delay(wet = 0.5, timeSeconds = 0.25, feedback = 1.0, cap = 3.0)
-        ).delays[0].feedbackCap shouldBe 3.0
+            MasterStageDsl.Delay(wet = 0.5, time = 0.25, feedback = 1.0, cap = 3.0)
+        ).delays[0].cap shouldBe 3.0
     }
 
     "an authored lookahead reaches the Compressor — the wire-to-DSP hop, asserted" {

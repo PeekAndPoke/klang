@@ -174,7 +174,7 @@ class Cylinder(
         // Delay — routed through the effect's lifecycle: an off-config drains the tail out on its
         // own timeline instead of freezing the ring (see KatalystDelayEffect).
         delay.configure(
-            timeSeconds = voice.delay.time,
+            time = voice.delay.time,
             feedback = voice.delay.feedback,
             cap = voice.delay.cap,
         )

@@ -64,8 +64,8 @@ envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pit
 |----------------------------|-----------------|----------------------------------------|
 | `KatalystBodyEffect`       | `BodyFilter`    | any voice on the orbit sets `body(…)`  |
 | `KatalystFormantEffect`    | `FormantFilter` | any voice on the orbit sets `vowel(…)` |
-| `KatalystDelayEffect`      | `DelayLine`     | `VoiceData.delay > 0`                  |
-| `KatalystReverbEffect`     | `Reverb`        | `VoiceData.reverbSize >= 0.1`          |
+| `KatalystDelayEffect`      | `DelayLine`     | owner voice touches the delay; time >= 0.01 s (default 0.25) |
+| `KatalystReverbEffect`     | `Reverb`        | owner voice touches the reverb; size >= 0.1 (default 5)       |
 | `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
 | `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
 | `KatalystDuckingEffect`    | `Ducking`       | sidechain from duckCylinder voice      |

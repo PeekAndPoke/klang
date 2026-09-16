@@ -222,7 +222,8 @@ stages must not carry it.
 - **B6 (Layers) — DELIVERED (certified 2026-08-17):** combines the B2 groove and the B3 melody
   literally; redeems B1's mixing promise by name in §2. ⚠️ Engine truth learned in its review
   (recorded in the lesson's KDoc + docs/tasks-archive/2026-09/20260908-orbit-level-effect-docs.md): reverb processor is
-  per-orbit but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` is SILENT (gate needs `size`); orbit
+  per-orbit but `reverb(wet)` is a per-voice SEND; a bare `reverb(wet)` plays in the default room (size 5, since
+  2026-09-16; before that it was SILENT); orbit
   bus settings are first-writer-wins. The lesson only demos uncontested configurations and never
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
@@ -231,12 +232,11 @@ stages must not carry it.
   depth (the field was called `scope` until 2026-09-08, renamed so that "scope" means one thing:
   where audio runs, see `KlangScope`); if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
-  (a) BOTH space effects are sends WITH A GATE and the gate is the SECOND number, not the
-  send: reverb is inactive unless the normalized `size >= 0.01` (defaults to 0.0) and delay is Off
-  unless `time >= 0.01` (defaults to 0.0), so a bare `reverb(0.4)` and a bare
-  `delay(0.4)` are SILENT. That trap became the lesson's spine (§2 proves it by ear), and
-  three silent `KlangScript(Playable)` KDoc examples were fixed at source in the reverb and delay
-  files (`lang_effects_reverb.kt`, `lang_effects_delay.kt`).
+  (a) Until 2026-09-16 BOTH space effects were sends WITH A GATE (an unset `size` or `time` was 0, so a
+  bare `reverb(0.4)` or `delay(0.4)` was SILENT) and that trap was the lesson's §2. Since the shared
+  musical defaults (`docs/tasks/delay-names-and-send-defaults.md`) an unset slot takes size 5, time
+  0.25 s, feedback 0.3, wet 0.25, and §2 ("What you leave out") teaches the default by ear instead.
+  Needs a by-ear pass in the review loop.
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
   (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`

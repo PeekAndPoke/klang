@@ -6,11 +6,17 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 
 /**
  * Declarative, data-driven **master bus** chain — the per-playback loudness and colour stage.
@@ -127,7 +133,9 @@ sealed interface MasterStageDsl {
      * **Every parameter here is the twin of a sprudel `reverb(...)` slot, with the same name on the
      * same scale** — a number means the same thing whether you write it on an orbit or on the
      * master. (It did not always: `size` was once raw 0..1 here while sprudel's was 0..10, so the
-     * same `3` meant a 1 s tail on an orbit and a 12.5 s one on the master.)
+     * same `3` meant a 1 s tail on an orbit and a 12.5 s one on the master.) The defaults are shared
+     * too: an orbit voice that touches the reverb gets the same ones for the slots it leaves unset
+     * (`constants/SendEffectDefaults.kt`).
      *
      * @param wet how much of the bus is sent into the reverb (0.0 = off). Orbit twin: `reverb(wet = x)`.
      * @param size tail length on the **authored ~0..10 scale** (the backend divides by 10, see
@@ -139,36 +147,27 @@ sealed interface MasterStageDsl {
      */
     @WireName("reverb")
     data class Reverb(
-        val wet: Double = 0.25,
-        val size: Double = DEFAULT_SIZE,
+        val wet: Double = REVERB_WET,
+        val size: Double = REVERB_SIZE,
         val lowpass: Double? = null,
-    ) : MasterStageDsl {
-        companion object {
-            /**
-             * Default size on the **authored** scale.
-             *
-             * `5.0 / 10 == 0.5`, the Freeverb default. Guarded by `MasterDefaultsSyncSpec`.
-             */
-            const val DEFAULT_SIZE: Double = 5.0
-        }
-    }
+    ) : MasterStageDsl
 
     /**
      * Master delay — the shared `DelayLine` (audio_be `effects/`) used as an *insert* (same
-     * send-copy trick as [Reverb]).
+     * send-copy trick as [Reverb]). Same names, scales and defaults as the orbit's `delay(...)`
+     * (`constants/SendEffectDefaults.kt`).
      *
      * @param wet how much of the bus is sent into the delay (0.0 = off). Orbit twin: `delay(wet = x)`.
-     * @param timeSeconds delay time in seconds. Orbit twin: `delay(time = ...)`.
+     * @param time delay time in seconds. Orbit twin: `delay(time = ...)`.
      * @param feedback feedback amount; ≥ 1.0 recirculates without loss and self-oscillates — allowed
      *   (raw engine), with [cap] deciding how loud. Orbit twin: `delay(feedback = ...)`.
-     * @param cap ceiling the feedback saturates toward (default 1.0 = unchanged). Orbit twin:
-     *   `delay(cap = ...)`.
+     * @param cap level the recirculating signal saturates toward. Orbit twin: `delay(cap = ...)`.
      */
     @WireName("delay")
     data class Delay(
-        val wet: Double = 0.25,
-        val timeSeconds: Double = 0.25,
-        val feedback: Double = 0.3,
-        val cap: Double = 1.0,
+        val wet: Double = DELAY_WET,
+        val time: Double = DELAY_TIME_SECONDS,
+        val feedback: Double = DELAY_FEEDBACK,
+        val cap: Double = DELAY_CAP,
     ) : MasterStageDsl
 }

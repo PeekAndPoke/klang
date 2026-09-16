@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
@@ -29,7 +30,7 @@ import kotlin.math.min
  *   samples. Gives sub-sample tap accuracy (kills the integer-quantisation
  *   zipper) and accurate tuning for pitch-based effects (flanger, chorus, comb
  *   filter, Karplus-Strong). NOTE: the tap position is resolved once per
- *   [process] call — a `delayTimeSeconds` change moves the read tap
+ *   [process] call — a `time` change moves the read tap
  *   instantaneously at the next block boundary, with no crossfade/ramp.
  *   Interpolation direction: `alpha=0` reads `s1` (newer
  *   sample, at `pos - delayInt`); `alpha=1` reads `s2` (one sample older).
@@ -41,7 +42,7 @@ import kotlin.math.min
  *   prevent runaway accumulation when `feedback ≥ 1.0` while keeping the
  *   character musical (smooth tanh-style knee). The ring buffer is therefore
  *   always bounded to ±1, which together with the non-finite-rejecting
- *   [delayTimeSeconds] / [feedback] setters means a finite input always
+ *   [time] / [feedback] setters means a finite input always
  *   produces a finite output — no per-sample scrub needed. Callers are
  *   expected to feed finite samples (consistent with the engine's raw style).
  *
@@ -62,16 +63,16 @@ class DelayLine(
     /** The ring. Rented from the resource warehouse in production; the secondary constructor allocates one. */
     ring: StereoBuffer,
     val sampleRate: Int,
-    delayTimeSeconds: Double = 0.5,
+    time: Double = 0.5,
     feedback: Double = 0.0,
 ) {
     /** Allocates its own ring of [maxDelaySeconds]. Master chains and specs; cylinders rent instead. */
     constructor(
         maxDelaySeconds: Double,
         sampleRate: Int,
-        delayTimeSeconds: Double = 0.5,
+        time: Double = 0.5,
         feedback: Double = 0.0,
-    ) : this(StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate, delayTimeSeconds, feedback)
+    ) : this(StereoBuffer((maxDelaySeconds * sampleRate).toInt()), sampleRate, time, feedback)
 
     /** The ring itself, so an owner can give it back to the warehouse. */
     internal val ring: StereoBuffer = ring
@@ -131,14 +132,14 @@ class DelayLine(
     internal val writePosForTest: Int get() = writePos
 
     /** Delay time in seconds. Setter silently ignores non-finite values. */
-    var delayTimeSeconds: Double = delayTimeSeconds
+    var time: Double = time
         set(value) {
             if (!value.isFinite()) return
             field = value
         }
 
     /** Feedback amount. Setter silently ignores non-finite values. Values ≥ 1.0
-     *  self-oscillate, bounded by [feedbackCap] in the feedback path. */
+     *  self-oscillate, bounded by [cap] in the feedback path. */
     var feedback: Double = feedback
         set(value) {
             if (!value.isFinite()) return
@@ -153,7 +154,7 @@ class DelayLine(
      * ring bounded so a finite input can never produce a non-finite output. Default 1.0 is
      * bit-identical to the previous fixed behaviour. Setter silently ignores non-finite values.
      */
-    var feedbackCap: Double = 1.0
+    var cap: Double = DELAY_CAP
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -275,12 +276,12 @@ class DelayLine(
             return ceil((period + 1.0) / period).toInt()
         }
 
-    /** The effective tap distance in samples — [delayTimeSeconds] under the same coercion [process] applies. */
+    /** The effective tap distance in samples — [time] under the same coercion [process] applies. */
     private fun currentDelaySamples(): Double =
-        (delayTimeSeconds * sampleRate).coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
+        (time * sampleRate).coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
 
     /**
-     * The delay actually being rendered, in seconds — [delayTimeSeconds] after the physical bound of
+     * The delay actually being rendered, in seconds — [time] after the physical bound of
      * this ring. They differ only when the requested time exceeds the ring, which since the resource
      * warehouse means "a longer ring was refused (out of memory) and this one is doing its best".
      * That gap is what the frontend should show as "delay time reduced".
@@ -307,8 +308,8 @@ class DelayLine(
         // Sanitised once per block, not per sample. `softCapTo`'s branches are loop-invariant here,
         // and this file's own PERF note records that a previously added per-sample check cost
         // ~+33% JVM / +30% JS at the rate this path runs.
-        val rawCap = feedbackCap
-        val cap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
+        val rawCap = cap
+        val safeCap = if (rawCap.isFinite() && rawCap > 0.0) rawCap else 1.0
 
         // Split the block at ring-buffer wrap boundaries so the inner loop has no
         // 'if (pos >= bufferSize)' check. A while loop rather than a single split:
@@ -321,8 +322,8 @@ class DelayLine(
         while (done < length) {
             val chunk = min(length - done, bufferSize - pos)
 
-            processInternal(buffer.left, input.left, output.left, done, chunk, pos, delayInt, alpha, fb, cap)
-            processInternal(buffer.right, input.right, output.right, done, chunk, pos, delayInt, alpha, fb, cap)
+            processInternal(buffer.left, input.left, output.left, done, chunk, pos, delayInt, alpha, fb, safeCap)
+            processInternal(buffer.right, input.right, output.right, done, chunk, pos, delayInt, alpha, fb, safeCap)
 
             done += chunk
             pos = (pos + chunk) % bufferSize
@@ -402,7 +403,7 @@ class DelayLine(
 
     companion object {
         /**
-         * Lower bound for [delayTimeSeconds] in seconds. ~0.1 ms — short enough
+         * Lower bound for [time] in seconds. ~0.1 ms — short enough
          * for flanger/comb regimes, long enough that linear interpolation
          * doesn't blow up at boundary conditions.
          */

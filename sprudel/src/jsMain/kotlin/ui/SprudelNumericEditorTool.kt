@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -75,9 +78,9 @@ object SprudelDistortAmountEditorTool : KlangUiToolEmbeddable by SprudelNumericE
 object SprudelReverbSizeEditorTool : KlangUiToolEmbeddable by SprudelNumericEditorTool(
     title = "Reverb Size Editor",
     iconFn = { microphone },
-    fieldLabel = "Reverb Size",
+    fieldLabel = "Size",
     maxValue = 10.0,
-    defaultValue = 1.0,
+    defaultValue = REVERB_SIZE,
     step = 0.1,
     centerValue = null,
 )
@@ -88,7 +91,7 @@ object SprudelDelayTimeEditorTool : KlangUiToolEmbeddable by SprudelNumericEdito
     iconFn = { history },
     fieldLabel = "Time (s)",
     maxValue = 2.0,
-    defaultValue = 0.25,
+    defaultValue = DELAY_TIME_SECONDS,
     step = 0.01,
     centerValue = null,
 )
@@ -99,7 +102,7 @@ object SprudelDelayFeedbackEditorTool : KlangUiToolEmbeddable by SprudelNumericE
     iconFn = { history },
     fieldLabel = "Feedback",
     maxValue = 1.0,
-    defaultValue = 0.5,
+    defaultValue = DELAY_FEEDBACK,
     step = 0.01,
     centerValue = null,
 )

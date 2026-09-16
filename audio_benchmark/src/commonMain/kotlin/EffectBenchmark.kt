@@ -457,7 +457,7 @@ class EffectBenchmark(
             },
             stereoIoCase("DelayLine (0.5s, fb=0.3)") { sr ->
                 val d = DelayLine(maxDelaySeconds = 1.0, sampleRate = sr).apply {
-                    delayTimeSeconds = 0.5
+                    time = 0.5
                     feedback = 0.3
                 }
                 StereoIoEffect { input, output, length -> d.process(input, output, length) }

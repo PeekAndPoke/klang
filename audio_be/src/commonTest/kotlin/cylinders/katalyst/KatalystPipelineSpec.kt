@@ -38,7 +38,7 @@ class BusPipelineSpec : StringSpec({
         compressorThreshold: Double? = null,
     ): List<KatalystEffect> {
         val delay = KatalystDelayEffect(DelayLine(10.0, sampleRate), blockFrames).apply {
-            configure(timeSeconds = delayTime, feedback = 0.0, cap = 1.0)
+            configure(time = delayTime, feedback = 0.0, cap = 1.0)
         }
         val reverb = KatalystReverbEffect(Reverb(sampleRate), blockFrames).apply {
             configure(size = reverbRoom, lowpass = null)

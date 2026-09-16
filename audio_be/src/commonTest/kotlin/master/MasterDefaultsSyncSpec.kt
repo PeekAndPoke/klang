@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.MasterStage
-import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
@@ -77,16 +76,9 @@ class MasterDefaultsSyncSpec : StringSpec({
         MasterStage.HOUSE_LIMITER_ATTACK_SECONDS shouldBe MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS
     }
 
-    "the master reverb default is the authored twin of the Freeverb default" {
-        // 5.0 authored / 10 == 0.5, the DSP's own default — so changing the literal from 0.5 to 5.0
-        // was behaviour-preserving. If either side moves without the other, the master's default
-        // reverb silently changes length.
-        Reverb.normalizeSize(MasterStageDsl.Reverb().size) shouldBe Reverb(44100).size
-    }
-
-    "the feedback ceilings default to the DSP's own" {
-        MasterStageDsl.Delay().cap shouldBe DelayLine(maxDelaySeconds = 1.0, sampleRate = 44100).feedbackCap
-    }
+    // NOTE (2026-09-16): the reverb size and delay cap sync tests went the way of the limiter's: both
+    // sides read `constants/SendEffectDefaults.kt` now, so they compared a value with itself. Drift
+    // between the surfaces is guarded behaviourally by `SendEffectDefaultsParitySpec`.
 
     "the reverb lowpass defaults to absent on both sides — the DSP's fixed default damping applies" {
         MasterStageDsl.Reverb().lowpass shouldBe null

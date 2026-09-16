@@ -10,6 +10,8 @@ import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -23,7 +25,7 @@ import kotlin.math.min
  * moment a no-delay voice took the orbit lease, and the stale tail resurrected later, detached
  * from time):
  *
- * - **Active** — the owner wants the delay ([configure] with a time >= [MIN_ACTIVE_DELAY_SECONDS]):
+ * - **Active** — the owner wants the delay ([configure] with a FINITE time >= [MIN_ACTIVE_DELAY_SECONDS]):
  *   process normally.
  * - **Draining** — the owner turned it off while the ring still holds a tail: keep processing with
  *   SILENT input under the retained last-active parameters, so the already-scheduled echoes
@@ -70,7 +72,7 @@ class KatalystDelayEffect(
      * play were the "Der Schmetterling" stutter. Now the ring is rented from the warehouse on the
      * first `configure` that activates, sized to the class that holds the requested time.
      *
-     * INVARIANT (unchanged): `delayTimeSeconds`/`feedback`/`feedbackCap` change only through
+     * INVARIANT (unchanged): `time`/`feedback`/`cap` change only through
      * [configure] — a direct write bypasses the lifecycle and desyncs [state] from the DSP
      * (tests may write directly to probe the core; production must not).
      */
@@ -99,13 +101,13 @@ class KatalystDelayEffect(
     private var refusedFrames: Int = 0
 
     /**
-     * Frames a ring must hold to serve [timeSeconds], including the interpolation guard. Past the
+     * Frames a ring must hold to serve [time], including the interpolation guard. Past the
      * Int range (13.5 h at 44.1 kHz, or a non-finite time) it saturates to `Int.MAX_VALUE`, which
      * no allocator serves — so the request degrades to `null` as the design intends, instead of
      * `toInt()` saturating and the `+ margin` wrapping NEGATIVE and quietly renting the smallest ring.
      */
-    private fun framesFor(timeSeconds: Double): Int {
-        val frames = ceil(timeSeconds * sampleRate)
+    private fun framesFor(time: Double): Int {
+        val frames = ceil(time * sampleRate)
 
         if (!(frames < Int.MAX_VALUE - RING_MARGIN_FRAMES)) { // also catches NaN
             return Int.MAX_VALUE
@@ -115,15 +117,15 @@ class KatalystDelayEffect(
     }
 
     /**
-     * Ensures a ring that holds [timeSeconds] is installed, renting or growing as needed. Returns the
+     * Ensures a ring that holds [time] is installed, renting or growing as needed. Returns the
      * line to use, or `null` if there is none and the warehouse refused one.
      *
      * Growing rents the next sufficient class, **migrates the old ring's history into it** (2c —
      * `DelayLine.adoptHistory`, so a delay that is ringing at that moment keeps ringing across the
      * seam), then gives the old ring back. Never shrinks: a shorter time keeps the ring it has.
      */
-    private fun ensureRing(timeSeconds: Double): DelayLine? {
-        val needed = framesFor(timeSeconds)
+    private fun ensureRing(time: Double): DelayLine? {
+        val needed = framesFor(time)
         val current = delayLine
 
         if (current != null && current.capacityFrames >= needed) {
@@ -180,19 +182,24 @@ class KatalystDelayEffect(
 
     /**
      * Applies the orbit owner's delay settings. Called by `Cylinder.applyBusEffects` on every
-     * block the lease is (re)claimed. An off-config (time below [MIN_ACTIVE_DELAY_SECONDS]) does
+     * block the lease is (re)claimed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      */
-    fun configure(timeSeconds: Double, feedback: Double, cap: Double) {
-        if (timeSeconds >= MIN_ACTIVE_DELAY_SECONDS) {
+    fun configure(time: Double, feedback: Double, cap: Double) {
+        // Non-finite reads as OFF (time) or as the shared default (feedback, cap), never as the previous
+        // owner's value: DelayLine's setters DROP non-finite writes, so passing one through would leave
+        // whatever the last owner set. VoiceFactory already turns non-finite slots into defaults; this
+        // guard is the door's own contract for a direct caller (the reverb door reads a non-finite size
+        // as off the same way).
+        if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
-            val line = ensureRing(timeSeconds) ?: return
+            val line = ensureRing(time) ?: return
 
             // No tail bookkeeping here: the ceiling reads the period and feedback in force on
             // every block, so a change (or a grow, which keeps the content) is simply followed.
-            line.delayTimeSeconds = timeSeconds
-            line.feedback = feedback
-            line.feedbackCap = cap
+            line.time = time
+            line.feedback = if (feedback.isFinite()) feedback else DELAY_FEEDBACK
+            line.cap = if (cap.isFinite()) cap else DELAY_CAP
             state = State.Active
             return
         }
@@ -263,9 +270,9 @@ class KatalystDelayEffect(
         // The ring is KEPT — re-activation is then free. Eviction (2f) is what returns it.
         delayLine?.let {
             it.reset()
-            it.delayTimeSeconds = 0.0
+            it.time = 0.0
             it.feedback = 0.0
-            it.feedbackCap = 1.0
+            it.cap = DELAY_CAP
         }
         state = State.Off
         drainRemaining = 0.0

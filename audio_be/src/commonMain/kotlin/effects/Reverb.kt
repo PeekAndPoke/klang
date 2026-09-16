@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb.Companion.FEEDBACK_OFFSET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.ln
@@ -101,7 +102,7 @@ class Reverb(
     // --- Parameters ---
 
     /** Decay tail length (comb feedback), normalized. 0 = short tail, 1 = long tail. NaN/Inf silently ignored. */
-    var size: Double = 0.5
+    var size: Double = normalizeSize(REVERB_SIZE)
         set(value) {
             if (!value.isFinite()) return
             field = value
@@ -269,7 +270,7 @@ class Reverb(
      * (`ReverbUnits.giveBack`). Keep in sync with the property initialisers above.
      */
     fun restoreDefaults() {
-        size = 0.5
+        size = normalizeSize(REVERB_SIZE)
         lowpass = null
     }
 

@@ -5,10 +5,13 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import kotlin.math.abs
 import kotlin.math.ceil
 
@@ -28,7 +31,7 @@ class KatalystDelayEffectSpec : StringSpec({
         val dl = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
 
         return KatalystDelayEffect(delayLine = dl, blockFrames = blockFrames).apply {
-            configure(timeSeconds = delayTime, feedback = feedback, cap = 1.0)
+            configure(time = delayTime, feedback = feedback, cap = 1.0)
         }
     }
 
@@ -74,11 +77,11 @@ class KatalystDelayEffectSpec : StringSpec({
     "delay line parameters are accessible and writable" {
         val effect = createEffect(delayTime = 0.5, feedback = 0.3)
 
-        effect.delayLine!!.delayTimeSeconds shouldBe 0.5
+        effect.delayLine!!.time shouldBe 0.5
         effect.delayLine!!.feedback shouldBe 0.3
 
-        effect.delayLine!!.delayTimeSeconds = 1.0
-        effect.delayLine!!.delayTimeSeconds shouldBe 1.0
+        effect.delayLine!!.time = 1.0
+        effect.delayLine!!.time shouldBe 1.0
     }
 
     // ── The drain lifecycle (block-framing ledger D3) ─────────────────────────
@@ -99,7 +102,7 @@ class KatalystDelayEffectSpec : StringSpec({
         ref.process(refCtx)
         drained.process(drainedCtx)
 
-        drained.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        drained.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         // 40 blocks ≈ 2.3 echo periods at 0.05 s — well inside the countdown, so the two runs
         // must be BIT-identical: the drain is by construction "active with silent input".
@@ -132,7 +135,7 @@ class KatalystDelayEffectSpec : StringSpec({
         ctx.delaySendBuffer.right[0] = 1.0
         effect.process(ctx)
 
-        effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         // The retained (last-active) params + the measured ring peak drive the countdown, so this
         // recomputes the same value the effect captured at the off-transition.
@@ -175,7 +178,7 @@ class KatalystDelayEffectSpec : StringSpec({
             effect.process(ctx)
         }
 
-        effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         val drainBlocks = ceil(
             effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs()) / blockFrames
@@ -190,7 +193,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // New owner with a delay long enough that its tap sweeps the ENTIRE region written above.
         // Without the terminal reset, the pre-drain tail would re-emerge somewhere in this sweep.
-        effect.configure(timeSeconds = 8.0, feedback = 0.3, cap = 1.0)
+        effect.configure(time = 8.0, feedback = 0.3, cap = 1.0)
 
         var residue = 0.0
         val sweepBlocks = (8.5 * sampleRate / blockFrames).toInt()
@@ -216,7 +219,7 @@ class KatalystDelayEffectSpec : StringSpec({
         ctx.delaySendBuffer.right[0] = 0.5
         effect.process(ctx)
 
-        effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         // 2000 blocks ≈ 290 delay periods — far beyond any finite countdown for a 0.02 s line.
         // The drone is an impulse train with 882-sample spacing, so a single 128-frame block can
@@ -247,13 +250,13 @@ class KatalystDelayEffectSpec : StringSpec({
             delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
             blockFrames = 64,
         ).apply {
-            configure(timeSeconds = 0.05, feedback = 0.5, cap = 1.0)
+            configure(time = 0.05, feedback = 0.5, cap = 1.0)
         }
         val ctx = createCtx()
 
         ctx.delaySendBuffer.left[0] = 1.0
         effect.process(ctx)
-        effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         val drainSamples = effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs())
         // Enough 128-frame calls that a countdown ticking by ctx.blockFrames would have flipped
@@ -276,6 +279,50 @@ class KatalystDelayEffectSpec : StringSpec({
         effect.hasTail() shouldBe false
     }
 
+    "a non-finite feedback or cap is the shared default, never the previous owner's value" {
+        // DelayLine's setters DROP non-finite writes, so passing a NaN through would leave the last
+        // owner's feedback (here a self-oscillating 1.2) and cap in force.
+        val effect = createEffect(delayTime = 0.3, feedback = 1.2)
+        effect.configure(time = 0.3, feedback = 1.2, cap = 3.0)
+
+        effect.configure(time = 0.3, feedback = Double.NaN, cap = Double.POSITIVE_INFINITY)
+
+        effect.delayLine!!.feedback shouldBe DELAY_FEEDBACK
+        effect.delayLine!!.cap shouldBe DELAY_CAP
+    }
+
+    "a non-finite time reads as off, never as the previous owner's delay" {
+        // +Inf is the sharp half: `Inf >= 0.01` is TRUE, so without the isFinite test it is an
+        // active config whose ring is refused, and the orbit keeps sounding the previous time.
+        for (bad in listOf(Double.POSITIVE_INFINITY, Double.NaN)) {
+            val poisoned = createEffect(delayTime = 0.05, feedback = 0.5)
+            val off = createEffect(delayTime = 0.05, feedback = 0.5)
+            val poisonedCtx = createCtx()
+            val offCtx = createCtx()
+
+            poisoned.configure(time = bad, feedback = 0.5, cap = 1.0)
+            off.configure(time = 0.0, feedback = 0.5, cap = 1.0)
+
+            var maxDiff = 0.0
+
+            repeat(40) {
+                poisonedCtx.delaySendBuffer.fill(0.6)
+                poisonedCtx.mixBuffer.clear()
+                poisoned.process(poisonedCtx)
+
+                offCtx.delaySendBuffer.fill(0.6)
+                offCtx.mixBuffer.clear()
+                off.process(offCtx)
+
+                for (i in 0 until blockFrames) {
+                    maxDiff = maxOf(maxDiff, abs(poisonedCtx.mixBuffer.left[i] - offCtx.mixBuffer.left[i]))
+                }
+            }
+
+            withClue("time = $bad") { maxDiff shouldBe 0.0 }
+        }
+    }
+
     "reset restores the factory params — the next orbit life cannot inherit them" {
         // DelayLine setters DROP non-finite writes, so a NaN param from the next life would
         // otherwise keep THIS life's value (e.g. a dead owner's self-oscillating feedback).
@@ -283,9 +330,9 @@ class KatalystDelayEffectSpec : StringSpec({
 
         effect.reset()
 
-        effect.delayLine!!.delayTimeSeconds shouldBe 0.0
+        effect.delayLine!!.time shouldBe 0.0
         effect.delayLine!!.feedback shouldBe 0.0
-        effect.delayLine!!.feedbackCap shouldBe 1.0
+        effect.delayLine!!.cap shouldBe DELAY_CAP
     }
 
     "a quiet ring drains in proportion to its content, not the saturated worst case" {
@@ -300,7 +347,7 @@ class KatalystDelayEffectSpec : StringSpec({
         ctx.delaySendBuffer.right[0] = 0.001
         effect.process(ctx)
 
-        effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
 
         // From 1e-3 at fb 0.9: ceil(ln(1e-5/1e-3)/ln(0.9)) + 1 = 45 periods. The worst-case bound
         // (from 1.0) would be 111 periods — assert we are done well before THAT.
@@ -321,7 +368,7 @@ class KatalystDelayEffectSpec : StringSpec({
         // infinite countdown never even starts.
         val empty = createEffect(delayTime = 0.5, feedback = 1.2)
         // Never processed a send: the ring is all zeros — the off-config lands in Off directly.
-        empty.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        empty.configure(time = 0.0, feedback = 0.0, cap = 1.0)
         empty.hasTail() shouldBe false
 
         // A charged ring, same infinite drain: the tail is real and must be reported.
@@ -330,7 +377,7 @@ class KatalystDelayEffectSpec : StringSpec({
         ctx.delaySendBuffer.left[0] = 1.0
         ctx.delaySendBuffer.right[0] = 1.0
         charged.process(ctx)
-        charged.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+        charged.configure(time = 0.0, feedback = 0.0, cap = 1.0)
         charged.hasTail() shouldBe true
     }
 
@@ -340,7 +387,7 @@ class KatalystDelayEffectSpec : StringSpec({
                 delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
                 blockFrames = bf,
             ).apply {
-                configure(timeSeconds = 0.05, feedback = 0.5, cap = 1.0)
+                configure(time = 0.05, feedback = 0.5, cap = 1.0)
             }
             val ctx = KatalystContext(
                 blockFrames = bf,
@@ -368,7 +415,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
                 // The takeover lands at the SAME absolute sample for every block size.
                 if (absSample == 128) {
-                    effect.configure(timeSeconds = 0.0, feedback = 0.0, cap = 1.0)
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
                 }
 
                 effect.process(ctx)
