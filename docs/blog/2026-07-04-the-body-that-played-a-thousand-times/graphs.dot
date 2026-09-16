@@ -1,0 +1,18 @@
+// Graphviz stacks LR clusters bottom-up in declaration order: the "after" cluster is declared
+// first so that "before" renders on top, matching the post's caption.
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130; nodesep=0.2; ranksep=0.45;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7];
+  subgraph cluster_b { label="after v0.1.2: the body once, on the summed orbit mix; the first voice to sound configures it (VoiceLease)"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    c1 [label="voice 1\nsupersaw, filters"]; c2 [label="voice 2"]; c3 [label="voice 3"]; c4 [label="... voice 544", shape=plaintext, fillcolor="white", color="white"];
+    ob [label="orbit bus\nbody, vowel, delay, reverb, phaser, compressor", fillcolor="#E4EFE8", color="#2F7A4F"];
+    c1 -> ob; c2 -> ob; c3 -> ob; c4 -> ob; }
+  subgraph cluster_a { label="before v0.1.2: the body inside every voice's filter chain, once per voice, per unison note, per superimpose copy"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    a1 [label="voice 1\nsupersaw, filters"]; b1 [label="body\n8-band bank", fillcolor="#F6E4E2", color="#B23A32"];
+    a2 [label="voice 2"]; b2 [label="body", fillcolor="#F6E4E2", color="#B23A32"];
+    a3 [label="voice 3"]; b3 [label="body", fillcolor="#F6E4E2", color="#B23A32"];
+    a4 [label="... voice 544", shape=plaintext, fillcolor="white", color="white"]; b4 [label="body", fillcolor="#F6E4E2", color="#B23A32"];
+    oa [label="orbit bus\ndelay, reverb, phaser, compressor", fillcolor="#F3EEE0", color="#A8791C"];
+    a1 -> b1 -> oa; a2 -> b2 -> oa; a3 -> b3 -> oa; a4 -> b4 -> oa; }
+}
