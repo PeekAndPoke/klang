@@ -26,7 +26,7 @@ Every post answers the same three questions, in this order, before anything else
 3. **What did it cost in sound?** Bit-identical, within a margin, or judged by ear; and how that
    was guarded (a parity spec with the old implementation as its oracle, a fuzz, a golden).
 
-**RTF alone is not the score.** The real-time factor (render time over audio time, §2.8) of the
+**RTF alone is not the score.** The real-time factor (render time over audio time, §2.7) of the
 live song mixes two things that moved in opposite directions: the engine got faster and the song
 got heavier (the guitars alone went from a filtered supersaw to a five-stage rig). Plotted as
 one line it says the optimizations went the wrong way. So the series never shows a live-song
@@ -166,6 +166,34 @@ may not depend on a test source set); it is only needed at HEAD, since the song 
 rendered by HEAD for the song axis (P16). The census table in the archive record (90 nodes, 35
 passes per rhythm-guitar note) is the hand-counted precedent.
 
+**Per instrument, the number the maintainer asked for (2026-09-16): calculations per sample for
+a given instrument, before and after.** Two figures per instrument, both on FIXED instrument
+text (the instrument as it is at HEAD), so the engine is the only thing that moves:
+
+- *work per note*: passes over the block per note (the walk above on the instrument's optimized
+  graph), and the voices the instrument keeps active per block (the rig suite's onsets and the
+  `culled` column give the second);
+- *cost per sample per voice*: the rig suite's `medRTF` for the instrument group, turned into
+  ns per sample per active voice (RTF times the block's audio time, over frames, over active
+  voices), measured on two engines: `v0.3.12` (2026-09-10, the last tag before the September
+  round: culling, the polynomial transcendentals, the block-rate drift, the optimizer's margin
+  and folds, the decimator) and `v0.3.14`. The ratio of the two is the September round's effect
+  on THAT instrument; dividing by passes per note gives ns per sample per pass, the engine's
+  efficiency on that instrument's mix of node kinds.
+
+The four instruments of Der Schmetterling, per the maintainer: the guitars with the full rig,
+the bass with its harmonics, the marimba, the Orchestertrommel. Expected shape: the drift round
+pays most on the marimba and the trommel (their "no analog" rows), culling on the trommel and
+the drums, the decimator on the guitars, the polynomial sine on the bass's harmonic bank. Where
+an instrument's HEAD text uses a door that `v0.3.12` lacks (check by parsing; the rig suite fails
+loudly), record it and take the nearest older tag that parses it as the "before".
+
+Mechanics: (opus) the rig suite at HEAD with the `work` column, then the same rig suite in a
+`v0.3.12` worktree with the HEAD instrument texts transplanted into `SongBenchmarkCases.kt`
+(the suite already isolates instrument groups and ungates them; `swapAll` and the ablation rows
+are the precedent); three runs each, same machine, one session; the table lands in P16 and in
+whichever post the instrument belongs to (P11, P12, P13, P15).
+
 ### 2.6 The post skeleton, series flavour
 
 The howto's arc, with the series' three questions on top:
@@ -181,7 +209,7 @@ The howto's arc, with the series' three questions on top:
 
 120 to 220 lines. Longer is two posts.
 
-### 2.8 RTF, defined once
+### 2.7 RTF, defined once
 
 Render time divided by the audio time rendered. A 128-frame block at 48 kHz is 2.67 ms of sound;
 rendering it in 0.27 ms is an RTF of 0.1, a tenth of the time available. 1.0 is the deadline.
@@ -189,7 +217,7 @@ rendering it in 0.27 ms is an RTF of 0.1, a tenth of the time available. 1.0 is 
 the first 32 (the one-time allocations skipped), and the peak is what makes a phone stutter. P1
 defines it for the reader; every other post links there.
 
-### 2.7 Review before publish
+### 2.8 Review before publish
 
 One reviewer (opus) with the post, the artifacts it cites and the checklist from the howto:
 every number traced to its artifact, every quote verbatim against `git show`, every link
@@ -205,7 +233,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 
 - **Story.** Why a 2021 phone is the target and what it forces: songs grow, the phone does not, so
   every added complexity must be paid for in the engine. The measurement stack that makes the
-  series possible: RTF (defined here, §2.8), work units (§2.5), the `audio_benchmark` rows, the
+  series possible: RTF (defined here, §2.7), work units (§2.5), the `audio_benchmark` rows, the
   song suites, `docs/benchmarks`, JVM against node and why node is the number that counts. And
   the warning the whole series rests on: the live song's RTF got WORSE over the summer while the
   engine got faster, because the song got heavier; the honest scoreboard is cost per unit of
@@ -556,11 +584,18 @@ tells the story in the order it happened. Working titles are Fable's to change.
   through `runSongBenchmark` with the `work` column of §2.5: medRTF, peakRTF, median and peak
   work units per block, voices per block. This is the figure that shows the guitars growing from
   a filtered supersaw into a five-stage rig, in passes per note.
+- **Mechanics, the instrument table** (opus): the per-instrument before and after of §2.5 for
+  the guitars, the bass, the marimba and the Orchestertrommel: passes per note, active voices per
+  block, ns per sample per voice on `v0.3.12` and on `v0.3.14`, and ns per sample per pass. This
+  is the table that answers "did the optimizations go the wrong way" instrument by instrument,
+  with the instrument held still.
 - **Figures** (sonnet drafts, Fable's eyes). Fig. 1, the engine axis: cost per work unit (or the
   fixed rows' µs/block) over tags, the optimizations annotated at their tags; Fig. 2, the song
   axis: work units per block over the song's snapshots, with the live RTF at HEAD beside it;
-  Fig. 3, the phone timeline from P1 with the song's work at each date; Fig. 4, the ledger as a
-  table image if the markdown table is too wide.
+  Fig. 3, the instrument table as grouped bars: ns per sample per voice before and after, one
+  group per instrument, the passes per note printed above each group; Fig. 4, the phone timeline
+  from P1 with the song's work at each date; Fig. 5, the ledger as a table image if the markdown
+  table is too wide.
 - **Writing.** Fable. Last.
 
 ## 4. Order of work
