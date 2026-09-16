@@ -290,7 +290,9 @@ parity, a mutation check, a rig A/B, a commit.
    samples next to it a tolerance of 1e3), and every corpus passes with it. The laws did not
    move in the end (constancy and params equal on both sides, since the zero divisor keeps its
    subtree). The rules did not move: still nothing merges across an addition;
-   `mul(2).add(2).mul(2).add(2)` stays two Affines.
+   `mul(2).add(2).mul(2).add(2)` stays two Affines. Merging them, algebraically or as a fused
+   runtime pass, is parked with its reasoning in `docs/tasks/future/affine-chain-fusion.md`
+   (maintainer, 2026-09-16: last in line, more complexity than gain).
 5. Dead and identity nodes (maintainer, 2026-09-15): `add(Constant(0))` and `mul(Constant(1))`
    drop; `mul(Constant(0))` makes its upstream `Silence`. And at BUILD time, where `Osc.param`
    values are known (per voice, constant for the voice): a `Times` whose block-constant operand
