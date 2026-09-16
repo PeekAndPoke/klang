@@ -338,7 +338,7 @@ let granCassa = (() => {
   let beater = Osc.pinknoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(1.75)     // wood core: a crack, the force of the hit
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.10, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
@@ -350,7 +350,7 @@ export trommel_shape = x => x.gain(0.50).sound(granCassa).adsrOff() // .solo()
   .hpf(140).lpf(3500).pan("0.75 0.25")
 
 export trommel_arrange = x => x.orbit(4)
-  .scale("e2:minor").postgain(0.25)
+  .scale("e2:minor").postgain(0.22)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
