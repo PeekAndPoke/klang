@@ -1,0 +1,17 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7];
+  subgraph cluster_d { label="optimized: two nodes, never across an addition"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    d0 [label="x"]; d1 [label="Affine\nmul 2, add 2", fillcolor="#E4EFE8", color="#2F7A4F"]; d2 [label="Affine\nmul 2, add 2", fillcolor="#E4EFE8", color="#2F7A4F"];
+    d0 -> d1 -> d2; }
+  subgraph cluster_c { label="authored: x.mul(2).add(2).mul(2).add(2)"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    c0 [label="x"]; c1 [label="Times 2"]; c2 [label="Plus 2"]; c3 [label="Times 2"]; c4 [label="Plus 2"];
+    c0 -> c1 -> c2 -> c3 -> c4; }
+  subgraph cluster_b { label="optimized: one node, one pass"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    b0 [label="x"]; b1 [label="Affine\npre 1, mul 2, add 3", fillcolor="#E4EFE8", color="#2F7A4F"];
+    b0 -> b1; }
+  subgraph cluster_a { label="authored: x.add(1).mul(2).add(3)"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    a0 [label="x"]; a1 [label="Plus 1"]; a2 [label="Times 2"]; a3 [label="Plus 3"];
+    a0 -> a1 -> a2 -> a3; }
+}
