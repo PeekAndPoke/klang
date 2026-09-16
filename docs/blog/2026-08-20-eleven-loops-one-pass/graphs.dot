@@ -1,0 +1,14 @@
+digraph G {
+  rankdir=LR; bgcolor="white"; dpi=130;
+  node [shape=box, style="rounded,filled", fillcolor="white", color="#14202B", fontname="monospace", fontsize=10, fontcolor="#14202B"];
+  edge [color="#14202B", arrowsize=0.7];
+  subgraph cluster_c { label="after rule R1 (v0.3.2): one Eq node, one pass over the block"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    c0 [label="signal"]; c1 [label="Eq\nRawTap, RawTap, Notch, Highpass, Lowpass, Lowpass", fillcolor="#E4EFE8", color="#2F7A4F"];
+    c0 -> c1; }
+  subgraph cluster_b { label="the .eq() surface (D5): two taps in one Eq, four filters still chained: 5 nodes"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    b0 [label="signal"]; b1 [label="Eq\nRawTap, RawTap", fillcolor="#E4EFE8", color="#2F7A4F"]; b2 [label="Notch"]; b3 [label="Highpass\n(tracking)"]; b4 [label="Lowpass"]; b5 [label="Lowpass"];
+    b0 -> b1 -> b2 -> b3 -> b4 -> b5; }
+  subgraph cluster_a { label="hand-built (v0.3.1.4): two parallel bandpass taps as Plus, Times and Bandpass nodes, then four filters: ten nodes and the source, the plan's about eleven"; fontname="monospace"; fontsize=10; color="#8D9BA3";
+    a0 [label="signal"]; a1 [label="Bandpass"]; a2 [label="Times"]; a3 [label="Plus"]; a4 [label="Bandpass"]; a5 [label="Times"]; a6 [label="Plus"]; a7 [label="Notch"]; a8 [label="Highpass\n(tracking)"]; a9 [label="Lowpass"]; a10 [label="Lowpass"];
+    a0 -> a1 -> a2 -> a3; a0 -> a3; a0 -> a4 -> a5 -> a6; a3 -> a6; a6 -> a7 -> a8 -> a9 -> a10; }
+}
