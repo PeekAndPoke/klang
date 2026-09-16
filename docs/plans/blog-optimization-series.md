@@ -209,9 +209,10 @@ loudly), record it and take the nearest older tag that parses it as the "before"
   a fraction of the traffic), and the one that explains why a 5 % desktop win was run-or-not-run
   on the phone (P7).
 - *measured, where the machine allows*: `perf stat -e cache-misses,cache-references,instructions`
-  around one isolated rig row on the JVM, per instrument, both engines, if `perf` is installed
-  on the measuring machine (it is not on the one this plan was written on; record that or install
-  it). Cache misses per sample per voice is the closest thing to what the A55 feels.
+  around one isolated rig row on the JVM, per instrument, both engines (`perf` is installed on
+  the machine this plan was written on; a JIT'd JVM needs `-XX:+PreserveFramePointer` only for
+  attribution, not for these counters). Cache misses per sample per voice is the closest thing
+  to what the A55 feels.
 
 Mechanics: (opus) the rig suite at HEAD with the `work`, `bytes` and `traffic` columns (one walk,
 three weight tables, in `audio_bridge` next to `workUnits()`, with a spec row each against a
