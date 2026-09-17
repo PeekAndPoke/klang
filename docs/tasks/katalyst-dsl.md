@@ -421,9 +421,13 @@ complexity outranks the duplication.
   the cylinder builds its chain from `KatalystDsl.classic` (d170bf12); step 3a = declared chains looked
   up, resolved from their slots (a `Param` resolves to its default until `katp` lands), installed when
   the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate; step 3c = the
-  body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 4 = `eq`
-  and `gain`; step 5 = the bus doors as `katp` aliases and insert-style sends. Classic keeps the
-  owner-voice writers until step 5 removes the voice fields; a declared chain reads slots only.
+  body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
+  orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
+  declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
+  insert-style sends and the voice fields leaving the wire. Reordered 2026-09-17 after step 3a's review:
+  a declared chain reads slots only, so `stack(guitars).reverb(wet = 0.15).katalyst(Katalyst(k =>
+  k.classic().eq(...)))` would lose its room until the doors write `katp`; 5a therefore precedes 4.
+  Classic keeps the owner-voice writers until 5b removes the voice fields.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
