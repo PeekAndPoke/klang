@@ -402,6 +402,12 @@ complexity outranks the duplication.
 
 ### 9. Phasing, one review loop and one commit each
 
+- **Sequencing as run (2026-09-17):** step 1 = the wire model and plumbing (commit 9fbc9e2b); step 2 =
+  the cylinder builds its chain from `KatalystDsl.classic` (d170bf12); step 3a = declared chains looked
+  up, resolved from their slots (a `Param` resolves to its default until `katp` lands), installed when
+  the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate; step 4 = `eq`
+  and `gain`; step 5 = the bus doors as `katp` aliases and insert-style sends. Classic keeps the
+  owner-voice writers until step 5 removes the voice fields; a declared chain reads slots only.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
