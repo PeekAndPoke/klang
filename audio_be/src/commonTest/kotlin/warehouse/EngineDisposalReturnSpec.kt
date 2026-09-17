@@ -92,8 +92,8 @@ class EngineDisposalReturnSpec : StringSpec({
         f.render(4) shouldBeGreaterThan 0.0 // positive control: the voice sounded
         val engine = f.dispatcher.engine("song").shouldNotBeNull()
         val cylinder = engine.cylinders.cylinders.single()
-        val ring = cylinder.delay.delayLine.shouldNotBeNull().ring
-        val unit = cylinder.reverb.reverb.shouldNotBeNull()
+        val ring = cylinder.delay!!.delayLine.shouldNotBeNull().ring
+        val unit = cylinder.reverb!!.reverb.shouldNotBeNull()
         f.warehouse.sized.shelfCount shouldBe 0
         f.warehouse.reverbs.idleCount shouldBe 0
 
@@ -104,8 +104,8 @@ class EngineDisposalReturnSpec : StringSpec({
         f.warehouse.sized.shelfCount shouldBe 1
         f.warehouse.reverbs.idleCount shouldBe 1
         // The cylinder forgot its units: whoever rents them next owns them.
-        cylinder.delay.delayLine.shouldBeNull()
-        cylinder.reverb.reverb.shouldBeNull()
+        cylinder.delay!!.delayLine.shouldBeNull()
+        cylinder.reverb!!.reverb.shouldBeNull()
         engine.cylinders.cylinders.size shouldBe 0
         // ...and they are the very instances, cleared.
         f.warehouse.sized.rent(1) shouldBeSameInstanceAs ring

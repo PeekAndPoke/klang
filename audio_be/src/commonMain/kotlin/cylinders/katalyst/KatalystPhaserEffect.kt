@@ -23,4 +23,21 @@ class KatalystPhaserEffect(
     override fun process(ctx: KatalystContext) {
         phaser.process(ctx.mixBuffer, ctx.blockFrames)
     }
+
+    /** Cascade + latch + LFO phase + kernel params: the full clean slate, rate included. */
+    override fun reset() {
+        phaser.resetForReuse()
+    }
+
+    /**
+     * False: the cascade, the latch and the LFO phase are state, but the phaser is an INSERT, so
+     * whatever it still carries is in `ctx.mixBuffer` by the time
+     * `Cylinder.isMixBufferSilent()` scans it. See [KatalystBodyEffect.hasTail].
+     */
+    override fun hasTail(): Boolean = false
+
+    /** Rents nothing, so retiring is the clean slate. */
+    override fun retire() {
+        reset()
+    }
 }

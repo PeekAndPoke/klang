@@ -132,7 +132,8 @@ class Phaser(sampleRate: Int) {
     }
 
     /**
-     * Full factory state, for ORBIT TEARDOWN only (`Cylinder.resetBusEffects`): cascade, engaged
+     * Full factory state, for ORBIT TEARDOWN only (`KatalystPhaserEffect.reset`, which
+     * `KatalystChain.reset` and `KatalystChain.retire` call): cascade, engaged
      * latch, LFO phase AND the kernel params. The retained-kernel rule (a no-phaser owner keeps
      * the previous owner's clock) is scoped to owner handoffs WITHIN one orbit life — across a
      * teardown there is no timeline left to preserve, and a surviving rate would free-run the

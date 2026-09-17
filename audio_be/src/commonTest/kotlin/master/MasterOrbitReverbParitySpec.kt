@@ -87,7 +87,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        return cylinder.reverb.reverb!!
+        return cylinder.reverb!!.reverb!!
     }
 
     /** The master chain for one reverb stage with the given authored size and lowpass. */
@@ -180,7 +180,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
                     ctx.reverbSendBuffer.right[i] = 0.5
                 }
                 ctx.mixBuffer.clear()
-                cylinder.reverb.process(ctx)
+                cylinder.reverb!!.process(ctx)
 
                 if ((0 until blockFrames).any { ctx.mixBuffer.left[it] != 0.0 }) {
                     heard = true

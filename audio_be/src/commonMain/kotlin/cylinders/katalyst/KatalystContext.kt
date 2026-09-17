@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * Effects read/write the shared buffers:
  * - **Send effects** (Delay, Reverb) read from their send buffers and write to [mixBuffer]
  * - **Insert effects** (Phaser, Compressor) read/write [mixBuffer] in-place
- * - **Ducking** reads a sidechain orbit's mix buffer as a trigger signal
+ * - the **Duck** reads a sidechain orbit's mix buffer as a trigger signal
  */
 class KatalystContext(
     /** Number of frames per block */

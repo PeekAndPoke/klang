@@ -67,7 +67,7 @@ class LazyRingSpec : StringSpec({
         val (rings, alloc) = shelf()
         val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, rings = rings)
 
-        cylinder.delay.delayLine.shouldBeNull()
+        cylinder.delay!!.delayLine.shouldBeNull()
         alloc.asked shouldBe emptyList()
     }
 
@@ -100,7 +100,7 @@ class LazyRingSpec : StringSpec({
         // allocated its ring through DelayLine's own constructor would bypass the shelf entirely,
         // and the counters above would stay at zero while 63 MB went out the door. (A mutation did
         // exactly that and the counters alone did not see it.)
-        eight.forEach { it.delay.delayLine.shouldBeNull() }
+        eight.forEach { it.delay!!.delayLine.shouldBeNull() }
         cylinders.anyActive() shouldBe false
     }
 

@@ -62,11 +62,26 @@ class KatalystBodyEffect(
         }
     }
 
-    fun reset() {
+    override fun reset() {
         curBands = null
         curMix = Double.NaN
         curFloor = Double.NaN
         swap.clear()
+    }
+
+    /**
+     * False, and NOT because this stage is stateless: the SVF integrators and the swap's
+     * crossfade do hold state. It is because everything they hold lands in `ctx.mixBuffer`, and
+     * `Cylinder.isMixBufferSilent()` scans that buffer AFTER the chain has run, so the
+     * deactivation gate already sees this stage's residue without having to ask it. A future stage
+     * whose output does NOT reach the mix before that scan (a send-return, a chorus ring) must
+     * answer true while it rings, as the delay and the reverb do.
+     */
+    override fun hasTail(): Boolean = false
+
+    /** Rents nothing, so retiring is the clean slate. */
+    override fun retire() {
+        reset()
     }
 
     override fun process(ctx: KatalystContext) {

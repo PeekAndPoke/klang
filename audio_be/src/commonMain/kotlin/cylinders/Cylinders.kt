@@ -90,9 +90,9 @@ class Cylinders(
 
         // Step 2: Apply ducking (cross-cylinder sidechain)
         for (cylinder in id2cylinder.values) {
-            val duckCylinderId = cylinder.ducking.duckCylinderId ?: continue
+            val duckCylinderId = cylinder.duck?.duckCylinderId ?: continue
             val sidechainCylinder = id2cylinder[duckCylinderId] ?: continue
-            cylinder.processDucking(sidechainCylinder.mixBuffer)
+            cylinder.processDuck(sidechainCylinder.mixBuffer)
         }
 
         // Step 3: Mix all cylinders to output

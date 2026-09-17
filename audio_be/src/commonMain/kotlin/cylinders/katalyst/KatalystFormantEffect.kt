@@ -51,11 +51,23 @@ class KatalystFormantEffect(
         }
     }
 
-    fun reset() {
+    override fun reset() {
         curBands = null
         curMix = Double.NaN
         curFloor = Double.NaN
         swap.clear()
+    }
+
+    /**
+     * False for the same reason as the body's: the formant bank's integrators and the swap
+     * crossfade hold state, but all of it goes into `ctx.mixBuffer`, which
+     * `Cylinder.isMixBufferSilent()` scans after the chain runs. See [KatalystBodyEffect.hasTail].
+     */
+    override fun hasTail(): Boolean = false
+
+    /** Rents nothing, so retiring is the clean slate. */
+    override fun retire() {
+        reset()
     }
 
     override fun process(ctx: KatalystContext) {

@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 
@@ -233,10 +234,10 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.isActive shouldBe false
         // Literally zero: any residue trips the strict > comparison.
-        cylinder.delay.delayLine!!.hasTail(0.0) shouldBe false
+        cylinder.delay!!.delayLine!!.hasTail(0.0) shouldBe false
         // Factory params too, not just the ring: a core-only reset would leave the dead owner's
         // time for the next life's first non-finite param to inherit (round-2 retrofit).
-        cylinder.delay.delayLine!!.time shouldBe 0.0
+        cylinder.delay!!.delayLine!!.time shouldBe 0.0
     }
 
     "an inaudibly-charged reverb network is cleared LITERALLY on deactivation" {
@@ -272,12 +273,12 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.isActive shouldBe false
         // Literally zero: any residue trips the strict > comparison.
-        cylinder.reverb.reverb!!.hasTail(0.0) shouldBe false
-        // Factory params too, not just the buffers: a network-only `reverb.reverb.reset()`
+        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false
+        // Factory params too, not just the buffers: a network-only `reverb.reverb!!.reset()`
         // passes the buffer assert while the dead owner's room survives into the next life
         // (review round 2).
-        cylinder.reverb.reverb!!.size shouldBe 0.0
-        cylinder.reverb.reverb!!.lowpass shouldBe null
+        cylinder.reverb!!.reverb!!.size shouldBe 0.0
+        cylinder.reverb!!.reverb!!.lowpass shouldBe null
     }
 
     "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {
@@ -304,5 +305,45 @@ class OrbitCleanupTest : StringSpec({
         cylinder.tryDeactivate()
 
         cylinder.isActive shouldBe false
+    }
+
+    "the duck is in the lifecycle set: deactivation clears it" {
+        val cylinder = createTestOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                ducking = Voice.Ducking(cylinderId = 3, attackSeconds = 0.02, depth = 0.8),
+            ),
+            blockStart = 0.0,
+        )
+        cylinder.duck!!.duckCylinderId shouldBe 3
+        cylinder.duck!!.ducking shouldNotBe null
+
+        cylinder.mixBuffer.clear()
+        cylinder.tryDeactivate()
+
+        // The duck runs OUTSIDE the serial pipeline, so a lifecycle that walks only the pipeline
+        // would leave this orbit ducking to a dead owner's source for its whole next life.
+        cylinder.isActive shouldBe false
+        cylinder.duck!!.duckCylinderId shouldBe null
+        cylinder.duck!!.ducking shouldBe null
+    }
+
+    "the duck is in the lifecycle set: retiring to the shelf clears it" {
+        val cylinder = createTestOrbit()
+
+        cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                ducking = Voice.Ducking(cylinderId = 4, attackSeconds = 0.02, depth = 0.8),
+            ),
+            blockStart = 0.0,
+        )
+        cylinder.duck!!.duckCylinderId shouldBe 4
+
+        cylinder.retire()
+
+        // A shelved cylinder holds nothing: the next engine to rent it must not inherit a duck.
+        cylinder.duck!!.duckCylinderId shouldBe null
+        cylinder.duck!!.ducking shouldBe null
     }
 })

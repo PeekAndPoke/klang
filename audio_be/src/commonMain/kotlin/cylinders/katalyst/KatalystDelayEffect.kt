@@ -84,12 +84,12 @@ class KatalystDelayEffect(
      * first-activation refusal leaves it Off; a grow refusal keeps the current ring, and
      * `DelayLine` clamps the time to what that ring holds. Surfaced through diagnostics later.
      */
-    var deniedRents: Int = 0
+    override var deniedRents: Int = 0
         private set
 
     /**
      * The smallest ring CLASS the warehouse has failed to allocate for this effect, or 0. Without
-     * it a refusal is retried on EVERY block — `Cylinder.applyBusEffects` re-applies the owner's
+     * it a refusal is retried on EVERY block — `KatalystChain.applyOwner` re-applies the owner's
      * config per block — and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the
      * audio thread (review round 1, both reviewers). While the needed class is `>= refusedFrames`
      * no ALLOCATION is attempted; the shelf is still consulted, because a ring another orbit
@@ -181,7 +181,7 @@ class KatalystDelayEffect(
     private val activeTail = TailCeiling()
 
     /**
-     * Applies the orbit owner's delay settings. Called by `Cylinder.applyBusEffects` on every
+     * Applies the orbit owner's delay settings. Called by `KatalystChain.applyOwner` on every
      * block the lease is (re)claimed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      */
@@ -239,7 +239,7 @@ class KatalystDelayEffect(
      * longer). (A CHARGED self-osc ring pins its orbit by design; that half is pre-existing and
      * open, see the class KDoc.)
      */
-    fun hasTail(): Boolean = when (state) {
+    override fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
         // A ceiling, not a scan: [process] maintains it from the send buffer.
@@ -261,12 +261,12 @@ class KatalystDelayEffect(
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
 
-    /** Clears the ring, the lifecycle AND the DSP params — called from `Cylinder.resetBusEffects`
+    /** Clears the ring, the lifecycle AND the DSP params — called from `KatalystChain.reset`
      *  on orbit deactivation. The params go back to factory here (review round 5): `DelayLine`'s
      *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
      *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
      *  Mirrors `Phaser.resetForReuse`. */
-    fun reset() {
+    override fun reset() {
         // The ring is KEPT — re-activation is then free. Eviction (2f) is what returns it.
         delayLine?.let {
             it.reset()
@@ -278,6 +278,15 @@ class KatalystDelayEffect(
         drainRemaining = 0.0
         activeTail.reset()
         refusedFrames = 0
+    }
+
+    /**
+     * Retiring hands the unit back DIRTY instead of clearing it ([release], not [reset]): zeroing
+     * it here would be a big store on the audio thread, and the shelf zeroes it again on return
+     * (`KatalystChain.retire`).
+     */
+    override fun retire() {
+        release()
     }
 
     override fun process(ctx: KatalystContext) {

@@ -81,7 +81,7 @@ class LazyReverbSpec : StringSpec({
         alloc.asked shouldBe 0
         // ...AND no cylinder holds a unit: a cylinder that built its own Reverb would bypass the
         // shelf and the counter above would not see it (the delay's lesson, 2b).
-        eight.forEach { it.reverb.reverb.shouldBeNull() }
+        eight.forEach { it.reverb!!.reverb.shouldBeNull() }
     }
 
     "a fresh effect renders as a no-op, without a unit and without throwing" {

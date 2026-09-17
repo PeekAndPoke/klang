@@ -346,7 +346,7 @@ complexity outranks the duplication.
   unified-eq plan's D4 note is closed by that commit.
 - Body and vowel: unchanged in this work; their rebase on `EqCore` stays the separate item in
   the settled section.
-- Ducking: the `Duck` stage configures `KatalystDuckingEffect` exactly as the voice field does
+- Ducking: the `Duck` stage configures `KatalystDuckEffect` exactly as the voice field does
   today; `Cylinders` keeps running it after every orbit is processed.
 - Nothing per sample allocates; every stage instance and buffer is created at chain build, which
   happens at registration (on the audio thread, as the master's does, the same bounded exception).

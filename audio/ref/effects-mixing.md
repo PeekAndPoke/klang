@@ -68,7 +68,7 @@ envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pit
 | `KatalystReverbEffect`     | `Reverb`        | owner voice touches the reverb; size >= 0.1 (default 5)       |
 | `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
 | `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
-| `KatalystDuckingEffect`    | `Ducking`       | sidechain from duckCylinder voice      |
+| `KatalystDuckEffect`       | `Ducking`       | sidechain from duckCylinder voice      |
 
 `body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
 per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.

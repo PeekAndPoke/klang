@@ -89,7 +89,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
         val (_, cylinder) = orbitOf(VoiceData.empty.copy(delay = 0.4))
         val master = masterOf(MasterStageDsl.Delay(wet = 0.4)).delays.firstOrNull().shouldNotBeNull()
 
-        val orbit = cylinder.delay.delayLine.shouldNotBeNull()
+        val orbit = cylinder.delay!!.delayLine.shouldNotBeNull()
         orbit.time shouldBe master.time
         orbit.feedback shouldBe master.feedback
         orbit.cap shouldBe master.cap
@@ -115,7 +115,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
             MasterStageDsl.Delay(wet = Double.NaN, time = Double.POSITIVE_INFINITY, feedback = Double.NaN),
         ).delays.firstOrNull().shouldNotBeNull()
 
-        val orbit = cylinder.delay.delayLine.shouldNotBeNull()
+        val orbit = cylinder.delay!!.delayLine.shouldNotBeNull()
         orbit.time shouldBe master.time
         orbit.feedback shouldBe master.feedback
         voice.delay.amount shouldBe MasterStageDsl.Delay().wet
@@ -125,7 +125,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
         val (voice, cylinder) = orbitOf(VoiceData.empty)
 
         voice.delay.amount shouldBe 0.0
-        cylinder.delay.delayLine.shouldBeNull()
+        cylinder.delay!!.delayLine.shouldBeNull()
     }
 
     // ── Reverb ───────────────────────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
         val (_, cylinder) = orbitOf(VoiceData.empty.copy(reverb = 0.4))
         val master = masterOf(MasterStageDsl.Reverb(wet = 0.4)).reverbs.firstOrNull().shouldNotBeNull()
 
-        cylinder.reverb.reverb.shouldNotBeNull().size shouldBe master.size
+        cylinder.reverb!!.reverb.shouldNotBeNull().size shouldBe master.size
     }
 
     "reverb: an orbit voice that sets any one slot but the send sends the master's default wet" {
@@ -154,7 +154,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
             val master = masterOf(MasterStageDsl.Reverb(wet = bad, size = bad)).reverbs.firstOrNull().shouldNotBeNull()
 
             withClue("slot = $bad") {
-                cylinder.reverb.reverb.shouldNotBeNull().size shouldBe master.size
+                cylinder.reverb!!.reverb.shouldNotBeNull().size shouldBe master.size
                 voice.reverb.amount shouldBe MasterStageDsl.Reverb().wet
             }
         }
@@ -164,6 +164,6 @@ class SendEffectDefaultsParitySpec : StringSpec({
         val (voice, cylinder) = orbitOf(VoiceData.empty)
 
         voice.reverb.amount shouldBe 0.0
-        cylinder.reverb.reverb.shouldBeNull()
+        cylinder.reverb!!.reverb.shouldBeNull()
     }
 })

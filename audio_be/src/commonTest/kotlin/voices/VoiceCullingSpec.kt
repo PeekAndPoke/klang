@@ -302,13 +302,13 @@ class VoiceCullingSpec : StringSpec({
             ctx.blockStart = start
             zombie.render(ctx)                                          // renews first, like the active list
             ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-            withClue("block $it: the zombie holds the lease") { cylinder.body.isEngaged shouldBe false }
+            withClue("block $it: the zombie holds the lease") { cylinder.body!!.isEngaged shouldBe false }
             start += 128
         }
 
         start += 2 * 128                                                // the zombie missed two blocks
         ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-        withClue("the lease lapsed without the zombie") { cylinder.body.isEngaged shouldBe true }
+        withClue("the lease lapsed without the zombie") { cylinder.body!!.isEngaged shouldBe true }
     }
     "a hand-muted voice (gain 0) can never be heard and is culled like any silent tail" {
         val v = createVoice(

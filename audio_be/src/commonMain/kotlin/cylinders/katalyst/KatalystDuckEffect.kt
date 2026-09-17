@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_be.effects.Ducking
  *
  * Short-circuits when no ducking is configured or the sidechain buffer is not available.
  */
-class KatalystDuckingEffect : KatalystEffect {
+class KatalystDuckEffect : KatalystEffect {
 
     /** Sidechain source orbit ID (which orbit triggers the ducking) */
     var duckCylinderId: Int? = null
@@ -39,9 +39,20 @@ class KatalystDuckingEffect : KatalystEffect {
         )
     }
 
-    /** Clears ducking configuration. */
-    fun clear() {
+    /** Clears the ducking configuration: no source orbit, no processor, fresh envelope next time. */
+    override fun reset() {
         duckCylinderId = null
         ducking = null
+    }
+
+    /**
+     * False: the duck's envelope is state, but like the compressor it only attenuates and emits
+     * nothing from silence. See [KatalystBodyEffect.hasTail].
+     */
+    override fun hasTail(): Boolean = false
+
+    /** Rents nothing, so retiring is the clean slate. */
+    override fun retire() {
+        reset()
     }
 }

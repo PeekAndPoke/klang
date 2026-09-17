@@ -76,7 +76,7 @@ class KatalystReverbEffect(
         private set
 
     /** Activating configures the shelf refused a unit for. Counted per orbit life, like the delay's. */
-    var deniedRents: Int = 0
+    override var deniedRents: Int = 0
         private set
 
     /**
@@ -100,7 +100,7 @@ class KatalystReverbEffect(
     private val activeTail = TailCeiling()
 
     /**
-     * Applies the orbit owner's reverb settings. Called by `Cylinder.applyBusEffects` on every
+     * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyOwner` on every
      * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on.
      *
@@ -168,7 +168,7 @@ class KatalystReverbEffect(
      * — an orbit ringing out under a live owner held the engine just as long before this
      * lifecycle existed.
      */
-    fun hasTail(): Boolean = when (state) {
+    override fun hasTail(): Boolean = when (state) {
         State.Off -> false
         State.Draining -> true
         // A ceiling, not a scan: [process] maintains it from the send buffer.
@@ -211,11 +211,11 @@ class KatalystReverbEffect(
     }
 
     /** Clears the network, the lifecycle AND the DSP params — called from
-     *  `Cylinder.resetBusEffects` on orbit deactivation. The params go back to factory here
+     *  `KatalystChain.reset` on orbit deactivation. The params go back to factory here
      *  (the delay's review-round-5 rationale): [Reverb]'s setters DROP non-finite writes, so a
      *  NaN param from the next life's first owner would otherwise inherit THIS life's value.
      *  Mirrors [KatalystDelayEffect.reset]. */
-    fun reset() {
+    override fun reset() {
         val unit = reverb
         if (unit != null) {
             unit.reset()
@@ -226,6 +226,15 @@ class KatalystReverbEffect(
         drainRemaining = 0.0
         activeTail.reset()
         refused = false
+    }
+
+    /**
+     * Retiring hands the unit back DIRTY instead of clearing it ([release], not [reset]): zeroing
+     * it here would be a big store on the audio thread, and the shelf zeroes it again on return
+     * (`KatalystChain.retire`).
+     */
+    override fun retire() {
+        release()
     }
 
     override fun process(ctx: KatalystContext) {

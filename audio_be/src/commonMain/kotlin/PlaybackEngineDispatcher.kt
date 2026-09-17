@@ -202,7 +202,7 @@ class PlaybackEngineDispatcher(
                 cylinderStates.add(
                     KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
                 )
-                deniedRents += cylinder.delay.deniedRents + cylinder.reverb.deniedRents
+                deniedRents += cylinder.deniedRents
             }
         }
 

@@ -85,8 +85,8 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.size shouldBe 0.7
-        cylinder.delay.delayLine!!.time shouldBe 0.3
+        cylinder.reverb!!.reverb!!.size shouldBe 0.7
+        cylinder.delay!!.delayLine!!.time shouldBe 0.3
 
         // Different voice, same block → denied → owner's settings persist.
         cylinder.updateFromVoice(
@@ -96,8 +96,8 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
             blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.size shouldBe 0.7
-        cylinder.delay.delayLine!!.time shouldBe 0.3
+        cylinder.reverb!!.reverb!!.size shouldBe 0.7
+        cylinder.delay!!.delayLine!!.time shouldBe 0.3
     }
 
     "when the orbit owner ends, a new voice takes over and its bus settings apply" {
@@ -106,12 +106,12 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.7)), blockStart = 0.0,
         )
-        cylinder.reverb.reverb!!.size shouldBe 0.7
+        cylinder.reverb!!.reverb!!.size shouldBe 0.7
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.2)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb!!.size shouldBe 0.2 // new owner's
+        cylinder.reverb!!.reverb!!.size shouldBe 0.2 // new owner's
     }
 
     "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
@@ -131,15 +131,15 @@ class OrbitBusPipelineSpec : StringSpec({
             cylinder.mixBuffer.clear()
             cylinder.processEffects()
         }
-        cylinder.reverb.hasTail() shouldBe true
+        cylinder.reverb!!.hasTail() shouldBe true
 
         // Owner A ends; a no-reverb voice takes over → the off-config starts the DRAIN under the
         // RETAINED params (the countdown decays at owner A's size, not the new owner's 0.0).
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.0, size = 0.0)), blockStart = 2.0 * bf,
         )
-        cylinder.reverb.reverb!!.size shouldBe 0.05 // retained
-        cylinder.reverb.hasTail() shouldBe true // draining — VISIBLE to cleanup now
+        cylinder.reverb!!.reverb!!.size shouldBe 0.05 // retained
+        cylinder.reverb!!.hasTail() shouldBe true // draining — VISIBLE to cleanup now
 
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
         // cleared, only the reverbHasTail() wiring stands between a charged drain and
@@ -158,7 +158,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Run the production block loop until the countdown's terminal reset flips the tail off.
         var blocks = 0
-        while (cylinder.reverb.hasTail() && blocks < 1200) {
+        while (cylinder.reverb!!.hasTail() && blocks < 1200) {
             cylinder.clear()
             cylinder.processEffects()
             cylinder.tryDeactivate()
@@ -171,7 +171,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.tryDeactivate()
 
         cylinder.isActive shouldBe false
-        cylinder.reverb.reverb!!.hasTail(0.0) shouldBe false // literally zero on lease free
+        cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false // literally zero on lease free
     }
 
     "cylinder bus context shares buffers with cylinder" {
@@ -216,7 +216,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.mixBuffer.left[0] shouldBe 0.0
     }
 
-    "processDucking applies sidechain ducking" {
+    "processDuck applies sidechain ducking" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
@@ -233,14 +233,14 @@ class OrbitBusPipelineSpec : StringSpec({
         sidechain.left.fill(0.9)
         sidechain.right.fill(0.9)
 
-        cylinder.processDucking(sidechain)
+        cylinder.processDuck(sidechain)
 
         // Signal should be reduced
         val outputLevel = abs(cylinder.mixBuffer.left[blockFrames - 1])
         (outputLevel < 0.5) shouldBe true
     }
 
-    "processDucking does nothing with null sidechain" {
+    "processDuck does nothing with null sidechain" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
@@ -251,7 +251,7 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.mixBuffer.left.fill(0.5)
 
-        cylinder.processDucking(null)
+        cylinder.processDuck(null)
 
         // Should be unchanged
         cylinder.mixBuffer.left[0] shouldBe 0.5
@@ -352,9 +352,9 @@ class OrbitBusPipelineSpec : StringSpec({
             blockStart = 2.0 * blockFrames,
         )
 
-        cylinder.phaser.phaser.depth shouldBe 0.8
-        cylinder.phaser.phaser.rate shouldBe 3.0
-        cylinder.phaser.phaser.center shouldBe 800.0
+        cylinder.phaser!!.phaser.depth shouldBe 0.8
+        cylinder.phaser!!.phaser.rate shouldBe 3.0
+        cylinder.phaser!!.phaser.center shouldBe 800.0
     }
 
     "a no-phaser owner keeps the sweep clock: kernel params retained, only depth drops" {
@@ -366,8 +366,8 @@ class OrbitBusPipelineSpec : StringSpec({
             ),
             blockStart = 0.0,
         )
-        cylinder.phaser.phaser.rate shouldBe 2.0
-        cylinder.phaser.phaser.depth shouldBe 0.8
+        cylinder.phaser!!.phaser.rate shouldBe 2.0
+        cylinder.phaser!!.phaser.depth shouldBe 0.8
 
         // Owner lapses; a plain voice takes over (VoiceFactory-default phaser: rate 0, depth 0).
         cylinder.updateFromVoice(
@@ -377,9 +377,9 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Depth is the new owner's, but the CLOCK params are retained (ledger D2, completed in
         // review round 1: writing rate 0 froze the LFO as surely as the old skipped prepareBlock).
-        cylinder.phaser.phaser.depth shouldBe 0.0
-        cylinder.phaser.phaser.rate shouldBe 2.0
-        cylinder.phaser.phaser.center shouldBe 1200.0
+        cylinder.phaser!!.phaser.depth shouldBe 0.0
+        cylinder.phaser!!.phaser.rate shouldBe 2.0
+        cylinder.phaser!!.phaser.center shouldBe 1200.0
     }
 
     "updateFromVoice configures delay parameters" {
@@ -389,8 +389,8 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.delay.delayLine!!.time shouldBe 0.5
-        cylinder.delay.delayLine!!.feedback shouldBe 0.3
+        cylinder.delay!!.delayLine!!.time shouldBe 0.5
+        cylinder.delay!!.delayLine!!.feedback shouldBe 0.3
     }
 
     "updateFromVoice configures reverb parameters" {
@@ -400,8 +400,8 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.reverb.reverb!!.size shouldBe 0.7
-        cylinder.reverb.reverb!!.lowpass shouldBe 5000.0
+        cylinder.reverb!!.reverb!!.size shouldBe 0.7
+        cylinder.reverb!!.reverb!!.lowpass shouldBe 5000.0
     }
 
     "updateFromVoice configures phaser parameters" {
@@ -411,13 +411,13 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.phaser.phaser.rate shouldBe 2.0
-        cylinder.phaser.phaser.depth shouldBe 0.5
-        cylinder.phaser.phaser.center shouldBe 800.0
-        cylinder.phaser.phaser.sweep shouldBe 600.0
+        cylinder.phaser!!.phaser.rate shouldBe 2.0
+        cylinder.phaser!!.phaser.depth shouldBe 0.5
+        cylinder.phaser!!.phaser.center shouldBe 800.0
+        cylinder.phaser!!.phaser.sweep shouldBe 600.0
         // C4.2: the floor must be FORWARDED (a dropped line falls back to additive 1.0
         // and phaser(floor = ...) becomes a silent no-op on the bus path)
-        cylinder.phaser.phaser.floor shouldBe 0.25
+        cylinder.phaser!!.phaser.floor shouldBe 0.25
     }
 
     "updateFromVoice: an absent phaser floor arrives as the additive default 1.0" {
@@ -426,7 +426,7 @@ class OrbitBusPipelineSpec : StringSpec({
             phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
-        cylinder.phaser.phaser.floor shouldBe 1.0
+        cylinder.phaser!!.phaser.floor shouldBe 1.0
     }
 
     "updateFromVoice configures ducking" {
@@ -436,9 +436,9 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.ducking.duckCylinderId shouldBe 2
-        cylinder.ducking.ducking shouldNotBe null
-        cylinder.ducking.ducking!!.depth shouldBe 0.8
+        cylinder.duck!!.duckCylinderId shouldBe 2
+        cylinder.duck!!.ducking shouldNotBe null
+        cylinder.duck!!.ducking!!.depth shouldBe 0.8
     }
 
     "updateFromVoice configures compressor" {
@@ -454,7 +454,7 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        val c = cylinder.compressor.compressor!!
+        val c = cylinder.compressor!!.compressor!!
         c.thresholdDb shouldBe -15.0
         c.ratio shouldBe 3.0
     }

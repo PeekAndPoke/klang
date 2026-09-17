@@ -28,8 +28,15 @@ import kotlin.math.ceil
  * One stage of a built [MasterChain] — a thin shell over the **shared** DSP in
  * `audio_be/effects/`, processing the master bus in place.
  *
- * Deliberately the same shape as `KatalystEffect` (the orbit-bus counterpart): the effect
- * implementations are shared, only the host differs (orbit bus vs master bus).
+ * The orbit-bus counterpart is `KatalystEffect`. Both chains have the same lifecycle (a clean
+ * slate for re-entry into service, a tail question, a return of rented units); what differs is
+ * WHERE it lives. Here it is chain-level: [MasterChain] owns typed arrays of the units it built
+ * ([MasterChain.reverbs], [MasterChain.delays], [MasterChain.limiters], the ceilings) and walks
+ * them in [MasterChain.reset], [MasterChain.hasActiveTail] and [MasterChain.releaseUnits], so a
+ * stage shell needs nothing but [process]. On the orbit bus it is per stage, because the stages
+ * own heterogeneous lifecycles (a delay grows its ring, a resonator swaps its bank) that no
+ * chain-level array can express. What the two DO share is the rule this shell exists for: the
+ * effect implementations are the same DSP classes, only the host differs.
  */
 internal fun interface MasterFx {
     fun process(bus: StereoBuffer, frames: Int)

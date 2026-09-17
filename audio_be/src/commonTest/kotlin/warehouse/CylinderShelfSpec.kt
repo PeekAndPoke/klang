@@ -95,8 +95,8 @@ class CylinderShelfSpec : StringSpec({
 
         f.warehouse.cylinders.idleCount shouldBe 1
         used.isActive shouldBe false
-        used.delay.delayLine.shouldBeNull() // the ring went to ITS shelf, not idle inside the cylinder
-        used.reverb.reverb.shouldBeNull()
+        used.delay!!.delayLine.shouldBeNull() // the ring went to ITS shelf, not idle inside the cylinder
+        used.reverb!!.reverb.shouldBeNull()
         f.warehouse.sized.shelfCount shouldBe 1
         f.warehouse.reverbs.idleCount shouldBe 1
 
@@ -319,10 +319,10 @@ class CylinderShelfSpec : StringSpec({
         repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val cylinders = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull().cylinders.cylinders.sortedBy { it.id }
-        cylinders[0].phaser.phaser.depth shouldBeGreaterThan 0.0
-        cylinders[1].compressor.compressor.shouldNotBeNull()
-        cylinders[2].body.isEngaged shouldBe true
-        cylinders[3].vowel.isEngaged shouldBe true
+        cylinders[0].phaser!!.phaser.depth shouldBeGreaterThan 0.0
+        cylinders[1].compressor!!.compressor.shouldNotBeNull()
+        cylinders[2].body!!.isEngaged shouldBe true
+        cylinders[3].vowel!!.isEngaged shouldBe true
     }
 
     "every warmup voice actually sounds through its orbit — the warmed paths are the real ones" {
@@ -339,8 +339,8 @@ class CylinderShelfSpec : StringSpec({
         engine.cylinders.cylinders.size shouldBe WarmupRunner.WARMUP_ORBITS
         engine.cylinders.cylinders.forEach { c ->
             c.isActive shouldBe true
-            c.delay.delayLine.shouldNotBeNull()
-            c.reverb.reverb.shouldNotBeNull()
+            c.delay!!.delayLine.shouldNotBeNull()
+            c.reverb!!.reverb.shouldNotBeNull()
         }
         engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
     }

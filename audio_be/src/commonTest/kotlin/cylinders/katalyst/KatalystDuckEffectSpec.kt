@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import kotlin.math.abs
 
-class KatalystDuckingEffectSpec : StringSpec({
+class KatalystDuckEffectSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
@@ -24,7 +24,7 @@ class KatalystDuckingEffectSpec : StringSpec({
     )
 
     "does nothing when no ducking is configured" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
         val ctx = createCtx()
 
         ctx.mixBuffer.left.fill(0.5)
@@ -37,7 +37,7 @@ class KatalystDuckingEffectSpec : StringSpec({
     }
 
     "does nothing when sidechain buffer is null" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
         effect.duckCylinderId = 0
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 1.0)
 
@@ -51,7 +51,7 @@ class KatalystDuckingEffectSpec : StringSpec({
     }
 
     "reduces signal when sidechain has signal" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
         effect.duckCylinderId = 0
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.001, depth = 1.0)
 
@@ -74,7 +74,7 @@ class KatalystDuckingEffectSpec : StringSpec({
     }
 
     "no ducking when sidechain is silent" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
         effect.duckCylinderId = 0
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.001, depth = 1.0)
 
@@ -101,7 +101,7 @@ class KatalystDuckingEffectSpec : StringSpec({
     }
 
     "duck orbit ID and ducking instance can be updated" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
 
         effect.duckCylinderId shouldBe null
         effect.ducking shouldBe null
@@ -113,19 +113,19 @@ class KatalystDuckingEffectSpec : StringSpec({
         effect.ducking!!.depth shouldBe 0.8
     }
 
-    "clear() removes ducking configuration" {
-        val effect = KatalystDuckingEffect()
+    "reset() removes the ducking configuration" {
+        val effect = KatalystDuckEffect()
         effect.duckCylinderId = 2
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.05, depth = 0.8)
 
-        effect.clear()
+        effect.reset()
 
         effect.duckCylinderId shouldBe null
         effect.ducking shouldBe null
     }
 
     "linked stereo: both channels get identical gain reduction" {
-        val effect = KatalystDuckingEffect()
+        val effect = KatalystDuckEffect()
         effect.duckCylinderId = 0
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.001, depth = 0.8)
 
