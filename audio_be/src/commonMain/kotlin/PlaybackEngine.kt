@@ -57,8 +57,9 @@ class PlaybackEngine(
     /**
      * Registers a custom orbit chain for this playback.
      *
-     * Katalyst step 1: the chain lands on this engine's fork and nothing reads it yet, and the
-     * cylinders start building chains from it in step 2.
+     * The chain lands on this engine's fork, which is the registry every cylinder of this engine
+     * resolves a name against (Katalyst step 3a): a `katalyst(…)` reference on the voice stream
+     * then finds it, and the orbit installs it the next time it is idle.
      */
     fun registerKatalyst(name: String, dsl: KatalystDsl) = katalystRegistry.register(name, dsl)
 
@@ -167,10 +168,16 @@ class PlaybackEngine(
 
         /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
         fun create(context: AudioBackendContext): PlaybackEngine {
+            // ONE fork per engine, shared by the two things that need it: this engine registers
+            // its chains here, and every cylinder it rents resolves a `katalyst(…)` name against
+            // the same fork. It dies with the engine, so a chain cannot outlive the playback that
+            // declared it.
+            val katalystRegistry = context.katalystRegistry.fork()
             val cylinders = Cylinders(
                 blockFrames = context.blockFrames,
                 sampleRate = context.sampleRate,
                 units = context.warehouse.cylinders,
+                katalysts = katalystRegistry,
             )
             // The bus is built first and handed to the scheduler as the sink for `master(…)` events,
             // so neither has to know about the other's lifecycle.
@@ -188,7 +195,7 @@ class PlaybackEngine(
                 scheduler = scheduler,
                 cylinders = cylinders,
                 masterBus = masterBus,
-                katalystRegistry = context.katalystRegistry.fork(),
+                katalystRegistry = katalystRegistry,
                 blockFrames = context.blockFrames,
                 sampleRate = context.sampleRate,
             )

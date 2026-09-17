@@ -46,6 +46,7 @@ class VoiceScheduler(
 
     private val context = options.context
     private val masterBus = options.masterBus
+    private val cylinders = options.cylinders
 
     // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
     // engine; the shared parent ([context]) keeps only the built-ins. See docs/tasks-archive/2026-09/20260904-per-playback-engine.md (#2).
@@ -592,6 +593,11 @@ class VoiceScheduler(
             // would be wrong, but late *state* must still take effect — otherwise a worklet stall
             // silently loses a section's master for the rest of the playback.
             head.data.master?.let { masterBus.requestSwap(it) }
+            // The orbit twin (Katalyst step 3a): a `katalyst(…)` reference selects the chain the
+            // event's ORBIT runs from here on. Same rule as the master's above, one line down
+            // because it is the same kind of engine-level state, and the default orbit is the one
+            // `VoiceFactory` resolves for a voice that names none.
+            head.data.katalyst?.let { cylinders.requestChain(orbit = head.data.cylinder ?: 0, name = it) }
 
             // A control-only event has now been consumed — it must never reach voice creation.
             // The flag is explicit because a null `sound` is NOT silent: the ignitor registry

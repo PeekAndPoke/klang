@@ -74,6 +74,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
             blockFrames = 128,
             rings = SizedBuffers.forRings(48000),
             reverbs = ReverbUnits(48000),
+            voiceDriven = true,
         )
 
         cylinder.pipeline.map { it::class.simpleName } shouldBe declared.pipeline.map { it::class.simpleName }

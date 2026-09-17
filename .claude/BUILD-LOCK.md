@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| Katalyst DSL step 3a (coordinator session 017L4Bx, one Opus implementer) | `audio_be/**/cylinders/**`, `voices/VoiceScheduler.kt`, `PlaybackEngine.kt`, `warehouse/CylinderUnits.kt` | declared chains looked up, resolved from slots, installed on an idle cylinder; no crossfade yet (3b) |
 
 ## The two layers
 

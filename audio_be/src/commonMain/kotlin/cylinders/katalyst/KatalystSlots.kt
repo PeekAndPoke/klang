@@ -1,0 +1,239 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.audio_be.cylinders.katalyst
+
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.buildExciter
+import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
+
+/**
+ * Reads the knobs of a **declared** Katalyst chain: one [IgnitorDsl] slot node in, one `Double`
+ * out, plus the three composite values a stage wants instead of a number (the body and vowel
+ * [FilterDef]s, the compressor and duck settings).
+ *
+ * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks/katalyst-dsl.md` §7 and the
+ * value rule is the signal-flow plan §7 (D4): **a declared chain's stage knobs come from the
+ * chain's slots only.** The owner voice is not a knob source here; the classic chain keeps its
+ * voice-driven writers until step 5 removes the voice fields (see [KatalystOwnerApply]).
+ *
+ * **Resolution happens ONCE, when the chain is built**, never per block: every answer here is
+ * block-constant by contract, so the writer [KatalystChainBuilder] installs captures the resolved
+ * numbers and re-applies them on every owner claim. That is what keeps a slot-driven writer as
+ * allocation-free per block as the voice-driven one it replaces.
+ *
+ * Step 5 adds the orbit param state (`.katp`) on top: a [IgnitorDsl.Param] will then read the
+ * orbit's own value per block instead of its authored default.
+ */
+internal object KatalystSlots {
+
+    /**
+     * The two note frequencies a non-leaf knob is read at (see [coerce]). Any two audible,
+     * unequal values do the job; these are an A4 and its octave, so a failure message reads like
+     * music rather than like a magic number. Not user-facing, so they live here and not in
+     * `audio_bridge/constants/`.
+     */
+    private const val PROBE_A_HZ: Double = 440.0
+    private const val PROBE_B_HZ: Double = 660.0 // not an octave of PROBE_A_HZ, so an octave-invariant use of freq still disagrees
+
+    /**
+     * The value of one knob: [IgnitorDsl.Constant] is its number, [IgnitorDsl.Param] is its
+     * authored default (step 5 lets the orbit's param state override it), a missing node is
+     * [fallback], and anything else is coerced.
+     *
+     * Not an exhaustive `when`, deliberately: a knob is block-constant BY CONTRACT
+     * (`KatalystStageDsl`), so the two leaf kinds are the vocabulary and everything else is the
+     * pathological case the contract already says to coerce rather than reject. Enumerating the
+     * ninety-odd [IgnitorDsl] variants here would claim a meaning for each of them that the bus
+     * does not have.
+     */
+    fun resolve(node: IgnitorDsl?, fallback: Double): Double = when (node) {
+        null -> fallback
+        is IgnitorDsl.Constant -> node.value
+        is IgnitorDsl.Param -> node.default
+        else -> coerce(node, fallback)
+    }
+
+    /**
+     * A knob that is not a slot leaf: read it at control rate if the graph answers the SAME finite
+     * number whatever note it is read at, else take the knob's default. Never a throw and never a
+     * rejection: the Motor stays raw, and an author who hands an oscillator to a bus knob keeps
+     * their sound and loses only the modulation.
+     *
+     * **Two probes at two frequencies, and the answers must agree** (decided with the maintainer,
+     * 2026-09-17): a bus has no note, so a knob whose value DEPENDS on one is not a bus knob at
+     * all. `Osc.freq()` answers 440 and 660, `Osc.freq().mul(2)` answers 880 and 1320, and both
+     * therefore take their constant instead of an invented number. A pitch-free fold
+     * (`0.1 * 3`, or `1 / 0`, which the engine's `Div` maps to a finite 0.0) answers the same on
+     * both probes and is the author's value, zero included: nothing here may second-guess a 0.0,
+     * or `phaser(rate = 0)` would stop meaning what it says.
+     *
+     * A single probe cannot make that distinction, which is what makes this the discriminator and
+     * not a NaN guard: the first version handed in one non-finite frequency and was defeated by
+     * the engine's own scrubbing (`Times` runs its product through `safeOut`, so NaN came back as
+     * a finite 0.0 and read as "delay off").
+     *
+     * The graph is built ONCE and read twice: [Ignitor.controlRateValueOrNull] is a pure
+     * structural read by contract, so the second query cannot advance any state the first one saw.
+     *
+     * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install
+     * time inside the render callback, where an escaping exception takes the worklet with it. A
+     * hand-built tree can still throw at build time (an empty `Osc.variants()` does), and the
+     * house answer to "the engine cannot read this knob" is the knob's default, not a dead voice.
+     *
+     * The build itself allocates, which is why this is a chain-build path only.
+     */
+    private fun coerce(node: IgnitorDsl, fallback: Double): Double {
+        // The guard covers the two reads as well as the build: every override today is a pure
+        // fold, and the policy on this thread is degrade, never throw.
+        val first: Double
+        val second: Double
+
+        try {
+            val ignitor = node.buildExciter().ignitor
+
+            first = ignitor.controlRateValueOrNull(PROBE_A_HZ) ?: return fallback
+            second = ignitor.controlRateValueOrNull(PROBE_B_HZ) ?: return fallback
+        } catch (_: Throwable) {
+            return fallback
+        }
+
+        // NaN-guard on a value the author can write, plus the agreement test: a NaN never equals
+        // itself, so the comparison also rejects a graph that answers non-finite on either probe.
+        if (!first.isFinite() || first != second) {
+            return fallback
+        }
+
+        return first
+    }
+
+    /**
+     * The modal bands behind a `body("<material>")` name, or null when the name resolves to
+     * nothing, which turns the stage OFF (the rule `SprudelVoiceData.toVoiceData` follows for an
+     * unknown material).
+     *
+     * ⚠️ **THE SEAM FOR STEP 3c** (decided with the maintainer, 2026-09-17): the backend has no
+     * material table, so every name is unknown here and every DECLARED `body(...)` is off. The
+     * tables (`SprudelBodyMaterials.modesFor` and sprudel's `resolveVowelBands`) live in
+     * `sprudel`, which `audio_be` does not depend on, while the wire carries the NAME; step 3c
+     * moves them to `audio_bridge` and this function is the one place that changes. The
+     * voice-driven classic chain plays every material meanwhile, because a voice arrives with its
+     * `FilterDef` already resolved. `KatalystSlotResolverSpec` pins the gap, so the day the table
+     * arrives the row fails and is rewritten deliberately.
+     */
+    fun bodyModes(material: String?): List<FilterDef.Body.Mode>? = null
+
+    /** The formant bands behind a `vowel("a")` name. The same step-3c seam as [bodyModes]. */
+    fun vowelBands(vowel: String?): List<FilterDef.Formant.Band>? = null
+
+    /**
+     * The body resonator a declared stage asks for, or null (the stage is off) when [bands] is
+     * null, whatever `wet` says.
+     *
+     * `mix` is the `wet` slot and a non-finite `floor` takes [BODY_FLOOR], which is also what a
+     * null floor means to [FilterDef.Body]; the constant is written out so the stage carries one
+     * value instead of two spellings of it. A non-finite `mix` takes [BODY_WET] by the same rule:
+     * unset is unset on every knob, and the resonator's own `mix` is read straight into the
+     * wet/dry law, where a NaN would silence the orbit.
+     */
+    fun bodyDef(stage: KatalystStageDsl.Body, bands: List<FilterDef.Body.Mode>?): FilterDef.Body? {
+        if (bands == null) {
+            return null
+        }
+
+        val mix = resolve(stage.wet, BODY_WET)
+        val floor = resolve(stage.floor, BODY_FLOOR)
+
+        return FilterDef.Body(
+            bands = bands,
+            // NaN-guards on values the author can write: a non-finite slot is "unset".
+            mix = if (mix.isFinite()) mix else BODY_WET,
+            floor = if (floor.isFinite()) floor else BODY_FLOOR,
+        )
+    }
+
+    /** The formant bank a declared stage asks for. Twin of [bodyDef], with the vowel constants. */
+    fun vowelDef(stage: KatalystStageDsl.Vowel, bands: List<FilterDef.Formant.Band>?): FilterDef.Formant? {
+        if (bands == null) {
+            return null
+        }
+
+        val mix = resolve(stage.wet, VOWEL_WET)
+        val floor = resolve(stage.floor, VOWEL_FLOOR)
+
+        return FilterDef.Formant(
+            bands = bands,
+            // NaN-guards on values the author can write: a non-finite slot is "unset".
+            mix = if (mix.isFinite()) mix else VOWEL_WET,
+            floor = if (floor.isFinite()) floor else VOWEL_FLOOR,
+        )
+    }
+
+    /**
+     * The compressor settings a declared stage asks for, or null (the stage is off) when NONE of
+     * the five slots is finite.
+     *
+     * Straight through [Voice.Compressor.fromParams], the voice path's own rule: any of the five
+     * set means on, and every unset one takes its `COMPRESSOR_*` constant. A non-finite slot is
+     * what "unset" looks like on the wire, so it maps to the `null` that function reads.
+     */
+    fun compressorSettings(stage: KatalystStageDsl.Compressor): Voice.Compressor? =
+        Voice.Compressor.fromParams(
+            threshold = finiteOrNull(stage.threshold, COMPRESSOR_THRESHOLD_DB),
+            ratio = finiteOrNull(stage.ratio, COMPRESSOR_RATIO),
+            knee = finiteOrNull(stage.knee, COMPRESSOR_KNEE_DB),
+            attack = finiteOrNull(stage.attack, COMPRESSOR_ATTACK_SECONDS),
+            release = finiteOrNull(stage.release, COMPRESSOR_RELEASE_SECONDS),
+        )
+
+    /**
+     * The duck settings a declared stage asks for, or null (the stage is off) unless the stage
+     * names a source orbit AND asks for depth.
+     *
+     * `orbit` is a number the runtime coerces to an Int, exactly as the sprudel door does; a
+     * finite negative is a request like any other, not an off switch (the off switch is the
+     * non-finite default). A non-finite attack takes [DUCK_ATTACK_SECONDS].
+     */
+    fun duckSettings(stage: KatalystStageDsl.Duck): Voice.Ducking? {
+        val orbit = resolve(stage.orbit, SLOT_UNSET)
+        val depth = resolve(stage.depth, DUCK_DEPTH)
+
+        // NaN-guard on values the author can write: a non-finite orbit is "no source named".
+        if (!orbit.isFinite() || !(depth > 0.0)) {
+            return null
+        }
+
+        val attack = resolve(stage.attack, DUCK_ATTACK_SECONDS)
+
+        return Voice.Ducking(
+            cylinderId = orbit.toInt(),
+            attackSeconds = if (attack.isFinite()) attack else DUCK_ATTACK_SECONDS,
+            depth = depth,
+        )
+    }
+
+    /** A slot as a `Double?`: the number when it is finite, null when the slot reads as unset. */
+    private fun finiteOrNull(node: IgnitorDsl?, fallback: Double): Double? {
+        val value = resolve(node, fallback)
+
+        // NaN-guard on a value the author can write: a non-finite slot was never set.
+        return if (value.isFinite()) value else null
+    }
+}

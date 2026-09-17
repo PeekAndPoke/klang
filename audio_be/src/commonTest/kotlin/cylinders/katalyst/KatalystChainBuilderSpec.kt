@@ -39,12 +39,16 @@ class KatalystChainBuilderSpec : StringSpec({
 
     // The shelves are on the builder's door, not behind a default, so a spec says which ones it
     // rents from, exactly as the cylinder does.
-    fun build(dsl: KatalystDsl) = KatalystChainBuilder.build(
+    // voiceDriven = true is this spec's subject: the CLASSIC writers, which is what the cylinder
+    // installs for a chain it was handed no name for. The slot-driven ones are
+    // [KatalystSlotResolverSpec]'s.
+    fun build(dsl: KatalystDsl, voiceDriven: Boolean = true) = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
+        voiceDriven = voiceDriven,
     )
 
     fun ctx() = KatalystContext(

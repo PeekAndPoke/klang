@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.CylinderUnits
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
@@ -29,6 +30,12 @@ class Cylinders(
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
     ),
+    /**
+     * Where a `katalyst(…)` name is resolved. Production passes the owning engine's per-playback
+     * fork, which is also what every cylinder rented here is handed, so a chain dies with the
+     * playback that declared it; the default is a private, empty registry, for specs.
+     */
+    private val katalysts: KatalystRegistry = KatalystRegistry(),
 ) {
     companion object {
         const val MAX_CYLINDERS = 256
@@ -77,7 +84,8 @@ class Cylinders(
      * Processes all cylinders and mixes the results into the given buffer.
      *
      * Processing order:
-     * 1. Process all cylinder katalyst pipelines (Delay → Reverb → Phaser → Compressor)
+     * 1. Install any chain queued on a SILENT orbit, then process all cylinder katalyst pipelines
+     *    (Delay → Reverb → Phaser → Compressor)
      * 2. Apply ducking (cross-cylinder sidechain — requires all cylinders processed first)
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders
@@ -85,6 +93,12 @@ class Cylinders(
     fun processAndMix(fusionMix: StereoBuffer) {
         // Step 1: Process katalyst pipeline on all cylinders
         for (cylinder in id2cylinder.values) {
+            // A chain requested before its registration arrived lands here, on the first block
+            // where both are true: the name resolves and the orbit is silent. Two field reads per
+            // cylinder when nothing is queued, which is the normal case (see
+            // [Cylinder.pollPendingChain]). An inactive cylinder renders nothing this block, so
+            // there is nothing this swap can cut.
+            cylinder.pollPendingChain()
             cylinder.processEffects()
         }
 
@@ -144,12 +158,47 @@ class Cylinders(
      */
     // blockStart is an ABSOLUTE backend frame — Double, see RenderClock.cursorFrame.
     fun getOrInit(id: Int, voice: Voice, blockStart: Double): Cylinder {
+        return cylinderFor(id).also {
+            it.updateFromVoice(voice, blockStart)
+        }
+    }
+
+    /**
+     * Routes a `katalyst(…)` reference to the cylinder for [orbit]: the scheduler calls this when
+     * it consumes the reference, whether or not the event also sounds (see
+     * [Cylinder.requestChain]).
+     *
+     * A chain declared on an orbit that is silent so far RENTS that orbit's cylinder, exactly as
+     * its first voice would: the rent is the same call with the same accounting, and the cylinder
+     * it returns is inactive, so it costs the render loop three early returns and one pending
+     * check per block until a voice arrives. Not renting would mean losing the declaration of
+     * every pattern whose chain is announced before its first note.
+     *
+     * One thing the rental is NOT free of: [processAndMix]'s cleanup is round-robin, ONE cylinder
+     * per block, so every allocated cylinder makes every other cylinder's silence grace longer
+     * (the block-framing D11 note on `Cylinder`: the wall-clock grace is
+     * `silentBlocksBeforeTailCheck × allocatedCylinders × blockFrames`). A chain-only rental
+     * therefore stretches the tail-check schedule of the orbits that ARE sounding, by the same
+     * amount an extra sounding orbit would.
+     */
+    fun requestChain(orbit: Int, name: String) {
+        cylinderFor(orbit).requestChain(name)
+    }
+
+    /**
+     * The cylinder for [id], rented from the shelf on first use. ONE door for both callers, so a
+     * chain request and a voice can never disagree about which cylinder an orbit number means
+     * (the `% maxCylinders` fold).
+     */
+    private fun cylinderFor(id: Int): Cylinder {
         val safeId = id % maxCylinders
 
         return id2cylinder.getOrPut(safeId) {
-            units.rent(id = safeId, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck)
-        }.also {
-            it.updateFromVoice(voice, blockStart)
+            units.rent(
+                id = safeId,
+                silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
+                katalysts = katalysts,
+            )
         }
     }
 }

@@ -176,9 +176,12 @@ class CylinderShelfSpec : StringSpec({
     "the shelf holds at most maxIdle cylinders and refuses a double return" {
         val rings = SizedBuffers.forRings(sampleRate)
         val units = CylinderUnits(blockFrames, sampleRate, rings, ReverbUnits(sampleRate), maxIdle = 2)
-        val a = units.rent(0, 10)
-        val b = units.rent(1, 10)
-        val c = units.rent(2, 10)
+        // The renting engine's chain registry; this spec is about the shelf, so one empty
+        // registry serves every rent.
+        val katalysts = KatalystRegistry()
+        val a = units.rent(0, 10, katalysts)
+        val b = units.rent(1, 10, katalysts)
+        val c = units.rent(2, 10, katalysts)
         units.allocations shouldBe 3
 
         units.giveBack(a)
@@ -191,8 +194,8 @@ class CylinderShelfSpec : StringSpec({
         units.idleCount shouldBe 2
         units.dropped shouldBe 1
 
-        units.rent(7, 10) shouldBeSameInstanceAs b
-        units.rent(8, 10).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
+        units.rent(7, 10, katalysts) shouldBeSameInstanceAs b
+        units.rent(8, 10, katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
         units.hits shouldBe 2
     }
 

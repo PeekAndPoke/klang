@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.warehouse
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 
 /**
  * The warehouse's shelf of idle [Cylinder]s (resource warehouse, step 3 — maintainer 2026-09-04:
@@ -53,13 +54,24 @@ class CylinderUnits(
     /**
      * A clean cylinder for orbit [id]: an idle one re-labelled, or a new one. [silentBlocksBeforeTailCheck]
      * is the owning `Cylinders`' setting and is adopted along with the id.
+     *
+     * [katalysts] is the renting engine's per-playback chain registry, which the cylinder resolves
+     * a `katalyst(…)` name against. It travels on the rent rather than on this shelf, because the
+     * shelf outlives every engine while a registry dies with one. Required, and deliberately not
+     * defaulted to a fresh empty one: this is a render path, and a default here would both allocate
+     * per rent and hide a mis-wired engine as "no chain was ever registered".
      */
-    fun rent(id: Int, silentBlocksBeforeTailCheck: Int): Cylinder {
+    fun rent(
+        id: Int,
+        silentBlocksBeforeTailCheck: Int,
+        katalysts: KatalystRegistry,
+    ): Cylinder {
         version++
         if (shelf.isNotEmpty()) {
             hits++
 
-            return shelf.removeAt(shelf.size - 1).also { it.adopt(id, silentBlocksBeforeTailCheck) }
+            return shelf.removeAt(shelf.size - 1)
+                .also { it.adopt(id, silentBlocksBeforeTailCheck, katalysts) }
         }
 
         allocations++
@@ -71,6 +83,7 @@ class CylinderUnits(
             silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
             rings = rings,
             reverbs = reverbs,
+            katalysts = katalysts,
         )
     }
 

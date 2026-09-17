@@ -8,13 +8,25 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 
 /**
  * Builds the [KatalystChain] for one [KatalystDsl]: one exhaustive `when` over
@@ -27,11 +39,17 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  * and no network. [KatalystStageDsl.Eq] and [KatalystStageDsl.Gain] build a
  * [KatalystPassThroughStage] until step 4 gives them their DSP.
  *
- * **Step 2 reads no knob from the DSL.** Every stage still takes its parameters from the orbit's
- * owner voice, through the [KatalystOwnerApply] this builder installs beside it, which is
- * `Cylinder.applyBusEffects` moved here line for line so the engine stays byte-identical. Step 3
- * replaces those with the per-stage slot resolver (`docs/tasks/katalyst-dsl.md` §7) and the DSL's
- * values start to matter.
+ * **Two kinds of writer, chosen by [build]'s `voiceDriven` flag** (Katalyst step 3a, 2026-09-17):
+ *
+ *  - `voiceDriven = true`, the CLASSIC chain: every knob comes from the orbit's owner voice, which
+ *    is `Cylinder.applyBusEffects` line for line, so a song that declares no chain is
+ *    byte-identical to the pre-DSL engine.
+ *  - `voiceDriven = false`, a DECLARED chain: every knob comes from the chain's own slots
+ *    ([KatalystSlots]), resolved once here, and the voice is ignored (the signal-flow plan §7,
+ *    D4: the chain is the instrument).
+ *
+ * The distinction exists only until step 5 takes the bus fields off the wire and makes the doors
+ * `katp` writers on the orbit's chain. Then every chain is slot-driven and the flag goes.
  *
  * **A chain that declares two ducks keeps the LAST one** (decided with the maintainer,
  * 2026-09-17): the cylinder runs exactly one ducking effect, so the earlier declarations are
@@ -41,8 +59,9 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 object KatalystChainBuilder {
 
     /**
-     * Builds the chain for [dsl]. Call once per cylinder (see `Cylinder`), never per block: the
-     * stage instances own the orbit's DSP state, and building them is where the allocation lives.
+     * Builds the chain for [dsl]. Call once per cylinder and chain (see `Cylinder`), never per
+     * block: the stage instances own the orbit's DSP state, and building them is where the
+     * allocation lives.
      */
     fun build(
         dsl: KatalystDsl,
@@ -53,10 +72,18 @@ object KatalystChainBuilder {
         rings: SizedBuffers,
         /** The unit shelf a reverb stage rents from. Required, same reason. */
         reverbs: ReverbUnits,
+        /**
+         * True ONLY for the classic chain, whose knobs still come from the owner voice (see the
+         * class KDoc). Required, and not derived from `dsl == KatalystDsl.classic` here: the
+         * decision belongs to the host that installs the chain, which is the one place that knows
+         * whether it is serving the historical default or an author's declaration.
+         */
+        voiceDriven: Boolean,
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
         val owners = mutableListOf<KatalystOwnerApply>()
         var duck: KatalystDuckEffect? = null
+        var duckStage: KatalystStageDsl.Duck? = null
 
         for (stage in dsl.stages) {
             when (stage) {
@@ -66,14 +93,26 @@ object KatalystChainBuilder {
                 is KatalystStageDsl.Body -> {
                     val fx = KatalystBodyEffect(sampleRate.toDouble())
                     pipeline.add(fx)
-                    // null (the owner has no body) turns the resonator off, not a no-op.
-                    owners.add(KatalystOwnerApply { voice -> fx.configure(voice.body) })
+
+                    if (voiceDriven) {
+                        // null (the owner has no body) turns the resonator off, not a no-op.
+                        owners.add(KatalystOwnerApply { voice -> fx.configure(voice.body) })
+                    } else {
+                        val def = KatalystSlots.bodyDef(stage, KatalystSlots.bodyModes(stage.material))
+                        owners.add(KatalystOwnerApply { fx.configure(def) })
+                    }
                 }
 
                 is KatalystStageDsl.Vowel -> {
                     val fx = KatalystFormantEffect(sampleRate.toDouble())
                     pipeline.add(fx)
-                    owners.add(KatalystOwnerApply { voice -> fx.configure(voice.vowel) })
+
+                    if (voiceDriven) {
+                        owners.add(KatalystOwnerApply { voice -> fx.configure(voice.vowel) })
+                    } else {
+                        val def = KatalystSlots.vowelDef(stage, KatalystSlots.vowelBands(stage.vowel))
+                        owners.add(KatalystOwnerApply { fx.configure(def) })
+                    }
                 }
 
                 // No ring until a voice asks for one (resource warehouse, 2b). This used to
@@ -86,17 +125,36 @@ object KatalystChainBuilder {
                         blockFrames = blockFrames,
                     )
                     pipeline.add(fx)
+
                     // Routed through the effect's lifecycle: an off-config drains the tail out on
                     // its own timeline instead of freezing the ring (see KatalystDelayEffect).
-                    owners.add(
-                        KatalystOwnerApply { voice ->
-                            fx.configure(
-                                time = voice.delay.time,
-                                feedback = voice.delay.feedback,
-                                cap = voice.delay.cap,
-                            )
-                        }
-                    )
+                    if (voiceDriven) {
+                        owners.add(
+                            KatalystOwnerApply { voice ->
+                                fx.configure(
+                                    time = voice.delay.time,
+                                    feedback = voice.delay.feedback,
+                                    cap = voice.delay.cap,
+                                )
+                            }
+                        )
+                    } else {
+                        // In THIS step `delay.wet` is the stage's ON SWITCH, not yet its amount
+                        // (decided with the maintainer, 2026-09-17): the send amount is still the
+                        // per-voice `voice.delay.amount` that `SendRenderer` writes into the send
+                        // buffer, so a chain cannot say HOW MUCH yet, but it must be able to say
+                        // NOTHING. `wet(0.0)` therefore rents no ring, consistent with the phaser
+                        // (gated on depth) and the duck (gated on orbit). Step 5 makes the sends
+                        // insert-style and `wet` becomes the amount it reads like.
+                        val time = KatalystSlots.resolve(stage.time, DELAY_TIME_SECONDS)
+                        val feedback = KatalystSlots.resolve(stage.feedback, DELAY_FEEDBACK)
+                        val cap = KatalystSlots.resolve(stage.cap, DELAY_CAP)
+                        val gatedTime = if (sendIsOn(stage.wet, DELAY_WET)) time else SLOT_UNSET
+
+                        owners.add(
+                            KatalystOwnerApply { fx.configure(time = gatedTime, feedback = feedback, cap = cap) }
+                        )
+                    }
                 }
 
                 // No network until a voice asks for room (resource warehouse, 2d): ~200 KB per
@@ -107,20 +165,35 @@ object KatalystChainBuilder {
                         blockFrames = blockFrames,
                     )
                     pipeline.add(fx)
+
                     // reverb.amount is used by SendRenderer for the send amount. Routed through
                     // the effect's lifecycle like the delay: an off-config drains the tail out on
                     // its own timeline instead of freezing the combs (see KatalystReverbEffect).
                     // size is already normalized (and bounded) by `Reverb.normalizeSize` in
                     // VoiceFactory, and configure bounds it again at the door, so every caller
                     // shares one conversion.
-                    owners.add(
-                        KatalystOwnerApply { voice ->
-                            fx.configure(
-                                size = voice.reverb.size,
-                                lowpass = voice.reverb.lowpass,
-                            )
-                        }
-                    )
+                    if (voiceDriven) {
+                        owners.add(
+                            KatalystOwnerApply { voice ->
+                                fx.configure(
+                                    size = voice.reverb.size,
+                                    lowpass = voice.reverb.lowpass,
+                                )
+                            }
+                        )
+                    } else {
+                        // The slot carries the AUTHORED 0..10 size, so it passes through the one
+                        // shared conversion here, where VoiceFactory does it for a voice.
+                        // `reverb.wet` is the stage's ON SWITCH in this step, as on the delay above.
+                        val size = Reverb.normalizeSize(KatalystSlots.resolve(stage.size, REVERB_SIZE))
+                        val gatedSize = if (sendIsOn(stage.wet, REVERB_WET)) size else SLOT_UNSET
+                        val lowpass = KatalystSlots.resolve(stage.lowpass, SLOT_UNSET)
+                            // NaN-guard on a value the author can write: non-finite is "unset",
+                            // which is the engine's own fixed damping.
+                            .takeIf { it.isFinite() }
+
+                        owners.add(KatalystOwnerApply { fx.configure(size = gatedSize, lowpass = lowpass) })
+                    }
                 }
 
                 is KatalystStageDsl.Phaser -> {
@@ -128,13 +201,46 @@ object KatalystChainBuilder {
                         phaser = Phaser(sampleRate),
                     )
                     pipeline.add(fx)
-                    owners.add(KatalystOwnerApply { voice -> applyPhaser(fx, voice) })
+
+                    if (voiceDriven) {
+                        owners.add(
+                            KatalystOwnerApply { voice ->
+                                writePhaser(
+                                    fx = fx,
+                                    depth = voice.phaser.depth,
+                                    rate = voice.phaser.rate,
+                                    center = voice.phaser.center,
+                                    sweep = voice.phaser.sweep,
+                                    floor = voice.phaser.floor,
+                                )
+                            }
+                        )
+                    } else {
+                        val depth = KatalystSlots.resolve(stage.wet, PHASER_WET)
+                        val rate = KatalystSlots.resolve(stage.rate, PHASER_RATE_HZ)
+                        val center = KatalystSlots.resolve(stage.center, PHASER_CENTER_HZ)
+                        val sweep = KatalystSlots.resolve(stage.sweep, PHASER_SWEEP_HZ)
+                        val floor = KatalystSlots.resolve(stage.floor, PHASER_FLOOR)
+
+                        owners.add(
+                            KatalystOwnerApply {
+                                writePhaser(fx, depth = depth, rate = rate, center = center, sweep = sweep, floor = floor)
+                            }
+                        )
+                    }
                 }
 
                 is KatalystStageDsl.Compressor -> {
                     val fx = KatalystCompressorEffect()
                     pipeline.add(fx)
-                    owners.add(KatalystOwnerApply { voice -> applyCompressor(fx, voice, sampleRate) })
+
+                    if (voiceDriven) {
+                        owners.add(KatalystOwnerApply { voice -> writeCompressor(fx, voice.compressor, sampleRate) })
+                    } else {
+                        val settings = KatalystSlots.compressorSettings(stage)
+
+                        owners.add(KatalystOwnerApply { writeCompressor(fx, settings, sampleRate) })
+                    }
                 }
 
                 // Declared in the list, run outside it: `Cylinders` applies it after every orbit,
@@ -142,6 +248,7 @@ object KatalystChainBuilder {
                 // declaration wins, so a second Duck stage replaces the first, instance and all.
                 is KatalystStageDsl.Duck -> {
                     duck = KatalystDuckEffect()
+                    duckStage = stage
                 }
 
                 // No DSP yet: the position is kept and the buffers are untouched (step 4).
@@ -157,7 +264,14 @@ object KatalystChainBuilder {
         val theDuck = duck
 
         if (theDuck != null) {
-            owners.add(KatalystOwnerApply { voice -> applyDuck(theDuck, voice, sampleRate) })
+            if (voiceDriven) {
+                owners.add(KatalystOwnerApply { voice -> writeDuck(theDuck, voice.ducking, sampleRate) })
+            } else {
+                // The winning stage's slots, for the same reason: the dropped duplicate's are never read.
+                val settings = duckStage?.let { KatalystSlots.duckSettings(it) }
+
+                owners.add(KatalystOwnerApply { writeDuck(theDuck, settings, sampleRate) })
+            }
         }
 
         return KatalystChain(
@@ -168,37 +282,60 @@ object KatalystChainBuilder {
     }
 
     /**
-     * Phaser: depth (the on/off + amount knob) is always the owner's; the KERNEL params are
-     * written only by an owner whose phaser is engaged. A no-phaser owner must not zero the sweep
-     * CLOCK (ledger D2, completed in review round 1): VoiceFactory defaults rate to 0.0, and a
-     * rate of 0 freezes the LFO as surely as a skipped prepareBlock: the retained rate is what
-     * keeps the sweep on its own timeline across owner handoffs, mirroring the delay's retained
-     * drain config. An owner that EXPLICITLY sets rate 0 with an engaged depth still gets its
-     * static notch: depth >= the gate means its kernel params are written.
-     *
-     * Gate on the STORED depth, not the raw voice value: the setter silently rejects non-finite
-     * input, and the two gates (this one and Phaser.process's) must never disagree about whether
-     * the phaser is engaged (review round 2).
+     * A declared send stage is on when its `wet` slot is a positive number: finite, above zero.
+     * Off is expressed by handing the effect a non-finite time respectively size, so the ONE gate
+     * stays inside the effect (where it also drains a live tail instead of freezing it) and this
+     * function only decides whether the author asked for the stage at all.
      */
-    private fun applyPhaser(fx: KatalystPhaserEffect, voice: Voice) {
-        fx.phaser.depth = voice.phaser.depth
+    private fun sendIsOn(wet: IgnitorDsl?, fallback: Double): Boolean {
+        val value = KatalystSlots.resolve(wet, fallback)
+
+        // NaN-guard on a value the author can write: a non-finite wet was never set, and an unset
+        // send stage is off, the same reading the voice path gives an untouched effect.
+        return value.isFinite() && value > 0.0
+    }
+
+    /**
+     * Phaser: depth (the on/off + amount knob) is always written; the KERNEL params are written
+     * only when the phaser is engaged. A no-phaser source must not zero the sweep CLOCK (ledger
+     * D2, completed in review round 1): VoiceFactory defaults rate to 0.0, and a rate of 0 freezes
+     * the LFO as surely as a skipped prepareBlock: the retained rate is what keeps the sweep on its
+     * own timeline across owner handoffs, mirroring the delay's retained drain config. A source
+     * that EXPLICITLY sets rate 0 with an engaged depth still gets its static notch: depth >= the
+     * gate means its kernel params are written.
+     *
+     * Gate on the STORED depth, not the raw input: the setter silently rejects non-finite input,
+     * and the two gates (this one and Phaser.process's) must never disagree about whether the
+     * phaser is engaged (review round 2).
+     *
+     * One writer for both knob sources (the owner voice, a declared chain's slots), so the gate
+     * cannot drift between them.
+     */
+    private fun writePhaser(
+        fx: KatalystPhaserEffect,
+        depth: Double,
+        rate: Double,
+        center: Double,
+        sweep: Double,
+        floor: Double,
+    ) {
+        fx.phaser.depth = depth
 
         if (fx.phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
-            fx.phaser.rate = voice.phaser.rate
-            fx.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else PHASER_CENTER_HZ
-            fx.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else PHASER_SWEEP_HZ
-            fx.phaser.floor = voice.phaser.floor
+            fx.phaser.rate = rate
+            fx.phaser.center = if (center > 0) center else PHASER_CENTER_HZ
+            fx.phaser.sweep = if (sweep > 0) sweep else PHASER_SWEEP_HZ
+            fx.phaser.floor = floor
             fx.phaser.feedback = 0.5
         }
     }
 
     /**
      * Compressor: reuse the instance to preserve the envelope follower across notes; clear it when
-     * the owner has no compressor (so it doesn't linger from a previous owner).
+     * [settings] is null (nobody asks for a compressor), so it does not linger from a previous
+     * owner or a previous chain.
      */
-    private fun applyCompressor(fx: KatalystCompressorEffect, voice: Voice, sampleRate: Int) {
-        val settings = voice.compressor
-
+    private fun writeCompressor(fx: KatalystCompressorEffect, settings: Voice.Compressor?, sampleRate: Int) {
         if (settings != null) {
             val existing = fx.compressor
 
@@ -224,11 +361,10 @@ object KatalystChainBuilder {
     }
 
     /**
-     * Duck / Sidechain: reuse the instance to preserve envelope state; clear when the owner has none.
+     * Duck / Sidechain: reuse the instance to preserve envelope state; clear when [settings] is
+     * null (nobody asks for ducking).
      */
-    private fun applyDuck(fx: KatalystDuckEffect, voice: Voice, sampleRate: Int) {
-        val settings = voice.ducking
-
+    private fun writeDuck(fx: KatalystDuckEffect, settings: Voice.Ducking?, sampleRate: Int) {
         if (settings != null) {
             fx.duckCylinderId = settings.cylinderId
             val existing = fx.ducking
