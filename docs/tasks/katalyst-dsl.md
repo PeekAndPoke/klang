@@ -425,7 +425,10 @@ complexity outranks the duplication.
 - **Sequencing as run (2026-09-17):** step 1 = the wire model and plumbing (commit 9fbc9e2b); step 2 =
   the cylinder builds its chain from `KatalystDsl.classic` (d170bf12); step 3a = declared chains looked
   up, resolved from their slots (a `Param` resolves to its default until `katp` lands), installed when
-  the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate; step 3c = the
+  the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate, with the
+  outgoing chain's tail DRAINED through the send stages' existing off-config rather than cut (decided
+  2026-09-17: the master accepted the cut for its v1 and noted the extension; the orbit does it from
+  the start because the effects already own the drain); step 3c = the
   body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
   orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
   declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
