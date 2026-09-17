@@ -315,7 +315,7 @@ historical order. Nothing reorders behind the author's back.
 | identity | `MasterDsl.uniqueId()` | `KatalystDsl.uniqueId()` (`KatalystDslIdentity.kt`) |
 | registry | `MasterRegistry`, per-playback fork | `KatalystRegistry`, per-playback fork |
 | consume | scheduler at promotion, `masterBus.requestSwap` | scheduler at promotion, `cylinders.requestSwap(orbit, id)`, applied whether or not the event sounds, before the late-sound guards |
-| swap | `MasterBus` dual-chain crossfade, 60 ms, linear | per-cylinder dual-chain crossfade, same constant, same linear law, same block-quantized start |
+| swap | `MasterBus` dual-chain crossfade, 60 ms, linear, the outgoing cut | per-cylinder dual-chain crossfade, same constant (`Crossfade.XFADE_SECONDS`), same block-quantized start, the outgoing chain's INPUT ramped (dry and sends) and its output added at full weight, then drained (see §9) |
 | build | chains built at registration, bounded cache | chains built at registration per cylinder that references them, bounded cache; reverb units and rings rented from the shelves as today |
 | reset | `Master.default()` says "back to unity" | there is no `default`: `Katalyst.classic()` IS the historical chain, and an event carrying no chain leaves the orbit's chain as it is (the master's "no change" rule), so going back is `.katalyst(Katalyst.classic())` on a pattern that composes nothing else |
 
@@ -434,7 +434,11 @@ complexity outranks the duplication.
   keeps its output blend because it cuts. The master could adopt the orbit's shape together with a
   drain later, as a by-ear sound item of its own, not here. A self-oscillating delay (`|feedback|`
   at or above 1) never drains, so it pins the orbit's next swap the way it already pins a live
-  orbit; the existing open question in `KatalystDelayEffect`'s KDoc covers both; step 3c = the
+  orbit; the existing open question in `KatalystDelayEffect`'s KDoc covers both. One outgoing slot:
+  a swap queued during a drain waits for the full ring-out (bounded by the closed-form ceiling, seconds
+  for a room); the master's bounded tail hold is the escape if live editing on a wet orbit needs it,
+  open item 2026-09-18. The duck envelope is orbit state that survives a swap (decided 2026-09-18 in
+  step 3b's review); step 3c = the
   body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
   orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
   declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
