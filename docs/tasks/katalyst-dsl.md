@@ -374,6 +374,21 @@ complexity outranks the duplication.
     and `duck` calls never write the name or the orbit.
   - Chain lookup: `KatalystRegistry.find` lowercases and allocates; resolve it on owner change or
     registration only, never per block.
+  - Coercion of a knob that is neither `Constant` nor `Param` (decided 2026-09-17, step 3a): the
+    resolver asks `controlRateValueOrNull` with a non-finite frequency, since a bus has no note, and
+    a non-finite or null answer takes the knob's shared wire constant. So `Osc.freq()` on a bus knob
+    is the default, not 0.0, and an opaque node on a compressor slot switches the stage on with the
+    constants. Never a throw.
+  - A pending chain on an idle cylinder (decided 2026-09-17): `Cylinders.processAndMix` polls the
+    pending name of INACTIVE cylinders once per block (one null check), so a registration that
+    arrives after the request lands at the next block, the master's "late state must still take
+    effect" rule; an active cylinder installs at its next deactivation until step 3b.
+  - **Body and vowel on a declared chain need the name tables** (`SprudelBodyMaterials.modesFor`,
+    the vowel bands), which live in `sprudel`, a module `audio_be` must not depend on. Step 3c
+    (2026-09-17): move the two tables, pure data, into `audio_bridge`; sprudel and the editor tool
+    import them from there; the resolver maps the name through them; until then a declared
+    `body`/`vowel` stays off and `KatalystSlotResolverSpec` pins that on purpose. The classic chain
+    is unaffected, its voices arrive with the `FilterDef` resolved.
 
 
 ### 8. Tests (mandatory tier, every one mutation-checked)
@@ -405,7 +420,8 @@ complexity outranks the duplication.
 - **Sequencing as run (2026-09-17):** step 1 = the wire model and plumbing (commit 9fbc9e2b); step 2 =
   the cylinder builds its chain from `KatalystDsl.classic` (d170bf12); step 3a = declared chains looked
   up, resolved from their slots (a `Param` resolves to its default until `katp` lands), installed when
-  the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate; step 4 = `eq`
+  the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate; step 3c = the
+  body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 4 = `eq`
   and `gain`; step 5 = the bus doors as `katp` aliases and insert-style sends. Classic keeps the
   owner-voice writers until step 5 removes the voice fields; a declared chain reads slots only.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
