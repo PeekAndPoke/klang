@@ -211,6 +211,11 @@ Rules that fix the shape:
 
 ### 2. Where a chain's values come from: the chain, then the owner voice
 
+> **Superseded 2026-09-17 by the signal-flow plan §7 (D4):** the voice fields this rule overrode leave
+> the wire and the bus doors become `katp` aliases, so a chain's values come from its slots only.
+> Kept for the record; step 2 still runs the owner-voice writers (byte identity), step 3's resolver
+> follows §7's contract, step 5 removes the fields.
+
 Two sources exist for the same knob: the chain says `reverb(r => r.size(3))`, the pattern says
 `.reverb(size = 5)`. The rule, and it is one rule for every built-in stage:
 

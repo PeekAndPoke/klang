@@ -656,7 +656,10 @@ Key files:
 
 Status: **Complete.** `Voice` (merged from Voice interface + VoiceImpl) runs a `List<BlockRenderer>` pipeline:
 Pitch renderers → IgniteRenderer → Filter renderers → SendRenderer.
-Bus pipeline: composable `KatalystEffect` pipeline (`cylinders/bus/`).
+Bus pipeline: composable `KatalystEffect` pipeline (`cylinders/katalyst/`); since 2026-09-17 (Katalyst DSL
+step 2) the cylinder builds its chain from `KatalystDsl.classic` through `KatalystChainBuilder` into a
+`KatalystChain` (stage order from the DSL, duck outside the list, `Eq`/`Gain` pass-through until step 4),
+still driven by the owner voice's fields; declared chains apply from step 3 (`docs/tasks/katalyst-dsl.md`).
 `VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
 Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by
 BlockRenderer implementations. ~426 tests across 35 files.
