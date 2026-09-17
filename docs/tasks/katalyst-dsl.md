@@ -428,7 +428,13 @@ complexity outranks the duplication.
   the cylinder is idle, pending otherwise; step 3b = the crossfade so a swap is immediate, with the
   outgoing chain's tail DRAINED through the send stages' existing off-config rather than cut (decided
   2026-09-17: the master accepted the cut for its v1 and noted the extension; the orbit does it from
-  the start because the effects already own the drain); step 3c = the
+  the start because the effects already own the drain). Two blend shapes follow from that, decided
+  2026-09-18: the orbit ramps the OUTGOING chain's input down and adds its output at full weight, so
+  the seam into the drain is continuous by construction and the tail is never scaled; the master
+  keeps its output blend because it cuts. The master could adopt the orbit's shape together with a
+  drain later, as a by-ear sound item of its own, not here. A self-oscillating delay (`|feedback|`
+  at or above 1) never drains, so it pins the orbit's next swap the way it already pins a live
+  orbit; the existing open question in `KatalystDelayEffect`'s KDoc covers both; step 3c = the
   body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
   orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
   declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
@@ -457,8 +463,26 @@ complexity outranks the duplication.
   (the known debt in `/dsl-design` §5).
 - **§D2 DISSOLVED 2026-09-17** by the signal-flow plan §7: no per-voice send amounts, so no send
   buffers; `reverb` and `delay` are insert-style stages at their list position, the master's model.
-- **§D3 DECIDED 2026-09-17:** extract the crossfade helper if it costs no runtime, or as good as none;
-  measure the master swap before and after in the same deliverable.
+- **§D3 DECIDED 2026-09-17, DONE 2026-09-18 (step 3b):** the crossfade is extracted into
+  `audio_be/Crossfade.kt`, one plain class both hosts own an instance of: the ramp, its length
+  (`Crossfade.XFADE_SECONDS`, the one name now, `MasterBus.MASTER_XFADE_SECONDS` is gone), the
+  block-quantized start and the per-sample loops. Measured: a master swap rendered before and after
+  the extraction is byte-identical (sha256 `af5bdcff…`), and the frozen July song is unchanged
+  (`8d79b9fc…`). No master-swap benchmark exists under `audio_benchmark/` and none was written.
+  Two things did NOT move into the helper, each with a reason:
+  - **The retarget queue.** The master queues a registered master's name; a cylinder's queue also
+    holds a name whose `RegisterKatalyst` has not arrived and is polled on every block, and each
+    host's eviction consults its own. Sharing it would buy indirection, not sharing.
+  - **The blend law.** The master blends the two chains' OUTPUTS; a cylinder ramps the outgoing
+    chain's INPUT down instead and adds its output at full weight. The orbit DRAINS its outgoing
+    chain (see §9, step 3b), and a chain whose output has just been ramped to zero and is then
+    re-added at full weight steps by the whole level of its tail: measured at ~0.045 rms on a
+    sustained chord with a wet room, which is the click the fade exists to prevent. Ramping the
+    input reaches zero input exactly where the drain takes over, so the seam is continuous by
+    construction and the tail is never scaled, while the dry path still crossfades linearly through
+    both chains' inserts. The master keeps the output blend, where the outgoing chain IS cut and a
+    ramped output is the right shape. Guard: `CylinderChainCrossfadeSpec`, "the handover from the
+    fade to the drain does not step".
 - **§D4 DECIDED 2026-09-17:** the chain is the instrument. The bus doors become `katp` aliases on
   the orbit's chain; a stage absent from a declared chain makes the matching door a no-op.
 - **§D5 DECIDED 2026-09-17:** the orbit `gain` stage stays, the group fader after the inserts.
