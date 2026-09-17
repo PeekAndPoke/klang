@@ -438,7 +438,14 @@ complexity outranks the duplication.
   a swap queued during a drain waits for the full ring-out (bounded by the closed-form ceiling, seconds
   for a room); the master's bounded tail hold is the escape if live editing on a wet orbit needs it,
   open item 2026-09-18. The duck envelope is orbit state that survives a swap (decided 2026-09-18 in
-  step 3b's review); step 3c = the
+  step 3b's review); its effect is crossfaded per sample in both directions, the envelope is taken
+  over only when the arriving duck will be configured, and a late takeover happens only in the swap
+  block (a claim after the ramp has advanced keeps ramping out; the fresh duck's own attack follows).
+  Two pre-existing corners recorded, not fixed: a takeover onto a duck whose sidechain orbit is not
+  yet rented freezes the reduction until that orbit sounds; the two-block owner liveness can answer
+  "ducks" for an owner that died on the swap block, and the successor's reset then steps, as any
+  owner change on a classic duck does today. A continuous mid-ramp handover would need a second ramp
+  the crossfade cannot express; the maintainer's call whether that corner deserves it; step 3c = the
   body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
   orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
   declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
@@ -484,7 +491,12 @@ complexity outranks the duplication.
     sustained chord with a wet room, which is the click the fade exists to prevent. Ramping the
     input reaches zero input exactly where the drain takes over, so the seam is continuous by
     construction and the tail is never scaled, while the dry path still crossfades linearly through
-    both chains' inserts. The master keeps the output blend, where the outgoing chain IS cut and a
+    both chains' LINEAR inserts. The ramp is on the whole input, the SENDS included (the leaving
+    chain gets ramped copies of the delay and reverb sends): without that, both chains' rooms are
+    charged at full level for the length of the fade, and the leaving chain's drain rings out
+    material from after the swap. Measured on a constant probe with a room and an echo on both
+    chains, the fade's peak sits 17 % above the louder endpoint with the sends ramped and 32 %
+    above it without. The master keeps the output blend, where the outgoing chain IS cut and a
     ramped output is the right shape. Guard: `CylinderChainCrossfadeSpec`, "the handover from the
     fade to the drain does not step".
 - **§D4 DECIDED 2026-09-17:** the chain is the instrument. The bus doors become `katp` aliases on
