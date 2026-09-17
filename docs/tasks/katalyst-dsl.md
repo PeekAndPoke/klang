@@ -193,13 +193,17 @@ Rules that fix the shape:
   (`KatalystDelayEffect` / `KatalystReverbEffect.configure`), not on wet, so `classic` carries what
   `VoiceFactory`'s untouched branch carries: delay wet, time and feedback 0.0 with `cap` at
   `DELAY_CAP`, reverb wet and size 0.0 with lowpass unset, phaser wet 0.0, body and vowel wet 0.0
-  with material and vowel null, compressor threshold unset, duck orbit unset and depth 0.0; every
-  other knob the shared constant. `KatalystClassicMatchesUntouchedVoiceSpec` builds a voice
+  with material and vowel null, all five compressor knobs unset (the engine's gate is "any of the
+  five set", `Voice.Compressor.fromParams`, and the `compressor(...)` door does not fill threshold on
+  a tail-only call, so `compressor(ratio = 8)` must still switch the stage on with the constant
+  threshold), duck orbit unset and depth 0.0; every other knob the shared constant. `KatalystClassicMatchesUntouchedVoiceSpec` builds a voice
   through the real factory and compares. A BARE stage keeps the touched constants (`Reverb()` has
   wet `REVERB_WET`), except phaser and duck, which stay off until `wet` respectively `orbit` is
   written, as their sprudel doors do today. Consequence: the `reverb(...)` door fills the companion
   slots at write time (the 2026-09-16 rule) and sounds familiar; a raw `katp("reverb.wet", x)`
-  writes one slot and is silent on classic until `reverb.size` is written too.
+  writes one slot and is silent on classic until `reverb.size` is written too. The compressor is
+  the second asymmetry, the other way round: a raw `katp("compressor.ratio", 8)` switches the stage
+  on with the constant threshold, as the voice door does today.
 - **`reverb.lowpass` is a slot whose unset value is the wire's non-finite sentinel** (`/dsl-design` §4:
   a non-finite value reads as unset), meaning the engine's fixed damping, exactly as a null `reverbLowpass`
   on the voice does today. Decided 2026-09-17 after step 1 shipped it without a slot; step 1's fix
