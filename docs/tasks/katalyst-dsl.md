@@ -345,6 +345,31 @@ complexity outranks the duplication.
   today; `Cylinders` keeps running it after every orbit is processed.
 - Nothing per sample allocates; every stage instance and buffer is created at chain build, which
   happens at registration (on the audio thread, as the master's does, the same bounded exception).
+- **Step 2's resolver contract, per stage (written down by the step 1 review loop, 2026-09-17;
+  byte identity with today's `applyBusEffects` depends on every line):**
+  - Delay: `configure(time, feedback, cap)` from the slots; non-finite time is off, non-finite
+    feedback and cap take their constants. `delay.wet` stays the per-VOICE send amount
+    (`SendRenderer` reads `voice.delay.amount`) until phase 1 step 5 makes the sends insert-style.
+  - Reverb: `configure(size = Reverb.normalizeSize(slot), lowpass = slot if finite else null)`;
+    `reverb.wet` per voice, same caveat.
+  - Phaser: `depth = wet`; only when the stored depth is at or above `Phaser.MIN_ACTIVE_DEPTH`
+    write rate, center (`PHASER_CENTER_HZ` when not above 0), sweep likewise, floor, feedback 0.5.
+    Never write the kernel params when gated off: the sweep clock must keep running.
+  - Compressor: on iff ANY of the five slots is finite; each non-finite one takes its
+    `COMPRESSOR_*` constant (`Voice.Compressor.fromParams` verbatim); reuse the instance so the
+    envelope follower survives.
+  - Duck: on iff `orbit.isFinite() && depth > 0.0`; `cylinderId = orbit.toInt()` after the door's
+    integer coercion; non-finite attack takes `DUCK_ATTACK_SECONDS`; the last Duck stage wins; run
+    after all orbits as today.
+  - Body and vowel: `configure(null)` iff material respectively vowel is null, whatever `wet` says;
+    otherwise the `FilterDef` with `mix = wet` and a non-finite floor taking `BODY_FLOOR` /
+    `VOWEL_FLOOR`; an unknown material name resolves to null as `toVoiceData` does.
+  - Doors (phase 1 step 5): `reverb(...)` and `delay(...)` write ALL companion slots on any call
+    (today's fill rule); `compressor(...)` writes only the named slots; tail-only `body`, `vowel`
+    and `duck` calls never write the name or the orbit.
+  - Chain lookup: `KatalystRegistry.find` lowercases and allocates; resolve it on owner change or
+    registration only, never per block.
+
 
 ### 8. Tests (mandatory tier, every one mutation-checked)
 
