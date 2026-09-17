@@ -57,6 +57,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klangbuch exported parts carry no arrangement timing and no scale; both live at song level.                                  | 2026-08-20 | `sprudel/MEMORY.md` Lessons                     |
 | Plans live in `docs/plans/`, tasks in `docs/tasks/`, finished tasks in `docs/tasks-archive/<month>/`.                        | 2026-06    | `docs/tasks/_priorities.md`                     |
 | Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. | 2026-09-06 | this file                                     |
+| Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in `docs/plans/signal-flow-redesign.md` §11). | 2026-09-17 | this file |
 
 ### Guideline
 

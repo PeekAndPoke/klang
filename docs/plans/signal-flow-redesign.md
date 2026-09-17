@@ -224,6 +224,13 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   renamed in their own item, after phase 3, once the slot vocabulary has settled.
 - Tutorials and the Lexikon describe doors as fields; they get re-read once as slot aliases.
 - Sample voices: `sound("bd")` as the sample instrument with its playback slots, in phase 3.
+- **Housekeeping, decided 2026-09-17: nothing in the backend or the frontend may allocate without a
+  way to clean it up.** The process-wide identity maps (`uniqueId()` for ignitors, masters and
+  chains) mint a name per live-coding edit and never forget it, while the backend bounds its built
+  chains. Move them behind a global per-playbackId registry of such storages, the frontend twin of
+  the backend's per-playback registry forks (`InlineDslRegistrar` already is one), and free the
+  playback's entries when it dies. Ids become per playback, which the registry forks allow. Its own
+  item, after phase 1; the Katalyst composition memo already lives in the pattern node and dies with it.
 
 ## Links
 
