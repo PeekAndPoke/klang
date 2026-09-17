@@ -144,7 +144,7 @@ carries, transposed: here the baseline is not empty but the chain the engine has
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
     companion object {
         /** Today's fixed chain, knobs as slots named `<stage>.<knob>`. MUST stay equal to what Cylinder ran before this DSL (guarded, §7). */
-        val classic: KatalystDsl = KatalystDsl(listOf(Body(), Vowel(), Delay(), Reverb(), Phaser(), Compressor()))
+        val classic: KatalystDsl = KatalystDsl(listOf(Body(), Vowel(), Delay(), Reverb(), Phaser(), Compressor(), Duck()))  // Duck last, runs outside the list
         fun of(vararg stages: KatalystStageDsl): KatalystDsl = KatalystDsl(stages.toList())
     }
 }
