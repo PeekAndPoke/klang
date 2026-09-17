@@ -16,6 +16,7 @@ internal val derSchmetterlingSong = Song(
     rpm = 32.5,
     icon = "bug",
     code = """
+
 import * from "stdlib"
 import * from "sprudel"
 
@@ -188,7 +189,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.15)
+    .mul(0.14)
 }
 
 // The rigs. A/B one stage at a time:
@@ -254,7 +255,7 @@ export lead_shape = x => x.gain(0.8).sound(marimba).adsrOff()
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.20!16 0.40!48 0.70!16>").postgain(mul(0.20))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.20!16 0.40!48 0.70!16>").postgain(mul(0.22))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
