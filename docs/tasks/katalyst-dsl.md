@@ -353,10 +353,13 @@ complexity outranks the duplication.
 - **Step 2's resolver contract, per stage (written down by the step 1 review loop, 2026-09-17;
   byte identity with today's `applyBusEffects` depends on every line):**
   - Delay: `configure(time, feedback, cap)` from the slots; non-finite time is off, non-finite
-    feedback and cap take their constants. `delay.wet` stays the per-VOICE send amount
-    (`SendRenderer` reads `voice.delay.amount`) until phase 1 step 5 makes the sends insert-style.
+    feedback and cap take their constants. On a declared chain `delay.wet` is the stage's ON
+    SWITCH (finite and above 0.0) until step 5b makes it the insert amount; the per-VOICE send
+    amount (`SendRenderer` reads `voice.delay.amount`) still decides how much each voice sends.
+    Decided 2026-09-17 in step 3a's batch, so `Katalyst(k => k.reverb(r => r.wet(0.0).size(6)))`
+    rents nothing, consistent with phaser (depth) and duck (orbit).
   - Reverb: `configure(size = Reverb.normalizeSize(slot), lowpass = slot if finite else null)`;
-    `reverb.wet` per voice, same caveat.
+    `reverb.wet` the same on switch, same caveat.
   - Phaser: `depth = wet`; only when the stored depth is at or above `Phaser.MIN_ACTIVE_DEPTH`
     write rate, center (`PHASER_CENTER_HZ` when not above 0), sweep likewise, floor, feedback 0.5.
     Never write the kernel params when gated off: the sweep clock must keep running.
@@ -374,11 +377,13 @@ complexity outranks the duplication.
     and `duck` calls never write the name or the orbit.
   - Chain lookup: `KatalystRegistry.find` lowercases and allocates; resolve it on owner change or
     registration only, never per block.
-  - Coercion of a knob that is neither `Constant` nor `Param` (decided 2026-09-17, step 3a): the
-    resolver asks `controlRateValueOrNull` with a non-finite frequency, since a bus has no note, and
-    a non-finite or null answer takes the knob's shared wire constant. So `Osc.freq()` on a bus knob
-    is the default, not 0.0, and an opaque node on a compressor slot switches the stage on with the
-    constants. Never a throw.
+  - Coercion of a knob that is neither `Constant` nor `Param` (decided 2026-09-17, step 3a, refined
+    in its delta review): the resolver asks `controlRateValueOrNull` at TWO different finite
+    frequencies and accepts the value only when both answers are finite and equal; anything else
+    takes the knob's shared wire constant. A bus has no note, so `Osc.freq()` and every
+    frequency-dependent subtree fall back (`Times` folds NaN to 0.0 through `safeOut`, which is why
+    a single non-finite probe was not enough); an opaque node on a compressor slot switches the
+    stage on with the constants. Never a throw.
   - A pending chain on an idle cylinder (decided 2026-09-17): `Cylinders.processAndMix` polls the
     pending name of INACTIVE cylinders once per block (one null check), so a registration that
     arrives after the request lands at the next block, the master's "late state must still take
