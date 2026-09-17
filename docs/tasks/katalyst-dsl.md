@@ -188,6 +188,18 @@ Rules that fix the shape:
   chain declares two, the last one wins (decided 2026-09-17; the chain builder says so in its KDoc).
 - **Enums nowhere.** `material` and `vowel` stay strings, as on the voice fields today; the stage
   variants are the sealed hierarchy (rule 7).
+- **The classic chain is the untouched voice, slot by slot (decided in step 1's review loop,
+  2026-09-17).** The engine gates the send effects on `delay.time` and `reverb.size`
+  (`KatalystDelayEffect` / `KatalystReverbEffect.configure`), not on wet, so `classic` carries what
+  `VoiceFactory`'s untouched branch carries: delay wet, time and feedback 0.0 with `cap` at
+  `DELAY_CAP`, reverb wet and size 0.0 with lowpass unset, phaser wet 0.0, body and vowel wet 0.0
+  with material and vowel null, compressor threshold unset, duck orbit unset and depth 0.0; every
+  other knob the shared constant. `KatalystClassicMatchesUntouchedVoiceSpec` builds a voice
+  through the real factory and compares. A BARE stage keeps the touched constants (`Reverb()` has
+  wet `REVERB_WET`), except phaser and duck, which stay off until `wet` respectively `orbit` is
+  written, as their sprudel doors do today. Consequence: the `reverb(...)` door fills the companion
+  slots at write time (the 2026-09-16 rule) and sounds familiar; a raw `katp("reverb.wet", x)`
+  writes one slot and is silent on classic until `reverb.size` is written too.
 - **`reverb.lowpass` is a slot whose unset value is the wire's non-finite sentinel** (`/dsl-design` §4:
   a non-finite value reads as unset), meaning the engine's fixed damping, exactly as a null `reverbLowpass`
   on the voice does today. Decided 2026-09-17 after step 1 shipped it without a slot; step 1's fix

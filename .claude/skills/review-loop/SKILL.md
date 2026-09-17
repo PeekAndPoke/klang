@@ -176,6 +176,9 @@ Mutation checking is the antidote: it tests the test.
   `-t` or `--continuous`. A plain `jsBrowserDevelopmentRun` is not that, so it does not block you.
   Check `ps aux | grep gradle | grep -- "-t \|--continuous"`, not the bare process name. The old
   rule read the process name alone and stalled a whole round of work for nothing.
+- **A `--tests` filter does not apply to a JS test task the way it does on the JVM** (2026-09-17):
+  `:audio_bridge:jvmTest :audio_bridge:jsTest --tests <Fqcn>` in one invocation fails. Filter the JVM
+  task; run the JS task unfiltered, on its own.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
 - **Generated batches: review the prose, trust the structure.** Across 88 script-generated accessor
   objects (2026-09-07) the reviewers found zero read/update or parameter slips; every finding was
