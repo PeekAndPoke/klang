@@ -94,6 +94,9 @@ class PlaybackEngineDispatcher(
 
         is KlangCommLink.Cmd.RegisterMaster ->
             engineFor(cmd.playbackId).registerMaster(cmd.name, cmd.dsl)
+
+        is KlangCommLink.Cmd.RegisterKatalyst ->
+            engineFor(cmd.playbackId).registerKatalyst(cmd.name, cmd.dsl)
     }
 
     private fun scheduleVoices(playbackId: String, voices: List<ScheduledVoice>) {

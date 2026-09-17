@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
@@ -37,6 +38,9 @@ class KlangAudioRenderer private constructor(
 
     /** Parent master registry — callers register custom master chains here. */
     val masterRegistry: MasterRegistry get() = context.masterRegistry
+
+    /** Parent Katalyst registry; callers register custom orbit chains here. */
+    val katalystRegistry: KatalystRegistry get() = context.katalystRegistry
 
     /**
      * Frames of latency the master post-chain adds (the limiter's lookahead delay).

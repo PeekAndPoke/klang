@@ -11,6 +11,8 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
@@ -18,6 +20,8 @@ import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.audio_bridge.uniqueId
 
 /**
@@ -157,9 +161,21 @@ data class SprudelVoiceData(
     var master: MasterValue?,
 
     /**
-     * Control-only event: carries engine-level data (a [master] swap) and is never synthesized.
-     * Set by the top-level `master(...)` carrier; a `note("c3").master(...)` leaves it null so the
-     * note still sounds.
+     * The orbit chain this event switches its orbit to, from its start time onward. Either a
+     * [KatalystValue.Named] (a pre-registered custom) or a [KatalystValue.Dsl] inlining a
+     * [KatalystDsl]; the latter is denormalized to a synthetic name in [toVoiceData]. Null = no
+     * change.
+     *
+     * Unlike [master], the `.katalyst(...)` door APPENDS to whatever chain the pattern already
+     * carries (see `KatalystDsl.plus`); the field itself merges last-writer-wins like every other
+     * one, because composing is the door's job, not the merge's.
+     */
+    var katalyst: KatalystValue?,
+
+    /**
+     * Control-only event: carries engine-level data (a [master] or [katalyst] swap) and is never
+     * synthesized. Set by the top-level `master(...)` / `katalyst(...)` carriers; a
+     * `note("c3").master(...)` leaves it null so the note still sounds.
      */
     var control: Boolean?,
 
@@ -772,6 +788,7 @@ data class SprudelVoiceData(
             patternId = patternId,  // Never merge - preserve original source ID
             pipeline = other.pipeline ?: pipeline,
             master = other.master ?: master,
+            katalyst = other.katalyst ?: katalyst,
             // control is NOT merged (like patternId): it says "this event makes no sound", which is
             // a property of the carrier itself. Taking it from `other` would let a merged-in master
             // carrier silence real notes.
@@ -830,6 +847,7 @@ data class SprudelVoiceData(
         // patternId intentionally preserved (never taken from other) — matches merge()
         pipeline = other.pipeline ?: pipeline
         master = other.master ?: master
+        katalyst = other.katalyst ?: katalyst
         // control intentionally NOT merged — see merge()
         value = other.value ?: value
         tags = mergeTags(tags, other.tags)
@@ -883,6 +901,15 @@ data class SprudelVoiceData(
             null -> null
             is MasterValue.Named -> m.name
             is MasterValue.Dsl -> m.master.uniqueId()
+        }
+
+        // ...and for the orbit chain reference.
+        // `k.name` is the memoized `uniqueId()` of the chain: one structural hash per value
+        // instance rather than one per event (see KatalystValue.Dsl.name).
+        val katalystName: String? = when (val k = katalyst) {
+            null -> null
+            is KatalystValue.Named -> k.name
+            is KatalystValue.Dsl -> k.name
         }
 
         // Build filter list from flat fields, each with its own resonance
@@ -987,7 +1014,7 @@ data class SprudelVoiceData(
                 val formantBands = resolveVowelBands(vowelValue)
 
                 formantBands?.let { bands ->
-                    add(FilterDef.Formant(bands = bands, mix = vowelMix ?: 0.5, floor = vowelFloor))
+                    add(FilterDef.Formant(bands = bands, mix = vowelMix ?: VOWEL_WET, floor = vowelFloor))
                 }
             }
 
@@ -997,7 +1024,7 @@ data class SprudelVoiceData(
                     // Default body amount when the user didn't set bodyMix — a moderate, audible
                     // amount (0..1; the blend keeps a broadband floor, so it never thins).
                     // floor = null → engine default (BODY_FLOOR); bodyFloor() overrides it.
-                    add(FilterDef.Body(bands = modes, mix = bodyMix ?: 0.5, floor = bodyFloor))
+                    add(FilterDef.Body(bands = modes, mix = bodyMix ?: BODY_WET, floor = bodyFloor))
                 }
             }
         }
@@ -1110,6 +1137,7 @@ data class SprudelVoiceData(
             sourceId = patternId,
             pipeline = pipelineName,
             master = masterName,
+            katalyst = katalystName,
             control = control,
             tags = tags,
             cull = cull,
@@ -1488,6 +1516,7 @@ internal val blueprint = SprudelVoiceData(
     patternId = null,
     pipeline = null,
     master = null,
+    katalyst = null,
     control = null,
     value = null,
     tags = null,

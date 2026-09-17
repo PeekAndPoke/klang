@@ -7,8 +7,10 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.PlaybackEngine.Companion.MAX_MASTER_TAIL_HOLD_SECONDS
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
@@ -22,6 +24,7 @@ class PlaybackEngine(
     val scheduler: VoiceScheduler,
     val cylinders: Cylinders,
     private val masterBus: MasterBus,
+    private val katalystRegistry: KatalystRegistry,
     private val blockFrames: Int,
     private val sampleRate: Int,
 ) {
@@ -50,6 +53,14 @@ class PlaybackEngine(
 
     /** Registers a custom master chain for this playback. */
     fun registerMaster(name: String, dsl: MasterDsl) = masterBus.register(name, dsl)
+
+    /**
+     * Registers a custom orbit chain for this playback.
+     *
+     * Katalyst step 1: the chain lands on this engine's fork and nothing reads it yet, and the
+     * cylinders start building chains from it in step 2.
+     */
+    fun registerKatalyst(name: String, dsl: KatalystDsl) = katalystRegistry.register(name, dsl)
 
     /** Render this engine's voices through its own cylinders, accumulating into [target]. */
     // NB `cursorFrame` is Double, not Int: it is an ABSOLUTE frame on the backend timeline, which
@@ -177,6 +188,7 @@ class PlaybackEngine(
                 scheduler = scheduler,
                 cylinders = cylinders,
                 masterBus = masterBus,
+                katalystRegistry = context.katalystRegistry.fork(),
                 blockFrames = context.blockFrames,
                 sampleRate = context.sampleRate,
             )

@@ -20,11 +20,18 @@ import io.peekandpoke.klang.common.infra.withLock
  * cycle, all structurally equal. Without the gate that would be one `RegisterMaster` per cycle,
  * forever.
  *
- * Dedup is on structural equality of [T] (the DSL data classes), so a re-derived-identical tree
- * is recognised as already-announced. Naming is NOT this class's job: [uniqueId] delegates to the
- * process-wide identity maps in `audio_bridge`.
+ * Dedup is on the NAME, not on the DSL value. The name already IS structural identity: it comes
+ * from the process-wide content-keyed identity maps in `audio_bridge`, so two structurally equal
+ * trees have one name by construction and a re-derived-identical tree is recognised as
+ * already-announced exactly as before. Keying the set on the value instead would hash the whole
+ * tree a second time on every event of every pattern that carries one, which is the cost this
+ * class is on the hot path for. A `Set<String>` also keeps the retained memory to one string per
+ * unique DSL rather than a reference to the tree.
  *
- * @param uniqueId The process-wide synthetic name for a DSL tree.
+ * Naming is NOT this class's job: [uniqueId] delegates to those identity maps.
+ *
+ * @param uniqueId The process-wide synthetic name for a DSL tree. Must be content-derived: this
+ *   class trusts it to be equal for equal trees and distinct for distinct ones.
  * @param announce Where a first sighting goes. The live path sends a `Cmd.Register*` over the
  *   wire; an in-process path (e.g. the offline renderer) registers straight into a backend
  *   registry. Same contract, different destination.
@@ -34,7 +41,7 @@ internal class AnnounceOnceRegistry<T : Any>(
     private val announce: (name: String, dsl: T) -> Unit,
 ) {
     private val lock = KlangLock()
-    private val announced = mutableSetOf<T>()
+    private val announced = mutableSetOf<String>()
 
     /** Number of unique DSLs announced so far. */
     val size: Int get() = lock.withLock { announced.size }
@@ -42,7 +49,7 @@ internal class AnnounceOnceRegistry<T : Any>(
     /** The synthetic name for [dsl]; announces it on first sighting. */
     fun registerOrLookup(dsl: T): String {
         val name = uniqueId(dsl)
-        val firstSighting = lock.withLock { announced.add(dsl) }
+        val firstSighting = lock.withLock { announced.add(name) }
 
         if (firstSighting) {
             announce(name, dsl)

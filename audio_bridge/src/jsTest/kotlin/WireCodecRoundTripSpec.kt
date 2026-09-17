@@ -7,15 +7,19 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_MasterDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_MasterDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
@@ -44,6 +48,99 @@ class WireCodecRoundTripSpec : StringSpec({
                 )
             ),
         ).forEach { decode_PipelineDsl(encode_PipelineDsl(it)) shouldBe it }
+    }
+
+    "a non-finite Param default survives the trip: SLOT_UNSET is how the wire says 'never set'" {
+        // `KatalystDsl.classic` puts SLOT_UNSET (NaN) on SEVEN slots (all five compressor knobs,
+        // `duck.orbit` and `reverb.lowpass`), so this is not a corner case
+        // but the everyday chain. The codec rides a structured-clone JS object rather than JSON, so
+        // NaN travels; this pins that, and pins that the comparison is not vacuous (an Infinity and
+        // a finite neighbour are in the same list).
+        listOf(
+            KatalystDsl.of(KatalystStageDsl.Compressor(threshold = IgnitorDsl.Param("compressor.threshold", SLOT_UNSET))),
+            KatalystDsl.of(KatalystStageDsl.Duck(orbit = IgnitorDsl.Param("duck.orbit", Double.POSITIVE_INFINITY))),
+            KatalystDsl.of(KatalystStageDsl.Reverb(lowpass = IgnitorDsl.Constant(SLOT_UNSET))),
+            KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Param("g", 1.4))),
+        ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
+
+        // ...and the decoded default really is non-finite, not a zero the equality glossed over.
+        val decoded = decode_KatalystDsl(encode_KatalystDsl(KatalystDsl.classic))
+        val threshold = decoded.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().threshold
+
+        (threshold as IgnitorDsl.Param).default.isFinite() shouldBe false
+    }
+
+    "a DECODED classic chain maps to the same synthetic name: the only fresh NaN in the system" {
+        // Every other NaN in the chain came from the `SLOT_UNSET` literal, so it is the same double
+        // and hashes the same. A decoded one did not: it crossed the structured-clone boundary,
+        // which is not required to preserve a NaN's payload bits, and Kotlin/JS hashes a Double by
+        // its bit pattern. If a decoded NaN hashed differently from the literal, the identity map
+        // would mint the decoded chain a SECOND name, and the backend would register, build and
+        // crossfade one chain as two. This is the only producer of that case in the system, and it
+        // can only be tested here, where the real codec is.
+        val decoded = decode_KatalystDsl(encode_KatalystDsl(KatalystDsl.classic))
+
+        decoded shouldBe KatalystDsl.classic
+        decoded.uniqueId() shouldBe KatalystDsl.classic.uniqueId()
+
+        // ...and the decoded slot really is non-finite, so the row above is about a NaN and not
+        // about a zero the codec substituted on the way through.
+        val threshold = decoded.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().threshold
+
+        (threshold as IgnitorDsl.Param).default.isFinite() shouldBe false
+
+        // Encoding the decoded chain again must land on the same name too: a second trip is what a
+        // relayed command does (frontend to worklet to a nested playback).
+        decode_KatalystDsl(encode_KatalystDsl(decoded)).uniqueId() shouldBe KatalystDsl.classic.uniqueId()
+    }
+
+    "KatalystDsl round-trips (every KatalystStageDsl variant, with IgnitorDsl knobs)" {
+        // Every variant, and on each the shapes a codec can silently lose: a Param knob next to a
+        // Constant one, the nullable `lowpass` in BOTH states, an empty section list next to a
+        // populated one, and the two String? names in both states.
+        listOf(
+            KatalystDsl(emptyList()),
+            KatalystDsl.classic,
+            KatalystDsl.of(
+                KatalystStageDsl.Body(material = "wood", wet = IgnitorDsl.Constant(0.7), floor = IgnitorDsl.Constant(0.3)),
+                KatalystStageDsl.Body(),
+                KatalystStageDsl.Vowel(vowel = "soprano:a", wet = IgnitorDsl.Param("vowel.wet", 0.6), floor = IgnitorDsl.Constant(0.1)),
+                KatalystStageDsl.Vowel(),
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Constant(0.2), time = IgnitorDsl.Constant(0.375),
+                    feedback = IgnitorDsl.Constant(0.45), cap = IgnitorDsl.Constant(3.0),
+                ),
+                // every reverb field set, including the nullable lowpass
+                KatalystStageDsl.Reverb(
+                    wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(8.0),
+                    lowpass = IgnitorDsl.Constant(9000.0),
+                ),
+                // ...and the nullable branch: lowpass absent
+                KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(8.0)),
+                KatalystStageDsl.Phaser(
+                    rate = IgnitorDsl.Constant(0.3), wet = IgnitorDsl.Constant(0.5),
+                    center = IgnitorDsl.Constant(800.0), sweep = IgnitorDsl.Constant(1200.0),
+                    floor = IgnitorDsl.Constant(0.2),
+                ),
+                KatalystStageDsl.Compressor(
+                    threshold = IgnitorDsl.Constant(-21.0), ratio = IgnitorDsl.Constant(3.0),
+                    knee = IgnitorDsl.Constant(6.0), attack = IgnitorDsl.Constant(0.005),
+                    release = IgnitorDsl.Constant(0.12),
+                ),
+                KatalystStageDsl.Duck(
+                    orbit = IgnitorDsl.Constant(2.0), depth = IgnitorDsl.Constant(0.8),
+                    attack = IgnitorDsl.Constant(0.05),
+                ),
+                KatalystStageDsl.Eq(
+                    sections = listOf(
+                        IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(300.0), q = IgnitorDsl.Constant(0.8), db = IgnitorDsl.Constant(2.0)),
+                        IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Constant(4000.0)),
+                    )
+                ),
+                KatalystStageDsl.Eq(),
+                KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.4)),
+            ),
+        ).forEach { decode_KatalystDsl(encode_KatalystDsl(it)) shouldBe it }
     }
 
     "MasterDsl round-trips (sealed MasterStageDsl: gain / limiter / reverb / delay)" {
@@ -163,9 +260,29 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.StopRealtimeVoice("pb", liveId = 8),
             KlangCommLink.Cmd.RegisterIgnitor("pb", "mysynth", dsl),
             KlangCommLink.Cmd.RegisterMaster("pb", "master-0", MasterDsl.of(MasterStageDsl.Gain(2.0))),
+            KlangCommLink.Cmd.RegisterKatalyst(
+                "pb", "katalyst-0",
+                KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)), KatalystStageDsl.Reverb()),
+            ),
+            KlangCommLink.Cmd.RegisterKatalyst("pb", "katalyst-1", KatalystDsl.classic),
             KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s", 1, "c3")),
         )
         cases.forEach { decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(it)) shouldBe it }
+    }
+
+    "ScheduledVoice round-trips the katalyst reference" {
+        // The orbit chain rides the same field family as the master: if the codec dropped it,
+        // every declared chain would silently stay unregistered on the far side.
+        val control = ScheduledVoice(
+            "pb", VoiceData.empty.copy(katalyst = "katalyst-3", control = true), 0.0, 1.0, 0.0,
+        )
+        val sounding = ScheduledVoice(
+            "pb", VoiceData.empty.copy(note = "c3", sound = "sine", katalyst = "katalyst-3"), 0.0, 1.0, 0.0,
+        )
+
+        listOf(control, sounding).forEach {
+            decode_ScheduledVoice(encode_ScheduledVoice(it)) shouldBe it
+        }
     }
 
     "ScheduledVoice round-trips the master reference + control flag" {

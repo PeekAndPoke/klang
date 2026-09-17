@@ -10,13 +10,9 @@ import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
-import io.peekandpoke.klang.audio_bridge.MasterValue
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.audio_fe.samples.Samples
 
 /**
@@ -75,6 +71,7 @@ class KlangOfflineRenderer(
         val ignitorRegistry = renderer.ignitorRegistry
         val pipelineRegistry = renderer.pipelineRegistry
         val masterRegistry = renderer.masterRegistry
+        val katalystRegistry = renderer.katalystRegistry
         val voiceScheduler = renderer.voices
 
         // Register this render's custom ignitors on top of the built-in defaults.
@@ -100,29 +97,16 @@ class KlangOfflineRenderer(
             cps = cyclesPerSecond,
         )
 
-        // Pre-register inline ignitors with the in-process BE so their synthetic names
-        // (from IgnitorDsl.uniqueId()) are recognised at voice scheduling time.
-        rawEvents.asSequence()
-            .map { it.sound }
-            .filterIsInstance<SoundValue.Osc>()
-            .forEach { soundValue ->
-                val name = soundValue.osc.uniqueId()
-                if (!ignitorRegistry.contains(name)) {
-                    ignitorRegistry.register(name, soundValue.osc)
-                }
-            }
-
-        // Same for inline pipelines (register is idempotent — same name+dsl on repeat).
-        rawEvents.asSequence()
-            .map { it.pipeline }
-            .filterIsInstance<PipelineValue.Dsl>()
-            .forEach { pipelineRegistry.register(it.pipeline.uniqueId(), it.pipeline) }
-
-        // Same for inline masters — so an offline render is as faithful as live playback.
-        rawEvents.asSequence()
-            .map { it.master }
-            .filterIsInstance<MasterValue.Dsl>()
-            .forEach { masterRegistry.register(it.master.uniqueId(), it.master) }
+        // Pre-register every inline DSL this render references with the in-process BE, so the
+        // synthetic names (`IgnitorDsl.uniqueId()` and friends) resolve at voice scheduling time.
+        // The SAME sweep the live playback runs, with the registries as its sink instead of the
+        // wire, which is what `InlineDslRegistrar` exists for.
+        InlineDslRegistrar.intoRegistries(
+            ignitors = ignitorRegistry,
+            pipelines = pipelineRegistry,
+            masters = masterRegistry,
+            katalysts = katalystRegistry,
+        ).announceAll(rawEvents)
 
         val events = rawEvents.map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
 

@@ -10,7 +10,9 @@ import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.pow
@@ -166,27 +168,11 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
  */
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
-/**
- * Broadband transmission floor for the body resonator (see [LowPassHighPassFilters.createBody]).
- * Under the C4 law the floor PINS the dry from `w* = (2/pi)*acos(sqrt(floor))` upward
- * (~0.56 for 0.4), i.e. from the middle of the knob, not just at the top (it never drops
- * below the floor anywhere). That floor is what lets the body emphasize its resonant modes
- * over a broadband bed instead of collapsing to a few isolated tones — the way a real
- * passive body behaves. A LOWER floor makes the body more audible at a
- * given mix (the resonances sit over less dry); a higher floor is subtler. `bodyWet` (wire spelling: `bodyMix`) itself is
- * clamped to [0, 1] since C4 (the shared wet/dry law lives on that domain; the old raw
- * extension above 1 is a deleted capability - plan: Helper domain).
- * Tunable by ear.
- */
-internal const val BODY_FLOOR: Double = 0.4
-
-/**
- * Broadband floor for the vowel/formant filter (see [LowPassHighPassFilters.createFormant]). The
- * formant analogue of [BODY_FLOOR], but much LOWER: a vowel is a source *strongly shaped by*
- * formants (deep valleys between them), whereas a body is a subtle coloration over a strong floor.
- * The floor still keeps some source audible between formants (avoids sparse/robotic). Tunable.
- */
-internal const val VOWEL_FLOOR: Double = 0.2
+// NOTE: `BODY_FLOOR` and `VOWEL_FLOOR` moved to `audio_bridge/constants/BusEffectDefaults.kt`
+// (Katalyst DSL step 1, 2026-09-17): the Katalyst `body`/`vowel` stage knobs need the same
+// numbers, and a second declaration here would be the drift the parity rule forbids. `bodyWet`
+// (wire spelling: `bodyMix`) is clamped to [0, 1] since C4 (the shared wet/dry law lives on that
+// domain; the old raw extension above 1 is a deleted capability - plan: Helper domain).
 
 /**
  * Overall level tame for the formant bank before the dry/wet blend. The vowel tables are tuned

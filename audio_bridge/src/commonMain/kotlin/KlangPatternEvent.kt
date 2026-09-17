@@ -54,6 +54,16 @@ interface KlangPatternEvent {
      */
     val master: MasterValue? get() = null
 
+    /**
+     * The orbit chain this event references, if any. Default `null` for pattern types that don't
+     * carry [KatalystValue]. Pattern languages that may carry an inline chain (e.g. sprudel)
+     * override to expose the event's [KatalystValue].
+     *
+     * Used by the playback's wire-emission step to pre-register inline chains with the backend
+     * before events that reference them are scheduled. Mirror of [master].
+     */
+    val katalyst: KatalystValue? get() = null
+
     /** Convert to engine-level voice data. */
     fun toVoiceData(): VoiceData
 }

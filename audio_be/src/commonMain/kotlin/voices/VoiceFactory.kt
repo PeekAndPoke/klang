@@ -33,6 +33,12 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
@@ -194,11 +200,11 @@ class VoiceFactory(
 
         // Phaser
         val phaser = Voice.Phaser(
-            rate = data.phaser ?: 0.0,
-            depth = data.phaserDepth ?: 0.0,
-            center = data.phaserCenter ?: 1000.0,
-            sweep = data.phaserSweep ?: 1000.0,
-            floor = data.phaserFloor ?: 1.0,
+            rate = data.phaser ?: PHASER_RATE_HZ,
+            depth = data.phaserDepth ?: PHASER_WET,
+            center = data.phaserCenter ?: PHASER_CENTER_HZ,
+            sweep = data.phaserSweep ?: PHASER_SWEEP_HZ,
+            floor = data.phaserFloor ?: PHASER_FLOOR,
         )
 
         // Tremolo
@@ -221,7 +227,7 @@ class VoiceFactory(
         val ducking = if (duckCylinderParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
             Voice.Ducking(
                 cylinderId = duckCylinderParam,
-                attackSeconds = data.duckAttack ?: 0.1,
+                attackSeconds = data.duckAttack ?: DUCK_ATTACK_SECONDS,
                 depth = duckDepthParam,
             )
         } else {

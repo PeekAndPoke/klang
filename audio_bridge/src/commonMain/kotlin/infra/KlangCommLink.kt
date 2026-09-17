@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
@@ -123,6 +124,19 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
             val name: String,
             val dsl: MasterDsl,
+        ) : Cmd
+
+        /**
+         * Registers a custom KatalystDsl in the backend's orbit-chain registry.
+         *
+         * Sent once per unique chain, before any voice referencing [name] is scheduled: the same
+         * send-once contract as [RegisterIgnitor] / [RegisterPipeline] / [RegisterMaster].
+         */
+        @WireName("register-katalyst")
+        data class RegisterKatalyst(
+            override val playbackId: String,
+            val name: String,
+            val dsl: KatalystDsl,
         ) : Cmd
 
         sealed interface Sample : Cmd {

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineValue
@@ -38,6 +39,7 @@ data class SprudelPatternEvent(
     override val sound: SoundValue? get() = data.sound
     override val pipeline: PipelineValue? get() = data.pipeline
     override val master: MasterValue? get() = data.master
+    override val katalyst: KatalystValue? get() = data.katalyst
     override fun toVoiceData(): VoiceData = data.toVoiceData()
 
     /**

@@ -7,6 +7,11 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 
 /**
  * Stereo phaser — two independent [PhaserCore] instances (one per channel) sharing
@@ -138,11 +143,11 @@ class Phaser(sampleRate: Int) {
     fun resetForReuse() {
         reset()
         zeroLfoPhase()
-        depth = 0.0
-        floor = 1.0
-        rate = 0.0
-        center = 1000.0
-        sweep = 1000.0
+        depth = PHASER_WET
+        floor = PHASER_FLOOR
+        rate = PHASER_RATE_HZ
+        center = PHASER_CENTER_HZ
+        sweep = PHASER_SWEEP_HZ
         feedback = 0.5
     }
 

@@ -174,6 +174,23 @@ data class VoiceData(
     val master: String? = null,
 
     /**
+     * Orbit-chain name: selects the `KatalystDsl` the voice's orbit runs, from this event's start
+     * time onward (last writer wins per orbit).
+     *
+     * Resolved from the authoring-layer `KatalystValue` at the wire boundary: an inline chain
+     * denormalizes to its `KatalystDsl.uniqueId()`, a named reference passes through. Null means
+     * "no change": the orbit keeps whatever chain it already had.
+     *
+     * A Katalyst reference rides *any* event, so `note("c3").katalyst(…)` swaps the orbit's chain
+     * at that note's onset and still sounds the note. An event that carries *only* a Katalyst is
+     * marked [control].
+     *
+     * The backend registers the chain but does not read it yet (Katalyst step 1, 2026-09-17); the
+     * cylinder starts running declared chains in step 2.
+     */
+    val katalyst: String? = null,
+
+    /**
      * Control-only event: carries engine/bus configuration (e.g. [master]) and is **never
      * synthesized**.
      *

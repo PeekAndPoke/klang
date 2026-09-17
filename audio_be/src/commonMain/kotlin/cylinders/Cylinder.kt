@@ -23,6 +23,8 @@ import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 
 /**
  * Mixing channel / Effect bus — called "Cylinder" in strudel.
@@ -203,8 +205,8 @@ class Cylinder(
 
         if (phaser.phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
             phaser.phaser.rate = voice.phaser.rate
-            phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
-            phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
+            phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else PHASER_CENTER_HZ
+            phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else PHASER_SWEEP_HZ
             phaser.phaser.floor = voice.phaser.floor
             phaser.phaser.feedback = 0.5
         }

@@ -16,6 +16,11 @@ import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 
@@ -368,11 +373,11 @@ class Voice(
                     return null
                 }
                 return Compressor(
-                    thresholdDb = threshold ?: -20.0,
-                    ratio = ratio ?: 4.0,
-                    kneeDb = knee ?: 6.0,
-                    attackSeconds = attack ?: 0.003,
-                    releaseSeconds = release ?: 0.1,
+                    thresholdDb = threshold ?: COMPRESSOR_THRESHOLD_DB,
+                    ratio = ratio ?: COMPRESSOR_RATIO,
+                    kneeDb = knee ?: COMPRESSOR_KNEE_DB,
+                    attackSeconds = attack ?: COMPRESSOR_ATTACK_SECONDS,
+                    releaseSeconds = release ?: COMPRESSOR_RELEASE_SECONDS,
                 )
             }
         }
