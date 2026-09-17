@@ -132,10 +132,10 @@ stack(guitar1, guitar2, guitar3).katalyst(guitarBus)  // three orbits, one chain
 drums.orbit(5).katalyst(Katalyst(k => k.eq(e => e.band(freq = 160, q = 1.0, db = -3.0)).reverb(r => r.wet(0.25).size(4))))
 ```
 
-A song without `katalyst(...)` runs `KatalystDsl.default`, which is today's hardcoded chain
+A song without `katalyst(...)` runs `KatalystDsl.classic`, which is today's hardcoded chain
 (body, vowel, delay, reverb, phaser, compressor) driven by the voice fields, byte-identical to the
 engine before this work. That is the same "default MUST stay empty" contract `MasterDsl.default`
-carries, transposed: here the default is not empty but the chain the engine has always run.
+carries, transposed: here the baseline is not empty but the chain the engine has always run.
 
 ### 1. Wire model (`audio_bridge/KatalystDsl.kt`)
 
@@ -143,8 +143,8 @@ carries, transposed: here the default is not empty but the chain the engine has 
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
     companion object {
-        /** Today's fixed chain. MUST stay equal to what Cylinder ran before this DSL (guarded, §7). */
-        val default: KatalystDsl = KatalystDsl(listOf(Body(), Vowel(), Delay(), Reverb(), Phaser(), Compressor()))
+        /** Today's fixed chain, knobs as slots named `<stage>.<knob>`. MUST stay equal to what Cylinder ran before this DSL (guarded, §7). */
+        val classic: KatalystDsl = KatalystDsl(listOf(Body(), Vowel(), Delay(), Reverb(), Phaser(), Compressor()))
         fun of(vararg stages: KatalystStageDsl): KatalystDsl = KatalystDsl(stages.toList())
     }
 }
@@ -184,9 +184,14 @@ Rules that fix the shape:
   Katalyst compressor follows sprudel (`threshold`, `knee`, `attack`), and the follow-up file gets
   a row saying the master limiter is the odd one out.
 - **`Duck` is declared in the list but runs outside it**, as today (`Cylinders.processAndMix` step 2
-  needs every orbit processed first). Its position in the list is documented as ignored.
+  needs every orbit processed first). Its position in the list is documented as ignored, and when a
+  chain declares two, the last one wins (decided 2026-09-17; the chain builder says so in its KDoc).
 - **Enums nowhere.** `material` and `vowel` stay strings, as on the voice fields today; the stage
   variants are the sealed hierarchy (rule 7).
+- **`reverb.lowpass` is a slot whose unset value is the wire's non-finite sentinel** (`/dsl-design` §4:
+  a non-finite value reads as unset), meaning the engine's fixed damping, exactly as a null `reverbLowpass`
+  on the voice does today. Decided 2026-09-17 after step 1 shipped it without a slot; step 1's fix
+  round adds it, so `katp("reverb.lowpass", hz)` has somewhere to land in phase 1 step 5.
 
 ### 2. Where a chain's values come from: the chain, then the owner voice
 
@@ -274,7 +279,7 @@ rule that makes the "cab before room" doctrine hold physically:
 
 The default position for a mix-shaping EQ follows the master decision (reverb, then eq, then the
 dynamics): after `reverb`, before `compressor`, so the detector sees the corrected spectrum and a
-low cut turns into headroom. The builder appends in written order; `Katalyst.default` is the
+low cut turns into headroom. The builder appends in written order; `Katalyst.classic()` is the
 historical order. Nothing reorders behind the author's back.
 
 ### 6. Application path, mirrored from the master
@@ -291,7 +296,7 @@ historical order. Nothing reorders behind the author's back.
 | consume | scheduler at promotion, `masterBus.requestSwap` | scheduler at promotion, `cylinders.requestSwap(orbit, id)`, applied whether or not the event sounds, before the late-sound guards |
 | swap | `MasterBus` dual-chain crossfade, 60 ms, linear | per-cylinder dual-chain crossfade, same constant, same linear law, same block-quantized start |
 | build | chains built at registration, bounded cache | chains built at registration per cylinder that references them, bounded cache; reverb units and rings rented from the shelves as today |
-| reset | `Master.default()` says "back to unity" | `Katalyst.default()` says "back to the historical chain" |
+| reset | `Master.default()` says "back to unity" | there is no `default`: `Katalyst.classic()` IS the historical chain, and an event carrying no chain leaves the orbit's chain as it is (the master's "no change" rule), so going back is `.katalyst(Katalyst.classic())` on a pattern that composes nothing else |
 
 Two voices on one orbit carrying different chains swap it back and forth with a crossfade each
 time, the same author error the master has, and the same cure: one chain per orbit. Voices with the
@@ -328,7 +333,7 @@ complexity outranks the duplication.
 ### 8. Tests (mandatory tier, every one mutation-checked)
 
 1. **Default parity, the byte-identity guard.** The frozen July song (`FrozenSongs`) renders
-   byte-identical with `KatalystDsl.default` driving every cylinder versus the pre-DSL engine, and
+   byte-identical with `KatalystDsl.classic` driving every cylinder versus the pre-DSL engine, and
    `KatalystDefaultsSyncSpec` pins the default list to the historical order and the wire constants.
 2. **Door parity.** `KatalystDoorParitySpec`: the script form and the Kotlin form build equal
    nodes, every stage, every knob (the `KlangScriptFilterDoorParitySpec` pattern).
@@ -352,7 +357,7 @@ complexity outranks the duplication.
 ### 9. Phasing, one review loop and one commit each
 
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
-  builder shells for the seven existing effects, `KatalystDsl.default`, the per-cylinder swap,
+  builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
 - **Phase 1, the song's need.** `eq` and `gain` stages with literal knobs, the sends rule (§D2),
   tests 4, 5. Acceptance: Der Schmetterling with the two EQs from the header, re-measured with the

@@ -128,10 +128,42 @@ Osc.register("supersaw", Osc.supersaw().classic())
   full synth voice with one call and an author who wants another order writes their own lambda,
   as Der Schmetterling does for its amps. No builder, no new node kinds, nothing on the wire.
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
-- **The gate moves to the node.** Today `VoiceFactory` skips a pipeline stage whose amount the
-  note did not set. Under the slot rule, a stage whose governing slot is unset is not built, so a
-  plain `sound("saw")` is a bare saw, bit-identical to today, and ten slots cost nothing until one
-  is written.
+- **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
+  and a pregain inside it would consume the slot there, so velocity would drive the rack's distort
+  and never the guitar's tubes while the unconsumed rule stayed silent. Built-ins are
+  `Osc.saw().mul(OscSlot.pregain).classic()`; an author places `.mul(OscSlot.pregain)` where the
+  player's touch enters, or leaves it to the unconsumed rule (§6).
+- **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs
+  after every ignitor, so `sound(guitar).hpf(120)` works on an authored guitar; Der Schmetterling
+  relies on it (the trommel's `.hpf(160).lpf(3500)`, the bass's `.adsr(...).hpf(30)`, the kick's
+  filters and `.distort(0.02)`, the guitars' `.adsrOff()`). Under the slot rule those doors write
+  slots the instrument does not declare and go silent, so phase 3 is byte-identical for built-ins
+  only. The migration: the built-in songs' authored instruments get `.classic()` appended where
+  they use the doors, then the frozen-song guard proves identity. The trap gets a diagnostic, not
+  magic: the editor knows every registered instrument's slot list (`collectParams`), so
+  `sound(guitar).hpf(120)` on an instrument without an `hpf` slot is flagged inline ("guitar
+  declares no slot hpf; append .classic() or place .highpass(OscSlot.hpf) in the instrument"),
+  and `.katp` is checked against the chain's slots the same way. Auto-wrapping would hide
+  structure, which is the thing this plan removes.
+- **The gate moves to the node (decided 2026-09-17, the optimization phase 3 stands on).** Today
+  the two paths differ. `FilterPipelineBuilder` adds a stage only when the voice wrote it (coarse
+  above 1, crush and distort above 0, tremolo depth above 0), so an off stage does not exist. The
+  Ignitor DSL path is not free: the literal overloads (`Ignitor.coarse(amount: Double)`) return the
+  inner when the amount is off, but a node whose knob is a `Param` or `Constant`, which is what
+  `.coarse(OscSlot.coarse)` becomes, builds its `CoarseIgnitor` unconditionally and pays a scratch
+  render and a copy per block even at 0. A classic tail of ten slotted stages with nothing written
+  would be ten buffer passes per voice. The rule that closes it: **at voice build, a stage whose
+  gating knob is `Param` or `Constant` backed and resolves to the unset sentinel or to that stage's
+  off value is not built; the builder returns the inner.** Params are per-note constants, so this is
+  exact; expression-backed knobs (an LFO on the amount) stay unconditional because they can move
+  within a note. The off value is per stage, not a global zero: coarse at or below 1, crush and
+  distort at 0, tremolo at depth 0, phaser below `Phaser.MIN_ACTIVE_DEPTH`, a filter only when its
+  cutoff is unset (a lowpass has no numeric off short of Nyquist), an envelope when unset. That list
+  lives in the phase 3 task next to the sentinel rule, and `Slots.lpf` and friends default to unset
+  rather than to a number. The build cache (`IgnitorBuildCache`, keyed on node identity and
+  accumulated modifiers) must cover the on and off state in its key, or a voice written with
+  `coarse(2)` could reuse a tree built for one without it. With the gate, a plain `sound("saw")` is
+  a bare saw, bit-identical to today, and ten slots cost nothing until one is written.
 - A pattern fills slots, never adds structure. Someone who wants a second lowpass or the highpass
   before the drive writes an instrument, inline or registered, and the same doors fill the same
   slot names on it. `sound(myGuitar).lpf(100)` on a guitar without an `lpf` slot does nothing.
@@ -211,8 +243,10 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 2. **Pregain**: the slot, the unconsumed rule, velocity onto pregain, `postgain` retired and
    folded. Byte-identical for every existing instrument (none places the slot yet).
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
-   the node-level gate, the voice doors as `oscp` aliases, `VoiceData` cut to §4, the Pipeline DSL
-   and the filter pipeline builder retired. Byte-identical by the gate rule.
+   the node-level gate with the build-cache key covering it, the voice doors as `oscp` aliases,
+   `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
+   songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
+   editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
 4. **Interoperability lift**: when the second pattern kind exists, not before.
 
 ## 11. Open points
