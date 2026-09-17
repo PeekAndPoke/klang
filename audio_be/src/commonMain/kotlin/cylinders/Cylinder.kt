@@ -87,7 +87,7 @@ class Cylinder(
     /**
      * The bus effect pipeline, in the order this orbit's chain declares its stages.
      *
-     * The duck is NOT in this pipeline — it's applied separately by [Cylinders] after all orbits
+     * The duck is NOT in this pipeline; it is applied separately by [Cylinders] after all orbits
      * are processed, because it needs cross-orbit access to the sidechain source.
      */
     val pipeline get() = katalyst.pipeline
@@ -176,7 +176,7 @@ class Cylinder(
      * Processes all bus effects in the chain's order: Body → Vowel → Delay → Reverb → Phaser →
      * Compressor for the classic chain.
      *
-     * The duck is NOT processed here — see [Cylinders.processAndMix].
+     * The duck is NOT processed here, see [Cylinders.processAndMix].
      */
     fun processEffects() {
         if (!isActive) return

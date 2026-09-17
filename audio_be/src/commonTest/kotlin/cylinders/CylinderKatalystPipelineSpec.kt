@@ -139,7 +139,7 @@ class OrbitBusPipelineSpec : StringSpec({
             VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.0, size = 0.0)), blockStart = 2.0 * bf,
         )
         cylinder.reverb!!.reverb!!.size shouldBe 0.05 // retained
-        cylinder.reverb!!.hasTail() shouldBe true // draining — VISIBLE to cleanup now
+        cylinder.reverb!!.hasTail() shouldBe true // draining, VISIBLE to cleanup now
 
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
         // cleared, only the reverbHasTail() wiring stands between a charged drain and

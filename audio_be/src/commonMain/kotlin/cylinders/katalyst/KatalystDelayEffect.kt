@@ -89,7 +89,7 @@ class KatalystDelayEffect(
 
     /**
      * The smallest ring CLASS the warehouse has failed to allocate for this effect, or 0. Without
-     * it a refusal is retried on EVERY block — `KatalystChain.applyOwner` re-applies the owner's
+     * it a refusal is retried on EVERY block: `KatalystChain.applyOwner` re-applies the owner's
      * config per block — and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the
      * audio thread (review round 1, both reviewers). While the needed class is `>= refusedFrames`
      * no ALLOCATION is attempted; the shelf is still consulted, because a ring another orbit
@@ -261,7 +261,7 @@ class KatalystDelayEffect(
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
 
-    /** Clears the ring, the lifecycle AND the DSP params — called from `KatalystChain.reset`
+    /** Clears the ring, the lifecycle AND the DSP params, called from `KatalystChain.reset`
      *  on orbit deactivation. The params go back to factory here (review round 5): `DelayLine`'s
      *  setters DROP non-finite writes, so a NaN param from the next life's first owner would
      *  otherwise inherit THIS life's value — e.g. a dead owner's self-oscillating feedback.
