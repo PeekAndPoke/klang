@@ -3,7 +3,10 @@
 > **Designed 2026-09-17, not started.** Priority: **MUST** (see `_priorities.md`). This is the
 > authoring surface for the Katalyst layer; the effects themselves already shipped. The design below
 > follows the shipped Master DSL step for step and adds two stages the songs need, `eq` and `mics`.
-> Five decisions are parked for the maintainer (§D1 to §D5); everything else is settled by precedent.
+> Five decisions were parked for the maintainer (§D1 to §D5); all five are decided as of 2026-09-17,
+> see §10. This task is phase 1 of [`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md),
+> which resolves D2, D4 and D5 and retires the owner-voice override of §2 below (the voice fields
+> it overrode leave the wire in that plan; the bus doors become `katp` aliases).
 >
 > **The concrete need (measured 2026-09-17, klang-ai `sessions/20260917-der-schmetterling-measure/`):**
 > Der Schmetterling reads hollow because its guitar wall is 2 to 4 dB thin at 160 to 400 Hz relative to
@@ -367,15 +370,15 @@ complexity outranks the duplication.
 - **§D1 DECIDED 2026-09-17:** `Katalyst.param(...)` on the object, `.katp(...)` on the pattern, as `oscp`.
   Noted for later: `Osc` / `oscp` are misnomers for the Ignitor concept and get renamed in their own item
   (the known debt in `/dsl-design` §5).
-- **§D2** the sends rule: position-implied (recommended) or an explicit knob per stage.
+- **§D2 DISSOLVED 2026-09-17** by the signal-flow plan §7: no per-voice send amounts, so no send
+  buffers; `reverb` and `delay` are insert-style stages at their list position, the master's model.
 - **§D3 DECIDED 2026-09-17:** extract the crossfade helper if it costs no runtime, or as good as none;
   measure the master swap before and after in the same deliverable.
-- **§D4** whether a stage absent from a declared chain silently ignores a voice's matching field
-  (recommended, "the chain is the instrument") or the voice field conjures the stage. The second
-  reintroduces the fixed order behind the author's back.
-- **§D5** whether `gain` belongs on the orbit at all, given `postgain` on the voice. Recommended
-  yes: a fader on the bus is what a mix-shaping surface is for, it is the master's `gain` with the
-  same word, and it is the one knob an advisor (auto-mix-advisor.md) would move first.
+- **§D4 DECIDED 2026-09-17:** the chain is the instrument. The bus doors become `katp` aliases on
+  the orbit's chain; a stage absent from a declared chain makes the matching door a no-op.
+- **§D5 DECIDED 2026-09-17:** the orbit `gain` stage stays, the group fader after the inserts.
+  Gain and postgain were both pre-bus faders at one point (`SendRenderer`); postgain retires in
+  the signal-flow plan §6, and `gain` means the tone-neutral level on every surface.
 
 ## Links
 
