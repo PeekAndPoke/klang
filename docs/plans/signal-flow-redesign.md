@@ -248,6 +248,17 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
    editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
 4. **Interoperability lift**: when the second pattern kind exists, not before.
+5. **The announcements, last.** Everything that describes a retired surface is re-read and
+   rewritten once the surfaces are gone: the whitepaper (`docs/whitepaper/klang-whitepaper.html`,
+   which explains the voice pipeline, `postgain`, the per-voice effect fields and the Strudel
+   lineage), the tutorials and the Lexikon (doors described as fields become slot aliases, the
+   Pipeline DSL and `pedal` disappear, `Katalyst` and `pregain` appear), the sprudel and ignitor
+   reference files that the klang-ai workspace symlinks (`ref/sprudel-reference.md`,
+   `ref/ignitor-reference.md`), the `/klang-music-writing` skill, the module `CLAUDE.md` and
+   `MEMORY.md` files, and the rules register's retired list, which gets `postgain`, `PipelineDsl`,
+   `pedal` and the per-voice bus doors with the date. A grep for each retired word over `docs/`,
+   the skills, the tutorials and the builtin songs is the checklist; the phase ends when it is
+   empty outside `docs/tasks-archive/`, `docs/history/` and the dev diary, which are never fixed.
 
 ## 11. Open points
 
@@ -256,7 +267,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   read from the tree at build. Needs its own paragraph in phase 3's task.
 - `Osc` and `oscp` are misnomers for the Ignitor concept (the known debt in `/dsl-design` §5) and get
   renamed in their own item, after phase 3, once the slot vocabulary has settled.
-- Tutorials and the Lexikon describe doors as fields; they get re-read once as slot aliases.
+- Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
+  engine; phase 5 re-reads them once the surfaces are gone.
 - Sample voices: `sound("bd")` as the sample instrument with its playback slots, in phase 3.
 - **Housekeeping, decided 2026-09-17: nothing in the backend or the frontend may allocate without a
   way to clean it up.** The process-wide identity maps (`uniqueId()` for ignitors, masters and
