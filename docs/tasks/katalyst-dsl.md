@@ -364,9 +364,12 @@ complexity outranks the duplication.
 
 ### 10. Parked decisions
 
-- **§D1** naming: `Katalyst.param` (recommended) or the settled `Kat.param`.
+- **§D1 DECIDED 2026-09-17:** `Katalyst.param(...)` on the object, `.katp(...)` on the pattern, as `oscp`.
+  Noted for later: `Osc` / `oscp` are misnomers for the Ignitor concept and get renamed in their own item
+  (the known debt in `/dsl-design` §5).
 - **§D2** the sends rule: position-implied (recommended) or an explicit knob per stage.
-- **§D3** the crossfade helper: extract (recommended if it stays plain) or copy.
+- **§D3 DECIDED 2026-09-17:** extract the crossfade helper if it costs no runtime, or as good as none;
+  measure the master swap before and after in the same deliverable.
 - **§D4** whether a stage absent from a declared chain silently ignores a voice's matching field
   (recommended, "the chain is the instrument") or the voice field conjures the stage. The second
   reintroduces the fixed order behind the author's back.
