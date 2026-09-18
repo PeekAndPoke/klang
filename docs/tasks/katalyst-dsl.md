@@ -464,6 +464,11 @@ complexity outranks the duplication.
   declared chain owns its material, so `.body(material = ...)` on its voices does not set it until 5b
   decides the string slot; the numeric doors reach it through `katp`. The owner's map is aged with
   the lease's two-block liveness, so a lapsed owner's values never configure an arriving chain.
+  Adding `.katalyst(Katalyst(k => k.classic()))` to a running pattern therefore installs a chain:
+  immediate when the orbit is idle, a crossfade from the born-with chain when it sounds, and that
+  crossfade is not bit-transparent (the arriving chain's ring and network warm from empty, a dip in
+  the wet inside the 60 ms window while the old tail drains at full weight), the same as every swap;
+  a repeated request is the raw-name no-op.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
   As built (2026-09-18): a slot-driven writer is a class with `resolve(params)` and `apply()`
   (`KatalystSlotWriters.kt`), one per stage kind, over `KatalystKnob`s that hold a slot NAME and the
@@ -485,9 +490,13 @@ complexity outranks the duplication.
   owner's map in `ownerParams` for exactly that, dropped wherever the lease is. Guards:
   `CylinderChainCrossfadeSpec`, three slot-duck rows. The acceptance measured:
   `note("c3 e3 g3").sound("supersaw").reverb(wet = 0.5, size = 6).orbit(1).katalyst(Katalyst(k =>
-  k.classic().gain(1.0)))` rendered byte-identically to the same pattern WITHOUT the reverb door
-  before this step, and differs after it (last-cycle rms 0.1333 against 0.1301, tail 0.0085 against
-  0.0080). Guards: `CylinderKatalystParamsSpec`, `LangKatalystParamSpec`.
+  k.classic()))` rendered byte-identically to the same pattern WITHOUT the reverb door before this
+  step, and differs after it (last-cycle rms 0.1333 against 0.1301, tail 0.0085 against 0.0080).
+  Guards: `CylinderKatalystParamsSpec`, `LangKatalystParamSpec`. Round 2 removed the `.gain(1.0)`
+  that acceptance needed: see the voice-driven rule below. Its parity fell out: step 3a's
+  `audible-classic` (a declared classic under voices carrying `reverb(wet 0.5, size 6)`) still
+  hashes identically to `audible-none` (no declaration at all), `6c8540cc…`, so the slot path and
+  the voice path agree on the reverb sample for sample.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
