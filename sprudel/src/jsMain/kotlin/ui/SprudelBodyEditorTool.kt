@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.sprudel.SprudelBodyMaterials
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -76,7 +76,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
 
     // ── Available materials ───────────────────────────────────────────────────
 
-    private val materials = SprudelBodyMaterials.names
+    private val materials = BodyMaterials.names
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
@@ -172,7 +172,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
                     fontStyle = FontStyle.italic
                     marginBottom = 8.px
                 }
-                +(SprudelBodyMaterials.descriptions[material] ?: "")
+                +(BodyMaterials.descriptions[material] ?: "")
             }
 
             ui.divider {}
@@ -203,7 +203,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
         val logMin = ln(20.0)
         val logMax = ln(20000.0)
 
-        val modes = SprudelBodyMaterials.modesFor(material) ?: emptyList()
+        val modes = BodyMaterials.modesFor(material) ?: emptyList()
 
         fun response(f: Double): Double {
             var sum = 0.0

@@ -16,7 +16,7 @@ The `body()` / `body(wet = ...)` resonator is a **parametric modal model**: a pa
 (`BodyFilter`), one per mode, mixed over the dry source via `ParallelMixFilter` (floor + peaks). Materials are
 hand-authored tables:
 
-- `sprudel/src/commonMain/kotlin/SprudelBodyMaterials.kt` — the public `modesFor(material)` catalogue (as of
+- `audio_bridge/src/commonMain/kotlin/BodyMaterials.kt` — the public `modesFor(material)` catalogue (as of
   2026-07-04 ~15 materials — woods `wood`/`cedar`/`spruce`/`mahogany`/`rosewood`/`maple`/`oak`, `violin`,
   `tube`/`glass`/`membrane`, metals `brass`/`steel`/`bell`, + `none`), each ~8 `m(freq, db, q)` modes. (Extracted
   from the old private `SprudelVoiceData.resolveBodyModes`.)

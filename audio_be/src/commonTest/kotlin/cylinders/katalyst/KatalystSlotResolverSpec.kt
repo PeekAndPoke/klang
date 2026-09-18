@@ -16,10 +16,12 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
@@ -314,14 +316,66 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.vowel.shouldNotBeNull().isEngaged shouldBe false
     }
 
-    "body and vowel: a NAME resolves to nothing in the backend today, so the stage stays off" {
-        // The material and vowel tables live in `sprudel`, which `audio_be` cannot reach, so every
-        // name is "unknown" here and an unknown name is off (the rule `toVoiceData` follows). This
-        // row is the pin on that gap: the day the names resolve, it fails and gets rewritten
-        // deliberately. See KatalystSlots.bodyModes.
+    "body and vowel: a NAME engages the stage, through the audio_bridge tables" {
         val chain = declared(
             KatalystStageDsl.Body(material = "wood", wet = c(0.3)),
             KatalystStageDsl.Vowel(vowel = "a", wet = c(0.3)),
+        )
+
+        chain.body.shouldNotBeNull().isEngaged shouldBe true
+        chain.vowel.shouldNotBeNull().isEngaged shouldBe true
+    }
+
+    "body and vowel: the resolved def is the voice path's, up to the floor fill" {
+        // Parity with `SprudelVoiceData.toVoiceData` (Katalyst step 3c): both paths read the SAME
+        // [BodyMaterials] / [VowelBands] table, so this row pins the table's answer on the chain
+        // side while `LangBodySpec` and `LangVowelComprehensiveSpec` pin the voice side against the
+        // same landmark modes. `audio_be` does not depend on `sprudel`, so the two halves of the
+        // parity cannot live in one file.
+        //
+        // The ONE difference between the paths is the floor FILL: a voice leaves `floor = null`,
+        // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
+        // same default out as a number. Same filter, two spellings of one value.
+        val body = KatalystSlots.bodyDef(
+            stage = KatalystStageDsl.Body(material = "wood", wet = c(0.3)),
+            bands = KatalystSlots.bodyModes("wood"),
+        ).shouldNotBeNull()
+
+        body.bands shouldBe BodyMaterials.modesFor("wood")
+        body.bands.first() shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        body.bands.size shouldBe 8
+        body.mix shouldBe 0.3
+        body.floor shouldBe BODY_FLOOR
+
+        val vowel = KatalystSlots.vowelDef(
+            stage = KatalystStageDsl.Vowel(vowel = "a", wet = c(0.3)),
+            bands = KatalystSlots.vowelBands("a"),
+        ).shouldNotBeNull()
+
+        // A bare vowel name is the soprano register, the voice path's rule as well.
+        vowel.bands shouldBe VowelBands.bandsFor("soprano:a")
+        vowel.bands.first() shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
+        vowel.bands.size shouldBe 5
+        vowel.mix shouldBe 0.3
+        vowel.floor shouldBe VOWEL_FLOOR
+    }
+
+    "body and vowel: the name is case-insensitive, as it is on the voice path" {
+        KatalystSlots.bodyModes("Wood") shouldBe BodyMaterials.modesFor("wood")
+        KatalystSlots.vowelBands("BASS:A") shouldBe VowelBands.bandsFor("bass:a")
+    }
+
+    "body and vowel: an unknown name is OFF, the rule toVoiceData follows" {
+        KatalystSlots.bodyModes("unobtainium").shouldBeNull()
+        KatalystSlots.vowelBands("zzz").shouldBeNull()
+
+        // `none` is the explicit off switch on both tables.
+        KatalystSlots.bodyModes("none").shouldBeNull()
+        KatalystSlots.vowelBands("none").shouldBeNull()
+
+        val chain = declared(
+            KatalystStageDsl.Body(material = "unobtainium", wet = c(1.0)),
+            KatalystStageDsl.Vowel(vowel = "zzz", wet = c(1.0)),
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe false

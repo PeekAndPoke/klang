@@ -388,12 +388,13 @@ complexity outranks the duplication.
     pending name of INACTIVE cylinders once per block (one null check), so a registration that
     arrives after the request lands at the next block, the master's "late state must still take
     effect" rule; an active cylinder installs at its next deactivation until step 3b.
-  - **Body and vowel on a declared chain need the name tables** (`SprudelBodyMaterials.modesFor`,
-    the vowel bands), which live in `sprudel`, a module `audio_be` must not depend on. Step 3c
-    (2026-09-17): move the two tables, pure data, into `audio_bridge`; sprudel and the editor tool
-    import them from there; the resolver maps the name through them; until then a declared
-    `body`/`vowel` stays off and `KatalystSlotResolverSpec` pins that on purpose. The classic chain
-    is unaffected, its voices arrive with the `FilterDef` resolved.
+  - **Body and vowel on a declared chain resolve their names through `audio_bridge`** (step 3c,
+    done 2026-09-18): `BodyMaterials.modesFor` and `VowelBands.bandsFor`, pure data moved out of
+    `sprudel` byte for byte, the sprudel-side symbols removed; `SprudelVoiceData.toVoiceData` and the
+    body editor tool read the same objects, and `KatalystSlots` maps a stage's name through them at
+    chain build. Unknown or null name = stage off on both paths. A declared `body("wood", wet 0.5)`
+    renders bit-identically to the voice door; the one formal difference is the floor (null on the
+    voice, the constant written out on the chain, the same number).
 
 
 ### 8. Tests (mandatory tier, every one mutation-checked)

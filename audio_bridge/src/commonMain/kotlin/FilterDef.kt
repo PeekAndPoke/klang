@@ -106,7 +106,7 @@ sealed class FilterDef {
      *    because it is the whole point of the effect.)
      *
      * Bands are resolved from a named material (`wood`, `cedar`, `tube`, `glass`, `membrane`,
-     * `brass`) at the sprudel DSL layer; this contract carries only the already-resolved modes + mix.
+     * `brass`) through [BodyMaterials]; this contract carries only the already-resolved modes + mix.
      */
     @WireName("body")
     data class Body(

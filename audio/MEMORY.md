@@ -264,8 +264,12 @@
   configures them via `VoiceLease` (first-writer-wins). `VoiceFactory` pulls `FilterDef.Body`/`Formant`
   OUT of the per-voice chain — its `toFilter` arms for them are unreachable (`error()`). The two
   effects are **intentional un-deduped twins** — change one, mirror the other.
-- **Materials** = pure data in `SprudelBodyMaterials` (sprudel commonMain): `names` / `descriptions`
-  / `modesFor(name)` → `List<FilterDef.Body.Mode>(freq,db,q)`; `none` = reset (vowel `none` too). Blend
+- **Materials** = pure data in `BodyMaterials` (audio_bridge commonMain, moved there from sprudel by
+  Katalyst step 3c on 2026-09-17): `names` / `descriptions` / `modesFor(name)` →
+  `List<FilterDef.Body.Mode>(freq,db,q)`; the vowel twin is `VowelBands.bandsFor("<voice>:<vowel>")`
+  (a bare name is the soprano register). `none` = reset (vowel `none` too). Both tables are read by
+  `SprudelVoiceData.toVoiceData` for a voice AND by `KatalystSlots` for a declared Katalyst chain's
+  `body`/`vowel` stage, so a name means one thing on both paths. Blend
   = `ParallelMixFilter(inner, mix, floor)`; `floor` user-settable via `bodyFloor()`/`vowelFloor()`
   (`FilterDef.Body/Formant.floor`, null → `BODY_FLOOR`/`VOWEL_FLOOR`), `bodyMix` uncapped >1 (raw).
   Sprudel fields grouped in `SvdBody`/`SvdVowel`. UI: `SprudelBodyEditorTool` (sprudel jsMain).

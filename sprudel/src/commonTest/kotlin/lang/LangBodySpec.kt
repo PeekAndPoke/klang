@@ -9,8 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.sprudel.SprudelBodyMaterials
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -56,7 +56,7 @@ class LangBodySpec : StringSpec({
     }
 
     "every catalogue material resolves to an 8-mode body (except 'none')" {
-        SprudelBodyMaterials.names.filter { it != "none" }.forEach { material ->
+        BodyMaterials.names.filter { it != "none" }.forEach { material ->
             val voiceData = note("c3").body(material).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
             withClue(material) {
@@ -113,6 +113,21 @@ class LangBodySpec : StringSpec({
 
         // No body filter is created for an unknown material — fail soft.
         voiceData.filters.filters.size shouldBe 0
+    }
+
+    "the voice path resolves through the shared BodyMaterials table (Katalyst step 3c parity)" {
+        // The voice half of the parity `KatalystSlotResolverSpec` holds the other half of: a
+        // declared Katalyst chain's `body` stage reads the SAME table through `KatalystSlots`.
+        // `audio_be` does not depend on `sprudel`, so the landmark mode is pinned on both sides.
+        // The one difference between the paths is the floor FILL: a voice leaves `floor = null`,
+        // which the engine reads as its default, while a declared stage writes that default out.
+        val bodyFilter = note("c3").body(material = "wood", wet = 0.3).queryArc(0.0, 1.0)[0]
+            .data.toVoiceData().filters.filters[0] as FilterDef.Body
+
+        bodyFilter.bands shouldBe BodyMaterials.modesFor("wood")
+        bodyFilter.bands[0] shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        bodyFilter.mix shouldBe 0.3
+        bodyFilter.floor shouldBe null
     }
 
     "body sits before the lowpass in the canonical filter order" {

@@ -8,9 +8,11 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
@@ -126,22 +128,20 @@ internal object KatalystSlots {
 
     /**
      * The modal bands behind a `body("<material>")` name, or null when the name resolves to
-     * nothing, which turns the stage OFF (the rule `SprudelVoiceData.toVoiceData` follows for an
-     * unknown material).
+     * nothing, which turns the stage OFF.
      *
-     * ⚠️ **THE SEAM FOR STEP 3c** (decided with the maintainer, 2026-09-17): the backend has no
-     * material table, so every name is unknown here and every DECLARED `body(...)` is off. The
-     * tables (`SprudelBodyMaterials.modesFor` and sprudel's `resolveVowelBands`) live in
-     * `sprudel`, which `audio_be` does not depend on, while the wire carries the NAME; step 3c
-     * moves them to `audio_bridge` and this function is the one place that changes. The
-     * voice-driven classic chain plays every material meanwhile, because a voice arrives with its
-     * `FilterDef` already resolved. `KatalystSlotResolverSpec` pins the gap, so the day the table
-     * arrives the row fails and is rewritten deliberately.
+     * Katalyst step 3c (2026-09-17) closed the seam: the wire carries the NAME, and both readers
+     * of a name now go through the same [BodyMaterials] table in `audio_bridge`. A null name (the
+     * stage was declared without a material) and an unknown name are the same answer, off, which
+     * is the rule `SprudelVoiceData.toVoiceData` follows on the voice path. Case handling is that
+     * table's own `lowercase()`, so `body("Wood")` resolves on both paths alike.
      */
-    fun bodyModes(material: String?): List<FilterDef.Body.Mode>? = null
+    fun bodyModes(material: String?): List<FilterDef.Body.Mode>? =
+        material?.let { BodyMaterials.modesFor(it) }
 
-    /** The formant bands behind a `vowel("a")` name. The same step-3c seam as [bodyModes]. */
-    fun vowelBands(vowel: String?): List<FilterDef.Formant.Band>? = null
+    /** The formant bands behind a `vowel("a")` name. Twin of [bodyModes], through [VowelBands]. */
+    fun vowelBands(vowel: String?): List<FilterDef.Formant.Band>? =
+        vowel?.let { VowelBands.bandsFor(it) }
 
     /**
      * The body resonator a declared stage asks for, or null (the stage is off) when [bands] is

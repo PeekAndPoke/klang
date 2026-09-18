@@ -178,7 +178,8 @@ sealed class FilterDef {
 ```
 
 - Cutoff filters: `audio_be/.../filters/LowPassHighPassFilters.kt` (SVF). Envelope = `FilterEnvDef`.
-- Resonators: bands resolved sprudel-side (`SprudelBodyMaterials.modesFor` / `SprudelVoiceData.resolveVowelBands`);
+- Resonators: bands resolved from a name in audio_bridge (`BodyMaterials.modesFor` / `VowelBands.bandsFor`),
+  by `SprudelVoiceData.toVoiceData` for a voice and by `KatalystSlots` for a declared Katalyst chain;
   DSP = `BodyFilter`/`FormantFilter` + `createBody`/`createFormant`; blend + declick-crossfade in
   `ParallelMixFilter` / `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
 
