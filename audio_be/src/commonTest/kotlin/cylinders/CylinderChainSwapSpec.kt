@@ -25,9 +25,10 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  * The per-cylinder chain swap: how a `katalyst(…)` name becomes the chain an orbit runs
  * (Katalyst step 3a, `docs/tasks/katalyst-dsl.md` §6 and the plan's §7).
  *
- * The five semantics of a request, the bounded cache behind them, and the lifecycle
- * (`retire` / `adopt`). What a DECLARED chain's knobs resolve to is
- * `KatalystSlotResolverSpec`'s subject; the crossfade for a swap on a SOUNDING orbit is step 3b's.
+ * The semantics of a request, the bounded cache behind them, and the lifecycle
+ * (`retire` / `adopt`). What a DECLARED chain's knobs resolve to is `KatalystSlotResolverSpec`'s
+ * subject; what the swap of a SOUNDING orbit sounds like, and the drain behind it, is
+ * `CylinderChainCrossfadeSpec`'s (step 3b).
  */
 class CylinderChainSwapSpec : StringSpec({
 
@@ -81,7 +82,7 @@ class CylinderChainSwapSpec : StringSpec({
     /** True while the cylinder runs the classic chain, which is the only one with all seven stages. */
     fun Cylinder.runsClassic(): Boolean = reverb != null && delay != null && body != null && duck != null
 
-    // ── The five semantics of a request ──────────────────────────────────────────────────────────
+    // ── The semantics of a request ───────────────────────────────────────────────────────────────
 
     "an idle cylinder installs a declared chain right away" {
         val rig = Rig()
@@ -172,21 +173,20 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.runsClassic() shouldBe false
     }
 
-    "the poll never swaps a SOUNDING orbit: that is what the silence gate is for" {
+    "a request on a SOUNDING orbit installs the chain at once, through a crossfade" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.sound()
 
         rig.cylinder.requestChain("gain")
-        rig.cylinder.pollPendingChain()
 
-        withClue("a swap under live audio is the click step 3b's crossfade exists to prevent") {
-            rig.cylinder.runsClassic() shouldBe true
+        withClue("step 3b: the declared chain is in service immediately") {
+            rig.cylinder.runsClassic() shouldBe false
         }
 
-        rig.goQuiet()
-
-        rig.cylinder.runsClassic() shouldBe false
+        withClue("and the chain it replaced is still audible, fading out") {
+            rig.cylinder.isFading shouldBe true
+        }
     }
 
     "a pending name also lands at the next idle check, without a second request" {
@@ -206,28 +206,18 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.runsClassic() shouldBe false
     }
 
-    "a request while the orbit sounds waits for the silence, then installs" {
-        val rig = Rig()
-        rig.registry.register("gain", gainChain(1.5))
-        rig.sound()
-
-        rig.cylinder.requestChain("gain")
-
-        rig.cylinder.runsClassic() shouldBe true
-
-        rig.goQuiet()
-
-        rig.cylinder.runsClassic() shouldBe false
-    }
-
     "the LAST request wins: an earlier queued name never lands after it" {
         val rig = Rig()
-        rig.registry.register("first", gainChain(1.1))
-        rig.registry.register("second", delayChain(0.25))
         rig.sound()
 
+        // Neither name is registered yet, so each request can only be queued, and the queue holds
+        // exactly one. (The mid-FADE queue, which is the other way in, is
+        // `CylinderChainCrossfadeSpec`'s.)
         rig.cylinder.requestChain("first")
         rig.cylinder.requestChain("second")
+
+        rig.registry.register("first", gainChain(1.1))
+        rig.registry.register("second", delayChain(0.25))
 
         rig.goQuiet()
 
@@ -460,11 +450,13 @@ class CylinderChainSwapSpec : StringSpec({
     "retire clears the cache, drops the pending name and puts the classic chain back" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
-        rig.registry.register("echo", delayChain(0.25))
 
         rig.cylinder.requestChain("gain")
         rig.sound()
+        // Still unknown when it is asked for, so it can only be QUEUED, which is what retire has
+        // to drop. (A name that resolves would start a crossfade instead, see step 3b.)
         rig.cylinder.requestChain("echo")
+        rig.registry.register("echo", delayChain(0.25))
 
         rig.cylinder.retire()
 

@@ -84,8 +84,8 @@ class Cylinders(
      * Processes all cylinders and mixes the results into the given buffer.
      *
      * Processing order:
-     * 1. Install any chain queued on a SILENT orbit, then process all cylinder katalyst pipelines
-     *    (Delay → Reverb → Phaser → Compressor)
+     * 1. Install (or start fading in) any chain queued on a cylinder, then run every cylinder's
+     *    katalyst pipeline (Delay → Reverb → Phaser → Compressor)
      * 2. Apply ducking (cross-cylinder sidechain — requires all cylinders processed first)
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders
@@ -94,10 +94,10 @@ class Cylinders(
         // Step 1: Process katalyst pipeline on all cylinders
         for (cylinder in id2cylinder.values) {
             // A chain requested before its registration arrived lands here, on the first block
-            // where both are true: the name resolves and the orbit is silent. Two field reads per
-            // cylinder when nothing is queued, which is the normal case (see
-            // [Cylinder.pollPendingChain]). An inactive cylinder renders nothing this block, so
-            // there is nothing this swap can cut.
+            // where the name resolves, and so does one that waited behind a running crossfade.
+            // One field read per cylinder when nothing is queued, which is the normal case (see
+            // [Cylinder.pollPendingChain]). Nothing here can cut audio: an idle orbit renders
+            // nothing this block, and a sounding one gets the crossfade (step 3b).
             cylinder.pollPendingChain()
             cylinder.processEffects()
         }

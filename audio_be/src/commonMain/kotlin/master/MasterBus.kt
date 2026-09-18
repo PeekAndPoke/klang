@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.master
 
+import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import kotlin.math.abs
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
@@ -20,21 +20,17 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * ([requestSwap]) and takes effect in [process].
  *
  * **Dual-chain crossfade.** Old and new chains run *in parallel* over a short window and their
- * outputs are blended. This is the one mechanism that handles any A→B pair: parameter ramping only
- * works when both chains share a topology, and limiter/reverb state cannot be interpolated
+ * outputs are blended by the shared [Crossfade] (the ramp, the law and the block-quantized start
+ * are documented there). This is the one mechanism that handles any A→B pair: parameter ramping
+ * only works when both chains share a topology, and limiter/reverb state cannot be interpolated
  * meaningfully. It also warms the new chain up — it processes real audio for the whole fade, so its
  * limiter envelope has settled by the time it reaches full weight. Cost is 2× master DSP for ~60 ms,
  * **per engine, not per voice**. Precedent: `KatalystFilterSwap` (the body/vowel live-change fix).
  *
- * **The blend is LINEAR, not equal-power.** Both chains process the *same* input, so their outputs
- * are highly correlated; amplitude-complementary weights sum correctly, while an equal-power
- * (sin/cos) law would push correlated material up to +3 dB mid-fade. Equal-power is for
- * *uncorrelated* sources.
- *
- * **Swap start is block-quantized, the fade is per-sample.** The per-sample ramp is what prevents
- * zipper noise; the start of the fade rounds to the current block (≤ ~2.7 ms at 128 frames / 48 kHz)
- * because the shared DSP processes buffers from index 0. Inaudible against a 60 ms fade, and it
- * keeps the effect classes untouched.
+ * **The outgoing chain is CUT at the end of the fade**, tail and all. The orbit bus drains its
+ * outgoing chain instead (`Cylinder`, Katalyst step 3b): the orbit's send effects own a Draining
+ * state the master's chain-level shells do not, and the master's v1 cut was accepted by the
+ * maintainer with "if audible, extend the old chain's life" noted. Still open for this host.
  *
  * **Chains are built once, at registration.** Building allocates (Freeverb buffers, delay rings), so
  * it must not happen per swap: swaps are applied from `promoteScheduled`, inside the render
@@ -61,9 +57,6 @@ class MasterBus(
     private val reverbs: ReverbUnits = ReverbUnits(sampleRate),
 ) {
     companion object {
-        /** Crossfade length for a master swap. Tune by ear. */
-        const val MASTER_XFADE_SECONDS: Double = 0.06
-
         /**
          * How many built chains one bus keeps.
          *
@@ -89,7 +82,8 @@ class MasterBus(
 
     }
 
-    private val fadeFrames: Int = (MASTER_XFADE_SECONDS * sampleRate).toInt().coerceAtLeast(1)
+    /** The ramp both chains are blended over. One per bus, created once. */
+    private val fade: Crossfade = Crossfade(sampleRate)
 
     /** Built chains by (lowercased) name — allocation happens here, never on the swap path. */
     private val chains = mutableMapOf<String, MasterChain>()
@@ -107,9 +101,6 @@ class MasterBus(
 
     /** The outgoing chain during a crossfade; null when no fade is running. */
     private var previous: MasterChain? = null
-
-    /** Frames already elapsed in the running crossfade. */
-    private var fadePos: Int = 0
 
     /** Name of the currently active master — a repeat request for the same name is a no-op. */
     private var currentName: String? = null
@@ -322,7 +313,7 @@ class MasterBus(
         previous = current
         current = chain
         currentName = name
-        fadePos = 0
+        fade.restart()
 
         if (scratch == null) {
             scratch = StereoBuffer(blockFrames)
@@ -347,13 +338,12 @@ class MasterBus(
         outgoing.process(bus, frames)   // bus  = outgoing output
         current.process(wet, frames)    // wet  = incoming output
 
-        blendInto(bus, wet, frames)
+        fade.blend(target = bus, incoming = wet, outgoing = bus, frames = frames)
         updateTailState(bus, frames)
 
-        if (fadePos >= fadeFrames) {
+        if (fade.isComplete) {
             // Fade complete: the outgoing chain (and its reverb/delay tail) is dropped.
             previous = null
-            fadePos = 0
 
             // A swap that arrived mid-fade waited for exactly this moment.
             pendingName?.let { queued ->
@@ -406,39 +396,6 @@ class MasterBus(
         }
 
         return false
-    }
-
-    /** Linear per-sample blend of the outgoing (already in [bus]) and incoming ([wet]) chains. */
-    private fun blendInto(bus: StereoBuffer, wet: StereoBuffer, frames: Int) {
-        val busL = bus.left
-        val busR = bus.right
-        val wetL = wet.left
-        val wetR = wet.right
-        val total = fadeFrames.toDouble()
-        var pos = fadePos
-
-        for (i in 0 until frames) {
-            val t = if (pos >= fadeFrames) 1.0 else pos / total
-            val u = 1.0 - t
-
-            // Sterilised taps: at the fade's endpoints one weight is exactly 0.0, and
-            // `Inf * 0.0` is NaN — so a chain contributing NOTHING yet could still inject
-            // NaN into the bus, which used to latch the master DC blocker downstream. A
-            // large-but-finite chain output is untouched (that is the raw engine's business).
-            val bl = busL[i]
-            val br = busR[i]
-            val wl = wetL[i]
-            val wr = wetR[i]
-
-            busL[i] = (if (abs(bl) <= Double.MAX_VALUE) bl else 0.0) * u +
-                (if (abs(wl) <= Double.MAX_VALUE) wl else 0.0) * t
-            busR[i] = (if (abs(br) <= Double.MAX_VALUE) br else 0.0) * u +
-                (if (abs(wr) <= Double.MAX_VALUE) wr else 0.0) * t
-
-            pos++
-        }
-
-        fadePos = pos
     }
 
 }

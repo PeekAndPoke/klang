@@ -39,7 +39,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
  * and no network. [KatalystStageDsl.Eq] and [KatalystStageDsl.Gain] build a
  * [KatalystPassThroughStage] until step 4 gives them their DSP.
  *
- * **Two kinds of writer, chosen by [build]'s `voiceDriven` flag** (Katalyst step 3a, 2026-09-17):
+ * **Two kinds of writer, chosen by [build]'s `voiceDriven` flag** (Katalyst step 3a, 2026-09-17),
+ * one interface each, so a declared chain can be configured with no owner voice alive
+ * ([KatalystChain.applyStatic]):
  *
  *  - `voiceDriven = true`, the CLASSIC chain: every knob comes from the orbit's owner voice, which
  *    is `Cylinder.applyBusEffects` line for line, so a song that declares no chain is
@@ -82,6 +84,7 @@ object KatalystChainBuilder {
     ): KatalystChain {
         val pipeline = mutableListOf<KatalystEffect>()
         val owners = mutableListOf<KatalystOwnerApply>()
+        val statics = mutableListOf<KatalystStaticApply>()
         var duck: KatalystDuckEffect? = null
         var duckStage: KatalystStageDsl.Duck? = null
 
@@ -99,7 +102,7 @@ object KatalystChainBuilder {
                         owners.add(KatalystOwnerApply { voice -> fx.configure(voice.body) })
                     } else {
                         val def = KatalystSlots.bodyDef(stage, KatalystSlots.bodyModes(stage.material))
-                        owners.add(KatalystOwnerApply { fx.configure(def) })
+                        statics.add(KatalystStaticApply { fx.configure(def) })
                     }
                 }
 
@@ -111,7 +114,7 @@ object KatalystChainBuilder {
                         owners.add(KatalystOwnerApply { voice -> fx.configure(voice.vowel) })
                     } else {
                         val def = KatalystSlots.vowelDef(stage, KatalystSlots.vowelBands(stage.vowel))
-                        owners.add(KatalystOwnerApply { fx.configure(def) })
+                        statics.add(KatalystStaticApply { fx.configure(def) })
                     }
                 }
 
@@ -151,8 +154,8 @@ object KatalystChainBuilder {
                         val cap = KatalystSlots.resolve(stage.cap, DELAY_CAP)
                         val gatedTime = if (sendIsOn(stage.wet, DELAY_WET)) time else SLOT_UNSET
 
-                        owners.add(
-                            KatalystOwnerApply { fx.configure(time = gatedTime, feedback = feedback, cap = cap) }
+                        statics.add(
+                            KatalystStaticApply { fx.configure(time = gatedTime, feedback = feedback, cap = cap) }
                         )
                     }
                 }
@@ -192,7 +195,7 @@ object KatalystChainBuilder {
                             // which is the engine's own fixed damping.
                             .takeIf { it.isFinite() }
 
-                        owners.add(KatalystOwnerApply { fx.configure(size = gatedSize, lowpass = lowpass) })
+                        statics.add(KatalystStaticApply { fx.configure(size = gatedSize, lowpass = lowpass) })
                     }
                 }
 
@@ -222,8 +225,8 @@ object KatalystChainBuilder {
                         val sweep = KatalystSlots.resolve(stage.sweep, PHASER_SWEEP_HZ)
                         val floor = KatalystSlots.resolve(stage.floor, PHASER_FLOOR)
 
-                        owners.add(
-                            KatalystOwnerApply {
+                        statics.add(
+                            KatalystStaticApply {
                                 writePhaser(fx, depth = depth, rate = rate, center = center, sweep = sweep, floor = floor)
                             }
                         )
@@ -239,7 +242,7 @@ object KatalystChainBuilder {
                     } else {
                         val settings = KatalystSlots.compressorSettings(stage)
 
-                        owners.add(KatalystOwnerApply { writeCompressor(fx, settings, sampleRate) })
+                        statics.add(KatalystStaticApply { writeCompressor(fx, settings, sampleRate) })
                     }
                 }
 
@@ -270,14 +273,20 @@ object KatalystChainBuilder {
                 // The winning stage's slots, for the same reason: the dropped duplicate's are never read.
                 val settings = duckStage?.let { KatalystSlots.duckSettings(it) }
 
-                owners.add(KatalystOwnerApply { writeDuck(theDuck, settings, sampleRate) })
+                statics.add(KatalystStaticApply { writeDuck(theDuck, settings, sampleRate) })
             }
         }
 
         return KatalystChain(
             serial = pipeline.toTypedArray(),
             owners = owners.toTypedArray(),
+            statics = statics.toTypedArray(),
             duck = theDuck,
+            voiceDriven = voiceDriven,
+            // The winning stage's slots, resolved once here: a declared chain that names no orbit
+            // (or a depth of zero) declares a duck stage that will never be configured, and the
+            // host has to be able to tell that from one that will (see [KatalystChain.ducksWith]).
+            duckDeclared = !voiceDriven && duckStage?.let { KatalystSlots.duckSettings(it) } != null,
         )
     }
 
@@ -365,6 +374,13 @@ object KatalystChainBuilder {
      * null (nobody asks for ducking).
      */
     private fun writeDuck(fx: KatalystDuckEffect, settings: Voice.Ducking?, sampleRate: Int) {
+        if (fx.handedOver) {
+            // The incoming chain of a running crossfade owns this envelope now
+            // ([KatalystDuckEffect.takeOver]); writing here would build a second `Ducking` nobody
+            // runs, and `reset()` below would undo the handover.
+            return
+        }
+
         if (settings != null) {
             fx.duckCylinderId = settings.cylinderId
             val existing = fx.ducking

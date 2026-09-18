@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| Katalyst DSL step 3b (coordinator session 017L4Bx, one Opus implementer) | `audio_be/**/cylinders/**`, `audio_be/**/master/MasterBus.kt` | the per-cylinder chain crossfade with a drained outgoing tail; the master's crossfade may be extracted into a shared helper |
 
 ## The two layers
 

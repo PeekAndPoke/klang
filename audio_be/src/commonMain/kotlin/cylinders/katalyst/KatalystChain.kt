@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 
 /**
  * Writes the orbit's OWNER voice into ONE built stage.
@@ -24,6 +25,20 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  */
 internal fun interface KatalystOwnerApply {
     fun apply(voice: Voice)
+}
+
+/**
+ * Writes a DECLARED chain's own slots into ONE built stage, with no voice in sight: the chain is
+ * the instrument (the signal-flow plan's D4).
+ *
+ * Separate from [KatalystOwnerApply] so that a chain can be configured with NO OWNER ALIVE
+ * ([KatalystChain.applyStatic]), which is what a chain faded in from `Cylinders`' pending poll
+ * needs: the block's voices have already offered themselves by then, and without this the declared
+ * chain would run its first blocks at the settings [KatalystChain.reset] left. Transitional with
+ * its sibling: step 5 takes the bus fields off the wire, and then every writer is one of these.
+ */
+internal fun interface KatalystStaticApply {
+    fun apply()
 }
 
 /**
@@ -58,10 +73,27 @@ class KatalystChain internal constructor(
      * One writer per declared stage whose knobs a stage CONSUMES, in DSL order, the duck's last.
      * `eq` and `gain` do have knobs, but no stage reads them yet (they build a pass-through), so
      * they get no writer and this array is shorter than [stages] for a chain that declares them.
+     *
+     * The VOICE-driven half, so a chain is either all of these (the classic chain) or all
+     * [statics] (a declared chain); the builder's `voiceDriven` flag decides which.
      */
     private val owners: Array<KatalystOwnerApply>,
+    /** The SLOT-driven half, same rule, per declared stage. See [KatalystStaticApply]. */
+    private val statics: Array<KatalystStaticApply>,
     /** The duck stage, or null when the chain declares none. The LAST declared duck wins. */
     val duck: KatalystDuckEffect?,
+    /**
+     * True when this chain's writers read the owner voice (the classic chain), false when they
+     * resolve the chain's own slots. See [KatalystStaticApply] and [ducksWith].
+     */
+    private val voiceDriven: Boolean,
+    /**
+     * For a SLOT-driven chain: whether its [duck] stage resolved to settings at build time. False
+     * for a chain that declares no duck, and for one whose `orbit` or `depth` slots say "off"
+     * (`KatalystSlots.duckSettings` returns null). Meaningless for a voice-driven chain, whose
+     * owner decides; [ducksWith] is the one reader.
+     */
+    private val duckDeclared: Boolean,
 ) {
     /**
      * The processing order as a read-only view, for the hosts and the specs: `List`, not the
@@ -78,11 +110,11 @@ class KatalystChain internal constructor(
     private val stages: Array<KatalystEffect> = if (duck == null) serial.copyOf() else serial + duck
 
     /**
-     * Test seam: how many owner writers the build installed. The one way a spec can tell "the
-     * dropped duplicate has no writer" from "it has one that nothing runs", which is what the
-     * last-duck rule turns on.
+     * Test seam: how many writers the build installed, voice-driven and slot-driven together. The
+     * one way a spec can tell "the dropped duplicate has no writer" from "it has one that nothing
+     * runs", which is what the last-duck rule turns on.
      */
-    internal val writerCount: Int get() = owners.size
+    internal val writerCount: Int get() = owners.size + statics.size
 
     // ════════════════════════════════════════════════════════════════════════════
     // Typed accessors
@@ -141,6 +173,22 @@ class KatalystChain internal constructor(
         for (i in owners.indices) {
             owners[i].apply(voice)
         }
+
+        applyStatic()
+    }
+
+    /**
+     * Apply every SLOT-driven stage of this chain, with no owner voice: what a declared chain needs
+     * the moment it enters service, because nothing else will configure it until a voice claims the
+     * orbit's lease (see [KatalystStaticApply]).
+     *
+     * A no-op on the classic chain, whose writers all need the voice. Idempotent, like
+     * [applyOwner], so the hosts may call it on any entry path.
+     */
+    fun applyStatic() {
+        for (i in statics.indices) {
+            statics[i].apply()
+        }
     }
 
     /** Runs the serial chain on the orbit's buffers, in DSL order. */
@@ -185,6 +233,59 @@ class KatalystChain internal constructor(
     fun retire() {
         for (i in stages.indices) {
             stages[i].retire()
+        }
+    }
+
+    /**
+     * True when this chain's [duck] will be CONFIGURED the next time its writers run, rather than
+     * cleared or left alone.
+     *
+     * A chain that declares a Duck stage does not necessarily duck: the classic chain declares one
+     * on every cylinder and its writer CLEARS it when the orbit's owner carries no ducking, and a
+     * declared chain whose `orbit` slot is unset resolves to no settings at all. The host asks this
+     * before it hands a live envelope to an arriving chain (`Cylinder.handOverDuck`): handing one
+     * to a stage that is about to be cleared releases the whole reduction in one sample.
+     *
+     * [ownerDucks] is the answer for a voice-driven chain, which the host knows and this chain does
+     * not: does the voice holding the orbit's lease carry ducking (and is one alive at all)?
+     */
+    fun ducksWith(ownerDucks: Boolean): Boolean {
+        if (duck == null) {
+            return false
+        }
+
+        return if (voiceDriven) ownerDucks else duckDeclared
+    }
+
+    /**
+     * Hands every send stage its off-config, which is how this chain is asked to RING OUT: the
+     * delay and the reverb enter their existing Draining state and run their already-scheduled
+     * echoes and room out under the parameters they last had, on whatever input they are then
+     * given (see `KatalystDelayEffect`, `KatalystReverbEffect`).
+     *
+     * Called by the host when a crossfade to another chain has completed and this one leaves
+     * service: `Cylinder` then keeps processing it on SILENT input until [hasTail] is false.
+     * Nothing here invents a decay curve; the two effects already own one, which is the whole
+     * reason the orbit bus drains where the master bus cuts.
+     *
+     * The off-config is ALL that happens: the insert stages keep whatever filter memory they
+     * hold, because the signal that charged it has just reached weight zero.
+     */
+    fun drainSends() {
+        for (i in stages.indices) {
+            when (val stage = stages[i]) {
+                // A non-finite time / size is the off switch; the drain runs on the retained
+                // last-active parameters, so the other arguments are unset rather than invented.
+                is KatalystDelayEffect -> stage.configure(
+                    time = SLOT_UNSET,
+                    feedback = SLOT_UNSET,
+                    cap = SLOT_UNSET,
+                )
+
+                is KatalystReverbEffect -> stage.configure(size = SLOT_UNSET, lowpass = null)
+
+                else -> {}
+            }
         }
     }
 
