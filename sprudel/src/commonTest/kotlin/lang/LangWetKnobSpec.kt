@@ -8,6 +8,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.dryFloor
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.shimmer
@@ -63,16 +64,20 @@ class LangWetKnobSpec : StringSpec({
         phaser.phaserDepth shouldBe 0.8
     }
 
-    "phaserFloor stays ABSENT unless set — the engine's additive default 1.0 must rule" {
-        firstData(note("c").phaser(wet = 0.5)).phaserFloor shouldBe null
+    "phaserFloor takes the engine's additive default 1.0 unless set" {
+        // It used to stay null and the engine substituted PHASER_FLOOR; since Katalyst step 5a-3
+        // the door writes the same constant when any phaser knob names the stage, so the additive
+        // law still rules and one place decides it. A value the author gave is untouched.
+        firstData(note("c").phaser(wet = 0.5)).phaserFloor shouldBe PHASER_FLOOR
+        firstData(note("c").phaser(wet = 0.5, floor = 0.25)).phaserFloor shouldBe 0.25
     }
 
-    "phaserFloor crosses the WIRE boundary (toVoiceData) — set passes through, unset stays null" {
+    "phaserFloor crosses the WIRE boundary (toVoiceData): set passes through, unnamed takes PHASER_FLOOR" {
         // The sprudel accessor rows above stop BEFORE the wire; a dropped mapping line in
         // toVoiceData() would make phaser(floor = ...) a silent no-op in real playback while
         // every accessor row stays green.
         firstData(note("c").phaser(floor = 0.25)).toVoiceData().phaserFloor shouldBe 0.25
-        firstData(note("c").phaser(wet = 0.5)).toVoiceData().phaserFloor shouldBe null
+        firstData(note("c").phaser(wet = 0.5)).toVoiceData().phaserFloor shouldBe PHASER_FLOOR
     }
 
     "ignitor Kotlin door: .wet()/.dryFloor() typed onto the node" {

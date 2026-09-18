@@ -18,6 +18,11 @@ package io.peekandpoke.klang.audio_bridge.constants
 // those fills already used; this file gave them a name, it did not retune them
 // (Katalyst DSL step 1, 2026-09-17).
 //
+// Since Katalyst step 5a-3 (2026-09-18) the sprudel compound doors fill their
+// companions from here; the rule is `/dsl-design` §4, its one home. The engine
+// keeps the same constants for a slot written raw through `katp`, which is the
+// NaN rule, not a second fill.
+//
 // These are the TOUCHED defaults: what a knob means once the author has reached
 // for its effect. What an UNTOUCHED effect carries is a separate question, and
 // the answer is the engine's own untouched value, a zero or [SLOT_UNSET], never

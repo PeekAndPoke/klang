@@ -26,7 +26,6 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
@@ -306,24 +305,147 @@ class KatalystSlotResolverSpec : StringSpec({
 
     // ── Body and vowel ───────────────────────────────────────────────────────────────────────────
 
-    "body and vowel: no name means the stage is OFF, whatever wet says" {
+    "body and vowel: an UNSET index means the stage is OFF, whatever wet says" {
         val chain = declared(
-            KatalystStageDsl.Body(material = null, wet = c(1.0)),
-            KatalystStageDsl.Vowel(vowel = null, wet = c(1.0)),
+            KatalystStageDsl.Body(material = c(SLOT_UNSET), wet = c(1.0)),
+            KatalystStageDsl.Vowel(vowel = c(SLOT_UNSET), wet = c(1.0)),
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe false
         chain.vowel.shouldNotBeNull().isEngaged shouldBe false
     }
 
-    "body and vowel: a NAME engages the stage, through the audio_bridge tables" {
+    "body and vowel: an INDEX engages the stage, through the audio_bridge catalogues" {
         val chain = declared(
-            KatalystStageDsl.Body(material = "wood", wet = c(0.3)),
-            KatalystStageDsl.Vowel(vowel = "a", wet = c(0.3)),
+            KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("wood")), wet = c(0.3)),
+            KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("a")), wet = c(0.3)),
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe true
         chain.vowel.shouldNotBeNull().isEngaged shouldBe true
+    }
+
+    "body and vowel: the index slot is what the pattern doors move, and it picks the right box" {
+        // The step 5a-2 contract: `katp("body.material", n)` (which `body(material = ...)` writes
+        // for you) selects a material on a live chain. The index is read off the catalogue rather
+        // than typed here, and the modes are compared against the catalogue's own answer, so this
+        // row cannot pass with the lookup pointing one box along.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Body(
+                    material = IgnitorDsl.Param("body.material", SLOT_UNSET),
+                    wet = IgnitorDsl.Param("body.wet", 0.0),
+                ),
+                KatalystStageDsl.Vowel(
+                    vowel = IgnitorDsl.Param("vowel.vowel", SLOT_UNSET),
+                    wet = IgnitorDsl.Param("vowel.wet", 0.0),
+                ),
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+            voiceDriven = false,
+        )
+
+        // Nothing written: both stages off, which is what an untouched classic orbit is.
+        chain.applyParams(null)
+        chain.body.shouldNotBeNull().isEngaged shouldBe false
+        chain.vowel.shouldNotBeNull().isEngaged shouldBe false
+
+        // The doors write index plus wet, and the stage comes on with THAT material's modes.
+        chain.applyParams(
+            mapOf(
+                "body.material" to BodyMaterials.indexOf("wood"),
+                "body.wet" to 0.3,
+                "vowel.vowel" to VowelBands.indexOf("bass:a"),
+                "vowel.wet" to 0.4,
+            )
+        )
+
+        chain.body.shouldNotBeNull().isEngaged shouldBe true
+        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+        chain.vowel.shouldNotBeNull().isEngaged shouldBe true
+        chain.vowel.shouldNotBeNull().installedBands shouldBe VowelBands.bandsFor("bass:a")
+
+        // A moved index re-resolves to the other box, and index 0 (`none`) switches it back off.
+        chain.applyParams(
+            mapOf(
+                "body.material" to BodyMaterials.indexOf("glass"),
+                "body.wet" to 0.3,
+                "vowel.vowel" to 0.0,
+                "vowel.wet" to 0.4,
+            )
+        )
+
+        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("glass")
+        chain.vowel.shouldNotBeNull().isEngaged shouldBe false
+    }
+
+    "body and vowel: the def is rebuilt only when the param map INSTANCE changes" {
+        // The cost rule of the param state: `apply` runs every block and writes a def already in
+        // hand, and only a new map instance costs a lookup. A writer that resolved in `apply`
+        // would do a catalogue lookup and allocate a FilterDef per block per orbit.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Body(
+                    material = IgnitorDsl.Param("body.material", SLOT_UNSET),
+                    wet = IgnitorDsl.Param("body.wet", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+            voiceDriven = false,
+        )
+
+        val first = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3)
+
+        chain.applyParams(first)
+        chain.resolveCount shouldBe 1
+        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+
+        // The SAME instance again does not re-resolve: the gate is identity, so a live owner
+        // re-offering its map every block costs one reference compare and no lookup.
+        chain.applyParams(first)
+        chain.applyParams(first)
+        chain.resolveCount shouldBe 1
+        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("wood")
+
+        // A DIFFERENT map with a different index does, and lands on the other box.
+        chain.applyParams(mapOf("body.material" to BodyMaterials.indexOf("bell"), "body.wet" to 0.3))
+        chain.resolveCount shouldBe 2
+        chain.body.shouldNotBeNull().installedBands shouldBe BodyMaterials.modesFor("bell")
+    }
+
+    "body and vowel: a signal-rate node on the index slot is coerced, never refused" {
+        // The two-probe rule, on the index knob like on every other one. A pitch-free fold IS the
+        // author's number, so `0.5 * 2` picks the first material; an oscillator has no bus value,
+        // so it takes the knob's fallback, which is unset, which is the stage off.
+        val folded = declared(
+            KatalystStageDsl.Body(material = IgnitorDsl.Times(c(0.5), c(2.0)), wet = c(0.3))
+        )
+
+        folded.body.shouldNotBeNull().isEngaged shouldBe true
+        folded.body.shouldNotBeNull().installedBands shouldBe
+                BodyMaterials.modesFor(BodyMaterials.names[1])
+
+        val oscillated = declared(
+            KatalystStageDsl.Body(material = IgnitorDsl.Sine(), wet = c(0.3)),
+            KatalystStageDsl.Vowel(vowel = IgnitorDsl.Sine(), wet = c(0.3)),
+        )
+
+        oscillated.body.shouldNotBeNull().isEngaged shouldBe false
+        oscillated.vowel.shouldNotBeNull().isEngaged shouldBe false
+
+        // And a note-DEPENDENT knob, the case one probe cannot see: two probes disagree, so it
+        // falls back to unset rather than to whatever the material index is at 440 Hz.
+        val perNote = declared(
+            KatalystStageDsl.Body(material = IgnitorDsl.Freq, wet = c(0.3))
+        )
+
+        perNote.body.shouldNotBeNull().isEngaged shouldBe false
     }
 
     "body and vowel: the resolved def is the voice path's, up to the floor fill" {
@@ -337,7 +459,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
         // same default out as a number. Same filter, two spellings of one value.
         val body = KatalystSlots.bodyDef(
-            bands = KatalystSlots.bodyModes("wood"),
+            bands = BodyMaterials.modesAt(BodyMaterials.indexOf("wood")),
             mix = 0.3,
             floor = BODY_FLOOR,
         ).shouldNotBeNull()
@@ -349,7 +471,7 @@ class KatalystSlotResolverSpec : StringSpec({
         body.floor shouldBe BODY_FLOOR
 
         val vowel = KatalystSlots.vowelDef(
-            bands = KatalystSlots.vowelBands("a"),
+            bands = VowelBands.bandsAt(VowelBands.indexOf("a")),
             mix = 0.3,
             floor = VOWEL_FLOOR,
         ).shouldNotBeNull()
@@ -362,22 +484,21 @@ class KatalystSlotResolverSpec : StringSpec({
         vowel.floor shouldBe VOWEL_FLOOR
     }
 
-    "body and vowel: the name is case-insensitive, as it is on the voice path" {
-        KatalystSlots.bodyModes("Wood") shouldBe BodyMaterials.modesFor("wood")
-        KatalystSlots.vowelBands("BASS:A") shouldBe VowelBands.bandsFor("bass:a")
-    }
-
-    "body and vowel: an unknown name is OFF, the rule toVoiceData follows" {
-        KatalystSlots.bodyModes("unobtainium").shouldBeNull()
-        KatalystSlots.vowelBands("zzz").shouldBeNull()
-
-        // `none` is the explicit off switch on both tables.
-        KatalystSlots.bodyModes("none").shouldBeNull()
-        KatalystSlots.vowelBands("none").shouldBeNull()
+    "body and vowel: an index that names nothing is OFF, the rule toVoiceData follows for a name" {
+        // The index door is `BodyMaterials.indexOf` / `VowelBands.indexOf`, which answers 0 for an
+        // unknown name, and 0 IS `none`. So a name the catalogue does not know arrives here as an
+        // index that resolves to no bands, which is the stage off. The catalogue's own edges are
+        // `CatalogueIndexSpec`'s; what this row pins is that the resolver reads them as off.
+        BodyMaterials.modesAt(BodyMaterials.indexOf("unobtainium")).shouldBeNull()
+        VowelBands.bandsAt(VowelBands.indexOf("zzz")).shouldBeNull()
+        BodyMaterials.modesAt(BodyMaterials.indexOf("none")).shouldBeNull()
+        VowelBands.bandsAt(VowelBands.indexOf("none")).shouldBeNull()
+        BodyMaterials.modesAt(SLOT_UNSET).shouldBeNull()
+        VowelBands.bandsAt(SLOT_UNSET).shouldBeNull()
 
         val chain = declared(
-            KatalystStageDsl.Body(material = "unobtainium", wet = c(1.0)),
-            KatalystStageDsl.Vowel(vowel = "zzz", wet = c(1.0)),
+            KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("unobtainium")), wet = c(1.0)),
+            KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("zzz")), wet = c(1.0)),
         )
 
         chain.body.shouldNotBeNull().isEngaged shouldBe false

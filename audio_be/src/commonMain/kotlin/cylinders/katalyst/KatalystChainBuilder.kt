@@ -116,10 +116,14 @@ object KatalystChainBuilder {
                         // null (the owner has no body) turns the resonator off, not a no-op.
                         owners.add(KatalystOwnerApply { voice -> fx.configure(voice.body) })
                     } else {
+                        // The material is a slot like the rest, holding the INDEX of a name in
+                        // `BodyMaterials.names` (Katalyst step 5a-2). Its fallback is the wire's
+                        // "never set", so a knob the bus cannot read leaves the stage off rather
+                        // than picking a box nobody asked for.
                         statics.add(
                             KatalystBodyWriter(
                                 fx = fx,
-                                bands = KatalystSlots.bodyModes(stage.material),
+                                material = KatalystKnob(stage.material, SLOT_UNSET),
                                 wet = KatalystKnob(stage.wet, BODY_WET),
                                 floor = KatalystKnob(stage.floor, BODY_FLOOR),
                             )
@@ -137,7 +141,7 @@ object KatalystChainBuilder {
                         statics.add(
                             KatalystVowelWriter(
                                 fx = fx,
-                                bands = KatalystSlots.vowelBands(stage.vowel),
+                                vowel = KatalystKnob(stage.vowel, SLOT_UNSET),
                                 wet = KatalystKnob(stage.wet, VOWEL_WET),
                                 floor = KatalystKnob(stage.floor, VOWEL_FLOOR),
                             )

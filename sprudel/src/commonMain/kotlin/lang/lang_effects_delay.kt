@@ -12,35 +12,41 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * A delay slot was just written on this event: every delay slot still unset takes the shared default
- * (`constants/SendEffectDefaults.kt`, the same the master delay uses), so one call sets them all. A slot
- * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
- * a mapper on a slot that was never set) is not filled.
+ * Fills the delay stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * master delay uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
+ * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
+ * echo is ON.
  *
- * The same values then go into the orbit chain's slot state (`delay.wet`, `delay.time`,
- * `delay.feedback`, `delay.cap`), which is what makes this door an alias of `katp` on a DECLARED
- * chain (signal-flow plan §7, Katalyst step 5a). One key at a time into the event's own map, and
- * the fill is the same fill. The voice fields stay until step 5b takes them off the wire, and the
- * chain a cylinder is BORN with still reads those, not this.
+ * Fills the voice FIELDS with the same four constants, so the two sources agree; they stay until
+ * step 5b takes them off the wire, and the chain a cylinder is BORN with still reads those.
  *
- * Same recorded asymmetry as the reverb door's: a non-numeric control token clears the voice field
- * and leaves the slot, reachable only through the bare-call reinterpret form this door never takes
- * ([SLOT_UNSET] is what `body`, `vowel` and `phaser` write instead).
+ * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
+ * these constants.
+ *
+ * The HEAD setter, the send, is the one setter here a bare call can reach with a null; it then
+ * writes nothing at all (`if (wet != null)`). Only the reverb door clears on that path, in
+ * `applyReverb`'s no-args block.
  */
 private fun SprudelVoiceData.fillDelayDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("delay.wet", value = null, default = DELAY_WET)
+    slots.setOrDefault("delay.time", value = null, default = DELAY_TIME_SECONDS)
+    slots.setOrDefault("delay.feedback", value = null, default = DELAY_FEEDBACK)
+    slots.setOrDefault("delay.cap", value = null, default = DELAY_CAP)
+
     if (delay == null) {
         delay = DELAY_WET
     }
@@ -56,11 +62,6 @@ private fun SprudelVoiceData.fillDelayDefaults() {
     if (delayCap == null) {
         delayCap = DELAY_CAP
     }
-
-    putKatalystParam("delay.wet", delay)
-    putKatalystParam("delay.time", delayTime)
-    putKatalystParam("delay.feedback", delayFeedback)
-    putKatalystParam("delay.cap", delayCap)
 }
 
 // -- delay, the wet slot ---------------------------------------------------------------------------------------------
@@ -70,6 +71,7 @@ private val delayMutation = voiceSetter {
 
     if (wet != null) {
         delay = wet
+        katalystParamsOrNew().set("delay.wet", wet)
         fillDelayDefaults()
     }
 }
@@ -213,7 +215,10 @@ object delay {
 private val delayTimeMutation = voiceSetter {
     delayTime = it?.asDoubleOrNull()
 
-    if (delayTime != null) {
+    val value = delayTime
+
+    if (value != null) {
+        katalystParamsOrNew().set("delay.time", value)
         fillDelayDefaults()
     }
 }
@@ -231,7 +236,10 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
 private val delayFeedbackMutation = voiceSetter {
     delayFeedback = it?.asDoubleOrNull()
 
-    if (delayFeedback != null) {
+    val value = delayFeedback
+
+    if (value != null) {
+        katalystParamsOrNew().set("delay.feedback", value)
         fillDelayDefaults()
     }
 }
@@ -249,7 +257,10 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
 private val delayCapMutation = voiceSetter {
     delayCap = it?.asDoubleOrNull()
 
-    if (delayCap != null) {
+    val value = delayCap
+
+    if (value != null) {
+        katalystParamsOrNew().set("delay.cap", value)
         fillDelayDefaults()
     }
 }

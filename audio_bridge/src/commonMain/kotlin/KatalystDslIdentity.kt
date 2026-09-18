@@ -33,26 +33,3 @@ private var nextGlobalKatalystId: Int = 0
 fun KatalystDsl.uniqueId(): String = globalKatalystNames.getOrPut(this) {
     "katalyst-${nextGlobalKatalystId++}"
 }
-
-/**
- * Concatenates two chains: `a + b` runs a's stages, then b's.
- *
- * This is what `.katalyst(dsl)` does to the chain a pattern already carries: a Katalyst composes
- * where a master replaces, because the pattern text IS the stage order.
- *
- * Pure and allocating, deliberately: there is no cache here. A fresh concatenation is content-equal
- * to its earlier twin, so [uniqueId] hands both the same name and the backend registers one chain.
- * The per-event allocation is removed one level up, by a memo the sprudel door owns, which dies
- * with the pattern it belongs to instead of growing for the life of the process.
- */
-operator fun KatalystDsl.plus(other: KatalystDsl): KatalystDsl {
-    if (other.stages.isEmpty()) {
-        return this
-    }
-
-    if (stages.isEmpty()) {
-        return other
-    }
-
-    return KatalystDsl(stages + other.stages)
-}

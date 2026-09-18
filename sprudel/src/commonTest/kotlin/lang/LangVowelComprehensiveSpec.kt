@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 
 /**
  * Comprehensive test coverage for vowel formant synthesis.
@@ -555,14 +556,14 @@ class LangVowelComprehensiveSpec : StringSpec({
         // The voice half of the parity `KatalystSlotResolverSpec` holds the other half of: a
         // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystSlots`.
         // `audio_be` does not depend on `sprudel`, so the landmark band is pinned on both sides.
-        // The one difference between the paths is the floor FILL: a voice leaves `floor = null`,
-        // which the engine reads as its default, while a declared stage writes that default out.
+        // Both paths now write the floor out: the door fills it when a call names the vowel
+        // (Katalyst step 5a-3), and a declared stage resolves the same constant from its slot.
         val formant = note("c3").vowel(vowel = "a", wet = 0.3).queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Formant
 
         formant.bands shouldBe VowelBands.bandsFor("soprano:a")
         formant.bands[0] shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
         formant.mix shouldBe 0.3
-        formant.floor shouldBe null
+        formant.floor shouldBe VOWEL_FLOOR
     }
 })

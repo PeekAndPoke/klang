@@ -7,7 +7,9 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -25,48 +27,60 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 // `docs/tasks/katalyst-dsl.md` §7 through the same KatalystSlots functions the build used, so a
 // value that arrives from a slot and one that was authored as a constant take the identical path.
 
-/** Body: the material is the CHAIN's (a slot carries a number), `wet` and `floor` are slots. */
+/**
+ * Body: all three knobs are slots, the material as the INDEX of a name in the shared catalogue
+ * (Katalyst step 5a-2). The index-to-bands lookup lives in [resolve] with the rest of the
+ * composite, never in [apply]: `apply` writes a `FilterDef` that is already in hand.
+ */
 internal class KatalystBodyWriter(
     private val fx: KatalystBodyEffect,
-    private val bands: List<FilterDef.Body.Mode>?,
+    private val material: KatalystKnob,
     private val wet: KatalystKnob,
     private val floor: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var def: FilterDef.Body? = KatalystSlots.bodyDef(bands, wet.value, floor.value)
+    private var def: FilterDef.Body? = buildDef()
 
     override fun resolve(params: Map<String, Double>?) {
+        material.resolve(params)
         wet.resolve(params)
         floor.resolve(params)
-        def = KatalystSlots.bodyDef(bands, wet.value, floor.value)
+        def = buildDef()
     }
 
     override fun apply() {
-        // null (the chain names no material, or an unknown one) turns the resonator off, and the
-        // effect short-circuits an unchanged def, so this is free on an unchanged block.
+        // null (the chain names no material, or an index out of range) turns the resonator off, and
+        // the effect short-circuits an unchanged def, so this is free on an unchanged block.
         fx.configure(def)
     }
+
+    private fun buildDef(): FilterDef.Body? =
+        KatalystSlots.bodyDef(BodyMaterials.modesAt(material.value), wet.value, floor.value)
 }
 
 /** Vowel: the twin of [KatalystBodyWriter], with the formant bank. */
 internal class KatalystVowelWriter(
     private val fx: KatalystFormantEffect,
-    private val bands: List<FilterDef.Formant.Band>?,
+    private val vowel: KatalystKnob,
     private val wet: KatalystKnob,
     private val floor: KatalystKnob,
 ) : KatalystSlotWriter {
 
-    private var def: FilterDef.Formant? = KatalystSlots.vowelDef(bands, wet.value, floor.value)
+    private var def: FilterDef.Formant? = buildDef()
 
     override fun resolve(params: Map<String, Double>?) {
+        vowel.resolve(params)
         wet.resolve(params)
         floor.resolve(params)
-        def = KatalystSlots.vowelDef(bands, wet.value, floor.value)
+        def = buildDef()
     }
 
     override fun apply() {
         fx.configure(def)
     }
+
+    private fun buildDef(): FilterDef.Formant? =
+        KatalystSlots.vowelDef(VowelBands.bandsAt(vowel.value), wet.value, floor.value)
 }
 
 /**

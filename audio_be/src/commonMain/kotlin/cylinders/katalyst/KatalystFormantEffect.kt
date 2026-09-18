@@ -33,7 +33,27 @@ class KatalystFormantEffect(
     /** Test seam: true while a formant bank is installed — the owner has a vowel. */
     internal val isEngaged: Boolean get() = swap.active
 
-    /** Configure from the OWNER voice's vowel. `null` (owner has no vowel) turns the resonator off. */
+    /**
+     * Test seams: WHAT is installed, the twins of `KatalystBodyEffect.installedBands` and friends,
+     * there for the same reason. On a declared chain the vowel arrives as an INDEX, and the wrong
+     * index sings the wrong vowel while still reading as engaged.
+     */
+    internal val installedBands: List<FilterDef.Formant.Band>? get() = curBands
+
+    internal val installedMix: Double get() = curMix
+
+    internal val installedFloor: Double? get() = curFloor
+
+    /**
+     * Configure from the OWNER voice's vowel, or from a declared chain's slots. `null` (nobody asks
+     * for a vowel) turns the formant bank off.
+     *
+     * **Open question, recorded 2026-09-18 (round 1 of Katalyst step 5a-2), not a regression:** the
+     * same hard CUT on off that `KatalystBodyEffect.configure` records, for the same reason and
+     * with the same shape of fix (a `KatalystFilterSwap.fadeOut()` over the usual 12 ms). The two
+     * stages share the swap IMPLEMENTATION (each owns its own instance), so whichever one gets the
+     * fix, both do.
+     */
     fun configure(vowel: FilterDef.Formant?) {
         if (vowel == null) {
             if (swap.active) reset() // owner has no vowel → turn off, once

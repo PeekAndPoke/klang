@@ -8,13 +8,19 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.putKatalystParam
 
@@ -22,18 +28,70 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // Every phaser slot writes the voice field AND the orbit chain's matching slot (`phaser.rate`, ...),
 // which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
-// step 5a). No fill: the phaser stays off until `wet` is written, on both paths, so a companion the
-// call did not name has no touched value to take.
+// step 5a).
 //
-// A REST calls no setter at all and leaves both sources alone. A control value that is not a NUMBER
-// is the one place the two shapes differ, and each slot mirrors its own field: `rate` KEEPS its
-// previous value (`?: phaserRate`, so the slot keeps it too), while `wet`, `center`, `sweep` and
-// `floor` CLEAR their field, and the slot is cleared with them (SLOT_UNSET, the wire's "never set").
+// A REST calls no setter at all and leaves both sources alone, and no setter here has a CLEAR arm.
+// No numeric TAIL setter of a compound BUS door can be handed a null: `_liftNumericField` returns early
+// on a control value that is not a number and `_mapNumericField` skips a null mapping (the
+// 2026-09-16 rule). The RATE is this door's head setter, so the bare-call reinterpret CAN hand it
+// one, and it returns on the spot (`?: return@voiceSetter`), writing nothing. The only two setters
+// that CLEAR on a null are `body`'s material and `vowel`'s vowel.
+
+/**
+ * Fills the phaser stage's companions from `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the
+ * rule; this is only what THIS door does). Called from every one of the five setters, because the
+ * phaser has no name knob.
+ *
+ * Reaching for the phaser still makes no sound on its own, and that is the point of [PHASER_WET]
+ * being 0.0: the engine gates the sweep on the depth, so a `phaser(rate = 2)` fills a wet of zero
+ * and stays inaudible. The fill is about the companions being right the moment the depth arrives.
+ *
+ * Fills the voice FIELDS with the same five constants, and it is byte-identical to do so:
+ * `VoiceFactory` substituted exactly these for a null `phaser` / `phaserDepth` / `phaserCenter` /
+ * `phaserSweep` / `phaserFloor`.
+ *
+ * One consequence worth knowing, and it holds for every filled door except `duck` (whose fill
+ * writes no voice fields, so `duck.attack` reads nothing after `duck(1)`): a filled knob becomes
+ * READABLE through its field accessor, so `phaser.wet` reads 0.0 after `phaser(rate = 2)` where it
+ * used to read nothing. A cross-stage read such as `delay(wet = phaser.wet)` therefore engages the
+ * delay line at a zero send rather than leaving it alone. No shipped song reads one stage into
+ * another this way.
+ */
+private fun SprudelVoiceData.fillPhaserDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("phaser.rate", value = null, default = PHASER_RATE_HZ)
+    slots.setOrDefault("phaser.wet", value = null, default = PHASER_WET)
+    slots.setOrDefault("phaser.center", value = null, default = PHASER_CENTER_HZ)
+    slots.setOrDefault("phaser.sweep", value = null, default = PHASER_SWEEP_HZ)
+    slots.setOrDefault("phaser.floor", value = null, default = PHASER_FLOOR)
+
+    if (phaserRate == null) {
+        phaserRate = PHASER_RATE_HZ
+    }
+
+    if (phaserDepth == null) {
+        phaserDepth = PHASER_WET
+    }
+
+    if (phaserCenter == null) {
+        phaserCenter = PHASER_CENTER_HZ
+    }
+
+    if (phaserSweep == null) {
+        phaserSweep = PHASER_SWEEP_HZ
+    }
+
+    if (phaserFloor == null) {
+        phaserFloor = PHASER_FLOOR
+    }
+}
 
 private val phaserMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
     phaserRate = str.toDoubleOrNull() ?: phaserRate
     putKatalystParam("phaser.rate", phaserRate)
+    fillPhaserDefaults()
 }
 
 private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -55,6 +113,12 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
  * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.
+ *
+ * The call sets every slot: the ones you leave out take their shared defaults, rate 0, wet 0,
+ * centre 1000 Hz, sweep 1000 Hz and floor 1, unless an earlier call already set them. Wet 0 is the
+ * engine's own gate, so reaching for the phaser without a depth is still silent, exactly as before.
+ * Slots apply in order, rate first, so a mapper on a later slot sees a default an earlier slot of
+ * the same call filled in.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`phaser(wet = mul(2))`), and the numeric slots read back as `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
@@ -178,7 +242,8 @@ object phaser {
 
 private val phaserWetMutation = voiceSetter {
     phaserDepth = it?.asDoubleOrNull()
-    putKatalystParam("phaser.wet", phaserDepth ?: SLOT_UNSET)
+    putKatalystParam("phaser.wet", phaserDepth)
+    fillPhaserDefaults()
 }
 
 private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -193,7 +258,8 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
 private val phaserFloorMutation = voiceSetter {
     phaserFloor = it?.asDoubleOrNull()
-    putKatalystParam("phaser.floor", phaserFloor ?: SLOT_UNSET)
+    putKatalystParam("phaser.floor", phaserFloor)
+    fillPhaserDefaults()
 }
 
 private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -208,7 +274,8 @@ private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<An
 
 private val phaserCenterMutation = voiceSetter {
     phaserCenter = it?.asDoubleOrNull()
-    putKatalystParam("phaser.center", phaserCenter ?: SLOT_UNSET)
+    putKatalystParam("phaser.center", phaserCenter)
+    fillPhaserDefaults()
 }
 
 private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -223,7 +290,8 @@ private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<A
 
 private val phaserSweepMutation = voiceSetter {
     phaserSweep = it?.asDoubleOrNull()
-    putKatalystParam("phaser.sweep", phaserSweep ?: SLOT_UNSET)
+    putKatalystParam("phaser.sweep", phaserSweep)
+    fillPhaserDefaults()
 }
 
 private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import kotlin.math.round
+
 /**
  * Body-resonator material catalogue: the fixed modal resonances behind `body("<material>")`.
  *
@@ -24,12 +26,25 @@ package io.peekandpoke.klang.audio_bridge
  * it: sprudel's `toVoiceData`, which resolves a voice's material, and the backend's
  * `KatalystSlots`, which resolves a declared Katalyst chain's `body` stage. Public so UI tools
  * (e.g. the `body()` editor) can visualize a material's modal response.
+ *
+ * **A material is also an INDEX** (Katalyst step 5a-2, 2026-09-18): [names] is a closed, ordered
+ * list, so a material can travel as the number of its position in it and the wire needs no string
+ * slot. [indexOf] and [modesAt] are that one conversion, and they live here, next to the table, so
+ * the pattern doors, the chain builders and the backend resolver can never disagree about which
+ * number is which box. Index 0 is `none`, which is the off state on both spellings.
  */
 object BodyMaterials {
 
     private fun m(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq, db, q)
 
-    /** All selectable names (`none` = off), grouped by family in display order. */
+    /**
+     * All selectable names (`none` = off), grouped by family in display order.
+     *
+     * **Append only, never reorder.** A name's POSITION in this list is the `body.material` slot's
+     * value, so it is the wire encoding of a material (Katalyst step 5a-2) as well as the editor's
+     * dropdown order. Reordering would repoint every declared chain and every `katp` at a different
+     * box; adding at the end costs nothing.
+     */
     val names: List<String> = listOf(
         "none",
         // Woods (guitar/string tonewoods)
@@ -67,10 +82,70 @@ object BodyMaterials {
     )
 
     /**
+     * The index of every name in [names], for [indexOf]. Built once: the lookup is on the note path
+     * (`toVoiceData`) and on a chain's resolve path, and neither may pay for a linear scan.
+     */
+    private val indexByName: Map<String, Int> = names.withIndex().associate { (i, name) -> name to i }
+
+    /**
+     * The modes of every name in [names], by index, built once from [modesOf].
+     *
+     * One consequence worth knowing: [modesFor] and [modesAt] hand back the table's OWN list, the
+     * same instance every time, so a consumer that compares band lists to decide whether to rebuild
+     * a filter bank (`KatalystBodyEffect.configure`) short-circuits on identity instead of walking
+     * eight modes per note.
+     */
+    private val modesByIndex: List<List<FilterDef.Body.Mode>?> = names.map { modesOf(it) }
+
+    /**
+     * The INDEX of a material name, for a `body.material` slot: the position in [names], or 0.0
+     * (`none`, the off state) for an unknown name.
+     *
+     * Case-insensitive, the table's own rule, so `body("Wood")` and `body("wood")` are one index.
+     * Never throws: an unknown name is user input and reads as "no body", which is what
+     * [modesFor] has always answered for one.
+     */
+    fun indexOf(material: String): Double = (indexByName[material.lowercase()] ?: 0).toDouble()
+
+    /**
+     * The modal resonances at an index, or null when the index names no material, which turns the
+     * body stage OFF.
+     *
+     * Null for a non-finite index (the wire's "never set"), for a negative one, for one past the
+     * end of [names], and for 0, which IS `none`. Anything else is rounded to the nearest index,
+     * so a slot that arrives as 1.0 and one that arrives as 0.999 are the same box. A TIE rounds to
+     * the even index, which is what `kotlin.math.round` does on both platforms: 0.5 is `none` and
+     * 1.5 is index 2, never index 1.
+     */
+    fun modesAt(index: Double): List<FilterDef.Body.Mode>? {
+        // NaN-guard on a value the author can write: a non-finite index was never set.
+        if (!index.isFinite()) {
+            return null
+        }
+
+        val i = round(index).toInt()
+
+        if (i <= 0 || i >= names.size) {
+            return null
+        }
+
+        return modesByIndex[i]
+    }
+
+    /**
      * Resolves a body-resonator material name to its fixed modal resonances. Returns null for an
      * unknown material, and the body is then skipped (fail soft, never throw on user input).
+     *
+     * Goes through the index, so the name path and the slot path cannot answer differently.
      */
-    fun modesFor(material: String): List<FilterDef.Body.Mode>? = when (material.lowercase()) {
+    fun modesFor(material: String): List<FilterDef.Body.Mode>? = modesAt(indexOf(material))
+
+    /**
+     * The mode table itself, by name. Private and index-free: it is what fills [modesByIndex], so
+     * it may not ask [modesAt] anything, and its only caller is [modesByIndex]'s builder, which
+     * walks [names], so it needs no case folding of its own ([indexOf] owns that rule).
+     */
+    private fun modesOf(material: String): List<FilterDef.Body.Mode>? = when (material) {
         // Warm resonant box (guitar/marimba-ish body).
         "wood" -> listOf(
             m(100.0, 3.0, 12.0),

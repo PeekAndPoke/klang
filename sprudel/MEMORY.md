@@ -55,40 +55,63 @@
 - **The bus doors also write the orbit's slot state (2026-09-18, Katalyst step 5a).** `katalystParams`
   is the `oscParams` twin on the other host: `oscp` fills the voice's instrument, `.katp(name, value)`
   the chain its orbit runs, and the two namespaces never cross. Until the voice fields leave the wire
-  (step 5b) the bus doors write BOTH: `reverb(...)` and `delay(...)` mirror every slot they set
-  including the ones they fill (`fillReverbDefaults` / `fillDelayDefaults`),
-  `compressor(...)` writes only the slots it was given (the recorded asymmetry: the engine's gate is
-  "any of the five set"), `duck(...)` writes `duck.orbit` / `duck.depth` / `duck.attack` and fills the
-  last two with their constants but NEVER invents an orbit, `phaser(...)` writes the five it was given,
-  and `body(...)` / `vowel(...)` write only `wet` and `floor`, because a material is a name and a slot
-  carries a number. The chain a cylinder is BORN with still reads the voice fields, so a song that
-  declares nothing sounds the same; every chain that arrives by NAME resolves its `Param` knobs from
-  the map, `Katalyst.classic()` included (decided 2026-09-18: voice-driven is only the born-with
-  chain, or `Katalyst(k => k.classic())` would be inert and `katp` on it would go nowhere). A
-  declared chain owns its body material and its vowel, because those are names. Guard: `LangKatalystParamSpec`, mutation-checked
-  (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
+  (step 5b) every bus door writes BOTH: its own voice fields and the matching `<stage>.<knob>` slots,
+  filling the stage's companions per the compound-door rule (`/dsl-design` §4, which is that rule's
+  one home). The chain a cylinder is BORN with still reads the voice fields,
+  so a song that declares nothing sounds the same; every chain that arrives by NAME resolves its
+  `Param` knobs from the map, `Katalyst.classic()` included (decided 2026-09-18: voice-driven is only
+  the born-with chain, or `Katalyst(k => k.classic())` would be inert and `katp` on it would go
+  nowhere). Guard: `LangKatalystParamSpec`, mutation-checked (one deletion per door family).
+  `docs/tasks/katalyst-dsl.md` §9, step 5a.
 
-- **`oscParams` and `katalystParams` are mutable and single-owner (2026-09-18).** They were
-  immutable-replace (`map + (k to v)` per write, a fresh map per slot); with a dozen bus doors writing
-  slots after Katalyst 5b that is the "twenty allocations per note" class the June work removed. They
-  are now `MutableMap` fields with the same contract as the `Svd*` groups: `putOscParam` /
-  `putKatalystParam` write ONE key into the map the event already owns, `clone()` deep-copies them
-  (the one allocation per event the design allows), `merge` builds a fresh map as `mergeSvdAdsr` does
-  and `mergeFrom` folds into the receiver's own. The copying helpers (`withOscParam`,
-  `withOscParams`, `mergeOscParamsFrom`, `putOscParams`, `putOscParamsFrom`) went with the old
-  storage: nothing called them, and a copy helper over a mutable map is a second way to own one.
-  `toVoiceData` hands the wire a `toMap()` COPY of each: the wire value
-  outlives the pattern event (the backend holds `Voice.katalystParams` for the whole life of the voice
-  and gates its re-resolve on the map's IDENTITY), and the boundary already allocates a `VoiceData`.
-  Guards: `LangKatalystParamSpec` ("a bus door call on an already-cloned voice allocates no map",
-  "toVoiceData hands the wire a COPY of both maps"), the golden, mutation-checked.
+- **A body material and a vowel are INDICES, and `.katalyst(dsl)` REPLACES (2026-09-18, Katalyst
+  step 5a-2).** Two cleanups that retired the step-5a rule above it. (1) The door replaces like
+  `sound()` and `master()`: `x.katalyst(A).katalyst(B)` is `x.katalyst(B)`, `KatalystAppend` and
+  `KatalystDsl.plus` are gone, and each door stamps ONE `KatalystValue.Dsl` instance onto every event
+  (cheaper than the memo it replaced). `KatalystBuilder.classic()` appends its seven stages at most
+  once per builder. (2) There is no string slot: `body.material` and `vowel.vowel` carry the INDEX of
+  a name in `BodyMaterials.names` / `VowelBands.names` (0 = `none`), so `body(material = "wood")` on
+  a pattern reaches a declared chain like every other knob and the song text did not move. The doors
+  convert through the one shared `BodyMaterials.indexOf` / `VowelBands.indexOf`. `KatalystDsl.classic`
+  carries `body.material`, `vowel.vowel`, `body.wet` AND `vowel.wet` as UNSET `Param` slots, because
+  a 0.0 wet is a SET wet that the engine never substitutes for, which made a material-only
+  `body("wood")` run dry on a declared chain (round 1 of this step's review). Since 5a-3 the DOOR
+  fills those two as well, so the engine's substitution is the NaN rule for a raw `katp` write only.
+  Guards: `CatalogueIndexSpec` (audio_bridge, the conversion both ways and its edges), the
+  `LangKatalystParamSpec` body/vowel index rows, `KatalystClassicMatchesUntouchedVoiceSpec` (born-with
+  against declared, both spellings) and `KatalystDeclaredBodyParitySpec` (the render, byte-identical).
+  `docs/tasks/katalyst-dsl.md` §9, step 5a-2.
 
-- **A `delay(...)` / `reverb(...)` call sets every slot (2026-09-16).** Every slot still unset takes the
-  shared default (`audio_bridge/constants/SendEffectDefaults.kt`, the master stages' too): delay wet 0.25,
-  time 0.25, feedback 0.3, cap 1; reverb wet 0.25, size 5. Filled at WRITE time in the slot mutations, so a
-  slot an earlier call set keeps its value, a rest in a control pattern or a mapper on a never-set slot fills
-  nothing, `merge` carries filled defaults, and `reverb.size` reads 5 after `reverb(0.3)`. `VoiceFactory`
-  applies the same fill as the wire contract for non-sprudel producers. `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`.
+- **`oscParams` and `katalystParams` are one class, `ParamBag`, mutable and single-owner
+  (2026-09-18).** They were immutable-replace (`map + (k to v)` per write, a fresh map per slot);
+  with a dozen bus doors writing slots after Katalyst 5b that is the "twenty allocations per note"
+  class the June work removed. They are now `ParamBag` fields (`sprudel/ParamBag.kt`) with the same
+  contract as the `Svd*` groups: `putOscParam` / `putKatalystParam` write ONE name into the bag the
+  event already owns, `oscParamsOrNew()` / `katalystParamsOrNew()` hand a whole-stage fill the bag
+  once, `copy()` is the per-event deep copy `clone()` makes, `merge` builds a fresh bag as
+  `mergeSvdAdsr` does and `mergeFrom` folds into the receiver's own (last writer wins per name). The
+  copying helpers (`withOscParam`, `withOscParams`, `mergeOscParamsFrom`, `putOscParams`,
+  `putOscParamsFrom`) went with the old storage: nothing called them, and a copy helper over a
+  mutable bag is a second way to own one. `toVoiceData` hands the wire a `toMap()` COPY of each: the
+  wire value outlives the pattern event (the backend holds `Voice.katalystParams` for the whole life
+  of the voice and gates its re-resolve on the map's IDENTITY), and the boundary already allocates a
+  `VoiceData`. The bag also carries the fill rule's one method, `setOrDefault` (below); the rule
+  itself lives in `/dsl-design` §4.
+  Guards: `ParamBagSpec`, `LangKatalystParamSpec` ("a bus door call on an already-cloned voice
+  allocates no map", "toVoiceData hands the wire a COPY of both maps"), the golden, mutation-checked.
+
+- **A compound door fills per param, at the door (2026-09-16 for the sends, 2026-09-18 for the rest,
+  Katalyst step 5a-3).** The rule and its two kinds of stage live in `/dsl-design` §4, its one home;
+  do not restate them here. What the sprudel side does: each per-slot setter writes its own slot with
+  `ParamBag.set`, the stage's fill then writes the companions with `setOrDefault(name, null, CONST)`,
+  and the constants come from `audio_bridge/constants/`. Six of the seven bus doors also fill their
+  VOICE fields with the same constants; `duck` does not, because `VoiceFactory` already supplies both
+  its numbers and writing them out would change what every existing song sends. Byte-identical for
+  every existing song, because the engine was already substituting exactly those constants for an
+  unset field (`VoiceFactory`, `Voice.Compressor.fromParams`, `FilterDef.Body`/`Formant`'s null
+  floor); the engine keeps them as the NaN rule for a raw `katp` write, not as a second fill. Guards:
+  `ParamBagSpec`, `LangKatalystParamSpec`, the per-door lang specs, `KatalystDeclaredBodyParitySpec`
+  (renders: body, compressor, duck). `docs/tasks/katalyst-dsl.md` §9 step 5a-3.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in

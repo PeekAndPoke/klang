@@ -17,26 +17,34 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
-import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * A reverb slot was just written on this event: every reverb slot still unset takes the shared default
- * (`constants/SendEffectDefaults.kt`, the same the master reverb uses), so one call sets them all. A slot
- * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
- * a mapper on a slot that was never set) is not filled. Lowpass has no default and stays unset.
+ * Fills the reverb stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * master reverb uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
+ * every reverb setter, because the reverb has no name knob: `reverb(size = 4)` fills `wet` and the
+ * room is ON.
  *
- * The same values then go into the orbit chain's slot state (`reverb.wet`, `reverb.size`,
- * `reverb.lowpass`), which is what makes this door an alias of `katp` on a DECLARED chain
- * (signal-flow plan §7, Katalyst step 5a). One key at a time into the event's own map, and the fill
- * is the same fill: `reverb(size = 4)` writes `reverb.size` 4 AND `reverb.wet` at the touched
- * default, so a declared room sounds like the familiar one. The voice fields stay until step 5b takes them off
- * the wire, and the CLASSIC chain still reads those, not this.
+ * **`lowpass` has no constant** and is never filled: unset means no damping, and inventing a cutoff
+ * would darken every room.
+ *
+ * Fills the voice FIELDS with the same constants, so the two sources agree on every knob the author
+ * did not reach past. The fields stay until step 5b takes them off the wire, and the chain a cylinder
+ * is BORN with still reads those.
+ *
+ * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
+ * these constants.
  */
 private fun SprudelVoiceData.fillReverbDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("reverb.wet", value = null, default = REVERB_WET)
+    slots.setOrDefault("reverb.size", value = null, default = REVERB_SIZE)
+
     if (reverb == null) {
         reverb = REVERB_WET
     }
@@ -44,10 +52,13 @@ private fun SprudelVoiceData.fillReverbDefaults() {
     if (reverbSize == null) {
         reverbSize = REVERB_SIZE
     }
+}
 
-    putKatalystParam("reverb.wet", reverb)
-    putKatalystParam("reverb.size", reverbSize)
-    putKatalystParam("reverb.lowpass", reverbLowpass)
+/** Writes the send this call named, into the field and its slot, and fills the companions. */
+private fun SprudelVoiceData.setReverbWet(wet: Double) {
+    reverb = wet
+    katalystParamsOrNew().set("reverb.wet", wet)
+    fillReverbDefaults()
 }
 
 // -- reverb, the wet slot --------------------------------------------------------------------------------------------
@@ -56,8 +67,7 @@ private val reverbMutation = voiceSetter {
     val wet = it?.toString()?.toDoubleOrNull()
 
     if (wet != null) {
-        reverb = wet
-        fillReverbDefaults()
+        setReverbWet(wet)
     }
 }
 
@@ -66,14 +76,18 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
         return source._mapNumericField(mapper, read = { it.reverb }, update = reverbMutation)
     }
 
-    // No args: reinterpret pattern's own values as the reverb send
+    // No args: reinterpret the pattern's own values as the send. This is the one path that can hand
+    // this door's HEAD setter a null, and it clears the voice field while leaving the slot: a
+    // recorded asymmetry, unreachable from any spelling with an argument.
     if (args.isEmpty()) {
         return source.reinterpretVoice {
             it.clone().apply {
                 reverb = value?.asDouble
 
-                if (reverb != null) {
-                    fillReverbDefaults()
+                val wet = reverb
+
+                if (wet != null) {
+                    setReverbWet(wet)
                 }
             }
         }
@@ -83,8 +97,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
         val wet = ctrl.reverb
 
         if (wet != null) {
-            src.reverb = wet
-            src.fillReverbDefaults()
+            src.setReverbWet(wet)
         }
 
         src
@@ -217,7 +230,10 @@ object reverb {
 private val reverbSizeMutation = voiceSetter {
     reverbSize = it?.asDoubleOrNull()
 
-    if (reverbSize != null) {
+    val size = reverbSize
+
+    if (size != null) {
+        katalystParamsOrNew().set("reverb.size", size)
         fillReverbDefaults()
     }
 }
@@ -235,7 +251,10 @@ private fun applyReverbSize(source: SprudelPattern, args: List<SprudelDslArg<Any
 private val reverbLowpassMutation = voiceSetter {
     reverbLowpass = it?.asDoubleOrNull()
 
-    if (reverbLowpass != null) {
+    val lowpass = reverbLowpass
+
+    if (lowpass != null) {
+        katalystParamsOrNew().set("reverb.lowpass", lowpass)
         fillReverbDefaults()
     }
 }

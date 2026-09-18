@@ -9,6 +9,11 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -149,7 +154,10 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser() per-param with partial params sets only specified fields" {
+    "phaser() per-param fills the params it was not given with their shared constants" {
+        // Katalyst step 5a-3: the phaser has no name knob, so any of its five names the stage and
+        // the rest take their `PHASER_*` constants. Byte-identical, because `VoiceFactory`
+        // substituted exactly those for a null field.
         val p = note("c3").phaser(1.5, 0.6)
         val events = p.queryArc(0.0, 1.0)
 
@@ -157,8 +165,9 @@ class LangPhaserSpec : StringSpec({
         with(events[0].data) {
             phaserRate shouldBe 1.5
             phaserDepth shouldBe 0.6
-            phaserCenter shouldBe null
-            phaserSweep shouldBe null
+            phaserCenter shouldBe PHASER_CENTER_HZ
+            phaserSweep shouldBe PHASER_SWEEP_HZ
+            phaserFloor shouldBe PHASER_FLOOR
         }
     }
 
@@ -196,7 +205,9 @@ class LangPhaserSpec : StringSpec({
             cycle0.size shouldBe 2
             cycle0[0].data.phaserRate shouldBe 0.5
             cycle0[0].data.phaserDepth shouldBe 0.3
-            cycle0[0].data.phaserCenter shouldBe null    // rest in the center pattern leaves it unset
+            // A rest in the center pattern writes nothing, so the centre is the one the RATE of the
+            // same call filled in, not a value the rest produced.
+            cycle0[0].data.phaserCenter shouldBe PHASER_CENTER_HZ
 
             cycle1.size shouldBe 2
             cycle1[0].data.phaserRate shouldBe 2.0
@@ -229,7 +240,7 @@ class LangPhaserSpec : StringSpec({
             phaserRate shouldBe 1.0
             phaserDepth shouldBe 0.5
             phaserCenter shouldBe 300.0
-            phaserSweep shouldBe null
+            phaserSweep shouldBe PHASER_SWEEP_HZ
         }
     }
 
@@ -239,9 +250,11 @@ class LangPhaserSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.phaserRate shouldBe 0.7
-        events[0].data.phaserDepth shouldBe null
-        events[0].data.phaserCenter shouldBe null
-        events[0].data.phaserSweep shouldBe null
+        // The rate names the stage, so the four companions take their constants. PHASER_WET is 0,
+        // which is the engine's gate: a rate on its own is still inaudible, as it always was.
+        events[0].data.phaserDepth shouldBe PHASER_WET
+        events[0].data.phaserCenter shouldBe PHASER_CENTER_HZ
+        events[0].data.phaserSweep shouldBe PHASER_SWEEP_HZ
     }
 
     "phaser(tail-only) does not touch the head field" {
@@ -251,7 +264,9 @@ class LangPhaserSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.phaserRate shouldBe null
+        // The rate is the constant the wet's own fill wrote, never the receiver's 3 or 4: that is
+        // what this row guards, and PHASER_RATE_HZ is 0, a phaser standing still.
+        events[0].data.phaserRate shouldBe PHASER_RATE_HZ
         events[0].data.phaserDepth shouldBe 0.6
     }
 })

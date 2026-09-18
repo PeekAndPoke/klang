@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
@@ -806,9 +807,13 @@ class LangFieldAccessorsSpec : StringSpec({
     }
 
     "batch G: a tail-only call does not reinterpret a numeric receiver into the head slot, in both doors" {
-        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val head: (SprudelVoiceData) -> Any?, val tail: (SprudelVoiceData) -> Double?)
+        // `expectedHead` is null wherever a tail-only call leaves the head alone. The compressor is
+        // the one exception since Katalyst step 5a-3: it has no NAME KNOB, so any of its five names
+        // the stage and the fill writes the head's constant. The guard is the same either way, the
+        // receiver's own 3 and 4 must not land in the head.
+        class Case(val name: String, val kotlin: SprudelPattern, val script: String, val head: (SprudelVoiceData) -> Any?, val tail: (SprudelVoiceData) -> Double?, val expectedHead: Any? = null)
         listOf(
-            Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.compressorThreshold }, { it.compressorRatio }),
+            Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.compressorThreshold }, { it.compressorRatio }, COMPRESSOR_THRESHOLD_DB),
             Case("unison(spread = 4)", seq("3 4").unison(spread = 4), """seq("3 4").unison(spread = 4)""", { it.oscParams?.get("voices") }, { it.oscParams?.get("spread") }),
             Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.duckCylinder }, { it.duckDepth }),
             Case("vibrato(depth = 4)", seq("3 4").vibrato(depth = 4), """seq("3 4").vibrato(depth = 4)""", { it.vibrato }, { it.vibratoMod }),
@@ -822,7 +827,7 @@ class LangFieldAccessorsSpec : StringSpec({
                     withClue(door) {
                         val events = p.queryArc(0.0, 1.0)
                         events shouldHaveSize 2
-                        events.map { case.head(it.data) } shouldBe listOf(null, null)
+                        events.map { case.head(it.data) } shouldBe listOf(case.expectedHead, case.expectedHead)
                         events.map { case.tail(it.data) } shouldBe listOf(4.0, 4.0)
                     }
                 }

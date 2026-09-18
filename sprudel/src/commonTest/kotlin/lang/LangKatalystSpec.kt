@@ -21,8 +21,9 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * The `katalyst(…)` authoring surface, see `docs/tasks/katalyst-dsl.md` §6.
  *
  * The top-level form is a **control carrier** (one silent event per cycle, routed with `.orbit(n)`);
- * the mapper forms stamp the reference onto sounding events. Unlike `master(…)`, the door APPENDS:
- * the pattern text is the stage order.
+ * the mapper forms stamp the reference onto sounding events. Like `master(…)`, the door REPLACES
+ * (decided 2026-09-18): a chain is one instrument, and `k.classic()` inside the builder is how you
+ * start from the familiar one.
  */
 class LangKatalystSpec : StringSpec({
 
@@ -83,90 +84,77 @@ class LangKatalystSpec : StringSpec({
         }
     }
 
-    // ── composition: the one place a Katalyst differs from a master ───────────
+    // ── the door replaces, like sound() and master() (decided 2026-09-18) ─────
 
-    "two doors APPEND: x.katalyst(A).katalyst(B) is the concatenation, in that order" {
+    "two doors REPLACE: x.katalyst(A).katalyst(B) is B, and nothing of A survives" {
         val events = note("c3").katalyst(chainA).katalyst(chainB).queryArc(0.0, 1.0)
-        val expected = KatalystDsl(chainA.stages + chainB.stages)
 
-        events[0].data.katalyst shouldBe KatalystValue.Dsl(expected)
-        // ...and A really is first: the order is the signal order, so a reversed concatenation is
-        // a different mix, not a different spelling of the same one.
+        events[0].data.katalyst shouldBe KatalystValue.Dsl(chainB)
+        // Spelled out as the stage list too: the append rule would have left A's Eq in front of
+        // B's Reverb, and two chains that both declare a reverb read the same slot names.
         (events[0].data.katalyst as KatalystValue.Dsl).katalyst.stages.map { it::class.simpleName } shouldBe
-                listOf("Eq", "Reverb")
+                listOf("Reverb")
     }
 
-    "a composed chain has the same unique id as the hand-built concatenation" {
+    "the replacing door carries the plain chain's own unique id, not a composition's" {
         val events = note("c3").katalyst(chainA).katalyst(chainB).queryArc(0.0, 1.0)
 
-        events[0].data.toVoiceData().katalyst shouldBe KatalystDsl(chainA.stages + chainB.stages).uniqueId()
+        events[0].data.toVoiceData().katalyst shouldBe chainB.uniqueId()
     }
 
-    "the door's memo hands every event of one pattern the SAME composed instance" {
-        // Reference equality, not structural: this is what pins the memo. Without it the door
-        // allocates a fresh stage list, a fresh data class and a structural hash per event.
-        val events = note("c3 e3 g3 a3").katalyst(chainA).katalyst(chainB).queryArc(0.0, 1.0)
+    "every one of the four door forms replaces, on every event" {
+        // All four, because the rule lives in four places (the carrier, the pattern door, the
+        // string door, the chained mapper) and a door that still appended would be invisible in a
+        // spec that only exercised one of them.
+        listOf(
+            "pattern.katalyst(A).katalyst(B)" to note("c3 e3").katalyst(chainA).katalyst(chainB),
+            "string.katalyst(A).katalyst(B)" to "c3 e3".katalyst(chainA).katalyst(chainB),
+            "chained mapper .katalyst(A).katalyst(B)" to
+                    note("c3 e3").apply(gain(0.5).katalyst(chainA).katalyst(chainB)),
+            "carrier under a pattern door" to katalyst(chainA).katalyst(chainB),
+        ).forEach { (label, pattern) ->
+            withClue(label) {
+                val events = pattern.queryArc(0.0, 1.0)
 
-        events.size shouldBe 4
-        val first = (events[0].data.katalyst as KatalystValue.Dsl).katalyst
-        events.forEach { (it.data.katalyst as KatalystValue.Dsl).katalyst shouldBeSameInstance first }
-    }
-
-    "the memo is capped: past LIMIT distinct incoming chains it composes without remembering" {
-        // The memo exists for the steady state, where one door sees one or a handful of incoming
-        // chains. A pathological source must not turn it into an unbounded map, so past the cap it
-        // keeps composing and stops storing. Correctness never depends on the memo, which is what
-        // this pins: the (LIMIT + 1)th chain composes exactly like the first.
-        KatalystAppend.LIMIT shouldBe 8
-
-        val inners = (0 until KatalystAppend.LIMIT + 1).map { i ->
-            KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(i.toDouble())))
-        }
-        val stacked = stack(
-            *inners.mapIndexed { i, chain -> note("c$i").katalyst(chain) }.toTypedArray()
-        ).katalyst(chainB)
-
-        val events = stacked.queryArc(0.0, 1.0)
-
-        events.size shouldBe KatalystAppend.LIMIT + 1
-
-        // Every one of them, memoized or not, carries its own chain plus the outer one.
-        val byNote = events.associate { it.data.note to (it.data.katalyst as KatalystValue.Dsl).katalyst }
-
-        inners.forEachIndexed { i, inner ->
-            withClue("note c$i (index $i, cap is ${KatalystAppend.LIMIT})") {
-                byNote["c$i"] shouldBe KatalystDsl(inner.stages + chainB.stages)
+                events.shouldNotBeEmpty()
+                events.forEach { it.data.katalyst shouldBe KatalystValue.Dsl(chainB) }
             }
         }
     }
 
-    "a chain referenced by NAME is replaced, not appended: named chains do not compose yet" {
-        // The stages behind a name live in the backend registry, so this door cannot concatenate
-        // them. Replacing is the honest answer, and it is the door's rule, so it is pinned on the
-        // door's rule object rather than through a pattern that cannot produce a Named value yet
-        // (no sprudel surface mints one today; the wire and a future `katalyst("name")` will).
-        val door = KatalystAppend(chainB)
+    "one door, one KatalystValue instance: every event of a pattern gets the SAME one" {
+        // Reference equality, not structural: the door stamps a value it allocated once, so a
+        // pattern of four notes costs one instance and one `uniqueId()` hash, not four. The
+        // per-event cost is what the retired append memo existed for; replacing gets it for free.
+        val events = note("c3 e3 g3 a3").katalyst(chainA).queryArc(0.0, 1.0)
 
-        door.onto(KatalystValue.Named("guitarBus")) shouldBe KatalystValue.Dsl(chainB)
+        events.size shouldBe 4
+        val first = events[0].data.katalyst
 
-        // The three branches of the rule, side by side: nothing, a name, and an inline chain.
-        door.onto(null) shouldBe KatalystValue.Dsl(chainB)
-        door.onto(KatalystValue.Dsl(chainA)) shouldBe KatalystValue.Dsl(KatalystDsl(chainA.stages + chainB.stages))
+        events.forEach { it.data.katalyst shouldBeSameInstance first }
 
-        // ...and the two replacing branches hand back the SAME instance, which is what makes the
-        // carrier free per event.
-        door.onto(null) shouldBeSameInstance door.onto(KatalystValue.Named("other"))
+        // The carrier and the chained mapper hand out one instance each as well.
+        val carrier = katalyst(chainA).queryArc(0.0, 4.0)
+
+        carrier.size shouldBe 4
+        carrier.forEach { it.data.katalyst shouldBeSameInstance carrier[0].data.katalyst }
+
+        val mapped = note("c3 e3 g3").apply(gain(0.5).katalyst(chainB)).queryArc(0.0, 1.0)
+
+        mapped.size shouldBe 3
+        mapped.forEach { it.data.katalyst shouldBeSameInstance mapped[0].data.katalyst }
     }
 
-    "an outer door appends to each stacked pattern's own chain" {
-        // stack(a.katalyst(A), b).katalyst(B): a's events get A+B, b's events get B alone.
+    "an outer door replaces each stacked pattern's own chain" {
+        // stack(a.katalyst(A), b).katalyst(B): both get B. The chain is a property of the ORBIT,
+        // and an outer door is the author saying what that orbit runs.
         val pattern = stack(note("c3").katalyst(chainA), note("e3")).katalyst(chainB)
         val events = pattern.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         val byNote = events.associate { it.data.note to (it.data.katalyst as KatalystValue.Dsl).katalyst }
 
-        byNote["c3"] shouldBe KatalystDsl(chainA.stages + chainB.stages)
+        byNote["c3"] shouldBe chainB
         byNote["e3"] shouldBe chainB
     }
 
@@ -223,13 +211,13 @@ class LangKatalystSpec : StringSpec({
         scriptEvents[0].data.control shouldBe true
     }
 
-    "the script door appends too" {
+    "the script door replaces too" {
         val script = SprudelPattern
             .compile("""note("c3").katalyst(Katalyst(k => k.reverb())).katalyst(Katalyst(k => k.gain(1.4)))""")!!
             .queryArc(0.0, 1.0)
 
         script[0].data.katalyst shouldBe KatalystValue.Dsl(
-            KatalystDsl.of(KatalystStageDsl.Reverb(), KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
+            KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
         )
     }
 

@@ -33,9 +33,10 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * Sibling of `Master` (per playback), `Pipeline` (per-voice signal path) and `Osc` (per-voice
  * exciter): same shape, different host.
  *
- * **In this step a chain is declared and registered, nothing more.** The backend starts applying
- * declared chains from step 2 of the Katalyst work; until then an orbit keeps running its fixed
- * historical chain, so writing one changes what the song SAYS, not yet what it sounds like.
+ * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
+ * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
+ * from the familiar orbit with [classic], which brings the seven historical stages as named slots
+ * the bus doors and `katp` can drive.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Katalyst")
@@ -45,8 +46,8 @@ object KlangScriptKatalyst {
     /**
      * Builds an orbit chain: the lambda receives a [KatalystBuilder] and appends stages in order
      * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `duck`, `eq`, `gain`, and
-     * `classic` for all seven historical ones at once). No lambda, or an empty one, is the empty
-     * chain.
+     * `classic` for all seven historical ones at once, at most once per builder). No lambda, or an
+     * empty one, is the empty chain.
      *
      * ```
      * katalyst(Katalyst.build(k => k.reverb(r => r.wet(0.2)).gain(1.4)))
@@ -60,11 +61,10 @@ object KlangScriptKatalyst {
 
     /**
      * The historical chain every orbit has always run: body, vowel, delay, reverb, phaser,
-     * compressor and the duck, seven stages in that order, with every knob a named slot that the
-     * pattern doors will write once the cylinder reads the chain, from step 2 on.
+     * compressor and the duck, seven stages in that order, with every knob a named slot the bus
+     * doors and `katp` write.
      *
-     * Write it to say "the familiar orbit", or use it as the base of a chain that adds to it. Until
-     * step 2 an orbit runs that chain anyway, so today this declares it rather than restores it:
+     * Write it to say "the familiar orbit", or use it as the base of a chain that adds to it:
      *
      * ```
      * katalyst(Katalyst.classic())
@@ -80,9 +80,9 @@ object KlangScriptKatalyst {
      * no chain runs the historical one from the voice's own effect fields; declaring THIS one names
      * the same stages as slots, so `katp` and the bus doors drive them, which is what makes
      * `Katalyst(k => k.classic())` the one line to add before automating a classic knob. The sound
-     * is the same either way; what changes is who the knobs listen to. The one thing the chain takes
-     * over is a NAME: its `body` material and its `vowel` are the chain's, because a slot carries a
-     * number (see the `katp` door).
+     * is the same either way; what changes is who the knobs listen to. Its `body` material and its
+     * `vowel` are slots as well, carrying the INDEX of a name in the shared catalogues, so a
+     * pattern's `body("wood")` still reaches it.
      */
     @KlangScript.Method
     fun classic(): KatalystDsl = KatalystDsl.classic

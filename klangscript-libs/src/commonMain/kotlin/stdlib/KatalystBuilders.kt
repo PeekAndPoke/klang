@@ -7,9 +7,12 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -50,36 +53,103 @@ data class KatalystBuilder(val node: KatalystDsl) {
  * `Katalyst(k => k.classic().eq(...))` therefore reads as "the chain an orbit has always run, plus
  * an EQ at the end".
  *
+ * **At most once per builder** (decided with the maintainer, 2026-09-18): a second `classic()` in
+ * the same builder returns the builder unchanged, because seven duplicated stages read the same
+ * slot names and one `reverb(0.3)` would run reverb into reverb. Writing a stage out twice
+ * (`k.reverb(...).reverb(...)`) is a different thing and still stacks, in written order: that is an
+ * author asking for two rooms, not for the familiar chain twice.
+ *
  * The duck it brings is an unset one (no source orbit, so no ducking). Appending a `duck(...)`
  * after it is how you set one: the cylinder runs exactly one ducking effect, so the LAST duck in
  * the chain wins.
  */
 @KlangScript.Function
-fun KatalystBuilder.classic(): KatalystBuilder = copy(node = KatalystDsl(node.stages + KatalystDsl.classic.stages))
+fun KatalystBuilder.classic(): KatalystBuilder {
+    if (node.stages.containsInOrder(KatalystDsl.classic.stages)) {
+        return this
+    }
+
+    return copy(node = KatalystDsl(node.stages + KatalystDsl.classic.stages))
+}
+
+/**
+ * True when [other] appears in this list as a contiguous run, which is what "the classic block is
+ * already in this builder" means. Content equality, not identity: a chain hand-built from the same
+ * stages is the same chain everywhere else in the Katalyst, so it must be here too.
+ *
+ * A plain double loop over two short lists, run once per `classic()` call at construction time and
+ * never on an audio path.
+ */
+private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>): Boolean {
+    if (other.isEmpty() || other.size > size) {
+        return false
+    }
+
+    for (start in 0..(size - other.size)) {
+        var matches = true
+
+        for (i in other.indices) {
+            if (this[start + i] != other[i]) {
+                matches = false
+                break
+            }
+        }
+
+        if (matches) {
+            return true
+        }
+    }
+
+    return false
+}
 
 /**
  * Appends a resonant body: a bank of narrow modes over a broadband floor, the box a sound sits in.
- * @param material material name (`"wood"`, `"glass"`, `"tube"`, ...); unset leaves the stage unnamed.
- * @param configure receives the [KatalystBodyBuilder] (knobs: `wet`, `floor`) and returns it.
+ *
+ * The name on the door is converted to the stage's `material` INDEX here, through the one shared
+ * `BodyMaterials.indexOf`, so a chain and a pattern mean the same box by the same word. An unknown
+ * name is `none`, and so is no name at all: the stage is declared and off.
+ *
+ * @param material material name (`"wood"`, `"glass"`, `"tube"`, ...); unset leaves the stage off.
+ * @param configure receives the [KatalystBodyBuilder] (knobs: `material`, `wet`, `floor`) and returns it.
  */
 @KlangScript.Function
 fun KatalystBuilder.body(
     material: String? = null,
     configure: ((KatalystBodyBuilder) -> KatalystBodyBuilder)? = null,
 ): KatalystBuilder =
-    plus(KatalystBodyBuilder(KatalystStageDsl.Body(material = material)).configuredBy("Katalyst body", configure).node)
+    plus(
+        KatalystBodyBuilder(KatalystStageDsl.Body(material = materialIndex(material)))
+            .configuredBy("Katalyst body", configure).node
+    )
 
 /**
  * Appends a formant bank: the vowel a sound sings.
- * @param vowel vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`); unset leaves the stage unnamed.
- * @param configure receives the [KatalystVowelBuilder] (knobs: `wet`, `floor`) and returns it.
+ *
+ * The name on the door is converted to the stage's `vowel` INDEX here, through the one shared
+ * `VowelBands.indexOf`, so a bare `"a"` is the soprano register on this door exactly as it is on
+ * the pattern one. An unknown name is `none`, and so is no name at all.
+ *
+ * @param vowel vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`); unset leaves the stage off.
+ * @param configure receives the [KatalystVowelBuilder] (knobs: `vowel`, `wet`, `floor`) and returns it.
  */
 @KlangScript.Function
 fun KatalystBuilder.vowel(
     vowel: String? = null,
     configure: ((KatalystVowelBuilder) -> KatalystVowelBuilder)? = null,
 ): KatalystBuilder =
-    plus(KatalystVowelBuilder(KatalystStageDsl.Vowel(vowel = vowel)).configuredBy("Katalyst vowel", configure).node)
+    plus(
+        KatalystVowelBuilder(KatalystStageDsl.Vowel(vowel = vowelIndex(vowel)))
+            .configuredBy("Katalyst vowel", configure).node
+    )
+
+/** A material name as the knob the stage carries: its index, or the wire's "never set" for no name. */
+private fun materialIndex(material: String?): IgnitorDsl =
+    IgnitorDsl.Constant(if (material != null) BodyMaterials.indexOf(material) else SLOT_UNSET)
+
+/** A vowel name as the knob the stage carries. Twin of [materialIndex], through the vowel catalogue. */
+private fun vowelIndex(vowel: String?): IgnitorDsl =
+    IgnitorDsl.Constant(if (vowel != null) VowelBands.indexOf(vowel) else SLOT_UNSET)
 
 /**
  * Appends an orbit delay (the shared delay line).
@@ -162,8 +232,21 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Body] stage. Knobs: `wet`, `floor`. */
+/** Builder for a [KatalystStageDsl.Body] stage. Knobs: `material`, `wet`, `floor`. */
 data class KatalystBodyBuilder(val node: KatalystStageDsl.Body)
+
+/**
+ * The material as an INDEX into the material catalogue, for a chain that wants it to MOVE:
+ * `k.body(b => b.material(Katalyst.param("mat", 3)))` listens to `katp("mat", n)`, and a plain
+ * number picks a fixed box.
+ *
+ * The readable door is the name on `k.body("wood")`, which writes this same knob; this one is what
+ * a slot needs, because a slot carries a number. 0 is `none`, and so is anything out of range.
+ * Orbit twin: `body("wood")`, or `katp("body.material", n)` for the number.
+ */
+@KlangScript.Function
+fun KatalystBodyBuilder.material(material: IgnitorDslLike): KatalystBodyBuilder =
+    copy(node = node.copy(material = material.toIgnitorDsl()))
 
 /** How much of the orbit runs through the body, 0 to 1 (default 0.5). Orbit twin: `body(wet = ...)`. */
 @KlangScript.Function
@@ -179,8 +262,21 @@ fun KatalystBodyBuilder.floor(floor: IgnitorDslLike): KatalystBodyBuilder =
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Vowel] stage. Knobs: `wet`, `floor`. */
+/** Builder for a [KatalystStageDsl.Vowel] stage. Knobs: `vowel`, `wet`, `floor`. */
 data class KatalystVowelBuilder(val node: KatalystStageDsl.Vowel)
+
+/**
+ * The vowel as an INDEX into the vowel catalogue, for a chain that wants it to MOVE:
+ * `k.vowel(v => v.vowel(Katalyst.param("vw", 1)))` listens to `katp("vw", n)`, and a plain number
+ * picks a fixed vowel.
+ *
+ * The readable door is the name on `k.vowel("bass:a")`, which writes this same knob; this one is
+ * what a slot needs. 0 is `none`, and so is anything out of range. Orbit twin: `vowel("a")`, or
+ * `katp("vowel.vowel", n)` for the number.
+ */
+@KlangScript.Function
+fun KatalystVowelBuilder.vowel(vowel: IgnitorDslLike): KatalystVowelBuilder =
+    copy(node = node.copy(vowel = vowel.toIgnitorDsl()))
 
 /** How much of the orbit runs through the formant bank, 0 to 1 (default 0.5). Orbit twin: `vowel(wet = ...)`. */
 @KlangScript.Function

@@ -132,7 +132,7 @@ class OptimizerSongParitySpec : StringSpec({
 
                 seen.add(sound.osc)
                 graphs++
-                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.osc, event.data.oscParams)
+                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.osc, event.data.oscParams?.toMap())
             }
         }
 

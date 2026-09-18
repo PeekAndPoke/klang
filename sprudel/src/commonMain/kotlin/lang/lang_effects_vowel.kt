@@ -8,34 +8,87 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- vowel -----------------------------------------------------------------------------------------------------------
 
-private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { v -> clone().also { it.vowel = v?.lowercase() } }
+/**
+ * Fills the vowel stage's companions, `vowel.wet` and `vowel.floor`, from
+ * `constants/BusEffectDefaults.kt`, the body door's twin with [VOWEL_WET] and [VOWEL_FLOOR]
+ * (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from the VOWEL setter
+ * alone, because the vowel is this stage's name knob.
+ *
+ * Fills the voice FIELDS with the same two constants, for the born-with path, until step 5b.
+ *
+ * Byte-identical to what the engine did with an unset field: `toVoiceData` reads a null `vowelMix`
+ * as [VOWEL_WET], and a null floor means [VOWEL_FLOOR] to `FilterDef.Formant`; the declared path
+ * takes the same two through `KatalystSlots.vowelDef`.
+ */
+private fun SprudelVoiceData.fillVowelDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("vowel.wet", value = null, default = VOWEL_WET)
+    slots.setOrDefault("vowel.floor", value = null, default = VOWEL_FLOOR)
+
+    if (vowelMix == null) {
+        vowelMix = VOWEL_WET
+    }
+
+    if (vowelFloor == null) {
+        vowelFloor = VOWEL_FLOOR
+    }
 }
 
-// The two NUMBERS go into the orbit chain's slot state as well (`vowel.wet`, `vowel.floor`), which
-// is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
-// step 5a). The VOWEL does not: a slot carries a number, and a declared chain names its own vowel
-// (`k.vowel("a")`), so a pattern can change how much of it is heard but not which one.
-// No fill either: the stage is off until the chain names a vowel, so a companion the call did
-// not write has nothing to be filled from. A control value that is NOT a number clears the voice
-// field, and the slot is cleared with it (SLOT_UNSET, the wire's "never set"), so the two sources
-// can never disagree on one event; a REST calls no setter at all and leaves both alone.
+// The VOWEL goes into the orbit chain's slot state as a number: `vowel.vowel` carries the vowel's
+// INDEX in `VowelBands.names`, and `VowelBands.indexOf` is the one conversion both doors use
+// (Katalyst step 5a-2, 2026-09-18). A bare name is the soprano register, there as here. That is
+// what keeps `vowel("bass:a")` working on a DECLARED chain without a string ever reaching the wire
+// as a slot; an unknown name is index 0, `none`, the same "off" the voice field gives it.
+//
+// Naming the vowel is what fills the rest of the stage. Clearing it fills nothing: the stage has no
+// name any more, so there is nothing for a companion to be filled for.
+private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args) { v ->
+        val name = v?.lowercase()
+
+        clone().also { data ->
+            data.vowel = name
+
+            if (name != null) {
+                data.putKatalystParam("vowel.vowel", VowelBands.indexOf(name))
+                data.fillVowelDefaults()
+            } else {
+                data.putKatalystParam("vowel.vowel", SLOT_UNSET)
+            }
+        }
+    }
+}
+
+// The two NUMBERS go into the slot state as well (`vowel.wet`, `vowel.floor`), which is what makes
+// this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst step 5a). A
+// tail-only call writes only its own knob: the NAME KNOB of this stage is the VOWEL, and a door
+// never invents a name knob.
+//
+// Neither tail setter has a CLEAR arm, and neither needs one, for the reason the body door spells
+// out: no numeric TAIL setter of a compound BUS door can be handed a null. The vowel setter above is a
+// HEAD setter, and one of only two that CLEAR on a null; it writes SLOT_UNSET.
 
 private val vowelWetMutation = voiceSetter {
     vowelMix = it?.asDoubleOrNull()
-    putKatalystParam("vowel.wet", vowelMix ?: SLOT_UNSET)
+    putKatalystParam("vowel.wet", vowelMix)
 }
 
 private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -48,7 +101,7 @@ private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 
 private val vowelFloorMutation = voiceSetter {
     vowelFloor = it?.asDoubleOrNull()
-    putKatalystParam("vowel.floor", vowelFloor ?: SLOT_UNSET)
+    putKatalystParam("vowel.floor", vowelFloor)
 }
 
 private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -75,6 +128,16 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`vowel(floor = mul(2))`), and the numeric slots read back as `vowel.wet`, `vowel.floor`. `vowel` is a name and has no reader.
  * With no argument at all, the pattern's own values are reinterpreted as `vowel`.
+ *
+ * Naming a vowel sets the whole stage: `wet` and `floor` take their shared defaults, 0.5 and 0.2,
+ * unless an earlier call already set them, so `vowel("a")` is as audible as it always was. Naming a
+ * tail knob alone does NOT invent a vowel, because the vowel is what switches the filter on. Slots
+ * apply in order, the vowel first, so a mapper on a later slot sees a default the vowel of the same
+ * call filled in (`vowel("a", wet = mul(2))` is wet 1.0).
+ *
+ * All three reach a DECLARED orbit chain as chain slots, the vowel as the index of its name in the
+ * vowel catalogue (`vowel.vowel`, 0 = none), so the same call works whether the orbit declares a
+ * chain or runs the historical one, down to the sample.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").vowel("a", 0.8)                                   // an open ah

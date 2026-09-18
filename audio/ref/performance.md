@@ -224,12 +224,21 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
   now sends the matching `<stage>.<knob>` slots over the wire even on an
   orbit running the born-with chain, which ignores them. Measured with
   `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
-  Node 24) on one voice: encode 448 → 609 ns/op, `structuredClone`
-  8097 → 8720 ns/op, worklet decode 459 → 836 ns/op. The "before" numbers were
-  taken at 36b15ca0, with THAT commit's fixture, which carried no slot map; the
-  committed fixture carries one, so they are the record and are not
-  reproducible from it. Step 5b takes the voice half off the wire and leaves
-  the slots alone, which pays it back.
+  Node 24) on one voice.
+
+  Re-measured 2026-09-18 after Katalyst step 5a-3, on the fixture as it stands
+  (11 slots and the 11 matching bus voice fields, where the step-5a fixture had
+  7 slots): encode 822 and 952 ns/op, `structuredClone` 11820 and 11905 ns/op,
+  worklet decode 2073 and 2258 ns/op, two consecutive runs on one machine. Two
+  runs is enough to show the spread (roughly 15 % on encode and decode, 1 % on
+  the clone) and not enough to attribute the difference from the step-5a
+  reading (609 / 8720 / 836) to the fixture rather than to the machine: that
+  reading was taken on a different day, and the numbers before it (448 / 8097 /
+  459, at 36b15ca0) came from a fixture with no slot map at all and are a
+  record, not a baseline this can be reproduced against. What the three
+  readings agree on is the shape: the clone dominates, and it grows with the
+  payload. Step 5b takes the voice half off the wire and leaves the slots
+  alone, which pays it back.
 - **`SprudelVoiceData.clone()` deep-copies both param maps** (`oscParams`,
   `katalystParams`) since 2026-09-18: they are mutable and single-owner, so a
   door writes one key in place instead of allocating a map per slot, and the

@@ -257,7 +257,7 @@ class SprudelVoiceDataSpec : StringSpec({
             bank = "MPC60"
             sound = SoundValue.Named("bd")
             soundIndex = 2
-            oscParams = mutableMapOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
+            oscParams = paramBagOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
             accelerate = 0.05
             vibrato = 0.2
             vibratoMod = 0.4
@@ -346,8 +346,8 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         note = "note$seed"; freqHz = b + 1; scale = "scale$seed"; chord = "chord$seed"
         gain = b + 2; legato = b + 3; velocity = b + 4; postGain = b + 5
         bank = "bank$seed"; sound = SoundValue.Named("snd$seed"); soundIndex = seed + 6
-        oscParams = mutableMapOf("k$seed" to b + 7)
-        katalystParams = mutableMapOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)
+        oscParams = paramBagOf("k$seed" to b + 7)
+        katalystParams = paramBagOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
         attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false

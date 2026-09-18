@@ -42,7 +42,32 @@ class KatalystBodyEffect(
     /** Test seam: true while a resonator bank is installed — the owner has a body. */
     internal val isEngaged: Boolean get() = swap.active
 
-    /** Configure from the OWNER voice's body. `null` (owner has no body) turns the resonator off. */
+    /**
+     * Test seams: WHAT is installed, not just whether anything is ([isEngaged]).
+     *
+     * On a declared chain all three arrive as slots, the material as an INDEX into a shared
+     * catalogue, so a wrong lookup or a knob wired to the wrong argument installs a real bank of
+     * the wrong box and reads as "engaged" either way. Nothing else can see which one it is.
+     */
+    internal val installedBands: List<FilterDef.Body.Mode>? get() = curBands
+
+    internal val installedMix: Double get() = curMix
+
+    internal val installedFloor: Double? get() = curFloor
+
+    /**
+     * Configure from the OWNER voice's body, or from a declared chain's slots. `null` (nobody asks
+     * for a body) turns the resonator off.
+     *
+     * **Open question, recorded 2026-09-18 (round 1 of Katalyst step 5a-2), not a regression:**
+     * turning the stage OFF is a hard CUT ([reset] clears the swap), while every material, mix or
+     * floor CHANGE crossfades. The asymmetry pre-dates the Katalyst DSL and sits at the same moment
+     * an owner handover already hits on the voice path, so nothing got worse; it is simply visible
+     * now that a `.katp` can switch a declared stage off mid-phrase. The shape it wants is a
+     * `KatalystFilterSwap.fadeOut()` (ramp the installed bank's wet to zero over the same 12 ms and
+     * clear when the ramp ends) so that off is as declick as every other change; the maintainer
+     * records it in `docs/tasks/katalyst-dsl.md`.
+     */
     fun configure(body: FilterDef.Body?) {
         if (body == null) {
             if (swap.active) reset() // owner has no body → turn off, once

@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
+import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
@@ -30,18 +31,26 @@ fun runWorkletSerializationBenchmark() {
     val voiceData = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8
         sound = SoundValue.Named("supersaw"); soundIndex = 1
-        oscParams = mutableMapOf("voices" to 7.0, "spread" to 0.3)
+        oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3; cylinder = 1
+        // The voice fields the named calls below set: the knobs the call names plus the ones each
+        // door's fill supplies (Katalyst step 5a-3), so the slot half has a voice half to ride
+        // beside, which is what the wire actually carries until step 5b.
+        reverb = 0.3; reverbSize = 4.0
+        delay = 0.2; delayTime = 0.25; delayFeedback = 0.3; delayCap = 1.0
+        compressorThreshold = -20.0; compressorRatio = 8.0; compressorKnee = 6.0
+        compressorAttack = 0.003; compressorRelease = 0.1
         // The orbit's slot state a bus door writes from Katalyst step 5a on: what
         // `.reverb(wet, size).delay(wet, time).compressor(ratio = 8)` puts on every event, next to
         // the voice fields it has always set. Both halves ride the wire until step 5b retires the
         // fields; this line is what that costs (`audio/ref/performance.md`).
-        katalystParams = mutableMapOf(
+        katalystParams = paramBagOf(
             "reverb.wet" to 0.3, "reverb.size" to 4.0,
             "delay.wet" to 0.2, "delay.time" to 0.25, "delay.feedback" to 0.3, "delay.cap" to 1.0,
-            "compressor.ratio" to 8.0,
+            "compressor.threshold" to -20.0, "compressor.ratio" to 8.0, "compressor.knee" to 6.0,
+            "compressor.attack" to 0.003, "compressor.release" to 0.1,
         )
     }.toVoiceData()
     val sv = ScheduledVoice("pb-1", voiceData, 1.0, 2.0, 0.5)

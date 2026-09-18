@@ -9,6 +9,11 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -66,7 +71,9 @@ class LangCompressorSpec : StringSpec({
         }
     }
 
-    "compressor() with leading params only leaves the rest unset" {
+    "compressor() with leading params only fills the rest with the shared constants" {
+        // Katalyst step 5a-3: the compound-door fill rule. Byte-identical to what the engine did,
+        // because `Voice.Compressor.fromParams` substituted exactly these three for a null field.
         val p = note("c").compressor(-15, 3)
         val events = p.queryArc(0.0, 1.0)
 
@@ -74,20 +81,20 @@ class LangCompressorSpec : StringSpec({
         with(events[0].data) {
             compressorThreshold shouldBe -15.0
             compressorRatio shouldBe 3.0
-            compressorKnee shouldBe null
-            compressorAttack shouldBe null
-            compressorRelease shouldBe null
+            compressorKnee shouldBe COMPRESSOR_KNEE_DB
+            compressorAttack shouldBe COMPRESSOR_ATTACK_SECONDS
+            compressorRelease shouldBe COMPRESSOR_RELEASE_SECONDS
         }
     }
 
-    "compressor() with named params skips unset slots" {
+    "compressor() with named params fills the ones it skipped" {
         val p = SprudelPattern.compile("""note("c").compressor(knee = 2, release = 0.5)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
         with(events[0].data) {
-            compressorThreshold shouldBe null
-            compressorRatio shouldBe null
+            compressorThreshold shouldBe COMPRESSOR_THRESHOLD_DB
+            compressorRatio shouldBe COMPRESSOR_RATIO
             compressorKnee shouldBe 2.0
             compressorRelease shouldBe 0.5
         }
@@ -125,7 +132,7 @@ class LangCompressorSpec : StringSpec({
 
         events.size shouldBe 2
         events.map { it.data.compressorThreshold } shouldBe listOf(3.0, 4.0)
-        events[0].data.compressorRatio shouldBe null
+        events[0].data.compressorRatio shouldBe COMPRESSOR_RATIO
     }
 
     "comp() alias reaches the same fields" {

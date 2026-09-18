@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_bridge
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
@@ -38,12 +40,14 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *
  * Every slot of the classic chain falls into exactly one of FOUR families, and each gets a row:
  *
- *  1. **gate-off wet** (0.0): the amount knob of a stage that has one. Seeding it with the touched
- *     constant would switch that effect on for every song that never asked for it.
+ *  1. **untouched zero** (0.0): a knob whose engine-untouched value is zero, so seeding it with
+ *     the touched constant would switch that effect on for every song that never asked for it:
+ *     `delay.wet`, `reverb.wet`, `phaser.wet`, `duck.depth`.
  *  2. **unset** ([SLOT_UNSET]): where "off" is an absence rather than a number, so the wire's
  *     non-finite marker carries it: all five compressor slots (`Voice.Compressor.fromParams`
  *     gates on "any of the five set", so even one finite constant is a compressor already on),
- *     `duck.orbit` and `reverb.lowpass`.
+ *     `duck.orbit`, `reverb.lowpass`, and the four name-and-amount slots of the two stages gated
+ *     on a NAME, `body.material`, `body.wet`, `vowel.vowel` and `vowel.wet`.
  *  3. **off-value** (0.0): a knob that is not the amount but IS where the engine's gate sits, so
  *     zeroing the wet alone would not be off: `delay.time` and `reverb.size` (the gates are
  *     `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS` and `KatalystReverbEffect.MIN_ACTIVE_SIZE`),
@@ -62,8 +66,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
     /** Every knob of every stage, flattened to `slot name to default`, in declaration order. */
     fun slots(stage: KatalystStageDsl): List<Pair<String, Double>> {
         val knobs: List<IgnitorDsl?> = when (stage) {
-            is KatalystStageDsl.Body -> listOf(stage.wet, stage.floor)
-            is KatalystStageDsl.Vowel -> listOf(stage.wet, stage.floor)
+            is KatalystStageDsl.Body -> listOf(stage.material, stage.wet, stage.floor)
+            is KatalystStageDsl.Vowel -> listOf(stage.vowel, stage.wet, stage.floor)
             is KatalystStageDsl.Delay -> listOf(stage.wet, stage.time, stage.feedback, stage.cap)
             is KatalystStageDsl.Reverb -> listOf(stage.wet, stage.size, stage.lowpass)
             is KatalystStageDsl.Phaser -> listOf(stage.rate, stage.wet, stage.center, stage.sweep, stage.floor)
@@ -82,8 +86,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
     "every knob of the classic chain is a slot named <stage>.<knob>" {
         KatalystDsl.classic.stages.flatMap { slots(it) }.map { it.first } shouldBe listOf(
-            "body.wet", "body.floor",
-            "vowel.wet", "vowel.floor",
+            "body.material", "body.wet", "body.floor",
+            "vowel.vowel", "vowel.wet", "vowel.floor",
             "delay.wet", "delay.time", "delay.feedback", "delay.cap",
             "reverb.wet", "reverb.size", "reverb.lowpass",
             "phaser.rate", "phaser.wet", "phaser.center", "phaser.sweep", "phaser.floor",
@@ -93,11 +97,16 @@ class KatalystDefaultsSyncSpec : StringSpec({
         )
     }
 
-    "family 1, the gate-off wet slots: every amount knob is 0.0, never its touched constant" {
+    "family 1, the untouched zeros: every knob here is 0.0, never its touched constant" {
         // A slot's default is its value when nobody writes it, so seeding an amount with the
         // touched constant would put REVERB_WET of room on every orbit of every song that never
-        // wrote `reverb(...)`.
-        listOf("body.wet", "vowel.wet", "delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
+        // wrote `reverb(...)`. The criterion for THIS family is exactly that: a knob whose
+        // engine-UNTOUCHED value is zero belongs here, because seeding it with the touched constant
+        // would switch that effect on everywhere. It is not about where the engine's gate sits (the
+        // delay gates on `time`, the reverb on `size`, the duck on `orbit`, and `duck.orbit` is in
+        // family 2 while `phaser.wet` is here). Family 3 holds the two gate knobs whose untouched
+        // value happens to be zero, `delay.time` and `reverb.size`, for this same reason.
+        listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
             .forEach { name ->
                 withClue(name) { classicSlots.getValue(name) shouldBe 0.0 }
             }
@@ -107,14 +116,17 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // 0.0 as well (PHASER_WET, DUCK_DEPTH), so for those two the gate and the constant say the
         // same thing and there is nothing to tell apart.
         listOf(
-            "body.wet" to BODY_WET,
-            "vowel.wet" to VOWEL_WET,
             "delay.wet" to DELAY_WET,
             "reverb.wet" to REVERB_WET,
         ).forEach { (name, touched) ->
-            val isTouchedDefault = classicSlots.getValue(name) == touched
+            withClue(name) { classicSlots.getValue(name) shouldNotBe touched }
+        }
 
-            withClue(name) { isTouchedDefault shouldBe false }
+        // `body.wet` and `vowel.wet` are NOT here, and that is the fix of round 1: a 0.0 amount is
+        // a SET amount, so the engine never substituted its constant and a material-only
+        // `body("wood")` played dry on a declared chain. They are in family 2 below.
+        listOf("body.wet", "vowel.wet").forEach { name ->
+            withClue(name) { classicSlots.getValue(name).isFinite() shouldBe false }
         }
     }
 
@@ -122,21 +134,41 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // ALL FIVE compressor slots, not just the threshold. `Voice.Compressor.fromParams` gates on
         // "any of the five set", so a single finite constant among them is a compressor that is
         // already on for every song that never wrote `compressor(...)`.
+        //
+        // `body.material` and `vowel.vowel` joined them on 2026-09-18 (Katalyst step 5a-2): the
+        // index of a name in a closed catalogue, where 0 IS a legitimate entry (`none`), so the off
+        // state has to be the absence marker and not a zero. Index 0 resolving to off as well is
+        // belt to that braces, not the mechanism.
+        //
+        // `body.wet` and `vowel.wet` joined them in round 1 of that step's review, for the
+        // compressor's reason and not the index's: `KatalystSlots.bodyDef` substitutes BODY_WET for
+        // an UNSET mix, and a 0.0 default is set, so a material-only `body("wood")` ran the bank
+        // fully dry on a declared chain. Safe here and nowhere else in this family, because these
+        // two stages are gated on their NAME: no material, no stage, whatever the amount says.
         listOf(
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
-            "compressor.release", "duck.orbit", "reverb.lowpass",
+            "compressor.release", "duck.orbit", "reverb.lowpass", "body.material", "vowel.vowel",
+            "body.wet", "vowel.wet",
         ).forEach { name ->
             withClue(name) { classicSlots.getValue(name).isFinite() shouldBe false }
         }
 
-        // ...and none of the five is its touched constant, which is the mistake this row exists for.
+        // ...and none of the seven numeric ones is its touched constant, which is the mistake this
+        // row exists for: the point of "unset" is that the ENGINE substitutes, so a chain that
+        // wrote the constant out would look identical and stop being a declaration of "untouched".
         listOf(
             "compressor.threshold" to COMPRESSOR_THRESHOLD_DB,
             "compressor.ratio" to COMPRESSOR_RATIO,
             "compressor.knee" to COMPRESSOR_KNEE_DB,
             "compressor.attack" to COMPRESSOR_ATTACK_SECONDS,
             "compressor.release" to COMPRESSOR_RELEASE_SECONDS,
+            "body.wet" to BODY_WET,
+            "vowel.wet" to VOWEL_WET,
         ).forEach { (name, touched) ->
+            // The raw `==` and not `shouldNotBe`, deliberately, and this is the one exception
+            // code-style rule 23 names: every slot here is NaN, so `shouldNotBe` would pass for the
+            // wrong reason (NaN is not equal to itself) and say nothing about whether the slot is
+            // still unset. The raw comparison is the same verdict for the right reason.
             val isTouchedDefault = classicSlots.getValue(name) == touched
 
             withClue(name) { isTouchedDefault shouldBe false }
@@ -157,9 +189,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "delay.feedback" to DELAY_FEEDBACK,
             "reverb.size" to REVERB_SIZE,
         ).forEach { (name, touched) ->
-            val isTouchedDefault = classicSlots.getValue(name) == touched
-
-            withClue(name) { isTouchedDefault shouldBe false }
+            withClue(name) { classicSlots.getValue(name) shouldNotBe touched }
         }
     }
 
@@ -183,10 +213,11 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
     "the four families together cover every slot, with no slot in two of them" {
         // The rows above are lists, and a slot quietly added to the chain would be in none of them.
-        val gateOff = listOf("body.wet", "vowel.wet", "delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
+        val gateOff = listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
         val unset = listOf(
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
-            "compressor.release", "duck.orbit", "reverb.lowpass",
+            "compressor.release", "duck.orbit", "reverb.lowpass", "body.material", "vowel.vowel",
+            "body.wet", "vowel.wet",
         )
         val offValue = listOf("delay.time", "delay.feedback", "reverb.size")
         val constant = listOf(
@@ -219,11 +250,21 @@ class KatalystDefaultsSyncSpec : StringSpec({
         KatalystStageDsl.Phaser().floor shouldBe IgnitorDsl.Constant(PHASER_FLOOR)
     }
 
-    "the phaser and the duck stay OFF bare: the two stages that need one more knob" {
-        // "Touched" is not "audible" for these two, and that is not an oversight: it matches the
+    "the phaser, the duck, the body and the vowel stay OFF bare: one knob has to name something" {
+        // "Touched" is not "audible" for these four, and that is not an oversight: it matches the
         // sprudel doors today. The phaser is gated on its depth (`Phaser.MIN_ACTIVE_DEPTH`), so
         // `phaser()` with no wet is a chain entry that does nothing; the duck needs a source orbit
-        // before it can duck anything.
+        // before it can duck anything; and the body and the vowel need a catalogue INDEX.
+        val bareMaterial = (KatalystStageDsl.Body().material as IgnitorDsl.Constant).value
+        val bareVowel = (KatalystStageDsl.Vowel().vowel as IgnitorDsl.Constant).value
+
+        withClue("a bare body names no material") { bareMaterial.isFinite() shouldBe false }
+        withClue("a bare vowel names none either") { bareVowel.isFinite() shouldBe false }
+        // ...and not a zero, for the same reason `duck.orbit` is not: 0 is `none`, a real entry in
+        // the catalogue, so "never set" has to be the absence marker to stay distinguishable.
+        IgnitorDsl.Constant(bareMaterial) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
+        IgnitorDsl.Constant(bareVowel) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
+
         KatalystStageDsl.Phaser().wet shouldBe IgnitorDsl.Constant(PHASER_WET)
         (KatalystStageDsl.Phaser().wet as IgnitorDsl.Constant).value shouldBe 0.0
         KatalystStageDsl.Phaser().rate shouldBe IgnitorDsl.Constant(PHASER_RATE_HZ)
@@ -244,16 +285,32 @@ class KatalystDefaultsSyncSpec : StringSpec({
         IgnitorDsl.Constant(orbit) shouldBe IgnitorDsl.Constant(SLOT_UNSET)
     }
 
-    "body and vowel name no material in the classic chain: a name is not a slot" {
+    "the classic body and vowel carry their NAME as an unset index slot, like every other knob" {
+        // Katalyst step 5a-2 (2026-09-18): a name travels as the INDEX of a name in a closed
+        // catalogue, so the two stages that used to be the exception are slots like the rest, and
+        // `body("wood")` on a pattern reaches a declared classic chain through `katp`.
         val body = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Body>().single()
         val vowel = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Vowel>().single()
 
-        body.material shouldBe null
-        vowel.vowel shouldBe null
+        val material = body.material.shouldBeInstanceOf<IgnitorDsl.Param>()
+        val theVowel = vowel.vowel.shouldBeInstanceOf<IgnitorDsl.Param>()
+
+        material.name shouldBe "body.material"
+        theVowel.name shouldBe "vowel.vowel"
+
+        // Unset, not 0: 0 is `none`, a real catalogue entry (see family 2).
+        material.default.isFinite() shouldBe false
+        theVowel.default.isFinite() shouldBe false
+
+        // And so is the AMOUNT of both stages, which is the other half of "a material-only call
+        // works on a declared chain": the engine substitutes BODY_WET / VOWEL_WET for an unset mix,
+        // so the door has nothing to invent (round 1, 2026-09-18).
+        body.wet.shouldBeInstanceOf<IgnitorDsl.Param>().default.isFinite() shouldBe false
+        vowel.wet.shouldBeInstanceOf<IgnitorDsl.Param>().default.isFinite() shouldBe false
     }
 
     "a classic chain rebuilt from FRESH instances gets the same name, NaN slots and all" {
-        // The identity map is content-keyed, so it hashes the chain. `classic` carries NaN on seven
+        // The identity map is content-keyed, so it hashes the chain. `classic` carries NaN on eleven
         // slots, and NaN is the one value where hashCode and equals can disagree: IEEE says NaN is
         // not equal to itself, Kotlin's data-class equals says it is, and a hash that took the IEEE
         // view would put a rebuilt chain in a different bucket and mint it a second name. Then one
@@ -280,11 +337,13 @@ class KatalystDefaultsSyncSpec : StringSpec({
         val rebuilt = KatalystDsl(
             KatalystDsl.classic.stages.map { stage ->
                 when (stage) {
-                    is KatalystStageDsl.Body ->
-                        KatalystStageDsl.Body(stage.material, freshKnob(stage.wet), freshKnob(stage.floor))
+                    is KatalystStageDsl.Body -> KatalystStageDsl.Body(
+                        freshKnob(stage.material), freshKnob(stage.wet), freshKnob(stage.floor),
+                    )
 
-                    is KatalystStageDsl.Vowel ->
-                        KatalystStageDsl.Vowel(stage.vowel, freshKnob(stage.wet), freshKnob(stage.floor))
+                    is KatalystStageDsl.Vowel -> KatalystStageDsl.Vowel(
+                        freshKnob(stage.vowel), freshKnob(stage.wet), freshKnob(stage.floor),
+                    )
 
                     is KatalystStageDsl.Delay -> KatalystStageDsl.Delay(
                         freshKnob(stage.wet), freshKnob(stage.time), freshKnob(stage.feedback), freshKnob(stage.cap),

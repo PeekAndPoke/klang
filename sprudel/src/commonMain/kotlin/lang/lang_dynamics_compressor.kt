@@ -8,28 +8,78 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- compressor ------------------------------------------------------------------------------------------------------
 
 // Each slot writes the voice field AND the orbit chain's matching slot (`compressor.threshold`, ...),
 // which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
-// step 5a). NO fill, unlike `reverb(...)` / `delay(...)`, and deliberately: the engine's gate is "any
-// of the five set, each unset one takes its constant", so `compressor(ratio = 8)` must switch the
-// stage on with the constant threshold on both paths. The recorded asymmetry (`KatalystDsl.classic`).
+// step 5a), and then fills the other four.
+
+/**
+ * Fills the compressor stage's companions from `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is
+ * the rule; this is only what THIS door does). Called from every one of the five setters, because
+ * the compressor has no name knob: `compressor(ratio = 8)` compresses at the constant threshold.
+ *
+ * Fills the voice FIELDS with the same five constants, for the born-with path, until step 5b.
+ *
+ * Byte-identical to the engine's own fallback, which is what let the fill move to the door: the
+ * five constants written here are exactly what `Voice.Compressor.fromParams` substituted for a null
+ * field. Until step 5a-3 this door filled nothing and the asymmetry with `reverb(...)` was recorded
+ * rather than fixed.
+ *
+ * The HEAD setter, the threshold, is the one setter here a bare call can reach with a null; it then
+ * writes nothing at all (`if (value != null)`).
+ */
+private fun SprudelVoiceData.fillCompressorDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("compressor.threshold", value = null, default = COMPRESSOR_THRESHOLD_DB)
+    slots.setOrDefault("compressor.ratio", value = null, default = COMPRESSOR_RATIO)
+    slots.setOrDefault("compressor.knee", value = null, default = COMPRESSOR_KNEE_DB)
+    slots.setOrDefault("compressor.attack", value = null, default = COMPRESSOR_ATTACK_SECONDS)
+    slots.setOrDefault("compressor.release", value = null, default = COMPRESSOR_RELEASE_SECONDS)
+
+    if (compressorThreshold == null) {
+        compressorThreshold = COMPRESSOR_THRESHOLD_DB
+    }
+
+    if (compressorRatio == null) {
+        compressorRatio = COMPRESSOR_RATIO
+    }
+
+    if (compressorKnee == null) {
+        compressorKnee = COMPRESSOR_KNEE_DB
+    }
+
+    if (compressorAttack == null) {
+        compressorAttack = COMPRESSOR_ATTACK_SECONDS
+    }
+
+    if (compressorRelease == null) {
+        compressorRelease = COMPRESSOR_RELEASE_SECONDS
+    }
+}
 
 private val compressorThresholdMutation = voiceSetter { raw ->
     val value = raw?.asDoubleOrNull()
 
     if (value != null) {
         compressorThreshold = value
-        putKatalystParam("compressor.threshold", value)
+        katalystParamsOrNew().set("compressor.threshold", value)
+        fillCompressorDefaults()
     }
 }
 
@@ -46,7 +96,8 @@ private val compressorRatioMutation = voiceSetter { raw ->
 
     if (value != null) {
         compressorRatio = value
-        putKatalystParam("compressor.ratio", value)
+        katalystParamsOrNew().set("compressor.ratio", value)
+        fillCompressorDefaults()
     }
 }
 
@@ -63,7 +114,8 @@ private val compressorKneeMutation = voiceSetter { raw ->
 
     if (value != null) {
         compressorKnee = value
-        putKatalystParam("compressor.knee", value)
+        katalystParamsOrNew().set("compressor.knee", value)
+        fillCompressorDefaults()
     }
 }
 
@@ -80,7 +132,8 @@ private val compressorAttackMutation = voiceSetter { raw ->
 
     if (value != null) {
         compressorAttack = value
-        putKatalystParam("compressor.attack", value)
+        katalystParamsOrNew().set("compressor.attack", value)
+        fillCompressorDefaults()
     }
 }
 
@@ -97,7 +150,8 @@ private val compressorReleaseMutation = voiceSetter { raw ->
 
     if (value != null) {
         compressorRelease = value
-        putKatalystParam("compressor.release", value)
+        katalystParamsOrNew().set("compressor.release", value)
+        fillCompressorDefaults()
     }
 }
 
@@ -118,6 +172,13 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * One compressor per [orbit bus](/manuals/lexikon/orbit-bus), so it hears the whole orbit summed
  * and its settings come from the orbit's owning voice. That is what makes it a drum-bus compressor
  * rather than a per-note one: give a pattern its own orbit to compress it on its own.
+ *
+ * The call sets every slot: the ones you leave out take the shared defaults, threshold -20 dB,
+ * ratio 4:1, knee 6 dB, attack 3 ms and release 100 ms, unless an earlier call already set them. So
+ * `compressor(ratio = 8)` is a working compressor at -20 dB, and `compressor.threshold` reads -20
+ * after it. Any of the five switches the stage on, because a compressor has no on-knob. Slots apply
+ * in order, threshold first, so a mapper on a later slot sees a default an earlier slot of the same
+ * call filled in (`compressor(-15, ratio = mul(2))` is ratio 8).
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`compressor(ratio = mul(2))`), and the numeric slots read back as `compressor.threshold`, `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`.

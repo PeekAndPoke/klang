@@ -122,31 +122,26 @@ internal object KatalystSlots {
     }
 
     /**
-     * The modal bands behind a `body("<material>")` name, or null when the name resolves to
-     * nothing, which turns the stage OFF.
-     *
-     * Katalyst step 3c (2026-09-17) closed the seam: the wire carries the NAME, and both readers
-     * of a name now go through the same [BodyMaterials] table in `audio_bridge`. A null name (the
-     * stage was declared without a material) and an unknown name are the same answer, off, which
-     * is the rule `SprudelVoiceData.toVoiceData` follows on the voice path. Case handling is that
-     * table's own `lowercase()`, so `body("Wood")` resolves on both paths alike.
-     */
-    fun bodyModes(material: String?): List<FilterDef.Body.Mode>? =
-        material?.let { BodyMaterials.modesFor(it) }
-
-    /** The formant bands behind a `vowel("a")` name. Twin of [bodyModes], through [VowelBands]. */
-    fun vowelBands(vowel: String?): List<FilterDef.Formant.Band>? =
-        vowel?.let { VowelBands.bandsFor(it) }
-
-    /**
      * The body resonator a declared stage asks for, from its RESOLVED `wet` and `floor`, or null
      * (the stage is off) when [bands] is null, whatever `mix` says.
+     *
+     * The bands come from `BodyMaterials.modesAt(index)`, which the writer calls directly: step 3c
+     * (2026-09-17) moved the table into `audio_bridge` and step 5a-2 (2026-09-18) made the wire
+     * carry the INDEX rather than the name, which left nothing for a wrapper here to add. An unset
+     * slot (non-finite), an index of 0 (`none`) and an index out of range are the same answer, off,
+     * which is the rule `SprudelVoiceData.toVoiceData` follows for an unknown NAME on the voice
+     * path; the name-to-index half is `BodyMaterials.indexOf`, and both doors call it.
      *
      * `mix` is the `wet` slot and a non-finite `floor` takes [BODY_FLOOR], which is also what a
      * null floor means to [FilterDef.Body]; the constant is written out so the stage carries one
      * value instead of two spellings of it. A non-finite `mix` takes [BODY_WET] by the same rule:
      * unset is unset on every knob, and the resonator's own `mix` is read straight into the
      * wet/dry law, where a NaN would silence the orbit.
+     *
+     * These two substitutions are the **NaN rule for a raw `katp` write**, not a second fill. The
+     * `body(...)` door fills its own companions when a call names the material (`/dsl-design` §4,
+     * checklist 11, Katalyst step 5a-3), so a slot only ever arrives unset here when somebody wrote
+     * `katp("body.material", n)` by hand, or when a chain declares the knob and nothing sets it.
      */
     fun bodyDef(bands: List<FilterDef.Body.Mode>?, mix: Double, floor: Double): FilterDef.Body? {
         if (bands == null) {
@@ -161,7 +156,10 @@ internal object KatalystSlots {
         )
     }
 
-    /** The formant bank a declared stage asks for. Twin of [bodyDef], with the vowel constants. */
+    /**
+     * The formant bank a declared stage asks for. Twin of [bodyDef], with the vowel constants and
+     * `VowelBands.bandsAt` as the lookup, and the same NaN rule for a raw `katp` write.
+     */
     fun vowelDef(bands: List<FilterDef.Formant.Band>?, mix: Double, floor: Double): FilterDef.Formant? {
         if (bands == null) {
             return null
@@ -182,6 +180,10 @@ internal object KatalystSlots {
      * Straight through [Voice.Compressor.fromParams], the voice path's own rule: any of the five
      * set means on, and every unset one takes its `COMPRESSOR_*` constant. A non-finite slot is
      * what "unset" looks like on the wire, so it maps to the `null` that function reads.
+     *
+     * That substitution is the NaN rule for a raw `katp` write, not a second fill: since Katalyst
+     * step 5a-3 the `compressor(...)` door fills the other four itself, whichever of the five the
+     * call named, so the values it writes are already the ones this function would have supplied.
      */
     fun compressorSettings(
         threshold: Double,

@@ -18,6 +18,7 @@ import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeToStringOrNull
+import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
@@ -329,7 +330,7 @@ class GraalSprudelPattern(
                 it.sound = sound?.let(SoundValue::Named)
                 it.soundIndex = soundIndex
                 // Oscillator parameters
-                it.oscParams = oscParams?.toMutableMap()
+                it.oscParams = oscParams?.let { params -> paramBagOf(params) }
                 // ADSR (flat fields)
                 it.attack = attack
                 it.decay = decay

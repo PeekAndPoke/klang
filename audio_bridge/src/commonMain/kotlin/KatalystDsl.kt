@@ -42,13 +42,14 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  * concept, one word, four hosts: exciter / voice pipeline / orbit chain / master bus.
  *
  * Like the master, a Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern
- * event, so an orbit's chain can change over musical time. Unlike the master, `.katalyst(...)`
- * APPENDS to the chain the pattern already carries (see `KatalystDsl.plus`), because the pattern
- * text is the stage order.
+ * event, so an orbit's chain can change over musical time. And like the master, `.katalyst(dsl)`
+ * REPLACES the chain the pattern already carries (decided 2026-09-18): the chain is one instrument,
+ * written in one place, and the way to build on the familiar one is `k.classic()` inside the
+ * builder rather than a second door.
  *
- * Step 1 of the Katalyst work (2026-09-17) is the wire model and the plumbing only: the chain
- * travels and is registered, and the cylinder does not read it yet. Nothing sounds different until
- * step 2.
+ * The cylinder reads a declared chain and runs it (Katalyst step 2 onward), swapping it in with a
+ * crossfade when the orbit is already sounding; an orbit that declares nothing keeps the historical
+ * chain, driven by its owner voice's fields, byte-identical to the pre-DSL engine.
  */
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
@@ -81,11 +82,11 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *
          * The families, then:
          *
-         *  - zero, because the engine's untouched value is zero: `body.wet`, `vowel.wet`,
-         *    `delay.wet`, `delay.time`, `delay.feedback`, `reverb.wet`, `reverb.size`,
-         *    `phaser.wet`, `duck.depth`;
+         *  - zero, because the engine's untouched value is zero: `delay.wet`, `delay.time`,
+         *    `delay.feedback`, `reverb.wet`, `reverb.size`, `phaser.wet`, `duck.depth`;
          *  - [SLOT_UNSET], the wire's non-finite "never set", where the off state is an absence
-         *    rather than a number: all FIVE compressor slots, `duck.orbit`, `reverb.lowpass`;
+         *    rather than a number: all FIVE compressor slots, `duck.orbit`, `reverb.lowpass`,
+         *    `body.material`, `vowel.vowel`, `body.wet` and `vowel.wet`;
          *  - the shared constant, for a knob that is inert while its gate is off and must be right
          *    the moment the gate opens: `delay.cap`, `body.floor`, `vowel.floor`, `phaser.rate`,
          *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.attack`.
@@ -97,34 +98,47 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * `fromParams` verbatim (any finite = on, each non-finite = its constant) then behaves
          * exactly as the voice path does today.
          *
-         * **What makes a door still feel familiar is the door, not this chain**, and the two doors
-         * do it differently:
+         * **`body.wet` and `vowel.wet` follow the compressor, not the sends** (round 1 of step
+         * 5a-2's review, 2026-09-18). They are [SLOT_UNSET] rather than 0.0, because 0.0 is a SET
+         * value: `KatalystSlots.bodyDef` substitutes [BODY_WET] for an unset mix exactly as
+         * `fromParams` substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
+         * "unset", so a material-only `body("wood")` on a declared classic chain ran the bank at a
+         * fully dry mix while the same call on an undeclared orbit played it at [BODY_WET]. Unset
+         * is safe here and NOT on the sends, because these two stages are gated on their NAME:
+         * `bodyDef` returns null whenever the bands are null, so an orbit that names no material
+         * cannot be switched on by a wet, however large. The engine's substitution is what makes a
+         * raw `katp("body.material", 1)` behave like the door, and it is the NaN rule for a raw
+         * write, not a second fill.
          *
-         *  - a sprudel `reverb(...)` / `delay(...)` call fills every companion slot it leaves unset
-         *    at write time (the rule of 2026-09-16, `constants/SendEffectDefaults.kt`), so
-         *    `.reverb(wet = 0.3)` writes `size` too and sounds like it always has. A raw
-         *    `katp("reverb.wet", 0.3)` writes exactly ONE slot, so on this chain it stays silent
-         *    until `reverb.size` is written as well.
-         *  - `compressor(...)` does NOT fill, and deliberately: a tail-only call such as
-         *    `compressor(ratio = 8)` leaves `threshold` untouched (see the door's own `if`), and
-         *    the voice path still compresses, at [COMPRESSOR_THRESHOLD_DB], because an unset knob
-         *    takes its constant. So a raw `katp("compressor.ratio", 8)` on this chain switches the
-         *    stage ON with the constant threshold, which is exactly what the voice does today. The
-         *    asymmetry between the two doors is real and pre-dates this chain; it is recorded here
-         *    rather than papered over.
+         * **What makes a door still feel familiar is the door, not this chain**: a sprudel door
+         * fills the companions of the stage a call names (`/dsl-design` §4, the rule's one home),
+         * so `.reverb(wet = 0.3)` and `.body("wood")` sound as they always have on this chain.
          *
-         * That is the honest consequence of slots, and it is why the doors do the filling they do.
+         * A raw `katp(...)` is the other half of that bargain: it writes exactly ONE slot, so
+         * `katp("reverb.wet", 0.3)` on this chain stays silent until `reverb.size` is written as
+         * well. That is the honest consequence of slots, and it is why the doors fill.
          *
-         * `material` and `vowel` are names, not numbers, so they have no slot and stay unset here.
+         * `body.material` and `vowel.vowel` are slots too, and they carry a NUMBER: the INDEX of a
+         * name in `BodyMaterials.names` respectively `VowelBands.names` (Katalyst step 5a-2,
+         * 2026-09-18). Unset here, because an untouched orbit names no material and no vowel, and
+         * unset is off. That is what lets `body("wood", wet = 0.3)` on a pattern keep working when
+         * its orbit declares a classic chain: the door writes the index, the same way it writes the
+         * wet. And `body("wood")` with no wet works because the door fills the wet and the floor
+         * from the same two constants the engine would have substituted.
          */
         val classic: KatalystDsl = KatalystDsl(
             listOf(
                 KatalystStageDsl.Body(
-                    wet = IgnitorDsl.Param(name = "body.wet", default = 0.0),
+                    material = IgnitorDsl.Param(name = "body.material", default = SLOT_UNSET),
+                    // Unset, not 0.0: the engine substitutes BODY_WET for an unset mix, and the
+                    // stage is gated on the material, so seeding the amount switches nothing on.
+                    wet = IgnitorDsl.Param(name = "body.wet", default = SLOT_UNSET),
                     floor = IgnitorDsl.Param(name = "body.floor", default = BODY_FLOOR),
                 ),
                 KatalystStageDsl.Vowel(
-                    wet = IgnitorDsl.Param(name = "vowel.wet", default = 0.0),
+                    vowel = IgnitorDsl.Param(name = "vowel.vowel", default = SLOT_UNSET),
+                    // Unset for the body's reason, see the classic KDoc.
+                    wet = IgnitorDsl.Param(name = "vowel.wet", default = SLOT_UNSET),
                     floor = IgnitorDsl.Param(name = "vowel.floor", default = VOWEL_FLOOR),
                 ),
                 KatalystStageDsl.Delay(
@@ -171,9 +185,8 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
 /**
  * One stage in a [KatalystDsl] chain, applied to the orbit in list order.
  *
- * Stages are thin declarations. Nothing reads them yet: step 1 of the Katalyst work registers a
- * chain and the cylinder ignores it, so the paragraphs below are the CONTRACT a stage carries, and
- * what step 2 will build from it, not a description of code that runs today.
+ * Stages are thin declarations: the paragraphs below are the CONTRACT a stage carries, and
+ * `KatalystChainBuilder` is the one place that turns each one into the effect the engine runs.
  *
  * **The contract: a stage is a shell over the shared DSP classes in `audio_be/`** (the same
  * `Compressor` / `Reverb` / `DelayLine` the master stages use). No stage may introduce its own DSP
@@ -190,10 +203,13 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * effect", so its knob defaults are the shared touched constants from
  * `constants/SendEffectDefaults.kt` and `constants/BusEffectDefaults.kt`, never a literal here.
  *
- * Two stages are deliberately NOT audible bare, matching their sprudel doors: [Phaser] stays off
- * until `wet` is written (the engine gates on `Phaser.MIN_ACTIVE_DEPTH`, and `PHASER_WET` is 0.0),
- * and [Duck] stays off until `orbit` names a source (its default is [SLOT_UNSET]). Everywhere else
- * a bare stage is a working effect.
+ * Four stages are deliberately NOT audible bare, matching their sprudel doors. Three of them wait
+ * for a NAME: [Body] and [Vowel] until `material` respectively `vowel` names an index, and [Duck]
+ * until `orbit` names a source; all three carry [SLOT_UNSET] on that one knob. The duck waits for
+ * a DEPTH as well, because its touched [DUCK_DEPTH] is 0, so naming the source alone is still
+ * silent. [Phaser] is the fourth without a name knob at all: its `wet` carries its own touched
+ * [PHASER_WET], which is 0.0 and therefore below the engine's `Phaser.MIN_ACTIVE_DEPTH` of 0.01.
+ * Every other stage carries its touched constants throughout and a bare one is a working effect.
  *
  * [KatalystDsl.classic] is the other case entirely and reads differently: nobody reached for
  * anything, so every slot carries the engine's untouched value.
@@ -207,15 +223,23 @@ sealed interface KatalystStageDsl {
     /**
      * Resonant body: a bank of narrow modes over a broadband floor, the box a sound sits in.
      *
-     * @param material material name (`"wood"`, `"glass"`, `"tube"`, ...); null = the chain does not
-     *   name one and the orbit keeps whatever it plays. Orbit twin: `body("wood")`.
+     * The material is a knob like every other one, and the number it carries is an INDEX into
+     * `BodyMaterials.names` (Katalyst step 5a-2, 2026-09-18). That is what keeps a name off the
+     * wire as a string and lets a pattern's `body("wood")` reach a declared chain through
+     * `katp("body.material", ...)`: both doors convert through `BodyMaterials.indexOf`, one place.
+     * Index 0 is `none`, and so is an unset, negative or out-of-range index: the stage is off.
+     *
+     * @param material the material's index in `BodyMaterials.names`, the number
+     *   `BodyMaterials.indexOf("wood")` gives. The default is [SLOT_UNSET]: the chain names no
+     *   material and the stage is off. Write a name on either builder door (`k.body("wood")`) and
+     *   it is converted for you. Orbit twin: `body("wood")`.
      * @param wet how much of the orbit runs through the body, 0 to 1. Orbit twin: `body(wet = ...)`.
      * @param floor minimum dry share kept in the mix, 0 to 1. Lower = the modes sit over less dry
      *   and the body is more audible. Orbit twin: `body(floor = ...)`.
      */
     @WireName("body")
     data class Body(
-        val material: String? = null,
+        val material: IgnitorDsl = IgnitorDsl.Constant(SLOT_UNSET),
         val wet: IgnitorDsl = IgnitorDsl.Constant(BODY_WET),
         val floor: IgnitorDsl = IgnitorDsl.Constant(BODY_FLOOR),
     ) : KatalystStageDsl
@@ -223,8 +247,14 @@ sealed interface KatalystStageDsl {
     /**
      * Formant bank: the vowel a sound sings, as a set of resonances over a low broadband floor.
      *
-     * @param vowel vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`); null = the chain
-     *   does not name one. Orbit twin: `vowel("a")`.
+     * The vowel is an INDEX into `VowelBands.names`, the flat `"<register>:<vowel>"` catalogue, for
+     * the same reason the body's material is (see [Body]). Index 0 is `none`, and so is an unset or
+     * out-of-range index: the stage is off.
+     *
+     * @param vowel the vowel's index in `VowelBands.names`, the number `VowelBands.indexOf("a")`
+     *   gives (a bare name is the soprano register). The default is [SLOT_UNSET]: the chain names
+     *   no vowel and the stage is off. Write a name on either builder door (`k.vowel("bass:a")`)
+     *   and it is converted for you. Orbit twin: `vowel("a")`.
      * @param wet how much of the orbit runs through the formant bank, 0 to 1. Orbit twin:
      *   `vowel(wet = ...)`.
      * @param floor minimum dry share kept between the formants, 0 to 1. Much lower than the body's:
@@ -232,7 +262,7 @@ sealed interface KatalystStageDsl {
      */
     @WireName("vowel")
     data class Vowel(
-        val vowel: String? = null,
+        val vowel: IgnitorDsl = IgnitorDsl.Constant(SLOT_UNSET),
         val wet: IgnitorDsl = IgnitorDsl.Constant(VOWEL_WET),
         val floor: IgnitorDsl = IgnitorDsl.Constant(VOWEL_FLOOR),
     ) : KatalystStageDsl

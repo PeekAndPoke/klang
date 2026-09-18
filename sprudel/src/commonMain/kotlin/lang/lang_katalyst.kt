@@ -10,7 +10,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
-import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -23,73 +22,23 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
 // -- katalyst() -------------------------------------------------------------------------------------------------------
 
 /**
- * Stamps an orbit-chain reference onto every event of [source], **appending** to the chain those
+ * Stamps an orbit-chain reference onto every event of [source], **replacing** the chain those
  * events already carry.
  *
- * `x.katalyst(A).katalyst(B)` is `x.katalyst(A + B)`: the pattern text is the stage order, so two
- * doors compose rather than the second replacing the first. This is the one place a Katalyst
- * differs from a master, which replaces (there is one master per playback).
+ * `x.katalyst(A).katalyst(B)` is `x.katalyst(B)`, exactly as `sound()` replaces the instrument and
+ * `master()` the master chain (decided with the maintainer, 2026-09-18, retiring the append rule of
+ * Katalyst step 1). A chain is ONE instrument, and the way to build on the familiar one is
+ * `k.classic()` inside the builder, where the stage order is visible on one line.
  *
- * An incoming [KatalystValue.Named] cannot be appended to, because the chain behind the name lives
- * in the backend registry and not here, so a named chain is REPLACED. Named chains are a later
- * concern.
+ * Why the rule changed: chaining two doors stacked their stages, and duplicated stages read the
+ * SAME slot names, so `.katalyst(Katalyst(k => k.classic())).katalyst(Katalyst(k => k.classic()))`
+ * ran reverb into reverb and two compressors in series off one `reverb(0.3)`.
+ *
+ * [value] is ONE [KatalystValue.Dsl] instance per door, allocated when the door is written and
+ * handed to every event, so stamping a chain costs nothing per event.
  */
-private fun applyKatalyst(source: SprudelPattern, memo: KatalystAppend): SprudelPattern =
-    source.reinterpretVoice { vd -> vd.copy(katalyst = memo.onto(vd.katalyst)) }
-
-/**
- * The append rule of one `.katalyst(dsl)` door, with the memo that keeps it free per event.
- *
- * An event arriving with no chain, or with a named one, gets [fresh]: one instance, allocated
- * once, handed to every event. An event arriving with an inline chain gets that chain plus this
- * door's, memoized on the incoming value **by reference**: a pattern hands the same
- * [KatalystValue.Dsl] instance to every event it emits (that is what [fresh] guarantees one door
- * down), so after the first event the composition costs a scan of a list with one entry in it
- * instead of a fresh stage list, a fresh data class and a structural hash.
- *
- * The memo belongs to the pattern node, not to the process: re-evaluating the script drops the
- * pattern tree and the memo with it. It never decides identity: a composition built somewhere
- * else is content-equal and `uniqueId()` gives it the same name, so a miss costs work, never
- * correctness.
- *
- * Not synchronized, and it does not need to be: the query path is single-threaded by construction
- * (the modifier chain mutates voice data in place, see [io.peekandpoke.klang.sprudel.SprudelVoiceData]).
- * [LIMIT] bounds it against a pathological source that hands out a new instance per event: past
- * that many distinct incoming chains the door simply stops memoizing and keeps composing.
- */
-internal class KatalystAppend(private val katalyst: KatalystDsl) {
-    private val fresh = KatalystValue.Dsl(katalyst)
-    private val seen = ArrayList<KatalystValue.Dsl>(LIMIT)
-    private val composed = ArrayList<KatalystValue.Dsl>(LIMIT)
-
-    fun onto(incoming: KatalystValue?): KatalystValue = when (incoming) {
-        null -> fresh
-        is KatalystValue.Named -> fresh
-        is KatalystValue.Dsl -> compose(incoming)
-    }
-
-    private fun compose(incoming: KatalystValue.Dsl): KatalystValue.Dsl {
-        for (i in seen.indices) {
-            if (seen[i] === incoming) {
-                return composed[i]
-            }
-        }
-
-        val result = KatalystValue.Dsl(incoming.katalyst + katalyst)
-
-        if (seen.size < LIMIT) {
-            seen.add(incoming)
-            composed.add(result)
-        }
-
-        return result
-    }
-
-    companion object {
-        /** How many distinct incoming chains one door memoizes. A stacked pattern has a handful. */
-        internal const val LIMIT: Int = 8
-    }
-}
+private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): SprudelPattern =
+    source.reinterpretVoice { vd -> vd.copy(katalyst = value) }
 
 /**
  * Creates a pattern that declares the **orbit chain**: one silent control event per cycle that
@@ -102,8 +51,8 @@ internal class KatalystAppend(private val katalyst: KatalystDsl) {
  * ```KlangScript(Playable)
  * stack(
  *   s("bd*4").orbit(1),
- *   note("c2 g2").s("supersaw").orbit(1),
- *   katalyst(Katalyst(k => k.reverb(r => r.wet(0.2).size(4)))).orbit(1),
+ *   note("c2 g2").s("supersaw").reverb(wet = 0.25, size = 4).orbit(1),
+ *   katalyst(Katalyst(k => k.classic())).orbit(1),
  * )
  * ```
  *
@@ -111,9 +60,10 @@ internal class KatalystAppend(private val katalyst: KatalystDsl) {
  * declaration to an orbit, which is why the carrier is an ordinary pattern and not a special
  * value.
  *
- * The backend registers a declared chain from this step on and **runs** it from step 2 of the
- * Katalyst work; until then an orbit keeps running its fixed historical chain, so the example
- * above declares the reverb the orbit will run rather than one you can hear today.
+ * `k.classic()` is the chain an orbit has always run, declared as named slots, so the `reverb(...)`
+ * on the supersaw drives the declared room: that is how a bus door and a declaration meet. A chain
+ * that declares no `reverb` stage would have nowhere for that call to land, which is what "the
+ * chain is the instrument" means.
  *
  * @param katalyst The orbit chain to declare.
  * @return A pattern emitting one control event per cycle.
@@ -124,35 +74,37 @@ internal class KatalystAppend(private val katalyst: KatalystDsl) {
  */
 @KlangScript.Function
 fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
-    val memo = KatalystAppend(katalyst)
+    val value = KatalystValue.Dsl(katalyst)
 
     return AtomicPattern.pure.reinterpretVoice { vd ->
-        vd.copy(katalyst = memo.onto(vd.katalyst), control = true)
+        vd.copy(katalyst = value, control = true)
     }
 }
 
 /**
- * Appends to the orbit chain from this pattern's events onward.
+ * Declares the orbit chain from this pattern's events onward.
  *
  * Unlike the top-level [katalyst] carrier, these events still sound: the chain declaration simply
- * rides them. Chaining the door twice appends twice, in written order, so the chain reads like the
- * signal path:
+ * rides them.
  *
- * **A chain referenced BY NAME does not compose yet.** Appending to an event that carries a named
- * chain replaces it, because the stages behind the name live in the backend registry and this door
- * cannot see them. Only inline chains (the ones `Katalyst(...)` builds) concatenate.
+ * **The door REPLACES**, like `sound()` and `master()`: the last `.katalyst(...)` on a pattern is
+ * the chain its orbit runs, and writing two of them is not two halves of one chain. Build the whole
+ * chain in one `Katalyst(k => ...)`, where the list order is the signal order and you can see it:
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw")
- *   .katalyst(Katalyst(k => k.eq(e => e.band(freq = 300, q = 0.8, db = 2.0))))
- *   .katalyst(Katalyst(k => k.reverb(r => r.wet(0.15).size(3))))
+ * note("c3 e3 g3").s("supersaw").reverb(wet = 0.3, size = 3)
+ *   .katalyst(Katalyst(k => k
+ *     .classic()
+ *     .eq(e => e.band(freq = 300, q = 0.8, db = 2.0))
+ *   ))
  * ```
  *
- * That declares an EQ and then a reverb on this pattern's orbit; the engine runs declared chains
- * from step 2 of the Katalyst work.
+ * That is the familiar orbit with a 300 Hz lift at the end of it: `k.classic()` brings the seven
+ * historical stages (once, whatever else the builder says), so the `reverb(...)` on the pattern
+ * still reaches the room, and the `eq` shapes the summed orbit after it.
  *
- * @param katalyst The orbit chain to append.
- * @return A new pattern whose events carry the composed chain.
+ * @param katalyst The orbit chain to declare.
+ * @return A new pattern whose events carry the chain.
  *
  * @scope orbit
  * @category effects
@@ -160,17 +112,17 @@ fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = nu
  */
 @KlangScript.Function
 fun SprudelPattern.katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
-    applyKatalyst(this, KatalystAppend(katalyst))
+    applyKatalyst(this, KatalystValue.Dsl(katalyst))
 
 /**
- * Parses this string as a pattern and appends to its orbit chain from its events onward.
+ * Parses this string as a pattern and declares its orbit chain from its events onward.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".katalyst(Katalyst(k => k.reverb(r => r.wet(0.2)))).s("supersaw")
+ * "c3 e3 g3".katalyst(Katalyst(k => k.classic().gain(1.6))).s("supersaw")
  * ```
  *
- * @param katalyst The orbit chain to append.
- * @return A new pattern whose events carry the composed chain.
+ * @param katalyst The orbit chain to declare.
+ * @return A new pattern whose events carry the chain.
  */
 @KlangScript.Function
 fun String.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): SprudelPattern =
@@ -183,18 +135,17 @@ fun String.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): SprudelP
 // form (d) below still exists for `.apply(gain(0.5).katalyst(...))`.
 
 /**
- * Creates a chained [PatternMapperFn] that appends to the orbit chain after the previous mapper.
+ * Creates a chained [PatternMapperFn] that declares the orbit chain after the previous mapper.
  *
- * @param katalyst The orbit chain to append.
+ * @param katalyst The orbit chain to declare.
  */
 @KlangScript.Function
 fun PatternMapperFn.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null): PatternMapperFn {
-    // Built ONCE, outside the lambda: a mapper is invoked per pattern it is applied to, and a memo
-    // created inside would be thrown away before its first hit. Sharing one memo across those
-    // patterns is the point, not a leak: it is keyed on the incoming chain, not on the pattern.
-    val memo = KatalystAppend(katalyst)
+    // Built ONCE, outside the lambda: a mapper is invoked per pattern it is applied to, and one
+    // value per door is the budget, not one per application.
+    val value = KatalystValue.Dsl(katalyst)
 
-    return this.chain { p -> applyKatalyst(p, memo) }
+    return this.chain { p -> applyKatalyst(p, value) }
 }
 
 // -- katp() -----------------------------------------------------------------------------------------------------------
@@ -215,12 +166,12 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * Direct access to a declared chain's named knobs, the orbit twin of [oscparam]: `oscp` fills the
  * voice's own instrument, `katp` the chain its orbit runs. The vocabulary is what the chain
- * declares, which for a chain built from `k.classic()` is every classic knob: `body.wet`,
- * `body.floor`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`, `delay.feedback`,
- * `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`, `phaser.wet`,
- * `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`, `compressor.ratio`,
- * `compressor.knee`, `compressor.attack`, `compressor.release`, `duck.orbit`, `duck.depth`,
- * `duck.attack`. An authored chain names its own with `Katalyst.param("room", 5)`.
+ * declares, which for a chain built from `k.classic()` is every classic knob: `body.material`,
+ * `body.wet`, `body.floor`, `vowel.vowel`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`,
+ * `delay.feedback`, `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`,
+ * `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`,
+ * `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`, `duck.orbit`,
+ * `duck.depth`, `duck.attack`. An authored chain names its own with `Katalyst.param("room", 5)`.
  *
  * **The orbit needs a DECLARED chain, so write one.** An orbit that declares nothing runs the chain
  * the engine has always run, whose knobs still come from the voice's own effect fields, and it
@@ -228,12 +179,11 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * all it takes. (Until step 5b of the Katalyst work, which retires the voice fields and makes every
  * orbit read slots.)
  *
- * **What a declared chain owns, the pattern no longer sets.** The chain carries its own body
- * material and its own vowel, because those are NAMES and a slot carries a number, so
- * `body(material = "wood")` on a voice of a declared chain does not change the material; write it
- * in the chain (`k.body("wood")`). The numeric knobs of both stages, `wet` and `floor`, do reach it,
- * here and through the `body(...)` / `vowel(...)` doors. (Step 5b decides whether a name becomes a
- * slot of its own.)
+ * **`body.material` and `vowel.vowel` are numbers, and the number is an INDEX** into the material
+ * and vowel catalogues, 0 = none (Katalyst step 5a-2, 2026-09-18). The `body(...)` and `vowel(...)`
+ * doors convert a name for you, so `body(material = "wood", wet = 0.3)` reaches a declared chain
+ * like every other knob. Writing an index by hand here is possible and rarely what you want: the
+ * names are the readable door, and a raw index moves if the catalogue grows.
  *
  * Four more things it is NOT, and they all follow from the orbit being a bus and not a note:
  *
@@ -247,9 +197,10 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *    expression OVER a slot, and the bus folds it to one number when the chain is built, so
  *    `katp("room", x)` never reaches it. Put the arithmetic on the pattern side instead.
  *
- * A raw slot write is exactly one slot, unlike the `reverb(...)` / `delay(...)` doors, which fill
- * their companions: on a chain built from `k.classic()` a `katp("reverb.wet", 0.3)` alone stays
- * silent until `reverb.size` is written too, because the engine gates the room on its size.
+ * A raw slot write is exactly one slot, unlike a compound door (`reverb(...)`, `body(...)`,
+ * `compressor(...)` and the rest), which fills the companions of the stage it names: on a chain
+ * built from `k.classic()` a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is
+ * written too, because the engine gates the room on its size.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")   // small room, then a hall

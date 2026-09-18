@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -87,10 +88,13 @@ class LangBodySpec : StringSpec({
         }
     }
 
-    "body(floor = ...) is null by default (engine default) and settable" {
+    "body(floor = ...) takes the shared constant when the call leaves it out, and is settable" {
+        // Since Katalyst step 5a-3 the DOOR writes the floor when a call names the material, which
+        // is the same number the engine substituted for a null (`floor ?: BODY_FLOOR`), so nothing
+        // sounds different: one place decides it now instead of two.
         val defaulted = note("c3").body("wood").queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
-        defaulted.floor shouldBe null
+        defaulted.floor shouldBe BODY_FLOOR
 
         val overridden = note("c3").body(material = "wood", floor = 0.2).queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
@@ -119,15 +123,15 @@ class LangBodySpec : StringSpec({
         // The voice half of the parity `KatalystSlotResolverSpec` holds the other half of: a
         // declared Katalyst chain's `body` stage reads the SAME table through `KatalystSlots`.
         // `audio_be` does not depend on `sprudel`, so the landmark mode is pinned on both sides.
-        // The one difference between the paths is the floor FILL: a voice leaves `floor = null`,
-        // which the engine reads as its default, while a declared stage writes that default out.
+        // Both paths now write the floor out: the door fills it when a call names the material
+        // (Katalyst step 5a-3), and a declared stage resolves the same constant from its slot.
         val bodyFilter = note("c3").body(material = "wood", wet = 0.3).queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
 
         bodyFilter.bands shouldBe BodyMaterials.modesFor("wood")
         bodyFilter.bands[0] shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
         bodyFilter.mix shouldBe 0.3
-        bodyFilter.floor shouldBe null
+        bodyFilter.floor shouldBe BODY_FLOOR
     }
 
     "body sits before the lowpass in the canonical filter order" {

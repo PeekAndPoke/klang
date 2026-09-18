@@ -51,8 +51,9 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "a non-finite Param default survives the trip: SLOT_UNSET is how the wire says 'never set'" {
-        // `KatalystDsl.classic` puts SLOT_UNSET (NaN) on SEVEN slots (all five compressor knobs,
-        // `duck.orbit` and `reverb.lowpass`), so this is not a corner case
+        // `KatalystDsl.classic` puts SLOT_UNSET (NaN) on ELEVEN slots (all five compressor knobs,
+        // `duck.orbit`, `reverb.lowpass`, and the name and amount of the body and the vowel), so
+        // this is not a corner case
         // but the everyday chain. The codec rides a structured-clone JS object rather than JSON, so
         // NaN travels; this pins that, and pins that the comparison is not vacuous (an Infinity and
         // a finite neighbour are in the same list).
@@ -97,14 +98,23 @@ class WireCodecRoundTripSpec : StringSpec({
     "KatalystDsl round-trips (every KatalystStageDsl variant, with IgnitorDsl knobs)" {
         // Every variant, and on each the shapes a codec can silently lose: a Param knob next to a
         // Constant one, the nullable `lowpass` in BOTH states, an empty section list next to a
-        // populated one, and the two String? names in both states.
+        // populated one, and the two catalogue-index knobs (`body.material`, `vowel.vowel`) both
+        // naming something and unset.
         listOf(
             KatalystDsl(emptyList()),
             KatalystDsl.classic,
             KatalystDsl.of(
-                KatalystStageDsl.Body(material = "wood", wet = IgnitorDsl.Constant(0.7), floor = IgnitorDsl.Constant(0.3)),
+                KatalystStageDsl.Body(
+                    material = IgnitorDsl.Constant(BodyMaterials.indexOf("wood")),
+                    wet = IgnitorDsl.Constant(0.7),
+                    floor = IgnitorDsl.Constant(0.3),
+                ),
                 KatalystStageDsl.Body(),
-                KatalystStageDsl.Vowel(vowel = "soprano:a", wet = IgnitorDsl.Param("vowel.wet", 0.6), floor = IgnitorDsl.Constant(0.1)),
+                KatalystStageDsl.Vowel(
+                    vowel = IgnitorDsl.Constant(VowelBands.indexOf("soprano:a")),
+                    wet = IgnitorDsl.Param("vowel.wet", 0.6),
+                    floor = IgnitorDsl.Constant(0.1),
+                ),
                 KatalystStageDsl.Vowel(),
                 KatalystStageDsl.Delay(
                     wet = IgnitorDsl.Constant(0.2), time = IgnitorDsl.Constant(0.375),

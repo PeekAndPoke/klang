@@ -45,8 +45,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         val data = createSprudelVoiceData {
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
-            oscParams = mutableMapOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
-            katalystParams = mutableMapOf("reverb.wet" to 0.5, "reverb.size" to 6.0)
+            oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
+            katalystParams = paramBagOf("reverb.wet" to 0.5, "reverb.size" to 6.0)
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false   // non-default: `Boolean?` is the shape a dynamic codec can confuse with undefined

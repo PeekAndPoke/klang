@@ -271,8 +271,22 @@
   `SprudelVoiceData.toVoiceData` for a voice AND by `KatalystSlots` for a declared Katalyst chain's
   `body`/`vowel` stage, so a name means one thing on both paths. Blend
   = `ParallelMixFilter(inner, mix, floor)`; `floor` user-settable via `bodyFloor()`/`vowelFloor()`
-  (`FilterDef.Body/Formant.floor`, null → `BODY_FLOOR`/`VOWEL_FLOOR`), `bodyMix` uncapped >1 (raw).
+  (`FilterDef.Body/Formant.floor`, null → `BODY_FLOOR`/`VOWEL_FLOOR`), and BOTH `mix` and `floor` are
+  coerced into [0, 1] by `ParallelMixFilter` (the pre-C4 raw extension above 1 is gone; `mix <= 0`
+  bypasses bit-identically and never runs the inner filter).
   Sprudel fields grouped in `SvdBody`/`SvdVowel`. UI: `SprudelBodyEditorTool` (sprudel jsMain).
+- **`names` is an INDEX SPACE since Katalyst step 5a-2 (2026-09-18).** A `body.material` /
+  `vowel.vowel` chain slot carries the INDEX of a name in `BodyMaterials.names` /
+  `VowelBands.names` (0 = `none`, out of range or non-finite = the stage off), so no string slot
+  joins the wire. The conversion is `indexOf(name)` / `modesAt(index)` and `indexOf` / `bandsAt`,
+  in ONE place next to each table, and the NAME path now goes THROUGH the index (`modesFor(n)` is
+  `modesAt(indexOf(n))`), so the two cannot answer differently. `VowelBands.names` is generated:
+  `"none"` plus the cross product of the five register spellings and the fifteen vowel spellings,
+  76 entries. **Both tables build their band lists once and hand out one shared instance per
+  entry**, which is load-bearing: `KatalystBodyEffect.configure` decides whether to rebuild the
+  bank by comparing band lists, so identity short-circuits it instead of walking eight modes per
+  note. Consequence: **append only, never reorder** either `names` list, because the index IS the
+  wire encoding (and the editor dropdown order). Guard: `CatalogueIndexSpec` (audio_bridge).
 - **Live-change declick**: `KatalystFilterSwap` crossfades the bank on any material/mix/floor rebuild.
 - **Live-update double-voice fix**: `VoiceScheduler.replaceVoices` now dedups incoming voices vs
   already-active ones (`ScheduledVoice.isDuplicate` = startTime+data); grace window 50→200 ms in

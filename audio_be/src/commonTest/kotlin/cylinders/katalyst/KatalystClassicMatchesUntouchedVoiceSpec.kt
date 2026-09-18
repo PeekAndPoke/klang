@@ -20,15 +20,25 @@ import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import kotlin.random.Random
 
 /**
@@ -96,14 +106,28 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
      */
     fun untouchedVoice(): Voice = voiceOf(VoiceData.empty.copy(freqHz = 440.0, sound = "triangle"))
 
+    /**
+     * The classic chain, built either way: `voiceDriven = true` is the chain a cylinder is BORN
+     * with, `false` the one a `Katalyst(k => k.classic())` declaration installs. Comparing the two
+     * is what "declaring the familiar chain changes nothing" means at stage level.
+     */
+    fun classicChain(voiceDriven: Boolean): KatalystChain = KatalystChainBuilder.build(
+        dsl = KatalystDsl.classic,
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        rings = SizedBuffers.forRings(sampleRate),
+        reverbs = ReverbUnits(sampleRate),
+        voiceDriven = voiceDriven,
+    )
+
     /** The default of one slot of the classic chain, by name. */
     fun slot(name: String): Double {
         val params = mutableListOf<IgnitorDsl.Param>()
 
         KatalystDsl.classic.stages.forEach { stage ->
             when (stage) {
-                is KatalystStageDsl.Body -> listOf(stage.wet, stage.floor)
-                is KatalystStageDsl.Vowel -> listOf(stage.wet, stage.floor)
+                is KatalystStageDsl.Body -> listOf(stage.material, stage.wet, stage.floor)
+                is KatalystStageDsl.Vowel -> listOf(stage.vowel, stage.wet, stage.floor)
                 is KatalystStageDsl.Delay -> listOf(stage.wet, stage.time, stage.feedback, stage.cap)
                 is KatalystStageDsl.Reverb -> listOfNotNull(stage.wet, stage.size, stage.lowpass)
                 is KatalystStageDsl.Phaser ->
@@ -209,23 +233,181 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
         withClue("duck.depth is zero") { slot("duck.depth") shouldBe 0.0 }
     }
 
-    "the untouched voice has NO body and NO vowel, and the classic stages name neither" {
-        // Body and vowel are the two stages whose gate is a NAME, not a number: `FilterDef.Body` /
-        // `FilterDef.Formant` only exist on a voice that named a material or a vowel, and
-        // `KatalystBodyEffect.configure(null)` is off. So the chain's off state is `material = null`
-        // / `vowel = null`, and the wet slots being zero is the belt to that braces.
+    "the untouched voice has NO body and NO vowel, and the classic slots name neither" {
+        // Body and vowel are the two stages whose gate is a NAME, and since Katalyst step 5a-2 the
+        // name travels as the INDEX of a name in a shared catalogue: `FilterDef.Body` /
+        // `FilterDef.Formant` only exist on a voice that named one, and `configure(null)` is off.
+        // So the chain's off state is an UNSET index. Unset and not 0, because 0 is `none`, a real
+        // catalogue entry. The two wet slots are unset as well, which the rows below assert; that
+        // is not a second gate, it is what lets the engine substitute BODY_WET / VOWEL_WET.
         val voice = untouchedVoice()
 
         voice.body shouldBe null
         voice.vowel shouldBe null
 
-        val body = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Body>().single()
-        val vowel = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Vowel>().single()
+        withClue("body.material names nothing") { slot("body.material").isFinite() shouldBe false }
+        withClue("vowel.vowel names nothing") { slot("vowel.vowel").isFinite() shouldBe false }
 
-        body.material shouldBe null
-        vowel.vowel shouldBe null
-        slot("body.wet") shouldBe 0.0
-        slot("vowel.wet") shouldBe 0.0
+        // The AMOUNT is unset too, and it has to be: the engine substitutes BODY_WET / VOWEL_WET
+        // for an unset mix (the compressor's rule), and a 0.0 here is a SET amount that never gets
+        // substituted, which is how a material-only `body("wood")` came out dry on a declared
+        // chain (round 1 of step 5a-2's review). Belt: the stage is gated on the NAME, so an
+        // unset amount cannot switch anything on either, which is what the two rows below assert.
+        withClue("body.wet is unset, not a set zero") { slot("body.wet").isFinite() shouldBe false }
+        withClue("vowel.wet is unset, not a set zero") { slot("vowel.wet").isFinite() shouldBe false }
+    }
+
+    "a MATERIAL-ONLY body reaches a declared classic at the engine's own wet, not dry" {
+        // The bug round 1 found, and the row that would have caught it. This is the RAW `katp`
+        // shape: only the index is written, so on the declared path the amount is whatever an unset
+        // `body.wet` slot resolves to. With the old 0.0 default that was a fully dry mix,
+        // bit-identically silent, while the same call on an undeclared orbit played the bank at
+        // BODY_WET. The sprudel door fills the amount itself since step 5a-3, which is why this row
+        // writes the slot by hand: it guards the engine's NaN rule, the door's fill is
+        // `LangKatalystParamSpec`'s subject. Both sides are read: the voice side is the `FilterDef`
+        // sprudel builds for a material-only call (`mix = bodyMix ?: BODY_WET`), the chain side is
+        // the classic chain's own slots with only the index written.
+        val bands = BodyMaterials.modesFor("wood").shouldNotBeNull()
+        val voice = voiceOf(
+            VoiceData.empty.copy(
+                freqHz = 440.0,
+                sound = "triangle",
+                filters = FilterDefs(listOf(FilterDef.Body(bands = bands, mix = BODY_WET))),
+            )
+        )
+
+        val bornWith = classicChain(voiceDriven = true).also { it.applyOwner(voice) }
+        val declared = classicChain(voiceDriven = false).also {
+            it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood")))
+        }
+
+        val fromVoice = bornWith.body.shouldNotBeNull()
+        val fromSlots = declared.body.shouldNotBeNull()
+
+        withClue("both paths engage the bank") {
+            fromVoice.isEngaged shouldBe true
+            fromSlots.isEngaged shouldBe true
+        }
+        withClue("the same modes") { fromSlots.installedBands shouldBe fromVoice.installedBands }
+
+        // The discriminator: NOT dry. A declared chain that resolved its unset amount to 0.0 would
+        // install the right bank at no mix at all, which is silence dressed as a body.
+        withClue("the declared mix is audible, not the dry 0.0 a SET slot would install") {
+            (fromSlots.installedMix > 0.0) shouldBe true
+        }
+        withClue("...and it is the same amount the voice path plays") {
+            fromSlots.installedMix shouldBe fromVoice.installedMix
+        }
+        fromSlots.installedMix shouldBe BODY_WET
+    }
+
+    "a VOWEL-ONLY call reaches a declared classic at the engine's own wet too" {
+        // The twin, on the other stage and the other constant: two writers, two substitutions.
+        val bands = VowelBands.bandsFor("a").shouldNotBeNull()
+        val voice = voiceOf(
+            VoiceData.empty.copy(
+                freqHz = 440.0,
+                sound = "triangle",
+                filters = FilterDefs(listOf(FilterDef.Formant(bands = bands, mix = VOWEL_WET))),
+            )
+        )
+
+        val bornWith = classicChain(voiceDriven = true).also { it.applyOwner(voice) }
+        val declared = classicChain(voiceDriven = false).also {
+            it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("a")))
+        }
+
+        val fromVoice = bornWith.vowel.shouldNotBeNull()
+        val fromSlots = declared.vowel.shouldNotBeNull()
+
+        fromSlots.isEngaged shouldBe true
+        fromSlots.installedBands shouldBe fromVoice.installedBands
+
+        withClue("the declared mix is audible, not dry") { (fromSlots.installedMix > 0.0) shouldBe true }
+        fromSlots.installedMix shouldBe fromVoice.installedMix
+        fromSlots.installedMix shouldBe VOWEL_WET
+    }
+
+    "a voice with a body and a DECLARED classic chain install the same bank, slot for slot" {
+        // The equivalence the step-5a-2 index slot exists for, and the one the frozen song's
+        // acceptance measures at sample level: declaring `Katalyst(k => k.classic())` on an orbit
+        // whose voices carry `body("wood", wet = 0.3)` must not drop the body. Before the index
+        // slot it did (a declared chain owned its material, and a slot could not carry a name), and
+        // that confound is recorded in `docs/tasks/katalyst-dsl.md` §9.
+        //
+        // Both halves are the production ones: the voice-driven chain a cylinder is BORN with,
+        // configured from a voice the real `VoiceFactory` built, against the slot-driven classic
+        // chain a declaration installs, configured from the params the `body(...)` door writes.
+        // Nothing here types a mode. The name-to-index half of the trip is `CatalogueIndexSpec`'s,
+        // and what the sprudel door writes is `LangKatalystParamSpec`'s.
+        val bands = BodyMaterials.modesFor("wood").shouldNotBeNull()
+        val voice = voiceOf(
+            VoiceData.empty.copy(
+                freqHz = 440.0,
+                sound = "triangle",
+                filters = FilterDefs(listOf(FilterDef.Body(bands = bands, mix = 0.3))),
+            )
+        )
+
+        voice.body.shouldNotBeNull()
+
+        val bornWith = classicChain(voiceDriven = true).also { it.applyOwner(voice) }
+        val declared = classicChain(voiceDriven = false).also {
+            it.applyParams(mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3))
+        }
+
+        val fromVoice = bornWith.body.shouldNotBeNull()
+        val fromSlots = declared.body.shouldNotBeNull()
+
+        withClue("the born-with chain engages its body") { fromVoice.isEngaged shouldBe true }
+        withClue("...and so does the declared one, which is the whole point") {
+            fromSlots.isEngaged shouldBe true
+        }
+        withClue("the SAME modes, not just some bank") {
+            fromSlots.installedBands shouldBe fromVoice.installedBands
+        }
+        withClue("...and the same mix") { fromSlots.installedMix shouldBe fromVoice.installedMix }
+
+        // The one formal difference, and why it is not audible: the voice leaves `floor` null,
+        // which `LowPassHighPassFilters.createBody` reads as BODY_FLOOR, and the declared stage
+        // writes that same number out. Two spellings of one value, so the filter is identical.
+        fromVoice.installedFloor shouldBe null
+        fromSlots.installedFloor shouldBe BODY_FLOOR
+    }
+
+    "a voice with a vowel and a DECLARED classic chain install the same formant bank" {
+        // The twin of the body row, on the other index slot. Written out rather than folded in:
+        // the two writers are separate classes, and a `vowel.vowel` wired to the body's catalogue
+        // (or to no catalogue at all) would pass a body-only spec. The register is `bass`, not the
+        // bare default, so a resolver that dropped the register would land on soprano and fail.
+        val bands = VowelBands.bandsFor("bass:a").shouldNotBeNull()
+        val voice = voiceOf(
+            VoiceData.empty.copy(
+                freqHz = 440.0,
+                sound = "triangle",
+                filters = FilterDefs(listOf(FilterDef.Formant(bands = bands, mix = 0.6))),
+            )
+        )
+
+        voice.vowel.shouldNotBeNull()
+
+        val bornWith = classicChain(voiceDriven = true).also { it.applyOwner(voice) }
+        val declared = classicChain(voiceDriven = false).also {
+            it.applyParams(mapOf("vowel.vowel" to VowelBands.indexOf("bass:a"), "vowel.wet" to 0.6))
+        }
+
+        val fromVoice = bornWith.vowel.shouldNotBeNull()
+        val fromSlots = declared.vowel.shouldNotBeNull()
+
+        withClue("the born-with chain engages its vowel") { fromVoice.isEngaged shouldBe true }
+        withClue("...and so does the declared one") { fromSlots.isEngaged shouldBe true }
+        withClue("the SAME bands, the bass register and not the soprano default") {
+            fromSlots.installedBands shouldBe fromVoice.installedBands
+        }
+        withClue("...and the same mix") { fromSlots.installedMix shouldBe fromVoice.installedMix }
+
+        fromVoice.installedFloor shouldBe null
+        fromSlots.installedFloor shouldBe VOWEL_FLOOR
     }
 
     "the engine's gates really do sit on time and size, not on the wet" {
