@@ -86,12 +86,14 @@ class KatalystChain internal constructor(
      */
     private val serial: Array<KatalystEffect>,
     /**
-     * One writer per declared stage whose knobs a stage CONSUMES, in DSL order, the duck's last.
-     * `eq` and `gain` do have knobs, but no stage reads them yet (they build a pass-through), so
-     * they get no writer and this array is shorter than [stages] for a chain that declares them.
+     * One writer per declared stage that HAS a voice field, in DSL order, the duck's last.
      *
-     * The VOICE-driven half, so a chain is either all of these (the classic chain) or all
-     * [statics] (a declared chain); the builder's `voiceDriven` flag decides which.
+     * The VOICE-driven half: a chain is either all of these (the chain a cylinder is born with) or
+     * all [statics] (a declared chain), and the builder's `voiceDriven` flag decides which. With
+     * one exception, which is not a hole in the rule: `eq` and `gain` never had a voice field, so
+     * there is nothing for an owner writer to read and they are slot-driven on every chain (see
+     * [KatalystChainBuilder]). A voice-driven chain that declares one therefore has entries in
+     * BOTH arrays, which is sound because [applyOwner] ends in [applyParams].
      */
     private val owners: Array<KatalystOwnerApply>,
     /** The SLOT-driven half, same rule, per declared stage. See [KatalystSlotWriter]. */

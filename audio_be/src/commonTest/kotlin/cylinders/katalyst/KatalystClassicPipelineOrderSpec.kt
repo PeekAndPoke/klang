@@ -47,11 +47,21 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         is KatalystStageDsl.Phaser -> "KatalystPhaserEffect"
         is KatalystStageDsl.Compressor -> "KatalystCompressorEffect"
         is KatalystStageDsl.Duck -> "KatalystDuckEffect"
-        // No DSP of their own yet: both hold their position and pass the buffer through untouched
-        // until step 4 gives them `KatalystEqEffect` / `KatalystGainEffect`. The classic chain must
-        // not contain them (asserted below by the exact match).
-        is KatalystStageDsl.Eq -> "KatalystPassThroughStage"
-        is KatalystStageDsl.Gain -> "KatalystPassThroughStage"
+        // The two stages that never had a per-voice twin (Katalyst step 4). Their own row below
+        // says the classic chain contains neither; here they are only the arms the exhaustive
+        // `when` needs, so a new stage kind cannot slip past this spec either.
+        is KatalystStageDsl.Eq -> "KatalystEqEffect"
+        is KatalystStageDsl.Gain -> "KatalystGainEffect"
+    }
+
+    "the classic chain declares neither eq nor gain" {
+        // Both stages are new surface, not history: the historical default is what every cylinder
+        // has always run, and an `eq` or a `gain` in it would change the sound of every song that
+        // declares no chain. Asserted rather than left to the order row above, which compares the
+        // declaration against the pipeline BUILT FROM IT and would happily agree with itself.
+        KatalystDsl.classic.stages.any {
+            it is KatalystStageDsl.Eq || it is KatalystStageDsl.Gain
+        } shouldBe false
     }
 
     "the classic chain IS the cylinder's pipeline, stage for effect, in order, plus the duck" {

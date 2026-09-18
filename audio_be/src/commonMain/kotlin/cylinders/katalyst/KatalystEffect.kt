@@ -25,7 +25,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  * ever hand it back. None of the three shows up as a compile error if the interface answers for
  * you, and there is no safe default for the third in particular: `retire() = reset()` is the safe
  * direction for the SOUND and the unsafe one for the WAREHOUSE. So every stage states all three,
- * even when the answer is "nothing" (see `KatalystPassThroughStage`).
+ * even when the answer is "nothing" (see [KatalystGainEffect], whose whole state is one factor).
  *
  * [deniedRents] keeps its default, because it is telemetry: a wrong 0 from a stage that rents
  * nothing is the truth, and a missing count costs a diagnostics number, not a resource.

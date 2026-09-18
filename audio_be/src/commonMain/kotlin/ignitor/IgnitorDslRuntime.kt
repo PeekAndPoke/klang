@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.filters.EqCore
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
+import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -622,25 +622,21 @@ private fun IgnitorDsl.buildRaw(
 
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
         // above (a withMod param subtree would change the freqHz the params see and break
-        // tracking-HP parity). The exhaustive `when` below IS the wire→EqCore type mapping:
-        // a new EqSection variant without an arm fails compilation.
+        // tracking-HP parity). The wire-to-EqCore type mapping is `eqSectionSpec`, shared with
+        // the orbit stage since Katalyst step 4; the build order per section stays freq, q, then
+        // the type's own param, because build order is rng draw order.
         is IgnitorDsl.Eq -> EqIgnitor(
             upstream = inner.withMod(),
             sections = sections.map { s ->
-                when (s) {
-                    is IgnitorDsl.EqSection.Lowpass ->
-                        EqIgnitor.Section(EqCore.LOWPASS, s.freq.noMod(), s.q.noMod())
-                    is IgnitorDsl.EqSection.Highpass ->
-                        EqIgnitor.Section(EqCore.HIGHPASS, s.freq.noMod(), s.q.noMod())
-                    is IgnitorDsl.EqSection.Bandpass ->
-                        EqIgnitor.Section(EqCore.BANDPASS, s.freq.noMod(), s.q.noMod())
-                    is IgnitorDsl.EqSection.Notch ->
-                        EqIgnitor.Section(EqCore.NOTCH, s.freq.noMod(), s.q.noMod())
-                    is IgnitorDsl.EqSection.Bell ->
-                        EqIgnitor.Section(EqCore.BELL, s.freq.noMod(), s.q.noMod(), db = s.db.noMod())
-                    is IgnitorDsl.EqSection.RawTap ->
-                        EqIgnitor.Section(EqCore.RAW_TAP, s.freq.noMod(), s.q.noMod(), gain = s.gain.noMod())
-                }
+                val spec = eqSectionSpec(s)
+
+                EqIgnitor.Section(
+                    type = spec.type,
+                    freq = spec.freq.noMod(),
+                    q = spec.q.noMod(),
+                    db = spec.db?.noMod(),
+                    gain = spec.gain?.noMod(),
+                )
             },
         )
 

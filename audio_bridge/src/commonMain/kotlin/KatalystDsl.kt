@@ -364,6 +364,15 @@ sealed interface KatalystStageDsl {
      * (the duck runs outside the list regardless, see [Duck]). Write the stages out in order when
      * the position matters.
      *
+     * **What the position means while the sends are still per voice.** The delay and reverb send
+     * buffers are written by the VOICES, before the orbit's chain runs, so an `eq` written BEFORE
+     * `reverb` shapes the dry mix and NOT the reverb return: the room hears the raw voices. The
+     * same `eq` written AFTER it shapes dry and tail together. Both are legitimate mixes and the
+     * list order is how they are told apart. The rule the design once carried, that a linear stage
+     * ahead of a send also filters the send buffers, was dissolved on 2026-09-17 together with the
+     * per-voice sends themselves; the signal-flow plan's step 5b makes `delay` and `reverb`
+     * insert-style stages, and then "the room hears the cab" is list order and nothing else.
+     *
      * @param sections the sections in written order; an empty list is a transparent stage.
      */
     @WireName("eq")

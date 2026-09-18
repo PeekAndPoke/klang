@@ -220,6 +220,80 @@ internal class KatalystCompressorWriter(
 }
 
 /**
+ * Eq: every section's knobs, resolved into the flat scalar array the stage configures from
+ * ([KatalystEqEffect.KNOBS_PER_SECTION] per section, in list order).
+ *
+ * A null knob is a param the section's TYPE does not have (only a bell has `db`, only a tap has
+ * `gain`), and it resolves to the 0.0 the per-voice adapter passes for the same absent param, so
+ * both adapters hand [io.peekandpoke.klang.audio_be.filters.EqCore] the identical seven arguments.
+ *
+ * No NaN guard, deliberately, unlike every other writer here: the coefficient helpers own the
+ * fallbacks for a non-finite freq, q, db and tap gain, and adding one at this surface would make
+ * the same number sound different on a bus than on a voice (see [KatalystEqEffect]).
+ */
+internal class KatalystEqWriter(
+    private val fx: KatalystEqEffect,
+    private val knobs: Array<KatalystKnob?>,
+) : KatalystSlotWriter {
+
+    /** The resolved scalars, filled in place: `apply` writes numbers already in hand. */
+    private val values = DoubleArray(knobs.size)
+
+    init {
+        fill()
+    }
+
+    override fun resolve(params: Map<String, Double>?) {
+        for (i in knobs.indices) {
+            knobs[i]?.resolve(params)
+        }
+
+        fill()
+    }
+
+    override fun apply() {
+        // The stage short-circuits an unchanged curve, so this is one compare pass on a block that
+        // moved no knob, which is every block of a chain without `.katp` on its EQ.
+        fx.configure(values)
+    }
+
+    private fun fill() {
+        for (i in knobs.indices) {
+            // `knobs[i]?.value ?: 0.0` boxes the nullable Double per knob on the JVM; the explicit
+            // branch reads the primitive field (`audio/ref/performance.md`).
+            val knob = knobs[i]
+
+            values[i] = if (knob != null) knob.value else 0.0
+        }
+    }
+}
+
+/** Gain: the one knob, guarded, into the fader. */
+internal class KatalystGainWriter(
+    private val fx: KatalystGainEffect,
+    private val gain: KatalystKnob,
+) : KatalystSlotWriter {
+
+    private var factor: Double = guarded()
+
+    override fun resolve(params: Map<String, Double>?) {
+        gain.resolve(params)
+        factor = guarded()
+    }
+
+    override fun apply() {
+        fx.configure(factor)
+    }
+
+    /**
+     * NaN-guard on a value the author can write: an unset fader is unity, the identity element of
+     * the stage and the master's own fallback for the same knob (`MasterChain.buildGain`). NOT a
+     * magnitude clamp: a negative factor and one above unity pass through untouched.
+     */
+    private fun guarded(): Double = if (gain.value.isFinite()) gain.value else 1.0
+}
+
+/**
  * Duck: on iff the stage names a source orbit AND asks for depth. The instance is reused so the
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
  * handover (see [writeDuck]).

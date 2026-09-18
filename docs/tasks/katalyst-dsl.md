@@ -339,11 +339,15 @@ complexity outranks the duplication.
   `Cylinder.pipeline` becomes the current chain's list; `applyBusEffects` becomes "resolve every
   knob of every stage per block: chain value, owner-voice field if set, param state".
 - **The EQ's precondition, stated in `EqCore`'s KDoc:** the core is snap-only, and a per-block
-  coefficient change on a bus is a click. Phase 1 (§9) ships the EQ with literal knobs only, so
-  coefficients change only on a chain swap, which the crossfade covers. Phase 2, which lets
-  `.katp` drive an EQ knob per block, adds the coefficient ramp to `EqCore` first (linear
-  interpolation of the five coefficients across the block, the `BaseSvf` precedent), and the
-  unified-eq plan's D4 note is closed by that commit.
+  coefficient change on a bus is a click. **Closed 2026-09-18 by step 4, at the SURFACE rather than
+  in the core:** `KatalystEqEffect` holds two pre-built `EqCore` banks and installs a changed curve
+  through `KatalystFilterSwap`, the 12 ms declick crossfade body and vowel already use, so a knob
+  moved by `.katp` costs one bank swap per changed block and never a click for changes at least
+  12 ms apart; two changes inside one fade drop the oldest bank, the faint tick
+  `KatalystFilterSwap` documents for body and vowel alike. `EqCore` keeps its
+  snap-only contract and needs no coefficient ramp for this host; the unified-eq plan's D4 note is
+  therefore closed for the orbit and still open for a future master eq that wants per-sample
+  interpolation instead of a bank swap.
 - Body and vowel: unchanged in this work; their rebase on `EqCore` stays the separate item in
   the settled section.
 - Ducking: the `Duck` stage configures `KatalystDuckEffect` exactly as the voice field does
@@ -497,16 +501,69 @@ complexity outranks the duplication.
   `audible-classic` (a declared classic under voices carrying `reverb(wet 0.5, size 6)`) still
   hashes identically to `audible-none` (no declaration at all), `6c8540cc…`, so the slot path and
   the voice path agree on the reverb sample for sample.
+- **Step 4 as built (2026-09-18): `eq` and `gain` are real DSP on the orbit bus.**
+  `KatalystEqEffect` runs the declared section list through two `EqCore` instances, left and right,
+  with the section types coming from `eqSectionSpec`, the variant-to-Int `when` hoisted out of
+  `IgnitorDslRuntime`'s Eq arm into `audio_be/filters/EqSectionSpec.kt` so the per-voice and the
+  orbit adapter cannot drift. Smoothing is the SURFACE's, as `EqCore`'s contract demands, and it is
+  the house precedent: two pre-built banks are ping-ponged and a changed curve is installed through
+  `KatalystFilterSwap`'s 12 ms crossfade, so a `.katp` on an EQ knob costs one bank swap per changed
+  block (a `reset` plus one coefficient computation per section per channel, and 12 ms of two banks
+  running), bounded by the once-per-block param read and allocating nothing after the swap's
+  scratch has grown once. Click-free holds for changes at least 12 ms apart; two inside one fade
+  drop the oldest bank, the faint tick body and vowel have always had. Two banks are enough
+  because a section list's SIZE is structure; body and vowel build a fresh bank per change only
+  because a material decides how many bands it has. The flush lives in exactly one place, the
+  install, so it has one failing row; `reset()` only clears the swap, which makes a parked bank
+  unreachable. `KatalystGainEffect` multiplies the mix and ramps per sample across ONE block on a
+  change, which is the longest ramp that always finishes before the next possible param read; the
+  master snaps the same knob (its factor is fixed at chain build), so this is the improvement, not
+  parity. Unity is bit-transparent on both stages, and a 0 dB bell stays bit-transparent through
+  the core's explicit branch. Both stages are slot-driven on every chain, `voiceDriven` or not,
+  because neither ever had a voice field; `KatalystPassThroughStage` went with the step (the
+  scaffolding rule). Position semantics stay "where written", and the `Eq` wire KDoc now says what
+  that means while the sends are per voice: an `eq` before `reverb` shapes the dry mix and not the
+  reverb return, after it shapes both. Parity measured: one voice with a `band(300, 0.8, 6)` on the
+  VOICE and the same band on its ORBIT render the orbit within 1e-12 (not bit-identical, because
+  the voice path filters before gain and pan and the bus path after), two voices likewise, and at
+  stage level the orbit stage is BIT-identical to `EqIgnitor` for all six section kinds. The frozen
+  July song is unchanged (`8d79b9fc…`).
+  Acceptance measured on the frozen song (32 cycles, 34.5 rpm, `specdist.py` 16-cycle windows):
+  with `k.classic().eq(band 300 Hz, q 0.8, +2 dB)` on the guitar orbit and `k.classic().eq(band
+  160 Hz, q 1.0, -3 dB)` on the drum orbit, the 320-to-160 gap closes from 1.8 dB to 0.1 dB and the
+  hump drops (127 by 3.4, 160 by 2.0, 202 by 1.5 dB rel pink); absolute, EQ minus declared: 254 +1.7,
+  320 +1.9, 403 +1.6, 127 -1.1, mid +0.9, presence +0.0. The q 0.8 bell is wide (+0.5 dB still at
+  806 Hz); a q of 1.2 to 1.5 lifts 300 Hz with less skirt, the ear decides. A confound the measurement
+  exposed: DECLARING a chain on the guitars drops their `.body(material = "wood")` (a declared chain
+  owns its material), which alone is +1.5 dB at 254 and 508 and +1.6 at 2.5 to 5 kHz. Decided
+  2026-09-18 for 5b: there is no string slot; a material is chain-declared (`k.classic().body("wood",
+  b => b.wet(0.3)).eq(...)`, the null-material body stage of classic stays off and the declared one
+  runs), and at 5b the pattern-side `material`/`vowel` arguments retire with the voice fields while
+  `wet` and `floor` stay `katp` aliases. So the song's first real use writes its body into the chain.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
-- **Phase 1, the song's need.** `eq` and `gain` stages with literal knobs, the sends rule (§D2),
-  tests 4, 5. Acceptance: Der Schmetterling with the two EQs from the header, re-measured with the
+- **Phase 1, the song's need.** `eq` and `gain` stages (step 4, done 2026-09-18: knobs are slots,
+  not just literals, since 5a landed first), tests 4 and 5. Test 5's sends rule went with §D2.
+  Acceptance: Der Schmetterling with the two EQs from the header, re-measured with the
   same tools: the 320 Hz band within 2 dB of the 160 Hz band, the guitars' 160 to 400 Hz within
   2 dB of their own 500 Hz to 1.6 kHz, no other region moved by more than 1 dB. Ears decide the
   numbers; the table referees them.
-- **Phase 2, the performance.** `Katalyst.param`, `.katp`, `VoiceData.katalystParams`, the
-  `EqCore` coefficient ramp, tests 9, 10.
+  **Measured 2026-09-18** (32 cycles at 34.5 rpm, `specdist.py <wav> 34.5 16`, and an absolute
+  band table beside it): the shape's 320-to-160 gap closes from 1.8 dB to 0.1 dB (320 stays at
+  -0.7, 160 goes +1.2 to -0.8) and the hump drops (127 +3.8 to +0.4, 202 +0.6 to -0.9), because
+  the anchor band itself rose. In ABSOLUTE terms, against the same song with a declared classic
+  chain and no EQ, the guitar bell adds +1.9 at 320, +1.7 at 254, +1.6 at 403, +1.1 at 508,
+  +1.0 at 202 and +0.5 to +0.7 at 640 to 806 (a q of 0.8 bell is wide), the drum cut takes -1.1
+  at 127 and -0.1 at 160, and nothing above 1.6 kHz moves by more than 0.1 dB, so mid +0.9,
+  highmid +0.1, presence +0.0. Ears next. One confound the maintainer should know: DECLARING a
+  chain on the guitar orbits already changes the song, because `.body(material = "wood")` does
+  not survive a declaration until 5b decides the string slot (+1.5 at 254 and 508, +1.6 at
+  2.5 to 5 kHz, +0.84 dB rms), which is why the EQ's own effect is measured against the declared
+  chain and not against the undeclared song.
+- **Phase 2, the performance.** `Katalyst.param`, `.katp`, `VoiceData.katalystParams` (step 5a,
+  done), tests 9, 10. The `EqCore` coefficient ramp is NOT part of it any more: step 4 built the
+  smoothing at the surface as a bank crossfade (§7).
 - **Phase 3, thickness.** `mics`, test 8.
 - **Phase 4, consolidation.** Body and vowel on `EqCore` (the settled item), unchanged sound,
   `FormantFilter` output as the oracle.

@@ -28,7 +28,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  *  - nothing that is lazy today becomes eager at build (no ring, no reverb network);
  *  - a chain declaring two ducks runs ONE, and the writer that configures it is bound to THAT
  *    instance and not to the one the "last wins" rule dropped;
- *  - `eq` and `gain` build a pass-through, and the pass-through is bit-exact.
+ *  - `eq` and `gain` build their own stages and are slot-driven on a voice-driven chain too,
+ *    because neither ever had a voice field.
  *
  * The cylinder's side of the mapping is [KatalystClassicPipelineOrderSpec]'s job.
  */
@@ -179,9 +180,9 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.hasTail() shouldBe false
     }
 
-    // ── Eq and Gain: the pass-through until step 4 ───────────────────────────────────────────────
+    // ── Eq and Gain: the two stages with no voice field ──────────────────────────────────────────
 
-    "eq and gain build one pass-through stage each, at their declared position" {
+    "eq and gain build their own stage each, at their declared position" {
         val chain = build(
             KatalystDsl.of(
                 KatalystStageDsl.Eq(),
@@ -191,18 +192,31 @@ class KatalystChainBuilderSpec : StringSpec({
         )
 
         chain.pipeline.map { it::class.simpleName } shouldBe listOf(
-            "KatalystPassThroughStage",
-            "KatalystPassThroughStage",
+            "KatalystEqEffect",
+            "KatalystGainEffect",
             "KatalystCompressorEffect",
         )
-
-        // One instance per declared stage: a shared object would make two stages indistinguishable.
-        (chain.pipeline[0] === chain.pipeline[1]) shouldBe false
     }
 
-    "the pass-through leaves every sample of every buffer exactly as it found it" {
+    "eq and gain get a SLOT writer on a voice-driven chain, because they have no voice field" {
+        // The classic chain declares neither, so this is the mixed case a host can still build:
+        // seven owner writers plus the ONE slot writer of the declared `eq`, which is what makes
+        // that eq work on a chain the cylinder was born with.
+        val chain = build(KatalystDsl.of(*KatalystDsl.classic.stages.toTypedArray(), KatalystStageDsl.Eq()))
+
+        chain.writerCount shouldBe 8
+    }
+
+    "a bare eq and a unity gain leave every sample of every buffer exactly as they found it" {
+        // `Eq()` declares no section (a transparent stage by its wire KDoc) and `Gain()` is unity,
+        // which the stage skips entirely. Both together must not touch one sample.
         val chain = build(KatalystDsl.of(KatalystStageDsl.Eq(), KatalystStageDsl.Gain()))
         val ctx = ctx()
+
+        // Configured, not merely unconfigured: an EQ bank IS installed (over no sections) and the
+        // fader IS set (to unity), so this row is about what the two stages DO, not about a chain
+        // that never ran its writers.
+        chain.applyParams(null)
 
         // A deterministic pseudo-random fill: silence or DC would pass a stage that zeroes or
         // scales, and a ramp would pass one that reverses the buffer.

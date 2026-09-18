@@ -852,7 +852,11 @@ the critical path for the device goal.
 - collectParams over fused trees: name-set + first-occurrence assertions (dup counts change by
   design when sharing collapses).
 - D2a test oracle: verify SvfLPF linear branch ≡ SvfIgnitor before using it; else Ignitor-form.
-- MasterFx.eq/Katalyst adoption blocked on the ramp API (deliberate, documented in EqCore KDoc).
+- MasterFx.eq adoption blocked on the ramp API (deliberate, documented in EqCore KDoc). **Katalyst
+  is unblocked as of 2026-09-18** and did not need it: `KatalystEqEffect` smooths a curve change by
+  crossfading two pre-built banks over 12 ms (`KatalystFilterSwap`, the body/vowel declick path), so
+  the policy the KDoc demands of a bus surface is built BY the surface. A master eq may still prefer
+  the ramp; the choice is per host now, not a precondition of the core.
 
 ## Verification
 - Per deliverable: `console/with-build-lock.sh ./gradlew :audio_be:jvmTest` (+ :audio_bridge and

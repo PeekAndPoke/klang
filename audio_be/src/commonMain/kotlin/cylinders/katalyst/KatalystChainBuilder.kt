@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
+import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
+import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
@@ -45,8 +47,10 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * over the shared DSP in `audio_be/effects/`), with the constructor arguments the cylinder used to
  * pass them: the delay rents its ring from [SizedBuffers] and the reverb its network from
  * [ReverbUnits], both on first activation and never here, so building a chain allocates no ring
- * and no network. [KatalystStageDsl.Eq] and [KatalystStageDsl.Gain] build a
- * [KatalystPassThroughStage] until step 4 gives them their DSP.
+ * and no network. [KatalystStageDsl.Eq] and [KatalystStageDsl.Gain] are the two stages that
+ * never had a per-voice twin: they build [KatalystEqEffect] and [KatalystGainEffect], and their
+ * knobs come from the chain's slots whatever `voiceDriven` says, because there is no voice field
+ * for an owner writer to read (Katalyst step 4).
  *
  * **Two kinds of writer, chosen by [build]'s `voiceDriven` flag** (Katalyst step 3a, 2026-09-17),
  * one interface each, so a declared chain can be configured with no owner voice alive
@@ -285,10 +289,36 @@ object KatalystChainBuilder {
                     duckStage = stage
                 }
 
-                // No DSP yet: the position is kept and the buffers are untouched (step 4).
-                is KatalystStageDsl.Eq,
-                is KatalystStageDsl.Gain,
-                    -> pipeline.add(KatalystPassThroughStage())
+                // The mix EQ: one stage, the declared section list, over two EqCore banks. Its
+                // STRUCTURE (how many sections, of which type) is the declaration's; only the
+                // coefficient scalars are knobs.
+                is KatalystStageDsl.Eq -> {
+                    val specs = stage.sections.map { eqSectionSpec(it) }
+                    val fx = KatalystEqEffect(
+                        sampleRate = sampleRate.toDouble(),
+                        types = IntArray(specs.size) { specs[it].type },
+                    )
+                    pipeline.add(fx)
+
+                    // Slot-driven on EVERY chain, `voiceDriven` or not, and so is the gain below:
+                    // neither stage ever had a voice FIELD to be overridden by, so there is
+                    // nothing for an owner writer to read. The classic chain declares neither, so
+                    // this changes nothing about the byte-identical default; a chain that declares
+                    // an `eq` gets it configured on both paths, because `applyOwner` ends in
+                    // `applyParams` (see [KatalystChain]).
+                    statics.add(KatalystEqWriter(fx = fx, knobs = eqKnobs(specs)))
+                }
+
+                // The group fader, after the inserts (the signal-flow plan's D5).
+                is KatalystStageDsl.Gain -> {
+                    val fx = KatalystGainEffect()
+                    pipeline.add(fx)
+
+                    // Unity is the identity element of the stage, not a tuned value, which is why
+                    // it is a literal here and in `MasterStageDsl.Gain` rather than a shared
+                    // constant (the wire KDoc says so).
+                    statics.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
+                }
             }
         }
 
@@ -329,6 +359,41 @@ object KatalystChainBuilder {
             // name the orbit after the chain was built.
             duckWriter = duckWriter,
         )
+    }
+
+    /**
+     * One knob per section param, flat, in the layout [KatalystEqEffect.configure] reads: four
+     * slots per section, the ones the section's type does not have left null.
+     *
+     * The fallback is [SLOT_UNSET] rather than a number, and that is the one place this stage
+     * departs from "an unreadable knob takes its shared wire constant": a section's defaults live
+     * on its own wire variant (a lowpass cuts at 2000, a bell sits at 1000) and are not shared
+     * constants, so copying them here would be two spellings of one default. Unset is safe: the
+     * coefficient helpers take a non-finite freq to 1000 Hz, a non-finite q to 0.707 and a
+     * non-finite db to a transparent bell, so nothing here can put a NaN in the mix.
+     *
+     * The ASYMMETRY that buys is worth stating plainly, because it is audible: a knob the bus
+     * cannot read is one a VOICE can. `lowpass(freq = sine.range(400, 800))` renders around its
+     * center per voice; on a bus the same section lands on the helper's fallback, 1000 Hz, which
+     * is neither the author's center nor the wire default of 2000. The alternative (the wire
+     * default) would only move the wrong number, and the right fix is not a better fallback but a
+     * `katp` pattern, which is what a moving bus knob IS. Recorded here so nobody reads the
+     * fallback as the declared default.
+     */
+    private fun eqKnobs(specs: List<EqSectionSpec>): Array<KatalystKnob?> {
+        val knobs = arrayOfNulls<KatalystKnob>(specs.size * KatalystEqEffect.KNOBS_PER_SECTION)
+
+        for (i in specs.indices) {
+            val spec = specs[i]
+            val base = i * KatalystEqEffect.KNOBS_PER_SECTION
+
+            knobs[base + KatalystEqEffect.KNOB_FREQ] = KatalystKnob(spec.freq, SLOT_UNSET)
+            knobs[base + KatalystEqEffect.KNOB_Q] = KatalystKnob(spec.q, SLOT_UNSET)
+            knobs[base + KatalystEqEffect.KNOB_DB] = spec.db?.let { KatalystKnob(it, SLOT_UNSET) }
+            knobs[base + KatalystEqEffect.KNOB_GAIN] = spec.gain?.let { KatalystKnob(it, SLOT_UNSET) }
+        }
+
+        return knobs
     }
 }
 
