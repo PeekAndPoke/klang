@@ -45,7 +45,8 @@ has no bus meaning). A stage belongs to the bus when it works on a sum.
 | `adsr` and the curves | instrument | onset and release are the note's |
 | `distort`, `crush`, `coarse` | instrument | nonlinear, the settled power-amp reason |
 | `vibrato`, `penv`, `fm`, `accelerate` | instrument | pitch is the note's |
-| `unison`, `spread`, `pregain`, `velocity` | instrument | the instrument's own knobs |
+| `unison`, `spread`, `pregain` | instrument | the instrument's own knobs |
+| `velocity` | frontend | articulation shorthand, folded into `gain` at the wire (§6) |
 | `tremolo` | instrument | its phase is synced to the onset |
 | `phaser` | bus | decided 2026-08-24, one coherent sweep over the bus |
 | `delay`, `reverb` | bus | time effects on the sum |
@@ -54,7 +55,7 @@ has no bus meaning). A stage belongs to the bus when it works on a sum.
 | `eq` as mix shaping | bus | linear and static, the case-1 win |
 | `gain`, `pan`, `orbit` | channel | |
 | `clip`, `late`, `swing`, `mute`, `solo` | timing and playback | not audio |
-| `postgain` | retired | folded into gain by multiplication |
+| `postgain` | retired | renamed to `gain`; folds by multiplication where a song uses both (§6) |
 
 A filter exists on both sides on purpose: the note's VCF and the bus's EQ filter different things.
 
@@ -78,7 +79,7 @@ instruments and the chains do, and the pattern only ever writes slots.
 timing        start, duration, in seconds
 instrument    sound: the name of a registered ignitor (built-in, authored, inline)
 note          freq
-slots         oscParams: the instrument's knobs, pregain and velocity among them
+slots         oscParams: the instrument's knobs, pregain among them (velocity never crosses, §6)
 channel       gain, pan, orbit
 bus           katalyst: chain name, katalystParams
 master        master: chain name
@@ -129,10 +130,10 @@ Osc.register("supersaw", Osc.supersaw().classic())
   as Der Schmetterling does for its amps. No builder, no new node kinds, nothing on the wire.
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
 - **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
-  and a pregain inside it would consume the slot there, so velocity would drive the rack's distort
-  and never the guitar's tubes while the unconsumed rule stayed silent. Built-ins are
-  `Osc.saw().mul(OscSlot.pregain).classic()`; an author places `.mul(OscSlot.pregain)` where the
-  player's touch enters, or leaves it to the unconsumed rule (§6).
+  so a pregain inside it would land in the wrong place for every instrument with its own
+  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()`; an author places
+  `.mul(OscSlot.pregain)` where the player's touch enters, or does not place it, and then the
+  instrument has no drive knob (§6: no unconsumed rule, no magic).
 - **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs
   after every ignitor, so `sound(guitar).hpf(120)` works on an authored guitar; Der Schmetterling
   relies on it (the trommel's `.hpf(160).lpf(3500)`, the bass's `.adsr(...).hpf(30)`, the kick's
@@ -174,23 +175,82 @@ Osc.register("supersaw", Osc.supersaw().classic())
   `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
   vocabulary from the instrument definitions.
 
-## 6. Pregain, velocity, gain
+## 6. Pregain, gain, and where velocity went (rewritten 2026-09-18 with the maintainer)
 
-| word | where | meaning |
-|---|---|---|
-| `pregain`, times velocity | a slot the instrument places, `.mul(OscSlot.pregain)`, before its own chain | how hard the note hits the instrument; drives the amp |
-| `gain` | voice: after the instrument, before pan; orbit: after the chain; master: the shipped stage | tone-neutral level, one meaning on every surface |
+```
+Osc -> [A pregain] -> classic -> [B gain] -> pan, sum into the orbit -> Katalyst classic ... -> [C gain] -> master ... -> [D gain]
+```
 
-- **Unconsumed pregain is applied at the instrument's output.** The voice factory already collects
-  every `Param` a tree references. If `pregain` is among them, the resolved value goes into the
-  slot and nowhere else; if not, it multiplies the ignitor's output, as today. Every existing song
-  and authored instrument stays byte-identical; an author opts into drive by placing the slot.
-- Velocity is the player: it multiplies the resolved pregain. An instrument that wants velocity as
-  timbre reads a `velocity` slot with the same unconsumed rule.
-- `postgain` retires. Today gain and postgain are one multiplier at one point (`SendRenderer`), so
-  a song's `postgain(x)` folds into `gain` by multiplication; the word is removed.
-- `.oscp("pregain", x)` and `.pregain(x)` are the same write; `OscSlot.pregain` carries the
-  "filled by the engine, default 1.0" note the other engine-filled slots carry.
+| spot | what it is | word | owner |
+|---|---|---|---|
+| A | into the instrument, the level at which the sound meets its first nonlinearity: how hard it is played. Changes TIMBRE | `pregain` | the instrument places the slot |
+| B | after the voice's chain, per voice, tone-neutral | `gain` | the channel, with pan and orbit |
+| C | after the bus chain, per orbit: make-up gain after the bus compressor, the group fader | the Katalyst's `gain` stage | the bus |
+| D | end of the master | the master's `gain` stage | the master |
+
+`gain` means ONE thing on every surface, a tone-neutral fader after the processing (the parity
+rule). `pregain` is the one level that is not a fader, and it has its own word.
+
+**Where this came from.** Strudel has `gain`, `velocity` and `postgain`, and they are two
+POSITIONS, not three levels: `gain *= velocity` sits right after the source, before the filters
+and the distortion (spot A), and `postgain` is the only level at the end (spot B); verified in
+`superdough.mjs`. Klang's port applied all three at the very end, in the send stage, which is why
+they looked redundant: they were. Strudel's `gain` is our `pregain`, Strudel's `postgain` is our
+`gain`. Strudel has no shared insert bus, so it has no spot C.
+
+**Rules.**
+
+- **`pregain` is an ordinary slot: it does what the instrument wires it to, and nothing
+  otherwise.** No unconsumed rule, no level applied behind the author's back, no analysis of the
+  tree, no flag from the build. The built-ins place it explicitly:
+  `Osc.saw().mul(OscSlot.pregain).classic()`, with a helper so the line reads
+  `Osc.saw().pregain().classic()`. An authored instrument places it in front of its own
+  nonlinearity (the Orchestertrommel: on the summed partials, before the skin's `distort`; one
+  place, not one per oscillator, because the sum is linear), or not at all. On an instrument
+  that never places it, `.pregain()` does nothing, and that surprises nobody: a bare sine has no
+  drive. `.pregain(x)` is `.oscp("pregain", x)`.
+- **`gain` is the channel, not part of the instrument.** The engine applies it to every voice,
+  with pan, whatever the tree says, so it works on any instrument, wired or not. That is not
+  magic: the channel was never the instrument's.
+- **`velocity` is frontend shorthand and never reaches the backend.** Sprudel keeps the door,
+  the field and the accessor for authors, and multiplies velocity into `gain` where the voice
+  crosses the wire (`gain * velocity`, the product and order the backend computes today, so every
+  song keeps its bits). It folds into `gain`, not into `pregain`: that is where Klang applies it
+  today and where a real synth applies it by default (the amp), it works on every instrument,
+  and nothing has to be migrated or listened to. It is folded at the wire and not at the door,
+  because `velocity(p) = gain(mul(p))` taken literally does nothing on an unset gain and makes
+  `.velocity(0.7).gain(0.5)` order-dependent. A pattern that wants touch (play harder, get
+  dirtier) writes `.pregain("1 0.7 0.8")`. Another pattern kind may have its own articulation
+  dial and folds it the same way. The `velocity` field leaves the wire.
+- **`postgain` retires as a word**: it is renamed to `gain`. Where a song uses both, they fold by
+  multiplication; they were one multiplier at one point already (`SendRenderer`).
+- **`Katalyst.classic` ends in a `gain` stage at unity** (spot C). The stage returns early at
+  unity and is bit-transparent, so it costs nothing. No pattern door for it yet: a chain says
+  `k.classic().gain(0.8)` and a pattern reaches it with `katp`; a door is one line if the songs
+  want it. One value per orbit, like every bus knob: the owner voice's value applies.
+- Non-finite values read as unset (`/dsl-design` §4): a non-finite `pregain` or `gain` is 1.0 at
+  the voice factory. A NaN there used to poison the orbit's reverb and delay for the rest of the
+  playback.
+
+**What was tried and deleted (2026-09-18), so nobody rebuilds it.** The first implementation
+gave `pregain` and `velocity` an unconsumed rule (an unplaced slot acts as level at the output)
+and coupled them (velocity rode on pregain). The slot's value then depended on knowing, BEFORE
+the build, which slots the build would create, so a separate analysis of the tree predicted it.
+Three review rounds found the prediction disagreeing with the build three times: `Variants`
+(the union over variants while the build picks one), two arms that skip a child (`Detune`'s
+identity fold, the plain-sine branch), and then the work cap that kept the analysis cheap on
+the audio thread mispredicting kits. Lesson, in the review ledger: code that predicts another
+walk's outcome drifts from it wherever that walk is conditional. The maintainer's rule that
+replaced it: no magic. A knob does what the tree wires, the channel is the channel, and
+articulation is the frontend's business.
+
+**Considered and rejected the same day:** wrapping a bare signal in `classic()` automatically
+(where is the line: is `Osc.sine().mul(0.5)` bare?); an unplaced knob acting at the output (the
+magic above); velocity as a second backend slot; velocity folded into `pregain` (Strudel's
+position: a trap for every instrument that does not place the slot, and a sound change for
+every driven one). Still open, deliberately: a construction that makes "this instrument does not
+listen to that door" impossible to write by accident, without a warning. A type boundary between
+a signal and an instrument was discussed and not adopted; `sound()` also takes samples.
 
 ## 7. The Katalyst under this plan
 
@@ -230,9 +290,14 @@ one language's types (the pipeline reference leaves, a Katalyst reference joins)
 
 ## 9. Guards
 
-- Frozen-song byte identity (`FrozenSongs`, the song benchmark's frozen July text) after every
-  phase; the ledger's `ns/smp/pass` and the query-path benchmark before and after, so no phase
-  trades sound or speed silently.
+- **Sound identity is proven on minimal examples, not on songs** (§12 replaces the frozen-song
+  guard this bullet named until 2026-09-18): one voice or one stage in doubles compared by raw
+  bits, small multi-orbit render rows for wiring, and, where a claim is "identical to the code
+  before this change", a MINIMAL file rendered at HEAD in a throwaway worktree and on the final
+  tree with equal hashes. Every such claim names its render, made on the final tree and
+  exercising the changed path. `FrozenSongs` stays what it is, the song benchmark's input.
+- The ledger's `ns/smp/pass` and the query-path benchmark before and after a phase, so no phase
+  trades speed silently.
 - Door parity specs on every surface change; wire round trips for every new variant; every new
   test mutation-checked (audio_be and wire are the mandatory tier).
 
@@ -244,8 +309,13 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    the per-cylinder swap, `eq` and `gain`, the bus doors becoming `katp` aliases, insert-style
    sends. Byte-identical except where one orbit carried different per-voice send amounts, which
    the frozen songs do not.
-2. **Pregain**: the slot, the unconsumed rule, velocity onto pregain, `postgain` retired and
-   folded. Byte-identical for every existing instrument (none places the slot yet).
+2. **Pregain and the levels** (§6, rewritten 2026-09-18): the `pregain` slot with its door and
+   the `.pregain()` helper, inert unless placed; `velocity` folded into `gain` at the wire and
+   the `velocity` field off the wire (the wire golden is a baseline and is regenerated);
+   `postgain` renamed to `gain` across the built-in songs and the tutorial (the maintainer
+   allowed the mechanical change in Der Schmetterling); the finite guards on `pregain` and `gain`;
+   `Katalyst.classic` ending in a unity `gain` stage. Bit-identical for every existing song in
+   doubles on minimal examples (§12); the first attempt of 2026-09-18 is discarded.
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
    the node-level gate with the build-cache key covering it, the voice doors as `oscp` aliases,
    `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
