@@ -137,6 +137,17 @@ A song without `katalyst(...)` runs `KatalystDsl.classic`, which is today's hard
 engine before this work. That is the same "default MUST stay empty" contract `MasterDsl.default`
 carries, transposed: here the baseline is not empty but the chain the engine has always run.
 
+**Decided 2026-09-18 with the maintainer, replacing the append rule of step 1:** `.katalyst(dsl)`
+REPLACES the chain an event carries, exactly as `sound()` replaces the instrument and `master()`
+the master chain. Chaining two doors was error-prone: with the append rule
+`.katalyst(Katalyst(k => k.classic())).katalyst(Katalyst(k => k.classic()))` stacked fourteen
+stages whose duplicates read the same slot names, so one `.reverb(0.3)` switched on reverb into
+reverb and two compressors in series. The builder starts EMPTY, so `Katalyst(k => k.eq(...))` is
+honestly "an EQ and nothing else", and `k.classic()` is the one explicit word for "the chain an
+orbit has always run", appended at most once per builder (a second `classic()` in the same
+builder is dropped). The default of an orbit that declares nothing stays classic. The composition
+memo (`KatalystAppend`) and `KatalystDsl.plus` go with the rule.
+
 ### 1. Wire model (`audio_bridge/KatalystDsl.kt`)
 
 ```kotlin
@@ -301,7 +312,8 @@ rule that makes the "cab before room" doctrine hold physically:
 The default position for a mix-shaping EQ follows the master decision (reverb, then eq, then the
 dynamics): after `reverb`, before `compressor`, so the detector sees the corrected spectrum and a
 low cut turns into headroom. The builder appends in written order; `Katalyst.classic()` is the
-historical order. Nothing reorders behind the author's back.
+historical order, and `k.classic()` lands its block once per builder. Nothing reorders behind the
+author's back.
 
 ### 6. Application path, mirrored from the master
 
@@ -317,7 +329,7 @@ historical order. Nothing reorders behind the author's back.
 | consume | scheduler at promotion, `masterBus.requestSwap` | scheduler at promotion, `cylinders.requestSwap(orbit, id)`, applied whether or not the event sounds, before the late-sound guards |
 | swap | `MasterBus` dual-chain crossfade, 60 ms, linear, the outgoing cut | per-cylinder dual-chain crossfade, same constant (`Crossfade.XFADE_SECONDS`), same block-quantized start, the outgoing chain's INPUT ramped (dry and sends) and its output added at full weight, then drained (see §9) |
 | build | chains built at registration, bounded cache | chains built at registration per cylinder that references them, bounded cache; reverb units and rings rented from the shelves as today |
-| reset | `Master.default()` says "back to unity" | there is no `default`: `Katalyst.classic()` IS the historical chain, and an event carrying no chain leaves the orbit's chain as it is (the master's "no change" rule), so going back is `.katalyst(Katalyst.classic())` on a pattern that composes nothing else |
+| reset | `Master.default()` says "back to unity" | there is no `default`: `Katalyst.classic()` IS the historical chain, and an event carrying no chain leaves the orbit's chain as it is (the master's "no change" rule), so going back is `.katalyst(Katalyst.classic())`; since 2026-09-18 the door replaces like `master`, so the last `.katalyst` on a pattern is the chain |
 
 Two voices on one orbit carrying different chains swap it back and forth with a crossfade each
 time, the same author error the master has, and the same cure: one chain per orbit. Voices with the
@@ -465,8 +477,8 @@ complexity outranks the duplication.
   declaration); every chain that arrives by name is slot-driven, classic content included (decided
   2026-09-18 in step 5a's review: `Katalyst(k => k.classic())` was content-equal to the built-in
   classic and resolved to the voice-driven chain, leaving `katp` inert on the documented line). A
-  declared chain owns its material, so `.body(material = ...)` on its voices does not set it until 5b
-  decides the string slot; the numeric doors reach it through `katp`. The owner's map is aged with
+  declared chain owned its material until step 5a-2 made the material an index slot (below), so
+  `.body(material = ...)` on its voices reaches it through `katp` like every other knob. The owner's map is aged with
   the lease's two-block liveness, so a lapsed owner's values never configure an arriving chain.
   Adding `.katalyst(Katalyst(k => k.classic()))` to a running pattern therefore installs a chain:
   immediate when the orbit is idle, a crossfade from the born-with chain when it sounds, and that
@@ -539,7 +551,24 @@ complexity outranks the duplication.
   2026-09-18 for 5b: there is no string slot; a material is chain-declared (`k.classic().body("wood",
   b => b.wet(0.3)).eq(...)`, the null-material body stage of classic stays off and the declared one
   runs), and at 5b the pattern-side `material`/`vowel` arguments retire with the voice fields while
-  `wet` and `floor` stay `katp` aliases. So the song's first real use writes its body into the chain.
+  `wet` and `floor` stay `katp` aliases. **Superseded the same day by step 5a-2 (below):** the
+  material and the vowel are numeric INDEX slots into the shared tables, so the pattern doors keep
+  working on a declared chain and the song text does not move.
+- **Step 5a-2, decided 2026-09-18 with the maintainer: the door replaces, the names are index slots.**
+  Two cleanups before 5b, one review loop and one commit, byte-identical for undeclared songs:
+  (1) `.katalyst(dsl)` replaces (see §0), `KatalystAppend`, `KatalystDsl.plus` and the "A plus B"
+  KDoc go, `k.classic()` appends its block once per builder; (2) `body.material` and `vowel.vowel`
+  become `IgnitorDsl` slots holding an INDEX into `BodyMaterials.names` and a flattened
+  register-by-vowel catalogue in `VowelBands`, index 0 = `none`, unset or out of range = the stage
+  is off, the same shape `duck.orbit` already has. Classic carries both as unset `Param` slots; the
+  pattern doors `.body("wood", ...)` and `.vowel("bass:a", ...)` write the index plus their
+  companions; the chain builders `k.body("wood", ...)` write a `Constant`; name-to-index and
+  index-to-bands live in one place next to the tables in `audio_bridge`, so both doors and the
+  resolver agree. A typed (string) param kind was considered and not needed: the tables are closed
+  lists, and a number is what the wire already carries. Off stages cost nothing new: `configure(null)`
+  clears the filter swap, whose `process` returns on its first line, the path the born-with chain
+  runs today. With this the 5b material wall is gone and the frozen July song keeps its body on a
+  declared chain.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
@@ -557,8 +586,8 @@ complexity outranks the duplication.
   +1.0 at 202 and +0.5 to +0.7 at 640 to 806 (a q of 0.8 bell is wide), the drum cut takes -1.1
   at 127 and -0.1 at 160, and nothing above 1.6 kHz moves by more than 0.1 dB, so mid +0.9,
   highmid +0.1, presence +0.0. Ears next. One confound the maintainer should know: DECLARING a
-  chain on the guitar orbits already changes the song, because `.body(material = "wood")` does
-  not survive a declaration until 5b decides the string slot (+1.5 at 254 and 508, +1.6 at
+  chain on the guitar orbits already changes the song, because `.body(material = "wood")` did
+  not survive a declaration before step 5a-2's index slot (+1.5 at 254 and 508, +1.6 at
   2.5 to 5 kHz, +0.84 dB rms), which is why the EQ's own effect is measured against the declared
   chain and not against the undeclared song.
 - **Phase 2, the performance.** `Katalyst.param`, `.katp`, `VoiceData.katalystParams` (step 5a,

@@ -200,7 +200,11 @@ The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisi
   `phaser`, `body`, `vowel`) stop being voice fields and become `katp` aliases on the orbit's
   chain; the owner-voice override rule of that doc's §2 disappears with the fields it overrode. On
   the default chain every classic effect has its slots, so a beginner's first `.reverb(0.3)`
-  works; on a declared chain without a reverb stage it does nothing.
+  works; on a declared chain without a reverb stage it does nothing. Decided 2026-09-18: the
+  `body` material and the `vowel` name are numeric INDEX slots into the shared tables in
+  `audio_bridge` (`body.material`, `vowel.vowel`, 0 = none), so no string slot kind joins the
+  wire and the pattern doors keep working on a declared chain; and `.katalyst(dsl)` REPLACES
+  like `sound()` and `master()`, the append rule of the task doc's step 1 is retired.
 - **D2 dissolves:** with no per-voice send amounts, the send buffers go. `reverb` and `delay`
   become insert-style stages fed by the mix at their list position scaled by `wet`, exactly the
   master's `MasterStageDsl.Reverb` model. "The room hears the cab" is then just list order.
@@ -276,7 +280,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   chains. Move them behind a global per-playbackId registry of such storages, the frontend twin of
   the backend's per-playback registry forks (`InlineDslRegistrar` already is one), and free the
   playback's entries when it dies. Ids become per playback, which the registry forks allow. Its own
-  item, after phase 1; the Katalyst composition memo already lives in the pattern node and dies with it.
+  item, after phase 1; the Katalyst composition memo was retired 2026-09-18 with the append rule.
 
 ## Links
 
