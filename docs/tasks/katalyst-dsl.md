@@ -447,9 +447,9 @@ complexity outranks the duplication.
   "ducks" for an owner that died on the swap block, and the successor's reset then steps, as any
   owner change on a classic duck does today. A continuous mid-ramp handover would need a second ramp
   the crossfade cannot express; the maintainer's call whether that corner deserves it; step 3c = the
-  body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a = the
-  orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it as aliases, so a
-  declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
+  body and vowel name tables move to `audio_bridge` so a declared chain can carry them; step 5a (done
+  2026-09-18) = the orbit param state (`katp`, `VoiceData.katalystParams`) and the bus doors writing it
+  as aliases, so a declared chain's `Param` slots resolve from what the pattern wrote; step 4 = `eq` and `gain`; step 5b =
   insert-style sends and the voice fields leaving the wire. Reordered 2026-09-17 after step 3a's review:
   a declared chain reads slots only, so `stack(guitars).reverb(wet = 0.15).katalyst(Katalyst(k =>
   k.classic().eq(...)))` would lose its room until the doors write `katp`; 5a therefore precedes 4.
@@ -457,8 +457,37 @@ complexity outranks the duplication.
   map read through the lease (no cylinder copy; it dies with the voice), re-resolved by the
   slot-driven writers only when the map instance changes; `.katp` and the bus doors write it (the
   doors with their fill rule, `compressor` without, `body`/`vowel` only `wet` and `floor` since a
-  material is a name, not a number); classic stays voice-driven and ignores the map until 5b.
+  material is a name, not a number). Voice-driven is ONLY the cylinder's born-with chain (no
+  declaration); every chain that arrives by name is slot-driven, classic content included (decided
+  2026-09-18 in step 5a's review: `Katalyst(k => k.classic())` was content-equal to the built-in
+  classic and resolved to the voice-driven chain, leaving `katp` inert on the documented line). A
+  declared chain owns its material, so `.body(material = ...)` on its voices does not set it until 5b
+  decides the string slot; the numeric doors reach it through `katp`. The owner's map is aged with
+  the lease's two-block liveness, so a lapsed owner's values never configure an arriving chain.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
+  As built (2026-09-18): a slot-driven writer is a class with `resolve(params)` and `apply()`
+  (`KatalystSlotWriters.kt`), one per stage kind, over `KatalystKnob`s that hold a slot NAME and the
+  authored number. `apply` runs every block and writes numbers already in hand; `resolve` runs only
+  when the map instance changes and is the one place a lookup happens and a composite (`FilterDef`,
+  `Voice.Compressor`, `Voice.Ducking`) is allocated. The identity gate lives in `KatalystChain`, not
+  in the cylinder, because a crossfade has TWO chains at different resolve states (a chain faded in
+  from the pending poll resolved from no owner). `reset()` and `retire()` drop the reference, so an
+  idle chain pins no voice's map. `duckDeclared` became the duck writer's live flag: `.katp` can name
+  the sidechain orbit after the chain was built, and `ducksWith` has to see that. The `.katp` rest
+  rule is the 2026-09-16 one for free (the string-lift helper). Round 1 of the coordinator's review
+  moved the sprudel storage: `oscParams` and `katalystParams` are mutable single-owner maps now, a
+  door writes one KEY in place, `clone()` deep-copies them and `toVoiceData` hands the wire a copy
+  (see `sprudel/MEMORY.md`). Round 1 also found the duck: `ducksWith` is asked BEFORE the arriving
+  chain's writers may run, so a duck named through `.katp("duck.orbit", n)` read as "no duck" at the
+  handover and the swap ramped the reduction out and then dropped a fresh one on the orbit a block
+  later. `KatalystChain.resolveParams` is the resolve half without the write, and both swap paths
+  (`beginFade`, the late-duck correction in `updateFromVoice`) call it first; the cylinder keeps the
+  owner's map in `ownerParams` for exactly that, dropped wherever the lease is. Guards:
+  `CylinderChainCrossfadeSpec`, three slot-duck rows. The acceptance measured:
+  `note("c3 e3 g3").sound("supersaw").reverb(wet = 0.5, size = 6).orbit(1).katalyst(Katalyst(k =>
+  k.classic().gain(1.0)))` rendered byte-identically to the same pattern WITHOUT the reverb door
+  before this step, and differs after it (last-cycle rms 0.1333 against 0.1301, tail 0.0085 against
+  0.0080). Guards: `CylinderKatalystParamsSpec`, `LangKatalystParamSpec`.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
