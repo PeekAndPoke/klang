@@ -129,6 +129,40 @@ the bug.
   master stage, a sprudel call (it sets every slot it leaves unset at write time), the engine's
   wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
+- **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
+  call NAMES a stage, the door checks every companion slot of that stage and, if it is not yet
+  set on the event and the call did not provide it, writes the constant from
+  `audio_bridge/constants/`. A later call that provides the knob overwrites it; an earlier
+  explicit value is never overwritten by a fill. What "names the stage" means differs by stage
+  kind, and the two kinds must not be confused (round 1 of step 5a-3 caught this text saying
+  "wet is the gate of the sends", which its own blueprint contradicts):
+  - stages with a NAME knob (`body` by its material, `vowel` by its vowel, `duck` by its orbit)
+    are named only by that knob; a tail-only call (`body(wet = 0.3)`, `duck(depth = 0.5)`)
+    writes its own slot and never invents the name knob, because inventing it would switch the
+    stage on;
+  - the sends, the compressor and the phaser have no name knob, so ANY of their knobs names the
+    stage: `reverb(size = 4)` fills `wet` with `REVERB_WET` and the room is on,
+    `compressor(ratio = 8)` fills the other four and compresses at the constant threshold,
+    `phaser(rate = 2)` fills the other four and stays silent because `PHASER_WET` is 0. That is
+    the documented, guarded behaviour of `fillReverbDefaults` / `fillDelayDefaults`, the
+    blueprint. The two lists above are CLOSED and complete for the bus doors (name knob: body,
+    vowel, duck; any knob: delay, reverb, compressor, phaser); a new bus door is added to one of
+    them in the same change, or the rule is silently wrong for it (round 2 of step 5a-3 caught the
+    phaser missing from this list one round after the sends' gate was mis-stated).
+  A knob with no constant, where unset means off (`reverb.lowpass`), is not a companion in this
+  sense and is never filled; inventing a constant for it would damp every room.
+  **This bullet is the ONE home of the rule's text.** The register row is its index line. Every
+  other site (a door's KDoc, `ParamBag`, the classic chain's KDoc, the constants headers, the
+  module `MEMORY.md` files) states only what THAT door or class does, in a sentence or two, and
+  points here. The rule escaped review three times in one step because its text was copied to a
+  dozen sites and each correction reached only some of them.
+  `body`, `vowel`, `compressor`, `phaser` and `duck` follow the blueprint since Katalyst step
+  5a-3, which also gave the bags a class (`ParamBag`, `setOrDefault`). The value a door hands to `setOrDefault` is
+  what THIS call named, never a voice field that an earlier fill wrote, or a `katp` between two
+  calls of the same door is overwritten. The engine's non-finite guard stays as the NaN rule for
+  a raw `katp` write, not as a second fill. The voice-side compound doors (`adsr`, `lpf`, FM and
+  pitch envelopes) adopt it when phase 3 of `docs/plans/signal-flow-redesign.md` rebuilds the
+  built-ins as instruments with slots.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
   on the master only because a per-orbit lookahead would shift that orbit late). See
@@ -227,3 +261,11 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
     trigger on the named orbit) and the comment describes what the engine does. Lesson of the
     accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
     queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear.
+11. A compound door fills its companions per param from `audio_bridge/constants/` when the
+    stage is named, never overwrites an explicit value, and never invents a NAME knob. Check the
+    door against the two closed lists in §4 (they are not repeated here on purpose); a new bus
+    door joins one of them in the same change. Review a change to this rule BY TABLE: every door,
+    every setter, against every clause.
+
+12. The value handed to `setOrDefault` is what this call named, never a field an earlier fill
+    wrote (§4).

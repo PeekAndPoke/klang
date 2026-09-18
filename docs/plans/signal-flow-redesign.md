@@ -282,6 +282,34 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   playback's entries when it dies. Ids become per playback, which the registry forks allow. Its own
   item, after phase 1; the Katalyst composition memo was retired 2026-09-18 with the append rule.
 
+## 12. Safety nets: what they are for, and when they go (maintainer, 2026-09-18)
+
+A byte-identity net is a MIGRATION TOOL, not a contract. It exists so the loop can run unattended
+between two moments at which the maintainer has listened; at the next such moment it has done its
+job. Kept past that, it ties knots around our legs: every deliberate sound change fights a test
+that only says "different", and the pace drops. Three kinds, three lifetimes:
+
+| kind | examples | lifetime |
+|---|---|---|
+| **contract** | door parity specs, the defaults-sync specs, catalogue index specs, `ParamBagSpec`, the wire codec round trip | permanent; they state what the surface promises |
+| **baseline** | the wire golden (`voicedata_golden.txt`), the frozen minimal corpus of phase 3 (one hash per row of raw doubles) | valid from one ear-confirmed checkpoint to the next; REGENERATED at the checkpoint, never hand-edited, never defended against a change the maintainer approved by ear |
+| **migration fixture** | old-path against new-path comparisons (`Katalyst…MatchesUntouchedVoice`, the declared-against-born-with render rows, `*MigrationSpec`, `*ParitySpec` whose two sides are an old and a new implementation) | removed in the change that finishes the migration (the scaffolding guideline); the oracle it carried is frozen into the baseline first if it is still wanted |
+
+**No full songs as tests.** A song renders slowly, exercises only the doors it happens to call
+(the phaser fill had no evidence behind two frozen songs), quantises to 16 bits, and a failure
+does not say where. Acceptance is minimal examples at three levels: the wire as text, one voice
+or one stage in doubles compared by raw bits, and small multi-orbit render rows for wiring
+(shared orbit, chain install, swap), each with an engagement control, a not-silence floor and a
+mutation. The frozen-song hash used as the acceptance of Katalyst steps 1 to 5a-3 ends with 5a-3.
+
+**Checkpoints.** A checkpoint is the maintainer saying "this sounds right". The foreseen ones:
+after the insert-style sends (Katalyst 5b), after the switch fades (5c), after the phase 3
+spike, at the end of phase 3. At each: regenerate the baselines, delete the migration fixtures
+whose migration is finished, and run one audit pass over the specs named `*Parity*`,
+`*Migration*` and `*Golden*` to classify each as contract, baseline or fixture. The first audit
+is due at the 5b checkpoint; candidates seen on 2026-09-18 without reading them: `DelayLineMigrationSpec`,
+`OnepoleParitySpec`, `BlockSizeParitySpec`, `OversamplerDecimatorParitySpec`, `OptimizerSongParitySpec`.
+
 ## Links
 
 - `../tasks/katalyst-dsl.md`, the first phase, with the measurement that started this.

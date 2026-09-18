@@ -57,6 +57,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klangbuch exported parts carry no arrangement timing and no scale; both live at song level.                                  | 2026-08-20 | `sprudel/MEMORY.md` Lessons                     |
 | Plans live in `docs/plans/`, tasks in `docs/tasks/`, finished tasks in `docs/tasks-archive/<month>/`.                        | 2026-06    | `docs/tasks/_priorities.md`                     |
 | Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. | 2026-09-06 | this file                                     |
+| Compound doors fill per param at the door: a call that names a stage writes every companion it left out and the event has not set, from the constant in `audio_bridge/constants/`; an explicit value is never overwritten. A stage with a name knob is named only by that knob, and a tail-only call never invents it; a stage without one is named by any of its knobs. Which door is which: the two closed lists in `/dsl-design` §4, the one home of this rule's text, never copied. | 2026-09-18 | `/dsl-design` §4, checklist 11 and 12 |
 | Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in `docs/plans/signal-flow-redesign.md` §11). | 2026-09-17 | this file |
 
 ### Guideline

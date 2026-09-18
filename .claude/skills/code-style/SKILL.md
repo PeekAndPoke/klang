@@ -413,3 +413,13 @@ the "raw" half (no unasked safety clamps on AUDIO parameters) lives there too.
 Never `—` or `–` in docs, KDoc, UI strings, tutorials, commit messages or reports. Use commas,
 colons, parentheses or a new sentence. The A/B comment suffix convention is `, swap`.
 (Maintainer, 2026-08: the dash reads as an AI tell.)
+
+## Test Rules
+
+### 23. Negated Equality Is `shouldNotBe`
+
+A negated equality in a spec is `a shouldNotBe b`, never `(a == b) shouldBe false`, so a failure
+names both values instead of "expected false but was true". The one exception is a boxed `NaN`,
+where `shouldNotBe` passes for the wrong reason and the raw comparison is deliberate; say so in a
+comment at that site. (Added 2026-09-18 after the form recurred one round after it was retired
+at three sites; the review ledger in `/review-loop` Standard 3 has the row.)

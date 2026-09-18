@@ -73,6 +73,32 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   Test-only or doc-only portions get ONE reviewer or none — mutation checks (Standard 2) already
   guard tests harder than a reviewer can.
 - **Never silently drop a finding.** Every finding ends as fix / reject+reason / user-decision.
+- **A rule with a closed list is reviewed by table** (2026-09-18, ledger): when a change lands or
+  edits a rule that enumerates cases (which door is in which list, which stage has which gate),
+  the reviewer brief asks for a table of EVERY case against the rule's clauses, read from the
+  code. Three rounds of prose review missed what one table found in a pass.
+- **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
+  exercising the changed path. A render that predates the last edit, or a song that never calls
+  the changed door, backs nothing.
+- **The effort ladder: every round that is not clean escalates one level, up to max**
+  (maintainer, 2026-09-18). The Agent tool has no per-call effort dial, so the levels are agent
+  definitions in `.claude/agents/` with model and effort pinned:
+
+  | round | reviewers | how to spawn |
+  |---|---|---|
+  | 1 (blind) | `opus`, session effort | `subagent_type: general-purpose`, `model: opus` |
+  | 2 | `opus`, high | `subagent_type: reviewer-high` |
+  | 3 | strongest tier, xhigh | `subagent_type: reviewer-xhigh` (the 2026-09-05 "round 3 on the strongest tier" rule, now with the effort) |
+  | 4 and later | strongest tier, max | `subagent_type: reviewer-max` (the safety valve has already fired; the maintainer is in the loop) |
+
+  Why a ladder and not max from the start: a round that is not clean means the previous tier
+  missed something or the fix delta introduced something, and both call for more scrutiny of a
+  SMALLER target (the delta), so the extra effort is spent where it pays. Round 1 is the wide
+  net at the ordinary tier. The implementer of a fix round stays at the session effort unless the
+  round found a CRITICAL, then it is briefed on `opus` with the reviewer-high definition's
+  discipline restated in the prompt. Watched together with the "opening line" table in
+  `/agent-fleet`: if round 2 at high finds what round 1 at session effort missed, the ladder
+  earns its cost; if it never does, round 1 can start higher and the ladder shortens.
 - **Final report** lists: rounds run; per round the findings and their outcomes; the parked user decisions on top.
 
 ### Reviewer prompt templates
@@ -156,6 +182,51 @@ Mutation checking is the antidote: it tests the test.
 
 ---
 
+## Standard 3: every escape closes one hole (deterministic self-improvement, maintainer, 2026-09-18)
+
+The loop improves itself without experiments. The unit is not a rate over many rounds (the sample
+stays too small to estimate one) but a single escaped defect: every CRITICAL or MAJOR that a
+review round finds is something the stage before it let through, and each one is classified and
+closed ONCE, deterministically, so the same class cannot escape the same way again.
+
+**Classify each CRITICAL/MAJOR by what would have caught it earlier**, and make that thing exist:
+
+| class | what let it through | the fix to the process |
+|---|---|---|
+| brief | the implementer was not told a constraint or a decided rule | a line in the brief template of `/agent-fleet` or in the rules register |
+| checklist | the reviewer template does not ask the question | an item in the `/dsl-design` or `/review-loop` checklist, with the failing scenario as its example |
+| test | no test class could see it (a mutation would have stayed green) | a mandatory test pattern for that kind of change (a parity render, a defaults-sync spec, an identity spec) |
+| design | it should have been decided before implementing | a "decide before implementing" line in the task doc's step template |
+| tooling | a mechanical check would have caught it | a pre-commit grep or a script (`git diff | grep -c '—'`) |
+
+**The signal that a rule failed is recurrence, not a rate.** If a finding of a class that already
+has a rule escapes again, the rule's TEXT failed (it was not where the agent read, or it did not
+name the scenario), and it is rewritten, not re-stated. One recurrence is enough to act on; that is
+what makes the loop deterministic at n = 1.
+
+**What stays a judgement call, set by the maintainer and revisited on evidence:** the effort
+ladder, the opening line, the safety valve. The recurrence ledger is the evidence: when round 1
+keeps letting through classes that already have a rule, the problem is the tier of round 1, not
+the rules.
+
+**The ledger** (one row per escape, appended when the step commits; the classes above):
+
+| date | step | the escape | class | what it changed |
+|---|---|---|---|---|
+| 2026-09-17 | Katalyst 2, 3c | em-dashes in moved lines reached two commits | tooling | `git diff \| grep '^+' \| grep -c '—'` before every commit |
+| 2026-09-17 | Katalyst 3a | the single NaN probe was defeated by `safeOut` | test | the two-probe coercion and its spec |
+| 2026-09-18 | Katalyst 3b | the outgoing chain's sends were unramped; the duck was not carried across a swap | checklist | the audio reviewer template asks "what happens to every send and to the envelope state during the swap" |
+| 2026-09-18 | Katalyst 5a | `Katalyst(k => k.classic())` content-equal to classic resolved to the voice-driven chain, `katp` inert | design | the rule "only the born-with chain is voice-driven", decided before 5a's fix round |
+| 2026-09-18 | Katalyst 5a | per-door map allocation on the query path | checklist | "allocation per event on the query path" in the coding reviewer template |
+| 2026-09-18 | Katalyst 5a-2 | classic's `body.wet` was a SET 0.0, so a material-only `body("wood")` on a declared chain was dry | design + checklist | the compound-door fill rule (rules register, `/dsl-design` §4, checklist 11) and the defaults-sync spec's unset family |
+| 2026-09-18 | Katalyst 5a-3, round 1 | the coordinator's rule text named `wet` as the gate of the sends and said the gate is never invented, which the blueprint `reverb(size = 4)` contradicts; the next implementer would have deleted the send fill | brief (the rule author did not read the blueprint before writing the rule) | the register row and `/dsl-design` §4 state the gate per stage kind (name knob vs any knob); rule: a rule that names a blueprint is checked against the blueprint's own spec before it lands |
+| 2026-09-18 | Katalyst 5a-3, round 1 | the fills handed `setOrDefault` the voice field, so a `katp` between two calls of the same door was overwritten | checklist | `/dsl-design` checklist 12: the value handed to `setOrDefault` is what this call named, never a field an earlier fill wrote |
+| 2026-09-18 | Katalyst 5a-3, round 2 | the corrected rule text listed the any-knob stages as "the sends and the compressor" and omitted the phaser, which the same round brought under the rule; an implementer reading the closed list would delete the phaser fill | recurrence of the round 1 text escape, one round later (the rule enumerated stages without saying the list was closed, so an addition elsewhere in the same change did not update it) | §4 now marks both lists CLOSED and complete and says a new bus door joins one of them in the same change; checklist 11 repeats it. Lesson for the rule author: an enumeration in a rule is a contract, write "closed" or do not enumerate |
+| 2026-09-18 | Katalyst 5a-3, round 3 | the duck door filled its companions on ANY knob (since step 5a), while the rule and the body door say a name-knob stage fills only when its name knob is named; audible on a custom chain (`duck(attack = 0.3)` wrote `duck.depth = 0.0` over a chain-authored 0.8); two guards in one spec encoded opposite readings of the same clause | checklist (no review had checked every door against the rule; the strongest-tier reviewer built a door-by-door table against the two closed lists and found it at once) | the duck fills only when THIS call named an orbit; `/review-loop`: when a change lands a rule with a closed list, the reviewer brief asks for the door-by-door table |
+| 2026-09-18 | Katalyst 5a-3, rounds 1 to 3 | the same rule text escaped three times in one step, each correction reaching only some of a dozen copies (register, skill, `ParamBag`, the classic KDoc, two constants headers, seven door KDocs, `MEMORY.md`) | structural (a rule restated at every site that obeys it cannot be corrected atomically) | `/dsl-design` §4 is the ONE home of the rule's text; every other site states only its own facts and points there; enumerations of "which stage is in which list" are never copied |
+| 2026-09-18 | Katalyst 5a-3, round 3 | byte-identity claims rested on renders that did not exercise the change: neither frozen song calls the phaser, and one render predated the last batch | test (the evidence audit: which render, made when, backs which claim) | before a step commits, every byte-identity claim names a render made on the final tree that exercises the changed door; a changed door no frozen song calls gets a before/after render of a song that does |
+| 2026-09-18 | Katalyst 5a-3, round 1 | `(a == b) shouldBe false` recurred in a new spec one round after it was retired at three sites | recurrence (the rule lived only in a round's findings, nowhere an author reads) | `/code-style` §23: `shouldNotBe`, except on a boxed NaN where the raw form is deliberate |
+
 ## Gotchas
 
 - **A scripted rename must know what a word is.** A door name that is also an English word (`voices`,
@@ -191,6 +262,9 @@ Mutation checking is the antidote: it tests the test.
   matches your own shell's command line.
 
 ## Changelog
+
+- **2026-09-18**: the effort ladder per round (round 2 `reviewer-high`, round 3 `reviewer-xhigh`,
+  round 4 and later `reviewer-max`, agent definitions in `.claude/agents/`).
 
 - **2026-08-28** — Loop tightened after the envelope-ownership review ran 5 rounds. Evidence both
   ways, recorded honestly: the loop's catches were decisive (the IgniteRenderer onset bug behind

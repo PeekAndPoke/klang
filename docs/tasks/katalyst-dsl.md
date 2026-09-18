@@ -162,8 +162,8 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
 
 @WireFormat
 sealed interface KatalystStageDsl {
-    @WireName("body")       data class Body(val material: String? = null, val wet: IgnitorDsl = Constant(0.0), val floor: IgnitorDsl = Constant(0.0))
-    @WireName("vowel")      data class Vowel(val vowel: String? = null, val wet: IgnitorDsl = Constant(0.0), val floor: IgnitorDsl = Constant(0.0))
+    @WireName("body")       data class Body(val material: IgnitorDsl = Constant(SLOT_UNSET), val wet: IgnitorDsl = Constant(0.0), val floor: IgnitorDsl = Constant(0.0))   // material = an index, step 5a-2
+    @WireName("vowel")      data class Vowel(val vowel: IgnitorDsl = Constant(SLOT_UNSET), val wet: IgnitorDsl = Constant(0.0), val floor: IgnitorDsl = Constant(0.0))
     @WireName("delay")      data class Delay(val wet: IgnitorDsl = Constant(DELAY_WET), val time: IgnitorDsl = Constant(DELAY_TIME_SECONDS), val feedback: IgnitorDsl = Constant(DELAY_FEEDBACK), val cap: IgnitorDsl = Constant(DELAY_CAP))
     @WireName("reverb")     data class Reverb(val wet: IgnitorDsl = Constant(REVERB_WET), val size: IgnitorDsl = Constant(REVERB_SIZE), val lowpass: IgnitorDsl? = null)
     @WireName("phaser")     data class Phaser(val rate: IgnitorDsl, val wet: IgnitorDsl, val center: IgnitorDsl, val sweep: IgnitorDsl, val floor: IgnitorDsl)
@@ -197,24 +197,29 @@ Rules that fix the shape:
 - **`Duck` is declared in the list but runs outside it**, as today (`Cylinders.processAndMix` step 2
   needs every orbit processed first). Its position in the list is documented as ignored, and when a
   chain declares two, the last one wins (decided 2026-09-17; the chain builder says so in its KDoc).
-- **Enums nowhere.** `material` and `vowel` stay strings, as on the voice fields today; the stage
-  variants are the sealed hierarchy (rule 7).
+- **Enums nowhere, and no string slot either.** `material` and `vowel` were strings until step
+  5a-2 (2026-09-18) made them numeric INDICES into `BodyMaterials.names` and `VowelBands.names`,
+  0 = none, so both doors convert a NAME through one shared `indexOf` and the wire keeps carrying
+  numbers. A typed (string) param kind was considered and not needed: the tables are closed lists.
+  The stage variants are the sealed hierarchy (rule 7).
 - **The classic chain is the untouched voice, slot by slot (decided in step 1's review loop,
   2026-09-17).** The engine gates the send effects on `delay.time` and `reverb.size`
   (`KatalystDelayEffect` / `KatalystReverbEffect.configure`), not on wet, so `classic` carries what
   `VoiceFactory`'s untouched branch carries: delay wet, time and feedback 0.0 with `cap` at
-  `DELAY_CAP`, reverb wet and size 0.0 with lowpass unset, phaser wet 0.0, body and vowel wet 0.0
-  with material and vowel null, all five compressor knobs unset (the engine's gate is "any of the
-  five set", `Voice.Compressor.fromParams`, and the `compressor(...)` door does not fill threshold on
-  a tail-only call, so `compressor(ratio = 8)` must still switch the stage on with the constant
-  threshold), duck orbit unset and depth 0.0; every other knob the shared constant. `KatalystClassicMatchesUntouchedVoiceSpec` builds a voice
+  `DELAY_CAP`, reverb wet and size 0.0 with lowpass unset, phaser wet 0.0, body and vowel with
+  their index AND their wet unset (since 5a-2: the material and the vowel are index slots, and an
+  unset wet lets the engine's non-finite guard supply the constant), all five compressor knobs
+  unset (the engine's gate is "any of the five set", `Voice.Compressor.fromParams`), duck orbit
+  unset and depth 0.0; every other knob the shared constant. `KatalystClassicMatchesUntouchedVoiceSpec` builds a voice
   through the real factory and compares. A BARE stage keeps the touched constants (`Reverb()` has
   wet `REVERB_WET`), except phaser and duck, which stay off until `wet` respectively `orbit` is
   written, as their sprudel doors do today. Consequence: the `reverb(...)` door fills the companion
   slots at write time (the 2026-09-16 rule) and sounds familiar; a raw `katp("reverb.wet", x)`
-  writes one slot and is silent on classic until `reverb.size` is written too. The compressor is
-  the second asymmetry, the other way round: a raw `katp("compressor.ratio", 8)` switches the stage
-  on with the constant threshold, as the voice door does today.
+  writes one slot and is silent on classic until `reverb.size` is written too. A raw
+  `katp("compressor.ratio", 8)` switches the compressor on with the constant threshold through the
+  engine's guard; since step 5a-3 the `compressor(...)` door fills its companions like every
+  compound bus door, so the asymmetry this paragraph once recorded between the two doors is gone
+  (`/dsl-design` §4 is the one home of the fill rule).
 - **`reverb.lowpass` is a slot whose unset value is the wire's non-finite sentinel** (`/dsl-design` §4:
   a non-finite value reads as unset), meaning the engine's fixed damping, exactly as a null `reverbLowpass`
   on the voice does today. Decided 2026-09-17 after step 1 shipped it without a slot; step 1's fix
@@ -385,12 +390,15 @@ complexity outranks the duplication.
   - Duck: on iff `orbit.isFinite() && depth > 0.0`; `cylinderId = orbit.toInt()` after the door's
     integer coercion; non-finite attack takes `DUCK_ATTACK_SECONDS`; the last Duck stage wins; run
     after all orbits as today.
-  - Body and vowel: `configure(null)` iff material respectively vowel is null, whatever `wet` says;
+  - Body and vowel: `configure(null)` iff the material respectively vowel INDEX names nothing
+    (non-finite, below 0, 0 = `none`, or past the end of the catalogue), whatever `wet` says;
     otherwise the `FilterDef` with `mix = wet` and a non-finite floor taking `BODY_FLOOR` /
-    `VOWEL_FLOOR`; an unknown material name resolves to null as `toVoiceData` does.
-  - Doors (phase 1 step 5): `reverb(...)` and `delay(...)` write ALL companion slots on any call
-    (today's fill rule); `compressor(...)` writes only the named slots; tail-only `body`, `vowel`
-    and `duck` calls never write the name or the orbit.
+    `VOWEL_FLOOR`. An unknown NAME is index 0 at the door, so it resolves to null as `toVoiceData`
+    does. The index-to-bands lookup happens in `resolve`, never in `apply` (step 5a-2).
+  - Doors (phase 1 step 5, as of step 5a-3): every compound bus door fills per param at the door;
+    `/dsl-design` §4 is the one home of the rule and of the two closed lists (which door is named
+    how), deliberately not copied here. (Before 5a-3: only the sends filled, `compressor(...)`
+    wrote only the named slots.)
   - Chain lookup: `KatalystRegistry.find` lowercases and allocates; resolve it on owner change or
     registration only, never per block.
   - Coercion of a knob that is neither `Constant` nor `Param` (decided 2026-09-17, step 3a, refined
@@ -404,7 +412,7 @@ complexity outranks the duplication.
     pending name of INACTIVE cylinders once per block (one null check), so a registration that
     arrives after the request lands at the next block, the master's "late state must still take
     effect" rule; an active cylinder installs at its next deactivation until step 3b.
-  - **Body and vowel on a declared chain resolve their names through `audio_bridge`** (step 3c,
+  - **Body and vowel on a declared chain resolve through `audio_bridge`** (step 3c,
     done 2026-09-18): `BodyMaterials.modesFor` and `VowelBands.bandsFor`, pure data moved out of
     `sprudel` byte for byte, the sprudel-side symbols removed; `SprudelVoiceData.toVoiceData` and the
     body editor tool read the same objects, and `KatalystSlots` maps a stage's name through them at
@@ -472,7 +480,8 @@ complexity outranks the duplication.
   Step 5a's scope, decided 2026-09-18: the orbit param state IS the owner voice's `katalystParams`
   map read through the lease (no cylinder copy; it dies with the voice), re-resolved by the
   slot-driven writers only when the map instance changes; `.katp` and the bus doors write it (the
-  doors with their fill rule, `compressor` without, `body`/`vowel` only `wet` and `floor` since a
+  doors with their fill rule, `compressor` without (superseded by step 5a-3, where every compound
+  door fills), `body`/`vowel` only `wet` and `floor` since a
   material is a name, not a number). Voice-driven is ONLY the cylinder's born-with chain (no
   declaration); every chain that arrives by name is slot-driven, classic content included (decided
   2026-09-18 in step 5a's review: `Katalyst(k => k.classic())` was content-equal to the built-in
@@ -569,6 +578,140 @@ complexity outranks the duplication.
   clears the filter swap, whose `process` returns on its first line, the path the born-with chain
   runs today. With this the 5b material wall is gone and the frozen July song keeps its body on a
   declared chain.
+  **Round 1 of 5a-2 (2026-09-18):** both reviewers found that a material-only `body("wood")`
+  reached a declared classic as mix 0.0 (classic's `body.wet` default was a SET 0.0, never the
+  unset the resolver substitutes `BODY_WET` for), bit-identically dry where the born-with path
+  plays it at `BODY_WET`. Decided with the maintainer, and made a rule (CLAUDE.md rules register,
+  `/dsl-design` §4, checklist 11): **a compound door fills per param, at the door, everywhere.**
+  A call that names a stage writes every companion it left out and the event has not set, from
+  the constant in `audio_bridge/constants/`; an explicit value is never overwritten (the first
+  wording of this sentence said "the gate is never invented", which rounds 1 to 3 of 5a-3 showed
+  to be wrong for the sends; `/dsl-design` §4 holds the corrected text and is its one home). The
+  reverb and delay doors were the blueprint; `body`, `vowel` and `compressor`
+  follow in **step 5a-3** (the compressor's recorded "no fill" asymmetry ends, byte-identical
+  because the engine applied the same constants to an unset field), which also gives the two
+  param bags a class of their own, `ParamBag` in sprudel, with the rule as one method:
+  `setOrDefault(name, value, default)` writes the value when given, else the default only when the
+  name is absent; the gate of a stage is always written with `set`, never `setOrDefault`; the
+  per-door fill functions go. 5a-2 itself makes classic's `body.wet` and `vowel.wet` unset `Param`
+  slots so a raw `katp("body.material", n)` resolves through the engine's non-finite guard to the
+  same constant, and adds the missing no-wet guards. The voice-side compound doors (`adsr`, `lpf`, FM and pitch
+  envelopes) adopt the rule in phase 3 of the signal-flow plan, where their literal engine defaults
+  (`AdsrDef`, the 0.707 q, the vibrato rate) move into `audio_bridge/constants/`.
+  Open item recorded, not fixed: `configure(null)` on a running body or vowel stage is a hard cut
+  (`KatalystFilterSwap.clear`) while every material change crossfades; pre-existing timing (the
+  same moment an owner handover already hits on the voice path). Shape when someone is in the file:
+  a `KatalystFilterSwap.fadeOut()` that keeps the current pair as old with no new pair and ramps
+  to dry over the same 12 ms, called from `configure(null)`, with `reset()` kept for the lifecycle
+  paths where the signal is already at weight zero.
+- **5a-2 and 5a-3 as built (2026-09-18).** 5a-2: round 1 blind (two reviewers) found the same MAJOR
+  (classic's `body.wet` a SET 0.0); round 2 on the high tier clean. 5a-3: round 1 on the high tier
+  found one MAJOR, the coordinator's rule TEXT (it named `wet` as the gate of the sends, which the
+  blueprint `reverb(size = 4)` contradicts; fixed in the register and `/dsl-design` §4, with
+  checklist 12), and a MINOR batch: the fills had handed `setOrDefault` the voice field, so a
+  `katp` between two calls of the same door was overwritten (now every setter writes its own slot
+  with `set` and every companion fill passes null, 22 sites); the phaser joined the rule (five
+  slots and five fields, the constants `VoiceFactory` substitutes); a duck clear could not leave a
+  stale slot once each duck setter wrote its own slot, and the `SLOT_UNSET` arm first added for it
+  was removed again as unreachable (a non-numeric token never reaches the setters); a cleared-slot
+  row in `ParamBagSpec`; the "slots apply in order" sentence on the body, vowel, compressor and
+  phaser doors. Decisions: `setOrDefault(name, value, default)` keeps its value parameter although
+  no production caller passes a non-null value today (the phase 3 voice doors will; checklist 12
+  is written in its terms). Behaviour changes recorded for 5a-3, none reaching a shipped or frozen
+  song: (1) a `katp` on a companion slot survives a later call of the same door, in both
+  directions; (2) `FilterDef.Body`/`Formant` carry an explicit floor and the phaser its five fields
+  on the wire where they carried null, the same numbers the engine substituted; (3) a mapper or a
+  `merge` on a companion reads the filled field where it read null (`body("wood").body(wet =
+  mul(2))` is 1.0, was 0.5), the shape the reverb door already had. The five
+  `fillCompressorDefaults()` calls per full compressor call stay: a trailing fill would need its
+  own reinterpret step, cloning every event and filling a rest in a control pattern. Both frozen
+  songs byte-identical after every edit (`8d79b9fc…`, Seltsamere Dinge `017da26d…`).
+- **5a-3, round 3 (2026-09-18, strongest tier).** One MAJOR, inherited from step 5a and found by a
+  door-by-door table against the rule's two closed lists: the duck filled its companions on ANY
+  knob, so on a custom chain `duck(attack = 0.3)` wrote `duck.depth = 0.0` over a chain-authored
+  0.8 and the ducking stopped. Fixed: the duck fills only when THIS call named an orbit; a bare
+  `duck()` writes nothing, slot included; render rows prove a tail-only call leaves a chain-authored
+  depth alone (0 counts) against a no-duck control (14572 counts). The rule's text, which had
+  escaped three times because it was copied to a dozen sites, now lives only in `/dsl-design` §4;
+  every other site keeps its own facts and points there. Evidence audit closed: the phaser fill,
+  which no frozen song exercises, is backed by IrishLamentTechno rendered at HEAD and on the final
+  tree (`a0c30f33…`, identical); both frozen songs re-rendered on the final tree. A lesson for
+  render rows: the offline renderer of `:jvmTest` has no sample bank, so `s("bd*4")` is silent
+  there and a row that asserts "0 counts" on a sample source passes on silence; use a synth source.
+- **Open, pre-existing, found in 5a-3's round 3, to fix as its own small step BEFORE 5b:** a NaN
+  body or vowel mix on the BORN-WITH path (`body("wood", wet = "NaN")`; `toVoiceData` guards null,
+  not non-finite) makes `KatalystBodyEffect.configure`'s `body.mix != curMix` true forever (NaN is
+  self-unequal), so every block allocates two filter banks on the audio thread and restarts the
+  12 ms crossfade, which never completes. The declared path is safe (`KatalystSlots.bodyDef`
+  substitutes the constant). Smallest guard: substitute at the entry of `configure` and its formant
+  twin (`if (mix.isFinite()) mix else BODY_WET`, the same for the floor), the rule `bodyDef`
+  already applies one layer up, so both paths agree by construction. Violates the stone rule on
+  hot-path allocation for a user-reachable input, hence before 5b.
+- **Open, pre-existing, recorded:** a `merge` whose control carries `duck(1)` takes the control's
+  filled slots (`duck.depth` 0.0) but not its null fields, so after the merge the voice path and
+  the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and
+  the disagreement with them. Optional alongside: fill the duck's voice fields on an orbit-named
+  call, byte-identical by the phaser's argument, which would make every filled door readable.
+- **Decided 2026-09-18 with the maintainer, step 5c (after 5b): switching any stage on or off
+  always crossfades, body and vowel included.** Off is a pass-through (the hosts process in place,
+  so off costs one comparison), but the EDGE between on and off is never a hard cut: a stage whose
+  off value is dry (wet 0, depth 0, amount 0, gain unity) switches continuously by construction; every
+  other stage (body, vowel, eq, compressor, phaser cascade) goes through a crossfade of its own
+  (`KatalystFilterSwap.fadeOut()` for the resonators and the eq, a gain-reduction ramp for the
+  compressor), and the sends keep their drain. Latency-bearing stages never bypass mid-signal.
+  With it, the stage lifecycle is written as a small state machine per effect, not as flags: a
+  private sealed hierarchy (`Off`, `Active`, `Draining`, `FadingOut`, ...) with an exhaustive
+  `when`, the data-less states as objects and a state that carries data preallocated once per
+  effect so a transition on the audio thread allocates nothing. The delay and reverb enum
+  lifecycles convert; the cylinder's swap bookkeeping (`outgoing`, `draining`, `duckingOut`,
+  `duckFadingIn`, `pendingKey`) becomes one `SwapState`. Same rule for the voice strips in phase 3.
+- **Future optimisation, noted 2026-09-18, not now:** an OFF ignitor effect node (`CoarseIgnitor`,
+  `CrushIgnitor`, the distortion) still lets its upstream generate into a scratch buffer and then
+  copies it into its output, so N off nodes in a row copy N times. Reading the gate knob BEFORE
+  generating upstream and, when off, letting upstream generate straight into the node's own output
+  buffer makes a chain of off nodes copy nothing; the gate knob is a per-block param read that does
+  not depend on the upstream signal. Belongs with phase 3's node-level gate.
+  **As built (2026-09-18).** `KatalystAppend`, its memo and `KatalystDsl.plus` are gone: a door
+  allocates one `KatalystValue.Dsl` when it is written and stamps that instance onto every event, so
+  replacing is cheaper per event than appending was and needs no memo at all. `KatalystBuilder
+  .classic()` drops its block when `node.stages` already contains `KatalystDsl.classic.stages` as a
+  contiguous run (content equality, so a hand-built classic counts); an explicit stage written twice
+  still stacks. The catalogues grew the conversion: `BodyMaterials.indexOf`/`modesAt` and
+  `VowelBands.indexOf`/`bandsAt`, with `VowelBands.names` a generated flat cross product of the five
+  register spellings and the fifteen vowel spellings (76 entries, `none` at 0), and `modesFor` /
+  `bandsFor` now go THROUGH the index, so the name path and the slot path cannot answer differently.
+  Both tables build their band lists once and hand out the table's own instance, which turns the
+  per-note `listOf(...)` on the voice path into a lookup and lets `KatalystBodyEffect.configure`
+  reject an unchanged bank by identity. The two writers take a `KatalystKnob` for the index and do
+  the lookup in `resolve`, never in `apply`. Acceptance measured: the frozen July song is unchanged
+  (`8d79b9fc…`), and a supersaw chord carrying `body(material = "wood", wet = 0.3)` renders BIT
+  identically (max difference 0 of 16-bit counts) with and without
+  `.katalyst(Katalyst(k => k.classic()))` on its orbit, where the same song without the body differs
+  by 3374 counts. Guards: `CatalogueIndexSpec` (bridge), `LangKatalystSpec` (the door replaces, one
+  instance per door), `LangKatalystParamSpec` (the doors write the index), the door parity spec
+  (`classic()` once, the name and the slot on both doors), `KatalystSlotResolverSpec` (the index
+  slot re-resolves only on a map instance change, the two-probe coercion),
+  `KatalystClassicMatchesUntouchedVoiceSpec` (born-with against declared, stage level) and
+  `KatalystDeclaredBodyParitySpec` (the render).
+  **Round 1 of the review found one MAJOR, both reviewers independently.** A material-only
+  `body("wood")` reached a declared classic chain at mix 0.0, bit-identically dry, while the
+  born-with path played it at `BODY_WET`: classic declared `body.wet` as `Param(default = 0.0)`, and
+  0.0 is a SET value, so `KatalystSlots.bodyDef` never saw "unset" and never substituted the
+  constant, although it already does exactly that for a non-finite mix. Fixed by moving `body.wet`
+  and `vowel.wet` to the UNSET family, which is the compressor's model (an unset knob takes its
+  constant AT THE ENGINE, the door fills nothing). Safe for these two stages and nowhere else in
+  that family, because their gate is the NAME: `bodyDef` returns null whenever the bands are null,
+  so no amount can switch on an orbit that named no material. A door-side fill was NOT added here;
+  that is a separate step. New guards: the material-only and vowel-only rows in
+  `KatalystClassicMatchesUntouchedVoiceSpec`, a second render row in
+  `KatalystDeclaredBodyParitySpec` for the `body(material = ...)` spelling, and a POSITIVE control
+  there (a declared chain with no body stage must differ from the undeclared render by more than
+  100 counts, measured 3374), which is the row that catches a declaration that never installs at
+  all: with `Cylinders.requestChain` stubbed out, both parity rows pass at a difference of 0 and
+  only the control goes red. `CatalogueIndexSpec` gained two ANCHORED rows (index 1 is wood at
+  100 Hz, index 1 of the vowel catalogue is `bass:a` at 600 Hz) because the round-trip rows route
+  both sides through the same functions and cannot see a uniform off-by-one; a shifted
+  `modesByIndex` leaves the round trip green and kills the anchored row.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
   tests 1 to 3, 6, 7. No new sound is reachable yet; the engine is byte-identical.
