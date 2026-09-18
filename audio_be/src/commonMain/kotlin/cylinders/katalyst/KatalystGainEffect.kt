@@ -13,9 +13,9 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  * `gain` means the tone-neutral level on every surface).
  *
  * **Raw.** A negative factor (a polarity flip) and one far above unity are the author's business;
- * nothing here clamps. The one guard is the writer's, and it is a read of "unset" rather than a
- * clamp: a non-finite slot takes unity, which is what `MasterChain.buildGain` does with the same
- * knob on the master bus (see [KatalystGainWriter]).
+ * nothing here clamps. The two guards are reads of "unset" rather than clamps: a non-finite factor
+ * is unity, at this stage's door ([configure]) and at the writer that feeds it, which is what
+ * `MasterChain.buildGain` does with the same knob on the master bus (see [KatalystGainWriter]).
  *
  * **Unity is bit-transparent**: the multiply is skipped entirely, so a chain that declares
  * `gain(1.0)` cannot change one sample. There is no `-0.0` hazard in that skip, unlike the
@@ -70,8 +70,17 @@ class KatalystGainEffect : KatalystEffect {
     /**
      * Sets the fader. Takes effect over the next block's ramp, or immediately when no sample has
      * been multiplied yet (see [snapNext]); the same number twice is free.
+     *
+     * A non-finite factor is UNSET, and this stage's unset is unity, which is what it already
+     * holds until something sets it: the call is ignored and the current target stands. The
+     * writer ([KatalystGainWriter]) reads unset the same way, so today nothing can reach here with
+     * one; the guard is at the door because the cost of missing it is unbounded, see below.
      */
     fun configure(gain: Double) {
+        if (!gain.isFinite()) { // NaN-guard: a non-finite factor is unset, and unset is unity
+            return
+        }
+
         if (snapNext) {
             currentGain = gain
         }

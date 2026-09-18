@@ -7,6 +7,8 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 
 /**
  * Orbit-level **body resonator** — an insert effect on the summed orbit mix.
@@ -36,6 +38,11 @@ class KatalystBodyEffect(
     private var curMix: Double = Double.NaN
     private var curFloor: Double? = Double.NaN
 
+    // The substitute for a non-finite floor, boxed ONCE at construction: the `Double?` the
+    // comparison and the factory both take would otherwise box the constant on every block that
+    // carries an unset floor, which is exactly the case the guard in `configure` is there for.
+    private val unsetFloor: Double? = BODY_FLOOR
+
     // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
     private val swap = KatalystFilterSwap(sampleRate)
 
@@ -48,6 +55,9 @@ class KatalystBodyEffect(
      * On a declared chain all three arrive as slots, the material as an INDEX into a shared
      * catalogue, so a wrong lookup or a knob wired to the wrong argument installs a real bank of
      * the wrong box and reads as "engaged" either way. Nothing else can see which one it is.
+     *
+     * They read the values the bank was BUILT from, so an unset knob reads as its constant and
+     * never as the non-finite marker that arrived.
      */
     internal val installedBands: List<FilterDef.Body.Mode>? get() = curBands
 
@@ -58,6 +68,11 @@ class KatalystBodyEffect(
     /**
      * Configure from the OWNER voice's body, or from a declared chain's slots. `null` (nobody asks
      * for a body) turns the resonator off.
+     *
+     * A non-finite `mix` or `floor` is UNSET and takes [BODY_WET] / [BODY_FLOOR], the rule
+     * `KatalystSlots.bodyDef` applies to a declared chain's slots, applied here so the BORN-WITH
+     * chain answers the same. The voice path can carry one: `body("wood", wet = "NaN")` parses to a
+     * NaN and `SprudelVoiceData.toVoiceData` only guards a null.
      *
      * **Open question, recorded 2026-09-18 (round 1 of Katalyst step 5a-2), not a regression:**
      * turning the stage OFF is a hard CUT ([reset] clears the swap), while every material, mix or
@@ -73,17 +88,33 @@ class KatalystBodyEffect(
             if (swap.active) reset() // owner has no body → turn off, once
             return
         }
+
+        // NaN-guards, and they sit BEFORE the comparison on purpose: a NaN is never equal to
+        // itself, so an unguarded non-finite mix made the test below true on EVERY block and
+        // rebuilt two filter banks per block on the audio thread, restarting a 12 ms crossfade
+        // that then never completed. Being NULLABLE does not save the floor: a `Double?` pair of
+        // NaNs answers "not equal" on both targets we ship, measured 2026-09-18 (JVM, and
+        // Kotlin/JS in Chrome headless). The guard does not rest on that measurement, it removes
+        // the question: a substituted value is finite, so the comparison settles whatever a
+        // runtime makes of NaN.
+        // Substituted, compared and stored, so the value the filters are built from is the value
+        // the next block compares against. A null floor stays null: `createBody` reads it as
+        // BODY_FLOOR, the same filter written the other way round.
+        val mix = if (body.mix.isFinite()) body.mix else BODY_WET
+        val rawFloor = body.floor
+        val floor = if (rawFloor == null || rawFloor.isFinite()) rawFloor else unsetFloor
+
         // Rebuild only when the material/mix/floor actually changes — with ownership this is once per
         // owner change (a live owner re-offers the same config every block, which short-circuits here).
         // The swap crossfades from the old bank so the change doesn't click.
-        if (body.bands != curBands || body.mix != curMix || body.floor != curFloor) {
+        if (body.bands != curBands || mix != curMix || floor != curFloor) {
             swap.set(
-                LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate, body.floor),
-                LowPassHighPassFilters.createBody(body.bands, body.mix, sampleRate, body.floor),
+                LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor),
+                LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor),
             )
             curBands = body.bands
-            curMix = body.mix
-            curFloor = body.floor
+            curMix = mix
+            curFloor = floor
         }
     }
 

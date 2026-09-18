@@ -135,6 +135,33 @@ class KatalystGainEffectSpec : StringSpec({
         steady[blockFrames - 1] shouldBe probe * -3.0
     }
 
+    "a non-finite factor is UNSET: the fader keeps what it had, and nothing reaches the mix" {
+        // The trap the body resonator fell into (found in review 2026-09-18), closed at this door
+        // too. With a non-finite target `from == to` in `process` is FALSE FOREVER for a NaN, so
+        // every block ramps, multiplies the whole orbit by NaN and counts a ramp, without bound;
+        // an infinity settles but poisons the mix just the same. Unreachable through
+        // `KatalystGainWriter`, which reads an unset slot as unity, so this guards the stage's own
+        // door, where the cost of being wrong is unbounded.
+        listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY).forEach { unset ->
+            val fx = KatalystGainEffect()
+
+            fx.configure(0.5)
+            block(fx) // the arriving factor snaps, so the fader now stands at 0.5
+
+            val rampsBefore = fx.ramps
+
+            fx.configure(unset)
+
+            val out = block(fx)
+
+            withClue("gain = $unset") {
+                fx.gain shouldBe 0.5
+                fx.ramps shouldBe rampsBefore
+                out[blockFrames - 1] shouldBe probe * 0.5
+            }
+        }
+    }
+
     // ── The ramp ─────────────────────────────────────────────────────────────────────────────────
 
     "a change ramps per sample across exactly one block and lands on the new factor" {

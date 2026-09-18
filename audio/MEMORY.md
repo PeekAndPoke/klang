@@ -287,6 +287,19 @@
   bank by comparing band lists, so identity short-circuits it instead of walking eight modes per
   note. Consequence: **append only, never reorder** either `names` list, because the index IS the
   wire encoding (and the editor dropdown order). Guard: `CatalogueIndexSpec` (audio_bridge).
+- **A non-finite mix or floor is UNSET at the entry of BOTH `configure` functions** (2026-09-18,
+  found in review). The declared path already substituted in `KatalystSlots.bodyDef`/`vowelDef`;
+  the BORN-WITH path did not, and `body("wood", wet = "NaN")` reaches it as a real NaN
+  (`"NaN".toDoubleOrNull()` is NaN, and `toVoiceData` guards a null mix, not a non-finite one).
+  The owner re-offers its def every block, `mix != curMix` is true forever for a NaN, so the stage
+  allocated two filter banks per block on the audio thread and restarted a 12 ms crossfade that
+  never completed, while `ParallelMixFilter` read the non-finite amount as a fully dry 0.0 and the
+  body was inaudible (8186 of 13380 counts on a minimal render). Being NULLABLE did not save the
+  floor: a `Double?` pair of NaNs answers "not equal" on the JVM and on Kotlin/JS alike (measured).
+  **The lesson for any stage that caches its config: compare and store the SUBSTITUTED values,
+  never the raw input.** `KatalystGainEffect.configure` took the same guard in the same change
+  (a non-finite factor is unset, and unset is unity). Guards: `KatalystBodyEffectSpec`,
+  `KatalystFormantEffectSpec`, `KatalystGainEffectSpec`, `KatalystBodyNonFiniteWetSpec` (render).
 - **Live-change declick**: `KatalystFilterSwap` crossfades the bank on any material/mix/floor rebuild.
 - **Live-update double-voice fix**: `VoiceScheduler.replaceVoices` now dedups incoming voices vs
   already-active ones (`ScheduledVoice.isDuplicate` = startTime+data); grace window 50→200 ms in

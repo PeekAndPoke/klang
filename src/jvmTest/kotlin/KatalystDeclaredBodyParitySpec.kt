@@ -8,9 +8,6 @@ package io.peekandpoke.klang
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
-import io.peekandpoke.klang.sprudel.SprudelPattern
-import kotlin.math.abs
 
 /**
  * The acceptance of Katalyst steps 5a-2 and 5a-3 (2026-09-18), rendered: declaring
@@ -44,10 +41,6 @@ import kotlin.math.abs
  */
 class KatalystDeclaredBodyParitySpec : StringSpec({
 
-    val sampleRate = 48_000
-    val cycles = 4
-    val cps = 0.575 // 34.5 rpm, the frozen song's tempo
-
     val voices = """note("c3 e3 g3 b3").s("supersaw")"""
     val declaration = """.katalyst(Katalyst(k => k.classic()))"""
 
@@ -64,63 +57,10 @@ class KatalystDeclaredBodyParitySpec : StringSpec({
     // Both strings close the `stack(` that `duckSong` opens.
     val duckChainOff = """.katalyst(Katalyst(k => k.gain(1.0))))"""
 
-    suspend fun render(code: String): List<ShortArray> {
-        val pattern = SprudelPattern.compile(code) ?: error("the song did not compile: $code")
-        val blocks = mutableListOf<ShortArray>()
-
-        KlangOfflineRenderer(sampleRate = sampleRate).render(
-            pattern = pattern,
-            cycles = cycles,
-            cyclesPerSecond = cps,
-            tailSec = 0.5,
-            onBlock = { samples, count -> blocks.add(samples.copyOf(count)) },
-        )
-
-        return blocks
-    }
-
-    /**
-     * The largest sample-to-sample difference between two renders, in 16-bit counts, so a failure
-     * says HOW far apart they are: a dropped body is thousands of counts, a rounding difference one
-     * or two. Every row asserts equal block COUNTS before it calls this; the per-block length is
-     * clamped anyway, so a render that diverges in length is reported as a difference by the row
-     * that compares the counts, never as an index crash from here.
-     */
-    fun maxDiff(a: List<ShortArray>, b: List<ShortArray>): Int {
-        var worst = 0
-
-        for (block in 0 until minOf(a.size, b.size)) {
-            val left = a[block]
-            val right = b[block]
-
-            for (i in 0 until minOf(left.size, right.size)) {
-                val diff = abs(left[i].toInt() - right[i].toInt())
-
-                if (diff > worst) {
-                    worst = diff
-                }
-            }
-        }
-
-        return worst
-    }
-
-    /** The loudest sample of a render, so a row can prove it is asserting about actual sound. */
-    fun peakOf(blocks: List<ShortArray>): Int {
-        var peak = 0
-
-        for (block in blocks) {
-            for (i in block.indices) {
-                val level = abs(block[i].toInt())
-
-                if (level > peak) {
-                    peak = level
-                }
-            }
-        }
-
-        return peak
-    }
+    // The renderer, the sample-for-sample comparison and the peak read are shared with the other
+    // small Katalyst render rows: `_katalyst_render_helpers.kt`, which also owns the numbers (48
+    // kHz, four cycles at the frozen song's 34.5 rpm) so they are stated once.
+    suspend fun render(code: String): List<ShortArray> = renderSong(code)
 
     "a declared classic chain keeps a body(material, wet): the render is identical, sample for sample" {
         val none = render("$voices.body(material = \"wood\", wet = 0.3).orbit(1)")
