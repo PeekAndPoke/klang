@@ -33,6 +33,28 @@ data class VoiceData(
     // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz])
     val oscParams: Map<String, Double>?,
 
+    /**
+     * The orbit bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
+     * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.orbit"`). The [oscParams] shape, the
+     * other host: `oscParams` is the voice's own instrument, this is the orbit's chain.
+     *
+     * **Applied by the orbit's OWNER voice**, the one holding the cylinder's lease: a declared
+     * chain's [IgnitorDsl.Param] knobs resolve to `katalystParams[name]` and fall back to the
+     * slot's authored default when the map does not carry it. The chain RE-READS the map when its
+     * instance changes, not every block; per block it only re-writes the numbers it already
+     * resolved. So this is orbit state with the owner's lifetime, not a per-note snapshot: last
+     * writer within the owner wins, and the values die with the voice that carried them. A knob
+     * written as a constant in the chain is not a slot and is never overridden.
+     *
+     * Written by `.katp(name, value)` and, until the voice fields leave the wire (signal-flow plan
+     * §7, step 5b), by the bus doors as aliases (`reverb(...)`, `delay(...)`, `compressor(...)`,
+     * `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`). The chain a cylinder is BORN with
+     * ignores this map entirely: its knobs still come from the voice fields, which is what keeps a
+     * song that declares no chain byte-identical. A chain DECLARED from `Katalyst.classic()` names
+     * the same stages as slots and reads it.
+     */
+    val katalystParams: Map<String, Double>? = null,
+
     // Filters
     val filters: FilterDefs = FilterDefs.empty,
 
@@ -230,6 +252,7 @@ data class VoiceData(
             sound = null,
             soundIndex = null,
             oscParams = null,
+            katalystParams = null,
             filters = FilterDefs.empty,
             adsr = AdsrDef.empty,
             accelerate = null,

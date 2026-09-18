@@ -19,6 +19,7 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
@@ -27,6 +28,13 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * (`constants/SendEffectDefaults.kt`, the same the master reverb uses), so one call sets them all. A slot
  * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
  * a mapper on a slot that was never set) is not filled. Lowpass has no default and stays unset.
+ *
+ * The same values then go into the orbit chain's slot state (`reverb.wet`, `reverb.size`,
+ * `reverb.lowpass`), which is what makes this door an alias of `katp` on a DECLARED chain
+ * (signal-flow plan §7, Katalyst step 5a). One key at a time into the event's own map, and the fill
+ * is the same fill: `reverb(size = 4)` writes `reverb.size` 4 AND `reverb.wet` at the touched
+ * default, so a declared room sounds like the familiar one. The voice fields stay until step 5b takes them off
+ * the wire, and the CLASSIC chain still reads those, not this.
  */
 private fun SprudelVoiceData.fillReverbDefaults() {
     if (reverb == null) {
@@ -36,6 +44,10 @@ private fun SprudelVoiceData.fillReverbDefaults() {
     if (reverbSize == null) {
         reverbSize = REVERB_SIZE
     }
+
+    putKatalystParam("reverb.wet", reverb)
+    putKatalystParam("reverb.size", reverbSize)
+    putKatalystParam("reverb.lowpass", reverbLowpass)
 }
 
 // -- reverb, the wet slot --------------------------------------------------------------------------------------------

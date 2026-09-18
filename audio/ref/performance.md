@@ -218,6 +218,26 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
 - **Cylinder cache locality** — cross-cylinder mix order is a separate (and
   currently un-actioned) optimization. See `audio_be/optimizations.md` for
   the analysis from Gemini-3-Pro and the rationale for deferring.
+- **Accepted, and temporary: every bus-door event ships `katalystParams` as
+  well as its voice fields** (Katalyst step 5a, 2026-09-18). A song touching
+  `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
+  now sends the matching `<stage>.<knob>` slots over the wire even on an
+  orbit running the born-with chain, which ignores them. Measured with
+  `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
+  Node 24) on one voice: encode 448 → 609 ns/op, `structuredClone`
+  8097 → 8720 ns/op, worklet decode 459 → 836 ns/op. The "before" numbers were
+  taken at 36b15ca0, with THAT commit's fixture, which carried no slot map; the
+  committed fixture carries one, so they are the record and are not
+  reproducible from it. Step 5b takes the voice half off the wire and leaves
+  the slots alone, which pays it back.
+- **`SprudelVoiceData.clone()` deep-copies both param maps** (`oscParams`,
+  `katalystParams`) since 2026-09-18: they are mutable and single-owner, so a
+  door writes one key in place instead of allocating a map per slot, and the
+  clone owns its own. `VoiceDataCopyBenchmark`
+  (`./gradlew :audio_benchmark:jvmRun`) showed no change outside its own
+  run-to-run noise, which on this harness is wider than the effect (`copy()`
+  on a code path the change never touched read 123 to 257 ns/op across three
+  runs).
 
 ## When to break the rules
 

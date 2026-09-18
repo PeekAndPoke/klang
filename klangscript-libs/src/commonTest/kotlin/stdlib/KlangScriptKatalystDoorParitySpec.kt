@@ -146,6 +146,20 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Param("room", 0.2)))
     }
 
+    "Katalyst.param is the chain's own slot door, on both doors, with the description" {
+        ks("""Katalyst(k => k.reverb(r => r.size(Katalyst.param("room", 5.0))))""") shouldBe
+                KatalystDsl.of(KatalystStageDsl.Reverb(size = IgnitorDsl.Param("room", 5.0)))
+
+        ks("""Katalyst(k => k.reverb(r => r.size(Katalyst.param("room", 5.0, "the tail"))))""") shouldBe
+                KlangScriptKatalyst.build {
+                    it.reverb { r -> r.size(KlangScriptKatalyst.param("room", 5.0, "the tail")) }
+                }
+
+        // Same node type as `Osc.param`, and that is the point: one slot vocabulary, two
+        // namespaces that never cross (`oscp` fills the voice's, `katp` the orbit's).
+        KlangScriptKatalyst.param("room", 5.0) shouldBe KlangScriptOsc.param("room", 5.0)
+    }
+
     "the Kotlin door takes the same lambda" {
         ks("Katalyst(k => k.reverb(r => r.wet(0.2)).gain(1.4))") shouldBe
                 KlangScriptKatalyst.build { it.reverb { r -> r.wet(0.2) }.gain(1.4) }

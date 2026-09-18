@@ -176,6 +176,9 @@ class WireCodecRoundTripSpec : StringSpec({
         val data = VoiceData.empty.copy(
             note = "c3", freqHz = 130.81, gain = 0.7, velocity = 0.9, soundIndex = 2, cull = 0.2,
             oscParams = mapOf("voices" to 7.0, "spread" to 0.3),
+            // The second string-keyed map, the orbit's slot state: same shape, different host, and
+            // a key with a dot in it (the `<stage>.<knob>` spelling every classic slot carries).
+            katalystParams = mapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),
             adsr = AdsrDef.Std(
                 attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,
                 attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,

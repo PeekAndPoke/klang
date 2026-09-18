@@ -14,10 +14,24 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- compressor ------------------------------------------------------------------------------------------------------
 
-private val compressorThresholdMutation = voiceSetter { compressorThreshold = it?.asDoubleOrNull() ?: compressorThreshold }
+// Each slot writes the voice field AND the orbit chain's matching slot (`compressor.threshold`, ...),
+// which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
+// step 5a). NO fill, unlike `reverb(...)` / `delay(...)`, and deliberately: the engine's gate is "any
+// of the five set, each unset one takes its constant", so `compressor(ratio = 8)` must switch the
+// stage on with the constant threshold on both paths. The recorded asymmetry (`KatalystDsl.classic`).
+
+private val compressorThresholdMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        compressorThreshold = value
+        putKatalystParam("compressor.threshold", value)
+    }
+}
 
 private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -27,7 +41,14 @@ private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelD
     return source._liftOrReinterpretNumericalField(args, compressorThresholdMutation)
 }
 
-private val compressorRatioMutation = voiceSetter { compressorRatio = it?.asDoubleOrNull() ?: compressorRatio }
+private val compressorRatioMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        compressorRatio = value
+        putKatalystParam("compressor.ratio", value)
+    }
+}
 
 private fun applyCompressorRatio(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -37,7 +58,14 @@ private fun applyCompressorRatio(source: SprudelPattern, args: List<SprudelDslAr
     return source._liftOrReinterpretNumericalField(args, compressorRatioMutation)
 }
 
-private val compressorKneeMutation = voiceSetter { compressorKnee = it?.asDoubleOrNull() ?: compressorKnee }
+private val compressorKneeMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        compressorKnee = value
+        putKatalystParam("compressor.knee", value)
+    }
+}
 
 private fun applyCompressorKnee(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -47,7 +75,14 @@ private fun applyCompressorKnee(source: SprudelPattern, args: List<SprudelDslArg
     return source._liftOrReinterpretNumericalField(args, compressorKneeMutation)
 }
 
-private val compressorAttackMutation = voiceSetter { compressorAttack = it?.asDoubleOrNull() ?: compressorAttack }
+private val compressorAttackMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        compressorAttack = value
+        putKatalystParam("compressor.attack", value)
+    }
+}
 
 private fun applyCompressorAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -57,7 +92,14 @@ private fun applyCompressorAttack(source: SprudelPattern, args: List<SprudelDslA
     return source._liftOrReinterpretNumericalField(args, compressorAttackMutation)
 }
 
-private val compressorReleaseMutation = voiceSetter { compressorRelease = it?.asDoubleOrNull() ?: compressorRelease }
+private val compressorReleaseMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        compressorRelease = value
+        putKatalystParam("compressor.release", value)
+    }
+}
 
 private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->

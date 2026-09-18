@@ -329,7 +329,7 @@ class GraalSprudelPattern(
                 it.sound = sound?.let(SoundValue::Named)
                 it.soundIndex = soundIndex
                 // Oscillator parameters
-                it.oscParams = oscParams
+                it.oscParams = oscParams?.toMutableMap()
                 // ADSR (flat fields)
                 it.attack = attack
                 it.decay = decay

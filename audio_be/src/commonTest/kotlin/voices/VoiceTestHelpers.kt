@@ -104,6 +104,9 @@ object VoiceTestHelpers {
         // Orbit-level resonators (carried to the Cylinder, not baked per-voice)
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
+
+        // The orbit chain's param state this voice carries while it owns the orbit's lease.
+        katalystParams: Map<String, Double>? = null,
     ): Voice {
         // Voice-RELATIVE duration — Int, mirrors VoiceFactory. (Absolute frames are Double.)
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
@@ -175,6 +178,7 @@ object VoiceTestHelpers {
             phaser = phaser,
             body = body,
             vowel = vowel,
+            katalystParams = katalystParams,
             cut = cut,
             cull = cull,
             pipeline = pipeline,
@@ -213,6 +217,7 @@ object VoiceTestHelpers {
         coarse: Voice.Coarse = Voice.Coarse(0.0),
         body: FilterDef.Body? = null,
         vowel: FilterDef.Formant? = null,
+        katalystParams: Map<String, Double>? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
@@ -222,6 +227,7 @@ object VoiceTestHelpers {
         ducking = ducking, filter = filter, filterModulators = filterModulators,
         delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
         distort = distort, crush = crush, coarse = coarse, body = body, vowel = vowel,
+        katalystParams = katalystParams,
     )
 
     /** Create a voice with SampleIgnitor for sample playback tests. */

@@ -11,6 +11,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -226,11 +227,14 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.reverb.shouldBeNull()
     }
 
-    "two names for one content are one chain: the second is adopted, nothing is rebuilt" {
+    "the KEY is the identity, not the content: a second name for one stage list is a second chain" {
+        // Changed 2026-09-18 (review round 2): the no-op compares the requested key against the
+        // CURRENT chain's key and never the stage lists. The content compare it replaces adopted a
+        // second name for free, but it also adopted `Katalyst(k => k.classic())` into the born-with
+        // VOICE-DRIVEN chain, which made every `katp` on that orbit inert. The price is that a
+        // chain re-registered under a second name rebuilds (and crossfades, on a sounding orbit);
+        // `KatalystDsl.uniqueId()` is content-derived, so one content normally has one name.
         val rig = Rig()
-        // The same stage list under two names, which is what a re-registered chain looks like when
-        // the frontend's synthetic name has been minted in another realm (the worklet's registry
-        // holds the name it was sent, not the one this process would compute).
         rig.registry.register("gain", gainChain(1.5))
         rig.registry.register("gain-again", gainChain(1.5))
 
@@ -239,9 +243,16 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.requestChain("gain-again")
 
-        rig.cylinder.pipeline shouldBeSameInstanceAs installed
-        withClue("a second name for the running content must not build a second chain") {
-            rig.cylinder.cachedChainCount shouldBe 1
+        rig.cylinder.pipeline shouldNotBeSameInstanceAs installed
+        rig.cylinder.cachedChainCount shouldBe 2
+
+        withClue("the same name again is still the free path") {
+            val second = rig.cylinder.pipeline
+
+            rig.cylinder.requestChain("gain-again")
+
+            rig.cylinder.pipeline shouldBeSameInstanceAs second
+            rig.cylinder.cachedChainCount shouldBe 2
         }
     }
 
@@ -267,24 +278,38 @@ class CylinderChainSwapSpec : StringSpec({
         }
     }
 
-    "requesting the classic chain by name on a fresh cylinder is a no-op" {
+    "the classic chain BY NAME is a declaration: a slot-driven chain of its own, not the born-with one" {
+        // Decided 2026-09-18 (review round 2). Handing back the born-with instance for content
+        // equal to `KatalystDsl.classic` made `Katalyst(k => k.classic())` inert: the orbit kept
+        // reading the voice's effect fields and every `katp` on it went nowhere. Voice-driven is
+        // now ONLY what a cylinder is born with.
         val rig = Rig()
-        // A different NAME for the same CONTENT, which is what `Katalyst.classic()` is once its
-        // synthetic name has crossed the wire.
         rig.registry.register("some-classic-name", KatalystDsl.classic)
 
-        val before = rig.cylinder.pipeline
+        val bornWith = rig.cylinder.pipeline
 
         rig.cylinder.requestChain("some-classic-name")
 
-        rig.cylinder.pipeline shouldBeSameInstanceAs before
-        rig.cylinder.runsClassic() shouldBe true
-        withClue("a chain that is already running is never cached a second time") {
-            rig.cylinder.cachedChainCount shouldBe 0
+        rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
+        withClue("the same seven stages, so it still sounds like the historical chain") {
+            rig.cylinder.runsClassic() shouldBe true
+            rig.cylinder.pipeline.size shouldBe bornWith.size
+        }
+        withClue("and it is a declared chain, so it is built and cached like any other") {
+            rig.cylinder.cachedChainCount shouldBe 1
+        }
+
+        withClue("a repeat request for the same name is still free") {
+            val installed = rig.cylinder.pipeline
+
+            rig.cylinder.requestChain("some-classic-name")
+
+            rig.cylinder.pipeline shouldBeSameInstanceAs installed
+            rig.cylinder.cachedChainCount shouldBe 1
         }
     }
 
-    "going back to classic from a declared chain reuses the cylinder's own classic chain" {
+    "the classic chain by name from a declared chain is an install, not a fall back to born-with" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.registry.register("classic", KatalystDsl.classic)
@@ -296,8 +321,9 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.requestChain("classic")
 
-        rig.cylinder.pipeline shouldBeSameInstanceAs bornWith
+        rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
         rig.cylinder.runsClassic() shouldBe true
+        rig.cylinder.cachedChainCount shouldBe 2
     }
 
     // ── The bounded cache ────────────────────────────────────────────────────────────────────────

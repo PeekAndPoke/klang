@@ -647,6 +647,9 @@ class VoiceFactory(
             phaser = phaser,
             body = body,
             vowel = vowel,
+            // By reference, never a copy: the map is immutable on the wire and only the orbit's
+            // owner reads it (see Voice.katalystParams).
+            katalystParams = data.katalystParams,
             ducking = ducking,
             compressor = compressor,
             cut = cut,

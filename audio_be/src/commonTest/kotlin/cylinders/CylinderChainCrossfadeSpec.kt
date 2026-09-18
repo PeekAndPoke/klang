@@ -16,6 +16,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -23,6 +24,8 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import kotlin.math.abs
 
 /**
@@ -100,6 +103,39 @@ class CylinderChainCrossfadeSpec : StringSpec({
             attack = IgnitorDsl.Constant(attack),
         )
     )
+
+    /**
+     * A chain whose duck takes ALL THREE knobs from the orbit's param state, which is what
+     * `.duck(orbit = n, depth = d)` writes on a declared chain from Katalyst step 5a on. The
+     * defaults are the classic chain's, so with no state the stage resolves to no duck at all.
+     */
+    fun slotDuckChain() = KatalystDsl.of(
+        KatalystStageDsl.Duck(
+            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = IgnitorDsl.Param("duck.depth", 0.0),
+            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+        )
+    )
+
+    /**
+     * A chain whose reverb size and duck are ALL slots, with authored defaults a row can tell from
+     * anything an owner would write: size 3 (a short room) and no duck at all.
+     */
+    fun roomSlotChain() = KatalystDsl.of(
+        KatalystStageDsl.Reverb(
+            wet = IgnitorDsl.Constant(0.5),
+            size = IgnitorDsl.Param("reverb.size", 3.0),
+        ),
+        KatalystStageDsl.Duck(
+            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = IgnitorDsl.Param("duck.depth", 0.0),
+            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+        ),
+    )
+
+    /** What `.duck(orbit = n, depth = d)` writes into the event's slot state. */
+    fun duckState(orbit: Double, depth: Double, attack: Double = 0.05): Map<String, Double> =
+        mapOf("duck.orbit" to orbit, "duck.depth" to depth, "duck.attack" to attack)
 
     /**
      * A chain that DECLARES a duck which will never be configured: no orbit is named, so
@@ -471,6 +507,109 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
+    "a duck named by the owner's SLOT STATE carries across a swap" {
+        // The Katalyst 5a shape: the chain declares `duck.*` slots and the pattern's `.duck(...)`
+        // door fills them through `katalystParams`. The arriving chain therefore knows it ducks
+        // only once it has read that state, and `handOverDuck` asks BEFORE any writer runs.
+        val rig = Rig()
+        val state = duckState(orbit = 5.0, depth = 0.9)
+
+        rig.registry.register("ducked-a", slotDuckChain())
+        rig.registry.register("ducked-b", slotDuckChain())
+        // katp-ONLY: no `ducking` field at all, so nothing but the chain's own slots can say that
+        // this orbit ducks, and `beginFade`'s resolve is the only thing that can know it in time.
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = state)
+
+        rig.cylinder.requestChain("ducked-a")
+
+        // The sidechain pumps, then stops: the reduction is in force and recovering.
+        rig.render(blocks = 20, level = probe, sidechainLevel = 0.5)
+        rig.render(blocks = 4, level = probe)
+
+        val last = rig.block(level = probe)
+
+        withClue("the orbit really is pulled down before the swap") {
+            peakOf(last) shouldBeLessThan probe
+        }
+
+        rig.cylinder.requestChain("ducked-b")
+
+        val across = last.after(rig.render(blocks = fadeBlocks + 4, level = probe))
+
+        withClue("asking before the arriving chain has read the state answers 'no duck': the swap") {
+            withClue("then ramps the reduction out and drops a fresh one on the orbit a block later") {
+                maxStep(across) shouldBeLessThan clickThreshold
+            }
+        }
+
+        withClue("the envelope really carried: a fresh one would start at gain 1.0") {
+            peakOf(across) shouldBeLessThan probe
+        }
+
+        withClue("and the arriving chain owns it, configured from the same state") {
+            val duck = rig.cylinder.duck.shouldNotBeNull()
+
+            duck.duckCylinderId shouldBe 5
+            duck.ducking.shouldNotBeNull().depth shouldBe 0.9
+        }
+    }
+
+    "the orbit's param state is aged with the lease: a dead owner configures nothing" {
+        // The state is the OWNER's, so it dies with the owner (review round 2). A chain arriving
+        // while the orbit merely rings out its tail must resolve from what it authored, not from a
+        // voice that stopped checking in.
+        val rig = Rig()
+        rig.registry.register("slot-room", roomSlotChain())
+        rig.voice = VoiceTestHelpers.createSynthVoice(
+            katalystParams = duckState(orbit = 3.0, depth = 0.9) + mapOf("reverb.size" to 9.0),
+        )
+
+        rig.render(blocks = 8, level = probe)
+
+        // The owner stops offering itself; the orbit keeps rendering its tail.
+        rig.render(blocks = 3, level = probe, owned = false)
+
+        rig.cylinder.requestChain("slot-room")
+        rig.block(level = probe, owned = false)
+
+        withClue("the arriving chain took the authored default, not the dead owner's 9") {
+            rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe
+                    Reverb.normalizeSize(3.0)
+        }
+
+        withClue("and the dead owner's duck did not arrive with it") {
+            rig.cylinder.duck.shouldNotBeNull().ducking.shouldBeNull()
+        }
+    }
+
+    "a duck named by the owner's SLOT STATE is ramped IN when nothing ducked before" {
+        val rig = Rig()
+
+        rig.registry.register("ducked", slotDuckChain())
+        // Nothing ducks the orbit before the swap, and the trigger is already sounding.
+        rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = duckState(orbit = 0.0, depth = 0.8))
+
+        rig.render(blocks = 10, level = probe, sidechainLevel = 0.5)
+
+        val last = rig.block(level = probe, sidechainLevel = 0.5)
+
+        withClue("nothing ducks this orbit before the swap") {
+            peakOf(last) shouldBeGreaterThan probe * 0.99
+        }
+
+        rig.cylinder.requestChain("ducked")
+
+        val across = last.after(rig.render(blocks = fadeBlocks + 4, level = probe, sidechainLevel = 0.5))
+
+        withClue("`Ducking` pulls down in one sample, so the arriving duck has to be ramped in") {
+            maxStep(across) shouldBeLessThan clickThreshold
+        }
+
+        withClue("and it really did duck by the end") {
+            peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeLessThan probe * 0.5
+        }
+    }
+
     "duck to duck with NO owner alive: the arriving chain's own slots govern the carried envelope" {
         val rig = Rig()
         rig.registry.register("first", duckChain(depth = 0.4, attack = 0.2, orbit = 3.0))
@@ -487,7 +626,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.cylinder.requestChain("second")
 
-        // Still unowned, all the way through: `beginFade`'s own `applyStatic` is the ONLY writer
+        // Still unowned, all the way through: `beginFade`'s own `applyParams` is the ONLY writer
         // that will ever touch the arriving chain here.
         val across = last.after(rig.render(blocks = fadeBlocks + 4, level = probe, owned = false))
 
@@ -611,7 +750,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    "a ducking owner whose first claim lands in the swap block takes the envelope over" {
+    "a katp-only ducking owner whose first claim lands in the swap block takes the envelope over" {
         val rig = Rig()
         // The two sides listen to DIFFERENT orbits, so the row can say which duck ended up in
         // charge; the rig hands the same sidechain to whichever one runs.
@@ -628,10 +767,15 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         rig.cylinder.requestChain("plain")
 
-        // And NOW a ducking voice claims, in the swap's own block: the classic chain's duck will be
+        // And NOW a ducking voice claims, in the swap's own block: the arriving chain's duck will be
         // configured after all, so the reduction has to carry instead of ramping out and dropping.
+        //
+        // katp-ONLY, and that is the point: a chain arriving by name is slot-driven
+        // (`Katalyst.classic()` included, 2026-09-18), so its duck reads `duck.orbit` and
+        // `duck.depth` and the voice's own `ducking` field says nothing. The correction used to be
+        // gated on that field, which skipped exactly this voice.
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            ducking = Voice.Ducking(cylinderId = 0, attackSeconds = 0.05, depth = 0.8),
+            katalystParams = duckState(orbit = 0.0, depth = 0.8),
         )
 
         val across = last.after(rig.render(blocks = fadeBlocks + 6, level = probe, sidechainLevel = 0.5))
@@ -665,7 +809,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val ramped = rig.render(blocks = 3, level = probe, sidechainLevel = 0.5, owned = false)
 
         rig.voice = VoiceTestHelpers.createSynthVoice(
-            ducking = Voice.Ducking(cylinderId = 0, attackSeconds = 0.05, depth = 0.8),
+            katalystParams = duckState(orbit = 0.0, depth = 0.8),
         )
 
         // Render while the duck that is fading OUT still governs the orbit, which is exactly the

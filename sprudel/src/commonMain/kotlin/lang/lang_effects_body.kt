@@ -8,6 +8,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- body ------------------------------------------------------------------------------------------------------------
 
@@ -22,7 +24,19 @@ private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     return source._liftOrReinterpretStringField(args) { v -> clone().also { it.body = v?.lowercase() } }
 }
 
-private val bodyWetMutation = voiceSetter { bodyMix = it?.asDoubleOrNull() }
+// The two NUMBERS go into the orbit chain's slot state as well (`body.wet`, `body.floor`), which
+// is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
+// step 5a). The MATERIAL does not: a slot carries a number, and a declared chain names its own
+// material (`k.body("wood")`), so a pattern can change how much of it is heard but not which one.
+// No fill either: the stage is off until the chain names a material, so a companion the call did
+// not write has nothing to be filled from. A control value that is NOT a number clears the voice
+// field, and the slot is cleared with it (SLOT_UNSET, the wire's "never set"), so the two sources
+// can never disagree on one event; a REST calls no setter at all and leaves both alone.
+
+private val bodyWetMutation = voiceSetter {
+    bodyMix = it?.asDoubleOrNull()
+    putKatalystParam("body.wet", bodyMix ?: SLOT_UNSET)
+}
 
 private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -32,7 +46,10 @@ private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
     return source._liftOrReinterpretNumericalField(args, bodyWetMutation)
 }
 
-private val bodyFloorMutation = voiceSetter { bodyFloor = it?.asDoubleOrNull() }
+private val bodyFloorMutation = voiceSetter {
+    bodyFloor = it?.asDoubleOrNull()
+    putKatalystParam("body.floor", bodyFloor ?: SLOT_UNSET)
+}
 
 private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->

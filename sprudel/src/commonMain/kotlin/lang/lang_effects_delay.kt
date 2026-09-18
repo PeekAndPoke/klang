@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -19,6 +20,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
@@ -27,6 +29,16 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * (`constants/SendEffectDefaults.kt`, the same the master delay uses), so one call sets them all. A slot
  * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
  * a mapper on a slot that was never set) is not filled.
+ *
+ * The same values then go into the orbit chain's slot state (`delay.wet`, `delay.time`,
+ * `delay.feedback`, `delay.cap`), which is what makes this door an alias of `katp` on a DECLARED
+ * chain (signal-flow plan §7, Katalyst step 5a). One key at a time into the event's own map, and
+ * the fill is the same fill. The voice fields stay until step 5b takes them off the wire, and the
+ * chain a cylinder is BORN with still reads those, not this.
+ *
+ * Same recorded asymmetry as the reverb door's: a non-numeric control token clears the voice field
+ * and leaves the slot, reachable only through the bare-call reinterpret form this door never takes
+ * ([SLOT_UNSET] is what `body`, `vowel` and `phaser` write instead).
  */
 private fun SprudelVoiceData.fillDelayDefaults() {
     if (delay == null) {
@@ -44,6 +56,11 @@ private fun SprudelVoiceData.fillDelayDefaults() {
     if (delayCap == null) {
         delayCap = DELAY_CAP
     }
+
+    putKatalystParam("delay.wet", delay)
+    putKatalystParam("delay.time", delayTime)
+    putKatalystParam("delay.feedback", delayFeedback)
+    putKatalystParam("delay.cap", delayCap)
 }
 
 // -- delay, the wet slot ---------------------------------------------------------------------------------------------

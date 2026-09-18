@@ -8,6 +8,7 @@ package io.peekandpoke.klang.sprudel
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
@@ -37,6 +38,24 @@ class SprudelVoiceDataSpec : StringSpec({
 
         cloned shouldBe populated
         (cloned === populated) shouldBe false
+    }
+
+    "clone() gives the clone its OWN param maps (they are mutable and single-owner)" {
+        val populated = populatedVoiceData(0)
+
+        val cloned = populated.clone()
+
+        // Sharing the reference was the old contract (immutable-replace). Now a door writes ONE key
+        // into the map the event owns, so a shared map would let one event's slot write land on
+        // another's: the aliasing bug the whole golden exists to catch, in one field.
+        cloned.oscParams shouldNotBeSameInstanceAs populated.oscParams
+        cloned.katalystParams shouldNotBeSameInstanceAs populated.katalystParams
+
+        cloned.putOscParam("k0", 999.0)
+        cloned.putKatalystParam("reverb.size", 999.0)
+
+        populated.oscParams?.get("k0") shouldBe 7.0
+        populated.katalystParams?.get("reverb.size") shouldBe 7.5
     }
 
     "mergeFrom() matches merge() (guards the in-place merge against the copy-based merge)" {
@@ -238,7 +257,7 @@ class SprudelVoiceDataSpec : StringSpec({
             bank = "MPC60"
             sound = SoundValue.Named("bd")
             soundIndex = 2
-            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
+            oscParams = mutableMapOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
             accelerate = 0.05
             vibrato = 0.2
             vibratoMod = 0.4
@@ -327,7 +346,8 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         note = "note$seed"; freqHz = b + 1; scale = "scale$seed"; chord = "chord$seed"
         gain = b + 2; legato = b + 3; velocity = b + 4; postGain = b + 5
         bank = "bank$seed"; sound = SoundValue.Named("snd$seed"); soundIndex = seed + 6
-        oscParams = mapOf("k$seed" to b + 7)
+        oscParams = mutableMapOf("k$seed" to b + 7)
+        katalystParams = mutableMapOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
         attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false

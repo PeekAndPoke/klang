@@ -8,6 +8,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- vowel -----------------------------------------------------------------------------------------------------------
 
@@ -22,7 +24,19 @@ private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     return source._liftOrReinterpretStringField(args) { v -> clone().also { it.vowel = v?.lowercase() } }
 }
 
-private val vowelWetMutation = voiceSetter { vowelMix = it?.asDoubleOrNull() }
+// The two NUMBERS go into the orbit chain's slot state as well (`vowel.wet`, `vowel.floor`), which
+// is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
+// step 5a). The VOWEL does not: a slot carries a number, and a declared chain names its own vowel
+// (`k.vowel("a")`), so a pattern can change how much of it is heard but not which one.
+// No fill either: the stage is off until the chain names a vowel, so a companion the call did
+// not write has nothing to be filled from. A control value that is NOT a number clears the voice
+// field, and the slot is cleared with it (SLOT_UNSET, the wire's "never set"), so the two sources
+// can never disagree on one event; a REST calls no setter at all and leaves both alone.
+
+private val vowelWetMutation = voiceSetter {
+    vowelMix = it?.asDoubleOrNull()
+    putKatalystParam("vowel.wet", vowelMix ?: SLOT_UNSET)
+}
 
 private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -32,7 +46,10 @@ private fun applyVowelWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>
     return source._liftOrReinterpretNumericalField(args, vowelWetMutation)
 }
 
-private val vowelFloorMutation = voiceSetter { vowelFloor = it?.asDoubleOrNull() }
+private val vowelFloorMutation = voiceSetter {
+    vowelFloor = it?.asDoubleOrNull()
+    putKatalystParam("vowel.floor", vowelFloor ?: SLOT_UNSET)
+}
 
 private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->

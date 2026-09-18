@@ -8,13 +8,17 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -173,7 +177,34 @@ val o: orbit = orbit
 
 // -- duck ------------------------------------------------------------------------------------------------------------
 
-private val duckOrbitMutation = voiceSetter { duckCylinder = it?.asIntOrNull() ?: duckCylinder }
+/**
+ * A duck slot was just written on this event: the three duck slots of the orbit chain take what the
+ * voice fields now say, which is what makes this door an alias of `katp` on a DECLARED chain
+ * (signal-flow plan §7, Katalyst step 5a). Written key by key into the event's own map.
+ *
+ * `depth` and `attack` are filled with their shared constants when the call left them out, which is
+ * what the voice path does at the other end ([DUCK_DEPTH] is 0, so a filled depth still means "no
+ * ducking", and `VoiceFactory` reads an unset attack as [DUCK_ATTACK_SECONDS]). The ORBIT is never
+ * filled: naming no source is how ducking stays off, so inventing one would turn it on.
+ *
+ * The voice fields themselves are NOT filled, unlike the reverb's and the delay's: the engine's wire
+ * fallback already supplies those two numbers, and writing them out would change what every existing
+ * song sends.
+ *
+ * This runs only when a duck setter reached the event, so there is always something to mirror, and
+ * the two constants are also the CLEARED meaning: a control value that is not a number leaves
+ * `duckDepth` null, and [DUCK_DEPTH] (0) is exactly "no ducking". A rest calls no setter at all.
+ */
+private fun SprudelVoiceData.fillDuckSlots() {
+    putKatalystParam("duck.orbit", duckCylinder?.toDouble())
+    putKatalystParam("duck.depth", duckDepth ?: DUCK_DEPTH)
+    putKatalystParam("duck.attack", duckAttack ?: DUCK_ATTACK_SECONDS)
+}
+
+private val duckOrbitMutation = voiceSetter {
+    duckCylinder = it?.asIntOrNull() ?: duckCylinder
+    fillDuckSlots()
+}
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -183,7 +214,10 @@ private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?
     return source._liftOrReinterpretNumericalField(args, duckOrbitMutation)
 }
 
-private val duckDepthMutation = voiceSetter { duckDepth = it?.asDoubleOrNull() }
+private val duckDepthMutation = voiceSetter {
+    duckDepth = it?.asDoubleOrNull()
+    fillDuckSlots()
+}
 
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -193,7 +227,10 @@ private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?
     return source._liftOrReinterpretNumericalField(args, duckDepthMutation)
 }
 
-private val duckAttackMutation = voiceSetter { duckAttack = it?.asDoubleOrNull() }
+private val duckAttackMutation = voiceSetter {
+    duckAttack = it?.asDoubleOrNull()
+    fillDuckSlots()
+}
 
 private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->

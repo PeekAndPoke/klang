@@ -52,6 +52,37 @@
   `loop`, `adsrOn`) and `hurry`'s `fast`, where a rest still drops the notes. Guard: `LangControlRestSpec`,
   one test per setter and per compound slot (187), mutation-checked.
 
+- **The bus doors also write the orbit's slot state (2026-09-18, Katalyst step 5a).** `katalystParams`
+  is the `oscParams` twin on the other host: `oscp` fills the voice's instrument, `.katp(name, value)`
+  the chain its orbit runs, and the two namespaces never cross. Until the voice fields leave the wire
+  (step 5b) the bus doors write BOTH: `reverb(...)` and `delay(...)` mirror every slot they set
+  including the ones they fill (`fillReverbDefaults` / `fillDelayDefaults`),
+  `compressor(...)` writes only the slots it was given (the recorded asymmetry: the engine's gate is
+  "any of the five set"), `duck(...)` writes `duck.orbit` / `duck.depth` / `duck.attack` and fills the
+  last two with their constants but NEVER invents an orbit, `phaser(...)` writes the five it was given,
+  and `body(...)` / `vowel(...)` write only `wet` and `floor`, because a material is a name and a slot
+  carries a number. The chain a cylinder is BORN with still reads the voice fields, so a song that
+  declares nothing sounds the same; every chain that arrives by NAME resolves its `Param` knobs from
+  the map, `Katalyst.classic()` included (decided 2026-09-18: voice-driven is only the born-with
+  chain, or `Katalyst(k => k.classic())` would be inert and `katp` on it would go nowhere). A
+  declared chain owns its body material and its vowel, because those are names. Guard: `LangKatalystParamSpec`, mutation-checked
+  (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
+
+- **`oscParams` and `katalystParams` are mutable and single-owner (2026-09-18).** They were
+  immutable-replace (`map + (k to v)` per write, a fresh map per slot); with a dozen bus doors writing
+  slots after Katalyst 5b that is the "twenty allocations per note" class the June work removed. They
+  are now `MutableMap` fields with the same contract as the `Svd*` groups: `putOscParam` /
+  `putKatalystParam` write ONE key into the map the event already owns, `clone()` deep-copies them
+  (the one allocation per event the design allows), `merge` builds a fresh map as `mergeSvdAdsr` does
+  and `mergeFrom` folds into the receiver's own. The copying helpers (`withOscParam`,
+  `withOscParams`, `mergeOscParamsFrom`, `putOscParams`, `putOscParamsFrom`) went with the old
+  storage: nothing called them, and a copy helper over a mutable map is a second way to own one.
+  `toVoiceData` hands the wire a `toMap()` COPY of each: the wire value
+  outlives the pattern event (the backend holds `Voice.katalystParams` for the whole life of the voice
+  and gates its re-resolve on the map's IDENTITY), and the boundary already allocates a `VoiceData`.
+  Guards: `LangKatalystParamSpec` ("a bus door call on an already-cloned voice allocates no map",
+  "toVoiceData hands the wire a COPY of both maps"), the golden, mutation-checked.
+
 - **A `delay(...)` / `reverb(...)` call sets every slot (2026-09-16).** Every slot still unset takes the
   shared default (`audio_bridge/constants/SendEffectDefaults.kt`, the master stages' too): delay wet 0.25,
   time 0.25, feedback 0.3, cap 1; reverb wet 0.25, size 5. Filled at WRITE time in the slot mutations, so a

@@ -73,8 +73,27 @@ data class SprudelVoiceData(
     /** Sound index */
     var soundIndex: Int?,
 
-    // Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz])
-    var oscParams: Map<String, Double>?,
+    /**
+     * Oscillator parameters (generic map: "density", "voices", "spread", "panSpread", "onepole" [Hz]).
+     *
+     * **Mutable and single-owner, like the `Svd*` groups**, not immutable-replace: a door writes one
+     * key in place ([putOscParam]) instead of allocating a fresh map per slot, which is what keeps a
+     * pattern that fills a dozen slots out of the "twenty allocations per note" class the June work
+     * removed. [clone] deep-copies it, which is the one allocation per event the design allows, and
+     * [toVoiceData] hands the wire a COPY (see there).
+     */
+    var oscParams: MutableMap<String, Double>?,
+
+    /**
+     * The ORBIT's bus slots this event writes, keyed `<stage>.<knob>` (`"reverb.size"`,
+     * `"compressor.ratio"`, `"duck.orbit"`). Same shape and same rules as [oscParams], the other
+     * host: that map is the voice's own instrument, this one the chain its orbit runs. Written by
+     * `.katp(name, value)` and, until the voice fields leave the wire, by the bus doors as aliases.
+     *
+     * Mutable and single-owner, and merged the same way as [oscParams], last writer wins per key.
+     * Carried to `VoiceData.katalystParams` by [toVoiceData].
+     */
+    var katalystParams: MutableMap<String, Double>?,
 
     // ADSR amplitude envelope — grouped (see SvdAdsr). Flat fields (attack/decay/…) are accessors below.
     var adsr: SvdAdsr?,
@@ -188,8 +207,9 @@ data class SprudelVoiceData(
      * Semantic tags accumulated via `.tag(...)`. A set by design: tags are unique and carry NO
      * ordering guarantee — consumers must never rely on accumulation order. Copied into engine
      * `VoiceData` by [toVoiceData] (and thus over the wire) for UI subscribers (visualizations)
-     * and analysis tools; the synthesis engine ignores them. Treated as immutable-replace like
-     * [oscParams] (shared reference in [clone], fresh set on write).
+     * and analysis tools; the synthesis engine ignores them. Treated as immutable-replace, UNLIKE
+     * the param maps: a shared reference in [clone] and a fresh set on every write, because a tag
+     * is added once per pattern node and never a dozen times per event.
      */
     var tags: Set<String>?,
 
@@ -201,8 +221,8 @@ data class SprudelVoiceData(
      * Deliberately NOT copied into engine `VoiceData` by [toVoiceData]: a tweak is a pattern-layer
      * concern that never reaches synthesis, so it would be dead weight on the wire.
      *
-     * Treated as immutable-replace like [tags] / [oscParams] (shared reference in [clone], fresh
-     * list on write).
+     * Treated as immutable-replace like [tags], UNLIKE the param maps (shared reference in
+     * [clone], fresh list on write).
      */
     var tweaks: List<String>?,
 
@@ -724,11 +744,14 @@ data class SprudelVoiceData(
     /**
      * Fresh deep-enough copy: the flat core fields are copied shallow (immutable scalars), and each
      * non-null group is `copy()`-ed so the clone owns its own groups (single-owner invariant — see the
-     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `oscParams` is
-     * treated as immutable-replace, so sharing its reference is fine. As more clusters become groups,
+     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `oscParams` and `katalystParams` are
+     * mutable maps and are copied here for the same reason the groups are: the clone owns them, so
+     * a door can write a key in place instead of allocating a map per slot. As more clusters become groups,
      * add them to the deep-copy list here.
      */
     fun clone(): SprudelVoiceData = copy(
+        oscParams = oscParams?.toMutableMap(),
+        katalystParams = katalystParams?.toMutableMap(),
         adsr = adsr?.copy(),
         lpf = lpf?.copy(),
         hpf = hpf?.copy(),
@@ -761,7 +784,8 @@ data class SprudelVoiceData(
             bank = other.bank ?: bank,
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
-            oscParams = mergeOscParams(oscParams, other.oscParams),
+            oscParams = mergeParamMap(oscParams, other.oscParams),
+            katalystParams = mergeParamMap(katalystParams, other.katalystParams),
             adsr = mergeSvdAdsr(adsr, other.adsr),
             pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod),
             pitchEnv = mergeSvdPitchEnv(pitchEnv, other.pitchEnv),
@@ -820,7 +844,8 @@ data class SprudelVoiceData(
         bank = other.bank ?: bank
         sound = other.sound ?: sound
         soundIndex = other.soundIndex ?: soundIndex
-        oscParams = mergeOscParams(oscParams, other.oscParams)
+        oscParams = mergeParamMapInto(oscParams, other.oscParams)
+        katalystParams = mergeParamMapInto(katalystParams, other.katalystParams)
         adsr = mergeSvdAdsr(adsr, other.adsr)
         pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod)
         pitchEnv = mergeSvdPitchEnv(pitchEnv, other.pitchEnv)
@@ -1064,7 +1089,14 @@ data class SprudelVoiceData(
             bank = bank,
             sound = soundName,
             soundIndex = soundIndex,
-            oscParams = oscParams,
+            // A COPY, not the event's own map: the wire value outlives the pattern event. The
+            // backend holds `Voice.katalystParams` for the whole life of the voice and its chain
+            // gates the re-resolve on the map's IDENTITY, so a map sprudel could still write into
+            // would change an orbit's settings invisibly. `oscParams` follows the same rule, one
+            // contract for both. The boundary already allocates a `VoiceData`, and one copy here
+            // replaces the one-per-slot copies the doors used to make.
+            oscParams = oscParams?.toMap(),
+            katalystParams = katalystParams?.toMap(),
             filters = FilterDefs(orderedFilters),
             adsr = AdsrDef.Std(
                 attack = attack,
@@ -1167,6 +1199,7 @@ internal val blueprint = SprudelVoiceData(
     sound = null,
     soundIndex = null,
     oscParams = null,
+    katalystParams = null,
     adsr = null,
     pitchMod = null,
     pitchEnv = null,
@@ -1232,8 +1265,8 @@ private fun mergeTags(
 
 /**
  * In-place tag add: no-op if [tag] is already present, else assigns a fresh set with [tag] added.
- * `tags` is treated as immutable-replace like `oscParams` — no new [SprudelVoiceData] is
- * allocated. Only safe on a single-owner instance (see [clone]).
+ * `tags` is treated as immutable-replace, unlike the param maps, so a fresh set is assigned to the
+ * field and no new [SprudelVoiceData] is allocated. Only safe on a single-owner instance (see [clone]).
  */
 fun SprudelVoiceData.addTag(tag: String) {
     val current = tags
@@ -1266,8 +1299,8 @@ private fun mergeTweaks(
 
 /**
  * In-place tweak append. Unlike [addTag] this is NOT idempotent: a repeated tweak applies twice,
- * which is the whole point of `tweaks` being a list. `tweaks` is treated as immutable-replace like
- * `oscParams` — no new [SprudelVoiceData] is allocated. Only safe on a single-owner instance
+ * which is the whole point of `tweaks` being a list. `tweaks` is treated as immutable-replace,
+ * unlike the param maps, so a fresh list is assigned to the field and no new [SprudelVoiceData] is allocated. Only safe on a single-owner instance
  * (see [SprudelVoiceData.clone]).
  */
 fun SprudelVoiceData.addTweak(tweak: String) {
@@ -1284,68 +1317,75 @@ fun SprudelVoiceData.withTweaks(names: List<String>): SprudelVoiceData = when {
     else -> copy(tweaks = tweaks.orEmpty() + names)
 }
 
-/** Merges two oscParams maps: other's values override this's values. */
-private fun mergeOscParams(
+/**
+ * Merges two param maps (`oscParams`, `katalystParams`) into a FRESH one: other's values override
+ * this's values. One function for both, because the two maps differ in their HOST, not in their
+ * shape.
+ *
+ * Always a new map, never an alias, exactly as `mergeSvdAdsr` and its siblings always return a new
+ * group: [SprudelVoiceData.merge] builds a new instance, and handing it either operand's mutable
+ * map would make two owners of one map. The in-place twin is [mergeParamMapInto].
+ */
+private fun mergeParamMap(
     base: Map<String, Double>?,
     other: Map<String, Double>?,
-): Map<String, Double>? = when {
-    base == null -> other
-    other == null -> base
-    else -> base + other
-}
-
-/** Returns a copy with the given oscParam set. If value is null, returns this unchanged. */
-fun SprudelVoiceData.withOscParam(key: String, value: Double?): SprudelVoiceData {
-    if (value == null) return this
-    return copy(oscParams = (oscParams.orEmpty()) + (key to value))
+): MutableMap<String, Double>? = when {
+    base == null -> other?.toMutableMap()
+    other == null -> base.toMutableMap()
+    else -> base.toMutableMap().also { it.putAll(other) }
 }
 
 /**
- * In-place counterpart of [withOscParam]: sets the given oscParam on this instance (null is a no-op).
- * `oscParams` is treated as immutable-replace, so a fresh map is assigned to the field — no new
- * [SprudelVoiceData] is allocated. Only safe on a single-owner instance (see [clone]).
+ * In-place counterpart of [mergeParamMap], for [SprudelVoiceData.mergeFrom]: [other]'s entries go
+ * into the receiver's own map, which is the whole point of the map being mutable. Only when the
+ * receiver has none is a map allocated, and then it is a copy: [other] belongs to another voice.
+ */
+private fun mergeParamMapInto(
+    target: MutableMap<String, Double>?,
+    other: Map<String, Double>?,
+): MutableMap<String, Double>? {
+    if (other == null) {
+        return target
+    }
+
+    if (target == null) {
+        return other.toMutableMap()
+    }
+
+    target.putAll(other)
+
+    return target
+}
+
+/**
+ * Sets ONE oscParam on this instance, in place (null is a no-op): one key written into the map the
+ * instance already owns, so a door that fills several slots allocates at most the first map. Only
+ * safe on a single-owner instance (see [clone]).
+ *
+ * The copying variants (`withOscParam`, `withOscParams`, `mergeOscParamsFrom`) went with the
+ * immutable-replace storage on 2026-09-18: nothing called them, and a copy helper over a mutable
+ * map is a second way to own one.
  */
 fun SprudelVoiceData.putOscParam(key: String, value: Double?) {
     if (value == null) return
-    oscParams = (oscParams.orEmpty()) + (key to value)
+
+    val params = oscParams ?: mutableMapOf<String, Double>().also { oscParams = it }
+    params[key] = value
 }
 
 /**
- * In-place counterpart of [withOscParams]: sets the given oscParams on this instance. Null values
- * are ignored. Only safe on a single-owner instance (see [clone]).
+ * In-place write of ONE orbit-chain slot, the [putOscParam] twin on the other host (null is a
+ * no-op, so a door that wrote nothing on this event writes nothing here either).
+ *
+ * ONE key into the map this instance already owns: a bus door calls this once per slot it sets and
+ * allocates at most the first map, whatever the door and however many slots it fills. Only safe on
+ * a single-owner instance (see [SprudelVoiceData.clone]).
  */
-fun SprudelVoiceData.putOscParams(vararg params: Pair<String, Double?>) {
-    val nonNull = params.filter { it.second != null }
-    if (nonNull.isEmpty()) return
-    val merged = oscParams.orEmpty().toMutableMap()
-    for ((k, v) in nonNull) merged[k] = v!!
-    oscParams = merged
-}
+fun SprudelVoiceData.putKatalystParam(key: String, value: Double?) {
+    if (value == null) return
 
-/** Merges multiple oscParams in a single copy. Null values are ignored. */
-fun SprudelVoiceData.withOscParams(vararg params: Pair<String, Double?>): SprudelVoiceData {
-    val nonNull = params.filter { it.second != null }
-    if (nonNull.isEmpty()) return this
-    val merged = oscParams.orEmpty().toMutableMap()
-    for ((k, v) in nonNull) merged[k] = v!!
-    return copy(oscParams = merged)
-}
-
-/** Merges all oscParams from another voice data in a single copy. */
-fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceData {
-    val otherParams = other.oscParams
-    if (otherParams.isNullOrEmpty()) return this
-    return copy(oscParams = (oscParams.orEmpty()) + otherParams)
-}
-
-/**
- * In-place counterpart of [mergeOscParamsFrom]: folds [other]'s oscParams into this instance.
- * Only safe on a single-owner instance (see [clone]).
- */
-fun SprudelVoiceData.putOscParamsFrom(other: SprudelVoiceData) {
-    val otherParams = other.oscParams
-    if (otherParams.isNullOrEmpty()) return
-    oscParams = (oscParams.orEmpty()) + otherParams
+    val params = katalystParams ?: mutableMapOf<String, Double>().also { katalystParams = it }
+    params[key] = value
 }
 
 /**

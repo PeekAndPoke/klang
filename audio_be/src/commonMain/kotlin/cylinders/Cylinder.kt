@@ -29,8 +29,10 @@ import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
  * A `katalyst(…)` reference on the voice stream reaches [requestChain] (Katalyst step 3a,
  * 2026-09-17), which looks the name up in this cylinder's [KatalystRegistry]. On an IDLE orbit the
  * declared chain is installed at once; on a SOUNDING one it is faded in over [Crossfade] while the
- * outgoing chain rings out (step 3b, see [processEffects]). The classic chain reads its knobs from
- * the orbit's OWNER voice, a declared chain from its own slots; see `KatalystChainBuilder`.
+ * outgoing chain rings out (step 3b, see [processEffects]). The chain a cylinder is BORN with reads
+ * its knobs from the orbit's OWNER voice; every chain that arrives by name reads its own slots,
+ * whatever it declares, `Katalyst.classic()` included (decided 2026-09-18). See
+ * `KatalystChainBuilder` and [chainFor].
  *
  * The duck runs in a separate pass after all orbits are processed (cross-orbit dependency).
  */
@@ -69,6 +71,13 @@ class Cylinder(
          * retained for the life of the cylinder. The chain in play is never evicted.
          */
         internal const val MAX_CACHED_CHAINS: Int = 8
+
+        /**
+         * How many blocks the orbit's param state survives its owner's last check-in: the lease's
+         * own one-block grace plus the block it was written on (`VoiceLease`). Past that the state
+         * is dropped and a chain arriving on the orbit's tail resolves from what it authored.
+         */
+        private const val OWNER_STATE_BLOCKS: Int = 2
     }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -87,8 +96,11 @@ class Cylinder(
     /**
      * The chain this cylinder is born with, and the ONE chain it can always fall back to: the
      * historical stages, driven by the orbit's owner voice. Never evicted and never cached by
-     * name, so "back to classic" (a retired cylinder [adopt]ed for another orbit, or a
-     * `Katalyst.classic()` on a pattern) costs no build.
+     * name, so a retired cylinder [adopt]ed for another orbit costs no build.
+     *
+     * The ONLY voice-driven chain there is (decided 2026-09-18, review round 2). A pattern writing
+     * `Katalyst.classic()` DECLARES the same stages and gets a slot-driven chain of its own, so
+     * `katp` and the bus doors reach it; this instance serves the song that declares nothing.
      */
     private val classicChain: KatalystChain = buildChain(KatalystDsl.classic, voiceDriven = true)
 
@@ -99,13 +111,6 @@ class Cylinder(
      * reverb's network are still rented on the first activating configure.
      */
     private var chain: KatalystChain = classicChain
-
-    /**
-     * The declaration [chain] was built from, for the content test in [requestChain]: two names
-     * for one content are one chain (the master's rule, content-addressed), so a repeat request
-     * never rebuilds and never resets a live stage.
-     */
-    private var chainDsl: KatalystDsl = KatalystDsl.classic
 
     /**
      * The key [chain] was requested under: the LOWERCASED name, which is what
@@ -140,11 +145,10 @@ class Cylinder(
      * retired (its rented units are back on the shelves), so an idle entry holds nothing but its
      * stage shells and is ready to go straight back into service.
      *
-     * "Two names for one content are one chain" holds for the chain IN SERVICE only, where
-     * [chainDsl] answers it without a lookup. Two DIFFERENT names that happen to carry equal
-     * content get one entry each, because the cache is keyed by name: content hashing a stage list
-     * per request would cost more than the one chain it saves, and a content-derived name
-     * (`KatalystDsl.uniqueId()`) is what a song normally carries anyway.
+     * Keyed by NAME and nothing else, [classic] included (decided 2026-09-18, review round 2):
+     * two different names that happen to carry equal content get one entry each. Content hashing a
+     * stage list per request would cost more than the one chain it saves, and a content-derived
+     * name (`KatalystDsl.uniqueId()`) is what a song normally carries anyway.
      */
     private val chains = mutableMapOf<String, KatalystChain>()
 
@@ -340,23 +344,30 @@ class Cylinder(
     private val lease = VoiceLease()
 
     /**
-     * Whether the voice holding the orbit's lease carries ducking, this block and the one before.
+     * The orbit's param state, as the voice holding the lease last handed it over: the map
+     * `.katp` and the bus doors wrote (`Voice.katalystParams`), by reference.
      *
-     * The classic chain's duck is written from the OWNER, and its writer CLEARS the duck when the
-     * owner has none, so a swap TO a voice-driven chain has to know which of the two will happen
-     * before it hands that chain a live envelope ([handOverDuck], [KatalystChain.ducksWith]).
+     * Kept for the ONE moment a swap needs it. [beginFade] runs before this block's voices have
+     * offered themselves (the promotion path) or after they have (the pending poll), and in both
+     * cases it has to resolve the ARRIVING chain from the live state before [handOverDuck] asks
+     * whether that chain ducks. Without it a `.katp("duck.orbit", n)` reads as "no duck" at the
+     * handover, the reduction is ramped out, and the arriving chain's own writer then drops a fresh
+     * one on the orbit a block later (review round 1).
      *
-     * Two blocks, because that is the lease's own liveness rule (`VoiceLease`: an owner that misses
-     * a block has lapsed), and because a swap is requested at promotion, before this block's voices
-     * have offered themselves. NOT the voice itself: a cylinder holding a dead voice would hold its
-     * buffers with it (the allocation-cleanup rule).
+     * **Aged with the lease** (review round 2): an owner that
+     * misses a block has lapsed (`VoiceLease`), and a chain arriving while the orbit merely rings
+     * out its tail must resolve from the authored defaults, not from a dead voice's state. The
+     * reference is dropped at the same moment, so nothing here outlives the owner by more than the
+     * lease's own grace (the allocation-cleanup rule).
      */
-    private var ownerDucksThisBlock: Boolean = false
+    private var ownerParams: Map<String, Double>? = null
 
-    private var ownerDucksLastBlock: Boolean = false
-
-    /** True while a ducking owner is alive by the lease's one-block rule (see above). */
-    private val ownerDucks: Boolean get() = ownerDucksThisBlock || ownerDucksLastBlock
+    /**
+     * Blocks since the orbit's owner last handed [ownerParams] over, capped at
+     * [OWNER_STATE_BLOCKS], where the state is dropped. Counted in blocks and not in frames because
+     * the lease's own liveness is (see `VoiceLease`).
+     */
+    private var ownerParamsAge: Int = OWNER_STATE_BLOCKS
 
     // ════════════════════════════════════════════════════════════════════════════
     // API
@@ -377,7 +388,15 @@ class Cylinder(
         isActive = true
 
         if (lease.claim(voice.id, blockStart, blockFrames)) {
-            ownerDucksThisBlock = voice.ducking != null
+            ownerParams = voice.katalystParams
+            ownerParamsAge = 0
+
+            // BEFORE the late-duck question below, and before any writer runs: `ducksWith` asks
+            // the chain what its duck stage RESOLVES to, and until this owner's state has been read
+            // that answer is the chain's authored default. Resolving does not write, so the
+            // handover order the carried envelope depends on is untouched, and the `applyOwner`
+            // further down re-uses this resolve (same map instance, gated).
+            chain.resolveParams(voice.katalystParams)
 
             // A ducking owner whose FIRST claim lands in the swap's own block. The swap was decided
             // at promotion, before this voice offered itself, so [handOverDuck] saw no owner and
@@ -393,16 +412,26 @@ class Cylinder(
             // step the swap put there.
             val lateDuck = duckingOut
 
-            if (lateDuck != null && fade.isAtStart && voice.ducking != null &&
-                chain.ducksWith(ownerDucks = true)
-            ) {
+            // NOT gated on `voice.ducking` (dropped in review round 3): a duck named through
+            // `.katp("duck.orbit", n)` alone leaves that field null, so the correction skipped it
+            // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
+            // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
+            // the resolve above is what makes it current.
+            if (lateDuck != null && fade.isAtStart && chain.ducksWith()) {
                 chain.duck?.takeOver(lateDuck)
                 duckingOut = null
             }
 
-            // The classic chain resolves every knob from the owner voice, as this method's
-            // `applyBusEffects` did before the chain existed; a DECLARED chain resolved its slots
-            // when it was built and ignores the voice (step 3a).
+            // The BORN-WITH chain resolves every knob from the owner voice, as this method's
+            // `applyBusEffects` did before the chain existed; a DECLARED chain reads the voice's
+            // `katalystParams` instead, the orbit's param state, and ignores its bus FIELDS
+            // (step 3a for the slots, step 5a for the state).
+            //
+            // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the
+            // owner's map, so it lives exactly as long as the owner does, and an orbit whose owner
+            // died is back to what its chain authored. The chain re-resolves only when the map
+            // INSTANCE changes (`KatalystChain.applyParams`), so a live owner costs one reference
+            // compare per block and no lookup.
             chain.applyOwner(voice)
 
             // The chain FADING OUT is still audible, so it is still configured (step 3b): the
@@ -431,10 +460,9 @@ class Cylinder(
      *    dropped): remembered as [pendingKey] and retried per idle block and on the next request.
      *    Never a silent fall back to classic: the caller must be able to tell "unknown, try again"
      *    from "known" (`KatalystRegistry`).
-     *  - **The name resolves to the chain already running** (a different name, the same content,
-     *    which is what `Katalyst.classic()` is on a fresh cylinder): the name is adopted and
-     *    nothing is rebuilt.
      *  - **The cylinder is idle**: installed now, which is the one moment no crossfade is needed.
+     *    A name whose CONTENT equals the historical chain is installed like any other, as a
+     *    slot-driven chain of its own: only the born-with chain is voice-driven (see [chainFor]).
      *  - **The cylinder is sounding**: faded in now (step 3b), over [Crossfade], while the chain
      *    it replaces fades out and then rings out (see [processEffects]).
      *  - **A fade or drain is already running**: queued in [pendingKey] and started when the one
@@ -473,16 +501,6 @@ class Cylinder(
 
         if (dsl == null) {
             pendingKey = key
-
-            return
-        }
-
-        if (dsl == chainDsl) {
-            // Content-addressed, exactly as the master is: the chain playing IS this chain, so
-            // adopting its name makes every repeat a single string compare.
-            chainKey = key
-            chainRawName = name
-            pendingKey = null
 
             return
         }
@@ -574,9 +592,16 @@ class Cylinder(
         if (!isActive) return
 
         // The owner's check-in ages one block here, the one place that runs once per block per
-        // orbit and after the voices have offered themselves (see [ownerDucksThisBlock]).
-        ownerDucksLastBlock = ownerDucksThisBlock
-        ownerDucksThisBlock = false
+        // orbit and after the voices have offered themselves (see [ownerParams]).
+        if (ownerParamsAge < OWNER_STATE_BLOCKS) {
+            ownerParamsAge++
+
+            if (ownerParamsAge == OWNER_STATE_BLOCKS) {
+                // The owner has lapsed: its state goes with it, and a chain arriving from here on
+                // resolves from the authored defaults.
+                ownerParams = null
+            }
+        }
 
         val fading = outgoing
 
@@ -821,8 +846,8 @@ class Cylinder(
         retiredDeniedRents = 0
         selectClassicChain()
         lease.reset()
-        ownerDucksThisBlock = false
-        ownerDucksLastBlock = false
+        ownerParams = null
+        ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
         delaySendBuffer.clear()
         reverbSendBuffer.clear()
@@ -875,8 +900,8 @@ class Cylinder(
         // is reconfigured by whichever voice next claims it.
         chain.reset()
         lease.reset()
-        ownerDucksThisBlock = false
-        ownerDucksLastBlock = false
+        ownerParams = null
+        ownerParamsAge = OWNER_STATE_BLOCKS
     }
 
     private fun isMixBufferSilent(): Boolean {
@@ -915,13 +940,6 @@ class Cylinder(
 
         pendingKey = null
 
-        if (dsl == chainDsl) {
-            chainKey = key
-            chainRawName = key
-
-            return false
-        }
-
         if (isActive) {
             beginFade(key, key, dsl)
 
@@ -951,15 +969,15 @@ class Cylinder(
      * The incoming chain needs no reset: nothing that is not the current chain holds state.
      *
      * The incoming chain is never the outgoing one, so retiring after the assignment cannot wipe
-     * what was just installed: both callers return early when the request resolves to the content
-     * already playing, and [chainDsl] tracks that content one-to-one with [chain].
+     * what was just installed: both callers return early when the requested KEY is the one already
+     * playing, and [chain] is either [classicChain] (never in [chains]) or the [chains] entry for
+     * [chainKey].
      */
     private fun install(key: String, rawName: String, dsl: KatalystDsl) {
         val next = chainFor(key, dsl)
         val leaving = chain
 
         chain = next
-        chainDsl = dsl
         chainKey = key
         chainRawName = rawName
 
@@ -970,6 +988,8 @@ class Cylinder(
         // The next voice on this orbit becomes the owner cleanly and writes the new chain's
         // stages, instead of the incoming chain waiting for the previous owner to die.
         lease.reset()
+        ownerParams = null
+        ownerParamsAge = OWNER_STATE_BLOCKS
     }
 
     /**
@@ -999,13 +1019,17 @@ class Cylinder(
         next.reset()
 
         chain = next
-        chainDsl = dsl
         chainKey = key
         chainRawName = rawName
 
         outgoing = leaving
         draining = false
         fade.restart()
+
+        // The arriving chain reads the orbit's live param state FIRST, without writing anything:
+        // `handOverDuck` below asks whether it will duck, and a duck whose orbit or depth comes
+        // from `.katp` answers that question only once the state has been read (review round 1).
+        next.resolveParams(ownerParams)
 
         // BEFORE the writers, not after: a carried envelope has to be updated IN PLACE by the
         // arriving chain's own writer (`writeDuck`'s `existing != null` branch), or the swap would
@@ -1014,9 +1038,10 @@ class Cylinder(
 
         // A DECLARED chain reads its own slots, and nothing else would run its writers until a
         // voice claims the lease: this block's voices have already offered themselves when a fade
-        // starts from the pending poll, and an owner may not even be alive. No-op on the classic
-        // chain, which has nothing to write without a voice.
-        next.applyStatic()
+        // starts from the pending poll, and an owner may not even be alive. Gated on the same map
+        // instance the resolve above took, so it only writes. No-op on the classic chain, which has
+        // nothing to write without a voice.
+        next.applyParams(ownerParams)
     }
 
     /**
@@ -1032,11 +1057,11 @@ class Cylinder(
      * orbit down in one sample when the trigger is already sounding.
      */
     private fun handOverDuck(from: KatalystChain, to: KatalystChain) {
-        // Whether the ARRIVING chain will duck, not whether it declares a stage: the classic chain
-        // declares one on every cylinder, so an orbit swapping from a ducked chain to
-        // `Katalyst.classic()` under an owner that carries no ducking would hand its envelope to a
-        // stage whose very next write is a `reset()`, releasing the whole reduction in one sample.
-        val arrivingDucks = to.ducksWith(ownerDucks)
+        // Whether the ARRIVING chain will duck, not whether it declares a stage: a chain built from
+        // `Katalyst.classic()` declares a duck that names no source, and handing it the envelope
+        // would give it to a stage whose very next write is a `reset()`, releasing the whole
+        // reduction in one sample.
+        val arrivingDucks = to.ducksWith()
         val leavingDuck = from.duck
 
         // A duck with no envelope yet has nothing in force and nothing to carry.
@@ -1066,10 +1091,11 @@ class Cylinder(
      * it twice.
      */
     private fun chainFor(key: String, dsl: KatalystDsl): KatalystChain {
-        if (dsl == KatalystDsl.classic) {
-            return classicChain
-        }
-
+        // No shortcut for content equal to `KatalystDsl.classic` (decided 2026-09-18, review
+        // round 2): VOICE-DRIVEN is only what a cylinder is BORN with, and a chain that arrives by
+        // NAME is a declaration, so it is slot-driven whatever it declares. Handing back
+        // [classicChain] here made `Katalyst(k => k.classic())` inert: the orbit kept reading the
+        // voice's own effect fields and every `katp` on it went nowhere.
         chains[key]?.let { return it }
 
         evictIfNeeded()
@@ -1105,7 +1131,6 @@ class Cylinder(
     /** The classic chain is the current one again, under no name. */
     private fun selectClassicChain() {
         chain = classicChain
-        chainDsl = KatalystDsl.classic
         chainKey = null
         chainRawName = null
         pendingKey = null

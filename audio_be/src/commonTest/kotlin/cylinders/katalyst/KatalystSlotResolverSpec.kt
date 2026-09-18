@@ -337,8 +337,9 @@ class KatalystSlotResolverSpec : StringSpec({
         // which [FilterDef.Body] documents as "engine default", while a declared stage writes that
         // same default out as a number. Same filter, two spellings of one value.
         val body = KatalystSlots.bodyDef(
-            stage = KatalystStageDsl.Body(material = "wood", wet = c(0.3)),
             bands = KatalystSlots.bodyModes("wood"),
+            mix = 0.3,
+            floor = BODY_FLOOR,
         ).shouldNotBeNull()
 
         body.bands shouldBe BodyMaterials.modesFor("wood")
@@ -348,8 +349,9 @@ class KatalystSlotResolverSpec : StringSpec({
         body.floor shouldBe BODY_FLOOR
 
         val vowel = KatalystSlots.vowelDef(
-            stage = KatalystStageDsl.Vowel(vowel = "a", wet = c(0.3)),
             bands = KatalystSlots.vowelBands("a"),
+            mix = 0.3,
+            floor = VOWEL_FLOOR,
         ).shouldNotBeNull()
 
         // A bare vowel name is the soprano register, the voice path's rule as well.
@@ -386,29 +388,21 @@ class KatalystSlotResolverSpec : StringSpec({
         val modes = listOf(FilterDef.Body.Mode(freq = 200.0, db = 0.0, q = 8.0))
         val bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 90.0))
 
-        val body = KatalystSlots.bodyDef(
-            stage = KatalystStageDsl.Body(material = "wood", wet = c(0.3), floor = c(SLOT_UNSET)),
-            bands = modes,
-        ).shouldNotBeNull()
+        val body = KatalystSlots.bodyDef(bands = modes, mix = 0.3, floor = SLOT_UNSET).shouldNotBeNull()
 
         body.bands shouldBe modes
         body.mix shouldBe 0.3
         body.floor shouldBe BODY_FLOOR
 
-        val vowel = KatalystSlots.vowelDef(
-            stage = KatalystStageDsl.Vowel(vowel = "a", wet = c(0.4), floor = c(SLOT_UNSET)),
-            bands = bands,
-        ).shouldNotBeNull()
+        val vowel = KatalystSlots.vowelDef(bands = bands, mix = 0.4, floor = SLOT_UNSET).shouldNotBeNull()
 
         vowel.bands shouldBe bands
         vowel.mix shouldBe 0.4
         vowel.floor shouldBe VOWEL_FLOOR
 
         // A finite floor is the author's, untouched (the Motor stays raw).
-        KatalystSlots.bodyDef(
-            stage = KatalystStageDsl.Body(material = "wood", floor = c(0.05)),
-            bands = modes,
-        ).shouldNotBeNull().floor shouldBe 0.05
+        KatalystSlots.bodyDef(bands = modes, mix = BODY_WET, floor = 0.05)
+            .shouldNotBeNull().floor shouldBe 0.05
     }
 
     "body and vowel: a non-finite mix takes its constant, like the floor" {
@@ -417,20 +411,16 @@ class KatalystSlotResolverSpec : StringSpec({
 
         // A NaN mix reaches the wet/dry law and silences the orbit, so unset has to read as the
         // constant here exactly as it does for the floor.
-        KatalystSlots.bodyDef(
-            stage = KatalystStageDsl.Body(material = "wood", wet = c(SLOT_UNSET)),
-            bands = modes,
-        ).shouldNotBeNull().mix shouldBe BODY_WET
+        KatalystSlots.bodyDef(bands = modes, mix = SLOT_UNSET, floor = BODY_FLOOR)
+            .shouldNotBeNull().mix shouldBe BODY_WET
 
-        KatalystSlots.vowelDef(
-            stage = KatalystStageDsl.Vowel(vowel = "a", wet = c(SLOT_UNSET)),
-            bands = bands,
-        ).shouldNotBeNull().mix shouldBe VOWEL_WET
+        KatalystSlots.vowelDef(bands = bands, mix = SLOT_UNSET, floor = VOWEL_FLOOR)
+            .shouldNotBeNull().mix shouldBe VOWEL_WET
     }
 
     "body and vowel: null bands is the off switch, whatever the slots say" {
-        KatalystSlots.bodyDef(KatalystStageDsl.Body(material = "wood", wet = c(1.0)), bands = null).shouldBeNull()
-        KatalystSlots.vowelDef(KatalystStageDsl.Vowel(vowel = "a", wet = c(1.0)), bands = null).shouldBeNull()
+        KatalystSlots.bodyDef(bands = null, mix = 1.0, floor = BODY_FLOOR).shouldBeNull()
+        KatalystSlots.vowelDef(bands = null, mix = 1.0, floor = VOWEL_FLOOR).shouldBeNull()
     }
 
     // ── The value vocabulary ─────────────────────────────────────────────────────────────────────

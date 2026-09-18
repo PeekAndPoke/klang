@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -74,9 +75,46 @@ object KlangScriptKatalyst {
      * Its duck names no source, so nothing ducks until one is written. The third line above is how:
      * a cylinder runs exactly one ducking effect, so the LAST duck in the chain wins and appending
      * one replaces the unset duck `classic` brought.
+     *
+     * **Writing it is not the same as writing nothing** (decided 2026-09-18). An orbit that declares
+     * no chain runs the historical one from the voice's own effect fields; declaring THIS one names
+     * the same stages as slots, so `katp` and the bus doors drive them, which is what makes
+     * `Katalyst(k => k.classic())` the one line to add before automating a classic knob. The sound
+     * is the same either way; what changes is who the knobs listen to. The one thing the chain takes
+     * over is a NAME: its `body` material and its `vowel` are the chain's, because a slot carries a
+     * number (see the `katp` door).
      */
     @KlangScript.Method
     fun classic(): KatalystDsl = KatalystDsl.classic
+
+    /**
+     * Creates a named **chain slot** with a default value: the knob a pattern can then move with
+     * `.katp("<name>", value)`.
+     *
+     * A slot is read per block from the voice that holds the orbit's lease, so it is orbit state and
+     * not a per-note snapshot. When nothing has written the name, the knob is [default]. Write a
+     * plain number instead of a slot where the chain should stay fixed.
+     *
+     * ```
+     * let bus = Katalyst(k => k.reverb(r => r.wet(0.5).size(Katalyst.param("room", 5.0))))
+     * note("c3 e3 g3").s("supersaw").katalyst(bus).katp("room", "<2 9>")
+     * ```
+     *
+     * **A slot listens only when it IS the knob.** `Katalyst.param("room", 5).mul(2)` is an
+     * expression over a slot, not a slot: the bus reads a knob that is neither a constant nor a slot
+     * ONCE, when the chain is built, and folds it to a number, so `katp("room", x)` never reaches
+     * it. Hand the knob the slot itself and do the arithmetic on the pattern side.
+     *
+     * The twin of `Osc.param` on the other host: that one fills the voice's own instrument from
+     * `oscp`, this one the orbit's chain from `katp`. The two namespaces never cross.
+     *
+     * @param name slot name, `<stage>.<knob>` for a classic knob or any word for an authored one
+     * @param default the value the knob has while nothing writes the name
+     * @param description human-readable description for documentation
+     */
+    @KlangScript.Method
+    fun param(name: String, default: Double, description: String = ""): IgnitorDsl =
+        IgnitorDsl.Param(name, default, description)
 
     /**
      * `Katalyst(k => ...)`: the callable form of [build]. `Katalyst()` is the empty chain.

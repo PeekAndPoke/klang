@@ -14,8 +14,11 @@ import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- katalyst() -------------------------------------------------------------------------------------------------------
 
@@ -193,3 +196,118 @@ fun PatternMapperFn.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null):
 
     return this.chain { p -> applyKatalyst(p, memo) }
 }
+
+// -- katp() -----------------------------------------------------------------------------------------------------------
+
+private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    if (args.size < 2) return source
+
+    val key = args[0].value?.toString() ?: return source
+    val valueArgs = args.drop(1)
+    val mutation = voiceSetter { putKatalystParam(key, it?.asDoubleOrNull()) }
+
+    return source._liftOrReinterpretStringField(valueArgs, mutation)
+}
+
+/**
+ * Writes one **orbit chain slot**, [per orbit](/manuals/lexikon/orbit-bus), by its `<stage>.<knob>`
+ * name.
+ *
+ * Direct access to a declared chain's named knobs, the orbit twin of [oscparam]: `oscp` fills the
+ * voice's own instrument, `katp` the chain its orbit runs. The vocabulary is what the chain
+ * declares, which for a chain built from `k.classic()` is every classic knob: `body.wet`,
+ * `body.floor`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`, `delay.feedback`,
+ * `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`, `phaser.wet`,
+ * `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`, `compressor.ratio`,
+ * `compressor.knee`, `compressor.attack`, `compressor.release`, `duck.orbit`, `duck.depth`,
+ * `duck.attack`. An authored chain names its own with `Katalyst.param("room", 5)`.
+ *
+ * **The orbit needs a DECLARED chain, so write one.** An orbit that declares nothing runs the chain
+ * the engine has always run, whose knobs still come from the voice's own effect fields, and it
+ * ignores this map; `.katalyst(Katalyst(k => k.classic()))` declares the same stages as slots and is
+ * all it takes. (Until step 5b of the Katalyst work, which retires the voice fields and makes every
+ * orbit read slots.)
+ *
+ * **What a declared chain owns, the pattern no longer sets.** The chain carries its own body
+ * material and its own vowel, because those are NAMES and a slot carries a number, so
+ * `body(material = "wood")` on a voice of a declared chain does not change the material; write it
+ * in the chain (`k.body("wood")`). The numeric knobs of both stages, `wet` and `floor`, do reach it,
+ * here and through the `body(...)` / `vowel(...)` doors. (Step 5b decides whether a name becomes a
+ * slot of its own.)
+ *
+ * Four more things it is NOT, and they all follow from the orbit being a bus and not a note:
+ *
+ *  - **No per-note snapshot.** The value is orbit state: the chain re-reads it when the owner's map
+ *    changes, so a chord writes it once, not once per note.
+ *  - **Only the OWNER is heard.** The first voice to sound owns the orbit; a second pattern on the
+ *    same orbit writes into nothing. Give it its own orbit.
+ *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(r => r.size(4))`) is
+ *    fixed; write `Katalyst.param` where the chain should listen.
+ *  - **A slot listens only when it IS the knob.** `Katalyst.param("room", 5).mul(2)` is an
+ *    expression OVER a slot, and the bus folds it to one number when the chain is built, so
+ *    `katp("room", x)` never reaches it. Put the arithmetic on the pattern side instead.
+ *
+ * A raw slot write is exactly one slot, unlike the `reverb(...)` / `delay(...)` doors, which fill
+ * their companions: on a chain built from `k.classic()` a `katp("reverb.wet", 0.3)` alone stays
+ * silent until `reverb.size` is written too, because the engine gates the room on its size.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")   // small room, then a hall
+ *   .katalyst(Katalyst(k => k.classic()))
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").katalyst(Katalyst(k => k.reverb(r => r.wet(0.5).size(Katalyst.param("room", 2)))))
+ *   .katp("room", "<2 9>")
+ * ```
+ *
+ * @param key The chain slot name.
+ * @param value The slot value.
+ * @return A new pattern with the orbit chain slot set.
+ * @scope orbit
+ * @category effects
+ * @tags katalyst, orbit, chain, bus, param, slot
+ */
+@KlangScript.Function
+fun SprudelPattern.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyKatp(this, listOf(key, value).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and writes an orbit chain slot.
+ *
+ * ```KlangScript(Playable)
+ * "c3 e3 g3".katp("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
+ *   .katalyst(Katalyst(k => k.classic()))
+ * ```
+ *
+ * @param key The chain slot name.
+ * @param value The slot value.
+ */
+@KlangScript.Function
+fun String.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).katp(key, value, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that writes an orbit chain slot.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katp("reverb.size", 8))
+ *   .katalyst(Katalyst(k => k.classic()))
+ * ```
+ *
+ * @param key The chain slot name.
+ * @param value The slot value.
+ */
+@KlangScript.Function
+fun katp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.katp(key, value, callInfo) }
+
+/**
+ * Chains an orbit-chain-slot write onto this [PatternMapperFn].
+ *
+ * @param key The chain slot name.
+ * @param value The slot value.
+ */
+@KlangScript.Function
+fun PatternMapperFn.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.katp(key, value, callInfo) }

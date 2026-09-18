@@ -15,14 +15,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
@@ -36,13 +29,15 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * chain's slots only.** The owner voice is not a knob source here; the classic chain keeps its
  * voice-driven writers until step 5 removes the voice fields (see [KatalystOwnerApply]).
  *
- * **Resolution happens ONCE, when the chain is built**, never per block: every answer here is
- * block-constant by contract, so the writer [KatalystChainBuilder] installs captures the resolved
- * numbers and re-applies them on every owner claim. That is what keeps a slot-driven writer as
- * allocation-free per block as the voice-driven one it replaces.
+ * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param
+ * state CHANGES (Katalyst step 5a): every answer here is block-constant by contract, so the writer
+ * [KatalystChainBuilder] installs holds the resolved numbers in its [KatalystKnob]s and re-applies
+ * them on every owner claim. That is what keeps a slot-driven writer as allocation-free per block
+ * as the voice-driven one it replaces.
  *
- * Step 5 adds the orbit param state (`.katp`) on top: a [IgnitorDsl.Param] will then read the
- * orbit's own value per block instead of its authored default.
+ * The param state is the owner voice's `katalystParams` map, which `.katp` and the bus doors write:
+ * a [IgnitorDsl.Param] reads `state[name]` and falls back to its authored default. Only a `Param`
+ * moves; a [IgnitorDsl.Constant] and a coerced node stay as they were built ([KatalystKnob]).
  */
 internal object KatalystSlots {
 
@@ -56,12 +51,12 @@ internal object KatalystSlots {
     private const val PROBE_B_HZ: Double = 660.0 // not an octave of PROBE_A_HZ, so an octave-invariant use of freq still disagrees
 
     /**
-     * The value of one knob: [IgnitorDsl.Constant] is its number, [IgnitorDsl.Param] is its
-     * authored default (step 5 lets the orbit's param state override it), a missing node is
-     * [fallback], and anything else is coerced.
+     * The AUTHORED value of one knob: [IgnitorDsl.Constant] is its number, [IgnitorDsl.Param] is
+     * its default, a missing node is [fallback], and anything else is coerced. What the orbit's
+     * param state then makes of a `Param` is [KatalystKnob]'s job, not this one's.
      *
      * Not an exhaustive `when`, deliberately: a knob is block-constant BY CONTRACT
-     * (`KatalystStageDsl`), so the two leaf kinds are the vocabulary and everything else is the
+     * ([KatalystStageDsl]), so the two leaf kinds are the vocabulary and everything else is the
      * pathological case the contract already says to coerce rather than reject. Enumerating the
      * ninety-odd [IgnitorDsl] variants here would claim a meaning for each of them that the bus
      * does not have.
@@ -144,8 +139,8 @@ internal object KatalystSlots {
         vowel?.let { VowelBands.bandsFor(it) }
 
     /**
-     * The body resonator a declared stage asks for, or null (the stage is off) when [bands] is
-     * null, whatever `wet` says.
+     * The body resonator a declared stage asks for, from its RESOLVED `wet` and `floor`, or null
+     * (the stage is off) when [bands] is null, whatever `mix` says.
      *
      * `mix` is the `wet` slot and a non-finite `floor` takes [BODY_FLOOR], which is also what a
      * null floor means to [FilterDef.Body]; the constant is written out so the stage carries one
@@ -153,13 +148,10 @@ internal object KatalystSlots {
      * unset is unset on every knob, and the resonator's own `mix` is read straight into the
      * wet/dry law, where a NaN would silence the orbit.
      */
-    fun bodyDef(stage: KatalystStageDsl.Body, bands: List<FilterDef.Body.Mode>?): FilterDef.Body? {
+    fun bodyDef(bands: List<FilterDef.Body.Mode>?, mix: Double, floor: Double): FilterDef.Body? {
         if (bands == null) {
             return null
         }
-
-        val mix = resolve(stage.wet, BODY_WET)
-        val floor = resolve(stage.floor, BODY_FLOOR)
 
         return FilterDef.Body(
             bands = bands,
@@ -170,13 +162,10 @@ internal object KatalystSlots {
     }
 
     /** The formant bank a declared stage asks for. Twin of [bodyDef], with the vowel constants. */
-    fun vowelDef(stage: KatalystStageDsl.Vowel, bands: List<FilterDef.Formant.Band>?): FilterDef.Formant? {
+    fun vowelDef(bands: List<FilterDef.Formant.Band>?, mix: Double, floor: Double): FilterDef.Formant? {
         if (bands == null) {
             return null
         }
-
-        val mix = resolve(stage.wet, VOWEL_WET)
-        val floor = resolve(stage.floor, VOWEL_FLOOR)
 
         return FilterDef.Formant(
             bands = bands,
@@ -187,40 +176,41 @@ internal object KatalystSlots {
     }
 
     /**
-     * The compressor settings a declared stage asks for, or null (the stage is off) when NONE of
-     * the five slots is finite.
+     * The compressor settings a declared stage asks for, from its five RESOLVED slot values, or
+     * null (the stage is off) when none of them is finite.
      *
      * Straight through [Voice.Compressor.fromParams], the voice path's own rule: any of the five
      * set means on, and every unset one takes its `COMPRESSOR_*` constant. A non-finite slot is
      * what "unset" looks like on the wire, so it maps to the `null` that function reads.
      */
-    fun compressorSettings(stage: KatalystStageDsl.Compressor): Voice.Compressor? =
+    fun compressorSettings(
+        threshold: Double,
+        ratio: Double,
+        knee: Double,
+        attack: Double,
+        release: Double,
+    ): Voice.Compressor? =
         Voice.Compressor.fromParams(
-            threshold = finiteOrNull(stage.threshold, COMPRESSOR_THRESHOLD_DB),
-            ratio = finiteOrNull(stage.ratio, COMPRESSOR_RATIO),
-            knee = finiteOrNull(stage.knee, COMPRESSOR_KNEE_DB),
-            attack = finiteOrNull(stage.attack, COMPRESSOR_ATTACK_SECONDS),
-            release = finiteOrNull(stage.release, COMPRESSOR_RELEASE_SECONDS),
+            threshold = finiteOrNull(threshold),
+            ratio = finiteOrNull(ratio),
+            knee = finiteOrNull(knee),
+            attack = finiteOrNull(attack),
+            release = finiteOrNull(release),
         )
 
     /**
-     * The duck settings a declared stage asks for, or null (the stage is off) unless the stage
-     * names a source orbit AND asks for depth.
+     * The duck settings a declared stage asks for, from its three RESOLVED slot values, or null
+     * (the stage is off) unless the stage names a source orbit AND asks for depth.
      *
      * `orbit` is a number the runtime coerces to an Int, exactly as the sprudel door does; a
      * finite negative is a request like any other, not an off switch (the off switch is the
      * non-finite default). A non-finite attack takes [DUCK_ATTACK_SECONDS].
      */
-    fun duckSettings(stage: KatalystStageDsl.Duck): Voice.Ducking? {
-        val orbit = resolve(stage.orbit, SLOT_UNSET)
-        val depth = resolve(stage.depth, DUCK_DEPTH)
-
+    fun duckSettings(orbit: Double, depth: Double, attack: Double): Voice.Ducking? {
         // NaN-guard on values the author can write: a non-finite orbit is "no source named".
         if (!orbit.isFinite() || !(depth > 0.0)) {
             return null
         }
-
-        val attack = resolve(stage.attack, DUCK_ATTACK_SECONDS)
 
         return Voice.Ducking(
             cylinderId = orbit.toInt(),
@@ -229,11 +219,49 @@ internal object KatalystSlots {
         )
     }
 
-    /** A slot as a `Double?`: the number when it is finite, null when the slot reads as unset. */
-    private fun finiteOrNull(node: IgnitorDsl?, fallback: Double): Double? {
-        val value = resolve(node, fallback)
-
+    /** A resolved slot as a `Double?`: the number when it is finite, null when it reads as unset. */
+    private fun finiteOrNull(value: Double): Double? {
         // NaN-guard on a value the author can write: a non-finite slot was never set.
         return if (value.isFinite()) value else null
+    }
+}
+
+/**
+ * One knob of a DECLARED stage: its authored value, plus the slot name the orbit's param state may
+ * move it with.
+ *
+ * Built ONCE per knob when the chain is built, which is where the expensive part of
+ * [KatalystSlots.resolve] lives: a [IgnitorDsl.Constant] is read, and anything that is neither a
+ * constant nor a slot is probed and folded to a number for good. From then on this knob is two
+ * fields, and [resolve] is one map lookup for a slot and nothing at all for every other knob kind.
+ * That is the cost rule of the param state: one lookup per SLOT per CHANGED map, and zero per
+ * block, because the writers read [value] and never the map.
+ *
+ * "Not in the map" and "no map at all" are the same answer, the authored default, so a pattern that
+ * writes nothing hears exactly what the chain says.
+ *
+ * **Only a knob that IS a slot listens.** An expression OVER a slot
+ * (`Katalyst.param("room", 5).mul(2)`) is neither a constant nor a `Param`, so it goes through
+ * [KatalystSlots.resolve]'s coercion once, here, and becomes a number for the life of the chain:
+ * `katp("room", x)` never reaches it. A bus knob is block-constant by contract, and folding is what
+ * that contract means; the author's way to scale a slot is on the pattern side.
+ */
+internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
+
+    /** The slot name when the knob is a [IgnitorDsl.Param], null for every other knob kind. */
+    private val slot: String? = (node as? IgnitorDsl.Param)?.name
+
+    /** What the chain itself says: a `Param`'s default, a constant's number, a coerced fold. */
+    private val authored: Double = KatalystSlots.resolve(node, fallback)
+
+    /** The number the stage is configured with right now. */
+    var value: Double = authored
+        private set
+
+    /** Re-reads a slot from the orbit's param state; null (no owner, no slots) is the default. */
+    fun resolve(params: Map<String, Double>?) {
+        val name = slot ?: return
+
+        value = if (params == null) authored else params[name] ?: authored
     }
 }

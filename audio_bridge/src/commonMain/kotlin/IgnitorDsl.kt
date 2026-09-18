@@ -153,7 +153,7 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Canonical open parameter slots that mirror sprudel's `withOscParam(name)` calls.
+     * Canonical open parameter slots that mirror sprudel's `oscp(name, value)` calls.
      *
      * Use these when defining a custom sound that should respond to sprudel modulation
      * (e.g. `note("c").analog(0.3)`). Each slot is a `Param(name, default)` singleton with

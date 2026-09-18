@@ -68,6 +68,20 @@ class Voice(
     val body: FilterDef.Body? = null,
     val vowel: FilterDef.Formant? = null,
 
+    /**
+     * The orbit chain slots this voice writes (`VoiceData.katalystParams`), carried by REFERENCE:
+     * the wire map is immutable by contract and the copy would be per voice, for a map only the
+     * orbit's owner ever reads.
+     *
+     * While this voice holds the orbit's lease, a DECLARED chain resolves every `Param` knob
+     * against it (`KatalystChain.applyOwner`), so this is the orbit's param state and it dies with
+     * the voice. Null when the pattern wrote no slot, which is the same answer as an empty map: the
+     * chain's authored defaults. The chain a cylinder is BORN with ignores it; a chain declared from
+     * `Katalyst.classic()` reads it (Katalyst step 5a; step 5b takes the voice fields off the wire
+     * and makes every chain read this).
+     */
+    val katalystParams: Map<String, Double>? = null,
+
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Cut group
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════

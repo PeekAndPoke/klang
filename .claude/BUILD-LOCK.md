@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| Katalyst DSL step 5a (coordinator session 017L4Bx, one Opus implementer) | `audio_bridge/**/VoiceData.kt`, `sprudel/**` (katp door, bus door aliases, SprudelVoiceData), `klangscript-libs/**/KlangScriptKatalyst.kt`, `audio_be/**/cylinders/**`, `voices/Voice.kt`, `VoiceFactory.kt` | the orbit param state: katp writes it, the bus doors write it too, declared chains resolve Param slots from it; classic unchanged; sends unchanged (5b) |
 
 ## The two layers
 

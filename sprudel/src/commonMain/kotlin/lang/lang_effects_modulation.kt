@@ -8,6 +8,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -15,12 +16,24 @@ import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // -- phaser, the rate slot -------------------------------------------------------------------------------------------
+
+// Every phaser slot writes the voice field AND the orbit chain's matching slot (`phaser.rate`, ...),
+// which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
+// step 5a). No fill: the phaser stays off until `wet` is written, on both paths, so a companion the
+// call did not name has no touched value to take.
+//
+// A REST calls no setter at all and leaves both sources alone. A control value that is not a NUMBER
+// is the one place the two shapes differ, and each slot mirrors its own field: `rate` KEEPS its
+// previous value (`?: phaserRate`, so the slot keeps it too), while `wet`, `center`, `sweep` and
+// `floor` CLEAR their field, and the slot is cleared with them (SLOT_UNSET, the wire's "never set").
 
 private val phaserMutation = voiceSetter {
     val str = it?.toString() ?: return@voiceSetter
     phaserRate = str.toDoubleOrNull() ?: phaserRate
+    putKatalystParam("phaser.rate", phaserRate)
 }
 
 private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -163,7 +176,10 @@ object phaser {
 
 // -- phaser.wet ------------------------------------------------------------------------------------------------------
 
-private val phaserWetMutation = voiceSetter { phaserDepth = it?.asDoubleOrNull() }
+private val phaserWetMutation = voiceSetter {
+    phaserDepth = it?.asDoubleOrNull()
+    putKatalystParam("phaser.wet", phaserDepth ?: SLOT_UNSET)
+}
 
 private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -175,7 +191,10 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
 // -- phaser.floor ----------------------------------------------------------------------------------------------------
 
-private val phaserFloorMutation = voiceSetter { phaserFloor = it?.asDoubleOrNull() }
+private val phaserFloorMutation = voiceSetter {
+    phaserFloor = it?.asDoubleOrNull()
+    putKatalystParam("phaser.floor", phaserFloor ?: SLOT_UNSET)
+}
 
 private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -187,7 +206,10 @@ private fun applyPhaserFloor(source: SprudelPattern, args: List<SprudelDslArg<An
 
 // -- phaser.center ---------------------------------------------------------------------------------------------------
 
-private val phaserCenterMutation = voiceSetter { phaserCenter = it?.asDoubleOrNull() }
+private val phaserCenterMutation = voiceSetter {
+    phaserCenter = it?.asDoubleOrNull()
+    putKatalystParam("phaser.center", phaserCenter ?: SLOT_UNSET)
+}
 
 private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
@@ -199,7 +221,10 @@ private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<A
 
 // -- phaser.sweep ----------------------------------------------------------------------------------------------------
 
-private val phaserSweepMutation = voiceSetter { phaserSweep = it?.asDoubleOrNull() }
+private val phaserSweepMutation = voiceSetter {
+    phaserSweep = it?.asDoubleOrNull()
+    putKatalystParam("phaser.sweep", phaserSweep ?: SLOT_UNSET)
+}
 
 private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
