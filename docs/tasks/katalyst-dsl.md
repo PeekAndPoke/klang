@@ -453,6 +453,11 @@ complexity outranks the duplication.
   insert-style sends and the voice fields leaving the wire. Reordered 2026-09-17 after step 3a's review:
   a declared chain reads slots only, so `stack(guitars).reverb(wet = 0.15).katalyst(Katalyst(k =>
   k.classic().eq(...)))` would lose its room until the doors write `katp`; 5a therefore precedes 4.
+  Step 5a's scope, decided 2026-09-18: the orbit param state IS the owner voice's `katalystParams`
+  map read through the lease (no cylinder copy; it dies with the voice), re-resolved by the
+  slot-driven writers only when the map instance changes; `.katp` and the bus doors write it (the
+  doors with their fill rule, `compressor` without, `body`/`vowel` only `wet` and `floor` since a
+  material is a name, not a number); classic stays voice-driven and ignores the map until 5b.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
 - **Phase 0, the mirror.** Wire model, identity, registry, registrar, doors on both surfaces,
   builder shells for the seven existing effects, `KatalystDsl.classic`, the per-cylinder swap,
