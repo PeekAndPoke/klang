@@ -638,7 +638,7 @@ complexity outranks the duplication.
   tree (`a0c30f33…`, identical); both frozen songs re-rendered on the final tree. A lesson for
   render rows: the offline renderer of `:jvmTest` has no sample bank, so `s("bd*4")` is silent
   there and a row that asserts "0 counts" on a sample source passes on silence; use a synth source.
-- **Open, pre-existing, found in 5a-3's round 3, to fix as its own small step BEFORE 5b:** a NaN
+- **Fixed as its own step on 2026-09-18 (see the commit after 5a-3):** found in 5a-3's round 3, a NaN
   body or vowel mix on the BORN-WITH path (`body("wood", wet = "NaN")`; `toVoiceData` guards null,
   not non-finite) makes `KatalystBodyEffect.configure`'s `body.mix != curMix` true forever (NaN is
   self-unequal), so every block allocates two filter banks on the audio thread and restarts the
@@ -647,6 +647,12 @@ complexity outranks the duplication.
   twin (`if (mix.isFinite()) mix else BODY_WET`, the same for the floor), the rule `bodyDef`
   already applies one layer up, so both paths agree by construction. Violates the stone rule on
   hot-path allocation for a user-reachable input, hence before 5b.
+- **Open, pre-existing, recorded 2026-09-18 (performance, not correctness):** `writeCompressor`
+  (`KatalystChainBuilder.kt`) writes all five `Compressor` setters every block on a running orbit,
+  and each setter calls `updateCoefficients()` with three `exp()`, about fifteen per block for
+  numbers that did not move; the setter's own KDoc says it is not meant per block. No allocation.
+  The guard is a stored-five comparison in `writeCompressor`, on SUBSTITUTED values (see the
+  review-loop rule on cached configs). Fits step 5c, when the compressor gets its state machine.
 - **Open, pre-existing, recorded:** a `merge` whose control carries `duck(1)` takes the control's
   filled slots (`duck.depth` 0.0) but not its null fields, so after the merge the voice path and
   the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and

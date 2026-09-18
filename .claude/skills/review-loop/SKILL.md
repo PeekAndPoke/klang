@@ -77,6 +77,12 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   edits a rule that enumerates cases (which door is in which list, which stage has which gate),
   the reviewer brief asks for a table of EVERY case against the rule's clauses, read from the
   code. Three rounds of prose review missed what one table found in a pass.
+- **A cached config is reviewed for the non-finite input** (2026-09-18, ledger): for every
+  `configure` / `update` on the audio thread that compares an incoming value against a stored one
+  and rebuilds on a mismatch, the audio reviewer answers: what happens when the incoming value is
+  NaN (self-unequal, so a raw compare never settles), what is STORED afterwards, and does the
+  mismatch branch allocate. The rule for the code: compare and store SUBSTITUTED values, never the
+  raw input. A change that touches one such stage asks the reviewer to sweep the others.
 - **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
   exercising the changed path. A render that predates the last edit, or a song that never calls
   the changed door, backs nothing.
@@ -225,6 +231,7 @@ the rules.
 | 2026-09-18 | Katalyst 5a-3, round 3 | the duck door filled its companions on ANY knob (since step 5a), while the rule and the body door say a name-knob stage fills only when its name knob is named; audible on a custom chain (`duck(attack = 0.3)` wrote `duck.depth = 0.0` over a chain-authored 0.8); two guards in one spec encoded opposite readings of the same clause | checklist (no review had checked every door against the rule; the strongest-tier reviewer built a door-by-door table against the two closed lists and found it at once) | the duck fills only when THIS call named an orbit; `/review-loop`: when a change lands a rule with a closed list, the reviewer brief asks for the door-by-door table |
 | 2026-09-18 | Katalyst 5a-3, rounds 1 to 3 | the same rule text escaped three times in one step, each correction reaching only some of a dozen copies (register, skill, `ParamBag`, the classic KDoc, two constants headers, seven door KDocs, `MEMORY.md`) | structural (a rule restated at every site that obeys it cannot be corrected atomically) | `/dsl-design` §4 is the ONE home of the rule's text; every other site states only its own facts and points there; enumerations of "which stage is in which list" are never copied |
 | 2026-09-18 | Katalyst 5a-3, round 3 | byte-identity claims rested on renders that did not exercise the change: neither frozen song calls the phaser, and one render predated the last batch | test (the evidence audit: which render, made when, backs which claim) | before a step commits, every byte-identity claim names a render made on the final tree that exercises the changed door; a changed door no frozen song calls gets a before/after render of a song that does |
+| 2026-09-18 | found in Katalyst 5a-3 round 3, fixed as its own step | a NaN body or vowel wet from the wire made `KatalystBodyEffect.configure`'s compare against its stored mix true forever: two filter banks allocated per block on the audio thread, the crossfade never completing, and the body inaudible; the nullable floor had the same defect (a `Double?` compare is IEEE on both the JVM and Kotlin/JS, measured) | checklist (pre-existing since the effect was written; no review had asked what a cached config does with a non-finite input) | both effects substitute at the entry of `configure` and compare and store the substituted values; the gain stage got the same guard at its door; the rule "a cached config is reviewed for the non-finite input" above; the first sweep found every other stage safe |
 | 2026-09-18 | Katalyst 5a-3, round 1 | `(a == b) shouldBe false` recurred in a new spec one round after it was retired at three sites | recurrence (the rule lived only in a round's findings, nowhere an author reads) | `/code-style` §23: `shouldNotBe`, except on a boxed NaN where the raw form is deliberate |
 
 ## Gotchas

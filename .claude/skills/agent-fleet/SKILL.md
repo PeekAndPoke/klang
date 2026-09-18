@@ -203,6 +203,7 @@ mind when reading it: step size, and the review process itself maturing over the
 | 4, eq and gain | yes | 692 | 1149 | 1 | 0 | 0.0 | clean on round 1 |
 | 5a-2, replace and index slots | yes | 1594 combined with 5a-3 (one commit, shared files) | 1851 combined | 2 | 1 | 2.5 combined, 1.3 counting code only | the same MAJOR from both reviewers (classic wet default a set 0.0) |
 | 5a-3, ParamBag and the fill | yes | see above | see above | 4 (ladder: high, high, xhigh, max) | 3 | see above | two of the three were the COORDINATOR's rule text (the sends' gate mis-stated, then the phaser missing from the corrected list); the third was inherited from step 5a (the duck filled on any knob) and found by a door-by-door table on the xhigh tier. None came from the implementer's code. Round 2 at high found what round 1 missed only in text; the table on xhigh found the code defect, so the ladder earned its cost once |
+| NaN guard on the born-with body and vowel, plus the gain door | yes | 89 | 630 | 1 | 0 | 0.0 | clean on round 1; the implementer measured what the brief had guessed wrong (a nullable Double compares by IEEE rules on both targets) and reported that its own first version of a row was green under a mutation it should have caught |
 
 Counts for steps 1 to 3b were not recorded per severity at the time; from here on the
 coordinator records them in the step's commit message ("N review rounds, C critical, M major")
