@@ -9,6 +9,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 // Defaults of the per-orbit bus effects that are NOT sends: phaser, compressor,
 // duck, body, vowel. The send pair (delay, reverb) lives next door in
 // `SendEffectDefaults.kt`; the master limiter in `MasterLimiterDefaults.kt`.
+// At the end, one timing that is not a knob default but belongs to the orbit
+// knobs whose jump is audible, sends included: [KNOB_GLIDE_SECONDS].
 //
 // Same contract as its neighbours: ONE declaration that every surface reads, so
 // the `KatalystStageDsl` knob defaults, the engine's fill for a voice field the
@@ -122,3 +124,17 @@ const val VOWEL_WET: Double = 0.5
  * between formants (avoids sparse/robotic). Tunable.
  */
 const val VOWEL_FLOOR: Double = 0.2
+
+// ── Knob glide ───────────────────────────────────────────────────────────────
+
+/**
+ * How long an orbit knob takes to reach a new value, in seconds: a gliding knob moves there over
+ * this time instead of jumping, because two patterns on one orbit take turns owning it and each
+ * owner change can move every knob of the chain at once (`docs/plans/knob-glide.md`, decided 2026-09-19).
+ *
+ * A safety net against clicks, applied per knob where a jump is AUDIBLE, not by default to every
+ * knob: today only the orbit reverb's size uses it (its damping was measured to need none). The
+ * engine rounds it to whole render blocks (`KnobGlide`). Not a knob today; it may become a user
+ * knob one day, and this is where its default would then live.
+ */
+const val KNOB_GLIDE_SECONDS: Double = 0.05

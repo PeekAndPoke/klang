@@ -1,5 +1,41 @@
 # Klang Audio — Memory
 
+## Orbit knobs glide: the pilot on the orbit reverb (2026-09-19)
+
+`docs/plans/knob-glide.md` (its section 5 holds the pilot log). `KnobGlide` (audio_be root, the
+sibling of `Crossfade`) moves one COEFFICIENT knob linearly over `KNOB_GLIDE_SECONDS` (0.05, in
+`BusEffectDefaults.kt`), rounded to whole 128-frame blocks (17 at 44.1 kHz, 19 at 48 kHz). It lands
+on the target bit for bit, restarts from the current value on a new target, ignores a non-finite
+target (the owner substitutes its own meaning first), and SNAPS every value after construction or
+`reset` until a block has consumed one. A glide is a safety net against AUDIBLE jumps, applied per
+knob, not a loudness keeper (maintainer, 2026-09-19). The per-sample LEVEL half arrives with its
+first real knob in 5b-2.
+
+- **Only the orbit reverb's SIZE glides**, on the normalized 0..1 axis (affine to the comb
+  feedback). Damping does NOT: review round 1 measured a full-span damping jump 66 to 70 dB below
+  the tail (the comb one-pole stays continuous, the change reaches the output a comb length later,
+  staggered over the combs); a size jump sits 44 to 50 dB below, and the glide takes 12 to 15 dB
+  off it (10*log10(17)). The shared `Reverb` gained only the drain's `size` parameter.
+- **The old path, literally.** `configure` writes size and lowpass unconditionally, as at HEAD;
+  while a glide moves, `advanceGlide` overwrites the size before the block processes. The one
+  reader in between is the drain countdown, which reads the glide.
+- **Lifecycle.** Leaving Off snaps (the one place a glide is forgotten; reset, release and a
+  finished drain all land in Off). Draining keeps gliding, so a drain is still "Active on silent
+  input".
+- **The drain countdown** takes the LARGER of the size in force and the glide's target: from a
+  still-rising feedback it cuts the tail. For a FALLING glide this over-holds, ACCEPTED for
+  simplicity (a tighter bound needs its own proof): size 1.0 falling to 0.0, off mid-glide, counts
+  down at feedback 0.98, about 21 s from a full-scale peak, where the room decays like 0.7, about
+  1.3 s. It holds an idle network and a rented unit on silent input, never audio; rare.
+- **The trap every next knob meets:** the owner re-applies its settings EVERY block, so a retarget to
+  the same value must be a no-op; a helper that restarts on every call never lands.
+- **Evidence:** 18 built-in songs and frozen pieces render bit-identically (raw doubles, 256 cycles,
+  wall clock pinned) at `279d5fc4` and on the tree; no song moves an orbit reverb while it plays
+  (two count-ins use `size = 0`, which is OFF, so their room arrives from Off). A move is
+  identical up to the change and differs from the first block the comb re-emits (one shortest
+  comb, 1116 samples, later) onward, decaying with the tail, not only inside the 50 ms. Guards:
+  `KnobGlideSpec`, `KatalystReverbGlideSpec`.
+
 ## An effect lifecycle as a state machine: the delay is the template (2026-09-19)
 
 Katalyst step 5c-1, the first conversion of `docs/plans/effect-state-machines.md` and the shape

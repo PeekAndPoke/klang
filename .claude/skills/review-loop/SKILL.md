@@ -116,7 +116,9 @@ Coding reviewer (fill the brackets, attach the diff):
 > the reconcile phase.) Review the attached diff for: correctness,
 > hidden regressions, API consistency, missing test coverage, convention adherence (project
 > code-style: braces always, no FQCN, no `Long`/boxed types in audio paths, exhaustive `when`,
-> NaN-guard comments). Return a numbered findings list — severity (CRITICAL/MAJOR/MINOR),
+> NaN-guard comments), and SURPLUS: what does this change add that the need did not ask for
+> (a helper half nothing calls yet, a parameter, a mapping, a branch), and could it be removed or
+> deferred? Complexity is the stone rule; a removal is a valid finding. Return a numbered findings list: severity (CRITICAL/MAJOR/MINOR),
 > `file:line`, and a concrete failure scenario each. "NO FINDINGS" is a valid answer; do not pad.
 
 Audio-engineer reviewer:
@@ -127,7 +129,8 @@ Audio-engineer reviewer:
 > sound preservation (defaults must be behavior-identical), click/zipper risk on parameter
 > changes (ramps/crossfades), cycle-boundary correctness. House philosophy: the engine is
 > intentionally raw — do NOT propose safety clamps on user-facing params; coerce only where the
-> project already coerces. Return findings as severity + `file:line` + failure scenario.
+> project already coerces. Also SURPLUS: a mechanism more elaborate than the audible problem
+> needs (a glide is a safety net against clicks, not a loudness keeper). Return findings as severity + `file:line` + failure scenario.
 > "NO FINDINGS" is a valid answer; do not pad.
 
 ---

@@ -351,14 +351,25 @@ class KatalystReverbEffectSpec : StringSpec({
         // New owner takes the lease with the LONGEST room: network kept, params written, sends live.
         effect.configureSize(size = 1.0)
 
-        effect.reverb!!.size shouldBe 1.0 // the new owner's params reached the DSP
         effect.hasTail() shouldBe true // the tail was NOT cut
+
+        // The network holds a tail, so the new room GLIDES in (docs/plans/knob-glide.md): the first
+        // block runs one step on the way, and the new owner's size is in force after the loop.
+        ctx.reverbSendBuffer.fill(0.3)
+        ctx.mixBuffer.clear()
+        effect.process(ctx)
+
+        val firstStep = effect.reverb!!.size
+
+        (firstStep > 0.05 && firstStep < 1.0) shouldBe true
 
         repeat(originalDrainBlocks) {
             ctx.reverbSendBuffer.fill(0.3)
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
+
+        effect.reverb!!.size shouldBe 1.0 // the new owner's params reached the DSP
 
         // Long past the abandoned countdown the effect is still Active: the live sends were
         // processed and keep the network hot (a stuck-Draining mutant discarded them, ran the

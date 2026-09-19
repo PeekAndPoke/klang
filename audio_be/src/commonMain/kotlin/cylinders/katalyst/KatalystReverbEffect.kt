@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
@@ -42,6 +43,35 @@ import kotlin.math.min
  *   continues under the new room (send-return semantics, same as the delay).
  *
  * This adoption fixes the GATE shape only; the Freeverb internals keep their own audit round.
+ *
+ * **The room's SIZE glides** (`docs/plans/knob-glide.md`, the pilot, 2026-09-19): a new size
+ * reaches the network over [KnobGlide]'s ~50 ms, one step per block, instead of in one step. It is
+ * a COEFFICIENT knob, so the per-block value is written into the [Reverb] before it processes the
+ * block ([advanceGlide]) and the shared DSP is untouched (the master shares it and does not
+ * glide). It glides on the normalized 0..1 axis the [Reverb] holds; the comb feedback is affine in
+ * it, so this is also a linear glide of the feedback.
+ *  - **Damping does not glide.** Measured in review round 1: a full-span damping jump already sits
+ *    66 to 70 dB below the tail (the comb's one-pole state stays continuous, and the change reaches
+ *    the output one comb length later, staggered over the combs), so a glide would buy ~15 dB on an
+ *    artifact nobody hears. A size jump sits 44 to 50 dB below it, and the glide takes 12 to 15 dB
+ *    off that.
+ *  - **The old path, literally.** [configure] writes the configured values exactly as before the
+ *    glide existed. While a glide moves, [advanceGlide] overwrites the size before the block
+ *    processes; the only reader in between is the drain countdown, which reads the glide.
+ *  - **Lifecycle.** Only Active can start a glide. The first configure out of Off SNAPS (the network
+ *    is empty in Off, so there is nothing to be continuous with, and a song whose room never
+ *    changes stays bit-identical); Draining keeps gliding towards the last Active size, so a drain
+ *    is still "Active on silent input", mid-glide too; a configure into Active from Draining
+ *    glides from where the room stands; [reset] and [retire] forget the glide (both land in Off,
+ *    and leaving Off is where a glide is forgotten). A chain arriving through a swap carries its
+ *    own stage, whose first configure snaps like any other.
+ *  - **The drain countdown** starts from the LARGER of the size in force and the size the glide is
+ *    heading to: the feedback only moves between the two for the rest of the drain, and a
+ *    countdown from a feedback that is still rising would end while the tail is audible. For a
+ *    FALLING glide that over-holds, accepted for simplicity (a tighter bound needs its own proof):
+ *    size 1.0 falling to 0.0, switched off mid-glide, counts down at feedback 0.98 (~21 s from a
+ *    full-scale peak) where the room decays like ~0.7 (~1.3 s). What it holds is an idle network
+ *    and a rented unit on silent input, never audio.
  */
 class KatalystReverbEffect(
     /** The unit shelf this orbit rents from (resource warehouse, 2d). */
@@ -68,9 +98,9 @@ class KatalystReverbEffect(
      * thread before any note). Rented from [units] on the first activating [configure]; kept across
      * [reset] like the delay's ring, returned only by eviction (2f).
      *
-     * INVARIANT: the room params change only through [configure] — a direct write bypasses the
-     * lifecycle and desyncs [state] from the DSP (tests may write directly to probe the core;
-     * production must not).
+     * INVARIANT: the room params change only through [configure] and, while the size glides,
+     * [advanceGlide] in [process]. A direct write bypasses the lifecycle and desyncs [state] from
+     * the DSP (tests may write directly to probe the core; production must not).
      */
     var reverb: Reverb? = null
         private set
@@ -99,6 +129,9 @@ class KatalystReverbEffect(
     /** The Active-state tail question from a ceiling on the combs' content (see [TailCeiling]); replaces the comb scan. */
     private val activeTail = TailCeiling()
 
+    /** The room's size on the normalized 0..1 axis [Reverb.size] holds (see the class KDoc). */
+    private val sizeGlide = KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames)
+
     /**
      * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyParams` on every
      * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
@@ -120,8 +153,20 @@ class KatalystReverbEffect(
         if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             val unit = reverb ?: rentUnit() ?: return
 
-            unit.size = size.coerceIn(0.0, 1.0)
+            if (state == State.Off) {
+                // The network is empty in Off: the room ARRIVES, it does not move (see the class KDoc).
+                // The ONE place a glide is forgotten: [reset], [release] and the end of a drain all
+                // land in Off, so this covers them without a second mechanism.
+                sizeGlide.reset()
+            }
+
+            // The old path, literally: while a glide moves, [advanceGlide] overwrites the size
+            // before the block processes (see the class KDoc).
+            val boundedSize = size.coerceIn(0.0, 1.0)
+
+            unit.size = boundedSize
             unit.lowpass = lowpass?.takeIf { it.isFinite() }
+            sizeGlide.retarget(boundedSize)
             state = State.Active
             return
         }
@@ -134,7 +179,14 @@ class KatalystReverbEffect(
             // non-finite comb cell makes the countdown non-finite (combPeakAbs reports any
             // poisoned cell as +Inf), and the reset is the heal (review rounds 1-2; the old
             // gate's takeover path provided exactly this exit).
-            drainRemaining = unit.drainSamplesUntilSilent(peak = unit.combPeakAbs())
+            //
+            // Mid-glide the size keeps moving through the drain (see [advanceGlide]), between the
+            // one in force and the target, so the larger of the two bounds every revolution to come
+            // (an over-hold for a falling glide, see the class KDoc). Read from the glide: an Active
+            // configure earlier in this block may have written its target into the unit already.
+            val drainSize = if (sizeGlide.isGliding) maxOf(sizeGlide.value, sizeGlide.target) else unit.size
+
+            drainRemaining = unit.drainSamplesUntilSilent(peak = unit.combPeakAbs(), size = drainSize)
 
             if (drainRemaining <= 0.0 || !drainRemaining.isFinite()) {
                 unit.reset()
@@ -229,6 +281,19 @@ class KatalystReverbEffect(
     }
 
     /**
+     * Moves the size glide by one block and writes it into the network while it MOVES, before the
+     * network processes the block, over whatever [configure] wrote. A settled size is not written:
+     * it already holds the configured value, which is what keeps a steady room bit-identical.
+     */
+    private fun advanceGlide(unit: Reverb) {
+        if (sizeGlide.isGliding) {
+            unit.size = sizeGlide.advance()
+        } else {
+            sizeGlide.advance()
+        }
+    }
+
+    /**
      * Retiring hands the unit back DIRTY instead of clearing it ([release], not [reset]): zeroing
      * it here would be a big store on the audio thread, and the shelf zeroes it again on return
      * (`KatalystChain.retire`).
@@ -245,6 +310,9 @@ class KatalystReverbEffect(
             State.Off -> {}
 
             State.Active -> {
+                // First, so the tail ceiling below reads the feedback this block runs at.
+                advanceGlide(unit)
+
                 val send = ctx.reverbSendBuffer
                 val frames = ctx.blockFrames
                 // Same shape as the delay's: the send peak feeds a ceiling on the combs' content,
@@ -265,6 +333,8 @@ class KatalystReverbEffect(
                 // the DSP processed — a countdown outrunning the network would fire the terminal
                 // reset while the tail is still audible (the delay's review-round-2 rationale).
                 val frames = min(ctx.blockFrames, silentInput.left.size)
+
+                advanceGlide(unit)
                 unit.process(silentInput, ctx.mixBuffer, frames)
 
                 drainRemaining -= frames

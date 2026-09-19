@@ -123,6 +123,8 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.reverb!!.reverb!!.size shouldBe 0.7
 
+        // This row guards the LEASE, who applies. In production a later owner's size GLIDES in
+        // over 50 ms (`KatalystReverbGlideSpec`).
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
