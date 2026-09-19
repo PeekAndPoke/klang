@@ -495,6 +495,10 @@ complexity outranks the duplication.
   the wet inside the 60 ms window while the old tail drains at full weight), the same as every swap;
   a repeated request is the raw-name no-op.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
+  **5b-2 decided with the maintainer (2026-09-19), see the signal-flow plan section 7:** inserts at
+  today's position, one owner `wet` per orbit, every room setting glides over 50 ms
+  (`docs/plans/knob-glide.md`), the delay's time crossfades between taps; the glide is piloted on
+  the orbit reverb first.
   **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
   and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
   in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and
