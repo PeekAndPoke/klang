@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
@@ -203,13 +202,12 @@ object KatalystChainBuilder {
                 }
 
                 is KatalystStageDsl.Compressor -> {
-                    val fx = KatalystCompressorEffect()
+                    val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
                     pipeline.add(fx)
 
                     statics.add(
                         KatalystCompressorWriter(
                             fx = fx,
-                            sampleRate = sampleRate,
                             threshold = KatalystKnob(stage.threshold, COMPRESSOR_THRESHOLD_DB),
                             ratio = KatalystKnob(stage.ratio, COMPRESSOR_RATIO),
                             knee = KatalystKnob(stage.knee, COMPRESSOR_KNEE_DB),
@@ -390,36 +388,6 @@ internal fun writePhaser(
         fx.phaser.sweep = if (sweep > 0) sweep else PHASER_SWEEP_HZ
         fx.phaser.floor = floor
         fx.phaser.feedback = 0.5
-    }
-}
-
-/**
- * Compressor: reuse the instance to preserve the envelope follower across notes; clear it when
- * [settings] is null (nobody asks for a compressor), so it does not linger from a previous
- * owner or a previous chain.
- */
-internal fun writeCompressor(fx: KatalystCompressorEffect, settings: Voice.Compressor?, sampleRate: Int) {
-    if (settings != null) {
-        val existing = fx.compressor
-
-        if (existing == null) {
-            fx.compressor = Compressor(
-                sampleRate = sampleRate,
-                thresholdDb = settings.thresholdDb,
-                ratio = settings.ratio,
-                kneeDb = settings.kneeDb,
-                attackSeconds = settings.attackSeconds,
-                releaseSeconds = settings.releaseSeconds,
-            )
-        } else {
-            existing.thresholdDb = settings.thresholdDb
-            existing.ratio = settings.ratio
-            existing.kneeDb = settings.kneeDb
-            existing.attackSeconds = settings.attackSeconds
-            existing.releaseSeconds = settings.releaseSeconds
-        }
-    } else {
-        fx.compressor = null
     }
 }
 

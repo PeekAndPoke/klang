@@ -205,7 +205,6 @@ internal class KatalystPhaserWriter(
 /** Compressor: on iff ANY of the five slots is finite, the voice path's own rule. */
 internal class KatalystCompressorWriter(
     private val fx: KatalystCompressorEffect,
-    private val sampleRate: Int,
     private val threshold: KatalystKnob,
     private val ratio: KatalystKnob,
     private val knee: KatalystKnob,
@@ -225,7 +224,7 @@ internal class KatalystCompressorWriter(
     }
 
     override fun apply() {
-        writeCompressor(fx, settings, sampleRate)
+        fx.configure(settings)
     }
 
     private fun settings(): Voice.Compressor? = KatalystSlots.compressorSettings(

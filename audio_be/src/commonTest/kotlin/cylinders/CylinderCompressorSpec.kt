@@ -5,13 +5,17 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.abs
 
 class OrbitCompressorSpec : StringSpec({
@@ -113,7 +117,7 @@ class OrbitCompressorSpec : StringSpec({
         cylinder.compressor!!.compressor!!.thresholdDb shouldBe -8.0 // new owner's params (instance reused)
     }
 
-    "when a non-compressor voice takes over the orbit, the compressor is cleared" {
+    "when a non-compressor voice takes over the orbit before anything sounded, the compressor is cleared at once" {
         val cylinder = createOrbit()
         cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0.0)
         cylinder.compressor!!.compressor shouldNotBe null
@@ -121,6 +125,43 @@ class OrbitCompressorSpec : StringSpec({
         // Compressor owner ends; a plain voice (no compressor) becomes the owner → compressor cleared.
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * blockFrames)
         cylinder.compressor!!.compressor shouldBe null
+    }
+
+    "when a non-compressor voice takes over a SOUNDING orbit, the compressor glides out and only then goes" {
+        val cylinder = createOrbit()
+        val compressing = voiceWithCompressor()
+        val plain = VoiceTestHelpers.createSynthVoice()
+        // 2205 samples at 44.1 kHz: the fade lands inside its 18th block.
+        val fadeBlocks = (sampleRate * KNOB_GLIDE_SECONDS / blockFrames).toInt() + 1
+
+        fun block(b: Int, voice: Voice) {
+            cylinder.updateFromVoice(voice, blockStart = b * blockFrames.toDouble())
+            cylinder.mixBuffer.left.fill(0.5)
+            cylinder.mixBuffer.right.fill(0.5)
+            cylinder.processEffects()
+        }
+
+        block(0, compressing)
+        block(1, compressing)
+        val instance = cylinder.compressor!!.compressor.shouldNotBeNull()
+
+        // The owner lapses; the plain voice claims the lease on block 3 (the one-block grace).
+        block(2, plain)
+        cylinder.compressor!!.compressor shouldBeSameInstanceAs instance
+
+        for (b in 3 until 3 + fadeBlocks - 1) {
+            block(b, plain)
+
+            withClue("block $b: still gliding out, the instance is kept") {
+                cylinder.compressor!!.compressor.shouldNotBeNull() shouldBeSameInstanceAs instance
+            }
+        }
+
+        block(3 + fadeBlocks - 1, plain)
+
+        withClue("the gain reduction has landed on 0 dB: the stage is off") {
+            cylinder.compressor!!.compressor shouldBe null
+        }
     }
 
     "envelope state is preserved across voice updates (not reset)" {

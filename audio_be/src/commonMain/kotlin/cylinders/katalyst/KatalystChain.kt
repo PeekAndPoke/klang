@@ -164,8 +164,9 @@ class KatalystChain internal constructor(
      * a previous owner. The values are re-written every block and that is idempotent (body and
      * vowel short-circuit an unchanged config). The compressor and ducking INSTANCES are reused,
      * so their envelope followers survive across notes as long as consecutive owners keep the
-     * effect: a takeover by a voice that asks for neither clears it, and the next owner that
-     * re-adds it starts a fresh envelope.
+     * effect: a takeover by a voice that asks for neither clears it (the compressor by gliding its
+     * gain reduction to 0 dB first, see [KatalystCompressorEffect]), and the next owner that
+     * re-adds it after that starts a fresh envelope.
      *
      * Stage by stage, in DSL order. The order is unobservable (each stage writes only its own
      * instance, and no stage reads another's params), which is why the historical

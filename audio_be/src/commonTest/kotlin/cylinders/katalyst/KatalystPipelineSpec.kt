@@ -9,10 +9,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.voices.Voice
 import kotlin.math.abs
 
 /**
@@ -48,15 +48,16 @@ class BusPipelineSpec : StringSpec({
             sweep = 1000.0
             feedback = 0.5
         })
-        val compressor = KatalystCompressorEffect().apply {
+        val compressor = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames).apply {
             if (compressorThreshold != null) {
-                this.compressor = Compressor(
-                    sampleRate = sampleRate,
-                    thresholdDb = compressorThreshold,
-                    ratio = 4.0,
-                    kneeDb = 0.0,
-                    attackSeconds = 0.0001,
-                    releaseSeconds = 0.1,
+                configure(
+                    Voice.Compressor(
+                        thresholdDb = compressorThreshold,
+                        ratio = 4.0,
+                        kneeDb = 0.0,
+                        attackSeconds = 0.0001,
+                        releaseSeconds = 0.1,
+                    )
                 )
             }
         }

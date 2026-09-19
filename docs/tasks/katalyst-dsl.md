@@ -746,13 +746,16 @@ complexity outranks the duplication.
   twin (`if (mix.isFinite()) mix else BODY_WET`, the same for the floor), the rule `bodyDef`
   already applies one layer up, so both paths agree by construction. Violates the stone rule on
   hot-path allocation for a user-reachable input, hence before 5b.
-- **Open, pre-existing, recorded 2026-09-18 (performance, not correctness):** `writeCompressor`
+- **DONE in Katalyst 5c-7 (2026-09-19; was open, pre-existing, recorded 2026-09-18, performance, not correctness):** `writeCompressor`
   (`KatalystChainBuilder.kt`) writes all five `Compressor` setters every block on a running orbit,
   and each setter calls `updateCoefficients()` with three `exp()`, about fifteen per block for
   numbers that did not move; the setter's own KDoc says it is not meant per block. No allocation.
-  The guard is a stored-five comparison in `writeCompressor`, on SUBSTITUTED values (see the
-  review-loop rule on cached configs). Fits step 5c, when the compressor gets its state machine.
-- **Open, pre-existing, LIVE since 5b-1 (2026-09-19: the slots decide the sound now; no song and no doc example hits it):** a `merge` whose control carries `duck(1)` takes the control's
+  Was: the guard should be a stored-five comparison in `writeCompressor`. As built in 5c-7:
+  `writeCompressor` is deleted; `KatalystCompressorEffect.configure(settings)` writes the five
+  setters only when the writer hands it a NEW settings object (a reference compare, `settings !==
+  applied`), which is safe because the writer builds a fresh, already-substituted `Voice.Compressor`
+  only when the owner's map changes. A running orbit costs one compare per block.
+- **RESOLVED by Katalyst 5b-3 (the duck fields are gone; was open, pre-existing, LIVE since 5b-1):** a `merge` whose control carries `duck(1)` takes the control's
   filled slots (`duck.depth` 0.0) but not its null fields, so after the merge the voice path and
   the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and
   the disagreement with them. Optional alongside: fill the duck's voice fields on an orbit-named
@@ -804,7 +807,17 @@ complexity outranks the duplication.
     level. One ramp, two banks, no tick, no delay. Today's "drop the oldest, may tick faintly"
     retires.
   - The compressor switches by gliding its gain reduction to 0 dB over the same 50 ms, not by
-    letting its own release run out.
+    letting its own release run out. **As built in 5c-7 (2026-09-19):** a linear blend with dry,
+    `out = dry + w * (compressed - dry)`, the instance running on the live signal until `w` lands
+    on exactly 0 (a dB ramp of the reduction was offered as a contained change and not needed for
+    a safety net); ON fades in the same way (its own attack clamping a live signal measured 8 to
+    26 dB of low-frequency swell over the floor at attacks of 5 ms or less); threshold, the
+    INVERSE ratio (the curve is linear in `1/ratio - 1`; review round 1) and knee glide PER SAMPLE (a memoryless gain computer's knobs behave like LEVEL knobs: a per-block
+    glide modelled a -31 to -69 dB zipper), attack and release do not (their jumps measured at the
+    floor). Off at 3 to 12 dB of reduction: -10..-39 dB before, -78..-86 after (floor -81..-83);
+    knob jumps to the floor. 18 of 18 songs bit-identical (no song switches or changes a
+    compressor while its orbit sounds). Listening checkpoint: WAVs in the session scratchpad
+    `5c7/listen/`.
   - The EQ gets no off door: it exists only on a declared chain, and a chain swap already
     crossfades.
   - The maintainer remembers audible clicks on material changes with today's 12 ms crossfade.

@@ -1,5 +1,121 @@
 # Klang Audio — Memory
 
+## The orbit compressor switches and changes by gliding (2026-09-19)
+
+Katalyst step 5c-7, a SOUND CHANGE under the 5c listening checkpoint (decided with the maintainer,
+`docs/tasks/katalyst-dsl.md` step 5c: "the compressor switches by gliding its gain reduction to 0 dB
+over the same 50 ms"). No identity-only commit before it (complexity rule of
+`docs/plans/effect-state-machines.md` section 2): the states and the glides arrived together.
+
+- **The law.** `KatalystCompressorEffect` has three preallocated states, Off (the instance at rest, `compressor` reads null), Engaged
+  (in place) and Fading (`out = dry + w * (compressed - dry)`, `w` linear over `KNOB_GLIDE_SECONDS`
+  in samples, the filter swap's law with dry as the partner). OFF fades `w` to 0 while the instance
+  keeps running on the live signal, and only on the exact landing (the output IS dry) does
+  `Off.enter` reset the instance and forget that life. ON rewrites the reset instance's five
+  knobs and fades it in from dry. A return
+  either way turns the fade around at the weight it has, on the SAME instance (its envelope
+  untouched), over one full fade. The first switch after construction or `reset` acts at once
+  until a block has run (`fresh`, the `KnobGlide` snap), so a compressor set on an orbit's first
+  block is bit-identical to before. `reset`/`retire` stay the synchronous HARD cut; `Cylinder.kt`
+  did not change.
+- **The glide is a linear blend with dry, not a dB ramp of the reduction.** Both land on exactly
+  0 dB and are continuous; the blend needs no change to the compressor's inner loop and is the law
+  every other orbit stage already switches by. Review round 1 compared the alternatives: a dB
+  ramp is WORSE on a bass; a smoothstep weight is better only at about 30 dB of reduction (linear
+  -58 on the bass, smoothstep -81); at 12 dB all three are at the floor. A safety net does not
+  need it: kept linear, the smoothstep weight is the option on file.
+- **The ON fade-in was MEASURED first, and built.** Without it a fresh instance is not a click
+  (-67 dB or quieter above 8 kHz), but at an attack of 5 ms or less its envelope clamps the level at
+  the attack's speed: 8 to 26 dB above the steady floor below 60 Hz (bass and saw at 6 and 12 dB of
+  reduction). The fade-in leaves at most 8 dB, like the OFF glide; it cost no state (the return
+  needs the fade toward 1 anyway). At a 20 ms attack it changes nothing: the reduction arrives
+  after the fade, as on any note from silence. Flipping it off is one line (`Off.switchOn`).
+  For the listening note: the fade-in lets a handed-over note through about 5 to 9 dB LOUDER for
+  about 50 ms (the decided "ON glides in"), where HEAD clamped it within the attack.
+- **Knob changes: threshold, ratio and knee glide PER SAMPLE; attack and release do not.** The gain
+  computer is memoryless, so its three knobs step the gain the moment they change: a threshold jump
+  measured -9 to -36 dB above 8 kHz, ratio -27 to -43, knee (envelope inside the knee) -34 to -52. A
+  per-block glide left -31 to -69 dB (Python model of the classic path), the per-sample ramp reaches
+  the steady floor. Attack and release are the follower's coefficients over a continuous state:
+  their jumps sat at the floor both ways, so they apply at once. Mechanism: one `KnobGlide` per knob
+  (whole blocks, exact landing, first value snaps; forgotten in `Off.enter`) and
+  `Compressor.processGliding(from, to)`, a second loop body of the classic path that ramps the
+  three per sample, written from the end. `Compressor.process` itself is unchanged; the gain curve
+  moved into `gainReductionDb(inputDb, thr, slope, knee)` and the follower into `followEnvelope`,
+  both inlined back into the old paths, so the master limiter computes the same doubles.
+- **The ratio glides as its INVERSE** (review round 1, a MAJOR). The curve is linear in its slope
+  `1 / ratio - 1`, not in the ratio, so a glide linear in the ratio bunched a wide change into one
+  end: 100 to 1 at -41 dB, 20 to 1 at -56 (the reviewer's model). `inverseRatioGlide` moves
+  `1 / ratio` and `processGliding` hands the curve `inverse - 1`; the settled path computes the same
+  `1.0 / ratio - 1.0` it always did. After: every ratio swing at its HF floor in the engine, both
+  ways (1 to 100, 100 to 1, 4 to 1, 1 to 4, 20 to 1.5, 20 to 1, 1 to 20, 2 to 8, 8 to 2; saw, chord,
+  bass, 44.1 and 48 kHz): HEAD's jumps -16 to -37 dB, the tree -80 to -89 (floors -79 to -89).
+  Wide knee swings (0 to 48 and back, envelope inside the knee) also land within 2.3 dB of the
+  floor. **Wide RISING threshold swings do not quite:** -40 to 0 dB sits at -62 to -65 dB above
+  8 kHz and -30 to -5 at -69 to -71 (floor -81 to -83); HEAD's jumps there were +3 to -17. The
+  model reproduces it (-62.1 / -62.3) and splits it: releasing the same 25 dB by the linear blend
+  gives -66 to -70, so part is the size of the change in 50 ms and part is the threshold law (the
+  reduction moves linearly in dB, which bunches the amplitude change at the end of the glide).
+  Falling threshold swings are at the floor. Open, not fixed: a law decision.
+- **One `Compressor` per effect, built with it** (review round 1). The ON edge used to build one
+  on the audio thread. `Off.enter` resets it (envelope to rest; the lookahead state too, though
+  no orbit has one) and empties the settings cache, so the next ON writes all five setters; the
+  constructor and the setters store the same coerced values and compute the same coefficients,
+  and nothing on an orbit writes `makeupGainDb` (the one field `reset()` leaves alone). Proven by
+  the spec rows that compare a new life against a FRESH bare `Compressor` bit for bit (after a
+  reset, after a fade-out landing, with every knob different), and by the engine rows that
+  re-enter ON repeatedly: bit-identical to the allocating version. One difference for a direct
+  caller only: a non-finite knob keeps the previous value where a constructor takes its default;
+  the writer never hands one. `compressor` reads null in Off.
+- **`writeCompressor` is gone** (the effect's `configure(settings)` replaces it), and with it the
+  open performance item: the knobs are written only when the writer hands a NEW settings object
+  (it resolves one per owner map), so a running orbit costs one reference compare per block
+  instead of five setters and about fifteen `exp()`. The cache (`applied`) is forgotten in
+  `Off.enter` with the instance.
+- **Measured** (effect level through `KatalystChain`, saw 110 Hz, three-saw chord and saw bass
+  73 Hz, all band-limited to 3 kHz, 44.1 and 48 kHz; HF: peak 0.7 ms RMS above 8 kHz, LF: peak 20 ms
+  RMS below 60 Hz, both re signal RMS, with each metric's steady floor). HEAD `089d6a47` to tree:
+  off at 3/6/12 dB of reduction HF -10..-39 to -78..-86 (floor -81..-83), LF -5..-34 to -25..-39
+  (floor -31..-36; the bass at 12 dB keeps 6 to 7 dB over its floor, the level change itself);
+  off then on inside the glide (1, 4, 10 blocks) HF -10..-22 to -71..-83; handover every 125/250
+  ms HF -14..-32 to -78..-82, LF -12..-26 to -25..-33; on during the fade-in then off HF -28..-86
+  to -88..-101; threshold jumps -9..-36 to the floor, ratio -27..-43 to the floor, knee -34..-52
+  to the floor, threshold patterned every 250 ms -9..-13 to -72..-74; attack and release jumps
+  and steady compression bit-identical. Engine (48 kHz renderer): two sine patterns sharing an
+  orbit, one compressed, HF -20.5 to -73.6 (control without compressor -77.1); the same with
+  different compressor settings per pattern -19.8 to -73.8; saw handover and a threshold patterned
+  per 16th -17 to -32 (their controls, the notes' own onsets, -34). The sine bass handover's LF
+  row reads -16.8 to -16.0 against a control of -19.5, but that peak is NOT the compressor
+  (review round 1): the tree's absolute LF peak (-25.55 dBFS at 2.012 s) equals the control's to
+  0.01 dB, the d2 note's own onset 41 ms BEFORE the compressor switches on at 2.0533 s, and the
+  gap is normalisation (compressed RMS 0.332 against the control's 0.497). With the control
+  subtracted, the compressor's own LF at the ON edge fell from -20.5 to -34.0: the row improved
+  by 13.5 dB. Its OFF edge went from -24 to -45.
+- **Songs** (15 built-in, 3 frozen, 256 cycles, raw doubles, wall clock pinned): 18 of 18
+  bit-identical. A per-orbit monitor found no compressor switching or changing while an orbit
+  sounds in any of them: every compressor snaps on at its orbit's first block and is cut at
+  deactivation, both unchanged. The rows above, rendered by the same harness, differ.
+- **Cost:** a settled compressor is unchanged (one reference compare per block instead of five
+  setters). Der Schmetterling 64 cycles and the two rows, three runs each side, interleaved:
+  within noise.
+- **Guards, each mutation-checked (25 mutants, all red; review round 1 re-ran them on the changed
+  code plus 6 new ones, 31 of 31 red):** `KatalystCompressorEffectSpec` (oracle: a
+  bare `Compressor` driven by hand plus the decided law; the knob row sets the bare compressor's
+  knobs ONE SAMPLE at a time): first init at full weight, off glides then releases on the landing
+  block and is dry bit for bit after it, on fades a fresh instance in, a return turns the fade
+  around on the same instance, an off during the fade-in turns too, reset and retire snap the next
+  life (no stale fade, no stale glide), the three knobs glide per sample while attack and release
+  apply at once, an unchanged owner writes nothing, a wide ratio swing both ways (1 to 100, 100 to
+  1; the oracle moves the ratio linearly in its inverse, and the old linear-in-ratio law goes
+  red), a life ended by a fade starts the next like a new compressor (the reused instance: red
+  without the reset, without a setter). `KatalystCompressorStateIdentitySpec` walks the table.
+  `OrbitCompressorSpec`: a non-compressor owner taking a SOUNDING orbit leaves the instance in
+  place through the glide and only then clears it (red for the hard cut and for a fade that never
+  releases); the old row that passed through the fresh snap only is renamed "before anything
+  sounded". Lesson from round 1: a row whose next life has a SLOW attack cannot see a fade-in or
+  a stale glide (no reduction arrives inside the first 50 ms), which let two mutants survive
+  until the next life got a fast attack.
+
 ## Body, vowel and the orbit EQ switch by fading from what sounds now (2026-09-19)
 
 Katalyst step 5c-6, the filter swap's SECOND commit, a SOUND CHANGE under the 5c listening
@@ -74,7 +190,8 @@ stage switches" and "rapid changes").
   from `blockFrames` (the builder passes its own, default `RENDER_QUANTUM_FRAMES`); the grow
   fallback remains only for a direct caller with a longer block.
 - **Not in this step:** the vowel morph (bands gliding by position, the `v1` tap, a Q setter),
-  the compressor and gain, the phaser and duck switch-off, other knob glides.
+  the compressor and gain, the phaser and duck switch-off, other knob glides (the compressor:
+  Katalyst 5c-7, the section above).
 
 ## The tail ceiling never under-reports a delay tail (2026-09-19)
 
@@ -697,7 +814,7 @@ writers, the `voiceDriven` flag and the `KatalystOwnerApply` interface are delet
   - **`VoiceFactory` still builds `voice.body`, `voice.vowel`, `voice.compressor` and
     `voice.ducking` per voice for no reader at all** until 5b-3 takes the fields off the wire.
   - `writeCompressor` is the known open item (five setters, about fifteen `exp()` per block on a
-    running orbit, step 5c's to fix). It does NOT newly run on an orbit a song already compressed:
+    running orbit, step 5c's to fix; closed and removed by Katalyst 5c-7). It does NOT newly run on an orbit a song already compressed:
     the voice-driven path called the very same `writeCompressor` on every block of every active
     orbit, and a door writes the field and the slot together, so the set of orbits whose compressor
     resolves to settings is unchanged. What IS newly reachable is a raw `katp("compressor.ratio", 8)`

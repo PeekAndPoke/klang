@@ -337,6 +337,75 @@ class Compressor(
     }
 
     /**
+     * One stereo block of the classic path while the three GAIN-COMPUTER knobs move: threshold,
+     * inverse ratio and knee run linearly per sample from the values the previous block ended on
+     * ([thresholdFrom], [inverseRatioFrom], [kneeFrom]) to [thresholdTo], [inverseRatioTo] and
+     * [kneeTo], written from the END, so the last sample runs at the `To` values bit for bit. The
+     * envelope follower is the same one [process] runs (it reads none of the three), so it stays
+     * continuous.
+     *
+     * **The ratio moves as its inverse, `1 / ratio`**, so the curve's slope `1 / ratio - 1` moves
+     * linearly. A glide linear in the ratio itself bunches a wide change into one end of the glide
+     * (from 100:1 to 1:1 the slope barely moves until the last few blocks): measured -41 dB above
+     * 8 kHz for 100 to 1, where the inverse glide sits at the floor (5c-7 review round 1).
+     *
+     * Why per sample: the gain computer has no memory, so a knob that moved once per block would
+     * step the gain once per block. Measured in Katalyst step 5c-7 (a band-limited saw, chord and
+     * bass, energy above 8 kHz against the signal): a threshold, ratio or knee JUMP sits at -9 to
+     * -52 dB, the same jump in 17 to 19 per-block steps at -31 to -69 dB (a model of this curve),
+     * and a per-sample ramp at the steady floor. The orbit compressor's glide
+     * (`KatalystCompressorEffect`) is the caller; the fields are NOT touched here, they hold what
+     * the caller configured last.
+     *
+     * The values are the caller's and are used as given: pass what the setters stored (an inverse
+     * ratio in `(0, 1]`, a knee of at least 0), and a linear ramp between two such values stays in
+     * range.
+     *
+     * Classic path only: an instance with [lookaheadSeconds] runs [process] instead, on the knobs
+     * in force, because its delay ring must see every block (no orbit compressor has one).
+     */
+    internal fun processGliding(
+        left: AudioBuffer,
+        right: AudioBuffer,
+        blockSize: Int,
+        thresholdFrom: Double,
+        thresholdTo: Double,
+        inverseRatioFrom: Double,
+        inverseRatioTo: Double,
+        kneeFrom: Double,
+        kneeTo: Double,
+    ) {
+        if (delayFrames > 0 || blockSize <= 0) {
+            process(left, right, blockSize)
+
+            return
+        }
+
+        val makeupLinear = computeMakeupLinear()
+        val thresholdStep = (thresholdTo - thresholdFrom) / blockSize
+        val inverseRatioStep = (inverseRatioTo - inverseRatioFrom) / blockSize
+        val kneeStep = (kneeTo - kneeFrom) / blockSize
+        val last = blockSize - 1
+
+        for (i in 0 until blockSize) {
+            val back = (last - i).toDouble()
+
+            followEnvelope(max(abs(left[i]), abs(right[i])))
+
+            val reductionDb = gainReductionDb(
+                inputDb = envelopeDb,
+                thresholdDb = thresholdTo - thresholdStep * back,
+                slope = (inverseRatioTo - inverseRatioStep * back) - 1.0,
+                kneeDb = kneeTo - kneeStep * back,
+            )
+            val totalGain = gainFor(reductionDb) * makeupLinear
+
+            left[i] = left[i] * totalGain
+            right[i] = right[i] * totalGain
+        }
+    }
+
+    /**
      * Process a mono buffer in-place.
      *
      * ⚠️ **This overload always takes the classic one-pole path, even when [lookaheadSeconds] is
@@ -361,6 +430,18 @@ class Compressor(
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun envelopeStep(level: Double): Double {
+        followEnvelope(level)
+
+        return gainFor(calculateGainReduction(envelopeDb))
+    }
+
+    /**
+     * One sample of the envelope follower: moves [envelopeDb] toward [level] (in dB). It reads no
+     * gain-computer knob (threshold, ratio, knee), which is what lets [processGliding] move those
+     * per sample over the one envelope.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun followEnvelope(level: Double) {
         // Same non-finite guard the lookahead path carries at `lookaheadStep`, and for a
         // sharper reason here: this path had NONE, so one +Inf sample latched the envelope
         // and silently DISABLED the limiter for good. `ln(Inf)` gives `envelopeDb = Inf`, the
@@ -387,10 +468,15 @@ class Compressor(
         val blend = smoothstep01((error + ENV_COEFF_BLEND_DB) / (2.0 * ENV_COEFF_BLEND_DB))
         val coeff = releaseCoeff + (attackCoeff - releaseCoeff) * blend
         envelopeDb += coeff * error
+    }
 
-        // Gain curve → linear multiplier. Skip `exp` only below an inaudible reduction floor
-        // (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped the gain 1.0<->0.99885.
-        val gainReductionDb = calculateGainReduction(envelopeDb)
+    /**
+     * Gain curve output (a reduction in dB, 0 or below) to a linear multiplier. Skip `exp` only
+     * below an inaudible reduction floor (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped
+     * the gain 1.0<->0.99885.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun gainFor(gainReductionDb: Double): Double {
         return if (gainReductionDb < GAIN_SKIP_THRESHOLD_DB) {
             fastExp(gainReductionDb * LN10_OVER_20)
         } else {
@@ -513,7 +599,17 @@ class Compressor(
      * Implements soft-knee compression — parabolic blend on `[-halfKnee, +halfKnee]`,
      * verified C¹ continuous at both boundaries when `kneeDb > 0`.
      */
-    private fun calculateGainReduction(inputDb: Double): Double {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun calculateGainReduction(inputDb: Double): Double =
+        gainReductionDb(inputDb, thresholdDb, 1.0 / ratio - 1.0, kneeDb)
+
+    /**
+     * [calculateGainReduction] with the knobs passed in: the one home of the curve, shared by the
+     * settled path (the fields) and [processGliding] (the knobs of each sample). The ratio arrives as
+     * the curve's SLOPE, `1 / ratio - 1` (0 at 1:1, -1 at infinity:1), because that is the quantity
+     * the curve is linear in, and so the one a glide must move linearly.
+     */
+    private fun gainReductionDb(inputDb: Double, thresholdDb: Double, slope: Double, kneeDb: Double): Double {
         val overshootDb = inputDb - thresholdDb
         val halfKnee = kneeDb / 2.0
 
@@ -523,11 +619,11 @@ class Compressor(
 
             // In the knee - soft transition
             overshootDb < halfKnee -> {
-                (1.0 / ratio - 1.0) * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
+                slope * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
             }
 
             // Above threshold - full compression
-            else -> (1.0 / ratio - 1.0) * overshootDb
+            else -> slope * overshootDb
         }
     }
 

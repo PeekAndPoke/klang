@@ -165,7 +165,9 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 - **REQUIREMENT for every re-entry (an owner that comes back while the stage is on its way
   out): the output is continuous across it, never a jump, never a restart that steps.** For the
   delay and the reverb that is met by identity with "stayed active" (see above). For the filter
-  swap and the compressor the mechanism is OPEN and is not this plan's to settle.
+  swap and the compressor the mechanism is OPEN and is not this plan's to settle. (Settled in their
+  steps: 5c-6 for the swap, 5c-7 for the compressor, both by turning the fade around from the
+  weight it has at that sample, on the same banks or instance.)
 - **Decided 2026-09-19 (complexity rule): no identity-only commit where the lifecycle is trivial.**
   The compressor effect's whole lifecycle today is one nullable field (about ten executable
   lines), and the gain's is a snap flag and a ramp; converting either to state classes now would
@@ -195,7 +197,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 | `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
 | `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.deactivate` |
 | `KatalystFilterSwap` (body, vowel, eq) | first commit CONVERTED 2026-09-19 (Katalyst 5c-4): Off, Engaged, Crossfading; every event dispatches, `clear` included, because the outgoing pair (a reference) belongs to Crossfading. Second commit DONE 2026-09-19 (Katalyst 5c-6), a sound change: `clear` fades to dry and enters Off only on landing, `reset` stays the synchronous hard cut; Crossfading holds up to 10 outgoing entries (one may be dry), each on its own 50 ms ramp, the target taking the complement, plus one parked change when the pool is full (latest wins; dropping the quietest measured -35 to -53 dB); a `fresh` snap flag outside the states keeps the first initialisation instant |
-| `KatalystCompressorEffect` | converted together with its switch-off ramp in 5c (no identity-only commit: its lifecycle today is one nullable field) | nullable instance; ReleasingOut is the ramp on switch-off |
+| `KatalystCompressorEffect` | CONVERTED 2026-09-19 (Katalyst 5c-7) together with its switch-off: Off, Engaged, Fading (`out = dry + w * (compressed - dry)`, w linear over 50 ms); a return turns the fade around on the same instance; `reset` enters Off without dispatching (Fading holds only numbers); a `fresh` snap flag keeps the first initialisation instant | was a nullable instance |
 | `KatalystGainEffect` | fresh, settled, ramping; converted in 5c together with the fader-through-zero fix (no identity-only commit) | fields |
 | `Cylinder` chain swap | Idle, Pending, Fading, Draining | five fields (`outgoing`, `draining`, `duckingOut`, `duckFadingIn`, `pendingKey`) |
 | voice strips (phase 3 of the signal-flow plan) | per strip, same shape | build-time gate plus per-block guards |

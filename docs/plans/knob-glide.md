@@ -163,3 +163,14 @@ exactly 0 when settled) brought it to the floor (-90 dB, or its own floor). Less
 effects: a coefficient that multiplies the signal directly behaves like a LEVEL knob and needs the
 per-sample ramp; only a coefficient inside a filter with continuous state is safe per block.
 
+**Katalyst 5c-7 (2026-09-19), the compressor.** Threshold, ratio and knee jumps measured -9 to -52
+dB (a hard-switch class for threshold); a per-block glide left a zipper at -31 to -69 dB, because
+the gain computer is MEMORYLESS: its output gain follows the knob within the sample, so a knob
+step is a level step. They glide per sample inside `Compressor.processGliding` (written from the
+end, exact landing), to the floor. **Glide on the axis the law is linear in:** the curve is linear
+in threshold (dB), knee, and the SLOPE `1/ratio - 1`, not in the ratio; the first cut glided the
+ratio itself, measured on a 2 to 8 sweep only, and a 20 to 1 or 100 to 1 swing still clicked at
+-41 to -56 dB (review round 1); gliding `1/ratio` puts every swing at its floor. A rising threshold
+swing of 40 dB still reads -62 to -65 dB (25 dB of release in 50 ms), accepted as a safety net. Attack and release are time constants of the smoothed envelope
+and measured at the floor: no glide. Lesson: a knob feeding a memoryless gain law is a LEVEL knob.
+
