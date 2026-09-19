@@ -218,8 +218,25 @@ internal fun IgnitorDsl.buildIgnitor(
     // ── Leaves: direct return, no cache. Note the oscParams lookup: an `.oscp(...)` override is
     //    folded into the leaf HERE, so any later read of this node (including the build-time
     //    release read in the Adsr arm) sees the overridden value with no second lookup rule. ──
+    //
+    //    A NON-FINITE override reads as UNSET and takes the slot's authored default. That is the
+    //    general rule for every wire number (`/dsl-design` section 4), applied once, at the one
+    //    place a slot resolves, rather than per slot name. Two reasons it is general: the bag is
+    //    an open `Map<String, Double>` that any frontend may fill, so no name is safer than
+    //    another; and a NaN that gets in multiplies through the rest of the tree and the voice
+    //    never recovers. Sprudel alone can deliver one through a string atom (`"NaN"` and
+    //    `"Infinity"` both parse) or an overflowing power. The Katalyst's own `SLOT_UNSET` slots
+    //    do NOT pass through here: they resolve in `KatalystSlots` / `KatalystKnob` off
+    //    `katalystParams`, where non-finite is the DECLARED off state and stays readable as such.
     when (this) {
-        is IgnitorDsl.Param -> return BuiltIgnitor(ParamIgnitor(name, oscParams?.get(name) ?: default))
+        is IgnitorDsl.Param -> {
+            val override = oscParams?.get(name)
+            // NaN-guard on a value the author can write: a non-finite slot was never set.
+            val value = if (override != null && override.isFinite()) override else default
+
+            return BuiltIgnitor(ParamIgnitor(name, value))
+        }
+
         is IgnitorDsl.Constant -> return BuiltIgnitor(ConstantIgnitor(value))
         is IgnitorDsl.Freq -> return BuiltIgnitor(FreqIgnitor)
         else -> { /* fall through */

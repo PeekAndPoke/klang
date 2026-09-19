@@ -99,8 +99,8 @@ fun katalyst(katalyst: KatalystDsl, @Suppress("unused") callInfo: CallInfo? = nu
  *   ))
  * ```
  *
- * That is the familiar orbit with a 300 Hz lift at the end of it: `k.classic()` brings the seven
- * historical stages (once, whatever else the builder says), so the `reverb(...)` on the pattern
+ * That is the familiar orbit with a 300 Hz lift at the end of it: `k.classic()` brings the whole
+ * familiar block (once, whatever else the builder says), so the `reverb(...)` on the pattern
  * still reaches the room, and the `eq` shapes the summed orbit after it.
  *
  * @param katalyst The orbit chain to declare.
@@ -170,14 +170,48 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * `body.wet`, `body.floor`, `vowel.vowel`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`,
  * `delay.feedback`, `delay.cap`, `reverb.wet`, `reverb.size`, `reverb.lowpass`, `phaser.rate`,
  * `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`, `compressor.threshold`,
- * `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`, `duck.orbit`,
- * `duck.depth`, `duck.attack`. An authored chain names its own with `Katalyst.param("room", 5)`.
+ * `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`, `gain.gain`,
+ * `duck.orbit`, `duck.depth`, `duck.attack`. An authored chain names its own with
+ * `Katalyst.param("room", 5)`.
  *
- * **The orbit needs a DECLARED chain, so write one.** An orbit that declares nothing runs the chain
- * the engine has always run, whose knobs still come from the voice's own effect fields, and it
- * ignores this map; `.katalyst(Katalyst(k => k.classic()))` declares the same stages as slots and is
- * all it takes. (Until step 5b of the Katalyst work, which retires the voice fields and makes every
- * orbit read slots.)
+ * `gain.gain` is the orbit's **group fader**, the last stage before the duck: one multiply of the
+ * whole orbit mix, after the compressor, covering the dry signal and the delay and reverb returns
+ * alike. 1 is unity and is what every orbit runs at; below 1 is quieter, above 1 louder, and a
+ * move is ramped across one block so it never steps.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").orbit(1).katp("gain.gain", 0.8)   // this orbit, a little down
+ * ```
+ *
+ * **It is a mix knob, not an articulation**, and for the ordinary reason every `katp` value is:
+ * the fader follows the orbit's lease, so the first voice that sounds there owns it and a new
+ * value lands once the previous owner has lapsed. Set it and leave it. For something that moves
+ * per note, reach for `gain` (the level a voice leaves at) or `pregain` (how hard it is played in).
+ *
+ * **And patterning it through exactly 0 is not a clean mute.** The orbit's silence gate looks at
+ * the mix AFTER the fader, so a stretch at zero can let the orbit deactivate while its voices are
+ * still playing, and the way back up can step rather than glide. Mute with `gain` on the pattern
+ * instead.
+ *
+ * **Which chain hears this map, and which does not.** THIS IS THE ONE HOME of that rule; every
+ * other mention of it is a pointer here.
+ *
+ *  - **Every chain reads it for a stage that has no voice FIELD**, which today means `gain`, and
+ *    `eq` wherever a chain declares one. Neither ever had a per-voice twin for an owner voice to
+ *    drive, so both are slot-driven on every chain. In practice that is the FADER: the familiar
+ *    chain carries a `gain.gain` slot and no eq at all, so `katp("gain.gain", 0.8)` reaches the
+ *    group fader of ANY orbit, one that declares nothing included, while an eq slot needs a
+ *    chain that declared the eq and named the slot.
+ *  - **Every other stage of an undeclared orbit still comes from the voice's own effect fields**
+ *    and does not read this map. To move one of those, declare the chain:
+ *    `.katalyst(Katalyst(k => k.classic()))` declares the same stages as slots.
+ *  - **Declaring is not free.** It flips the whole orbit from voice-driven to slot-driven in one
+ *    step, so every bus knob then comes from the chain and from this map, and a `reverb(...)` on
+ *    the pattern reaches it only because the door writes slots too. Declare when you want that,
+ *    not to reach the fader.
+ *
+ * (Until step 5b of the Katalyst work, which retires the voice fields and makes every orbit read
+ * slots for everything.)
  *
  * **`body.material` and `vowel.vowel` are numbers, and the number is an INDEX** into the material
  * and vowel catalogues, 0 = none (Katalyst step 5a-2, 2026-09-18). The `body(...)` and `vowel(...)`

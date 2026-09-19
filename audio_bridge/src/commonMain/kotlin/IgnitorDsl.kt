@@ -115,6 +115,15 @@ sealed interface IgnitorDsl {
      * At runtime, fills a buffer with [default]. Can be replaced with any [IgnitorDsl]
      * subtree to modulate the parameter at audio rate.
      *
+     * A non-finite override reads as UNSET and the leaf falls back to [default]
+     * (`/dsl-design` section 4, resolved in `IgnitorDslRuntime`).
+     *
+     * [Slots] holds the names a frontend may already write, so placing one of those wires that
+     * door into an instrument. The one to know is [Slots.pregain]: how hard the pattern plays
+     * INTO the instrument, written by sprudel's `pregain(x)`, default 1.0, with no meaning beyond
+     * where the tree places it. Reach for `Slots.<name>` rather than retyping a name and a default
+     * here, so one default serves every instrument; a name of your own is what this door is for.
+     *
      * @param name parameter name — used for discovery, UI display, and oscParams override matching
      * @param default constant value when no modulator is wired in
      * @param description human-readable description for UI tooltips and auto-generated docs
@@ -182,6 +191,33 @@ sealed interface IgnitorDsl {
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
+
+        /**
+         * How hard the sound is played INTO the instrument: the level at which the signal meets
+         * the instrument's first nonlinearity. The pattern writes it with `pregain(x)`.
+         *
+         * **An ordinary slot: it does what the instrument wires it to, and nothing otherwise**
+         * (the signal-flow plan, section 6). An instrument that never places it ignores
+         * `pregain(x)` bit for bit, and that surprises nobody, because a bare sine has no drive.
+         * Place it ONCE, in front of the nonlinearity it is meant to drive, not once per
+         * oscillator: a sum is linear, so driving the sum is the same sound and one multiply.
+         *
+         * It changes TIMBRE only where the tree puts a nonlinearity after it, and only where that
+         * nonlinearity has somewhere left to go. On a tree with no nonlinearity it is
+         * mathematically just a level; on a CLIPPING shape already in hard saturation it is
+         * neither, because a clipper holds the tone AND the level (measured: a shape distance of
+         * 0.006 and a level ratio of 0.999 at `distort(2)`, against 0.223 at `distort(0.5)`).
+         * Both are worth saying plainly rather than promising tone the slot cannot deliver. The
+         * tone-neutral level word is `gain`, the channel fader after the whole instrument, and on
+         * a heavily driven CLIPPER it is the only one that still moves anything.
+         *
+         * The WAVEFOLDERS are the exception and it is a big one: `fold`, `linearfold` and
+         * `sineshaper` never saturate, so there this slot is the fold depth and the strongest tone
+         * knob at any drive (a shape distance of 1.36 to 1.76 at `distort(2)`), and it does not
+         * behave like a level at all: on `fold` at that drive, HALVING it makes the sound about
+         * four times louder.
+         */
+        val pregain: IgnitorDsl = Param(name = "pregain", default = 1.0)
         val rate: IgnitorDsl = Param(name = "rate", default = 1.0)
         val spread: IgnitorDsl = Param(name = "spread", default = 0.2)
         val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
@@ -1778,6 +1814,19 @@ operator fun IgnitorDsl.times(other: IgnitorDsl) = IgnitorDsl.Times(left = this,
 
 /** Scales this signal by a modulatable [other] factor. Alias for [times]. */
 fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
+
+/**
+ * Places the `pregain` slot here: how hard the pattern plays INTO whatever follows.
+ *
+ * Exactly `mul(IgnitorDsl.Slots.pregain)`, written out as a call to [mul] so the two spellings
+ * can never drift apart: same node, same operand order, same content id. The script door's
+ * `.pregain()` builds the same node from `OscSlot.pregain`, which is this same singleton.
+ *
+ * No parameter: the slot IS the parameter, and a pattern moves it with `pregain(x)`. Put it in
+ * front of the nonlinearity it should drive, once (see [IgnitorDsl.Slots.pregain] for why once).
+ * On a tree with nothing nonlinear after it, this is a plain level.
+ */
+fun IgnitorDsl.pregain() = mul(IgnitorDsl.Slots.pregain)
 
 /** Divides this signal by a modulatable [other] divisor. */
 fun IgnitorDsl.div(other: IgnitorDsl) = IgnitorDsl.Div(left = this, right = other)

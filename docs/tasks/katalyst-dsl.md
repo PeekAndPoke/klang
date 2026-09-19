@@ -783,6 +783,13 @@ complexity outranks the duplication.
 - **§D5 DECIDED 2026-09-17:** the orbit `gain` stage stays, the group fader after the inserts.
   Gain and postgain were both pre-bus faders at one point (`SendRenderer`); postgain retires in
   the signal-flow plan §6, and `gain` means the tone-neutral level on every surface.
+  **Built 2026-09-19** (signal-flow phase 2): `postgain` is retired, and `classic` ends in a unity
+  `gain.gain` slot, last in the serial list before the duck. Bit-identical by construction (the
+  fader returns early at exactly 1.0), verified against HEAD `df93f9f1` on three minimal
+  multi-orbit rows. Since then `classic` declares no `eq` and DOES declare a `gain`, so every
+  chain, the born-with one included, reads `katalystParams` for that one stage; the one home of
+  that sentence is the `katp` door's KDoc. `KatalystClassicGainStageSpec` is a contract in the
+  sense of the signal-flow plan §12 (its oracle, the chain without the fader, never expires).
 
 ## Links
 

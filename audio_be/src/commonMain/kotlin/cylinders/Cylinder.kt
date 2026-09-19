@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
  * Mixing channel / Effect bus — called "Cylinder" in strudel.
  *
  * Each orbit runs one [KatalystChain], the per-orbit effect chain, built from a [KatalystDsl]:
- * **Body → Vowel → Delay → Reverb → Phaser → Compressor** for [KatalystDsl.classic], which is what
+ * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain** for [KatalystDsl.classic], which is what
  * every cylinder is born with and what every cylinder that is handed no chain name still runs.
  *
  * A `katalyst(…)` reference on the voice stream reaches [requestChain] (Katalyst step 3a,
@@ -423,9 +423,12 @@ class Cylinder(
             }
 
             // The BORN-WITH chain resolves every knob from the owner voice, as this method's
-            // `applyBusEffects` did before the chain existed; a DECLARED chain reads the voice's
-            // `katalystParams` instead, the orbit's param state, and ignores its bus FIELDS
-            // (step 3a for the slots, step 5a for the state).
+            // `applyBusEffects` did before the chain existed, EXCEPT for a stage that never had a
+            // voice field to resolve from (today `gain`, and `eq` wherever a chain declares
+            // one), which reads `katalystParams`
+            // on every chain; a DECLARED chain reads that map for everything and ignores the bus
+            // FIELDS (step 3a for the slots, step 5a for the state). The rule's one home is the
+            // `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
             //
             // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the
             // owner's map, so it lives exactly as long as the owner does, and an orbit whose owner
@@ -560,7 +563,7 @@ class Cylinder(
 
     /**
      * Processes all bus effects in the chain's order: Body → Vowel → Delay → Reverb → Phaser →
-     * Compressor for the classic chain.
+     * Compressor → Gain for the classic chain.
      *
      * The duck is NOT processed here, see [Cylinders.processAndMix].
      *

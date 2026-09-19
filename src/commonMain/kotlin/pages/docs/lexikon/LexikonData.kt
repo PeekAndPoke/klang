@@ -756,7 +756,8 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The one shared effect chain an orbit's voices are mixed through.",
         detail = "Every voice on an orbit is summed into one mix, and that mix runs through a single " +
-                "chain of effects: body, vowel, delay, reverb, phaser, compressor, and ducking last. " +
+                "chain of effects: body, vowel, delay, reverb, phaser, compressor, the orbit's own " +
+                "fader, and ducking last. " +
                 "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
                 "shared. The settings belong to the FIRST voice that sounds on the orbit while it lives " +
                 "(first-writer-wins): a second voice asking for a different reverb size is simply ignored, " +

@@ -282,12 +282,26 @@ private fun expandPasses(
             //
             // THESE TWO ARMS ARE A PAIR — keep them or remove them together. They live in
             // different modules and nothing pairs them structurally, so it is worth spelling
-            // out: `safeOut(x * 1.0) == x` only for FINITE x. With a non-finite oscparam q,
-            // an unwrapped q reaches `computeSvfCoeffs` raw and takes its Butterworth 0.7071
+            // out: `safeOut(x * 1.0) == x` only for FINITE x. With a non-finite q, an
+            // unwrapped q reaches `computeSvfCoeffs` raw and takes its Butterworth 0.7071
             // fallback, while `Times(q, Constant(1.0))` becomes `safeOut(NaN) = 0.0` and
             // takes the 0.1 q floor. Drop one arm alone and the middle stage of an odd-N
             // cascade is a different filter on the two doors. `IgnitorDslOptimizerRenderSpec`
-            // drives NaN and +/-Inf through passes = 3 for exactly this.
+            // drives NaN and +/-Inf through passes = 3 for exactly this, and BOTH mutations
+            // were run on 2026-09-19: each alone turns that row red. Only ODD N touches this
+            // pair, because only odd N has a ladder factor of exactly 1.0; the passes = 2 half
+            // of that row guards the other invariant, that a non-literal q goes through `times`
+            // on both doors.
+            //
+            // Where a non-finite q comes from, since 2026-09-19: NOT from `oscParams`. The
+            // `IgnitorDsl.Param` leaf reads a non-finite OVERRIDE as unset and falls back to
+            // the slot's default (`IgnitorDslRuntime`). Two routes keep this pair live: an
+            // authored `IgnitorDsl.Param` whose DEFAULT is non-finite (a default is the
+            // instrument's declaration and is not scrubbed), and arithmetic in the q expression,
+            // since `Plus` and `Minus` are clamp-free by contract and two finite operands can
+            // overflow to an infinity. A `ParamIgnitor` that engine code constructs directly
+            // would be a third, but no production caller does that today (`scaledBy` has two
+            // callers, both fed `q.noMod()`).
             rel == 1.0 -> q
             q is IgnitorDsl.Constant -> IgnitorDsl.Constant(q.value * rel)
             else -> IgnitorDsl.Times(q, IgnitorDsl.Constant(rel))

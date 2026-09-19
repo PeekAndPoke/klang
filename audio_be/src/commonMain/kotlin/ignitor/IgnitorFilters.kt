@@ -302,12 +302,30 @@ fun Ignitor.svf(
  * fused and the chained door bit-identical: a literal folds into the value on both sides
  * (no `safeOut` on either), and anything else goes through [times] on both sides (so both
  * get the same block-constant fold, the same `safeOut` scrubbing and the same
- * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would
- * be safe as far as `oscParams` goes — substitution already happened in `IgnitorDslRuntime`
- * — but it would skip the `safeOut` the fused door applies, so a non-finite oscparam q would
- * land on the SVF's Butterworth 0.7071 fallback on one door and on the scrubbed value's clamp
- * on the other: the 0.1 floor for NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an
- * infinity to a finite SAFE_MAX). Same program, two filters.
+ * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would skip
+ * the `safeOut` the fused door applies, so a non-finite q would land on the SVF's Butterworth
+ * 0.7071 fallback on one door and on the scrubbed value's clamp on the other: the 0.1 floor for
+ * NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an infinity to a finite SAFE_MAX). Same
+ * program, two filters.
+ *
+ * Where a non-finite q still comes from, since 2026-09-19: NOT from `oscParams`, whose values the
+ * `IgnitorDsl.Param` leaf reads as unset when they are non-finite (`IgnitorDslRuntime`). Two live
+ * routes remain, which is why this is not dead code (both verified by a caller search and a
+ * render on 2026-09-19):
+ *
+ *  - an authored `IgnitorDsl.Param` whose DEFAULT is non-finite. A default is the instrument's own
+ *    declaration and is deliberately not scrubbed; `IgnitorDslOptimizerRenderSpec`'s C5 rows drive
+ *    exactly this.
+ *  - ARITHMETIC in a q expression. `Plus` and `Minus` are clamp-free by contract (see
+ *    `PlusIgnitor`), so two finite operands can overflow: `Osc.param("a", 1e308).plus(...)` as a q
+ *    renders sample for sample what a `+Infinity` q renders.
+ *
+ * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its
+ * wrappers) would be a third, but no production caller does that today: `scaledBy` has exactly two
+ * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`, and a voice's
+ * `FilterDef` q never comes near here at all (it becomes an `AudioFilter` through
+ * `LowPassHighPassFilters.createLPF`/`createHPF`; the ignitor package does not reference
+ * `FilterDef`). An earlier version of this KDoc claimed that `FilterDef` route and was wrong.
  */
 internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
     factor == 1.0 -> this

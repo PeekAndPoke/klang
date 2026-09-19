@@ -10,10 +10,12 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  *
  * The bus signal flows through the stages of a [KatalystChain], in the order the chain's
  * `KatalystDsl` declares them. The classic chain is
- * **Body → Vowel → Delay → Reverb → Phaser → Compressor**, with the **Duck** run after every orbit.
+ * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain**, with the **Duck** run after
+ * every orbit.
  *
  * - **Delay** and **Reverb** are send/return effects (read from send buffers, write to mix buffer)
  * - **Phaser** and **Compressor** are insert effects (read/write mix buffer in-place)
+ * - **Gain** is the group fader, one multiply of the mix; unity is bit-transparent
  * - **Duck** is a sidechain effect (reads another cylinder's mix buffer as trigger)
  *
  * Each effect checks its own activation state and short-circuits when inactive.

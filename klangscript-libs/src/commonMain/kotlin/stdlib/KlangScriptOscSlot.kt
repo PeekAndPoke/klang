@@ -72,4 +72,30 @@ object KlangScriptOscSlot {
     /** Open `rate` slot (default 1.0). Used by perlin / berlin noise. */
     @KlangScript.Property
     val rate: IgnitorDsl = IgnitorDsl.Slots.rate
+
+    /**
+     * Open `pregain` slot (default 1.0): how hard the pattern plays INTO the instrument, the
+     * level at which the signal meets the instrument's first nonlinearity. Mirrors sprudel
+     * `.pregain(x)`.
+     *
+     * An ordinary slot, so it does what the tree wires it to and nothing otherwise: an instrument
+     * that never places it ignores `pregain(x)` bit for bit. `.pregain()` is the short spelling
+     * of `.mul(OscSlot.pregain)`, and the place to put it is in front of the nonlinearity it
+     * should drive:
+     *
+     * ```
+     * Osc.saw().pregain().distort(0.5)   // play harder, get dirtier
+     * ```
+     *
+     * It changes TIMBRE only where something nonlinear follows it AND that nonlinearity still has
+     * somewhere to go. With nothing nonlinear after it, it is just a level; on a CLIPPING shape
+     * already in hard saturation it is neither, because a clipper holds the tone and the level
+     * alike. The tone-neutral level word is `gain`, the channel fader after the whole instrument.
+     *
+     * The wavefolders (`fold`, `linearfold`, `sineshaper`) never saturate, so there this slot is
+     * the fold depth and the strongest tone knob at any drive, and turning it down can make the
+     * sound louder rather than quieter.
+     */
+    @KlangScript.Property
+    val pregain: IgnitorDsl = IgnitorDsl.Slots.pregain
 }

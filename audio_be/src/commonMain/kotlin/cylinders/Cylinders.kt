@@ -85,7 +85,8 @@ class Cylinders(
      *
      * Processing order:
      * 1. Install (or start fading in) any chain queued on a cylinder, then run every cylinder's
-     *    katalyst pipeline (Delay → Reverb → Phaser → Compressor)
+     *    katalyst pipeline (for the classic chain: Body → Vowel → Delay → Reverb → Phaser →
+     *    Compressor → Gain)
      * 2. Apply ducking (cross-cylinder sidechain — requires all cylinders processed first)
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders

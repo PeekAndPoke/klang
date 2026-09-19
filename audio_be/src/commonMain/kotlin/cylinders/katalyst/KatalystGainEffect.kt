@@ -13,9 +13,11 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  * `gain` means the tone-neutral level on every surface).
  *
  * **Raw.** A negative factor (a polarity flip) and one far above unity are the author's business;
- * nothing here clamps. The two guards are reads of "unset" rather than clamps: a non-finite factor
- * is unity, at this stage's door ([configure]) and at the writer that feeds it, which is what
- * `MasterChain.buildGain` does with the same knob on the master bus (see [KatalystGainWriter]).
+ * nothing here clamps. The two guards are reads of "unset" rather than clamps, and they answer it
+ * differently on purpose: the WRITER reads a non-finite slot as unity and hands that on (see
+ * [KatalystGainWriter], the same thing `MasterChain.buildGain` does with this knob on the master
+ * bus), while this stage's DOOR ignores the call entirely and leaves the current target standing
+ * (see [configure], which spells out when the difference shows).
  *
  * **Unity is bit-transparent**: the multiply is skipped entirely, so a chain that declares
  * `gain(1.0)` cannot change one sample. There is no `-0.0` hazard in that skip, unlike the
@@ -24,7 +26,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  *
  * **A change ramps across ONE block, per sample.** The master snaps its gain instead: its factor
  * is resolved at chain build and a new number is a new chain, so the 60 ms bus crossfade covers
- * it. Here the factor is a slot, so `.katp("gain", "<0.5 1.0>")` moves it while the stage stands,
+ * it. Here the factor is a slot, so `.katp("gain.gain", "<0.5 1.0>")` moves it while the stage stands,
  * and a snap would step the whole mix by the difference in one sample. One block is not an
  * arbitrary window: the orbit's param state is re-read at most once per block, so a block is
  * exactly the interval between two possible changes, and the longest ramp that always finishes
@@ -71,13 +73,18 @@ class KatalystGainEffect : KatalystEffect {
      * Sets the fader. Takes effect over the next block's ramp, or immediately when no sample has
      * been multiplied yet (see [snapNext]); the same number twice is free.
      *
-     * A non-finite factor is UNSET, and this stage's unset is unity, which is what it already
-     * holds until something sets it: the call is ignored and the current target stands. The
-     * writer ([KatalystGainWriter]) reads unset the same way, so today nothing can reach here with
-     * one; the guard is at the door because the cost of missing it is unbounded, see below.
+     * A non-finite factor is UNSET, and the call is ignored so the current target stands. That is
+     * unity only BEFORE the first set (the two fields start at 1.0); after a factor has been set,
+     * ignoring a NaN keeps THAT factor, not unity.
+     *
+     * In production the difference never shows, because the guard never fires: [KatalystGainWriter]
+     * substitutes 1.0 for a non-finite slot before it calls this, so an unset slot arrives here as
+     * unity and a cleared one takes the fader back to unity by ramp. The guard stays at the door
+     * anyway, because the cost of a NaN that does get through is unbounded (see below) and because
+     * a second caller must not have to rediscover the rule.
      */
     fun configure(gain: Double) {
-        if (!gain.isFinite()) { // NaN-guard: a non-finite factor is unset, and unset is unity
+        if (!gain.isFinite()) { // NaN-guard: a non-finite factor is unset, so the current target stands (see the KDoc)
             return
         }
 

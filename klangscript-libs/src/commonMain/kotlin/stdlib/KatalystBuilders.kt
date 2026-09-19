@@ -47,14 +47,17 @@ data class KatalystBuilder(val node: KatalystDsl) {
 }
 
 /**
- * Appends the seven historical stages at once: body, vowel, delay, reverb, phaser, compressor and
- * the duck, in that order, with every knob a named slot.
+ * Appends the familiar block at once: body, vowel, delay, reverb, phaser, compressor, the group
+ * fader at unity and the duck, in that order, with every knob a named slot.
  *
  * `Katalyst(k => k.classic().eq(...))` therefore reads as "the chain an orbit has always run, plus
- * an EQ at the end".
+ * an EQ at the end". The fader is the one stage that is not history: it is bit-transparent at
+ * unity, and it is there so `katp("gain.gain", x)` reaches a group fader on every orbit (the
+ * signal-flow plan, section 6, spot C). `k.classic().gain(0.8)` is legal and is what it looks
+ * like, two faders in series: the unity slot, then 0.8.
  *
  * **At most once per builder** (decided with the maintainer, 2026-09-18): a second `classic()` in
- * the same builder returns the builder unchanged, because seven duplicated stages read the same
+ * the same builder returns the builder unchanged, because duplicated stages read the same
  * slot names and one `reverb(0.3)` would run reverb into reverb. Writing a stage out twice
  * (`k.reverb(...).reverb(...)`) is a different thing and still stacks, in written order: that is an
  * author asking for two rooms, not for the familiar chain twice.
@@ -224,6 +227,14 @@ fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystB
 
 /**
  * Appends make-up gain on the orbit: the group fader, after the inserts.
+ *
+ * **It APPENDS**, and `classic()` already brought one (its `gain.gain` slot at unity), so
+ * `k.classic().gain(0.8)` is two faders in series and the engine multiplies them: `katp` at 0.5
+ * makes 0.4. That is not a special case and nothing collapses them, which is the point of a stage
+ * list. Writing `Katalyst.param("gain.gain", ...)` as the knob of a SECOND stage is the sharp
+ * edge: both stages then read the same key, so one `katp("gain.gain", 0.5)` applies twice and the
+ * orbit lands at 0.25. Give a second fader its own slot name if it should move on its own.
+ *
  * @param gain linear gain factor (1.0 = unity, 2.0 is about +6 dB).
  */
 @KlangScript.Function

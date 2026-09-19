@@ -228,9 +228,20 @@ they looked redundant: they were. Strudel's `gain` is our `pregain`, Strudel's `
   unity and is bit-transparent, so it costs nothing. No pattern door for it yet: a chain says
   `k.classic().gain(0.8)` and a pattern reaches it with `katp`; a door is one line if the songs
   want it. One value per orbit, like every bus knob: the owner voice's value applies.
-- Non-finite values read as unset (`/dsl-design` §4): a non-finite `pregain` or `gain` is 1.0 at
-  the voice factory. A NaN there used to poison the orbit's reverb and delay for the rest of the
-  playback.
+  Built 2026-09-19: the slot is `gain.gain` (the `<stage>.<knob>` rule; it reads oddly and it is
+  the rule). The stage is last in the SERIAL list, before the duck, whose list position is
+  ignored because it runs in the cross-orbit pass. It covers dry AND the delay and reverb
+  returns, because those stages mix their returns into the orbit's buffer at their own
+  positions. It is on the born-with chain too, and a gain stage never had a voice field, so
+  `katp("gain.gain", x)` reaches ANY orbit without a declaration. One consequence worth knowing:
+  orbit A's duck trigger is A's post-fader mix, so lowering A's fader also lowers how hard A
+  ducks B, which is what a fader on a desk does.
+- Non-finite values read as unset (`/dsl-design` §4). A non-finite `gain` is 1.0 at the voice
+  factory; a NaN there used to poison the orbit's reverb and delay for the rest of the playback.
+  For `pregain` the guard landed where a slot reads its value, the `Param` leaf, and for EVERY
+  slot, not by name: a non-finite OVERRIDE from the bag takes the slot's default (the bag is an
+  open map any frontend fills). An authored non-finite default still reaches the runtime; that
+  is the one confirmed route by which a non-finite slot value still arrives.
 
 **What was tried and deleted (2026-09-18), so nobody rebuilds it.** The first implementation
 gave `pregain` and `velocity` an unconsumed rule (an unplaced slot acts as level at the output)
@@ -328,8 +339,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    allowed the mechanical change in Der Schmetterling); the finite guards on `pregain` and `gain`;
    `Katalyst.classic` ending in a unity `gain` stage. The first attempt of 2026-09-18 is
    discarded. Two steps: **levels on the wire**, DONE 2026-09-19 (spot B: the velocity fold, `postgain` retired,
-   the finite guard on `gain`, the song migration), then **the slot and the bus fader** (spots A
-   and C: `pregain`, the unity `gain` stage). Identity, stated precisely: a voice that never used
+   the finite guard on `gain`, the song migration), then **the slot and the bus fader**, DONE
+   2026-09-19 (spots A and C: `pregain`, the unity `gain` stage). Identity, stated precisely: a voice that never used
    `postgain` is bit-identical in doubles (`x * 1.0` is exact, and `gain * velocity` is the same
    product computed on the other side of the wire). A voice that used `postgain` changes by
    floating-point rounding only, because `(s * post) * (gain * pan)` became
@@ -364,6 +375,36 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 - Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
   engine; phase 5 re-reads them once the surfaces are gone.
 - Sample voices: `sound("bd")` as the sample instrument with its playback slots, in phase 3.
+- **Parked for the maintainer, by ear (found in review 2026-09-19, NOT rendered): the group
+  fader patterned through exactly 0 on a dry orbit.** `katp("gain.gain", "<0 1>")`, default ADSR,
+  no room or line. The orbit's silence gate reads the POST-fader mix, so with the fader at 0 the
+  cylinder deactivates and resets while voices still play; the lease is then re-dealt, and the
+  first `configure` after a reset SNAPS. Depending on which voice wins the lease, the return to
+  level either jumps from 0 to full in one sample (with the muted note's release tail becoming
+  audible) or waits for the previous owner to lapse (release plus two blocks, about 56 ms) and
+  ramps mid-note. The mechanism is from Katalyst step 4; it is newly reachable because the fader
+  now sits on every orbit. The `katp` door says plainly that the fader is a mix knob that follows
+  the lease, not a per-note articulation. The root is that an orbit's liveness is judged on
+  post-fader output while its reset assumes nobody is playing; candidates: judge liveness before
+  the fader, or never snap while voices are active. Belongs with Katalyst 5c (crossfade on every
+  switch, the effect state machines), where the gain stage gets its states anyway.
+- **Phase 3, from the pregain review (2026-09-19): a placed `pregain` costs CPU at unity.** Neither
+  `mulConstInPlace` nor the `Affine` fold special-cases a block-constant multiplier of exactly 1.0
+  at render, so every built-in that places the slot pays one multiply and one `safeOut` per sample
+  for the life of every voice. Folding it away at build would drop the `safeOut`, which changes
+  bits for a NaN or an out-of-range sample, so it is a decision (is the extra scrub wanted?), not
+  a blind optimisation. Measure in the phase 3 spike before the built-ins place the slot.
+- **Phase 3: `analog` is the one bag key with two readers that disagree on a non-finite value.**
+  Since the leaf guard, the oscillator's `Slots.analog` reads a NaN as its default, while
+  `VoiceFactory` still hands the raw value to the filter-feel scales and the sample ignitor.
+  `oscParams["onepole"]` is NaN-safe by accident and not `+Infinity`-safe. Both go away when those
+  doors become slots; until then they are listed here so nobody concludes the bag is guarded
+  everywhere. A `ParamIgnitor` that engine code constructs directly never passes the leaf either;
+  no production caller does that today (checked 2026-09-19: a `FilterDef` becomes an `AudioFilter`
+  and never reaches `Ignitor.svf`, whose `Double` overload has only a test caller). A fourth reader, `GraphCensus`
+  (benchmark-only, audio-inert), resolves an override without the guard too. For phase 5's grep
+  list: `docs/audio-backend-file-map.md` still spells the orbit chain without body, vowel and the
+  fader.
 - **Housekeeping, decided 2026-09-17: nothing in the backend or the frontend may allocate without a
   way to clean it up.** The process-wide identity maps (`uniqueId()` for ignitors, masters and
   chains) mint a name per live-coding edit and never forget it, while the backend bounds its built

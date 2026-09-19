@@ -39,6 +39,9 @@ class SprudelScopeSpec : StringSpec({
         "crush" to KlangScope.VOICE,
         "coarse" to KlangScope.VOICE,
         "gain" to KlangScope.VOICE,
+        // The other level word, and a voice setting for a reason worth naming: it is a SLOT in
+        // the voice's own instrument, so it reaches exactly the note that carries it.
+        "pregain" to KlangScope.VOICE,
         "pan" to KlangScope.VOICE,
         "velocity" to KlangScope.VOICE,
         "adsr" to KlangScope.VOICE,

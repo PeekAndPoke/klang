@@ -80,7 +80,7 @@ class CylinderChainSwapSpec : StringSpec({
         }
     }
 
-    /** True while the cylinder runs the classic chain, which is the only one with all seven stages. */
+    /** True while the cylinder runs the classic chain, the only one with all seven classic effects. */
     fun Cylinder.runsClassic(): Boolean = reverb != null && delay != null && body != null && duck != null
 
     // ── The semantics of a request ───────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.requestChain("some-classic-name")
 
         rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
-        withClue("the same seven stages, so it still sounds like the historical chain") {
+        withClue("the same classic effects, so it still sounds like the historical chain") {
             rig.cylinder.runsClassic() shouldBe true
             rig.cylinder.pipeline.size shouldBe bornWith.size
         }

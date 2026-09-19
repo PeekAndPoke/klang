@@ -35,8 +35,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
- * from the familiar orbit with [classic], which brings the seven historical stages as named slots
- * the bus doors and `katp` can drive.
+ * from the familiar orbit with [classic], which brings the historical stages plus the group fader
+ * at unity, as named slots the bus doors and `katp` can drive.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Katalyst")
@@ -46,7 +46,7 @@ object KlangScriptKatalyst {
     /**
      * Builds an orbit chain: the lambda receives a [KatalystBuilder] and appends stages in order
      * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `duck`, `eq`, `gain`, and
-     * `classic` for all seven historical ones at once, at most once per builder). No lambda, or an
+     * `classic` for the whole familiar block at once, at most once per builder). No lambda, or an
      * empty one, is the empty chain.
      *
      * ```
@@ -60,9 +60,10 @@ object KlangScriptKatalyst {
         KatalystBuilder(KatalystDsl(emptyList())).configuredBy("Katalyst", configure).node
 
     /**
-     * The historical chain every orbit has always run: body, vowel, delay, reverb, phaser,
-     * compressor and the duck, seven stages in that order, with every knob a named slot the bus
-     * doors and `katp` write.
+     * The chain every orbit has always run: body, vowel, delay, reverb, phaser, compressor and the
+     * duck, in that order, plus the group fader at unity (`gain.gain`) between the compressor and
+     * the duck, which is bit-transparent and is there so a pattern can reach a group fader. Every
+     * knob is a named slot the bus doors and `katp` write.
      *
      * Write it to say "the familiar orbit", or use it as the base of a chain that adds to it:
      *

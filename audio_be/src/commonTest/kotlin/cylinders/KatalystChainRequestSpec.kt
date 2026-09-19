@@ -78,7 +78,7 @@ class KatalystChainRequestSpec : StringSpec({
     fun cylinder(d: PlaybackEngineDispatcher, orbit: Int): Cylinder? =
         d.engine("song")?.cylinders?.cylinders?.firstOrNull { it.id == orbit }
 
-    /** True while the cylinder runs the classic chain, which is the only one with all seven stages. */
+    /** True while the cylinder runs the classic chain, the only one with all seven classic effects. */
     fun Cylinder.runsClassic(): Boolean = reverb != null && delay != null && body != null && duck != null
 
     "a control-only chain event installs the chain on ITS orbit, and creates no voice" {

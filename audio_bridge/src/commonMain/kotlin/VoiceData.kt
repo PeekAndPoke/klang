@@ -54,10 +54,15 @@ data class VoiceData(
      *
      * Written by `.katp(name, value)` and, until the voice fields leave the wire (signal-flow plan
      * §7, step 5b), by the bus doors as aliases (`reverb(...)`, `delay(...)`, `compressor(...)`,
-     * `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`). The chain a cylinder is BORN with
-     * ignores this map entirely: its knobs still come from the voice fields, which is what keeps a
-     * song that declares no chain byte-identical. A chain DECLARED from `Katalyst.classic()` names
-     * the same stages as slots and reads it.
+     * `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`).
+     *
+     * Which chain reads which slot of this map is ONE rule with ONE home, the `katp` door's KDoc
+     * in `sprudel/lang/lang_katalyst.kt`. In short: every chain reads it for a stage that has no
+     * voice FIELD (today `gain`, and `eq` wherever a chain declares one; the born-with chain has
+     * only the fader), and the chain a cylinder is BORN with takes every other
+     * knob from the voice fields, which is what keeps a song that declares no chain
+     * byte-identical. A chain DECLARED from `Katalyst.classic()` names every stage as a slot and
+     * reads them all.
      */
     val katalystParams: Map<String, Double>? = null,
 

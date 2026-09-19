@@ -222,7 +222,10 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
   well as its voice fields** (Katalyst step 5a, 2026-09-18). A song touching
   `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
   now sends the matching `<stage>.<knob>` slots over the wire even on an
-  orbit running the born-with chain, which ignores them. Measured with
+  orbit running the born-with chain, which ignores those particular slots
+  (it reads the map only for a stage that has no voice field, which on the
+  born-with chain is the `gain.gain` fader alone; the rule's one home is the
+  `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`). Measured with
   `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
   Node 24) on one voice.
 

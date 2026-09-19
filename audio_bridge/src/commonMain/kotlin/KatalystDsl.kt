@@ -57,7 +57,21 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
         /**
          * The historical chain, in the historical order: body, vowel, delay, reverb, phaser,
          * compressor, and the duck the cylinder runs after every orbit. This is what every
-         * cylinder has always run, written down.
+         * cylinder has always run, written down, plus the ONE stage that is new surface rather
+         * than history: a [KatalystStageDsl.Gain] at unity, the group fader, last in the list
+         * before the duck (signal-flow plan section 6, spot C, 2026-09-19). Unity is
+         * bit-transparent in the stage, so the historical sound is untouched; what it buys is a
+         * fader a pattern can reach with `katp("gain.gain", x)` on any orbit, declared chain or
+         * not, since a gain stage is slot-driven on every chain.
+         *
+         * **What the fader covers.** The delay and the reverb are SEND buses whose returns are
+         * mixed into the orbit's buffer by their own stages, which sit before this one, so the
+         * fader scales dry and returns together, which is what a group fader should do. The duck
+         * is the one thing after it: it runs outside the list, per orbit, in the cross-orbit pass
+         * (see [KatalystStageDsl.Duck]), so a ducked orbit is ducked after its fader, and an orbit
+         * that TRIGGERS a duck on another triggers it with its post-fader mix (lower A's fader and
+         * A ducks B less hard, which is what a fader on a desk does). Both remain true when step
+         * 5b makes the sends insert-style stages.
          *
          * Every knob is a **slot** ([IgnitorDsl.Param]) named `<stage>.<knob>`, which is the
          * vocabulary the sprudel doors write into once the cylinder reads the chain.
@@ -89,7 +103,11 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *    `body.material`, `vowel.vowel`, `body.wet` and `vowel.wet`;
          *  - the shared constant, for a knob that is inert while its gate is off and must be right
          *    the moment the gate opens: `delay.cap`, `body.floor`, `vowel.floor`, `phaser.rate`,
-         *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.attack`.
+         *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.attack`;
+         *  - unity, for the one knob whose untouched value is the IDENTITY of its stage rather
+         *    than an off state or a tuned number: `gain.gain`. It is 1.0 written out here and in
+         *    `MasterStageDsl.Gain` rather than read from `constants/`, for the reason that KDoc
+         *    gives: an identity element is not a taste decision anybody could retune.
          *
          * The compressor is the one stage whose gate is not a single knob. `Voice.Compressor
          * .fromParams` reads "ANY of the five set = on, and each unset one takes its constant", so
@@ -168,6 +186,15 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                     knee = IgnitorDsl.Param(name = "compressor.knee", default = SLOT_UNSET),
                     attack = IgnitorDsl.Param(name = "compressor.attack", default = SLOT_UNSET),
                     release = IgnitorDsl.Param(name = "compressor.release", default = SLOT_UNSET),
+                ),
+                // The group fader, at unity: the LAST stage the orbit's mix runs through (the
+                // duck below is declared last but runs outside the list, see [KatalystStageDsl.Duck]).
+                // Unity is bit-transparent in `KatalystGainEffect`, which returns before it
+                // multiplies, so this costs one virtual call per block and not one sample. It is
+                // here so that a pattern can reach the fader with `katp("gain.gain", x)` without
+                // declaring a chain at all; there is no sprudel door for it yet.
+                KatalystStageDsl.Gain(
+                    gain = IgnitorDsl.Param(name = "gain.gain", default = 1.0),
                 ),
                 KatalystStageDsl.Duck(
                     orbit = IgnitorDsl.Param(name = "duck.orbit", default = SLOT_UNSET),
@@ -391,8 +418,8 @@ sealed interface KatalystStageDsl {
      * master puts its EQ after the reverb and before the dynamics, so the room is shaped with the
      * dry and the detector sees the result; write it there if you want the same. Note that
      * `k.classic().eq(...)` does NOT land there: it appends, so the EQ ends up after the compressor
-     * (the duck runs outside the list regardless, see [Duck]). Write the stages out in order when
-     * the position matters.
+     * AND after classic's own group fader (the duck runs outside the list regardless, see [Duck]).
+     * Write the stages out in order when the position matters.
      *
      * **What the position means while the sends are still per voice.** The delay and reverb send
      * buffers are written by the VOICES, before the orbit's chain runs, so an `eq` written BEFORE
@@ -415,6 +442,28 @@ sealed interface KatalystStageDsl {
      *
      * The structural fix for mixing an orbit deliberately low (to keep its compressor out of plop
      * territory) and bringing the level back up at the end of its chain.
+     *
+     * **What a fader at the end of the chain covers**, while the sends are still send buses: the
+     * delay and the reverb mix their RETURNS into the orbit's buffer at their own stage positions,
+     * so a gain stage written after them scales dry and returns alike. Written BEFORE them it
+     * scales only the dry, which is a legitimate mix and is what list order is for. The duck is
+     * the one stage no list position can put before this one: it runs outside the list, in the
+     * cross-orbit pass ([Duck]), so it always lands after the fader.
+     *
+     * That ordering has one consequence worth naming, and it is the RIGHT behaviour rather than a
+     * corner: a duck on orbit B reads orbit A's mix as its trigger, and by then A's fader has
+     * already run, so lowering A's fader also lowers how hard A ducks B. A group fader moves the
+     * whole group, sends and sidechain sends included, which is what a fader on a desk does.
+     *
+     * [KatalystDsl.classic] carries one of these at unity, as its last stage before the duck, so
+     * `katp("gain.gain", x)` reaches the group fader on any orbit (signal-flow plan section 6,
+     * spot C). There is no sprudel door for it yet; a door is one line if the songs want it.
+     *
+     * **A chain may declare more than one, and they MULTIPLY**, in list order, like any two
+     * stages: `k.classic().gain(0.8)` is classic's unity slot then 0.8. Two stages whose knobs are
+     * `Param`s of the SAME name read the same key, so one `katp` write applies once per stage
+     * (0.5 on two such stages is 0.25). Deliberate, and the reason a second fader that should move
+     * on its own needs a slot name of its own.
      *
      * @param gain linear gain factor (1.0 = unity, 2.0 is about +6 dB). Unity is the identity
      *   element of the stage, not a tuned value, which is why it is written here rather than read

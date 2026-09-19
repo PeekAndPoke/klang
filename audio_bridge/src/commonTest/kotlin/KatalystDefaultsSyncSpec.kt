@@ -38,7 +38,8 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * Keeps [KatalystDsl.classic] in sync with what a slot default MEANS: the value the knob has when
  * nobody writes it.
  *
- * Every slot of the classic chain falls into exactly one of FOUR families, and each gets a row:
+ * Every slot of the classic chain falls into exactly one of FIVE families, and each gets a row
+ * (four until 2026-09-19, when the group fader arrived and brought its own):
  *
  *  1. **untouched zero** (0.0): a knob whose engine-untouched value is zero, so seeding it with
  *     the touched constant would switch that effect on for every song that never asked for it:
@@ -53,6 +54,8 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *     `KatalystDelayEffect.MIN_ACTIVE_DELAY_SECONDS` and `KatalystReverbEffect.MIN_ACTIVE_SIZE`),
  *     plus `delay.feedback`, which the untouched voice also carries at zero.
  *  4. **constant**: everything else, inert while its gate is off and right the moment it opens.
+ *  5. **unity** (1.0): the identity element of a stage, which is none of the four above: the
+ *     group fader `gain.gain`, whose stage is bit-transparent at exactly 1.0.
  *
  * Families 1 and 3 together are the untouched voice, and that equality is pinned against the real
  * `VoiceFactory` by `KatalystClassicMatchesUntouchedVoiceSpec` in audio_be, which is the test that
@@ -93,6 +96,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "phaser.rate", "phaser.wet", "phaser.center", "phaser.sweep", "phaser.floor",
             "compressor.threshold", "compressor.ratio", "compressor.knee", "compressor.attack",
             "compressor.release",
+            "gain.gain",
             "duck.orbit", "duck.depth", "duck.attack",
         )
     }
@@ -211,7 +215,19 @@ class KatalystDefaultsSyncSpec : StringSpec({
         }
     }
 
-    "the four families together cover every slot, with no slot in two of them" {
+    "family 5, the unity slot: the identity element of a stage, not an off state" {
+        // The group fader, added 2026-09-19 (the signal-flow plan, section 6, spot C). It is its
+        // own family because none of the other four fits and saying so is the point: it is not an
+        // off value (a fader at 0 is silence, not transparency), not an absence (unity IS a
+        // number the stage uses) and not a shared constant from `constants/` (an identity element
+        // is not a taste decision anybody retunes, which is why `MasterStageDsl.Gain` writes it
+        // out too). Exactly 1.0, because the stage's bit-transparency is a `== 1.0` branch in
+        // `KatalystGainEffect.process`: a 0.9999999999 here would multiply every orbit of every
+        // song by something.
+        classicSlots.getValue("gain.gain") shouldBe 1.0
+    }
+
+    "the five families together cover every slot, with no slot in two of them" {
         // The rows above are lists, and a slot quietly added to the chain would be in none of them.
         val gateOff = listOf("delay.wet", "reverb.wet", "phaser.wet", "duck.depth")
         val unset = listOf(
@@ -224,7 +240,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
             "delay.cap", "body.floor", "vowel.floor", "phaser.rate", "phaser.center", "phaser.sweep",
             "phaser.floor", "duck.attack",
         )
-        val all = gateOff + unset + offValue + constant
+        val unity = listOf("gain.gain")
+        val all = gateOff + unset + offValue + constant + unity
 
         all.size shouldBe all.toSet().size
         all.toSet() shouldBe classicSlots.keys

@@ -69,6 +69,7 @@ class LangControlRestSpec : StringSpec({
     val rows: List<Row> = listOf(
         // Level
         single("gain", "amount", "0.3", "0.6"),
+        single("pregain", "amount", "0.3", "0.6"),
         single("pan", "amount", "0.3", "0.6"),
         single("velocity", "amount", "0.3", "0.6"),
         single("vel", "amount", "0.3", "0.6"),

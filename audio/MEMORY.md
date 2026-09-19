@@ -1,5 +1,135 @@
 # Klang Audio — Memory
 
+## The pregain slot, the leaf guard, and the orbit's group fader (2026-09-19)
+
+Second half of the signal-flow plan's phase 2 (spots A and C). The first half is the entry below.
+
+- **`pregain` is an ORDINARY slot.** `IgnitorDsl.Slots.pregain` is `Param("pregain", 1.0)`, and
+  that is the whole of it: it does what an instrument's tree wires it to and nothing otherwise.
+  An instrument that never places it ignores `pregain(x)` bit for bit, which is what
+  `PregainSlotRenderSpec` and `VoicePregainWireSpec` assert against a slotless twin. No unconsumed
+  rule, no analysis of the tree, no flag from the build; the first attempt of 2026-09-18 had all
+  three and is recorded as deleted in the plan's section 6, with the lesson (code that predicts
+  another walk's outcome drifts from it wherever that walk is conditional).
+- **`.pregain()` is written as `mul(Slots.pregain)`**, not as a hand-built `Times`, so the helper
+  and the spelled-out form cannot drift into two operand orders and two content ids. A multiply
+  commutes, so a swap would render identically and only a tree comparison can see it:
+  `PregainSlotSpec` is that comparison, and the swap is its mutation.
+- **What the word is worth, stated honestly**: the slot changes TIMBRE only where the tree puts a
+  nonlinearity after it. On a linear tree it is mathematically just a level, and the render spec
+  says so with a bit-exact row (`x.pregain()` at 0.5 IS the slotless render times 0.5). The tone
+  claim is a separate row on a tree with a `tanh` after the slot, where the render differs from
+  `render(1) * 0.5` by 0.05 and more, against rounding at ~1e-16. `gain` is the tone-neutral word,
+  and the same two rows on one driven instrument in `VoicePregainWireSpec` are what tells them
+  apart.
+- **And where it stops working, which is the opposite of the intuition and is now in the door's
+  KDoc**: on a CLIPPING shape driven into hard saturation the slot changes neither the tone nor the
+  level, because a clipper holds both. Swept on `saw.pregain().distort(d).lowpass(2500)` at
+  `pregain` 1 against 0.4, as a normalised-RMS shape distance (level-blind, so a pure level change
+  reads 0): d = 0.1 -> 0.082, 0.3 -> 0.181, **0.5 -> 0.223**, 1.0 -> 0.117, 2.0 -> 0.006, with the
+  level ratio running 0.487 to 0.999 over the same sweep. So `distort(0.5)` is where touch lives
+  and `distort(2)` is where the knob is inert; the doc examples and the driven instrument in
+  `VoicePregainWireSpec` use 0.5, and `PregainSlotRenderSpec` guards that choice with a row that
+  fails at 2.0.
+- **The shape decides, and only the SATURATING shapes behave that way** (2026-09-19, round 3; the
+  paragraph above generalised from one shape and was wrong for a whole family). At `distort(2)`,
+  the same measurement per shape: `soft` 0.006, `hard` 0.004, `cubic` 0.005, `diode` 0.009,
+  `tube` 0.015, `gentle` 0.021, all with a level ratio of 0.999, against the three WAVEFOLDERS,
+  which never saturate: `fold` **1.358** (level ratio **4.256**, so halving `pregain` makes the
+  note about four times LOUDER), `linearfold` 1.675 (0.854), `sineshaper` 1.757 (1.103).
+  `rectify` sits between the families at 0.054. On a folder `pregain` IS the fold depth and stays
+  the strongest tone knob at any drive, and it is not monotonic in level. Guard:
+  `PregainSlotRenderSpec`'s contrast row, mutation-checked by swapping the shape.
+- **The finite guard sits at the `Param` LEAF, for every slot, not for `pregain`** (`IgnitorDslRuntime`,
+  the one place a slot resolves against `oscParams`). A non-finite override reads as unset and
+  takes the slot's authored default. General and not name-keyed for two reasons: the bag is an open
+  `Map<String, Double>` that any frontend may fill, so no name is safer than another, and a NaN that
+  gets in multiplies through the rest of the tree and the voice never recovers. It is reachable from
+  sprudel today through a string atom (`"NaN"` and `"Infinity"` both parse) or an overflowing power;
+  script division by zero throws instead. Checked before it was made general: the Katalyst's
+  `SLOT_UNSET` slots never pass through this leaf (they resolve in `KatalystSlots` / `KatalystKnob`
+  off `katalystParams`, where non-finite is the DECLARED off state), and the only other reader of
+  the bag on a render path is `IgnitorRegistry.createExciter`'s `oscParams["onepole"]`, which
+  compares `> 0.0` and is therefore already non-finite-safe for NaN, though not for `+Infinity`;
+  `VoiceFactory`'s `oscParams["analog"]` is the other, both out of this step's scope.
+  `GraphCensus.of` is a FOURTH reader (`countOf`, `params[slot.name] ?: slot.default`) and resolves
+  an override with no finite guard at all; it is audio-inert (benchmark only, never on a render
+  path) and harmless as it stands, since `NaN.toInt()` is 0 and is then coerced to 1.
+  Guard: `VoicePregainWireSpec`.
+- **The one behaviour the guard CHANGES, and it is wanted: it closes a voice leak.** An instrument
+  whose envelope release is a slot (`.adsr(release = Osc.param("rel", 0.1))`) used to accept
+  `oscp("rel", "Infinity")`, which the leaf handed on as an infinite `releaseTailSec`, so
+  `VoiceFactory` computed `endFrame = gateEndFrame + release * sampleRate` as infinite and the
+  voice was endless and uncullable, ONE PER EVENT. Measured both ways on 2026-09-19: with the guard
+  that call resolves to the slot's 0.1, without it to `Infinity`. `"Infinity"` is reachable because
+  a sprudel string atom parses it. An authored infinite DEFAULT still produces the endless voice,
+  and that stays: an instrument that declares an infinite release is asking for a drone, and the
+  wire's NaN rule is about values a PATTERN writes.
+- **Precisely what the guard covers, because the difference matters downstream**: every
+  `IgnitorDsl.Param` LEAF, and only the OVERRIDE it reads out of `oscParams`. It does NOT cover
+  the slot's authored DEFAULT (that is the instrument's own declaration, and
+  `IgnitorDslOptimizerFuzzSpec` fuzzes non-finite defaults on purpose), and it does not close
+  `IgnitorFilters.scaledBy`'s non-finite-q hazard, which survives by two other routes: a non-finite
+  authored DEFAULT, and ARITHMETIC in a q expression, since `Plus` and `Minus` are clamp-free by
+  contract (`Osc.param("a", 1e308).plus(Osc.param("b", 1e308))` as a q renders sample for sample
+  what a `+Infinity` q renders; verified 2026-09-19). A `ParamIgnitor` that engine code constructs
+  directly never passes the leaf either, but no production caller does that today: `scaledBy` has
+  exactly two callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`.
+  **A voice's `FilterDef` q is NOT one of these routes**, and three sites said it was for one round
+  (this file, `IgnitorFilters` and `IgnitorDslOptimizer`) because the claim was reasoned rather than
+  looked up: a `FilterDef` becomes an `AudioFilter` through `LowPassHighPassFilters.createLPF` /
+  `createHPF`, and the whole ignitor package never references `FilterDef`. The lesson is the plain
+  one: a claim about WHICH CALLERS reach a function is a caller search, not an inference.
+- **THREE test rows of `IgnitorDslOptimizerRenderSpec` were silently voided by the guard when it
+  landed** (a subtract, a divide and the C5 non-finite q, the last one found a round later because
+  its value is a LOOP VARIABLE that a literal grep cannot see). All three delivered NaN, the
+  infinities or 1e300 through `oscParams` and all of them read as the slot's finite default
+  instead; the C5 row is the one the production comments name as THE guard for the
+  `rel == 1.0 -> q` / `factor == 1.0 -> this` pair, so that pair was unguarded for a round. They
+  deliver through the authored DEFAULT now and carry an engagement row each.
+- **How they were found, and the method to reuse**: a grep for a literal non-finite next to
+  `oscParams` misses a loop variable, so the sweep that found the third one instrumented the LEAF
+  to throw on any non-finite override and ran the full jvm suites of `audio_be`, `sprudel`,
+  `klangscript-libs`, `audio_bridge`, `klang` and the root (2026-09-19). After the repairs only the
+  three deliberate `VoicePregainWireSpec` rows trip it. Reuse the instrumented leaf, not a grep,
+  whenever a guard changes what reaches a leaf.
+- **An engagement row for a PARITY row must not merely differ from the finite case.** The first C5
+  engagement row asserted "the poisoned render differs from the q = 1.2 render", which any
+  substitution of one finite number also satisfies, so it would have stayed green under the very
+  guard that voided the parity row. What no single substitution can fake is that the poisoned
+  values DIVERGE FROM EACH OTHER: NaN and -Infinity render identically while +Infinity does not.
+  The MECHANISM behind that, read off `computeSvfCoeffs` and not guessed (round 3 corrected an
+  earlier wording that said the two "share the scrub", which they do not): `safeOut` maps NaN to
+  0.0 and an infinity to a SIGNED SAFE_MAX of 1e15, and `computeSvfCoeffs` then coerces a finite q
+  into [0.1, 200], so NaN and -Infinity MEET AT THE 0.1 FLOOR while +Infinity lands on the 200
+  ceiling and screams (it peaks 24x to 43x above a q of 1.2 over four blocks).
+- **And even that was not enough.** None of it can see a SIGN-PRESERVING scrub of the default
+  (NaN to 0.0, the infinities to a signed SAFE_MAX), which keeps every one of those relations.
+  What separates "the raw non-finite reached `computeSvfCoeffs`" from "something scrubbed it" is
+  the 0.7071 Butterworth fallback (`q.isFinite()` is the test there, so ANY non-finite takes it)
+  on the UNWRAPPED middle stage, which only an ODD cascade has: at passes = 3 a raw NaN builds
+  the stages (0.1, 0.7071, 0.1) and a scrubbed 0.0 builds (0.1, 0.1, 0.1); at passes = 2 they are
+  identical. The row asserts both halves of that, and the sign-preserving scrub is its mutation.
+- **`KatalystDsl.classic` ends in a group fader at unity** (`gain.gain`, the dotted convention),
+  declared last in the list before the duck. At exactly 1.0 `KatalystGainEffect.process` returns
+  before it multiplies, so the historical sound is untouched, which
+  `KatalystClassicGainStageSpec` pins against the chain the classic chain WAS (the same stages with
+  the fader filtered out) rather than against a remembered number.
+- **What the fader covers, and what it does not.** The delay and the reverb are still send buses,
+  but their RETURNS are mixed into the orbit's buffer by their own stages, and those sit before the
+  fader, so it scales dry and returns alike; a row with the dry input zeroed proves it on the
+  returns alone, and its mutation is the fader moved to the front of the pipeline. The duck is the
+  one thing it cannot cover: it runs outside the list, in the cross-orbit pass, so a ducked orbit is
+  ducked after its own fader. Step 5b does not change either fact.
+- **Every chain has the fader, the born-with one included**, because a gain stage is slot-driven
+  whatever `voiceDriven` says (it never had a voice field). So `katp("gain.gain", 0.5)` reaches a
+  group fader on an orbit that declares nothing at all, which is measured end to end through the
+  offline renderer as well as at chain level.
+- Identity, measured: three minimal multi-orbit rows (no declaration, one orbit declaring
+  `Katalyst(k => k.classic())`, both declaring it) render to the same hash at HEAD `df93f9f1` in a
+  throwaway worktree and on the final tree, peak 29871 of 32767. Adding `katp("gain.gain", 0.5)`
+  changes that hash, which is the engagement control for the whole path.
+
 ## The wire carries ONE level word (2026-09-19)
 
 - `VoiceData.velocity` and `VoiceData.postGain` are GONE. `gain` is the channel fader, applied once,

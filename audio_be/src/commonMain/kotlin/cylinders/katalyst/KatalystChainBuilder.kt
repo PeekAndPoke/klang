@@ -50,16 +50,20 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * and no network. [KatalystStageDsl.Eq] and [KatalystStageDsl.Gain] are the two stages that
  * never had a per-voice twin: they build [KatalystEqEffect] and [KatalystGainEffect], and their
  * knobs come from the chain's slots whatever `voiceDriven` says, because there is no voice field
- * for an owner writer to read (Katalyst step 4).
+ * for an owner writer to read (Katalyst step 4). Since 2026-09-19 the classic chain declares a
+ * `Gain` at unity, so every cylinder has one, the born-with chain included: bit-transparent at
+ * unity and reachable with `katp("gain.gain", x)` (signal-flow plan section 6, spot C).
  *
  * **Two kinds of writer, chosen by [build]'s `voiceDriven` flag** (Katalyst step 3a, 2026-09-17),
  * one interface each, so a declared chain can be configured with no owner voice alive
  * (`KatalystChain.applyParams(null)`):
  *
  *  - `voiceDriven = true`, the chain a cylinder is BORN with and nothing else (decided 2026-09-18):
- *    every knob comes from the orbit's owner voice, which is `Cylinder.applyBusEffects` line for
- *    line, so a song that declares no chain is byte-identical to the pre-DSL engine. A pattern that
- *    writes `Katalyst.classic()` declares the same stages and gets the slot-driven half below.
+ *    every knob OF A STAGE THAT HAS A VOICE FIELD comes from the orbit's owner voice, which is
+ *    `Cylinder.applyBusEffects` line for line, so a song that declares no chain is byte-identical
+ *    to the pre-DSL engine. `gain` and `eq` have no such field and are slot-driven here too (see
+ *    below). A pattern that writes `Katalyst.classic()` declares the same stages and gets the
+ *    slot-driven half below for all of them.
  *  - `voiceDriven = false`, a DECLARED chain: every knob comes from the chain's own slots
  *    ([KatalystKnob] over [KatalystSlots]), resolved here and re-resolved only when the orbit's
  *    param state changes; the voice's bus FIELDS are ignored (the signal-flow plan §7, D4: the
@@ -306,10 +310,11 @@ object KatalystChainBuilder {
 
                     // Slot-driven on EVERY chain, `voiceDriven` or not, and so is the gain below:
                     // neither stage ever had a voice FIELD to be overridden by, so there is
-                    // nothing for an owner writer to read. The classic chain declares neither, so
-                    // this changes nothing about the byte-identical default; a chain that declares
-                    // an `eq` gets it configured on both paths, because `applyOwner` ends in
-                    // `applyParams` (see [KatalystChain]).
+                    // nothing for an owner writer to read. A chain that declares one gets it
+                    // configured on both paths, because `applyOwner` ends in `applyParams` (see
+                    // [KatalystChain]). The classic chain declares no `eq`; it does declare a
+                    // `gain` at unity since 2026-09-19, which is bit-transparent and is what lets
+                    // `katp("gain.gain", x)` reach the fader of an orbit that declares nothing.
                     statics.add(KatalystEqWriter(fx = fx, knobs = eqKnobs(specs)))
                 }
 

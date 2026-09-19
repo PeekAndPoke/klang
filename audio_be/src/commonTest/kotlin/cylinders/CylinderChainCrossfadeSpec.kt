@@ -301,7 +301,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
-    /** True while the cylinder runs the classic chain, which is the only one with all seven stages. */
+    /** True while the cylinder runs the classic chain, the only one with all seven classic effects. */
     fun Cylinder.runsClassic(): Boolean = reverb != null && delay != null && body != null && duck != null
 
     /** Per-block peak of what the orbit produced, the `MasterBusTest` envelope measure. */

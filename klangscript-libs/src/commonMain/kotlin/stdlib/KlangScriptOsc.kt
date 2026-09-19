@@ -416,6 +416,16 @@ object KlangScriptOsc {
      * Param slots are the leaf nodes of the ignitor tree — they produce a constant signal
      * at [default] unless overridden by oscParam() at play time.
      *
+     * `OscSlot` holds the names a sprudel door already writes, so placing one of those wires that
+     * door into your instrument. The one to know is `pregain`: how hard the pattern plays INTO
+     * the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of its own
+     * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `decay`,
+     * `brightness`, `pickPosition`, `stiffness` and `rate` are the others. Reach for
+     * `OscSlot.<name>` rather than retyping the name and the default here, so one default serves
+     * every instrument; a name of your own is what this door is for.
+     *
+     * A non-finite value written into a slot reads as UNSET: the leaf falls back to [default].
+     *
      * @param name parameter name — used for oscParam() overrides and UI discovery
      * @param default constant value when no override is provided
      * @param description human-readable description for documentation

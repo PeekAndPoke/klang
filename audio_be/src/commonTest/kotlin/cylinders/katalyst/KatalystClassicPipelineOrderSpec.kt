@@ -9,11 +9,13 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
@@ -48,20 +50,29 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         is KatalystStageDsl.Compressor -> "KatalystCompressorEffect"
         is KatalystStageDsl.Duck -> "KatalystDuckEffect"
         // The two stages that never had a per-voice twin (Katalyst step 4). Their own row below
-        // says the classic chain contains neither; here they are only the arms the exhaustive
-        // `when` needs, so a new stage kind cannot slip past this spec either.
+        // says which of them the classic chain carries and on what condition; here they are the
+        // arms the exhaustive `when` needs, so a new stage kind cannot slip past this spec either.
         is KatalystStageDsl.Eq -> "KatalystEqEffect"
         is KatalystStageDsl.Gain -> "KatalystGainEffect"
     }
 
-    "the classic chain declares neither eq nor gain" {
-        // Both stages are new surface, not history: the historical default is what every cylinder
-        // has always run, and an `eq` or a `gain` in it would change the sound of every song that
-        // declares no chain. Asserted rather than left to the order row above, which compares the
+    "the classic chain declares no eq, and its one gain stage is a bit-transparent unity slot" {
+        // The EQ is new surface, not history: one in the classic chain would change the sound of
+        // every song that declares no chain, and nothing about an EQ is transparent by default.
+        //
+        // The GAIN is new surface too (2026-09-19, the signal-flow plan's spot C) and is in the
+        // chain anyway, on one condition that this row pins: the stage returns before it
+        // multiplies while its factor is exactly 1.0 (`KatalystGainEffect.process`), so a unity
+        // fader cannot move a sample. Any other default here, and every orbit of every song would
+        // be scaled. Asserted rather than left to the order row above, which compares the
         // declaration against the pipeline BUILT FROM IT and would happily agree with itself.
-        KatalystDsl.classic.stages.any {
-            it is KatalystStageDsl.Eq || it is KatalystStageDsl.Gain
-        } shouldBe false
+        KatalystDsl.classic.stages.any { it is KatalystStageDsl.Eq } shouldBe false
+
+        val fader = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Gain>().single()
+        val slot = fader.gain.shouldBeInstanceOf<IgnitorDsl.Param>()
+
+        slot.name shouldBe "gain.gain"
+        slot.default shouldBe 1.0
     }
 
     "the classic chain IS the cylinder's pipeline, stage for effect, in order, plus the duck" {
@@ -191,9 +202,13 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // The position is documented as ignored, so "last" is a reading convention, not a
         // promise about signal order. What IS load-bearing: the duck must not be in the serial
-        // pipeline, or it would run per orbit before the sidechain source exists.
+        // pipeline, or it would run per orbit before the sidechain source exists. The group
+        // fader sits directly before it, so the fader really is last in the list that IS a
+        // signal order (2026-09-19); nothing else may be appended after the duck.
         KatalystDsl.classic.stages.last() shouldBe KatalystDsl.classic.stages
             .filterIsInstance<KatalystStageDsl.Duck>().single()
+
+        cylinder.pipeline.last()::class.simpleName shouldBe "KatalystGainEffect"
 
         cylinder.pipeline.any { it is KatalystDuckEffect } shouldBe false
     }

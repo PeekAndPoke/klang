@@ -146,7 +146,8 @@ class KatalystChain internal constructor(
     // Typed accessors
     // ════════════════════════════════════════════════════════════════════════════
 
-    // The seven classic effects by name, for the hosts and the specs that ask about ONE of them
+    // The seven classic EFFECTS by name (the fader has no accessor: nothing asks a chain for its
+    // gain stage), for the hosts and the specs that ask about ONE of them
     // (the warehouse specs about the rented ring and network, the diagnostics about denied rents).
     // Null when the chain declares no such stage: "the cylinder's delay" is a property of the
     // chain, not of the cylinder, which is exactly what this step makes true. A chain that
@@ -207,7 +208,14 @@ class KatalystChain internal constructor(
      * Apply every SLOT-driven stage from the orbit's param state ([params], the owner voice's
      * `katalystParams`). **Null is the no-owner door**: no state, so every slot resolves to what
      * the chain itself authored, which is what a chain entering service needs before any voice has
-     * claimed the orbit's lease. A no-op on a voice-driven chain, whose writers all need a voice.
+     * claimed the orbit's lease.
+     *
+     * **Not a no-op on a voice-driven chain**, and this is the one place that is easy to get
+     * wrong: a voice-driven chain has [statics] too, for every stage that never had a voice field
+     * to be driven BY (today `gain`, and `eq` wherever a chain declares one, see [owners] and
+     * [KatalystChainBuilder]). So the
+     * classic chain's group fader moves on an orbit that declared nothing. The rule and its one
+     * home are the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
      *
      * **The re-resolve is gated on the map's IDENTITY, the apply is not** (Katalyst step 5a). A
      * live owner hands over the same map instance every block, so the lookups run once per owner

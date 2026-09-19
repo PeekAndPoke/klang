@@ -54,7 +54,9 @@ Returns the existing `Cylinder` or creates a new one, copying effect parameters 
 One effect bus. Holds its own stereo accumulation buffer and effect instances.
 
 **PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
-on the summed mix: `[body, vowel, delay, reverb, phaser, compressor]` (+ ducking, separate pass). Config is
+on the summed mix: `[body, vowel, delay, reverb, phaser, compressor, gain]` (+ ducking, separate pass).
+The `gain` stage is the orbit's group fader, at unity on the classic chain and bit-transparent there;
+a pattern moves it with `katp("gain.gain", x)`. Config is
 copied from voices in `updateFromVoice` **last-writer-wins**, so all voices on an orbit SHARE these; put
 voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` +
 envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`,

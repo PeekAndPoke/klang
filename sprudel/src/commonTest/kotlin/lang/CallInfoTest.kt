@@ -26,6 +26,10 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").gain("0.5")""")
     }
 
+    "pregain passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").pregain("0.5")""")
+    }
+
     "pan passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").pan("0.25")""")
     }

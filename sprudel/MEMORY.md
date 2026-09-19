@@ -1,5 +1,37 @@
 # Sprudel — Memory
 
+## The `pregain` door: the other level word (2026-09-19)
+
+- **`pregain(amount)` is exactly `oscp("pregain", amount)`**, one key of the oscParams bag, and it
+  lives next to `gain` in `lang_dynamics_level.kt` because a reader looking for a level word looks
+  there. All four forms (pattern, String, the callable object, the `PatternMapperFn` chain), plus
+  the accessor object, `@scope voice`, `@category dynamics`.
+- **It takes a control pattern**, which is the idiom the plan named: `.pregain("1 0.7 0.8")` is
+  play harder, get dirtier, on an instrument that places the slot in front of a nonlinearity.
+- **On a CLIPPING shape it needs a gentle drive to be worth anything**, which the door's KDoc now
+  says because it is the opposite of the intuition: in hard saturation the slot moves neither the
+  tone nor the level (a clipper holds both, measured at 0.006 shape distance and 0.999 level ratio
+  at `distort(2)`), so there the level has to come from `gain`. The WAVEFOLDERS (`fold`,
+  `linearfold`, `sineshaper`) are the exception: they never saturate, so `pregain` is the fold
+  depth and the strongest tone knob at any drive, and on `fold` turning it down makes the sound
+  louder. The per-shape numbers and the chosen example drive are in `audio/MEMORY.md`.
+- **It has the numeric lift, the mapper form and an accessor, and needed no new machinery for
+  any of them.** `analog`, `duty` and `onepole` are the precedent: an `oscp`-backed door reads its
+  own slot back through `_mapNumericField(read = { it.oscParams?.get(name) })` exactly as a
+  field-backed door reads a field. It uses `_liftOrReinterpretNumericalField` (like `gain`) rather
+  than the String lift those three use, because the value is always a number and the numeric lift
+  leaves the slot untouched for a control value that is not one.
+- **The mapper on an UNSET slot is a no-op**, the general 2026-09-07 rule, the same as
+  `gain(mul(x))`. Recorded, not worked around; the entry below has the longer note on what a
+  mapper-spelled trim costs.
+- **What it does NOT do** is the part worth remembering: it writes a slot, and a slot does what
+  the instrument's tree wires it to. No built-in instrument places `pregain` yet (that is phase 3
+  of the signal-flow plan), so on today's sounds the door is inert, bit for bit. That is the
+  design, not a gap: a bare sine has no drive. The KDoc says so and one of its examples shows it.
+- Guards: `LangPregainSpec`, rows in `LangControlRestSpec`, `LangFieldAccessorsSpec`,
+  `SprudelScopeSpec`, `CallInfoTest` and `FreqAccessorIntelSpec`. What the slot DOES is
+  audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`); nothing in sprudel can hear it.
+
 ## `gain` is the one level word; `velocity` folds at the wire (2026-09-19)
 
 - **`postgain` is retired**, every form of it (the pattern door, the string door, the accessor
@@ -96,7 +128,10 @@
   the chain its orbit runs, and the two namespaces never cross. Until the voice fields leave the wire
   (step 5b) every bus door writes BOTH: its own voice fields and the matching `<stage>.<knob>` slots,
   filling the stage's companions per the compound-door rule (`/dsl-design` §4, which is that rule's
-  one home). The chain a cylinder is BORN with still reads the voice fields,
+  one home). The chain a cylinder is BORN with still reads the voice fields for every stage that
+  HAS one (since 2026-09-19 that is the qualifier: `gain` and `eq` never had one, so they are
+  slot-driven on every chain and `katp("gain.gain", x)` reaches an undeclared orbit's fader; the
+  rule's one home is the `katp` door's KDoc),
   so a song that declares nothing sounds the same; every chain that arrives by NAME resolves its
   `Param` knobs from the map, `Katalyst.classic()` included (decided 2026-09-18: voice-driven is only
   the born-with chain, or `Katalyst(k => k.classic())` would be inert and `katp` on it would go
@@ -107,7 +142,7 @@
   step 5a-2).** Two cleanups that retired the step-5a rule above it. (1) The door replaces like
   `sound()` and `master()`: `x.katalyst(A).katalyst(B)` is `x.katalyst(B)`, `KatalystAppend` and
   `KatalystDsl.plus` are gone, and each door stamps ONE `KatalystValue.Dsl` instance onto every event
-  (cheaper than the memo it replaced). `KatalystBuilder.classic()` appends its seven stages at most
+  (cheaper than the memo it replaced). `KatalystBuilder.classic()` appends its block at most
   once per builder. (2) There is no string slot: `body.material` and `vowel.vowel` carry the INDEX of
   a name in `BodyMaterials.names` / `VowelBands.names` (0 = `none`), so `body(material = "wood")` on
   a pattern reaches a declared chain like every other knob and the song text did not move. The doors
@@ -483,7 +518,7 @@ return applyCat(patterns)
 
 ### Synthesis Parameters
 
-- `gain()`, `pan()`, `legato()` / `clip()`
+- `gain()`, `pregain()`, `pan()`, `legato()` / `clip()`
 - `vibrato(rate, depth)` / `vib`; readers `vibrato.rate`, `vibrato.depth`
 - `accelerate()`, `unison(voices, spread, pan)` / `uni`, `density()` / `d` (`detune()` and `spread()` are gone)
 - `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)

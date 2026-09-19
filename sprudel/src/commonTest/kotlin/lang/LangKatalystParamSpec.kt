@@ -288,7 +288,7 @@ class LangKatalystParamSpec : StringSpec({
                 setOf("body.material", "body.wet", "body.floor")
         slot(b, "body.material") shouldBe BodyMaterials.indexOf("wood")
         slot(b, "body.wet") shouldBe 0.3
-        withClue("the material still reaches the voice field: the born-with chain is voice-driven") {
+        withClue("the material still reaches the voice field: the body stage is voice-driven on a born-with chain") {
             b.queryArc(0.0, 1.0).first().data.body shouldBe "wood"
         }
 

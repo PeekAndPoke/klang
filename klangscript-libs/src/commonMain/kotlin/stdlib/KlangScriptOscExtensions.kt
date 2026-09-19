@@ -511,6 +511,25 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Times(left = self, right = other.toIgnitorDsl())
 
     /**
+     * Places the `pregain` slot here: how hard the pattern plays INTO whatever follows.
+     *
+     * Exactly `mul(OscSlot.pregain)`, and written as a call to [mul] so the two spellings cannot
+     * drift into two operand orders: one tree, one content id. It takes no argument on purpose:
+     * the slot IS the parameter, and the pattern moves it with `pregain(x)`.
+     *
+     * Put it in front of the nonlinearity it should drive, once. It changes TIMBRE only because
+     * of what follows it; with nothing nonlinear after it, it is a plain level, and `gain` is
+     * the tone-neutral level word.
+     *
+     * ```KlangScript
+     * Osc.saw().pregain().distort(0.5)
+     * ```
+     */
+    @KlangScript.Method
+    fun pregain(self: IgnitorDsl): IgnitorDsl =
+        mul(self, IgnitorDsl.Slots.pregain)
+
+    /**
      * Divides the signal by a divisor (IgnitorDsl or Number).
      *
      * Zero divisors are substituted with `1e-30` to keep the engine `NaN`-free.

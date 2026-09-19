@@ -38,10 +38,13 @@ class OrbitBusPipelineSpec : StringSpec({
         return cylinder.mixBuffer.left[blockFrames - 1] != 1.0
     }
 
-    "cylinder has 6-stage pipeline: Body, Vowel, Delay, Reverb, Phaser, Compressor" {
+    "cylinder has a 7-stage pipeline: Body, Vowel, Delay, Reverb, Phaser, Compressor, Gain" {
+        // Seven since 2026-09-19: the group fader joined the classic chain at unity, where it is
+        // bit-transparent (signal-flow plan section 6, spot C). The duck is deliberately not in
+        // this list; it runs in the cross-orbit pass.
         val cylinder = createOrbit()
 
-        cylinder.pipeline.size shouldBe 6
+        cylinder.pipeline.size shouldBe 7
     }
 
     "orbit runs exactly ONE body and ONE vowel pass regardless of voice count (per-orbit, not per-voice)" {

@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -269,7 +270,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         )
     }
 
-    "C5: a NON-FINITE oscparam q lands on the SAME filter on both doors" {
+    "C5: a NON-FINITE q lands on the SAME filter on both doors" {
         // Where the doors could silently disagree, and the reason `scaledBy` routes a
         // non-literal q through `times` instead of folding it into the value: only the
         // `times` path applies `safeOut`. Fold it instead and NaN reaches the chained door
@@ -288,26 +289,136 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // fallback while `safeOut(NaN)` takes the 0.1 q floor. Remove ONE arm and this row
         // fails. Removing BOTH is invisible here and always will be: this is a door-vs-door
         // comparison, so anything that moves both doors together passes by construction. It
-        // would still change the sound (an odd-N middle stage fed a non-finite oscparam q
-        // moves from the 0.7071 fallback to the 0.1 floor for NaN and -Inf, and to the 200
-        // ceiling for +Inf, since safeOut CLAMPS an infinity to a finite SAFE_MAX rather
-        // than scrubbing it), so that pair is a decision, not a test result.
+        // would still change the sound (an odd-N middle stage fed a non-finite q moves from
+        // the 0.7071 fallback to the 0.1 floor for NaN and -Inf, and to the 200 ceiling for
+        // +Inf, since safeOut CLAMPS an infinity to a finite SAFE_MAX rather than scrubbing
+        // it), so that pair is a decision, not a test result.
+        // The poison is the slot's AUTHORED DEFAULT and not an `oscParams` override, since
+        // 2026-09-19: the `Param` leaf reads a non-finite OVERRIDE as unset and falls back to the
+        // default (`IgnitorDslRuntime`), so a bag delivery would arrive here as a finite 1.2 and
+        // all six iterations would run one ordinary resonant filter. The default is not scrubbed,
+        // by design: it is the instrument's own declaration, not a value a pattern wrote. The tree
+        // SHAPE is unchanged either way (`expandPasses` and `scaledBy` both branch on whether the
+        // q node is a LITERAL, and a `Param` is not one however its value arrives), so the pair of
+        // short-circuits under test is the same pair.
         for (n in listOf(2, 3)) {
             for (poisoned in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
                 assertOptimizeIsInaudible(
                     IgnitorDsl.Lowpass(
                         inner = IgnitorDsl.Sawtooth(),
                         freq = IgnitorDsl.Constant(1500.0),
-                        q = IgnitorDsl.Param("res", 1.2),
+                        q = IgnitorDsl.Param("res", poisoned),
                         passes = n,
                     ),
-                    oscParams = mapOf("res" to poisoned),
                     // Non-vacuity: a poisoned q that silenced BOTH doors would compare two
                     // silences and pass. Every one of these lands on a finite q at a finite
                     // cutoff, so real audio must come out.
                     minPeak = 1e-6,
                 )
             }
+        }
+    }
+
+    "C5: ...and the poisoned q really reaches the filter: it is a different filter from a finite one" {
+        // The engagement control the row above cannot carry, for the reason its own comment gives:
+        // it is a door-VS-door comparison, so anything that moves both doors together passes by
+        // construction, and a guard that replaced the q with a finite number moves both. That is
+        // exactly what happened on 2026-09-19 while the value still came through `oscParams`: all
+        // six iterations ran q = 1.2 and the row guarded nothing.
+        //
+        // One-sided: the AUTHORED door alone. "Differs from a finite q" would NOT be enough, and
+        // the first version of this row made that mistake: any substitution of ONE finite number
+        // for the poison also differs from 1.2, so the row would have stayed green under the very
+        // guard that voided the parity row. What no single substitution can fake is that the three
+        // poisoned values DIVERGE FROM EACH OTHER, which is the production comment's own claim.
+        //
+        // The mechanism, read off `computeSvfCoeffs` rather than guessed (round 3 corrected an
+        // earlier wording here that said NaN and -Inf "share the scrub", which they do not):
+        // `safeOut` maps NaN to 0.0 and an infinity to a SIGNED SAFE_MAX (1e15), so the three
+        // arrive at the wrapped stages as 0.0, +1e15 and -1e15; `computeSvfCoeffs` then coerces a
+        // finite q into [0.1, 200], so NaN and -Inf MEET AT THE 0.1 FLOOR while +Inf lands on the
+        // 200 ceiling. On the UNWRAPPED middle stage of an odd cascade there is no safeOut at
+        // all, and `computeSvfCoeffs` takes its 0.7071 Butterworth fallback for any non-finite q.
+        // "Fallback" is that raw arm; the floor is the clamp. Measured, not assumed.
+        // [blocks] blocks and not one: the peak ratio below is PHASE-DEPENDENT inside a single
+        // block (a saw that starts elsewhere can put the resonant ring anywhere), and one block at
+        // an unlucky start phase measured 1.81x, which would have gone falsely red if the
+        // oscillator's start phase ever moved. Over four blocks the ratio is 43x at passes = 2 and
+        // 24x at passes = 3, with room to spare under the 2x the row asks for.
+        fun block(q: Double, n: Int): DoubleArray {
+            val rng = Random(seed)
+            val ignitor = IgnitorDsl.Lowpass(
+                inner = IgnitorDsl.Sawtooth(),
+                freq = IgnitorDsl.Constant(1500.0),
+                q = IgnitorDsl.Param("res", q),
+                passes = n,
+            ).toExciter(random = rng)
+            val out = DoubleArray(blockFrames * blocks)
+            val buf = AudioBuffer(blockFrames)
+            val context = ctx(rng)
+
+            for (b in 0 until blocks) {
+                ignitor.generate(buf, 220.0, context)
+
+                for (i in 0 until blockFrames) {
+                    out[b * blockFrames + i] = buf[i]
+                }
+
+                context.voiceElapsedFrames += blockFrames
+            }
+
+            return out
+        }
+
+        fun bits(a: DoubleArray): List<Long> = a.map { it.toRawBits() }
+
+        for (n in listOf(2, 3)) {
+            val finite = block(1.2, n)
+            val nan = block(Double.NaN, n)
+            val posInf = block(Double.POSITIVE_INFINITY, n)
+            val negInf = block(Double.NEGATIVE_INFINITY, n)
+
+            withClue("not-silence floor, passes = $n") {
+                finite.maxOf { abs(it) } shouldBeGreaterThan 0.01
+            }
+
+            withClue("NaN and -Inf meet at the 0.1 floor, so they are the same filter, passes = $n") {
+                bits(nan) shouldBe bits(negInf)
+            }
+
+            // THE discriminator: one substituted number would make these two equal.
+            withClue("+Inf clamps to the 200 ceiling where NaN clamps to the 0.1 floor, passes = $n") {
+                bits(posInf) shouldNotBe bits(nan)
+            }
+
+            withClue("...and it really is the screaming end: +Inf peaks far above a q of 1.2, passes = $n") {
+                posInf.maxOf { abs(it) } shouldBeGreaterThan finite.maxOf { abs(it) } * 2.0
+            }
+
+            for (poisoned in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+                withClue("q = $poisoned at passes = $n must not render the q = 1.2 filter") {
+                    bits(block(poisoned, n)) shouldNotBe bits(finite)
+                }
+            }
+        }
+
+        // The one thing every assertion above still misses (round 3): a SIGN-PRESERVING scrub of
+        // the default, NaN to 0.0 and the infinities to a signed SAFE_MAX. It keeps NaN equal to
+        // -Inf (both clamp to the 0.1 floor), keeps +Inf apart from them (the 200 ceiling) and
+        // keeps the peak ratio, so the row would stay green while the parity row it guards had
+        // been voided again.
+        //
+        // What separates "the raw non-finite reached `computeSvfCoeffs`" from "something scrubbed
+        // it first" is the 0.7071 Butterworth fallback on the UNWRAPPED middle stage, and only an
+        // ODD cascade has one: at passes = 3 a raw NaN builds the stages (0.1, 0.7071, 0.1) while
+        // a scrubbed 0.0 builds (0.1, 0.1, 0.1). At passes = 2 the two are identical, and this
+        // assertion would be false there, which is why it is asked at 3 alone.
+        withClue("a raw NaN takes the 0.7071 fallback at the odd middle stage; a scrubbed 0.0 does not") {
+            bits(block(Double.NaN, 3)) shouldNotBe bits(block(0.0, 3))
+        }
+
+        withClue("...and at passes = 2 they DO agree, which is why the row above asks at 3") {
+            bits(block(Double.NaN, 2)) shouldBe bits(block(0.0, 2))
         }
     }
 
@@ -569,11 +680,50 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.4)).minus(IgnitorDsl.Constant(0.1)), minPeak = 0.1)
         assertOptimizeIsInaudible(IgnitorDsl.Constant(0.5).minus(IgnitorDsl.Sawtooth()), minPeak = 0.1, expectFused = false)
         // a Param subtrahend at NaN, at an infinity and beyond SAFE_MAX: the subtract is bare on
-        // both sides (a Neg coefficient would scrub the NaN and clamp the rest)
+        // both sides (a Neg coefficient would scrub the NaN and clamp the rest).
+        //
+        // The value is the slot's AUTHORED DEFAULT and not an `oscParams` override, since
+        // 2026-09-19: the `Param` leaf reads a non-finite OVERRIDE as unset and falls back to the
+        // default (`IgnitorDslRuntime`), so a bag delivery would arrive here as 0.0 and this loop
+        // would run three identical finite iterations under three non-finite names. The default is
+        // not scrubbed, by design: it is the instrument's own declaration, not a value a pattern
+        // wrote. The tree SHAPE is unchanged either way (a `Param` is control-rate and is not a
+        // literal on both paths), so the fold under test is the same one.
         for (off in listOf(Double.NaN, Double.NEGATIVE_INFINITY, 1e300)) {
-            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5)).minus(IgnitorDsl.Param("off", 0.0)), oscParams = mapOf("off" to off))
-            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().minus(IgnitorDsl.Param("off", 0.0)).mul(IgnitorDsl.Constant(1e-10)), oscParams = mapOf("off" to off))
+            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5)).minus(IgnitorDsl.Param("off", off)))
+            assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().minus(IgnitorDsl.Param("off", off)).mul(IgnitorDsl.Constant(1e-10)))
         }
+    }
+
+    "R2: ...and each of those subtrahends really arrives: the three renders differ from a finite one" {
+        // The engagement control the loop above cannot carry. A parity row compares two sides of
+        // ONE value, so anything that neuters that value on BOTH sides leaves it green and empty:
+        // that is exactly what happened on 2026-09-19 while the values still came through
+        // `oscParams`, where the new leaf guard replaced all three with the slot's 0.0 default and
+        // three non-finite names ran one finite case. This row reads the AUTHORED side alone and
+        // asserts the value is still in the render.
+        fun firstSample(off: Double): Double {
+            val rng = Random(seed)
+            val ignitor = IgnitorDsl.Sawtooth().mul(IgnitorDsl.Constant(0.5))
+                .minus(IgnitorDsl.Param("off", off))
+                .toExciter(random = rng)
+            val buf = AudioBuffer(blockFrames)
+
+            ignitor.generate(buf, 220.0, ctx(rng))
+
+            return buf[0]
+        }
+
+        val finite = firstSample(0.0)
+
+        withClue("the finite control is an ordinary sample") { finite.isFinite() shouldBe true }
+
+        // Each non-finite subtrahend reaches the subtract bare, which is the row's whole claim:
+        // NaN poisons it, -Infinity overflows it, and 1e300 swamps the signal. A coefficient fold
+        // (a `Neg` in front of the Affine) would scrub or clamp each of the three instead.
+        firstSample(Double.NaN).isNaN() shouldBe true
+        firstSample(Double.NEGATIVE_INFINITY) shouldBe Double.POSITIVE_INFINITY
+        firstSample(1e300) shouldBe -1e300
     }
 
     "R2: a divide by a literal, by a Param, after an add, and by zero, fold within the margin" {
@@ -595,11 +745,53 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     "R2: a Param divisor at an infinity is a dead branch on both sides too (its reciprocal is a zero multiplier)" {
+        // The infinity is the slot's AUTHORED DEFAULT, not an `oscParams` override: since
+        // 2026-09-19 the `Param` leaf reads a non-finite override as unset and would hand this row
+        // a divisor of 1.0, turning the dead branch it is named for into an ordinary divide. The
+        // default is not scrubbed (it is the instrument's declaration), and a `Param` is
+        // control-rate and non-literal whichever way its value arrives, so the optimizer takes the
+        // same arm. The row below, with the SAME shape at a finite divisor, is the discriminator:
+        // it renders a different peak, which is what "dead branch" means here.
         assertOptimizeIsInaudible(
-            IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", 1.0)).plus(IgnitorDsl.WhiteNoise()),
-            oscParams = mapOf("p" to Double.POSITIVE_INFINITY),
+            IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", Double.POSITIVE_INFINITY)).plus(IgnitorDsl.WhiteNoise()),
             minPeak = 0.1,
         )
+    }
+
+    "R2: ...and the infinite divisor really IS the dead branch: a finite one renders louder" {
+        // The engagement control for the row above, and for the RNG-stream bug class both rows
+        // guard. `DivIgnitor` skips its upstream when the divisor makes the branch dead, so the
+        // first noise never renders and never draws; at a finite divisor it does, and the two
+        // noises sum. If the infinite divisor stopped being dead (a guard scrubbing the default,
+        // a rule folding it to unity), this row's two peaks would converge and it goes red.
+        fun peakOf(dsl: IgnitorDsl): Double {
+            val rng = Random(seed)
+            val ignitor = dsl.toExciter(random = rng)
+            val buf = AudioBuffer(blockFrames)
+            val context = ctx(rng)
+            var peak = 0.0
+
+            repeat(blocks) {
+                ignitor.generate(buf, 220.0, context)
+
+                for (i in 0 until blockFrames) {
+                    peak = maxOf(peak, abs(buf[i]))
+                }
+
+                context.voiceElapsedFrames += blockFrames
+            }
+
+            return peak
+        }
+
+        val dead = peakOf(IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", Double.POSITIVE_INFINITY)).plus(IgnitorDsl.WhiteNoise()))
+        val alive = peakOf(IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", 1.0)).plus(IgnitorDsl.WhiteNoise()))
+
+        withClue("not-silence floor: both render noise") { dead shouldBeGreaterThan 0.1 }
+
+        withClue("one noise against two: the finite divisor has to be louder") {
+            alive shouldBeGreaterThan dead * 1.1
+        }
     }
 
     "R2: a Param divisor at zero is a dead branch on both sides: the voice's noise stream stays in step" {

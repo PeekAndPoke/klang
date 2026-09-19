@@ -14,6 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putOscParam
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
@@ -126,6 +127,130 @@ object gain : FieldAccessor({ it.gain }) {
 @KlangScript.Function
 fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.gain(amount, callInfo) }
+
+// -- pregain() --------------------------------------------------------------------------------------------------------
+
+private val pregainMutation = voiceSetter { putOscParam("pregain", it?.asDoubleOrNull()) }
+
+private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("pregain") }, update = pregainMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, pregainMutation)
+}
+
+/**
+ * Sets how hard each event is played INTO its instrument, [per voice](/manuals/lexikon/voice).
+ *
+ * The other level word, and the only one that is not a fader. `gain` is the level the event LEAVES
+ * at, after everything; `pregain` is the level the signal ARRIVES at inside the instrument, where
+ * it meets whatever the instrument does to it. Exactly `oscparam("pregain", amount)`: it writes the
+ * `pregain` slot and nothing else.
+ *
+ * **It does what the instrument wires it to, and nothing otherwise.** An instrument that places the
+ * slot in front of a nonlinearity turns this into touch: play harder, get dirtier, the way an amp
+ * does. An instrument that never places it ignores the call, note for note, and that is not a bug
+ * to work around: a bare sine has no drive. Reach for `gain` when you want the size of the sound.
+ *
+ * **`pregain` is not the drive amount, and the two scales are not the same.** An instrument's
+ * `distort(amount)` is EXPONENTIAL (about 4x at `0.5`, 16x at `1`, 250x at `2`) and it is fixed
+ * inside the instrument, one setting for every note; `pregain` is LINEAR, 1 is unity, and the
+ * pattern sets it per note. Design the drive once by ear, and leave `pregain` the touch.
+ *
+ * **Where it stops working, which is the opposite of what you might expect.** On a CLIPPING shape
+ * driven into hard saturation, turning `pregain` down changes almost nothing: not the tone and
+ * not the level either, because a clipper holds both. Measured on `saw.pregain().distort(2)
+ * .lowpass(2500)` at `pregain` 1 against 0.4: the level comes out at 0.999 of the loud one and
+ * the shape distance is 0.006, a rounding-scale no-op. So on a heavily driven lead, `pregain` is
+ * the wrong knob twice over: the LEVEL has to come from `gain`, and there is no touch left to
+ * find. The room to hear touch is at the gentle end of the drive (`distort(0.5)` gives a shape
+ * distance of 0.223 on the same measurement), which is what the example below uses.
+ *
+ * **That is true of the shapes that SATURATE, which is `soft` and the other clippers.** The three
+ * WAVEFOLDERS never saturate: `fold`, `linearfold` and `sineshaper` keep folding the harder you
+ * drive them, so there `pregain` IS the fold depth and stays the strongest tone knob at any drive
+ * (the same measurement at `distort(2)` gives a shape distance of 1.36 to 1.76 against `soft`'s
+ * 0.006). It is not a level knob there either, and it is not even monotonic: on `fold` at
+ * `distort(2)`, turning `pregain` DOWN to 0.4 makes the note about four times LOUDER. `rectify`
+ * sits between the two families (0.054). A folder is a fine home for touch; just do not expect
+ * "down" to mean "softer".
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * note("c3 e3 g3 e3").sound(amp).pregain("1 0.6 1 0.4").gain(0.3)   // touch: harder notes dirtier
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").pregain(2).gain(0.3)   // the default sounds place no slot: this changes nothing
+ * ```
+ *
+ * **Per VOICE, which is what makes it touch at all**: every note carries its own value, so
+ * `"1 0.6 1 0.4"` is four different notes. The orbit's own knobs (`katp`, the bus doors) are per
+ * ORBIT and belong to the first voice that sounds there, so they cannot articulate a line.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ *
+ * @scope voice
+ * @category dynamics
+ * @tags pregain, drive, touch, level, oscillator
+ */
+@KlangScript.Function
+fun SprudelPattern.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPregain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets how hard each event is played into its instrument.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ */
+@KlangScript.Function
+fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pregain(amount, callInfo)
+
+/**
+ * How hard each event is played into its instrument, as a value other setters can read.
+ *
+ * Bare `pregain` reads what the chain has set so far, so it comes after whatever set the slot
+ * (`pregain(...)`, `oscparam("pregain", ...)`). Call it, `pregain(...)`, to set the slot; a mapper
+ * argument applies to the slot, and on an event that has none it does nothing, so set one first.
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * note("c3 e3").sound(amp).pregain(1).pregain(mul("1 0.5")).gain(0.3)   // the second note softer in
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * note("c3 e3").sound(amp).pregain("1 0.5").gain(pregain.mul(0.3))      // and quieter out with it
+ * ```
+ *
+ * @scope voice
+ * @category dynamics
+ * @tags pregain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("pregain")
+object pregain : FieldAccessor({ it.oscParams?.get("pregain") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets how hard each event is played into its instrument.
+     *
+     * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+     */
+    @KlangScript.Invoke
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.pregain(amount, callInfo) }
+}
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the pregain after the previous mapper.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ */
+@KlangScript.Function
+fun PatternMapperFn.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pregain(amount, callInfo) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 

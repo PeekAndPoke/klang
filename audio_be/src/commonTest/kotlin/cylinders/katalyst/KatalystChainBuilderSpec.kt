@@ -23,13 +23,14 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  * [KatalystChainBuilder] is the one mapping from a declared stage to the effect the engine runs
  * for it. What this spec pins:
  *
- *  - the classic chain builds the seven historical effects, in the DSL's order, the duck outside
- *    the serial list;
+ *  - the classic chain builds the historical effects plus its unity group fader, in the DSL's
+ *    order, the duck outside the serial list;
  *  - nothing that is lazy today becomes eager at build (no ring, no reverb network);
  *  - a chain declaring two ducks runs ONE, and the writer that configures it is bound to THAT
  *    instance and not to the one the "last wins" rule dropped;
  *  - `eq` and `gain` build their own stages and are slot-driven on a voice-driven chain too,
- *    because neither ever had a voice field.
+ *    because neither ever had a voice field (which is what lets the classic chain carry a fader
+ *    a pattern can move).
  *
  * The cylinder's side of the mapping is [KatalystClassicPipelineOrderSpec]'s job.
  */
@@ -61,7 +62,7 @@ class KatalystChainBuilderSpec : StringSpec({
 
     // ── The classic chain ────────────────────────────────────────────────────────────────────────
 
-    "the classic chain builds the seven historical effects, in DSL order, the duck outside the list" {
+    "the classic chain builds the historical effects and the fader, in DSL order, the duck outside the list" {
         val chain = build(KatalystDsl.classic)
 
         chain.pipeline.map { it::class.simpleName } shouldBe listOf(
@@ -71,6 +72,9 @@ class KatalystChainBuilderSpec : StringSpec({
             "KatalystReverbEffect",
             "KatalystPhaserEffect",
             "KatalystCompressorEffect",
+            // The group fader, last in the serial list since 2026-09-19. Unity there, so it is
+            // bit-transparent; what it buys is `katp("gain.gain", x)` on any orbit.
+            "KatalystGainEffect",
         )
 
         // The duck is built, and it is NOT in the serial list: `Cylinders` runs it after every
@@ -111,9 +115,11 @@ class KatalystChainBuilderSpec : StringSpec({
     // ── The duck: declared in the list, run outside it, last one wins ────────────────────────────
 
     "the classic chain installs one writer per declared stage" {
-        // Seven stages, seven writers. The count is what the duplicate-duck row below discriminates
-        // against, so it is pinned here on the chain everything else is measured from.
-        build(KatalystDsl.classic).writerCount shouldBe 7
+        // Eight stages, eight writers (seven owner writers plus the fader's slot writer, which is
+        // slot-driven on every chain because a gain stage has no voice field). The count is what
+        // the duplicate-duck row below discriminates against, so it is pinned here on the chain
+        // everything else is measured from.
+        build(KatalystDsl.classic).writerCount shouldBe 8
     }
 
     "two declared ducks: ONE duck stage, ONE writer, and the dropped duplicate is never configured" {
@@ -199,12 +205,12 @@ class KatalystChainBuilderSpec : StringSpec({
     }
 
     "eq and gain get a SLOT writer on a voice-driven chain, because they have no voice field" {
-        // The classic chain declares neither, so this is the mixed case a host can still build:
-        // seven owner writers plus the ONE slot writer of the declared `eq`, which is what makes
-        // that eq work on a chain the cylinder was born with.
+        // The mixed case: the classic block's seven owner writers and its own fader's slot
+        // writer, plus the ONE slot writer of the declared `eq`, which is what makes that eq work
+        // on a chain the cylinder was born with.
         val chain = build(KatalystDsl.of(*KatalystDsl.classic.stages.toTypedArray(), KatalystStageDsl.Eq()))
 
-        chain.writerCount shouldBe 8
+        chain.writerCount shouldBe 9
     }
 
     "a bare eq and a unity gain leave every sample of every buffer exactly as they found it" {

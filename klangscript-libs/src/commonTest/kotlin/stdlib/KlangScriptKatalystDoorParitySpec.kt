@@ -61,10 +61,29 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 )
     }
 
+    "k.classic().gain(0.8) is classic's unity slot followed by the author's own fader" {
+        // The classic block has ended in a `Gain` at unity since 2026-09-19 (the signal-flow
+        // plan's spot C), so an author appending their own fader gets TWO gain stages, in written
+        // order, and the engine multiplies them. Nothing collapses them: the first is a SLOT a
+        // pattern can move with `katp("gain.gain", x)` and the second is the author's constant.
+        // What the two then do to the mix is `KatalystClassicGainStageSpec`'s.
+        val chain = ks("Katalyst(k => k.classic().gain(0.8))")
+
+        chain shouldBe KatalystDsl(KatalystDsl.classic.stages + KatalystStageDsl.Gain(c(0.8)))
+
+        val faders = chain.stages.filterIsInstance<KatalystStageDsl.Gain>()
+
+        faders.size shouldBe 2
+        (faders[0].gain as IgnitorDsl.Param).name shouldBe "gain.gain"
+        faders[1].gain shouldBe c(0.8)
+    }
+
     "classic() lands its block at most ONCE per builder, on both doors" {
-        // Decided with the maintainer, 2026-09-18. Seven duplicated stages read the SAME slot
+        // Decided with the maintainer, 2026-09-18. Its duplicated stages read the SAME slot
         // names, so a doubled classic ran reverb into reverb and two compressors in series off one
-        // `reverb(0.3)`. The guard is in the builder, so it holds however the author gets there.
+        // `reverb(0.3)`. The guard is a contiguous-sublist check in the builder, so it holds
+        // however the author gets there, and it held when the block grew from seven stages to
+        // eight (2026-09-19).
         ks("Katalyst(k => k.classic().classic())") shouldBe KatalystDsl.classic
         ks("Katalyst(k => k.classic().classic().classic())") shouldBe KatalystDsl.classic
 

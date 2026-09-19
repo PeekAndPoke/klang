@@ -125,7 +125,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-four accessor is an object with a call form and the first-step operators" {
-        listOf("density", "orbit", "analog", "duty", "onepole").forEach { name ->
+        listOf("density", "orbit", "analog", "duty", "onepole", "pregain").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("

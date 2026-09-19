@@ -7,9 +7,11 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
@@ -24,6 +26,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import kotlin.math.abs
 
 /**
  * The orbit's **param state** (Katalyst step 5a): what `.katp` and the bus doors write reaches a
@@ -45,10 +48,15 @@ class CylinderKatalystParamsSpec : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
-    /** `Katalyst(k => k.classic().gain(1.0))`: the classic stages, so every knob is a named slot. */
-    val declaredClassic = KatalystDsl(
-        KatalystDsl.classic.stages + KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.0))
-    )
+    /**
+     * `Katalyst(k => k.classic())`: the classic stages, so every knob is a named slot.
+     *
+     * It used to append a `gain(1.0)` of its own, because the classic chain had no gain stage and
+     * these rows wanted one. Since 2026-09-19 it carries one at unity, so the appendix went with
+     * the scaffolding rule; `declaredClassic` stays as a name for "the classic chain, DECLARED",
+     * which is what the `voiceDriven = false` build below makes of it.
+     */
+    val declaredClassic = KatalystDsl.classic
 
     fun build(dsl: KatalystDsl, voiceDriven: Boolean = false): KatalystChain = KatalystChainBuilder.build(
         dsl = dsl,
@@ -254,9 +262,14 @@ class CylinderKatalystParamsSpec : StringSpec({
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
 
-    // ── The BORN-WITH chain ignores it, a DECLARED classic does not ──────────────────────────────
+    // ── The BORN-WITH chain reads the state ONLY for a stage with no voice field ─────────────────
+    //
+    // The exception is not an oversight: `gain` and `eq` never had a per-voice twin for an owner
+    // voice to drive, so they are slot-driven on every chain (`KatalystChainBuilder`), and that is
+    // what lets `katp("gain.gain", x)` reach the fader of an orbit that declares nothing. The
+    // rule's one home is the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
 
-    "the BORN-WITH chain ignores the state: it is voice-driven until step 5b" {
+    "the BORN-WITH chain ignores the state for every stage that HAS a voice field" {
         val rig = Rig()
 
         // No `requestChain`, so the cylinder runs the chain it was born with. The voice carries a
@@ -264,6 +277,47 @@ class CylinderKatalystParamsSpec : StringSpec({
         rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
 
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldBeNull()
+    }
+
+    "...and reads it for the one stage that has none: the fader halves the orbit's mix, exactly" {
+        // The discriminator for the exception above, on the CYLINDER path rather than at chain
+        // level: no declaration, no `requestChain`, just a voice whose `katalystParams` name the
+        // group fader.
+        //
+        // A SCALING LAW, not an identity: both sides are cylinder renders, so what this pins is
+        // that the orbit's mix is LINEAR in the slot, not that any particular sample is right.
+        // The independent anchor for the samples themselves is the byte-identity row below, which
+        // compares a born-with cylinder against itself under a state its voice-driven stages own.
+        fun render(params: Map<String, Double>?): DoubleArray {
+            val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+
+            cylinder.updateFromVoice(
+                VoiceTestHelpers.createSynthVoice(katalystParams = params),
+                blockStart = 0.0,
+            )
+
+            for (i in 0 until blockFrames) {
+                cylinder.mixBuffer.left[i] = 0.5 * (if (i % 8 < 4) 1.0 else -1.0)
+                cylinder.mixBuffer.right[i] = 0.25 * (if (i % 8 < 4) 1.0 else -1.0)
+            }
+
+            cylinder.processEffects()
+
+            return cylinder.mixBuffer.left.copyOf()
+        }
+
+        val unity = render(null)
+        val halved = render(mapOf("gain.gain" to 0.5))
+
+        withClue("not-silence floor") { unity.maxOf { abs(it) } shouldBeGreaterThan 0.1 }
+
+        withClue("engagement: the write has to move the mix at all") {
+            halved.toList() shouldNotBe unity.toList()
+        }
+
+        for (i in unity.indices) {
+            withClue("sample $i") { halved[i].toRawBits() shouldBe (unity[i] * 0.5).toRawBits() }
+        }
     }
 
     "a DECLARED classic resolves the state: the same stages, listening to the slots" {
@@ -285,7 +339,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         }
     }
 
-    "the born-with chain renders byte-identically with and without a state" {
+    "the born-with chain renders byte-identically with a state its voice-driven stages own" {
         fun render(params: Map<String, Double>?): DoubleArray {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
@@ -311,6 +365,9 @@ class CylinderKatalystParamsSpec : StringSpec({
             return cylinder.mixBuffer.left.copyOf()
         }
 
+        // Every slot here belongs to a stage the born-with chain drives from the VOICE. The one
+        // exception, `gain.gain`, is deliberately absent and has its own row above: writing it
+        // here would (correctly) make this row fail.
         render(mapOf("reverb.size" to 9.0, "delay.time" to 0.4, "compressor.ratio" to 12.0)) shouldBe render(null)
     }
 })

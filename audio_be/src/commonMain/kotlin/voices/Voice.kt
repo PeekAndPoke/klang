@@ -75,9 +75,13 @@ class Voice(
      * While this voice holds the orbit's lease, a DECLARED chain resolves every `Param` knob
      * against it (`KatalystChain.applyOwner`), so this is the orbit's param state and it dies with
      * the voice. Null when the pattern wrote no slot, which is the same answer as an empty map: the
-     * chain's authored defaults. The chain a cylinder is BORN with ignores it; a chain declared from
-     * `Katalyst.classic()` reads it (Katalyst step 5a; step 5b takes the voice fields off the wire
-     * and makes every chain read this).
+     * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
+     * `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it for a stage with
+     * no voice field (today `gain`, and `eq` wherever a chain declares one), and the chain a
+     * cylinder is BORN with takes every
+     * other knob from the voice fields, while a chain declared from `Katalyst.classic()` reads all
+     * of them (Katalyst step 5a; step 5b takes the voice fields off the wire and makes every chain
+     * read this).
      */
     val katalystParams: Map<String, Double>? = null,
 
