@@ -748,7 +748,9 @@ complexity outranks the duplication.
     Suspects, unmeasured: the new bank's cold start rings up for longer than 12 ms at the body's
     low modes; a second change mid-crossfade drops the oldest bank; a linear blend of two
     uncorrelated materials dips about 3 dB. First task of the filter swap's conversion: a render
-    that alternates materials, measured for sample-to-sample jumps, at 12 ms and at 50 ms.
+    that alternates materials, measured for sample-to-sample jumps, at 12 ms and at 50 ms. The
+    dip is NOT a defect to fix (maintainer, 2026-09-19): a glide is a safety net against clicks,
+    not a loudness keeper, so the blend stays linear (`docs/plans/knob-glide.md` section 1).
   - **One common resonator bank for body, vowel, and later a user surface where formants are
     specified one by one.** Body (`BodyFilter`) and vowel (`FormantFilter`) are already the same
     thing under the hood (a parallel bank of `SvfBPF` bandpasses in a `ParallelMixFilter`); they

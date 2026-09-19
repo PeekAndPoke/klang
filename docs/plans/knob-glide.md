@@ -10,6 +10,13 @@ owner change can move every knob of the orbit's chain at once. Today most of the
 clicks (a level) or zips (a coefficient). The rule: every orbit knob GLIDES to its new value over
 `KNOB_GLIDE_SECONDS = 0.05` (a constant in `audio_bridge/constants/`, one day perhaps a user knob).
 
+**What a glide is for (maintainer, 2026-09-19): a safety net against clicks and sudden unwanted
+sounds, not a sound-proof one.** It does NOT preserve loudness: a linear blend of two different
+sounds may dip by about 3 dB in the middle, and that is fine. No equal-power law, no loudness
+compensation, no cleverness. Different-sounding voices that must not disturb each other belong on
+different orbits; that is the user's call, and the glide does not try to make one orbit behave
+like two.
+
 ## 2. The rule, per kind of knob
 
 | kind | examples | how it glides | cost |
