@@ -384,9 +384,12 @@ class KlangBenchmark(
                     )
                 ),
                 adsr = AdsrDef.defaultSynth,
-                // Enable reverb send (expensive mixing)
+                // Enable reverb send (expensive mixing). The FIELD is the per-voice send amount;
+                // the orbit's reverb stage reads the SLOTS (Katalyst step 5b-1), so a benchmark
+                // that wants the room to run writes both.
                 reverb = 0.2,
-                reverbSize = 0.5
+                reverbSize = 0.5,
+                katalystParams = mapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
             )
         )
         scheduler.scheduleVoice(voice)

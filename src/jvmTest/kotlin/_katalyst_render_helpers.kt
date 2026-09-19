@@ -12,7 +12,7 @@ import kotlin.math.abs
 /**
  * The three moves every small Katalyst render row makes: render a sprudel song offline, compare two
  * renders sample for sample, and read a render's peak so a row can prove it is asserting about
- * sound. Shared by [KatalystDeclaredBodyParitySpec] and [KatalystBodyNonFiniteWetSpec], which the
+ * sound. Shared by [KatalystDoorFillRenderSpec] and [KatalystBodyNonFiniteWetSpec], which the
  * signal-flow plan's §12 gives different lifetimes (a migration fixture and a contract), so the
  * helpers live apart from both.
  *

@@ -1,5 +1,146 @@
 # Klang Audio — Memory
 
+## The born-with chain is slot-driven: one way a bus knob reaches a stage (2026-09-19)
+
+Katalyst step 5b-1. Before it there were two paths into an orbit's stages: a DECLARED chain read
+the owner voice's `katalystParams`, and the chain a cylinder is BORN with read the owner voice's
+bus FIELDS (`voice.body`, `voice.reverb`, ...). Now there is one, the map, and the voice-driven
+writers, the `voiceDriven` flag and the `KatalystOwnerApply` interface are deleted.
+
+- **What the fields still do, and who reads them.** Two readers are left in the whole backend, and
+  neither is the bus. `SendRenderer` reads `voice.delay.amount` and `voice.reverb.amount`, the
+  per-VOICE send amounts (step 5b-2 takes those). `FilterPipelineBuilder` reads `voice.phaser`, all
+  five knobs, for the PER-VOICE phaser of a custom pipeline that declares `StageDsl.Phaser`; no
+  built-in preset does (maintainer, 2026-08-24: the phaser is a bus effect, and running it on both
+  double-applied the dry floor). Nothing reads `voice.body`, `voice.vowel`, `voice.compressor`,
+  `voice.ducking`, `Voice.Delay.time/feedback/cap` or `Voice.Reverb.size/lowpass` any more. They
+  are still BUILT by `VoiceFactory` (so the untouched-voice table stays a live oracle for the
+  classic chain's slot defaults) and still carried on the wire until 5b-3.
+- **`Katalyst(k => k.classic())` is a bit-exact no-op now**, and the 2026-09-18 rule that forbade
+  that (`chainFor` must never hand back the born-with instance) is retired with its reason. That
+  rule stood on the born-with chain being voice-driven, which made a content-classic declaration
+  inert; with both slot-driven the two are one chain, so `chainFor` returns `classicChain` for
+  content equal to `KatalystDsl.classic.stages` and `install` / `beginFade` return early when the
+  arriving chain is the one already in service. The price of NOT doing it would have been a
+  crossfade that is not bit-transparent (the arriving room and ring warm from empty) for a
+  declaration that changes nothing. Measured: the same song with and without the declaration
+  renders to the same 16-bit hash.
+- **Producers that write a bus FIELD and no slot lose their bus effect.** The sprudel doors write
+  both, so no song is affected (measured: 15 built-in songs, 3059 events over 8 cycles, zero
+  field-without-slot mismatches; 953 playable doc examples, 19642 events, three mismatches, all
+  `reverb.size` after a `katp` that the door's field fill then overwrote, which is the intended
+  direction). The non-sprudel producers that RENDER are `WarmupRunner`, `IgnitorBenchmark` and
+  `KlangBenchmark`, and all three write slots now; `WorkletSerializationBenchmark` already did, and
+  `VoiceDataCopyBenchmark` still writes fields only on purpose, because it measures the cost of
+  copying a `VoiceData` and never renders one. A raw `VoiceData` with bus fields and no map now reaches a silent
+  bus, which is the new wire truth and a guarded row (`CylinderKatalystParamsSpec`).
+  One thing a slot cannot express: a hand-built `FilterDef.Body` with private bands. A body is an
+  INDEX into the shared catalogue, so the warmup names `wood` and `a` instead of inventing modes.
+- **What a non-finite bus knob does, and why every difference in that family is an improvement.**
+  One rule covers all of them: HEAD let a non-finite knob fall through to the effect's own setter,
+  and those setters DROP a non-finite write and keep whatever was there, which on an orbit that had
+  played before is the previous owner's value; the tree substitutes the shared constant before the
+  setter sees it, so the result no longer depends on what the orbit played earlier. Verified in
+  `git show HEAD:` for each, and the per-family detail, because they are not all the same:
+  - `phaser.wet`: `Phaser.depth`'s setter returns on non-finite (`Phaser.kt`, "NaN/Inf silently
+    ignored"), so HEAD kept the depth it had; the tree reads it as unset and writes `PHASER_WET`,
+    which is off. On a FRESH orbit both are off, so the difference is the stale-depth case only.
+  - `phaser.floor`: stored RAW by `Phaser.floor` on purpose, and `WetDryMix.dryCoeff` coerces a
+    non-finite floor to **0.0**, which swaps the ADDITIVE law (floor 1.0: the dry signal passes at
+    full level beside the wet) for the CROSSFADE law `max(floor, cos(depth*pi/2)^2)`. Verified in
+    the code, exponent included: that is about unity just above the engage threshold, -1.4 dB of
+    dry at depth 0.25, -6 dB at 0.5, -20 dB at 0.8, and silent only at depth 1.0. So it is audible
+    at large depths and nearly inaudible at small ones, NOT the "full notch" an earlier draft of
+    this entry claimed. The tree writes `PHASER_FLOOR` (1.0). Reachable only while the phaser is
+    engaged, because the floor is written only then.
+  - `compressor.*`: **NOT what it looks like, and the claim that HEAD put a NaN gain reduction into
+    the orbit mix is wrong.** `Compressor` guards every knob itself, `guardOr(value, <the same
+    constant>)` in the constructor and `if (!value.isFinite()) return` in each setter, so a fresh
+    compressor at HEAD already resolved to the same five numbers the tree's `finiteOrNull` plus
+    `Voice.Compressor.fromParams` produce. The render rows agree: a `compressor(ratio = "NaN")` row
+    is bit-identical on both sides. What differs is the same stale case as the phaser's: a SECOND
+    owner writing a non-finite knob left the first owner's value at HEAD.
+  - `delay.time` and `reverb.size`: the two the previous entry's bullet on the master asymmetry
+    covers; those differ on a fresh orbit too, because `VoiceFactory` substituted the constant
+    where the slot path reads the non-finite value as the declared off state.
+  - **A non-finite `wet`, and this one is NOT a strict improvement, which is why it is written out
+    rather than folded into the list.** `reverb("NaN")`, `delay("NaN")`, `katp("reverb.wet", NaN)`.
+    At HEAD the field was non-null, so the effect counted as TOUCHED and `orDefault` swallowed the
+    NaN: the room ran at `REVERB_WET` / `REVERB_SIZE`, and every voice on the orbit was heard in
+    it. On the tree `KatalystKnob.written` is false for a non-finite value, so the stage is off for
+    the whole orbit, and another voice sending into it loses its room. That is a real loss, not a
+    scrub: what it buys is the slot vocabulary being consistent with itself, "non-finite is unset"
+    on every knob including this one, which is what lets a cleared slot read as untouched at all.
+    No ordinary spelling produces it: a mapper over an unset field yields null, a rest calls no
+    setter, the doors fill finite constants, and KlangScript division by zero throws; it takes a
+    string atom (`"NaN"`, `"Infinity"`) or a hand-written `katp`. Guarded by
+    `KatalystSlotResolverSpec`'s "a non-finite WRITTEN wet is unset, which is neither touched nor
+    an amount, so OFF".
+- **The migration fixtures that became vacuous, and where their coverage went.** The content-classic
+  shortcut makes any test that compares "with a classic declaration" against "without" true by
+  construction. One file in the repository did that, `KatalystDeclaredBodyParitySpec`, whose three
+  such rows were the acceptance of steps 5a-2 and 5a-3; they are retired and the file is renamed
+  **`KatalystDoorFillRenderSpec`** for what it pins now, the DOOR's fill against the same call with
+  every knob spelled out at the shared constant. Verified by breaking both substitutions: the
+  door's fill turns the render rows red, and the engine's own `KatalystSlots.bodyDef` substitution
+  turns `KatalystClassicMatchesUntouchedVoiceSpec`'s hand-written-slot row red and leaves the
+  renders green. A search of every `classic()` and every `maxDiff` / `renderSong` site in all test
+  source sets found no other such comparison.
+- **Five render rows differ from HEAD, and every one is a documented family** (27 minimal
+  multi-orbit rows, a one-off fixture deleted with the step): `reverb(wet = 0)` mid-phrase and
+  `katp` reaching the born-with chain (both since RESOLVED, see the send-gate bullet below), plus
+  the non-finite `reverb.size`, `delay.time` and `duck.attack` rows above. The other 22 rows,
+  every ordinary door form included, are bit-identical.
+- **`wet` stayed a PER-VOICE send, and the gate says so** (review round 1). The first cut of this
+  step gated the two send stages on `sendIsOn(wet) = wet > 0`, which silenced the room for every
+  voice on an orbit as soon as the voice HOLDING THE LEASE wrote `reverb(0)`: `stack(pad.reverb(0),
+  lead.reverb(0.4))` lost the lead's room, and swapping the two arms of the stack changed the song,
+  because the lease is first-rendered-wins. `VoiceFactory` ran the stage on a TOUCHED field (the
+  field non-null, a written 0 included) and let `time` / `size` decide, so the slot twin of touched
+  is `KatalystKnob.written`: the owner's map carries the key with a FINITE value. `sendStageRuns`
+  is `written || (finite && > 0)`, and the second half keeps the 2026-09-17 decision for AUTHORED
+  constants, so a declared `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents
+  nothing. That semantic change belongs to 5b-2, where `wet` becomes the insert amount and the
+  maintainer listens.
+- **One parity asymmetry, recorded, not fixed**: a non-finite `delay.time` / `reverb.size` is the
+  orbit's declared OFF state, while the MASTER's same knob substitutes the shared constant
+  (`MasterChain.buildDelay`'s `finite(...)`). It follows from the Katalyst slot rule ("non-finite
+  is the declared off state", the reason the `Param` leaf guard was NOT extended to this map) and
+  is unreachable from either door, both of which fill with numbers. `SendEffectDefaultsParitySpec`
+  states it. Second half of the same corner: `Reverb.normalizeSize` guards NaN (to 0.0) but CLAMPS
+  `+Infinity` (to 1.0), so an infinite size is the largest room rather than "unset".
+- **The NaN guard in `KatalystBodyEffect.configure` / `KatalystFormantEffect.configure` is now
+  defence in depth.** It was added for the born-with voice path, where `toVoiceData` could hand a
+  non-finite mix through; the only production caller left is `KatalystSlots.bodyDef` / `vowelDef`,
+  which substitute one layer up. Kept, as `KatalystDelayEffect.configure`'s own guard is kept, for
+  the same reason its KDoc gives: it is the stage's contract for a direct caller. Still tested by
+  `KatalystBodyEffectSpec` / `KatalystFormantEffectSpec`, which call `configure` directly.
+- **Cost, stated per block and per owner change, because they are different.**
+  - **Per block: nothing allocates, on either side.** The shape changed from one owner lambda per
+    stage to one `apply()` per stage, the same count, both writing numbers already in hand.
+  - **Per OWNER CHANGE the undeclared orbit newly pays a resolve**, and every event carries a fresh
+    map instance, so on a busy orbit that is once per note. The classic chain has 27 knobs
+    (body 3, vowel 3, delay 4, reverb 3, phaser 5, compressor 5, gain 1, duck 3), so a resolve is
+    27 map lookups plus up to four small allocations, and only for the stages the orbit actually
+    uses: a `FilterDef.Body` and a `FilterDef.Formant` when a material or a vowel is named, a
+    `Voice.Compressor` when any of its five is set, a `Voice.Ducking` when an orbit is named. An
+    orbit whose voices write no bus door allocates none of them. HEAD's born-with path resolved ONE
+    knob there (the fader's) and allocated nothing in the chain.
+  - **`KatalystChain.resolvedFrom` now holds the owner's map on every orbit**, not only declared
+    ones, until `reset()` or `retire()` drops it. It is the identity gate, and it is a reference to
+    a map the voice owns anyway.
+  - **`VoiceFactory` still builds `voice.body`, `voice.vowel`, `voice.compressor` and
+    `voice.ducking` per voice for no reader at all** until 5b-3 takes the fields off the wire.
+  - `writeCompressor` is the known open item (five setters, about fifteen `exp()` per block on a
+    running orbit, step 5c's to fix). It does NOT newly run on an orbit a song already compressed:
+    the voice-driven path called the very same `writeCompressor` on every block of every active
+    orbit, and a door writes the field and the slot together, so the set of orbits whose compressor
+    resolves to settings is unchanged. What IS newly reachable is a raw `katp("compressor.ratio", 8)`
+    on an undeclared orbit, which is the feature.
+  - Measured with `runSongBenchmark --args=ledger` on both trees: every row inside the run-to-run
+    spread (guitar melody 5.9 both, marimba 4.3 to 4.2, bass 11.8 to 12.1 ns/s/pass). No ledger row
+    was appended; this is a step, not a phase.
+
 ## The pregain slot, the leaf guard, and the orbit's group fader (2026-09-19)
 
 Second half of the signal-flow plan's phase 2 (spots A and C). The first half is the entry below.
@@ -122,7 +263,8 @@ Second half of the signal-flow plan's phase 2 (spots A and C). The first half is
   one thing it cannot cover: it runs outside the list, in the cross-orbit pass, so a ducked orbit is
   ducked after its own fader. Step 5b does not change either fact.
 - **Every chain has the fader, the born-with one included**, because a gain stage is slot-driven
-  whatever `voiceDriven` says (it never had a voice field). So `katp("gain.gain", 0.5)` reaches a
+  on every chain (it never had a voice field, and since step 5b-1 no stage does). So
+  `katp("gain.gain", 0.5)` reaches a
   group fader on an orbit that declares nothing at all, which is measured end to end through the
   offline renderer as well as at chain level.
 - Identity, measured: three minimal multi-orbit rows (no declaration, one orbit declaring
@@ -862,8 +1004,10 @@ Status: **Complete.** `Voice` (merged from Voice interface + VoiceImpl) runs a `
 Pitch renderers → IgniteRenderer → Filter renderers → SendRenderer.
 Bus pipeline: composable `KatalystEffect` pipeline (`cylinders/katalyst/`); since 2026-09-17 (Katalyst DSL
 step 2) the cylinder builds its chain from `KatalystDsl.classic` through `KatalystChainBuilder` into a
-`KatalystChain` (stage order from the DSL, duck outside the list, `Eq`/`Gain` pass-through until step 4),
-still driven by the owner voice's fields; declared chains apply from step 3 (`docs/tasks/katalyst-dsl.md`).
+`KatalystChain` (stage order from the DSL, duck outside the list). Declared chains apply from step 3, and
+since step 5b-1 (2026-09-19) EVERY chain takes its knobs from the orbit's param state, the born-with one
+included: the voice's bus fields are not a knob source any more (`docs/tasks/katalyst-dsl.md`, and the
+top entry of this file).
 `VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
 Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by
 BlockRenderer implementations. ~426 tests across 35 files.

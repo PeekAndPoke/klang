@@ -6,14 +6,18 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+
+/** This voice's orbit slots plus [more]: the warmup builds its variants by adding to one base. */
+private fun VoiceData.withKatalystParams(vararg more: Pair<String, Double>): VoiceData =
+    copy(katalystParams = (katalystParams ?: emptyMap()) + more)
 
 /**
  * Primes the audio render hot path before the first real voice arrives.
@@ -156,6 +160,17 @@ class WarmupRunner(
                     // behind the block it is promoted for, and `k * blockSec` can land an ulp before
                     // the clock's own `k * frames / sampleRate`.
                     val start = (orbit + 0.5) * blockSec
+                    // The orbit chain reads its knobs from `katalystParams` alone since Katalyst
+                    // step 5b-1, so the warmup writes SLOTS, not the bus fields: with fields only,
+                    // this warmup would warm the voice strip and leave every orbit stage cold, and
+                    // no ring and no reverb network would be rented in the warmup window, which is
+                    // most of what it is for. The send AMOUNTS stay fields until step 5b-2, so
+                    // `delay` and `reverb` are written on both sides here.
+                    //
+                    // The body and the vowel are named through the shared catalogues rather than
+                    // by hand-built bands, because a slot carries an INDEX and there is no spelling
+                    // for a private band list on the bus. Warming the catalogue lookup is what a
+                    // real song does anyway.
                     val base = VoiceData.empty.copy(
                         sound = WARMUP_SOUNDS[orbit % WARMUP_SOUNDS.size],
                         freqHz = 220.0 + 20.0 * orbit,
@@ -164,16 +179,35 @@ class WarmupRunner(
                         cutoff = 2000.0,
                         resonance = 0.3,
                         delay = 0.5,
-                        delayTime = 0.3,
-                        delayFeedback = 0.2,
                         reverb = 0.5,
-                        reverbSize = 0.6,
+                        katalystParams = mapOf(
+                            "delay.wet" to 0.5,
+                            "delay.time" to 0.3,
+                            "delay.feedback" to 0.2,
+                            "reverb.wet" to 0.5,
+                            "reverb.size" to 0.6,
+                        ),
                     )
                     val data = when (orbit % EXTRA_EFFECT_KINDS) {
-                        0 -> base.copy(phaser = 0.5, phaserDepth = 0.5)
-                        1 -> base.copy(compressorThreshold = -18.0, compressorRatio = 4.0, compressorKnee = 6.0, compressorAttack = 0.01, compressorRelease = 0.2)
-                        2 -> base.copy(filters = FilterDefs(listOf(FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 220.0, db = 6.0, q = 8.0), FilterDef.Body.Mode(freq = 440.0, db = 3.0, q = 6.0)), mix = 0.5))))
-                        else -> base.copy(filters = FilterDefs(listOf(FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 700.0, db = 0.0, q = 8.0), FilterDef.Formant.Band(freq = 1200.0, db = -6.0, q = 10.0)), mix = 0.5))))
+                        0 -> base.withKatalystParams("phaser.rate" to 0.5, "phaser.wet" to 0.5)
+
+                        1 -> base.withKatalystParams(
+                            "compressor.threshold" to -18.0,
+                            "compressor.ratio" to 4.0,
+                            "compressor.knee" to 6.0,
+                            "compressor.attack" to 0.01,
+                            "compressor.release" to 0.2,
+                        )
+
+                        2 -> base.withKatalystParams(
+                            "body.material" to BodyMaterials.indexOf("wood"),
+                            "body.wet" to 0.5,
+                        )
+
+                        else -> base.withKatalystParams(
+                            "vowel.vowel" to VowelBands.indexOf("a"),
+                            "vowel.wet" to 0.5,
+                        )
                     }
                     ScheduledVoice(
                         playbackId = WARMUP_PLAYBACK_ID,

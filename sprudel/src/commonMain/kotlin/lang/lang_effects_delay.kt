@@ -29,8 +29,9 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
  * echo is ON.
  *
- * Fills the voice FIELDS with the same four constants, so the two sources agree; they stay until
- * step 5b takes them off the wire, and the chain a cylinder is BORN with still reads those.
+ * Fills the voice FIELDS with the same four constants, so the two sources agree. Since step 5b-1
+ * the orbit's line reads the SLOTS alone; the `delay` field is the per-voice send AMOUNT until step
+ * 5b-2, and the rest leave the wire in 5b-3.
  *
  * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
  * these constants.

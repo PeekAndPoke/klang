@@ -65,9 +65,18 @@ class MasterOrbitReverbParitySpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = 440.0,
                     sound = "triangle",
+                    // The orbit's reverb stage reads the SLOTS (Katalyst step 5b-1), on the same
+                    // authored 0-to-10 scale the master stage takes, which is the whole point of
+                    // this spec; the FIELD is the per-voice send amount and is carried too, as
+                    // the `reverb(...)` door writes both until step 5b-2.
                     reverb = 0.5,
                     reverbSize = authored,
                     reverbLowpass = lowpass,
+                    katalystParams = buildMap {
+                        put("reverb.wet", 0.5)
+                        put("reverb.size", authored)
+                        lowpass?.let { put("reverb.lowpass", it) }
+                    },
                 ),
                 startTime = 0.0,
                 gateEndTime = 1.0,
@@ -164,7 +173,9 @@ class MasterOrbitReverbParitySpec : StringSpec({
             cylinder.updateFromVoice(
                 VoiceTestHelpers.createSynthVoice(
                     blockFrames = blockFrames,
-                    reverb = Voice.Reverb(amount = 0.6, size = Reverb.normalizeSize(authored)),
+                    // The slot carries the AUTHORED size, exactly as the master stage does, which
+                    // is what makes the two gates comparable at all.
+                    katalystParams = mapOf("reverb.wet" to 0.6, "reverb.size" to authored),
                 ),
                 blockStart = 0.0,
             )

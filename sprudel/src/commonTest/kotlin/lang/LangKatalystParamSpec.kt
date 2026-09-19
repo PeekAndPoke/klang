@@ -288,7 +288,7 @@ class LangKatalystParamSpec : StringSpec({
                 setOf("body.material", "body.wet", "body.floor")
         slot(b, "body.material") shouldBe BodyMaterials.indexOf("wood")
         slot(b, "body.wet") shouldBe 0.3
-        withClue("the material still reaches the voice field: the body stage is voice-driven on a born-with chain") {
+        withClue("the material still reaches the voice field, which the wire carries until step 5b-3") {
             b.queryArc(0.0, 1.0).first().data.body shouldBe "wood"
         }
 
@@ -317,7 +317,7 @@ class LangKatalystParamSpec : StringSpec({
     "body(material) alone fills wet and floor from the shared constants" {
         // Katalyst step 5a-3, the compound-door fill rule. Byte-identical to what the engine did
         // with an unset field, on both the voice path and the declared path, which is what
-        // `KatalystDeclaredBodyParitySpec` renders.
+        // `KatalystDoorFillRenderSpec` renders.
         val p = note("c3").body("wood")
         val data = p.queryArc(0.0, 1.0).first().data
 

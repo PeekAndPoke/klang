@@ -70,6 +70,10 @@ class KatalystFormantEffect(
             return
         }
 
+        // No production caller can hand this a non-finite value any more (Katalyst step 5b-1): the
+        // one caller is `KatalystSlots.vowelDef`, which substitutes VOWEL_WET and the floor one
+        // layer up, on every chain. Kept as the stage's contract for a DIRECT caller, which is what
+        // the effect specs are; the twin's KDoc carries the full note.
         // NaN-guards, before the comparison for the reason [KatalystBodyEffect.configure] spells
         // out: a NaN is never equal to itself, so an unguarded non-finite mix rebuilt the whole
         // bank on every block and restarted a crossfade that never completed, and being nullable

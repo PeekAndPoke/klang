@@ -29,10 +29,10 @@ import io.peekandpoke.klang.audio_bridge.constants.ORBIT_SILENCE_FLOOR
  * A `katalyst(…)` reference on the voice stream reaches [requestChain] (Katalyst step 3a,
  * 2026-09-17), which looks the name up in this cylinder's [KatalystRegistry]. On an IDLE orbit the
  * declared chain is installed at once; on a SOUNDING one it is faded in over [Crossfade] while the
- * outgoing chain rings out (step 3b, see [processEffects]). The chain a cylinder is BORN with reads
- * its knobs from the orbit's OWNER voice; every chain that arrives by name reads its own slots,
- * whatever it declares, `Katalyst.classic()` included (decided 2026-09-18). See
- * `KatalystChainBuilder` and [chainFor].
+ * outgoing chain rings out (step 3b, see [processEffects]). EVERY chain reads its knobs from the
+ * orbit's param state, the owner voice's `katalystParams`, the born-with one included (step 5b-1),
+ * and a declaration whose content IS the historical chain resolves back to the born-with instance
+ * rather than swapping. See `KatalystChainBuilder` and [chainFor].
  *
  * The duck runs in a separate pass after all orbits are processed (cross-orbit dependency).
  */
@@ -95,14 +95,15 @@ class Cylinder(
 
     /**
      * The chain this cylinder is born with, and the ONE chain it can always fall back to: the
-     * historical stages, driven by the orbit's owner voice. Never evicted and never cached by
-     * name, so a retired cylinder [adopt]ed for another orbit costs no build.
+     * historical stages. Never evicted and never cached by name, so a retired cylinder [adopt]ed
+     * for another orbit costs no build.
      *
-     * The ONLY voice-driven chain there is (decided 2026-09-18, review round 2). A pattern writing
-     * `Katalyst.classic()` DECLARES the same stages and gets a slot-driven chain of its own, so
-     * `katp` and the bus doors reach it; this instance serves the song that declares nothing.
+     * Slot-driven like every other chain since step 5b-1 (2026-09-19), so a bus door or a `katp`
+     * reaches it through the orbit's param state and nothing else. A pattern writing
+     * `Katalyst.classic()` declares the same stages and now resolves to THIS instance (see
+     * [chainFor]), which makes that declaration a no-op instead of a crossfade.
      */
-    private val classicChain: KatalystChain = buildChain(KatalystDsl.classic, voiceDriven = true)
+    private val classicChain: KatalystChain = buildChain(KatalystDsl.classic)
 
     /**
      * This orbit's effect chain: the stage instances own the orbit's DSP state (delay ring, reverb
@@ -145,10 +146,17 @@ class Cylinder(
      * retired (its rented units are back on the shelves), so an idle entry holds nothing but its
      * stage shells and is ready to go straight back into service.
      *
-     * Keyed by NAME and nothing else, [classic] included (decided 2026-09-18, review round 2):
-     * two different names that happen to carry equal content get one entry each. Content hashing a
-     * stage list per request would cost more than the one chain it saves, and a content-derived
-     * name (`KatalystDsl.uniqueId()`) is what a song normally carries anyway.
+     * Keyed by NAME: two different names that happen to carry equal content get one entry each.
+     * Content hashing a stage list per request would cost more than the one chain it saves, and a
+     * content-derived name (`KatalystDsl.uniqueId()`) is what a song normally carries anyway.
+     *
+     * ONE content is compared, and it never enters this map: a declaration equal to
+     * [KatalystDsl.classic] short-circuits to [classicChain] (see [chainFor], step 5b-1), so the
+     * born-with chain is neither cached nor evictable. [chainFor] runs that compare BEFORE the
+     * cache lookup, so it is paid on every request that gets past [requestChain]'s raw and key
+     * fast paths, which is every actual SWITCH: a live A/B between two declared names pays one
+     * list equality each way. It is O(stages) on a list of at most a dozen data classes, off the
+     * per-block path, and it buys the born-with chain never being rebuilt.
      */
     private val chains = mutableMapOf<String, KatalystChain>()
 
@@ -394,7 +402,7 @@ class Cylinder(
             // BEFORE the late-duck question below, and before any writer runs: `ducksWith` asks
             // the chain what its duck stage RESOLVES to, and until this owner's state has been read
             // that answer is the chain's authored default. Resolving does not write, so the
-            // handover order the carried envelope depends on is untouched, and the `applyOwner`
+            // handover order the carried envelope depends on is untouched, and the `applyParams`
             // further down re-uses this resolve (same map instance, gated).
             chain.resolveParams(voice.katalystParams)
 
@@ -422,27 +430,24 @@ class Cylinder(
                 duckingOut = null
             }
 
-            // The BORN-WITH chain resolves every knob from the owner voice, as this method's
-            // `applyBusEffects` did before the chain existed, EXCEPT for a stage that never had a
-            // voice field to resolve from (today `gain`, and `eq` wherever a chain declares
-            // one), which reads `katalystParams`
-            // on every chain; a DECLARED chain reads that map for everything and ignores the bus
-            // FIELDS (step 3a for the slots, step 5a for the state). The rule's one home is the
-            // `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
+            // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
+            // included (step 5b-1): one way for a bus knob to reach a stage, and the voice's bus
+            // FIELDS are not it. The rule's one home is the `katp` door's KDoc in
+            // `sprudel/lang/lang_katalyst.kt`.
             //
             // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the
             // owner's map, so it lives exactly as long as the owner does, and an orbit whose owner
             // died is back to what its chain authored. The chain re-resolves only when the map
             // INSTANCE changes (`KatalystChain.applyParams`), so a live owner costs one reference
             // compare per block and no lookup.
-            chain.applyOwner(voice)
+            chain.applyParams(voice.katalystParams)
 
             // The chain FADING OUT is still audible, so it is still configured (step 3b): the
             // owner keeps steering it until the fade ends. Not while it DRAINS: a live config
             // would take its send stages out of their Draining state and point them back at the
             // live sends, which is exactly the ring-out this cylinder is holding them for.
             if (!draining) {
-                outgoing?.applyOwner(voice)
+                outgoing?.applyParams(voice.katalystParams)
             }
         }
     }
@@ -464,8 +469,8 @@ class Cylinder(
      *    Never a silent fall back to classic: the caller must be able to tell "unknown, try again"
      *    from "known" (`KatalystRegistry`).
      *  - **The cylinder is idle**: installed now, which is the one moment no crossfade is needed.
-     *    A name whose CONTENT equals the historical chain is installed like any other, as a
-     *    slot-driven chain of its own: only the born-with chain is voice-driven (see [chainFor]).
+     *    A name whose CONTENT equals the historical chain resolves to the chain the cylinder was
+     *    born with, so the install is the name and nothing else (see [chainFor]).
      *  - **The cylinder is sounding**: faded in now (step 3b), over [Crossfade], while the chain
      *    it replaces fades out and then rings out (see [processEffects]).
      *  - **A fade or drain is already running**: queued in [pendingKey] and started when the one
@@ -891,10 +896,12 @@ class Cylinder(
         silentBlockCount = 0
 
         // A chain that was requested while this orbit was sounding lands HERE, the first moment
-        // the swap is inaudible. The install retires the outgoing chain (units back to the
-        // shelves) and frees the lease, which is the clean slate the reset below would reach, so
-        // only one of the two runs: resetting first would zero a ring we are about to hand back
-        // dirty on purpose (see KatalystChain.retire).
+        // the swap is inaudible. An install that SWAPPED retires the outgoing chain (units back to
+        // the shelves) and frees the lease, which is the clean slate the reset below would reach,
+        // so only one of the two runs: resetting first would zero a ring we are about to hand back
+        // dirty on purpose (see KatalystChain.retire). A pending key that resolved to the chain
+        // already in service installs nothing, and then the reset below is still owed: it is what
+        // keeps the next life's first owner from inheriting this life's DSP state.
         if (installPending()) {
             return
         }
@@ -922,8 +929,16 @@ class Cylinder(
 
     /**
      * Installs the queued chain if there is one and it can be resolved by now: at once on an idle
-     * orbit, through a crossfade on a sounding one. Returns true when a chain was installed or a
-     * fade was started, so the caller knows the lease and the outgoing chain are dealt with.
+     * orbit, through a crossfade on a sounding one.
+     *
+     * **What the return value means, per branch**, because the two are not quite the same question:
+     * the IDLE branch reports whether the chain actually CHANGED, which is what [tryDeactivate]
+     * needs (a content-classic key lands on the chain already in service and installs nothing, and
+     * the reset is then still owed); the SOUNDING branch reports that the key was CONSUMED, and
+     * says true even for a content-classic key on which [beginFade] no-ops. That asymmetry is
+     * harmless and deliberate: the only caller that reads the value is [tryDeactivate], which runs
+     * on an orbit that has just gone silent, so the sounding branch is unreachable from it. Giving
+     * [beginFade] a Boolean of its own would buy nothing today and one more thing to keep true.
      *
      * A name that is still unknown STAYS queued: the registration may yet arrive. So does one that
      * is waiting behind a running fade or drain.
@@ -949,9 +964,10 @@ class Cylinder(
             return true
         }
 
-        install(key, key, dsl)
-
-        return true
+        // What the caller needs is "did the chain change", not "was the key consumed": a
+        // content-classic key lands on the chain already in service (see [chainFor]), and
+        // [tryDeactivate] must still reach its own clean slate in that case (review round 1, m1).
+        return install(key, key, dsl)
     }
 
     /**
@@ -976,13 +992,24 @@ class Cylinder(
      * playing, and [chain] is either [classicChain] (never in [chains]) or the [chains] entry for
      * [chainKey].
      */
-    private fun install(key: String, rawName: String, dsl: KatalystDsl) {
+    private fun install(key: String, rawName: String, dsl: KatalystDsl): Boolean {
         val next = chainFor(key, dsl)
         val leaving = chain
 
-        chain = next
         chainKey = key
         chainRawName = rawName
+
+        // The requested chain is the one already in service, under a name it did not carry before:
+        // a content-classic declaration on an orbit still running the chain it was born with (see
+        // [chainFor]). Adopting the name is the whole of the install; retiring `leaving` below
+        // would hand back the ring and the network of the chain we just "installed", and resetting
+        // the lease would re-deal the orbit for nothing. FALSE, not true: the caller has to know
+        // that nothing was installed, or [tryDeactivate] would skip the reset that is its own job.
+        if (next === chain) {
+            return false
+        }
+
+        chain = next
 
         // Carried BEFORE the retire, which zeroes the stage's own count: the orbit's diagnostics
         // number is about this cylinder's life, not about its current chain.
@@ -993,6 +1020,8 @@ class Cylinder(
         lease.reset()
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
+
+        return true
     }
 
     /**
@@ -1019,11 +1048,18 @@ class Cylinder(
         val next = chainFor(key, dsl)
         val leaving = chain
 
+        chainKey = key
+        chainRawName = rawName
+
+        // Already in service (see [install]): there is nothing to fade, and a fade would RESET the
+        // running chain, cutting the orbit's own tail on a declaration that changes nothing.
+        if (next === chain) {
+            return
+        }
+
         next.reset()
 
         chain = next
-        chainKey = key
-        chainRawName = rawName
 
         outgoing = leaving
         draining = false
@@ -1039,11 +1075,12 @@ class Cylinder(
         // leave the orbit ducking off the leaving chain's orbit at the leaving chain's depth.
         handOverDuck(from = leaving, to = next)
 
-        // A DECLARED chain reads its own slots, and nothing else would run its writers until a
-        // voice claims the lease: this block's voices have already offered themselves when a fade
-        // starts from the pending poll, and an owner may not even be alive. Gated on the same map
-        // instance the resolve above took, so it only writes. No-op on the classic chain, which has
-        // nothing to write without a voice.
+        // The arriving chain reads the orbit's slot state here, because nothing else would run its
+        // writers until a voice claims the lease: this block's voices have already offered
+        // themselves when a fade starts from the pending poll, and an owner may not even be alive.
+        // Gated on the same map instance the resolve above took, so it only writes. With no state
+        // at all every knob lands on what the chain authored, which is the clean slate a chain
+        // entering service wants.
         next.applyParams(ownerParams)
     }
 
@@ -1094,16 +1131,27 @@ class Cylinder(
      * it twice.
      */
     private fun chainFor(key: String, dsl: KatalystDsl): KatalystChain {
-        // No shortcut for content equal to `KatalystDsl.classic` (decided 2026-09-18, review
-        // round 2): VOICE-DRIVEN is only what a cylinder is BORN with, and a chain that arrives by
-        // NAME is a declaration, so it is slot-driven whatever it declares. Handing back
-        // [classicChain] here made `Katalyst(k => k.classic())` inert: the orbit kept reading the
-        // voice's own effect fields and every `katp` on it went nowhere.
+        // A declaration whose CONTENT is the historical chain gets the instance this cylinder was
+        // born with (step 5b-1, 2026-09-19). Both are slot-driven now, so the two are the same
+        // chain in every observable way, and handing back a second instance would cost a crossfade
+        // that is not bit-transparent (the arriving room and ring warm from empty) for a
+        // declaration that changes nothing. The 2026-09-18 decision that forbade this shortcut
+        // stood on the born-with chain being VOICE-driven, which made a classic declaration inert;
+        // that reason is gone with the owner writers.
+        //
+        // The shortcut also keeps [classicChain] out of [chains], so it is never evicted and never
+        // retired as a cache victim. Both callers of this function then have to handle
+        // "the chain we are installing is already in service", which is what their identity checks
+        // are for.
+        if (dsl.stages == KatalystDsl.classic.stages) {
+            return classicChain
+        }
+
         chains[key]?.let { return it }
 
         evictIfNeeded()
 
-        return buildChain(dsl, voiceDriven = false).also { chains[key] = it }
+        return buildChain(dsl).also { chains[key] = it }
     }
 
     /**
@@ -1139,12 +1187,11 @@ class Cylinder(
         pendingKey = null
     }
 
-    private fun buildChain(dsl: KatalystDsl, voiceDriven: Boolean): KatalystChain = KatalystChainBuilder.build(
+    private fun buildChain(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = rings,
         reverbs = reverbs,
-        voiceDriven = voiceDriven,
     )
 }

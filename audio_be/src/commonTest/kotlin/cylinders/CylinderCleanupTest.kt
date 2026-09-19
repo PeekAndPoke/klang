@@ -216,7 +216,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                delay = Voice.Delay(amount = 1.0, time = 0.02, feedback = 0.4),
+                katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.02, "delay.feedback" to 0.4),
             ),
             blockStart = 0.0,
         )
@@ -254,7 +254,9 @@ class OrbitCleanupTest : StringSpec({
             VoiceTestHelpers.createSynthVoice(
                 // lowpass set so the reset's `lowpass = null` line has something to clear —
                 // a fresh-default null would make that assert vacuous (review round 3).
-                reverb = Voice.Reverb(amount = 1.0, size = 0.5, lowpass = 3000.0),
+                katalystParams = mapOf(
+                    "reverb.wet" to 1.0, "reverb.size" to 5.0, "reverb.lowpass" to 3000.0,
+                ),
             ),
             blockStart = 0.0,
         )
@@ -284,10 +286,13 @@ class OrbitCleanupTest : StringSpec({
     "a draining self-oscillating delay with an EMPTY ring does not pin the orbit" {
         val cylinder = createTestOrbit()
 
-        // Owner A configures a self-oscillating delay but never sends into it (amount 0).
+        // Owner A configures a self-oscillating delay; nothing is ever sent into it, so the ring
+        // never holds anything. (The per-voice send amount is the FIELD, which nothing writes
+        // here; an AUTHORED `delay.wet` decides whether the line runs until step 5b-2, and this
+        // one is WRITTEN, so the line runs and the ring stays empty.)
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                delay = Voice.Delay(amount = 0.0, time = 0.5, feedback = 1.2),
+                katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.5, "delay.feedback" to 1.2),
             ),
             blockStart = 0.0,
         )
@@ -312,7 +317,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                ducking = Voice.Ducking(cylinderId = 3, attackSeconds = 0.02, depth = 0.8),
+                katalystParams = mapOf("duck.orbit" to 3.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )
@@ -334,7 +339,7 @@ class OrbitCleanupTest : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                ducking = Voice.Ducking(cylinderId = 4, attackSeconds = 0.02, depth = 0.8),
+                katalystParams = mapOf("duck.orbit" to 4.0, "duck.attack" to 0.02, "duck.depth" to 0.8),
             ),
             blockStart = 0.0,
         )

@@ -52,8 +52,23 @@ class Voice(
     val cylinderId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics & Routing (used by SendRenderer and Cylinder configuration)
+    // Dynamics & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Since Katalyst step 5b-1 the orbit's bus reads its knobs from [katalystParams] alone, so most
+    // of the block below has NO reader left. Who reads what, exactly:
+    //
+    //   gain, pan     SendRenderer, every block of every voice.
+    //   delay, reverb SendRenderer, the `amount` field ONLY: the per-voice send amounts. Their
+    //                 time / feedback / cap / size / lowpass are read by nobody.
+    //   phaser        FilterPipelineBuilder, all five knobs, for the PER-VOICE phaser of a custom
+    //                 pipeline that declares `StageDsl.Phaser`. No built-in preset does
+    //                 (`PipelineDsl`, maintainer 2026-08-24: the phaser is a bus effect).
+    //   compressor    nobody.
+    //   ducking       nobody.
+    //   body, vowel   nobody.
+    //
+    // They are still built by `VoiceFactory` and still carried on the wire; the send amounts go in
+    // step 5b-2 and the rest in 5b-3.
     val gain: Double,
     val pan: Double,
     val compressor: Compressor?,
@@ -62,8 +77,10 @@ class Voice(
     val reverb: Reverb,
     val phaser: Phaser,
 
-    // Orbit-level resonators — carried here (not baked into the per-voice filter chain) so the
-    // Cylinder can configure its body/vowel Katalyst from the voice. See docs/tasks/body-vowel-to-orbit-katalyst.md.
+    // Orbit-level resonators, moved off the per-voice filter chain in the 2026-07-03 orbit-Katalyst
+    // work (docs/tasks-archive/2026-07/20260703-body-vowel-orbit-katalyst.md). The orbit reads its
+    // resonators from the `body.*` / `vowel.*` slots now, so these two have no reader and leave with
+    // the wire fields in step 5b-3.
     val body: FilterDef.Body? = null,
     val vowel: FilterDef.Formant? = null,
 
@@ -72,16 +89,14 @@ class Voice(
      * the wire map is immutable by contract and the copy would be per voice, for a map only the
      * orbit's owner ever reads.
      *
-     * While this voice holds the orbit's lease, a DECLARED chain resolves every `Param` knob
-     * against it (`KatalystChain.applyOwner`), so this is the orbit's param state and it dies with
+     * While this voice holds the orbit's lease, the orbit's chain resolves every `Param` knob
+     * against it (`KatalystChain.applyParams`), so this is the orbit's param state and it dies with
      * the voice. Null when the pattern wrote no slot, which is the same answer as an empty map: the
      * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
-     * `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it for a stage with
-     * no voice field (today `gain`, and `eq` wherever a chain declares one), and the chain a
-     * cylinder is BORN with takes every
-     * other knob from the voice fields, while a chain declared from `Katalyst.classic()` reads all
-     * of them (Katalyst step 5a; step 5b takes the voice fields off the wire and makes every chain
-     * read this).
+     * `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
+     * it declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
+     * on this class are not a knob source any more; [delay] and [reverb] carry the per-voice send
+     * AMOUNTS until step 5b-2, and the rest leave with the wire fields in 5b-3.
      */
     val katalystParams: Map<String, Double>? = null,
 

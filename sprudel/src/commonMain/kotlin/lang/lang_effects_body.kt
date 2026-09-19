@@ -30,13 +30,13 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the rule; this is only what THIS door
  * does). Called from the MATERIAL setter alone, because the material is this stage's name knob.
  *
- * Fills the voice FIELDS with the same two constants, for the born-with path, until step 5b takes
- * them off the wire.
+ * Fills the voice FIELDS with the same two constants, which the wire still carries until step
+ * 5b-3; since step 5b-1 the orbit's resonator reads the SLOTS and nothing else.
  *
  * Byte-identical to what the engine did with an unset field: `toVoiceData` reads a null `bodyMix`
- * as [BODY_WET], and a null floor means [BODY_FLOOR] to `FilterDef.Body`; the declared path takes
- * the same two through `KatalystSlots.bodyDef`. What the fill buys is that one place decides them
- * instead of two engine fallbacks that could drift.
+ * as [BODY_WET], and a null floor means [BODY_FLOOR] to `FilterDef.Body`; the chain takes the same
+ * two through `KatalystSlots.bodyDef`. What the fill buys is that one place decides them instead
+ * of two engine fallbacks that could drift.
  */
 private fun SprudelVoiceData.fillBodyDefaults() {
     val slots = katalystParamsOrNew()
@@ -150,7 +150,7 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * All three reach a DECLARED orbit chain as chain slots, `material` as the index of its name in the
  * material catalogue (`body.material`, 0 = none), so the same call works whether the orbit declares
  * a chain or runs the historical one, down to the sample. Guarded by
- * `KatalystDeclaredBodyParitySpec`, which renders both spellings either way and compares samples.
+ * `KatalystDoorFillRenderSpec`, which renders the short and the long spelling and compares samples.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").body("wood", 0.7)                                 // a wooden box around the tone

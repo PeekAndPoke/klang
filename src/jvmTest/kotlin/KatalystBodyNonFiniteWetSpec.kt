@@ -18,20 +18,25 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * `wet` is UNSET on every surface, so `body("wood", wet = "NaN")` has to sound exactly like
  * `body("wood")`.
  *
- * Born from a defect found in review on 2026-09-18. `"NaN".toDoubleOrNull()` is a NaN, so a pattern
- * can put one on the wire; `SprudelVoiceData.toVoiceData` guards a null `bodyMix` and passes a
- * non-finite one straight through; and `KatalystBodyEffect.configure` decided whether to rebuild
- * the bank with `body.mix != curMix`, which is TRUE FOREVER for a NaN against a NaN. So the orbit
- * allocated two filter banks per block on the audio thread and restarted a 12 ms crossfade that
- * never completed, while the wet/dry law read the non-finite amount as a fully dry 0.0 and the
- * body was not even audible. The DECLARED path never had it (`KatalystSlots.bodyDef` substitutes
- * BODY_WET), which is why this row renders the BORN-WITH chain: no `.katalyst(...)` anywhere.
+ * **What it pins TODAY, restated in step 5b-1**, because the mechanism it was born for is no longer
+ * the one it can catch. It was written on 2026-09-18 for a defect in `KatalystBodyEffect.configure`:
+ * the rebuild test `body.mix != curMix` is TRUE FOREVER for a NaN against a NaN, so a non-finite
+ * mix made the orbit allocate two filter banks per block on the audio thread and restart a 12 ms
+ * crossfade that never completed. That NaN reached `configure` through the FIELD path of the chain
+ * a cylinder is born with, and since 5b-1 there is no field path: every chain resolves through
+ * `KatalystSlots.bodyDef`, which substitutes BODY_WET before `configure` ever sees the value. The
+ * old born-with / declared distinction is therefore gone from this file, and the row can no longer
+ * go red for the rebuild loop.
+ *
+ * It still has teeth, one level up: it pins `bodyDef`'s substitution end to end, through the door,
+ * the wire and the cylinder. Break that substitution and this row fails.
  *
  * Minimal on purpose (plan §12: no full songs as tests): one orbit, one synth chord, one door.
  * The renderer of `:jvmTest` has no sample bank, so the source is a supersaw and never an `s("bd")`.
  *
- * The VOWEL half of the same rule is stage level, in `KatalystFormantEffectSpec`: the two effects
- * are un-deduped twins, so one render row for the pair is enough to prove the born-with path.
+ * The VOWEL half of the same rule is stage level, in `KatalystFormantEffectSpec`, and the entry
+ * guard inside the two effects is now defence in depth with no production caller that can reach
+ * it; their own KDocs say so.
  */
 class KatalystBodyNonFiniteWetSpec : StringSpec({
 
@@ -51,7 +56,7 @@ class KatalystBodyNonFiniteWetSpec : StringSpec({
 
         val body = events.first().toVoiceData().filters.getByType<FilterDef.Body>().shouldNotBeNull()
 
-        withClue("the mix the born-with chain is configured from") { body.mix.isFinite() shouldBe false }
+        withClue("the mix the wire carries, before any chain substitutes for it") { body.mix.isFinite() shouldBe false }
     }
 
     "a non-finite body wet renders exactly like the material-only call" {

@@ -33,8 +33,8 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * would darken every room.
  *
  * Fills the voice FIELDS with the same constants, so the two sources agree on every knob the author
- * did not reach past. The fields stay until step 5b takes them off the wire, and the chain a cylinder
- * is BORN with still reads those.
+ * did not reach past. Since step 5b-1 the orbit's room reads the SLOTS alone; the `reverb` field is
+ * the per-voice send AMOUNT until step 5b-2, and the rest leave the wire in 5b-3.
  *
  * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
  * these constants.

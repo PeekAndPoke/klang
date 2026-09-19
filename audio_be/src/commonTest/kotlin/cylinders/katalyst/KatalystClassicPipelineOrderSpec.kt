@@ -95,7 +95,6 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
             blockFrames = 128,
             rings = SizedBuffers.forRings(48000),
             reverbs = ReverbUnits(48000),
-            voiceDriven = true,
         )
 
         cylinder.pipeline.map { it::class.simpleName } shouldBe declared.pipeline.map { it::class.simpleName }
@@ -109,7 +108,9 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         val cylinder = Cylinder(id = 0, blockFrames = 128, sampleRate = 22050)
 
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(delay = Voice.Delay(amount = 0.5, time = 0.25, feedback = 0.3)),
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.25, "delay.feedback" to 0.3),
+            ),
             blockStart = 0.0,
         )
 
@@ -130,7 +131,9 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // Owner A charges a small room.
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.8, size = 0.05)),
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
+            ),
             blockStart = 0.0,
         )
         repeat(20) {
@@ -143,7 +146,9 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         // Owner B has no room: the off-config starts the drain, which runs on SILENT input from
         // the stage's own buffer.
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.0, size = 0.0)),
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
+            ),
             blockStart = 2.0 * bigBlock,
         )
         cylinder.reverb!!.hasTail() shouldBe true
@@ -168,7 +173,9 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
 
         // Owner A charges the ring with a delay short enough that echoes land inside one block.
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(delay = Voice.Delay(amount = 0.8, time = 0.01, feedback = 0.8)),
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("delay.wet" to 0.8, "delay.time" to 0.01, "delay.feedback" to 0.8),
+            ),
             blockStart = 0.0,
         )
         repeat(20) {

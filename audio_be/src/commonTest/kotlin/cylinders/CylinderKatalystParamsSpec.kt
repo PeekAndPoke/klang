@@ -12,6 +12,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
@@ -35,10 +36,10 @@ import kotlin.math.abs
  *
  * Three questions, and they are separate on purpose:
  *
- *  - what a declared chain RESOLVES from a state, and what it costs (the chain rows);
+ *  - what a chain RESOLVES from a state, and what it costs (the chain rows);
  *  - who supplies that state and when it is re-read (the cylinder rows, where the lease lives);
- *  - what the CLASSIC chain does with it, which is nothing (the last row, the byte identity every
- *    song that declares no chain depends on).
+ *  - that the chain a cylinder is BORN with reads it exactly like a declared one (the last rows;
+ *    since step 5b-1 the map is the ONE way a bus knob reaches a stage).
  *
  * What a pattern writes into the map is `sprudel`'s `LangKatalystParamSpec`; what a slot means once
  * resolved is `KatalystSlotResolverSpec`.
@@ -53,18 +54,16 @@ class CylinderKatalystParamsSpec : StringSpec({
      *
      * It used to append a `gain(1.0)` of its own, because the classic chain had no gain stage and
      * these rows wanted one. Since 2026-09-19 it carries one at unity, so the appendix went with
-     * the scaffolding rule; `declaredClassic` stays as a name for "the classic chain, DECLARED",
-     * which is what the `voiceDriven = false` build below makes of it.
+     * the scaffolding rule; `declaredClassic` stays as a name for "the classic chain, by name".
      */
     val declaredClassic = KatalystDsl.classic
 
-    fun build(dsl: KatalystDsl, voiceDriven: Boolean = false): KatalystChain = KatalystChainBuilder.build(
+    fun build(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-        voiceDriven = voiceDriven,
     )
 
     /** A voice with no bus fields of its own, carrying only the orbit's slot state. */
@@ -89,7 +88,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     "a declared classic chain takes its room from the owner's slot state" {
         val chain = build(declaredClassic)
 
-        chain.applyOwner(voice(room(size = 6.0)))
+        chain.applyParams(room(size = 6.0))
 
         val unit = chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
 
@@ -102,7 +101,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     "the same chain with no state has its reverb off: a slot's default is the classic OFF value" {
         val chain = build(declaredClassic)
 
-        chain.applyOwner(voice(null))
+        chain.applyParams(null)
 
         // `reverb.wet` and `reverb.size` default to 0.0 on the classic chain, so nothing rents.
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
@@ -111,9 +110,8 @@ class CylinderKatalystParamsSpec : StringSpec({
     "the re-resolve is gated on the map INSTANCE: a live owner costs one read, not one per block" {
         val chain = build(declaredClassic)
         val state = room(size = 6.0)
-        val owner = voice(state)
 
-        repeat(64) { chain.applyOwner(owner) }
+        repeat(64) { chain.applyParams(state) }
 
         // One read for 64 blocks. Without the identity gate this is 64, and every one of them
         // rebuilds the stages' composites on the audio thread.
@@ -124,10 +122,10 @@ class CylinderKatalystParamsSpec : StringSpec({
     "a CHANGED map re-resolves, and the new value reaches the stage" {
         val chain = build(declaredClassic)
 
-        chain.applyOwner(voice(room(size = 6.0)))
+        chain.applyParams(room(size = 6.0))
         chain.resolveCount shouldBe 1
 
-        chain.applyOwner(voice(room(size = 2.0)))
+        chain.applyParams(room(size = 2.0))
 
         chain.resolveCount shouldBe 2
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(2.0)
@@ -136,8 +134,8 @@ class CylinderKatalystParamsSpec : StringSpec({
     "identity, not equality: an equal map in a fresh instance is read again" {
         val chain = build(declaredClassic)
 
-        chain.applyOwner(voice(room(size = 6.0)))
-        chain.applyOwner(voice(room(size = 6.0)))
+        chain.applyParams(room(size = 6.0))
+        chain.applyParams(room(size = 6.0))
 
         // Two instances, one value. The gate is a reference compare by design (a per-block map
         // comparison would cost more than the read it saves), so this is two reads and the same
@@ -159,7 +157,7 @@ class CylinderKatalystParamsSpec : StringSpec({
         chain.applyParams(null)
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(3.0)
 
-        chain.applyOwner(voice(mapOf("reverb.size" to 9.0)))
+        chain.applyParams(mapOf("reverb.size" to 9.0))
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(9.0)
 
         // No owner, no state: back to what the chain itself says.
@@ -174,7 +172,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyOwner(voice(mapOf("reverb.size" to 9.0)))
+        chain.applyParams(mapOf("reverb.size" to 9.0))
 
         chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(4.0)
     }
@@ -189,7 +187,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyOwner(voice(mapOf("phaser.wet" to 0.8, "phaser.floor" to 0.2)))
+        chain.applyParams(mapOf("phaser.wet" to 0.8, "phaser.floor" to 0.2))
 
         val phaser = chain.phaser.shouldNotBeNull().phaser
 
@@ -198,13 +196,13 @@ class CylinderKatalystParamsSpec : StringSpec({
 
         // An unset FLOOR, with the phaser still engaged so the kernel params are written: a NaN
         // here reaches `WetDryMix.dryCoeff` and comes out as a full notch.
-        chain.applyOwner(voice(mapOf("phaser.wet" to 0.8, "phaser.floor" to SLOT_UNSET)))
+        chain.applyParams(mapOf("phaser.wet" to 0.8, "phaser.floor" to SLOT_UNSET))
 
         phaser.floor shouldBe PHASER_FLOOR
 
         // An unset WET is OFF. `Phaser.depth`'s setter DROPS a non-finite value and keeps the depth
         // it had, so without the guard the phaser stays engaged at 0.8 forever.
-        chain.applyOwner(voice(mapOf("phaser.wet" to SLOT_UNSET, "phaser.floor" to 0.2)))
+        chain.applyParams(mapOf("phaser.wet" to SLOT_UNSET, "phaser.floor" to 0.2))
 
         phaser.depth shouldBe PHASER_WET
 
@@ -223,7 +221,7 @@ class CylinderKatalystParamsSpec : StringSpec({
             )
         )
 
-        chain.applyOwner(voice(mapOf("duck.orbit" to 1.0, "duck.depth" to 0.8)))
+        chain.applyParams(mapOf("duck.orbit" to 1.0, "duck.depth" to 0.8))
         chain.ducksWith() shouldBe true
 
         // Back on the shelf, and back in the cache. The host asks this BEFORE the arriving chain's
@@ -262,32 +260,108 @@ class CylinderKatalystParamsSpec : StringSpec({
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
 
-    // ── The BORN-WITH chain reads the state ONLY for a stage with no voice field ─────────────────
+    // ── The BORN-WITH chain reads the state, for EVERY stage (step 5b-1) ────────────────────────
     //
-    // The exception is not an oversight: `gain` and `eq` never had a per-voice twin for an owner
-    // voice to drive, so they are slot-driven on every chain (`KatalystChainBuilder`), and that is
-    // what lets `katp("gain.gain", x)` reach the fader of an orbit that declares nothing. The
-    // rule's one home is the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
+    // The map is the one way a bus knob reaches a stage, on a declared chain and on the chain a
+    // cylinder is born with alike; the voice's bus FIELDS are not a knob source any more. The
+    // rule's one home is the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`. These two rows
+    // are the pair that catches a half-done deletion: one says the map alone switches a stage ON,
+    // the other says the fields alone leave it OFF.
 
-    "the BORN-WITH chain ignores the state for every stage that HAS a voice field" {
+    "the BORN-WITH chain takes its room from the state, with the voice's bus FIELDS null" {
         val rig = Rig()
 
         // No `requestChain`, so the cylinder runs the chain it was born with. The voice carries a
-        // loud room in its slot state and nothing in its bus FIELDS.
+        // room in its slot state and nothing at all in its bus FIELDS (`createSynthVoice` leaves
+        // `reverb` at amount 0, size 0, which is the untouched wire voice).
         rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
 
-        rig.cylinder.reverb.shouldNotBeNull().reverb.shouldBeNull()
+        rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
     }
 
-    "...and reads it for the one stage that has none: the fader halves the orbit's mix, exactly" {
-        // The discriminator for the exception above, on the CYLINDER path rather than at chain
-        // level: no declaration, no `requestChain`, just a voice whose `katalystParams` name the
-        // group fader.
+    "the BORN-WITH chain ignores the voice's bus FIELDS: fields set, no state, the room stays off" {
+        val rig = Rig()
+
+        // The reverse row, and the one that goes red on a half-done deletion: a voice whose
+        // `Voice.Reverb` names a big room and whose `katalystParams` is null must leave the orbit
+        // dry, because the fields stopped being a knob source in step 5b-1. They stay on the wire
+        // for the per-voice send AMOUNT until 5b-2, which is why this voice still HAS them.
+        rig.cylinder.updateFromVoice(
+            VoiceTestHelpers.createSynthVoice(
+                reverb = Voice.Reverb(amount = 0.5, size = 0.6),
+                delay = Voice.Delay(amount = 0.5, time = 0.3, feedback = 0.2, cap = 1.0),
+                katalystParams = null,
+            ),
+            blockStart = 0.0,
+        )
+
+        withClue("no reverb network rented") { rig.cylinder.reverb.shouldNotBeNull().reverb.shouldBeNull() }
+        withClue("no delay ring rented") { rig.cylinder.delay.shouldNotBeNull().delayLine.shouldBeNull() }
+    }
+
+    "two voices on one orbit: the dry OWNER does not silence the other voice's room" {
+        // The MAJOR of review round 1, built as the scenario it is about, and heard rather than
+        // read off a field. `wet` is documented as a PER-VOICE send, so `reverb(0)` on the voice
+        // that happens to hold the lease must not take the room away from the voice that is
+        // sending 0.6 into it. Which of the two owns the orbit is first-rendered-wins, so the
+        // alternative would make a song depend on the order of a `stack`'s arms.
+        //
+        // Both voices offer themselves in the same block, the DRY one first, so it wins the lease
+        // and its slots are the ones the bus reads. The wet one's send is written into the orbit's
+        // reverb send buffer the way `SendRenderer` writes it, and what the row measures is the
+        // orbit's MIX after `processEffects`: the room's return, or silence.
+        fun roomReturn(ownerSlots: Map<String, Double>): Double {
+            val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+
+            // The owner: dry, but it named the stage.
+            cylinder.updateFromVoice(voice(ownerSlots), blockStart = 0.0)
+            // The second voice on the same orbit: its claim is refused, its SEND is not.
+            cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
+
+            var peak = 0.0
+
+            // Freeverb's shortest comb is 1116 frames, so a single block returns silence whatever
+            // the settings: render past it and take the loudest return.
+            repeat(40) {
+                cylinder.mixBuffer.clear()
+                cylinder.reverbSendBuffer.left.fill(0.5)
+                cylinder.reverbSendBuffer.right.fill(0.5)
+                cylinder.processEffects()
+
+                for (sample in cylinder.mixBuffer.left) {
+                    val level = abs(sample)
+
+                    if (level > peak) {
+                        peak = level
+                    }
+                }
+            }
+
+            return peak
+        }
+
+        // The owner WROTE `reverb(0, size = 6)`: dry itself, and the room runs for the orbit.
+        val heard = roomReturn(mapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
+
+        withClue("the other voice's send comes back out of the room, peak $heard") {
+            heard shouldBeGreaterThan 0.01
+        }
+
+        // The control, and the half that keeps the 2026-09-17 decision: an owner that never named
+        // the stage at all asked for no room, and then the same send goes nowhere.
+        val silent = roomReturn(emptyMap())
+
+        withClue("an orbit nobody asked for a room on returns nothing, peak $silent") {
+            silent shouldBe 0.0
+        }
+    }
+
+    "the fader halves the orbit's mix, exactly" {
+        // The same rule on the CYLINDER path and at sample level: no declaration, no
+        // `requestChain`, just a voice whose `katalystParams` name the group fader.
         //
         // A SCALING LAW, not an identity: both sides are cylinder renders, so what this pins is
         // that the orbit's mix is LINEAR in the slot, not that any particular sample is right.
-        // The independent anchor for the samples themselves is the byte-identity row below, which
-        // compares a born-with cylinder against itself under a state its voice-driven stages own.
         fun render(params: Map<String, Double>?): DoubleArray {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
@@ -321,10 +395,9 @@ class CylinderKatalystParamsSpec : StringSpec({
     }
 
     "a DECLARED classic resolves the state: the same stages, listening to the slots" {
-        // The rule of 2026-09-18 (review round 2): voice-driven is only what a cylinder is BORN
-        // with, so `Katalyst.classic()` by name is a declaration and its knobs are slots. Before
-        // it, `chainFor` handed the born-with instance back for that content and every `katp` on
-        // the orbit went nowhere.
+        // `Katalyst(k => k.classic())` by name. Since step 5b-1 it resolves BACK to the instance
+        // the cylinder was born with (`Cylinder.chainFor`), which is why the room it shows here is
+        // the same room the born-with rows above show: the two are one chain.
         val rig = Rig()
         rig.registry.register("classic", KatalystDsl.classic)
         rig.cylinder.requestChain("classic")
@@ -339,35 +412,31 @@ class CylinderKatalystParamsSpec : StringSpec({
         }
     }
 
-    "the born-with chain renders byte-identically with a state its voice-driven stages own" {
-        fun render(params: Map<String, Double>?): DoubleArray {
-            val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+    "a content-classic declaration installs NO second chain: the born-with instance keeps playing" {
+        // The consequence of the shortcut in `Cylinder.chainFor`, and the reason it exists: with
+        // both chains slot-driven, a `Katalyst(k => k.classic())` on an orbit changes nothing, so
+        // it must not cost a crossfade (which is not bit-transparent: the arriving room and ring
+        // warm from empty). Read off the DSP state rather than off a flag: the reverb network the
+        // orbit had rented is still rented, and still the same instance, after the request.
+        val rig = Rig()
+        rig.registry.register("classic", KatalystDsl.classic)
 
-            cylinder.updateFromVoice(
-                VoiceTestHelpers.createSynthVoice(
-                    delay = Voice.Delay(amount = 0.3, time = 0.05, feedback = 0.4, cap = 1.0),
-                    reverb = Voice.Reverb(amount = 0.3, size = 0.5),
-                    katalystParams = params,
-                ),
-                blockStart = 0.0,
-            )
+        rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
 
-            for (i in 0 until blockFrames) {
-                val v = 0.5 * (if (i % 8 < 4) 1.0 else -1.0)
-                cylinder.mixBuffer.left[i] = v
-                cylinder.mixBuffer.right[i] = v
-                cylinder.reverbSendBuffer.left[i] = v * 0.3
-                cylinder.reverbSendBuffer.right[i] = v * 0.3
-            }
+        val before = rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
 
-            cylinder.processEffects()
+        rig.cylinder.requestChain("classic")
 
-            return cylinder.mixBuffer.left.copyOf()
+        withClue("the same network, so the room was never swapped out and back in") {
+            rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull() shouldBeSameInstanceAs before
         }
 
-        // Every slot here belongs to a stage the born-with chain drives from the VOICE. The one
-        // exception, `gain.gain`, is deliberately absent and has its own row above: writing it
-        // here would (correctly) make this row fail.
-        render(mapOf("reverb.size" to 9.0, "delay.time" to 0.4, "compressor.ratio" to 12.0)) shouldBe render(null)
+        // The engagement control: a chain with DIFFERENT content does swap, and the orbit's
+        // reverb goes with it. Without this row the one above would pass on a `requestChain` that
+        // does nothing at all.
+        rig.registry.register("other", KatalystDsl.of(KatalystStageDsl.Compressor()))
+        rig.cylinder.requestChain("other")
+
+        rig.cylinder.reverb.shouldBeNull()
     }
 })

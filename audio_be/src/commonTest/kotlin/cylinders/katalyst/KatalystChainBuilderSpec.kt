@@ -12,12 +12,14 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 
 /**
  * [KatalystChainBuilder] is the one mapping from a declared stage to the effect the engine runs
@@ -28,9 +30,9 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  *  - nothing that is lazy today becomes eager at build (no ring, no reverb network);
  *  - a chain declaring two ducks runs ONE, and the writer that configures it is bound to THAT
  *    instance and not to the one the "last wins" rule dropped;
- *  - `eq` and `gain` build their own stages and are slot-driven on a voice-driven chain too,
- *    because neither ever had a voice field (which is what lets the classic chain carry a fader
- *    a pattern can move).
+ *  - every declared stage gets exactly one writer, and every writer is a slot writer (step 5b-1),
+ *    so the classic chain a cylinder is born with is configured from `katalystParams` like any
+ *    other.
  *
  * The cylinder's side of the mapping is [KatalystClassicPipelineOrderSpec]'s job.
  */
@@ -41,16 +43,12 @@ class KatalystChainBuilderSpec : StringSpec({
 
     // The shelves are on the builder's door, not behind a default, so a spec says which ones it
     // rents from, exactly as the cylinder does.
-    // voiceDriven = true is this spec's subject: the CLASSIC writers, which is what the cylinder
-    // installs for a chain it was handed no name for. The slot-driven ones are
-    // [KatalystSlotResolverSpec]'s.
-    fun build(dsl: KatalystDsl, voiceDriven: Boolean = true) = KatalystChainBuilder.build(
+    fun build(dsl: KatalystDsl) = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-        voiceDriven = voiceDriven,
     )
 
     fun ctx() = KatalystContext(
@@ -115,19 +113,27 @@ class KatalystChainBuilderSpec : StringSpec({
     // ── The duck: declared in the list, run outside it, last one wins ────────────────────────────
 
     "the classic chain installs one writer per declared stage" {
-        // Eight stages, eight writers (seven owner writers plus the fader's slot writer, which is
-        // slot-driven on every chain because a gain stage has no voice field). The count is what
-        // the duplicate-duck row below discriminates against, so it is pinned here on the chain
-        // everything else is measured from.
+        // Eight stages, eight slot writers. The count is what the duplicate-duck row below
+        // discriminates against, so it is pinned here on the chain everything else is measured
+        // from.
         build(KatalystDsl.classic).writerCount shouldBe 8
     }
 
     "two declared ducks: ONE duck stage, ONE writer, and the dropped duplicate is never configured" {
+        // Both ducks declare SLOTS, so the state below can configure the survivor; a bare
+        // `Duck()` carries constants and would be deaf to it, which would make the row pass on a
+        // duck nothing ever writes.
+        fun duck() = KatalystStageDsl.Duck(
+            orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
+            depth = IgnitorDsl.Param("duck.depth", DUCK_DEPTH),
+            attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+        )
+
         val chain = build(
             KatalystDsl.of(
-                KatalystStageDsl.Duck(),
+                duck(),
                 KatalystStageDsl.Reverb(),
-                KatalystStageDsl.Duck(),
+                duck(),
             )
         )
 
@@ -139,11 +145,9 @@ class KatalystChainBuilderSpec : StringSpec({
         // out, and a count is the only way to tell that from a dropped instance.
         chain.writerCount shouldBe 2
 
-        val voice = VoiceTestHelpers.createSynthVoice(
-            ducking = Voice.Ducking(cylinderId = 3, attackSeconds = 0.02, depth = 0.7),
-        )
+        val params = mapOf("duck.orbit" to 3.0, "duck.depth" to 0.7, "duck.attack" to 0.02)
 
-        chain.applyOwner(voice)
+        chain.applyParams(params)
 
         // The surviving writer is bound to the instance the chain exposes and processes.
         duck.duckCylinderId shouldBe 3
@@ -152,7 +156,7 @@ class KatalystChainBuilderSpec : StringSpec({
 
         // And a second block reuses that one DSP instance instead of building another, which is
         // what keeps the duck's envelope follower alive across notes.
-        chain.applyOwner(voice)
+        chain.applyParams(params)
 
         duck.ducking.shouldNotBeNull() shouldBeSameInstanceAs ducking
     }
@@ -204,10 +208,9 @@ class KatalystChainBuilderSpec : StringSpec({
         )
     }
 
-    "eq and gain get a SLOT writer on a voice-driven chain, because they have no voice field" {
-        // The mixed case: the classic block's seven owner writers and its own fader's slot
-        // writer, plus the ONE slot writer of the declared `eq`, which is what makes that eq work
-        // on a chain the cylinder was born with.
+    "a classic block plus an eq is nine stages and nine writers" {
+        // The classic eight plus the ONE writer of the declared `eq`: one writer per declared
+        // stage, whatever the kind, which is the rule the duplicate duck is the only exception to.
         val chain = build(KatalystDsl.of(*KatalystDsl.classic.stages.toTypedArray(), KatalystStageDsl.Eq()))
 
         chain.writerCount shouldBe 9

@@ -495,6 +495,68 @@ complexity outranks the duplication.
   the wet inside the 60 ms window while the old tail drains at full weight), the same as every swap;
   a repeated request is the raw-name no-op.
   Classic keeps the owner-voice writers until 5b removes the voice fields.
+  **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
+  and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
+  in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and
+  `SprudelVoiceData`. **5b-1 as built (2026-09-19; two review rounds):** there is ONE way a bus knob
+  reaches a stage, the owner's `katalystParams`; the `voiceDriven` flag, the `owners` array and
+  `applyOwner` are deleted. The rule above, "voice-driven is ONLY the born-with chain", and its
+  consequence that `Katalyst(k => k.classic())` had to install a second chain, retire with their
+  reason: a chain whose stages equal classic's resolves to the born-with chain, a bit-exact no-op
+  instead of a crossfade. Evidence: 18 songs and frozen pieces (every built-in song, the
+  maintainer's working copy of Der Schmetterling included) render bit-identically at HEAD
+  `52b89756` and on the tree over 256 cycles with the wall-clock seeds pinned; 27 door-form rows
+  and 23 value-edge rows rendered the same way. Accepted differences, for the 5b listening
+  checkpoint: (1) `katp` now reaches every stage of an undeclared orbit, which is the point;
+  (2) RETIRED in review round 1: the first cut gated the two send stages on `wet > 0`, which
+  let the voice holding the orbit's lease silence the room for every other voice on it
+  (`stack(pad.reverb(0), lead.reverb(0.4))` lost the lead's room, and swapping the arms changed
+  the song, because the lease is first-rendered-wins), against the door's own promise that a dry
+  voice on a wet orbit stays dry. The coordinator had accepted it as a note; the audio reviewer
+  was right that it was not. `VoiceFactory` ran the stage on a TOUCHED field (non-null, a written
+  0 included) and let `time`/`size` decide; the slot twin of touched is `KatalystKnob.written`
+  ("the owner's map carries the key with a finite value"), and `sendStageRuns` is
+  `written || (finite && > 0)`. The second half keeps the 2026-09-17 decision for authored
+  constants: a declared `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents
+  nothing. Making `wet` mean the amount is 5b-2's, with the listening checkpoint. After the fix
+  76 of 80 rendered rows are identical at HEAD and on the tree; the four that differ are (1) and
+  the three non-finite rows of (3).
+  (3) a non-finite `delay.time` or `reverb.size` is the slot vocabulary's OFF where the field
+  path substituted the shared constant (the master still does), and a non-finite `duck.attack`
+  now takes its constant where the field path handed the duck a NaN.
+  (4) A sixth accepted difference, and the one that is NOT an improvement (round 2): a non-finite
+  `wet` (`reverb("NaN")`, `delay("NaN")`, a hand-written `katp("reverb.wet", NaN)`) switched the
+  stage ON at the shared constants on the field path, because the field was non-null and therefore
+  touched and `VoiceFactory`'s `orDefault` swallowed the NaN; now `KatalystKnob.written` is false
+  for a non-finite value, so the stage is OFF for the whole orbit and another voice sending into
+  it loses its room. Accepted because it is the slot vocabulary being consistent with itself
+  ("non-finite is unset" on every knob, which is what lets a cleared slot read as untouched at
+  all) and because no ordinary spelling produces it: a mapper over an unset field yields null, a
+  rest calls no setter, the doors fill finite constants, and KlangScript division by zero throws.
+  Guard: `KatalystSlotResolverSpec`. Also BETTER than the field path, worth claiming so nobody
+  re-derives them as regressions: a non-finite `phaser.wet` (the setter used to drop it and keep
+  the previous owner's depth), a non-finite `phaser.floor` (it used to reach the dry coefficient
+  raw and turn the additive law into the crossfade law, `cos(depth*pi/2)^2`), and a non-finite
+  compressor knob from a SECOND owner (the first owner's value used to stay).
+  Decided 2026-09-19 for (3):
+  leave it. Substituting in the writers would break the resolver contract above ("non-finite
+  time is off") and two guards that author `SLOT_UNSET` as an off state. Option kept on file:
+  read a non-finite OVERRIDE from the map as absent, so the knob falls back to its AUTHORED
+  default, the rule the `oscParams` leaf got the same day; it buys one rule across both bags and
+  no parity with HEAD or the master on this knob. Also on file: `Reverb.normalizeSize(+Infinity)`
+  is 1.0, the largest room, not off; left alone. Readers of the bus FIELDS that remain after
+  5b-1: the send amounts in `SendRenderer` (5b-2), `VoiceFactory`'s construction of the
+  `Voice.*` objects, and the per-voice phaser of a CUSTOM pipeline that declares
+  `StageDsl.Phaser` (`FilterPipelineBuilder`), so `phaser` cannot leave the wire in 5b-3 without
+  deciding what that stage reads. **For the 5b-2 plan (event-stream survey over 256 cycles, sample
+  voices included, 2026-09-19):** NO built-in song and no frozen piece carries two distinct send
+  amounts on one orbit in one cycle, so the per-voice send becoming the owner's insert amount
+  changes no song in the repo. 5 of 953 playable doc examples do, four of them the "as much X as
+  Y" idiom (`reverb(wet = delay.wet, ...)` with a patterned source) and one a wet of 0 next to a
+  positive one (`s("hh*4").delay(0.3, 0.25).delay(wet = mul("1 0 1 0"))`, "delay on every other
+  hat only"); 5b-2 has to decide what those spellings mean once the send is the orbit's insert.
+  A raw wire producer can no longer hand an orbit private body
+  or formant bands: a body is an index into the shared catalogue (only the warmup did).
   As built (2026-09-18): a slot-driven writer is a class with `resolve(params)` and `apply()`
   (`KatalystSlotWriters.kt`), one per stage kind, over `KatalystKnob`s that hold a slot NAME and the
   authored number. `apply` runs every block and writes numbers already in hand; `resolve` runs only
@@ -653,7 +715,7 @@ complexity outranks the duplication.
   numbers that did not move; the setter's own KDoc says it is not meant per block. No allocation.
   The guard is a stored-five comparison in `writeCompressor`, on SUBSTITUTED values (see the
   review-loop rule on cached configs). Fits step 5c, when the compressor gets its state machine.
-- **Open, pre-existing, recorded:** a `merge` whose control carries `duck(1)` takes the control's
+- **Open, pre-existing, LIVE since 5b-1 (2026-09-19: the slots decide the sound now; no song and no doc example hits it):** a `merge` whose control carries `duck(1)` takes the control's
   filled slots (`duck.depth` 0.0) but not its null fields, so after the merge the voice path and
   the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and
   the disagreement with them. Optional alongside: fill the duck's voice fields on an orbit-named
@@ -698,7 +760,8 @@ complexity outranks the duplication.
   (`classic()` once, the name and the slot on both doors), `KatalystSlotResolverSpec` (the index
   slot re-resolves only on a map instance change, the two-probe coercion),
   `KatalystClassicMatchesUntouchedVoiceSpec` (born-with against declared, stage level) and
-  `KatalystDeclaredBodyParitySpec` (the render).
+  `KatalystDoorFillRenderSpec` (the render; named `KatalystDeclaredBodyParitySpec` until 5b-1
+  retired its declared-against-undeclared rows, which had become one chain compared with itself).
   **Round 1 of the review found one MAJOR, both reviewers independently.** A material-only
   `body("wood")` reached a declared classic chain at mix 0.0, bit-identically dry, while the
   born-with path played it at `BODY_WET`: classic declared `body.wet` as `Param(default = 0.0)`, and
@@ -710,7 +773,7 @@ complexity outranks the duplication.
   so no amount can switch on an orbit that named no material. A door-side fill was NOT added here;
   that is a separate step. New guards: the material-only and vowel-only rows in
   `KatalystClassicMatchesUntouchedVoiceSpec`, a second render row in
-  `KatalystDeclaredBodyParitySpec` for the `body(material = ...)` spelling, and a POSITIVE control
+  `KatalystDoorFillRenderSpec` (then `KatalystDeclaredBodyParitySpec`) for the `body(material = ...)` spelling, and a POSITIVE control
   there (a declared chain with no body stage must differ from the undeclared render by more than
   100 counts, measured 3374), which is the row that catches a declaration that never installs at
   all: with `Cylinders.requestChain` stubbed out, both parity rows pass at a difference of 0 and

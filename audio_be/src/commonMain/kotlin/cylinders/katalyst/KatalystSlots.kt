@@ -20,20 +20,19 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /**
- * Reads the knobs of a **declared** Katalyst chain: one [IgnitorDsl] slot node in, one `Double`
- * out, plus the three composite values a stage wants instead of a number (the body and vowel
- * [FilterDef]s, the compressor and duck settings).
+ * Reads the knobs of a Katalyst chain: one [IgnitorDsl] slot node in, one `Double` out, plus the
+ * three composite values a stage wants instead of a number (the body and vowel [FilterDef]s, the
+ * compressor and duck settings).
  *
  * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks/katalyst-dsl.md` §7 and the
- * value rule is the signal-flow plan §7 (D4): **a declared chain's stage knobs come from the
- * chain's slots only.** The owner voice is not a knob source here; the classic chain keeps its
- * voice-driven writers until step 5 removes the voice fields (see [KatalystOwnerApply]).
+ * value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**,
+ * on every chain since step 5b-1, the one a cylinder is born with included. The owner voice is a
+ * knob source only through the map it carries ([KatalystKnob]), never through its bus fields.
  *
  * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param
  * state CHANGES (Katalyst step 5a): every answer here is block-constant by contract, so the writer
  * [KatalystChainBuilder] installs holds the resolved numbers in its [KatalystKnob]s and re-applies
- * them on every owner claim. That is what keeps a slot-driven writer as allocation-free per block
- * as the voice-driven one it replaces.
+ * them on every owner claim. That is what keeps a writer allocation-free per block.
  *
  * The param state is the owner voice's `katalystParams` map, which `.katp` and the bus doors write:
  * a [IgnitorDsl.Param] reads `state[name]` and falls back to its authored default. Only a `Param`
@@ -260,10 +259,29 @@ internal class KatalystKnob(node: IgnitorDsl?, fallback: Double) {
     var value: Double = authored
         private set
 
+    /**
+     * True when [value] came OUT of the orbit's param state as a finite number, rather than from
+     * what the chain authored. "The pattern wrote this knob", which is the slot twin of the wire's
+     * old "the voice TOUCHED this effect" (`VoiceFactory`'s `reverbTouched` / `delayTouched`), and
+     * the two send stages need it to keep that rule (see [KatalystReverbWriter]).
+     *
+     * FINITE on purpose: a non-finite slot is the wire's "never set" (`/dsl-design` §4), so a
+     * cleared knob reads as untouched, exactly as a null field did.
+     *
+     * Always false for a knob that is not a slot: a chain that AUTHORED its wet as a number said
+     * what it wanted, and no pattern touched it.
+     */
+    var written: Boolean = false
+        private set
+
     /** Re-reads a slot from the orbit's param state; null (no owner, no slots) is the default. */
     fun resolve(params: Map<String, Double>?) {
         val name = slot ?: return
+        val fromState = params?.get(name)
 
-        value = if (params == null) authored else params[name] ?: authored
+        // NaN-guard on a value the author can write: a non-finite slot was never set, so it is not
+        // a write either.
+        written = fromState != null && fromState.isFinite()
+        value = fromState ?: authored
     }
 }

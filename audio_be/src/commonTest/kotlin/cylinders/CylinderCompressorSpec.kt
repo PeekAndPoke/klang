@@ -28,12 +28,14 @@ class OrbitCompressorSpec : StringSpec({
         attackSeconds: Double = 0.003,
         releaseSeconds: Double = 0.1,
     ) = VoiceTestHelpers.createSynthVoice(
-        compressor = Voice.Compressor(
-            thresholdDb = thresholdDb,
-            ratio = ratio,
-            kneeDb = kneeDb,
-            attackSeconds = attackSeconds,
-            releaseSeconds = releaseSeconds,
+        // The bus compressor reads the orbit's SLOT state since Katalyst step 5b-1; every knob is
+        // named here, which is what a `compressor(...)` call writes through the door's fill rule.
+        katalystParams = mapOf(
+            "compressor.threshold" to thresholdDb,
+            "compressor.ratio" to ratio,
+            "compressor.knee" to kneeDb,
+            "compressor.attack" to attackSeconds,
+            "compressor.release" to releaseSeconds,
         )
     )
 

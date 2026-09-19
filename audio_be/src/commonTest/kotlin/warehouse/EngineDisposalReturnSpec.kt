@@ -70,8 +70,15 @@ class EngineDisposalReturnSpec : StringSpec({
         gateEndTime = 0.05,
         data = VoiceData.empty.copy(
             sound = "sine", freqHz = 440.0, cylinder = cylinder,
-            delay = 0.5, delayTime = 0.3, delayFeedback = 0.0,
-            reverb = 0.5, reverbSize = 0.6,
+            delay = 0.5, reverb = 0.5,
+            // The orbit's stages read the SLOT state (Katalyst step 5b-1); the two fields above
+            // are the per-voice send amounts. What a `delay(...)` / `reverb(...)` call writes.
+            katalystParams = mapOf(
+                "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.0, "delay.cap" to 1.0,
+                // AUTHORED 0 to 10, the scale `VoiceData.reverbSize` was already on: the number
+                // is unchanged from the fixture this replaced.
+                "reverb.wet" to 0.5, "reverb.size" to 0.6,
+            ),
         ),
         playbackStartTime = 0.0,
     )

@@ -11,15 +11,19 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import kotlin.math.abs
 import kotlin.math.sin
 
 /**
  * Tests for the refactored Cylinder bus pipeline integration.
  * Verifies that Cylinder correctly delegates to its KatalystEffect pipeline.
+ *
+ * Every voice here carries its bus knobs as SLOTS (`katalystParams`), which is the one way a knob
+ * reaches a stage since Katalyst step 5b-1; a spec names every knob it means, rather than going
+ * through the doors' fill rule (`/dsl-design` §4, whose subject is sprudel's own specs). Sizes are
+ * AUTHORED (0 to 10) in a slot, so an assertion on `Reverb.size` reads the normalized tenth.
  */
 class OrbitBusPipelineSpec : StringSpec({
 
@@ -28,7 +32,8 @@ class OrbitBusPipelineSpec : StringSpec({
 
     fun createOrbit() = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
 
-    val woodBody = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 300.0, db = 6.0, q = 8.0)), mix = 1.0)
+    /** The slot state of a voice that asks its orbit for a fully wet wooden body. */
+    val woodBody = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0)
 
     // True if the orbit's body resonator is active — a body on a DC mix blends it away from 1.0.
     fun bodyActiveOn(cylinder: Cylinder): Boolean {
@@ -62,7 +67,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val bf = blockFrames
 
         // Voice A (has body) claims the orbit body at block 0.
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0.0)
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0)
         bodyActiveOn(cylinder) shouldBe true
 
         // A stops checking in; voice B (no body) claims after the 1-block grace → body turns OFF.
@@ -74,7 +79,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         val bf = blockFrames
 
-        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(body = woodBody), blockStart = 0.0) // A owns
+        cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0) // A owns
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = bf.toDouble())               // B within grace → denied
         bodyActiveOn(cylinder) shouldBe true // still A's body
     }
@@ -83,8 +88,10 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                reverb = Voice.Reverb(amount = 0.5, size = 0.7),
-                delay = Voice.Delay(amount = 0.5, time = 0.3, feedback = 0.4),
+                katalystParams = mapOf(
+                    "reverb.wet" to 0.5, "reverb.size" to 7.0,
+                    "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.4,
+                ),
             ),
             blockStart = 0.0,
         )
@@ -94,8 +101,10 @@ class OrbitBusPipelineSpec : StringSpec({
         // Different voice, same block → denied → owner's settings persist.
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                reverb = Voice.Reverb(amount = 0.5, size = 0.2),
-                delay = Voice.Delay(amount = 0.5, time = 0.9, feedback = 0.1),
+                katalystParams = mapOf(
+                    "reverb.wet" to 0.5, "reverb.size" to 2.0,
+                    "delay.wet" to 0.5, "delay.time" to 0.9, "delay.feedback" to 0.1,
+                ),
             ),
             blockStart = 0.0,
         )
@@ -107,12 +116,18 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         val bf = blockFrames
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.7)), blockStart = 0.0,
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 7.0),
+            ),
+            blockStart = 0.0,
         )
         cylinder.reverb!!.reverb!!.size shouldBe 0.7
 
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.5, size = 0.2)), blockStart = 2.0 * bf,
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
+            ),
+            blockStart = 2.0 * bf,
         )
         cylinder.reverb!!.reverb!!.size shouldBe 0.2 // new owner's
     }
@@ -126,7 +141,10 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Owner A: reverb on — build up a comb-filter tail (small room = a drain the test can afford).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.8, size = 0.05)), blockStart = 0.0,
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.8, "reverb.size" to 0.5),
+            ),
+            blockStart = 0.0,
         )
         repeat(20) {
             cylinder.reverbSendBuffer.left.fill(0.5)
@@ -139,7 +157,10 @@ class OrbitBusPipelineSpec : StringSpec({
         // Owner A ends; a no-reverb voice takes over → the off-config starts the DRAIN under the
         // RETAINED params (the countdown decays at owner A's size, not the new owner's 0.0).
         cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(reverb = Voice.Reverb(amount = 0.0, size = 0.0)), blockStart = 2.0 * bf,
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.0, "reverb.size" to 0.0),
+            ),
+            blockStart = 2.0 * bf,
         )
         cylinder.reverb!!.reverb!!.size shouldBe 0.05 // retained
         cylinder.reverb!!.hasTail() shouldBe true // draining, VISIBLE to cleanup now
@@ -190,7 +211,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            reverb = Voice.Reverb(amount = 0.5, size = 0.5),
+            katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 5.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -224,7 +245,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            ducking = Voice.Ducking(cylinderId = 1, attackSeconds = 0.001, depth = 1.0),
+            katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -248,7 +269,7 @@ class OrbitBusPipelineSpec : StringSpec({
         val voice = VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
             endFrame = 1000.0,
-            ducking = Voice.Ducking(cylinderId = 1, attackSeconds = 0.001, depth = 1.0),
+            katalystParams = mapOf("duck.orbit" to 1.0, "duck.attack" to 0.001, "duck.depth" to 1.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -266,7 +287,13 @@ class OrbitBusPipelineSpec : StringSpec({
         // the bypass path) is wrong across a full teardown — the carried phase would be "blocks
         // the previous life stayed active x rate", a cleanup-schedule artifact.
         fun phaserVoice() = VoiceTestHelpers.createSynthVoice(
-            phaser = Voice.Phaser(rate = 1.7, depth = 0.8, center = 1200.0, sweep = 900.0),
+            katalystParams = mapOf(
+                // No `phaser.floor`: the fixture this replaced left the voice's floor at its
+                // default, and an unwritten slot resolves to the same PHASER_FLOOR the field
+                // defaulted to. Writing a 0.0 here would be a different dry coefficient.
+                "phaser.rate" to 1.7, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
+                "phaser.sweep" to 900.0,
+            ),
         )
 
         fun fillTone(cylinder: Cylinder) {
@@ -339,25 +366,32 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                phaser = Voice.Phaser(rate = 2.0, depth = 0.8, center = 1200.0, sweep = 900.0),
+                katalystParams = mapOf(
+                    "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
+                    "phaser.sweep" to 900.0,
+                ),
             ),
             blockStart = 0.0,
         )
 
-        // New owner with a NaN depth: the setter rejects the write (stored depth stays 0.8), and
-        // the kernel gate must follow the STORED value so both gates agree — the new owner's
-        // kernel params land (review round 2; gating on the raw NaN left the previous owner's
-        // ENTIRE phaser in charge).
+        // New owner with a NaN wet. The slot writer reads a non-finite amount as UNSET and
+        // substitutes PHASER_WET (0.0), so the phaser goes off and its kernel params are left
+        // where they were: the two gates (this one and `Phaser.process`'s) never disagree, which
+        // is what this row is about. On the FIELD path the same NaN was handed to the setter,
+        // which drops it, and the phaser stayed engaged at 0.8 with the new owner's kernel params.
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                phaser = Voice.Phaser(rate = 3.0, depth = Double.NaN, center = 800.0, sweep = 700.0),
+                katalystParams = mapOf(
+                    "phaser.rate" to 3.0, "phaser.wet" to Double.NaN, "phaser.center" to 800.0,
+                    "phaser.sweep" to 700.0,
+                ),
             ),
             blockStart = 2.0 * blockFrames,
         )
 
-        cylinder.phaser!!.phaser.depth shouldBe 0.8
-        cylinder.phaser!!.phaser.rate shouldBe 3.0
-        cylinder.phaser!!.phaser.center shouldBe 800.0
+        cylinder.phaser!!.phaser.depth shouldBe 0.0
+        cylinder.phaser!!.phaser.rate shouldBe 2.0
+        cylinder.phaser!!.phaser.center shouldBe 1200.0
     }
 
     "a no-phaser owner keeps the sweep clock: kernel params retained, only depth drops" {
@@ -365,14 +399,18 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
-                phaser = Voice.Phaser(rate = 2.0, depth = 0.8, center = 1200.0, sweep = 900.0),
+                katalystParams = mapOf(
+                    "phaser.rate" to 2.0, "phaser.wet" to 0.8, "phaser.center" to 1200.0,
+                    "phaser.sweep" to 900.0,
+                ),
             ),
             blockStart = 0.0,
         )
         cylinder.phaser!!.phaser.rate shouldBe 2.0
         cylinder.phaser!!.phaser.depth shouldBe 0.8
 
-        // Owner lapses; a plain voice takes over (VoiceFactory-default phaser: rate 0, depth 0).
+        // Owner lapses; a plain voice takes over, carrying no slot state at all, so the phaser
+        // resolves to the classic chain's own defaults (rate 0, wet 0).
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(),
             blockStart = 2.0 * blockFrames,
@@ -388,7 +426,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures delay parameters" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            delay = Voice.Delay(time = 0.5, feedback = 0.3, amount = 0.5),
+            katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.3),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -399,7 +437,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures reverb parameters" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            reverb = Voice.Reverb(amount = 0.5, size = 0.7, lowpass = 5000.0),
+            katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -410,7 +448,10 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures phaser parameters" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0, floor = 0.25),
+            katalystParams = mapOf(
+                "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0,
+                "phaser.sweep" to 600.0, "phaser.floor" to 0.25,
+            ),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -426,7 +467,10 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice: an absent phaser floor arrives as the additive default 1.0" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            phaser = Voice.Phaser(rate = 2.0, depth = 0.5, center = 800.0, sweep = 600.0),
+            katalystParams = mapOf(
+                "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0,
+                "phaser.sweep" to 600.0,
+            ),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
         cylinder.phaser!!.phaser.floor shouldBe 1.0
@@ -435,7 +479,7 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures ducking" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            ducking = Voice.Ducking(cylinderId = 2, attackSeconds = 0.05, depth = 0.8),
+            katalystParams = mapOf("duck.orbit" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
@@ -447,12 +491,12 @@ class OrbitBusPipelineSpec : StringSpec({
     "updateFromVoice configures compressor" {
         val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            compressor = Voice.Compressor(
-                thresholdDb = -15.0,
-                ratio = 3.0,
-                kneeDb = 4.0,
-                attackSeconds = 0.005,
-                releaseSeconds = 0.2,
+            katalystParams = mapOf(
+                "compressor.threshold" to -15.0,
+                "compressor.ratio" to 3.0,
+                "compressor.knee" to 4.0,
+                "compressor.attack" to 0.005,
+                "compressor.release" to 0.2,
             ),
         )
         cylinder.updateFromVoice(voice, blockStart = 0.0)

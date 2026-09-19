@@ -126,17 +126,14 @@
 - **The bus doors also write the orbit's slot state (2026-09-18, Katalyst step 5a).** `katalystParams`
   is the `oscParams` twin on the other host: `oscp` fills the voice's instrument, `.katp(name, value)`
   the chain its orbit runs, and the two namespaces never cross. Until the voice fields leave the wire
-  (step 5b) every bus door writes BOTH: its own voice fields and the matching `<stage>.<knob>` slots,
+  (step 5b-3) every bus door writes BOTH: its own voice fields and the matching `<stage>.<knob>` slots,
   filling the stage's companions per the compound-door rule (`/dsl-design` §4, which is that rule's
-  one home). The chain a cylinder is BORN with still reads the voice fields for every stage that
-  HAS one (since 2026-09-19 that is the qualifier: `gain` and `eq` never had one, so they are
-  slot-driven on every chain and `katp("gain.gain", x)` reaches an undeclared orbit's fader; the
-  rule's one home is the `katp` door's KDoc),
-  so a song that declares nothing sounds the same; every chain that arrives by NAME resolves its
-  `Param` knobs from the map, `Katalyst.classic()` included (decided 2026-09-18: voice-driven is only
-  the born-with chain, or `Katalyst(k => k.classic())` would be inert and `katp` on it would go
-  nowhere). Guard: `LangKatalystParamSpec`, mutation-checked (one deletion per door family).
-  `docs/tasks/katalyst-dsl.md` §9, step 5a.
+  one home). **Since 2026-09-19 (step 5b-1) the SLOT is the one that reaches the orbit**: every
+  chain reads the map, the one a cylinder is born with included, so a bus door and its `katp` slot
+  are the same knob and a `katp("reverb.size", 8)` needs no declaration first. The fields still
+  carry the per-voice send AMOUNTS (`delay`, `reverb`) until step 5b-2 and are inert for everything
+  else. The rule's one home is the `katp` door's KDoc. Guard: `LangKatalystParamSpec`,
+  mutation-checked (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
 
 - **A body material and a vowel are INDICES, and `.katalyst(dsl)` REPLACES (2026-09-18, Katalyst
   step 5a-2).** Two cleanups that retired the step-5a rule above it. (1) The door replaces like
@@ -152,8 +149,9 @@
   `body("wood")` run dry on a declared chain (round 1 of this step's review). Since 5a-3 the DOOR
   fills those two as well, so the engine's substitution is the NaN rule for a raw `katp` write only.
   Guards: `CatalogueIndexSpec` (audio_bridge, the conversion both ways and its edges), the
-  `LangKatalystParamSpec` body/vowel index rows, `KatalystClassicMatchesUntouchedVoiceSpec` (born-with
-  against declared, both spellings) and `KatalystDeclaredBodyParitySpec` (the render, byte-identical).
+  `LangKatalystParamSpec` body/vowel index rows, `KatalystClassicMatchesUntouchedVoiceSpec` (what the
+  chain installs against what the wire carries, both spellings) and `KatalystDoorFillRenderSpec`
+  (the render, byte-identical).
   `docs/tasks/katalyst-dsl.md` §9, step 5a-2.
 
 - **`oscParams` and `katalystParams` are one class, `ParamBag`, mutable and single-owner
@@ -184,7 +182,7 @@
   every existing song, because the engine was already substituting exactly those constants for an
   unset field (`VoiceFactory`, `Voice.Compressor.fromParams`, `FilterDef.Body`/`Formant`'s null
   floor); the engine keeps them as the NaN rule for a raw `katp` write, not as a second fill. Guards:
-  `ParamBagSpec`, `LangKatalystParamSpec`, the per-door lang specs, `KatalystDeclaredBodyParitySpec`
+  `ParamBagSpec`, `LangKatalystParamSpec`, the per-door lang specs, `KatalystDoorFillRenderSpec`
   (renders: body, compressor, duck). `docs/tasks/katalyst-dsl.md` §9 step 5a-3.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are

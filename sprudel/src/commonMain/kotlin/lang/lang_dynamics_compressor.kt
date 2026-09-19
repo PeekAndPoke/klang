@@ -33,7 +33,8 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * the rule; this is only what THIS door does). Called from every one of the five setters, because
  * the compressor has no name knob: `compressor(ratio = 8)` compresses at the constant threshold.
  *
- * Fills the voice FIELDS with the same five constants, for the born-with path, until step 5b.
+ * Fills the voice FIELDS with the same five constants, which the wire still carries until step
+ * 5b-3; since step 5b-1 the orbit's compressor reads the SLOTS and nothing else.
  *
  * Byte-identical to the engine's own fallback, which is what let the fill move to the door: the
  * five constants written here are exactly what `Voice.Compressor.fromParams` substituted for a null

@@ -13,6 +13,8 @@ import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.highpass
@@ -207,6 +209,20 @@ class IgnitorBenchmark(
             adsr = adsr,
             reverb = reverb,
             reverbSize = reverbSize,
+            // The orbit reverb reads its SLOTS since Katalyst step 5b-1; the field is the per-voice
+            // send AMOUNT only. A case that asks for a room writes both halves, exactly as the
+            // `reverb(...)` door does: the named knob plus the companion the door would fill. A
+            // size-only case would otherwise write `reverb.size` with no `reverb.wet` and measure
+            // a dry orbit, because the stage's gate is "the wet was written or is positive"
+            // (`sendStageRuns`), and then the benchmark's reverb arm would cost nothing.
+            katalystParams = if (reverb == null && reverbSize == null) {
+                null
+            } else {
+                buildMap {
+                    put("reverb.wet", reverb ?: REVERB_WET)
+                    put("reverb.size", reverbSize ?: REVERB_SIZE)
+                }
+            },
             distort = distort,
             distortShape = distortShape,
             distortOversample = distortOversample,

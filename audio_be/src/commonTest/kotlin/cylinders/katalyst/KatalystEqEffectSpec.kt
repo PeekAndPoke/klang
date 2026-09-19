@@ -65,7 +65,6 @@ class KatalystEqEffectSpec : StringSpec({
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-        voiceDriven = false,
     )
 
     /**
@@ -585,10 +584,10 @@ class KatalystEqEffectSpec : StringSpec({
 
     // ── The two chain kinds, and the lifecycle ───────────────────────────────────────────────────
 
-    "applyOwner on a VOICE-driven chain engages a declared eq, because it ends in applyParams" {
-        // `eq` never had a voice field, so its writer is slot-driven on every chain (the builder's
-        // KDoc). That only works because the voice-driven path finishes by applying the param
-        // state, which is the one line this row is here for.
+    "an eq appended to the classic block engages from the orbit's param state like any stage" {
+        // `eq` is the one classic-block neighbour that never had a voice field, and it was
+        // slot-driven one step before the rest of them (step 4). The row stays because it is the
+        // cheapest place the classic-plus-eq shape is exercised end to end.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl(
                 KatalystDsl.classic.stages +
@@ -598,14 +597,13 @@ class KatalystEqEffectSpec : StringSpec({
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
             reverbs = ReverbUnits(sampleRate),
-            voiceDriven = true,
         )
 
         val fx = chain.pipeline.filterIsInstance<KatalystEqEffect>().single()
 
         fx.isEngaged shouldBe false
 
-        chain.applyOwner(VoiceTestHelpers.createSynthVoice())
+        chain.applyParams(null)
 
         fx.isEngaged shouldBe true
     }

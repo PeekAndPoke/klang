@@ -100,7 +100,7 @@ class KatalystReverbEffect(
     private val activeTail = TailCeiling()
 
     /**
-     * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyOwner` on every
+     * Applies the orbit owner's reverb settings. Called by `KatalystChain.applyParams` on every
      * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on.
      *

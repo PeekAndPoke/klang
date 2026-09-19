@@ -29,8 +29,8 @@ import kotlin.math.abs
  * difference is the stage under test. Sample for sample, by raw bits, over several blocks so the
  * stateful stages (the room, the line, the compressor's follower) have to agree as they evolve.
  *
- * **It is reachable.** `katp("gain.gain", x)` moves it on ANY orbit, because a gain stage is
- * slot-driven whatever the chain's `voiceDriven` flag says. Halving it must halve the mix exactly
+ * **It is reachable.** `katp("gain.gain", x)` moves it on ANY orbit, because every chain reads the
+ * orbit's param state, the one a cylinder is born with included. Halving it must halve the mix exactly
  * (0.5 is a power of two), INCLUDING what the delay and the reverb return, which is the honest
  * question about a fader while the sends are still send buses: the returns are mixed in by their
  * own stages, and those sit before this one, so they are covered. The duck is not, and cannot be
@@ -51,13 +51,12 @@ class KatalystClassicGainStageSpec : StringSpec({
     /** The classic chain minus its fader: what `KatalystDsl.classic` was until 2026-09-19. */
     val withoutFader = KatalystDsl(KatalystDsl.classic.stages.filterNot { it is KatalystStageDsl.Gain })
 
-    fun build(dsl: KatalystDsl, voiceDriven: Boolean = false): KatalystChain = KatalystChainBuilder.build(
+    fun build(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-        voiceDriven = voiceDriven,
     )
 
     fun ctx(): KatalystContext = KatalystContext(
@@ -215,16 +214,17 @@ class KatalystClassicGainStageSpec : StringSpec({
         }
     }
 
-    "the born-with chain has the fader too, and katp reaches it there as well" {
+    "the fader is on the classic chain, so katp reaches an orbit that declares nothing" {
         // A SCALING LAW, not an identity: both sides are engine renders, so what this pins is
         // that the output is LINEAR in the knob, not that any particular sample is right. The
-        // independent anchor for the samples themselves is the first two rows of this spec, and the cylinder-level twin in
-        // `CylinderKatalystParamsSpec`.
-        // `voiceDriven = true` is the chain a cylinder is BORN with. A gain stage is slot-driven
-        // on every chain, so an orbit that declares nothing still has a group fader a pattern can
-        // move, which is half the reason the stage is in `classic` at all.
-        val unity = render(build(KatalystDsl.classic, voiceDriven = true), null)
-        val halved = render(build(KatalystDsl.classic, voiceDriven = true), mapOf("gain.gain" to 0.5))
+        // independent anchor for the samples themselves is the first two rows of this spec, and
+        // the cylinder-level twin in `CylinderKatalystParamsSpec`.
+        //
+        // `KatalystDsl.classic` IS the chain a cylinder is born with, and since step 5b-1 the
+        // cylinder builds it like any other, so an orbit that declares nothing has a group fader a
+        // pattern can move, which is half the reason the stage is in `classic` at all.
+        val unity = render(build(KatalystDsl.classic), null)
+        val halved = render(build(KatalystDsl.classic), mapOf("gain.gain" to 0.5))
 
         withClue("not-silence floor") { unity.peak() shouldBeGreaterThan 0.1 }
 

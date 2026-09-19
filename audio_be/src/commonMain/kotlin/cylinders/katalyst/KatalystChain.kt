@@ -5,49 +5,30 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 
 /**
- * Writes the orbit's OWNER voice into ONE built stage.
+ * Writes a chain's own slots into ONE built stage, with no voice in sight: the chain is the
+ * instrument (the signal-flow plan's D4).
  *
- * Transitional by design. Step 2 of the Katalyst work (2026-09-17) builds the chain from the DSL
- * but still reads every knob off the owner voice, exactly as `Cylinder.applyBusEffects` did, so
- * the engine stays byte-identical. Step 3 replaces these with the per-stage slot resolver of
- * `docs/tasks/katalyst-dsl.md` §7, at which point the owner voice stops being a knob source and
- * this interface goes with it.
- *
- * Stateless on purpose: the instance [KatalystChainBuilder] installs here captures the stage and
- * the sample rate, both `val`, and every bit of mutable state stays inside the effect class (the
- * house rule on SAM lambdas, `audio/ref/performance.md`). One instance per stage, built once, so
- * the per-block cost is one virtual call per stage and no dispatch and no allocation.
- */
-internal fun interface KatalystOwnerApply {
-    fun apply(voice: Voice)
-}
-
-/**
- * Writes a DECLARED chain's own slots into ONE built stage, with no voice in sight: the chain is
- * the instrument (the signal-flow plan's D4).
- *
- * Separate from [KatalystOwnerApply] so that a chain can be configured with NO OWNER ALIVE
- * (`KatalystChain.applyParams(null)`), which is what a chain faded in from `Cylinders`' pending
- * poll needs: the block's voices have already offered themselves by then, and without this the
- * declared chain would run its first blocks at the settings [KatalystChain.reset] left.
- * Transitional with its sibling: step 5b takes the bus fields off the wire, and then every writer
- * is one of these.
+ * **The ONLY kind of writer there is** since Katalyst step 5b-1 (2026-09-19): the chain a cylinder
+ * is born with reads the orbit's param state exactly as a declared one does, and the owner-voice
+ * writers that read the bus FIELDS are gone. A chain can therefore be configured with NO OWNER
+ * ALIVE (`KatalystChain.applyParams(null)`), which is what a chain faded in from `Cylinders`'
+ * pending poll needs: the block's voices have already offered themselves by then, and without this
+ * the chain would run its first blocks at the settings [KatalystChain.reset] left.
  *
  * **Two methods, because the orbit's param state changes far more rarely than a block goes by**
  * (Katalyst step 5a). [resolve] re-reads this stage's [KatalystKnob]s from the state and rebuilds
  * whatever composite the stage wants (a `FilterDef`, a `Voice.Compressor`); [apply] writes what is
  * already resolved into the stage and does no lookup and no allocation, so it can run on every
- * block as the voice-driven writers do. [KatalystChain.applyParams] is the one place that decides
+ * block. [KatalystChain.applyParams] is the one place that decides
  * which of the two a block needs.
  *
- * Stateful, unlike [KatalystOwnerApply], and that IS the design: the resolved numbers have to live
- * somewhere between the map that produced them and the block that writes them, and the stage they
- * belong to takes several of them at once.
+ * Stateful, and that IS the design: the resolved numbers have to live somewhere between the map
+ * that produced them and the block that writes them, and the stage they belong to takes several of
+ * them at once.
  */
 internal interface KatalystSlotWriter {
     /** Re-read this stage's slots from the orbit's param state. Null = the authored defaults. */
@@ -70,9 +51,9 @@ internal interface KatalystSlotWriter {
  * after the chains, which is what it has always done; the duck stage's position in the DSL list is
  * therefore ignored, and a chain that declares two keeps the last (decided 2026-09-17).
  *
- * Step 2 is the mirror: the chain is built from [KatalystDsl.classic] and every knob still comes
- * from the owner voice through [applyOwner], so nothing sounds different. What moved is WHERE the
- * stage list lives: it is data now, not a hardcoded `listOf(...)`.
+ * Every knob comes from the orbit's param state through [applyParams], the chain a cylinder is
+ * born with included (step 5b-1). What the DSL moved is WHERE the stage list lives: it is data
+ * now, not a hardcoded `listOf(...)`.
  */
 class KatalystChain internal constructor(
     /**
@@ -85,26 +66,14 @@ class KatalystChain internal constructor(
      * the read-only [pipeline] view.
      */
     private val serial: Array<KatalystEffect>,
-    /**
-     * One writer per declared stage that HAS a voice field, in DSL order, the duck's last.
-     *
-     * The VOICE-driven half: a chain is either all of these (the chain a cylinder is born with) or
-     * all [statics] (a declared chain), and the builder's `voiceDriven` flag decides which. With
-     * one exception, which is not a hole in the rule: `eq` and `gain` never had a voice field, so
-     * there is nothing for an owner writer to read and they are slot-driven on every chain (see
-     * [KatalystChainBuilder]). A voice-driven chain that declares one therefore has entries in
-     * BOTH arrays, which is sound because [applyOwner] ends in [applyParams].
-     */
-    private val owners: Array<KatalystOwnerApply>,
-    /** The SLOT-driven half, same rule, per declared stage. See [KatalystSlotWriter]. */
+    /** One writer per declared stage, in DSL order, the duck's last. See [KatalystSlotWriter]. */
     private val statics: Array<KatalystSlotWriter>,
     /** The duck stage, or null when the chain declares none. The LAST declared duck wins. */
     val duck: KatalystDuckEffect?,
     /**
-     * The writer of this chain's [duck] stage, or null when it declares none, and null on a
-     * voice-driven chain, which is never asked (see [ducksWith], the one reader). Its `declared`
-     * flag is whether the stage currently resolves to settings, which `.katp` can change while the
-     * chain runs.
+     * The writer of this chain's [duck] stage, or null when it declares none (see [ducksWith], the
+     * one reader). Its `declared` flag is whether the stage currently resolves to settings, which
+     * `.katp` can change while the chain runs.
      */
     private val duckWriter: KatalystDuckWriter?,
 ) {
@@ -123,11 +92,11 @@ class KatalystChain internal constructor(
     private val stages: Array<KatalystEffect> = if (duck == null) serial.copyOf() else serial + duck
 
     /**
-     * Test seam: how many writers the build installed, voice-driven and slot-driven together. The
-     * one way a spec can tell "the dropped duplicate has no writer" from "it has one that nothing
-     * runs", which is what the last-duck rule turns on.
+     * Test seam: how many writers the build installed. The one way a spec can tell "the dropped
+     * duplicate has no writer" from "it has one that nothing runs", which is what the last-duck
+     * rule turns on.
      */
-    internal val writerCount: Int get() = owners.size + statics.size
+    internal val writerCount: Int get() = statics.size
 
     /**
      * The param state [statics] last resolved from, by REFERENCE: the gate of [applyParams]. Null
@@ -183,39 +152,26 @@ class KatalystChain internal constructor(
     // ════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Apply ALL of this chain's stages from the orbit's owning [voice]. Absent effects are turned
-     * off, so the owner's config fully determines the orbit and nothing leaks from a previous
-     * owner. The owner re-applies every block; this is idempotent (body/vowel short-circuit on an
-     * unchanged config). The compressor/ducking instances are reused, so their envelope followers
-     * survive across notes AS LONG AS consecutive owners keep the effect: a takeover by a voice
-     * that has no compressor/ducking clears it, and the next owner that re-adds it starts a fresh
-     * envelope.
+     * Apply EVERY stage of this chain from the orbit's param state ([params], the owner voice's
+     * `katalystParams`). **Null is the no-owner door**: no state, so every slot resolves to what
+     * the chain itself authored, which is what a chain entering service needs before any voice has
+     * claimed the orbit's lease, and what an orbit whose owner has died falls back to.
+     *
+     * **This is the ONE way a bus knob reaches a stage** since step 5b-1, on a declared chain and
+     * on the chain a cylinder is born with alike. The rule and its one home are the `katp` door's
+     * KDoc in `sprudel/lang/lang_katalyst.kt`.
+     *
+     * Absent stages are turned OFF, so the state fully determines the orbit and nothing leaks from
+     * a previous owner. The values are re-written every block and that is idempotent (body and
+     * vowel short-circuit an unchanged config). The compressor and ducking INSTANCES are reused,
+     * so their envelope followers survive across notes as long as consecutive owners keep the
+     * effect: a takeover by a voice that asks for neither clears it, and the next owner that
+     * re-adds it starts a fresh envelope.
      *
      * Stage by stage, in DSL order. The order is unobservable (each stage writes only its own
      * instance, and no stage reads another's params), which is why the historical
      * `applyBusEffects` could configure ducking before the compressor while the classic chain
      * declares them the other way round.
-     */
-    fun applyOwner(voice: Voice) {
-        for (i in owners.indices) {
-            owners[i].apply(voice)
-        }
-
-        applyParams(voice.katalystParams)
-    }
-
-    /**
-     * Apply every SLOT-driven stage from the orbit's param state ([params], the owner voice's
-     * `katalystParams`). **Null is the no-owner door**: no state, so every slot resolves to what
-     * the chain itself authored, which is what a chain entering service needs before any voice has
-     * claimed the orbit's lease.
-     *
-     * **Not a no-op on a voice-driven chain**, and this is the one place that is easy to get
-     * wrong: a voice-driven chain has [statics] too, for every stage that never had a voice field
-     * to be driven BY (today `gain`, and `eq` wherever a chain declares one, see [owners] and
-     * [KatalystChainBuilder]). So the
-     * classic chain's group fader moves on an orbit that declared nothing. The rule and its one
-     * home are the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`.
      *
      * **The re-resolve is gated on the map's IDENTITY, the apply is not** (Katalyst step 5a). A
      * live owner hands over the same map instance every block, so the lookups run once per owner
@@ -252,8 +208,8 @@ class KatalystChain internal constructor(
      * duck" at the moment the question is asked, and the swap ramps the reduction out and then
      * drops a fresh one on the orbit a block later.
      *
-     * Idempotent and gated exactly like [applyParams], so the [applyOwner] that follows on the same
-     * map instance costs nothing extra.
+     * Idempotent and gated exactly like [applyParams], so the [applyParams] that follows on the
+     * same map instance costs nothing extra.
      */
     fun resolveParams(params: Map<String, Double>?) {
         if (everResolved && params === resolvedFrom) {
@@ -327,10 +283,7 @@ class KatalystChain internal constructor(
      * ARRIVING chain (`Cylinder.handOverDuck`): handing one to a stage that is about to be cleared
      * releases the whole reduction in one sample.
      *
-     * Only an arriving chain is ever asked, and since 2026-09-18 an arriving chain is always
-     * slot-driven (voice-driven is only what a cylinder is born with, `Cylinder.chainFor`), so the
-     * answer is its duck writer's and the voice-driven arm this once had is gone with the host
-     * flags that fed it.
+     * The answer is its duck writer's, on every chain.
      */
     fun ducksWith(): Boolean = duckWriter?.declared == true
 

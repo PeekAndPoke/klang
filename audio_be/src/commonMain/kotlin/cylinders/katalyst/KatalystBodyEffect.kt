@@ -89,6 +89,11 @@ class KatalystBodyEffect(
             return
         }
 
+        // **No production caller can hand this a non-finite value any more** (Katalyst step 5b-1,
+        // 2026-09-19): the one caller is `KatalystSlots.bodyDef`, which substitutes BODY_WET and the
+        // matching floor one layer up, on every chain. The guard stays as this stage's contract for
+        // a DIRECT caller, which is what the effect specs are, and because the failure it prevents
+        // is a per-block allocation on the audio thread rather than a wrong number.
         // NaN-guards, and they sit BEFORE the comparison on purpose: a NaN is never equal to
         // itself, so an unguarded non-finite mix made the test below true on EVERY block and
         // rebuilt two filter banks per block on the audio thread, restarting a 12 ms crossfade

@@ -264,7 +264,6 @@ class KatalystGainEffectSpec : StringSpec({
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
             reverbs = ReverbUnits(sampleRate),
-            voiceDriven = false,
         )
 
         chain.applyParams(null)
@@ -288,7 +287,6 @@ class KatalystGainEffectSpec : StringSpec({
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
             reverbs = ReverbUnits(sampleRate),
-            voiceDriven = false,
         )
 
         fun renderBlock(): DoubleArray {

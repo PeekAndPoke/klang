@@ -89,7 +89,7 @@ class KatalystDelayEffect(
 
     /**
      * The smallest ring CLASS the warehouse has failed to allocate for this effect, or 0. Without
-     * it a refusal is retried on EVERY block: `KatalystChain.applyOwner` re-applies the owner's
+     * it a refusal is retried on EVERY block: `KatalystChain.applyParams` re-applies the owner's
      * config per block — and "graceful degradation" becomes a 344 Hz allocate-and-catch storm on the
      * audio thread (review round 1, both reviewers). While the needed class is `>= refusedFrames`
      * no ALLOCATION is attempted; the shelf is still consulted, because a ring another orbit
@@ -181,7 +181,7 @@ class KatalystDelayEffect(
     private val activeTail = TailCeiling()
 
     /**
-     * Applies the orbit owner's delay settings. Called by `KatalystChain.applyOwner` on every
+     * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
      * block the lease is (re)claimed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
      */

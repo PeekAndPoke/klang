@@ -221,11 +221,12 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
 - **Accepted, and temporary: every bus-door event ships `katalystParams` as
   well as its voice fields** (Katalyst step 5a, 2026-09-18). A song touching
   `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
-  now sends the matching `<stage>.<knob>` slots over the wire even on an
-  orbit running the born-with chain, which ignores those particular slots
-  (it reads the map only for a stage that has no voice field, which on the
-  born-with chain is the `gain.gain` fader alone; the rule's one home is the
-  `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`). Measured with
+  sends the matching `<stage>.<knob>` slots over the wire AND the fields.
+  Since step 5b-1 (2026-09-19) the SLOTS are what every orbit reads and the
+  fields are the temporary half: they carry the per-voice send amounts until
+  step 5b-2 and leave the wire in 5b-3, which is when this row's cost goes.
+  The rule's one home is the `katp` door's KDoc in
+  `sprudel/lang/lang_katalyst.kt`. Measured with
   `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
   Node 24) on one voice.
 

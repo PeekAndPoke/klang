@@ -12,8 +12,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
@@ -39,55 +37,44 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /**
- * One row per stage of the resolver contract (`docs/tasks/katalyst-dsl.md` §7) for a **declared**
- * chain: its knobs come from its own slots, and the owner voice is not a knob source
- * (the signal-flow plan §7, D4).
+ * One row per stage of the resolver contract (`docs/tasks/katalyst-dsl.md` §7): what a chain's
+ * stage is configured with, given what the chain AUTHORED and what the orbit's param state says.
  *
- * Every row builds a slot-driven chain and applies it from a voice whose own bus settings are
- * LOUD and different, so each row also proves that the voice is ignored. The classic chain's
- * voice-driven writers are `KatalystChainBuilderSpec`'s subject, and the byte identity they buy is
- * `KatalystClassicMatchesUntouchedVoiceSpec`'s.
+ * Most rows configure from no state at all ([declared]) and are therefore about the authored
+ * values; the rows that name a map are about what a write does to them. What the CLASSIC chain's
+ * own slot defaults are is `KatalystClassicMatchesUntouchedVoiceSpec`'s subject, and that the bus
+ * FIELDS of a voice reach nothing is `CylinderKatalystParamsSpec`'s.
  */
 class KatalystSlotResolverSpec : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 128
 
-    /** Every bus knob set, and set to something no row below asks for. */
-    fun loudVoice(): Voice = VoiceTestHelpers.createSynthVoice(
-        delay = Voice.Delay(amount = 0.9, time = 0.75, feedback = 0.8, cap = 0.2),
-        reverb = Voice.Reverb(amount = 0.9, size = 0.95, lowpass = 999.0),
-        phaser = Voice.Phaser(rate = 9.0, depth = 0.9, center = 9000.0, sweep = 9000.0, floor = 0.1),
-        compressor = Voice.Compressor(
-            thresholdDb = -9.0,
-            ratio = 9.0,
-            kneeDb = 9.0,
-            attackSeconds = 0.09,
-            releaseSeconds = 0.9,
-        ),
-        ducking = Voice.Ducking(cylinderId = 9, attackSeconds = 0.09, depth = 0.9),
-        body = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 99.0, db = 9.0, q = 9.0)), mix = 0.9),
-        vowel = FilterDef.Formant(
-            bands = listOf(FilterDef.Formant.Band(freq = 999.0, db = 9.0, q = 99.0)),
-            mix = 0.9,
-        ),
-    )
-
-    /** A declared chain, built slot-driven, with the loud voice offered as its owner. */
+    /**
+     * A chain built from [stages] and configured from NO param state, so every knob resolves to
+     * what the chain itself authored. That is what these rows are about: one row per stage of the
+     * resolver contract, on the authored values.
+     *
+     * It used to hand `applyParams` the `katalystParams` of a voice whose seven bus FIELDS were all
+     * set to loud values, to show that those fields were ignored. Since step 5b-1 the chain's
+     * signature cannot see a field at all, so the demonstration was empty (the map of that voice was
+     * null, so this was already `applyParams(null)` through a whole `VoiceFactory` build). The claim
+     * has a home where it can still be made: `CylinderKatalystParamsSpec`'s "the BORN-WITH chain
+     * ignores the voice's bus FIELDS" row, which offers such a voice to a real cylinder.
+     */
     fun declared(vararg stages: KatalystStageDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = KatalystDsl.of(*stages),
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = SizedBuffers.forRings(sampleRate),
         reverbs = ReverbUnits(sampleRate),
-        voiceDriven = false,
-    ).also { it.applyOwner(loudVoice()) }
+    ).also { it.applyParams(null) }
 
     fun c(value: Double) = IgnitorDsl.Constant(value)
 
     // ── Delay ────────────────────────────────────────────────────────────────────────────────────
 
-    "delay: the slots reach the line, and the voice's own delay does not" {
+    "delay: the authored slots reach the line" {
         val chain = declared(
             KatalystStageDsl.Delay(time = c(0.25), feedback = c(0.4), cap = c(0.9))
         )
@@ -120,7 +107,8 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "delay: wet 0.0 is OFF in this step, so the stage rents nothing" {
-        // `wet` is the stage's ON SWITCH until step 5 makes the sends insert-style: a chain cannot
+        // `wet` decides WHETHER the stage runs until step 5b-2 makes the sends insert-style
+        // (`sendStageRuns` is the one home): a chain cannot
         // say HOW MUCH yet, but it must be able to say NOTHING, like the phaser's depth and the
         // duck's orbit.
         val chain = declared(
@@ -170,13 +158,149 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
 
-    "reverb: wet 0.0 is OFF in this step, so the stage rents nothing" {
+    "reverb: an AUTHORED wet of 0.0 that no pattern writes rents nothing" {
+        // Half of the send gate (`sendStageRuns`), and the half decided on 2026-09-17: a chain
+        // that says `wet(0.0)` asked for a chain that HAS a room, not for a room. Nothing in the
+        // param state, so `KatalystKnob.written` is false and only the authored amount speaks.
         val chain = declared(KatalystStageDsl.Reverb(wet = c(0.0), size = c(6.0)))
 
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
 
-    "reverb: a non-finite wet is unset, which is also OFF" {
+    "reverb: a WRITTEN wet of 0.0 keeps the room running, because wet is a per-voice send" {
+        // The other half, and the one round 1 of the review put back (Katalyst step 5b-1). `wet`
+        // is documented as a PER-VOICE send, so `reverb(0)` on ONE voice must not silence the room
+        // that another voice on the same orbit is sending into; which of them holds the lease is
+        // first-rendered-wins, and the song would otherwise change when two arms of a `stack` swap
+        // places. `VoiceFactory` ran the stage on a TOUCHED field, a written 0 included, and the
+        // slot twin of touched is "the map carries the key with a finite value".
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Reverb(
+                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
+                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(mapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
+
+        val unit = chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
+
+        unit.size shouldBe Reverb.normalizeSize(6.0)
+
+        // The discriminator, on a FRESH chain so no drain state can answer for it: the same size,
+        // with the wet key ABSENT from the map, rents nothing. What decides is the write, not the
+        // number, and not the presence of a size.
+        val untouched = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Reverb(
+                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
+                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        untouched.applyParams(mapOf("reverb.size" to 6.0))
+
+        untouched.reverb.shouldNotBeNull().reverb.shouldBeNull()
+    }
+
+    "delay: a WRITTEN wet of 0.0 keeps the line running, the reverb row's twin" {
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Param("delay.wet", 0.0),
+                    time = IgnitorDsl.Param("delay.time", 0.0),
+                    feedback = IgnitorDsl.Param("delay.feedback", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(mapOf("delay.wet" to 0.0, "delay.time" to 0.25, "delay.feedback" to 0.3))
+
+        chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().time shouldBe 0.25
+
+        val untouched = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Param("delay.wet", 0.0),
+                    time = IgnitorDsl.Param("delay.time", 0.0),
+                    feedback = IgnitorDsl.Param("delay.feedback", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        untouched.applyParams(mapOf("delay.time" to 0.25, "delay.feedback" to 0.3))
+
+        untouched.delay.shouldNotBeNull().delayLine.shouldBeNull()
+    }
+
+    "a NEGATIVE written wet runs the stage too: the wire's rule is touched, not positive" {
+        // `VoiceFactory` read a negative send field as touched, and `SendRenderer` sends a
+        // phase-inverted amount. The gate must not second-guess the sign.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Reverb(
+                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
+                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(mapOf("reverb.wet" to -0.5, "reverb.size" to 6.0))
+
+        chain.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
+    }
+
+    "reverb: a non-finite WRITTEN wet is unset, which is neither touched nor an amount, so OFF" {
+        // The one non-finite family that is NOT a strict improvement, pinned deliberately. At HEAD
+        // the FIELD was non-null, so the effect counted as touched and `VoiceFactory`'s `orDefault`
+        // swallowed the NaN: the room ran at the constants and every voice on the orbit was heard
+        // in it. Here the stage is off for the whole orbit, so a second voice sending into it loses
+        // its room. What that buys is the slot vocabulary being consistent with itself, "non-finite
+        // is unset" on EVERY knob, which is what lets a cleared slot read as untouched at all. No
+        // ordinary spelling reaches it: it takes a string atom (`"NaN"`) or a hand-written `katp`.
+        // Recorded in `audio/MEMORY.md` with the same honesty.
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Reverb(
+                    wet = IgnitorDsl.Param("reverb.wet", 0.0),
+                    size = IgnitorDsl.Param("reverb.size", 0.0),
+                )
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        )
+
+        chain.applyParams(mapOf("reverb.wet" to SLOT_UNSET, "reverb.size" to 6.0))
+
+        chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
+    }
+
+    "reverb: an AUTHORED non-finite wet is OFF as well" {
         val chain = declared(KatalystStageDsl.Reverb(wet = c(SLOT_UNSET), size = c(6.0)))
 
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
@@ -267,7 +391,7 @@ class KatalystSlotResolverSpec : StringSpec({
         val chain = declared(KatalystStageDsl.Compressor(threshold = c(-21.0)))
         val comp = chain.compressor.shouldNotBeNull().compressor.shouldNotBeNull()
 
-        chain.applyOwner(loudVoice())
+        chain.applyParams(null)
 
         chain.compressor.shouldNotBeNull().compressor.shouldNotBeNull() shouldBeSameInstanceAs comp
     }
@@ -345,7 +469,6 @@ class KatalystSlotResolverSpec : StringSpec({
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
             reverbs = ReverbUnits(sampleRate),
-            voiceDriven = false,
         )
 
         // Nothing written: both stages off, which is what an untouched classic orbit is.
@@ -397,7 +520,6 @@ class KatalystSlotResolverSpec : StringSpec({
             blockFrames = blockFrames,
             rings = SizedBuffers.forRings(sampleRate),
             reverbs = ReverbUnits(sampleRate),
-            voiceDriven = false,
         )
 
         val first = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 0.3)

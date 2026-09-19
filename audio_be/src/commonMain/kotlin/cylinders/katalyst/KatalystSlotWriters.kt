@@ -84,9 +84,8 @@ internal class KatalystVowelWriter(
 }
 
 /**
- * Delay: `wet` is the stage's ON SWITCH until step 5b makes it the insert amount, so an off stage
- * is expressed by handing the line a non-finite TIME, which is also what makes a live tail drain
- * instead of freeze (see [KatalystDelayEffect]).
+ * Delay: an off stage is expressed by handing the line a non-finite TIME, which is also what makes
+ * a live tail drain instead of freeze (see [KatalystDelayEffect]).
  */
 internal class KatalystDelayWriter(
     private val fx: KatalystDelayEffect,
@@ -110,13 +109,13 @@ internal class KatalystDelayWriter(
         fx.configure(time = gatedTime, feedback = feedback.value, cap = cap.value)
     }
 
-    private fun gate(): Double = if (sendIsOn(wet.value)) time.value else SLOT_UNSET
+    private fun gate(): Double = if (sendStageRuns(wet)) time.value else SLOT_UNSET
 }
 
 /**
  * Reverb: the slot carries the AUTHORED 0 to 10 size, so it passes through the one shared
- * conversion ([Reverb.normalizeSize]) here, where `VoiceFactory` does it for a voice. `wet` is the
- * on switch, as on the delay above.
+ * conversion ([Reverb.normalizeSize]) here, where `VoiceFactory` does it for a voice. The stage's
+ * gate is [sendStageRuns], as on the delay above.
  */
 internal class KatalystReverbWriter(
     private val fx: KatalystReverbEffect,
@@ -141,7 +140,7 @@ internal class KatalystReverbWriter(
     }
 
     private fun gate(): Double =
-        if (sendIsOn(wet.value)) Reverb.normalizeSize(size.value) else SLOT_UNSET
+        if (sendStageRuns(wet)) Reverb.normalizeSize(size.value) else SLOT_UNSET
 
     // NaN-guard on a value the author can write: non-finite is "unset", which is the engine's own
     // fixed damping.
@@ -149,14 +148,18 @@ internal class KatalystReverbWriter(
 }
 
 /**
- * Phaser: the five knobs, through the one gate both knob sources share ([writePhaser]).
+ * Phaser: the five knobs, through the one gate and kernel-param rule in [writePhaser].
  *
  * `wet` and `floor` are NaN-guarded here, the way the reverb writer guards its `lowpass`, because
- * the two effect setters behind them SWALLOW a non-finite value instead of reading it as unset:
- * `Phaser.depth` drops it and keeps the depth it had (so a cleared `phaser.wet` would leave the
- * phaser engaged at the previous amount), and a NaN floor reaches `WetDryMix.dryCoeff` and comes
- * out as a full notch. `rate`, `center` and `sweep` need no guard: they are only written while the
- * phaser is engaged, and `center`/`sweep` already fall back on `> 0` inside [writePhaser].
+ * the two knobs behind them read a non-finite value as something other than unset:
+ * `Phaser.depth`'s setter DROPS it and keeps the depth it had (so a cleared `phaser.wet` would
+ * leave the phaser engaged at the previous amount), and `Phaser.floor` stores it RAW, where
+ * `WetDryMix.dryCoeff` coerces it to 0.0 and the additive law (floor 1.0, the dry signal passing
+ * at full level next to the wet) becomes the CROSSFADE law, `cos(depth*pi/2)^2`: about unity just
+ * above the engage threshold, -1.4 dB at depth 0.25, -6 dB at 0.5, -20 dB at 0.8 and silent only
+ * at 1.0. So it is audible at large depths and nearly inaudible at small ones, not a full notch.
+ * `rate`, `center` and `sweep` need no guard: they are only written while the phaser is engaged,
+ * and `center`/`sweep` already fall back on `> 0` inside [writePhaser].
  */
 internal class KatalystPhaserWriter(
     private val fx: KatalystPhaserEffect,

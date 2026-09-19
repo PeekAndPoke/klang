@@ -14,6 +14,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -228,12 +229,14 @@ class CylinderChainSwapSpec : StringSpec({
     }
 
     "the KEY is the identity, not the content: a second name for one stage list is a second chain" {
-        // Changed 2026-09-18 (review round 2): the no-op compares the requested key against the
-        // CURRENT chain's key and never the stage lists. The content compare it replaces adopted a
-        // second name for free, but it also adopted `Katalyst(k => k.classic())` into the born-with
-        // VOICE-DRIVEN chain, which made every `katp` on that orbit inert. The price is that a
-        // chain re-registered under a second name rebuilds (and crossfades, on a sounding orbit);
-        // `KatalystDsl.uniqueId()` is content-derived, so one content normally has one name.
+        // The no-op of a re-emitted declaration compares the requested key against the CURRENT
+        // chain's key, never the stage lists, so a chain re-registered under a second name rebuilds
+        // (and crossfades, on a sounding orbit). `KatalystDsl.uniqueId()` is content-derived, so one
+        // content normally has one name and the price is not paid.
+        //
+        // ONE content is compared, and it is the exception this row does not cover: a declaration
+        // equal to `KatalystDsl.classic` resolves to the chain the cylinder was born with (step
+        // 5b-1, `Cylinder.chainFor`), which is what the "no build, no swap" row above is about.
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.registry.register("gain-again", gainChain(1.5))
@@ -278,11 +281,13 @@ class CylinderChainSwapSpec : StringSpec({
         }
     }
 
-    "the classic chain BY NAME is a declaration: a slot-driven chain of its own, not the born-with one" {
-        // Decided 2026-09-18 (review round 2). Handing back the born-with instance for content
-        // equal to `KatalystDsl.classic` made `Katalyst(k => k.classic())` inert: the orbit kept
-        // reading the voice's effect fields and every `katp` on it went nowhere. Voice-driven is
-        // now ONLY what a cylinder is born with.
+    "a chain whose CONTENT is classic resolves to the born-with instance: no build, no swap" {
+        // Decided 2026-09-19 with step 5b-1, and it reverses the decision of 2026-09-18 (review
+        // round 2) together with its reason. That round forbade the shortcut because the born-with
+        // chain was VOICE-driven, so handing it back made `Katalyst(k => k.classic())` inert and
+        // every `katp` on the orbit went nowhere. Both chains read the orbit's param state now, so
+        // the two are the same chain in every observable way, and building a second one would buy
+        // a crossfade that is not bit-transparent for a declaration that changes nothing.
         val rig = Rig()
         rig.registry.register("some-classic-name", KatalystDsl.classic)
 
@@ -290,26 +295,79 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.requestChain("some-classic-name")
 
-        rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
-        withClue("the same classic effects, so it still sounds like the historical chain") {
-            rig.cylinder.runsClassic() shouldBe true
-            rig.cylinder.pipeline.size shouldBe bornWith.size
-        }
-        withClue("and it is a declared chain, so it is built and cached like any other") {
-            rig.cylinder.cachedChainCount shouldBe 1
+        rig.cylinder.pipeline shouldBeSameInstanceAs bornWith
+        withClue("nothing was built, so nothing is cached") {
+            rig.cylinder.cachedChainCount shouldBe 0
         }
 
-        withClue("a repeat request for the same name is still free") {
-            val installed = rig.cylinder.pipeline
-
+        withClue("and the name was adopted, so a re-emission takes the raw fast path") {
             rig.cylinder.requestChain("some-classic-name")
 
-            rig.cylinder.pipeline shouldBeSameInstanceAs installed
-            rig.cylinder.cachedChainCount shouldBe 1
+            rig.cylinder.pipeline shouldBeSameInstanceAs bornWith
+            rig.cylinder.cachedChainCount shouldBe 0
+        }
+
+        // The engagement control: a chain with DIFFERENT content is still built and installed, so
+        // the row above is about the CONTENT and not about a `requestChain` that stopped working.
+        rig.registry.register("not-classic", gainChain(1.5))
+        rig.cylinder.requestChain("not-classic")
+
+        rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
+        rig.cylinder.cachedChainCount shouldBe 1
+    }
+
+    "a QUEUED content-classic key still lets the deactivation reach its clean slate" {
+        // Review round 1, m1. `install` returns FALSE when the requested chain is the one already
+        // in service, so `installPending` reports "nothing installed" and `tryDeactivate` falls
+        // through to its own reset. Without that the orbit went inactive with its DSP state and its
+        // lease intact, and the next life's first owner inherited this life's settings, which the
+        // reset exists to prevent.
+        val rig = Rig()
+
+        // A room the deactivation has to clear, written as a SLOT so the born-with chain reads it.
+        rig.sound(
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 6.0),
+            )
+        )
+
+        rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
+
+        // The request arrives BEFORE its `RegisterKatalyst`, which is what puts the key in the
+        // queue rather than installing it: a request on a sounding orbit whose name IS known goes
+        // through `beginFade` and never reaches `installPending` at all.
+        //
+        // This is the cheapest way to reach the guarded path, NOT the production scenario, and a
+        // future reader should not go looking for a late registration. In production
+        // `Cylinders.processAndMix` polls every cylinder's pending chain BEFORE `tryDeactivate`,
+        // so a key that is merely late is installed by the poll. What reaches `tryDeactivate` with
+        // a key still queued is one that was refused by that block's poll and freed afterwards:
+        // a key waiting behind a fade whose `outgoing` slot is released inside `processEffects` of
+        // the same block.
+        rig.cylinder.requestChain("classic")
+        rig.registry.register("classic", KatalystDsl.classic)
+
+        rig.goQuiet()
+
+        rig.cylinder.isActive shouldBe false
+
+        // The observable is the LEASE, which `tryDeactivate`'s reset frees along with the orbit's
+        // param state. A second voice offering itself in the SAME block as the first is inside the
+        // lease's grace: if the lease still stood, its claim would be refused and the orbit would
+        // keep the dead owner's 6. Granted, it writes its own 2.
+        rig.sound(
+            VoiceTestHelpers.createSynthVoice(
+                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
+            )
+        )
+
+        withClue("the lease was freed, so the next owner configures the orbit from scratch") {
+            rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe
+                    Reverb.normalizeSize(2.0)
         }
     }
 
-    "the classic chain by name from a declared chain is an install, not a fall back to born-with" {
+    "the classic chain by name from a declared chain comes back to the born-with instance" {
         val rig = Rig()
         rig.registry.register("gain", gainChain(1.5))
         rig.registry.register("classic", KatalystDsl.classic)
@@ -321,9 +379,9 @@ class CylinderChainSwapSpec : StringSpec({
 
         rig.cylinder.requestChain("classic")
 
-        rig.cylinder.pipeline shouldNotBeSameInstanceAs bornWith
+        rig.cylinder.pipeline shouldBeSameInstanceAs bornWith
         rig.cylinder.runsClassic() shouldBe true
-        rig.cylinder.cachedChainCount shouldBe 2
+        withClue("only the gain chain was ever built") { rig.cylinder.cachedChainCount shouldBe 1 }
     }
 
     // ── The bounded cache ────────────────────────────────────────────────────────────────────────

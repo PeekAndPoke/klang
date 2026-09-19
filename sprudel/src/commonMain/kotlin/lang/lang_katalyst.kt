@@ -52,9 +52,13 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
  * stack(
  *   s("bd*4").orbit(1),
  *   note("c2 g2").s("supersaw").reverb(wet = 0.25, size = 4).orbit(1),
- *   katalyst(Katalyst(k => k.classic())).orbit(1),
+ *   katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 1.0, db = 3.0)))).orbit(1),
  * )
  * ```
+ *
+ * The declaration above adds an EQ the familiar chain does not have, which is what a declaration is
+ * FOR. `Katalyst(k => k.classic())` on its own declares exactly the chain an orbit already runs and
+ * therefore changes nothing: it is the one spelling that is a no-op.
  *
  * The event is a **control event**: it never sounds. `.orbit(n)` on the carrier is what routes the
  * declaration to an orbit, which is why the carrier is an ordinary pattern and not a special
@@ -193,25 +197,23 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * still playing, and the way back up can step rather than glide. Mute with `gain` on the pattern
  * instead.
  *
- * **Which chain hears this map, and which does not.** THIS IS THE ONE HOME of that rule; every
- * other mention of it is a pointer here.
+ * **Which chain hears this map.** THIS IS THE ONE HOME of that rule; every other mention of it is
+ * a pointer here.
  *
- *  - **Every chain reads it for a stage that has no voice FIELD**, which today means `gain`, and
- *    `eq` wherever a chain declares one. Neither ever had a per-voice twin for an owner voice to
- *    drive, so both are slot-driven on every chain. In practice that is the FADER: the familiar
- *    chain carries a `gain.gain` slot and no eq at all, so `katp("gain.gain", 0.8)` reaches the
- *    group fader of ANY orbit, one that declares nothing included, while an eq slot needs a
- *    chain that declared the eq and named the slot.
- *  - **Every other stage of an undeclared orbit still comes from the voice's own effect fields**
- *    and does not read this map. To move one of those, declare the chain:
- *    `.katalyst(Katalyst(k => k.classic()))` declares the same stages as slots.
- *  - **Declaring is not free.** It flips the whole orbit from voice-driven to slot-driven in one
- *    step, so every bus knob then comes from the chain and from this map, and a `reverb(...)` on
- *    the pattern reaches it only because the door writes slots too. Declare when you want that,
- *    not to reach the fader.
+ * **Every chain does, for every stage it declares.** An orbit that declares nothing runs the
+ * familiar chain and reads this map exactly as a declared one does, so `katp("gain.gain", 0.8)`
+ * moves the fader of any orbit and needs no `.katalyst(...)` first. A bus DOOR and its slot are
+ * the same knob written two ways: `reverb(wet = 0.4, size = 8)` writes `reverb.wet` and
+ * `reverb.size`, and the stage reads them; `katp("reverb.size", 8)` moves that same size slot, and
+ * whether a room is HEARD then depends on the wet as it always does (see the last paragraph).
+ * Declaring a chain therefore changes what STAGES an orbit has, never where their knobs come from,
+ * and `.katalyst(Katalyst(k => k.classic()))` on an orbit that declared nothing changes nothing at
+ * all.
  *
- * (Until step 5b of the Katalyst work, which retires the voice fields and makes every orbit read
- * slots for everything.)
+ * The one thing to know: a slot only exists when a stage declares it. `k.classic()` declares every
+ * knob listed above; a chain that declares an `eq` names the eq's own slots; and a name nothing
+ * declares is simply not read, which is what a `.katalyst(Katalyst(k => k.eq(...)))` (an EQ and
+ * nothing else) does to a `reverb(...)` on its voices.
  *
  * **`body.material` and `vowel.vowel` are numbers, and the number is an INDEX** into the material
  * and vowel catalogues, 0 = none (Katalyst step 5a-2, 2026-09-18). The `body(...)` and `vowel(...)`
@@ -232,13 +234,12 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *    `katp("room", x)` never reaches it. Put the arithmetic on the pattern side instead.
  *
  * A raw slot write is exactly one slot, unlike a compound door (`reverb(...)`, `body(...)`,
- * `compressor(...)` and the rest), which fills the companions of the stage it names: on a chain
- * built from `k.classic()` a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is
- * written too, because the engine gates the room on its size.
+ * `compressor(...)` and the rest), which fills the companions of the stage it names: on the
+ * familiar chain a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is written
+ * too, because the engine gates the room on its size.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")   // small room, then a hall
- *   .katalyst(Katalyst(k => k.classic()))
  * ```
  *
  * ```KlangScript(Playable)
@@ -262,7 +263,6 @@ fun SprudelPattern.katp(key: String, value: PatternLike, callInfo: CallInfo? = n
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".katp("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
- *   .katalyst(Katalyst(k => k.classic()))
  * ```
  *
  * @param key The chain slot name.
@@ -277,7 +277,6 @@ fun String.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): Sp
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katp("reverb.size", 8))
- *   .katalyst(Katalyst(k => k.classic()))
  * ```
  *
  * @param key The chain slot name.

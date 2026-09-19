@@ -433,6 +433,18 @@ or one stage in doubles compared by raw bits, and small multi-orbit render rows 
 (shared orbit, chain install, swap), each with an engagement control, a not-silence floor and a
 mutation. The frozen-song hash used as the acceptance of Katalyst steps 1 to 5a-3 ends with 5a-3.
 
+**A one-off whole-corpus render is not a test, and it is the right net for one kind of claim**
+(2026-09-19, Katalyst 5b-1). When a step's claim is "every existing song sounds the same" and
+the change is a change of PATH (equal numbers travelling a different route), door-form tables and
+value tripwires cannot see a gate that treats equal values differently; rendering every built-in
+song and frozen piece at HEAD in a throwaway worktree and on the final tree can. It is a
+migration fixture: written for the step, deleted with it, its result recorded in the task doc.
+Two things it needs: enough cycles to reach every section (the longest `arrange` and the longest
+`mute` alternation set the bar; 256 covered the corpus of 2026-09-19), and the WALL CLOCK PINNED,
+because four songs seed their randomness from `timeOfDay` or `sinOfDay` and otherwise differ for
+a reason that has nothing to do with the engine. What it cannot see: sample voices (the jvm
+offline renderer has no sample bank), differences under one 16-bit count, JS-only behaviour.
+
 **Checkpoints.** A checkpoint is the maintainer saying "this sounds right". The foreseen ones:
 after the insert-style sends (Katalyst 5b), after the switch fades (5c), after the phase 3
 spike, at the end of phase 3. At each: regenerate the baselines, delete the migration fixtures

@@ -52,17 +52,15 @@ data class VoiceData(
      * writer within the owner wins, and the values die with the voice that carried them. A knob
      * written as a constant in the chain is not a slot and is never overridden.
      *
-     * Written by `.katp(name, value)` and, until the voice fields leave the wire (signal-flow plan
-     * §7, step 5b), by the bus doors as aliases (`reverb(...)`, `delay(...)`, `compressor(...)`,
-     * `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`).
+     * Written by `.katp(name, value)` and by the bus doors as aliases (`reverb(...)`, `delay(...)`,
+     * `compressor(...)`, `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`), which is what
+     * makes a door and its slot the same knob.
      *
      * Which chain reads which slot of this map is ONE rule with ONE home, the `katp` door's KDoc
-     * in `sprudel/lang/lang_katalyst.kt`. In short: every chain reads it for a stage that has no
-     * voice FIELD (today `gain`, and `eq` wherever a chain declares one; the born-with chain has
-     * only the fader), and the chain a cylinder is BORN with takes every other
-     * knob from the voice fields, which is what keeps a song that declares no chain
-     * byte-identical. A chain DECLARED from `Katalyst.classic()` names every stage as a slot and
-     * reads them all.
+     * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
+     * declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
+     * below are not a knob source any more; they carry the per-voice send AMOUNTS until step 5b-2
+     * and leave the wire in 5b-3.
      */
     val katalystParams: Map<String, Double>? = null,
 

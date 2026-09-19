@@ -56,21 +56,27 @@ One effect bus. Holds its own stereo accumulation buffer and effect instances.
 **PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
 on the summed mix: `[body, vowel, delay, reverb, phaser, compressor, gain]` (+ ducking, separate pass).
 The `gain` stage is the orbit's group fader, at unity on the classic chain and bit-transparent there;
-a pattern moves it with `katp("gain.gain", x)`. Config is
-copied from voices in `updateFromVoice` **last-writer-wins**, so all voices on an orbit SHARE these; put
-voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` +
-envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`,
+a pattern moves it with `katp("gain.gain", x)`.
+
+**Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the orbit's
+param state, which is the `katalystParams` map of the voice holding the orbit's lease.** The bus
+doors write those slots (a door and its `katp` slot are the same knob), the chain re-resolves only
+when the map instance changes, and the voice's bus FIELDS are not a knob source any more: they
+carry the per-voice send AMOUNTS until step 5b-2 and leave the wire in 5b-3. Ownership is the
+`VoiceLease`'s **first-writer-wins**, so all voices on an orbit SHARE these; put voices on different
+orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` + envelopes,
+`distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`,
 `unison`/`spread`, `analog`) is **per-voice** in the voice strip.
 
-| Katalyst effect            | Class           | Applied when                           |
-|----------------------------|-----------------|----------------------------------------|
-| `KatalystBodyEffect`       | `BodyFilter`    | any voice on the orbit sets `body(…)`  |
-| `KatalystFormantEffect`    | `FormantFilter` | any voice on the orbit sets `vowel(…)` |
-| `KatalystDelayEffect`      | `DelayLine`     | owner voice touches the delay; time >= 0.01 s (default 0.25) |
-| `KatalystReverbEffect`     | `Reverb`        | owner voice touches the reverb; size >= 0.1 (default 5)       |
-| `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
-| `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
-| `KatalystDuckEffect`       | `Ducking`       | sidechain from duckCylinder voice      |
+| Katalyst effect            | Class           | Applied when                                                     |
+|----------------------------|-----------------|------------------------------------------------------------------|
+| `KatalystBodyEffect`       | `BodyFilter`    | `body.material` names a material                                 |
+| `KatalystFormantEffect`    | `FormantFilter` | `vowel.vowel` names a vowel                                      |
+| `KatalystDelayEffect`      | `DelayLine`     | `delay.wet` above 0 and `delay.time` >= 0.01 s (default 0.25)    |
+| `KatalystReverbEffect`     | `Reverb`        | `reverb.wet` above 0 and `reverb.size` >= 0.1 authored (default 5) |
+| `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
+| `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
+| `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
 
 `body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
 per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.

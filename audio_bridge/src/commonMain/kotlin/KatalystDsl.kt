@@ -49,7 +49,9 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  *
  * The cylinder reads a declared chain and runs it (Katalyst step 2 onward), swapping it in with a
  * crossfade when the orbit is already sounding; an orbit that declares nothing keeps the historical
- * chain, driven by its owner voice's fields, byte-identical to the pre-DSL engine.
+ * chain, [classic]. Every chain takes its knobs from the orbit's param state, the born-with one
+ * included (step 5b-1), so a declaration changes which STAGES an orbit has and not where their
+ * values come from.
  */
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
@@ -427,8 +429,8 @@ sealed interface KatalystStageDsl {
      * same `eq` written AFTER it shapes dry and tail together. Both are legitimate mixes and the
      * list order is how they are told apart. The rule the design once carried, that a linear stage
      * ahead of a send also filters the send buffers, was dissolved on 2026-09-17 together with the
-     * per-voice sends themselves; the signal-flow plan's step 5b makes `delay` and `reverb`
-     * insert-style stages, and then "the room hears the cab" is list order and nothing else.
+     * per-voice sends themselves; Katalyst step 5b-2 makes `delay` and `reverb` insert-style
+     * stages, and then "the room hears the cab" is list order and nothing else.
      *
      * @param sections the sections in written order; an empty list is a transparent stage.
      */
