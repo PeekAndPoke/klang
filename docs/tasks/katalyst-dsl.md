@@ -499,6 +499,9 @@ complexity outranks the duplication.
   today's position, one owner `wet` per orbit, every room setting glides over 50 ms
   (`docs/plans/knob-glide.md`), the delay's time crossfades between taps; the glide is piloted on
   the orbit reverb first.
+  **Listened 2026-09-19 by the maintainer, on a fresh JS build at `b27dd5ad`** (levels on the
+  wire, `pregain`, the unity fader, 5b-1, the delay and reverb state machines, the reverb's size
+  glide): "things check out".
   **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
   and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
   in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and
