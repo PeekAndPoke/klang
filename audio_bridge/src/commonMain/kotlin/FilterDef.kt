@@ -74,7 +74,7 @@ sealed class FilterDef {
          *
          * **Gain semantic (legacy Q-peak convention, preserved by a fold):** the actual
          * peak gain at `freq` is `Q · 10^(db/20)`. The engine bandpass is UNITY-peak since
-         * C2 of the filter unification; `FormantFilter` folds the legacy Q peak back into
+         * C2 of the filter unification; the engine's vowel mapping folds the legacy Q peak into
          * its band gains so the shipped vowel tables keep this convention exactly — do NOT
          * "clean up" that fold without rewriting every table. A band with `db = 0, q = 10`
          * produces **+20 dB** at `freq`. F1 is conventionally `db = 0`; upper formants use
@@ -123,7 +123,7 @@ sealed class FilterDef {
          * One body mode — a single SVF bandpass tuned to a resonance of the body.
          *
          * **Gain semantic (unity-peak):** UNLIKE [Formant.Band], the peak gain at `freq`
-         * is `10^(db/20)` — `BodyFilter` always normalised the Q peak away (pre-C2 via an
+         * is `10^(db/20)`: the engine's body bank always normalised the Q peak away (pre-C2 via an
          * explicit 1/Q, since C2 natively via the unity-peak SVF), so `db` IS the peak.
          * Material tables conventionally set the lowest mode to `db = 0` and use negative
          * dB for upper modes.

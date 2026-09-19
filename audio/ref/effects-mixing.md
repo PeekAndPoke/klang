@@ -70,8 +70,8 @@ orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch`
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|
-| `KatalystBodyEffect`       | `BodyFilter`    | `body.material` names a material                                 |
-| `KatalystFormantEffect`    | `FormantFilter` | `vowel.vowel` names a vowel                                      |
+| `KatalystBodyEffect`       | `ResonatorBank` (`bodyBand`) | `body.material` names a material                                 |
+| `KatalystFormantEffect`    | `ResonatorBank` (`vowelBand`) | `vowel.vowel` names a vowel                                      |
 | `KatalystDelayEffect`      | `DelayLine`     | `delay.wet` above 0 and `delay.time` >= 0.01 s (default 0.25)    |
 | `KatalystReverbEffect`     | `Reverb`        | `reverb.wet` above 0 and `reverb.size` >= 0.1 authored (default 5) |
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
@@ -153,7 +153,7 @@ All implement `AudioFilter` interface with `process(buffer: FloatArray)`.
 | `LowPassFilter`  | 2-pole Biquad             |
 | `HighPassFilter` | 2-pole Biquad             |
 | `BandPassFilter` | 2-pole Biquad             |
-| `FormantFilter`  | Multi-band formant filter |
+| `ResonatorBank`  | Parallel SVF bandpass bank (body, vowel) |
 
 Constructed from `FilterDef` sealed types. Cutoff can be modulated by `FilterEnvelope` via `FilterModulator`.
 

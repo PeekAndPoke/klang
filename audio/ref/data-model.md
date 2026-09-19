@@ -179,7 +179,7 @@ sealed class FilterDef {
 - Resonators: bands resolved from a name in audio_bridge (`BodyMaterials.modesFor` / `VowelBands.bandsFor`),
   by `SprudelVoiceData.toVoiceData` for the wire and, on the ORBIT, from the `body.material` /
   `vowel.vowel` INDEX slot through `BodyMaterials.modesAt` / `VowelBands.bandsAt` (`KatalystSlots`);
-  DSP = `BodyFilter`/`FormantFilter` + `createBody`/`createFormant`; blend + declick-crossfade in
+  DSP = one `ResonatorBank` (band gain rules in `bodyBand` / `vowelBand`) + `createBody`/`createFormant`; blend + declick-crossfade in
   `ParallelMixFilter` / `KatalystFilterSwap`. See `ref/architecture.md` "Per-Playback Engine".
 
 Key method: `FilterDefs.addOrReplace(filter: FilterDef)` — replaces existing filter of same type, or appends.

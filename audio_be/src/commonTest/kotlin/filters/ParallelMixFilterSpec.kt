@@ -93,16 +93,16 @@ class ParallelMixFilterSpec : StringSpec({
         }
     }
 
-    "ParallelMixFilter wrapping BodyFilter - boosts on-mode AND keeps off-mode at the floor (never thins)" {
+    "ParallelMixFilter wrapping the body bank - boosts on-mode AND keeps off-mode at the floor (never thins)" {
         val onBand = sine(430.0, blockFrames)     // on a wood mode (db=0)
         val offBand = sine(12000.0, blockFrames)  // far above every mode
         val inOn = rms(onBand)
         val inOff = rms(offBand)
 
         val floor = 0.6
-        ParallelMixFilter(BodyFilter(woodModes(), sampleRate), amount = 1.0, floor = floor)
+        ParallelMixFilter(ResonatorBank(woodModes().map(LowPassHighPassFilters::bodyBand), sampleRate), amount = 1.0, floor = floor)
             .process(onBand, 0, onBand.size)
-        ParallelMixFilter(BodyFilter(woodModes(), sampleRate), amount = 1.0, floor = floor)
+        ParallelMixFilter(ResonatorBank(woodModes().map(LowPassHighPassFilters::bodyBand), sampleRate), amount = 1.0, floor = floor)
             .process(offBand, 0, offBand.size)
 
         // On-mode: floor·dry + resonance → boosted above the input.

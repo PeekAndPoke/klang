@@ -765,12 +765,36 @@ complexity outranks the duplication.
     place; frequency and Q glide in log space, the gain linearly; the bank has a fixed capacity
     preallocated with the effect (today's tables need at most 8; a user surface states its own
     maximum). A band at gain 0 may be skipped; it then starts cold, which its own fade-in masks.
-    To verify first: that `SvfBPF` takes new coefficients without resetting its state.
+    Verified 2026-09-19 (step 5c-3): `SvfBPF` retunes its FREQUENCY while playing (`BaseSvf.setCutoff`
+    ramps the coefficients over 32 samples and never touches the integrator state); its Q is a
+    constructor value with no setter, so a Q glide needs a setter on the same ramp path, and since
+    the vowel's band gain contains the clamped Q, the bank must move that gain with it. Largest
+    band count today: 8 (body), 5 (vowel); nothing is sized by it.
+    From the 5c-3 audio review, for the morph step: (1) a band gain moved once per block is a gain
+    step every 128 frames (a 375 Hz zipper); the bank's sum loop needs a per-sample gain ramp on
+    the coefficients' schedule, the LEVEL half of the glide helper. (2) The Q coupling can be
+    REMOVED instead of followed: the vowel band's output `(dB * clampedQ * TAME) * (k * v1)` with
+    `k = 1 / clampedQ` is algebraically `dB * TAME * v1`, the un-normalised bandpass tap; if vowel
+    bands take `v1` the vowel gain stops depending on Q, a Q glide needs no companion gain move,
+    and no mid-ramp k/a mismatch exists (ulp-level differences, fine in the step that changes the
+    sound anyway). Decide this before writing a Q setter. (3) `setCutoff`'s 32-sample coefficient
+    ramp retuned every 128 frames is a ramp-then-hold staircase repeating at 375 Hz; a ramp as long
+    as the block would be continuous. `FILTER_SMOOTH_SAMPLES` is shared with the `lpf` envelope, so
+    it is not simply changed; measure before choosing. (4) Mid-ramp stability at Q 80 to 140 is not
+    a risk: checked analytically and over 20,000 random coefficient pairs, the pole radius never
+    exceeded the larger endpoint's. First measurements of the morph step: a steady tone through a
+    Q 140 band gliding its frequency per block (jump detector, 375 Hz sidebands, 32- against
+    128-sample ramp); a Q glide with the gain ramped per sample against the `v1` form; a band
+    fading in from gain 0 from a cold start.
   - Morph or output crossfade is chosen per effect BY EAR at the 5c checkpoint: the proposal is
     morph for vowels (a vowel change sweeps like a mouth), and for body whichever sounds better.
   - Order inside 5c for body and vowel: merge into one bank (identity), the click measurement, the
     state machine of the swap (identity, today's lifecycle), then the glides, fades and morph as
     the sound change.
+    The merge is DONE 2026-09-19 (step 5c-3): one `ResonatorBank` of `SvfBPF` bands with linear
+    gains, the two gain rules at the factories; the two orbit hosts stay two classes (the wire
+    types share no supertype, `KatalystChain` finds each stage by type, the specs use typed seams;
+    one class would cost a generic band type and a kind marker to save about 40 lines).
 - **Decided 2026-09-18 with the maintainer, step 5c (after 5b): switching any stage on or off
   always crossfades, body and vowel included.** Off is a pass-through (the hosts process in place,
   so off costs one comparison), but the EDGE between on and off is never a hard cut: a stage whose

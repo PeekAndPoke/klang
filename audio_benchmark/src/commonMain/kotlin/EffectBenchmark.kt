@@ -274,7 +274,7 @@ class EffectBenchmark(
             monoFilterCase("SvfNotch (1k, q=1)") { sr -> LowPassHighPassFilters.SvfNotch(1000.0, 1.0, sr) },
 
             // Resonators — orbit-level body/vowel banks: ParallelMixFilter over an N-band parallel
-            // SVF-BPF (BodyFilter / FormantFilter). This is what body()/vowel() run per orbit.
+            // SVF-BPF (ResonatorBank). This is what body()/vowel() run per orbit.
             monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },

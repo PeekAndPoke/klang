@@ -105,7 +105,7 @@ import kotlin.math.tan
 //
 // **Round 4 (2026-04-29) — Q clamp widened from [0.1, 50] to [0.1, 200]:**
 //
-// `FormantFilter`'s vowel tables in `SprudelVoiceData` use Q=60-130 per band. The old
+// The vowel tables in `SprudelVoiceData` use Q=60-130 per band. The old
 // clamp at 50 was silently flattening every vowel — every formant peak was lower and
 // fatter than the data prescribed. Trapezoidal SVF is unconditionally stable for any
 // finite Q (`The Art of VA Filter Design` ch. 5.3), so widening the clamp is safe.
@@ -429,7 +429,7 @@ object LowPassHighPassFilters {
         floor: Double? = null,
     ): AudioFilter =
         ParallelMixFilter(
-            inner = FormantFilter(bands, sampleRate, gainScale = VOWEL_TAME),
+            inner = ResonatorBank(bands.map(::vowelBand), sampleRate),
             amount = mix,
             floor = floor ?: VOWEL_FLOOR,
         )
@@ -440,7 +440,39 @@ object LowPassHighPassFilters {
         sampleRate: Double,
         floor: Double? = null,
     ): AudioFilter =
-        ParallelMixFilter(BodyFilter(bands, sampleRate), amount = mix, floor = floor ?: BODY_FLOOR)
+        ParallelMixFilter(ResonatorBank(bands.map(::bodyBand), sampleRate), amount = mix, floor = floor ?: BODY_FLOOR)
+
+    /**
+     * A body mode as a [ResonatorBank] band. The SVF bandpass is unity-peak at fc (C2 of the filter
+     * unification), so the gain is the plain `10^(db/20)` and `mode.db` IS the peak emphasis in dB,
+     * independent of the mode's q. `freq` and `q` go to the SVF raw (it guards them).
+     */
+    internal fun bodyBand(mode: FilterDef.Body.Mode): ResonatorBank.Band {
+        // NaN-guard: a non-finite dB is 0 dB, unity gain.
+        val safeDb = if (mode.db.isFinite()) mode.db else 0.0
+
+        return ResonatorBank.Band(freq = mode.freq, q = mode.q, gain = 10.0.pow(safeDb / 20.0))
+    }
+
+    /**
+     * A vowel formant as a [ResonatorBank] band, with the **legacy Q-peak fold**: the vowel tables
+     * were tuned when the bandpass peaked at `Q` and `band.db` was gain on top of that; the SVF is
+     * unity-peak since C2, so the gain folds the peak back in, `10^(db/20) * clampedQ`. EXACT
+     * (the SVF scales by k = 1/clampedQ, and k * q = 1) as long as the fold uses the SAME clamp
+     * as `computeSvfCoeffs`, so `freq = 730, q = 10, db = 0` still peaks at +20 dB before
+     * [VOWEL_TAME]. The SVF gets the raw q. Flipping the tables to the absolute-peak convention is
+     * a deferred follow-up; do not "clean up" the fold without rewriting every table.
+     *
+     * [VOWEL_TAME] then scales every band alike, so each vowel keeps its tuned balance. The
+     * operand order is the arithmetic the tables were heard with: `(dB factor * q) * tame`.
+     */
+    internal fun vowelBand(band: FilterDef.Formant.Band): ResonatorBank.Band {
+        // NaN-guards: a non-finite dB is 0 dB; a non-finite q folds the SVF's own fallback.
+        val safeDb = if (band.db.isFinite()) band.db else 0.0
+        val safeQ = if (band.q.isFinite()) band.q.coerceIn(0.1, 200.0) else 0.7071067811865475
+
+        return ResonatorBank.Band(freq = band.freq, q = band.q, gain = 10.0.pow(safeDb / 20.0) * safeQ * VOWEL_TAME)
+    }
 
     // --- Implementations ---
 

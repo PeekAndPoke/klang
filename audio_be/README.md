@@ -181,7 +181,7 @@ audio_be/src/commonMain/kotlin/
 ├── filters/
 │   ├── AudioFilter.kt        # Filter interface
 │   ├── LowPassHighPassFilters.kt
-│   ├── FormantFilter.kt
+│   ├── ResonatorBank.kt      # Body and vowel resonator bank
 │   └── effects/
 │       ├── BitCrushFilter.kt
 │       ├── SampleRateReducerFilter.kt

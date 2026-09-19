@@ -1,5 +1,32 @@
 # Klang Audio — Memory
 
+## Body and vowel run on one resonator bank (2026-09-19)
+
+Katalyst step 5c-3, a pure refactor, bit-identical. `BodyFilter` and `FormantFilter` are gone;
+`filters/ResonatorBank.kt` is a parallel bank of `SvfBPF` bands, each a frequency, a q and a LINEAR
+gain, and knows nothing about body or vowel. The two gain rules live where a table row becomes a
+band, `LowPassHighPassFilters.bodyBand` (`10^(db/20)`) and `vowelBand` (`10^(db/20) * clampedQ *
+VOWEL_TAME`, in that operand order: regrouping it changes the doubles and the vowel harness rows
+went red on exactly that). Both hand the SVF the RAW q; the vowel folds the clamped one.
+
+- **The hosts stayed two classes** (`KatalystBodyEffect`, `KatalystFormantEffect`): the wire
+  types share no supertype that carries bands, mix and floor (only the sealed `FilterDef`), their
+  band types share nothing, `KatalystChain.body` / `.vowel` find a stage by its class, and the test
+  seams are typed per band kind. One class needed a generic, a factory parameter and a kind marker.
+- **Identity:** a raw-bits harness over every material (15) and vowel (75) at six wet/floor pairs
+  (set, unset floor, full wet, a high floor, NaN, infinite), odd bands (NaN/infinite dB and q, q out
+  of range, NaN freq, freq above Nyquist), empty banks, and both hosts through material changes, a
+  change mid-crossfade, unset and non-finite knobs, off, `reset`, `retire` and a catalogue walk:
+  114,166 block digests identical. The regrouped vowel fold changed 35,506 of them. Eight built-in
+  songs, 20 call sites (19 body, 1 vowel), every site reached, raw pre-master doubles identical; the
+  same mutation moved Stranger Things. Sound Of The Sea's body sits on a glockenspiel SAMPLE, silent
+  in the jvm renderer.
+- **For the morph (next steps):** `SvfBPF.setCutoff` retunes while it plays and keeps its state
+  (the integrators are untouched, the coefficients ramp over 32 samples). q is a construction
+  `val` in `BaseSvf`; a q glide needs a setter on the same ramp. The vowel's gain depends on q, so a
+  q glide must move the band's gain with it. Largest band count today: 8 (the body materials), 5 for
+  every vowel; nothing in the code is sized by it, the bank sizes its arrays from the list.
+
 ## The orbit reverb is a state machine too (2026-09-19)
 
 Katalyst step 5c-2, the delay's shape copied onto `KatalystReverbEffect` (the plan is

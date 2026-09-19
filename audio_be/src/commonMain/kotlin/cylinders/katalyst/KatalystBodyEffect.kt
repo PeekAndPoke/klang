@@ -18,8 +18,8 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
  * instrument/orbit, not of an individual note — it now runs **once per orbit** on the mixed stereo
  * signal. The orbit is the grouping unit: voices needing independent body go on different orbits.
  *
- * The wrapped filter is the same [LowPassHighPassFilters.createBody] (a `ParallelMixFilter` around a
- * wet-only `BodyFilter`, so the dry/wet blend is intact). It is **mono**, so we keep one instance per
+ * The wrapped filter is the same [LowPassHighPassFilters.createBody] (a `ParallelMixFilter` around the
+ * wet-only `ResonatorBank`, so the dry/wet blend is intact). It is **mono**, so we keep one instance per
  * stereo channel (independent SVF state).
  *
  * Ownership: `Cylinder.updateFromVoice` only calls [configure] for the voice that OWNS the orbit's body
@@ -27,8 +27,14 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
  * has no body) authoritatively turns the resonator OFF — it is NOT a no-op. The cylinder calls [reset] when
  * it fully deactivates so a reused orbit reconfigures cleanly.
  *
- * NOTE: near-verbatim twin of [KatalystFormantEffect] (only the band type + factory fn differ). Left
- * un-deduped on purpose — both will fold into a single generic resonator once the Katalyst DSL lands.
+ * NOTE: near-verbatim twin of [KatalystFormantEffect] (only the band type, the factory fn and the
+ * WET/FLOOR constants differ). The DSP is already one: both build a `ResonatorBank` (Katalyst step
+ * 5c-3, 2026-09-19). The hosts stay two classes on purpose: `FilterDef.Body` and `FilterDef.Formant`
+ * share no supertype that carries bands, mix and floor (only the sealed `FilterDef`), their band
+ * types share nothing, the typed
+ * accessors `KatalystChain.body` / `.vowel` find each stage by its class, and the test seams are
+ * typed per band kind, so one class would need a generic band type, a factory parameter and a kind
+ * marker to save the few dozen lines of lifecycle the twins repeat.
  */
 class KatalystBodyEffect(
     private val sampleRate: Double,

@@ -18,8 +18,9 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel) turns
  * the resonator OFF; [reset] deactivates it on orbit teardown.
  *
- * NOTE: near-verbatim twin of [KatalystBodyEffect] (only the band type + factory fn differ). Left
- * un-deduped on purpose — both will fold into a single generic resonator once the Katalyst DSL lands.
+ * NOTE: near-verbatim twin of [KatalystBodyEffect] (only the band type, the factory fn and the
+ * WET/FLOOR constants differ); both build
+ * a `ResonatorBank`, and the twin's KDoc says why the hosts stay two classes.
  */
 class KatalystFormantEffect(
     private val sampleRate: Double,

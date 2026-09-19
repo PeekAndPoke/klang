@@ -30,6 +30,9 @@ class BodyFilterSpec : StringSpec({
 
     fun mode(freq: Double, db: Double, q: Double) = FilterDef.Body.Mode(freq, db, q)
 
+    // The wet-only body bank, built the way `createBody` builds it before the mix wrapper.
+    fun bodyBank(modes: List<FilterDef.Body.Mode>) = ResonatorBank(modes.map(LowPassHighPassFilters::bodyBand), sampleRate)
+
     fun woodModes() = listOf(
         mode(110.0, 2.0, 12.0),
         mode(230.0, 1.0, 10.0),
@@ -45,19 +48,20 @@ class BodyFilterSpec : StringSpec({
         mode(3300.0, -6.0, 45.0),
     )
 
-    // BodyFilter is WET-ONLY (same API as lpf/formant). The dry/wet blend lives in
-    // ParallelMixFilter — see ParallelMixFilterSpec. Per-band gain is normalized by 1/Q so `db`
-    // is the actual peak emphasis, independent of Q.
+    // The body bank is WET-ONLY (same API as lpf/formant). The dry/wet blend lives in
+    // ParallelMixFilter, see ParallelMixFilterSpec. The SVF bandpass is unity-peak (its own
+    // `k * v1` tap, since C2), so the body gain is the plain dB factor and `db` is the actual peak
+    // emphasis, independent of Q.
 
-    "BodyFilter - 1/Q normalization: a db=0 mode peaks at ~unity regardless of Q" {
+    "body bank - 1/Q normalization: a db=0 mode peaks at ~unity regardless of Q" {
         val freq = 1000.0
         val input = sine(freq, blockFrames)
         val inRms = rms(input)
 
         val lowQ = AudioBuffer(blockFrames) { input[it] }
         val highQ = AudioBuffer(blockFrames) { input[it] }
-        BodyFilter(listOf(mode(freq, 0.0, 5.0)), sampleRate).process(lowQ, 0, lowQ.size)
-        BodyFilter(listOf(mode(freq, 0.0, 50.0)), sampleRate).process(highQ, 0, highQ.size)
+        bodyBank(listOf(mode(freq, 0.0, 5.0))).process(lowQ, 0, lowQ.size)
+        bodyBank(listOf(mode(freq, 0.0, 50.0))).process(highQ, 0, highQ.size)
 
         // Without 1/Q normalization a Q=50 mode would peak ~50× the input. Normalized, BOTH the
         // Q=5 and Q=50 modes land near unity (db=0) — that's the whole point of the /Q fix.
@@ -67,18 +71,18 @@ class BodyFilterSpec : StringSpec({
         rms(highQ) shouldBeLessThan (inRms * 2.0)
     }
 
-    "BodyFilter - wet-only: rejects a tone far from every mode" {
+    "body bank - wet-only: rejects a tone far from every mode" {
         val offBand = sine(12000.0, blockFrames) // far above every wood mode
         val inOff = rms(offBand)
 
-        BodyFilter(woodModes(), sampleRate).process(offBand, 0, offBand.size)
+        bodyBank(woodModes()).process(offBand, 0, offBand.size)
 
         // Wet-only: nothing near 12 kHz → near silence. The dry is re-added by the mix wrapper.
         rms(offBand) shouldBeLessThan (inOff * 0.2)
     }
 
-    "BodyFilter - stays finite and the ring decays over a long tail" {
-        val filter = BodyFilter(glassModes(), sampleRate)
+    "body bank - stays finite and the ring decays over a long tail" {
+        val filter = bodyBank(glassModes())
 
         val first = AudioBuffer(blockFrames) { if (it == 0) 1.0 else 0.0 }
         filter.process(first, 0, first.size)
@@ -95,14 +99,14 @@ class BodyFilterSpec : StringSpec({
         lastRms shouldBeLessThan 1e-3
     }
 
-    "BodyFilter - non-finite mode params still produce finite output" {
+    "body bank - non-finite mode params still produce finite output" {
         val bands = listOf(
             mode(freq = Double.NaN, db = 0.0, q = 10.0),
             mode(freq = 500.0, db = Double.NaN, q = Double.POSITIVE_INFINITY),
         )
         val buf = sine(500.0, blockFrames)
 
-        BodyFilter(bands, sampleRate).process(buf, 0, buf.size)
+        bodyBank(bands).process(buf, 0, buf.size)
 
         buf.all { it.isFinite() } shouldBe true
     }
