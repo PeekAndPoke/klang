@@ -5,11 +5,13 @@
 
 package io.peekandpoke.klang.audio_be.effects
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
+import kotlin.math.sin
 
 class DelayLineSpec : StringSpec({
 
@@ -427,5 +429,241 @@ class DelayLineSpec : StringSpec({
         // Not merely finite — actually still delaying. A guard that zeroed the whole ring
         // would satisfy isFinite and fail this.
         heard shouldBe true
+    }
+
+    // ── A time change crossfades the taps (Katalyst 5b-2) ─────────────────────────────────────────
+    //
+    // The oracle: with feedback 0 the ring holds nothing but the input, so the line under test reads
+    // exactly what separate bare lines at the old and the new time read, and the crossfade is their
+    // straight-line blend over KNOB_GLIDE_SECONDS, 2205 samples at 44.1 kHz, written out by hand.
+
+    val xfBlock = 128
+    val fadeSamples = 2205
+
+    /** A deterministic, non-periodic input, so a tap read from the wrong place cannot hide. */
+    fun xfInput(block: Int): StereoBuffer = StereoBuffer(xfBlock).apply {
+        for (i in 0 until xfBlock) {
+            val t = block * xfBlock + i
+            left[i] = ((t * 7919) % 1000) / 1000.0 - 0.5
+            right[i] = ((t * 104729) % 1000) / 1000.0 - 0.5
+        }
+    }
+
+    fun line(time: Double) = DelayLine(maxDelaySeconds = 1.0, sampleRate = sampleRate, time = time, feedback = 0.0)
+
+    /** One block of [l] fed block [block]'s input, into a fresh output. */
+    fun run(l: DelayLine, block: Int): StereoBuffer =
+        StereoBuffer(xfBlock).also { l.process(xfInput(block), it, xfBlock) }
+
+    "a time change crossfades from the old tap to the new one, per sample, and then IS the new tap" {
+        val underTest = line(0.01)
+        val old = line(0.01)
+        val new = line(0.02)
+        val change = 20
+
+        for (block in 0 until change) {
+            val out = run(underTest, block)
+            val ref = run(old, block)
+            run(new, block)
+
+            for (i in 0 until xfBlock) {
+                out.left[i].toRawBits() shouldBe ref.left[i].toRawBits()
+            }
+        }
+
+        underTest.time = 0.02
+
+        var jumpGap = 0.0
+
+        for (block in change until change + 30) {
+            val out = run(underTest, block)
+            val a = run(old, block)
+            val b = run(new, block)
+
+            for (i in 0 until xfBlock) {
+                val j = (block - change) * xfBlock + i + 1
+
+                if (j >= fadeSamples) {
+                    // Landed: the single-tap read, bit for bit.
+                    out.left[i].toRawBits() shouldBe b.left[i].toRawBits()
+                    out.right[i].toRawBits() shouldBe b.right[i].toRawBits()
+                } else {
+                    val g = j.toDouble() / fadeSamples
+
+                    (abs(out.left[i] - (a.left[i] * (1.0 - g) + b.left[i] * g)) <= 1e-12) shouldBe true
+                    (abs(out.right[i] - (a.right[i] * (1.0 - g) + b.right[i] * g)) <= 1e-12) shouldBe true
+                }
+
+                jumpGap = maxOf(jumpGap, abs(out.left[i] - b.left[i]))
+            }
+        }
+
+        // Engagement: the fade is really there, the output is not the new tap from the first sample.
+        (jumpGap > 0.1) shouldBe true
+    }
+
+    "a time change that arrives mid-crossfade is PARKED: the running fade finishes, then the next one starts" {
+        val underTest = line(0.01)
+        val a = line(0.01)
+        val b = line(0.02)
+        val c = line(0.03)
+        val change = 20
+
+        for (block in 0 until change) {
+            run(underTest, block)
+            run(a, block)
+            run(b, block)
+            run(c, block)
+        }
+
+        underTest.time = 0.02
+
+        // The first fade spans 2205 samples, so it ends inside the 18th block after the change; the
+        // next block is where a parked time starts its own fade (fades start on block boundaries).
+        val secondFadeBlock = change + (fadeSamples + xfBlock - 1) / xfBlock
+
+        for (block in change until change + 60) {
+            if (block == change + 5) {
+                underTest.time = 0.03
+            }
+
+            val out = run(underTest, block)
+            val oa = run(a, block)
+            val ob = run(b, block)
+            val oc = run(c, block)
+
+            for (i in 0 until xfBlock) {
+                val j = (block - change) * xfBlock + i + 1
+                val expected = if (block < secondFadeBlock) {
+                    // Still the first fade (or its landed tail): old 0.01 to 0.02, untouched by 0.03.
+                    val g = if (j >= fadeSamples) 1.0 else j.toDouble() / fadeSamples
+                    oa.left[i] * (1.0 - g) + ob.left[i] * g
+                } else {
+                    val k = (block - secondFadeBlock) * xfBlock + i + 1
+                    val g = if (k >= fadeSamples) 1.0 else k.toDouble() / fadeSamples
+                    ob.left[i] * (1.0 - g) + oc.left[i] * g
+                }
+
+                withClue("block $block sample $i") {
+                    (abs(out.left[i] - expected) <= 1e-12) shouldBe true
+                }
+            }
+        }
+    }
+
+    "after reset the next time is in force at once: an empty ring has nothing to crossfade from" {
+        val underTest = line(0.3)
+
+        for (block in 0 until 10) {
+            run(underTest, block)
+        }
+
+        underTest.reset()
+        underTest.time = 0.01
+        underTest.isCrossfading shouldBe false
+
+        // The oracle: a line that never knew another time, fed from the same moment on.
+        val fresh = line(0.01)
+
+        for (block in 10 until 20) {
+            val out = run(underTest, block)
+            val ref = run(fresh, block)
+
+            for (i in 0 until xfBlock) {
+                out.left[i].toRawBits() shouldBe ref.left[i].toRawBits()
+            }
+        }
+    }
+
+    /**
+     * The feedback ramp against a delay written out by hand. A 1/64 s tap at 48 kHz is exactly 750
+     * samples and 1/32 s exactly 1500 (no interpolation), and every level stays below the soft
+     * cap's 0.95 knee, where it is the identity. Per block the feedback moves from the value the
+     * previous block ended on to the new one, sample j of the block at (j + 1) / 128 of the way.
+     * When [changeTimeAt] is set, the time moves from 750 to 1500 samples in that block and the
+     * oracle crossfades the two taps over 2400 samples (KNOB_GLIDE_SECONDS at 48 kHz), sample k of
+     * the fade at k / 2400. [maxDelaySeconds] decides whether the ring wraps inside a block.
+     */
+    fun feedbackRampAgainstHand(maxDelaySeconds: Double, changeTimeAt: Int?): Pair<Double, Double> {
+        val sr = 48000
+        val n = 128
+        val fade = 2400
+        val line = DelayLine(maxDelaySeconds = maxDelaySeconds, sampleRate = sr, time = 1.0 / 64.0, feedback = 0.1)
+        val ring = DoubleArray(200 * n)
+        val input = StereoBuffer(n)
+        val output = StereoBuffer(n)
+        var previous = 0.1
+        var worst = 0.0
+        var stairGap = 0.0
+
+        for (b in 0 until 200) {
+            // The feedback moves on some blocks and holds on others.
+            val fb = if (b < 30) 0.1 else if (b < 50) 0.1 + 0.6 * (b - 29) / 20.0 else 0.7
+
+            line.feedback = fb
+
+            if (changeTimeAt != null && b == changeTimeAt) {
+                line.time = 1.0 / 32.0
+            }
+
+            for (i in 0 until n) {
+                val t = b * n + i
+                // Continuous, so every chunk of every block carries signal the ramp scales; at
+                // feedback 0.7 the ring settles near 0.1 / 0.3, well below the knee.
+                input.left[i] = 0.1 * sin(t * 0.3)
+                input.right[i] = input.left[i]
+            }
+
+            output.clear()
+            line.process(input, output, n)
+
+            for (i in 0 until n) {
+                val t = b * n + i
+                val f = fb - (fb - previous) / n * (n - 1 - i)
+                val short = if (t >= 750) ring[t - 750] else 0.0
+                val long = if (t >= 1500) ring[t - 1500] else 0.0
+                val delayed = if (changeTimeAt == null || b < changeTimeAt) {
+                    short
+                } else {
+                    val k = (b - changeTimeAt) * n + i + 1
+                    val g = if (k >= fade) 1.0 else k.toDouble() / fade
+
+                    short * (1.0 - g) + long * g
+                }
+
+                ring[t] = input.left[i] + delayed * f
+                worst = maxOf(worst, abs(output.left[i] - delayed))
+                stairGap = maxOf(stairGap, abs(f - fb))
+            }
+
+            previous = fb
+        }
+
+        return worst to stairGap
+    }
+
+    "a feedback change ramps per SAMPLE across the block, along the straight line from the last block's value" {
+        val (worst, stairGap) = feedbackRampAgainstHand(maxDelaySeconds = 1.0, changeTimeAt = null)
+
+        (stairGap > 0.01) shouldBe true
+        (worst <= 1e-12) shouldBe true
+    }
+
+    "the feedback ramp holds across a ring WRAP inside a block: the second chunk enters the ramp at its offset" {
+        // 0.05 s is 2400 cells: the ring wraps every 18.75 blocks, so `process` splits blocks into
+        // two chunks and the second one starts mid-ramp.
+        val (worst, stairGap) = feedbackRampAgainstHand(maxDelaySeconds = 0.05, changeTimeAt = null)
+
+        (stairGap > 0.01) shouldBe true
+        (worst <= 1e-12) shouldBe true
+    }
+
+    "the feedback ramps per sample DURING a tap crossfade too, on a wrapping ring" {
+        // The time and the feedback move in the same block (block 30): the crossfade loop carries
+        // the ramp as the plain loop does.
+        val (worst, stairGap) = feedbackRampAgainstHand(maxDelaySeconds = 0.05, changeTimeAt = 30)
+
+        (stairGap > 0.01) shouldBe true
+        (worst <= 1e-12) shouldBe true
     }
 })

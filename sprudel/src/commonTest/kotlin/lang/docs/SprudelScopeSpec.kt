@@ -58,10 +58,9 @@ class SprudelScopeSpec : StringSpec({
         "phaser" to KlangScope.ORBIT,
         "compressor" to KlangScope.ORBIT,
         "duck" to KlangScope.ORBIT,
-
-        // Orbit processor, per-voice send amount
-        "reverb" to KlangScope.ORBIT_SEND,
-        "delay" to KlangScope.ORBIT_SEND,
+        // Fed from the orbit mix by one amount per orbit since Katalyst step 5b-2: no per-voice send
+        "reverb" to KlangScope.ORBIT,
+        "delay" to KlangScope.ORBIT,
 
         // The whole playback
         "master" to KlangScope.MASTER,

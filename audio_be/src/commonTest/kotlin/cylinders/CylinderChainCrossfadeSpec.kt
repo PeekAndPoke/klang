@@ -55,12 +55,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
     val probe = 0.5
 
     /**
-     * The per-voice send level for the send-path rows. Low enough that the delay's ring, which
-     * saturates softly around 1.0, stays in its linear region at `send / (1 - feedback)`.
-     */
-    val send = 0.15
-
-    /**
      * The largest sample-to-sample step the fade may show, on a DC probe of [probe].
      *
      * Derived, not borrowed: the ramp moves the incoming weight by `1 / (0.06 * 44100)` per sample,
@@ -85,7 +79,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         KatalystStageDsl.Delay(time = IgnitorDsl.Constant(time))
     )
 
-    /** A chain with a room AND an echo of its own, for the send-path rows. */
+    /** A chain with a room AND an echo of its own, for the wet-path rows. */
     fun wetChain(time: Double, size: Double) = KatalystDsl.of(
         KatalystStageDsl.Delay(
             wet = IgnitorDsl.Constant(0.5),
@@ -236,8 +230,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
          */
         fun block(
             level: Double = 0.0,
-            reverbSend: Double = 0.0,
-            delaySend: Double = 0.0,
             sidechainLevel: Double = 0.0,
             /** False renders a block no voice offered itself on: the owner lease lapses over it. */
             owned: Boolean = true,
@@ -249,8 +241,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
             }
 
             cylinder.mixBuffer.fill(level)
-            cylinder.reverbSendBuffer.fill(reverbSend)
-            cylinder.delaySendBuffer.fill(delaySend)
             cylinder.pollPendingChain()
             cylinder.processEffects()
 
@@ -277,8 +267,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
         fun render(
             blocks: Int,
             level: Double = 0.0,
-            reverbSend: Double = 0.0,
-            delaySend: Double = 0.0,
             sidechainLevel: Double = 0.0,
             owned: Boolean = true,
             duckPass: Boolean = true,
@@ -288,8 +276,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
             for (b in 0 until blocks) {
                 block(
                     level = level,
-                    reverbSend = reverbSend,
-                    delaySend = delaySend,
                     sidechainLevel = sidechainLevel,
                     owned = owned,
                     duckPass = duckPass,
@@ -303,13 +289,11 @@ class CylinderChainCrossfadeSpec : StringSpec({
         fun peakOver(
             blocks: Int,
             level: Double = 0.0,
-            reverbSend: Double = 0.0,
-            delaySend: Double = 0.0,
         ): Double {
             var worst = 0.0
 
             for (b in 0 until blocks) {
-                val peak = peakOf(block(level = level, reverbSend = reverbSend, delaySend = delaySend))
+                val peak = peakOf(block(level = level))
 
                 if (peak > worst) {
                     worst = peak
@@ -403,29 +387,58 @@ class CylinderChainCrossfadeSpec : StringSpec({
     "the handover from the fade to the drain does not step" {
         val rig = Rig()
         rig.registry.register("dry", dryChain(1.0))
-        // A wet room on the classic chain, charged by the voices' reverb send.
+        // A wet room on the classic chain, fed from the orbit mix by the owner's wet.
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
 
-        // The room is loud, and the voices keep feeding it right across the swap: the leaving
-        // chain's send has to be ramped with its dry, or its input would drop from a constant to
-        // silence in one sample at the handover and the combs would emit that edge one comb period
-        // later.
-        rig.render(blocks = 200, level = probe, reverbSend = probe)
+        // The room is loud, and the mix keeps feeding it right across the swap: the leaving
+        // chain's feed is ramped with its dry (both come from the one ramped mix it is handed), or
+        // its input would drop from a constant to silence in one sample at the handover and the
+        // combs would emit that edge one comb period later.
+        rig.render(blocks = 200, level = probe)
 
-        val last = rig.block(level = probe, reverbSend = probe)
+        val last = rig.block(level = probe)
 
         rig.cylinder.requestChain("dry")
 
         // The fade ends somewhere in here: if the outgoing chain's OUTPUT were ramped to zero and
         // its tail then re-added at full weight for the drain, the seam would be a step the size
         // of the whole tail.
-        val across = last.after(rig.render(blocks = fadeBlocks + 12, level = probe, reverbSend = probe))
+        val across = last.after(rig.render(blocks = fadeBlocks + 12, level = probe))
 
         rig.cylinder.isDraining shouldBe true
         maxStep(across) shouldBeLessThan clickThreshold
     }
 
-    // ── The send path ────────────────────────────────────────────────────────────────────────────
+    "the leaving room keeps hearing the delay's ring-out: the handover to the drain does not step" {
+        // Katalyst step 5b-2, review round 1: the delay and the reverb are fed from the mix at
+        // their position, so at the ramp's end the leaving chain's DRY input is zero but the delay's
+        // echoes still reach the room behind it. A ring-out that switched the stages to their own
+        // silent drain input cut the room's feed from `wet * echo` to 0 in one sample, and the combs
+        // passed that edge through on their first lap. The echo here is 0.1 s long, so at the fade's
+        // end it still carries the full DC level from before the swap.
+        val rig = Rig()
+        rig.registry.register("dry", dryChain(1.0))
+        rig.voice = VoiceTestHelpers.createSynthVoice(
+            katalystParams = echoState(wet = 0.5, time = 0.1, feedback = 0.5) + roomState(wet = 0.5, size = 3.0),
+        )
+
+        // Long enough for the DC probe's own echo onsets to die away (the first echo of a constant
+        // is a step, halving every 0.1 s period): 1500 blocks are 4.4 s, 43 periods.
+        rig.render(blocks = 1500, level = probe)
+
+        val last = rig.block(level = probe)
+
+        rig.cylinder.requestChain("dry")
+
+        // The ramp, the handover, and 60 blocks (174 ms) of the ring-out: past the room's first lap
+        // of whatever the handover fed it.
+        val across = last.after(rig.render(blocks = fadeBlocks + 60, level = probe))
+
+        rig.cylinder.isDraining shouldBe true
+        maxStep(across) shouldBeLessThan clickThreshold
+    }
+
+    // ── The wet path ─────────────────────────────────────────────────────────────────────────────
 
     "both chains' wet fades with their dry: the returns are not doubled, and the handover holds" {
         val rig = Rig()
@@ -442,13 +455,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
         )
 
         // Long enough for the outgoing chain's room and echo to reach their steady level.
-        rig.render(blocks = 400, level = probe, reverbSend = send, delaySend = send)
-        val before = peakOf(rig.block(level = probe, reverbSend = send, delaySend = send))
+        rig.render(blocks = 400, level = probe)
+        val before = peakOf(rig.block(level = probe))
 
         rig.cylinder.requestChain("wet")
 
         // The ramp, the handover, and the first blocks of the ring-out in one pass.
-        val across = rig.render(blocks = fadeBlocks + 8, level = probe, reverbSend = send, delaySend = send)
+        val across = rig.render(blocks = fadeBlocks + 8, level = probe)
         val during = peakOf(across.copyOfRange(0, fadeBlocks * blockFrames))
 
         rig.cylinder.isDraining shouldBe true
@@ -458,23 +471,24 @@ class CylinderChainCrossfadeSpec : StringSpec({
         var blocks = 0
 
         while (rig.cylinder.isDraining && blocks < 20000) {
-            rig.block(level = probe, reverbSend = send, delaySend = send)
+            rig.block(level = probe)
             blocks++
         }
 
-        val after = rig.peakOver(blocks = 600, level = probe, reverbSend = send, delaySend = send)
+        val after = rig.peakOver(blocks = 600, level = probe)
 
         withClue("the swap is a swap: both endpoints are wet and audible") {
             before shouldBeGreaterThan probe
             after shouldBeGreaterThan probe
         }
 
-        // What the ramp on the send path buys, in one number. The two chains' DRY paths are
-        // amplitude-complementary, so anything above the louder endpoint is the two WET paths
-        // overlapping: the room the old chain has already stored (which the fade must not scale,
-        // that is what the drain is for) plus the echo the new one builds inside the window. That
-        // overlap is 17 % here. With the sends unramped the old chain is FED at full level for the
-        // whole fade instead, and the same measurement reads 32 %.
+        // What ramping the leaving chain's INPUT buys on the wet path, in one number. The two
+        // chains' DRY paths are amplitude-complementary, so anything above the louder endpoint is
+        // the two WET paths overlapping: the room the old chain has already stored (which the fade
+        // must not scale, that is what the drain is for) plus the echo the new one builds inside
+        // the window. Since Katalyst step 5b-2 the delay and the reverb are fed from the mix at
+        // their position, so the one ramped mix the leaving chain is handed IS its feed; a leaving
+        // chain fed at full level for the whole fade is what this bound catches.
         val bound = (if (before > after) before else after) * 1.25
 
         withClue("the wet is not doubled mid-fade (during=$during before=$before after=$after)") {
@@ -875,14 +889,14 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // No room on the way out, so the only network in play is the incoming chain's.
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
-        rig.render(blocks = 10, level = probe, reverbSend = probe)
+        rig.render(blocks = 10, level = probe)
         rig.cylinder.requestChain("room")
 
         // The stage exists from the moment the chain is installed; its NETWORK is rented by the
         // stage's writer, which the owner runs on the fade's first block.
         val incoming = rig.cylinder.reverb.shouldNotBeNull()
 
-        rig.block(level = probe, reverbSend = probe)
+        rig.block(level = probe)
 
         withClue("the incoming chain's writer ran, so its network is rented") {
             incoming.reverb.shouldNotBeNull()
@@ -890,13 +904,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         // Halfway through the ramp, while the incoming chain still carries less than half the
         // weight: its combs must already hold energy, which they only can if they were fed.
-        rig.render(blocks = fadeBlocks / 2 - 1, level = probe, reverbSend = probe)
+        rig.render(blocks = fadeBlocks / 2 - 1, level = probe)
         rig.cylinder.isFading shouldBe true
         val atHalf = incoming.reverb.shouldNotBeNull().combPeakAbs()
 
         atHalf shouldBeGreaterThan 0.0
 
-        rig.render(blocks = fadeBlocks / 2, level = probe, reverbSend = probe)
+        rig.render(blocks = fadeBlocks / 2, level = probe)
         val atEnd = incoming.reverb.shouldNotBeNull().combPeakAbs()
 
         withClue("and it kept charging for the rest of the fade") {
@@ -908,13 +922,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
         val rig = Rig()
 
         // The orbit sounds, and the chain is asked for before its registration arrives.
-        rig.render(blocks = 4, level = probe, reverbSend = probe)
+        rig.render(blocks = 4, level = probe)
         rig.cylinder.requestChain("room")
         rig.registry.register("room", roomChain(6.0))
 
         // The note has ended and the orbit is still audible, so no voice offers itself: the
         // pending poll starts the fade, and nothing will claim the lease to write the chain.
-        rig.block(level = probe, reverbSend = probe, owned = false)
+        rig.block(level = probe, owned = false)
 
         rig.cylinder.isFading shouldBe true
 
@@ -935,7 +949,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             room.reverb.shouldBeNull()
         }
 
-        rig.block(level = probe, reverbSend = probe)
+        rig.block(level = probe)
 
         withClue("the first voice's own writers configure it, before anything renders") {
             room.reverb.shouldNotBeNull()
@@ -958,12 +972,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.voice = VoiceTestHelpers.createSynthVoice()
 
         rig.cylinder.requestChain("ducked")
-        rig.render(blocks = 200, level = probe, reverbSend = probe, sidechainLevel = 0.5)
+        rig.render(blocks = 200, level = probe, sidechainLevel = 0.5)
 
         // The sidechain orbit disappears in the same block the swap is asked for, so the pass that
         // normally ends the duck's crossfade never runs.
         rig.cylinder.requestChain("dry")
-        rig.render(blocks = fadeBlocks + 4, level = probe, reverbSend = probe, duckPass = false)
+        rig.render(blocks = fadeBlocks + 4, level = probe, duckPass = false)
 
         rig.cylinder.isDraining shouldBe true
 
@@ -979,7 +993,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
 
-        rig.render(blocks = 200, level = probe, reverbSend = probe)
+        rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
 
         withClue("the room is on the way out, so the shelf has nothing while it still rings") {
@@ -1032,7 +1046,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             katalystParams = echoState(time = 0.2, feedback = 0.5),
         )
 
-        rig.render(blocks = 4, level = probe, delaySend = probe)
+        rig.render(blocks = 4, level = probe)
 
         // The stage of the chain that is about to LEAVE: the cylinder's own accessors follow the
         // chain in service, so the handle has to be taken while it still is one.
@@ -1048,7 +1062,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
             katalystParams = echoState(time = 0.35, feedback = 0.5),
         )
         rig.skipBlock()
-        rig.block(level = probe, delaySend = probe)
+        rig.block(level = probe)
 
         withClue("the chain that is still audible is still being configured") {
             leaving.delayLine.shouldNotBeNull().time shouldBe 0.35
@@ -1058,16 +1072,16 @@ class CylinderChainCrossfadeSpec : StringSpec({
             rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
         }
 
-        rig.render(blocks = fadeBlocks, level = probe, delaySend = probe)
+        rig.render(blocks = fadeBlocks, level = probe)
         rig.cylinder.isDraining shouldBe true
 
         // A third owner, while the outgoing chain only rings out: a live config would take its
-        // delay back out of the Draining state and point it at the live sends again.
+        // delay back out of the Draining state and point it at a live feed again.
         rig.voice = VoiceTestHelpers.createSynthVoice(
             katalystParams = echoState(time = 0.05, feedback = 0.5),
         )
         rig.skipBlock()
-        rig.block(level = probe, delaySend = probe)
+        rig.block(level = probe)
 
         withClue("a draining chain takes no more orders") {
             leaving.delayLine.shouldNotBeNull().time shouldBe 0.35
@@ -1136,7 +1150,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
 
-        rig.render(blocks = 200, level = probe, reverbSend = probe)
+        rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
 
         // Everything goes quiet at the swap, which is exactly when the cleanup would like to
@@ -1184,9 +1198,9 @@ class CylinderChainCrossfadeSpec : StringSpec({
             katalystParams = roomState(size = 6.0) + echoState(time = 0.2, feedback = 0.5),
         )
 
-        rig.render(blocks = 20, level = probe, reverbSend = probe, delaySend = probe)
+        rig.render(blocks = 20, level = probe)
         rig.cylinder.requestChain("room")
-        rig.render(blocks = 4, level = probe, reverbSend = probe, delaySend = probe)
+        rig.render(blocks = 4, level = probe)
 
         withClue("two chains are live, and both of their rooms are rented") {
             rig.cylinder.isFading shouldBe true
@@ -1217,7 +1231,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("dry", dryChain(1.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
 
-        rig.render(blocks = 200, level = probe, reverbSend = probe)
+        rig.render(blocks = 200, level = probe)
         rig.cylinder.requestChain("dry")
         rig.render(blocks = fadeBlocks)
 
@@ -1240,12 +1254,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.registry.register("room", roomChain(6.0))
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState(size = 6.0))
 
-        rig.block(level = probe, reverbSend = probe)
+        rig.block(level = probe)
 
         rig.cylinder.deniedRents shouldBe 1
 
         rig.cylinder.requestChain("room")
-        rig.block(level = probe, reverbSend = probe)
+        rig.block(level = probe)
 
         withClue("the incoming chain's refusal is added to the outgoing chain's, not swapped for it") {
             rig.cylinder.isFading shouldBe true
@@ -1254,7 +1268,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         // The outgoing chain never got a room, so it has no tail and retires the moment the fade
         // ends. Its count goes with it, which is why the cylinder carries it over.
-        rig.render(blocks = fadeBlocks, level = probe, reverbSend = probe)
+        rig.render(blocks = fadeBlocks, level = probe)
 
         withClue("a retired chain's refusals stay on this cylinder's LIFE count") {
             rig.cylinder.isFading shouldBe false
@@ -1274,8 +1288,6 @@ class CylinderChainCrossfadeSpec : StringSpec({
         // DC blocker downstream latches one for good.
         rig.cylinder.updateFromVoice(rig.voice, rig.blockStart)
         rig.cylinder.mixBuffer.fill(Double.POSITIVE_INFINITY)
-        rig.cylinder.reverbSendBuffer.fill(0.0)
-        rig.cylinder.delaySendBuffer.fill(0.0)
         rig.cylinder.processEffects()
 
         withClue("the raw engine may be loud, but it may not be NaN") {

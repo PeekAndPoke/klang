@@ -244,8 +244,8 @@ class VoiceFactory(
         // unlatched; and `SendRenderer.measurePeak` scales the block peak by `abs(gain)`, so a NaN
         // gain made the measured peak NaN, which fails every compare against the cull floor and
         // reads as audible forever. The guard hands both readers a finite number, and a NaN can no
-        // longer reach the mix and send buffers, where the orbit's reverb and delay would latch it
-        // for the rest of the playback.
+        // longer reach the orbit mix, which the orbit's reverb and delay are fed from and would
+        // latch it for the rest of the playback.
         val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
         // Compressor

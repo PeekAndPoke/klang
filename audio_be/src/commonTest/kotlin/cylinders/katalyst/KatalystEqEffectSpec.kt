@@ -54,8 +54,6 @@ class KatalystEqEffectSpec : StringSpec({
     fun ctx(): KatalystContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /** A declared chain, slot-driven, as the cylinder builds one for a `katalyst(...)` name. */
@@ -386,52 +384,6 @@ class KatalystEqEffectSpec : StringSpec({
                 // algebraic `v0 + 0 * v1` would flip it.
                 out[i].toRawBits() shouldBe data[i].toRawBits()
             }
-        }
-    }
-
-    "the stage shapes the MIX and never the send buffers, which the voices wrote" {
-        // The position rule as it stands until the sends become insert-style (the `Eq` wire KDoc):
-        // an `eq` written before `reverb` shapes the dry mix and NOT the reverb return, because the
-        // send buffers were filled by the voices before the chain ran. A stage that filtered them
-        // too would be the dissolved D2 rule, quietly back.
-        val chain = chainOf(
-            KatalystStageDsl.Eq(sections = listOf(IgnitorDsl.EqSection.Lowpass(freq = c(400.0), q = c(0.9))))
-        )
-
-        chain.applyParams(null)
-
-        val data = noise(4 * blockFrames)
-        val ctx = ctx()
-        var mixMoved = 0.0
-
-        for (b in 0 until 4) {
-            val base = b * blockFrames
-
-            for (i in 0 until blockFrames) {
-                ctx.mixBuffer.left[i] = data[base + i]
-                ctx.mixBuffer.right[i] = data[base + i]
-                ctx.delaySendBuffer.left[i] = data[base + i]
-                ctx.delaySendBuffer.right[i] = data[base + i]
-                ctx.reverbSendBuffer.left[i] = data[base + i]
-                ctx.reverbSendBuffer.right[i] = data[base + i]
-            }
-
-            chain.process(ctx)
-
-            for (i in 0 until blockFrames) {
-                mixMoved += abs(ctx.mixBuffer.left[i] - data[base + i])
-
-                withClue("block $b frame $i") {
-                    ctx.delaySendBuffer.left[i] shouldBe data[base + i]
-                    ctx.delaySendBuffer.right[i] shouldBe data[base + i]
-                    ctx.reverbSendBuffer.left[i] shouldBe data[base + i]
-                    ctx.reverbSendBuffer.right[i] shouldBe data[base + i]
-                }
-            }
-        }
-
-        withClue("and the mix really went through the lowpass") {
-            mixMoved shouldBeGreaterThan 1.0
         }
     }
 

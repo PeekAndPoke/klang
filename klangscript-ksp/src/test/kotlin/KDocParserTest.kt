@@ -27,11 +27,11 @@ class KDocParserTest : StringSpec({
             """
             Reverb.
 
-            @scope orbit-send
+            @scope orbit
             @category effects
             """
         ).let {
-            it.scope shouldBe "orbit-send"
+            it.scope shouldBe "orbit"
             it.category shouldBe "effects"
         }
     }

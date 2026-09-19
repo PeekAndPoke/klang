@@ -34,8 +34,6 @@ class KatalystReverbGlideSpec : StringSpec({
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /** Two partials, not a DC fill: the combs hold a signal whose every cell differs. */
@@ -73,10 +71,11 @@ class KatalystReverbGlideSpec : StringSpec({
             configure(k)
             setReference(k)
 
-            fillInput(effectCtx.reverbSendBuffer, block)
+            // The stage is fed from the orbit mix at wet 1 and adds its room to it, so the bare
+            // network's output starts from the same dry signal (`Reverb.process` adds).
+            fillInput(effectCtx.mixBuffer, block)
             fillInput(referenceIn, block)
-            effectCtx.mixBuffer.clear()
-            referenceOut.clear()
+            fillInput(referenceOut, block)
 
             effect.process(effectCtx)
             reference.process(referenceIn, referenceOut, blockFrames)
@@ -96,9 +95,8 @@ class KatalystReverbGlideSpec : StringSpec({
         val c = ctx()
 
         repeat(30) { block ->
-            effect.configure(size = 0.2, lowpass = null)
-            fillInput(c.reverbSendBuffer, block)
-            c.mixBuffer.clear()
+            effect.configure(size = 0.2, lowpass = null, wet = 1.0)
+            fillInput(c.mixBuffer, block)
             effect.process(c)
         }
 
@@ -111,9 +109,8 @@ class KatalystReverbGlideSpec : StringSpec({
         var previous = 0.2
 
         for (k in 1..glideBlocks) {
-            effect.configure(size = 0.8, lowpass = null)
-            fillInput(c.reverbSendBuffer, 30 + k)
-            c.mixBuffer.clear()
+            effect.configure(size = 0.8, lowpass = null, wet = 1.0)
+            fillInput(c.mixBuffer, 30 + k)
             effect.process(c)
 
             withClue("block $k") {
@@ -143,7 +140,7 @@ class KatalystReverbGlideSpec : StringSpec({
 
         val settled = drive(
             effect, effectCtx, reference, refIn, refOut, firstBlock = 0, blocks = 30,
-            configure = { effect.configure(size = 0.2, lowpass = null) },
+            configure = { effect.configure(size = 0.2, lowpass = null, wet = 1.0) },
             setReference = {},
             peak = peak,
         )
@@ -154,7 +151,7 @@ class KatalystReverbGlideSpec : StringSpec({
         // The glide and 30 blocks after it, against the straight line by hand.
         val gliding = drive(
             effect, effectCtx, reference, refIn, refOut, firstBlock = 30, blocks = glideBlocks + 30,
-            configure = { effect.configure(size = 0.8, lowpass = null) },
+            configure = { effect.configure(size = 0.8, lowpass = null, wet = 1.0) },
             setReference = { k -> reference.size = if (k >= glideBlocks) 0.8 else 0.2 + 0.6 * k / glideBlocks },
             peak = peak,
         )
@@ -202,21 +199,19 @@ class KatalystReverbGlideSpec : StringSpec({
         val c = ctx()
         val a = ctx()
 
-        effect.configure(size = 0.05, lowpass = null)
-        active.configure(size = 0.05, lowpass = null)
-        c.reverbSendBuffer.left[0] = 1.0
-        c.reverbSendBuffer.right[0] = 1.0
-        a.reverbSendBuffer.left[0] = 1.0
-        a.reverbSendBuffer.right[0] = 1.0
+        effect.configure(size = 0.05, lowpass = null, wet = 1.0)
+        active.configure(size = 0.05, lowpass = null, wet = 1.0)
+        c.mixBuffer.left[0] = 1.0
+        c.mixBuffer.right[0] = 1.0
+        a.mixBuffer.left[0] = 1.0
+        a.mixBuffer.right[0] = 1.0
         effect.process(c)
         active.process(a)
 
         // The room starts to grow, two blocks into a glide to the largest one...
         repeat(2) {
-            effect.configure(size = 1.0, lowpass = null)
-            active.configure(size = 1.0, lowpass = null)
-            c.reverbSendBuffer.clear()
-            a.reverbSendBuffer.clear()
+            effect.configure(size = 1.0, lowpass = null, wet = 1.0)
+            active.configure(size = 1.0, lowpass = null, wet = 1.0)
             c.mixBuffer.clear()
             a.mixBuffer.clear()
             effect.process(c)
@@ -229,7 +224,7 @@ class KatalystReverbGlideSpec : StringSpec({
         (abs(effect.reverb!!.size - sizeNow) <= 1e-12) shouldBe true
 
         // ...and the owner turns it off.
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
 
         // The countdown by hand, from the drain's formula: revolutions of the 1640-sample longest
         // comb, plus the spare one. Too short: the feedback in force at the off-config. Long
@@ -246,21 +241,21 @@ class KatalystReverbGlideSpec : StringSpec({
         var worstLaw = 0.0
 
         for (block in 0 until tooShortBlocks) {
-            c.reverbSendBuffer.fill(0.5) // a drain discards live sends
-            a.reverbSendBuffer.clear()
-            c.mixBuffer.clear()
+            c.mixBuffer.fill(0.5) // a drain is not fed from the mix: the owner said off
             a.mixBuffer.clear()
-            active.configure(size = 1.0, lowpass = null)
+            active.configure(size = 1.0, lowpass = null, wet = 1.0)
             effect.process(c)
             active.process(a)
 
             for (i in 0 until blockFrames) {
-                worstLaw = maxOf(worstLaw, abs(c.mixBuffer.left[i] - a.mixBuffer.left[i]))
+                // The draining side's 0.5 is dry signal passing through; what it ADDED is compared.
+                worstLaw = maxOf(worstLaw, abs((c.mixBuffer.left[i] - 0.5) - a.mixBuffer.left[i]))
             }
         }
 
-        // Draining kept gliding exactly as the Active side did (a law of the engine, not an oracle).
-        worstLaw shouldBe 0.0
+        // Draining kept gliding exactly as the Active side did (a law of the engine, not an oracle),
+        // up to the rounding of taking the 0.5 back out.
+        (worstLaw <= 1e-12) shouldBe true
         effect.reverb!!.size shouldBe 1.0
 
         // Where the short countdown would have cut, the network still holds a tail well above the
@@ -269,7 +264,6 @@ class KatalystReverbGlideSpec : StringSpec({
         effect.hasTail() shouldBe true
 
         repeat(enoughBlocks - tooShortBlocks) {
-            c.reverbSendBuffer.clear()
             c.mixBuffer.clear()
             effect.process(c)
         }
@@ -283,17 +277,15 @@ class KatalystReverbGlideSpec : StringSpec({
 
         // The largest room, charged...
         repeat(20) { block ->
-            effect.configure(size = 1.0, lowpass = null)
-            fillInput(c.reverbSendBuffer, block)
-            c.mixBuffer.clear()
+            effect.configure(size = 1.0, lowpass = null, wet = 1.0)
+            fillInput(c.mixBuffer, block)
             effect.process(c)
         }
 
         // ...two blocks into a glide down to the smallest room that is still on...
         repeat(2) { block ->
-            effect.configure(size = 0.01, lowpass = null)
-            fillInput(c.reverbSendBuffer, 20 + block)
-            c.mixBuffer.clear()
+            effect.configure(size = 0.01, lowpass = null, wet = 1.0)
+            fillInput(c.mixBuffer, 20 + block)
             effect.process(c)
         }
 
@@ -304,7 +296,7 @@ class KatalystReverbGlideSpec : StringSpec({
         val peak = effect.reverb!!.combPeakAbs()
 
         // ...and the owner turns it off.
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
 
         // The countdown by hand from the size IN FORCE, the larger of the two while falling (the
         // accepted over-hold: the room decays faster than this from here on). Off lands on the
@@ -313,7 +305,6 @@ class KatalystReverbGlideSpec : StringSpec({
         val offBlock = ceil(countdown / blockFrames).toInt()
 
         repeat(offBlock - 1) {
-            c.reverbSendBuffer.clear()
             c.mixBuffer.clear()
             effect.process(c)
         }
@@ -332,18 +323,16 @@ class KatalystReverbGlideSpec : StringSpec({
                 val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
                 val c = ctx()
 
-                effect.configure(size = 0.2, lowpass = null)
+                effect.configure(size = 0.2, lowpass = null, wet = 1.0)
 
                 repeat(3) { block ->
-                    fillInput(c.reverbSendBuffer, block)
-                    c.mixBuffer.clear()
+                    fillInput(c.mixBuffer, block)
                     effect.process(c)
                 }
 
                 repeat(3) { block ->
-                    effect.configure(size = 0.8, lowpass = null)
-                    fillInput(c.reverbSendBuffer, block)
-                    c.mixBuffer.clear()
+                    effect.configure(size = 0.8, lowpass = null, wet = 1.0)
+                    fillInput(c.mixBuffer, block)
                     effect.process(c)
                 }
 
@@ -355,16 +344,97 @@ class KatalystReverbGlideSpec : StringSpec({
 
                 // Not 0.5: that is a fresh unit's factory size, which a retired stage's next rent
                 // would show whether or not the glide was forgotten.
-                effect.configure(size = 0.45, lowpass = null)
+                effect.configure(size = 0.45, lowpass = null, wet = 0.3)
 
                 effect.reverb!!.size shouldBe 0.45
 
-                fillInput(c.reverbSendBuffer, 0)
-                c.mixBuffer.clear()
-                effect.process(c)
+                // The wet glide is forgotten on the same line: the next life is fed the input times
+                // ITS wet from the first block on, which a bare network fed by hand reproduces
+                // exactly. Past the shortest comb (1116 samples), so the room has answered.
+                val reference = Reverb(sampleRate).apply { size = 0.45 }
+                val refIn = StereoBuffer(blockFrames)
+                val refOut = StereoBuffer(blockFrames)
 
-                effect.reverb!!.size shouldBe 0.45
+                for (block in 0 until 20) {
+                    effect.configure(size = 0.45, lowpass = null, wet = 0.3)
+                    fillInput(c.mixBuffer, block)
+                    fillInput(refIn, block)
+                    fillInput(refOut, block)
+
+                    for (i in 0 until blockFrames) {
+                        refIn.left[i] = refIn.left[i] * 0.3
+                        refIn.right[i] = refIn.right[i] * 0.3
+                    }
+
+                    effect.process(c)
+                    reference.process(refIn, refOut, blockFrames)
+
+                    effect.reverb!!.size shouldBe 0.45
+
+                    for (i in 0 until blockFrames) {
+                        withClue("block $block frame $i") {
+                            c.mixBuffer.left[i].toRawBits() shouldBe refOut.left[i].toRawBits()
+                        }
+                    }
+                }
             }
         }
+    }
+
+    "a wet change glides per SAMPLE into the room's feed along the straight line, and lands" {
+        // The LEVEL half on the reverb (Katalyst 5b-2). The oracle: a bare network fed the input
+        // times the straight line from 0.2 to 0.9 over the glide's 17 * 128 samples, by hand.
+        val effect = KatalystReverbEffect(reverb = Reverb(sampleRate), blockFrames = blockFrames)
+        val c = ctx()
+        val reference = Reverb(sampleRate)
+        val refIn = StereoBuffer(blockFrames)
+        val refOut = StereoBuffer(blockFrames)
+        val total = glideBlocks * blockFrames
+
+        reference.size = 0.5
+
+        fun step(block: Int, wetAt: (Int) -> Double): Double {
+            fillInput(c.mixBuffer, block)
+            fillInput(refIn, block)
+            fillInput(refOut, block)
+
+            for (i in 0 until blockFrames) {
+                refIn.left[i] = refIn.left[i] * wetAt(i)
+                refIn.right[i] = refIn.right[i] * wetAt(i)
+            }
+
+            effect.process(c)
+            reference.process(refIn, refOut, blockFrames)
+
+            var worst = 0.0
+
+            for (i in 0 until blockFrames) {
+                worst = maxOf(worst, abs(c.mixBuffer.left[i] - refOut.left[i]))
+                worst = maxOf(worst, abs(c.mixBuffer.right[i] - refOut.right[i]))
+            }
+
+            return worst
+        }
+
+        for (block in 0 until 20) {
+            effect.configure(size = 0.5, lowpass = null, wet = 0.2)
+            step(block) { 0.2 } shouldBe 0.0
+        }
+
+        var gliding = 0.0
+
+        for (k in 1..glideBlocks + 20) {
+            effect.configure(size = 0.5, lowpass = null, wet = 0.9)
+            gliding = maxOf(
+                gliding,
+                step(19 + k) { i ->
+                    val j = (k - 1) * blockFrames + i + 1
+
+                    if (j >= total) 0.9 else 0.2 + 0.7 * j / total
+                },
+            )
+        }
+
+        (gliding <= 1e-12) shouldBe true
     }
 })

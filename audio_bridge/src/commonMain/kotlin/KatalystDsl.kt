@@ -423,14 +423,11 @@ sealed interface KatalystStageDsl {
      * AND after classic's own group fader (the duck runs outside the list regardless, see [Duck]).
      * Write the stages out in order when the position matters.
      *
-     * **What the position means while the sends are still per voice.** The delay and reverb send
-     * buffers are written by the VOICES, before the orbit's chain runs, so an `eq` written BEFORE
-     * `reverb` shapes the dry mix and NOT the reverb return: the room hears the raw voices. The
-     * same `eq` written AFTER it shapes dry and tail together. Both are legitimate mixes and the
-     * list order is how they are told apart. The rule the design once carried, that a linear stage
-     * ahead of a send also filters the send buffers, was dissolved on 2026-09-17 together with the
-     * per-voice sends themselves; Katalyst step 5b-2 makes `delay` and `reverb` insert-style
-     * stages, and then "the room hears the cab" is list order and nothing else.
+     * **What the position means.** The delay and the reverb are fed from the orbit mix at their own
+     * position in the list (Katalyst step 5b-2), so an `eq` written BEFORE `reverb` shapes the dry
+     * signal AND what the room hears: the room hears the cab. The same `eq` written AFTER it shapes
+     * dry and tail together, after the room. Both are legitimate mixes and the list order is how
+     * they are told apart.
      *
      * @param sections the sections in written order; an empty list is a transparent stage.
      */
@@ -445,10 +442,10 @@ sealed interface KatalystStageDsl {
      * The structural fix for mixing an orbit deliberately low (to keep its compressor out of plop
      * territory) and bringing the level back up at the end of its chain.
      *
-     * **What a fader at the end of the chain covers**, while the sends are still send buses: the
-     * delay and the reverb mix their RETURNS into the orbit's buffer at their own stage positions,
-     * so a gain stage written after them scales dry and returns alike. Written BEFORE them it
-     * scales only the dry, which is a legitimate mix and is what list order is for. The duck is
+     * **What a fader covers is list order**: the delay and the reverb are fed from the orbit's mix
+     * at their own positions and add their RETURNS into it there (Katalyst step 5b-2), so a gain
+     * stage written after them scales dry and returns alike, and one written BEFORE them scales the
+     * dry and what they are fed, and so their returns too. The duck is
      * the one stage no list position can put before this one: it runs outside the list, in the
      * cross-orbit pass ([Duck]), so it always lands after the fader.
      *

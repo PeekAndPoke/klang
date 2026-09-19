@@ -44,8 +44,6 @@ class KatalystReverbStateIdentitySpec : StringSpec({
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /**
@@ -57,10 +55,9 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
     /** One block with a full-scale impulse in the send, so the network is charged and has a tail. */
     fun charge(effect: KatalystReverbEffect, ctx: KatalystContext) {
-        ctx.reverbSendBuffer.clear()
         ctx.mixBuffer.clear()
-        ctx.reverbSendBuffer.left[0] = 1.0
-        ctx.reverbSendBuffer.right[0] = 1.0
+        ctx.mixBuffer.left[0] = 1.0
+        ctx.mixBuffer.right[0] = 1.0
         effect.process(ctx)
     }
 
@@ -69,7 +66,6 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         var blocks = 0
 
         while (effect.hasTail() && blocks < 100_000) {
-            ctx.reverbSendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
             blocks++
@@ -100,17 +96,17 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         effect.reverb shouldBe null
 
         // Off + an off-config with NO unit: `configure` returns at its null check.
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs off
 
         // Off -> Active, renting the unit on the way.
-        effect.configure(size = 0.5, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         val active = effect.currentState
         see(active)
         active shouldNotBeSameInstanceAs off
 
         // Active -> Active: the knob-rewrite self-edge, every block of a running reverb.
-        effect.configure(size = 0.6, lowpass = 4000.0)
+        effect.configure(size = 0.6, lowpass = 4000.0, wet = 1.0)
         withClue("a knob rewrite is a self-edge, not a new state") {
             effect.currentState shouldBeSameInstanceAs active
         }
@@ -119,7 +115,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         charge(effect, ctx)
 
         // Active -> Draining.
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         val draining = effect.currentState
         see(draining)
         withClue("Draining is its own state") {
@@ -128,37 +124,37 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         }
 
         // Draining -> Draining: a second off-config changes nothing.
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("an off-config repeated while draining is a self-edge") {
             effect.currentState shouldBeSameInstanceAs draining
         }
         see(effect.currentState)
 
         // The shortcut: Draining -> Active before the countdown ends, and straight back.
-        effect.configure(size = 0.3, lowpass = null)
+        effect.configure(size = 0.3, lowpass = null, wet = 1.0)
         withClue("Draining -> Active reuses the ONE Active instance") {
             effect.currentState shouldBeSameInstanceAs active
         }
         see(effect.currentState)
 
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("Active -> Draining reuses the ONE Draining instance") {
             effect.currentState shouldBeSameInstanceAs draining
         }
         see(effect.currentState)
 
         // Draining -> Active while the size glide is still MOVING, and out again mid-glide.
-        effect.configure(size = 0.9, lowpass = null)
+        effect.configure(size = 0.9, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs active
         charge(effect, ctx)
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
-        effect.configure(size = 0.2, lowpass = null)
+        effect.configure(size = 0.2, lowpass = null, wet = 1.0)
         withClue("a return mid-drain and mid-glide reuses the ONE Active instance") {
             effect.currentState shouldBeSameInstanceAs active
         }
         see(effect.currentState)
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
 
         // Draining -> Off, by the countdown running out.
@@ -170,7 +166,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
         // Off + an off-config WITH a unit present (the terminal reset keeps the unit).
         effect.reverb.shouldNotBeNull()
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("an off-config while Off with a unit is a self-edge") {
             effect.currentState shouldBeSameInstanceAs off
         }
@@ -184,9 +180,9 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Active -> Off through the cylinder-deactivation door, from a live tail, mid-glide.
-        effect.configure(size = 0.2, lowpass = null)
+        effect.configure(size = 0.2, lowpass = null, wet = 1.0)
         charge(effect, ctx)
-        effect.configure(size = 0.8, lowpass = null)
+        effect.configure(size = 0.8, lowpass = null, wet = 1.0)
         charge(effect, ctx)
         effect.currentState shouldBeSameInstanceAs active
         effect.reset()
@@ -196,9 +192,9 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Draining -> Off through the same door: `reset` from mid-drain.
-        effect.configure(size = 0.5, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         charge(effect, ctx)
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
         effect.reset()
         withClue("reset from mid-drain lands in the ONE Off instance") {
@@ -207,8 +203,8 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Active -> Off through the silent-network arm: never charged since the reset.
-        effect.configure(size = 0.5, lowpass = null)
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("a silent network goes straight to the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off
         }
@@ -216,25 +212,24 @@ class KatalystReverbStateIdentitySpec : StringSpec({
 
         // Active -> Off through the POISONED-network arm: a comb overflowed to non-finite, so the
         // countdown is infinite and the reset is the heal (the reverb's own arm).
-        effect.configure(size = 0.5, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
 
         repeat(16) {
-            ctx.reverbSendBuffer.fill(Double.MAX_VALUE)
-            ctx.mixBuffer.clear()
+            ctx.mixBuffer.fill(Double.MAX_VALUE)
             effect.process(ctx)
         }
 
         effect.reverb.shouldNotBeNull().combPeakAbs() shouldBe Double.POSITIVE_INFINITY
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         withClue("a poisoned network heals into the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off
         }
         see(effect.currentState)
 
         // Draining -> Off through the RETIRE door, then a new life on a unit the shelf hands out.
-        effect.configure(size = 0.5, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         charge(effect, ctx)
-        effect.configure(size = 0.0, lowpass = null)
+        effect.configure(size = 0.0, lowpass = null, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
         effect.retire()
         withClue("retire from mid-drain lands in the ONE Off instance") {
@@ -242,14 +237,14 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         }
         see(effect.currentState)
 
-        effect.configure(size = 0.5, lowpass = null)
+        effect.configure(size = 0.5, lowpass = null, wet = 1.0)
         withClue("the new life rents a unit and activates") {
             effect.currentState shouldBeSameInstanceAs active
         }
 
         // Active -> Off through retire, mid-glide from a live tail; then retire AGAIN, from Off.
         charge(effect, ctx)
-        effect.configure(size = 0.9, lowpass = null)
+        effect.configure(size = 0.9, lowpass = null, wet = 1.0)
         charge(effect, ctx)
         effect.retire()
         withClue("retire mid-glide lands in the ONE Off instance") {
@@ -270,7 +265,7 @@ class KatalystReverbStateIdentitySpec : StringSpec({
         val starved = createEffect(ReverbUnits(sampleRate, allocate = { null }))
         val starvedOff = starved.currentState
 
-        starved.configure(size = 0.5, lowpass = null)
+        starved.configure(size = 0.5, lowpass = null, wet = 1.0)
         withClue("a refused first rent leaves the effect in its own Off instance") {
             starved.currentState shouldBeSameInstanceAs starvedOff
         }

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -284,8 +285,9 @@ class CylinderKatalystParamsSpec : StringSpec({
 
         // The reverse row, and the one that goes red on a half-done deletion: a voice whose
         // `Voice.Reverb` names a big room and whose `katalystParams` is null must leave the orbit
-        // dry, because the fields stopped being a knob source in step 5b-1. They stay on the wire
-        // for the per-voice send AMOUNT until 5b-2, which is why this voice still HAS them.
+        // dry, because the fields stopped being a knob source in step 5b-1 and, since step 5b-2,
+        // are not an amount either. They stay on the wire until 5b-3, which is why this voice
+        // still HAS them. The rendered twin is in `KatalystInsertFeedSpec`.
         rig.cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
                 reverb = Voice.Reverb(amount = 0.5, size = 0.6),
@@ -299,61 +301,57 @@ class CylinderKatalystParamsSpec : StringSpec({
         withClue("no delay ring rented") { rig.cylinder.delay.shouldNotBeNull().delayLine.shouldBeNull() }
     }
 
-    "two voices on one orbit: the dry OWNER does not silence the other voice's room" {
-        // The MAJOR of review round 1, built as the scenario it is about, and heard rather than
-        // read off a field. `wet` is documented as a PER-VOICE send, so `reverb(0)` on the voice
-        // that happens to hold the lease must not take the room away from the voice that is
-        // sending 0.6 into it. Which of the two owns the orbit is first-rendered-wins, so the
-        // alternative would make a song depend on the order of a `stack`'s arms.
+    "a WRITTEN wet of 0 keeps the room running and feeds it nothing; a room nobody named rents nothing" {
+        // Step 5b-2: `wet` is the orbit's amount, and the 5b-1 on/off rule stays (`sendStageRuns`):
+        // a written 0 runs the stage with nothing fed in, so a later wet glides up from there
+        // instead of switching a room on; an authored 0 nobody writes rents nothing at all.
         //
-        // Both voices offer themselves in the same block, the DRY one first, so it wins the lease
-        // and its slots are the ones the bus reads. The wet one's send is written into the orbit's
-        // reverb send buffer the way `SendRenderer` writes it, and what the row measures is the
-        // orbit's MIX after `processEffects`: the room's return, or silence.
-        fun roomReturn(ownerSlots: Map<String, Double>): Double {
+        // What the row measures is the orbit's MIX after `processEffects`, fed a constant 0.5:
+        // the room adds nothing but the reverb's deliberate `+ ANTI_DENORMAL` residue (far below
+        // the bound here), and the rent says the stage is running.
+        fun render(ownerSlots: Map<String, Double>): Pair<Cylinder, Double> {
             val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
-            // The owner: dry, but it named the stage.
             cylinder.updateFromVoice(voice(ownerSlots), blockStart = 0.0)
-            // The second voice on the same orbit: its claim is refused, its SEND is not.
-            cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
 
-            var peak = 0.0
+            var worst = 0.0
 
-            // Freeverb's shortest comb is 1116 frames, so a single block returns silence whatever
-            // the settings: render past it and take the loudest return.
+            // Freeverb's shortest comb is 1116 frames: render past it.
             repeat(40) {
-                cylinder.mixBuffer.clear()
-                cylinder.reverbSendBuffer.left.fill(0.5)
-                cylinder.reverbSendBuffer.right.fill(0.5)
+                cylinder.mixBuffer.fill(0.5)
                 cylinder.processEffects()
 
                 for (sample in cylinder.mixBuffer.left) {
-                    val level = abs(sample)
-
-                    if (level > peak) {
-                        peak = level
-                    }
+                    worst = maxOf(worst, abs(sample - 0.5))
                 }
             }
 
-            return peak
+            return cylinder to worst
         }
 
-        // The owner WROTE `reverb(0, size = 6)`: dry itself, and the room runs for the orbit.
-        val heard = roomReturn(mapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
+        val (written, writtenAdds) = render(mapOf("reverb.wet" to 0.0, "reverb.size" to 6.0))
 
-        withClue("the other voice's send comes back out of the room, peak $heard") {
-            heard shouldBeGreaterThan 0.01
+        withClue("the written 0 runs the room: a network is rented") {
+            written.reverb.shouldNotBeNull().reverb.shouldNotBeNull()
+        }
+
+        withClue("and feeds it nothing, largest addition $writtenAdds") {
+            writtenAdds shouldBeLessThan 1e-9
+        }
+
+        withClue("engagement: the same room at wet 0.5 is heard") {
+            render(mapOf("reverb.wet" to 0.5, "reverb.size" to 6.0)).second shouldBeGreaterThan 0.01
         }
 
         // The control, and the half that keeps the 2026-09-17 decision: an owner that never named
-        // the stage at all asked for no room, and then the same send goes nowhere.
-        val silent = roomReturn(emptyMap())
+        // the stage asked for no room, and nothing is rented.
+        val (unnamed, unnamedAdds) = render(emptyMap())
 
-        withClue("an orbit nobody asked for a room on returns nothing, peak $silent") {
-            silent shouldBe 0.0
+        withClue("an orbit nobody asked for a room on rents none") {
+            unnamed.reverb.shouldNotBeNull().reverb.shouldBeNull()
         }
+
+        unnamedAdds shouldBe 0.0
     }
 
     "the fader halves the orbit's mix, exactly" {

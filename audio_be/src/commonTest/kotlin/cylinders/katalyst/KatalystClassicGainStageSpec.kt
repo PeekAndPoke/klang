@@ -31,11 +31,10 @@ import kotlin.math.abs
  *
  * **It is reachable.** `katp("gain.gain", x)` moves it on ANY orbit, because every chain reads the
  * orbit's param state, the one a cylinder is born with included. Halving it must halve the mix exactly
- * (0.5 is a power of two), INCLUDING what the delay and the reverb return, which is the honest
- * question about a fader while the sends are still send buses: the returns are mixed in by their
- * own stages, and those sit before this one, so they are covered. The duck is not, and cannot be
- * (it runs outside the list, in the cross-orbit pass); that is stated in the stage's KDoc and is
- * not something this spec can change.
+ * (0.5 is a power of two), INCLUDING what the delay and the reverb return: their returns are mixed
+ * in by their own stages, and those sit before this one, so they are covered. The duck is not, and
+ * cannot be (it runs outside the list, in the cross-orbit pass); that is stated in the stage's KDoc
+ * and is not something this spec can change.
  */
 class KatalystClassicGainStageSpec : StringSpec({
 
@@ -62,13 +61,11 @@ class KatalystClassicGainStageSpec : StringSpec({
     fun ctx(): KatalystContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /**
-     * Runs [blocks] blocks of a deterministic pseudo-random signal through [chain], feeding the
-     * dry mix AND both send buses, and returns every output sample of both channels.
+     * Runs [blocks] blocks of a deterministic pseudo-random signal through [chain] and returns every
+     * output sample of both channels. The delay and the reverb take their feed from this same mix.
      *
      * Pseudo-random rather than DC or a ramp: DC would hide a stage that only touches transients
      * and a ramp would hide one that reverses a buffer. The same seed on both sides of every
@@ -91,14 +88,9 @@ class KatalystClassicGainStageSpec : StringSpec({
         for (b in 0 until blocks) {
             for (i in 0 until blockFrames) {
                 val dry = next()
-                val send = next()
 
                 ctx.mixBuffer.left[i] = dry
                 ctx.mixBuffer.right[i] = dry * 0.5
-                ctx.delaySendBuffer.left[i] = send
-                ctx.delaySendBuffer.right[i] = send * 0.5
-                ctx.reverbSendBuffer.left[i] = send
-                ctx.reverbSendBuffer.right[i] = send * 0.5
             }
 
             chain.applyParams(params)
@@ -107,40 +99,6 @@ class KatalystClassicGainStageSpec : StringSpec({
             for (i in 0 until blockFrames) {
                 out[(b * blockFrames + i) * 2] = ctx.mixBuffer.left[i]
                 out[(b * blockFrames + i) * 2 + 1] = ctx.mixBuffer.right[i]
-            }
-        }
-
-        return out
-    }
-
-    /**
-     * The same, with the DRY input held at silence, so every sample that comes out is a RETURN
-     * the delay or the reverb put there. A fader sitting before the send stages would leave this
-     * render untouched whatever its factor says, which is the discriminator [render] cannot be.
-     */
-    fun renderReturnsOnly(chain: KatalystChain, params: Map<String, Double>?): DoubleArray {
-        val ctx = ctx()
-        val out = DoubleArray(blockFrames * blocks)
-        var x = 0x1234
-
-        for (b in 0 until blocks) {
-            for (i in 0 until blockFrames) {
-                x = x * 1103515245 + 12345
-                val send = ((x ushr 8) and 0xFFFF) / 65535.0 - 0.5
-
-                ctx.mixBuffer.left[i] = 0.0
-                ctx.mixBuffer.right[i] = 0.0
-                ctx.delaySendBuffer.left[i] = send
-                ctx.delaySendBuffer.right[i] = send
-                ctx.reverbSendBuffer.left[i] = send
-                ctx.reverbSendBuffer.right[i] = send
-            }
-
-            chain.applyParams(params)
-            chain.process(ctx)
-
-            for (i in 0 until blockFrames) {
-                out[b * blockFrames + i] = ctx.mixBuffer.left[i]
             }
         }
 
@@ -191,26 +149,6 @@ class KatalystClassicGainStageSpec : StringSpec({
 
         for (i in unity.indices) {
             withClue("sample $i") { halved[i].toRawBits() shouldBe (unity[i] * 0.5).toRawBits() }
-        }
-    }
-
-    "the halving covers the RETURNS, not only the dry: the wet-only mix halves too" {
-        // The dry input is zeroed for this row, so every sample that comes out is a return. If the
-        // fader sat before the send stages, this render would be silent at both settings and the
-        // row above could pass on the dry alone.
-        //
-        // A SCALING LAW like the row above (both sides are engine renders), and what makes it
-        // worth its own row is WHICH samples it holds for, not the law: the anchor for the
-        // samples is the wet-state identity row further up.
-        val unity = renderReturnsOnly(build(KatalystDsl.classic), wet)
-        val halved = renderReturnsOnly(build(KatalystDsl.classic), wet + mapOf("gain.gain" to 0.5))
-
-        withClue("not-silence floor: the returns alone are audible") {
-            unity.peak() shouldBeGreaterThan 0.01
-        }
-
-        for (i in unity.indices) {
-            withClue("return sample $i") { halved[i].toRawBits() shouldBe (unity[i] * 0.5).toRawBits() }
         }
     }
 

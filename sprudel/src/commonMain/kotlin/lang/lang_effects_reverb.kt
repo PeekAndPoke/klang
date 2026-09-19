@@ -33,8 +33,8 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * would darken every room.
  *
  * Fills the voice FIELDS with the same constants, so the two sources agree on every knob the author
- * did not reach past. Since step 5b-1 the orbit's room reads the SLOTS alone; the `reverb` field is
- * the per-voice send AMOUNT until step 5b-2, and the rest leave the wire in 5b-3.
+ * did not reach past. The orbit's room reads the SLOTS alone (the amount too, since step 5b-2), and
+ * the fields leave the wire in 5b-3.
  *
  * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
  * these constants.
@@ -54,7 +54,7 @@ private fun SprudelVoiceData.fillReverbDefaults() {
     }
 }
 
-/** Writes the send this call named, into the field and its slot, and fills the companions. */
+/** Writes the wet this call named, into the field and its slot, and fills the companions. */
 private fun SprudelVoiceData.setReverbWet(wet: Double) {
     reverb = wet
     katalystParamsOrNew().set("reverb.wet", wet)
@@ -76,7 +76,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
         return source._mapNumericField(mapper, read = { it.reverb }, update = reverbMutation)
     }
 
-    // No args: reinterpret the pattern's own values as the send. This is the one path that can hand
+    // No args: reinterpret the pattern's own values as the wet. This is the one path that can hand
     // this door's HEAD setter a null, and it clears the voice field while leaving the slot: a
     // recorded asymmetry, unreachable from any spelling with an argument.
     if (args.isEmpty()) {
@@ -106,12 +106,15 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
 
 /**
- * The orbit reverb: send, size and lowpass.
+ * The orbit reverb: how much of the orbit goes into the room, its size and its lowpass.
  *
- * One reverb per orbit, so `size` and `lowpass` are set once for everyone by the orbit's owning
- * voice. `wet` is the exception and the thing to remember: it is a per-voice
- * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its own
- * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
+ * One reverb per [orbit bus](/manuals/lexikon/orbit-bus), and all three are set once for everyone
+ * by the orbit's owning voice. `wet` is how much of the orbit goes into the room: the room is added
+ * on top of the dry sound, and every voice on the orbit is in it alike. So a pattern that should
+ * stay dry, or sit in the room by a different amount, goes on an orbit of its own. The room hears
+ * everything before it on the orbit: a `body`, a `vowel` and the `delay`'s echoes. When another
+ * pattern with a reverb takes the orbit over, `wet` and `size` move smoothly to its values; a
+ * pattern without one switches the room off, which does not fade yet (the tail rings out).
  *
  * The call sets every slot: the ones you leave out take the same default as on the master reverb,
  * wet 0.25 and size 5 (lowpass has none), unless an earlier call already set them. So a bare
@@ -127,7 +130,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
  *
  * ```KlangScript(Playable)
- * s("bd sd").reverb(0.3, 4)                                                  // send and size
+ * s("bd sd").reverb(0.3, 4)                                                  // wet and size
  * ```
  *
  * ```KlangScript(Playable)
@@ -139,16 +142,16 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd").reverb("0.1 0.5", 4).delay(wet = reverb.wet, time = 0.25)       // as much delay as reverb
+ * s("bd sd").reverb("<0.1 0.5>", 4).delay(wet = reverb.wet, time = 0.25)     // as much delay as reverb
  * ```
  *
- * @param wet Send into the orbit reverb, 0 to 1, default 0.25. Per voice.
+ * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
  * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
  * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
  * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param-tool size SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags reverb, wet, size, lowpass
  */
@@ -194,7 +197,7 @@ fun PatternMapperFn.reverb(
  * The `reverb` object: `reverb(...)` sets the slots, and each numeric slot reads back as a child,
  * `reverb.wet`, `reverb.size`, `reverb.lowpass`.
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags reverb, accessor
  */

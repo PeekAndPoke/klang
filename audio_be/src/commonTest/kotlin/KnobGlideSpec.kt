@@ -154,4 +154,94 @@ class KnobGlideSpec : StringSpec({
         fresh.value shouldBe 0.5
         fresh.isGliding shouldBe false
     }
+
+    // ── LEVEL: the per-sample half (Katalyst 5b-2) ───────────────────────────────────────────────
+
+    /** A buffer of ones, so what [KnobGlide.advanceScaled] writes IS the level it applied. */
+    fun ones(): StereoBuffer = StereoBuffer(frames).apply { fill(1.0) }
+
+    "LEVEL: a glide ramps per SAMPLE along the straight line and lands on the target bit for bit" {
+        val from = 0.2
+        val to = 0.9
+        val blocks = 17
+        val glide = settledAt(from)
+        val out = StereoBuffer(frames)
+        // The straight line from `from` to `to` over the glide's 17 * 128 samples, by hand: sample
+        // j of the glide (1-based) sits at j / (17 * 128) of the way.
+        val total = blocks * frames
+
+        glide.retarget(to)
+
+        for (k in 1..blocks) {
+            glide.advanceScaled(into = out, source = ones(), frames = frames)
+
+            for (i in 0 until frames) {
+                val j = (k - 1) * frames + i + 1
+                val line = from + (to - from) * j / total
+
+                withClue("block $k sample $i") {
+                    (abs(out.left[i] - line) <= 1e-12) shouldBe true
+                    out.right[i] shouldBe out.left[i]
+                }
+            }
+        }
+
+        withClue("the glide's last sample IS the target") {
+            out.left[frames - 1].toRawBits() shouldBe to.toRawBits()
+        }
+
+        // Settled: every sample is the target, exactly, block after block.
+        glide.advanceScaled(into = out, source = ones(), frames = frames)
+
+        for (i in 0 until frames) {
+            out.left[i].toRawBits() shouldBe to.toRawBits()
+        }
+    }
+
+    "LEVEL: a settled or snapped knob multiplies by the value itself, one multiply per sample" {
+        // The identity the whole step's "unchanged songs render the same" rests on: at a constant
+        // wet the feed is the mix times that number, which is what a constant send was.
+        val glide = KnobGlide(44100, frames)
+        val source = StereoBuffer(frames)
+        val out = StereoBuffer(frames)
+
+        for (i in 0 until frames) {
+            source.left[i] = 0.3 * i - 17.0
+            source.right[i] = -0.7 * i + 5.0
+        }
+
+        glide.retarget(0.37)
+
+        repeat(3) {
+            glide.advanceScaled(into = out, source = source, frames = frames)
+
+            for (i in 0 until frames) {
+                out.left[i].toRawBits() shouldBe (source.left[i] * 0.37).toRawBits()
+                out.right[i].toRawBits() shouldBe (source.right[i] * 0.37).toRawBits()
+            }
+        }
+    }
+
+    "LEVEL: a block shorter than blockFrames still starts where the last one ended and lands exactly" {
+        val glide = settledAt(0.0)
+        val out = StereoBuffer(frames)
+        val short = 40
+
+        glide.retarget(1.0)
+        glide.advanceScaled(into = out, source = ones(), frames = frames)
+
+        val ended = out.left[frames - 1]
+
+        glide.advanceScaled(into = out, source = ones(), frames = short)
+
+        val step = out.left[1] - out.left[0]
+
+        withClue("continuous across the seam: the first sample is one step past where the block before ended") {
+            (abs(out.left[0] - (ended + step)) <= 1e-12) shouldBe true
+        }
+
+        withClue("and the short block ends on this block's value, which the COEFFICIENT view reads too") {
+            out.left[short - 1].toRawBits() shouldBe glide.value.toRawBits()
+        }
+    }
 })

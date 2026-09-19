@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 
 /**
  * Writes a chain's own slots into ONE built stage, with no voice in sight: the chain is the
@@ -310,38 +309,6 @@ class KatalystChain internal constructor(
 
         for (i in statics.indices) {
             statics[i].resolve(null)
-        }
-    }
-
-    /**
-     * Hands every send stage its off-config, which is how this chain is asked to RING OUT: the
-     * delay and the reverb enter their existing Draining state and run their already-scheduled
-     * echoes and room out under the parameters they last had, on whatever input they are then
-     * given (see `KatalystDelayEffect`, `KatalystReverbEffect`).
-     *
-     * Called by the host when a crossfade to another chain has completed and this one leaves
-     * service: `Cylinder` then keeps processing it on SILENT input until [hasTail] is false.
-     * Nothing here invents a decay curve; the two effects already own one, which is the whole
-     * reason the orbit bus drains where the master bus cuts.
-     *
-     * The off-config is ALL that happens: the insert stages keep whatever filter memory they
-     * hold, because the signal that charged it has just reached weight zero.
-     */
-    fun drainSends() {
-        for (i in stages.indices) {
-            when (val stage = stages[i]) {
-                // A non-finite time / size is the off switch; the drain runs on the retained
-                // last-active parameters, so the other arguments are unset rather than invented.
-                is KatalystDelayEffect -> stage.configure(
-                    time = SLOT_UNSET,
-                    feedback = SLOT_UNSET,
-                    cap = SLOT_UNSET,
-                )
-
-                is KatalystReverbEffect -> stage.configure(size = SLOT_UNSET, lowpass = null)
-
-                else -> {}
-            }
         }
     }
 

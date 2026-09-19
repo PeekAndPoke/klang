@@ -31,7 +31,7 @@ fun FlowContent.klangScopeLabel(laf: KlangLookAndFeel, scope: KlangScope) {
     // popup header, where two identical pills stop carrying any warning at all.
     val background = when (scope) {
         KlangScope.VOICE -> laf.accent
-        KlangScope.ORBIT, KlangScope.ORBIT_SEND -> laf.gold
+        KlangScope.ORBIT -> laf.gold
         KlangScope.MASTER -> laf.warning
     }
 
@@ -43,11 +43,6 @@ fun FlowContent.klangScopeLabel(laf: KlangLookAndFeel, scope: KlangScope) {
             "Orbit bus: one shared processor per orbit, set by the orbit's first sounding voice." +
                     " Every other voice on the orbit is along for the ride." +
                     " Give a pattern its own orbit to give it its own settings."
-
-        KlangScope.ORBIT_SEND ->
-            "Orbit bus with a per-voice send: the processor belongs to the orbit (set by its first" +
-                    " sounding voice), but each voice decides how much it sends," +
-                    " so a dry voice on a wet orbit stays dry."
 
         KlangScope.MASTER ->
             "Master: the whole playback, after every orbit."

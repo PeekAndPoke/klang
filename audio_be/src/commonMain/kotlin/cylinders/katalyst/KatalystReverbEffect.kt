@@ -10,12 +10,19 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import kotlin.math.min
 
 /**
- * Reverb send/return effect for the bus pipeline.
+ * The orbit reverb, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
+ * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and adds its room into
+ * that same mix, so the dry signal stays. In the classic order it sits after body, vowel and the
+ * delay, so the room hears all three, the delay's echoes included. The master's
+ * `MasterStageDsl.Reverb` model, on the orbit bus.
  *
- * Reads from the reverb send buffer and mixes the wet reverb signal into the mix buffer.
+ * **The `wet` glides** per sample, a LEVEL knob ([KnobGlide.advanceScaled]) into the feed, with the
+ * size glide's lifecycle below: the first configure out of Off snaps, [Off.enter] forgets it. Not
+ * advanced while Draining, where nothing is fed.
  *
  * Owns the same active/draining/off lifecycle as [KatalystDelayEffect] (block-framing ledger D3,
  * adopted here as the decided follow-up): turning the reverb off must never freeze a live tail
@@ -28,19 +35,19 @@ import kotlin.math.min
  *   process normally.
  * - **Draining** — the owner turned it off while the combs still hold a tail: keep processing
  *   with SILENT input under the retained last-active parameters, so the tail mixes out on its
- *   own timeline (live sends are discarded — the owner said off). A closed-form sample-counted
+ *   own timeline (the mix is no longer fed in: the owner said off). A closed-form sample-counted
  *   countdown ([Reverb.drainSamplesUntilSilent]) says when the combs are provably inaudible,
  *   and [hasTail] answers true for the whole countdown BY CONSTRUCTION (round 2 measured that a
  *   live scan would beat the countdown by only ~one revolution for real content — see there).
  *   Unlike the delay there is NO self-oscillating regime: comb feedback is structurally < 1
  *   ([Reverb.normalizeSize] bounds size in VoiceFactory, [configure] bounds it again),
  *   so every finite drain terminates — and a NON-finite countdown (an Inf or NaN comb cell from
- *   a hot send: neither ever decays) resets immediately instead: the heal the old gate's
+ *   a hot feed: neither ever decays) resets immediately instead: the heal the old gate's
  *   takeover path provided, and the only exit such an orbit would otherwise ever have.
  * - **Off** — countdown done: one [Reverb.reset] (combs, allpasses and LPF stores literally
  *   zero), then a true short-circuit until an owner re-enables. A reverb-carrying owner
  *   arriving MID-drain goes straight to Active with the network kept — the tail deliberately
- *   continues under the new room (send-return semantics, same as the delay).
+ *   continues under the new room (the network keeps what it holds, same as the delay).
  *
  * The transition table on [State] is AUTHORITATIVE for the edges: which event moves which state
  * where is settled there and nowhere else. The bullets above give the reasoning.
@@ -119,8 +126,14 @@ class KatalystReverbEffect(
      */
     private var refused = false
 
-    /** All-zero input for the draining phase — the owner said off, so live sends are discarded. */
+    /** All-zero input for the draining phase: the owner said off, so the mix is no longer fed in. */
     private val silentInput = StereoBuffer(blockFrames)
+
+    /** What the network is fed while Active: the orbit mix at this stage's position, times [wetGlide]. */
+    private val feed = StereoBuffer(blockFrames)
+
+    /** The owner's `wet`, a LEVEL knob (see the class KDoc). Forgotten in [Off.enter]. */
+    private val wetGlide = KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames)
 
     /**
      * The Active-state tail question from a ceiling on the combs' content (see [TailCeiling]); replaces the comb scan.
@@ -191,12 +204,14 @@ class KatalystReverbEffect(
          * countdown it measured is already over OR not finite (a poisoned network, which the reset
          * heals); [Draining.process] resets it when the countdown runs out; [reset] resets it and
          * puts the DSP params back to factory; [release] hands the unit to the shelf DIRTY and drops
-         * it, so there is nothing left to empty. What is left here is forgetting the two RECORDS of
-         * the finished life: the tail ceiling and the size glide (see [activeTail], [sizeGlide]).
+         * it, so there is nothing left to empty. What is left here is forgetting the RECORDS of
+         * the finished life: the tail ceiling and the two glides (see [activeTail], [sizeGlide],
+         * [wetGlide]).
          */
         fun enter() {
             activeTail.reset()
             sizeGlide.reset()
+            wetGlide.reset()
             state = this
         }
 
@@ -224,21 +239,24 @@ class KatalystReverbEffect(
             // First, so the tail ceiling below reads the feedback this block runs at.
             advanceGlide(unit)
 
-            val send = ctx.reverbSendBuffer
-            val frames = ctx.blockFrames
-            // Same shape as the delay's: the send peak feeds a ceiling on the combs' content,
+            // min(): [feed] is sized from the constructor blockFrames, like the silent input.
+            val frames = min(ctx.blockFrames, feed.left.size)
+
+            wetGlide.advanceScaled(into = feed, source = ctx.mixBuffer, frames = frames)
+
+            // Same shape as the delay's: the feed peak feeds a ceiling on the combs' content,
             // decaying by the comb feedback once per longest-comb revolution (TailCeiling).
             activeTail.observe(
-                inputPeak = TailCeiling.peakOf(send, frames),
+                inputPeak = TailCeiling.peakOf(feed, frames),
                 frames = frames,
                 windowSamples = unit.tailWindowSamples,
                 feedback = unit.tailFeedback,
                 lapsPerWindow = unit.tailLapsPerWindow,
             )
-            unit.process(send, ctx.mixBuffer, frames)
+            unit.process(feed, ctx.mixBuffer, frames)
         }
 
-        /** A ceiling, not a scan: [process] maintains it from the send buffer. */
+        /** A ceiling, not a scan: [process] maintains it from the feed. */
         override fun hasTail(): Boolean = reverb != null && activeTail.hasTail
 
         override fun deactivate(unit: Reverb) {
@@ -345,6 +363,9 @@ class KatalystReverbEffect(
      * block the lease is (re)claimed. An off-config does NOT reach the [reverb]: the retained
      * last-active parameters are what the drain runs on.
      *
+     * [wet] is how much of the orbit mix feeds the room. Raw: no clamp; a non-finite wet reads as
+     * the shared default, like the master's (the slot writer never hands one to a running stage).
+     *
      * Non-finite params read as OFF (or as unset, for [Reverb.lowpass]), never as the previous
      * owner's room: [Reverb]'s setters drop NaN/Inf writes, so before the lifecycle a non-finite
      * param left the DSP on whatever the previous owner set — the same leak shape the phaser's
@@ -357,6 +378,7 @@ class KatalystReverbEffect(
     fun configure(
         size: Double,
         lowpass: Double?,
+        wet: Double,
     ) {
         if (size.isFinite() && size >= MIN_ACTIVE_SIZE) {
             // Out of Off the glide was forgotten on the way in, so the room ARRIVES, it does not
@@ -370,6 +392,8 @@ class KatalystReverbEffect(
             unit.size = boundedSize
             unit.lowpass = lowpass?.takeIf { it.isFinite() }
             sizeGlide.retarget(boundedSize)
+            // NaN-guard on a value a direct caller can pass: the shared default, see above.
+            wetGlide.retarget(if (wet.isFinite()) wet else REVERB_WET)
             active.enter()
             return
         }

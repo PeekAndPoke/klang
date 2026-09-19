@@ -58,8 +58,8 @@ class Voice(
     // of the block below has NO reader left. Who reads what, exactly:
     //
     //   gain, pan     SendRenderer, every block of every voice.
-    //   delay, reverb SendRenderer, the `amount` field ONLY: the per-voice send amounts. Their
-    //                 time / feedback / cap / size / lowpass are read by nobody.
+    //   delay, reverb nobody (since step 5b-2 the orbit's delay and reverb are fed from the orbit
+    //                 mix by the owner's `wet` slot; the per-voice send amounts are gone).
     //   phaser        FilterPipelineBuilder, all five knobs, for the PER-VOICE phaser of a custom
     //                 pipeline that declares `StageDsl.Phaser`. No built-in preset does
     //                 (`PipelineDsl`, maintainer 2026-08-24: the phaser is a bus effect).
@@ -67,8 +67,7 @@ class Voice(
     //   ducking       nobody.
     //   body, vowel   nobody.
     //
-    // They are still built by `VoiceFactory` and still carried on the wire; the send amounts go in
-    // step 5b-2 and the rest in 5b-3.
+    // They are still built by `VoiceFactory` and still carried on the wire; they go in step 5b-3.
     val gain: Double,
     val pan: Double,
     val compressor: Compressor?,
@@ -95,8 +94,9 @@ class Voice(
      * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
      * `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
      * it declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
-     * on this class are not a knob source any more; [delay] and [reverb] carry the per-voice send
-     * AMOUNTS until step 5b-2, and the rest leave with the wire fields in 5b-3.
+     * on this class are not a knob source any more, and since step 5b-2 [delay] and [reverb] have
+     * no reader either (the orbit's delay and reverb are fed from the orbit mix); they leave with
+     * the wire fields in 5b-3.
      */
     val katalystParams: Map<String, Double>? = null,
 

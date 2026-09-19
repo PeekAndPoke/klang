@@ -15,9 +15,13 @@ import kotlin.math.round
  * whole chains the same way this ramps one number.
  *
  * **Use.** The owner calls [retarget] whenever a setting arrives (as often as it likes: the same
- * value again is free) and [advance] exactly ONCE per rendered block, before it uses the value,
- * which is then [value] for the whole block: a COEFFICIENT knob, whose math stays at block rate.
- * (A per-sample half for LEVEL knobs arrives with the first one, Katalyst 5b-2.)
+ * value again is free) and ONE of the two advances exactly once per rendered block, before it uses
+ * the value:
+ *  - [advance] for a COEFFICIENT knob, whose math stays at block rate: [value] holds for the whole
+ *    block.
+ *  - [advanceScaled] for a LEVEL knob, a gain that would zip if it stepped once per block: it moves
+ *    the knob by the same block and multiplies a buffer by it, ramping linearly per sample from the
+ *    value the previous block ended on to the one this block ends on.
  *
  * **Linear, whole blocks, exact landing.** The glide spans the glide time rounded to the nearest
  * whole block (17 blocks, 49.3 ms, at 44.1 kHz and 128 frames; 19, 50.7 ms, at 48 kHz), so every
@@ -98,7 +102,7 @@ internal class KnobGlide(
         remaining = blocks
     }
 
-    /** Moves the knob by one block and returns the value in force for it. Call once per block. */
+    /** COEFFICIENT use: moves the knob by one block and returns the value in force for it. Call once per block. */
     fun advance(): Double {
         snapNext = false
 
@@ -110,6 +114,51 @@ internal class KnobGlide(
         value = if (remaining == 0) target else start + (target - start) * ((blocks - remaining) * invBlocks)
 
         return value
+    }
+
+    /**
+     * LEVEL use: moves the knob by one block, like [advance], and writes [source] times the knob
+     * into [into] for [frames] samples, ramping per sample from the value the previous block ended
+     * on to the one this block ends on (`docs/plans/knob-glide.md`, pilot log entry 10).
+     *
+     * **Written from the END**, `end - step * (frames - 1 - i)`, so the block's last sample is the
+     * block's value bit for bit, and after the last block of a glide that is the target. A settled
+     * knob (and the first, snapped value) takes the fast path, one multiply per sample and nothing
+     * else, which is what keeps a steady level identical to a constant gain.
+     *
+     * **A block shorter than `blockFrames`** spreads that block's share of the glide over the frames
+     * it has: the ramp still starts where the previous block ended and still lands exactly. The glide
+     * is counted in blocks either way (see the class KDoc). Unreachable in production, where every
+     * block is the pinned 128 frames.
+     *
+     * [into] and [source] may be the same buffer: each sample is read before it is written.
+     */
+    fun advanceScaled(into: StereoBuffer, source: StereoBuffer, frames: Int) {
+        val from = value
+        val end = advance()
+        val targetLeft = into.left
+        val targetRight = into.right
+        val sourceLeft = source.left
+        val sourceRight = source.right
+
+        if (end == from) {
+            for (i in 0 until frames) {
+                targetLeft[i] = sourceLeft[i] * end
+                targetRight[i] = sourceRight[i] * end
+            }
+
+            return
+        }
+
+        val step = (end - from) / frames
+        val last = frames - 1
+
+        for (i in 0 until frames) {
+            val level = end - step * (last - i)
+
+            targetLeft[i] = sourceLeft[i] * level
+            targetRight[i] = sourceRight[i] * level
+        }
     }
 
     /** Forgets the glide: the next [retarget] snaps. For a stage whose content has just been cleared. */

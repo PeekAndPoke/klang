@@ -50,10 +50,10 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
  *
  * ```KlangScript(Playable)
  * stack(
- *   s("bd*4").orbit(1),
- *   note("c2 g2").s("supersaw").reverb(wet = 0.25, size = 4).orbit(1),
- *   katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 1.0, db = 3.0)))).orbit(1),
- * )
+ *   s("bd*4"),
+ *   note("c2 g2").s("supersaw"),
+ *   katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 1.0, db = 3.0)))),
+ * ).orbit(1).reverb(wet = 0.25, size = 4)
  * ```
  *
  * The declaration above adds an EQ the familiar chain does not have, which is what a declaration is
@@ -65,7 +65,8 @@ private fun applyKatalyst(source: SprudelPattern, value: KatalystValue.Dsl): Spr
  * value.
  *
  * `k.classic()` is the chain an orbit has always run, declared as named slots, so the `reverb(...)`
- * on the supersaw drives the declared room: that is how a bus door and a declaration meet. A chain
+ * on the stack drives the declared room, for the kick and the bass alike: that is how a bus door
+ * and a declaration meet. A chain
  * that declares no `reverb` stage would have nowhere for that call to land, which is what "the
  * chain is the instrument" means.
  *

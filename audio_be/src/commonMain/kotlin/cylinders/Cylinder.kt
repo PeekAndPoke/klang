@@ -269,35 +269,23 @@ class Cylinder(
     // Buffers and context
     // ════════════════════════════════════════════════════════════════════════════
 
-    /** Dry mix buffer — voices sum into this */
+    /** The orbit mix: voices sum into this, and the chain processes it in place. */
     val mixBuffer = StereoBuffer(blockFrames)
 
-    /** Delay send buffer — voices write delay sends here */
-    val delaySendBuffer = StereoBuffer(blockFrames)
-
-    /** Reverb send buffer — voices write reverb sends here */
-    val reverbSendBuffer = StereoBuffer(blockFrames)
-
     /**
-     * Scratch mix for the chain that is leaving service: the dry mix scaled by the outgoing weight
+     * Scratch mix for the chain that is leaving service: the mix scaled by the outgoing weight
      * during the crossfade, silence during the drain. Allocated once here, never per block: a swap
      * is applied from the render callback, and a cylinder comes off a shelf where nothing may
      * allocate.
+     *
+     * It is ALL the leaving chain is fed, its delay and reverb included: they take their feed from
+     * the mix at their position (Katalyst step 5b-2), so their wet fades with the dry through this
+     * one ramp. At the ramp's end the DRY input is zero, but what a stage adds is not: the delay's
+     * echoes keep reaching the reverb after it. That is why the ring-out keeps the leaving chain
+     * ACTIVE on this cleared buffer instead of switching its stages to their own silent drain
+     * input, which would cut the room's feed of echoes in one sample (see [processEffects]).
      */
     private val fadeBuffer = StereoBuffer(blockFrames)
-
-    /**
-     * The leaving chain's own send buffers, the voices' sends scaled by the SAME outgoing weight.
-     *
-     * Its wet has to fade with its dry, or the two chains' rooms and echoes would both be charged
-     * at full level for the length of the fade (up to +6 dB where the two returns are correlated),
-     * and at the handover the leaving chain's send input would drop from full to silence in one
-     * sample and its drain would then ring out material from AFTER the swap. Two more ramp passes,
-     * on fading blocks only; zeroed once when the drain starts.
-     */
-    private val fadeDelaySendBuffer = StereoBuffer(blockFrames)
-
-    private val fadeReverbSendBuffer = StereoBuffer(blockFrames)
 
     /**
      * The orbit's mix as it was BEFORE a duck that is leaving service ducked it, so the duck's
@@ -310,23 +298,15 @@ class Cylinder(
     val katalystContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = mixBuffer,
-        delaySendBuffer = delaySendBuffer,
-        reverbSendBuffer = reverbSendBuffer,
     )
 
     /**
-     * The context the leaving chain runs in: its own mix buffer and its own send buffers, so the
-     * whole ramp (dry and wet) is in its input and the live buffers stay untouched for the chain
-     * that is arriving.
-     *
-     * No send stage ever WRITES a send buffer (`DelayLine.process` and `Reverb.process` read their
-     * input and ADD to their target), so the ramped copies are pure input.
+     * The context the leaving chain runs in: its own mix buffer, so the whole ramp is in its input
+     * and the live mix stays untouched for the chain that is arriving.
      */
     private val fadeContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = fadeBuffer,
-        delaySendBuffer = fadeDelaySendBuffer,
-        reverbSendBuffer = fadeReverbSendBuffer,
     )
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -443,9 +423,10 @@ class Cylinder(
             chain.applyParams(voice.katalystParams)
 
             // The chain FADING OUT is still audible, so it is still configured (step 3b): the
-            // owner keeps steering it until the fade ends. Not while it DRAINS: a live config
-            // would take its send stages out of their Draining state and point them back at the
-            // live sends, which is exactly the ring-out this cylinder is holding them for.
+            // owner keeps steering it until the fade ends. Not while it DRAINS: the ring-out runs
+            // on the settings the chain had when it left service, and a new owner's settings (a
+            // different time or room, or an off-config that would cut the room's feed of echoes)
+            // are the arriving chain's business.
             if (!draining) {
                 outgoing?.applyParams(voice.katalystParams)
             }
@@ -562,8 +543,6 @@ class Cylinder(
         if (!isActive) return
 
         mixBuffer.clear()
-        delaySendBuffer.clear()
-        reverbSendBuffer.clear()
     }
 
     /**
@@ -575,25 +554,27 @@ class Cylinder(
      * **While a chain swap is in flight, two chains run** (step 3b, the master's dual-chain
      * crossfade on the orbit bus):
      *
-     *  - **Fading.** Both chains see the same dry mix and the same sends, the outgoing one through
-     *    its own ramped copies ([fadeBuffer], [fadeDelaySendBuffer], [fadeReverbSendBuffer]) and
-     *    the incoming one through the live buffers. The ramp is applied to the outgoing chain's
-     *    INPUT, dry and wet alike, and to the incoming chain's OUTPUT, per sample
+     *  - **Fading.** Both chains see the same mix, the outgoing one through its own ramped copy
+     *    ([fadeBuffer]) and the incoming one through the live buffer. The ramp is applied to the
+     *    outgoing chain's INPUT (its delay and reverb take their feed from it too) and to the
+     *    incoming chain's OUTPUT, per sample
      *    ([Crossfade.rampDown], [Crossfade.rampUpAndAdd]), which is what makes the handover to the
      *    drain continuous. See [Crossfade] for why the master's output blend would step here. The
      *    incoming chain is warmed up on real audio for the whole fade: its compressor envelope and
      *    its room have settled by the time it carries full weight, the same reason the master bus
      *    runs both chains in parallel.
      *  - **Draining.** One block after the ramp runs out (see above) the outgoing chain leaves
-     *    service, and it is NOT retired. Its send stages
-     *    get their off-config ([KatalystChain.drainSends]) and it keeps processing on SILENT input
-     *    with its output added at FULL weight, so the echoes and the room it had already scheduled
-     *    ring out on their own timeline instead of being cut mid-tail. The existing closed-form
-     *    countdowns bound it (`KatalystDelayEffect`, `KatalystReverbEffect`), and the chain retires
-     *    (units back to the shelves) on the first block [KatalystChain.hasTail] is false.
+     *    service, and it is NOT retired. It keeps processing, its stages still Active, on SILENT
+     *    input with its output added at FULL weight, so the echoes and the room it had already
+     *    scheduled ring out on their own timeline instead of being cut mid-tail, and the room keeps
+     *    hearing the delay's ring-out (a stage switched off would read its own silent input and cut
+     *    that feed in one sample, measured in step 5b-2). The stages' tail ceilings bound it
+     *    (`KatalystDelayEffect`, `KatalystReverbEffect`; a self-oscillating delay pins, as it does
+     *    when drained), and the chain retires (units back to the shelves) on the first block
+     *    [KatalystChain.hasTail] is false. No owner configures it any more (see [updateFromVoice]).
      *
      *    The master bus accepted the CUT for its v1 and noted "if audible, extend the old chain's
-     *    life" (decided 2026-09-17: the orbit extends it from the start, because its send effects
+     *    life" (decided 2026-09-17: the orbit extends it from the start, because its delay and reverb
      *    already own the drain; nothing here invents a decay).
      */
     fun processEffects() {
@@ -644,12 +625,10 @@ class Cylinder(
         }
 
         // The two halves of one block's ramp, with both chains processed in between: the outgoing
-        // chain is handed a shrinking dry mix AND shrinking sends, the incoming chain's own output
-        // is ramped up, and the mix buffer is what the rest of the engine reads. Three rampDowns,
-        // one weight: `rampDown` does not advance the ramp, `rampUpAndAdd` does.
+        // chain is handed a shrinking mix, the incoming chain's own output is ramped up, and the mix
+        // buffer is what the rest of the engine reads. `rampDown` does not advance the ramp,
+        // `rampUpAndAdd` does.
         fade.rampDown(target = fadeBuffer, source = mixBuffer, frames = blockFrames)
-        fade.rampDown(target = fadeDelaySendBuffer, source = delaySendBuffer, frames = blockFrames)
-        fade.rampDown(target = fadeReverbSendBuffer, source = reverbSendBuffer, frames = blockFrames)
         leaving.process(fadeContext)
         chain.process(katalystContext)
         fade.rampUpAndAdd(target = mixBuffer, outgoing = fadeBuffer, frames = blockFrames)
@@ -669,17 +648,11 @@ class Cylinder(
     }
 
     /**
-     * The crossfade has finished: the outgoing chain leaves service and rings out, or retires on
-     * the spot when it holds nothing that can ring (a chain without a delay and without a reverb,
-     * where [KatalystChain.drainSends] has nothing to turn off).
+     * The crossfade has finished: the outgoing chain leaves service and rings out, still Active on
+     * silent input (see [processEffects]), or retires on the spot when it holds nothing that can
+     * ring (no delay and no reverb, or ones whose tail ceilings are already empty).
      */
     private fun beginDrain(leaving: KatalystChain) {
-        leaving.drainSends()
-        // Once, not per block: a draining delay or reverb reads its own `silentInput` and never
-        // these, and every other stage of a drained chain is off. Zeroing them here is what makes
-        // that a property of the buffers rather than a promise about the stages.
-        fadeDelaySendBuffer.clear()
-        fadeReverbSendBuffer.clear()
         // The ramp is over, so no further block may blend with it: [processDuck] normally clears
         // these on the ramp's last block, but an orbit whose sidechain has meanwhile disappeared
         // never runs that pass, and `Crossfade.blendHeld` would then replay that block's weights.
@@ -794,7 +767,7 @@ class Cylinder(
      */
     /**
      * Retires this cylinder for the shelf (resource warehouse, cylinders): every bus effect off and
-     * cleared, the lease freed, the send buffers zeroed, and the rented units (delay ring, reverb
+     * cleared, the lease freed, the buffers zeroed, and the rented units (delay ring, reverb
      * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
      * [tryDeactivate] reaches, plus the return. Only for a cylinder that will never render again
      * on its current orbit: `CylinderUnits.giveBack` is the one caller.
@@ -857,11 +830,7 @@ class Cylinder(
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
-        delaySendBuffer.clear()
-        reverbSendBuffer.clear()
         fadeBuffer.clear()
-        fadeDelaySendBuffer.clear()
-        fadeReverbSendBuffer.clear()
         duckFadeBuffer.clear()
         isActive = false
         silentBlockCount = 0
@@ -894,6 +863,10 @@ class Cylinder(
 
         isActive = false
         silentBlockCount = 0
+        // The mix buffer is not cleared while the orbit is inactive (see [clear]), so the last
+        // block's sub-floor output would otherwise still be in it when a voice reactivates the
+        // orbit: summed into that block's mix and, since step 5b-2, fed into its delay and room.
+        mixBuffer.clear()
 
         // A chain that was requested while this orbit was sounding lands HERE, the first moment
         // the swap is inaudible. An install that SWAPPED retires the outgoing chain (units back to

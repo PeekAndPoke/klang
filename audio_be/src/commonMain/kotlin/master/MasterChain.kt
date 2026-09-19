@@ -337,8 +337,8 @@ internal class MasterChain private constructor(
                 tail = tail,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)
-                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
-                    // orbit effects read their send buffers.
+                    // The ceiling reads what the unit is FED: the send, after `wet`, like the
+                    // orbit stages read their feed.
                     tail.observe(
                         inputPeak = TailCeiling.peakOf(send, frames),
                         frames = frames,
@@ -402,8 +402,8 @@ internal class MasterChain private constructor(
                 tail = tail,
                 fx = MasterFx { bus, frames ->
                     fillSend(send, bus, frames, wet)
-                    // The ceiling reads what the unit is FED — the send, after `wet`, like the
-                    // orbit effects read their send buffers.
+                    // The ceiling reads what the unit is FED: the send, after `wet`, like the
+                    // orbit stages read their feed.
                     tail.observe(
                         inputPeak = TailCeiling.peakOf(send, frames),
                         frames = frames,

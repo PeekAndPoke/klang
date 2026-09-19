@@ -19,12 +19,10 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * channel with independent integrator state.
  *
  * **Where it sits is what it does.** The stage processes `ctx.mixBuffer` at its list position and
- * nothing else. The send buffers are written by the VOICES, before the bus runs, so until the
- * signal-flow plan's step 5b makes the sends insert-style, an `eq` written BEFORE `reverb` shapes
- * the dry mix only (the room hears the raw voices), and the same `eq` written AFTER it shapes dry
- * and tail together. Both are legitimate mixes and the list order is how they are told apart; the
- * earlier design's rule that a linear stage ahead of a send also filters the send buffers was
- * dissolved on 2026-09-17 with the per-voice sends themselves.
+ * nothing else. The delay and the reverb are fed from that mix at THEIR position (Katalyst step
+ * 5b-2), so an `eq` written BEFORE `reverb` shapes the dry mix and what the room hears, and the
+ * same `eq` written AFTER it shapes dry and tail together. Both are legitimate mixes and the list
+ * order is how they are told apart.
  *
  * **A configuration change does not click.** [EqCore] is SNAP-only by contract (its own KDoc: a
  * per-block coefficient change on a bus is a click), so the smoothing is built here, and it is the

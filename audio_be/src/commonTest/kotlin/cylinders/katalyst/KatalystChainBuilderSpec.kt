@@ -54,8 +54,6 @@ class KatalystChainBuilderSpec : StringSpec({
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     // ── The classic chain ────────────────────────────────────────────────────────────────────────
@@ -216,7 +214,7 @@ class KatalystChainBuilderSpec : StringSpec({
         chain.writerCount shouldBe 9
     }
 
-    "a bare eq and a unity gain leave every sample of every buffer exactly as they found it" {
+    "a bare eq and a unity gain leave every sample of the mix exactly as they found it" {
         // `Eq()` declares no section (a transparent stage by its wire KDoc) and `Gain()` is unity,
         // which the stage skips entirely. Both together must not touch one sample.
         val chain = build(KatalystDsl.of(KatalystStageDsl.Eq(), KatalystStageDsl.Gain()))
@@ -238,18 +236,10 @@ class KatalystChainBuilderSpec : StringSpec({
         for (i in 0 until blockFrames) {
             ctx.mixBuffer.left[i] = next()
             ctx.mixBuffer.right[i] = next()
-            ctx.delaySendBuffer.left[i] = next()
-            ctx.delaySendBuffer.right[i] = next()
-            ctx.reverbSendBuffer.left[i] = next()
-            ctx.reverbSendBuffer.right[i] = next()
         }
 
         val mixL = ctx.mixBuffer.left.copyOf()
         val mixR = ctx.mixBuffer.right.copyOf()
-        val delayL = ctx.delaySendBuffer.left.copyOf()
-        val delayR = ctx.delaySendBuffer.right.copyOf()
-        val reverbL = ctx.reverbSendBuffer.left.copyOf()
-        val reverbR = ctx.reverbSendBuffer.right.copyOf()
 
         chain.process(ctx)
 
@@ -257,10 +247,6 @@ class KatalystChainBuilderSpec : StringSpec({
             withClue("frame $i") {
                 ctx.mixBuffer.left[i] shouldBe mixL[i]
                 ctx.mixBuffer.right[i] shouldBe mixR[i]
-                ctx.delaySendBuffer.left[i] shouldBe delayL[i]
-                ctx.delaySendBuffer.right[i] shouldBe delayR[i]
-                ctx.reverbSendBuffer.left[i] shouldBe reverbL[i]
-                ctx.reverbSendBuffer.right[i] shouldBe reverbR[i]
             }
         }
     }

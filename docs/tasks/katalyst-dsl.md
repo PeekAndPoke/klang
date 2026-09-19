@@ -502,6 +502,11 @@ complexity outranks the duplication.
   **Listened 2026-09-19 by the maintainer, on a fresh JS build at `b27dd5ad`** (levels on the
   wire, `pregain`, the unity fader, 5b-1, the delay and reverb state machines, the reverb's size
   glide): "things check out".
+  **Listened 2026-09-19 by the maintainer on 5b-2, the insert-style sends** (rooms hear the body
+  and the delay's echoes; the mixed-wet orbits of Der Schmetterling, Synthris and Pipers' Last
+  Rave, where the room drains while an owner without a `wet` holds the orbit): "the listening
+  checks out". The drain on a mixed-wet orbit is therefore kept: it is the turn-taking the
+  signal-flow plan section 7 accepts, softened by the `wet` glide.
   **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
   and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
   in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and
@@ -732,6 +737,12 @@ complexity outranks the duplication.
   zero, live or on return; worst measured an echo at about -3 dBFS dropped at a 0.7 to 0.0
   handover with a silent new owner. Details and the repair shapes in `audio/MEMORY.md`. Any fix
   moves the block on which an orbit resets, so it belongs with a listening checkpoint (5c).
+  Since 5b-2 it is also reachable on the CHAIN-SWAP ring-out, where the leaving chain retires on
+  the first block its ceiling says silent, without the ten silent blocks the orbit path waits
+  for (a feedback glide still falling to near zero after the fade can end it one echo early).
+  The repair the 5b-2 review recommends: `TailCeiling` tracks the largest |feedback| seen in the
+  running window, as it tracks the input peak, and uses it for both terms; O(1), closes the class
+  on every path, unchanged for a steady feedback.
 - **DECIDED 2026-09-19 with the maintainer: how every orbit stage switches and changes (step 5c).**
   The principle: **always glide from the CURRENT state of the effect to the target state; only the
   very first initialisation is instant.** It is the knob-glide rule (`docs/plans/knob-glide.md`)

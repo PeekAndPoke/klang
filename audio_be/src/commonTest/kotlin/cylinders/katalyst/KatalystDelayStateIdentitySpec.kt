@@ -60,8 +60,6 @@ class KatalystDelayStateIdentitySpec : StringSpec({
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /**
@@ -77,10 +75,9 @@ class KatalystDelayStateIdentitySpec : StringSpec({
 
     /** One block with a full-scale impulse in the send, so the ring is charged and has a tail. */
     fun charge(effect: KatalystDelayEffect, ctx: KatalystContext) {
-        ctx.delaySendBuffer.clear()
         ctx.mixBuffer.clear()
-        ctx.delaySendBuffer.left[0] = 1.0
-        ctx.delaySendBuffer.right[0] = 1.0
+        ctx.mixBuffer.left[0] = 1.0
+        ctx.mixBuffer.right[0] = 1.0
         effect.process(ctx)
     }
 
@@ -89,7 +86,6 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         var blocks = 0
 
         while (effect.hasTail() && blocks < 100_000) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
             blocks++
@@ -123,17 +119,17 @@ class KatalystDelayStateIdentitySpec : StringSpec({
 
         // Off + an off-config with NO ring: `configure` returns at its null check, before the
         // state is consulted at all.
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs off
 
         // Off -> Active, renting the ring on the way.
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         val active = effect.currentState
         see(active)
         active shouldNotBeSameInstanceAs off
 
         // Active -> Active: the knob-rewrite self-edge, every block of a running delay.
-        effect.configure(time = 0.06, feedback = 0.5, cap = 1.5)
+        effect.configure(time = 0.06, feedback = 0.5, cap = 1.5, wet = 1.0)
         withClue("a knob rewrite is a self-edge, not a new state") {
             effect.currentState shouldBeSameInstanceAs active
         }
@@ -142,7 +138,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         charge(effect, ctx)
 
         // Active -> Draining.
-        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
         val draining = effect.currentState
         see(draining)
         withClue("Draining is its own state") {
@@ -152,20 +148,20 @@ class KatalystDelayStateIdentitySpec : StringSpec({
 
         // Draining -> Draining: a second off-config changes nothing (the countdown keeps running,
         // which is the half `KatalystDelayEffectSpec` owns).
-        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
         withClue("an off-config repeated while draining is a self-edge") {
             effect.currentState shouldBeSameInstanceAs draining
         }
         see(effect.currentState)
 
         // The shortcut: Draining -> Active before the countdown ends, and straight back.
-        effect.configure(time = 0.08, feedback = 0.4, cap = 1.0)
+        effect.configure(time = 0.08, feedback = 0.4, cap = 1.0, wet = 1.0)
         withClue("Draining -> Active reuses the ONE Active instance") {
             effect.currentState shouldBeSameInstanceAs active
         }
         see(effect.currentState)
 
-        effect.configure(time = 0.0, feedback = 0.4, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.4, cap = 1.0, wet = 1.0)
         withClue("Active -> Draining reuses the ONE Draining instance") {
             effect.currentState shouldBeSameInstanceAs draining
         }
@@ -181,7 +177,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         // Off + an off-config WITH a ring present (the terminal reset keeps the ring): this time
         // `configure` does reach the state, and Off has nothing to do.
         effect.delayLine.shouldNotBeNull()
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
         withClue("an off-config while Off with a ring is a self-edge") {
             effect.currentState shouldBeSameInstanceAs off
         }
@@ -195,7 +191,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Active -> Off through the cylinder-deactivation door, from a live tail.
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs active
         charge(effect, ctx)
         effect.reset()
@@ -205,9 +201,9 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         see(effect.currentState)
 
         // Draining -> Off through the same door: `reset` from mid-drain.
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         charge(effect, ctx)
-        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
         effect.reset()
         withClue("reset from mid-drain lands in the ONE Off instance") {
@@ -220,9 +216,9 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         // countdown left over from the retired life would NOT show here: this path reaches Off
         // through a local in `Active.deactivate` and never reads `Draining.remaining`. Where it
         // shows is `KatalystDelayEffectSpec`'s "the countdown a drain runs on is its own".)
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         charge(effect, ctx)
-        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.0, feedback = 0.6, cap = 2.0, wet = 1.0)
         effect.currentState shouldBeSameInstanceAs draining
         effect.retire()
         withClue("retire from mid-drain lands in the ONE Off instance") {
@@ -230,11 +226,11 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         }
         see(effect.currentState)
 
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         withClue("the new life rents a ring and activates") {
             effect.currentState shouldBeSameInstanceAs active
         }
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
         withClue("a silent ring goes straight to Off, with no drain of the retired life's making") {
             effect.currentState shouldBeSameInstanceAs off
         }
@@ -244,7 +240,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         // one is the double-release question: `release` gives the ring back and drops it, so the
         // second call finds nothing to hand over. `SizedBuffers` counts a buffer returned twice,
         // which is what makes that observable from here.
-        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 0.6, cap = 2.0, wet = 1.0)
         charge(effect, ctx)
         effect.retire()
         withClue("retire lands in the ONE Off instance") {
@@ -268,7 +264,7 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         val starved = createEffect(SizedBuffers.forRings(sampleRate, allocate = refusing.allocate))
         val starvedOff = starved.currentState
 
-        starved.configure(time = 0.3, feedback = 0.4, cap = 1.0)
+        starved.configure(time = 0.3, feedback = 0.4, cap = 1.0, wet = 1.0)
         withClue("a refused first rent leaves the effect in its own Off instance") {
             starved.currentState shouldBeSameInstanceAs starvedOff
         }
@@ -288,11 +284,11 @@ class KatalystDelayStateIdentitySpec : StringSpec({
         val effect = createEffect(SizedBuffers.forRings(sampleRate))
         val off = effect.currentState
 
-        effect.configure(time = 0.05, feedback = 1.2, cap = 2.0)
+        effect.configure(time = 0.05, feedback = 1.2, cap = 2.0, wet = 1.0)
         val active = effect.currentState
 
         // Never charged: the ring is all zeros, so the off-config lands in Off directly.
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         withClue("the silent-ring arm reuses the ONE Off instance") {
             effect.currentState shouldBeSameInstanceAs off

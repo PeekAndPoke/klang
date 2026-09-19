@@ -214,7 +214,7 @@ object JsCompatTestSongs {
         Example(
             "Two Orbits", """
                 stack(
-                      // Snare only delay on the drums
+                      // The drums' delay amount follows the owning hit: up on the snare (it glides)
                       sound("bd hh sd oh").gain(0.7).delay(wet = "0.0 0.0 0.5 0.0", time = 0.25, feedback = 0.5).orbit(0),
                       // Full delay on the melody
                       note("c ~ d ~ e ~ f ~").delay(wet = "0.0", time = 0.25).orbit(1),

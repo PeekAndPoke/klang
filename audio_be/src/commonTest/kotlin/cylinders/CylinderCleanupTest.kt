@@ -224,8 +224,7 @@ class OrbitCleanupTest : StringSpec({
         // Charge QUIETLY: everything in the ring stays below the 1e-5 audibility scan, yet > 0.
         repeat(4) {
             cylinder.clear()
-            cylinder.delaySendBuffer.left.fill(0.000005)
-            cylinder.delaySendBuffer.right.fill(0.000005)
+            cylinder.mixBuffer.fill(0.000005)
             cylinder.processEffects()
         }
 
@@ -262,11 +261,10 @@ class OrbitCleanupTest : StringSpec({
         )
 
         // Charge QUIETLY: 4 blocks never wrap a comb (>= 1116 samples), so every written cell
-        // is exactly the send level — below the 1e-5 audibility scan, yet > 0.
+        // is exactly the feed level, below the 1e-5 audibility scan, yet > 0.
         repeat(4) {
             cylinder.clear()
-            cylinder.reverbSendBuffer.left.fill(0.000005)
-            cylinder.reverbSendBuffer.right.fill(0.000005)
+            cylinder.mixBuffer.fill(0.000005)
             cylinder.processEffects()
         }
 
@@ -287,9 +285,8 @@ class OrbitCleanupTest : StringSpec({
         val cylinder = createTestOrbit()
 
         // Owner A configures a self-oscillating delay; nothing is ever sent into it, so the ring
-        // never holds anything. (The per-voice send amount is the FIELD, which nothing writes
-        // here; an AUTHORED `delay.wet` decides whether the line runs until step 5b-2, and this
-        // one is WRITTEN, so the line runs and the ring stays empty.)
+        // never holds anything: the orbit mix stays silent, so the line is fed nothing. The
+        // `delay.wet` is WRITTEN, so the line runs, and the ring stays empty.)
         cylinder.updateFromVoice(
             VoiceTestHelpers.createSynthVoice(
                 katalystParams = mapOf("delay.wet" to 1.0, "delay.time" to 0.5, "delay.feedback" to 1.2),
@@ -350,5 +347,22 @@ class OrbitCleanupTest : StringSpec({
         // A shelved cylinder holds nothing: the next engine to rent it must not inherit a duck.
         cylinder.duck!!.duckCylinderId shouldBe null
         cylinder.duck!!.ducking shouldBe null
+    }
+
+    "deactivation clears the mix, so a reactivating voice is not summed onto the last block's residue" {
+        // Found in the step 5b-2 review (Synthris Echo): `clear()` skips an inactive orbit, so the
+        // sub-floor output of the orbit's last block stayed in its mix buffer until a voice woke the
+        // orbit, was summed under that voice and, since the delay and the reverb are fed from the
+        // mix, fed into the room.
+        val cylinder = createTestOrbit()
+        makeOrbitActive(cylinder)
+
+        // Below the silence floor, so the orbit deactivates with it in the buffer.
+        cylinder.mixBuffer.fill(0.000001)
+        cylinder.tryDeactivate()
+
+        cylinder.isActive shouldBe false
+        cylinder.mixBuffer.left.all { it == 0.0 } shouldBe true
+        cylinder.mixBuffer.right.all { it == 0.0 } shouldBe true
     }
 })

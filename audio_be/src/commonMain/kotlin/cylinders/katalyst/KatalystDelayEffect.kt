@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
@@ -12,13 +13,33 @@ import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
+import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.min
 
 /**
- * Delay send/return effect for the bus pipeline.
+ * The orbit delay, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
+ * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and it adds its echoes
+ * into that same mix, so the dry signal stays and whatever follows in the chain (the reverb in the
+ * classic order) hears the echoes. The master's `MasterStageDsl.Delay` model, on the orbit bus.
  *
- * Reads from the delay send buffer and mixes the delayed signal into the mix buffer.
+ * **What glides** (`docs/plans/knob-glide.md`), each because its jump was measured audible first
+ * (step 5b-2, a band-limited pad and a pluck, energy above 8 kHz against a hard cut of the return):
+ *  - `wet`, a LEVEL knob, per sample ([KnobGlide.advanceScaled]) into the feed.
+ *  - `feedback`: a jump sat at -28 to -35 dB for 0.3 to 0.7, 0.7 to 0.0 and 0.0 to 0.9 (a hard
+ *    cut: -26 to -31 dB), -47 dB for 0.3 to 0.4, on the pad. The glide moves it one step per block
+ *    and [DelayLine] ramps each step per sample (a gain on the recirculating audio has no state to
+ *    smooth a per-block step, which came back every period at -47 to -55 dB); together they reach
+ *    the steady floor (-90 to -93 dB). The old path literally, as for the reverb's size:
+ *    [configure] writes the target, and while the glide moves [advanceGlide] overwrites it before
+ *    the block processes.
+ *  - `time` does NOT glide (a glide bends the echoes' pitch): [DelayLine] crossfades from the old
+ *    tap to the new one (its KDoc has the measurement and the rules).
+ * The first configure out of [Off] snaps both glides (the ring is empty there, and a song whose
+ * delay never changes stays identical to a constant feed); [Draining] keeps the feedback gliding
+ * towards the last Active value, so a drain is still "Active on silent input"; [Off.enter] forgets
+ * both, next to the tail ceiling.
  *
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
@@ -31,7 +52,7 @@ import kotlin.math.min
  *   process normally.
  * - **Draining** — the owner turned it off while the ring still holds a tail: keep processing with
  *   SILENT input under the retained last-active parameters, so the already-scheduled echoes
- *   complete on their own timeline (live sends are discarded — the owner said off). A
+ *   complete on their own timeline (the mix is no longer fed in: the owner said off). A
  *   sample-counted closed-form countdown ([DelayLine.drainSamplesUntilSilent]) says when the tail
  *   is provably inaudible. `|feedback| >= 1.0` self-oscillates and deliberately never auto-drains
  *   (raw engine — the drone IS the authored sound; the escape is a new owner with a tame delay.
@@ -42,9 +63,9 @@ import kotlin.math.min
  * - **Off** — countdown done: one [DelayLine.reset] (the ring is now literally zero, including the
  *   pre-drain regions a future LONGER delay time could otherwise tap into), then a true
  *   short-circuit until an owner re-enables. That zero-ring guarantee is for THIS path only: a new
- *   delay-carrying owner arriving MID-drain goes straight to Active with the ring kept — the tail
- *   deliberately continues under the new tap (send-delay semantics; same raw behavior as any live
- *   delay-time change, which can always reach older ring content).
+ *   delay-carrying owner arriving MID-drain goes straight to Active with the ring kept: the tail
+ *   deliberately continues under the new tap, which [DelayLine] crossfades to like any live
+ *   delay-time change (a longer tap can always reach older ring content).
  *
  * "Off" is a threshold rather than zero because a zero time would be coerced up to the DSP minimum
  * and ring as a metallic comb instead of being silent (see the MasterChain gate note).
@@ -165,12 +186,21 @@ class KatalystDelayEffect(
         return line
     }
 
-    /** All-zero input for the draining phase — the owner said off, so live sends are discarded. */
+    /** All-zero input for the draining phase: the owner said off, so the mix is no longer fed in. */
     private val silentInput = StereoBuffer(blockFrames)
+
+    /** What the line is fed while Active: the orbit mix at this stage's position, times [wetGlide]. */
+    private val feed = StereoBuffer(blockFrames)
+
+    /** The owner's `wet`, a LEVEL knob (see the class KDoc). Forgotten in [Off.enter]. */
+    private val wetGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
+
+    /** The owner's `feedback`, a COEFFICIENT knob (see the class KDoc). Forgotten in [Off.enter]. */
+    private val feedbackGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames)
 
     /**
      * The Active-state tail question answered from a ceiling on the ring's content (see
-     * [TailCeiling]), maintained every block from the send buffer; it replaces the O(ring) scan
+     * [TailCeiling]), maintained every block from the feed; it replaces the O(ring) scan
      * `DelayLine.hasTail` used to run from `Cylinder.tryDeactivate`.
      *
      * It lives on the effect rather than on [Active] because it OUTLIVES that state: nothing
@@ -193,10 +223,10 @@ class KatalystDelayEffect(
      *   [TailCeiling.SILENCE]), and neither can the moment of return. AFTERWARDS it can: a
      *   self-oscillating delay takes a charge, the owner leaves, the ring grows to the cap under a
      *   ceiling frozen at a fraction of it, and a new owner returns with a TAME feedback (the
-     *   escape this class's KDoc documents) and silent sends. The stale ceiling then decays
+     *   escape this class's KDoc documents) and a silent feed. The stale ceiling then decays
      *   geometrically and crosses [TailCeiling.SILENCE] while the ring still holds about
      *   `(ring at return / frozen ceiling) * 1e-5`. Traced through [TailCeiling] at a 0.4 s
-     *   delay with a returning feedback near 1: a 0.1 send peak leaves about -86 dBFS behind,
+     *   delay with a returning feedback near 1: a 0.1 feed peak leaves about -86 dBFS behind,
      *   0.005 about -60 dBFS and 0.0002 about -32 dBFS, after several windows of silence. With a
      *   returning feedback near ZERO it is louder and sooner, see the next bullet.
      * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover:
@@ -206,7 +236,15 @@ class KatalystDelayEffect(
      *   0.0 an echo at about -3 to -6 dBFS is dropped in a sizeable share of phases, the orbit
      *   reset within about 80 blocks. It needs the new owner to send nothing audible and the mix
      *   to be silent for the cylinder's ten blocks while the repeat is in flight; no built-in song
-     *   reaches it. A feedback of 0.01 or more stays below -83 dBFS.
+     *   reaches it. A feedback of 0.01 or more stays below -83 dBFS. The feedback glide (step
+     *   5b-2) leaves this as it was: it spreads the reduction over 50 ms, which is shorter than
+     *   the window of any delay time long enough to matter, and the repair stays with the tail
+     *   fix of 5c (`docs/plans/knob-glide.md`, pilot log entry 7). A fourth reader since step
+     *   5b-2: a chain-swap ring-out (`Cylinder.processEffects`) retires the leaving chain on the
+     *   first block its ceiling says silent, without the ten silent blocks the orbit path waits,
+     *   so a feedback glide falling to near zero there can drop one repeat. The repair the step's
+     *   reviewers recommend for 5c: [TailCeiling] tracks the largest |feedback| seen in the
+     *   running window, as it tracks the input peak.
      *   All three are PRE-EXISTING and bit-identical before this state machine, so they are
      *   recorded as open (`audio/MEMORY.md`, `docs/tasks/katalyst-dsl.md`) rather than fixed here:
      *   any repair moves the block on which an orbit resets and needs the listening checkpoint.
@@ -274,10 +312,13 @@ class KatalystDelayEffect(
          * when the tap window it measured is already silent (no countdown runs on that arm);
          * [Draining.process] zeroes it when the countdown runs out; [reset] zeroes it and puts the
          * DSP params back to factory; [release] hands the ring to the shelf DIRTY and drops it, so
-         * there is nothing left to empty. All that is left here is forgetting the ceiling.
+         * there is nothing left to empty. All that is left here is forgetting the RECORDS of the
+         * finished life: the ceiling and the two glides.
          */
         fun enter() {
             activeTail.reset()
+            wetGlide.reset()
+            feedbackGlide.reset()
             state = this
         }
 
@@ -301,23 +342,27 @@ class KatalystDelayEffect(
         override fun process(ctx: KatalystContext) {
             // A ring is implied here; the guard is so no path can throw in render.
             val line = delayLine ?: return
-            val send = ctx.delaySendBuffer
-            val frames = ctx.blockFrames
+            // min(): [feed] is sized from the constructor blockFrames, like the silent input.
+            val frames = min(ctx.blockFrames, feed.left.size)
 
-            // The tail question is answered from the INPUT: the block's send peak feeds a
+            // First, so the ceiling below reads the feedback this block runs at.
+            advanceGlide(line)
+            wetGlide.advanceScaled(into = feed, source = ctx.mixBuffer, frames = frames)
+
+            // The tail question is answered from the INPUT: the block's feed peak feeds a
             // ceiling on the ring's content that decays by the feedback once per delay period
             // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring).
             activeTail.observe(
-                inputPeak = TailCeiling.peakOf(send, frames),
+                inputPeak = TailCeiling.peakOf(feed, frames),
                 frames = frames,
                 windowSamples = line.tailWindowSamples,
                 feedback = line.feedback,
                 lapsPerWindow = line.tailLapsPerWindow,
             )
-            line.process(send, ctx.mixBuffer, frames)
+            line.process(feed, ctx.mixBuffer, frames)
         }
 
-        /** A ceiling, not a scan: [process] maintains it from the send buffer. */
+        /** A ceiling, not a scan: [process] maintains it from the feed. */
         override fun hasTail(): Boolean = delayLine != null && activeTail.hasTail
 
         override fun deactivate(line: DelayLine) {
@@ -326,7 +371,19 @@ class KatalystDelayEffect(
             // the scan from the whole ring to the tap window: older content is overwritten
             // before the tap arrives and can never be emitted). An already-silent window
             // (including an EMPTY self-oscillating ring) goes straight to Off.
-            val remaining = line.drainSamplesUntilSilent(peak = line.tapWindowPeakAbs())
+            //
+            // Mid-glide the feedback keeps moving through the drain (see [advanceGlide]), between
+            // the one in force and the target, so the larger magnitude of the two bounds every
+            // period to come (the reverb's rule, `docs/plans/knob-glide.md` pilot log entry 6).
+            // Read from the glide: an Active configure earlier in this block may have written its
+            // target into the line already.
+            val drainFeedback = if (feedbackGlide.isGliding) {
+                maxOf(abs(feedbackGlide.value), abs(feedbackGlide.target))
+            } else {
+                line.feedback
+            }
+
+            val remaining = line.drainSamplesUntilSilent(peak = line.tapWindowPeakAbs(), feedback = drainFeedback)
 
             if (remaining <= 0.0) {
                 line.reset()
@@ -366,6 +423,8 @@ class KatalystDelayEffect(
             // decrement by the SAME clamped count the DSP processed (review round 2): a
             // countdown outrunning the ring would fire the terminal reset at ~-50 dBFS.
             val frames = min(ctx.blockFrames, silentInput.left.size)
+
+            advanceGlide(line)
             line.process(silentInput, ctx.mixBuffer, frames)
 
             // Infinity minus a block stays Infinity, so the self-oscillating case needs no branch.
@@ -415,22 +474,31 @@ class KatalystDelayEffect(
      * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
      * block the lease is (re)claimed. An off-config (a time that is non-finite or below [MIN_ACTIVE_DELAY_SECONDS]) does
      * NOT reach the [delayLine]: the retained last-active parameters are what the drain runs on.
+     *
+     * [wet] is how much of the orbit mix feeds the line. Raw: no clamp, a negative wet feeds the
+     * line inverted, above 1 hotter than the mix.
      */
-    fun configure(time: Double, feedback: Double, cap: Double) {
-        // Non-finite reads as OFF (time) or as the shared default (feedback, cap), never as the previous
-        // owner's value: DelayLine's setters DROP non-finite writes, so passing one through would leave
-        // whatever the last owner set. VoiceFactory already turns non-finite slots into defaults; this
-        // guard is the door's own contract for a direct caller (the reverb door reads a non-finite size
-        // as off the same way).
+    fun configure(time: Double, feedback: Double, cap: Double, wet: Double) {
+        // Non-finite reads as OFF (time) or as the shared default (feedback, cap, wet), never as the
+        // previous owner's value: DelayLine's setters DROP non-finite writes, so passing one through
+        // would leave whatever the last owner set. The slot writer never hands a non-finite wet to a
+        // running stage (`sendStageRuns`); this guard is the door's own contract for a direct caller
+        // (the reverb door reads a non-finite size as off the same way).
         if (time.isFinite() && time >= MIN_ACTIVE_DELAY_SECONDS) {
             // No ring and none to be had: the orbit stays dry rather than the worklet dying.
             val line = ensureRing(time) ?: return
 
             // No tail bookkeeping here: the ceiling reads the period and feedback in force on
             // every block, so a change (or a grow, which keeps the content) is simply followed.
+            // The old path, literally: while the feedback glides, [advanceGlide] overwrites it
+            // before the block processes (see the class KDoc).
+            val guardedFeedback = if (feedback.isFinite()) feedback else DELAY_FEEDBACK
+
             line.time = time
-            line.feedback = if (feedback.isFinite()) feedback else DELAY_FEEDBACK
+            line.feedback = guardedFeedback
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
+            feedbackGlide.retarget(guardedFeedback)
+            wetGlide.retarget(if (wet.isFinite()) wet else DELAY_WET)
             active.enter()
             return
         }
@@ -488,6 +556,19 @@ class KatalystDelayEffect(
         }
         off.enter()
         refusedFrames = 0
+    }
+
+    /**
+     * Moves the feedback glide by one block and writes it into the line while it MOVES, before the
+     * line processes the block, over whatever [configure] wrote. A settled feedback is not written:
+     * the line already holds the configured value, which is what keeps a steady delay identical.
+     */
+    private fun advanceGlide(line: DelayLine) {
+        if (feedbackGlide.isGliding) {
+            line.feedback = feedbackGlide.advance()
+        } else {
+            feedbackGlide.advance()
+        }
     }
 
     /**

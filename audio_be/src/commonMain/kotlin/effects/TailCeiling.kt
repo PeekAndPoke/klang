@@ -40,7 +40,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * converges to the true steady floor `input / (1 − fb)` instead of pretending the unit is empty.
  *
  * **How.** The owner calls [observe] once per block with the block's input peak (`peakOf` on the
- * send buffer, O(block) and unavoidable — it replaces the silence test) and the unit's current
+ * unit's feed, O(block) and unavoidable: it replaces the silence test) and the unit's current
  * window and feedback. Everything else is O(1). [hasTail] is two compares. A never-fed unit has
  * ceiling 0: no tail, no cost. A parameter change needs no invalidation: the next window decays by
  * the feedback in force when the content actually recirculates, which is what the ring does too.

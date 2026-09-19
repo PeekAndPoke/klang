@@ -49,13 +49,11 @@ class LazyReverbSpec : StringSpec({
     fun effect(units: ReverbUnits) = KatalystReverbEffect(units = units, blockFrames = blockFrames)
 
     fun KatalystReverbEffect.configureSize(size: Double) =
-        configure(size = size, lowpass = null)
+        configure(size = size, lowpass = null, wet = 1.0)
 
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     fun noise(frames: Int, seed: Int): StereoBuffer {
@@ -89,7 +87,6 @@ class LazyReverbSpec : StringSpec({
         val fx = effect(units)
         val ctx = ctx()
         ctx.mixBuffer.left.fill(0.25)
-        ctx.reverbSendBuffer.left.fill(0.5)
 
         fx.process(ctx)
 
@@ -146,7 +143,7 @@ class LazyReverbSpec : StringSpec({
         val (units, _) = shelf(alloc)
         val fx = effect(units)
         val ctx = ctx()
-        ctx.reverbSendBuffer.left.fill(0.5)
+        ctx.mixBuffer.left.fill(0.5)
 
         repeat(100) {
             fx.configureSize(size = 0.6) // the owner re-applies every block
@@ -157,7 +154,7 @@ class LazyReverbSpec : StringSpec({
         fx.deniedRents shouldBe 1
         alloc.asked shouldBe 1 // asked ONCE, not 100 times
         units.failures shouldBe 1
-        ctx.mixBuffer.left[3] shouldBe 0.0 // dry
+        ctx.mixBuffer.left[3] shouldBe 0.5 // dry: the mix passes untouched
         fx.hasTail() shouldBe false
 
         alloc.failing = false

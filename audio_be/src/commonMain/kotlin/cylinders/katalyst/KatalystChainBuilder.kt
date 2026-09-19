@@ -57,9 +57,8 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * `katalystParams`, which `.katp` and the bus doors write (step 5a), and it is the ONE way a bus
  * knob reaches a stage, for a declared chain and for the chain a cylinder is born with alike. The
  * voice's bus FIELDS are not a knob source any more (the signal-flow plan §7, D4: the chain is the
- * instrument); they stay on the wire for the per-voice send AMOUNTS (`SendRenderer`) until step
- * 5b-2 and leave it in 5b-3. The `voiceDriven` flag and the owner writers it chose went with this
- * step.
+ * instrument), and since step 5b-2 nothing on the bus reads them at all; they leave the wire in
+ * 5b-3. The `voiceDriven` flag and the owner writers it chose went with step 5b-1.
  *
  * A writer has TWO halves, `resolve` and `apply`, and the split is about the per-block cost: the
  * orbit's param state changes far more rarely than a block goes by, so `resolve` does the lookups
@@ -145,13 +144,10 @@ object KatalystChainBuilder {
                     // Routed through the effect's lifecycle: an off-config drains the tail out on
                     // its own timeline instead of freezing the ring (see KatalystDelayEffect).
                     //
-                    // Until step 5b-2 `delay.wet` says WHETHER the stage runs, not how much any
-                    // voice sends: the amount is still the per-voice `voice.delay.amount` that
-                    // `SendRenderer` writes into the send buffer. An AUTHORED `wet(0.0)` rents no
-                    // ring (decided 2026-09-17, consistent with the phaser gated on depth and the
-                    // duck on orbit), while a wet a PATTERN wrote runs the stage whatever its
-                    // value, because a per-voice send belongs to its voice and not to the orbit.
-                    // The one home of that rule is [sendStageRuns].
+                    // `delay.wet` is how much of the orbit mix feeds the line (step 5b-2). An
+                    // AUTHORED `wet(0.0)` rents no ring (decided 2026-09-17, consistent with the
+                    // phaser gated on depth and the duck on orbit), while a wet a PATTERN wrote runs
+                    // the stage whatever its value. The one home of that rule is [sendStageRuns].
                     statics.add(
                         KatalystDelayWriter(
                             fx = fx,
@@ -172,16 +168,12 @@ object KatalystChainBuilder {
                     )
                     pipeline.add(fx)
 
-                    // reverb.amount is used by SendRenderer for the send amount. Routed through
-                    // the effect's lifecycle like the delay: an off-config drains the tail out on
-                    // its own timeline instead of freezing the combs (see KatalystReverbEffect).
-                    // size is already normalized (and bounded) by `Reverb.normalizeSize` in
-                    // VoiceFactory, and configure bounds it again at the door, so every caller
-                    // shares one conversion.
-                    // The slot carries the AUTHORED 0..10 size, so it passes through the one
-                    // shared conversion here, where VoiceFactory does it for a voice.
-                    // `reverb.wet` decides WHETHER the stage runs until 5b-2, as on the delay
-                    // above; [sendStageRuns] is the one home of that rule.
+                    // Routed through the effect's lifecycle like the delay: an off-config drains
+                    // the tail out on its own timeline instead of freezing the combs (see
+                    // KatalystReverbEffect). The slot carries the AUTHORED 0..10 size, so the writer
+                    // passes it through the one shared conversion, and configure bounds it again
+                    // at the door. `reverb.wet` is how much of the orbit mix feeds the room, and
+                    // whether the stage runs is [sendStageRuns], as on the delay above.
                     statics.add(
                         KatalystReverbWriter(
                             fx = fx,
@@ -337,18 +329,19 @@ object KatalystChainBuilder {
 }
 
 /**
- * Whether a send stage RUNS, which is not the same question as how much any voice sends into it.
+ * Whether the delay or the reverb stage RUNS, which is a different question from how much of the
+ * orbit mix feeds it (that is `wet` itself, since Katalyst step 5b-2).
  *
- * **This is the wire's old "touched" rule, carried over to the slots** (Katalyst step 5b-1, round
- * 1). `VoiceFactory` ran an orbit's delay or reverb when the voice TOUCHED the effect, meaning the
- * send field was non-null, a written 0 included, and then let `time` / `size` decide (their
- * thresholds live in the effects). `wet` is documented as a PER-VOICE send, so a pattern that
- * writes `reverb(0)` on one voice must not silence the room another voice on the same orbit is
- * sending into: which of them happens to hold the lease is first-rendered-wins, and the song would
- * change when two arms of a `stack` swap places.
+ * The stage runs when the pattern WROTE this knob (any finite value, zero and negative included:
+ * [KatalystKnob.written]) or when what the chain itself authored is a positive amount.
  *
- * So the stage runs when the pattern WROTE this knob (any finite value, zero and negative
- * included: [KatalystKnob.written]) or when what the chain itself authored is a positive amount.
+ * **Why a written 0 keeps the stage running** (step 5b-1's "touched" rule, kept by the 5b-2
+ * decision): a written wet is a LEVEL, and a level glides. A pattern that moves the wet to 0 and
+ * back (`reverb(wet = "0.4 0")`, `delay(wet = "0.3 0")`) fades the feed down and up again while
+ * the room or the ring keeps ringing out what it holds; switching the stage off at 0 instead would start a drain
+ * and snap the feed back on at the next nonzero. A running stage fed nothing costs its network's
+ * processing, which it spends anyway while it rings.
+ *
  * The second half keeps the decision of 2026-09-17 for authored constants: a declared
  * `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents nothing, because nobody
  * asked for a room, only for a chain that has one.
@@ -356,14 +349,11 @@ object KatalystChainBuilder {
  * Off is expressed by handing the effect a non-finite time respectively size, so the ONE threshold
  * stays inside the effect (where it also drains a live tail instead of freezing it) and this
  * function only decides whether anybody asked for the stage at all.
- *
- * Step 5b-2 makes `wet` the insert AMOUNT, at which point "how much" and "whether" become one
- * question again and this function goes.
  */
 internal fun sendStageRuns(wet: KatalystKnob): Boolean {
     // NaN-guard on a value the author can write: a non-finite wet was never set, so it is neither
-    // a write nor a positive amount, and an unset send stage is off. That is the same reading the
-    // voice path gave an untouched effect.
+    // a write nor a positive amount, and an unset stage is off. That is the same reading the voice
+    // path gave an untouched effect.
     return wet.written || (wet.value.isFinite() && wet.value > 0.0)
 }
 

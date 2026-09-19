@@ -98,23 +98,19 @@ class VoiceGainWireSpec : StringSpec({
         voiceOf(VoiceData.empty.copy(freqHz = 440.0, sound = "triangle", gain = gain)).gain
 
     /**
-     * One block of the cylinder's three left-hand buses, rendered from the given [voice]:
-     * the mix bus left, the mix bus right and the delay send bus left, in that order.
-     *
-     * All three come from ONE render, so the send row cannot disagree with the mix row about
-     * which block it is looking at.
+     * One block of the cylinder's mix bus, rendered from the given [voice]: left, then right, from
+     * ONE render, so the two rows cannot disagree about which block they are looking at.
      */
-    fun renderBuses(voice: Voice): Triple<DoubleArray, DoubleArray, DoubleArray> {
+    fun renderBuses(voice: Voice): Pair<DoubleArray, DoubleArray> {
         val ctx = createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
 
         voice.render(ctx)
 
         val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
 
-        return Triple(
+        return Pair(
             cylinder.mixBuffer.left.copyOf(),
             cylinder.mixBuffer.right.copyOf(),
-            cylinder.delaySendBuffer.left.copyOf(),
         )
     }
 
@@ -122,9 +118,9 @@ class VoiceGainWireSpec : StringSpec({
     fun renderLeft(voice: Voice): DoubleArray = renderBuses(voice).first
 
     /**
-     * A hand-built voice whose only settings are its gain, its pan and its delay send, on the ramp
-     * ignitor. Its pipeline is the helper's: a transparent filter chain and the amp VCA, then the
-     * send stage, which is what the absolute rows below are about.
+     * A hand-built voice whose only settings are its gain and its pan, on the ramp ignitor. Its
+     * pipeline is the helper's: a transparent filter chain and the amp VCA, then the send stage,
+     * which is what the absolute rows below are about.
      *
      * The rows use POSITIVE gains on purpose. A negative gain would fail them at frame 0 for a
      * reason that has nothing to do with the level: the ramp's first sample is `0.0`, so the oracle
@@ -132,7 +128,7 @@ class VoiceGainWireSpec : StringSpec({
      * `0.0 + -0.0` is `+0.0`. That a negative gain reaches the voice unclamped is asserted at the
      * factory instead, where no summation is in the way.
      */
-    fun rampVoice(gain: Double, pan: Double, delayAmount: Double = 0.0): Voice = createVoice(
+    fun rampVoice(gain: Double, pan: Double): Voice = createVoice(
         startFrame = 0.0,
         endFrame = 10_000.0,
         gateEndFrame = 10_000.0,
@@ -140,7 +136,6 @@ class VoiceGainWireSpec : StringSpec({
         blockFrames = blockFrames,
         gain = gain,
         pan = pan,
-        delay = Voice.Delay(amount = delayAmount, time = 0.0, feedback = 0.0),
         signal = TestIgnitors.ramp,
     )
 
@@ -204,38 +199,32 @@ class VoiceGainWireSpec : StringSpec({
 
     // ── The send stage, against an oracle the code under test did not produce ─────────────────
 
-    "both mix channels and the delay send are the ignitor's own samples times pan and gain" {
+    "both mix channels are the ignitor's own samples times pan and gain" {
         // What the ramp ignitor writes, by its own definition: (i - offset) / length.
         val expected = DoubleArray(blockFrames) { it.toDouble() / blockFrames }
         val pan = 0.35
         val panAngle = pan * (PI / 2.0)
         val gain = 0.625
-        val delayAmount = 0.25
 
         // Why these are raw-bit comparisons and not approximations: the oracle GROUPS the product
-        // the way `SendRenderer` does, `sample * (panLaw * gain)` and then `* delayAmount` on the
-        // already-panned value. Two properties of this voice are load-bearing for that, and both
-        // would have to be re-checked if they changed: `gainMultiplier` is 1.0 (no scheduler has
-        // touched this voice), and the helper's always-on envelope makes the amp VCA exactly
-        // `x * 1.0` (sustain 1.0, the de-click smoother primed at the first rendered gain), so the
-        // sample reaching the send stage IS the ignitor's. Being exact in binary, 0.625 and 0.25
-        // only keep the oracle readable; they are not what makes the bits agree.
-        val (mixLeft, mixRight, delayLeft) = renderBuses(
-            rampVoice(gain = gain, pan = pan, delayAmount = delayAmount)
-        )
+        // the way `SendRenderer` does, `sample * (panLaw * gain)`. Two properties of this voice are
+        // load-bearing for that, and both would have to be re-checked if they changed:
+        // `gainMultiplier` is 1.0 (no scheduler has touched this voice), and the helper's always-on
+        // envelope makes the amp VCA exactly `x * 1.0` (sustain 1.0, the de-click smoother primed at
+        // the first rendered gain), so the sample reaching the send stage IS the ignitor's. Being
+        // exact in binary, 0.625 only keeps the oracle readable; it is not what makes the bits agree.
+        val (mixLeft, mixRight) = renderBuses(rampVoice(gain = gain, pan = pan))
 
-        withClue("not-silence floor: the ramp must actually reach every bus") {
+        withClue("not-silence floor: the ramp must actually reach both channels") {
             mixLeft.maxOf { abs(it) } shouldBeGreaterThan 0.1
             mixRight.maxOf { abs(it) } shouldBeGreaterThan 0.1
-            delayLeft.maxOf { abs(it) } shouldBeGreaterThan 0.01
         }
 
         withClue("engagement: a different gain must not render the same buses") {
-            val other = renderBuses(rampVoice(gain = 1.0, pan = pan, delayAmount = delayAmount))
+            val other = renderBuses(rampVoice(gain = 1.0, pan = pan))
 
             other.first.toList() shouldNotBe mixLeft.toList()
             other.second.toList() shouldNotBe mixRight.toList()
-            other.third.toList() shouldNotBe delayLeft.toList()
         }
 
         withClue("the two channels must not be the same signal") {
@@ -253,11 +242,6 @@ class VoiceGainWireSpec : StringSpec({
                 mixRight[i].toRawBits() shouldBe (expected[i] * (sin(panAngle) * gain)).toRawBits()
             }
 
-            // The send is taken from the PANNED and GAINED value, not from the raw signal:
-            // `delaySendL[idx] + left * delayAmount` into a zeroed bus.
-            withClue("delay send left, frame $i") {
-                delayLeft[i].toRawBits() shouldBe (left * delayAmount).toRawBits()
-            }
         }
     }
 

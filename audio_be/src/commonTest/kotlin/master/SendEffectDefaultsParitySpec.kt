@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.effects.Reverb
@@ -29,6 +30,9 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -41,9 +45,10 @@ import kotlin.random.Random
  * `MasterChain.build` for the master, so a default that drifts on either side fails here.
  *
  * **Where the two halves now live (Katalyst step 5b-1, 2026-09-19), and what is left here.** The
- * orbit's STAGE reads the slot state, and the voice FIELD is the per-voice send AMOUNT and nothing
- * else. So the rows about the amount read the field, and the rows about the DSP write the slots by
- * hand. That costs this file half of its old subject, honestly stated: a row that writes
+ * orbit's STAGE reads the slot state; since step 5b-2 the `wet` slot is the amount too (the stage is
+ * fed from the orbit mix), and the voice FIELDS have no reader on the bus at all, so the rows that
+ * read a field's send amount went with that step. The rows about the DSP write the slots by hand.
+ * That costs this file half of its old subject, honestly stated: a row that writes
  * `DELAY_TIME_SECONDS` into the map and then reads it back out of the delay line does NOT pin "the
  * door's fill equals the master's default" any more, it pins "the orbit and the master build the
  * same DSP from the same number", which is still worth having (either host could convert or clamp
@@ -112,10 +117,51 @@ class SendEffectDefaultsParitySpec : StringSpec({
         blockFrames = blockFrames,
     )
 
+    /**
+     * Renders 30 blocks of the same two-partial input through the orbit's chain (the cylinder the
+     * voice configured) and through the master chain, and demands the same bits, plus a return that
+     * is really there.
+     */
+    fun renderParity(cylinder: Cylinder, master: MasterChain) {
+        val bus = StereoBuffer(blockFrames)
+        var returned = 0.0
+
+        for (block in 0 until 30) {
+            for (i in 0 until blockFrames) {
+                val n = (block * blockFrames + i).toDouble()
+                val x = 0.3 * sin(2.0 * PI * 440.0 * n / sampleRate) + 0.2 * sin(2.0 * PI * 97.0 * n / sampleRate)
+
+                cylinder.mixBuffer.left[i] = x
+                cylinder.mixBuffer.right[i] = x * 0.5
+                bus.left[i] = x
+                bus.right[i] = x * 0.5
+            }
+
+            cylinder.processEffects()
+            master.process(bus, blockFrames)
+
+            for (i in 0 until blockFrames) {
+                withClue("block $block frame $i") {
+                    cylinder.mixBuffer.left[i].toRawBits() shouldBe bus.left[i].toRawBits()
+                    cylinder.mixBuffer.right[i].toRawBits() shouldBe bus.right[i].toRawBits()
+                }
+
+                val n = (block * blockFrames + i).toDouble()
+                val x = 0.3 * sin(2.0 * PI * 440.0 * n / sampleRate) + 0.2 * sin(2.0 * PI * 97.0 * n / sampleRate)
+
+                returned = maxOf(returned, abs(bus.left[i] - x))
+            }
+        }
+
+        withClue("not two dry signals: the stage returned something, largest $returned") {
+            (returned > 1e-3) shouldBe true
+        }
+    }
+
     // ── Delay ────────────────────────────────────────────────────────────────────────────────────
 
     "delay: the orbit and the master build the same line from the same three numbers" {
-        // What `.delay(0.4)` puts on the wire: the send amount in the field, and in the slot state
+        // What `.delay(0.4)` puts on the wire: the amount in the field, and in the slot state
         // the named knob plus the three companions the door fills from the shared constants. The
         // MASTER side is the oracle: its stage reads the same constants through its own code, so a
         // literal that drifted into either host fails here.
@@ -150,32 +196,10 @@ class SendEffectDefaultsParitySpec : StringSpec({
         cylinder.delay!!.delayLine.shouldBeNull()
     }
 
-    "delay: an orbit voice that sets any one slot but the send sends the master's default wet" {
-        listOf(
-            "time" to VoiceData.empty.copy(delayTime = 0.5),
-            "feedback" to VoiceData.empty.copy(delayFeedback = 0.6),
-            "cap" to VoiceData.empty.copy(delayCap = 2.0),
-        ).forEach { (slot, data) ->
-            withClue("only $slot") {
-                orbitOf(data).first.delay.amount shouldBe MasterStageDsl.Delay().wet
-            }
-        }
-    }
-
-    "delay: a non-finite send AMOUNT reads as unset on the wire, the master's own default" {
-        // The field half, which is still `VoiceFactory`'s: a non-finite `delay` is unset and the
-        // voice sends the shared default amount.
-        val (voice, _) = orbitOf(
-            VoiceData.empty.copy(delay = Double.NaN, delayTime = Double.POSITIVE_INFINITY, delayFeedback = Double.NaN),
-        )
-
-        voice.delay.amount shouldBe MasterStageDsl.Delay().wet
-    }
-
     "delay: a non-finite TIME is off on the orbit and the constant on the master, the one asymmetry" {
         // Recorded, not asserted away (see the class KDoc). A bus SLOT's non-finite value is the
-        // declared "never set", and an unset gate is off, which is what lets `drainSends` and the
-        // classic chain express "no line" at all; the master stage has no such state and
+        // declared "never set", and an unset gate is off, which is what lets the classic chain
+        // express "no line" at all; the master stage has no such state and
         // substitutes. Neither door can produce it: both fill with numbers.
         val (_, cylinder) = orbitOf(
             VoiceData.empty.copy(
@@ -191,11 +215,31 @@ class SendEffectDefaultsParitySpec : StringSpec({
         withClue("the master substitutes the shared constant") { master.time shouldBe DELAY_TIME_SECONDS }
     }
 
-    "delay: a voice that does not touch it sends nothing and leaves the orbit's delay off" {
-        val (voice, cylinder) = orbitOf(VoiceData.empty)
+    "delay: a voice that does not touch it leaves the orbit's delay off" {
+        val (_, cylinder) = orbitOf(VoiceData.empty)
 
-        voice.delay.amount shouldBe 0.0
         cylinder.delay!!.delayLine.shouldBeNull()
+    }
+
+    "delay: the same wet feeds the same echo on both buses, sample for sample" {
+        // The amount's parity, now that it is the orbit's too (step 5b-2): both stages copy their
+        // bus into a feed scaled by `wet` and let the shared `DelayLine` add its return. A PARITY
+        // LAW between two production paths, like the rest of this file, not an identity against a
+        // hand-built line (that is `KatalystInsertFeedSpec`).
+        val wet = 0.4
+        val (_, cylinder) = orbitOf(
+            VoiceData.empty.copy(
+                katalystParams = mapOf(
+                    "delay.wet" to wet,
+                    "delay.time" to 0.01,
+                    "delay.feedback" to DELAY_FEEDBACK,
+                    "delay.cap" to DELAY_CAP,
+                ),
+            )
+        )
+        val master = masterOf(MasterStageDsl.Delay(wet = wet, time = 0.01))
+
+        renderParity(cylinder, master)
     }
 
     // ── Reverb ───────────────────────────────────────────────────────────────────────────────────
@@ -211,25 +255,6 @@ class SendEffectDefaultsParitySpec : StringSpec({
         val master = masterOf(MasterStageDsl.Reverb(wet = 0.4)).reverbs.firstOrNull().shouldNotBeNull()
 
         cylinder.reverb!!.reverb.shouldNotBeNull().size shouldBe master.size
-    }
-
-    "reverb: an orbit voice that sets any one slot but the send sends the master's default wet" {
-        listOf(
-            "size" to VoiceData.empty.copy(reverbSize = 4.0),
-            "lowpass" to VoiceData.empty.copy(reverbLowpass = 3000.0),
-        ).forEach { (slot, data) ->
-            withClue("only $slot") {
-                orbitOf(data).first.reverb.amount shouldBe MasterStageDsl.Reverb().wet
-            }
-        }
-    }
-
-    "reverb: a non-finite send AMOUNT reads as unset on the wire, the master's own default" {
-        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY)) {
-            val (voice, _) = orbitOf(VoiceData.empty.copy(reverb = bad, reverbSize = bad))
-
-            withClue("slot = $bad") { voice.reverb.amount shouldBe MasterStageDsl.Reverb().wet }
-        }
     }
 
     "reverb: a non-finite SIZE slot, and the two answers the orbit gives it" {
@@ -260,10 +285,20 @@ class SendEffectDefaultsParitySpec : StringSpec({
         }
     }
 
-    "reverb: a voice that does not touch it sends nothing and leaves the orbit's reverb off" {
-        val (voice, cylinder) = orbitOf(VoiceData.empty)
+    "reverb: a voice that does not touch it leaves the orbit's reverb off" {
+        val (_, cylinder) = orbitOf(VoiceData.empty)
 
-        voice.reverb.amount shouldBe 0.0
         cylinder.reverb!!.reverb.shouldBeNull()
+    }
+
+    "reverb: the same wet feeds the same room on both buses, sample for sample" {
+        // The delay row's twin.
+        val wet = 0.4
+        val (_, cylinder) = orbitOf(
+            VoiceData.empty.copy(katalystParams = mapOf("reverb.wet" to wet, "reverb.size" to REVERB_SIZE)),
+        )
+        val master = masterOf(MasterStageDsl.Reverb(wet = wet))
+
+        renderParity(cylinder, master)
     }
 })

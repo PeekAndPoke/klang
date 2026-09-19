@@ -13,7 +13,8 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
  * **Body → Vowel → Delay → Reverb → Phaser → Compressor → Gain**, with the **Duck** run after
  * every orbit.
  *
- * - **Delay** and **Reverb** are send/return effects (read from send buffers, write to mix buffer)
+ * - **Delay** and **Reverb** are fed from the mix at their position (times `wet`, into a buffer of
+ *   their own) and add their return into it
  * - **Phaser** and **Compressor** are insert effects (read/write mix buffer in-place)
  * - **Gain** is the group fader, one multiply of the mix; unity is bit-transparent
  * - **Duck** is a sidechain effect (reads another cylinder's mix buffer as trigger)

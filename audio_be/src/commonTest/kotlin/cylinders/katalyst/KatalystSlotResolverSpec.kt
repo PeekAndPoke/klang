@@ -167,13 +167,13 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
 
-    "reverb: a WRITTEN wet of 0.0 keeps the room running, because wet is a per-voice send" {
-        // The other half, and the one round 1 of the review put back (Katalyst step 5b-1). `wet`
-        // is documented as a PER-VOICE send, so `reverb(0)` on ONE voice must not silence the room
-        // that another voice on the same orbit is sending into; which of them holds the lease is
-        // first-rendered-wins, and the song would otherwise change when two arms of a `stack` swap
-        // places. `VoiceFactory` ran the stage on a TOUCHED field, a written 0 included, and the
-        // slot twin of touched is "the map carries the key with a finite value".
+    "reverb: a WRITTEN wet of 0.0 keeps the room running, fed nothing" {
+        // The other half, put back in review round 1 of Katalyst step 5b-1 and kept by the 5b-2
+        // decision (`sendStageRuns`): a written wet is the orbit's amount, a LEVEL that glides, so
+        // a written 0 runs the stage with nothing fed in and a later amount glides up from there
+        // instead of switching a room on. `VoiceFactory` ran the stage on a TOUCHED field, a
+        // written 0 included, and the slot twin of touched is "the map carries the key with a
+        // finite value".
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(
@@ -253,8 +253,8 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "a NEGATIVE written wet runs the stage too: the wire's rule is touched, not positive" {
-        // `VoiceFactory` read a negative send field as touched, and `SendRenderer` sends a
-        // phase-inverted amount. The gate must not second-guess the sign.
+        // `VoiceFactory` read a negative send field as touched, and a negative wet feeds the stage
+        // phase-inverted (raw). The gate must not second-guess the sign.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(

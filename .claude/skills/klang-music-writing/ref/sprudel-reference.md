@@ -183,15 +183,13 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > simply ignored (`Cylinder.kt`). **To give voices independent bus effects, put them on different orbits.**
 >
 > Since 2026-09-08 this is also metadata, not just prose: every DSL function carries a `@scope` tag that the
-> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `orbit-send` /
-> `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
+> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
-> | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `reverb` (`wet` is the per-voice send; `size`/`lowpass` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
+> | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
+> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
 **Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
 `attack(seconds)` `release(seconds)` `lookahead(seconds)`.

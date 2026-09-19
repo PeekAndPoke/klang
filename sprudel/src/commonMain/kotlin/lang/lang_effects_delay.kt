@@ -29,14 +29,13 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
  * echo is ON.
  *
- * Fills the voice FIELDS with the same four constants, so the two sources agree. Since step 5b-1
- * the orbit's line reads the SLOTS alone; the `delay` field is the per-voice send AMOUNT until step
- * 5b-2, and the rest leave the wire in 5b-3.
+ * Fills the voice FIELDS with the same four constants, so the two sources agree. The orbit's line
+ * reads the SLOTS alone (the amount too, since step 5b-2), and the fields leave the wire in 5b-3.
  *
  * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
  * these constants.
  *
- * The HEAD setter, the send, is the one setter here a bare call can reach with a null; it then
+ * The HEAD setter, the wet, is the one setter here a bare call can reach with a null; it then
  * writes nothing at all (`if (wet != null)`). Only the reverb door clears on that path, in
  * `applyReverb`'s no-args block.
  */
@@ -87,12 +86,15 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
 
 /**
- * The orbit delay: send, time, feedback and the feedback cap.
+ * The orbit delay: how much of the orbit is echoed, the time, the feedback and the feedback cap.
  *
- * One delay line per orbit, so `time`, `feedback` and `cap` are set once for everyone by the
- * orbit's owning voice. `wet` is the exception: it is a per-voice
- * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its
- * own delay by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
+ * One delay per [orbit bus](/manuals/lexikon/orbit-bus), and all four are set once for everyone by
+ * the orbit's owning voice. `wet` is how much of the orbit goes into the delay: the echoes are
+ * added on top of the dry sound, and every voice on the orbit is echoed alike. So a pattern that
+ * should stay dry, or echo by a different amount, goes on an orbit of its own. When another pattern
+ * with a delay takes the orbit over, `wet` and `feedback` move smoothly to its values, and a new
+ * time crossfades to the new echo; a pattern without one switches the delay off, which does not
+ * fade yet (the echoes already sent ring out).
  *
  * The call sets every slot: the ones you leave out take the same default as on the master delay,
  * wet 0.25, time 0.25 s, feedback 0.3 and cap 1, unless an earlier call already set them. So a bare
@@ -106,18 +108,18 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
  *
  * ```KlangScript(Playable)
- * s("hh*4").delay(0.3, 0.25, 0.4)                                        // send, time, feedback
+ * s("hh*4").delay(0.3, 0.25, 0.4)                                        // wet, time, feedback
  * ```
  *
  * ```KlangScript(Playable)
- * s("hh*4").delay(0.3, 0.25).delay(wet = mul("1 0 1 0"))                  // delay on every other hat only
+ * stack(s("hh ~ hh ~").delay(0.3, 0.25), s("~ hh ~ hh").orbit(1))        // delay on every other hat only
  * ```
  *
  * ```KlangScript(Playable)
- * s("sd sd").delay("0.1 0.4", 0.25).reverb(wet = delay.wet, size = 4)       // as much reverb as delay
+ * s("sd sd").delay("<0.1 0.4>", 0.25).reverb(wet = delay.wet, size = 4)     // as much reverb as delay
  * ```
  *
- * @param wet Send into the orbit delay, 0 to 1, default 0.25. Per voice.
+ * @param wet How much of the orbit goes into the delay, 0 to 1, default 0.25. Orbit-wide.
  * @param time Delay time in seconds, default 0.25. Orbit-wide.
  * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
  * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
@@ -125,7 +127,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @param-tool time SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
  * @param-tool feedback SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags delay, wet, time, feedback, cap
  */
@@ -175,7 +177,7 @@ fun PatternMapperFn.delay(
  * The `delay` object: `delay(...)` sets the slots, and each numeric slot reads back as a child,
  * `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags delay, accessor
  */

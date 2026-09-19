@@ -128,9 +128,10 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * through it. One body per [orbit bus](/manuals/lexikon/orbit-bus), so ALL of it, `material`
  * included, is set once for everyone by the orbit's owning voice.
  *
- * `wet` here is a mix, not a [send](/manuals/lexikon/send): the body processes the whole orbit mix,
- * so unlike `reverb` and `delay` there is no per-voice amount. Give a pattern its own body by giving
- * it its own orbit.
+ * `wet` here is a mix (and `floor` how much of the dry stays under it): the body processes the whole
+ * orbit mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the orbit goes
+ * INTO them, a [send](/manuals/lexikon/send), and their sound is added on top of the dry. Give a
+ * pattern its own body by giving it its own orbit.
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
  * `violin`; voice `croon`; pipe and glass `tube`, `glass`; skin `membrane`; metals `brass`, `steel`,
@@ -161,7 +162,7 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("tube", "0.2 0.9").reverb(wet = body.wet, size = 4)   // as much reverb as body
+ * note("c3 e3").s("saw").body("tube", "<0.2 0.9>").reverb(wet = body.wet, size = 4)   // as much reverb as body
  * ```
  *
  * @param material Material name. See the list above.

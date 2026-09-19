@@ -164,8 +164,8 @@ class WarmupRunner(
                     // step 5b-1, so the warmup writes SLOTS, not the bus fields: with fields only,
                     // this warmup would warm the voice strip and leave every orbit stage cold, and
                     // no ring and no reverb network would be rented in the warmup window, which is
-                    // most of what it is for. The send AMOUNTS stay fields until step 5b-2, so
-                    // `delay` and `reverb` are written on both sides here.
+                    // most of what it is for. `delay` and `reverb` are written on both sides here,
+                    // as the doors do, though since step 5b-2 no bus stage reads the fields.
                     //
                     // The body and the vowel are named through the shared catalogues rather than
                     // by hand-built bands, because a slot carries an INDEX and there is no spelling

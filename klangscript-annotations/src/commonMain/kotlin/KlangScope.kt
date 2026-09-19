@@ -14,12 +14,13 @@ package io.peekandpoke.klang.script.annotations
  *
  * - a voice runs its own strip, Pitch to Ignite to Filter to Send (`Voice.kt`);
  * - each orbit owns ONE shared bus, Body to Vowel to Delay to Reverb to Phaser to Compressor,
- *   processing the orbit's summed mix, plus ducking after all orbits (`Cylinder.kt`);
+ *   processing the orbit's summed mix, plus ducking after all orbits (`Cylinder.kt`); the delay and
+ *   the reverb are fed from that mix too, by one amount per orbit (Katalyst step 5b-2);
  * - that bus is configured by ONE voice, the first to sound while it lives ("first-writer-wins",
  *   `Cylinder.kt`): a second voice asking for different bus settings is simply ignored, and the
  *   answer is to route it to its own orbit.
  *
- * Set it with `@scope voice|orbit|orbit-send|master` in the KDoc of the primary declaration.
+ * Set it with `@scope voice|orbit|master` in the KDoc of the primary declaration.
  *
  * It lives in `klangscript-annotations` because both sides of the docs pipeline need it and that is
  * the only module both can see: the KSP processor reads the tag and emits the constant, `KlangSymbol`
@@ -35,16 +36,6 @@ enum class KlangScope(val tag: String, val label: String) {
      * Every voice on the orbit is processed by it whether it asked for it or not.
      */
     ORBIT("orbit", "ORBIT BUS"),
-
-    /**
-     * An orbit bus processor that each voice feeds by its own amount: the processor's character is
-     * a bus setting (first-writer-wins), the wet amount is per voice.
-     *
-     * This is `reverb` and `delay`, and it is the distinction that trips people up: a dry voice on a
-     * wet orbit stays dry, because only voices with a send greater than zero are summed into the
-     * orbit's send buffer (`SendRenderer.kt`), while `size` or `time` are the orbit's for everyone.
-     */
-    ORBIT_SEND("orbit-send", "ORBIT BUS + SEND"),
 
     /** The whole playback, after every orbit. */
     MASTER("master", "MASTER");

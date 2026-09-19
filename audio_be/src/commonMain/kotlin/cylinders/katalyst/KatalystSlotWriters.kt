@@ -85,7 +85,8 @@ internal class KatalystVowelWriter(
 
 /**
  * Delay: an off stage is expressed by handing the line a non-finite TIME, which is also what makes
- * a live tail drain instead of freeze (see [KatalystDelayEffect]).
+ * a live tail drain instead of freeze (see [KatalystDelayEffect]). `wet` is the amount of the orbit
+ * mix the line is fed; whether the stage runs at all is [sendStageRuns].
  */
 internal class KatalystDelayWriter(
     private val fx: KatalystDelayEffect,
@@ -106,7 +107,7 @@ internal class KatalystDelayWriter(
     }
 
     override fun apply() {
-        fx.configure(time = gatedTime, feedback = feedback.value, cap = cap.value)
+        fx.configure(time = gatedTime, feedback = feedback.value, cap = cap.value, wet = wet.value)
     }
 
     private fun gate(): Double = if (sendStageRuns(wet)) time.value else SLOT_UNSET
@@ -114,8 +115,8 @@ internal class KatalystDelayWriter(
 
 /**
  * Reverb: the slot carries the AUTHORED 0 to 10 size, so it passes through the one shared
- * conversion ([Reverb.normalizeSize]) here, where `VoiceFactory` does it for a voice. The stage's
- * gate is [sendStageRuns], as on the delay above.
+ * conversion ([Reverb.normalizeSize]) here. The stage's gate is [sendStageRuns] and `wet` is the
+ * amount of the orbit mix the room is fed, as on the delay above.
  */
 internal class KatalystReverbWriter(
     private val fx: KatalystReverbEffect,
@@ -136,7 +137,7 @@ internal class KatalystReverbWriter(
     }
 
     override fun apply() {
-        fx.configure(size = gatedSize, lowpass = damping)
+        fx.configure(size = gatedSize, lowpass = damping, wet = wet.value)
     }
 
     private fun gate(): Double =

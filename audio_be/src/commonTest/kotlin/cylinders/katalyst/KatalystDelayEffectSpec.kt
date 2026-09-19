@@ -23,15 +23,13 @@ class KatalystDelayEffectSpec : StringSpec({
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     fun createEffect(delayTime: Double = 0.5, feedback: Double = 0.0): KatalystDelayEffect {
         val dl = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
 
         return KatalystDelayEffect(delayLine = dl, blockFrames = blockFrames).apply {
-            configure(time = delayTime, feedback = feedback, cap = 1.0)
+            configure(time = delayTime, feedback = feedback, cap = 1.0, wet = 1.0)
         }
     }
 
@@ -39,36 +37,30 @@ class KatalystDelayEffectSpec : StringSpec({
         val effect = createEffect(delayTime = 0.005)
         val ctx = createCtx()
 
-        // Put signal in send buffer
-        ctx.delaySendBuffer.left[0] = 0.5
+        // Put signal in the orbit mix
+        ctx.mixBuffer.left[0] = 0.5
 
         effect.process(ctx)
 
-        // Mix buffer should be untouched
-        ctx.mixBuffer.left[0] shouldBe 0.0
+        // Mix buffer should be untouched: the dry sample stays, nothing is added
+        ctx.mixBuffer.left[0] shouldBe 0.5
+        ctx.mixBuffer.left.drop(1).all { it == 0.0 } shouldBe true
     }
 
     "processes delay when delay time is above threshold" {
         val effect = createEffect(delayTime = 0.05)
         val ctx = createCtx()
 
-        // Put signal in send buffer
-        for (i in 0 until blockFrames) {
-            ctx.delaySendBuffer.left[i] = 0.5
-            ctx.delaySendBuffer.right[i] = 0.3
-        }
-
         // Process multiple blocks to allow delay to fill
         repeat(50) {
-            ctx.delaySendBuffer.left.fill(0.5)
-            ctx.delaySendBuffer.right.fill(0.3)
-            ctx.mixBuffer.clear()
+            ctx.mixBuffer.left.fill(0.5)
+            ctx.mixBuffer.right.fill(0.3)
             effect.process(ctx)
         }
 
-        // After enough blocks, delayed signal should appear in mix buffer
-        val hasSignalL = ctx.mixBuffer.left.any { it != 0.0 }
-        val hasSignalR = ctx.mixBuffer.right.any { it != 0.0 }
+        // After enough blocks, delayed signal should appear in mix buffer, ON TOP of the dry
+        val hasSignalL = ctx.mixBuffer.left.any { it != 0.5 }
+        val hasSignalR = ctx.mixBuffer.right.any { it != 0.3 }
 
         hasSignalL shouldBe true
         hasSignalR shouldBe true
@@ -95,36 +87,36 @@ class KatalystDelayEffectSpec : StringSpec({
         val drained = createEffect(delayTime = 0.05, feedback = 0.5)
         val drainedCtx = createCtx()
 
-        refCtx.delaySendBuffer.left[0] = 1.0
-        refCtx.delaySendBuffer.right[0] = 1.0
-        drainedCtx.delaySendBuffer.left[0] = 1.0
-        drainedCtx.delaySendBuffer.right[0] = 1.0
+        refCtx.mixBuffer.left[0] = 1.0
+        refCtx.mixBuffer.right[0] = 1.0
+        drainedCtx.mixBuffer.left[0] = 1.0
+        drainedCtx.mixBuffer.right[0] = 1.0
         ref.process(refCtx)
         drained.process(drainedCtx)
 
-        drained.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        drained.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
-        // 40 blocks ≈ 2.3 echo periods at 0.05 s — well inside the countdown, so the two runs
-        // must be BIT-identical: the drain is by construction "active with silent input".
+        // 40 blocks ≈ 2.3 echo periods at 0.05 s, well inside the countdown, so the two runs
+        // must agree: the drain is by construction "active with silent input".
         var maxDiff = 0.0
 
         repeat(40) {
-            refCtx.delaySendBuffer.clear()
             refCtx.mixBuffer.clear()
             ref.process(refCtx)
 
-            // The draining side gets GARBAGE sends — a drain must discard them (the owner said off).
-            drainedCtx.delaySendBuffer.fill(0.7)
-            drainedCtx.mixBuffer.clear()
+            // The draining side's mix carries GARBAGE: a drain must not be fed from it (the owner
+            // said off). The 0.7 itself is dry signal passing through, so what the stage ADDED is
+            // compared, up to the rounding of taking the 0.7 back out; a fed 0.7 would add ~0.7.
+            drainedCtx.mixBuffer.fill(0.7)
             drained.process(drainedCtx)
 
             for (i in 0 until blockFrames) {
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - drainedCtx.mixBuffer.left[i]))
-                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - drainedCtx.mixBuffer.right[i]))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - (drainedCtx.mixBuffer.left[i] - 0.7)))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - (drainedCtx.mixBuffer.right[i] - 0.7)))
             }
         }
 
-        maxDiff shouldBe 0.0
+        (maxDiff <= 1e-12) shouldBe true
     }
 
     "a delay that returns mid-drain keeps the ring AND the tail ceiling" {
@@ -152,28 +144,26 @@ class KatalystDelayEffectSpec : StringSpec({
         val returningCtx = createCtx()
 
         // One hot block charges both rings identically.
-        refCtx.delaySendBuffer.left[0] = 1.0
-        refCtx.delaySendBuffer.right[0] = 1.0
-        returningCtx.delaySendBuffer.left[0] = 1.0
-        returningCtx.delaySendBuffer.right[0] = 1.0
+        refCtx.mixBuffer.left[0] = 1.0
+        refCtx.mixBuffer.right[0] = 1.0
+        returningCtx.mixBuffer.left[0] = 1.0
+        returningCtx.mixBuffer.right[0] = 1.0
         ref.process(refCtx)
         returning.process(returningCtx)
 
         // The owner leaves for about 170 ms, well before the first echo is due at 0.4 s.
-        returning.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        returning.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         repeat(60) {
-            refCtx.delaySendBuffer.clear()
             refCtx.mixBuffer.clear()
             ref.process(refCtx)
 
-            returningCtx.delaySendBuffer.clear()
             returningCtx.mixBuffer.clear()
             returning.process(returningCtx)
         }
 
         // A new owner with the same knobs claims the orbit while the ring is still charged.
-        returning.configure(time = 0.4, feedback = 0.7, cap = 1.0)
+        returning.configure(time = 0.4, feedback = 0.7, cap = 1.0, wet = 1.0)
 
         // Long enough that the first echo (at 0.4 s, block 138) is inside the window: a row that
         // stopped before it would compare two silences and prove nothing.
@@ -182,11 +172,9 @@ class KatalystDelayEffectSpec : StringSpec({
         var loudest = 0.0
 
         repeat(200) {
-            refCtx.delaySendBuffer.clear()
             refCtx.mixBuffer.clear()
             ref.process(refCtx)
 
-            returningCtx.delaySendBuffer.clear()
             returningCtx.mixBuffer.clear()
             returning.process(returningCtx)
 
@@ -230,17 +218,15 @@ class KatalystDelayEffectSpec : StringSpec({
         val ctx = createCtx()
 
         repeat(4) {
-            ctx.delaySendBuffer.fill(0.8)
-            ctx.mixBuffer.clear()
+            ctx.mixBuffer.fill(0.8)
             effect.process(ctx)
         }
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         var blocks = 0
 
         while (effect.hasTail() && blocks < 100_000) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
             blocks++
@@ -258,7 +244,7 @@ class KatalystDelayEffectSpec : StringSpec({
         // `observe`: with the reset deleted the stale answer survives 31 silent blocks at the
         // feedback 0.0 used here, about 427 at 0.6, and for ever at 1.2. That is exactly why a leak
         // of this shape is long, and why the row asks twice.
-        effect.configure(time = 0.05, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.05, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         withClue("a fresh life must not inherit the previous life's tail ceiling") {
             effect.hasTail() shouldBe false
@@ -267,7 +253,6 @@ class KatalystDelayEffectSpec : StringSpec({
         // Ten silent blocks, because ten is when production asks: `Cylinder` polls the chain's
         // tail only after `silentBlocksBeforeTailCheck` silent blocks, and its default is 10.
         repeat(10) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -278,8 +263,7 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // Positive control: the fresh life really is Active and really does answer this question,
         // so the two `false`s above are an empty ceiling and not a dead effect.
-        ctx.delaySendBuffer.fill(0.8)
-        ctx.mixBuffer.clear()
+        ctx.mixBuffer.fill(0.8)
         effect.process(ctx)
 
         withClue("one loud block must make the fresh life report a tail") {
@@ -297,11 +281,11 @@ class KatalystDelayEffectSpec : StringSpec({
         val ctx = createCtx()
 
         // A SHORT first drain: a quiet ring at a low feedback is inaudible within a few periods.
-        ctx.delaySendBuffer.left[0] = 0.001
-        ctx.delaySendBuffer.right[0] = 0.001
+        ctx.mixBuffer.left[0] = 0.001
+        ctx.mixBuffer.right[0] = 0.001
         effect.process(ctx)
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // How long that first drain would have been. Read it as a LOWER BOUND for the wait below,
         // not as an expected value: it comes from the production helpers, so it cannot be their
@@ -321,7 +305,6 @@ class KatalystDelayEffectSpec : StringSpec({
         }
 
         // Spend one block of it, then throw the whole life away mid-drain.
-        ctx.delaySendBuffer.clear()
         ctx.mixBuffer.clear()
         effect.process(ctx)
         effect.hasTail() shouldBe true
@@ -331,15 +314,13 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // The next life: a long, loud tail whose honest countdown is far longer than what the
         // previous life had left.
-        effect.configure(time = 0.5, feedback = 0.9, cap = 1.0)
-        ctx.delaySendBuffer.fill(1.0)
-        ctx.mixBuffer.clear()
+        effect.configure(time = 0.5, feedback = 0.9, cap = 1.0, wet = 1.0)
+        ctx.mixBuffer.fill(1.0)
         effect.process(ctx)
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // A countdown carried over from the previous life would be spent within these blocks.
         repeat(shortDrainBlocks + 8) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -353,11 +334,11 @@ class KatalystDelayEffectSpec : StringSpec({
         val effect = createEffect(delayTime = 0.05, feedback = 0.5)
         val ctx = createCtx()
 
-        ctx.delaySendBuffer.left[0] = 1.0
-        ctx.delaySendBuffer.right[0] = 1.0
+        ctx.mixBuffer.left[0] = 1.0
+        ctx.mixBuffer.right[0] = 1.0
         effect.process(ctx)
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // The retained (last-active) params + the measured ring peak drive the countdown, so this
         // recomputes the same value the effect captured at the off-transition.
@@ -367,14 +348,12 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // Halfway through, the tail must still be draining (guards a grossly short countdown).
         repeat(drainBlocks / 2) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
         effect.hasTail() shouldBe true
 
         repeat(drainBlocks / 2 + 2) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -383,11 +362,10 @@ class KatalystDelayEffectSpec : StringSpec({
         // Literally zero: hasTail(0.0) is a strict > comparison, ANY residue would trip it.
         effect.delayLine!!.hasTail(0.0) shouldBe false
 
-        // And Off is a true short-circuit: a hot send no longer reaches the mix.
-        ctx.delaySendBuffer.fill(0.9)
-        ctx.mixBuffer.clear()
+        // And Off is a true short-circuit: a hot mix passes through untouched.
+        ctx.mixBuffer.fill(0.9)
         effect.process(ctx)
-        ctx.mixBuffer.left.all { it == 0.0 } shouldBe true
+        ctx.mixBuffer.left.all { it == 0.9 } shouldBe true
     }
 
     "re-enabling after off resurrects nothing, even with a far longer delay time" {
@@ -395,19 +373,17 @@ class KatalystDelayEffectSpec : StringSpec({
         val ctx = createCtx()
 
         repeat(4) {
-            ctx.delaySendBuffer.fill(0.8)
-            ctx.mixBuffer.clear()
+            ctx.mixBuffer.fill(0.8)
             effect.process(ctx)
         }
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         val drainBlocks = ceil(
             effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs()) / blockFrames
         ).toInt() + 2
 
         repeat(drainBlocks) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -415,13 +391,12 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // New owner with a delay long enough that its tap sweeps the ENTIRE region written above.
         // Without the terminal reset, the pre-drain tail would re-emerge somewhere in this sweep.
-        effect.configure(time = 8.0, feedback = 0.3, cap = 1.0)
+        effect.configure(time = 8.0, feedback = 0.3, cap = 1.0, wet = 1.0)
 
         var residue = 0.0
         val sweepBlocks = (8.5 * sampleRate / blockFrames).toInt()
 
         repeat(sweepBlocks) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
 
@@ -437,11 +412,11 @@ class KatalystDelayEffectSpec : StringSpec({
         val effect = createEffect(delayTime = 0.02, feedback = 1.2)
         val ctx = createCtx()
 
-        ctx.delaySendBuffer.left[0] = 0.5
-        ctx.delaySendBuffer.right[0] = 0.5
+        ctx.mixBuffer.left[0] = 0.5
+        ctx.mixBuffer.right[0] = 0.5
         effect.process(ctx)
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // 2000 blocks ≈ 290 delay periods — far beyond any finite countdown for a 0.02 s line.
         // The drone is an impulse train with 882-sample spacing, so a single 128-frame block can
@@ -449,7 +424,6 @@ class KatalystDelayEffectSpec : StringSpec({
         var tailWindowPeak = 0.0
 
         repeat(2000) { idx ->
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
 
@@ -472,13 +446,13 @@ class KatalystDelayEffectSpec : StringSpec({
             delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
             blockFrames = 64,
         ).apply {
-            configure(time = 0.05, feedback = 0.5, cap = 1.0)
+            configure(time = 0.05, feedback = 0.5, cap = 1.0, wet = 1.0)
         }
         val ctx = createCtx()
 
-        ctx.delaySendBuffer.left[0] = 1.0
+        ctx.mixBuffer.left[0] = 1.0
         effect.process(ctx)
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         val drainSamples = effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs())
         // Enough 128-frame calls that a countdown ticking by ctx.blockFrames would have flipped
@@ -486,7 +460,6 @@ class KatalystDelayEffectSpec : StringSpec({
         val callsForBuggyFlip = ceil(drainSamples / blockFrames).toInt() + 2
 
         repeat(callsForBuggyFlip) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -494,7 +467,6 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // With the honest 64-sample tick it completes in twice the calls.
         repeat(callsForBuggyFlip + 4) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -505,9 +477,9 @@ class KatalystDelayEffectSpec : StringSpec({
         // DelayLine's setters DROP non-finite writes, so passing a NaN through would leave the last
         // owner's feedback (here a self-oscillating 1.2) and cap in force.
         val effect = createEffect(delayTime = 0.3, feedback = 1.2)
-        effect.configure(time = 0.3, feedback = 1.2, cap = 3.0)
+        effect.configure(time = 0.3, feedback = 1.2, cap = 3.0, wet = 1.0)
 
-        effect.configure(time = 0.3, feedback = Double.NaN, cap = Double.POSITIVE_INFINITY)
+        effect.configure(time = 0.3, feedback = Double.NaN, cap = Double.POSITIVE_INFINITY, wet = 1.0)
 
         effect.delayLine!!.feedback shouldBe DELAY_FEEDBACK
         effect.delayLine!!.cap shouldBe DELAY_CAP
@@ -522,18 +494,16 @@ class KatalystDelayEffectSpec : StringSpec({
             val poisonedCtx = createCtx()
             val offCtx = createCtx()
 
-            poisoned.configure(time = bad, feedback = 0.5, cap = 1.0)
-            off.configure(time = 0.0, feedback = 0.5, cap = 1.0)
+            poisoned.configure(time = bad, feedback = 0.5, cap = 1.0, wet = 1.0)
+            off.configure(time = 0.0, feedback = 0.5, cap = 1.0, wet = 1.0)
 
             var maxDiff = 0.0
 
             repeat(40) {
-                poisonedCtx.delaySendBuffer.fill(0.6)
-                poisonedCtx.mixBuffer.clear()
+                poisonedCtx.mixBuffer.fill(0.6)
                 poisoned.process(poisonedCtx)
 
-                offCtx.delaySendBuffer.fill(0.6)
-                offCtx.mixBuffer.clear()
+                offCtx.mixBuffer.fill(0.6)
                 off.process(offCtx)
 
                 for (i in 0 until blockFrames) {
@@ -565,18 +535,17 @@ class KatalystDelayEffectSpec : StringSpec({
         val ctx = createCtx()
 
         // Charge QUIETLY: peak ~1e-3.
-        ctx.delaySendBuffer.left[0] = 0.001
-        ctx.delaySendBuffer.right[0] = 0.001
+        ctx.mixBuffer.left[0] = 0.001
+        ctx.mixBuffer.right[0] = 0.001
         effect.process(ctx)
 
-        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
 
         // From 1e-3 at fb 0.9: ceil(ln(1e-5/1e-3)/ln(0.9)) + 1 = 45 periods. The worst-case bound
         // (from 1.0) would be 111 periods — assert we are done well before THAT.
         val peakBlocks = ceil(46.0 * 0.02 * sampleRate / blockFrames).toInt() + 2
 
         repeat(peakBlocks) {
-            ctx.delaySendBuffer.clear()
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -590,16 +559,16 @@ class KatalystDelayEffectSpec : StringSpec({
         // infinite countdown never even starts.
         val empty = createEffect(delayTime = 0.5, feedback = 1.2)
         // Never processed a send: the ring is all zeros — the off-config lands in Off directly.
-        empty.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        empty.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
         empty.hasTail() shouldBe false
 
         // A charged ring, same infinite drain: the tail is real and must be reported.
         val charged = createEffect(delayTime = 0.05, feedback = 1.2)
         val ctx = createCtx()
-        ctx.delaySendBuffer.left[0] = 1.0
-        ctx.delaySendBuffer.right[0] = 1.0
+        ctx.mixBuffer.left[0] = 1.0
+        ctx.mixBuffer.right[0] = 1.0
         charged.process(ctx)
-        charged.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+        charged.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
         charged.hasTail() shouldBe true
     }
 
@@ -609,13 +578,11 @@ class KatalystDelayEffectSpec : StringSpec({
                 delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
                 blockFrames = bf,
             ).apply {
-                configure(time = 0.05, feedback = 0.5, cap = 1.0)
+                configure(time = 0.05, feedback = 0.5, cap = 1.0, wet = 1.0)
             }
             val ctx = KatalystContext(
                 blockFrames = bf,
                 mixBuffer = StereoBuffer(bf),
-                delaySendBuffer = StereoBuffer(bf),
-                reverbSendBuffer = StereoBuffer(bf),
             )
 
             // 18 periods x 2205 samples: the pinned countdown for this run's full-scale impulse at
@@ -628,16 +595,15 @@ class KatalystDelayEffectSpec : StringSpec({
             var absSample = 0
 
             while (absSample < totalSamples) {
-                ctx.delaySendBuffer.clear()
                 ctx.mixBuffer.clear()
 
                 if (absSample == 0) {
-                    ctx.delaySendBuffer.left[0] = 1.0
+                    ctx.mixBuffer.left[0] = 1.0
                 }
 
                 // The takeover lands at the SAME absolute sample for every block size.
                 if (absSample == 128) {
-                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
                 }
 
                 effect.process(ctx)

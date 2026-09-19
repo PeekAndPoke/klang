@@ -149,9 +149,7 @@ class OrbitBusPipelineSpec : StringSpec({
             blockStart = 0.0,
         )
         repeat(20) {
-            cylinder.reverbSendBuffer.left.fill(0.5)
-            cylinder.reverbSendBuffer.right.fill(0.5)
-            cylinder.mixBuffer.clear()
+            cylinder.mixBuffer.fill(0.5)
             cylinder.processEffects()
         }
         cylinder.reverb!!.hasTail() shouldBe true
@@ -204,8 +202,6 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
 
         cylinder.katalystContext.mixBuffer shouldBe cylinder.mixBuffer
-        cylinder.katalystContext.delaySendBuffer shouldBe cylinder.delaySendBuffer
-        cylinder.katalystContext.reverbSendBuffer shouldBe cylinder.reverbSendBuffer
     }
 
     "processEffects runs full pipeline when active" {
@@ -219,14 +215,12 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Reverb comb filters need time to build up signal
         repeat(20) {
-            cylinder.reverbSendBuffer.left.fill(0.5)
-            cylinder.reverbSendBuffer.right.fill(0.5)
-            cylinder.mixBuffer.clear()
+            cylinder.mixBuffer.fill(0.5)
             cylinder.processEffects()
         }
 
-        // Reverb should add signal to mix buffer
-        val hasSignal = cylinder.mixBuffer.left.any { it != 0.0 }
+        // Reverb should add signal to the mix buffer, on top of the 0.5 dry
+        val hasSignal = cylinder.mixBuffer.left.any { abs(it - 0.5) > 1e-6 }
         hasSignal shouldBe true
     }
 
@@ -234,12 +228,12 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         // cylinder is NOT active (no updateFromVoice called)
 
-        cylinder.reverbSendBuffer.left.fill(0.5)
+        cylinder.mixBuffer.left.fill(0.5)
 
         cylinder.processEffects()
 
-        // Nothing should happen
-        cylinder.mixBuffer.left[0] shouldBe 0.0
+        // Nothing should happen: the mix is left exactly as it was
+        cylinder.mixBuffer.left.all { it == 0.5 } shouldBe true
     }
 
     "processDuck applies sidechain ducking" {
@@ -513,13 +507,11 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         cylinder.mixBuffer.left.fill(0.5)
-        cylinder.delaySendBuffer.left.fill(0.3)
-        cylinder.reverbSendBuffer.left.fill(0.2)
+        cylinder.mixBuffer.right.fill(0.3)
 
         cylinder.clear()
 
-        cylinder.mixBuffer.left[0] shouldBe 0.0
-        cylinder.delaySendBuffer.left[0] shouldBe 0.0
-        cylinder.reverbSendBuffer.left[0] shouldBe 0.0
+        cylinder.mixBuffer.left.all { it == 0.0 } shouldBe true
+        cylinder.mixBuffer.right.all { it == 0.0 } shouldBe true
     }
 })

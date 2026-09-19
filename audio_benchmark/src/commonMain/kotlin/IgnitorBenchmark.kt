@@ -209,8 +209,8 @@ class IgnitorBenchmark(
             adsr = adsr,
             reverb = reverb,
             reverbSize = reverbSize,
-            // The orbit reverb reads its SLOTS since Katalyst step 5b-1; the field is the per-voice
-            // send AMOUNT only. A case that asks for a room writes both halves, exactly as the
+            // The orbit reverb reads its SLOTS alone, the amount included (Katalyst step 5b-2); the
+            // fields have no reader on the bus. A case that asks for a room writes both halves, exactly as the
             // `reverb(...)` door does: the named knob plus the companion the door would fill. A
             // size-only case would otherwise write `reverb.size` with no `reverb.wet` and measure
             // a dry orbit, because the stage's gate is "the wet was written or is positive"

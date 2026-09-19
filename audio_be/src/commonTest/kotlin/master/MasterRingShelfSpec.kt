@@ -54,7 +54,7 @@ class MasterRingShelfSpec : StringSpec({
     /** What the ORBIT delay rents for [time] — the reference the master must match. */
     fun orbitRingFrames(time: Double, rings: SizedBuffers): Int {
         val fx = KatalystDelayEffect(rings = rings, sampleRate = sampleRate, blockFrames = blockFrames)
-        fx.configure(time = time, feedback = 0.0, cap = 1.0)
+        fx.configure(time = time, feedback = 0.0, cap = 1.0, wet = 1.0)
         return fx.delayLine!!.capacityFrames
     }
 

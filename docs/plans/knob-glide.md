@@ -146,3 +146,17 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
     constructor parameter no caller passed (with a false claim about `round(+Inf)`: it saturates
     to `Int.MAX_VALUE` on both targets), and the LEVEL half. The helper is about 120 lines with
     its KDoc; its only state is value, target, start, remaining and the snap flag.
+
+**Katalyst 5b-2 (2026-09-19), the first LEVEL knobs and the delay.** The LEVEL half landed with
+the owner's `wet` of the delay and the reverb (`KnobGlide.advanceScaled`: from the end, exact
+landing, a multiply-only fast path when settled, a short block spreads its share over the frames
+it has). Delay TIME: measured a hard-cut-class click (-20 to -29 dB), so a change crossfades
+between the old and the new tap over the glide time (a second read position, the blended tap also
+fed back; a change arriving mid-crossfade is parked, the latest wins); after: at the steady floor.
+Delay FEEDBACK: measured -28 to -35 dB; a per-block glide alone left -47 to -55 dB, because
+feedback is a gain on the recirculating audio with no continuous state, so the steps are written
+into the ring and come back every period; a per-SAMPLE ramp inside the delay's loop (one add,
+exactly 0 when settled) brought it to the floor (-90 dB, or its own floor). Lesson for the next
+effects: a coefficient that multiplies the signal directly behaves like a LEVEL knob and needs the
+per-sample ramp; only a coefficient inside a filter with continuous state is safe per block.
+

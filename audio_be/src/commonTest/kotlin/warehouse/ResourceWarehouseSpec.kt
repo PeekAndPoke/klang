@@ -506,7 +506,7 @@ class ResourceWarehouseSpec : StringSpec({
 
         for (time in listOf(0.25, 0.375, 0.5)) {
             val fx = KatalystDelayEffect(rings = w.sized, sampleRate = 44_100, blockFrames = 128)
-            fx.configure(time = time, feedback = 0.0, cap = 1.0)
+            fx.configure(time = time, feedback = 0.0, cap = 1.0, wet = 1.0)
             withClue("delaytime $time") { fx.delayLine.shouldNotBeNull().capacityFrames shouldBe class0 }
         }
     }

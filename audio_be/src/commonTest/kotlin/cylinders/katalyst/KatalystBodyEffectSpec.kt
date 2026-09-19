@@ -35,8 +35,6 @@ class KatalystBodyEffectSpec : StringSpec({
         val ctx = KatalystContext(
             blockFrames = n,
             mixBuffer = mix,
-            delaySendBuffer = StereoBuffer(n),
-            reverbSendBuffer = StereoBuffer(n),
         )
         return ctx to mix
     }

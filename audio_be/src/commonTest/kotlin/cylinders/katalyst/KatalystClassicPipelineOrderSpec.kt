@@ -137,9 +137,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
             blockStart = 0.0,
         )
         repeat(20) {
-            cylinder.reverbSendBuffer.left.fill(0.5)
-            cylinder.reverbSendBuffer.right.fill(0.5)
-            cylinder.mixBuffer.clear()
+            cylinder.mixBuffer.fill(0.5)
             cylinder.processEffects()
         }
 
@@ -179,9 +177,7 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
             blockStart = 0.0,
         )
         repeat(20) {
-            cylinder.delaySendBuffer.left.fill(0.5)
-            cylinder.delaySendBuffer.right.fill(0.5)
-            cylinder.mixBuffer.clear()
+            cylinder.mixBuffer.fill(0.5)
             cylinder.processEffects()
         }
 

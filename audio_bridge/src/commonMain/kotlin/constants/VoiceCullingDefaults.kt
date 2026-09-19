@@ -28,18 +28,20 @@ const val ORBIT_SILENCE_FLOOR: Double = 1e-5
 
 /**
  * Output peak below which a voice's block counts as silent for culling. Measured on the voice's
- * own output (post-VCA, times gain and the largest send amount), before the solo/mute
- * fade, so a voice that is merely faded out by a solo is not mistaken for a dead one.
+ * own output (post-VCA, times gain), before the solo/mute fade, so a voice that is merely faded
+ * out by a solo is not mistaken for a dead one. That output is all a voice puts on its orbit: the
+ * mix bus, which the orbit's delay and reverb take their feed from (Katalyst step 5b-2).
  *
  * The same value as [ORBIT_SILENCE_FLOOR], on purpose and by definition rather than by two
- * literals: a culled voice's contribution to the mix bus and to each send bus is then, per voice
- * and per bus, already below what keeps an orbit alive, so one culled voice cannot let its orbit
- * deactivate earlier than its sounding tail would have (and reset the phaser sweep and the
- * compressor follower under the next hit). Two accumulations sit outside that per-voice
- * statement and are accepted as a known class: several sub-floor tails on one orbit whose SUM
- * stays above the floor, and a feedback delay whose `TailCeiling` keeps a steady sub-floor send
- * alive through recirculation. Both remove content at -100 dB and below; what can move is the
- * moment a sparse orbit's bus effects reset.
+ * literals: a culled voice's contribution to the mix bus is then already below what keeps an
+ * orbit alive, so one culled voice cannot let its orbit deactivate earlier than its sounding tail
+ * would have (and reset the phaser sweep and the compressor follower under the next hit). Some
+ * accumulations and gains sit outside that per-voice statement and are accepted as a known class:
+ * several sub-floor tails on one orbit whose SUM stays above the floor; a feedback delay whose
+ * `TailCeiling` keeps a steady sub-floor feed alive through recirculation; and a stage ahead of the
+ * room that amplifies, an orbit `wet` above 1 or a resonant body or vowel, which feeds a culled
+ * voice's floor times that factor. All of them remove content at -100 dB and below times such a
+ * factor; what can move is the moment a sparse orbit's bus effects reset.
  */
 const val VOICE_CULL_FLOOR: Double = ORBIT_SILENCE_FLOOR
 

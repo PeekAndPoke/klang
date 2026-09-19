@@ -119,9 +119,10 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * Shapes the orbit like a mouth. One formant filter per [orbit bus](/manuals/lexikon/orbit-bus), so
  * ALL of it, the vowel included, is set once for everyone by the orbit's owning voice.
  *
- * `wet` here is a mix, not a [send](/manuals/lexikon/send): the filter processes the whole orbit
- * mix, so unlike `reverb` and `delay` there is no per-voice amount. Give a pattern its own vowel by
- * giving it its own orbit.
+ * `wet` here is a mix (and `floor` how much of the dry stays under it): the filter processes the
+ * whole orbit mix. The `wet` of `reverb` and `delay` reads differently: it is how much of the orbit
+ * goes INTO them, a [send](/manuals/lexikon/send), and their sound is added on top of the dry. Give a
+ * pattern its own vowel by giving it its own orbit.
  *
  * Vowels: `a`, `e`, `i`, `o`, `u`, the umlauts `ae`/`ä`, `oe`/`ö`, `ue`/`ü`, and the diphthongs
  * `ei`, `au`, `eu`/`äu`. A prefix picks a voice type, `tenor:a`.
@@ -149,7 +150,7 @@ private fun applyVowelFloor(source: SprudelPattern, args: List<SprudelDslArg<Any
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").vowel("o", "0.2 0.9").reverb(wet = vowel.wet, size = 4)   // as much reverb as vowel
+ * note("c3 e3").s("saw").vowel("o", "<0.2 0.9>").reverb(wet = vowel.wet, size = 4)   // as much reverb as vowel
  * ```
  *
  * @param vowel Vowel name, see the list above. A prefix picks a voice type, `tenor:a`.

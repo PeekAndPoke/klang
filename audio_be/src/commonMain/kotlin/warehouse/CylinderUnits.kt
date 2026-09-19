@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
  * The warehouse's shelf of idle [Cylinder]s (resource warehouse, step 3 — maintainer 2026-09-04:
  * "cylinders will join the warehouse").
  *
- * A cylinder without its rented units is small (three block-sized send buffers and the effect
+ * A cylinder without its rented units is small (a few block-sized buffers and the effect
  * shells), but it is a deep object graph, and building eight of them in the first frame of a song
  * on a phone is what remained of the "Der Schmetterling" stutter once the rings and networks had
  * moved to their shelves. So cylinders are built by the warmup, returned when their engine is

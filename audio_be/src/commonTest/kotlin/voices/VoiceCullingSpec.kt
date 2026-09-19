@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 import kotlin.math.abs
@@ -238,43 +237,6 @@ class VoiceCullingSpec : StringSpec({
 
         withClue("audible from its late onset to its scheduled end: expired, not culled") { v.culled shouldBe false }
         death shouldBeGreaterThanOrEqualTo endFrame
-    }
-
-    "the measured peak bounds the send buses, not only the mix" {
-        // Loud through the gate (so the voice counts as heard), then a level just under the floor:
-        // silent on the mix bus, but a x3 delay send carries it above the floor until the VCA's
-        // release ramp has taken two thirds off. The send must delay the cull by far more than a window.
-        val quiet = 0.9 * VOICE_CULL_FLOOR
-        fun fading() = object : Ignitor {
-            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                val end = ctx.windowEnd
-
-                for (i in ctx.offset until end) {
-                    val frame = ctx.voiceElapsedFrames + (i - ctx.offset)
-                    buffer[i] = if (frame < gateEndFrame) 1.0 else quiet
-                }
-            }
-        }
-        fun voiceWith(delay: Voice.Delay) = createVoice(
-            startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
-            sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
-            signal = fading(), delay = delay,
-        )
-        val plain = voiceWith(Voice.Delay(amount = 0.0, time = 0.1, feedback = 0.0))
-        val sent = voiceWith(Voice.Delay(amount = 3.0, time = 0.1, feedback = 0.0))
-        val plainCull = cullFrame(plain)
-        val sentCull = cullFrame(sent)
-
-        withClue("both end up culled: the release ramp takes the send under the floor too") {
-            plain.culled shouldBe true
-            sent.culled shouldBe true
-        }
-        withClue("the plain voice is culled as soon as the window elapses") {
-            plainCull shouldBeLessThanOrEqualTo gateEndFrame + defaultWindowFrames + 128
-        }
-        withClue("the delay send keeps the voice audible for a good part of the release") {
-            sentCull - plainCull shouldBeGreaterThanOrEqualTo 4800.0
-        }
     }
 
     "a zombie keeps its orbit lease: a later voice with its own bus config is refused" {

@@ -1,5 +1,60 @@
 # Klang Audio — Memory
 
+## The orbit delay and reverb are insert-style stages (2026-09-19)
+
+Katalyst step 5b-2, decided with the maintainer (signal-flow plan §7). A SOUND CHANGE, pending the
+listening checkpoint.
+
+- **The feed is the orbit mix at the stage's position, times the owner's ONE `wet`**, into a
+  block-sized `feed` buffer each stage owns; the return is added into the mix as before, so the
+  dry stays. In the classic order the room hears body, vowel and the delay's echoes. The master's
+  `MasterStageDsl` model on the orbit bus. No voice sends: `SendRenderer` writes the mix only, the
+  cylinder's two send buffers, the swap's two send ramps and `KatalystContext`'s two send fields
+  are gone. The chain swap feeds the leaving chain through its one ramped mix, and its ring-out
+  keeps the stages ACTIVE on the cleared buffer (`drainSends` is gone): switching them to their
+  own silent drain input cut the room's feed of the delay's echoes in one sample at the handover
+  (measured -66.8 dB above 8 kHz on a pad, now at the -93 dB floor; review round 1, M1).
+- **On/off is unchanged** (`sendStageRuns`): a WRITTEN wet of 0 runs the stage fed nothing, an
+  authored 0 nobody writes rents nothing. `Voice.delay` / `Voice.reverb` have no reader any more
+  (the cull bound dropped its send factor); they leave with the wire fields in 5b-3.
+- **`KnobGlide` has its LEVEL half**, `advanceScaled`: one block's share of the glide as a
+  per-sample ramp written from the END (the last sample is the block's value bit for bit), a
+  multiply-only fast path when the value did not move, and a short block spreads its share over
+  the frames it has. First users: both stages' `wet`.
+- **Measured before gliding** (band-limited pad and pluck, energy above 8 kHz, calibrated against a
+  hard cut of the return at -24 to -31 dB): a delay TIME jump -20 to -29 dB (hard-cut class), a
+  FEEDBACK jump -28 to -35 dB for large moves, -47 dB for 0.3 to 0.4. So `DelayLine` crossfades
+  the old tap to the new one over 50 ms (a second read, one ramp, both output and feedback path;
+  now at the -91 to -94 dB steady floor), and the feedback glides per block AND `DelayLine` ramps
+  each step per sample (one add, 0.0 on a settled line): per block alone left -47 to -55 dB,
+  because a gain on the recirculating audio writes its staircase into the ring and it comes back
+  every period (review round 1, m1); now -90 to -93 dB. A time change during a running crossfade is PARKED,
+  the latest wins when it ends; reset snaps; a grow carries the tap state (`adoptHistory`). The
+  tail bounds (`tapWindowPeakAbs`, the countdown, the ceiling window) reach the furthest tap still
+  sounding (`reachSamples`), and the ceiling's laps per window count the SHORTEST one; both equal
+  the settled values when nothing moves. The drain countdown takes the larger
+  feedback magnitude while it glides (pilot entry 6, both directions guarded); entry 7 (a feedback
+  falling to 0) stays open for 5c, now with a fourth reader: the chain-swap ring-out retires the
+  leaving chain on the first block its ceiling says silent, without the orbit path's ten silent
+  blocks, so a feedback glide falling to near zero there can drop one repeat (review round 2).
+  Recommended repair for 5c: `TailCeiling` tracks the largest |feedback| seen in the running
+  window, as it tracks the input peak.
+- **Evidence**: 21 renders at HEAD `e08143f3` and on the tree, raw doubles, 256 cycles, wall clock
+  pinned. Unaffected songs are identical or at rounding level; every other difference is an orbit
+  with a body or vowel before the room, a delay AND a reverb, or voices with and without a wet on
+  one orbit. Synthris Echo and Smalltown first read 1.5e-8 / 3.6e-9: traced (review round 1, m2)
+  to a PRE-EXISTING stale mix buffer. `clear()` skips an inactive orbit, so the last block's
+  sub-floor output stayed in the buffer until a voice reactivated the orbit, summed under that
+  voice and, now, fed into the room. `tryDeactivate` clears the mix; with that one line on both
+  sides the two songs read 1.7e-16 and 3.6e-16. Guard: `OrbitCleanupTest`. Guards: `KnobGlideSpec`,
+  `DelayLineSpec`, `KatalystDelayGlideSpec`, `KatalystReverbGlideSpec`, `KatalystInsertFeedSpec`,
+  `CylinderKatalystParamsSpec`, `SendEffectDefaultsParitySpec`, `CylinderChainCrossfadeSpec`.
+- **For 5c (review round 1, m6): the wet glide is bypassed exactly where the feed moves most.** Out
+  of Off the wet snaps; Active to Draining cuts the feed in one sample; Draining to Active restarts
+  from the wet frozen at the drain's start although the real feed was 0. Since the feed is the
+  whole orbit mix, each of these cuts or starts every sounding voice on the orbit, not only the
+  voice that asked. The switch-on and switch-off fades of 5c are where it belongs.
+
 ## The filter swap is a state machine: Off, Engaged, Crossfading (2026-09-19)
 
 Katalyst step 5c-4, the FIRST of the swap's two commits: today's lifecycle as states, a pure

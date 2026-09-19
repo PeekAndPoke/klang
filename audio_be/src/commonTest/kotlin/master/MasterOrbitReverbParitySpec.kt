@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.math.abs
 import kotlin.random.Random
 
 /**
@@ -67,8 +68,8 @@ class MasterOrbitReverbParitySpec : StringSpec({
                     sound = "triangle",
                     // The orbit's reverb stage reads the SLOTS (Katalyst step 5b-1), on the same
                     // authored 0-to-10 scale the master stage takes, which is the whole point of
-                    // this spec; the FIELD is the per-voice send amount and is carried too, as
-                    // the `reverb(...)` door writes both until step 5b-2.
+                    // this spec; the FIELDS are carried too, as the `reverb(...)` door writes both
+                    // until step 5b-3, and no orbit stage reads them.
                     reverb = 0.5,
                     reverbSize = authored,
                     reverbLowpass = lowpass,
@@ -145,10 +146,10 @@ class MasterOrbitReverbParitySpec : StringSpec({
 
         val orbit = KatalystReverbEffect(Reverb(sampleRate), blockFrames)
         // A finite lowpass first, so the +Inf outcome is provably "unset", not a fresh default.
-        orbit.configure(size = 0.5, lowpass = 3000.0)
+        orbit.configure(size = 0.5, lowpass = 3000.0, wet = 1.0)
         orbit.reverb!!.lowpass shouldBe 3000.0
 
-        orbit.configure(size = 0.5, lowpass = Double.POSITIVE_INFINITY)
+        orbit.configure(size = 0.5, lowpass = Double.POSITIVE_INFINITY, wet = 1.0)
         orbit.reverb!!.lowpass shouldBe null
     }
 
@@ -180,20 +181,20 @@ class MasterOrbitReverbParitySpec : StringSpec({
                 blockStart = 0.0,
             )
 
-            // Feed the send and look for wet output. Freeverb's shortest comb is 1116 samples, so
-            // a single 128-frame block returns silence no matter what — render past that.
+            // Feed the mix and look for wet output on top of it. Freeverb's shortest comb is 1116
+            // samples, so a single 128-frame block returns nothing no matter what: render past
+            // that. Audible wet, not the ~1e-20 anti-denormal residue any processed block carries.
             val ctx = cylinder.katalystContext
             var heard = false
 
             repeat(30) {
                 for (i in 0 until blockFrames) {
-                    ctx.reverbSendBuffer.left[i] = 0.5
-                    ctx.reverbSendBuffer.right[i] = 0.5
+                    ctx.mixBuffer.left[i] = 0.5
+                    ctx.mixBuffer.right[i] = 0.5
                 }
-                ctx.mixBuffer.clear()
                 cylinder.reverb!!.process(ctx)
 
-                if ((0 until blockFrames).any { ctx.mixBuffer.left[it] != 0.0 }) {
+                if ((0 until blockFrames).any { abs(ctx.mixBuffer.left[it] - 0.5) > 1e-6 }) {
                     heard = true
                 }
             }

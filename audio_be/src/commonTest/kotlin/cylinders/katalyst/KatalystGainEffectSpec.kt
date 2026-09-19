@@ -43,8 +43,6 @@ class KatalystGainEffectSpec : StringSpec({
     fun ctx(): KatalystContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     /** One block of DC through [fx], returning the left channel. */

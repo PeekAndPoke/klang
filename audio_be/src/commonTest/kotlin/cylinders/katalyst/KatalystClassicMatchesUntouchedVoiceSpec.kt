@@ -53,9 +53,10 @@ import kotlin.random.Random
  * under test:
  *
  *  - the classic chain's SLOT DEFAULTS against the wire's own "untouched" table, which is
- *    `VoiceFactory`'s untouched branch. That branch still runs (the fields carry the per-voice
- *    send amounts until step 5b-2) and it is where the constants of an untouched orbit are
- *    written down a second time, which is what makes it an oracle rather than a mirror. It expires
+ *    `VoiceFactory`'s untouched branch. That branch still runs (the fields stay on the wire until
+ *    step 5b-3, though since step 5b-2 no orbit stage reads them) and it is where the constants
+ *    of an untouched orbit are written down a second time, which is what makes it an oracle
+ *    rather than a mirror. It expires
  *    with the fields in step 5b-3, and this spec's first half goes with it.
  *  - what a chain INSTALLS from a slot state, against the `FilterDef` a body or vowel call puts on
  *    the wire. That half is about the engine's non-finite rule (an unset `body.wet` plays at

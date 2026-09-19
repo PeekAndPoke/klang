@@ -59,8 +59,9 @@ data class VoiceData(
      * Which chain reads which slot of this map is ONE rule with ONE home, the `katp` door's KDoc
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
      * declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
-     * below are not a knob source any more; they carry the per-voice send AMOUNTS until step 5b-2
-     * and leave the wire in 5b-3.
+     * below are not a knob source any more, and since step 5b-2 no orbit stage reads them at all
+     * (the delay and the reverb are fed from the orbit mix by the owner's `wet` slot); they leave
+     * the wire in 5b-3.
      */
     val katalystParams: Map<String, Double>? = null,
 

@@ -44,7 +44,7 @@ import kotlin.math.abs
  *    sum can bulge mid-fade by up to the gain reduction it gives back. Bounded by the fade and by
  *    the compressor's own release, and the same class of inaccuracy the master's output blend has
  *    (there the outgoing compressor sees full input to the last sample and is then cut).
- *  - A chain with no send stage retires one block after the ramp ends, so whatever its INSERTS
+ *  - A chain with no delay and no reverb retires one block after the ramp ends, so whatever its INSERTS
  *    still hold is dropped at that moment: a resonator's ring, a `KatalystFilterSwap` crossfade in
  *    flight. Silent input has just reached it, so the residue is small; if it is ever heard, the
  *    fix is `hasTail` on those stages, not a longer fade.
@@ -179,8 +179,8 @@ internal class Crossfade(sampleRate: Int) {
             val u = 1.0 - t
 
             // Sterilised tap, the reason [blend] gives: `Inf * 0.0` is NaN. Not a NaN shield for the
-            // chain, which reads the same sample unsterilised through the live send buffers; just
-            // this multiplication not inventing one.
+            // chain, which reads the same sample unsterilised through the live mix; just this
+            // multiplication not inventing one.
             val left = sourceLeft[i]
             val right = sourceRight[i]
 
