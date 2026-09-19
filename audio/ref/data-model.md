@@ -36,7 +36,6 @@ data class ScheduledVoice(
 | `gain`       | `Double?`  | The channel fader: the one level word on the wire (1.0 = unity, null = unset). A frontend's articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is multiplied into it BEFORE it crosses, so `velocity` and the retired second multiplier are not wire fields (signal-flow plan section 6, 2026-09-19). |
 | `legato`     | `Boolean?` | If true, don't re-trigger on same note |
 | `solo`       | `Boolean?` | If true, mute all other voices         |
-| `compressor` | `Double?`  | Per-voice compression amount           |
 
 ### Sound Selection
 
@@ -105,14 +104,6 @@ data class ScheduledVoice(
 | `phaser`  | `PhaserDef?`  | Phaser: `depth`, `center`, `sweep`                 |
 | `tremolo` | `TremeloDef?` | Tremolo: `sync`, `depth`, `skew`, `phase`, `shape` |
 
-### Ducking (sidechain)
-
-| Field          | Type      | Meaning                                    |
-|----------------|-----------|--------------------------------------------|
-| `duckCylinder` | `Int?`    | Cylinder ID to duck when this voice plays  |
-| `duckAttack`   | `Double?` | Ducking attack time (s)                    |
-| `duckDepth`    | `Double?` | Ducking depth (0 = full mute, 1 = no duck) |
-
 ### Routing
 
 | Field      | Type      | Meaning                                      |
@@ -120,16 +111,15 @@ data class ScheduledVoice(
 | `cylinder` | `Int?`    | Cylinder (effect bus) ID for this voice      |
 | `pan`      | `Double?` | Stereo pan (−1 = full left, +1 = full right) |
 
-### Time-Based Effects (on cylinder)
+### Orbit bus knobs (on the cylinder)
 
-| Field           | Type      | Meaning                                 |
-|-----------------|-----------|-----------------------------------------|
-| `delay`         | `Double?` | Dry/wet mix for cylinder delay          |
-| `delayTime`     | `Double?` | Delay time (s)                          |
-| `delayFeedback` | `Double?` | Delay feedback (0–1)                    |
-| `reverb`        | `Double?` | Reverb send amount (0..1)               |
-| `reverbSize`    | `Double?` | Reverb tail length, authored ~0..10     |
-| `reverbLowpass` | `Double?` | Reverb tail damping cutoff (Hz)         |
+The delay, reverb, compressor and duck have no wire fields since Katalyst step 5b-3 (2026-09-19).
+Their knobs travel in `katalystParams: Map<String, Double>?`, keyed `<stage>.<knob>` exactly as
+`KatalystDsl.classic` names them (`delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`,
+`reverb.wet`, `reverb.size`, `reverb.lowpass`, `compressor.threshold` ... `compressor.release`,
+`duck.orbit`, `duck.depth`, `duck.attack`), and the orbit's OWNER voice applies them. The phaser
+fields stay on the wire for one reader, a custom pipeline's per-voice phaser, until the Pipeline DSL
+is retired.
 
 ### Sample Manipulation
 

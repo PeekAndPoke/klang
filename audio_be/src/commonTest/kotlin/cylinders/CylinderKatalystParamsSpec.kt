@@ -264,41 +264,19 @@ class CylinderKatalystParamsSpec : StringSpec({
     // ── The BORN-WITH chain reads the state, for EVERY stage (step 5b-1) ────────────────────────
     //
     // The map is the one way a bus knob reaches a stage, on a declared chain and on the chain a
-    // cylinder is born with alike; the voice's bus FIELDS are not a knob source any more. The
-    // rule's one home is the `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`. These two rows
-    // are the pair that catches a half-done deletion: one says the map alone switches a stage ON,
-    // the other says the fields alone leave it OFF.
+    // cylinder is born with alike. The rule's one home is the `katp` door's KDoc in
+    // `sprudel/lang/lang_katalyst.kt`. Until step 5b-3 a second row here said the voice's bus
+    // FIELDS alone leave a stage OFF; the fields left the wire and the voice in that step, so there
+    // is nothing left for that row to set.
 
-    "the BORN-WITH chain takes its room from the state, with the voice's bus FIELDS null" {
+    "the BORN-WITH chain takes its room from the state" {
         val rig = Rig()
 
         // No `requestChain`, so the cylinder runs the chain it was born with. The voice carries a
-        // room in its slot state and nothing at all in its bus FIELDS (`createSynthVoice` leaves
-        // `reverb` at amount 0, size 0, which is the untouched wire voice).
+        // room in its slot state, which is the only place a voice can carry one.
         rig.cylinder.updateFromVoice(voice(room(size = 6.0)), blockStart = 0.0)
 
         rig.cylinder.reverb.shouldNotBeNull().reverb.shouldNotBeNull().size shouldBe Reverb.normalizeSize(6.0)
-    }
-
-    "the BORN-WITH chain ignores the voice's bus FIELDS: fields set, no state, the room stays off" {
-        val rig = Rig()
-
-        // The reverse row, and the one that goes red on a half-done deletion: a voice whose
-        // `Voice.Reverb` names a big room and whose `katalystParams` is null must leave the orbit
-        // dry, because the fields stopped being a knob source in step 5b-1 and, since step 5b-2,
-        // are not an amount either. They stay on the wire until 5b-3, which is why this voice
-        // still HAS them. The rendered twin is in `KatalystInsertFeedSpec`.
-        rig.cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(
-                reverb = Voice.Reverb(amount = 0.5, size = 0.6),
-                delay = Voice.Delay(amount = 0.5, time = 0.3, feedback = 0.2, cap = 1.0),
-                katalystParams = null,
-            ),
-            blockStart = 0.0,
-        )
-
-        withClue("no reverb network rented") { rig.cylinder.reverb.shouldNotBeNull().reverb.shouldBeNull() }
-        withClue("no delay ring rented") { rig.cylinder.delay.shouldNotBeNull().delayLine.shouldBeNull() }
     }
 
     "a WRITTEN wet of 0 keeps the room running and feeds it nothing; a room nobody named rents nothing" {

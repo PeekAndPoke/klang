@@ -29,15 +29,14 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
  * echo is ON.
  *
- * Fills the voice FIELDS with the same four constants, so the two sources agree. The orbit's line
- * reads the SLOTS alone (the amount too, since step 5b-2), and the fields leave the wire in 5b-3.
+ * The slots are the delay's only storage since Katalyst step 5b-3 (the voice fields left the
+ * wire and `SprudelVoiceData`): the orbit's line reads them, and so do the `delay.*` accessors.
  *
- * Byte-identical to what the engine did with an unset field: `VoiceFactory` substituted exactly
- * these constants.
+ * Byte-identical to what the engine did with an unset field until then: `VoiceFactory`
+ * substituted exactly these constants.
  *
  * The HEAD setter, the wet, is the one setter here a bare call can reach with a null; it then
- * writes nothing at all (`if (wet != null)`). Only the reverb door clears on that path, in
- * `applyReverb`'s no-args block.
+ * writes nothing at all (`if (wet != null)`).
  */
 private fun SprudelVoiceData.fillDelayDefaults() {
     val slots = katalystParamsOrNew()
@@ -46,22 +45,6 @@ private fun SprudelVoiceData.fillDelayDefaults() {
     slots.setOrDefault("delay.time", value = null, default = DELAY_TIME_SECONDS)
     slots.setOrDefault("delay.feedback", value = null, default = DELAY_FEEDBACK)
     slots.setOrDefault("delay.cap", value = null, default = DELAY_CAP)
-
-    if (delay == null) {
-        delay = DELAY_WET
-    }
-
-    if (delayTime == null) {
-        delayTime = DELAY_TIME_SECONDS
-    }
-
-    if (delayFeedback == null) {
-        delayFeedback = DELAY_FEEDBACK
-    }
-
-    if (delayCap == null) {
-        delayCap = DELAY_CAP
-    }
 }
 
 // -- delay, the wet slot ---------------------------------------------------------------------------------------------
@@ -70,7 +53,6 @@ private val delayMutation = voiceSetter {
     val wet = it?.toString()?.toDoubleOrNull()
 
     if (wet != null) {
-        delay = wet
         katalystParamsOrNew().set("delay.wet", wet)
         fillDelayDefaults()
     }
@@ -78,7 +60,7 @@ private val delayMutation = voiceSetter {
 
 private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delay }, update = delayMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.wet") }, update = delayMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayMutation)
@@ -187,19 +169,19 @@ object delay {
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.delay }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.wet") }
 
     /** The time slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val time: FieldAccessor = FieldAccessor { it.delayTime }
+    val time: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.time") }
 
     /** The feedback slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val feedback: FieldAccessor = FieldAccessor { it.delayFeedback }
+    val feedback: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.feedback") }
 
     /** The cap slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val cap: FieldAccessor = FieldAccessor { it.delayCap }
+    val cap: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.cap") }
 
     /** The setter, see [SprudelPattern.delay]. */
     @KlangScript.Invoke
@@ -216,9 +198,7 @@ object delay {
 // -- delay.time ------------------------------------------------------------------------------------------------------
 
 private val delayTimeMutation = voiceSetter {
-    delayTime = it?.asDoubleOrNull()
-
-    val value = delayTime
+    val value = it?.asDoubleOrNull()
 
     if (value != null) {
         katalystParamsOrNew().set("delay.time", value)
@@ -228,7 +208,7 @@ private val delayTimeMutation = voiceSetter {
 
 private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayTime }, update = delayTimeMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.time") }, update = delayTimeMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayTimeMutation)
@@ -237,9 +217,7 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
 // -- delay.feedback --------------------------------------------------------------------------------------------------
 
 private val delayFeedbackMutation = voiceSetter {
-    delayFeedback = it?.asDoubleOrNull()
-
-    val value = delayFeedback
+    val value = it?.asDoubleOrNull()
 
     if (value != null) {
         katalystParamsOrNew().set("delay.feedback", value)
@@ -249,7 +227,7 @@ private val delayFeedbackMutation = voiceSetter {
 
 private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayFeedback }, update = delayFeedbackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.feedback") }, update = delayFeedbackMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayFeedbackMutation)
@@ -258,9 +236,7 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
 // -- delay.cap -------------------------------------------------------------------------------------------------------
 
 private val delayCapMutation = voiceSetter {
-    delayCap = it?.asDoubleOrNull()
-
-    val value = delayCap
+    val value = it?.asDoubleOrNull()
 
     if (value != null) {
         katalystParamsOrNew().set("delay.cap", value)
@@ -270,7 +246,7 @@ private val delayCapMutation = voiceSetter {
 
 private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayCap }, update = delayCapMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.cap") }, update = delayCapMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayCapMutation)

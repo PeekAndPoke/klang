@@ -112,29 +112,6 @@ data class SvdTremolo(
     var tremoloShape: String? = null,
 )
 
-/** Ducking / sidechain. */
-data class SvdDuck(
-    var duckCylinder: Int? = null,
-    var duckAttack: Double? = null,
-    var duckDepth: Double? = null,
-)
-
-/** Delay. */
-data class SvdDelay(
-    var delay: Double? = null,
-    var delayTime: Double? = null,
-    var delayFeedback: Double? = null,
-    /** Ceiling the delay feedback saturates toward. `delay(cap = ...)`; default 1.0 at the engine. */
-    var delayCap: Double? = null,
-)
-
-/** Reverb. */
-data class SvdReverb(
-    var reverb: Double? = null,
-    var reverbSize: Double? = null,
-    var reverbLowpass: Double? = null,
-)
-
 /** Body resonator: material + dry/wet mix + broadband dry floor. */
 data class SvdBody(
     var material: String? = null,
@@ -263,37 +240,6 @@ fun mergeSvdTremolo(base: SvdTremolo?, over: SvdTremolo?): SvdTremolo? {
         tremoloSkew = over.tremoloSkew ?: base.tremoloSkew,
         tremoloPhase = over.tremoloPhase ?: base.tremoloPhase,
         tremoloShape = over.tremoloShape ?: base.tremoloShape,
-    )
-}
-
-fun mergeSvdDuck(base: SvdDuck?, over: SvdDuck?): SvdDuck? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdDuck(
-        duckCylinder = over.duckCylinder ?: base.duckCylinder,
-        duckAttack = over.duckAttack ?: base.duckAttack,
-        duckDepth = over.duckDepth ?: base.duckDepth,
-    )
-}
-
-fun mergeSvdDelay(base: SvdDelay?, over: SvdDelay?): SvdDelay? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdDelay(
-        delay = over.delay ?: base.delay,
-        delayTime = over.delayTime ?: base.delayTime,
-        delayFeedback = over.delayFeedback ?: base.delayFeedback,
-        delayCap = over.delayCap ?: base.delayCap,
-    )
-}
-
-fun mergeSvdReverb(base: SvdReverb?, over: SvdReverb?): SvdReverb? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdReverb(
-        reverb = over.reverb ?: base.reverb,
-        reverbSize = over.reverbSize ?: base.reverbSize,
-        reverbLowpass = over.reverbLowpass ?: base.reverbLowpass,
     )
 }
 

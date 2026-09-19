@@ -79,22 +79,20 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * vocabulary the sprudel doors write into once the cylinder reads the chain.
          *
          * **A slot's default IS its value when nobody writes it, so the classic chain has to encode
-         * the engine's "off unless touched" state, slot for slot, not the shared constants.** The
-         * reference is `VoiceFactory`'s untouched branch, which is what every song that never wrote
-         * a bus door gets today:
-         *
-         * ```
-         * Voice.Delay(amount = 0.0, time = 0.0, feedback = 0.0, cap = DELAY_CAP)
-         * Voice.Reverb(amount = 0.0, size = 0.0)
-         * ```
+         * the engine's "off unless touched" state, slot for slot, not the shared constants.** For
+         * the delay and the reverb that state is: wet, time and feedback 0.0 and cap [DELAY_CAP];
+         * wet and size 0.0 (it was `VoiceFactory`'s untouched branch until the bus fields left the
+         * wire in Katalyst step 5b-3).
          *
          * Note WHERE the engine's gate sits: `KatalystDelayEffect.configure` engages on
          * `time >= MIN_ACTIVE_DELAY_SECONDS` and `KatalystReverbEffect.configure` on
          * `size >= MIN_ACTIVE_SIZE`, neither of them on `wet`. So zeroing `wet` alone would NOT be
          * off, and `delay.time` / `delay.feedback` / `reverb.size` are zero here as well.
-         * `delay.cap` keeps [DELAY_CAP] because the untouched voice does too: it is the soft-cap
+         * `delay.cap` keeps [DELAY_CAP] because the untouched voice did too: it is the soft-cap
          * shape of a line that is not running, not an amount.
-         * `KatalystClassicMatchesUntouchedVoiceSpec` compares the two, through the real factory.
+         * `KatalystDefaultsSyncSpec` pins the delay, reverb, compressor and duck defaults; only the
+         * phaser still has an untouched branch in `VoiceFactory`, and
+         * `KatalystClassicMatchesUntouchedVoiceSpec` compares that one through the real factory.
          *
          * The families, then:
          *

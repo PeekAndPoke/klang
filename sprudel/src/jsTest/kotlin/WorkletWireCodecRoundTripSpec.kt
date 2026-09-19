@@ -46,7 +46,14 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
             oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
-            katalystParams = paramBagOf("reverb.wet" to 0.5, "reverb.size" to 6.0)
+            // The bus knobs travel as orbit slots only since Katalyst step 5b-3: every door's worth.
+            katalystParams = paramBagOf(
+                "reverb.wet" to 0.5, "reverb.size" to 6.0, "reverb.lowpass" to 8000.0,
+                "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4, "delay.cap" to 2.5,
+                "compressor.threshold" to -12.0, "compressor.ratio" to 4.0, "compressor.knee" to 2.5,
+                "compressor.attack" to 0.01, "compressor.release" to 0.31,
+                "duck.orbit" to 0.0, "duck.attack" to 0.05, "duck.depth" to 0.5,
+            )
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false   // non-default: `Boolean?` is the shape a dynamic codec can confuse with undefined
@@ -62,13 +69,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             2
             phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
-            duckCylinder = 0; duckAttack = 0.05; duckDepth = 0.5
             cylinder = 1; pan = 0.3
-            delay = 0.3; delayTime = 0.25; delayFeedback = 0.4; delayCap = 2.5
-            reverb = 0.5; reverbSize = 0.8; reverbLowpass = 8000.0
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
-            compressorThreshold = -12.0; compressorRatio = 4.0; compressorKnee = 2.5
-            compressorAttack = 0.01; compressorRelease = 0.31
             solo = 1.0; pipeline = PipelineValue.Named("pedal"); cull = 0.2
         }.toVoiceData()
 

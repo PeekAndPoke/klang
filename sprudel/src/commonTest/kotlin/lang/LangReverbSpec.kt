@@ -44,8 +44,8 @@ class LangReverbSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.reverb shouldBe 0.0
-            events[1].data.reverb shouldBe 0.5
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.0
+            events[1].data.katalystParams?.get("reverb.wet") shouldBe 0.5
         }
     }
 
@@ -56,8 +56,8 @@ class LangReverbSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.reverb shouldBe 0.0
-            events[1].data.reverb shouldBe 0.5
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.0
+            events[1].data.katalystParams?.get("reverb.wet") shouldBe 0.5
         }
     }
 
@@ -68,17 +68,17 @@ class LangReverbSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.reverb shouldBe 0.0
-            events[1].data.reverb shouldBe 0.5
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.0
+            events[1].data.katalystParams?.get("reverb.wet") shouldBe 0.5
         }
     }
 
-    "reverb() sets VoiceData.reverb" {
+    "reverb() sets the reverb.wet slot" {
         val p = note("a b").reverb("0.5 0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.reverb } shouldBe listOf(0.5, 0.8)
+        events.map { it.data.katalystParams?.get("reverb.wet") } shouldBe listOf(0.5, 0.8)
     }
 
     "reverb() works as string extension" {
@@ -86,14 +86,14 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.reverb shouldBe 0.5
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.5
     }
 
     "reverb() works in compiled code" {
         val p = SprudelPattern.compile("""note("c").reverb("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.reverb shouldBe 0.5
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.5
     }
 
     "reverb() with a continuous pattern sets the send" {
@@ -102,10 +102,10 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
-        events[0].data.reverb shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].data.reverb shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].data.reverb shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.reverb shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.katalystParams?.get("reverb.wet") shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.katalystParams?.get("reverb.wet") shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].data.katalystParams?.get("reverb.wet") shouldBe (0.0 plusOrMinus EPSILON)
     }
 
     // -- positional slots -------------------------------------------------------------------------------------------------
@@ -116,9 +116,9 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 1
         assertSoftly {
-            events[0].data.reverb shouldBe 0.5
-            events[0].data.reverbSize shouldBe 2.0
-            events[0].data.reverbLowpass shouldBe 4000.0
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.5
+            events[0].data.katalystParams?.get("reverb.size") shouldBe 2.0
+            events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 4000.0
         }
     }
 
@@ -130,9 +130,9 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 1
         assertSoftly {
-            events[0].data.reverb shouldBe 0.8
-            events[0].data.reverbSize shouldBe 2.0
-            events[0].data.reverbLowpass shouldBe 3000.0
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+            events[0].data.katalystParams?.get("reverb.size") shouldBe 2.0
+            events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 3000.0
         }
     }
 
@@ -142,9 +142,9 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 1
         assertSoftly {
-            events[0].data.reverb shouldBe 0.8
-            events[0].data.reverbSize shouldBe 4.0
-            events[0].data.reverbLowpass shouldBe null
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+            events[0].data.katalystParams?.get("reverb.size") shouldBe 4.0
+            events[0].data.katalystParams?.get("reverb.lowpass") shouldBe null
         }
     }
 
@@ -154,9 +154,9 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 1
         with(events[0].data) {
-            reverb shouldBe (0.6 plusOrMinus EPSILON)
-            reverbSize shouldBe REVERB_SIZE
-            reverbLowpass shouldBe null // no default
+            katalystParams?.get("reverb.wet") shouldBe (0.6 plusOrMinus EPSILON)
+            katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
+            katalystParams?.get("reverb.lowpass") shouldBe null // no default
         }
     }
 
@@ -166,10 +166,10 @@ class LangReverbSpec : StringSpec({
 
         events.size shouldBe 2
         assertSoftly {
-            events[0].data.reverb shouldBe 0.3
-            events[0].data.reverbSize shouldBe 1.0
-            events[1].data.reverb shouldBe 0.8
-            events[1].data.reverbSize shouldBe 4.0
+            events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.3
+            events[0].data.katalystParams?.get("reverb.size") shouldBe 1.0
+            events[1].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+            events[1].data.katalystParams?.get("reverb.size") shouldBe 4.0
         }
     }
 
@@ -180,12 +180,12 @@ class LangReverbSpec : StringSpec({
 
         assertSoftly {
             cycle0.size shouldBe 2
-            cycle0[0].data.reverb shouldBe 0.3
-            cycle0[0].data.reverbSize shouldBe 1.0
+            cycle0[0].data.katalystParams?.get("reverb.wet") shouldBe 0.3
+            cycle0[0].data.katalystParams?.get("reverb.size") shouldBe 1.0
 
             cycle1.size shouldBe 2
-            cycle1[0].data.reverb shouldBe 0.8
-            cycle1[0].data.reverbSize shouldBe 4.0
+            cycle1[0].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+            cycle1[0].data.katalystParams?.get("reverb.size") shouldBe 4.0
         }
     }
 
@@ -196,8 +196,8 @@ class LangReverbSpec : StringSpec({
         events.size shouldBe 1
         with(events[0].data) {
             gain shouldBe 0.8
-            reverb shouldBe 0.5
-            reverbSize shouldBe 2.0
+            katalystParams?.get("reverb.wet") shouldBe 0.5
+            katalystParams?.get("reverb.size") shouldBe 2.0
         }
     }
 
@@ -208,8 +208,8 @@ class LangReverbSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.reverb shouldBe REVERB_WET
-        events[0].data.reverbSize shouldBe 8.0
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe REVERB_WET
+        events[0].data.katalystParams?.get("reverb.size") shouldBe 8.0
     }
 
     // -- the call sets every slot ----------------------------------------------------------------------------------------
@@ -220,8 +220,8 @@ class LangReverbSpec : StringSpec({
             SprudelPattern.compile("""note("c").reverb(size = 4)""")!!,
         ).forEach { p ->
             with(p.queryArc(0.0, 1.0)[0].data) {
-                reverb shouldBe REVERB_WET
-                reverbSize shouldBe 4.0
+                katalystParams?.get("reverb.wet") shouldBe REVERB_WET
+                katalystParams?.get("reverb.size") shouldBe 4.0
             }
         }
     }
@@ -229,53 +229,53 @@ class LangReverbSpec : StringSpec({
     "every write path fills: lowpass alone, a bare call, the send mapper" {
         with(note("c").reverb(lowpass = 2000).queryArc(0.0, 1.0)[0].data) {
             withClue("lowpass alone") {
-                reverb shouldBe REVERB_WET
-                reverbSize shouldBe REVERB_SIZE
+                katalystParams?.get("reverb.wet") shouldBe REVERB_WET
+                katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
             }
         }
         with(seq("0.3").reverb().queryArc(0.0, 1.0)[0].data) {
             withClue("bare call") {
-                reverb shouldBe 0.3
-                reverbSize shouldBe REVERB_SIZE
+                katalystParams?.get("reverb.wet") shouldBe 0.3
+                katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
             }
         }
         with(SprudelPattern.compile("""s("bd").delay(0.3).reverb(delay.wet)""")!!.queryArc(0.0, 1.0)[0].data) {
             withClue("send from a reader") {
-                reverb shouldBe 0.3
-                reverbSize shouldBe REVERB_SIZE
+                katalystParams?.get("reverb.wet") shouldBe 0.3
+                katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
             }
         }
     }
 
     "slots apply in order: a mapper on a later slot sees the default an earlier slot filled" {
-        note("c").reverb(0.3, size = mul(2)).queryArc(0.0, 1.0)[0].data.reverbSize shouldBe REVERB_SIZE * 2
+        note("c").reverb(0.3, size = mul(2)).queryArc(0.0, 1.0)[0].data.katalystParams?.get("reverb.size") shouldBe REVERB_SIZE * 2
     }
 
     "a slot an earlier call set keeps its value" {
         val data = note("c").reverb(0.3, 4).reverb(lowpass = 2000).queryArc(0.0, 1.0)[0].data
 
-        data.reverb shouldBe 0.3
-        data.reverbSize shouldBe 4.0
-        data.reverbLowpass shouldBe 2000.0
+        data.katalystParams?.get("reverb.wet") shouldBe 0.3
+        data.katalystParams?.get("reverb.size") shouldBe 4.0
+        data.katalystParams?.get("reverb.lowpass") shouldBe 2000.0
     }
 
     "a rest in a control pattern sets nothing on that event" {
         val p = s("bd").reverb("<0.5 ~>")
 
         with(p.queryArc(0.0, 1.0)[0].data) {
-            reverb shouldBe 0.5
-            reverbSize shouldBe REVERB_SIZE
+            katalystParams?.get("reverb.wet") shouldBe 0.5
+            katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
         }
         with(p.queryArc(1.0, 2.0)[0].data) {
-            reverb.shouldBeNull()
-            reverbSize.shouldBeNull()
+            katalystParams?.get("reverb.wet").shouldBeNull()
+            katalystParams?.get("reverb.size").shouldBeNull()
         }
     }
 
     "a mapper on a slot that was never set sets nothing" {
         with(s("bd").reverb(size = mul(2)).queryArc(0.0, 1.0)[0].data) {
-            reverb.shouldBeNull()
-            reverbSize.shouldBeNull()
+            katalystParams?.get("reverb.wet").shouldBeNull()
+            katalystParams?.get("reverb.size").shouldBeNull()
         }
     }
 
@@ -289,18 +289,18 @@ class LangReverbSpec : StringSpec({
         // Decided 2026-09-16: a filled default is a set value like any other, so merge copies it.
         val data = note("c").reverb(0.5, 8).merge(s("x").reverb(0.2)).queryArc(0.0, 1.0)[0].data
 
-        data.reverb shouldBe 0.2
-        data.reverbSize shouldBe REVERB_SIZE
+        data.katalystParams?.get("reverb.wet") shouldBe 0.2
+        data.katalystParams?.get("reverb.size") shouldBe REVERB_SIZE
     }
 
     // -- reverb(lowpass = ...) --------------------------------------------------------------------------------------------
 
-    "reverb(lowpass = ...) sets VoiceData.reverbLowpass correctly" {
+    "reverb(lowpass = ...) sets the reverb.lowpass slot correctly" {
         val p = note("c3").reverb(lowpass = "1000")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.reverbLowpass shouldBe 1000.0
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 1000.0
     }
 
     "reverb(lowpass = ...) works as top-level function" {
@@ -308,7 +308,7 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.reverbLowpass shouldBe 500.0
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 500.0
     }
 
     "reverb(lowpass = ...) works with control pattern" {
@@ -316,8 +316,8 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.reverbLowpass shouldBe 800.0
-        events[1].data.reverbLowpass shouldBe 1200.0
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 800.0
+        events[1].data.katalystParams?.get("reverb.lowpass") shouldBe 1200.0
     }
 
     "reverb(lowpass = ...) works as string extension" {
@@ -325,7 +325,7 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.reverbLowpass shouldBe 1500.0
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 1500.0
     }
 
     // -- chaining ---------------------------------------------------------------------------------------------------------
@@ -338,9 +338,9 @@ class LangReverbSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.reverb shouldBe 0.8
-        events[0].data.reverbSize shouldBe 0.9
-        events[0].data.reverbLowpass shouldBe 1000.0
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+        events[0].data.katalystParams?.get("reverb.size") shouldBe 0.9
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 1000.0
     }
 
     "reverb slots work named in compiled code" {
@@ -348,8 +348,8 @@ class LangReverbSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.reverb shouldBe 0.8
-        events[0].data.reverbSize shouldBe 4.0
-        events[0].data.reverbLowpass shouldBe 1000.0
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.8
+        events[0].data.katalystParams?.get("reverb.size") shouldBe 4.0
+        events[0].data.katalystParams?.get("reverb.lowpass") shouldBe 1000.0
     }
 })

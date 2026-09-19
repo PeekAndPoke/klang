@@ -9,7 +9,6 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
@@ -29,18 +28,11 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
-import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -116,10 +108,9 @@ class VoiceFactory(
         // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
         val filterStage = pipelineRegistry.get(data.pipeline).stages
             .firstNotNullOfOrNull { it as? StageDsl.Filter } ?: StageDsl.Filter()
-        // Body / vowel are orbit-level Katalyst effects now — pull them out of the per-voice filter
-        // chain (they're routed to the Cylinder via the Voice). Everything else stays per-voice.
-        val bodyDef = data.filters.getByType<FilterDef.Body>()
-        val vowelDef = data.filters.getByType<FilterDef.Formant>()
+        // Body and vowel are orbit-level Katalyst stages, driven by the `body.*` / `vowel.*` slots of
+        // the orbit's owner. A wire producer can still carry them in `filters` (sprudel does), so they
+        // are dropped from the per-voice chain here; nothing on the voice reads them (step 5b-3).
         val voiceFilterDefs = data.filters.filters.filter { it !is FilterDef.Body && it !is FilterDef.Formant }
 
         // Seeded-voice-rng: deal THIS voice's stream from the playback's coreRandom at the
@@ -165,39 +156,6 @@ class VoiceFactory(
             null
         }
 
-        // Delay and reverb. A voice that touches an effect (sets any of its slots) gets the shared
-        // defaults for every slot it left unset, the same ones the master stages use
-        // (constants/SendEffectDefaults.kt); a non-finite slot reads as unset. A voice that does not
-        // touch an effect sends nothing and configures nothing: otherwise every voice would feed
-        // every orbit's delay and reverb. Sprudel's `delay(...)`/`reverb(...)` already fill unset slots
-        // at write time; this is the wire contract for every other producer, and it still covers what a
-        // sprudel voice can carry non-finite (a NaN value).
-        val delayTouched = data.delay != null || data.delayTime != null ||
-                data.delayFeedback != null || data.delayCap != null
-
-        val delay = if (delayTouched) {
-            Voice.Delay(
-                amount = data.delay.orDefault(DELAY_WET),
-                time = data.delayTime.orDefault(DELAY_TIME_SECONDS),
-                feedback = data.delayFeedback.orDefault(DELAY_FEEDBACK),
-                cap = data.delayCap.orDefault(DELAY_CAP),
-            )
-        } else {
-            Voice.Delay(amount = 0.0, time = 0.0, feedback = 0.0, cap = DELAY_CAP)
-        }
-
-        val reverbTouched = data.reverb != null || data.reverbSize != null || data.reverbLowpass != null
-
-        val reverb = if (reverbTouched) {
-            Voice.Reverb(
-                amount = data.reverb.orDefault(REVERB_WET),
-                size = Reverb.normalizeSize(data.reverbSize.orDefault(REVERB_SIZE)),
-                lowpass = data.reverbLowpass,
-            )
-        } else {
-            Voice.Reverb(amount = 0.0, size = 0.0)
-        }
-
         // Phaser
         val phaser = Voice.Phaser(
             rate = data.phaser ?: PHASER_RATE_HZ,
@@ -221,19 +179,6 @@ class VoiceFactory(
         // with a tremolo is not culled unless the author set `cull(...)` themselves.
         val cull = data.cull ?: if (tremolo.depth > 0.0) VOICE_CULL_NEVER else null
 
-        // Ducking / Sidechain
-        val duckCylinderParam = data.duckCylinder
-        val duckDepthParam = data.duckDepth
-        val ducking = if (duckCylinderParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
-            Voice.Ducking(
-                cylinderId = duckCylinderParam,
-                attackSeconds = data.duckAttack ?: DUCK_ATTACK_SECONDS,
-                depth = duckDepthParam,
-            )
-        } else {
-            null
-        }
-
         // Dynamics: `gain` is the channel fader, the one level word on the wire. A frontend's
         // articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is already folded
         // into it before it crosses (signal-flow plan section 6).
@@ -247,15 +192,6 @@ class VoiceFactory(
         // longer reach the orbit mix, which the orbit's reverb and delay are fed from and would
         // latch it for the rest of the playback.
         val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
-
-        // Compressor
-        val compressor = Voice.Compressor.fromParams(
-            threshold = data.compressorThreshold,
-            ratio = data.compressorRatio,
-            knee = data.compressorKnee,
-            attack = data.compressorAttack,
-            release = data.compressorRelease,
-        )
 
         // Effects
         val distort = Voice.Distort(
@@ -321,11 +257,10 @@ class VoiceFactory(
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
-                    delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
+                    phaser, tremolo, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = cull,
-                    body = bodyDef, vowel = vowelDef,
                 )
             }
 
@@ -417,12 +352,11 @@ class VoiceFactory(
                 buildVoice(
                     data, resolvedAdsr, sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
-                    delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
+                    phaser, tremolo, distort, crush, coarse,
                     fm, signal, baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = cull,
-                    body = bodyDef, vowel = vowelDef,
                 )
             }
 
@@ -454,17 +388,13 @@ class VoiceFactory(
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(freq, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(freq, q, sampleRateDouble, offsetMul)
             // Body / vowel are orbit-level Katalyst effects (KatalystBodyEffect / KatalystFormantEffect):
-            // VoiceFactory pulls them out of the per-voice chain (see voiceFilterDefs) and routes them to the
-            // Cylinder, so these arms are unreachable and exist only to satisfy the sealed `when`. floor is
-            // honored on the orbit path, not here.
+            // VoiceFactory drops them from the per-voice chain (see voiceFilterDefs) and the orbit takes its
+            // resonators from the owner's `body.*` / `vowel.*` slots, so these arms are unreachable and exist
+            // only to satisfy the sealed `when`.
             is FilterDef.Formant, is FilterDef.Body ->
                 error("Body/Formant are orbit-level resonators, not per-voice filters")
         }
     }
-
-    /** A send-effect slot: its value when set and finite, otherwise the shared [default]. */
-    private fun Double?.orDefault(default: Double): Double =
-        if (this != null && this.isFinite()) this else default
 
     /**
      * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`
@@ -564,12 +494,8 @@ class VoiceFactory(
         pitchEnvelope: Voice.PitchEnvelope?,
         bakedFilters: AudioFilter,
         modulators: List<Voice.FilterModulator>,
-        delay: Voice.Delay,
-        reverb: Voice.Reverb,
         phaser: Voice.Phaser,
         tremolo: Voice.Tremolo,
-        ducking: Voice.Ducking?,
-        compressor: Voice.Compressor?,
         distort: Voice.Distort,
         crush: Voice.Crush,
         coarse: Voice.Coarse,
@@ -582,8 +508,6 @@ class VoiceFactory(
         voiceRandom: Random,
         cut: Int? = null,
         cull: Double? = null,
-        body: FilterDef.Body? = null,
-        vowel: FilterDef.Formant? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
         val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
@@ -648,16 +572,10 @@ class VoiceFactory(
             gateEndFrame = gateEndFrame,
             gain = gain,
             pan = data.pan ?: 0.5,
-            delay = delay,
-            reverb = reverb,
             phaser = phaser,
-            body = body,
-            vowel = vowel,
             // By reference, never a copy: the map is immutable on the wire and only the orbit's
             // owner reads it (see Voice.katalystParams).
             katalystParams = data.katalystParams,
-            ducking = ducking,
-            compressor = compressor,
             cut = cut,
             cull = cull,
             pipeline = pipeline,

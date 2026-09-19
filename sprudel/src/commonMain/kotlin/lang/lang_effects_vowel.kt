@@ -31,8 +31,9 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from the VOWEL setter
  * alone, because the vowel is this stage's name knob.
  *
- * Fills the voice FIELDS with the same two constants, which the wire still carries until step
- * 5b-3; since step 5b-1 the orbit's formant bank reads the SLOTS and nothing else.
+ * Fills the voice FIELDS with the same two constants. The wire still carries them (as a
+ * `FilterDef.Formant` in `filters`), but since step 5b-1 the orbit's formant bank reads the SLOTS
+ * and nothing else, and since step 5b-3 no backend code reads that filter at all.
  *
  * Byte-identical to what the engine did with an unset field: `toVoiceData` reads a null `vowelMix`
  * as [VOWEL_WET], and a null floor means [VOWEL_FLOOR] to `FilterDef.Formant`; the chain takes the

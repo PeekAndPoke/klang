@@ -178,7 +178,6 @@ class LangKatalystParamSpec : StringSpec({
 
         withClue("the explicit threshold survives the second call's fill") {
             slot(p, "compressor.threshold") shouldBe -30.0
-            p.queryArc(0.0, 1.0).first().data.compressorThreshold shouldBe -30.0
         }
 
         slot(p, "compressor.ratio") shouldBe 8.0
@@ -215,32 +214,29 @@ class LangKatalystParamSpec : StringSpec({
 
     "a bare duck() that names nothing writes nothing, slot included" {
         // The bare form reinterprets the pattern's own values as the orbit, so on a pattern whose
-        // values are not numbers it names nothing. It must then leave the slot alone: re-mirroring
-        // the stale FIELD would stamp 2 over the 5 the katp asked for (checklist 12).
+        // values are not numbers it names nothing. It must then leave the slot alone: re-writing
+        // the value of the last naming call would stamp 2 over the 5 the katp asked for (checklist
+        // 12). Until step 5b-3 that stale value sat in the voice FIELD, and a row here pinned that
+        // the field kept it; the field is gone.
         val p = note("c3").duck(2).katp("duck.orbit", 5).duck()
 
         slot(p, "duck.orbit") shouldBe 5.0
-        withClue("the voice field keeps what the last naming call gave it") {
-            p.queryArc(0.0, 1.0).first().data.duckCylinder shouldBe 2
-        }
 
         // ...and on its own it writes no slot at all, so the event carries no bag: naming nothing
         // must not even allocate one, let alone fill the companions.
         note("c3").duck().queryArc(0.0, 1.0).first().data.katalystParams.shouldBeNull()
     }
 
-    "duck(...): the field and its slot never disagree after a non-numeric control" {
-        // The two sources have to say the same thing about one event, and the mechanism is the lift,
+    "duck(...): a non-numeric control leaves the slot where it was" {
+        // Until step 5b-3 there were two sources, the field and the slot, and they had to agree; the
+        // slot is the only one left. The mechanism is the lift,
         // not a clear arm in the setter: `_liftNumericField` RETURNS EARLY on a control value that
         // is not a number and `_mapNumericField` skips a null mapping (the 2026-09-16 rule), so
-        // `duck(depth = "x")` never reaches the setter at all and the earlier 0.5 stands on both
-        // paths. That holds for every numeric TAIL setter of every compound BUS door, which is why
+        // `duck(depth = "x")` never reaches the setter at all and the earlier 0.5 stands. That holds for every numeric TAIL setter of every compound BUS door, which is why
         // none of them carries a clear arm; a HEAD setter can be handed a null by the bare-call
         // reinterpret, and the two NAME setters are the only ones that CLEAR on it.
         val p = note("c3").duck(orbit = 1, depth = 0.5).duck(depth = "x")
-        val data = p.queryArc(0.0, 1.0).first().data
 
-        data.duckDepth shouldBe 0.5
         slot(p, "duck.depth") shouldBe 0.5
         slot(p, "duck.orbit") shouldBe 1.0
     }
@@ -489,6 +485,57 @@ class LangKatalystParamSpec : StringSpec({
             events[1].data.katalystParams?.get("phaser.wet") shouldBe 0.4
             events[1].data.bodyMix shouldBe 0.3
             events[1].data.katalystParams?.get("body.wet") shouldBe 0.3
+        }
+    }
+
+    // ── The accessors read the slots (Katalyst step 5b-3) ───────────────────────────────────────
+
+    "a bus accessor reads the slot, so a value a katp wrote is what it reads, in both doors" {
+        // Until step 5b-3 the `delay.*` / `reverb.*` / `compressor.*` / `duck.*` accessors read the
+        // voice FIELDS, which a raw `katp` never wrote, so these reads came back empty. The fields
+        // are gone and the slot is the knob's only storage.
+        val cases = listOf(
+            "delay.wet" to Pair(note("c3").katp("delay.wet", 0.5).gain(delay.wet), """note("c3").katp("delay.wet", 0.5).gain(delay.wet)"""),
+            "reverb.size" to Pair(note("c3").katp("reverb.size", 0.7).gain(reverb.size), """note("c3").katp("reverb.size", 0.7).gain(reverb.size)"""),
+            "compressor.ratio" to Pair(note("c3").katp("compressor.ratio", 0.3).gain(compressor.ratio), """note("c3").katp("compressor.ratio", 0.3).gain(compressor.ratio)"""),
+            "duck.depth" to Pair(note("c3").katp("duck.depth", 0.6).gain(duck.depth), """note("c3").katp("duck.depth", 0.6).gain(duck.depth)"""),
+        )
+
+        for ((name, doors) in cases) {
+            val (kotlin, script) = doors
+            val expected = slot(kotlin, name).shouldNotBeNull()
+
+            withClue("$name, Kotlin door") { kotlin.queryArc(0.0, 1.0).first().data.gain shouldBe expected }
+            withClue("$name, script door") {
+                SprudelPattern.compile(script).shouldNotBeNull().queryArc(0.0, 1.0).first().data.gain shouldBe expected
+            }
+        }
+    }
+
+    "the duck accessors and mappers see the companions its fill wrote" {
+        // `duck(1)` fills `duck.depth` and `duck.attack` into the SLOTS; until step 5b-3 it wrote no
+        // voice field for them, so `duck.attack` read nothing and a mapper on an unnamed attack
+        // wrote nothing. Now both see what the orbit runs.
+        note("c3").duck(1).gain(duck.attack).queryArc(0.0, 1.0).first().data.gain shouldBe DUCK_ATTACK_SECONDS
+
+        val mapped = note("c3").duck(1, 0.8).duck(attack = mul(4))
+
+        slot(mapped, "duck.attack") shouldBe DUCK_ATTACK_SECONDS * 4
+        slot(mapped, "duck.depth") shouldBe 0.8
+    }
+
+    "a bare reverb() whose values are not numbers leaves the wet slot readable, in both doors" {
+        // The bare call reinterprets the pattern's own values as the wet; on a non-number it names
+        // nothing. Until step 5b-3 that path CLEARED the voice field (so `reverb.wet` read nothing
+        // afterwards) while leaving the slot; now the slot is the only storage and it stays.
+        val kotlin = note("c").reverb(0.5).reverb().gain(reverb.wet)
+        val script = SprudelPattern.compile("""note("c").reverb(0.5).reverb().gain(reverb.wet)""").shouldNotBeNull()
+
+        for ((door, p) in listOf("Kotlin" to kotlin, "script" to script)) {
+            withClue(door) {
+                slot(p, "reverb.wet") shouldBe 0.5
+                p.queryArc(0.0, 1.0).first().data.gain shouldBe 0.5
+            }
         }
     }
 

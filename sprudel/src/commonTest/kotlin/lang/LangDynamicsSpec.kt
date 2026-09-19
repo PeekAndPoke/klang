@@ -160,11 +160,11 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.compressorThreshold shouldBe -20.0
-        events[0].data.compressorRatio shouldBe 4.0
-        events[0].data.compressorKnee shouldBe 3.0
-        events[0].data.compressorAttack shouldBe 0.03
-        events[0].data.compressorRelease shouldBe 0.1
+        events[0].data.katalystParams?.get("compressor.threshold") shouldBe -20.0
+        events[0].data.katalystParams?.get("compressor.ratio") shouldBe 4.0
+        events[0].data.katalystParams?.get("compressor.knee") shouldBe 3.0
+        events[0].data.katalystParams?.get("compressor.attack") shouldBe 0.03
+        events[0].data.katalystParams?.get("compressor.release") shouldBe 0.1
     }
 
     // ---- unison() / uni() -------------------------------------------------------------------------------
@@ -511,8 +511,8 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 1
-        events[0].data.duckDepth shouldBe 0.8
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.8
     }
 
     "script apply(duck()) works in compiled code" {
@@ -520,7 +520,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 1
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
     }
 
     // ---- duck(attack = ...) -----------------------------------------------------------------------
@@ -544,9 +544,9 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 1
-        events[0].data.duckAttack shouldBe 0.2
-        events[0].data.duckDepth shouldBe 0.8
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.2
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.8
     }
 
     "script apply(duck(attack = ...)) works in compiled code" {
@@ -554,7 +554,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckAttack shouldBe 0.2
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.2
     }
 
     // ---- duck(depth = ...) ------------------------------------------------------------------------------------
@@ -577,6 +577,6 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckDepth shouldBe 0.8
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.8
     }
 })

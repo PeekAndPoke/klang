@@ -27,7 +27,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * Katalyst step 3a (2026-09-17). The per-stage contract is `docs/tasks/katalyst-dsl.md` §7 and the
  * value rule is the signal-flow plan §7 (D4): **a chain's stage knobs come from its slots only**,
  * on every chain since step 5b-1, the one a cylinder is born with included. The owner voice is a
- * knob source only through the map it carries ([KatalystKnob]), never through its bus fields.
+ * knob source only through the map it carries ([KatalystKnob]); it has no bus fields since 5b-3.
  *
  * **Resolution happens ONCE, when the chain is built**, and again only when the orbit's param
  * state CHANGES (Katalyst step 5a): every answer here is block-constant by contract, so the writer
@@ -176,7 +176,7 @@ internal object KatalystSlots {
      * The compressor settings a declared stage asks for, from its five RESOLVED slot values, or
      * null (the stage is off) when none of them is finite.
      *
-     * Straight through [Voice.Compressor.fromParams], the voice path's own rule: any of the five
+     * Straight through [Voice.Compressor.fromParams], the one rule for it: any of the five
      * set means on, and every unset one takes its `COMPRESSOR_*` constant. A non-finite slot is
      * what "unset" looks like on the wire, so it maps to the `null` that function reads.
      *

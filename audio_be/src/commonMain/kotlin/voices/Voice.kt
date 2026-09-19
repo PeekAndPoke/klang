@@ -15,7 +15,6 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
@@ -54,34 +53,17 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Dynamics & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Since Katalyst step 5b-1 the orbit's bus reads its knobs from [katalystParams] alone, so most
-    // of the block below has NO reader left. Who reads what, exactly:
+    // The orbit's bus reads its knobs from [katalystParams] alone (Katalyst step 5b-1), and the
+    // voice carries no bus settings of its own since step 5b-3. Who reads what, exactly:
     //
     //   gain, pan     SendRenderer, every block of every voice.
-    //   delay, reverb nobody (since step 5b-2 the orbit's delay and reverb are fed from the orbit
-    //                 mix by the owner's `wet` slot; the per-voice send amounts are gone).
-    //   phaser        FilterPipelineBuilder, all five knobs, for the PER-VOICE phaser of a custom
-    //                 pipeline that declares `StageDsl.Phaser`. No built-in preset does
-    //                 (`PipelineDsl`, maintainer 2026-08-24: the phaser is a bus effect).
-    //   compressor    nobody.
-    //   ducking       nobody.
-    //   body, vowel   nobody.
-    //
-    // They are still built by `VoiceFactory` and still carried on the wire; they go in step 5b-3.
+    //   phaser        nobody on the voice: `VoiceFactory` hands the same object to
+    //                 `buildFilterPipeline`, whose PER-VOICE phaser serves a custom pipeline that
+    //                 declares `StageDsl.Phaser` (no built-in preset does, `PipelineDsl`, maintainer
+    //                 2026-08-24: the phaser is a bus effect). It leaves with the Pipeline DSL.
     val gain: Double,
     val pan: Double,
-    val compressor: Compressor?,
-    val ducking: Ducking?,
-    val delay: Delay,
-    val reverb: Reverb,
     val phaser: Phaser,
-
-    // Orbit-level resonators, moved off the per-voice filter chain in the 2026-07-03 orbit-Katalyst
-    // work (docs/tasks-archive/2026-07/20260703-body-vowel-orbit-katalyst.md). The orbit reads its
-    // resonators from the `body.*` / `vowel.*` slots now, so these two have no reader and leave with
-    // the wire fields in step 5b-3.
-    val body: FilterDef.Body? = null,
-    val vowel: FilterDef.Formant? = null,
 
     /**
      * The orbit chain slots this voice writes (`VoiceData.katalystParams`), carried by REFERENCE:
@@ -93,10 +75,7 @@ class Voice(
      * the voice. Null when the pattern wrote no slot, which is the same answer as an empty map: the
      * chain's authored defaults. Which chain reads which slot of it is one rule with one home, the
      * `katp` door's KDoc in `sprudel/lang/lang_katalyst.kt`: EVERY chain reads it, for every stage
-     * it declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
-     * on this class are not a knob source any more, and since step 5b-2 [delay] and [reverb] have
-     * no reader either (the orbit's delay and reverb are fed from the orbit mix); they leave with
-     * the wire fields in 5b-3.
+     * it declares, the chain a cylinder is born with included (Katalyst step 5b-1).
      */
     val katalystParams: Map<String, Double>? = null,
 
@@ -392,9 +371,10 @@ class Voice(
     ) {
         companion object {
             /**
-             * Builds per-voice compressor settings from the per-param wire fields (C0.2).
-             * Null when no field is set; missing fields fall back to the classic defaults
-             * (threshold -20 dB, ratio 4:1, knee 6 dB, attack 3 ms, release 100 ms).
+             * Builds the orbit compressor's settings from its five knobs, as
+             * `KatalystSlots.compressorSettings` resolves them from the owner's slots (a
+             * non-finite slot arrives here as null). Null when no knob is set; a missing knob
+             * falls back to its `COMPRESSOR_*` constant.
              */
             fun fromParams(
                 threshold: Double?,
@@ -452,10 +432,6 @@ class Voice(
         val rate: Double, val depth: Double, val skew: Double, val phase: Double,
         val shape: String?,
     )
-
-    class Delay(val amount: Double, val time: Double, val feedback: Double, val cap: Double = 1.0)
-    /** [size] is normalized 0..1 (`Reverb.normalizeSize` ran in VoiceFactory); [lowpass] is the tail damping cutoff in Hz. */
-    class Reverb(val amount: Double, val size: Double, val lowpass: Double? = null)
 
     companion object {
         // Monotonic voice-id source for [id]. Voice creation is single-threaded (render thread), so a plain

@@ -507,6 +507,21 @@ complexity outranks the duplication.
   Rave, where the room drains while an owner without a `wet` holds the orbit): "the listening
   checks out". The drain on a mixed-wet orbit is therefore kept: it is the turn-taking the
   signal-flow plan section 7 accepts, softened by the `wet` glide.
+  **5b-3 as built (2026-09-19; one review round, clean):** the delay, reverb, compressor and duck
+  fields (15 on `VoiceData`, the matching groups on `SprudelVoiceData`) are gone; `VoiceFactory`
+  no longer builds `Voice.Delay`, `Voice.Reverb`, a voice compressor or ducking, nor hands body
+  and vowel to the voice. The phaser fields stay for the custom pipeline's stage until phase 3.
+  Identity: 15 built-in songs and 3 frozen pieces over 256 cycles bit-identical in raw doubles
+  at `15b19243` and on the tree, 26 door-form rows identical; the voice-data golden regenerated,
+  every changed line the old one with exactly the removed keys stripped, and every removed value
+  equal to its slot. One deliberate change, judged correct by both reviewers: sprudel's
+  accessors and mappers of these doors read the slots now (they read the fields), so a raw
+  `katp` write is visible to `reverb.wet` and friends, the duck's mappers scale the companions
+  the duck fill wrote (`duck(1, 0.8).duck(attack = mul(4))` is 4 times `DUCK_ATTACK_SECONDS`, it
+  was a no-op), and a bare `reverb()` with a null value leaves the slot readable. No built-in
+  song, frozen piece or tutorial uses an accessor or mapper of these doors, nor `duck` at all.
+  Left for phase 3: body and vowel `FilterDef`s still ride `filters` with no backend reader, and
+  `Voice.Compressor`/`Voice.Ducking` live under `Voice` though only the chain uses them.
   **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
   and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
   in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and

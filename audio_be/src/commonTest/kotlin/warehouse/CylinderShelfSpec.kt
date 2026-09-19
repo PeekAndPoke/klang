@@ -75,12 +75,12 @@ class CylinderShelfSpec : StringSpec({
         playbackId = pid, startTime = start, gateEndTime = start + 0.05,
         data = VoiceData.empty.copy(
             sound = sound, freqHz = 330.0, cylinder = cylinder,
-            delay = 0.5, reverb = 0.5, cutoff = 1500.0, resonance = 0.2,
-            // The orbit's stages read the SLOT state (Katalyst step 5b-1); the two send fields
-            // above are the per-voice amounts.
+            cutoff = 1500.0, resonance = 0.2,
+            // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included
+            // since step 5b-2.
             katalystParams = mapOf(
                 "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.3, "delay.cap" to 1.0,
-                // AUTHORED 0 to 10, the scale `VoiceData.reverbSize` was already on, so the
+                // AUTHORED 0 to 10, the scale the old `VoiceData.reverbSize` was already on, so the
                 // faithful translation keeps the number. (`Voice.Reverb.size` is the NORMALIZED
                 // tenth of it, and a fixture built from THAT converts; this one did not.)
                 "reverb.wet" to 0.5, "reverb.size" to 0.6,
@@ -153,7 +153,7 @@ class CylinderShelfSpec : StringSpec({
                 playbackId = "a", startTime = 0.0, gateEndTime = 0.2,
                 data = VoiceData.empty.copy(
                     sound = "supersaw", freqHz = 110.0 + 50.0 * orbit, cylinder = orbit, gain = 2.0,
-                    delay = 0.9, reverb = 0.9, cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
+                    cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
                     katalystParams = mapOf(
                         "delay.wet" to 0.9, "delay.time" to 0.05 + 0.1 * orbit,
                         "delay.feedback" to 0.8, "delay.cap" to 1.0,

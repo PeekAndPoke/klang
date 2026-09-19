@@ -1,5 +1,18 @@
 # Klang Audio — Memory
 
+## The orbit-bus fields left the wire (2026-09-19)
+
+Katalyst step 5b-3. `VoiceData` lost `delay*`, `reverb*`, `compressor*` and `duck*`; the orbit's
+knobs cross the wire as `katalystParams` slots only. `VoiceFactory` no longer builds `Voice.Delay`,
+`Voice.Reverb` (both classes gone), a compressor, a ducking or the body/vowel defs for the voice, and
+`Voice` lost those six members. `Voice.Compressor` and `Voice.Ducking` stay: they are the composites
+`KatalystSlots` resolves from the slots. Identity: every built-in song and frozen piece rendered
+bit-identically in raw doubles at `15b19243` and on the tree (15 built-in songs and 3 frozen
+pieces over 256 cycles, 26 door-form rows over 16, wall clock pinned).
+Still carried but read by nobody on the backend: the body/vowel `FilterDef`s in `filters` (the
+factory drops them from the per-voice chain). The phaser fields stay for a custom pipeline's
+per-voice phaser and leave with the Pipeline DSL.
+
 ## The orbit delay and reverb are insert-style stages (2026-09-19)
 
 Katalyst step 5b-2, decided with the maintainer (signal-flow plan §7). A SOUND CHANGE, pending the
@@ -1520,6 +1533,6 @@ Canonical scale + variant syntax: `seq("0 2 4 4:1 5:1").scale("c4:minor")`
 - `MonoSamplePcm` is always mono; stereo is handled at the `Cylinders` pan/mix level.
 - `FilterDefs.addOrReplace()` is additive — calling it twice with the same filter type replaces, not duplicates.
 - `VoiceData` fields are nullable with defaults — omitting a field means "use engine default".
-- `duckCylinder` in `VoiceData` sets the cylinder ID to duck when a voice plays; ducking is cross-cylinder sidechain.
+- The `duck.orbit` slot in `VoiceData.katalystParams` names the orbit whose voices duck this one (the `duckCylinder` field left in step 5b-3); ducking is cross-cylinder sidechain.
 - `VoiceData.soundIndex: Int?` is the universal variant channel — consumed by `SampleRequest` for sample-bank picking
   AND by `IgnitorRegistry.createExciter` → `IgnitorDsl.Variants` dispatch.

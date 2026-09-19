@@ -160,12 +160,11 @@ class WarmupRunner(
                     // behind the block it is promoted for, and `k * blockSec` can land an ulp before
                     // the clock's own `k * frames / sampleRate`.
                     val start = (orbit + 0.5) * blockSec
-                    // The orbit chain reads its knobs from `katalystParams` alone since Katalyst
-                    // step 5b-1, so the warmup writes SLOTS, not the bus fields: with fields only,
-                    // this warmup would warm the voice strip and leave every orbit stage cold, and
-                    // no ring and no reverb network would be rented in the warmup window, which is
-                    // most of what it is for. `delay` and `reverb` are written on both sides here,
-                    // as the doors do, though since step 5b-2 no bus stage reads the fields.
+                    // The orbit chain reads its knobs from `katalystParams` alone (Katalyst step
+                    // 5b-1; the bus fields left the wire in 5b-3), so the warmup writes SLOTS:
+                    // without them this warmup would warm the voice strip and leave every orbit
+                    // stage cold, and no ring and no reverb network would be rented in the warmup
+                    // window, which is most of what it is for.
                     //
                     // The body and the vowel are named through the shared catalogues rather than
                     // by hand-built bands, because a slot carries an INDEX and there is no spelling
@@ -178,8 +177,6 @@ class WarmupRunner(
                         adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
                         cutoff = 2000.0,
                         resonance = 0.3,
-                        delay = 0.5,
-                        reverb = 0.5,
                         katalystParams = mapOf(
                             "delay.wet" to 0.5,
                             "delay.time" to 0.3,

@@ -400,8 +400,9 @@ class Cylinder(
             // step the swap put there.
             val lateDuck = duckingOut
 
-            // NOT gated on `voice.ducking` (dropped in review round 3): a duck named through
-            // `.katp("duck.orbit", n)` alone leaves that field null, so the correction skipped it
+            // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
+            // has none since step 5b-3): a duck named through `.katp("duck.orbit", n)` alone left
+            // the voice's then `duckCylinder` field null, so the correction skipped it
             // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
             // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
             // the resolve above is what makes it current.
@@ -411,8 +412,8 @@ class Cylinder(
             }
 
             // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
-            // included (step 5b-1): one way for a bus knob to reach a stage, and the voice's bus
-            // FIELDS are not it. The rule's one home is the `katp` door's KDoc in
+            // included (step 5b-1): one way for a bus knob to reach a stage (the voice's bus
+            // fields left the wire in step 5b-3). The rule's one home is the `katp` door's KDoc in
             // `sprudel/lang/lang_katalyst.kt`.
             //
             // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the

@@ -32,8 +32,8 @@ class LangDuckingSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.duckCylinder shouldBe 1
-            events[1].data.duckCylinder shouldBe 2
+            events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
+            events[1].data.katalystParams?.get("duck.orbit") shouldBe 2.0
         }
     }
 
@@ -56,8 +56,8 @@ class LangDuckingSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(duck(attack = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.duckAttack shouldBe 0.1
-            events[1].data.duckAttack shouldBe 0.5
+            events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
+            events[1].data.katalystParams?.get("duck.attack") shouldBe 0.5
         }
     }
 
@@ -80,17 +80,17 @@ class LangDuckingSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(duck(depth = "$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.duckDepth shouldBe 0.1
-            events[1].data.duckDepth shouldBe 0.5
+            events[0].data.katalystParams?.get("duck.depth") shouldBe 0.1
+            events[1].data.katalystParams?.get("duck.depth") shouldBe 0.5
         }
     }
 
-    "duck() sets duckOrbit" {
+    "duck() sets the duck.orbit slot" {
         val p = note("c3").duck(1)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 1
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
     }
 
     "duck() can be used as PatternMapper" {
@@ -98,15 +98,15 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 1
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
     }
 
-    "duck(attack = ...) sets duckAttack" {
+    "duck(attack = ...) sets the duck.attack slot" {
         val p = note("c3").duck(attack = 0.15)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckAttack shouldBe 0.15
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.15
     }
 
     "duck(attack = ...) can be used as PatternMapper" {
@@ -114,15 +114,15 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckAttack shouldBe 0.25
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.25
     }
 
-    "duck(depth = ...) sets duckDepth" {
+    "duck(depth = ...) sets the duck.depth slot" {
         val p = note("c3").duck(depth = 0.7)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckDepth shouldBe 0.7
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.7
     }
 
     "duck(depth = ...) can be used as PatternMapper" {
@@ -130,7 +130,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckDepth shouldBe 0.9
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.9
     }
 
     "ducking parameters merge correctly" {
@@ -141,12 +141,12 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckCylinder shouldBe 0
-        events[0].data.duckAttack shouldBe 0.1
-        events[0].data.duckDepth shouldBe 0.8
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 0.0
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.8
     }
 
-    "ducking parameters transfer to VoiceData" {
+    "ducking slots transfer to VoiceData" {
         val p = note("c3")
             .duck(0)
             .duck(attack = 0.15)
@@ -156,9 +156,9 @@ class LangDuckingSpec : StringSpec({
         events.size shouldBe 1
         val voiceData = events[0].data.toVoiceData()
 
-        voiceData.duckCylinder shouldBe 0
-        voiceData.duckAttack shouldBe 0.15
-        voiceData.duckDepth shouldBe 0.6
+        voiceData.katalystParams?.get("duck.orbit") shouldBe 0.0
+        voiceData.katalystParams?.get("duck.attack") shouldBe 0.15
+        voiceData.katalystParams?.get("duck.depth") shouldBe 0.6
     }
 
     "ducking parameters work with pattern control" {
@@ -169,8 +169,8 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.duckCylinder shouldBe 2
-        events[0].data.duckAttack shouldBe 0.1
-        events[0].data.duckDepth shouldBe 0.5
+        events[0].data.katalystParams?.get("duck.orbit") shouldBe 2.0
+        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
+        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.5
     }
 })

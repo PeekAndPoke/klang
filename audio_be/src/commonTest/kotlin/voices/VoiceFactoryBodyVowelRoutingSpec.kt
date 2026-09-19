@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
@@ -24,9 +23,11 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
 /**
- * `body(...)` and `vowel(...)` are authored in the same `filters` list as `lpf`/`hpf`, but they do
- * NOT belong to the per-voice chain: `VoiceFactory` pulls them out (`:108-110`) and hands them to
- * the voice's `body` / `vowel` fields, from which the orbit-level Katalyst picks them up.
+ * `body(...)` and `vowel(...)` can arrive in the same `filters` list as `lpf`/`hpf` (sprudel still
+ * puts them there), but they do NOT belong to the per-voice chain: `VoiceFactory` drops them from
+ * it. The orbit-level Katalyst takes its resonators from the owner's `body.*` / `vowel.*` slots;
+ * until step 5b-3 the factory also handed the two defs to fields on the voice, which nothing had
+ * read since step 5b-1, so those fields and the rows asserting them are gone.
  *
  * **That routing is the entire point of the 2026-07-04 body-to-orbit move.** A resonator left in the
  * per-voice chain runs once per voice, so `superimpose` — which renders a note two or more times —
@@ -100,7 +101,7 @@ class VoiceFactoryBodyVowelRoutingSpec : StringSpec({
     val lpf = FilterDef.LowPass(freq = 1000.0, q = 0.707)
     val hpf = FilterDef.HighPass(freq = 200.0, q = 0.707)
 
-    "a Body authored alongside lpf/hpf is routed to the orbit, not baked into the voice chain" {
+    "a Body authored alongside lpf/hpf is not baked into the voice chain" {
         val voice = voiceOf(listOf(lpf, body, hpf))
         val chain = chainOf(voice)
 
@@ -109,21 +110,14 @@ class VoiceFactoryBodyVowelRoutingSpec : StringSpec({
         chain[0].shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
         // ...and the survivors keep their authored order.
         chain[1].shouldBeInstanceOf<LowPassHighPassFilters.SvfHPF>()
-
-        // ...but it is not dropped — it rides on the voice for the Katalyst to pick up.
-        voice.body shouldBe body
-        voice.vowel.shouldBeNull()
     }
 
-    "a Formant is routed the same way" {
+    "a Formant is left out the same way" {
         val voice = voiceOf(listOf(lpf, vowel))
         val chain = chainOf(voice)
 
         chain.size shouldBe 1
         chain[0].shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
-
-        voice.vowel shouldBe vowel
-        voice.body.shouldBeNull()
 
         // The single survivor is handed back unwrapped, not as a one-element chain.
         voice.mainFilter.shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
@@ -134,17 +128,13 @@ class VoiceFactoryBodyVowelRoutingSpec : StringSpec({
         val chain = chainOf(voice)
 
         chain.size shouldBe 2
-        voice.body shouldBe body
-        voice.vowel shouldBe vowel
     }
 
-    "with no resonators authored, both fields stay null and the chain is untouched" {
+    "with no resonators authored, the chain is untouched" {
         val voice = voiceOf(listOf(lpf, hpf))
 
         // The positive control for the three rows above: without it, a `makeVoice` that dropped
         // EVERY filter would satisfy their size assertions just as well.
         chainOf(voice).size shouldBe 2
-        voice.body.shouldBeNull()
-        voice.vowel.shouldBeNull()
     }
 })

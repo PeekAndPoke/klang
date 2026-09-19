@@ -58,9 +58,9 @@ class KatalystSlotResolverSpec : StringSpec({
      * It used to hand `applyParams` the `katalystParams` of a voice whose seven bus FIELDS were all
      * set to loud values, to show that those fields were ignored. Since step 5b-1 the chain's
      * signature cannot see a field at all, so the demonstration was empty (the map of that voice was
-     * null, so this was already `applyParams(null)` through a whole `VoiceFactory` build). The claim
-     * has a home where it can still be made: `CylinderKatalystParamsSpec`'s "the BORN-WITH chain
-     * ignores the voice's bus FIELDS" row, which offers such a voice to a real cylinder.
+     * null, so this was already `applyParams(null)` through a whole `VoiceFactory` build). Since
+     * step 5b-3 the fields are gone from the wire and the voice, so the claim has nothing left to
+     * be about.
      */
     fun declared(vararg stages: KatalystStageDsl): KatalystChain = KatalystChainBuilder.build(
         dsl = KatalystDsl.of(*stages),

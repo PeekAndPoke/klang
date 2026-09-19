@@ -19,6 +19,7 @@ import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeToStringOrNull
 import io.peekandpoke.klang.sprudel.paramBagOf
+import io.peekandpoke.klang.sprudel.putKatalystParam
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
@@ -377,10 +378,10 @@ class GraalSprudelPattern(
                 it.tremoloSkew = tremoloSkew
                 it.tremoloPhase = tremoloPhase
                 it.tremoloShape = tremoloShape
-                // Ducking / Sidechain
-                it.duckCylinder = duckOrbit
-                it.duckAttack = duckAttack
-                it.duckDepth = duckDepth
+                // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3
+                it.putKatalystParam("duck.orbit", duckOrbit?.toDouble())
+                it.putKatalystParam("duck.attack", duckAttack)
+                it.putKatalystParam("duck.depth", duckDepth)
                 // Filters (flat fields) - each filter has its own resonance
                 it.cutoff = cutoff
                 it.resonance = resonance
@@ -418,14 +419,13 @@ class GraalSprudelPattern(
                 it.cylinder = orbit
                 // Pan
                 it.pan = pan
-                // Delay
-                it.delay = delay
-                it.delayTime = delayTime
-                it.delayFeedback = delayFeedback
-                // Reverb
-                it.reverb = room
-                it.reverbSize = roomFade?.let { fade -> fade * 10.0 } ?: roomSize
-                it.reverbLowpass = roomLp
+                // Delay and reverb: the orbit slots, the only storage since Katalyst step 5b-3
+                it.putKatalystParam("delay.wet", delay)
+                it.putKatalystParam("delay.time", delayTime)
+                it.putKatalystParam("delay.feedback", delayFeedback)
+                it.putKatalystParam("reverb.wet", room)
+                it.putKatalystParam("reverb.size", roomFade?.let { fade -> fade * 10.0 } ?: roomSize)
+                it.putKatalystParam("reverb.lowpass", roomLp)
                 // Sample manipulation
                 it.begin = sampleBeginPos
                 it.end = sampleEndPos
@@ -441,11 +441,11 @@ class GraalSprudelPattern(
                 // keeping the OLD activation gate: only fully-parsable 5- or 2-slot forms count)
                 val compParts = compressor?.split(":")?.mapNotNull { d -> d.toDoubleOrNull() }
                     ?.takeIf { parts -> parts.size == 5 || parts.size == 2 }
-                it.compressorThreshold = compParts?.getOrNull(0)
-                it.compressorRatio = compParts?.getOrNull(1)
-                it.compressorKnee = compParts?.getOrNull(2)
-                it.compressorAttack = compParts?.getOrNull(3)
-                it.compressorRelease = compParts?.getOrNull(4)
+                it.putKatalystParam("compressor.threshold", compParts?.getOrNull(0))
+                it.putKatalystParam("compressor.ratio", compParts?.getOrNull(1))
+                it.putKatalystParam("compressor.knee", compParts?.getOrNull(2))
+                it.putKatalystParam("compressor.attack", compParts?.getOrNull(3))
+                it.putKatalystParam("compressor.release", compParts?.getOrNull(4))
                 // Playback control
                 it.solo = null
                 // Value

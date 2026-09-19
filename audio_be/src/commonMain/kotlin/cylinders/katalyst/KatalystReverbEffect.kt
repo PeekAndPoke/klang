@@ -40,7 +40,7 @@ import kotlin.math.min
  *   and [hasTail] answers true for the whole countdown BY CONSTRUCTION (round 2 measured that a
  *   live scan would beat the countdown by only ~one revolution for real content — see there).
  *   Unlike the delay there is NO self-oscillating regime: comb feedback is structurally < 1
- *   ([Reverb.normalizeSize] bounds size in VoiceFactory, [configure] bounds it again),
+ *   ([Reverb.normalizeSize] bounds size in `KatalystReverbWriter`'s gate, [configure] bounds it again),
  *   so every finite drain terminates — and a NON-finite countdown (an Inf or NaN comb cell from
  *   a hot feed: neither ever decays) resets immediately instead: the heal the old gate's
  *   takeover path provided, and the only exit such an orbit would otherwise ever have.
@@ -372,8 +372,9 @@ class KatalystReverbEffect(
      * depth gate had (ledger D2 round 2). Size gets the 0..1 bound HERE too, at the door
      * (conversions in one place): it is the normalized comb-feedback axis directly, and the bound
      * keeps the feedback inside the range the drain countdown is proven for (see
-     * [Reverb.normalizeSize], which production size already passes through in VoiceFactory — the
-     * door bound is bit-identical there and protects a future direct caller).
+     * [Reverb.normalizeSize], which production size already passes through in the slot writer's
+     * gate, `KatalystSlotWriters.kt`; the door bound is bit-identical there and protects a future
+     * direct caller).
      */
     fun configure(
         size: Double,

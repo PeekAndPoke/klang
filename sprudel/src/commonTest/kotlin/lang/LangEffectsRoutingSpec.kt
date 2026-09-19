@@ -60,83 +60,83 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // reverb
-    "top-level reverb() sets VoiceData.reverb correctly" {
+    "top-level reverb() sets the reverb.wet slot correctly" {
         val p = note("a b").apply(reverb("0.1 0.9"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.katalystParams?.get("reverb.wet") } shouldBe listOf(0.1, 0.9)
     }
 
-    "control pattern reverb() sets VoiceData.reverb on existing pattern" {
+    "control pattern reverb() sets the reverb.wet slot on existing pattern" {
         val base = note("c3 e3")
         val p = base.reverb("0.3 0.6")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.reverb } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
+        events.map { it.data.katalystParams?.get("reverb.wet") } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
     }
 
     // reverb(size = ...)
-    "top-level reverb(size = ...) sets VoiceData.reverbSize correctly" {
+    "top-level reverb(size = ...) sets the reverb.size slot correctly" {
         val p1 = note("a b").apply(reverb(size = "0.2 0.8"))
         val e1 = p1.queryArc(0.0, 1.0)
         e1.size shouldBe 2
-        e1.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
+        e1.map { it.data.katalystParams?.get("reverb.size") } shouldBe listOf(0.2, 0.8)
     }
 
-    "control pattern reverb(size = ...) sets VoiceData.reverbSize on existing pattern" {
+    "control pattern reverb(size = ...) sets the reverb.size slot on existing pattern" {
         val base = note("c3 e3")
         val p = base.reverb(size = "0.1 0.3")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.reverbSize } shouldBe listOf(0.1, 0.3, 0.1, 0.3)
+        events.map { it.data.katalystParams?.get("reverb.size") } shouldBe listOf(0.1, 0.3, 0.1, 0.3)
     }
 
     // delay
-    "top-level delay() sets VoiceData.delay correctly" {
+    "top-level delay() sets the delay.wet slot correctly" {
         val p = note("a b").apply(delay("0.0 1.0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
+        events.map { it.data.katalystParams?.get("delay.wet") } shouldBe listOf(0.0, 1.0)
     }
 
-    "control pattern delay() sets VoiceData.delay on existing pattern" {
+    "control pattern delay() sets the delay.wet slot on existing pattern" {
         val base = note("c3 e3")
         val p = base.delay("0.25 0.5")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.delay } shouldBe listOf(0.25, 0.5, 0.25, 0.5)
+        events.map { it.data.katalystParams?.get("delay.wet") } shouldBe listOf(0.25, 0.5, 0.25, 0.5)
     }
 
     // delay(time = ...)
-    "top-level delay(time = ...) sets VoiceData.delayTime correctly" {
+    "top-level delay(time = ...) sets the delay.time slot correctly" {
         val p = note("a b").apply(delay(time = "0.125 0.25"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
+        events.map { it.data.katalystParams?.get("delay.time") } shouldBe listOf(0.125, 0.25)
     }
 
-    "control pattern delay(time = ...) sets VoiceData.delayTime on existing pattern" {
+    "control pattern delay(time = ...) sets the delay.time slot on existing pattern" {
         val base = note("c3 e3")
         val p = base.delay(time = "0.0625 0.5")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.delayTime } shouldBe listOf(0.0625, 0.5, 0.0625, 0.5)
+        events.map { it.data.katalystParams?.get("delay.time") } shouldBe listOf(0.0625, 0.5, 0.0625, 0.5)
     }
 
     // delay(feedback = ...)
-    "top-level delay(feedback = ...) sets VoiceData.delayFeedback correctly" {
+    "top-level delay(feedback = ...) sets the delay.feedback slot correctly" {
         val p = note("a b").apply(delay(feedback = "0.25 0.75"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
+        events.map { it.data.katalystParams?.get("delay.feedback") } shouldBe listOf(0.25, 0.75)
     }
 
-    "control pattern delay(feedback = ...) sets VoiceData.delayFeedback on existing pattern" {
+    "control pattern delay(feedback = ...) sets the delay.feedback slot on existing pattern" {
         val base = note("c3 e3")
         val p = base.delay(feedback = "0.1 0.9")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.delayFeedback } shouldBe listOf(0.1, 0.9, 0.1, 0.9)
+        events.map { it.data.katalystParams?.get("delay.feedback") } shouldBe listOf(0.1, 0.9, 0.1, 0.9)
     }
 
     // orbit
@@ -215,7 +215,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.katalystParams?.get("reverb.wet") } shouldBe listOf(0.1, 0.9)
     }
 
     "reverb() works within compiled code as chained-level function" {
@@ -224,7 +224,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.reverb } shouldBe listOf(0.1, 0.9)
+        events.map { it.data.katalystParams?.get("reverb.wet") } shouldBe listOf(0.1, 0.9)
     }
 
     "reverb(size = ...) works within compiled code as top-level PatternMapper" {
@@ -233,7 +233,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.katalystParams?.get("reverb.size") } shouldBe listOf(0.2, 0.8)
     }
 
     "reverb(size = ...) works within compiled code as chained-level function" {
@@ -242,7 +242,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.reverbSize } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.katalystParams?.get("reverb.size") } shouldBe listOf(0.2, 0.8)
     }
 
     "delay() works within compiled code as top-level function" {
@@ -251,7 +251,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
+        events.map { it.data.katalystParams?.get("delay.wet") } shouldBe listOf(0.0, 1.0)
     }
 
     "delay() works within compiled code as chained-level function" {
@@ -260,7 +260,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
+        events.map { it.data.katalystParams?.get("delay.wet") } shouldBe listOf(0.0, 1.0)
     }
 
     "delay(time = ...) works within compiled code as top-level function" {
@@ -269,7 +269,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
+        events.map { it.data.katalystParams?.get("delay.time") } shouldBe listOf(0.125, 0.25)
     }
 
     "delay(time = ...) works within compiled code as chained-level function" {
@@ -278,7 +278,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
+        events.map { it.data.katalystParams?.get("delay.time") } shouldBe listOf(0.125, 0.25)
     }
 
     "delay(feedback = ...) works within compiled code as top-level function" {
@@ -287,7 +287,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
+        events.map { it.data.katalystParams?.get("delay.feedback") } shouldBe listOf(0.25, 0.75)
     }
 
     "delay(feedback = ...) works within compiled code as chained-level function" {
@@ -296,7 +296,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
+        events.map { it.data.katalystParams?.get("delay.feedback") } shouldBe listOf(0.25, 0.75)
     }
 
     "orbit() works within compiled code as top-level function" {
@@ -322,17 +322,17 @@ class LangEffectsRoutingSpec : StringSpec({
         val p = note("c3 e3").apply(delay(0.5).delay(time = 0.25, feedback = 0.6))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.delay shouldBe 0.5
-        events[0].data.delayTime shouldBe 0.25
-        events[0].data.delayFeedback shouldBe 0.6
+        events[0].data.katalystParams?.get("delay.wet") shouldBe 0.5
+        events[0].data.katalystParams?.get("delay.time") shouldBe 0.25
+        events[0].data.katalystParams?.get("delay.feedback") shouldBe 0.6
     }
 
     "reverb().reverb(size = ...) can be chained as PatternMapperFn" {
         val p = note("c3 e3").apply(reverb(0.5).reverb(size = 4.0))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.reverb shouldBe 0.5
-        events[0].data.reverbSize shouldBe 4.0
+        events[0].data.katalystParams?.get("reverb.wet") shouldBe 0.5
+        events[0].data.katalystParams?.get("reverb.size") shouldBe 4.0
     }
 
     "phaser().phaser(wet = ...) can be chained as PatternMapperFn" {

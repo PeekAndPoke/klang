@@ -90,7 +90,9 @@ data class SprudelVoiceData(
      * The ORBIT's bus slots this event writes, named `<stage>.<knob>` (`"reverb.size"`,
      * `"compressor.ratio"`, `"duck.orbit"`). Same shape and same rules as [oscParams], the other
      * host: that bag is the voice's own instrument, this one the chain its orbit runs. Written by
-     * `.katp(name, value)` and, until the voice fields leave the wire, by the bus doors as aliases.
+     * `.katp(name, value)` and by the bus doors as aliases (`reverb(...)`, `delay(...)`,
+     * `compressor(...)`, `duck(...)` have no voice fields of their own since Katalyst step 5b-3:
+     * their slots here are the only place their values live, and their accessors read them back).
      *
      * Mutable and single-owner, and merged the same way as [oscParams], last writer wins per name.
      * Carried to `VoiceData.katalystParams` by [toVoiceData].
@@ -118,9 +120,6 @@ data class SprudelVoiceData(
     // Tremolo — grouped (see SvdTremolo).
     var tremolo: SvdTremolo?,
 
-    // Ducking / sidechain — grouped (see SvdDuck).
-    var duck: SvdDuck?,
-
     // Filters — grouped (see SvdFilter): cutoff + resonance + optional envelope, one group per filter type.
     // Flat fields (cutoff/hcutoff/bandf/notchf, resonance/…, lp*/hp*/bp*/nf*) are accessors below.
     var lpf: SvdFilter?,
@@ -135,12 +134,6 @@ data class SprudelVoiceData(
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     var pan: Double?,
 
-    // Delay — grouped (see SvdDelay). Property is `delayFx` (the flat `delay` mix-amount is an accessor below).
-    var delayFx: SvdDelay?,
-
-    // Reverb — grouped (see SvdReverb). Property is `reverbFx` (the flat `reverb` send amount is an accessor below).
-    var reverbFx: SvdReverb?,
-
     // Sample manipulation — grouped (see SvdSample).
     var sample: SvdSample?,
 
@@ -149,18 +142,6 @@ data class SprudelVoiceData(
 
     // Body resonator — grouped (see SvdBody). Flat fields (body/bodyMix/bodyFloor) are accessors below.
     var bodyFx: SvdBody?,
-
-    // Dynamics / Compression (per-param since C0.2)
-    /** Compressor threshold in dB (e.g. -20). */
-    var compressorThreshold: Double?,
-    /** Compression ratio (e.g. 4 = 4:1 above threshold). */
-    var compressorRatio: Double?,
-    /** Knee smoothness in dB (0 = hard knee). */
-    var compressorKnee: Double?,
-    /** Attack time in seconds. */
-    var compressorAttack: Double?,
-    /** Release time in seconds. */
-    var compressorRelease: Double?,
 
     // Playback control
     /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
@@ -250,9 +231,6 @@ data class SprudelVoiceData(
     private fun distortionOrNew(): SvdDistortion = distortion ?: SvdDistortion().also { distortion = it }
     private fun phaserOrNew(): SvdPhaser = phaser ?: SvdPhaser().also { phaser = it }
     private fun tremoloOrNew(): SvdTremolo = tremolo ?: SvdTremolo().also { tremolo = it }
-    private fun duckOrNew(): SvdDuck = duck ?: SvdDuck().also { duck = it }
-    private fun delayFxOrNew(): SvdDelay = delayFx ?: SvdDelay().also { delayFx = it }
-    private fun reverbFxOrNew(): SvdReverb = reverbFx ?: SvdReverb().also { reverbFx = it }
     private fun sampleOrNew(): SvdSample = sample ?: SvdSample().also { sample = it }
     private fun bodyFxOrNew(): SvdBody = bodyFx ?: SvdBody().also { bodyFx = it }
     private fun vowelFxOrNew(): SvdVowel = vowelFx ?: SvdVowel().also { vowelFx = it }
@@ -648,59 +626,6 @@ data class SprudelVoiceData(
             if (v != null || tremolo != null) tremoloOrNew().tremoloShape = v
         }
 
-    var duckCylinder: Int?
-        get() = duck?.duckCylinder
-        set(v) {
-            if (v != null || duck != null) duckOrNew().duckCylinder = v
-        }
-    var duckAttack: Double?
-        get() = duck?.duckAttack
-        set(v) {
-            if (v != null || duck != null) duckOrNew().duckAttack = v
-        }
-    var duckDepth: Double?
-        get() = duck?.duckDepth
-        set(v) {
-            if (v != null || duck != null) duckOrNew().duckDepth = v
-        }
-
-    var delay: Double?
-        get() = delayFx?.delay
-        set(v) {
-            if (v != null || delayFx != null) delayFxOrNew().delay = v
-        }
-    var delayTime: Double?
-        get() = delayFx?.delayTime
-        set(v) {
-            if (v != null || delayFx != null) delayFxOrNew().delayTime = v
-        }
-    var delayFeedback: Double?
-        get() = delayFx?.delayFeedback
-        set(v) {
-            if (v != null || delayFx != null) delayFxOrNew().delayFeedback = v
-        }
-    var delayCap: Double?
-        get() = delayFx?.delayCap
-        set(v) {
-            if (v != null || delayFx != null) delayFxOrNew().delayCap = v
-        }
-
-    var reverb: Double?
-        get() = reverbFx?.reverb
-        set(v) {
-            if (v != null || reverbFx != null) reverbFxOrNew().reverb = v
-        }
-    var reverbSize: Double?
-        get() = reverbFx?.reverbSize
-        set(v) {
-            if (v != null || reverbFx != null) reverbFxOrNew().reverbSize = v
-        }
-    var reverbLowpass: Double?
-        get() = reverbFx?.reverbLowpass
-        set(v) {
-            if (v != null || reverbFx != null) reverbFxOrNew().reverbLowpass = v
-        }
-
     var begin: Double?
         get() = sample?.begin
         set(v) {
@@ -765,9 +690,6 @@ data class SprudelVoiceData(
         distortion = distortion?.copy(),
         phaser = phaser?.copy(),
         tremolo = tremolo?.copy(),
-        duck = duck?.copy(),
-        delayFx = delayFx?.copy(),
-        reverbFx = reverbFx?.copy(),
         sample = sample?.copy(),
         bodyFx = bodyFx?.copy(),
         vowelFx = vowelFx?.copy(),
@@ -794,23 +716,15 @@ data class SprudelVoiceData(
             distortion = mergeSvdDistortion(distortion, other.distortion),
             phaser = mergeSvdPhaser(phaser, other.phaser),
             tremolo = mergeSvdTremolo(tremolo, other.tremolo),
-            duck = mergeSvdDuck(duck, other.duck),
             lpf = mergeSvdFilter(lpf, other.lpf),
             hpf = mergeSvdFilter(hpf, other.hpf),
             bpf = mergeSvdFilter(bpf, other.bpf),
             notch = mergeSvdFilter(notch, other.notch),
             cylinder = other.cylinder ?: cylinder,
             pan = other.pan ?: pan,
-            delayFx = mergeSvdDelay(delayFx, other.delayFx),
-            reverbFx = mergeSvdReverb(reverbFx, other.reverbFx),
             sample = mergeSvdSample(sample, other.sample),
             vowelFx = mergeSvdVowel(vowelFx, other.vowelFx),
             bodyFx = mergeSvdBody(bodyFx, other.bodyFx),
-            compressorThreshold = other.compressorThreshold ?: compressorThreshold,
-            compressorRatio = other.compressorRatio ?: compressorRatio,
-            compressorKnee = other.compressorKnee ?: compressorKnee,
-            compressorAttack = other.compressorAttack ?: compressorAttack,
-            compressorRelease = other.compressorRelease ?: compressorRelease,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
             pipeline = other.pipeline ?: pipeline,
@@ -853,23 +767,15 @@ data class SprudelVoiceData(
         distortion = mergeSvdDistortion(distortion, other.distortion)
         phaser = mergeSvdPhaser(phaser, other.phaser)
         tremolo = mergeSvdTremolo(tremolo, other.tremolo)
-        duck = mergeSvdDuck(duck, other.duck)
         lpf = mergeSvdFilter(lpf, other.lpf)
         hpf = mergeSvdFilter(hpf, other.hpf)
         bpf = mergeSvdFilter(bpf, other.bpf)
         notch = mergeSvdFilter(notch, other.notch)
         cylinder = other.cylinder ?: cylinder
         pan = other.pan ?: pan
-        delayFx = mergeSvdDelay(delayFx, other.delayFx)
-        reverbFx = mergeSvdReverb(reverbFx, other.reverbFx)
         sample = mergeSvdSample(sample, other.sample)
         vowelFx = mergeSvdVowel(vowelFx, other.vowelFx)
         bodyFx = mergeSvdBody(bodyFx, other.bodyFx)
-        compressorThreshold = other.compressorThreshold ?: compressorThreshold
-        compressorRatio = other.compressorRatio ?: compressorRatio
-        compressorKnee = other.compressorKnee ?: compressorKnee
-        compressorAttack = other.compressorAttack ?: compressorAttack
-        compressorRelease = other.compressorRelease ?: compressorRelease
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
         pipeline = other.pipeline ?: pipeline
@@ -1168,22 +1074,12 @@ data class SprudelVoiceData(
             tremoloSkew = tremoloSkew,
             tremoloPhase = tremoloPhase,
             tremoloShape = tremoloShape,
-            duckCylinder = duckCylinder,
-            duckAttack = duckAttack,
-            duckDepth = duckDepth,
             cutoff = cutoff,
             hcutoff = hcutoff,
             bandf = bandf,
             resonance = resonance, // For backward compatibility, use LPF resonance as default
             cylinder = cylinder,
             pan = pan,
-            delay = delay,
-            delayTime = delayTime,
-            delayFeedback = delayFeedback,
-            delayCap = delayCap,
-            reverb = reverb,
-            reverbSize = reverbSize,
-            reverbLowpass = reverbLowpass,
             begin = begin,
             end = end,
             speed = speed,
@@ -1191,11 +1087,6 @@ data class SprudelVoiceData(
             cut = cut,
             loopBegin = loopBegin,
             loopEnd = loopEnd,
-            compressorThreshold = compressorThreshold,
-            compressorRatio = compressorRatio,
-            compressorKnee = compressorKnee,
-            compressorAttack = compressorAttack,
-            compressorRelease = compressorRelease,
             solo = solo,
             sourceId = patternId,
             pipeline = pipelineName,
@@ -1235,23 +1126,15 @@ internal val blueprint = SprudelVoiceData(
     distortion = null,
     phaser = null,
     tremolo = null,
-    duck = null,
     lpf = null,
     hpf = null,
     bpf = null,
     notch = null,
     cylinder = null,
     pan = null,
-    delayFx = null,
-    reverbFx = null,
     sample = null,
     vowelFx = null,
     bodyFx = null,
-    compressorThreshold = null,
-    compressorRatio = null,
-    compressorKnee = null,
-    compressorAttack = null,
-    compressorRelease = null,
     solo = null,
     patternId = null,
     pipeline = null,

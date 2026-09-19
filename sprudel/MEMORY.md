@@ -107,8 +107,8 @@
   slots: the curriculum lint reads call names.
 
 - **The reverb is `reverb`, not `room` (2026-09-16).** One word on every surface: the sprudel door, the
-  master builder (`r.size().lowpass()`), the wire (`VoiceData.reverb`/`reverbSize`/`reverbLowpass`,
-  `SprudelVoiceData.reverbFx` as the group, mirroring `delayFx`) and the engine (`Reverb.size`/`lowpass`).
+  master builder (`r.size().lowpass()`), the wire (then `VoiceData.reverb`/`reverbSize`/`reverbLowpass`,
+  `SprudelVoiceData.reverbFx` as the group; since step 5b-3 the `reverb.*` slots) and the engine (`Reverb.size`/`lowpass`).
   `fade` was `size / 10` with an override and is gone (`fade = x` is `size = 10x`); `dim` was never read;
   the master's `damp` went because `lowpass` spans the same range. A third positional argument is now
   `lowpass`. `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
@@ -134,6 +134,20 @@
   carry the per-voice send AMOUNTS (`delay`, `reverb`) until step 5b-2 and are inert for everything
   else. The rule's one home is the `katp` door's KDoc. Guard: `LangKatalystParamSpec`,
   mutation-checked (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
+  **Since step 5b-3 (2026-09-19) the delay, reverb, compressor and duck doors write the SLOTS
+  only**: their voice fields (`SvdDelay`, `SvdReverb`, `SvdDuck`, the five `compressor*`) are gone
+  from `SprudelVoiceData` and the wire, and their accessors and mappers read the slots
+  (`reverb.wet` is `katalystParams["reverb.wet"]`, the `pregain` precedent). Five reads changed on
+  purpose, all judged correct under the slot vocabulary in review: (a) an accessor or mapper now
+  sees a value a `katp` wrote; (b) the duck's accessors and mappers see the companions its fill
+  wrote, `attack` AND `depth` (`duck.attack` after `duck(1)` reads `DUCK_ATTACK_SECONDS`, it read
+  nothing before, so `duck(1, 0.8).duck(attack = mul(4))` multiplies that constant, and
+  `duck(1).duck(depth = add(0.5))` now ducks at 0.5 where it wrote nothing); (c) a null or
+  non-numeric write on a tail setter used to clear the field and now writes nothing; (d) the bare
+  `reverb()` reinterpret on a non-number used to clear the field, so `reverb.wet` read nothing, and
+  now leaves the slot readable; (e) `reverb`'s control-pattern combine reads the control's slot,
+  which differs only when `katp` sits on the control pattern itself. Guards: the accessor rows in
+  `LangKatalystParamSpec`. The phaser, body and vowel doors still write both halves.
 
 - **A body material and a vowel are INDICES, and `.katalyst(dsl)` REPLACES (2026-09-18, Katalyst
   step 5a-2).** Two cleanups that retired the step-5a rule above it. (1) The door replaces like

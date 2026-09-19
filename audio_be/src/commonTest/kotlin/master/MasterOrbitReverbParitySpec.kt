@@ -68,11 +68,7 @@ class MasterOrbitReverbParitySpec : StringSpec({
                     sound = "triangle",
                     // The orbit's reverb stage reads the SLOTS (Katalyst step 5b-1), on the same
                     // authored 0-to-10 scale the master stage takes, which is the whole point of
-                    // this spec; the FIELDS are carried too, as the `reverb(...)` door writes both
-                    // until step 5b-3, and no orbit stage reads them.
-                    reverb = 0.5,
-                    reverbSize = authored,
-                    reverbLowpass = lowpass,
+                    // this spec.
                     katalystParams = buildMap {
                         put("reverb.wet", 0.5)
                         put("reverb.size", authored)

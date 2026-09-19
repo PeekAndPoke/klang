@@ -57,9 +57,10 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  *  5. **unity** (1.0): the identity element of a stage, which is none of the four above: the
  *     group fader `gain.gain`, whose stage is bit-transparent at exactly 1.0.
  *
- * Families 1 and 3 together are the untouched voice, and that equality is pinned against the real
- * `VoiceFactory` by `KatalystClassicMatchesUntouchedVoiceSpec` in audio_be, which is the test that
- * can actually see the engine. This file pins the DECLARATION: the slot vocabulary, which family
+ * Families 1 and 3 together are the untouched voice. Since Katalyst step 5b-3 only `phaser.wet` is
+ * still pinned against the real `VoiceFactory` (its untouched phaser branch, by
+ * `KatalystClassicMatchesUntouchedVoiceSpec` in audio_be); the delay, reverb and duck values are
+ * pinned HERE, and the gate facts by that spec's last row. This file pins the DECLARATION: the slot vocabulary, which family
  * each slot is in, and that no family-4 slot has drifted off its shared constant. Neither file
  * alone proves byte identity; the frozen-song render does that once the cylinder reads the chain in
  * step 2. What they buy is that a wrong value here is loud instead of subtle.

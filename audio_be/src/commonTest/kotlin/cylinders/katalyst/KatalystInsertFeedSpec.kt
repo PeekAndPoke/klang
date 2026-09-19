@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -256,33 +255,10 @@ class KatalystInsertFeedSpec : StringSpec({
         "reverb.wet" to 0.3, "reverb.size" to 6.0,
     )
 
-    "a voice's delay and reverb FIELDS reach nothing: the SLOTS' amount decides, whatever the fields say" {
-        // The fields stay on the wire until step 5b-3, and nothing on the bus reads them: not the
-        // voice's own send stage (`SendRenderer`), not the orbit's chain. So a voice whose fields
-        // say 0.8 and whose slots say 0.3 renders exactly what the slots alone render. Before step
-        // 5b-2 the voice sent its FIELD amount (0.8) into stages the slots configured, which is the
-        // difference this row would see.
-        val (slotsOnly, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots))
-        val (both, orbit) = renderVoice(
-            VoiceTestHelpers.createSynthVoice(
-                blockFrames = blockFrames,
-                delay = Voice.Delay(amount = 0.8, time = 0.05, feedback = 0.5, cap = 1.0),
-                reverb = Voice.Reverb(amount = 0.8, size = 0.6),
-                katalystParams = slots,
-            ),
-        )
-
-        withClue("the stages run: a ring and a network are rented") {
-            orbit.line.shouldNotBeNull()
-            orbit.room.shouldNotBeNull()
-        }
-
-        both shouldBe slotsOnly
-    }
-
-    "and the slots alone DO reach the stages: the same voice without them renders dry" {
-        // The engagement control for the row above, through the same path: without the slots the
-        // orbit rents nothing and sounds different, so the row above cannot pass on a dead bus.
+    "the slots alone reach the stages: the same voice without them renders dry" {
+        // Through the real voice strip and cylinder: without the slots the orbit rents nothing and
+        // sounds different. Until step 5b-3 this was the engagement control for a row showing that
+        // the voice's delay and reverb FIELDS reached nothing; the fields left in that step.
         val (wet, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots))
         val (dry, orbit) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames))
 

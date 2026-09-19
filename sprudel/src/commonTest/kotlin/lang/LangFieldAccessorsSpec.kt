@@ -68,13 +68,13 @@ class LangFieldAccessorsSpec : StringSpec({
         row("crush.oversample", """s("bd sd").crush(oversample = 2).crush(oversample = mul(2))""", { it.crushOversample?.toDouble() }, 4.0, s("bd sd").crush(oversample = 2).crush(oversample = mul(2))),
         row("coarse.amount", """s("bd sd").coarse(4).coarse(mul(2))""", { it.coarse }, 8.0, s("bd sd").coarse(4).coarse(mul(2))),
         row("coarse.oversample", """s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))""", { it.coarseOversample?.toDouble() }, 4.0, s("bd sd").coarse(oversample = 2).coarse(oversample = mul(2))),
-        row("reverb.wet", """s("bd sd").reverb(0.3).reverb(add(0.2))""", { it.reverb }, 0.5, s("bd sd").reverb(0.3).reverb(add(0.2))),
-        row("reverb.size", """s("bd sd").reverb(size = 4).reverb(size = mul(2))""", { it.reverbSize }, 8.0, s("bd sd").reverb(size = 4).reverb(size = mul(2))),
-        row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))""", { it.reverbLowpass }, 2000.0, s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))),
-        row("delay.wet", """s("bd sd").delay(0.3).delay(add(0.2))""", { it.delay }, 0.5, s("bd sd").delay(0.3).delay(add(0.2))),
-        row("delay.time", """s("bd sd").delay(time = 0.25).delay(time = mul(2))""", { it.delayTime }, 0.5, s("bd sd").delay(time = 0.25).delay(time = mul(2))),
-        row("delay.feedback", """s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))""", { it.delayFeedback }, 0.2, s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))),
-        row("delay.cap", """s("bd sd").delay(cap = 0.5).delay(cap = mul(2))""", { it.delayCap }, 1.0, s("bd sd").delay(cap = 0.5).delay(cap = mul(2))),
+        row("reverb.wet", """s("bd sd").reverb(0.3).reverb(add(0.2))""", { it.katalystParams?.get("reverb.wet") }, 0.5, s("bd sd").reverb(0.3).reverb(add(0.2))),
+        row("reverb.size", """s("bd sd").reverb(size = 4).reverb(size = mul(2))""", { it.katalystParams?.get("reverb.size") }, 8.0, s("bd sd").reverb(size = 4).reverb(size = mul(2))),
+        row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))""", { it.katalystParams?.get("reverb.lowpass") }, 2000.0, s("bd sd").reverb(lowpass = 4000).reverb(lowpass = div(2))),
+        row("delay.wet", """s("bd sd").delay(0.3).delay(add(0.2))""", { it.katalystParams?.get("delay.wet") }, 0.5, s("bd sd").delay(0.3).delay(add(0.2))),
+        row("delay.time", """s("bd sd").delay(time = 0.25).delay(time = mul(2))""", { it.katalystParams?.get("delay.time") }, 0.5, s("bd sd").delay(time = 0.25).delay(time = mul(2))),
+        row("delay.feedback", """s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))""", { it.katalystParams?.get("delay.feedback") }, 0.2, s("bd sd").delay(feedback = 0.4).delay(feedback = mul(0.5))),
+        row("delay.cap", """s("bd sd").delay(cap = 0.5).delay(cap = mul(2))""", { it.katalystParams?.get("delay.cap") }, 1.0, s("bd sd").delay(cap = 0.5).delay(cap = mul(2))),
         row("phaser.rate", """s("bd sd").phaser(0.5).phaser(mul(4))""", { it.phaserRate }, 2.0, s("bd sd").phaser(0.5).phaser(mul(4))),
         row("phaser.wet", """s("bd sd").phaser(wet = 0.5).phaser(wet = mul(0.5))""", { it.phaserDepth }, 0.25, s("bd sd").phaser(wet = 0.5).phaser(wet = mul(0.5))),
         row("phaser.center", """s("bd sd").phaser(center = 1000).phaser(center = mul(2))""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(center = 1000).phaser(center = mul(2))),
@@ -95,11 +95,11 @@ class LangFieldAccessorsSpec : StringSpec({
         row("crush.oversample", """s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)""", { it.coarseOversample?.toDouble() }, 2.0, s("bd sd").crush(oversample = 2).coarse(oversample = crush.oversample)),
         row("coarse.amount", """s("bd sd").coarse(4).crush(coarse.amount)""", { it.crush }, 4.0, s("bd sd").coarse(4).crush(coarse.amount)),
         row("coarse.oversample", """s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)""", { it.distortOversample?.toDouble() }, 2.0, s("bd sd").coarse(oversample = 2).distort(oversample = coarse.oversample)),
-        row("reverb.wet", """s("bd sd").reverb(0.3).delay(reverb.wet)""", { it.delay }, 0.3, s("bd sd").reverb(0.3).delay(reverb.wet)),
-        row("reverb.size", """s("bd sd").reverb(size = 4, lowpass = reverb.size)""", { it.reverbLowpass }, 4.0, s("bd sd").reverb(size = 4, lowpass = reverb.size)),
+        row("reverb.wet", """s("bd sd").reverb(0.3).delay(reverb.wet)""", { it.katalystParams?.get("delay.wet") }, 0.3, s("bd sd").reverb(0.3).delay(reverb.wet)),
+        row("reverb.size", """s("bd sd").reverb(size = 4, lowpass = reverb.size)""", { it.katalystParams?.get("reverb.lowpass") }, 4.0, s("bd sd").reverb(size = 4, lowpass = reverb.size)),
         row("reverb.lowpass", """s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)""", { it.cutoff }, 4000.0, s("bd sd").reverb(lowpass = 4000).lpf(reverb.lowpass)),
-        row("delay.wet", """s("bd sd").delay(0.3).reverb(delay.wet)""", { it.reverb }, 0.3, s("bd sd").delay(0.3).reverb(delay.wet)),
-        row("delay.time", """s("bd sd").delay(time = 0.25).reverb(size = delay.time)""", { it.reverbSize }, 0.25, s("bd sd").delay(time = 0.25).reverb(size = delay.time)),
+        row("delay.wet", """s("bd sd").delay(0.3).reverb(delay.wet)""", { it.katalystParams?.get("reverb.wet") }, 0.3, s("bd sd").delay(0.3).reverb(delay.wet)),
+        row("delay.time", """s("bd sd").delay(time = 0.25).reverb(size = delay.time)""", { it.katalystParams?.get("reverb.size") }, 0.25, s("bd sd").delay(time = 0.25).reverb(size = delay.time)),
         row("delay.feedback", """s("bd sd").delay(feedback = 0.4).pan(delay.feedback)""", { it.pan }, 0.4, s("bd sd").delay(feedback = 0.4).pan(delay.feedback)),
         row("delay.cap", """s("bd sd").delay(cap = 0.5).pan(delay.cap)""", { it.pan }, 0.5, s("bd sd").delay(cap = 0.5).pan(delay.cap)),
         row("phaser.rate", """s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)""", { it.tremoloSync }, 0.5, s("bd sd").phaser(0.5).tremolo(sync = phaser.rate)),
@@ -254,10 +254,10 @@ class LangFieldAccessorsSpec : StringSpec({
         row("panSpread", """s("bd sd").unison(pan = 0.5).unison(pan = mul(2))""", { it.oscParams?.get("panSpread") }, 1.0, s("bd sd").unison(pan = 0.5).unison(pan = mul(2))),
         row("density", """s("bd sd").density(0.5).density(mul(2))""", { it.oscParams?.get("density") }, 1.0, s("bd sd").density(0.5).density(mul(2))),
         row("orbit", """s("bd sd").orbit(1).orbit(add(1))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").orbit(1).orbit(add(1))),
-        row("duckorbit", """s("bd sd").duck(1).duck(add(1))""", { it.duckCylinder?.toDouble() }, 2.0, s("bd sd").duck(1).duck(add(1))),
-        row("duckattack", """s("bd sd").duck(attack = 0.05).duck(attack = mul(2))""", { it.duckAttack }, 0.1, s("bd sd").duck(attack = 0.05).duck(attack = mul(2))),
-        row("duckdepth", """s("bd sd").duck(depth = 0.5).duck(depth = mul(2))""", { it.duckDepth }, 1.0, s("bd sd").duck(depth = 0.5).duck(depth = mul(2))),
-        row("compressor.threshold", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.compressorThreshold }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
+        row("duckorbit", """s("bd sd").duck(1).duck(add(1))""", { it.katalystParams?.get("duck.orbit") }, 2.0, s("bd sd").duck(1).duck(add(1))),
+        row("duckattack", """s("bd sd").duck(attack = 0.05).duck(attack = mul(2))""", { it.katalystParams?.get("duck.attack") }, 0.1, s("bd sd").duck(attack = 0.05).duck(attack = mul(2))),
+        row("duckdepth", """s("bd sd").duck(depth = 0.5).duck(depth = mul(2))""", { it.katalystParams?.get("duck.depth") }, 1.0, s("bd sd").duck(depth = 0.5).duck(depth = mul(2))),
+        row("compressor.threshold", """s("bd sd").compressor(-12).compressor(add(-6))""", { it.katalystParams?.get("compressor.threshold") }, -18.0, s("bd sd").compressor(-12).compressor(add(-6))),
         row("fmenv", """s("bd sd").fm(200).fm(mul(2))""", { it.fmEnv }, 400.0, s("bd sd").fm(200).fm(mul(2))),
         row("pregain", """s("bd sd").pregain(2).pregain(mul(2))""", { it.oscParams?.get("pregain") }, 4.0, s("bd sd").pregain(2).pregain(mul(2))),
         row("analog", """s("bd sd").analog(2).analog(mul(2))""", { it.oscParams?.get("analog") }, 4.0, s("bd sd").analog(2).analog(mul(2))),
@@ -286,7 +286,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("uni", """s("bd sd").apply(uni(2))""", { it.oscParams?.get("voices") }, 2.0, s("bd sd").apply(uni(2))),
         row("d", """s("bd sd").apply(d(2))""", { it.oscParams?.get("density") }, 2.0, s("bd sd").apply(d(2))),
         row("o", """s("bd sd").apply(o(2))""", { it.cylinder?.toDouble() }, 2.0, s("bd sd").apply(o(2))),
-        row("comp", """s("bd sd").apply(comp(2))""", { it.compressorThreshold }, 2.0, s("bd sd").apply(comp(2))),
+        row("comp", """s("bd sd").apply(comp(2))""", { it.katalystParams?.get("compressor.threshold") }, 2.0, s("bd sd").apply(comp(2))),
     )
 
     val aliasReadsBatchFour = listOf(
@@ -404,16 +404,16 @@ class LangFieldAccessorsSpec : StringSpec({
         }
         // batch two: the compound effect doors, positional and named
         both(s("bd sd").apply(reverb(0.3, 4)), """s("bd sd").apply(reverb(0.3, 4))""") {
-            it.reverb shouldBe 0.3
-            it.reverbSize shouldBe 4.0
+            it.katalystParams?.get("reverb.wet") shouldBe 0.3
+            it.katalystParams?.get("reverb.size") shouldBe 4.0
         }
         both(s("bd sd").apply(reverb(size = 4)), """s("bd sd").apply(reverb(size = 4))""") {
-            it.reverbSize shouldBe 4.0
+            it.katalystParams?.get("reverb.size") shouldBe 4.0
         }
         both(s("bd sd").apply(delay(0.3, 0.25, 0.4)), """s("bd sd").apply(delay(0.3, 0.25, 0.4))""") {
-            it.delay shouldBe 0.3
-            it.delayTime shouldBe 0.25
-            it.delayFeedback shouldBe 0.4
+            it.katalystParams?.get("delay.wet") shouldBe 0.3
+            it.katalystParams?.get("delay.time") shouldBe 0.25
+            it.katalystParams?.get("delay.feedback") shouldBe 0.4
         }
         both(s("bd sd").apply(phaser(0.5, 0.6, 1000, 2000)), """s("bd sd").apply(phaser(0.5, 0.6, 1000, 2000))""") {
             it.phaserRate shouldBe 0.5
@@ -435,9 +435,9 @@ class LangFieldAccessorsSpec : StringSpec({
             it.nresonance shouldBe 5.0
         }
         both(s("bd sd").apply(compressor(-12, 4, 6)), """s("bd sd").apply(compressor(-12, 4, 6))""") {
-            it.compressorThreshold shouldBe -12.0
-            it.compressorRatio shouldBe 4.0
-            it.compressorKnee shouldBe 6.0
+            it.katalystParams?.get("compressor.threshold") shouldBe -12.0
+            it.katalystParams?.get("compressor.ratio") shouldBe 4.0
+            it.katalystParams?.get("compressor.knee") shouldBe 6.0
         }
         // a named argument that skips the first parameter
         both(note("c e").lpf(700).apply(lpf(q = 6)), """note("c e").lpf(700).apply(lpf(q = 6))""") {
@@ -547,14 +547,14 @@ class LangFieldAccessorsSpec : StringSpec({
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val check: (SprudelVoiceData) -> Unit)
         listOf(
             Case("reverb(size = mul(2))", s("bd sd").reverb(0.3, 4, 1500).reverb(size = mul(2)), """s("bd sd").reverb(0.3, 4, 1500).reverb(size = mul(2))""") {
-                it.reverb shouldBe 0.3
-                it.reverbSize shouldBe 8.0
-                it.reverbLowpass shouldBe 1500.0
+                it.katalystParams?.get("reverb.wet") shouldBe 0.3
+                it.katalystParams?.get("reverb.size") shouldBe 8.0
+                it.katalystParams?.get("reverb.lowpass") shouldBe 1500.0
             },
             Case("delay(feedback = mul(2))", s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2)), """s("bd sd").delay(0.3, 0.25, 0.2).delay(feedback = mul(2))""") {
-                it.delay shouldBe 0.3
-                it.delayTime shouldBe 0.25
-                it.delayFeedback shouldBe 0.4
+                it.katalystParams?.get("delay.wet") shouldBe 0.3
+                it.katalystParams?.get("delay.time") shouldBe 0.25
+                it.katalystParams?.get("delay.feedback") shouldBe 0.4
             },
             Case("phaser(center = mul(2))", s("bd sd").phaser(0.5, 0.6, 1000, 2000).phaser(center = mul(2)), """s("bd sd").phaser(0.5, 0.6, 1000, 2000).phaser(center = mul(2))""") {
                 it.phaserRate shouldBe 0.5
@@ -593,8 +593,8 @@ class LangFieldAccessorsSpec : StringSpec({
     "effects: every compound head keeps its value where the control pattern has a gap, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         listOf(
-            Case("reverb", s("bd sd").reverb(0.8).reverb("<0.5 ~>"), """s("bd sd").reverb(0.8).reverb("<0.5 ~>")""") { it.reverb },
-            Case("delay", s("bd sd").delay(0.8).delay("<0.5 ~>"), """s("bd sd").delay(0.8).delay("<0.5 ~>")""") { it.delay },
+            Case("reverb", s("bd sd").reverb(0.8).reverb("<0.5 ~>"), """s("bd sd").reverb(0.8).reverb("<0.5 ~>")""") { it.katalystParams?.get("reverb.wet") },
+            Case("delay", s("bd sd").delay(0.8).delay("<0.5 ~>"), """s("bd sd").delay(0.8).delay("<0.5 ~>")""") { it.katalystParams?.get("delay.wet") },
             Case("phaser", s("bd sd").phaser(0.8).phaser("<0.5 ~>"), """s("bd sd").phaser(0.8).phaser("<0.5 ~>")""") { it.phaserRate },
             Case("tremolo", s("bd sd").tremolo(0.8).tremolo("<0.5 ~>"), """s("bd sd").tremolo(0.8).tremolo("<0.5 ~>")""") { it.tremoloDepth },
             Case("distort", s("bd sd").distort(0.8).distort("<0.5 ~>"), """s("bd sd").distort(0.8).distort("<0.5 ~>")""") { it.distort },
@@ -709,11 +709,11 @@ class LangFieldAccessorsSpec : StringSpec({
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val check: (SprudelVoiceData) -> Unit)
         listOf(
             Case("compressor(ratio = mul(2))", note("c e").compressor(-20, 4, 6, 0.003, 0.1).compressor(ratio = mul(2)), """note("c e").compressor(-20, 4, 6, 0.003, 0.1).compressor(ratio = mul(2))""") {
-                it.compressorThreshold shouldBe -20.0
-                it.compressorRatio shouldBe 8.0
-                it.compressorKnee shouldBe 6.0
-                it.compressorAttack shouldBe 0.003
-                it.compressorRelease shouldBe 0.1
+                it.katalystParams?.get("compressor.threshold") shouldBe -20.0
+                it.katalystParams?.get("compressor.ratio") shouldBe 8.0
+                it.katalystParams?.get("compressor.knee") shouldBe 6.0
+                it.katalystParams?.get("compressor.attack") shouldBe 0.003
+                it.katalystParams?.get("compressor.release") shouldBe 0.1
             },
             Case("unison(spread = mul(2))", note("c e").unison(5, 0.3, 0.5).unison(spread = mul(2)), """note("c e").unison(5, 0.3, 0.5).unison(spread = mul(2))""") {
                 it.oscParams?.get("voices") shouldBe 5.0
@@ -721,9 +721,9 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.oscParams?.get("panSpread") shouldBe 0.5
             },
             Case("duck(depth = mul(0.5))", note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5)), """note("c e").duck(1, 0.8, 0.2).duck(depth = mul(0.5))""") {
-                it.duckCylinder shouldBe 1
-                it.duckDepth shouldBe 0.4
-                it.duckAttack shouldBe 0.2
+                it.katalystParams?.get("duck.orbit") shouldBe 1.0
+                it.katalystParams?.get("duck.depth") shouldBe 0.4
+                it.katalystParams?.get("duck.attack") shouldBe 0.2
             },
             Case("vibrato(depth = mul(2))", note("c e").vibrato(5, 0.5).vibrato(depth = mul(2)), """note("c e").vibrato(5, 0.5).vibrato(depth = mul(2))""") {
                 it.vibrato shouldBe 5.0
@@ -767,16 +767,16 @@ class LangFieldAccessorsSpec : StringSpec({
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         val cases = mutableListOf<Case>()
         fun add(name: String, kotlin: SprudelPattern, script: String, field: (SprudelVoiceData) -> Double?) { cases.add(Case(name, kotlin, script, field)) }
-        add("compressor", s("bd sd").compressor(threshold = "0.1 0.5"), """s("bd sd").compressor(threshold = "0.1 0.5")""") { it.compressorThreshold }
-        add("compressor.ratio", s("bd sd").compressor(ratio = "0.1 0.5"), """s("bd sd").compressor(ratio = "0.1 0.5")""") { it.compressorRatio }
-        add("compressor.knee", s("bd sd").compressor(knee = "0.1 0.5"), """s("bd sd").compressor(knee = "0.1 0.5")""") { it.compressorKnee }
-        add("compressor.attack", s("bd sd").compressor(attack = "0.1 0.5"), """s("bd sd").compressor(attack = "0.1 0.5")""") { it.compressorAttack }
-        add("compressor.release", s("bd sd").compressor(release = "0.1 0.5"), """s("bd sd").compressor(release = "0.1 0.5")""") { it.compressorRelease }
+        add("compressor", s("bd sd").compressor(threshold = "0.1 0.5"), """s("bd sd").compressor(threshold = "0.1 0.5")""") { it.katalystParams?.get("compressor.threshold") }
+        add("compressor.ratio", s("bd sd").compressor(ratio = "0.1 0.5"), """s("bd sd").compressor(ratio = "0.1 0.5")""") { it.katalystParams?.get("compressor.ratio") }
+        add("compressor.knee", s("bd sd").compressor(knee = "0.1 0.5"), """s("bd sd").compressor(knee = "0.1 0.5")""") { it.katalystParams?.get("compressor.knee") }
+        add("compressor.attack", s("bd sd").compressor(attack = "0.1 0.5"), """s("bd sd").compressor(attack = "0.1 0.5")""") { it.katalystParams?.get("compressor.attack") }
+        add("compressor.release", s("bd sd").compressor(release = "0.1 0.5"), """s("bd sd").compressor(release = "0.1 0.5")""") { it.katalystParams?.get("compressor.release") }
         add("unison", s("bd sd").unison(voices = "0.1 0.5"), """s("bd sd").unison(voices = "0.1 0.5")""") { it.oscParams?.get("voices") }
         add("unison", s("bd sd").unison(spread = "0.1 0.5"), """s("bd sd").unison(spread = "0.1 0.5")""") { it.oscParams?.get("spread") }
         add("unison", s("bd sd").unison(pan = "0.1 0.5"), """s("bd sd").unison(pan = "0.1 0.5")""") { it.oscParams?.get("panSpread") }
-        add("duck", s("bd sd").duck(depth = "0.1 0.5"), """s("bd sd").duck(depth = "0.1 0.5")""") { it.duckDepth }
-        add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.duckAttack }
+        add("duck", s("bd sd").duck(depth = "0.1 0.5"), """s("bd sd").duck(depth = "0.1 0.5")""") { it.katalystParams?.get("duck.depth") }
+        add("duck", s("bd sd").duck(attack = "0.1 0.5"), """s("bd sd").duck(attack = "0.1 0.5")""") { it.katalystParams?.get("duck.attack") }
         add("vibrato", s("bd sd").vibrato(rate = "0.1 0.5"), """s("bd sd").vibrato(rate = "0.1 0.5")""") { it.vibrato }
         add("vibrato", s("bd sd").vibrato(depth = "0.1 0.5"), """s("bd sd").vibrato(depth = "0.1 0.5")""") { it.vibratoMod }
         add("penv", s("bd sd").penv(amount = "0.1 0.5"), """s("bd sd").penv(amount = "0.1 0.5")""") { it.pEnv }
@@ -802,7 +802,7 @@ class LangFieldAccessorsSpec : StringSpec({
             }
         }
         listOf("kotlin" to s("bd sd").duck(orbit = "1 2"), "script" to SprudelPattern.compile("""s("bd sd").duck(orbit = "1 2")""").shouldNotBeNull()).forEach { (door, p) ->
-            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.duckCylinder } shouldBe listOf(1, 2) }
+            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 2.0) }
         }
     }
 
@@ -813,9 +813,9 @@ class LangFieldAccessorsSpec : StringSpec({
         // receiver's own 3 and 4 must not land in the head.
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val head: (SprudelVoiceData) -> Any?, val tail: (SprudelVoiceData) -> Double?, val expectedHead: Any? = null)
         listOf(
-            Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.compressorThreshold }, { it.compressorRatio }, COMPRESSOR_THRESHOLD_DB),
+            Case("compressor(ratio = 4)", seq("3 4").compressor(ratio = 4), """seq("3 4").compressor(ratio = 4)""", { it.katalystParams?.get("compressor.threshold") }, { it.katalystParams?.get("compressor.ratio") }, COMPRESSOR_THRESHOLD_DB),
             Case("unison(spread = 4)", seq("3 4").unison(spread = 4), """seq("3 4").unison(spread = 4)""", { it.oscParams?.get("voices") }, { it.oscParams?.get("spread") }),
-            Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.duckCylinder }, { it.duckDepth }),
+            Case("duck(depth = 4)", seq("3 4").duck(depth = 4), """seq("3 4").duck(depth = 4)""", { it.katalystParams?.get("duck.orbit") }, { it.katalystParams?.get("duck.depth") }),
             Case("vibrato(depth = 4)", seq("3 4").vibrato(depth = 4), """seq("3 4").vibrato(depth = 4)""", { it.vibrato }, { it.vibratoMod }),
             Case("penv(attack = 4)", seq("3 4").penv(attack = 4), """seq("3 4").penv(attack = 4)""", { it.pEnv }, { it.pAttack }),
             Case("fm(h = 4)", seq("3 4").fm(h = 4), """seq("3 4").fm(h = 4)""", { it.fmEnv }, { it.fmh }),
@@ -840,7 +840,7 @@ class LangFieldAccessorsSpec : StringSpec({
             withClue("fm $door") { p.queryArc(0.0, 1.0).map { it.data.fmEnv } shouldBe listOf(3.0, 4.0) }
         }
         listOf("kotlin" to seq("1 2").duck(), "script" to SprudelPattern.compile("""seq("1 2").duck()""").shouldNotBeNull()).forEach { (door, p) ->
-            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.duckCylinder } shouldBe listOf(1, 2) }
+            withClue("duck $door") { p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 2.0) }
         }
         listOf("kotlin" to seq("wood glass").body(), "script" to SprudelPattern.compile("""seq("wood glass").body()""").shouldNotBeNull()).forEach { (door, p) ->
             withClue("body $door") { p.queryArc(0.0, 1.0).map { it.data.body } shouldBe listOf("wood", "glass") }
@@ -850,7 +850,7 @@ class LangFieldAccessorsSpec : StringSpec({
     "batch G: every numeric head keeps its value where the control pattern has a gap, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         listOf(
-            Case("compressor", s("bd sd").compressor(-8).compressor("<-5 ~>"), """s("bd sd").compressor(-8).compressor("<-5 ~>")""") { it.compressorThreshold },
+            Case("compressor", s("bd sd").compressor(-8).compressor("<-5 ~>"), """s("bd sd").compressor(-8).compressor("<-5 ~>")""") { it.katalystParams?.get("compressor.threshold") },
             Case("unison", s("bd sd").unison(8).unison("<5 ~>"), """s("bd sd").unison(8).unison("<5 ~>")""") { it.oscParams?.get("voices") },
             Case("vibrato", s("bd sd").vibrato(8).vibrato("<5 ~>"), """s("bd sd").vibrato(8).vibrato("<5 ~>")""") { it.vibrato },
             Case("penv", s("bd sd").penv(8).penv("<5 ~>"), """s("bd sd").penv(8).penv("<5 ~>")""") { it.pEnv },
@@ -868,8 +868,8 @@ class LangFieldAccessorsSpec : StringSpec({
         }
         listOf("kotlin" to s("bd sd").duck(2).duck("<1 ~>"), "script" to SprudelPattern.compile("""s("bd sd").duck(2).duck("<1 ~>")""").shouldNotBeNull()).forEach { (door, p) ->
             withClue("duck $door") {
-                p.queryArc(0.0, 1.0).map { it.data.duckCylinder } shouldBe listOf(1, 1)
-                p.queryArc(1.0, 2.0).map { it.data.duckCylinder } shouldBe listOf(2, 2)
+                p.queryArc(0.0, 1.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(1.0, 1.0)
+                p.queryArc(1.0, 2.0).map { it.data.katalystParams?.get("duck.orbit") } shouldBe listOf(2.0, 2.0)
             }
         }
     }
@@ -917,13 +917,13 @@ class LangFieldAccessorsSpec : StringSpec({
     "effects: every numeric slot takes a control pattern per event, in both doors" {
         class Case(val name: String, val kotlin: SprudelPattern, val script: String, val field: (SprudelVoiceData) -> Double?)
         listOf(
-            Case("reverb.wet", s("bd sd").reverb(wet = "0.1 0.5"), """s("bd sd").reverb(wet = "0.1 0.5")""") { it.reverb },
-            Case("reverb.size", s("bd sd").reverb(size = "0.1 0.5"), """s("bd sd").reverb(size = "0.1 0.5")""") { it.reverbSize },
-            Case("reverb.lowpass", s("bd sd").reverb(lowpass = "0.1 0.5"), """s("bd sd").reverb(lowpass = "0.1 0.5")""") { it.reverbLowpass },
-            Case("delay.wet", s("bd sd").delay(wet = "0.1 0.5"), """s("bd sd").delay(wet = "0.1 0.5")""") { it.delay },
-            Case("delay.time", s("bd sd").delay(time = "0.1 0.5"), """s("bd sd").delay(time = "0.1 0.5")""") { it.delayTime },
-            Case("delay.feedback", s("bd sd").delay(feedback = "0.1 0.5"), """s("bd sd").delay(feedback = "0.1 0.5")""") { it.delayFeedback },
-            Case("delay.cap", s("bd sd").delay(cap = "0.1 0.5"), """s("bd sd").delay(cap = "0.1 0.5")""") { it.delayCap },
+            Case("reverb.wet", s("bd sd").reverb(wet = "0.1 0.5"), """s("bd sd").reverb(wet = "0.1 0.5")""") { it.katalystParams?.get("reverb.wet") },
+            Case("reverb.size", s("bd sd").reverb(size = "0.1 0.5"), """s("bd sd").reverb(size = "0.1 0.5")""") { it.katalystParams?.get("reverb.size") },
+            Case("reverb.lowpass", s("bd sd").reverb(lowpass = "0.1 0.5"), """s("bd sd").reverb(lowpass = "0.1 0.5")""") { it.katalystParams?.get("reverb.lowpass") },
+            Case("delay.wet", s("bd sd").delay(wet = "0.1 0.5"), """s("bd sd").delay(wet = "0.1 0.5")""") { it.katalystParams?.get("delay.wet") },
+            Case("delay.time", s("bd sd").delay(time = "0.1 0.5"), """s("bd sd").delay(time = "0.1 0.5")""") { it.katalystParams?.get("delay.time") },
+            Case("delay.feedback", s("bd sd").delay(feedback = "0.1 0.5"), """s("bd sd").delay(feedback = "0.1 0.5")""") { it.katalystParams?.get("delay.feedback") },
+            Case("delay.cap", s("bd sd").delay(cap = "0.1 0.5"), """s("bd sd").delay(cap = "0.1 0.5")""") { it.katalystParams?.get("delay.cap") },
             Case("phaser.rate", s("bd sd").phaser(rate = "0.1 0.5"), """s("bd sd").phaser(rate = "0.1 0.5")""") { it.phaserRate },
             Case("phaser.wet", s("bd sd").phaser(wet = "0.1 0.5"), """s("bd sd").phaser(wet = "0.1 0.5")""") { it.phaserDepth },
             Case("phaser.center", s("bd sd").phaser(center = "0.1 0.5"), """s("bd sd").phaser(center = "0.1 0.5")""") { it.phaserCenter },

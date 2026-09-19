@@ -61,8 +61,8 @@ a pattern moves it with `katp("gain.gain", x)`.
 **Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the orbit's
 param state, which is the `katalystParams` map of the voice holding the orbit's lease.** The bus
 doors write those slots (a door and its `katp` slot are the same knob), the chain re-resolves only
-when the map instance changes, and the voice's bus FIELDS are not a knob source any more: they
-carry the per-voice send AMOUNTS until step 5b-2 and leave the wire in 5b-3. Ownership is the
+when the map instance changes, and the voice's bus fields are not a knob source any more (the
+delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership is the
 `VoiceLease`'s **first-writer-wins**, so all voices on an orbit SHARE these; put voices on different
 orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` + envelopes,
 `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`,
@@ -101,34 +101,35 @@ RMS-based compressor. Applied per-cylinder or per-voice.
 
 Sidechain-triggered gain reduction across orbits.
 
-- Triggered when a voice with `duckCylinder = N` is activated
-- Reduces gain of cylinder N according to `duckAttack`/`duckDepth`
+- Configured by the orbit owner's `duck.orbit` slot (the source orbit N)
+- Reduces this orbit's gain whenever orbit N plays, by `duck.depth`, recovering over `duck.attack`
 - Recovery is automatic after the triggering voice ends
 
-| Parameter    | Meaning                                    |
-|--------------|--------------------------------------------|
-| `duckDepth`  | Depth of ducking (0 = full mute, 1 = none) |
-| `duckAttack` | Attack time (s) before full ducking        |
+| Slot          | Meaning                                    |
+|---------------|--------------------------------------------|
+| `duck.depth`  | Depth of ducking (0 = none, 1 = full mute) |
+| `duck.attack` | Recovery time (s) after the trigger stops  |
 
 ### DelayLine
 
 Fixed-size circular buffer delay with feedback and multi-tap mixing.
 
-| Parameter       | Meaning                             |
-|-----------------|-------------------------------------|
-| `delayTime`     | Delay time in seconds               |
-| `delayFeedback` | Feedback coefficient (0–1)          |
-| `delay`         | Dry/wet mix (0 = dry, 1 = full wet) |
+| Slot             | Meaning                                           |
+|------------------|---------------------------------------------------|
+| `delay.time`     | Delay time in seconds                             |
+| `delay.feedback` | Feedback coefficient (0-1)                        |
+| `delay.cap`      | Ceiling the feedback saturates toward             |
+| `delay.wet`      | How much of the orbit mix feeds the line (insert) |
 
 ### Reverb
 
 Freeverb-style algorithmic reverb (no impulse-response path).
 
-| Parameter   | Meaning                                        |
+| Slot             | Meaning                                        |
 |-------------|------------------------------------------------|
-| `reverb`        | Send amount per voice (`SendRenderer`)                          |
-| `reverbSize`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
-| `reverbLowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
+| `reverb.wet`     | How much of the orbit mix feeds the room (insert, the owner's one amount) |
+| `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
+| `reverb.lowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
 
 ### Phaser
 

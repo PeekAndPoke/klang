@@ -191,10 +191,10 @@ val o: orbit = orbit
  * `KatalystDsl.classic` carries for that slot, so filling it changes nothing on the historical
  * chain either.
  *
- * **This door does not fill the voice FIELDS**, unlike every other compound door: `VoiceFactory`
- * already supplies both numbers for a null field, and writing them out would change what every
- * existing song sends. So `duck.attack` reads nothing after `duck(1)` even though the SLOT has
- * [DUCK_ATTACK_SECONDS] in it.
+ * The slots are the duck's only storage since Katalyst step 5b-3 (the voice fields left the wire
+ * and `SprudelVoiceData`), and the `duck.*` accessors read them: `duck.attack` reads
+ * [DUCK_ATTACK_SECONDS] after `duck(1)`, the value the orbit runs. Until 5b-3 the accessors read
+ * the fields, which this fill never wrote, so the same read came back empty.
  *
  * Two different things keep a fill off a value it must not touch, and they are worth telling apart.
  * The `value = null` plus the absence test is what lets a `katp("duck.depth", 0.7)` from an earlier
@@ -220,7 +220,6 @@ private val duckOrbitMutation = voiceSetter {
     val named = it?.asIntOrNull()
 
     if (named != null) {
-        duckCylinder = named
         katalystParamsOrNew().set("duck.orbit", named.toDouble())
         fillDuckDefaults()
     }
@@ -228,7 +227,7 @@ private val duckOrbitMutation = voiceSetter {
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckCylinder?.toDouble() }, update = duckOrbitMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.orbit") }, update = duckOrbitMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckOrbitMutation)
@@ -239,26 +238,24 @@ private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?
 // authored its own depth as a `Param` default that 0 is what the stage then resolves to
 // (`/dsl-design` §4, the name-knob half).
 private val duckDepthMutation = voiceSetter {
-    duckDepth = it?.asDoubleOrNull()
-    putKatalystParam("duck.depth", duckDepth)
+    putKatalystParam("duck.depth", it?.asDoubleOrNull())
 }
 
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckDepth }, update = duckDepthMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.depth") }, update = duckDepthMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckDepthMutation)
 }
 
 private val duckAttackMutation = voiceSetter {
-    duckAttack = it?.asDoubleOrNull()
-    putKatalystParam("duck.attack", duckAttack)
+    putKatalystParam("duck.attack", it?.asDoubleOrNull())
 }
 
 private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckAttack }, update = duckAttackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.attack") }, update = duckAttackMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckAttackMutation)
@@ -334,15 +331,15 @@ object duck {
 
     /** The orbit slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val orbit: FieldAccessor = FieldAccessor { it.duckCylinder?.toDouble() }
+    val orbit: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.orbit") }
 
     /** The depth slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val depth: FieldAccessor = FieldAccessor { it.duckDepth }
+    val depth: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.depth") }
 
     /** The attack slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val attack: FieldAccessor = FieldAccessor { it.duckAttack }
+    val attack: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.attack") }
 
     /** The setter, see [SprudelPattern.duck]. */
     @KlangScript.Invoke

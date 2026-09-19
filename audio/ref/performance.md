@@ -223,8 +223,11 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
   `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
   sends the matching `<stage>.<knob>` slots over the wire AND the fields.
   Since step 5b-1 (2026-09-19) the SLOTS are what every orbit reads and the
-  fields are the temporary half: they carry the per-voice send amounts until
-  step 5b-2 and leave the wire in 5b-3, which is when this row's cost goes.
+  fields are the temporary half. Step 5b-3 (2026-09-19) took the delay,
+  reverb, compressor and duck fields off the wire, so for those four doors this
+  row's cost is gone; the phaser, body and vowel still ship both halves (the
+  phaser's fields feed a custom pipeline's per-voice phaser, and body and vowel
+  still ride `filters`).
   The rule's one home is the `katp` door's KDoc in
   `sprudel/lang/lang_katalyst.kt`. Measured with
   `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,

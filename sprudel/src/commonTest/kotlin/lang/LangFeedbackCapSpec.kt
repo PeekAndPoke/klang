@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
+import io.peekandpoke.klang.sprudel.paramBagOf
 
 /**
  * `delay(cap = ...)`, the ceiling a runaway delay saturates toward.
@@ -40,33 +41,32 @@ class LangFeedbackCapSpec : StringSpec({
                     SprudelPattern.compile("""note("$pat").apply(delay(cap = "$value").delay(cap = "$value"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.delayCap shouldBe 3.0
+            events[0].data.katalystParams?.get("delay.cap") shouldBe 3.0
         }
     }
 
     "the cap reaches the wire and defaults to absent" {
         val withCaps = note("c3").delay(cap = 3.0).queryArc(0.0, 1.0)[0].data.toVoiceData()
-        withCaps.delayCap shouldBe 3.0
+        withCaps.katalystParams?.get("delay.cap") shouldBe 3.0
 
         // Unset means "the engine's own default" (1.0), not a value written on every voice.
-        note("c3").queryArc(0.0, 1.0)[0].data.toVoiceData().delayCap.shouldBeNull()
+        note("c3").queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams?.get("delay.cap").shouldBeNull()
     }
 
-    "the cap survives a merge — it is a normal voice field, not a special case" {
-        // The merge helpers are the easy place to forget a new field: `clone()` uses copy() so it is
-        // safe automatically, and the "mergeFrom matches merge" oracle compares two paths that call
-        // the SAME helper, so neither notices an omission. This asserts the value directly.
-        // `plain` HAS a delay group but no cap, built directly: a `delay(...)` call would fill its cap
-        // with the default (2026-09-16), and a voice without a group would take merge's copy branch
-        // and never reach the field-by-field constructor this row exists to guard.
+    "the cap survives a merge, per slot name" {
+        // The cap lives in the orbit slot bag since Katalyst step 5b-3 (it used to be a field of a
+        // delay group, and this row guarded that group's merge helper). `plain` HAS a slot bag with
+        // a delay slot but no cap, built directly: a `delay(...)` call would fill its cap with the
+        // default (2026-09-16), and a voice without a bag would take merge's copy branch and never
+        // reach the per-name merge this row exists to guard.
         val withCap = note("c3").delay(cap = 2.5).queryArc(0.0, 1.0)[0].data
-        val plain = createSprudelVoiceData { delay = 0.4 }
+        val plain = createSprudelVoiceData { katalystParams = paramBagOf("delay.wet" to 0.4) }
 
-        plain.merge(withCap).delayCap shouldBe 2.5
-        withCap.merge(plain).delayCap shouldBe 2.5
+        plain.merge(withCap).katalystParams?.get("delay.cap") shouldBe 2.5
+        withCap.merge(plain).katalystParams?.get("delay.cap") shouldBe 2.5
 
-        val inPlace = createSprudelVoiceData { delay = 0.4 }
+        val inPlace = createSprudelVoiceData { katalystParams = paramBagOf("delay.wet" to 0.4) }
         inPlace.mergeFrom(withCap)
-        inPlace.delayCap shouldBe 2.5
+        inPlace.katalystParams?.get("delay.cap") shouldBe 2.5
     }
 })

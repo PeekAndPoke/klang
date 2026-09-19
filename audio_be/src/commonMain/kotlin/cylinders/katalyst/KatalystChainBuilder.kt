@@ -56,9 +56,9 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * re-resolved only when the orbit's param state changes. That state is the owner voice's
  * `katalystParams`, which `.katp` and the bus doors write (step 5a), and it is the ONE way a bus
  * knob reaches a stage, for a declared chain and for the chain a cylinder is born with alike. The
- * voice's bus FIELDS are not a knob source any more (the signal-flow plan §7, D4: the chain is the
- * instrument), and since step 5b-2 nothing on the bus reads them at all; they leave the wire in
- * 5b-3. The `voiceDriven` flag and the owner writers it chose went with step 5b-1.
+ * voice's bus FIELDS stopped being a knob source then (the signal-flow plan §7, D4: the chain is
+ * the instrument) and left the wire in step 5b-3. The `voiceDriven` flag and the owner writers it
+ * chose went with step 5b-1.
  *
  * A writer has TWO halves, `resolve` and `apply`, and the split is about the per-block cost: the
  * orbit's param state changes far more rarely than a block goes by, so `resolve` does the lookups

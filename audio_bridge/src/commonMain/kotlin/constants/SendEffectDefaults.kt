@@ -10,8 +10,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // master stages (`MasterStageDsl.Delay` / `.Reverb` and their builders), a
 // sprudel `delay(...)` / `reverb(...)` call (the compound doors fill their
 // companions from here, see `/dsl-design` §4),
-// the engine's fill for any other producer (`VoiceFactory`), the fallback for a
-// non-finite value on both buses, and the sprudel editor tools. One edit here
+// the fallback for a non-finite value on both buses, and the sprudel editor tools. One edit here
 // retunes all of them; they cannot drift apart.
 //
 // Musical, not neutral (maintainer, 2026-09-16): an unset slot means a usable

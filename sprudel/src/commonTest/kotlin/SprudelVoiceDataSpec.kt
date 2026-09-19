@@ -266,11 +266,10 @@ class SprudelVoiceDataSpec : StringSpec({
             crush = 4.0
             cylinder = 1
             pan = 0.5
-            delay = 0.3
-            delayTime = 0.25
-            delayFeedback = 0.5
-            reverb = 0.7
-            reverbSize = 5.0
+            katalystParams = paramBagOf(
+                "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.5,
+                "reverb.wet" to 0.7, "reverb.size" to 5.0,
+            )
             begin = 0.0
             end = 1.0
             speed = 1.0
@@ -300,11 +299,11 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.crush shouldBe 4.0
         voiceData.cylinder shouldBe 1
         voiceData.pan shouldBe 0.5
-        voiceData.delay shouldBe 0.3
-        voiceData.delayTime shouldBe 0.25
-        voiceData.delayFeedback shouldBe 0.5
-        voiceData.reverb shouldBe 0.7
-        voiceData.reverbSize shouldBe 5.0
+        voiceData.katalystParams?.get("delay.wet") shouldBe 0.3
+        voiceData.katalystParams?.get("delay.time") shouldBe 0.25
+        voiceData.katalystParams?.get("delay.feedback") shouldBe 0.5
+        voiceData.katalystParams?.get("reverb.wet") shouldBe 0.7
+        voiceData.katalystParams?.get("reverb.size") shouldBe 5.0
         voiceData.begin shouldBe 0.0
         voiceData.end shouldBe 1.0
         voiceData.speed shouldBe 1.0
@@ -359,7 +358,6 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5
         tremoloSync = b + 36; tremoloDepth = b + 37; tremoloSkew = b + 38; tremoloPhase = b + 39
         tremoloShape = "ts$seed"
-        duckCylinder = seed + 40; duckAttack = b + 41; duckDepth = b + 42
         cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46; lpPasses = b + 46.2; hpPasses = b + 46.4
         bandf = b + 47; bandq = b + 48; notchf = b + 49; nresonance = b + 50
         lpattack = b + 51; lpdecay = b + 52; lpsustain = b + 53; lprelease = b + 54; lpenv = b + 55
@@ -367,13 +365,9 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         bpattack = b + 61; bpdecay = b + 62; bpsustain = b + 63; bprelease = b + 64; bpenv = b + 65
         nfattack = b + 66; nfdecay = b + 67; nfsustain = b + 68; nfrelease = b + 69; nfenv = b + 70
         cylinder = seed + 71; pan = b + 72
-        delay = b + 73; delayTime = b + 74; delayFeedback = b + 75; delayCap = b + 175
-        reverb = b + 76; reverbSize = b + 77; reverbLowpass = b + 79
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86
         vowel = "v$seed"
-        compressorThreshold = b + 89; compressorRatio = b + 90; compressorKnee = b + 91
-        compressorAttack = b + 92; compressorRelease = b + 93
         solo = b + 88; patternId = "pid$seed"; pipeline = PipelineValue.Named("eng$seed")
         value = SprudelVoiceValue.Num(b + 87)
         tags = setOf("t$seed")

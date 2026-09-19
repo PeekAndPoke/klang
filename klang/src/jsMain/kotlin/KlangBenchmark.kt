@@ -384,11 +384,8 @@ class KlangBenchmark(
                     )
                 ),
                 adsr = AdsrDef.defaultSynth,
-                // Enable the orbit reverb. Its stage reads the SLOTS alone, the amount included
-                // (Katalyst step 5b-2); the FIELDS are written too, as the `reverb(...)` door does,
-                // until they leave the wire in 5b-3.
-                reverb = 0.2,
-                reverbSize = 0.5,
+                // Enable the orbit reverb. Its stage reads the SLOTS, the amount included
+                // (Katalyst step 5b-2), and the wire has no reverb fields since 5b-3.
                 katalystParams = mapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
             )
         )

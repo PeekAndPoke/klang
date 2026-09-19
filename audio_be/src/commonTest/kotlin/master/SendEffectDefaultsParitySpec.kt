@@ -46,8 +46,8 @@ import kotlin.random.Random
  *
  * **Where the two halves now live (Katalyst step 5b-1, 2026-09-19), and what is left here.** The
  * orbit's STAGE reads the slot state; since step 5b-2 the `wet` slot is the amount too (the stage is
- * fed from the orbit mix), and the voice FIELDS have no reader on the bus at all, so the rows that
- * read a field's send amount went with that step. The rows about the DSP write the slots by hand.
+ * fed from the orbit mix), so the rows that read a voice FIELD's send amount went with that step,
+ * and the fields themselves left the wire in 5b-3. The rows about the DSP write the slots by hand.
  * That costs this file half of its old subject, honestly stated: a row that writes
  * `DELAY_TIME_SECONDS` into the map and then reads it back out of the delay line does NOT pin "the
  * door's fill equals the master's default" any more, it pins "the orbit and the master build the
@@ -161,13 +161,12 @@ class SendEffectDefaultsParitySpec : StringSpec({
     // ── Delay ────────────────────────────────────────────────────────────────────────────────────
 
     "delay: the orbit and the master build the same line from the same three numbers" {
-        // What `.delay(0.4)` puts on the wire: the amount in the field, and in the slot state
-        // the named knob plus the three companions the door fills from the shared constants. The
+        // What `.delay(0.4)` puts on the wire: in the slot state, the named knob plus the three
+        // companions the door fills from the shared constants. The
         // MASTER side is the oracle: its stage reads the same constants through its own code, so a
         // literal that drifted into either host fails here.
         val (_, cylinder) = orbitOf(
             VoiceData.empty.copy(
-                delay = 0.4,
                 katalystParams = mapOf(
                     "delay.wet" to 0.4,
                     "delay.time" to DELAY_TIME_SECONDS,
@@ -190,7 +189,7 @@ class SendEffectDefaultsParitySpec : StringSpec({
         // the classic chain's own `delay.time` default is the untouched voice's 0.0, so nothing
         // runs. Documented in `docs/tasks/katalyst-dsl.md` §1 since step 1.
         val (_, cylinder) = orbitOf(
-            VoiceData.empty.copy(delay = 0.4, katalystParams = mapOf("delay.wet" to 0.4))
+            VoiceData.empty.copy(katalystParams = mapOf("delay.wet" to 0.4))
         )
 
         cylinder.delay!!.delayLine.shouldBeNull()
@@ -203,7 +202,6 @@ class SendEffectDefaultsParitySpec : StringSpec({
         // substitutes. Neither door can produce it: both fill with numbers.
         val (_, cylinder) = orbitOf(
             VoiceData.empty.copy(
-                delay = 0.4,
                 katalystParams = mapOf("delay.wet" to 0.4, "delay.time" to Double.POSITIVE_INFINITY),
             )
         )
@@ -248,7 +246,6 @@ class SendEffectDefaultsParitySpec : StringSpec({
         // The delay row's twin: what `.reverb(0.4)` writes, the named knob plus the filled size.
         val (_, cylinder) = orbitOf(
             VoiceData.empty.copy(
-                reverb = 0.4,
                 katalystParams = mapOf("reverb.wet" to 0.4, "reverb.size" to REVERB_SIZE),
             )
         )
@@ -264,7 +261,6 @@ class SendEffectDefaultsParitySpec : StringSpec({
         // there is). The master substitutes the shared constant for both.
         fun orbitReverbFor(size: Double) = orbitOf(
             VoiceData.empty.copy(
-                reverb = 0.4,
                 katalystParams = mapOf("reverb.wet" to 0.4, "reverb.size" to size),
             )
         ).second.reverb!!.reverb

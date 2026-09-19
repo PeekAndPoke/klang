@@ -58,10 +58,11 @@ data class VoiceData(
      *
      * Which chain reads which slot of this map is ONE rule with ONE home, the `katp` door's KDoc
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
-     * declares, the chain a cylinder is born with included (Katalyst step 5b-1). The bus FIELDS
-     * below are not a knob source any more, and since step 5b-2 no orbit stage reads them at all
-     * (the delay and the reverb are fed from the orbit mix by the owner's `wet` slot); they leave
-     * the wire in 5b-3.
+     * declares, the chain a cylinder is born with included (Katalyst step 5b-1). It is the one
+     * source of an orbit stage's knobs: the delay, reverb, compressor and duck fields left the wire
+     * in step 5b-3. The phaser fields below stay for one reader only, the per-voice phaser of a
+     * custom pipeline that declares `StageDsl.Phaser`; they leave with the Pipeline DSL
+     * (signal-flow plan phase 3).
      */
     val katalystParams: Map<String, Double>? = null,
 
@@ -126,11 +127,6 @@ data class VoiceData(
     val tremoloPhase: Double?,
     val tremoloShape: String?,
 
-    // Ducking / Sidechain
-    val duckCylinder: Int?,
-    val duckAttack: Double?,
-    val duckDepth: Double?,
-
     // HPF / LPF
     /** Low pass filter cutoff frequency */
     val cutoff: Double?,
@@ -147,18 +143,6 @@ data class VoiceData(
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     val pan: Double?,
 
-    // Delay
-    val delay: Double?, // Mix amount (0.0 to 1.0)
-    val delayTime: Double?, // Time in seconds
-    val delayFeedback: Double?, // Feedback amount; >= 1.0 self-oscillates, bounded by delayCap
-    /** Ceiling the delay feedback saturates toward (default 1.0). Sprudel `delay(cap = ...)`. */
-    val delayCap: Double? = null,
-
-    // Reverb
-    val reverb: Double?, // Send amount (0.0 to 1.0)
-    val reverbSize: Double?, // Tail length, authored ~0..10 scale (normalized in VoiceFactory)
-    val reverbLowpass: Double?, // Tail damping cutoff in Hz
-
     // Sample manipulation
     val begin: Double?,
     val end: Double?,
@@ -167,13 +151,6 @@ data class VoiceData(
     val cut: Int?,
     val loopBegin: Double?,
     val loopEnd: Double?,
-
-    // Dynamics / Compression (per-param since C0.2; audio_be applies defaults for missing values)
-    val compressorThreshold: Double?,
-    val compressorRatio: Double?,
-    val compressorKnee: Double?,
-    val compressorAttack: Double?,
-    val compressorRelease: Double?,
 
     // Solo
     /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
@@ -291,21 +268,12 @@ data class VoiceData(
             tremoloSkew = null,
             tremoloPhase = null,
             tremoloShape = null,
-            duckCylinder = null,
-            duckAttack = null,
-            duckDepth = null,
             cutoff = null,
             hcutoff = null,
             bandf = null,
             resonance = null,
             cylinder = null,
             pan = null,
-            delay = null,
-            delayTime = null,
-            delayFeedback = null,
-            reverb = null,
-            reverbSize = null,
-            reverbLowpass = null,
             begin = null,
             end = null,
             speed = null,
@@ -313,11 +281,6 @@ data class VoiceData(
             cut = null,
             loopBegin = null,
             loopEnd = null,
-            compressorThreshold = null,
-            compressorRatio = null,
-            compressorKnee = null,
-            compressorAttack = null,
-            compressorRelease = null,
             solo = null,
             sourceId = null,
         )

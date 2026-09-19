@@ -50,24 +50,24 @@ class LangCompressorSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(comp("-10 -30", "2 4"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.compressorThreshold shouldBe -10.0
-            events[0].data.compressorRatio shouldBe 2.0
-            events[1].data.compressorThreshold shouldBe -30.0
-            events[1].data.compressorRatio shouldBe 4.0
+            events[0].data.katalystParams?.get("compressor.threshold") shouldBe -10.0
+            events[0].data.katalystParams?.get("compressor.ratio") shouldBe 2.0
+            events[1].data.katalystParams?.get("compressor.threshold") shouldBe -30.0
+            events[1].data.katalystParams?.get("compressor.ratio") shouldBe 4.0
         }
     }
 
-    "compressor() sets all five wire fields" {
+    "compressor() sets all five slots" {
         val p = note("c").compressor(-20, 4, 6, 0.003, 0.1)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         with(events[0].data) {
-            compressorThreshold shouldBe -20.0
-            compressorRatio shouldBe 4.0
-            compressorKnee shouldBe 6.0
-            compressorAttack shouldBe 0.003
-            compressorRelease shouldBe 0.1
+            katalystParams?.get("compressor.threshold") shouldBe -20.0
+            katalystParams?.get("compressor.ratio") shouldBe 4.0
+            katalystParams?.get("compressor.knee") shouldBe 6.0
+            katalystParams?.get("compressor.attack") shouldBe 0.003
+            katalystParams?.get("compressor.release") shouldBe 0.1
         }
     }
 
@@ -79,11 +79,11 @@ class LangCompressorSpec : StringSpec({
 
         events.size shouldBe 1
         with(events[0].data) {
-            compressorThreshold shouldBe -15.0
-            compressorRatio shouldBe 3.0
-            compressorKnee shouldBe COMPRESSOR_KNEE_DB
-            compressorAttack shouldBe COMPRESSOR_ATTACK_SECONDS
-            compressorRelease shouldBe COMPRESSOR_RELEASE_SECONDS
+            katalystParams?.get("compressor.threshold") shouldBe -15.0
+            katalystParams?.get("compressor.ratio") shouldBe 3.0
+            katalystParams?.get("compressor.knee") shouldBe COMPRESSOR_KNEE_DB
+            katalystParams?.get("compressor.attack") shouldBe COMPRESSOR_ATTACK_SECONDS
+            katalystParams?.get("compressor.release") shouldBe COMPRESSOR_RELEASE_SECONDS
         }
     }
 
@@ -93,10 +93,10 @@ class LangCompressorSpec : StringSpec({
 
         events.size shouldBe 1
         with(events[0].data) {
-            compressorThreshold shouldBe COMPRESSOR_THRESHOLD_DB
-            compressorRatio shouldBe COMPRESSOR_RATIO
-            compressorKnee shouldBe 2.0
-            compressorRelease shouldBe 0.5
+            katalystParams?.get("compressor.threshold") shouldBe COMPRESSOR_THRESHOLD_DB
+            katalystParams?.get("compressor.ratio") shouldBe COMPRESSOR_RATIO
+            katalystParams?.get("compressor.knee") shouldBe 2.0
+            katalystParams?.get("compressor.release") shouldBe 0.5
         }
     }
 
@@ -105,10 +105,10 @@ class LangCompressorSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.compressorThreshold shouldBe -10.0
-        events[1].data.compressorThreshold shouldBe -30.0
-        events[0].data.compressorRatio shouldBe 4.0
-        events[1].data.compressorRatio shouldBe 4.0
+        events[0].data.katalystParams?.get("compressor.threshold") shouldBe -10.0
+        events[1].data.katalystParams?.get("compressor.threshold") shouldBe -30.0
+        events[0].data.katalystParams?.get("compressor.ratio") shouldBe 4.0
+        events[1].data.katalystParams?.get("compressor.ratio") shouldBe 4.0
     }
 
     "compressor() alternation form selects per cycle" {
@@ -119,10 +119,10 @@ class LangCompressorSpec : StringSpec({
         assertSoftly {
             c0.size shouldBe 1
             c1.size shouldBe 1
-            c0[0].data.compressorThreshold shouldBe -10.0
-            c0[0].data.compressorRatio shouldBe 2.0
-            c1[0].data.compressorThreshold shouldBe -30.0
-            c1[0].data.compressorRatio shouldBe 8.0
+            c0[0].data.katalystParams?.get("compressor.threshold") shouldBe -10.0
+            c0[0].data.katalystParams?.get("compressor.ratio") shouldBe 2.0
+            c1[0].data.katalystParams?.get("compressor.threshold") shouldBe -30.0
+            c1[0].data.katalystParams?.get("compressor.ratio") shouldBe 8.0
         }
     }
 
@@ -131,21 +131,21 @@ class LangCompressorSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.compressorThreshold } shouldBe listOf(3.0, 4.0)
-        events[0].data.compressorRatio shouldBe COMPRESSOR_RATIO
+        events.map { it.data.katalystParams?.get("compressor.threshold") } shouldBe listOf(3.0, 4.0)
+        events[0].data.katalystParams?.get("compressor.ratio") shouldBe COMPRESSOR_RATIO
     }
 
-    "comp() alias reaches the same fields" {
+    "comp() alias reaches the same slots" {
         val p = SprudelPattern.compile("""note("c").comp(-20, 4, 3, 0.01, 0.3)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
         with(events[0].data) {
-            compressorThreshold shouldBe -20.0
-            compressorRatio shouldBe 4.0
-            compressorKnee shouldBe 3.0
-            compressorAttack shouldBe 0.01
-            compressorRelease shouldBe 0.3
+            katalystParams?.get("compressor.threshold") shouldBe -20.0
+            katalystParams?.get("compressor.ratio") shouldBe 4.0
+            katalystParams?.get("compressor.knee") shouldBe 3.0
+            katalystParams?.get("compressor.attack") shouldBe 0.01
+            katalystParams?.get("compressor.release") shouldBe 0.3
         }
     }
 
@@ -154,6 +154,6 @@ class LangCompressorSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.compressorThreshold shouldBe -20.0
+        events[0].data.katalystParams?.get("compressor.threshold") shouldBe -20.0
     }
 })

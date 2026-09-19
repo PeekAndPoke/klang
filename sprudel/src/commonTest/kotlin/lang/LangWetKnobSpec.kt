@@ -32,8 +32,8 @@ class LangWetKnobSpec : StringSpec({
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data
 
     "sprudel Kotlin door: wet knobs write the (unchanged) wire fields" {
-        firstData(note("c").reverb(0.4)).reverb shouldBe 0.4
-        firstData(note("c").delay(0.3)).delay shouldBe 0.3
+        firstData(note("c").reverb(0.4)).katalystParams?.get("reverb.wet") shouldBe 0.4
+        firstData(note("c").delay(0.3)).katalystParams?.get("delay.wet") shouldBe 0.3
         firstData(note("c").phaser(wet = 0.8)).phaserDepth shouldBe 0.8
         firstData(note("c").phaser(floor = 0.3)).phaserFloor shouldBe 0.3
         firstData(note("c").body(wet = 0.5)).bodyMix shouldBe 0.5
@@ -41,8 +41,8 @@ class LangWetKnobSpec : StringSpec({
     }
 
     "sprudel script door: wet knobs dispatch and write the same fields" {
-        firstData(SprudelPattern.compile("""note("c").reverb(0.4)""")).reverb shouldBe 0.4
-        firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).delay shouldBe 0.3
+        firstData(SprudelPattern.compile("""note("c").reverb(0.4)""")).katalystParams?.get("reverb.wet") shouldBe 0.4
+        firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).katalystParams?.get("delay.wet") shouldBe 0.3
         firstData(SprudelPattern.compile("""note("c").phaser(wet = 0.8)""")).phaserDepth shouldBe 0.8
         firstData(SprudelPattern.compile("""note("c").phaser(floor = 0.3)""")).phaserFloor shouldBe 0.3
         firstData(SprudelPattern.compile("""note("c").body(wet = 0.5)""")).bodyMix shouldBe 0.5
@@ -51,13 +51,13 @@ class LangWetKnobSpec : StringSpec({
 
     "compound heads: the wet slot stays the head's first/second slot" {
         val reverb = firstData(note("c").reverb(0.4, 5.0))
-        reverb.reverb shouldBe 0.4
-        reverb.reverbSize shouldBe 5.0
+        reverb.katalystParams?.get("reverb.wet") shouldBe 0.4
+        reverb.katalystParams?.get("reverb.size") shouldBe 5.0
 
         val delay = firstData(note("c").delay(0.5, 0.25, 0.6))
-        delay.delay shouldBe 0.5
-        delay.delayTime shouldBe 0.25
-        delay.delayFeedback shouldBe 0.6
+        delay.katalystParams?.get("delay.wet") shouldBe 0.5
+        delay.katalystParams?.get("delay.time") shouldBe 0.25
+        delay.katalystParams?.get("delay.feedback") shouldBe 0.6
 
         val phaser = firstData(note("c").phaser(2.0, 0.8))
         phaser.phaserRate shouldBe 2.0

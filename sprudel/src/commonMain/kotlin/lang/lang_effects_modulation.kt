@@ -50,8 +50,8 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * `VoiceFactory` substituted exactly these for a null `phaser` / `phaserDepth` / `phaserCenter` /
  * `phaserSweep` / `phaserFloor`.
  *
- * One consequence worth knowing, and it holds for every filled door except `duck` (whose fill
- * writes no voice fields, so `duck.attack` reads nothing after `duck(1)`): a filled knob becomes
+ * One consequence worth knowing, and it holds for every filled door (`duck` included since step
+ * 5b-3, when its accessors moved onto the slots its fill writes): a filled knob becomes
  * READABLE through its field accessor, so `phaser.wet` reads 0.0 after `phaser(rate = 2)` where it
  * used to read nothing. A cross-stage read such as `delay(wet = phaser.wet)` therefore engages the
  * delay line at a zero send rather than leaving it alone. No shipped song reads one stage into

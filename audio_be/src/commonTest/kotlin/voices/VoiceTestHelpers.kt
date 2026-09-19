@@ -19,7 +19,6 @@ import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
@@ -76,16 +75,10 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0), // Always on
-        compressor: Voice.Compressor? = null,
-        ducking: Voice.Ducking? = null,
 
         // Filters & Modulation
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
-
-        // Time-Based Effects
-        delay: Voice.Delay = Voice.Delay(0.0, 0.0, 0.0),
-        reverb: Voice.Reverb = Voice.Reverb(0.0, 0.0),
 
         // Raw Effect Data
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
@@ -99,10 +92,6 @@ object VoiceTestHelpers {
 
         // Silence culling window in seconds (null = engine default, negative = never)
         cull: Double? = null,
-
-        // Orbit-level resonators (carried to the Cylinder, not baked per-voice)
-        body: FilterDef.Body? = null,
-        vowel: FilterDef.Formant? = null,
 
         // The orbit chain's param state this voice carries while it owns the orbit's lease.
         katalystParams: Map<String, Double>? = null,
@@ -169,13 +158,7 @@ object VoiceTestHelpers {
             cylinderId = cylinderId,
             gain = gain,
             pan = pan,
-            compressor = compressor,
-            ducking = ducking,
-            delay = delay,
-            reverb = reverb,
             phaser = phaser,
-            body = body,
-            vowel = vowel,
             katalystParams = katalystParams,
             cut = cut,
             cull = cull,
@@ -201,29 +184,22 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
-        compressor: Voice.Compressor? = null,
-        ducking: Voice.Ducking? = null,
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
-        delay: Voice.Delay = Voice.Delay(0.0, 0.0, 0.0),
-        reverb: Voice.Reverb = Voice.Reverb(0.0, 0.0),
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
         tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
         distort: Voice.Distort = Voice.Distort(0.0),
         crush: Voice.Crush = Voice.Crush(0.0),
         coarse: Voice.Coarse = Voice.Coarse(0.0),
-        body: FilterDef.Body? = null,
-        vowel: FilterDef.Formant? = null,
         katalystParams: Map<String, Double>? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
-        envelope = envelope, compressor = compressor,
-        ducking = ducking, filter = filter, filterModulators = filterModulators,
-        delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
-        distort = distort, crush = crush, coarse = coarse, body = body, vowel = vowel,
+        envelope = envelope, filter = filter, filterModulators = filterModulators,
+        phaser = phaser, tremolo = tremolo,
+        distort = distort, crush = crush, coarse = coarse,
         katalystParams = katalystParams,
     )
 
@@ -250,12 +226,8 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
-        compressor: Voice.Compressor? = null,
-        ducking: Voice.Ducking? = null,
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
-        delay: Voice.Delay = Voice.Delay(0.0, 0.0, 0.0),
-        reverb: Voice.Reverb = Voice.Reverb(0.0, 0.0),
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
         tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
         distort: Voice.Distort = Voice.Distort(0.0),
@@ -277,9 +249,8 @@ object VoiceTestHelpers {
         ),
         fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
-        envelope = envelope, compressor = compressor,
-        ducking = ducking, filter = filter, filterModulators = filterModulators,
-        delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
+        envelope = envelope, filter = filter, filterModulators = filterModulators,
+        phaser = phaser, tremolo = tremolo,
         distort = distort, crush = crush, coarse = coarse,
     )
 
