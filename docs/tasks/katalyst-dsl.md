@@ -365,8 +365,8 @@ complexity outranks the duplication.
   snap-only contract and needs no coefficient ramp for this host; the unified-eq plan's D4 note is
   therefore closed for the orbit and still open for a future master eq that wants per-sample
   interpolation instead of a bank swap.
-- Body and vowel: unchanged in this work; their rebase on `EqCore` stays the separate item in
-  the settled section.
+- Body and vowel: unchanged in this work; their consolidation is the resonator-bank item in the
+  settled section (not a rebase on `EqCore`, superseded 2026-09-19).
 - Ducking: the `Duck` stage configures `KatalystDuckEffect` exactly as the voice field does
   today; `Cylinders` keeps running it after every orbit is processed.
 - Nothing per sample allocates; every stage instance and buffer is created at chain build, which
@@ -854,8 +854,13 @@ complexity outranks the duplication.
   done), tests 9, 10. The `EqCore` coefficient ramp is NOT part of it any more: step 4 built the
   smoothing at the surface as a bank crossfade (§7).
 - **Phase 3, thickness.** `mics`, test 8.
-- **Phase 4, consolidation.** Body and vowel on `EqCore` (the settled item), unchanged sound,
-  `FormantFilter` output as the oracle.
+- **Phase 4, consolidation.** SUPERSEDED 2026-09-19: body and vowel do NOT move onto `EqCore`.
+  `EqCore` is snap-only by contract (a per-block coefficient change on it clicks), and the
+  decision of 2026-09-19 ("how every orbit stage switches and changes") wants a per-block formant
+  MORPH for vowels. Body and vowel already run on `SvfBPF`, the state-variable bandpass that
+  tolerates coefficient changes while it plays; they merge into ONE resonator bank on it instead
+  (identity first, unchanged sound), which is also the core of a later user surface for
+  individual formants.
 
 ### 10. Parked decisions
 
