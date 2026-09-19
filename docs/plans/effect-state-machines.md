@@ -181,7 +181,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 |---|---|---|
 | `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
 | `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.deactivate` |
-| `KatalystFilterSwap` (body, vowel, eq) | first commit: Off, Engaged, Crossfading; second commit, a sound change: the switch-off fade, states open | two nullable filter pairs plus `active`; FadingOut is step 5c's crossfade on switch-off |
+| `KatalystFilterSwap` (body, vowel, eq) | first commit CONVERTED 2026-09-19 (Katalyst 5c-4): Off, Engaged, Crossfading; every event dispatches, `clear` included, because the outgoing pair (a reference) belongs to Crossfading. Second commit, a sound change: the switch-on and switch-off fades, with the open decision on rapid changes in `../tasks/katalyst-dsl.md` |
 | `KatalystCompressorEffect` | first commit: Off, Active; second commit, a sound change: the switch-off ramp, law open | nullable instance; ReleasingOut is the ramp on switch-off |
 | `KatalystGainEffect` | fresh, settled, ramping | fields |
 | `Cylinder` chain swap | Idle, Pending, Fading, Draining | five fields (`outgoing`, `draining`, `duckingOut`, `duckFadingIn`, `pendingKey`) |

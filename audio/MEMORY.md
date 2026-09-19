@@ -1,5 +1,58 @@
 # Klang Audio — Memory
 
+## The filter swap is a state machine: Off, Engaged, Crossfading (2026-09-19)
+
+Katalyst step 5c-4, the FIRST of the swap's two commits: today's lifecycle as states, a pure
+refactor, bit-identical. `KatalystFilterSwap` has the delay's shape (private sealed `State`, three
+preallocated inner states, the table in the KDoc on `State`, seam `currentState`). The hosts (body,
+vowel, eq) did not change: `set`, `clear`, `process` and `active` kept their names and meaning.
+
+- **Every event dispatches**, `clear` included: Crossfading holds the outgoing pair, so only
+  Crossfading can drop it. The delay's shortcut (`reset` enters Off without asking the state)
+  would have kept two dead banks alive per body or vowel host until the next fade.
+- **The four answers.** (1) What outlives the states: the pair in service (it survives the fade's
+  end, so it lives on the swap and `Off.enter` drops it) and the grow-once scratch buffers; the
+  pairs are the hosts' resources, the swap only references them. (2) The record a finished life
+  leaves is the fade position: Crossfading's own, initialised only by `enter`, so the old `fadePos
+  = 0` in `clear()` was a dead write. The hosts' config caches stay the hosts'. (3) The Off
+  precondition, today: none; entering Off is the measured cut and leaving it an instant install,
+  kept bit for bit. (4) References: the outgoing pair is dropped by the fade's end, by a restart
+  (which drops the OLDEST pair) and by `clear`; the pair in service by `Off.enter`.
+- **The EQ's ping-pong depends on "a restart drops the oldest pair"**: the bank it reuses and
+  zeroes on a change mid-fade is exactly the one the restart drops, before any block hears it.
+  "Crossfade from what sounds now" keeps that bank sounding, so the second commit needs more than
+  two EQ banks or a different reuse rule.
+- **Permanent rows, each mutation-checked:** `KatalystFilterSwapStateIdentitySpec` (red for a fresh
+  `Crossfading()` in a transition); in `KatalystFilterSwapSpec` one row per question: "a pair's own
+  state runs on across every transition" (red when the outgoing pair runs twice per block, which the
+  five older rows do not see, and for a swapped `crossfadeTo`), "every fade starts at t = 0" (red without
+  `pos = 0` in `enter`), "Off is a pass-through from every way in" (red when Crossfading's `clear`
+  stays in Crossfading or Off's `set` fades; it pins TODAY's cut and turns red with the switch-off
+  fade, on purpose), "a finished fade, a restart and a clear() leave no reference to a dead pair"
+  through the seam `holds(filter)` (red, and the only red row, for each of the three drops removed).
+- **Evidence, fixtures deleted.** (a) A raw-bits harness, 1084 lines, `cmp`-identical at `4306f104`
+  and on the tree; a missing `pos = 0` changed 381 lines. Its swap lifecycles, at 44.1 and 48 kHz:
+  `off-pass`, `set-from-off`, `fade-completes`, `restart-at-0..5` (set while fading, at every block
+  of the fade including the last), `triple-at-0..5`, `clear-mid-0..5`, `set-set-before-block`,
+  `clear-from-engaged`, `clear-from-off`, `short-blocks` (64, 1, 100, 0, 200, 7, 300, 500 frames,
+  a scratch grow mid-life), `tiny-fade`, `long-fade`; and the three hosts: body and vowel through
+  changes at every fade position, off from Engaged and mid-fade, the same material after off, NaN
+  knobs, `reset`, `retire`, a catalogue walk; the EQ through its ping-pong at every fade position,
+  a wrong shape, `reset` from Engaged and mid-fade, NaN, `retire`. No production host renders a
+  block shorter than 128. (b) Raw pre-master doubles, 48 kHz, wall clock pinned, identical: the
+  eight songs (Sakura 48 cycles, Irish Lament Techno 160, Final Fantasy 7 Prelude 32, Stranger
+  Things 200, Der Schmetterling 160, A Truth Worth Lying For 72, Tetris 40, Sound Of The Sea 16)
+  and thirteen synth rows (`body-alternate` and its dry control, `body-rapid`, `body-rapid-off`,
+  `body-onoff`, `body-handover`, `vowel-alternate`, `vowel-rapid`, `eq-katp`, `eq-katp-rapid`,
+  `rapid-dry`, `eq-rapid-dry`, `eq-static`). 19 of the 20 body and vowel sites were reached,
+  measured by host; Sound Of The Sea's glockenspiel is a sample and never configures its body in
+  the jvm renderer. No built-in song declares an orbit EQ (the `.eq(...)` in Der Schmetterling is
+  the per-voice ignitor), so the rows carry it. (c) Enter counters: the songs drive Off to Engaged,
+  Engaged to Off, clear while Off, and Engaged to Crossfading to Engaged (98 fades in Stranger
+  Things, its vowel pattern); no song restarts or clears mid-fade. The rapid rows restart mid-fade
+  about 1000 times each and `body-rapid-off` clears mid-fade 336 times; the harness drives every
+  cell. (e) A Truth Worth Lying For, 32 cycles, interleaved runs: noise.
+
 ## Body and vowel run on one resonator bank (2026-09-19)
 
 Katalyst step 5c-3, a pure refactor, bit-identical. `BodyFilter` and `FormantFilter` are gone;

@@ -772,6 +772,22 @@ complexity outranks the duplication.
       number of outgoing banks, for example drop one whose weight is under a few percent: not yet
       measured); 50 ms is optional for clicks and keeps one constant; no warm start.
     - WAVs for listening (today's clicks and the fixes): the session scratchpad, `clicks/`.
+  - **OPEN for the maintainer before the swap's second commit (found in the 5c-4 review,
+    2026-09-19): rapid changes and "crossfade from what sounds now".** Taken literally, every
+    restart freezes the outgoing banks and ramps them out together. A `.katp` that changes the EQ
+    (or a pattern that changes a material) every block piles up outgoing banks: at 50 ms and 128
+    frames a frozen weight falls about 6 % per block, so dozens of banks would be live at once, and
+    the EQ's two-bank reuse would zero a bank that is still audible. Two options: (a) the master's
+    precedent, "at most one queued swap": a change that arrives mid-fade is parked, the latest
+    wins, and it is applied when the fade ends; two banks stay enough and nothing piles up; the
+    price is up to one fade of lag (12 or 50 ms) on a rapid change. (b) N banks with a hard cap on
+    outgoing pairs and a drop rule; the measured restart click (-11 to -34 dB) says the drop rule
+    needs a listening test. Recommendation: (a), the smaller and already proven answer.
+    Also for the second commit, from the same review: the hosts must tell INTENT from SOUND (an
+    `active` that flips synchronously in `set` and `clear`, separate from "a pair is still
+    sounding"); `clear` during a fade-out is idempotent and `set` during it retargets; and the
+    cylinder's deactivation and `retire()` keep a synchronous HARD cut, or an orbit deactivates
+    mid-fade-out and its next life resumes a stale fade on new material.
   - **One common resonator bank for body, vowel, and later a user surface where formants are
     specified one by one.** Body (`BodyFilter`) and vowel (`FormantFilter`) are already the same
     thing under the hood (a parallel bank of `SvfBPF` bandpasses in a `ParallelMixFilter`); they
