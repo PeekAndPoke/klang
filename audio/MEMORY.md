@@ -1,5 +1,190 @@
 # Klang Audio — Memory
 
+## An effect lifecycle as a state machine: the delay is the template (2026-09-19)
+
+Katalyst step 5c-1, the first conversion of `docs/plans/effect-state-machines.md` and the shape
+the reverb, the filter swap, the compressor and the cylinder's swap bookkeeping copy. A pure
+refactor: `KatalystDelayEffect`'s `private enum class State` became a private `sealed class State`
+nested in the effect with three `private inner class` subclasses, one preallocated instance each,
+and a `state` pointer. What it replaced, counted rather than remembered: TWO `when (state)`
+(`hasTail` and `process`), one `if (state == State.Active)` in `configure`, and the field written at
+six sites besides its initializer. Byte-identical, proven twice (below).
+
+- **The shape, as built.** `State` declares three methods: `process(ctx)`, `hasTail()` and
+  `deactivate(line)`. The host calls `state.process(ctx)` and `state.hasTail()`; `configure`'s ON
+  arm is the same from every state, so it stays on the effect and only its OFF arm dispatches.
+  `enter` is the only way into a state and is what resets that state's own data: `Draining` owns
+  the countdown and nothing else, `Active` owns NOTHING (its knobs live on the `DelayLine`, where
+  the DSP reads them), `Off` owns nothing and its `enter` forgets the tail ceiling.
+- **What belongs on the state and what on the effect**, sharper than the plan says it: a datum
+  belongs to a state only if it dies with that state. The tail ceiling looked like `Active`'s, but
+  it survives `Active -> Draining -> Active`, so it is a resource on the effect, like the ring and
+  the silent input buffer. WHAT that survival is worth has one home and it is not this file: the
+  `activeTail` KDoc in `KatalystDelayEffect`. Two review rounds were spent on loose versions of the
+  sentence here, so the short form is all that belongs in memory: the ceiling is a bound while
+  Draining and at the moment of return, wherever the ring decays, which is every `|feedback| < 1`;
+  it is NOT a bound at `|feedback| >= 1`, nor across a LENGTHENED tap, nor after a feedback
+  REDUCED to (near) zero, and each of those can let `hasTail` answer false over real content. The countdown really does die with
+  `Draining`, so it moved.
+- **OPEN, pre-existing, recorded 2026-09-19 (not introduced by the state machine, bit-identical at
+  HEAD, deliberately not fixed in an identity step): a self-oscillating delay can leave a stale
+  ceiling that later under-reports a real tail, and so can a feedback reduced to (near) zero.**
+  WIDENED in review round 4, measured on the compiled classes: `TailCeiling.observe` recomputes the
+  running window with the feedback in force NOW, so a feedback cut from 0.7 to 0.0 (after a drain,
+  or LIVE on an owner handover) makes the ceiling vanish at the next window close while the ring
+  still holds one repeat: an echo at about -3 to -6 dBFS dropped in a sizeable share of phases,
+  the orbit reset within about 80 blocks; a new feedback of 0.01 or more stays below -83 dBFS. It
+  needs a new owner that sends nothing audible and a silent mix for ten blocks; no built-in song
+  reaches it. RE-MEASURE on return repairs only the frozen variants; the live one needs `observe`
+  never to LOWER `current` inside a running window (at most one extra window of hold). The reverb
+  is not exposed (measured -103 dBFS). The original sequence, traced through a line-for-line port
+  of `TailCeiling.observe`: a delay at `|feedback| >= 1` takes a charge; the owner leaves; the
+  drain is infinite, so the ceiling freezes while the ring grows to the cap; a new owner returns
+  with a TAME feedback (the escape the class KDoc documents) and quiet sends. Ring and ceiling then
+  decay at the same rate, so their ratio is preserved, and the ceiling crosses the 1e-5 silence
+  threshold while the ring still holds about `(ring at return / frozen ceiling) * 1e-5`. At a 0.4 s
+  delay with a returning feedback near 1, a charge of 0.1 leaves -87 dBFS behind, 0.01 leaves -67 dBFS, 0.005 leaves
+  -61 dBFS, 0.001 leaves -47 dBFS and 0.0002 leaves -33 dBFS. It needs hundreds of consecutive
+  silent blocks (5 to 9 windows at a tame 0.3, 689 to 1240 blocks of 128), far more than the ten
+  the cylinder waits, so only a long gap can reach it. Whoever fixes it: the honest repair is for
+  the return to RE-MEASURE rather than resume, which is a design change and not a spelling one.
+- **`internal` buys nothing on the JVM, and the plan is wrong about it** (measured with `javap`,
+  Kotlin 2.3.10, JVM target 17). A `private` outer member read from an inner class costs a
+  synthetic `access$getX$p`, a STATIC call. Making it `internal` replaces that with
+  `getX$audio_be()`, a VIRTUAL call. Neither is a plain field load; only `@JvmField` would be, and
+  that is JVM-only so it cannot be written in `commonMain`. Everything therefore stays `private`:
+  the encapsulation is free. What is NOT optional is the plan's rule 1 (copy into locals before the
+  loop), which is about Kotlin/JS, where the outer is reached through a stored property.
+- **Cost per block, counted in bytecode, not guessed.** An orbit whose delay is off and never had a
+  ring (the common case) is UNCHANGED in `configure`: both sides return at the same null check, the
+  same instruction. `process` is the same COST by a different mechanism, and the entry is precise
+  about it because a copy will inherit the sentence: the old one returned at a null check, the new
+  one calls `Off.process`, whose body is empty. A running delay's
+  `configure` gains two calls, both monomorphic and trivially inlinable (`Active.enter` and the
+  synthetic state setter), and keeps its eight branches. An off-config on an effect that HAS a ring
+  trades one enum comparison for one virtual call. `process` trades a null check plus a tableswitch
+  for one virtual call, and `hasTail` a tableswitch for one virtual call. Wall time, "Irish Lament
+  Techno" 64 cycles at 48 kHz, three runs each: HEAD 3658 / 3643 / 3641 ms, tree 3662 / 3619 /
+  3620 ms. No regression; the difference is noise.
+- **Two oddities the old code had**, both kept as behaviour and now impossible to write:
+  `drainRemaining` survived `Draining -> Active` (never read there, but it was a state carrying a
+  previous life's value), and the tail ceiling's survival across the drain was real but undocumented.
+- **How it was accepted, and which render backs the claim.** Both sides of every comparison are
+  HEAD `d37032e2` in a throwaway `git worktree` against the FINAL tree, rendered on this machine
+  with two one-off fixtures that were deleted with the step.
+  The evidence rests on the first one: it drove the effect directly through nine scripted
+  lifecycles and wrote a per-block FNV digest of the RAW BITS of every output sample plus the
+  `hasTail` answer, 4460 lines, `cmp`-identical (md5 `729ae683b54bba72020103b324126943` both
+  sides). Raw doubles, and a difference would have named the block it started in.
+  **The nine lifecycles it scripted, named here because the fixture is deleted and the next
+  conversion copies the list rather than inventing one:** (1) `off-to-active`, the first config;
+  (2) `active-drain-off`, the full Active to Draining to Off run with live sends arriving through
+  the drain and having to be discarded; (3) `drain-back-to-active`, the return mid-drain with a
+  LONGER time, so the new tap sweeps cells the drain wrote, then out again; (4)
+  `active-reconfigured`, time, feedback and cap moving every block, including a ring GROW through
+  `adoptHistory`; (5) `owner-handover`, three owners in sequence with the middle one carrying no
+  delay; (6) `reset-and-relive`, `reset()` mid-tail and a new life after it; (7)
+  `retire-and-rent-again`, `retire()` mid-tail and a fresh rent; (8) `self-oscillation`, feedback
+  1.2 with the infinite drain and a tame owner as the escape; (9) `mismatched-block`, an effect
+  built for 64 frames driven with a 128-frame context, so the drain clamps and the countdown must
+  tick by the clamped count. Each wrote one line per block, and the tail flips are in the step's
+  report.
+  **The seven render rows, same reason:** `off-active-drain-active`, `drain-to-off`,
+  `active-reconfigured`, `owner-handover`, `deactivate-and-relive`, `swap-delay-on-both-chains`,
+  `swap-delay-on-one-chain`. Each carried a peak floor and a wet-at-zero engagement control.
+  **Both harnesses were proven able to FAIL, which is what makes their agreement worth anything.**
+  The raw-bits one: halving the drain countdown (`remaining - frames * 2.0`) changed 1106 of its
+  4460 lines. The render one: short-circuiting `Active.process` turned its engagement control red.
+  Neither was accepted on a green run alone.
+  The second was the end-to-end half: seven synth-only sprudel rows (each with a peak floor and a
+  wet-at-zero engagement control) and the six built-in songs that call the delay door, 64 cycles
+  each at 48 kHz, every hash identical. The six are **Sandsturm, Tetris, Irish Lament Techno, Sound
+  Of The Sea** (with `sinOfDay` pinned to `pure(0.5)`), and, added in review round 2 when the count
+  was checked against the sources rather than against the first list, **Sakura and Small Town Boy**.
+  Each song was rendered twice in-process as a determinism tripwire, and neither late addition seeds
+  anything from the wall clock. **Der Schmetterling was deliberately NOT among them**: it never
+  calls the delay door, and it carried the maintainer's uncommitted by-ear edits at the time.
+  **What "six songs" does and does not mean, counted by reading the sources in review round 3**,
+  because the next conversion will otherwise over-trust it. The six carry SEVEN delay call sites.
+  Six of the seven play inside the first 64 cycles; the seventh, `IrishLamentTechno.kt` line 218,
+  sits in `darkBuild`, which the arrangement places at cycles 148 to 243 (the song's own comment
+  says 211, stale), so a 64-cycle render never reaches it. The plan's acceptance (b) now asks for
+  enough cycles to reach every call site; 5c-1 accepted this gap because that site drives only Off
+  to Active on a synth, which the raw-bits harness drives too. Of the six that do play, only FOUR are fed by a synth and therefore sound at all in
+  this renderer (Sandsturm's `leadPat`, Tetris's `leadShape`, Irish Lament Techno's `leadStyle` from
+  cycle 32, and Sakura's outer-stack delay): Sound Of The Sea's Windspiel is a `glockenspiel` SAMPLE
+  and Small Town Boy's is a drum pattern of samples, and the jvm offline renderer has no sample
+  bank, so those two orbits send silence into a configured delay. The song half is therefore worth
+  less than its count suggests, and **the evidence rests on the effect-level raw-bits harness**,
+  which drives every edge deliberately.
+  Sakura adds one thing the other three audible sites do not: a delay running at `feedback = 0.0`
+  in the ACTIVE path. It does NOT drive the `fbAbs <= 0.0` arm of `DelayLine.drainSamplesUntilSilent`
+  (a round-2 claim that did not survive reading): that function has exactly one production caller,
+  `Active.deactivate`, and Sakura's delay rides the outer stack, so every event carries it and no
+  owner ever hands the effect an off-config.
+  Which edges the RENDER ROWS really drive was MEASURED with a temporary counter in `enter`, not
+  assumed: `drain-to-off` fired the terminal reset 8 times, `off-active-drain-active` did
+  `Draining -> Active` 7 times, `deactivate-and-relive` went through the cylinder-reset door 3
+  times.
+- **What stays, and what the next four conversions copy: FOUR permanent contracts.**
+  **1. `KatalystDelayStateIdentitySpec`** drives every REACHABLE cell of the table (all but the two
+  marked "never", which are unreachable by construction) plus `configure`'s own three arms: an
+  off-config with no ring, one with a ring, and an ON-config the warehouse refuses. It asserts that
+  only the three original state objects ever appear, counted by identity and not by `equals` (a
+  state written one day as a `data class` would make fresh instances equal and defuse the whole
+  spec). That is the "the state machine adds no allocation" guarantee of the plan's section 1 and
+  its identity-spec bullet, without a profiler: the only objects
+  a transition could allocate are the states. Its final count is a summary of the per-edge
+  assertions, not an independent guard. Its seam is `KatalystDelayEffect.currentState`, and it uses
+  the PRODUCTION constructor, because the test-seam one installs a ring and the no-ring arm would
+  never be walked.
+  **2.** The other half needs a BEHAVIOUR row, and this is the one to copy, because review round 1
+  found that nothing permanent guarded the template's one non-obvious decision:
+  `KatalystDelayEffectSpec`'s "a delay that returns mid-drain keeps the ring AND the tail ceiling".
+  A converter who reads "enter resets the target's fields" as a law writes `activeTail.reset()`
+  into the Active entry, every spec stays green, and the cost is a CUT ECHO TRAIN: a new owner
+  claims the orbit while its own voice is still in its attack and sends nothing, the ceiling reads
+  empty, `Cylinder.tryDeactivate` resets the chain and the tail stops dead. The row leaves for 60
+  blocks mid-drain, comes back with the same knobs and asserts (a) `hasTail()` never goes false
+  and (b) the mix is BIT-identical for 200 blocks to a reference effect that simply stayed Active
+  on silent sends. Both halves are mutation-checked, and they fail separately: a ceiling reset in
+  the Active entry turns (a) red, a ring reset there turns (b) red.
+  The bit-identity in (b) is exact and not an approximation, which is worth knowing before copying
+  the shape: `DelayLine.process` reads its input samples, three knobs and its own ring and nothing
+  else, so `silentInput` and a silent send buffer are the same input, the re-`configure` writes the
+  same three numbers into plain field setters, and neither ring can diverge by a bit.
+  **3.** "The countdown a drain runs on is its own, never the previous life's remains" guards the
+  single-INITIALISER property (`Draining.enter` initialises the countdown, `Draining.process`
+  advances it, nothing outside the state touches it) that made THREE writes of the old flag version
+  dead code: `drainRemaining = 0.0` in `reset` and in `release`, and the field write on the arm that
+  went straight to Off.
+  **4.** "A life that ended in Off starts the next one with an empty ceiling", added in review
+  round 2, guards the `activeTail.reset()` inside `Off.enter`. That line had NOTHING behind it:
+  deleting it left every row of both specs green, because the Off arm of `hasTail` is a hardcoded
+  `false` and a stale ceiling is invisible until the NEXT life reads it through `Active.hasTail`. In
+  a copy (the reverb has the same ceiling, reset at FOUR terminal sites today, `KatalystReverbEffect`
+  lines 141, 208, 227 and 274) the cost is an orbit
+  held open long past its due, about 20 s at a big room's comb feedback and for ever at a delay
+  feedback of 1 or more. The row charges four blocks of 0.8, drains to Off, starts a new life and
+  asks `hasTail()` BEFORE any block is processed, then again after TEN silent blocks, which is when
+  production asks (`Cylinder.silentBlocksBeforeTailCheck` defaults to 10), then sends one loud block
+  as a positive control that the fresh life is Active and really answers.
+  The reason for asking at zero is NOT that a block would hide the bug. That was written in round 2
+  and is false against `TailCeiling.observe`: `inputPeakInWindow` is a running max within the
+  window, so a silent block on a stale ceiling recomputes `fresh(0.8, fb, 2)` and still answers
+  true. Simulated with a line-for-line port of `observe`, the stale answer survives 31 silent blocks
+  at feedback 0.0, about 427 at 0.6, and for ever at 1.2. That is what makes a leak of this shape
+  long, and it is worth knowing before someone deletes the row as scaffolding.
+  The arithmetic to carry into a copy: one window is `delaySamples + 1` = 2206 samples with
+  `lapsPerWindow` 2, so four blocks of 0.8 leave the ceiling at `0.8 * (1 + 0.6) = 1.28` with only
+  512 samples elapsed, no window boundary crossed and nothing decayed, against a silence threshold
+  of 1e-5. Deleting the reset turns this row red and, measured across the whole module, NO other row
+  in 2004; both assertions bind, checked separately by dropping the first one and watching the
+  ten-block one fail on its own.
+- **What the benchmark harness cannot see**: `audio_benchmark` has a `DelayLine` case, which is the
+  untouched DSP core, and no case for the orbit delay effect. A future conversion that wants a
+  benchmark number has to add one.
+
 ## The born-with chain is slot-driven: one way a bus knob reaches a stage (2026-09-19)
 
 Katalyst step 5b-1. Before it there were two paths into an orbit's stages: a DECLARED chain read

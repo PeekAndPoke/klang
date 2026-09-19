@@ -720,6 +720,26 @@ complexity outranks the duplication.
   the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and
   the disagreement with them. Optional alongside: fill the duck's voice fields on an orbit-named
   call, byte-identical by the phaser's argument, which would make every filled door readable.
+- **OPEN, pre-existing, found in the 5c-1 review (2026-09-19): the delay's tail ceiling can
+  under-report a real tail** after a self-oscillating drain or after a feedback reduced to (near)
+  zero, live or on return; worst measured an echo at about -3 dBFS dropped at a 0.7 to 0.0
+  handover with a silent new owner. Details and the repair shapes in `audio/MEMORY.md`. Any fix
+  moves the block on which an orbit resets, so it belongs with a listening checkpoint (5c).
+- **OPEN for the maintainer before the switch-off fades of step 5c are briefed (found in the
+  5c-1 review, 2026-09-19).** The decision below says every on/off edge crossfades and names
+  `fadeOut()`. It does not say: (1) what an owner that RETURNS mid-fade-out hears (proposal: one
+  wet/dry ramp with a direction, reversed in place when the same bank returns; today's swap can
+  represent exactly one ramp without allocating); (2) what a DIFFERENT material arriving
+  mid-fade-out does, and an off arriving mid-crossfade (three signals alive, two ramp positions;
+  today `set` mid-fade drops the oldest pair and "may tick faintly"); (3) whether switching ON
+  fades in (today a fresh bank is a hard edge of `(1 - dryGain) * x`); (4) the compressor's
+  switch-off law (its own release with a starved detector, which swells with a long release on a
+  per-note toggle, or a fixed short wet/dry ramp; today off is a level step of the whole current
+  gain reduction); (5) the EQ has no owner-driven off door at all today. Each changes what a
+  listener hears, so each is decided here first. The state-machine conversions of the filter
+  swap and the compressor therefore run in two commits each: today's lifecycle as states
+  (identity), then the fade as a sound change under the 5c listening checkpoint
+  (`docs/plans/effect-state-machines.md` §2).
 - **Decided 2026-09-18 with the maintainer, step 5c (after 5b): switching any stage on or off
   always crossfades, body and vowel included.** Off is a pass-through (the hosts process in place,
   so off costs one comparison), but the EDGE between on and off is never a hard cut: a stage whose
@@ -728,8 +748,8 @@ complexity outranks the duplication.
   (`KatalystFilterSwap.fadeOut()` for the resonators and the eq, a gain-reduction ramp for the
   compressor), and the sends keep their drain. Latency-bearing stages never bypass mid-signal.
   With it, the stage lifecycle is written as a small state machine per effect, not as flags: a
-  private sealed hierarchy (`Off`, `Active`, `Draining`, `FadingOut`, ...) with an exhaustive
-  `when`, the data-less states as objects and a state that carries data preallocated once per
+  private sealed hierarchy (`Off`, `Active`, `Draining`, `FadingOut`, ...) as preallocated inner-class
+  instances (no `when`, no `object`s: a state reaches the effect's resources) and a state that carries data preallocated once per
   effect so a transition on the audio thread allocates nothing. The delay and reverb enum
   lifecycles convert; the cylinder's swap bookkeeping (`outgoing`, `draining`, `duckingOut`,
   `duckFadingIn`, `pendingKey`) becomes one `SwapState`. Same rule for the voice strips in phase 3.

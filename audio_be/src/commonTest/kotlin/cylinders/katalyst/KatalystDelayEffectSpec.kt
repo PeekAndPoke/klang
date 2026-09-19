@@ -127,6 +127,228 @@ class KatalystDelayEffectSpec : StringSpec({
         maxDiff shouldBe 0.0
     }
 
+    "a delay that returns mid-drain keeps the ring AND the tail ceiling" {
+        // The Draining -> Active edge, and the one non-obvious decision of this state machine:
+        // coming back re-arms NOTHING. The ring keeps its content (the echo train continues under
+        // the new tap, send-delay semantics) and the tail ceiling keeps its value, so the orbit
+        // still reports a tail while the ring is audibly ringing.
+        //
+        // What a converter who reads "enter resets the target's fields" as a rule would write is
+        // `activeTail.reset()` in the Active entry, and the cost is a cut echo train: a new owner
+        // claims the orbit while its own voice is still in its attack and sends nothing, the
+        // ceiling reads empty, `Cylinder.tryDeactivate` resets the chain and the tail stops dead.
+        //
+        // The oracle for the audio half is the same shape as the drain row above: an effect whose
+        // owner never left, fed silent sends. That comparison is BIT-exact by construction, and
+        // the reason is worth stating, because it is what makes the row an identity and not an
+        // approximation: `DelayLine.process` reads its input samples, the three knobs and its own
+        // ring, and nothing else. Draining feeds it `silentInput` while Active feeds it the send
+        // buffer, but with a silent send both are all-zero arrays of the same length, both sides
+        // run the same frame count, and the re-`configure` writes the SAME three numbers into
+        // plain field setters, so neither ring can diverge by a bit.
+        val ref = createEffect(delayTime = 0.4, feedback = 0.7)
+        val refCtx = createCtx()
+        val returning = createEffect(delayTime = 0.4, feedback = 0.7)
+        val returningCtx = createCtx()
+
+        // One hot block charges both rings identically.
+        refCtx.delaySendBuffer.left[0] = 1.0
+        refCtx.delaySendBuffer.right[0] = 1.0
+        returningCtx.delaySendBuffer.left[0] = 1.0
+        returningCtx.delaySendBuffer.right[0] = 1.0
+        ref.process(refCtx)
+        returning.process(returningCtx)
+
+        // The owner leaves for about 170 ms, well before the first echo is due at 0.4 s.
+        returning.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+
+        repeat(60) {
+            refCtx.delaySendBuffer.clear()
+            refCtx.mixBuffer.clear()
+            ref.process(refCtx)
+
+            returningCtx.delaySendBuffer.clear()
+            returningCtx.mixBuffer.clear()
+            returning.process(returningCtx)
+        }
+
+        // A new owner with the same knobs claims the orbit while the ring is still charged.
+        returning.configure(time = 0.4, feedback = 0.7, cap = 1.0)
+
+        // Long enough that the first echo (at 0.4 s, block 138) is inside the window: a row that
+        // stopped before it would compare two silences and prove nothing.
+        var maxDiff = 0.0
+        var tailAlways = true
+        var loudest = 0.0
+
+        repeat(200) {
+            refCtx.delaySendBuffer.clear()
+            refCtx.mixBuffer.clear()
+            ref.process(refCtx)
+
+            returningCtx.delaySendBuffer.clear()
+            returningCtx.mixBuffer.clear()
+            returning.process(returningCtx)
+
+            tailAlways = tailAlways && returning.hasTail()
+
+            for (i in 0 until blockFrames) {
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - returningCtx.mixBuffer.left[i]))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - returningCtx.mixBuffer.right[i]))
+                loudest = maxOf(
+                    loudest,
+                    abs(returningCtx.mixBuffer.left[i]),
+                    abs(returningCtx.mixBuffer.right[i]),
+                )
+            }
+        }
+
+        // (a) the ceiling survived the drain: the orbit is never told the ring is empty.
+        withClue("the tail ceiling must survive Draining -> Active") { tailAlways shouldBe true }
+        // (b) the ring survived it too, sample for sample.
+        withClue("the ring must survive Draining -> Active") { maxDiff shouldBe 0.0 }
+        // Not two silences: the echo really came out inside the window.
+        withClue("the echo must be inside the compared window") { (loudest > 0.5) shouldBe true }
+    }
+
+    "a life that ended in Off starts the next one with an empty ceiling" {
+        // `Off.enter()` forgets the tail ceiling, and that one line is load-bearing with nothing
+        // else behind it: the Off arm of `hasTail` is a hardcoded false, so a stale ceiling is
+        // invisible for as long as the effect stays Off and only surfaces in the NEXT life, where
+        // `Active.hasTail()` reads it. A converter who writes `Off.enter() { state = this }` keeps
+        // every other row green and hands the next owner a tail that is not there: at a big room's
+        // comb feedback that holds the orbit about 20 s past its due, and at a delay feedback of
+        // 1 or more it pins the orbit for ever.
+        //
+        // The numbers, verified against `TailCeiling.observe` rather than assumed. One window here
+        // is `delaySamples + 1` = 2206 samples and `lapsPerWindow` is 2, so four blocks of 0.8
+        // leave `current = 0.8 * (1 + 0.6) = 1.28` with only 4 x 128 = 512 samples elapsed: no
+        // window boundary is crossed, nothing decays, and 1.28 is far above the 1e-5 silence
+        // threshold. So with the reset deleted the fresh life reports a tail, and with it in place
+        // the ceiling is 0.
+        val effect = createEffect(delayTime = 0.05, feedback = 0.6)
+        val ctx = createCtx()
+
+        repeat(4) {
+            ctx.delaySendBuffer.fill(0.8)
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+
+        var blocks = 0
+
+        while (effect.hasTail() && blocks < 100_000) {
+            ctx.delaySendBuffer.clear()
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+            blocks++
+        }
+
+        withClue("the drain must reach Off, or the row never tests the entry into Off") {
+            effect.hasTail() shouldBe false
+        }
+
+        // A new owner, a new life, and the question is asked BEFORE any block is processed
+        // because that is the strictest moment. The REASON is NOT that a block would hide the bug:
+        // against `TailCeiling.observe` that is false, because `inputPeakInWindow` is a running max
+        // within the window, so a silent block on a stale ceiling still recomputes
+        // `fresh(0.8, fb, 2)` and answers true. Simulated against a line-for-line port of
+        // `observe`: with the reset deleted the stale answer survives 31 silent blocks at the
+        // feedback 0.0 used here, about 427 at 0.6, and for ever at 1.2. That is exactly why a leak
+        // of this shape is long, and why the row asks twice.
+        effect.configure(time = 0.05, feedback = 0.0, cap = 1.0)
+
+        withClue("a fresh life must not inherit the previous life's tail ceiling") {
+            effect.hasTail() shouldBe false
+        }
+
+        // Ten silent blocks, because ten is when production asks: `Cylinder` polls the chain's
+        // tail only after `silentBlocksBeforeTailCheck` silent blocks, and its default is 10.
+        repeat(10) {
+            ctx.delaySendBuffer.clear()
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
+        withClue("and still empty ten silent blocks later, which is when the cylinder asks") {
+            effect.hasTail() shouldBe false
+        }
+
+        // Positive control: the fresh life really is Active and really does answer this question,
+        // so the two `false`s above are an empty ceiling and not a dead effect.
+        ctx.delaySendBuffer.fill(0.8)
+        ctx.mixBuffer.clear()
+        effect.process(ctx)
+
+        withClue("one loud block must make the fresh life report a tail") {
+            effect.hasTail() shouldBe true
+        }
+    }
+
+    "the countdown a drain runs on is its own, never the previous life's remains" {
+        // The countdown belongs to the Draining state: its `enter` is the only thing that
+        // INITIALISES it (its `process` advances it, nothing else touches it at all), so a life
+        // that ends mid-drain cannot lend its leftover to the next. That is what made THREE writes
+        // of the old flag version dead code: `drainRemaining = 0.0` in `reset` and in `release`,
+        // and the field write on the arm that went straight to Off.
+        val effect = createEffect(delayTime = 0.02, feedback = 0.2)
+        val ctx = createCtx()
+
+        // A SHORT first drain: a quiet ring at a low feedback is inaudible within a few periods.
+        ctx.delaySendBuffer.left[0] = 0.001
+        ctx.delaySendBuffer.right[0] = 0.001
+        effect.process(ctx)
+
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+
+        // How long that first drain would have been. Read it as a LOWER BOUND for the wait below,
+        // not as an expected value: it comes from the production helpers, so it cannot be their
+        // oracle, and the `1..200` clue is what bounds it. By hand, so the number is checkable
+        // without running anything: the ring holds one 0.001 impulse, the feedback is 0.2 and one
+        // period is 0.02 s = 882 samples, so
+        //   periods = ceil(ln(1e-5 / 1e-3) / ln(0.2)) = ceil(2.861) = 3, plus one slack period,
+        //   4 x 882 = 3528 samples = 28 blocks of 128.
+        // The second life's own countdown is ceil(ln(1e-5 / 0.989) / ln(0.9)) + 1 = 111 periods of
+        // 0.5 s, about 2.4 million samples: three orders of magnitude apart, which is the gap the
+        // row measures.
+        val shortDrainBlocks = ceil(
+            effect.delayLine!!.drainSamplesUntilSilent(peak = effect.delayLine!!.tapWindowPeakAbs()) / blockFrames
+        ).toInt()
+        withClue("the first drain must be short, or the row proves nothing") {
+            (shortDrainBlocks in 1..200) shouldBe true
+        }
+
+        // Spend one block of it, then throw the whole life away mid-drain.
+        ctx.delaySendBuffer.clear()
+        ctx.mixBuffer.clear()
+        effect.process(ctx)
+        effect.hasTail() shouldBe true
+
+        effect.reset()
+        effect.hasTail() shouldBe false
+
+        // The next life: a long, loud tail whose honest countdown is far longer than what the
+        // previous life had left.
+        effect.configure(time = 0.5, feedback = 0.9, cap = 1.0)
+        ctx.delaySendBuffer.fill(1.0)
+        ctx.mixBuffer.clear()
+        effect.process(ctx)
+        effect.configure(time = 0.0, feedback = 0.0, cap = 1.0)
+
+        // A countdown carried over from the previous life would be spent within these blocks.
+        repeat(shortDrainBlocks + 8) {
+            ctx.delaySendBuffer.clear()
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
+        withClue("the second drain must still be running on its OWN countdown") {
+            effect.hasTail() shouldBe true
+        }
+    }
+
     "the countdown ends: ring literally empty, processing short-circuits" {
         val effect = createEffect(delayTime = 0.05, feedback = 0.5)
         val ctx = createCtx()

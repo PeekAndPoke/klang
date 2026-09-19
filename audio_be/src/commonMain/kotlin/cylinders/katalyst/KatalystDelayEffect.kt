@@ -23,7 +23,9 @@ import kotlin.math.min
  * The effect owns an active/draining/off lifecycle so that turning the delay off never freezes a
  * live tail inside the ring (block-framing ledger D3: the ring's write clock used to stop dead the
  * moment a no-delay voice took the orbit lease, and the stale tail resurrected later, detached
- * from time):
+ * from time). The transition table on [State] is AUTHORITATIVE for the edges: which event moves
+ * which state where is settled there and nowhere else. The bullets below give the reasoning, and
+ * where one of them names an edge it is quoting that table, not competing with it.
  *
  * - **Active** — the owner wants the delay ([configure] with a FINITE time >= [MIN_ACTIVE_DELAY_SECONDS]):
  *   process normally.
@@ -163,13 +165,6 @@ class KatalystDelayEffect(
         return line
     }
 
-    private enum class State { Off, Active, Draining }
-
-    private var state = State.Off
-
-    /** Remaining drain samples; [Double.POSITIVE_INFINITY] while `|feedback| >= 1` (self-oscillation). */
-    private var drainRemaining = 0.0
-
     /** All-zero input for the draining phase — the owner said off, so live sends are discarded. */
     private val silentInput = StereoBuffer(blockFrames)
 
@@ -177,8 +172,244 @@ class KatalystDelayEffect(
      * The Active-state tail question answered from a ceiling on the ring's content (see
      * [TailCeiling]), maintained every block from the send buffer; it replaces the O(ring) scan
      * `DelayLine.hasTail` used to run from `Cylinder.tryDeactivate`.
+     *
+     * It lives on the effect rather than on [Active] because it OUTLIVES that state: nothing
+     * clears it on the way into [Draining], so a delay that returns before the drain ends resumes
+     * with the ceiling it had. [TailCeiling.observe] runs only in [Active.process], so across a
+     * drain the ceiling is FROZEN while the ring moves underneath it.
+     *
+     * **This paragraph is the one home of what the frozen ceiling is worth.** It is a bound while
+     * Draining and at the moment of return, wherever the ring decays, which is every
+     * `|feedback| < 1`: there the stale number says "the ring holds no more than this", and that is
+     * the safe direction, because this number decides whether the orbit may be torn down. It is NOT
+     * a bound in at least the three places below (the list is what review found, not a proof that
+     * there are no more), and each can let [hasTail] answer false over real content:
+     * - a tap LENGTHENED on the way back reaches cells the ceiling has already decayed past. This
+     *   is the exception [TailCeiling] files itself, and it prices the cut it can make: -60 to
+     *   -90 dBFS if an orbit deactivates in that instant. It belongs to live delay-time changes
+     *   rather than to the drain.
+     * - at `|feedback| >= 1` the ring GROWS under the frozen ceiling. While the drain runs that
+     *   cannot cut anything (the drain is infinite by design and the frozen value is already above
+     *   [TailCeiling.SILENCE]), and neither can the moment of return. AFTERWARDS it can: a
+     *   self-oscillating delay takes a charge, the owner leaves, the ring grows to the cap under a
+     *   ceiling frozen at a fraction of it, and a new owner returns with a TAME feedback (the
+     *   escape this class's KDoc documents) and silent sends. The stale ceiling then decays
+     *   geometrically and crosses [TailCeiling.SILENCE] while the ring still holds about
+     *   `(ring at return / frozen ceiling) * 1e-5`. Traced through [TailCeiling] at a 0.4 s
+     *   delay with a returning feedback near 1: a 0.1 send peak leaves about -86 dBFS behind,
+     *   0.005 about -60 dBFS and 0.0002 about -32 dBFS, after several windows of silence. With a
+     *   returning feedback near ZERO it is louder and sooner, see the next bullet.
+     * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover:
+     *   [TailCeiling.observe] recomputes the running window with the feedback in force NOW, so the
+     *   ceiling vanishes at the next window close while the ring still holds one repeat written
+     *   under the old feedback. Measured on the compiled classes in the 5c-1 review: at 0.7 to
+     *   0.0 an echo at about -3 to -6 dBFS is dropped in a sizeable share of phases, the orbit
+     *   reset within about 80 blocks. It needs the new owner to send nothing audible and the mix
+     *   to be silent for the cylinder's ten blocks while the repeat is in flight; no built-in song
+     *   reaches it. A feedback of 0.01 or more stays below -83 dBFS.
+     *   All three are PRE-EXISTING and bit-identical before this state machine, so they are
+     *   recorded as open (`audio/MEMORY.md`, `docs/tasks/katalyst-dsl.md`) rather than fixed here:
+     *   any repair moves the block on which an orbit resets and needs the listening checkpoint.
+     *   The reverb does not share them (fixed comb lengths, comb feedback structurally below 1),
+     *   so this paragraph must NOT be copied into its conversion.
+     *
+     * Entering [Off] is the one place the ceiling is forgotten, because there the ring is empty.
+     * That line is load-bearing: without it the next life reads the previous life's ceiling and
+     * the orbit is held open long past its due. Guarded by "a life that ended in Off starts the
+     * next one with an empty ceiling" in `KatalystDelayEffectSpec`.
      */
     private val activeTail = TailCeiling()
+
+    /**
+     * The lifecycle as a state machine (`docs/plans/effect-state-machines.md`), one class per
+     * state. One instance of each is created with the effect and [state] points at the current
+     * one, so a transition is a pointer swap and nothing allocates on the audio thread. `enter`
+     * is the only way into a state, and it is what resets that state's own data.
+     *
+     * | state \ event | `configure`, delay ON | `configure`, delay OFF | `process`, countdown ends | `reset` | `retire` / `release` |
+     * |---|---|---|---|---|---|
+     * | **Off** | **Active** (a ring is rented if needed). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | Off | Off |
+     * | **Active** | Active (the knobs are rewritten) | **Draining**, or **Off** when the tap window is already silent | (never) | Off | Off |
+     * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap) | Draining (the countdown keeps running) | **Off** | Off | Off |
+     *
+     * The ON arm of [configure] is the same from every state, so it stays on the effect and only
+     * the OFF arm dispatches ([deactivate]). Per block that is one virtual call for the block
+     * ([process]) and, on the OFF arm only, one more for the owner's config: a running delay takes
+     * the ON arm and dispatches nothing through [state]. That is the price of the `when`s they
+     * replace.
+     *
+     * `sealed` buys no exhaustive `when` here, because no `when` over the states is left: it is
+     * documentation that the set is closed, and the compiler's guarantee that a fourth state
+     * cannot appear from outside this file.
+     */
+    private sealed class State {
+        /**
+         * One block. Everything the block needs is read into a local first (the ring, the frame
+         * count, the countdown); the per-sample loop itself belongs to [DelayLine].
+         */
+        abstract fun process(ctx: KatalystContext)
+
+        /** This state's answer to [KatalystDelayEffect.hasTail], where the reasoning lives. */
+        abstract fun hasTail(): Boolean
+
+        /**
+         * The owner's off-config arrived. [line] is the effect's ring, which [configure] has
+         * already proven non-null. A state that has nothing to do with it ignores it.
+         *
+         * Do not read the parameter as a pattern: it is here ONLY so the one state that uses the
+         * ring does not repeat a null check the caller has just done. [process] takes the context
+         * and reads `delayLine` itself, because there the caller has checked nothing.
+         */
+        abstract fun deactivate(line: DelayLine)
+    }
+
+    /** Nothing in the ring and nothing to do: a true short-circuit until an owner re-enables. */
+    private inner class Off : State() {
+        /**
+         * PRECONDITION, and the contract every copy of this template inherits: the caller has
+         * already emptied the unit, because [hasTail] here answers a hardcoded `false` and cannot
+         * check. Entering Off with a charged ring is therefore a silent cut, not a wrong number.
+         *
+         * The four callers and how each of them satisfies it: [Active.deactivate] zeroes the ring
+         * when the tap window it measured is already silent (no countdown runs on that arm);
+         * [Draining.process] zeroes it when the countdown runs out; [reset] zeroes it and puts the
+         * DSP params back to factory; [release] hands the ring to the shelf DIRTY and drops it, so
+         * there is nothing left to empty. All that is left here is forgetting the ceiling.
+         */
+        fun enter() {
+            activeTail.reset()
+            state = this
+        }
+
+        override fun process(ctx: KatalystContext) {}
+
+        override fun hasTail(): Boolean = false
+
+        /** Already off: an owner that says off again says nothing. */
+        override fun deactivate(line: DelayLine) {}
+    }
+
+    /**
+     * The owner wants the delay. It carries no data of its own: the knobs live on the [DelayLine],
+     * where the DSP reads them, and the tail ceiling outlives this state (see [activeTail]).
+     */
+    private inner class Active : State() {
+        fun enter() {
+            state = this
+        }
+
+        override fun process(ctx: KatalystContext) {
+            // A ring is implied here; the guard is so no path can throw in render.
+            val line = delayLine ?: return
+            val send = ctx.delaySendBuffer
+            val frames = ctx.blockFrames
+
+            // The tail question is answered from the INPUT: the block's send peak feeds a
+            // ceiling on the ring's content that decays by the feedback once per delay period
+            // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring).
+            activeTail.observe(
+                inputPeak = TailCeiling.peakOf(send, frames),
+                frames = frames,
+                windowSamples = line.tailWindowSamples,
+                feedback = line.feedback,
+                lapsPerWindow = line.tailLapsPerWindow,
+            )
+            line.process(send, ctx.mixBuffer, frames)
+        }
+
+        /** A ceiling, not a scan: [process] maintains it from the send buffer. */
+        override fun hasTail(): Boolean = delayLine != null && activeTail.hasTail
+
+        override fun deactivate(line: DelayLine) {
+            // One O(delayInt) scan at the transition: the countdown starts from what the TAP can
+            // still reach (review round 3 replaced the static worst-case bound; round 4 shrank
+            // the scan from the whole ring to the tap window: older content is overwritten
+            // before the tap arrives and can never be emitted). An already-silent window
+            // (including an EMPTY self-oscillating ring) goes straight to Off.
+            val remaining = line.drainSamplesUntilSilent(peak = line.tapWindowPeakAbs())
+
+            if (remaining <= 0.0) {
+                line.reset()
+                off.enter()
+            } else {
+                draining.enter(remaining)
+            }
+        }
+    }
+
+    /**
+     * The owner turned the delay off while the ring still held a tail: keep processing with SILENT
+     * input under the retained last-active parameters, so the already-scheduled echoes complete on
+     * their own timeline. The countdown is this state's whole data, and [enter] is its only
+     * INITIALISER: [process] advances it every block, nothing outside this class touches it at
+     * all. That is why a delay that returns mid-drain and leaves again gets a fresh countdown and
+     * never the remains of the previous one, and it is what made three defensive writes of the old
+     * flag version dead code (the two `drainRemaining = 0.0` in [reset] and [release], and the
+     * field write on the arm that went straight to Off).
+     */
+    private inner class Draining : State() {
+        /** Remaining drain samples; [Double.POSITIVE_INFINITY] while `|feedback| >= 1` (self-oscillation). */
+        private var remaining = 0.0
+
+        fun enter(remaining: Double) {
+            this.remaining = remaining
+            state = this
+        }
+
+        override fun process(ctx: KatalystContext) {
+            // A ring is implied here; the guard is so no path can throw in render.
+            val line = delayLine ?: return
+            // min(): silentInput is sized from the constructor blockFrames; a mismatched ctx
+            // must not read past it (on Kotlin/JS an out-of-range read is undefined -> NaN
+            // straight into the ring). Production passes one value into both (Cylinder owns
+            // the effect AND the context), so the clamp never binds there. The countdown MUST
+            // decrement by the SAME clamped count the DSP processed (review round 2): a
+            // countdown outrunning the ring would fire the terminal reset at ~-50 dBFS.
+            val frames = min(ctx.blockFrames, silentInput.left.size)
+            line.process(silentInput, ctx.mixBuffer, frames)
+
+            // Infinity minus a block stays Infinity, so the self-oscillating case needs no branch.
+            val left = remaining - frames
+            remaining = left
+
+            if (left <= 0.0) {
+                line.reset()
+                off.enter()
+            }
+        }
+
+        /** Tailed BY CONSTRUCTION, never by scan: see [KatalystDelayEffect.hasTail]. */
+        override fun hasTail(): Boolean = true
+
+        /**
+         * Already draining: the countdown keeps running on the parameters it started with. A
+         * second off-config must NOT restart it, or an owner re-applied every block would hold
+         * the tail open for ever.
+         */
+        override fun deactivate(line: DelayLine) {}
+    }
+
+    private val off = Off()
+    private val active = Active()
+    private val draining = Draining()
+
+    /**
+     * The current state: one of the three instances above, never a fresh one.
+     *
+     * This initializer is the one entry into Off that does not run [Off.enter], and the exception
+     * is stated here because "enter is the only way in" is the rule the other conversions copy: a
+     * freshly built [TailCeiling] is what `reset()` would make of it, and there is no ring yet to
+     * empty, so the precondition holds by construction.
+     */
+    private var state: State = off
+
+    /**
+     * Test seam: the current state OBJECT, for `KatalystDelayStateIdentitySpec`, which walks a full
+     * transition cycle and asserts that only ever those three instances appear. That is how the
+     * "a transition allocates nothing" rule of `docs/plans/effect-state-machines.md` is guarded
+     * without an allocation profiler. Production never reads it.
+     */
+    internal val currentState: Any get() = state
 
     /**
      * Applies the orbit owner's delay settings. Called by `KatalystChain.applyParams` on every
@@ -200,51 +431,34 @@ class KatalystDelayEffect(
             line.time = time
             line.feedback = if (feedback.isFinite()) feedback else DELAY_FEEDBACK
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
-            state = State.Active
+            active.enter()
             return
         }
 
         // Never activated: nothing to drain.
-        val delayLine = this.delayLine ?: return
+        val line = this.delayLine ?: return
 
-        if (state == State.Active) {
-            // One O(delayInt) scan at the transition: the countdown starts from what the TAP can
-            // still reach (review round 3 replaced the static worst-case bound; round 4 shrank
-            // the scan from the whole ring to the tap window — older content is overwritten
-            // before the tap arrives and can never be emitted). An already-silent window
-            // (including an EMPTY self-oscillating ring) goes straight to Off.
-            drainRemaining = delayLine.drainSamplesUntilSilent(peak = delayLine.tapWindowPeakAbs())
-
-            if (drainRemaining <= 0.0) {
-                delayLine.reset()
-                activeTail.reset() // the unit holds nothing now
-                state = State.Off
-            } else {
-                state = State.Draining
-            }
-        }
-        // Off, or already Draining: the countdown keeps running, nothing changes.
+        // Only [Active] has work to do here; the other two say why they do not.
+        state.deactivate(line)
     }
 
     /**
-     * True while the ring can still contribute audio — the state-aware replacement for always
-     * scanning: Off is empty by construction ([DelayLine.reset] on entry); Active asks the ring.
+     * True while the ring can still contribute audio, the state-aware replacement for always
+     * scanning: Off is empty by construction ([DelayLine.reset] on entry); Active asks the
+     * CEILING, not the ring (see [activeTail], which is also where what that ceiling is worth is
+     * written down).
      * Draining is tailed BY CONSTRUCTION, not by scan (settled in review round 4): it is entered
      * only when the tap window held content above the threshold (an already-silent ring goes
-     * straight to Off in [configure] — that is what protects the empty-self-osc engine-leak case
-     * round 1 found), and it CONSERVATIVELY reports a tail for the whole countdown — which can
+     * straight to Off from [Active.deactivate], which is what protects the empty-self-osc
+     * engine-leak case round 1 found), and it CONSERVATIVELY reports a tail for the whole
+     * countdown, which can
      * outlive the ring's last audible sample by up to one delay period (review round 5: at high
      * fb the countdown can even outlast a full ring revolution, so a whole-ring scan COULD answer
      * false near the end; this arm never cuts audio, it only holds the orbit a bounded moment
      * longer). (A CHARGED self-osc ring pins its orbit by design; that half is pre-existing and
      * open, see the class KDoc.)
      */
-    override fun hasTail(): Boolean = when (state) {
-        State.Off -> false
-        State.Draining -> true
-        // A ceiling, not a scan: [process] maintains it from the send buffer.
-        State.Active -> delayLine != null && activeTail.hasTail
-    }
+    override fun hasTail(): Boolean = state.hasTail()
 
     /**
      * The return path (resource warehouse, 2f): hands the ring back to the shelf and forgets it.
@@ -254,9 +468,7 @@ class KatalystDelayEffect(
     fun release() {
         delayLine?.let { rings.giveBack(it.ring) }
         delayLine = null
-        state = State.Off
-        drainRemaining = 0.0
-        activeTail.reset()
+        off.enter()
         refusedFrames = 0
         deniedRents = 0 // per life: a shelved cylinder must not carry a previous engine's count
     }
@@ -274,9 +486,7 @@ class KatalystDelayEffect(
             it.feedback = 0.0
             it.cap = DELAY_CAP
         }
-        state = State.Off
-        drainRemaining = 0.0
-        activeTail.reset()
+        off.enter()
         refusedFrames = 0
     }
 
@@ -289,50 +499,7 @@ class KatalystDelayEffect(
         release()
     }
 
-    override fun process(ctx: KatalystContext) {
-        // Active and Draining both imply a ring; the guard is so no path can throw in render.
-        val delayLine = this.delayLine ?: return
-
-        when (state) {
-            State.Off -> {}
-
-            State.Active -> {
-                val send = ctx.delaySendBuffer
-                val frames = ctx.blockFrames
-                // The tail question is answered from the INPUT: the block's send peak feeds a
-                // ceiling on the ring's content that decays by the feedback once per delay period
-                // (TailCeiling). O(block) here, O(1) to ask. Nothing is ever O(ring).
-                activeTail.observe(
-                    inputPeak = TailCeiling.peakOf(send, frames),
-                    frames = frames,
-                    windowSamples = delayLine.tailWindowSamples,
-                    feedback = delayLine.feedback,
-                    lapsPerWindow = delayLine.tailLapsPerWindow,
-                )
-                delayLine.process(send, ctx.mixBuffer, frames)
-            }
-
-            State.Draining -> {
-                // min(): silentInput is sized from the constructor blockFrames; a mismatched ctx
-                // must not read past it (on Kotlin/JS an out-of-range read is undefined -> NaN
-                // straight into the ring). Production passes one value into both — Cylinder owns
-                // the effect AND the context — so the clamp never binds there. The countdown MUST
-                // decrement by the SAME clamped count the DSP processed (review round 2): a
-                // countdown outrunning the ring would fire the terminal reset at ~-50 dBFS.
-                val frames = min(ctx.blockFrames, silentInput.left.size)
-                delayLine.process(silentInput, ctx.mixBuffer, frames)
-
-                // Infinity minus a block stays Infinity, so the self-oscillating case needs no branch.
-                drainRemaining -= frames
-
-                if (drainRemaining <= 0.0) {
-                    delayLine.reset()
-                    activeTail.reset() // the unit holds nothing now
-                    state = State.Off
-                }
-            }
-        }
-    }
+    override fun process(ctx: KatalystContext) = state.process(ctx)
 
     companion object {
         /** Headroom past the requested time so `DelayLine`'s `bufferSize - 2` interpolation guard never clamps it. */

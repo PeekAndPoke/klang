@@ -8,37 +8,34 @@
 
 Every effect that has a lifecycle (off, active, draining, fading out, crossfading) owns ONE
 instance of each of its states, created with the effect, and a `state` field that points at the
-current one. A transition is a pointer swap after an `enter(...)` call on the target; nothing is
-allocated after construction, on any thread.
+current one. A transition is a pointer swap after an `enter(...)` call on the target; the state
+machine itself adds no allocation after construction, on any thread. (That is a statement about
+the STATES. What an effect allocates for other reasons, a `Compressor` per engage, two filter
+banks per material change, is that effect's own debt and its identity spec does not see it.)
 
 ```kotlin
 class KatalystDelayEffect : KatalystEffect {
-    // Shared resources outlive states, so they live on the effect: the line is kept from
-    // Active into Draining, and handed back only from Draining.
-    private var delayLine: DelayLine? = null
+    // Resources that outlive a state live on the effect: the ring, its tail ceiling, the silent
+    // input buffer. The ring is handed back by release()/retire() from ANY state.
+    var delayLine: DelayLine? = null
+        private set
+    private val activeTail = TailCeiling()
 
     // The base is a nested sealed class (a sealed class cannot be inner); the subclasses are
-    // inner, so they reach the effect's resources by name. Dispatch is virtual, so the sealed
-    // modifier only buys an exhaustive `when` where a host wants one.
+    // inner, so they reach the effect's resources by name. Dispatch is virtual and no `when`
+    // over the states remains, so `sealed` is documentation of a closed set, nothing more.
+    // The methods are the EVENTS the host raises, not only process and hasTail.
     private sealed class State {
         abstract fun process(ctx: KatalystContext)
         abstract fun hasTail(): Boolean
+        abstract fun deactivate(line: DelayLine)   // the owner's off-config
     }
 
-    private inner class Off : State() { ... }
-    private inner class Active : State() {
-        var feedback = 0.0
-        var cap = 0.0
-        fun enter(feedback: Double, cap: Double) { ... }
-        override fun process(ctx: KatalystContext) {
-            val line = delayLine ?: return   // read once per block, into locals
-            val fb = feedback
-            ...                              // the per-sample loop touches locals only
-        }
-    }
+    private inner class Off : State() { fun enter() { ... } ... }
+    private inner class Active : State() { fun enter() { state = this } ... }   // owns NOTHING
     private inner class Draining : State() {
-        var remaining = 0.0
-        fun enter(remaining: Double) { ... }
+        private var remaining = 0.0                 // dies with the state, so it lives here
+        fun enter(remaining: Double) { this.remaining = remaining; state = this }
         ...
     }
 
@@ -52,6 +49,9 @@ class KatalystDelayEffect : KatalystEffect {
 }
 ```
 
+As built on 2026-09-19 (Katalyst 5c-1, the template). The class KDoc of the effect carries the
+transition table, states times events; the next conversions copy that table first.
+
 ## 2. The three rules that keep it as fast as the flags
 
 The rule of thumb for every `State.process()`, in three lines (maintainer, 2026-09-18):
@@ -62,35 +62,136 @@ The rule of thumb for every `State.process()`, in three lines (maintainer, 2026-
 
 
 1. **One dispatch per block.** The host calls `state.process(ctx)` once per block. That is one
-   virtual call, the price of the `when (state)` on an enum it replaces. The per-sample loop lives
-   inside the state's method and never reads `this.state`, a state field or an outer field: every
-   value it needs is copied into a local at the top of the method. This is the same discipline the
+   virtual call, the price of the `when (state)` on an enum it replaces. The state's method
+   reads everything the block needs into locals before the loop runs, wherever the loop lives
+   (for the delay it lives in `DelayLine`, not in the state); the loop never reads `this.state`,
+   a state field or an outer field. This is the same discipline the
    SVF and the resonators already follow for their coefficients, and on Kotlin/JS it matters more
    than on the JVM, so it is not optional.
-2. **States carry the data of that state only.** `Draining` owns `remaining`; `Active` owns the
-   live knob values. Resources that outlive a state (a rented `DelayLine`, a reverb unit, the two
-   filter banks of a swap) stay on the effect, reached through the `inner` class's outer
-   reference, read once per block into a local. Data-less states are plain `inner class`es too,
-   not `object`s, so every state is written the same way. An outer field a state reads is
-   `internal`, not `private`: Kotlin/JVM emits a synthetic accessor for a private outer member
-   reached from an inner class, a real call in the interpreter and C1 tiers; `internal` makes it a
-   plain field load. On Kotlin/JS the outer is reached through a stored property, and V8 does not
-   reliably hoist a mutable property read out of a per-sample loop, which is why rule 1 is
-   mandatory rather than a preference.
-3. **`enter(...)` is the only way in.** A transition is `state = draining.also { it.enter(x) }`
-   spelled through a private `transitionTo`-style helper per effect if it reads better; `enter`
-   resets the target's fields, so a state never carries a previous life's values. No transition
-   allocates; a spec proves it by asserting state-instance identity across a full cycle of
-   transitions (`===` before and after).
+2. **A datum belongs on a state only if it DIES with that state.** The delay's countdown dies
+   with `Draining`, so it moved there. The delay's tail ceiling LOOKED like `Active`'s, but it
+   survives `Active -> Draining -> Active` (the ring still holds that content; the ceiling is
+   frozen across the drain, a conservative bound while Draining and at the moment of return
+   wherever the ring decays; the exceptions are recorded in the effect's KDoc, their one home),
+   so it
+   stays a resource on the effect beside the ring and the
+   silent input buffer. The live knobs stayed on the `DelayLine`, where the DSP reads them and `configure` writes
+   them onto whatever line `ensureRing` returns: a copy on `Active` would have been a second
+   source of truth. `Active` ended up carrying no data at all, and that is the correct answer, not a
+   smell. Data-less states are plain `inner class`es too, not `object`s, so every state is
+   written the same way. **An outer member a state reads stays `private`.** Measured with `javap`
+   in step 5c-1 (Kotlin 2.3.10, JVM target 17): a private outer member reached from an inner
+   class costs a synthetic `access$getX$p`, a STATIC call; making it `internal` replaces that
+   with `getX$module()`, a VIRTUAL call. Neither is a plain field load, only `@JvmField` would
+   be, and that cannot be written in `commonMain`. On Kotlin/JS both spellings compile to plain
+   instance properties. So there is nothing to buy with `internal` (an earlier version of this
+   plan said otherwise), and rule 1 is the rule that pays: V8 does not reliably hoist a mutable
+   property read out of a per-sample loop.
+   **An arm of an event that is the SAME from every state stays on the effect and does not
+   dispatch.** The delay's `configure` on-arm is identical from Off, Active and Draining, so it
+   stays on the effect and ends in `active.enter()`; only the off-arm dispatches
+   (`state.deactivate(line)`). That is why the common case's `configure`, an orbit whose delay is
+   off and never had a ring, compiles to the same bytecode before and after; its `process` trades
+   a null-check return for an empty virtual call, the same cost by another mechanism.
+3. **`enter(...)` is the only way in, and the only thing that INITIALISES the state's own
+   data.** `enter` sets `state = this` and initialises the fields that die with the state. The
+   state's own `process` may ADVANCE them (the delay's countdown); nothing outside the state
+   writes them at all. So a state can never carry a previous life's values: the delay's
+   countdown used to survive `Draining -> Active` (never read there, but carried), and that
+   cannot be written any more. The one exception is the field initializer
+   `private var state: State = off`, benign when a fresh resource equals a reset one; say so at
+   that line.
+
+### What the delay taught, stated for the delay
+
+These are TRUE OF THE DELAY, where they were built and mutation-checked. They are not general
+laws: two earlier versions of this section stated them for every effect and were wrong for three
+of the four (review ledger, 2026-09-19).
+
+- `Active.enter()` does not reset what outlives the state, the ring and the tail ceiling. A delay
+  that returns mid-drain would otherwise report no tail while it audibly rings, the orbit would
+  be deactivated, and the echo train would stop dead. Row: "a delay that returns mid-drain keeps
+  the ring AND the tail ceiling" (`hasTail()` never false, the mix bit-identical to an effect
+  that stayed Active on silent sends; both halves mutation-checked separately).
+- `Off.enter()` forgets the RECORD of what the unit held (`activeTail.reset()`); the unit itself
+  is untouched. Forget that, and the next life's `hasTail()` reads the previous life's ceiling
+  and holds the orbit long past its due, for ever at a feedback of 1 or more. Row: "a life that
+  ended in Off starts the next one with an empty ceiling".
+- Entering Off has a precondition, a contract on `Off.enter`: the caller has already zeroed the
+  ring or handed it back, because `Off.hasTail()` answers a hardcoded false.
+- A drain runs on its own countdown. Row: "the countdown a drain runs on is its own".
+- The identity spec: every reachable cell of the transition table points at one of the three
+  preallocated instances, compared with `shouldBeSameInstanceAs` and an identity COLLECTION (a
+  list plus `none { it === state }`, never a Kotlin `Set`, which compares with `equals`), through
+  a seam `internal val currentState: Any get() = state`. It proves the STATES are not
+  re-allocated, nothing more.
+
+### What each remaining conversion must work out for itself
+
+A template states REQUIREMENTS per effect. A MECHANISM waits for that effect's own step, written
+with every host file open, and where it changes what a listener hears it is decided with the
+maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed.
+
+- **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
+  OFF-ARM test ("already silent", today `KatalystReverbEffect.kt` ~139, tomorrow its
+  `Active.deactivate`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
+  POISONED network, and the reset is the only exit such an orbit ever gets. Its countdown-end
+  test is a plain `<= 0.0`. A transliterated delay condition pins that orbit for the life of the
+  playback.
+- **Each conversion answers three questions in its own terms and pins each answer with a row
+  that can fail:** (1) what outlives its states, and which `enter` must therefore not touch it;
+  (2) what RECORD of a finished life must be forgotten, and where (for the reverb it is the tail
+  ceiling, as for the delay; for body and vowel it is the HOST's config cache, which lives
+  outside the swap, and a cache that survives a fade-out to Off makes the identical material
+  silently never re-install; for the compressor it is the envelope and the knobs, or the
+  instance; the gain has no terminal state); (3) what its Off precondition is (for an insert:
+  the stage has reached identity, wet weight 0 or gain reduction 0 dB, or the host guarantees
+  silence; entering Off early IS the click). That describes the END state: in each effect's
+  first, identity commit today's early entry into Off is kept bit for bit. A row written as "`hasTail()` is false" is vacuous
+  wherever `hasTail()` is a constant. (4) which state data are REFERENCES (the swap's old pair and
+  its fade position, the compressor's instance, the cylinder's outgoing chain), and which event of
+  that state drops them on the way out; that event then dispatches to the state. The delay has
+  none (its one state datum is a `Double`), which is why its `reset()` and `release()` may enter
+  Off without dispatching; a copy of that shape for the swap's `clear()` would keep two dead
+  banks alive.
+- **REQUIREMENT for every re-entry (an owner that comes back while the stage is on its way
+  out): the output is continuous across it, never a jump, never a restart that steps.** For the
+  delay and the reverb that is met by identity with "stayed active" (see above). For the filter
+  swap and the compressor the mechanism is OPEN and is not this plan's to settle.
+- **The filter swap and the compressor convert in TWO commits each.** First the lifecycle they
+  have TODAY as states (the swap: Off, Engaged, Crossfading, with today's `set`-mid-fade policy
+  pinned as it is; the compressor: Off, Active), an identity refactor accepted on the full list
+  below. Then the switch-off state (`FadingOut`, `ReleasingOut`) as a SOUND CHANGE under the 5c
+  listening checkpoint, with the acceptance scoped to the edges HEAD has. Open design for that
+  second commit, each needing the maintainer: what a return mid-fade does (a proposal on file:
+  one wet/dry ramp with a direction, reversed in place for the same bank; note that the four states this
+  plan used to name have no home for a reversed ramp, and the swap can represent exactly ONE ramp without
+  allocating); what a DIFFERENT material mid-fade-out and an off mid-crossfade do (three signals
+  alive, two ramp positions); whether ON fades in (today it is a hard edge); the compressor's
+  ramp law (its own release with a starved detector, or a fixed wet/dry ramp); and that the EQ
+  has no owner-driven off door at all today. Whatever is decided, the oracle is an identity
+  computed from a reference that stayed engaged and the DECIDED law, never a step threshold
+  taken from a run of the code under test. For the swap under a linear crossfade of OUTPUTS it is
+  `out[n] == wetRef[n] * (1 - t[n]) + dry[n] * t[n]`, which matches the blend line's association
+  and is writable bit for bit; a ramp of the bank's wet knob, or a compressor released through
+  its own detector, needs its own.
+- **The gain** has three lifecycle situations today, not two: fresh (nothing multiplied since
+  construction or reset: EVERY `configure` before the first `process` snaps, and it is `process`
+  that leaves this situation; a chain arriving through `beginFade` can see two configures before
+  its first block, and the identity harness scripts exactly that), settled, ramping. `currentGain` outlives
+  all of them. The identity conversion keeps the snap; the parked finding of
+  `signal-flow-redesign.md` §11 (a fader through exactly 0 on a dry orbit can step) is a
+  separate behaviour change; its candidates, one of them a cylinder change, stay in §11.
 
 ## 3. Where it applies, in order
 
 | effect | states | today |
 |---|---|---|
-| `KatalystDelayEffect`, `KatalystReverbEffect` | Off, Active, Draining | private enum plus a `when`; the template, convert first |
-| `KatalystFilterSwap` (body, vowel, eq) | Off, Engaged, Crossfading, FadingOut | two nullable filter pairs plus `active`; FadingOut is step 5c's crossfade on switch-off |
-| `KatalystCompressorEffect` | Off, Active, ReleasingOut | nullable instance; ReleasingOut is the ramp on switch-off |
-| `KatalystGainEffect` | Settled, Ramping | fields |
+| `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
+| `KatalystReverbEffect` | Off, Active, Draining | private enum plus a `when`; next. The same machine with one extra arm on its OFF-arm test (section 2, "copy the shape, not the condition") |
+| `KatalystFilterSwap` (body, vowel, eq) | first commit: Off, Engaged, Crossfading; second commit, a sound change: the switch-off fade, states open | two nullable filter pairs plus `active`; FadingOut is step 5c's crossfade on switch-off |
+| `KatalystCompressorEffect` | first commit: Off, Active; second commit, a sound change: the switch-off ramp, law open | nullable instance; ReleasingOut is the ramp on switch-off |
+| `KatalystGainEffect` | fresh, settled, ramping | fields |
 | `Cylinder` chain swap | Idle, Pending, Fading, Draining | five fields (`outgoing`, `draining`, `duckingOut`, `duckFadingIn`, `pendingKey`) |
 | voice strips (phase 3 of the signal-flow plan) | per strip, same shape | build-time gate plus per-block guards |
 
@@ -102,18 +203,34 @@ cylinder's `SwapState` proves out.
 One effect per review round, inside Katalyst step 5c (crossfade on every switch), the delay
 first as the template. Each conversion is accepted on:
 
-- the frozen songs byte-identical (`8d79b9fc…` for Der Schmetterling, the Seltsamere Dinge hash
-  of 2026-09-18);
-- the offline render wall time of the frozen song within run-to-run noise of the flag version,
-  measured three times each on the same machine;
-- an identity spec: every state instance is the same object across a full transition cycle;
-- the effect's own spec unchanged in its assertions (the lifecycle contract does not move, only
-  its spelling).
+- (a) a ONE-OFF effect-level harness that drives the effect through every edge of its table
+  with deterministic input and compares RAW BITS per block between HEAD in a throwaway worktree
+  and the final tree, which localises a difference to a block instead of a song; with ONE
+  deliberate mutation on the tree side that makes the digests differ, so the harness is shown to
+  be able to fail (for the delay: halving the countdown changed 1106 of 4460 lines);
+- (b) minimal synth-only render rows with a peak floor and an engagement control, plus the
+  built-in songs that call the stage, wall clock pinned (`timeOfDay`, `sinOfDay`), both sides
+  rendered from the same song text, for enough cycles to REACH every call site of the stage (a
+  call inside a late `arrange` section is not reached by 64 cycles; signal-flow plan §12; the
+  frozen-song hashes this list used to name were retired with Katalyst 5a-3);
+- (c) a counter in each `enter`, added and removed, that MEASURES which edges the rows drive
+  instead of assuming it;
+- (d) the permanent contracts the conversion worked out for itself (section 2): the identity
+  spec, its re-entry row, its "a finished life leaves no record" row, and whatever else its
+  three questions produced, each mutation-checked;
+- (e) three timed renders each side on the same machine, within run-to-run noise;
+- (f) the effect's own spec unchanged in its assertions (the lifecycle contract does not move,
+  only its spelling).
+
+Both one-off harnesses are migration fixtures and are deleted with the step; the record names
+every scripted lifecycle, every render row and every song, because the next conversion copies
+that list and the fixtures are gone. `audio_benchmark` has no case for an orbit stage (only the DSP cores),
+so a conversion that wants a benchmark number adds the case first.
 
 ## 5. What we do not do
 
 - No state objects shared between effects, no generic state-machine framework, no interface
-  with `onEnter`/`onExit` pairs: three inner classes and a field are the whole mechanism
+  with `onEnter`/`onExit` pairs: a few inner classes and a field are the whole mechanism
   (complexity stone rule).
 - No data on the states that the per-sample loop reads through the state pointer.
 - No conversion of an effect that has no lifecycle (the phaser and the duck stay as they are
