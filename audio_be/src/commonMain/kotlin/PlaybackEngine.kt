@@ -77,7 +77,7 @@ class PlaybackEngine(
 
         if (!masterBus.isActive) {
             // Fast path — byte-identical to the pre-MasterDsl engine.
-            cylinders.processAndMix(target)
+            cylinders.processAndMix(target, cursorFrame)
             markMasterBusRendered()
             return
         }
@@ -85,7 +85,7 @@ class PlaybackEngine(
         // A master chain needs the engine's bus in isolation before it joins the shared mix.
         val ownBus = bus ?: StereoBuffer(blockFrames).also { bus = it }
         ownBus.clear()
-        cylinders.processAndMix(ownBus)
+        cylinders.processAndMix(ownBus, cursorFrame)
         masterBus.process(ownBus, blockFrames)
 
         val targetL = target.left

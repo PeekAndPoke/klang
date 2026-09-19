@@ -1,5 +1,84 @@
 # Klang Audio — Memory
 
+## An orbit never deactivates while a voice plays on it; the fader glides (2026-09-19)
+
+Katalyst step 5c-8, a SOUND CHANGE at two edges only: the group fader patterned through exactly 0
+on a dry orbit, and every fader move (decided with the maintainer, signal-flow plan section 11,
+"DECIDED 2026-09-19").
+
+- **The fix is one condition.** `Cylinder.tryDeactivate(blockStart)` refuses while the orbit's
+  `VoiceLease.isHeld(blockStart, blockFrames)`, after the silence grace and the tail test. The
+  lease is held whenever ANY voice plays on the orbit (caller search: `lease.claim` has one caller,
+  `Cylinder.updateFromVoice`, reached from `Cylinders.getOrInit`, which `SendRenderer`, the last
+  stage of every voice pipeline, and `Voice.render`'s culled branch call every block a voice
+  renders; a voice turned away from the lease is turned away BECAUSE it is held). Grace: held in
+  the block after the owner's last check-in, lapsed in the one after that. The refusal holds the
+  silence count at the grace instead of restarting it, so an orbit goes at the first visit after
+  the lapse. `isHeld` is also what `claim` tests now (one home for the liveness rule). The block
+  start reaches the cylinder through `Cylinders.processAndMix(fusion, blockStart)`, fed
+  `PlaybackEngine.renderInto`'s cursor (the frame the voices claimed with).
+- **Before (HEAD `4af2e010`), measured:** a muted orbit with notes was deactivated and reset every
+  10 blocks (one orbit allocated), about 150 times in 8 s; the fader came back either as a
+  ONE-SAMPLE jump (a reset landed at the owner's lapse, the next owner's first configure snapped:
+  default ADSR, releases 0.05/0.08/0.13/0.16 s) or as a one-block ramp once the old owner lapsed
+  (most releases). Both are reproduced by `CylinderFaderThroughZeroSpec` on HEAD (all three rows
+  red at block 9; the audio row alone at block 20, full level where the law says 0).
+- **The gain stage keeps no state classes.** Its three situations (fresh, ramping, settled; the
+  level outlives them) are exactly `KnobGlide`'s snap flag, countdown and rest, so the stage is now
+  a `KnobGlide` plus the unity skip; classes would copy the helper (the plan's complexity rule).
+  The four questions are answered in its KDoc, each pinned by a row.
+- **The ramp law:** a change glides per sample over `KNOB_GLIDE_SECONDS` in whole blocks (17 at
+  44.1 kHz, 19 at 48 kHz), written from the block's end (exact landing), from where the fader
+  stands on a retarget. It was one block, from the start: on 4 -> 0.01 that missed the target by a
+  rounding in the last sample.
+- **Measured** (HF: peak 0.7 ms RMS above 8 kHz, LF: peak 20 ms RMS below 60 Hz, both re the signal
+  RMS; sources band-limited to 3 kHz). Effect level, saw 110 Hz, three-saw chord, saw bass 73 Hz,
+  44.1 and 48 kHz, jumps 0/1, 1/0, 0.01/4, 4/0.01, -1/1, 1/0/1, a return after 3 blocks, 0.5/1:
+  HEAD HF -58 to -79, LF -9 to -33; tree HF -82 to -100, LF -30 to -61 (the LF left is the level
+  change itself, largest on the bass). Engine rows (48 kHz renderer, `<0 1>` on sine and saw
+  notes): HEAD snap -17.7 / -18.6 dB HF, HEAD lapse ramp -60 to -66; tree -85 to -91 against the
+  note-onset controls -95 to -101 (the saw row equals its control, -41). Ordinary orbits that end:
+  same final deactivation block, bit-identical; a muted note's orbit goes 2 blocks later (the
+  lease grace); intermediate resets while silent voices play are gone (52 and 120 per row became 4).
+- **Songs:** 15 built-in songs and 3 frozen pieces, 256 cycles, raw doubles,
+  wall clock pinned, HEAD `4af2e010` in a throwaway worktree: 15 of 18 bit-identical. No song moves
+  the fader; all three differences come from orbits HEAD reset while a silent voice still played
+  (velocity or gain at 0, or a culled release). **The Synthsale Pipers' Last Rave** differs
+  audibly (163 to 237 s, worst -24.5 dB re peak, -39 dB RMS): orbit 6's supersaw plays at
+  `velocity` 0 for a long stretch under a `phaser(rate = 1/13)`, and HEAD's resets restarted the
+  phaser sweep from its clean slate each time (`Phaser.resetForReuse`), so the sweep stood somewhere
+  else when the notes became audible; with the phaser stripped from both renders the difference
+  falls to 3e-16 (orbit 7's reverb, delay and body, reset at 234 s on HEAD). **Synthsturm** (orbit
+  5, the riser at `gain(saw.range(0, ...))` under a stack-wide reverb) and **Synthkura** (orbit 3,
+  the sub-bass's silent release under a stack-wide reverb, delay and compressor, last 1.4 s)
+  differ at -140 and -146 dB below peak: HEAD zeroed the reverb's `+ ANTI_DENORMAL` residue (the
+  orbit's post-chain output read 1e-20 against the tree's 1e-19), and the master limiter's
+  gain-skip branch turns that into at most 8e-8 of output, far under one 16-bit count. The
+  sweep's continuity is the decided behaviour (the orbit is playing); the maintainer should hear
+  the Last Rave section once.
+- **Guards, mutation-checked:** `CylinderFaderThroughZeroSpec` (new: the muted
+  orbit held while its voice plays and gone on the first block its lease has lapsed (two after the
+  last check-in), a non-owner holding it
+  after the owner ended, the fader's return by the glide against a reference render at unity, and
+  the same hold through a whole `PlaybackEngineDispatcher` with and without a master chain);
+  `KatalystGainEffectSpec` (the law over the full range both ways with an exact landing, the step
+  bound, a retarget mid-glide turning from where the fader stands, a reset mid-glide snapping the
+  next life). 13 mutants, all red: no lease condition; the refusal restarting the silence grace;
+  `isHeld` without the one-block grace; `Cylinders` handing a stale frame; `PlaybackEngine` handing
+  a stale frame on the fast path, on the master path, and one block late (each red only in its own
+  path's row; a first version of the master row never reached the master path and let that mutant
+  survive, fixed by registering a real master chain); reset keeping the level; reset not
+  re-arming unity; a start-based ramp (red only on 4 -> 0.01, the pair it misses); every change
+  snapping; a retarget starting from the old target (`KnobGlide`); the unity path not ending the
+  fresh situation. The first three `CylinderFaderThroughZeroSpec` rows are red on HEAD at block 9.
+- **Not a new cost (review round 1):** a culled or muted voice keeps its orbit active until its
+  scheduled end (it renews the lease). HEAD processed that orbit just as long: every check-in set
+  `isActive` again in `updateFromVoice`, so the orbit was reactivated the block after each
+  deactivation and its chain ran every block, to the same final deactivation block (measured:
+  the culled-release row ends on the same block both sides). What 5c-8 removes is the repeated
+  `chain.reset()` and lease re-dealing in between. Do not "fix" a CPU regression that does not
+  exist.
+
 ## The orbit compressor switches and changes by gliding (2026-09-19)
 
 Katalyst step 5c-7, a SOUND CHANGE under the 5c listening checkpoint (decided with the maintainer,

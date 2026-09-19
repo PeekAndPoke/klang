@@ -758,15 +758,6 @@ class Cylinder(
     }
 
     /**
-     * Checks if the orbit is silent and deactivates it if so.
-     *
-     * Uses a two-phase approach to avoid cutting off effect tails (delay/reverb):
-     * 1. When mixBuffer is silent, increment a counter instead of deactivating immediately.
-     *    This grace period keeps effects processing so their tails continue to decay naturally.
-     * 2. After N silent blocks, scan effect internal buffers. If they still have audio, reset
-     *    the counter and keep processing. If silent, deactivate.
-     */
-    /**
      * Retires this cylinder for the shelf (resource warehouse, cylinders): every bus effect off and
      * cleared, the lease freed, the buffers zeroed, and the rented units (delay ring, reverb
      * network) handed back to THEIR shelves — a shelved cylinder holds nothing. The same clean slate
@@ -837,7 +828,38 @@ class Cylinder(
         silentBlockCount = 0
     }
 
-    fun tryDeactivate() {
+    /**
+     * Deactivates the orbit once its mix has been silent for the grace, nothing rings in its chain,
+     * no swap runs, AND no voice plays on it. [blockStart] is the start frame of the block just
+     * rendered (production: `Cylinders.processAndMix`, fed the engine's cursor), which the lease
+     * test needs.
+     *
+     * Two phases, so a tail is never cut: while the mix is silent a counter runs instead of
+     * deactivating at once, and the stages keep processing so their tails decay naturally; after
+     * the grace the chain is asked for a tail, and one resets the counter.
+     *
+     * **An orbit never deactivates while a voice plays on it** (decided 2026-09-19 with the
+     * maintainer, Katalyst 5c-8). The silence test reads the POST-fader mix, so a group fader at 0
+     * used to make a playing orbit look dead: it was reset every tenth block (measured with one
+     * orbit allocated; the grace is counted in cleanup visits), the lease was
+     * re-dealt, and the fader came back either as a one-sample jump (a fresh stage snaps) or as a
+     * one-block ramp mid-note, depending on which voice claimed first. The lease is held whenever
+     * any voice on the orbit checked in this block or its owner did in the block before
+     * ([VoiceLease.isHeld]), so a muted orbit with notes keeps running at 0 and its fader glides
+     * back from where it stands. Judging silence BEFORE the fader was rejected: in a user chain the
+     * gain stage can sit anywhere.
+     *
+     * The lease test does NOT restart the silence grace, unlike a tail: silence already counted
+     * stays counted, and an orbit whose notes have all ended goes at the first visit once its
+     * lease has lapsed, two blocks after the last check-in (the owner's grace covers the block
+     * after it, see [VoiceLease.isHeld]). Every voice checks in until its scheduled end, a culled
+     * one included, so an orbit stays active through an inaudible release. That is NOT a new
+     * processing cost: before 5c-8 every check-in reactivated the orbit ([updateFromVoice] sets
+     * `isActive`), so the same orbit was reactivated the block after each deactivation and its
+     * chain ran every block anyway, to the same final deactivation block. What the refusal
+     * removes is the repeated reset of the chain and the re-dealing of the lease in between.
+     */
+    fun tryDeactivate(blockStart: Double) {
         if (!isActive) return
 
         if (!isMixBufferSilent()) {
@@ -859,6 +881,13 @@ class Cylinder(
         // [processEffects] frees the slot on the first block it does not.
         if (chain.hasTail() || outgoing != null) {
             silentBlockCount = 0
+            return
+        }
+
+        // A voice still plays here (see the KDoc). The count is held at the grace rather than
+        // restarted, so the orbit goes at the first visit after the lease lapses.
+        if (lease.isHeld(blockStart, blockFrames)) {
+            silentBlockCount = silentBlocksBeforeTailCheck
             return
         }
 

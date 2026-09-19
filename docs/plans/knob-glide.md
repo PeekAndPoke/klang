@@ -163,6 +163,10 @@ exactly 0 when settled) brought it to the floor (-90 dB, or its own floor). Less
 effects: a coefficient that multiplies the signal directly behaves like a LEVEL knob and needs the
 per-sample ramp; only a coefficient inside a filter with continuous state is safe per block.
 
+**Katalyst 5c-8 (2026-09-19), the fader.** The orbit `gain.gain` is on the LEVEL law: a
+`KnobGlide` over `KNOB_GLIDE_SECONDS`, per sample from the end. Its one-block ramp measured -58 to
+-79 dB on jumps across 0.01 to 4 and through 0; the glide -82 to -100 dB.
+
 **Katalyst 5c-7 (2026-09-19), the compressor.** Threshold, ratio and knee jumps measured -9 to -52
 dB (a hard-switch class for threshold); a per-block glide left a zipper at -31 to -69 dB, because
 the gain computer is MEMORYLESS: its output gain follows the knob within the sample, so a knob

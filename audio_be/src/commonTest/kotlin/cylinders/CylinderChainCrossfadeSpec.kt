@@ -1199,10 +1199,12 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
         // Everything goes quiet at the swap, which is exactly when the cleanup would like to
         // deactivate the orbit. With a fade running, that would drop the outgoing chain at
-        // whatever weight it had.
+        // whatever weight it had. Every cleanup visit in this row is placed one block past the
+        // owner's grace, as if the voice had just stopped: the lease has lapsed, so the refusal
+        // is the chain's own (Katalyst 5c-8: a held lease refuses too, and would mask it).
         rig.block()
         rig.cylinder.mixBuffer.clear()
-        rig.cylinder.tryDeactivate()
+        rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
 
         withClue("a running fade keeps the orbit alive") {
             rig.cylinder.isFading shouldBe true
@@ -1213,7 +1215,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         rig.cylinder.isDraining shouldBe true
 
         rig.cylinder.mixBuffer.clear()
-        rig.cylinder.tryDeactivate()
+        rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
 
         withClue("and so does a draining one") {
             rig.cylinder.isDraining shouldBe true
@@ -1228,7 +1230,7 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
 
         rig.cylinder.mixBuffer.clear()
-        rig.cylinder.tryDeactivate()
+        rig.cylinder.tryDeactivate(rig.blockStart + blockFrames)
 
         withClue("once nothing rings, the orbit may go") {
             rig.cylinder.isActive shouldBe false

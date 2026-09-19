@@ -23,6 +23,10 @@ class OrbitsCleanupTest : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
+    // A block long after every claim below: no voice plays any more, so the orbit lease has lapsed
+    // and the round-robin cleanup is decided by the silence gate alone.
+    val afterLastVoice = 100.0 * blockFrames
+
     fun createTestVoice(cylinderId: Int): Voice {
         return VoiceTestHelpers.createSynthVoice(
             startFrame = 0.0,
@@ -39,7 +43,7 @@ class OrbitsCleanupTest : StringSpec({
         val voice0 = createTestVoice(cylinderId = 0)
         val orbit0 = cylinders.getOrInit(0, voice0, blockStart = 0.0)
         orbit0.mixBuffer.clear()
-        orbit0.tryDeactivate()
+        orbit0.tryDeactivate(afterLastVoice)
         orbit0.isActive shouldBe false
 
         // Create cylinder 1 with signal
@@ -52,7 +56,7 @@ class OrbitsCleanupTest : StringSpec({
         fusionMix.clear()
 
         // Process and mix
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
 
         // Master should only have cylinder 1's signal (cylinder 0 was skipped)
         fusionMix.left[0] shouldBe 0.5
@@ -80,19 +84,19 @@ class OrbitsCleanupTest : StringSpec({
         // Process multiple times - each time one cylinder should be checked
         assertSoftly {
             // Block 1: Should check cylinder 0
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false  // Deactivated
             orbit1.isActive shouldBe true   // Not checked yet
             orbit2.isActive shouldBe true   // Not checked yet
 
             // Block 2: Should check cylinder 1
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false
             orbit1.isActive shouldBe false  // Deactivated
             orbit2.isActive shouldBe true   // Not checked yet
 
             // Block 3: Should check cylinder 2
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false
             orbit1.isActive shouldBe false
             orbit2.isActive shouldBe false  // Deactivated
@@ -112,11 +116,11 @@ class OrbitsCleanupTest : StringSpec({
 
         assertSoftly {
             // First cycle
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false
             orbit1.isActive shouldBe true
 
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false
             orbit1.isActive shouldBe false
 
@@ -127,7 +131,7 @@ class OrbitsCleanupTest : StringSpec({
             orbit1.mixBuffer.clear()
 
             // Should wrap around and check cylinder 0 again
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
             orbit0.isActive shouldBe false
             orbit1.isActive shouldBe true
         }
@@ -138,7 +142,7 @@ class OrbitsCleanupTest : StringSpec({
         val fusionMix = StereoBuffer(blockFrames)
 
         // No cylinders created - should not crash
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
 
         // Should complete without error
         fusionMix.left[0] shouldBe 0.0
@@ -153,7 +157,7 @@ class OrbitsCleanupTest : StringSpec({
         val voice = createTestVoice(cylinderId = 0)
         val cylinder = cylinders.getOrInit(0, voice, blockStart = 0.0)
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Add signal AFTER deactivation
         cylinder.mixBuffer.left[0] = 1.0
@@ -163,7 +167,7 @@ class OrbitsCleanupTest : StringSpec({
         fusionMix.clear()
 
         // Process and mix
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
 
         // Master should be silent (inactive cylinder was skipped)
         fusionMix.left[0] shouldBe 0.0
@@ -181,7 +185,7 @@ class OrbitsCleanupTest : StringSpec({
         // Process 8 times (full round-robin cycle)
         // Should only check cylinder 0 when its index comes up
         repeat(8) {
-            cylinders.processAndMix(fusionMix)
+            cylinders.processAndMix(fusionMix, afterLastVoice)
         }
 
         // Cylinder 0 should have been checked and deactivated
@@ -208,7 +212,7 @@ class OrbitsCleanupTest : StringSpec({
         fusionMix.clear()
 
         // Process and mix
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
 
         // All three should be summed
         fusionMix.left[0] shouldBe (0.6 plusOrMinus 0.0001)
@@ -224,7 +228,7 @@ class OrbitsCleanupTest : StringSpec({
         orbit0.mixBuffer.clear()
 
         // First block: cleanup deactivates cylinder 0
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
         orbit0.isActive shouldBe false
 
         // Add signal to the now-inactive cylinder
@@ -234,7 +238,7 @@ class OrbitsCleanupTest : StringSpec({
         fusionMix.clear()
 
         // Second block: should NOT mix the inactive cylinder
-        cylinders.processAndMix(fusionMix)
+        cylinders.processAndMix(fusionMix, afterLastVoice)
         fusionMix.left[0] shouldBe 0.0
         fusionMix.right[0] shouldBe 0.0
     }

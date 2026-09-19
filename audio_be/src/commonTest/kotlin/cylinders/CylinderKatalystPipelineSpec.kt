@@ -174,8 +174,11 @@ class OrbitBusPipelineSpec : StringSpec({
         // The tail CHECK itself must hold the orbit, not just the mix-silence gate: with the mix
         // cleared, only the reverbHasTail() wiring stands between a charged drain and
         // deactivation (mutation campaign: `reverbHasTail() = false` survived without this).
+        // Every cleanup visit below happens long after the last claim, so the orbit lease has
+        // lapsed and cannot be what holds the orbit (Katalyst 5c-8).
+        val afterLastVoice = 100.0 * bf
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
         cylinder.isActive shouldBe true
 
         // The tail keeps SOUNDING while it drains, and the orbit must not deactivate under it
@@ -183,7 +186,7 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.clear()
         cylinder.processEffects()
         cylinder.mixBuffer.left.any { it > 0.001 || it < -0.001 } shouldBe true
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
         cylinder.isActive shouldBe true
 
         // Run the production block loop until the countdown's terminal reset flips the tail off.
@@ -191,14 +194,14 @@ class OrbitBusPipelineSpec : StringSpec({
         while (cylinder.reverb!!.hasTail() && blocks < 1200) {
             cylinder.clear()
             cylinder.processEffects()
-            cylinder.tryDeactivate()
+            cylinder.tryDeactivate(afterLastVoice)
             blocks++
         }
         (blocks < 1200) shouldBe true // the drain terminated on its own schedule
 
         // One silent round finishes deactivation if the final drain block was still audible.
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
         cylinder.reverb!!.reverb!!.hasTail(0.0) shouldBe false // literally zero on lease free
@@ -317,7 +320,7 @@ class OrbitBusPipelineSpec : StringSpec({
         }
 
         reused.clear()
-        reused.tryDeactivate()
+        reused.tryDeactivate(10.0 * blockFrames) // after the lease taken at frame 0 has lapsed
         reused.isActive shouldBe false
 
         // Life 2 opens with a PHASER-LESS stretch before a phaser voice engages. Review round 3:

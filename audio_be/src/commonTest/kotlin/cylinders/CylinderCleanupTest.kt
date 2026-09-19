@@ -20,6 +20,10 @@ class OrbitCleanupTest : StringSpec({
     val blockFrames = 128
     val sampleRate = 44100
 
+    // A block long after every claim below: no voice plays any more, so the orbit lease has lapsed
+    // and what each row tests (the silence gate, the tails, the clean slate) is all that decides.
+    val afterLastVoice = 100.0 * blockFrames
+
     fun createTestOrbit(): Cylinder {
         return Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
     }
@@ -44,7 +48,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.clear()
 
         // Try to deactivate
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should now be inactive
         cylinder.isActive shouldBe false
@@ -62,7 +66,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.right[0] = 0.5
 
         // Try to deactivate
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should still be active
         cylinder.isActive shouldBe true
@@ -78,7 +82,7 @@ class OrbitCleanupTest : StringSpec({
             cylinder.mixBuffer.right[i] = 0.000005
         }
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should be deactivated (below threshold)
         cylinder.isActive shouldBe false
@@ -94,7 +98,7 @@ class OrbitCleanupTest : StringSpec({
             cylinder.mixBuffer.right[i] = 0.0002
         }
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active (above threshold)
         cylinder.isActive shouldBe true
@@ -108,7 +112,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.left[64] = 0.1
         cylinder.mixBuffer.right.fill(0.0)
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active
         cylinder.isActive shouldBe true
@@ -122,7 +126,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.left.fill(0.0)
         cylinder.mixBuffer.right[64] = 0.1
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active
         cylinder.isActive shouldBe true
@@ -136,7 +140,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.left[0] = -0.5
         cylinder.mixBuffer.right[0] = -0.3
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active (abs value matters)
         cylinder.isActive shouldBe true
@@ -148,14 +152,14 @@ class OrbitCleanupTest : StringSpec({
 
         // Deactivate it first
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
         cylinder.isActive shouldBe false
 
         // Add signal to buffer
         cylinder.mixBuffer.left[0] = 0.5
 
         // Try to deactivate again - should exit early
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should still be inactive (didn't check buffer)
         cylinder.isActive shouldBe false
@@ -167,7 +171,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Deactivate it
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
         cylinder.isActive shouldBe false
 
         // Reactivate by calling updateFromVoice
@@ -185,7 +189,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.clear()
         cylinder.mixBuffer.left[64] = 0.01
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active
         cylinder.isActive shouldBe true
@@ -199,7 +203,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.mixBuffer.clear()
         cylinder.mixBuffer.right[blockFrames - 1] = 0.001
 
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // Should remain active
         cylinder.isActive shouldBe true
@@ -229,7 +233,7 @@ class OrbitCleanupTest : StringSpec({
         }
 
         cylinder.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
         // Literally zero: any residue trips the strict > comparison.
@@ -269,7 +273,7 @@ class OrbitCleanupTest : StringSpec({
         }
 
         cylinder.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
         // Literally zero: any residue trips the strict > comparison.
@@ -304,7 +308,7 @@ class OrbitCleanupTest : StringSpec({
         // Ring empty, mix silent: the orbit must free itself. Review round 1 found this shape
         // pinning the cylinder forever (and through anyActive -> hasOwnSound -> isIdle leaking
         // one whole PlaybackEngine per stop); the configure-door peak check is what closes it.
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
     }
@@ -322,7 +326,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.duck!!.ducking shouldNotBe null
 
         cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         // The duck runs OUTSIDE the serial pipeline, so a lifecycle that walks only the pipeline
         // would leave this orbit ducking to a dead owner's source for its whole next life.
@@ -359,7 +363,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Below the silence floor, so the orbit deactivates with it in the buffer.
         cylinder.mixBuffer.fill(0.000001)
-        cylinder.tryDeactivate()
+        cylinder.tryDeactivate(afterLastVoice)
 
         cylinder.isActive shouldBe false
         cylinder.mixBuffer.left.all { it == 0.0 } shouldBe true

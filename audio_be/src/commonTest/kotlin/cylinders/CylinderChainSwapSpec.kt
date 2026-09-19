@@ -74,10 +74,13 @@ class CylinderChainSwapSpec : StringSpec({
             cylinder.updateFromVoice(voice, blockStart = 0.0)
         }
 
-        /** The orbit falls silent and the round-robin cleanup reaches it. */
+        /**
+         * The orbit falls silent and the round-robin cleanup reaches it, long after [sound]'s claim:
+         * no voice plays any more, so the orbit lease has lapsed.
+         */
         fun goQuiet() {
             cylinder.mixBuffer.clear()
-            cylinder.tryDeactivate()
+            cylinder.tryDeactivate(blockStart = 100.0 * blockFrames)
         }
     }
 

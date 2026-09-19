@@ -245,7 +245,7 @@ class KatalystEqEffectSpec : StringSpec({
                 voice.render(renderCtx)
             }
 
-            cylinders.processAndMix(fusion)
+            cylinders.processAndMix(fusion, renderCtx.blockStart)
             fusion.left.copyInto(out, b * blockFrames, 0, blockFrames)
         }
 

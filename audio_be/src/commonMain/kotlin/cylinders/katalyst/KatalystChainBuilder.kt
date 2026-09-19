@@ -246,7 +246,7 @@ object KatalystChainBuilder {
 
                 // The group fader, after the inserts (the signal-flow plan's D5).
                 is KatalystStageDsl.Gain -> {
-                    val fx = KatalystGainEffect()
+                    val fx = KatalystGainEffect(sampleRate = sampleRate, blockFrames = blockFrames)
                     pipeline.add(fx)
 
                     // Unity is the identity element of the stage, not a tuned value, which is why

@@ -411,7 +411,16 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   refuses while the orbit's `VoiceLease` is held (every voice sounding on the orbit checks in each
   block). A muted orbit with notes keeps running with the fader at 0, and the fader glides back up
   from where it stands. Judging liveness before the fader was rejected (in a user chain the gain
-  stage can sit anywhere). Built with the gain stage's states in Katalyst 5c-8.
+  stage can sit anywhere). BUILT in Katalyst 5c-8 (2026-09-19): `VoiceLease.isHeld` (the one
+  liveness rule, `claim` uses it) and `tryDeactivate(blockStart)` refusing while held; an orbit
+  goes on the first block the lease has lapsed (two blocks after the last check-in), silence
+  already counted stays counted. The fader glides over `KNOB_GLIDE_SECONDS` from where it stands
+  (the gain stage got no state classes: see `effect-state-machines.md` section 3). Consequence
+  heard in The Synthsale Pipers' Last Rave 163 to 237 s: orbit 6's supersaw plays at velocity 0
+  under a slow phaser, whose sweep HEAD restarted at every reset (about 167) and which now runs on.
+  No new cost: a culled voice holds its orbit until its scheduled end, as it did before (its
+  check-in reactivated the orbit on the very next block); what is gone is only the periodic
+  `chain.reset()` and the lease re-dealing, about 150 of each per 8 s on a muted orbit.
 - **Phase 3, from the pregain review (2026-09-19): a placed `pregain` costs CPU at unity.** Neither
   `mulConstInPlace` nor the `Affine` fold special-cases a block-constant multiplier of exactly 1.0
   at render, so every built-in that places the slot pays one multiply and one `safeOut` per sample

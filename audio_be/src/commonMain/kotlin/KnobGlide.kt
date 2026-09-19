@@ -37,7 +37,8 @@ import kotlin.math.round
  *
  * **The first value snaps.** After construction and after [reset], every [retarget] sets the
  * value outright until an [advance] has consumed one: there is nothing to be continuous with
- * before the first block (the rule and the reason are `KatalystGainEffect`'s `snapNext`).
+ * before the first block (the rule and the reason are in `KatalystGainEffect`'s KDoc, "why an
+ * ARRIVING factor snaps").
  * Without it every orbit would open with a glide from a meaningless default, and every render
  * would change.
  *

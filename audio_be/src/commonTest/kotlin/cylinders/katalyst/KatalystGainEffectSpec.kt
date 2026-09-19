@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -21,16 +22,20 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import kotlin.math.abs
+import kotlin.math.round
 
 /**
  * The orbit's group fader ([KatalystGainEffect]): exact where it must be, and never a step.
  *
  * The master snaps its gain (its factor is resolved at chain build, so a new number is a new
  * chain and the 60 ms bus crossfade covers it). Here the factor is a SLOT, so `.katp` moves it
- * while the stage stands, and the stage owns the smoothing: one linear ramp per sample across one
- * block, which is exactly the interval between two possible param-state reads.
+ * while the stage stands, and the stage owns the smoothing: the knob-glide LEVEL law
+ * (`docs/plans/knob-glide.md`), linear over `KNOB_GLIDE_SECONDS` rounded to whole blocks, per sample
+ * within a block, written from the block's end so it lands exactly (Katalyst 5c-8; it was one
+ * block, from the start). The oracle below is that law, computed here from the constant.
  */
 class KatalystGainEffectSpec : StringSpec({
 
@@ -39,6 +44,46 @@ class KatalystGainEffectSpec : StringSpec({
 
     /** The DC probe: a constant makes every step in the output the ramp's own. */
     val probe = 0.5
+
+    /** The decided glide length: the glide time rounded to whole blocks (17 at 44.1 kHz). */
+    val glideBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
+
+    fun fader(): KatalystGainEffect = KatalystGainEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+
+    /**
+     * The decided law for sample [i] of the [k]th block of a glide from [from] to [to] (k = 1 is the
+     * block the change arrives in): the level at the end of block k is `from + (to - from) * k / G`,
+     * `to` itself from block G on, and a block ramps linearly from where the previous one ended to
+     * its own end.
+     */
+    fun law(from: Double, to: Double, k: Int, i: Int): Double {
+        fun end(j: Int): Double = if (j <= 0) from else if (j >= glideBlocks) to else from + (to - from) * j / glideBlocks
+
+        val step = (end(k) - end(k - 1)) / blockFrames
+
+        return end(k) - step * (blockFrames - 1 - i)
+    }
+
+    /**
+     * Asserts that [blocks] (consecutive blocks of the DC probe, the change arriving in the first)
+     * follow the law from [from] to [to], and land on [to] exactly: the glide's last sample and every
+     * sample after it are `probe * to` bit for bit.
+     */
+    fun shouldGlide(blocks: List<DoubleArray>, from: Double, to: Double) {
+        for ((index, samples) in blocks.withIndex()) {
+            val k = index + 1
+
+            for (i in 0 until blockFrames) {
+                withClue("$from -> $to, glide block $k frame $i") {
+                    if (k > glideBlocks || k == glideBlocks && i == blockFrames - 1) {
+                        samples[i] shouldBe probe * to
+                    } else {
+                        samples[i] shouldBe (probe * law(from, to, k, i) plusOrMinus 1e-12)
+                    }
+                }
+            }
+        }
+    }
 
     fun ctx(): KatalystContext = KatalystContext(
         blockFrames = blockFrames,
@@ -77,7 +122,7 @@ class KatalystGainEffectSpec : StringSpec({
     // ── Exactness ────────────────────────────────────────────────────────────────────────────────
 
     "unity is bit-transparent, negative zero included" {
-        val fx = KatalystGainEffect()
+        val fx = fader()
         fx.configure(1.0)
 
         val ctx = ctx()
@@ -105,7 +150,7 @@ class KatalystGainEffectSpec : StringSpec({
     }
 
     "a gain of 2 doubles every sample exactly, from the first block on" {
-        val fx = KatalystGainEffect()
+        val fx = fader()
         fx.configure(2.0)
 
         val first = block(fx)
@@ -124,7 +169,7 @@ class KatalystGainEffectSpec : StringSpec({
     }
 
     "the fader is raw: a negative factor flips polarity and nothing is clamped" {
-        val fx = KatalystGainEffect()
+        val fx = fader()
         fx.configure(-3.0)
 
         block(fx)
@@ -141,7 +186,7 @@ class KatalystGainEffectSpec : StringSpec({
         // `KatalystGainWriter`, which reads an unset slot as unity, so this guards the stage's own
         // door, where the cost of being wrong is unbounded.
         listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY).forEach { unset ->
-            val fx = KatalystGainEffect()
+            val fx = fader()
 
             fx.configure(0.5)
             block(fx) // the arriving factor snaps, so the fader now stands at 0.5
@@ -160,48 +205,95 @@ class KatalystGainEffectSpec : StringSpec({
         }
     }
 
-    // ── The ramp ─────────────────────────────────────────────────────────────────────────────────
+    // ── The glide ────────────────────────────────────────────────────────────────────────────────
 
-    "a change ramps per sample across exactly one block and lands on the new factor" {
-        val fx = KatalystGainEffect()
-        fx.configure(1.0)
-        block(fx)
+    "a change glides per sample over the glide time and lands exactly, across the fader's full range" {
+        // Both ways, extremes included, and through exactly 0 (a polarity flip passes it mid-glide).
+        // 4 -> 0.01 is the pair on which a ramp written from the block's START misses the target by
+        // a rounding in the last block (the gain stage's old formula), so the exact landing below can
+        // fail.
+        val jumps = listOf(0.0 to 1.0, 1.0 to 0.0, 0.01 to 4.0, 4.0 to 0.01, -1.0 to 1.0, 1.0 to 2.0)
 
-        fx.configure(2.0)
-        val ramped = block(fx)
+        for ((from, to) in jumps) {
+            val fx = fader()
+            fx.configure(from)
+            block(fx)
 
-        // Derived from the class's own definition: the first sample is one step in and the last is
-        // the new factor, so the block is continuous with the block before (which ended at 1.0)
-        // and with the block after (which starts at 2.0).
-        val step = (2.0 - 1.0) / blockFrames
+            fx.configure(to)
+            val glide = List(glideBlocks + 2) { block(fx) }
 
-        for (i in 0 until blockFrames) {
-            withClue("frame $i") {
-                ramped[i] shouldBe probe * (1.0 + step * (i + 1))
+            shouldGlide(glide, from, to)
+
+            withClue("$from -> $to: one glide, $glideBlocks blocks long, then a constant") {
+                fx.ramps shouldBe glideBlocks
+                fx.gain shouldBe to
             }
         }
-
-        // And the block after it is the new factor exactly, with no residue of the ramp.
-        block(fx)[0] shouldBe probe * 2.0
     }
 
-    "the ramp bounds the step at the change by the block length, where a snap would not" {
-        val fx = KatalystGainEffect()
+    "the glide bounds the step at the change, where a one-block ramp and a snap would not" {
+        val fx = fader()
         fx.configure(1.0)
         val before = block(fx)
 
         fx.configure(2.0)
-        val across = before + block(fx) + block(fx)
+        val across = before + List(glideBlocks + 1) { block(fx) }.reduce { a, b -> a + b }
 
-        // The bound is derived, not borrowed: the weight moves by `|new - old| / blockFrames` per
-        // sample, so the output can step by at most `probe * 1.0 / 128` = 0.0039. A snap, which is
-        // what the master accepts for the same knob, would step by `probe * 1.0` = 0.5, 128 times
-        // more; the threshold sits just above the ramp and far below the snap.
-        maxStep(across) shouldBeLessThan (probe * 1.0 / blockFrames) * 1.01
+        // Derived from the law, not read off a run: the level moves by `|new - old| / (G * n)` per
+        // sample, so the DC output steps by at most `probe * 1.0 / (17 * 128)`. A one-block ramp
+        // would step 17 times more, a snap `probe * 1.0`.
+        maxStep(across) shouldBeLessThan (probe * 1.0 / (glideBlocks * blockFrames)) * 1.01
     }
 
-    "a steady fader never ramps at all: it arrives and then multiplies by a constant" {
-        val fx = KatalystGainEffect()
+    "a new target mid-glide turns from where the fader stands, never from where the old glide was going" {
+        // The plan's first question: the level in force outlives every glide, so a retarget starts
+        // from it. Glide 1 -> 2 for five blocks, then the owner changes and wants 0.
+        val fx = fader()
+        fx.configure(1.0)
+        block(fx)
+
+        fx.configure(2.0)
+        repeat(5) { block(fx) }
+
+        val stands = law(1.0, 2.0, 5, blockFrames - 1)
+
+        withClue("where the fader stands after five blocks of the first glide") {
+            fx.gain shouldBe (stands plusOrMinus 1e-12)
+        }
+
+        fx.configure(0.0)
+        val turn = List(glideBlocks + 1) { block(fx) }
+
+        // A full glide from THERE, continuous with the last sample of the first glide.
+        shouldGlide(turn, stands, 0.0)
+    }
+
+    "a reset mid-glide: the next life snaps, it does not glide from the old life's level" {
+        // The plan's second question: the record of a finished life (the level and the running glide)
+        // is forgotten in reset, and the next life's first factor arrives at once.
+        val fx = fader()
+        fx.configure(1.0)
+        block(fx)
+        fx.configure(4.0)
+        repeat(3) { block(fx) }
+
+        fx.reset()
+        fx.configure(0.25)
+
+        val rampsBefore = fx.ramps
+        val next = block(fx)
+
+        for (i in 0 until blockFrames) {
+            withClue("frame $i") {
+                next[i] shouldBe probe * 0.25
+            }
+        }
+
+        fx.ramps shouldBe rampsBefore
+    }
+
+    "a steady fader never glides at all: it arrives and then multiplies by a constant" {
+        val fx = fader()
 
         repeat(20) {
             fx.configure(0.25)
@@ -209,13 +301,13 @@ class KatalystGainEffectSpec : StringSpec({
         }
 
         // The work pin (the `hasRawTap` / `staticConfigureSkips` precedent): re-applying the same
-        // number every block, which is what a chain without `.katp` does, must not keep ramping.
+        // number every block, which is what a chain without `.katp` does, must not keep gliding.
         fx.ramps shouldBe 0
         fx.gain shouldBe 0.25
     }
 
     "reset puts the fader back to unity, so a reused orbit starts transparent" {
-        val fx = KatalystGainEffect()
+        val fx = fader()
         fx.configure(4.0)
         block(fx)
         block(fx)
@@ -224,9 +316,10 @@ class KatalystGainEffectSpec : StringSpec({
 
         val after = block(fx)
 
-        // The FIRST sample, not just the last: a reset that only re-targeted unity would ramp
-        // DOWN from the factor it still held, so the orbit's next tenant would hear a block of
-        // the previous one's level. The clean slate is immediate.
+        // The FIRST sample, not just the last: a reset that only re-targeted unity would glide
+        // DOWN from the factor it still held, so the orbit's next tenant would hear 50 ms of
+        // the previous one's level. The clean slate is immediate, which is also the plan's fourth
+        // question: the stage holds no reference, so reset completes on the spot.
         after[0] shouldBe probe
         after[blockFrames - 1] shouldBe probe
         fx.gain shouldBe 1.0
@@ -237,7 +330,7 @@ class KatalystGainEffectSpec : StringSpec({
     }
 
     "retire puts the fader back to unity too: a shelved stage holds no level" {
-        val fx = KatalystGainEffect()
+        val fx = fader()
         fx.configure(4.0)
         block(fx)
 
@@ -278,7 +371,7 @@ class KatalystGainEffectSpec : StringSpec({
         ctx.mixBuffer.left[blockFrames - 1] shouldBe probe
     }
 
-    "the gain slot is what `katp` moves, and the move ramps to the value the pattern wrote" {
+    "the gain slot is what `katp` moves, and the move glides to the value the pattern wrote" {
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Param("gain", 1.0))),
             sampleRate = sampleRate,
@@ -306,19 +399,21 @@ class KatalystGainEffectSpec : StringSpec({
 
         chain.applyParams(mapOf("gain" to 0.5))
 
-        // One block of ramp, landing exactly on what the pattern wrote.
-        renderBlock()[blockFrames - 1] shouldBe probe * 0.5
-        renderBlock()[0] shouldBe probe * 0.5
+        // The glide, landing exactly on what the pattern wrote.
+        shouldGlide(List(glideBlocks + 1) { renderBlock() }, 1.0, 0.5)
     }
 
     // ── The mute idiom, through a real cylinder ──────────────────────────────────────────────────
 
     "a gain-0 orbit stays exactly silent across the deactivation grace, block after block" {
         // `k.classic().gain(0)` is how a mix is muted at the bus. The mix is then silent while the
-        // voices play, so `Cylinder.tryDeactivate` reaches its silence grace every tenth block,
-        // deactivates and RESETS the chain; the next voice to claim the orbit reconfigures the
-        // fader. If an arriving factor ramped, that block would come out at nearly full level,
-        // once every eleven blocks: a 31 Hz buzz out of an orbit the author muted.
+        // voices play; until Katalyst 5c-8 `Cylinder.tryDeactivate` reached its silence grace every
+        // tenth block, deactivated and RESET the chain, and the next voice to claim the orbit
+        // reconfigured the fader, so an arriving factor that ramped came out at nearly full level
+        // every tenth block: a buzz out of an orbit the author muted. Since 5c-8 the
+        // orbit does not deactivate while its voice plays (`CylinderFaderThroughZeroSpec`); the row
+        // stays, because the fader must be silent from the orbit's first block whichever way it
+        // gets there.
         val registry = KatalystRegistry()
         val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate, katalysts = registry)
         val orbit = 1
@@ -355,7 +450,7 @@ class KatalystGainEffectSpec : StringSpec({
             cylinders.clearAll()
             fusion.clear()
             voice.render(renderCtx)
-            cylinders.processAndMix(fusion)
+            cylinders.processAndMix(fusion, renderCtx.blockStart)
 
             for (i in 0 until blockFrames) {
                 withClue("block $b frame $i") {

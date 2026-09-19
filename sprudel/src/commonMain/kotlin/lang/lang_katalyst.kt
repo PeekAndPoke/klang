@@ -182,7 +182,7 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * `gain.gain` is the orbit's **group fader**, the last stage before the duck: one multiply of the
  * whole orbit mix, after the compressor, covering the dry signal and the delay and reverb returns
  * alike. 1 is unity and is what every orbit runs at; below 1 is quieter, above 1 louder, and a
- * move is ramped across one block so it never steps.
+ * move glides over 50 ms so it never steps.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").orbit(1).katp("gain.gain", 0.8)   // this orbit, a little down
@@ -193,10 +193,11 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * value lands once the previous owner has lapsed. Set it and leave it. For something that moves
  * per note, reach for `gain` (the level a voice leaves at) or `pregain` (how hard it is played in).
  *
- * **And patterning it through exactly 0 is not a clean mute.** The orbit's silence gate looks at
- * the mix AFTER the fader, so a stretch at zero can let the orbit deactivate while its voices are
- * still playing, and the way back up can step rather than glide. Mute with `gain` on the pattern
- * instead.
+ * **Patterning it through exactly 0 keeps the orbit running**: an orbit never deactivates while a
+ * voice plays on it, so the fader waits at zero and glides back up from there. It is still not a
+ * per-note mute: the way back up starts when the lease hands the fader its new value, which is
+ * after the muted notes' owner has lapsed and can fall mid-note. Mute a note with `gain` on the
+ * pattern instead.
  *
  * **Which chain hears this map.** THIS IS THE ONE HOME of that rule; every other mention of it is
  * a pointer here.

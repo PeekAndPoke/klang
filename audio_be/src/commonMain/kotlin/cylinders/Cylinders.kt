@@ -90,8 +90,13 @@ class Cylinders(
      * 2. Apply ducking (cross-cylinder sidechain — requires all cylinders processed first)
      * 3. Mix all active cylinders to fusion output
      * 4. Round-robin cleanup check for silent cylinders
+     *
+     * [blockStart] is the block's start frame, the one this block's voices claimed their orbits
+     * with: the cleanup asks the orbit lease whether a voice still plays (see
+     * [Cylinder.tryDeactivate]).
      */
-    fun processAndMix(fusionMix: StereoBuffer) {
+    // blockStart is an ABSOLUTE backend frame, a Double (see RenderClock.cursorFrame).
+    fun processAndMix(fusionMix: StereoBuffer, blockStart: Double) {
         // Step 1: Process katalyst pipeline on all cylinders
         for (cylinder in id2cylinder.values) {
             // A chain requested before its registration arrived lands here, on the first block
@@ -141,7 +146,7 @@ class Cylinders(
             var idx = 0
             for ((cylinderId, cylinder) in id2cylinder) {
                 if (idx == keyIndex) {
-                    cylinder.tryDeactivate()
+                    cylinder.tryDeactivate(blockStart)
                     break
                 }
                 idx++

@@ -633,8 +633,9 @@ complexity outranks the duplication.
   because a section list's SIZE is structure; body and vowel build a fresh bank per change only
   because a material decides how many bands it has. The flush lives in exactly one place, the
   install, so it has one failing row; `reset()` only clears the swap, which makes a parked bank
-  unreachable. `KatalystGainEffect` multiplies the mix and ramps per sample across ONE block on a
-  change, which is the longest ramp that always finishes before the next possible param read; the
+  unreachable. `KatalystGainEffect` multiplies the mix and ramped per sample across ONE block on a
+  change (SUPERSEDED by Katalyst 5c-8: a `KnobGlide` over `KNOB_GLIDE_SECONDS`, per sample from
+  the end, from where the fader stands), which is the longest ramp that always finishes before the next possible param read; the
   master snaps the same knob (its factor is fixed at chain build), so this is the improvement, not
   parity. Unity is bit-transparent on both stages, and a 0 dB bell stays bit-transparent through
   the core's explicit branch. Both stages are slot-driven on every chain, `voiceDriven` or not,
@@ -818,6 +819,20 @@ complexity outranks the duplication.
     knob jumps to the floor. 18 of 18 songs bit-identical (no song switches or changes a
     compressor while its orbit sounds). Listening checkpoint: WAVs in the session scratchpad
     `5c7/listen/`.
+  - **The fader and the orbit's liveness, as built in 5c-8 (2026-09-19):** an orbit never
+    deactivates while its `VoiceLease` is held, so a fader patterned through exactly 0 no longer
+    resets a playing orbit (the click measured -17.7 dB, now -88); the fader glides over
+    `KNOB_GLIDE_SECONDS` from where it stands (was one block), every edge to the floor, a
+    polarity flip and 0.01 to 4 included. 15 of 18 songs bit-identical; Synthsturm and Synthkura
+    differ at -140 dB (the reverb's anti-denormal residue is no longer zeroed by the resets that
+    are gone). **The Synthsale Pipers' Last Rave differs audibly 163 to 234 s:** orbit 6's
+    silent supersaw runs a phaser at 1/13 Hz whose sweep HEAD restarted at each of about 167
+    resets (a cleanup-schedule-dependent offset the Phaser's own KDoc rejects) and which now runs
+    on from the section's downbeat; stripping the phaser from both sides leaves 3e-16. Listening
+    checkpoint pending: `5c8/listen/last-rave-155-240-{head,tree}.wav`.
+  - Known and accepted (5c-8 review): a fader edge takes effect when the lease changes hands, not
+    when the pattern changes, and then glides 50 ms, so a patterned fader is not a rhythmic gate.
+    No song does it; a gate would be its own feature.
   - The EQ gets no off door: it exists only on a declared chain, and a chain swap already
     crossfades.
   - The maintainer remembers audible clicks on material changes with today's 12 ms crossfade.
