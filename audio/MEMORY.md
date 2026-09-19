@@ -1,5 +1,71 @@
 # Klang Audio — Memory
 
+## The orbit reverb is a state machine too (2026-09-19)
+
+Katalyst step 5c-2, the delay's shape copied onto `KatalystReverbEffect` (the plan is
+`docs/plans/effect-state-machines.md`). A pure refactor, byte-identical: the private enum and its
+`when`s became a private `sealed class State` with three preallocated `inner class` states, the
+transition table lives in the KDoc on `State`, the seam is `currentState`. What the reverb's own
+answers turned out to be:
+
+- **Outlives the states:** the unit, the tail ceiling AND the size glide. Draining keeps
+  advancing the glide, and a return mid-drain glides on from where the room stands.
+- **The records of a finished life are forgotten in `Off.enter()`, both of them:** the ceiling
+  (the four terminal resets the 5c-1 entry names are now this one line; its line numbers were
+  already stale, at `11e02b3f` they sat at 193, 260, 279 and 344) and the size glide. The glide
+  reset MOVED: it sat on `configure`'s ON arm behind "the state is Off", i.e. on the way OUT of
+  Off. Nothing reads or advances the glide while Off, so forgetting it on the way IN is the same
+  behaviour (the raw-bits harness below proves it bit for bit), and it makes the ON arm the same
+  from every state, so only the OFF arm dispatches.
+- **The Off precondition** has four callers: `Active.deactivate` (silent OR poisoned network,
+  `unit.reset()`), `Draining.process` (countdown end, `unit.reset()`), `reset()`, `release()`
+  (hands the unit back dirty). The OFF-arm test keeps `|| !remaining.isFinite()` (the heal of a
+  poisoned network); the countdown-end test in Draining stays a plain `<= 0.0`.
+- **Dead writes removed** with the single-initialiser argument: `drainRemaining = 0.0` in `reset`
+  and `release`, and the field write on the arm that went straight to Off. A non-initialising
+  `Draining.enter` turns five existing rows of `KatalystReverbEffectSpec` red, so the delay's
+  "own countdown" row was not copied.
+- **Permanent rows, each mutation-checked:** `KatalystReverbStateIdentitySpec` (every reachable
+  cell, both Off arms of the OFF config, the glide edges, the refusal; red for a fresh
+  `Draining()`, `Active()` or `Off()` in a transition); "a reverb that returns mid-drain keeps the
+  network AND the tail ceiling" (the ceiling reset in `Active.enter` turns (a) red, a network
+  reset on Draining to Active turns (b) red and only this row); "a life that ended in Off starts
+  the next one with an empty ceiling" (deleting the ceiling reset turns only this row red, and the
+  ten-block assertion binds on its own); the existing poisoned-network row (red without the
+  `isFinite` arm, as is the identity spec); the existing glide row "reset and retire mid-glide"
+  (red without the glide reset in `Off.enter`).
+- **Evidence, one-off fixtures deleted with the step.** (a) An effect-level harness, raw bits of
+  the mix plus `hasTail`, the unit's size bits and `deniedRents` per block and per event, 19110
+  lines, `cmp`-identical at `11e02b3f` and on the tree. Its twenty lifecycles, for the next
+  conversion to copy: `off-to-active`, `active-drain-off`, `drain-back-to-active` (a larger room,
+  glides), `drain-back-same`, `active-reconfigured` (size and lowpass moving, NaN, Inf, clamped
+  sizes), `owner-handover` (NaN and Inf owners as off), `reset-and-relive`, `reset-mid-drain`,
+  `retire-and-rent-again` (one shelf, retire from Active and mid-drain, double retire, release),
+  `poisoned-network`, `mismatched-block` (built for 64, driven with 128), `silent-network-off`,
+  `glide-return-mid-drain`, `glide-return-same-target`, `reset-mid-glide`, `retire-mid-glide`,
+  `falling-glide-off`, `refused-then-shelf`, `finished-life-then-new`, `test-seam`. Able to fail:
+  deleting the glide reset from `Off.enter` changed 4263 lines, dropping the `isFinite` arm 40030.
+  (b) Raw doubles of the engine mix before the master stage, 48 kHz, wall clock pinned: seven
+  synth rows (`off-active-drain-active`, `drain-to-off`, `active-reconfigured`, `owner-handover`,
+  `deactivate-and-relive`, `swap-reverb-on-both-chains`, `swap-reverb-on-one-chain`), each with a
+  peak and a dry control (the row without its reverb, 0.018 to 0.047 apart), and the twelve songs
+  with an orbit reverb, each rendered past the first appearance of its last reverb owner
+  (Final Fantasy 7 Prelude 32 cycles, Stranger Things 40, Sakura 48, Der Schmetterling 104,
+  Tetris 40, Sound Of The Sea 16, Tetris Remix 24, Irish Lament Techno 156, Sandsturm 32, Irish
+  Lament 16, Small Town Boy 16, Drunken Sailor 16): identical. Halving the drain countdown changed
+  three rows and Irish Lament Techno. (c) Enter counters: only Irish Lament Techno among the songs
+  drains (2 countdown ends); the rows drive Draining to Active 23 times and 16 countdown ends;
+  NO render reaches the silent or poisoned arm or reset or retire from Draining, which is why (a)
+  carries the evidence. Stranger Things drives nothing but Off to Off: its reverb
+  owners are samples. (e) Sakura, 64 cycles, three timed renders each side twice: noise.
+- **Call sites:** 39 orbit-reverb calls in 12 songs (the four `Master(m => m.reverb(...))` are the
+  master's). Eleven of Irish Lament's twelve are overwritten by its outer `.reverb(0.1, 7)`.
+  Sample-fed, so silent in the jvm renderer: Stranger Things (all), Der Schmetterling's count-in
+  (`size = 0`, OFF) and the drum orbits of its line 433 (its orbit 10, pink noise, is a synth),
+  Tetris's drum orbit, Sound Of The Sea's glockenspiel,
+  Tetris Remix's snare, Irish Lament Techno's clap and crash, Small Town Boy's drums, Drunken
+  Sailor's drums.
+
 ## Orbit knobs glide: the pilot on the orbit reverb (2026-09-19)
 
 `docs/plans/knob-glide.md` (its section 5 holds the pilot log). `KnobGlide` (audio_be root, the

@@ -133,15 +133,16 @@ with every host file open, and where it changes what a listener hears it is deci
 maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed.
 
 - **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
-  OFF-ARM test ("already silent", today `KatalystReverbEffect.kt` ~139, tomorrow its
-  `Active.deactivate`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
+  OFF-ARM test ("already silent", now its `Active.deactivate`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
   POISONED network, and the reset is the only exit such an orbit ever gets. Its countdown-end
   test is a plain `<= 0.0`. A transliterated delay condition pins that orbit for the life of the
   playback.
 - **Each conversion answers three questions in its own terms and pins each answer with a row
   that can fail:** (1) what outlives its states, and which `enter` must therefore not touch it;
   (2) what RECORD of a finished life must be forgotten, and where (for the reverb it is the tail
-  ceiling, as for the delay; for body and vowel it is the HOST's config cache, which lives
+  ceiling AND the size glide, both forgotten in `Off.enter()`; the glide used to be forgotten on
+  the way OUT of Off behind a state test on the ON arm, and forgetting it on the way IN is
+  equivalent because nothing reads or advances it while Off, and keeps the ON arm uniform; for body and vowel it is the HOST's config cache, which lives
   outside the swap, and a cache that survives a fade-out to Off makes the identical material
   silently never re-install; for the compressor it is the envelope and the knobs, or the
   instance; the gain has no terminal state); (3) what its Off precondition is (for an insert:
@@ -179,7 +180,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 | effect | states | today |
 |---|---|---|
 | `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
-| `KatalystReverbEffect` | Off, Active, Draining | private enum plus a `when`; next. The same machine with one extra arm on its OFF-arm test (section 2, "copy the shape, not the condition") |
+| `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.deactivate` |
 | `KatalystFilterSwap` (body, vowel, eq) | first commit: Off, Engaged, Crossfading; second commit, a sound change: the switch-off fade, states open | two nullable filter pairs plus `active`; FadingOut is step 5c's crossfade on switch-off |
 | `KatalystCompressorEffect` | first commit: Off, Active; second commit, a sound change: the switch-off ramp, law open | nullable instance; ReleasingOut is the ramp on switch-off |
 | `KatalystGainEffect` | fresh, settled, ramping | fields |

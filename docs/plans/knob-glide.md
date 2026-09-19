@@ -80,9 +80,12 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
    never do anything with a side effect on an unchanged value, and write rows with a configure
    per block, like production.
 2. **Snap or glide is decided by the LIFECYCLE.** The helper snaps until its first `advance`; the
-   stage forgets the glide at one place only: leaving the state in which its memory is EMPTY (for
-   the reverb, leaving Off; reset, release, retire and a finished drain all land there). Next
-   effects: find that state and snap on leaving it; one row deletes that line and goes red.
+   stage forgets the glide at one place only: the transition into or out of the state in which
+   its memory is EMPTY, whichever keeps the ON arm uniform; the two are equivalent when nothing
+   reads or advances the glide there (reset, release, retire and a finished drain all land in
+   Off; since Katalyst 5c-2 the reverb forgets it on ENTERING Off, next to the tail ceiling).
+   Next effects: find that state and forget the glide at its door; one row deletes that line and
+   goes red.
 3. **The first value snaps until a BLOCK has consumed it**, not only on the first call: a chain
    arriving through `beginFade` can be configured twice before its first `process`.
 4. **Glide only where a jump is AUDIBLE, and measure before you build.** The pilot first glided the

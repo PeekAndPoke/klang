@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -126,6 +127,153 @@ class KatalystReverbEffectSpec : StringSpec({
         }
 
         maxDiff shouldBe 0.0
+    }
+
+    "a reverb that returns mid-drain keeps the network AND the tail ceiling" {
+        // The Draining -> Active edge (docs/plans/effect-state-machines.md, the re-entry
+        // requirement): coming back re-arms NOTHING. The network keeps its content (the tail
+        // continues under the new room, send-return semantics) and the tail ceiling keeps its
+        // value, so the orbit still reports a tail while the room is audibly ringing. A converter
+        // who resets the ceiling in the Active entry hands `Cylinder.tryDeactivate` an orbit that
+        // says "no tail" while a new owner's voice is still in its attack, and the room stops dead.
+        //
+        // The oracle is the drain row's: an effect whose owner never left, fed silent sends. It is
+        // BIT-exact by construction: `Reverb.process` reads its input samples, its knobs and its
+        // own state; Draining feeds it `silentInput` and Active a silent send buffer, both all-zero
+        // and both 128 frames, the same-size re-configure writes the same two numbers into the
+        // unit and retargets the size glide to the target it already has (a no-op), and both sides
+        // advance that glide once per block.
+        val ref = createEffect(size = 0.5)
+        val refCtx = createCtx()
+        val returning = createEffect(size = 0.5)
+        val returningCtx = createCtx()
+
+        // Four hot blocks charge both networks identically.
+        repeat(4) {
+            refCtx.reverbSendBuffer.fill(0.8)
+            refCtx.mixBuffer.clear()
+            ref.process(refCtx)
+
+            returningCtx.reverbSendBuffer.fill(0.8)
+            returningCtx.mixBuffer.clear()
+            returning.process(returningCtx)
+        }
+
+        // The owner leaves for 20 blocks, longer than the longest comb (1640 samples, 13 blocks).
+        returning.configure(size = 0.0, lowpass = null)
+
+        repeat(20) {
+            refCtx.reverbSendBuffer.clear()
+            refCtx.mixBuffer.clear()
+            ref.process(refCtx)
+
+            returningCtx.reverbSendBuffer.clear()
+            returningCtx.mixBuffer.clear()
+            returning.process(returningCtx)
+        }
+
+        withClue("the row must return MID-drain") { returning.hasTail() shouldBe true }
+
+        // A new owner with the same knobs claims the orbit while the network is still charged.
+        returning.configure(size = 0.5, lowpass = null)
+
+        // 200 blocks: about 15 revolutions of the longest comb.
+        var maxDiff = 0.0
+        var tailAlways = returning.hasTail()
+        var loudest = 0.0
+
+        repeat(200) {
+            refCtx.reverbSendBuffer.clear()
+            refCtx.mixBuffer.clear()
+            ref.process(refCtx)
+
+            returningCtx.reverbSendBuffer.clear()
+            returningCtx.mixBuffer.clear()
+            returning.process(returningCtx)
+
+            tailAlways = tailAlways && returning.hasTail()
+
+            for (i in 0 until blockFrames) {
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.left[i] - returningCtx.mixBuffer.left[i]))
+                maxDiff = maxOf(maxDiff, abs(refCtx.mixBuffer.right[i] - returningCtx.mixBuffer.right[i]))
+                loudest = maxOf(loudest, abs(returningCtx.mixBuffer.left[i]), abs(returningCtx.mixBuffer.right[i]))
+            }
+        }
+
+        // (a) the ceiling survived the drain: the orbit is never told the network is empty.
+        withClue("the tail ceiling must survive Draining -> Active") { tailAlways shouldBe true }
+        // (b) the network survived it too, sample for sample.
+        withClue("the network must survive Draining -> Active") { maxDiff shouldBe 0.0 }
+        // Not two silences: the tail really came out inside the window.
+        withClue("the tail must be audible inside the compared window, loudest $loudest") {
+            (loudest > 0.05) shouldBe true
+        }
+    }
+
+    "a life that ended in Off starts the next one with an empty ceiling" {
+        // `Off.enter()` forgets the tail ceiling, and nothing else guards that line: the Off arm
+        // of `hasTail` is a hardcoded false, so a stale ceiling is invisible while the effect
+        // stays Off and only surfaces in the NEXT life, where `Active.hasTail()` reads it. At a
+        // big room's comb feedback that holds the orbit about 20 s past its due.
+        //
+        // The numbers, from `TailCeiling.observe` and the reverb at 44.1 kHz: one window is the
+        // longest comb plus one, 1641 samples, and `lapsPerWindow` is ceil(1641 / 1116) = 2. Four
+        // blocks of 0.8 at size 0.05 (feedback 0.714) leave `current = 0.8 * (1 + 0.714) = 1.37`
+        // with only 512 samples elapsed: no window has closed and 1.37 is far above the 1e-5
+        // silence threshold. Ten silent blocks later one window has closed and the stale ceiling
+        // still reads about 0.98, so both questions below bind on their own.
+        val effect = createEffect(size = 0.05)
+        val ctx = createCtx()
+
+        repeat(4) {
+            ctx.reverbSendBuffer.fill(0.8)
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
+        effect.configureSize(size = 0.0)
+
+        var blocks = 0
+
+        while (effect.hasTail() && blocks < 100_000) {
+            ctx.reverbSendBuffer.clear()
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+            blocks++
+        }
+
+        withClue("the drain must reach Off, or the row never tests the entry into Off") {
+            effect.hasTail() shouldBe false
+        }
+
+        // A new owner, a new life, and the question asked BEFORE any block is processed.
+        effect.configureSize(size = 0.05)
+
+        withClue("a fresh life must not inherit the previous life's tail ceiling") {
+            effect.hasTail() shouldBe false
+        }
+
+        // Ten silent blocks, because ten is when production asks: `Cylinder` polls the chain's
+        // tail only after `silentBlocksBeforeTailCheck` silent blocks, and its default is 10.
+        repeat(10) {
+            ctx.reverbSendBuffer.clear()
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+        }
+
+        withClue("and still empty ten silent blocks later, which is when the cylinder asks") {
+            effect.hasTail() shouldBe false
+        }
+
+        // Positive control: the fresh life is Active and really answers, so the two `false`s above
+        // are an empty ceiling and not a dead effect.
+        ctx.reverbSendBuffer.fill(0.8)
+        ctx.mixBuffer.clear()
+        effect.process(ctx)
+
+        withClue("one loud block must make the fresh life report a tail") {
+            effect.hasTail() shouldBe true
+        }
     }
 
     "the countdown ends: comb network literally empty, processing short-circuits" {
