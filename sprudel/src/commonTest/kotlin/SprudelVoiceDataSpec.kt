@@ -344,7 +344,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
     val b = seed.toDouble()
     return createSprudelVoiceData {
         note = "note$seed"; freqHz = b + 1; scale = "scale$seed"; chord = "chord$seed"
-        gain = b + 2; legato = b + 3; velocity = b + 4; postGain = b + 5
+        gain = b + 2; legato = b + 3; velocity = b + 4
         bank = "bank$seed"; sound = SoundValue.Named("snd$seed"); soundIndex = seed + 6
         oscParams = paramBagOf("k$seed" to b + 7)
         katalystParams = paramBagOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)

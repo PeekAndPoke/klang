@@ -66,10 +66,7 @@ class SendRenderer(
             val idx = offset + i
 
             // Read processed signal from voice buffer
-            var signal = audioBuffer[idx]
-
-            // Apply post-gain
-            signal *= voice.postGain
+            val signal = audioBuffer[idx]
 
             // Split to Stereo with panning
             val left = signal * gainL
@@ -113,17 +110,30 @@ class SendRenderer(
             val sample = audioBuffer[i]
             val magnitude = if (sample < 0.0) -sample else sample
 
-            // NaN-guard: a NaN sample fails this compare and counts as silence, so a voice that blew
-            // up in its release is culled rather than kept poisoning the bus.
+            // NaN-guard: a NaN sample loses this compare, so it contributes nothing and a block
+            // of them measures as silence. One rule covers that and the infinities below: CULL ON
+            // WHAT IS MEASURABLY SILENT. A NaN has no magnitude to compare, so it leaves nothing
+            // to measure and the block reads as silent, which is how a voice that blew up in its
+            // release stops rendering and stops feeding the bus. An INFINITE sample does win this
+            // compare, and an infinite bound is a measurement that is not small, so that voice is
+            // kept (see below).
             if (magnitude > peak) {
                 peak = magnitude
             }
         }
 
-        // Raw-Motor: gain, postGain and the send amounts are unclamped and may be negative or above 1;
-        // the bound is a magnitude, and a send above 1 puts more on its bus than the mix gets. A NaN
-        // gain makes the peak NaN, which reads as audible (never culled): NaN-guard by inaction.
-        val gainMagnitude = abs(voice.gain * voice.postGain)
+        // Raw-Motor: the gain and the send amounts are unclamped and may be negative or above 1;
+        // the bound is a magnitude, and a send above 1 puts more on its bus than the mix gets.
+        //
+        // Every voice the factory builds has a FINITE gain (it substitutes a non-finite wire
+        // value), so a non-finite WIRE value can no longer make this bound unusable. The product
+        // can still be non-finite when the voice's own output blew up: an Inf sample sets `peak`
+        // to Inf (only NaN loses the compare above), Inf times a zero gain is NaN, and a finite
+        // peak times a large gain can overflow. Either way the bound fails `< VOICE_CULL_FLOOR`,
+        // so such a voice is never culled. That is the same rule as the NaN one above and not its
+        // opposite: culling is an optimisation and it fires on measurable silence, so a block with
+        // nothing to measure goes, and a block whose measurement is not small stays.
+        val gainMagnitude = abs(voice.gain)
         val sendMagnitude = maxOf(1.0, abs(delayAmount), abs(reverbAmount))
 
         ctx.voiceOutputPeak = peak * gainMagnitude * sendMagnitude

@@ -150,8 +150,8 @@ class BlockContext(
     var measurePeak: Boolean = false
 
     /**
-     * Peak `|sample|` of the voice's own output this block: post-VCA, times `postGain`, `gain` and
-     * the largest send amount, BEFORE the solo/mute multiplier. Zeroed per block by `Voice.render`,
+     * Peak `|sample|` of the voice's own output this block: post-VCA, times `gain` and the
+     * largest send amount, BEFORE the solo/mute multiplier. Zeroed per block by `Voice.render`,
      * written by the Send stage when [measurePeak] is set, read back for silence culling.
      */
     var voiceOutputPeak: Double = 0.0

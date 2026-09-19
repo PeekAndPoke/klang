@@ -70,7 +70,6 @@ class LangControlRestSpec : StringSpec({
         // Level
         single("gain", "amount", "0.3", "0.6"),
         single("pan", "amount", "0.3", "0.6"),
-        single("postgain", "amount", "0.3", "0.6"),
         single("velocity", "amount", "0.3", "0.6"),
         single("vel", "amount", "0.3", "0.6"),
         // Routing and dynamics

@@ -31,7 +31,7 @@ stack(
     , // bass  ---------------------------------------------------------
     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
     .orbit(3).sound("supersaw").unison(voices = 8, spread = 0.1)
-    .adsr(0.02, 0.3, 0.0, 0.1).lpf(1200).hpf(80).gain(1.0).postgain(1.25)
+    .adsr(0.02, 0.3, 0.0, 0.1).lpf(1200).hpf(80).gain(1.0 * 1.25)
     , // Drums ---------------------------------------------------------
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
      .orbit(4).pan(0.5).gain(0.95)

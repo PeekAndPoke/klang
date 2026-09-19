@@ -155,10 +155,12 @@ class MidiPlaygroundPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  THE TRANSLATION — voice shape, sound and params live here  //////////////////////////////
 
+    // Key velocity is this frontend's articulation shorthand and folds into the wire's one level
+    // word, exactly as sprudel folds its own `velocity` (signal-flow plan section 6).
     private fun voiceFor(evt: MidiConnector.Event.NoteOn): VoiceData = VoiceData.empty.copy(
         sound = selectedSound,
         freqHz = Midi.midiToFreq(evt.key.note.toDouble()),
-        velocity = evt.velocity / 127.0,
+        gain = evt.velocity / 127.0,
     )
 
     /** Exhaustive by design: a new connector event fails the build until this page decides. */

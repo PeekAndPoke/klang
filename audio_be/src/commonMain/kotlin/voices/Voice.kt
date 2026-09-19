@@ -56,7 +56,6 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     val gain: Double,
     val pan: Double,
-    val postGain: Double,
     val compressor: Compressor?,
     val ducking: Ducking?,
     val delay: Delay,
@@ -139,11 +138,13 @@ class Voice(
      * A voice that has not sounded yet is never culled, whatever its gate says: a sample with
      * leading silence pitched two octaves down, or an ignitor envelope whose attack outlives a
      * short gate, is silent at gate end and sounds only later. The gate marks "the note was told
-     * to stop", not "the sound has started"; this latch marks the latter. A voice whose gain
-     * product is exactly zero (`gain(0)`, the hand mute) can never be heard and starts latched, so
-     * its silent tail is culled like any other.
+     * to stop", not "the sound has started"; this latch marks the latter. A voice whose [gain] is
+     * exactly zero (`gain(0)`, the hand mute) can never be heard and starts latched, so its silent
+     * tail is culled like any other. Every voice the factory builds has a FINITE gain (it
+     * substitutes a non-finite wire value), so this compare settles; a NaN would leave the latch
+     * off forever.
      */
-    private var heard: Boolean = gain * postGain == 0.0
+    private var heard: Boolean = gain == 0.0
 
     /**
      * The cull window in frames. Negative = never cull (`noCull()`); `0` = end at the first silent

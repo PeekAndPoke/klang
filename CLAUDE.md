@@ -119,6 +119,10 @@ so "what Strudel does not have" named nothing a reader could use; every DSL file
 `TutorialScope` and the tutorial field `scope` (renamed 2026-09-08 to `TutorialDepth` / `depth`, with
 `scopeLabel`/`scopeColor` and the `?scope=` URL parameter: Quick/Standard/DeepDive is a depth ladder, and
 "scope" now means one thing only, WHERE audio runs, see `KlangScope` and the `@scope` KDoc tag).
+`postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
+channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
+`velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
+`docs/plans/signal-flow-redesign.md` section 6).
 
 ## Available Agent
 

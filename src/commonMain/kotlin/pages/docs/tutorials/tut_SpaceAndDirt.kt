@@ -32,14 +32,16 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   harshness sitting on top of it" — plausible and FALSE. §5 now teaches the true version:
  *   drive and tone are one decision. This holds whatever pipeline is selected, because
  *   onepole is inside the voice and the pipeline runs on the voice's output.
- * - `gain` and `postgain` are BOTH applied in SendRenderer at the voice output
- *   (`signal *= voice.postGain`, then `* gainL/gainR` from `voice.gain * gainMultiplier`).
- *   `gain` does NOT drive the distortion, and for one line the two are the same arithmetic.
- *   The first draft of §6 claimed dropping `gain` "feeds the distortion less and changes the
- *   growl" — also plausible and FALSE. The real difference is WHERE each is used: `gain` is
- *   the patternable per-note knob and is what `velocity` and mute/solo scale (VoiceFactory:
- *   `gain = baseGain * velocity`), `postgain` is the untouched whole-line trim. §6 says that
- *   and stages an audible level A/B instead of an inaudible gain-vs-postgain one.
+ * - `gain` is the ONE level word (signal-flow plan section 6, 2026-09-19): the channel fader,
+ *   applied with pan at the voice output (`SendRenderer`: `* gainL/gainR` from
+ *   `voice.gain * gainMultiplier`). It does NOT drive the distortion. The first draft of §6
+ *   claimed dropping `gain` "feeds the distortion less and changes the growl", plausible and
+ *   FALSE. A SECOND multiplier at the same point, retired 2026-09-19 (the rules register's
+ *   retired list), said nothing `gain` does not say, so §6 now teaches one word and stages an
+ *   audible level A/B. The numbers carry the old sound over by multiplication: §6's 0.2 and
+ *   the summary line's 0.225 are the products of the two levels those lines used to carry.
+ *   `velocity` and mute/solo still scale `gain`; `velocity` is sprudel's own word and is
+ *   multiplied into `gain` where the voice crosses the wire, so the backend sees one level.
  * - At this lesson's 30 RPM a cycle is 2 s and a step is 0.25 s, which is why
  *   `delay(time = 0.25)` lands each echo exactly one step later. B1 licensed the "at 30 RPM"
  *   caveat; §3 restates it rather than assuming it.
@@ -49,7 +51,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * order does NOT reorder the chain. The order-matters demo belongs to the Pipeline lesson
  * (C7) via `.pipeline()`. §4 forward-references it by topic, since C7 has no name yet.
  *
- * One of the two biggest `teaches` lists in the corpus (5). The plan assigns all of it to this one slot,
+ * One of the biggest `teaches` lists in the corpus (4). The plan assigns all of it to this one slot,
  * and it is one theme in three moves: dress it, dirty it, lift it. If a review panel finds
  * it dense, the natural split is space (§§1-3) and dirt-plus-level (§§4-6).
  *
@@ -64,7 +66,7 @@ val spaceAndDirtTutorial = Tutorial(
     difficulty = TutorialDifficulty.Intermediate,
     depth = TutorialDepth.Standard,
     tags = listOf(TutorialTag.Effects, TutorialTag.Mixing),
-    teaches = listOf("reverb", "delay", "distort", "onepole", "postgain"),
+    teaches = listOf("reverb", "delay", "distort", "onepole"),
     sections = listOf(
         TutorialSection(
             heading = "How much goes in: wet and size",
@@ -184,23 +186,25 @@ val spaceAndDirtTutorial = Tutorial(
             ),
         ),
         TutorialSection(
-            heading = "The last word: postgain",
+            heading = "The last word: gain",
             blocks = listOf(
                 Block.Markdown(
                     markdown = """
-                    Everything this lesson added made the line louder, and a sound you cannot place in a mix is not finished. `postgain()` is the trim on the way out: one multiplier on the completed voice.
+                    Everything this lesson added made the line louder, and a sound you cannot place in a mix is not finished. `gain()` is the level the voice leaves at: one multiplier on the finished sound, and there is only one of them.
 
-                    `gain()` would also make it quieter, and on a single line the two do the same arithmetic. They are kept apart because they are reached for at different moments. `gain()` is the per-note knob: it takes a pattern, which is how ${Tut.spaceAndRests} put accents on individual hits, and it is what a velocity or a mute scales. `postgain()` is one number for the whole line, set last, once the sound is designed and only its size is still wrong.
+                    Every line in this lesson has ended in `gain(0.5)` without a word about why. This is why. A voice needs a level, and you cannot know which one until the sound is designed, so you set it last, when the room, the echo, the drive and the tone are where you want them and the only thing still wrong is how big the line is.
 
-                    **Try it:** swap the `//` and press **Update**. Then walk `postgain` from 0.4 up to 1 and find the point where the growl still reads but stops shouting.
+                    It takes a pattern like everything else, which is how ${Tut.spaceAndRests} put accents on individual hits: one number for the whole line, a pattern for note by note, the same word either way. A mute or a fade scales it too.
+
+                    **Try it:** swap the `//` and press **Update**. Then walk `gain` from 0.2 up to 0.5 and find the point where the growl still reads but stops shouting.
 
                     **Listen for:** nothing changing except size. The growl and the tone are exactly as you left them; the line simply stops dominating everything around it.
                     """.trimIndent(),
                 ),
                 Block.Code(
                     code = """
-                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.5).postgain(0.4)  // same growl, trimmed on the way out
-                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.5)             // untrimmed, swap to compare
+                    note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.2)     // same growl, trimmed on the way out
+                    // note("a3 c4 d4 ~  e4 d4 c4 ~").sound("saw").adsr(0.001, 0.3, 0, 0.1).distort(0.5).onepole(3500).gain(0.5)  // untrimmed, swap to compare
                     """.trimIndent(),
                 ),
             ),
@@ -225,8 +229,7 @@ val spaceAndDirtTutorial = Tutorial(
                       .delay(wet = 0.25, time = 0.25, feedback = 0.3)     // an echo one step behind, a couple of repeats
                       .distort(0.4)                                       // driven, but not shouting
                       .onepole(3500)                                      // the glare taken off the drive
-                      .gain(0.5)                                          // how hard it is played
-                      .postgain(0.45)                                     // how loud it leaves
+                      .gain(0.225)                                        // how loud it leaves
                     """.trimIndent(),
                 ),
             ),

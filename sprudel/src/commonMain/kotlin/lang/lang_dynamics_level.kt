@@ -28,11 +28,19 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 }
 
 /**
- * Sets the level of each event, [per voice](/manuals/lexikon/voice).
+ * Sets the level each event leaves at, [per voice](/manuals/lexikon/voice).
  *
- * A plain multiplier on the voice's output: below 1 is quieter, above 1 is louder. `velocity` is
- * multiplied into it, and mute, solo and fade scale it as well. Takes a control pattern, so the
- * level can move from event to event.
+ * The one level word. It is tone-neutral and it comes last: the voice's filters, its distortion and
+ * its envelope have all run by the time `gain` is applied, so turning it down makes the sound
+ * smaller and changes nothing else about it. Set it once the sound is designed and only its size is
+ * still wrong. Below 1 is quieter, above 1 is louder.
+ *
+ * A later `gain` REPLACES an earlier one, so the last call in the chain wins. To scale a level
+ * that is already set instead of replacing it, pass a mapper: `gain(mul(0.5))` halves whatever is
+ * there. On an event with no gain set at all a mapper does nothing, so set a level first.
+ *
+ * `velocity` is multiplied into it, and mute, solo and fade scale it as well. Takes a control
+ * pattern, so the level can move from event to event.
  *
  * ```KlangScript(Playable)
  * s("bd sd hh cp").gain(0.5)              // all hits at half volume
@@ -40,6 +48,10 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * ```KlangScript(Playable)
  * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(0.7).gain(0.2)       // dirty it first, then set the level it leaves at
  * ```
  *
  * @param amount Level multiplier, 1 leaves the event as it is.
@@ -376,103 +388,3 @@ val vel: velocity = velocity
 @KlangScript.Function
 fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.velocity(amount, callInfo) }
-
-// -- postgain() -------------------------------------------------------------------------------------------------------
-
-private val postgainMutation = voiceSetter { postGain = it?.asDoubleOrNull() }
-
-private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.postGain }, update = postgainMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, postgainMutation)
-}
-
-/**
- * Sets the final level trim of each event, per voice.
- *
- * `postgain` and `gain` are both output multipliers applied at the voice output, so on a single
- * voice they do the same arithmetic. The difference is what else touches them: `gain` is scaled by
- * `velocity` and by the mute/solo/fade multiplier, while `postgain` is not. So `gain` is the
- * per-note, performable level and `postgain` is the line's own final trim.
- *
- * ```KlangScript(Playable)
- * s("bd sd").postgain(1.5)                    // amplify after processing
- * ```
- *
- * ```KlangScript(Playable)
- * s("hh*8").postgain(rand.range(0.1, 1.0))   // random post-gain per hit
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- *
- * @scope voice
- * @category dynamics
- * @tags postgain, gain, volume, post-processing
- */
-@KlangScript.Function
-fun SprudelPattern.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPostgain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the post-gain for each event.
- *
- * ```KlangScript(Playable)
- * "hh*8".postgain(perlin.range(0.1, 1.0).slow(4)).s()   // perlin noised post-gain
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- */
-@KlangScript.Function
-fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).postgain(amount, callInfo)
-
-/**
- * The post-processing gain of each event, as a value other setters can read.
- *
- * Bare `postgain` reads what the chain has set so far, so it comes after whatever set the field
- * (`postgain(...)`, `adsr(...)`, an alias). Call it, `postgain(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * s("bd*4").distort(2).postgain(0.4).postgain(mul("1 0.5 1 0.5"))       // tame every second hit
- * ```
- *
- * ```KlangScript(Playable)
- * note("c e").postgain("0.5 0.25").gain(postgain)                        // match the two stages
- * ```
- *
- * @scope voice
- * @category dynamics
- * @tags postgain, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("postgain")
-object postgain : FieldAccessor({ it.postGain }) {
-
-    /**
-     * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
-     *
-     * ```KlangScript(Playable)
-     * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
-     * ```
-     *
-     * @param amount Final level trim, 1 leaves the event as it is.
-     */
-    @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.postgain(amount, callInfo) }
-}
-
-/**
- * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
- *
- * ```KlangScript(Playable)
- * s("hh*4").apply(postgain(0.8).gain(0.5))  // postgain + gain chained
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- */
-@KlangScript.Function
-fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.postgain(amount, callInfo) }

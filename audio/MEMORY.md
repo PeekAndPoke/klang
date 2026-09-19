@@ -1,5 +1,48 @@
 # Klang Audio — Memory
 
+## The wire carries ONE level word (2026-09-19)
+
+- `VoiceData.velocity` and `VoiceData.postGain` are GONE. `gain` is the channel fader, applied once,
+  with pan, in `SendRenderer`; the `signal *= voice.postGain` line went with the field, and
+  `measurePeak` and `Voice.heard` read `gain` alone. A frontend's articulation shorthand (sprudel's
+  `velocity`, the MIDI playground's key velocity) is multiplied into `gain` BEFORE the voice crosses,
+  so the backend never learns that word. Signal-flow plan section 6.
+- **Non-finite `gain` reads as UNSET, 1.0, at the voice factory** (the wire's NaN rule,
+  `/dsl-design` section 4). It is not a clamp: a negative gain and a gain above 1 stay legal and pass
+  through raw. Two readers depended on it and both were wrong for a NaN: `Voice.heard` starts latched
+  on a gain of exactly 0 and `NaN == 0.0` is false, so a NaN voice started unlatched; and
+  `measurePeak` scales the block peak by `abs(gain)`, so a NaN gain made the peak NaN, which fails
+  every compare against the cull floor and read as audible forever, while the NaN itself went on into
+  the orbit's reverb and delay and latched them for the rest of the playback. The old comment there
+  called that "NaN-guard by inaction"; it is a guard now. Guard: `VoiceGainWireSpec`.
+- **What `VoiceGainWireSpec` actually asserts**, since the claim above needs its evidence named,
+  in four kinds, because what each kind needs by way of a control differs:
+  - **Factory rows** (seven): the substitution for NaN and both infinities, and the raw
+    pass-through of a negative, an above-1 and an exactly-0 gain. Direct oracle, value in and
+    value out, so they need neither an engagement control nor a floor.
+  - **The absolute send row** (one): `TestIgnitors.ramp`'s samples, by their own definition, times
+    the pan law computed in the test, compared by raw bits against BOTH mix channels and the delay
+    send bus, which the engine takes from the already-panned and gained value. Neither side comes
+    from the code under test. It carries both a not-silence floor on all three buses and an
+    engagement control (a different gain must render different buses, and the two channels must
+    differ from each other). Its reach is the stages THIS voice renders, the amp VCA and the send
+    stage: a trim inside a stage only a factory-built voice instantiates, a filter or a
+    waveshaper, is not in its pipeline and it cannot see one there.
+  - **Whole-path render rows** (two), `VoiceData -> VoiceFactory -> Voice -> render`: a NaN gain
+    rendering bit for bit what an unset gain renders, which carries the NOT-SILENCE FLOOR on its
+    reference; and a 0.5 gain rendering exactly half of it (0.5 is a power of two, so the product
+    is exact either way it associates), which carries the ENGAGEMENT CONTROL.
+  - **Cull rows** (two), the only public seam the two readers have, `Voice.culled`: a gain of 0
+    starts the `heard` latch so a voice that can never sound is culled, with its ENGAGEMENT
+    CONTROL being the same voice at gain 1, which is never heard and never culled; and a NaN gain
+    from the wire culled exactly where an unset one is, with its ENGAGEMENT CONTROL being the
+    assertion that the reference actually culls.
+  A second multiplier reintroduced at the send stage moves the bits and goes red UNLESS it is
+  exactly unity, which no bit comparison can see; nothing here claims otherwise.
+- Rounding: a voice that never used the retired second multiplier is bit-identical; one that did
+  changes by floating-point rounding only. 309,867 onset events of every song text in the repo,
+  89.4 % bit-identical, worst relative deviation 2.3e-16.
+
 ## The ignitor optimizer's promise is a margin now (2026-09-15)
 
 - `OPTIMIZER_PARITY` (audio_bridge, 1e-12 relative, NaN for NaN, infinity for infinity) replaces

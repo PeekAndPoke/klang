@@ -15,6 +15,16 @@ package io.peekandpoke.klang
  * no longer parses is migrated to the new spelling and nothing else (the `FrozenSongs` precedent),
  * so the sound stays identical. A materially changed instrument gets a NEW dated snapshot; the old
  * one stays so its rows remain comparable.
+ *
+ * 2026-09-19, `postgain` retired into `gain` (signal-flow plan section 6): every `postgain(x)` here
+ * became `gain(mul(x))`, which is the same multiplication against the gain each `*_shape` sets, and
+ * no value changed. Unlike the earlier renames this one RE-ASSOCIATES the product the engine used
+ * to compute: in `SendRenderer`, with the scheduler's `gainMultiplier` in it,
+ * `(signal * post) * (pan * (gain * gainMultiplier))` became
+ * `signal * (pan * ((gain * post) * gainMultiplier))`, so the raw
+ * doubles of the folded lines differ from older captures in the last bits; the worst deviation
+ * measured over every song text in the repo was 2.3e-16 relative on the level. Ledger rows from
+ * before and after that date are comparable by ear and by level, not by hash.
  */
 object FrozenPieces {
 
@@ -258,7 +268,7 @@ export lead_shape = x => x.gain(0.8).sound(marimba).adsrOff()
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").postgain("<0.40!48 0.20!16 0.40!48 0.70!16>").postgain(mul(0.21))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").gain(mul("<0.40!48 0.20!16 0.40!48 0.70!16>")).gain(mul(0.21))
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
@@ -276,7 +286,7 @@ export guitar1_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guita
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").postgain(0.205)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(mul(0.205))  // .mute()
   .late(berlin.range(0.0004, 0.0008).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -293,7 +303,7 @@ export guitar2_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guita
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
-  .scale("<e2:minor>").postgain(0.160).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(mul(0.160)).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar2 = n(guitar2_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar2_shape).tag("guitar2")
@@ -308,7 +318,7 @@ export guitar3_shape = x => x.gain(1.0).velocity(guitarDyna.fast(2)).sound(guita
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3)  // . solo()
-  .scale("<e2:minor>").postgain(0.160).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(mul(0.160)).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
@@ -318,7 +328,7 @@ export bass_pat =
   `<[0 0 2 4 0 0 -2 -1]!3 [0 0 2 4 0 0 5 6]
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
-export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).postgain(0.40) // . mute()
+export bass_shape = x => x.gain(1.0).velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(mul(0.40)) // . mute()
     .oscp("sub", 1.0).oscp("harmonics", 1.0)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
@@ -356,7 +366,7 @@ export trommel_shape = x => x.gain(0.50).sound(granCassa).adsrOff() // .solo()
   .hpf(160).lpf(3500).pan("0.75 0.25 0.85 0.15")
 
 export trommel_arrange = x => x.orbit(4)
-  .scale("e2:minor").postgain(0.20)
+  .scale("e2:minor").gain(mul(0.20))
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 

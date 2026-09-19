@@ -220,5 +220,5 @@ Room, Ballad, Live Coding
 These didn't get dedicated tutorials — fold into related tutorials or leave for future:
 
 `s_cat()`/`timeCat()`, `stackLeft/Right/Centre/By`, `pure()`, `gap()`, `run()`/`binary()`, `pickF()`, `pace()`/
-`steps()`, `take()`/`drop()`, `repeatCycles()`, `linger()`, `ribbon()`, `clip()`, `postgain()`, advanced reverb params (
+`steps()`, `take()`/`drop()`, `repeatCycles()`, `linger()`, `ribbon()`, `clip()`, advanced reverb params (
 `reverb(lowpass)`), bitwise operators, `compress()`/`focus()`/`zoom()`

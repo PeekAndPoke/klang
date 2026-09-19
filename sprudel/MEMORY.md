@@ -1,5 +1,44 @@
 # Sprudel — Memory
 
+## `gain` is the one level word; `velocity` folds at the wire (2026-09-19)
+
+- **`postgain` is retired**, every form of it (the pattern door, the string door, the accessor
+  object, the mapper chain). It was a SECOND multiplier at the same point in `SendRenderer`, so it
+  said nothing `gain` does not say. One word per concept: `gain` is the level at which the voice
+  leaves, and a song that used both now folds them by multiplication. `LangPostGainSpec` is gone,
+  the `postgain` rows left `LangDynamicsSpec`, `LangControlRestSpec`, `LangFieldAccessorsSpec`,
+  `SprudelScopeSpec`, `CallInfoTest` and `FreqAccessorIntelSpec`.
+- **`velocity` stays a sprudel word and stops at the wire.** The door, the `vel` alias, the field
+  and the accessor are unchanged; `SprudelVoiceData.toVoiceData` multiplies it into `gain`
+  (`foldedGain()`) and `VoiceData` has no `velocity` field any more. Both unset gives `null`, so the
+  wire stays sparse and the engine's own `?: 1.0` answers; otherwise `(gain ?: 1.0) * (velocity ?: 1.0)`,
+  the same operands in the same order the voice factory used, so an unaccented voice keeps its bits.
+  A non-finite value reads as unset PER OPERAND, before the product: substituting after it would
+  turn `gain(0.5).velocity(NaN)` into a NaN the engine reads as 1.0, full level where the author
+  asked for half. Two operands that both read as unset give `null`, the same answer as writing
+  neither. Guard: `WireGainFoldSpec` (the four null/non-null combinations, the set ones by raw
+  bits and the both-unset one asserting `null`, plus the non-finite operands and a patterned row).
+- **Why at the wire and not at the `velocity()` door.** `velocity(p)` read as `gain(mul(p))` does
+  NOTHING on an event whose gain is unset, because a mapper on an unset field leaves it unset
+  (`_mapNumericField`, decided 2026-09-07), and it would make `.velocity(0.7).gain(0.5)`
+  order-dependent. Folding once, at the boundary, has neither problem.
+- **The rounding note.** A voice that never used `postgain` is BIT-IDENTICAL: the product moved to
+  the other side of the wire with its operands and their order intact. A voice that used both
+  changes by floating-point rounding only, because `(s·p)·(g·c)` became `s·((g·p)·c)` and the
+  literal folds in the songs re-associate a product. Measured over 309,867 onset events of every
+  song text in the repo: 89.4 % bit-identical, worst relative deviation 2.3e-16.
+- **A trim spelled as a mapper is not the door it replaced.** Where a song's level lived in a
+  separate lambda from its `gain` (the `*_arrange` functions of Der Schmetterling), the migration
+  wrote `gain(mul(P))`. That goes through `_mapNumericField` and `_appLeft`, not the `_outerJoin`
+  the retired door used, and the three differences are worth knowing before writing another one:
+  a REST in the control pattern DROPS the event instead of leaving the field alone; a control that
+  changes inside an event FRAGMENTS it into parts sharing one whole, of which only the first is an
+  onset (so playback, which schedules onsets only, does not hear it); and on an event whose gain is
+  UNSET it is a silent no-op, which is what makes it safe only when a `gain(...)` runs upstream on
+  every event. That last one bites anyone who imports an exported `*_arrange` without its
+  `*_shape`: the trim then does nothing and the part plays at full level.
+- Signal-flow plan section 6; `pregain` and the Katalyst's unity `gain` stage are the next step.
+
 ## Recent Work (2026-09-07)
 
 - **Batch G, the last compounds.** `compressor(threshold, ratio, knee, attack, release)`,
@@ -144,7 +183,7 @@
   `crushos(2)` never wrote its field from a number. Now `asDoubleOrNull()?.toInt()`.
 
 - **Field accessors, batch one** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): fourteen objects on the
-  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
+  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain (retired 2026-09-19), lpf, hpf, bpf, lpq, hpq,
   bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:
   on the mapper path a `null` result leaves the field unchanged (`_mapNumericField`).
   Specs: `LangFieldAccessorsSpec` (two rows per accessor, both doors), `FreqAccessorIntelSpec`.
@@ -382,7 +421,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Dynamics & Panning
 
-- `velocity()`, `postgain()`, `compressor()`
+- `velocity()`, `compressor()`
 - `jux()`, `juxBy()` / `juxby`
 
 ### Audio Effects — Reverb
@@ -449,7 +488,7 @@ return applyCat(patterns)
 - `accelerate()`, `unison(voices, spread, pan)` / `uni`, `density()` / `d` (`detune()` and `spread()` are gone)
 - `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
-- `velocity()`, `postgain()`
+- `velocity()`
 - FM synthesis: `fm(env, h, attack, decay, sustain)`; readers `fm.*`
 - Pitch envelope: `penv(amount, attack, decay, release, curve, anchor)`
 

@@ -48,7 +48,7 @@ stack(
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)
     .orbit(1).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(voices = 11, spread = 0.03).analog(feel)
     .hpf(1350).lpf(freq = 1625, q = 1.2, env = berlin.range(24.0, 24.0), attack = 0.005, decay = 3.0, sustain = 0.5, release = 0.05)
-    .gain(1.00).distort(0.300, "tube", 4).postgain("<0.800!48 0.325!16>")
+    .distort(0.300, "tube", 4).gain("<0.800!48 0.325!16>")
     .adsr(0.01, 3.0, 0.0, 0.05).clip(0.8)
     .adsr(release = "<0.25!16 0.15!16>")
     .phaser(rate = 1/8, wet = 0.15, sweep = 1000, center = 1800)
@@ -65,7 +65,7 @@ stack(
     .distort(1.0, "tube", 4).distort(1.0)
     .adsr(0.005, 3.0, 0.0, 0.005).adsrCurves("square", "exp", "cube").lpf(attack = 0.007, decay = 1.0, sustain = 0.0, release = 0.005)
     .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2))
-    .gain(0.6).postgain(0.365).hpf("<400!48 700!16 400!32 300!32>").lpf(freq = saw.range(1,0).pow(1.5).mul(1000).add(1200).slow(4), q = 1.5, env = 12).lpf(q = 2.0)
+    .gain(0.6 * 0.365).hpf("<400!48 700!16 400!32 300!32>").lpf(freq = saw.range(1,0).pow(1.5).mul(1000).add(1200).slow(4), q = 1.5, env = 12).lpf(q = 2.0)
     .pan(0.2).superimpose(pan(0.8))
     .orbit(1).pipeline("pedal")
   ,
@@ -75,16 +75,16 @@ stack(
     .analog(feel).sound("supersaw").unison(voices = 11, spread = 0.08)
     .hpf(freq = 180, q = 1.0).lpf(freq = 1400, q = 2.50, env = 12)
     .adsr(0.009, 3.0, 0.0, 0.005).adsrCurves("square", "exp", "cube").lpf(attack = 0.007, decay = 1.0, sustain = 0.0, release = 0.005).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
-    .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2)).gain(0.8).distort(1, "tube", 4).distort(1.0)
+    .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2)).gain(0.8 * 0.275).distort(1, "tube", 4).distort(1.0)
     .coarse(amount = 2, oversample = 2)
-    .pan(0.35).postgain(0.275).superimpose(
+    .pan(0.35).superimpose(
       x => x.pan(0.65),
-      x => x.postgain(0.25).hpf(180).lpf(1900)
+      x => x.gain(0.8 * 0.25).hpf(180).lpf(1900)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
     ).orbit(2).mute("<0!128 1!16 0!16>").pipeline("pedal")
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!32 [x@3 x]!32 [x!4]!64>").fast(2).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
-    .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5).distort(0.2, "tube", 1).coarse(2).postgain(0.6).clip(1.0)
+    .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5 * 0.6).distort(0.2, "tube", 1).coarse(2).clip(1.0)
     .adsr(0.015, 0.3, 0.0, 0.15).hpf(freq = 80, q = 1).lpf(freq = 100, env = 19, attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.22)
     .mute("<0!128 1!32>")
   , // Drums

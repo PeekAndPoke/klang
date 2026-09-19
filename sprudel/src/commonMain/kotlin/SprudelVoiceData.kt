@@ -55,10 +55,12 @@ data class SprudelVoiceData(
     // Gain / Dynamics
     var gain: Double?,
     var legato: Double?,
-    /** Volume scaling (0-1), multiplies with gain */
+    /**
+     * Articulation shorthand: the accents inside a line, multiplied into [gain] at the wire
+     * ([toVoiceData]). A sprudel word only, it never crosses to the backend, which knows one
+     * level word (signal-flow plan section 6).
+     */
     var velocity: Double?,
-    /** Gain applied after voice processing, before mixing to the cylinder */
-    var postGain: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
@@ -780,7 +782,6 @@ data class SprudelVoiceData(
             gain = other.gain ?: gain,
             legato = other.legato ?: legato,
             velocity = other.velocity ?: velocity,
-            postGain = other.postGain ?: postGain,
             bank = other.bank ?: bank,
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
@@ -840,7 +841,6 @@ data class SprudelVoiceData(
         gain = other.gain ?: gain
         legato = other.legato ?: legato
         velocity = other.velocity ?: velocity
-        postGain = other.postGain ?: postGain
         bank = other.bank ?: bank
         sound = other.sound ?: sound
         soundIndex = other.soundIndex ?: soundIndex
@@ -894,6 +894,37 @@ data class SprudelVoiceData(
 
     fun isNotTruthy(): Boolean {
         return !isTruthy()
+    }
+
+    /**
+     * The wire's one level word: [gain] with [velocity] multiplied into it.
+     *
+     * `velocity` is sprudel's articulation shorthand and stops here (signal-flow plan section 6).
+     * Both unset stays unset, so the wire stays sparse and the engine's own `?: 1.0` answers; any
+     * other combination is `(gain ?: 1.0) * (velocity ?: 1.0)`, the operands and the order the
+     * backend used to compute in the voice factory, so an unaccented voice keeps its bits.
+     *
+     * A non-finite value reads as UNSET, PER OPERAND and before the product (`/dsl-design` §4).
+     * Substituting after the product instead would turn `gain(0.5).velocity(NaN)` into a NaN the
+     * engine reads as 1.0, i.e. FULL level where the author asked for half, louder than anything
+     * they wrote. Per operand, that call is `0.5`. Two operands that both read as unset give
+     * `null`, the same answer as writing neither, so the wire stays sparse. A product that
+     * OVERFLOWS to infinity is left alone here and caught by the engine's own guard.
+     *
+     * Folded HERE and not at the `velocity()` door: `velocity(p)` read as `gain(mul(p))` does
+     * nothing on an event whose gain is unset (a mapper on an unset field is a no-op, by design)
+     * and would make `.velocity(0.7).gain(0.5)` order-dependent.
+     */
+    private fun foldedGain(): Double? {
+        // NaN-guard: per operand, before the product (see the KDoc for why the order matters)
+        val g = gain?.takeIf { it.isFinite() }
+        val v = velocity?.takeIf { it.isFinite() }
+
+        if (g == null && v == null) {
+            return null
+        }
+
+        return (g ?: 1.0) * (v ?: 1.0)
     }
 
     /**
@@ -1082,9 +1113,7 @@ data class SprudelVoiceData(
             note = note,
             freqHz = freqHz,
             scale = scale,
-            gain = gain,
-            velocity = velocity,
-            postGain = postGain,
+            gain = foldedGain(),
             legato = legato,
             bank = bank,
             sound = soundName,
@@ -1194,7 +1223,6 @@ internal val blueprint = SprudelVoiceData(
     gain = null,
     legato = null,
     velocity = null,
-    postGain = null,
     bank = null,
     sound = null,
     soundIndex = null,

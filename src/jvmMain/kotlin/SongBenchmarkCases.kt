@@ -73,7 +73,7 @@ object SongBenchmarkCases {
             "1 +filters (hpf/lpf/lpe/lpq/lpadsr)" to
                     """.hpf(1500).lpf(freq = 1575, env = berlin.range(19.0, 19.6).fast(4), q = 2.3, attack = 0.007, decay = 1.3, sustain = 0.0, release = 0.01)""",
             "2 +distort (0.62:tube:4)+clip" to
-                    """.distort(0.620, "tube", 4).postgain("<0.220!48 0.110!16 0.220!48 0.330!16>").clip(0.89)""",
+                    """.distort(0.620, "tube", 4).gain("<0.220!48 0.110!16 0.220!48 0.330!16>".mul(0.50)).clip(0.89)""",
             "3 +pitchmod (vibrato/shuffle)" to
                     """.adsr(release = "<0.04!16 0.11!16>").vibrato(rate = 8, depth = 0.01).shuffle("<1!64 0!16 1!1 4/8!14 1!33>")""",
             "4 +superimpose (transpose+2xsuper)" to
@@ -99,7 +99,7 @@ object SongBenchmarkCases {
             [[-3,-7] [[-4,-5] [-1,-3]] [0,-3] <[[4 6],[0 -1]] [0,-1]>] [<[7,4] [[7 4 6 2]!4]> [-5 -6] [-7,-14] [-5 <-1 -4 -4 1>]]>/4`)
           .orbit(1).scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
-          .sound("supersaw").unison(voices = 9, spread = 0.08).gain(0.75).postgain(0.12).adsr(0.005, 2.5, 0.0, 0.029)
+          .sound("supersaw").unison(voices = 9, spread = 0.08).gain(0.75 * 0.12).adsr(0.005, 2.5, 0.0, 0.029)
     """.trimIndent()
 
     private val guitar1Ladder = ladder(
@@ -113,7 +113,7 @@ object SongBenchmarkCases {
                     """.distort(1, "tube", 4).distort(0.80).clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2))""",
             "3 +coarse(2,os4)" to """.coarse(amount = 2, oversample = 4)""",
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
-            "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).postgain(0.03))""",
+            "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""",
             "6 +pipeline(pedal)" to """.pipeline("pedal")""",
             "7 +body(wood, mix0.3)" to """.body(material = "wood", wet = 0.3)""",
             "8 +room(0.10:8:0.12)" to """.reverb(0.10, 1.2)""",
@@ -306,14 +306,14 @@ object SongBenchmarkCases {
         n("<0 0 2 4 0 0 -2 -1>")
           .orbit(1).scale("<e2:minor>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2)
           .velocity("0.98 0.95!7 0.97 0.95!7".fast(2)).analog(feel)
-          .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75).postgain(0.11).distort(1, "tube", 4).distort(0.85)
+          .sound("supersaw").unison(voices = 7, spread = 0.09).gain(0.75 * 0.11).distort(1, "tube", 4).distort(0.85)
           .clip("<0.86!31 0.77 0.86!31 0.85 0.86!30 0.80 0.70>".fast(2)).adsr(0.005, 2.5, 0.0, 0.027).lpf(attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.01)
           .hpf(120).lpf(freq = 3200, env = 8.1, q = 1.8)
           .coarse(amount = 2, oversample = 4).pan(0.3).superimpose(
             x => x.pan(0.7),
-            x => x.postgain(0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
+            x => x.gain(0.75 * 0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
-          ).superimpose(hpf(3500).lpf(6200).postgain(0.03)).pipeline("pedal").body(material = "wood", wet = 0.30)
+          ).superimpose(hpf(3500).lpf(6200).gain(0.75 * 0.03)).pipeline("pedal").body(material = "wood", wet = 0.30)
         """.trimIndent(),
     )
 
@@ -321,7 +321,7 @@ object SongBenchmarkCases {
         "BASS (full, saw)", "voice",
         """
         n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!16 [x@3 x]!48 [x!4]!80>").fast(2).velocity("0.98 0.98 0.99 0.98".fast(2))
-          .orbit(4).scale("e1:minor").sound("saw").gain(0.5).distort(0.05, "soft", 2).postgain(0.20).clip(0.65)
+          .orbit(4).scale("e1:minor").sound("saw").gain(0.5 * 0.20).distort(0.05, "soft", 2).clip(0.65)
           .adsr(0.007, 5.0, 0.0, 0.015).lpf(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.01).hpf(freq = 60, q = 1.0).lpf(freq = 200, env = 62, q = 1.0)
           .pan(0.50)
         """.trimIndent(),
@@ -376,7 +376,7 @@ object SongBenchmarkCases {
     private val fullChainTail =
         """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)""" +
                 """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(amount = 2, oversample = 4)""" +
-                """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).postgain(0.03))""" +
+                """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""" +
                 """.pipeline("pedal").body(material = "wood", wet = 0.3)"""
 
     private fun unisonCase(n: Int): SongBenchmark.Case =

@@ -17,9 +17,15 @@ data class VoiceData(
     val scale: String?,
 
     // Gain / Dynamics
+    /**
+     * The channel fader: the tone-neutral level at which the voice leaves, applied with [pan] in
+     * the send stage. `null` is unset and reads as 1.0.
+     *
+     * The ONE level word on the wire. A frontend's articulation shorthand (sprudel's `velocity`,
+     * a MIDI key velocity) is multiplied into it before it crosses, so the backend never learns
+     * that word (signal-flow plan section 6).
+     */
     val gain: Double?,
-    val velocity: Double?,
-    val postGain: Double?,
     val legato: Double?,
 
     // Sound, bank, sound index
@@ -245,8 +251,6 @@ data class VoiceData(
             freqHz = null,
             scale = null,
             gain = null,
-            velocity = null,
-            postGain = null,
             legato = null,
             bank = null,
             sound = null,

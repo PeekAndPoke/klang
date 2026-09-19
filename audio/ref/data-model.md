@@ -33,9 +33,7 @@ data class ScheduledVoice(
 
 | Field        | Type       | Meaning                                |
 |--------------|------------|----------------------------------------|
-| `gain`       | `Double?`  | Output gain multiplier (1.0 = unity)   |
-| `velocity`   | `Double?`  | MIDI-style velocity 0–1                |
-| `postGain`   | `Double?`  | Post-effects gain multiplier           |
+| `gain`       | `Double?`  | The channel fader: the one level word on the wire (1.0 = unity, null = unset). A frontend's articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is multiplied into it BEFORE it crosses, so `velocity` and the retired second multiplier are not wire fields (signal-flow plan section 6, 2026-09-19). |
 | `legato`     | `Boolean?` | If true, don't re-trigger on same note |
 | `solo`       | `Boolean?` | If true, mute all other voices         |
 | `compressor` | `Double?`  | Per-voice compression amount           |

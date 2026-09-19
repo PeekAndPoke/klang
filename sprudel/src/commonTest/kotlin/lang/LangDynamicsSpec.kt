@@ -124,29 +124,6 @@ class LangDynamicsSpec : StringSpec({
         events[0].data.velocity shouldBe 0.6
     }
 
-    // ---- postgain() -------------------------------------------------------------------------------------
-
-    "postgain dsl interface" {
-        dslInterfaceTests(
-            "pattern.postgain(amount)" to note("a").postgain(1.5),
-            "script pattern.postgain(amount)" to SprudelPattern.compile("""note("a").postgain(1.5)"""),
-            "string.postgain(amount)" to "a".postgain(1.5),
-            "script string.postgain(amount)" to SprudelPattern.compile(""""a".postgain(1.5)"""),
-            "postgain(amount) via apply" to note("a").apply(postgain(1.5)),
-            "script postgain(amount) via apply" to SprudelPattern.compile("""note("a").apply(postgain(1.5))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-        }
-    }
-
-    "script apply(postgain()) works in compiled code" {
-        val p = SprudelPattern.compile("""note("a").apply(postgain(1.5))""")!!
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.postGain shouldBe 1.5
-    }
-
     // ---- compressor() / comp() --------------------------------------------------------------------------
 
     "compressor dsl interface" {

@@ -33,7 +33,7 @@ Filter stage    (FilterPipelineBuilder → reads/writes audioBuffer)
   13. Envelope (ADSR)   — VCA, last in the tonal stage
 
 Send stage      (SendRenderer → mixes to cylinder)
-  14. postGain → pan → gain → cylinder mix + delay/reverb sends
+  14. pan + gain → cylinder mix + delay/reverb sends
 ```
 
 **Classic subtractive ordering**: `osc → waveshaper → VCF → VCA`. The ADSR
@@ -61,9 +61,8 @@ sealed interface Voice {
     val pitchEnvelope: PitchEnvelope?// one-shot pitch curve
 
     // Dynamics
-    val gain: Double
+    val gain: Double                 // the channel fader, the one level word (see the note below)
     val pan: Double
-    val postGain: Double
     val envelope: Envelope           // ADSR
     val compressor: Compressor?
 
@@ -89,6 +88,12 @@ sealed interface Voice {
     fun render(ctx: RenderContext): Boolean  // returns false when voice is done
 }
 ```
+
+**`Voice.gain` is stored, not guarded.** `Voice` keeps whatever it is constructed with, including
+a NaN. The substitution of a non-finite wire value by 1.0 happens in `VoiceFactory`, which is the
+only production path that builds a voice. Anything that adds a second construction path has to do
+it there too, or `Voice.heard` (which compares against 0) and `SendRenderer.measurePeak` (which
+scales by `abs(gain)`) go back to being wrong for a NaN.
 
 ### RenderContext
 
@@ -235,7 +240,7 @@ The scheduled lifetime above is an upper bound. A voice also ends itself EARLY o
 its release and its own output has stayed under the audibility floor for the cull window:
 
 - **Measure:** `SendRenderer`, the last strip stage, keeps the block's peak `|output|`
-  (post-VCA, times `postGain`, `gain` and the largest send amount, so it bounds the mix bus AND
+  (post-VCA, times `gain` and the largest send amount, so it bounds the mix bus AND
   the send buses; BEFORE the solo/mute multiplier, so a voice a solo faded out is not taken for
   a dead one) in `BlockContext.voiceOutputPeak`. A separate pass, run only on the blocks that
   read it (`BlockContext.measurePeak`): until the voice has been heard, then in the release; a

@@ -40,7 +40,6 @@ class SprudelScopeSpec : StringSpec({
         "coarse" to KlangScope.VOICE,
         "gain" to KlangScope.VOICE,
         "pan" to KlangScope.VOICE,
-        "postgain" to KlangScope.VOICE,
         "velocity" to KlangScope.VOICE,
         "adsr" to KlangScope.VOICE,
         "unison" to KlangScope.VOICE,

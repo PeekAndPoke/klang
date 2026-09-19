@@ -190,7 +190,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `reverb` (`wet` is the per-voice send; `size`/`lowpass` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
 
 **Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
@@ -322,7 +322,7 @@ selection — extended to ignitor variants and per-note gain.
 
 | Function         | Aliases    | Description                    | Example                               |
 |------------------|------------|--------------------------------|---------------------------------------|
-| `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
+| `gain(amt)`      |            | The one level word: tone-neutral, after the voice's filters and distortion; a later `gain` REPLACES an earlier one (`gain(mul(x))` scales a gain that is set) | `s("bd").distort(3).gain(0.1)` |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
 | `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).reverb(0.5, 4)`       |
@@ -331,7 +331,6 @@ selection — extended to ignitor variants and per-note gain.
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
 | `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |
-| `postgain(amt)`  |            | Post-processing gain           | `s("bd").distort(3).postgain(0.1)`    |
 
 ### Sound Selection
 
@@ -697,7 +696,7 @@ stack(
 >`).scale("C1:minor")
     .sound("pluck")
     .adsr(0.01, 0.2, 0.5, 0.2)
-    .clip(0.5).distort(0.1).onepole(20257).postgain(0.2)
+    .clip(0.5).distort(0.1).onepole(20257).gain(0.2)
     .superimpose(x => x.sound("tri"))  // layer triangle on top
 
   // Hi-hats

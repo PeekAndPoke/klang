@@ -193,7 +193,7 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd hh sd").compressor(-20, 4).postgain(compressor.threshold.mul(-0.02).add(1))   // make-up gain from the threshold
+ * s("bd sd hh sd").compressor(-20, 4).gain(compressor.threshold.mul(-0.02).add(1))       // make-up gain from the threshold
  * ```
  *
  * @param threshold Level in dB where compression starts, such as -20.

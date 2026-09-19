@@ -42,7 +42,7 @@ fun runVoiceDataCopyBenchmark() {
     }
     // Typical voice: adsr + low/high-pass filter + distortion groups set (a few non-null → deep-cloned).
     val voice = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
+        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
         sound = SoundValue.Named("supersaw"); soundIndex = 1
         oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05
@@ -51,7 +51,7 @@ fun runVoiceDataCopyBenchmark() {
     }
     // WORST case: at least one field set in EVERY group, so clone() must deep-copy all 15 nested objects.
     val full = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
+        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
         sound = SoundValue.Named("supersaw"); soundIndex = 1; oscParams = paramBagOf("voices" to 7.0)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05                 // adsr
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0                              // lpf

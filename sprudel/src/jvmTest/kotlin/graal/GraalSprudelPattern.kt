@@ -101,6 +101,9 @@ class GraalSprudelPattern(
         val velocity = value.safeGetMember("velocity").safeNumberOrNull()
             ?: value.safeGetMember("vel").safeNumberOrNull()
 
+        // Strudel still has `postgain`; sprudel does not (`gain` is the one level word). The two
+        // were one multiplier at one point in Klang already, so fold it into the gain here and the
+        // comparison keeps the level it had.
         val postGain = value.safeGetMember("postgain").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
@@ -321,10 +324,11 @@ class GraalSprudelPattern(
                 it.chord = chord
                 it.freqHz = freq
                 // Gain / Dynamics
-                it.gain = gain
+                // `gain` carries its long-standing `?: 1.0` default above; this oracle runs on GraalVM only,
+                // so its shape is left as it was and only the retired field is folded in.
+                it.gain = gain * (postGain ?: 1.0)
                 it.legato = legato
                 it.velocity = velocity
-                it.postGain = postGain
                 // Sound samples
                 it.bank = bank
                 it.sound = sound?.let(SoundValue::Named)

@@ -28,7 +28,7 @@ const val ORBIT_SILENCE_FLOOR: Double = 1e-5
 
 /**
  * Output peak below which a voice's block counts as silent for culling. Measured on the voice's
- * own output (post-VCA, times gain, postGain and the largest send amount), before the solo/mute
+ * own output (post-VCA, times gain and the largest send amount), before the solo/mute
  * fade, so a voice that is merely faded out by a solo is not mistaken for a dead one.
  *
  * The same value as [ORBIT_SILENCE_FLOOR], on purpose and by definition rather than by two

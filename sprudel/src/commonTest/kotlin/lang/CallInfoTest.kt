@@ -34,10 +34,6 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").velocity("0.5")""")
     }
 
-    "postgain passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").postgain("0.5")""")
-    }
-
     "compressor passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").compressor(-20, 4, 3, 0.03, 0.1)""")
     }

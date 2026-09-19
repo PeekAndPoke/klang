@@ -42,7 +42,6 @@ Short keys for frequently used attrs, full names always work as aliases.
 | `g`    | `gain`                     | `gain`                       | Double            | `{g=0.5}`                 |
 | `l`    | `legato`                   | `legato`                     | Double            | `{l=2}`                   |
 | `pan`  | —                          | `pan`                        | Double            | `{pan=-0.5}`              |
-| `pg`   | `postgain`                 | `postGain`                   | Double            | `{pg=0.5}`                |
 | `adsr` | —                          | attack:decay:sustain:release | Double (compound) | `{adsr=0.01:0.1:0.5:0.3}` |
 | `o`    | `orbit`, `cyl`, `cylinder` | `cylinder`                   | Int               | `{o=2}`                   |
 | `bank` | —                          | `bank`                       | String            | `{bank=casio}`            |

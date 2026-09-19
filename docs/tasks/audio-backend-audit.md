@@ -154,7 +154,7 @@ the set — start there, big specs with few tests are where padding hides.
 - **`VoiceScheduler.kt` (407 lines) has NO spec at all.** Its old `VoiceSchedulerDiagnosticsTest` was *deleted* when
   diagnostics moved to the dispatcher and nothing replaced it. It is also the highest-churn file in the module (56
   commits in the last 200 touching `audio_be`).
-- **`strip/send/SendRenderer.kt` — zero test references.** Every voice routes through it (gain / pan / postGain into the
+- **`strip/send/SendRenderer.kt`: zero test references at the audit; since 2026-09-19 `VoiceGainWireSpec` pins its left mix output by raw bits.** Every voice routes through it (gain / pan into the
   orbit mix, plus the reverb/delay send writes).
 - **solo/mute and cut/choke — zero tests anywhere.** Grepping the whole test tree for `solo` and
   `choke` returns nothing, yet `VoiceScheduler.process` computes solo gain and runs a `soloMuteRamp`, and

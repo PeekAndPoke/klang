@@ -74,7 +74,7 @@ let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
                      [d5 d5 d5 d5 d5 d5 b4 d5 d5 d5 d5 d5 d5 d5 f#5 d5]
                      [a4 a4 a4 a4 a4 a4 f#4 a4 a4 a4 a4 a4 a4 a4 c#5 a4]>`)
     .transpose(-36)
-    .sound(lead).legato(0.55).gain(0.4).postgain(0.5).orbit(4)
+    .sound(lead).legato(0.55).gain(0.4 * 0.5).orbit(4)
     .delay(wet = 0.14, time = pure(3/16).div(cps), feedback = 0.25).reverb(wet = 0.12, size = 5)
 
 let riserPat = note("c5").fast(2).sound(riser)

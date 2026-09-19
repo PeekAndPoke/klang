@@ -46,7 +46,7 @@ Starting rule set, each one a mechanized session diagnosis:
 
 1. **Band over target, contributor known** → the contributor's low-shaping knobs. Example from the sessions: "160–200 Hz
    is +3.4 dB over target; guitar 2 owns most of it → raise its tracking highpass (`hptrack` 1.0 → 1.4) or trim
-   `postgain` 1.5 dB." The knob map per voice type lives in a registry (§6.2).
+   `gain` 1.5 dB." The knob map per voice type lives in a registry (§6.2).
 2. **Low-band excess + deep GR events coinciding with low peaks** → the gain-staging transfer:
    "trim the low contributors X dB, raise the master `gain` stage ~X dB." **Measured 2026-08-11:** bass −2.1 dB + kick −1.9 dB +
    master +1.8 dB ⇒ **+1.3 dB louder, beat-rate pumping −5…−12 %, zero clipping.** The mix was paying a
@@ -100,7 +100,7 @@ voices, not numbers.
 
 1. Target-curve preset format and where presets live (project file? per-song in the pattern?).
 2. **The knob registry:** mapping voice types → their spectral-shaping knobs (supersawHp: `hptrack`,
-   `postgain`, `lpf`; sample drums: `gain`, `lpf`; bass: `postgain`, octave-layer gain …). Where is it maintained, and
+   `gain`, `lpf`; sample drums: `gain`, `lpf`; bass: `gain`, octave-layer gain …). Where is it maintained, and
    can Osc definitions self-describe their knobs (Osc.param descriptions already exist — possibly derivable)?
 3. Suggestion delivery: report text only, or one-click "apply to source" edits? (Proposal: text with exact
    `.knob(value)` snippets, author pastes — keeps the author in the loop and survives pattern refactors.)

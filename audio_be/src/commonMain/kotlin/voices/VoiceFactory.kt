@@ -234,11 +234,19 @@ class VoiceFactory(
             null
         }
 
-        // Dynamics
-        val baseGain = data.gain ?: 1.0
-        val velocity = data.velocity ?: 1.0
-        val gain = baseGain * velocity
-        val postGain = data.postGain ?: 1.0
+        // Dynamics: `gain` is the channel fader, the one level word on the wire. A frontend's
+        // articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is already folded
+        // into it before it crosses (signal-flow plan section 6).
+        //
+        // A non-finite gain reads as UNSET, like every other wire number (/dsl-design section 4).
+        // Two downstream readers depend on it, and both used to be wrong for a NaN: `Voice.heard`
+        // starts latched on a gain of exactly 0, and `NaN == 0.0` is false, so a NaN voice started
+        // unlatched; and `SendRenderer.measurePeak` scales the block peak by `abs(gain)`, so a NaN
+        // gain made the measured peak NaN, which fails every compare against the cull floor and
+        // reads as audible forever. The guard hands both readers a finite number, and a NaN can no
+        // longer reach the mix and send buffers, where the orbit's reverb and delay would latch it
+        // for the rest of the playback.
+        val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
         // Compressor
         val compressor = Voice.Compressor.fromParams(
@@ -312,7 +320,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
+                    gain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
@@ -408,7 +416,7 @@ class VoiceFactory(
 
                 buildVoice(
                     data, resolvedAdsr, sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
+                    gain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, baseSamplePitchHz,
                     voiceRandom = voiceRandom,
@@ -551,7 +559,6 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        postGain: Double,
         accelerate: Voice.Accelerate,
         vibrato: Voice.Vibrato,
         pitchEnvelope: Voice.PitchEnvelope?,
@@ -641,7 +648,6 @@ class VoiceFactory(
             gateEndFrame = gateEndFrame,
             gain = gain,
             pan = data.pan ?: 0.5,
-            postGain = postGain,
             delay = delay,
             reverb = reverb,
             phaser = phaser,

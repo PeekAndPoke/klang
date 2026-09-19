@@ -252,6 +252,18 @@ every driven one). Still open, deliberately: a construction that makes "this ins
 listen to that door" impossible to write by accident, without a warning. A type boundary between
 a signal and an instrument was discussed and not adopted; `sound()` also takes samples.
 
+**Seen while migrating the songs (2026-09-19), parked for the maintainer.** With `postgain` gone
+there is no spelling for "scale this voice's level whatever it is": `gain(x)` replaces, and the
+mapper form `gain(mul(x))` scales a gain that is SET and is a silent no-op on an unset one (the
+general mapper rule of 2026-09-07: a mapper that yields nothing leaves the field unchanged). It
+also joins by `appLeft`, so a rest in a patterned trim drops the note where `postgain(P)` left it
+alone. In the repo this is safe: every exported `*_arrange` that trims with `gain(mul(x))` runs
+after a `*_shape` that sets `gain`. An importer who applies an arrange without its shape gets
+unity. Options when it comes up: leave it (the author sets gain first); let a mapper on a field
+with a known neutral value start from that value (`gain` unset reads as 1.0 for `mul`); or a
+group-level trim that is not a voice field at all (the Katalyst's `gain` stage, spot C, is
+already that for a whole orbit).
+
 ## 7. The Katalyst under this plan
 
 The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisions resolved here:
@@ -314,8 +326,16 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    the `velocity` field off the wire (the wire golden is a baseline and is regenerated);
    `postgain` renamed to `gain` across the built-in songs and the tutorial (the maintainer
    allowed the mechanical change in Der Schmetterling); the finite guards on `pregain` and `gain`;
-   `Katalyst.classic` ending in a unity `gain` stage. Bit-identical for every existing song in
-   doubles on minimal examples (§12); the first attempt of 2026-09-18 is discarded.
+   `Katalyst.classic` ending in a unity `gain` stage. The first attempt of 2026-09-18 is
+   discarded. Two steps: **levels on the wire**, DONE 2026-09-19 (spot B: the velocity fold, `postgain` retired,
+   the finite guard on `gain`, the song migration), then **the slot and the bus fader** (spots A
+   and C: `pregain`, the unity `gain` stage). Identity, stated precisely: a voice that never used
+   `postgain` is bit-identical in doubles (`x * 1.0` is exact, and `gain * velocity` is the same
+   product computed on the other side of the wire). A voice that used `postgain` changes by
+   floating-point rounding only, because `(s * post) * (gain * pan)` became
+   `s * ((gain * post) * pan)`; that is accepted and needs no listening checkpoint. The song
+   migration is checked per event (old product against new wire gain, relative 1e-12) by a
+   one-off fixture that is deleted with the step.
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
    the node-level gate with the build-cache key covering it, the voice doors as `oscp` aliases,
    `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in

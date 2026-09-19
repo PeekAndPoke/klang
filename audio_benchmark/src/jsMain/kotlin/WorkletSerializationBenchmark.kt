@@ -29,7 +29,7 @@ private fun structuredCloneJs(@Suppress("unused") obj: dynamic): dynamic = js("s
  */
 fun runWorkletSerializationBenchmark() {
     val voiceData = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8
+        note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9
         sound = SoundValue.Named("supersaw"); soundIndex = 1
         oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05

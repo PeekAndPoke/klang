@@ -75,7 +75,7 @@ export bassShape = (p) => p
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort(0.2, "tube", 2).postgain(0.80).analog(2.5)
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.80).distort(0.2, "tube", 2).analog(2.5)
     .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
 
 // Drums: tight, panned right, fast.

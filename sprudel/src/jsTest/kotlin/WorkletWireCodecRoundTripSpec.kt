@@ -43,7 +43,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
     "fully-populated voice (every cluster + all filter types) survives the worklet round-trip" {
         // Touch every Svd* group so toVoiceData() emits adsr + all 5 filters + every scalar effect field.
         val data = createSprudelVoiceData {
-            note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8; legato = 0.95
+            note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
             oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
             katalystParams = paramBagOf("reverb.wet" to 0.5, "reverb.size" to 6.0)
