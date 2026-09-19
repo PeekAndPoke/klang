@@ -751,9 +751,27 @@ complexity outranks the duplication.
     Suspects, unmeasured: the new bank's cold start rings up for longer than 12 ms at the body's
     low modes; a second change mid-crossfade drops the oldest bank; a linear blend of two
     uncorrelated materials dips about 3 dB. First task of the filter swap's conversion: a render
-    that alternates materials, measured for sample-to-sample jumps, at 12 ms and at 50 ms. The
-    dip is NOT a defect to fix (maintainer, 2026-09-19): a glide is a safety net against clicks,
-    not a loudness keeper, so the blend stays linear (`docs/plans/knob-glide.md` section 1).
+    that alternates materials, measured at 12 ms and at 50 ms. **MEASURED 2026-09-19 (HEAD
+    `51bec86b`)**, metric: peak 0.7 ms RMS above 8 kHz relative to the signal, on sources
+    band-limited to 3 kHz (steady state -78 to -93 dB, a hard switch -8 to -46 dB):
+    - A single material change at today's 12 ms fade does NOT click: 30 body pairs and 7 vowel
+      pairs, saw and pluck, 44.1 and 48 kHz, worst -66 dB; a whole-engine render of
+      `body("<wood glass>")` reads the same as no change.
+    - The cold start is not a click but a SWELL: on bell the new ring arrives up to 190 ms late,
+      up to 4 dB under the quieter material. 50 ms halves it; a warm start removes it and is
+      won't-implement (it buys nothing against clicks).
+    - The 3 dB linear-blend dip did not appear (both banks share a dry path).
+    - The clicks the maintainer heard are elsewhere: (1) the hard OFF (`reset()`) and the instant
+      ON, -12 to -30 dB, reproduced in the engine with `body("<wood none>")` and with two patterns
+      sharing one orbit where only one has a body (a click at EVERY owner handover); a fade to or
+      from dry takes them to -70 to -92 dB. (2) A second change inside a running fade (today's
+      drop-the-oldest), -11 to -34 dB, a hard-switch-class click, and a 50 ms fade makes it WORSE;
+      crossfading from what sounds now takes it to -64 to -95 dB.
+    - So for 5c: fade OFF and ON through the swap (to and from a dry partner, no new machinery);
+      crossfade from what sounds now on a restart, MANDATORY together with a 50 ms fade (bound the
+      number of outgoing banks, for example drop one whose weight is under a few percent: not yet
+      measured); 50 ms is optional for clicks and keeps one constant; no warm start.
+    - WAVs for listening (today's clicks and the fixes): the session scratchpad, `clicks/`.
   - **One common resonator bank for body, vowel, and later a user surface where formants are
     specified one by one.** Body (`BodyFilter`) and vowel (`FormantFilter`) are already the same
     thing under the hood (a parallel bank of `SvfBPF` bandpasses in a `ParallelMixFilter`); they
