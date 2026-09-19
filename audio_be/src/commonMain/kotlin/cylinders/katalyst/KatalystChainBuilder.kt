@@ -99,7 +99,7 @@ object KatalystChainBuilder {
                 // per-voice chain). In the classic chain they run first, so they color the dry
                 // mix before the time/dynamics effects.
                 is KatalystStageDsl.Body -> {
-                    val fx = KatalystBodyEffect(sampleRate.toDouble())
+                    val fx = KatalystBodyEffect(sampleRate.toDouble(), blockFrames)
                     pipeline.add(fx)
 
                     // The material is a slot like the rest, holding the INDEX of a name in
@@ -117,7 +117,7 @@ object KatalystChainBuilder {
                 }
 
                 is KatalystStageDsl.Vowel -> {
-                    val fx = KatalystFormantEffect(sampleRate.toDouble())
+                    val fx = KatalystFormantEffect(sampleRate.toDouble(), blockFrames)
                     pipeline.add(fx)
 
                     statics.add(
@@ -235,6 +235,7 @@ object KatalystChainBuilder {
                     val fx = KatalystEqEffect(
                         sampleRate = sampleRate.toDouble(),
                         types = IntArray(specs.size) { specs[it].type },
+                        blockFrames = blockFrames,
                     )
                     pipeline.add(fx)
 

@@ -8,53 +8,50 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 
 /**
- * [KatalystFilterSwap] is the declick crossfade behind `body(...)` and `vowel(...)`: swapping a
- * resonant bank outright would jump from a mid-ring state to a zero state in one sample, so [set]
- * keeps the old pair alive and ramps old→new over `fadeSeconds`.
+ * [KatalystFilterSwap] switches the resonant banks behind `body(...)`, `vowel(...)` and the orbit
+ * `eq` without a click: every edge (on, off, a change, a return, a change arriving mid-fade) is a
+ * linear crossfade over [KNOB_GLIDE_SECONDS] from what sounds NOW (Katalyst step 5c-6, decided with
+ * the maintainer 2026-09-19).
  *
- * `KatalystBodyEffectSpec`'s *"a live material change does not step the output"* already guards the
- * **start** of that fade, and does it well. What it cannot see is everything after: it inspects one
- * sample, and at 44100 Hz a 12 ms fade is **529 frames — 4.1 blocks of 128**.
+ * The "filters" here are mostly plain gains on a DC input, so the output of any sequence of events
+ * is exactly predictable, and the oracle is [FilterSwapLaw], the decided law written per sample
+ * from scratch, never a number read off a run of the class.
  *
- * That gap has a silent failure mode. If the ramp never advanced (`t` stuck at 0), the swap boundary
- * would be *perfectly* continuous, because the output would simply still be the old bank — the
- * existing assertion passes. The damage would land 4 blocks later, when the fade position finally crosses
- * `fadeLen`, the old pair is dropped, and the output snaps to the new bank in one sample. A click,
- * moved to where nothing was looking.
- *
- * So this spec pins the ramp itself. The two "filters" are plain gains — old ×1.0, new ×0.0 — which
- * makes the expected output exactly `1 - t`, and every constant in the crossfade arithmetic
- * checkable against a number derived from the class's own definition rather than from a recorded run.
- *
- * Deliberately NOT a row here: "the fade end is continuous when the old pair is dropped". It was
- * written, and no mutation could kill it — the linear-ramp row already pins every sample to 1e-12,
- * including the two either side of that release, so it added a name and no kill power. Whether the
- * old pair is actually released is invisible from the output (a retained pair keeps blending at a
- * clamped t = 1 and sounds identical), so the references row below asks the swap through its
- * `holds` seam instead.
- *
- * The last four rows are the answers of Katalyst step 5c-4 (the lifecycle as a state machine) to
- * the four questions of `docs/plans/effect-state-machines.md`, one row each.
+ * Why the ramp is pinned sample by sample and not only at its start: a ramp that never advanced
+ * would be perfectly continuous at the swap sample (the output would simply stay the old bank) and
+ * snap to the new one where the fade position finally crosses its end. Whether an outgoing pair is
+ * actually RELEASED is invisible from the output (a retained pair at weight 0 sounds identical), so
+ * the reference rows ask the swap through its `holds` seam instead.
  */
 class KatalystFilterSwapSpec : StringSpec({
 
     val sampleRate = 44100.0
-    val fadeSeconds = 0.012
     val n = 128
 
-    // KatalystFilterSwap computes this itself as (sampleRate * fadeSeconds).toInt() — recomputed
-    // here from the same definition so the spec does not simply agree with whatever the class did.
-    val fadeLen = (sampleRate * fadeSeconds).toInt() // 529
+    // KatalystFilterSwap computes this itself as (sampleRate * KNOB_GLIDE_SECONDS).toInt(),
+    // recomputed here from the same definition so the spec does not simply agree with the class.
+    val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt() // 2205, 17.2 blocks
+
+    // Enough blocks for any fade in this file to land.
+    val fadeBlocks = fadeLen / n + 2
 
     /** A "filter" that multiplies by a constant, so the crossfade output is exactly predictable. */
-    fun gain(g: Double) = object : AudioFilter {
+    class Gain(val g: Double) : AudioFilter {
+        /** The last block this filter processed, so a spec can count the banks that ran. */
+        var lastBlock = -1
+        var block = 0
+
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            lastBlock = block
+
             for (i in offset until offset + length) {
                 buffer[i] *= g
             }
@@ -68,20 +65,92 @@ class KatalystFilterSwapSpec : StringSpec({
         }
     }
 
-    /** Installs ×1.0, swaps to ×0.0, then renders [blocks] blocks of DC and concatenates the left channel. */
+    /**
+     * Drives [swap] and [FilterSwapLaw] side by side. Each [Gain] is a bank id (its index in
+     * [gains]); on the DC input its output is its gain, and dry is 1.0.
+     */
+    class Twin(sampleRate: Double, fadeLen: Int, val n: Int) {
+        val swap = KatalystFilterSwap(sampleRate)
+        val law = FilterSwapLaw(fadeLen, KatalystFilterSwap.MAX_BANKS)
+        val gains = mutableListOf<Pair<Gain, Gain>>()
+        var blocks = 0
+
+        fun pair(g: Double): Int {
+            gains += Gain(g) to Gain(g)
+
+            return gains.size - 1
+        }
+
+        fun set(id: Int) {
+            swap.set(gains[id].first, gains[id].second)
+            law.set(id)
+        }
+
+        fun clear() {
+            swap.clear()
+            law.clear()
+        }
+
+        fun resume(id: Int): Boolean {
+            val a = swap.resume(gains[id].first)
+            val b = law.resume(id)
+
+            withClue("resume($id): the swap and the law agree") { a shouldBe b }
+
+            return a
+        }
+
+        fun reset() {
+            swap.reset()
+            law.reset()
+        }
+
+        /** One block; asserts every sample of both channels against the law. */
+        fun block(label: String) {
+            for ((l, r) in gains) {
+                l.block = blocks
+                r.block = blocks
+            }
+
+            val mix = StereoBuffer(n)
+            mix.left.fill(1.0)
+            mix.right.fill(1.0)
+
+            swap.process(mix, n)
+
+            val expected = law.block(n) { id, _ -> if (id == FilterSwapLaw.DRY) 1.0 else gains[id].first.g }
+
+            for (k in 0 until n) {
+                withClue("$label, block $blocks, sample $k") {
+                    mix.left[k] shouldBe expected[k].plusOrMinus(1e-12)
+                    mix.right[k] shouldBe expected[k].plusOrMinus(1e-12)
+                }
+            }
+
+            blocks++
+        }
+
+        /** Banks that processed the last block. */
+        fun ranLastBlock(): Int = gains.count { it.first.lastBlock == blocks - 1 }
+    }
+
+    fun twin() = Twin(sampleRate, fadeLen, n)
+
+    // ── A change ──────────────────────────────────────────────────────────────────────────────────
+
+    /** Installs x1.0, swaps to x0.0, then renders [blocks] blocks of DC and concatenates the left channel. */
     fun rampAfterSwap(blocks: Int): DoubleArray {
-        val swap = KatalystFilterSwap(sampleRate, fadeSeconds)
-        swap.set(gain(1.0), gain(1.0))
-
-        val settle = dcBlock()
-        swap.process(settle, n)
-
-        swap.set(gain(0.0), gain(0.0))
+        val swap = KatalystFilterSwap(sampleRate)
+        swap.set(Gain(1.0), Gain(1.0))
+        swap.process(dcBlock(), n)
+        swap.set(Gain(0.0), Gain(0.0))
 
         val out = DoubleArray(blocks * n)
+
         for (b in 0 until blocks) {
             val mix = dcBlock()
             swap.process(mix, n)
+
             for (i in 0 until n) {
                 out[b * n + i] = mix.left[i]
             }
@@ -90,268 +159,339 @@ class KatalystFilterSwapSpec : StringSpec({
         return out
     }
 
-    "the ramp is exactly linear from the old pair to the new one, across block boundaries" {
-        val out = rampAfterSwap(blocks = 5)
+    "a change ramps exactly linearly from the pair in service to the new one, across block boundaries" {
+        val out = rampAfterSwap(blocks = fadeBlocks)
 
-        // out[k] = old*(1-t) + new*t with old = 1.0, new = 0.0  =>  1 - t, t = min(k/fadeLen, 1).
-        // Sampling all five blocks is the point: the fade position accumulates ACROSS process() calls, so a
-        // per-block reset would still look right inside block 0.
-        for (k in 0 until 5 * n) {
+        // out[k] = new + (1 - t) * (old - new) with old = 1, new = 0, t = min(k / fadeLen, 1). Every
+        // block is sampled: the fade position accumulates ACROSS process() calls.
+        for (k in 0 until fadeBlocks * n) {
             val t = minOf(k.toDouble() / fadeLen, 1.0)
-            out[k] shouldBe (1.0 - t).plusOrMinus(1e-12)
+
+            withClue("sample $k") { out[k] shouldBe (1.0 - t).plusOrMinus(1e-12) }
         }
     }
 
-    "the fade starts at the OLD pair — the swap sample is continuous" {
-        val out = rampAfterSwap(blocks = 1)
+    "the fade starts at the OLD pair (the swap sample is continuous) and ends on the new one alone" {
+        val out = rampAfterSwap(blocks = fadeBlocks)
 
-        // t = 0 at the first sample after the swap, so the blend is entirely the old bank. This is
-        // the property KatalystBodyEffectSpec measures as "no step"; pinned here as an exact value.
         out[0] shouldBe 1.0.plusOrMinus(1e-12)
-    }
 
-    "the fade COMPLETES — after fadeLen the output is the new pair alone" {
-        val out = rampAfterSwap(blocks = 5)
-
-        // 5 blocks = 640 frames > fadeLen = 529, so the tail is past the end of the ramp. A fade
-        // that never advanced would sit at 1.0 here; a fade that overran would go negative.
-        for (k in fadeLen until 5 * n) {
-            out[k] shouldBe 0.0.plusOrMinus(1e-12)
+        for (k in fadeLen until fadeBlocks * n) {
+            withClue("sample $k") { out[k] shouldBe 0.0 }
         }
     }
 
     "with no pair installed the mix passes through untouched" {
-        val swap = KatalystFilterSwap(sampleRate, fadeSeconds)
+        val swap = KatalystFilterSwap(sampleRate)
         val mix = dcBlock()
 
         swap.process(mix, n)
 
         swap.active shouldBe false
+        swap.sounding shouldBe false
         (0 until n).all { mix.left[it] == 1.0 && mix.right[it] == 1.0 } shouldBe true
     }
 
-    "clear() drops the pair and stops filtering" {
-        val swap = KatalystFilterSwap(sampleRate, fadeSeconds)
-        swap.set(gain(0.0), gain(0.0))
-        swap.active shouldBe true
+    // ── Off and on ────────────────────────────────────────────────────────────────────────────────
 
-        swap.clear()
-        swap.active shouldBe false
+    "clear() fades the pair to dry, lands on exactly dry, and only then lets go of it" {
+        // Question 3, the Off precondition: Off is entered only once the output IS the dry input.
+        val t = twin()
+        val a = t.pair(0.25)
 
+        t.set(a)
+        t.block("installed")
+        t.clear()
+
+        withClue("the intent flips at once, the sound does not") {
+            t.swap.active shouldBe false
+            t.swap.sounding shouldBe true
+        }
+
+        repeat(fadeBlocks) { t.block("fading out") }
+
+        withClue("landed: Off, and the pair is released") {
+            t.swap.sounding shouldBe false
+            t.swap.holds(t.gains[a].first) shouldBe false
+            t.swap.holds(t.gains[a].second) shouldBe false
+        }
+
+        // And dry from here on, bit for bit.
         val mix = dcBlock()
-        swap.process(mix, n)
-
-        // Still 1.0: with the pair dropped, the silencing gain is no longer in the path at all.
-        (0 until n).all { mix.left[it] == 1.0 } shouldBe true
+        t.swap.process(mix, n)
+        (0 until n).all { mix.left[it].toRawBits() == 1.0.toRawBits() } shouldBe true
     }
 
-    /**
-     * A "filter" that ignores its input and counts the samples it has processed, from [start], so a
-     * pair's own life is visible. Each channel gets its own start, so a crossed L/R wiring shows.
-     */
-    class Clock(start: Int) : AudioFilter {
-        private var count = start
+    "switching ON after the first block fades in from dry" {
+        val t = twin()
+        val a = t.pair(0.0)
 
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            for (i in offset until offset + length) {
-                buffer[i] = count.toDouble()
-                count++
+        t.block("nothing installed, so the snap is spent")
+        t.set(a)
+
+        withClue("the intent flips at once") { t.swap.active shouldBe true }
+
+        repeat(fadeBlocks) { t.block("fading in") }
+    }
+
+    "the first initialisation is instant: set and clear act at once until a block has run, and again after reset" {
+        fun firstBlockIs(swap: KatalystFilterSwap, value: Double, label: String) {
+            val mix = dcBlock()
+            swap.process(mix, n)
+
+            withClue(label) { (0 until n).all { mix.left[it] == value && mix.right[it] == value } shouldBe true }
+        }
+
+        val fresh = KatalystFilterSwap(sampleRate)
+        fresh.set(Gain(0.5), Gain(0.5))
+        firstBlockIs(fresh, 0.5, "a fresh set is alone from its first sample")
+
+        val twice = KatalystFilterSwap(sampleRate)
+        twice.set(Gain(0.5), Gain(0.5))
+        twice.set(Gain(0.25), Gain(0.25))
+        firstBlockIs(twice, 0.25, "two sets before the first block: the second replaces the first")
+
+        val cleared = KatalystFilterSwap(sampleRate)
+        cleared.set(Gain(0.5), Gain(0.5))
+        cleared.clear()
+        cleared.sounding shouldBe false
+        firstBlockIs(cleared, 1.0, "a clear before the first block is dry at once")
+
+        val relive = KatalystFilterSwap(sampleRate)
+        relive.set(Gain(0.5), Gain(0.5))
+        relive.process(dcBlock(), n)
+        relive.reset()
+        relive.set(Gain(0.25), Gain(0.25))
+        firstBlockIs(relive, 0.25, "after reset the next set snaps again")
+    }
+
+    // ── What sounds now ───────────────────────────────────────────────────────────────────────────
+
+    "a change mid-fade never drops a sounding bank: every outgoing bank rides its own ramp to 0" {
+        // The old "drop the oldest" measured -11 to -34 dB, a click. Here A, B and C are all
+        // still fading while D comes in, and the output is the law at every sample.
+        val t = twin()
+        val a = t.pair(1.0)
+        val b = t.pair(2.0)
+        val c = t.pair(4.0)
+        val d = t.pair(8.0)
+
+        t.set(a)
+        t.block("A alone")
+        t.set(b)
+        repeat(3) { t.block("A to B") }
+        t.set(c)
+        repeat(2) { t.block("A, B to C") }
+        t.set(d)
+
+        withClue("all four are sounding") {
+            listOf(a, b, c, d).forEach { id -> t.swap.holds(t.gains[id].first) shouldBe true }
+        }
+
+        repeat(fadeBlocks) { t.block("A, B, C to D") }
+
+        withClue("D alone at the end") {
+            t.swap.holds(t.gains[d].first) shouldBe true
+            listOf(a, b, c).forEach { id -> t.swap.holds(t.gains[id].first) shouldBe false }
+        }
+    }
+
+    "a return mid-fade-out turns around where it stands, and a second clear is idempotent" {
+        // The owner comes back to the SAME pair while it fades out: no new bank, no step. The law
+        // puts the dry entry at its current weight and lets it ramp back out.
+        val t = twin()
+        val a = t.pair(0.25)
+
+        t.set(a)
+        t.block("installed")
+        t.clear()
+        repeat(4) { t.block("fading out") }
+        t.clear()
+        t.block("a second clear changes nothing")
+        t.resume(a) shouldBe true
+
+        withClue("the intent is back at once") { t.swap.active shouldBe true }
+
+        repeat(fadeBlocks) { t.block("turned around") }
+
+        // Out again, all the way: after landing the pair is not there to be taken back.
+        t.clear()
+        repeat(fadeBlocks) { t.block("fading out for good") }
+        t.resume(a) shouldBe false
+        t.swap.sounding shouldBe false
+    }
+
+    "a clear mid-change and an on during a fade-out keep every bank that sounds" {
+        val t = twin()
+        val a = t.pair(1.0)
+        val b = t.pair(0.5)
+        val c = t.pair(0.25)
+
+        t.set(a)
+        t.block("A")
+        t.set(b)
+        repeat(2) { t.block("A to B") }
+        t.clear()
+        repeat(3) { t.block("A, B to dry") }
+        t.set(c)
+        repeat(fadeBlocks) { t.block("A, B, dry to C") }
+    }
+
+    "the cap: at most MAX_BANKS banks run, a change at a full pool is parked and the latest wins" {
+        // A change on every block. From the tenth bank on, each new change is parked; the one parked
+        // last goes in at the first block boundary after a bank has landed, and a parked pair that a
+        // later change replaced never runs at all.
+        val t = twin()
+        val ids = (0 until 40).map { t.pair(1.0 + it) }
+
+        t.set(ids[0])
+        t.block("first")
+
+        for (i in 1 until ids.size) {
+            t.set(ids[i])
+            t.block("change $i")
+
+            withClue("block ${t.blocks - 1}: banks that ran") {
+                t.ranLastBlock() shouldBeLessThanOrEqual KatalystFilterSwap.MAX_BANKS
             }
+        }
+
+        repeat(fadeBlocks) { t.block("settling") }
+
+        val neverRan = ids.filter { t.gains[it].first.lastBlock == -1 }
+
+        withClue("the cap engaged: some changes were overtaken while parked") {
+            (neverRan.isNotEmpty()) shouldBe true
+        }
+
+        withClue("the latest change is the one that stands") {
+            t.swap.holds(t.gains[ids.last()].first) shouldBe true
+        }
+    }
+
+    // ── The hard cut and the references ───────────────────────────────────────────────────────────
+
+    "reset() is a hard cut from every state: dry at once, nothing held, and the next set snaps" {
+        // The cylinder's deactivation and retire: a fade that survived would resume on the orbit's
+        // next life, on new material.
+        // Two runs per case, because the first block after the cut spends the snap (in the engine
+        // no block runs between an orbit's deactivation and its next life).
+        fun afterReset(prepare: (Twin) -> Unit, label: String) {
+            val t = twin()
+            prepare(t)
+            t.reset()
+
+            withClue("$label: nothing held, nothing sounding") {
+                t.gains.none { t.swap.holds(it.first) || t.swap.holds(it.second) } shouldBe true
+                t.swap.sounding shouldBe false
+                t.swap.active shouldBe false
+            }
+
+            val dry = dcBlock()
+            t.swap.process(dry, n)
+
+            withClue("$label: dry at once") { (0 until n).all { dry.left[it] == 1.0 && dry.right[it] == 1.0 } shouldBe true }
+
+            val u = twin()
+            prepare(u)
+            u.reset()
+            u.swap.set(Gain(0.125), Gain(0.125))
+            val next = dcBlock()
+            u.swap.process(next, n)
+
+            withClue("$label: the next life starts at once, no stale fade") {
+                (0 until n).all { next.left[it] == 0.125 && next.right[it] == 0.125 } shouldBe true
+            }
+        }
+
+        afterReset({ t -> t.set(t.pair(0.5)); t.block("engaged") }, "from Engaged")
+        afterReset({ t -> t.set(t.pair(0.5)); t.block("engaged"); t.clear(); repeat(3) { t.block("out") } }, "mid fade-out")
+        afterReset({ t -> t.set(t.pair(0.5)); t.block("a"); t.set(t.pair(0.25)); t.block("b"); t.set(t.pair(2.0)) }, "mid change")
+        afterReset(
+            { t ->
+                t.set(t.pair(0.0))
+                repeat(12) { t.block("x"); t.set(t.pair(1.0 + it)) }
+            },
+            "with a change parked",
+        )
+    }
+
+    "a landed fade, a finished change and a replaced parked pair leave no reference behind" {
+        // Question 4, the REFERENCES: the outgoing entries die with their own landing, a parked
+        // pair with its replacement, the pair in service with Off.
+        val t = twin()
+        val a = t.pair(1.0)
+        val b = t.pair(0.5)
+
+        t.set(a)
+        t.block("a")
+        t.set(b)
+        t.block("a to b")
+
+        withClue("mid-fade the outgoing pair is held") { t.swap.holds(t.gains[a].first) shouldBe true }
+
+        repeat(fadeBlocks) { t.block("to b") }
+
+        withClue("after its landing the outgoing pair is dropped, the pair in service kept") {
+            t.swap.holds(t.gains[a].first) shouldBe false
+            t.swap.holds(t.gains[a].second) shouldBe false
+            t.swap.holds(t.gains[b].first) shouldBe true
+            t.swap.holds(t.gains[b].second) shouldBe true
+        }
+
+        // Fill the pool, park one, replace it.
+        val fill = (0 until 12).map { t.pair(2.0 + it) }
+
+        for (id in fill) {
+            t.set(id)
+        }
+
+        withClue("the pool is full, so the later changes are parked and only the latest is held") {
+            t.law.parkedId shouldBe fill.last()
+            fill.dropLast(1).drop(KatalystFilterSwap.MAX_BANKS - 1).none { t.swap.holds(t.gains[it].first) } shouldBe true
+            t.swap.holds(t.gains[fill.last()].first) shouldBe true
         }
     }
 
     "a pair's own state runs on across every transition: in service, outgoing, and alone again" {
         // Question 1, what outlives the states: the pairs. The swap never builds, resets or re-runs
-        // one; it only moves a reference from "in service" to "outgoing". A clock shows it: each
-        // pair must see every sample of its life exactly once, whatever state the swap is in.
-        val swap = KatalystFilterSwap(sampleRate, fadeSeconds)
+        // one; it only moves a reference. A clock shows it: each pair must see every sample of its
+        // life exactly once, whatever state the swap is in.
+        class Clock(start: Int) : AudioFilter {
+            private var count = start
+
+            override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+                for (i in offset until offset + length) {
+                    buffer[i] = count.toDouble()
+                    count++
+                }
+            }
+        }
+
+        val swap = KatalystFilterSwap(sampleRate)
 
         // Distinct right-channel starts, so a right pair run twice, skipped or wired to the left shows.
         val aRight = 5000
         val bRight = 7000
-        val cRight = 9000
 
         swap.set(Clock(0), Clock(aRight))
         swap.process(dcBlock(), n)
-
         swap.set(Clock(0), Clock(bRight))
 
         // A was in service for one block, so it enters the fade at 128; B starts at its own start.
-        for (block in 0 until 5) {
+        for (block in 0 until fadeBlocks) {
             val mix = dcBlock()
             swap.process(mix, n)
 
             for (i in 0 until n) {
                 val kk = block * n + i
-                val t = minOf(kk.toDouble() / fadeLen, 1.0)
-                val left = if (kk < fadeLen) (n + kk) * (1.0 - t) + kk * t else kk.toDouble()
-                val right = if (kk < fadeLen) {
-                    (aRight + n + kk) * (1.0 - t) + (bRight + kk) * t
-                } else {
-                    (bRight + kk).toDouble()
-                }
+                val w = maxOf(0, fadeLen - kk).toDouble() / fadeLen
+                val left = kk + w * ((n + kk) - kk)
+                val right = (bRight + kk) + w * ((aRight + n + kk) - (bRight + kk))
 
                 withClue("A to B, left sample $kk") { mix.left[i] shouldBe left.plusOrMinus(1e-9) }
                 withClue("A to B, right sample $kk") { mix.right[i] shouldBe right.plusOrMinus(1e-9) }
             }
-        }
-
-        // B, in service for 5 blocks, becomes the outgoing pair and runs on from 640.
-        swap.set(Clock(0), Clock(cRight))
-
-        for (block in 0 until 5) {
-            val mix = dcBlock()
-            swap.process(mix, n)
-
-            for (i in 0 until n) {
-                val kk = block * n + i
-                val t = minOf(kk.toDouble() / fadeLen, 1.0)
-                val left = if (kk < fadeLen) (5 * n + kk) * (1.0 - t) + kk * t else kk.toDouble()
-                val right = if (kk < fadeLen) {
-                    (bRight + 5 * n + kk) * (1.0 - t) + (cRight + kk) * t
-                } else {
-                    (cRight + kk).toDouble()
-                }
-
-                withClue("B to C, left sample $kk") { mix.left[i] shouldBe left.plusOrMinus(1e-9) }
-                withClue("B to C, right sample $kk") { mix.right[i] shouldBe right.plusOrMinus(1e-9) }
-            }
-        }
-    }
-
-    "every fade starts at t = 0: a restart mid-fade, and the first fade of a life after clear()" {
-        // Question 2, what record of a finished life is forgotten: the fade position. It belongs to
-        // Crossfading and `enter` is its only initialiser, so neither a restart nor a new life can
-        // start a fade where an earlier one stopped.
-        fun ramp(swap: KatalystFilterSwap, from: Double, label: String) {
-            for (block in 0 until 5) {
-                val mix = dcBlock()
-                swap.process(mix, n)
-
-                for (i in 0 until n) {
-                    val k = block * n + i
-                    val t = minOf(k.toDouble() / fadeLen, 1.0)
-
-                    withClue("$label, sample $k") { mix.left[i] shouldBe (from * (1.0 - t)).plusOrMinus(1e-12) }
-                }
-            }
-        }
-
-        // A restart two blocks into a fade: x2 is in service, so the new fade runs from 2 to 0.
-        val restart = KatalystFilterSwap(sampleRate, fadeSeconds)
-        restart.set(gain(1.0), gain(1.0))
-        restart.process(dcBlock(), n)
-        restart.set(gain(2.0), gain(2.0))
-        restart.process(dcBlock(), n)
-        restart.process(dcBlock(), n)
-        restart.set(gain(0.0), gain(0.0))
-        ramp(restart, from = 2.0, label = "restart")
-
-        // clear() two blocks into a fade, then a new life: installed at once, then its first fade.
-        val relive = KatalystFilterSwap(sampleRate, fadeSeconds)
-        relive.set(gain(1.0), gain(1.0))
-        relive.process(dcBlock(), n)
-        relive.set(gain(2.0), gain(2.0))
-        relive.process(dcBlock(), n)
-        relive.process(dcBlock(), n)
-        relive.clear()
-        relive.set(gain(3.0), gain(3.0))
-        relive.process(dcBlock(), n)
-        relive.set(gain(0.0), gain(0.0))
-        ramp(relive, from = 3.0, label = "new life")
-    }
-
-    "Off is a pass-through from every way in, and the first pair after it is installed at once" {
-        // Question 3, the Off precondition. TODAY there is none: entering Off from a sounding pair
-        // is a hard cut to dry, and leaving it installs without a fade. That is the click the
-        // decided switch-off fade removes (`docs/tasks/katalyst-dsl.md`), and this row turns red
-        // with that sound change, on purpose: it pins today's lifecycle, not the future one.
-        fun fromOff(swap: KatalystFilterSwap, label: String) {
-            val dry = dcBlock()
-            swap.process(dry, n)
-
-            withClue("$label: Off leaves the mix untouched") {
-                (0 until n).all { dry.left[it] == 1.0 && dry.right[it] == 1.0 } shouldBe true
-            }
-
-            swap.set(gain(0.25), gain(0.25))
-            val on = dcBlock()
-            swap.process(on, n)
-
-            withClue("$label: the first pair after Off is alone from its first sample") {
-                (0 until n).all { on.left[it] == 0.25 && on.right[it] == 0.25 } shouldBe true
-            }
-        }
-
-        val fromEngaged = KatalystFilterSwap(sampleRate, fadeSeconds)
-        fromEngaged.set(gain(0.0), gain(0.0))
-        fromEngaged.process(dcBlock(), n)
-        fromEngaged.clear()
-        fromOff(fromEngaged, "clear from Engaged")
-
-        val fromCrossfading = KatalystFilterSwap(sampleRate, fadeSeconds)
-        fromCrossfading.set(gain(0.0), gain(0.0))
-        fromCrossfading.process(dcBlock(), n)
-        fromCrossfading.set(gain(0.5), gain(0.5))
-        fromCrossfading.process(dcBlock(), n)
-        fromCrossfading.process(dcBlock(), n)
-        fromCrossfading.clear()
-        fromOff(fromCrossfading, "clear mid-fade")
-    }
-
-    "a finished fade, a restart and a clear() leave no reference to a dead pair" {
-        // Question 4, the REFERENCES. The outgoing pair dies with Crossfading, so each event that
-        // leaves that state drops it: the fade's end, a restart (which drops the OLDEST pair) and
-        // clear(). The pair in service is dropped on entering Off. A retained pair is inaudible (see
-        // the class KDoc), so the swap is asked directly through its `holds` seam; the positive
-        // controls show the seam does see a live reference.
-        val swap = KatalystFilterSwap(sampleRate, fadeSeconds)
-        val aL = gain(1.0)
-        val aR = gain(1.0)
-        val bL = gain(0.5)
-        val bR = gain(0.5)
-
-        swap.set(aL, aR)
-        swap.process(dcBlock(), n)
-        swap.set(bL, bR)
-        swap.process(dcBlock(), n)
-
-        withClue("mid-fade the outgoing pair is held") {
-            swap.holds(aL) shouldBe true
-            swap.holds(aR) shouldBe true
-        }
-
-        repeat(4) { swap.process(dcBlock(), n) }
-
-        withClue("after the fade's end the outgoing pair is dropped, the pair in service kept") {
-            swap.holds(aL) shouldBe false
-            swap.holds(aR) shouldBe false
-            swap.holds(bL) shouldBe true
-            swap.holds(bR) shouldBe true
-        }
-
-        // A restart mid-fade drops the oldest pair: B is outgoing, C comes in, D restarts from C.
-        val cL = gain(0.25)
-        val cR = gain(0.25)
-        val dL = gain(0.0)
-        val dR = gain(0.0)
-
-        swap.set(cL, cR)
-        swap.process(dcBlock(), n)
-        swap.set(dL, dR)
-
-        withClue("a restart drops the oldest pair and keeps the one it fades from") {
-            swap.holds(bL) shouldBe false
-            swap.holds(bR) shouldBe false
-            swap.holds(cL) shouldBe true
-            swap.holds(cR) shouldBe true
-        }
-
-        swap.process(dcBlock(), n)
-        swap.clear()
-
-        withClue("clear() mid-fade drops both pairs") {
-            listOf(cL, cR, dL, dR).none { swap.holds(it) } shouldBe true
         }
     }
 })

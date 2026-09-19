@@ -12,7 +12,9 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import kotlin.math.PI
@@ -43,6 +45,11 @@ class KatalystFormantEffectSpec : StringSpec({
     val vowelish = FilterDef.Formant(
         bands = listOf(FilterDef.Formant.Band(freq = 700.0, db = 0.0, q = 10.0)),
         mix = 1.0,
+    )
+
+    val ohish = FilterDef.Formant(
+        bands = listOf(FilterDef.Formant.Band(freq = 450.0, db = 0.0, q = 8.0)),
+        mix = 0.8,
     )
 
     "inactive vowel is a no-op on the mix" {
@@ -159,7 +166,7 @@ class KatalystFormantEffectSpec : StringSpec({
     "the SAME def with a non-finite knob installs ONCE, not one bank per block" {
         // The body's defect, on the twin: `vowel.mix != curMix` is true forever for a NaN against a
         // NaN, so the owner's per-block re-offer allocated two formant banks per block on the audio
-        // thread and restarted a 12 ms crossfade that never completed. The floor is here for the
+        // thread and restarted a crossfade (12 ms then) that never completed. The floor is here for the
         // reason the body's row gives (measured on both targets), with the same two limits: the row is blind at block 0, and
         // under a missing wet guard it dies on the teeth clue before it can count installs.
         val freq = 700.0 // vowelish's own band, so the bank rings and a fresh one is nothing like it
@@ -236,6 +243,156 @@ class KatalystFormantEffectSpec : StringSpec({
             fx.configure(vowelish.copy(mix = wet))
 
             withClue("wet = $wet") { fx.installedMix shouldBe wet }
+        }
+    }
+    // ── Every edge fades (Katalyst step 5c-6) ─────────────────────────────────────────────────────
+    //
+    // The oracle is `FilterSwapLaw`, the decided switching law, applied to reference banks built
+    // from the bare DSP (`LowPassHighPassFilters.createFormant`) and run on the same input.
+
+    val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
+    val landBlocks = fadeLen / n + 2
+
+    fun script(fx: KatalystFormantEffect, blocks: Int): SwapHostScript =
+        SwapHostScript(n, fadeLen, drySine(700.0, blocks)) { fx.process(it) }
+
+    fun ref(def: FilterDef.Formant) = LowPassHighPassFilters.createFormant(def.bands, def.mix, sampleRate, def.floor)
+
+    "off fades the bank to dry and releases it; the SAME vowel after that fade-out installs afresh" {
+        // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
+        // the intent off must not be taken for "already installed". The first bank has faded out,
+        // so the second install is a NEW bank fading in from dry.
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 12 + 2 * landBlocks)
+        val first = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(first)
+        repeat(12) { s.step("on") }
+
+        fx.configure(null)
+        s.law.clear()
+
+        withClue("intent off at once, the sound still fading") {
+            fx.isEngaged shouldBe false
+            fx.isSounding shouldBe true
+        }
+
+        repeat(landBlocks) {
+            fx.configure(null)
+            s.step("fading out")
+        }
+
+        withClue("landed on dry: released") { fx.isSounding shouldBe false }
+
+        val second = s.reference(ref(vowelish))
+        fx.configure(vowelish)
+        s.law.set(second)
+
+        withClue("the identical def installs again") {
+            fx.isEngaged shouldBe true
+            fx.isSounding shouldBe true
+        }
+
+        repeat(landBlocks - 2) {
+            fx.configure(vowelish)
+            s.step("fading in")
+        }
+    }
+
+    "an owner that returns mid-fade-out takes the fading bank back where it stands" {
+        // The re-entry requirement: continuous, never a restart. A NEW bank here would start from
+        // zero state and differ from the reference bank that ran on all along.
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 10 + 5 + landBlocks)
+        val bank = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(bank)
+        repeat(10) { s.step("on") }
+
+        fx.configure(null)
+        s.law.clear()
+        repeat(5) {
+            fx.configure(null)
+            s.step("fading out")
+        }
+
+        fx.configure(vowelish)
+        s.law.resume(bank) shouldBe true
+        fx.isEngaged shouldBe true
+
+        repeat(landBlocks) {
+            fx.configure(vowelish)
+            s.step("turned around")
+        }
+    }
+
+    "a change mid-fade crossfades from what sounds now, keeping the bank that is still fading" {
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 8 + 3 + landBlocks)
+        val a = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(a)
+        repeat(8) { s.step("a") }
+
+        val b = s.reference(ref(ohish))
+        fx.configure(ohish)
+        s.law.set(b)
+        repeat(3) { s.step("a to b") }
+
+        val c = s.reference(ref(vowelish.copy(mix = 0.5)))
+        fx.configure(vowelish.copy(mix = 0.5))
+        s.law.set(c)
+        repeat(landBlocks) { s.step("a, b to c") }
+    }
+
+    "reset() mid-fade-out is a hard cut: dry at once, and the next life starts on a fresh bank at once" {
+        // The cylinder's deactivation and retire. A fade that survived would resume in the orbit's
+        // next life, on new material. Two runs of the same life, because the first block after the
+        // cut would spend the snap the second half needs (in the engine no block runs between an
+        // orbit's deactivation and its next life).
+        fun lifeThenCut(): Pair<KatalystFormantEffect, SwapHostScript> {
+            val fx = KatalystFormantEffect(sampleRate)
+            val s = script(fx, blocks = 20)
+            val bank = s.reference(ref(vowelish))
+
+            fx.configure(vowelish)
+            s.law.set(bank)
+            repeat(10) { s.step("on") }
+
+            fx.configure(null)
+            s.law.clear()
+            repeat(3) { s.step("fading out") }
+
+            fx.retire()
+
+            withClue("nothing sounding, nothing intended") {
+                fx.isSounding shouldBe false
+                fx.isEngaged shouldBe false
+            }
+
+            return fx to s
+        }
+
+        val (_, cutRun) = lifeThenCut()
+        val dry = cutRun.inputBlock(cutRun.block)
+        val cut = cutRun.raw()
+
+        withClue("the block after the cut is the dry input, bit for bit") {
+            (0 until n).all { cut[it].toRawBits() == dry[it].toRawBits() } shouldBe true
+        }
+
+        val (fx, nextRun) = lifeThenCut()
+        val fresh = ref(ohish)
+        val next = nextRun.inputBlock(nextRun.block)
+        fresh.process(next, 0, n)
+        fx.configure(ohish)
+        val got = nextRun.raw()
+
+        withClue("the first block of the next life is the fresh bank alone") {
+            (0 until n).all { got[it].toRawBits() == next[it].toRawBits() } shouldBe true
         }
     }
 })

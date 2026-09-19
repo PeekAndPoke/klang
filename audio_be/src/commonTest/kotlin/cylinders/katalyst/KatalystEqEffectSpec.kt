@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.cylinders.katalyst
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -27,6 +28,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import kotlin.math.PI
 import kotlin.math.abs
@@ -400,12 +402,12 @@ class KatalystEqEffectSpec : StringSpec({
             )
         )
 
-        val data = sine(24 * blockFrames, 300.0)
+        val data = sine(40 * blockFrames, 300.0)
         val out = DoubleArray(data.size)
         val ctx = ctx()
-        // 12 ms at 44100 Hz is 529 frames, 4.1 blocks: the fade ENDS inside the window below, so
-        // the seam where the old bank is dropped is measured too (the failure `KatalystFilterSwap`
-        // would show if its ramp never advanced).
+        // KNOB_GLIDE_SECONDS at 44100 Hz is 2205 frames, 17.2 blocks: the fade ENDS inside the
+        // window below, so the seam where the old bank is dropped is measured too (the failure
+        // `KatalystFilterSwap` would show if its ramp never advanced).
         val changeBlock = 12
 
         for (b in 0 until data.size / blockFrames) {
@@ -427,8 +429,8 @@ class KatalystEqEffectSpec : StringSpec({
         }
 
         val settled = out.copyOfRange((changeBlock - 4) * blockFrames, changeBlock * blockFrames)
-        val across = out.copyOfRange((changeBlock - 1) * blockFrames, (changeBlock + 8) * blockFrames)
-        val after = out.copyOfRange((changeBlock + 8) * blockFrames, data.size)
+        val across = out.copyOfRange((changeBlock - 1) * blockFrames, (changeBlock + 20) * blockFrames)
+        val after = out.copyOfRange((changeBlock + 20) * blockFrames, data.size)
 
         withClue("the change really happened: the boost is gone") {
             rms(settled) / rms(after) shouldBeGreaterThan 3.0
@@ -450,7 +452,7 @@ class KatalystEqEffectSpec : StringSpec({
             )
         )
 
-        val data = sine(24 * blockFrames, 300.0)
+        val data = sine(40 * blockFrames, 300.0)
         val ctx = ctx()
         val out = DoubleArray(data.size)
 
@@ -475,7 +477,8 @@ class KatalystEqEffectSpec : StringSpec({
             ctx.mixBuffer.left.copyInto(out, base, 0, blockFrames)
         }
 
-        for (i in 17 * blockFrames until data.size) {
+        // The fade (17.2 blocks) started at block 12, so it has landed from block 30 on.
+        for (i in 30 * blockFrames until data.size) {
             withClue("frame $i") {
                 out[i].toRawBits() shouldBe data[i].toRawBits()
             }
@@ -495,7 +498,7 @@ class KatalystEqEffectSpec : StringSpec({
         }
 
         // The work pin: every install recomputes every section's coefficients on both channels and
-        // starts a 12 ms crossfade. A stage that installed per block would sound almost the same
+        // starts a crossfade. A stage that installed per block would sound almost the same
         // and never stop paying for it.
         fx.installs shouldBe 1
         fx.isEngaged shouldBe true
@@ -640,10 +643,11 @@ class KatalystEqEffectSpec : StringSpec({
         }
     }
 
-    "reset turns the stage off, and the bank that comes back from the ping-pong is silent on silence" {
+    "reset turns the stage off, and the bank that comes back from the pool is silent on silence" {
         // The flush has one place, `EqBank.install`, and this is the row that fails without it.
         // Reaching a DIRTY bank takes three installs: the first takes bank 0, the second takes
-        // bank 1 and parks bank 0 mid-ring, and the third takes bank 0 again. A `reset` in
+        // bank 1 while bank 0 rings on as the outgoing one, the reset (a hard cut) lets go of both,
+        // and the third takes the first bank the swap does not hold, bank 0 again. A `reset` in
         // between is what an orbit does when it deactivates, and it must not leave the bank that
         // comes back holding the previous tenant's resonance.
         val chain = chainOf(
@@ -700,5 +704,87 @@ class KatalystEqEffectSpec : StringSpec({
                 }
             }
         }
+    }
+    // ── Changes crossfade from what sounds now (Katalyst step 5c-6) ─────────────────────────────
+
+    "a curve change on every block: every bank that sounds is one that started from zero, none is zeroed while heard" {
+        // The old two-bank ping-pong zeroed the bank a restart dropped; with "crossfade from what
+        // sounds now" a restart drops nothing, so a reused bank must be one nobody hears. The
+        // oracle is the decided law (`FilterSwapLaw`, the cap and its parking included) over
+        // reference cores built from the bare `EqCore`, each configured fresh at its install and
+        // run on the dry input from then on. A bank zeroed or reconfigured while it still sounds,
+        // or a parked curve lost, departs from it.
+        val sr = sampleRate.toDouble()
+        val fadeLen = (sr * KNOB_GLIDE_SECONDS).toInt()
+        val fx = KatalystEqEffect(sampleRate = sr, types = intArrayOf(EqCore.BELL))
+        val dbs = doubleArrayOf(9.0, -9.0, 4.0, -3.0, 12.0)
+        val changes = 60
+        val blocks = changes + fadeLen / blockFrames + 30
+        val input = sine(blocks * blockFrames, 300.0)
+        val refs = mutableMapOf<Int, DoubleArray>()
+
+        fun curve(db: Double) = doubleArrayOf(300.0, 4.0, db, 0.0)
+
+        fun reference(db: Double, fromBlock: Int): DoubleArray {
+            val core = EqCore(1)
+            core.configureSection(0, EqCore.BELL, 300.0, 4.0, db, 0.0, sr)
+            val out = DoubleArray(input.size)
+            val buf = DoubleArray(blockFrames)
+
+            for (b in fromBlock until blocks) {
+                input.copyInto(buf, 0, b * blockFrames, b * blockFrames + blockFrames)
+                core.process(buf, 0, blockFrames)
+                buf.copyInto(out, b * blockFrames)
+            }
+
+            return out
+        }
+
+        val law = FilterSwapLaw(fadeLen, KatalystFilterSwap.MAX_BANKS)
+        val mix = StereoBuffer(blockFrames)
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = mix)
+        val curveOf = mutableMapOf<Int, Double>()
+        var parkedSeen = false
+
+        for (b in 0 until blocks) {
+            if (b <= changes) {
+                val db = dbs[b % dbs.size]
+                fx.configure(curve(db))
+                curveOf[b] = db
+                law.set(b)
+            }
+
+            if (law.parkedId != null) {
+                parkedSeen = true
+            }
+
+            // A reference core starts at the block its id first sounds: at once for a change that
+            // found room, at the block boundary the law installs it for a parked one.
+            for (id in law.sounding) {
+                if (id !in refs) {
+                    refs[id] = reference(curveOf.getValue(id), b)
+                }
+            }
+
+            val base = b * blockFrames
+
+            for (k in 0 until blockFrames) {
+                mix.left[k] = input[base + k]
+                mix.right[k] = input[base + k]
+            }
+
+            fx.process(ctx)
+
+            val expected = law.block(blockFrames) { id, k -> if (id == FilterSwapLaw.DRY) input[base + k] else refs.getValue(id)[base + k] }
+
+            for (k in 0 until blockFrames) {
+                withClue("block $b, sample $k") {
+                    mix.left[k] shouldBe expected[k].plusOrMinus(1e-9)
+                    mix.right[k] shouldBe expected[k].plusOrMinus(1e-9)
+                }
+            }
+        }
+
+        withClue("the cap engaged, so the pool and the parking were exercised") { parkedSeen shouldBe true }
     }
 })

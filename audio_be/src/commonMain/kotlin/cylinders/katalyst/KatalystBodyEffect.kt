@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
@@ -23,9 +25,22 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
  * stereo channel (independent SVF state).
  *
  * Ownership: `Cylinder.updateFromVoice` only calls [configure] for the voice that OWNS the orbit's body
- * (via [VoiceLease] — first-writer-wins while alive). Because only the owner configures, `null` (the owner
- * has no body) authoritatively turns the resonator OFF — it is NOT a no-op. The cylinder calls [reset] when
- * it fully deactivates so a reused orbit reconfigures cleanly.
+ * (via [VoiceLease], first-writer-wins while alive). Because only the owner configures, `null` (the owner
+ * has no body) authoritatively turns the resonator OFF: it is NOT a no-op.
+ *
+ * **Every edge fades** (Katalyst step 5c-6, decided with the maintainer 2026-09-19): off fades the
+ * bank to dry over `KNOB_GLIDE_SECONDS` and only then releases it, on fades in from dry, a change
+ * crossfades from what sounds now, and an owner that returns to the same body mid-fade-out takes
+ * the fading bank back ([KatalystFilterSwap.resume]). [reset] and [retire] stay a HARD cut: the
+ * cylinder calls them when the orbit has gone silent or goes to the shelf, and a fade that
+ * survived them would resume on the orbit's next life.
+ *
+ * **Intent and sound are two things.** [isEngaged] is the intent (the owner's latest word was a
+ * body); the bank may still be sounding after it turned false. The config cache (`curBands`,
+ * `curMix`, `curFloor`, `curLeft`) describes the pair the last install built. It survives a
+ * fade-out on purpose, so a returning owner can take the fading bank back, and it is never trusted
+ * on its own: an unchanged config with the intent off asks the swap whether that pair still sounds,
+ * and installs a fresh one when it does not (question 2 of `docs/plans/effect-state-machines.md`).
  *
  * NOTE: near-verbatim twin of [KatalystFormantEffect] (only the band type, the factory fn and the
  * WET/FLOOR constants differ). The DSP is already one: both build a `ResonatorBank` (Katalyst step
@@ -38,22 +53,30 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
  */
 class KatalystBodyEffect(
     private val sampleRate: Double,
+    /** The frames of one render block; sizes the swap's scratch at construction (see [KatalystFilterSwap]). */
+    blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) : KatalystEffect {
 
     private var curBands: List<FilterDef.Body.Mode>? = null
     private var curMix: Double = Double.NaN
     private var curFloor: Double? = Double.NaN
 
+    /** The left filter of the pair the last install built: what [KatalystFilterSwap.resume] looks for. */
+    private var curLeft: AudioFilter? = null
+
     // The substitute for a non-finite floor, boxed ONCE at construction: the `Double?` the
     // comparison and the factory both take would otherwise box the constant on every block that
     // carries an unset floor, which is exactly the case the guard in `configure` is there for.
     private val unsetFloor: Double? = BODY_FLOOR
 
-    // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
-    private val swap = KatalystFilterSwap(sampleRate)
+    // Holds the bank in service and, while a fade runs, the banks fading out; every edge fades.
+    private val swap = KatalystFilterSwap(sampleRate, blockFrames)
 
-    /** Test seam: true while a resonator bank is installed — the owner has a body. */
+    /** Test seam: the INTENT, true while the owner asks for a body (a bank may still fade out after). */
     internal val isEngaged: Boolean get() = swap.active
+
+    /** Test seam: the SOUND, true while any bank may still be heard, a fade-out included. */
+    internal val isSounding: Boolean get() = swap.sounding
 
     /**
      * Test seams: WHAT is installed, not just whether anything is ([isEngaged]).
@@ -80,18 +103,15 @@ class KatalystBodyEffect(
      * chain answers the same. The voice path can carry one: `body("wood", wet = "NaN")` parses to a
      * NaN and `SprudelVoiceData.toVoiceData` only guards a null.
      *
-     * **Open question, recorded 2026-09-18 (round 1 of Katalyst step 5a-2), not a regression:**
-     * turning the stage OFF is a hard CUT ([reset] clears the swap), while every material, mix or
-     * floor CHANGE crossfades. The asymmetry pre-dates the Katalyst DSL and sits at the same moment
-     * an owner handover already hits on the voice path, so nothing got worse; it is simply visible
-     * now that a `.katp` can switch a declared stage off mid-phrase. The shape it wants is a
-     * `KatalystFilterSwap.fadeOut()` (ramp the installed bank's wet to zero over the same 12 ms and
-     * clear when the ramp ends) so that off is as declick as every other change; the maintainer
-     * records it in `docs/tasks/katalyst-dsl.md`.
+     * A null fades the bank out (see the class KDoc); a second null while it fades is free. Closed
+     * here: the open question of 2026-09-18 (off was a hard cut while every change crossfaded).
      */
     fun configure(body: FilterDef.Body?) {
         if (body == null) {
-            if (swap.active) reset() // owner has no body → turn off, once
+            if (swap.active) {
+                swap.clear() // the owner has no body: fade to dry, once
+            }
+
             return
         }
 
@@ -102,7 +122,7 @@ class KatalystBodyEffect(
         // is a per-block allocation on the audio thread rather than a wrong number.
         // NaN-guards, and they sit BEFORE the comparison on purpose: a NaN is never equal to
         // itself, so an unguarded non-finite mix made the test below true on EVERY block and
-        // rebuilt two filter banks per block on the audio thread, restarting a 12 ms crossfade
+        // rebuilt two filter banks per block on the audio thread, restarting a crossfade (12 ms then)
         // that then never completed. Being NULLABLE does not save the floor: a `Double?` pair of
         // NaNs answers "not equal" on both targets we ship, measured 2026-09-18 (JVM, and
         // Kotlin/JS in Chrome headless). The guard does not rest on that measurement, it removes
@@ -115,25 +135,45 @@ class KatalystBodyEffect(
         val rawFloor = body.floor
         val floor = if (rawFloor == null || rawFloor.isFinite()) rawFloor else unsetFloor
 
-        // Rebuild only when the material/mix/floor actually changes — with ownership this is once per
+        // Rebuild only when the material/mix/floor actually changes: with ownership this is once per
         // owner change (a live owner re-offers the same config every block, which short-circuits here).
-        // The swap crossfades from the old bank so the change doesn't click.
-        if (body.bands != curBands || mix != curMix || floor != curFloor) {
-            swap.set(
-                LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor),
-                LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor),
-            )
-            curBands = body.bands
-            curMix = mix
-            curFloor = floor
+        val unchanged = body.bands == curBands && mix == curMix && floor == curFloor
+
+        if (unchanged) {
+            if (swap.active) {
+                return
+            }
+
+            // The owner is back with the body it had: take the fading bank back where it stands.
+            // Only while it still sounds; once it has faded out the cache describes a released
+            // bank, and the identical body installs afresh below. A return after a DIFFERENT change
+            // (A, then B, then A again within one fade) is not found here, because the cache holds
+            // B: it builds a fresh A that fades in while the warm A fades out, which is continuous,
+            // and searching the outgoing banks by config is complexity the safety net does not need
+            // (decided in the 5c-6 review).
+            val left = curLeft
+
+            if (left != null && swap.resume(left)) {
+                return
+            }
         }
+
+        val left = LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor)
+
+        swap.set(left, LowPassHighPassFilters.createBody(body.bands, mix, sampleRate, floor))
+        curLeft = left
+        curBands = body.bands
+        curMix = mix
+        curFloor = floor
     }
 
+    /** A HARD cut (orbit deactivation, chain swap, the shelf): the bank goes at once, the cache with it. */
     override fun reset() {
         curBands = null
         curMix = Double.NaN
         curFloor = Double.NaN
-        swap.clear()
+        curLeft = null
+        swap.reset()
     }
 
     /**

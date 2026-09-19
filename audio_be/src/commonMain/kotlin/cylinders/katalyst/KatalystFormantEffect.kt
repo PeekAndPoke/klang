@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
@@ -18,26 +20,37 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel) turns
  * the resonator OFF; [reset] deactivates it on orbit teardown.
  *
+ * Every edge fades, intent and sound are two things, and [reset] / [retire] stay a hard cut, all
+ * exactly as [KatalystBodyEffect]'s KDoc spells out (Katalyst step 5c-6).
+ *
  * NOTE: near-verbatim twin of [KatalystBodyEffect] (only the band type, the factory fn and the
  * WET/FLOOR constants differ); both build
  * a `ResonatorBank`, and the twin's KDoc says why the hosts stay two classes.
  */
 class KatalystFormantEffect(
     private val sampleRate: Double,
+    /** The frames of one render block; sizes the swap's scratch at construction (see [KatalystFilterSwap]). */
+    blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) : KatalystEffect {
 
     private var curBands: List<FilterDef.Formant.Band>? = null
     private var curMix: Double = Double.NaN
     private var curFloor: Double? = Double.NaN
 
+    /** The left filter of the pair the last install built: what [KatalystFilterSwap.resume] looks for. */
+    private var curLeft: AudioFilter? = null
+
     // Boxed once at construction, the twin of `KatalystBodyEffect.unsetFloor` and for its reason.
     private val unsetFloor: Double? = VOWEL_FLOOR
 
-    // Holds the current (+ briefly the previous) stereo bank; crossfades on swap to declick live changes.
-    private val swap = KatalystFilterSwap(sampleRate)
+    // Holds the bank in service and, while a fade runs, the banks fading out; every edge fades.
+    private val swap = KatalystFilterSwap(sampleRate, blockFrames)
 
-    /** Test seam: true while a formant bank is installed — the owner has a vowel. */
+    /** Test seam: the INTENT, true while the owner asks for a vowel (a bank may still fade out after). */
     internal val isEngaged: Boolean get() = swap.active
+
+    /** Test seam: the SOUND, true while any bank may still be heard, a fade-out included. */
+    internal val isSounding: Boolean get() = swap.sounding
 
     /**
      * Test seams: WHAT is installed, the twins of `KatalystBodyEffect.installedBands` and friends,
@@ -59,15 +72,14 @@ class KatalystFormantEffect(
      * substitution [KatalystBodyEffect.configure] makes and of the one `KatalystSlots.vowelDef`
      * makes for a declared chain's slots, so all three paths install the same bank.
      *
-     * **Open question, recorded 2026-09-18 (round 1 of Katalyst step 5a-2), not a regression:** the
-     * same hard CUT on off that `KatalystBodyEffect.configure` records, for the same reason and
-     * with the same shape of fix (a `KatalystFilterSwap.fadeOut()` over the usual 12 ms). The two
-     * stages share the swap IMPLEMENTATION (each owns its own instance), so whichever one gets the
-     * fix, both do.
+     * A null fades the bank out, the twin of [KatalystBodyEffect.configure].
      */
     fun configure(vowel: FilterDef.Formant?) {
         if (vowel == null) {
-            if (swap.active) reset() // owner has no vowel → turn off, once
+            if (swap.active) {
+                swap.clear() // the owner has no vowel: fade to dry, once
+            }
+
             return
         }
 
@@ -85,23 +97,38 @@ class KatalystFormantEffect(
         val rawFloor = vowel.floor
         val floor = if (rawFloor == null || rawFloor.isFinite()) rawFloor else unsetFloor
 
-        // The swap crossfades from the old bank so a live vowel/mix/floor change doesn't click.
-        if (vowel.bands != curBands || mix != curMix || floor != curFloor) {
-            swap.set(
-                LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor),
-                LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor),
-            )
-            curBands = vowel.bands
-            curMix = mix
-            curFloor = floor
+        // The twin of the body's rebuild rule, the returning owner included.
+        val unchanged = vowel.bands == curBands && mix == curMix && floor == curFloor
+
+        if (unchanged) {
+            if (swap.active) {
+                return
+            }
+
+            // A return after a DIFFERENT change builds a fresh bank: the twin's comment says why.
+            val left = curLeft
+
+            if (left != null && swap.resume(left)) {
+                return
+            }
         }
+
+        val left = LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor)
+
+        swap.set(left, LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor))
+        curLeft = left
+        curBands = vowel.bands
+        curMix = mix
+        curFloor = floor
     }
 
+    /** A HARD cut, the twin of [KatalystBodyEffect.reset]. */
     override fun reset() {
         curBands = null
         curMix = Double.NaN
         curFloor = Double.NaN
-        swap.clear()
+        curLeft = null
+        swap.reset()
     }
 
     /**

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.EqCore
@@ -26,27 +27,31 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  *
  * **A configuration change does not click.** [EqCore] is SNAP-only by contract (its own KDoc: a
  * per-block coefficient change on a bus is a click), so the smoothing is built here, and it is the
- * house precedent rather than a new one: [KatalystFilterSwap], the declick crossfade behind
- * `body(...)` and `vowel(...)`, keeps the previous bank alive and ramps old to new over its 12 ms.
+ * house precedent rather than a new one: [KatalystFilterSwap], the same switch `body(...)` and
+ * `vowel(...)` go through, crossfades from what sounds now to the new bank over
+ * `KNOB_GLIDE_SECONDS`, and a change arriving mid-fade adds a bank instead of dropping one.
  * The core's `process(buffer, offset, length)` IS the [AudioFilter] signature the swap wants, so
  * the adaptation is one delegating call per channel per block and nothing at all per sample. The
  * alternative, interpolating the five coefficients per sample inside the stage, would have been a
- * second smoothing policy in the engine for a stage that had a working one available.
+ * second smoothing policy in the engine for a stage that had a working one available. There is no
+ * off door: the stage exists only on a declared chain, and a chain swap already crossfades.
  *
- * **Two banks, ping-ponged, so a change allocates nothing.** The arriving configuration always
- * takes the bank the swap is not currently playing as its current one, and that bank is zeroed
- * before it is reconfigured, which makes it exactly the fresh instance the body and the vowel
- * build on every change. They build one because a material decides how many bands it has; an EQ's
- * section count and types are fixed by the DECLARATION (structure is declared once, the
- * signal-flow plan's rule 2), which is what makes two pre-built banks enough. That matters
+ * **A pool of pre-built banks, so a change allocates nothing.** The arriving configuration takes
+ * a bank the swap does not hold ([KatalystFilterSwap.holds]), which is by definition not heard,
+ * and zeroes it before it is reconfigured, which makes it exactly the fresh instance the body and
+ * the vowel build on every change. The pool is [KatalystFilterSwap.MAX_BANKS] + 2: up to that
+ * many banks may sound during rapid changes, one more may be PARKED behind a full pool, and the
+ * arriving one needs its own (Katalyst step 5c-6; the old two-bank ping-pong zeroed the bank a
+ * restart dropped, and a restart no longer drops a sounding bank). They can be pre-built because
+ * an EQ's section count and types are fixed by the DECLARATION (structure is declared once, the
+ * signal-flow plan's rule 2), where a material decides how many bands a body has. That matters
  * because a `.katp` on an EQ knob is a change per event: the cost of one is a `reset` plus one
- * coefficient computation per section per channel (a `tan` each) plus 12 ms of two banks running
- * instead of one, and it is bounded at one per BLOCK, because the orbit's param state is re-read
+ * coefficient computation per section per channel (a `tan` each) plus one fade time of one more
+ * bank running, and it is bounded at one per BLOCK, because the orbit's param state is re-read
  * once per block at most. Nothing is allocated and nothing is rebuilt on a block that changes no
- * knob, which is the normal case and the one the `installs` counter pins. The one allocation a
- * change can still cause is the swap's own: [KatalystFilterSwap] grows its two scratch buffers on
- * the FIRST change (two block-sized `DoubleArray`s, 128 doubles each at the pinned block size) and
- * never again.
+ * knob, which is the normal case and the one the `installs` counter pins. A change allocates
+ * nothing at all: the banks are built with the stage, and [KatalystFilterSwap] sizes its scratch
+ * buffers for `blockFrames` at construction.
  *
  * A [EqCore.BELL] section at `db == 0.0` stays BIT-TRANSPARENT through the core's explicit
  * passthrough branch, and this stage deliberately does NOT take the per-voice adapter's
@@ -67,6 +72,8 @@ class KatalystEqEffect(
      * slot: a section's KIND is the declaration's, only its coefficient scalars can move.
      */
     private val types: IntArray,
+    /** The frames of one render block; sizes the swap's scratch at construction (see [KatalystFilterSwap]). */
+    blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) : KatalystEffect {
 
     companion object {
@@ -84,13 +91,11 @@ class KatalystEqEffect(
         const val KNOB_GAIN = 3
     }
 
-    /** Holds the current (and briefly the previous) stereo bank; crossfades on swap to declick. */
-    private val swap = KatalystFilterSwap(sampleRate)
+    /** Holds the bank in service and, while a fade runs, the banks fading out. */
+    private val swap = KatalystFilterSwap(sampleRate, blockFrames)
 
-    /** The two pre-built banks (see the class KDoc): [nextBank] is the one not in service. */
-    private val banks = arrayOf(EqBank(types.size), EqBank(types.size))
-
-    private var nextBank = 0
+    /** The pre-built banks (see the class KDoc); an install takes one the swap does not hold. */
+    private val banks = Array(KatalystFilterSwap.MAX_BANKS + 2) { EqBank(types.size) }
 
     /** The scalars the installed bank was configured from, [KNOBS_PER_SECTION] per section. */
     private val current = DoubleArray(types.size * KNOBS_PER_SECTION)
@@ -128,23 +133,37 @@ class KatalystEqEffect(
 
         values.copyInto(current)
 
-        val bank = banks[nextBank]
-        nextBank = 1 - nextBank
+        val bank = freeBank()
         bank.install(types, current, sampleRate)
         swap.set(bank.left, bank.right)
         installs++
     }
 
     /**
-     * Turns the stage off: the swap holds no pair, so nothing this stage owns can reach the mix.
+     * A bank nothing can hear: one the swap holds no reference to. The pool is sized so one always
+     * exists (see the class KDoc); the last bank is the fallback that keeps this total.
+     */
+    private fun freeBank(): EqBank {
+        for (bank in banks) {
+            if (!swap.holds(bank.left)) {
+                return bank
+            }
+        }
+
+        return banks[banks.size - 1]
+    }
+
+    /**
+     * Turns the stage off, a HARD cut (the orbit's deactivation, a chain swap, the shelf): the swap
+     * holds no pair, so nothing this stage owns can reach the mix.
      *
-     * The banks are deliberately NOT zeroed here. A parked bank is unreachable while the swap is
+     * The banks are deliberately NOT zeroed here. An idle pool bank is unreachable while the swap is
      * empty, and every path back into service goes through [EqBank.install], which zeroes it, so
      * the flush has ONE place and one failing row instead of two guards that mask each other
-     * (`KatalystEqEffectSpec`, "the bank that comes back from the ping-pong is silent on silence").
+     * (`KatalystEqEffectSpec`, "the bank that comes back from the pool is silent on silence").
      */
     override fun reset() {
-        swap.clear()
+        swap.reset()
     }
 
     /**
@@ -155,7 +174,7 @@ class KatalystEqEffect(
      */
     override fun hasTail(): Boolean = false
 
-    /** Rents nothing (both banks are built with the chain), so retiring is the clean slate. */
+    /** Rents nothing (the whole pool of banks is built with the stage), so retiring is the clean slate. */
     override fun retire() {
         reset()
     }
@@ -191,7 +210,7 @@ private class EqCoreFilter(val core: EqCore) : AudioFilter {
     }
 }
 
-/** One stereo pair of [EqCore]s: the unit [KatalystEqEffect] ping-pongs between (see its KDoc). */
+/** One stereo pair of [EqCore]s: the unit [KatalystEqEffect] installs from its pool (see its KDoc). */
 private class EqBank(sections: Int) {
 
     val left = EqCoreFilter(EqCore(sections))
@@ -204,7 +223,7 @@ private class EqBank(sections: Int) {
     }
 
     private fun configure(core: EqCore, types: IntArray, values: DoubleArray, sampleRate: Double) {
-        // Zeroed FIRST: the bank coming back into service is the one that faded OUT last, and its
+        // Zeroed FIRST: the bank coming back into service is one that faded OUT earlier, and its
         // integrators still hold that curve's energy. `configureSection` keeps state by design (a
         // live tweak on ONE core must not click), so a bank that is about to be blended in from
         // zero weight has to start from zero state, or a high-Q section releases seconds-old

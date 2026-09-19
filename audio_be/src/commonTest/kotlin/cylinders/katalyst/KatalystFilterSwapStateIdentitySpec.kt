@@ -23,10 +23,11 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
  * starts from, the references a finished life drops, the cut and the instant install at Off) is
  * guarded in `KatalystFilterSwapSpec`.
  *
- * **What the main row drives:** every cell of the table on `KatalystFilterSwap.State` except the two
- * marked "(never)", plus a `process` in each state that ends nothing, which must be a self-edge. The
- * swap is built the way its three hosts build it, `KatalystFilterSwap(sampleRate)`, so the fade is
- * the production 12 ms. The seam is [KatalystFilterSwap.currentState].
+ * **What the main row drives:** every cell of the table on `KatalystFilterSwap.State` except the one
+ * marked "(never)", plus a `process` in each state that ends nothing, which must be a self-edge,
+ * and both "fresh" arms (the first initialisation). The swap is built the way its three hosts
+ * build it, `KatalystFilterSwap(sampleRate)`, so the fade is the production `KNOB_GLIDE_SECONDS`.
+ * The seam is [KatalystFilterSwap.currentState].
  */
 class KatalystFilterSwapStateIdentitySpec : StringSpec({
 
@@ -56,29 +57,37 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
             }
         }
 
+        // 17.2 blocks at 44.1 kHz; this many blocks lands any fade.
+        val land = 19
+
         // Off, as the hosts build it.
         val off = swap.currentState
         see(off)
 
-        // Off + clear, and Off + a block: self-edges.
+        // Off + clear, Off + resume, Off + reset: self-edges.
         swap.clear()
-        swap.process(mix, n)
-        withClue("clear and process while Off are self-edges") {
-            swap.currentState shouldBeSameInstanceAs off
-        }
+        swap.resume(gain(1.0)) shouldBe false
+        swap.reset()
+        swap.currentState shouldBeSameInstanceAs off
 
-        // Off -> Engaged: the first pair is installed at once.
+        // Off -> Engaged while fresh: installed at once. Engaged + set while fresh: replaced, a self-edge.
         swap.set(gain(1.0), gain(1.0))
         val engaged = swap.currentState
         see(engaged)
         engaged shouldNotBeSameInstanceAs off
-
-        // Engaged + a block: a self-edge.
-        swap.process(mix, n)
+        swap.set(gain(0.75), gain(0.75))
         swap.currentState shouldBeSameInstanceAs engaged
 
-        // Engaged -> Crossfading.
-        swap.set(gain(0.5), gain(0.5))
+        // Engaged + clear while fresh: Off at once.
+        swap.clear()
+        swap.currentState shouldBeSameInstanceAs off
+
+        // Off + a block (the snap is spent): a self-edge.
+        swap.process(mix, n)
+        swap.currentState shouldBeSameInstanceAs off
+
+        // Off -> Crossfading: a set fades in from dry.
+        swap.set(gain(1.0), gain(1.0))
         val crossfading = swap.currentState
         see(crossfading)
         withClue("Crossfading is its own state") {
@@ -86,42 +95,55 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
             crossfading shouldNotBeSameInstanceAs off
         }
 
-        // Crossfading + a block that does not end the fade: a self-edge (128 of 529 frames).
+        // Crossfading + a block that ends nothing, + set, + clear, + resume: self-edges.
         swap.process(mix, n)
         swap.currentState shouldBeSameInstanceAs crossfading
-
-        // Crossfading + set: the restart is a self-edge on the ONE Crossfading instance.
-        swap.set(gain(0.25), gain(0.25))
-        withClue("a restart mid-fade reuses the ONE Crossfading instance") {
+        val back = gain(0.5)
+        swap.set(back, gain(0.5))
+        swap.currentState shouldBeSameInstanceAs crossfading
+        swap.clear()
+        swap.currentState shouldBeSameInstanceAs crossfading
+        swap.resume(back) shouldBe true
+        withClue("a restart, a clear and a return mid-fade reuse the ONE Crossfading instance") {
             swap.currentState shouldBeSameInstanceAs crossfading
         }
-        see(swap.currentState)
 
-        // Crossfading -> Engaged, by the fade running out (five blocks cover the 529 frames).
-        repeat(5) { swap.process(mix, n) }
+        // Crossfading -> Engaged, by the last fade landing on a pair.
+        repeat(land) { swap.process(mix, n) }
         withClue("the fade's end lands in the ONE Engaged instance") {
             swap.currentState shouldBeSameInstanceAs engaged
         }
-        see(swap.currentState)
 
-        // Engaged -> Off.
+        // Engaged + a block, + resume of the pair in service: self-edges.
+        swap.process(mix, n)
+        swap.resume(back) shouldBe true
+        swap.currentState shouldBeSameInstanceAs engaged
+
+        // Engaged -> Crossfading by set, then back to Engaged.
+        swap.set(gain(0.25), gain(0.25))
+        swap.currentState shouldBeSameInstanceAs crossfading
+        repeat(land) { swap.process(mix, n) }
+        swap.currentState shouldBeSameInstanceAs engaged
+
+        // Engaged -> Crossfading by clear, then Crossfading -> Off by the fade landing on dry.
         swap.clear()
-        withClue("clear from Engaged lands in the ONE Off instance") {
+        swap.currentState shouldBeSameInstanceAs crossfading
+        repeat(land) { swap.process(mix, n) }
+        withClue("a fade to dry lands in the ONE Off instance") {
             swap.currentState shouldBeSameInstanceAs off
         }
-        see(swap.currentState)
 
-        // Off -> Engaged -> Crossfading -> Off: clear mid-fade.
+        // Crossfading -> Off and Engaged -> Off by reset.
+        swap.set(gain(1.0), gain(1.0))
+        swap.currentState shouldBeSameInstanceAs crossfading
+        swap.reset()
+        withClue("reset mid-fade lands in the ONE Off instance") {
+            swap.currentState shouldBeSameInstanceAs off
+        }
         swap.set(gain(1.0), gain(1.0))
         swap.currentState shouldBeSameInstanceAs engaged
-        swap.set(gain(0.0), gain(0.0))
-        swap.process(mix, n)
-        swap.currentState shouldBeSameInstanceAs crossfading
-        swap.clear()
-        withClue("clear mid-fade lands in the ONE Off instance") {
-            swap.currentState shouldBeSameInstanceAs off
-        }
-        see(swap.currentState)
+        swap.reset()
+        swap.currentState shouldBeSameInstanceAs off
 
         // The summary: driving the table produced no fourth object. The clue prints CLASS names.
         withClue("a transition that allocates shows up here: ${seen.map { it::class.simpleName }}") {

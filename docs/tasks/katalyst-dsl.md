@@ -361,7 +361,8 @@ complexity outranks the duplication.
   through `KatalystFilterSwap`, the 12 ms declick crossfade body and vowel already use, so a knob
   moved by `.katp` costs one bank swap per changed block and never a click for changes at least
   12 ms apart; two changes inside one fade drop the oldest bank, the faint tick
-  `KatalystFilterSwap` documents for body and vowel alike. `EqCore` keeps its
+  `KatalystFilterSwap` documents for body and vowel alike (SUPERSEDED by Katalyst 5c-6: 50 ms,
+  crossfade from what sounds now, at most 10 banks, a change at a full pool parked). `EqCore` keeps its
   snap-only contract and needs no coefficient ramp for this host; the unified-eq plan's D4 note is
   therefore closed for the orbit and still open for a future master eq that wants per-sample
   interpolation instead of a bank swap.
@@ -626,7 +627,9 @@ complexity outranks the duplication.
   block (a `reset` plus one coefficient computation per section per channel, and 12 ms of two banks
   running), bounded by the once-per-block param read and allocating nothing after the swap's
   scratch has grown once. Click-free holds for changes at least 12 ms apart; two inside one fade
-  drop the oldest bank, the faint tick body and vowel have always had. Two banks are enough
+  drop the oldest bank, the faint tick body and vowel have always had (SUPERSEDED by Katalyst
+  5c-6: the EQ now installs into any of `MAX_BANKS + 2` pre-built banks the swap no longer holds,
+  so an audible bank is never zeroed). Two banks were enough
   because a section list's SIZE is structure; body and vowel build a fresh bank per change only
   because a material decides how many bands it has. The flush lives in exactly one place, the
   install, so it has one failing row; `reset()` only clears the swap, which makes a parked bank
@@ -697,7 +700,9 @@ complexity outranks the duplication.
   same moment an owner handover already hits on the voice path). Shape when someone is in the file:
   a `KatalystFilterSwap.fadeOut()` that keeps the current pair as old with no new pair and ramps
   to dry over the same 12 ms, called from `configure(null)`, with `reset()` kept for the lifecycle
-  paths where the signal is already at weight zero.
+  paths where the signal is already at weight zero. CLOSED by Katalyst 5c-6 (2026-09-19), in
+  another spelling: `clear()` itself fades to dry over `KNOB_GLIDE_SECONDS` and enters Off only on
+  landing, `reset()` stays the synchronous hard cut for deactivation and retire.
 - **5a-2 and 5a-3 as built (2026-09-18).** 5a-2: round 1 blind (two reviewers) found the same MAJOR
   (classic's `body.wet` a SET 0.0); round 2 on the high tier clean. 5a-3: round 1 on the high tier
   found one MAJOR, the coordinator's rule TEXT (it named `wet` as the gate of the sends, which the
@@ -846,6 +851,20 @@ complexity outranks the duplication.
     bank (not the oldest, which is today's measured -11 to -34 dB click); if that measures in the
     click class, a change arriving at a full pool is parked until a bank frees, latest wins (the
     master's precedent as the overflow rule, so nothing sounding is ever cut).
+    **Measured in Katalyst 5c-6 (2026-09-19): quietest-drop -35 to -53 dB under a change every
+    block (inside the hard-switch class), so the overflow rule is PARK: -76 to -96 dB.** Each
+    outgoing bank keeps its OWN ramp (a shared ramp restarted on every change never lands, and the
+    pool would fill on any stream faster than one change per fade). At 48 kHz a 50 ms fade is 2400
+    frames, so a change every OTHER block already reaches the cap. Cost while fades run: +15 % for
+    a body change every 125 ms, +25 % for a vowel change every 62.5 ms; nothing when settled.
+    **Listened 2026-09-19 by the maintainer on 5c-6:** "Vowels change on each 16th and no clicks
+    to be heard. Synthkura also sounds right." Fade law kept as built (each outgoing bank ramps
+    from its frozen weight to 0 over the full fade). Considered and NOT taken (maintainer: "the
+    current implementation is fine"): a constant-slope law (every outgoing weight falls at 1/L per
+    sample, so a quiet bank lands early; about 8 banks instead of 20 under a change every block,
+    never reaching the cap, about a third of the cost, the same sound for single changes). On file
+    if rapid changes ever feel laggy or cost too much. Also accepted: A, B, then A again inside
+    one fade builds a fresh A (continuous, a small swell, no turn-around by config search).
     Also for the second commit, from the same review: the hosts must tell INTENT from SOUND (an
     `active` that flips synchronously in `set` and `clear`, separate from "a pair is still
     sounding"); `clear` during a fade-out is idempotent and `set` during it retargets; and the
@@ -897,7 +916,7 @@ complexity outranks the duplication.
   so off costs one comparison), but the EDGE between on and off is never a hard cut: a stage whose
   off value is dry (wet 0, depth 0, amount 0, gain unity) switches continuously by construction; every
   other stage (body, vowel, eq, compressor, phaser cascade) goes through a crossfade of its own
-  (`KatalystFilterSwap.fadeOut()` for the resonators and the eq, a gain-reduction ramp for the
+  (for the resonators the swap's own fade, built in 5c-6 as `clear()`; the eq changes through the same swap; a gain-reduction ramp for the
   compressor), and the sends keep their drain. Latency-bearing stages never bypass mid-signal.
   With it, the stage lifecycle is written as a small state machine per effect, not as flags: a
   private sealed hierarchy (`Off`, `Active`, `Draining`, `FadingOut`, ...) as preallocated inner-class

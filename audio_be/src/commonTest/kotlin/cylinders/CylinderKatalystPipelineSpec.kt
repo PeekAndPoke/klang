@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -72,6 +73,11 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // A stops checking in; voice B (no body) claims after the 1-block grace → body turns OFF.
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 2.0 * bf)
+        cylinder.body!!.isEngaged shouldBe false // the intent flips at once
+        bodyActiveOn(cylinder) shouldBe true // the sound does not: the first block still carries the fading body
+
+        // The sound fades to dry over KNOB_GLIDE_SECONDS (Katalyst step 5c-6), then the body is gone.
+        repeat((sampleRate * KNOB_GLIDE_SECONDS / bf).toInt()) { bodyActiveOn(cylinder) }
         bodyActiveOn(cylinder) shouldBe false
     }
 

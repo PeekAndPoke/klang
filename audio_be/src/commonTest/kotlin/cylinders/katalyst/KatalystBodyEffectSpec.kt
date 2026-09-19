@@ -12,9 +12,11 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -42,6 +44,11 @@ class KatalystBodyEffectSpec : StringSpec({
     val woodish = FilterDef.Body(
         bands = listOf(FilterDef.Body.Mode(freq = 300.0, db = 6.0, q = 8.0)),
         mix = 1.0,
+    )
+
+    val glassy = FilterDef.Body(
+        bands = listOf(FilterDef.Body.Mode(freq = 520.0, db = 9.0, q = 12.0)),
+        mix = 0.8,
     )
 
     "inactive body is a no-op on the mix" {
@@ -210,7 +217,7 @@ class KatalystBodyEffectSpec : StringSpec({
     "the SAME def with a non-finite knob installs ONCE, not one bank per block" {
         // The defect this row is born from. The owner re-offers its def every block, and
         // `body.mix != curMix` is TRUE forever for a NaN against a NaN, so every block allocated
-        // two filter banks on the audio thread and restarted the 12 ms crossfade, which then never
+        // two filter banks on the audio thread and restarted the crossfade (12 ms then), which then never
         // completed. Substituting BEFORE the comparison is what makes it settle.
         //
         // The FLOOR is in this row and not only in the seam row above: being nullable does not
@@ -241,8 +248,9 @@ class KatalystBodyEffectSpec : StringSpec({
             // same bypassed sine and the comparison below would pass saying nothing.
             withClue("non-finite $knob: max |body - dry| was $coloured") { coloured shouldBeGreaterThan 0.01 }
 
-            // 8 blocks = 1024 frames, past the 529-frame fade, so a restarted crossfade has room to
-            // show: a re-install would blend the ringing bank into a zero-state one.
+            // A re-install on any of blocks 1 to 7 starts a crossfade to a zero-state bank, which
+            // differs from the ringing one from its first sample on (the fade is 2205 frames, so
+            // it is still running at the end; it does not need to finish to show).
             withClue("non-finite $knob: max |re-offered every block - offered once| was $worst") {
                 worst shouldBe 0.0
             }
@@ -305,6 +313,156 @@ class KatalystBodyEffectSpec : StringSpec({
             fx.configure(woodish.copy(mix = wet))
 
             withClue("wet = $wet") { fx.installedMix shouldBe wet }
+        }
+    }
+    // ── Every edge fades (Katalyst step 5c-6) ─────────────────────────────────────────────────────
+    //
+    // The oracle is `FilterSwapLaw`, the decided switching law, applied to reference banks built
+    // from the bare DSP (`LowPassHighPassFilters.createBody`) and run on the same input.
+
+    val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
+    val landBlocks = fadeLen / n + 2
+
+    fun script(fx: KatalystBodyEffect, blocks: Int): SwapHostScript =
+        SwapHostScript(n, fadeLen, drySine(300.0, blocks)) { fx.process(it) }
+
+    fun ref(def: FilterDef.Body) = LowPassHighPassFilters.createBody(def.bands, def.mix, sampleRate, def.floor)
+
+    "off fades the bank to dry and releases it; the SAME body after that fade-out installs afresh" {
+        // Question 2 of the plan: the config cache survives the fade-out, and an unchanged def with
+        // the intent off must not be taken for "already installed". The first bank has faded out,
+        // so the second install is a NEW bank fading in from dry.
+        val fx = KatalystBodyEffect(sampleRate)
+        val s = script(fx, blocks = 12 + 2 * landBlocks)
+        val first = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(first)
+        repeat(12) { s.step("on") }
+
+        fx.configure(null)
+        s.law.clear()
+
+        withClue("intent off at once, the sound still fading") {
+            fx.isEngaged shouldBe false
+            fx.isSounding shouldBe true
+        }
+
+        repeat(landBlocks) {
+            fx.configure(null)
+            s.step("fading out")
+        }
+
+        withClue("landed on dry: released") { fx.isSounding shouldBe false }
+
+        val second = s.reference(ref(woodish))
+        fx.configure(woodish)
+        s.law.set(second)
+
+        withClue("the identical def installs again") {
+            fx.isEngaged shouldBe true
+            fx.isSounding shouldBe true
+        }
+
+        repeat(landBlocks - 2) {
+            fx.configure(woodish)
+            s.step("fading in")
+        }
+    }
+
+    "an owner that returns mid-fade-out takes the fading bank back where it stands" {
+        // The re-entry requirement: continuous, never a restart. A NEW bank here would start from
+        // zero state and differ from the reference bank that ran on all along.
+        val fx = KatalystBodyEffect(sampleRate)
+        val s = script(fx, blocks = 10 + 5 + landBlocks)
+        val bank = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(bank)
+        repeat(10) { s.step("on") }
+
+        fx.configure(null)
+        s.law.clear()
+        repeat(5) {
+            fx.configure(null)
+            s.step("fading out")
+        }
+
+        fx.configure(woodish)
+        s.law.resume(bank) shouldBe true
+        fx.isEngaged shouldBe true
+
+        repeat(landBlocks) {
+            fx.configure(woodish)
+            s.step("turned around")
+        }
+    }
+
+    "a change mid-fade crossfades from what sounds now, keeping the bank that is still fading" {
+        val fx = KatalystBodyEffect(sampleRate)
+        val s = script(fx, blocks = 8 + 3 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(8) { s.step("a") }
+
+        val b = s.reference(ref(glassy))
+        fx.configure(glassy)
+        s.law.set(b)
+        repeat(3) { s.step("a to b") }
+
+        val c = s.reference(ref(woodish.copy(mix = 0.5)))
+        fx.configure(woodish.copy(mix = 0.5))
+        s.law.set(c)
+        repeat(landBlocks) { s.step("a, b to c") }
+    }
+
+    "reset() mid-fade-out is a hard cut: dry at once, and the next life starts on a fresh bank at once" {
+        // The cylinder's deactivation and retire. A fade that survived would resume in the orbit's
+        // next life, on new material. Two runs of the same life, because the first block after the
+        // cut would spend the snap the second half needs (in the engine no block runs between an
+        // orbit's deactivation and its next life).
+        fun lifeThenCut(): Pair<KatalystBodyEffect, SwapHostScript> {
+            val fx = KatalystBodyEffect(sampleRate)
+            val s = script(fx, blocks = 20)
+            val bank = s.reference(ref(woodish))
+
+            fx.configure(woodish)
+            s.law.set(bank)
+            repeat(10) { s.step("on") }
+
+            fx.configure(null)
+            s.law.clear()
+            repeat(3) { s.step("fading out") }
+
+            fx.retire()
+
+            withClue("nothing sounding, nothing intended") {
+                fx.isSounding shouldBe false
+                fx.isEngaged shouldBe false
+            }
+
+            return fx to s
+        }
+
+        val (_, cutRun) = lifeThenCut()
+        val dry = cutRun.inputBlock(cutRun.block)
+        val cut = cutRun.raw()
+
+        withClue("the block after the cut is the dry input, bit for bit") {
+            (0 until n).all { cut[it].toRawBits() == dry[it].toRawBits() } shouldBe true
+        }
+
+        val (fx, nextRun) = lifeThenCut()
+        val fresh = ref(glassy)
+        val next = nextRun.inputBlock(nextRun.block)
+        fresh.process(next, 0, n)
+        fx.configure(glassy)
+        val got = nextRun.raw()
+
+        withClue("the first block of the next life is the fresh bank alone") {
+            (0 until n).all { got[it].toRawBits() == next[it].toRawBits() } shouldBe true
         }
     }
 })

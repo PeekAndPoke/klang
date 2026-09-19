@@ -1,5 +1,81 @@
 # Klang Audio — Memory
 
+## Body, vowel and the orbit EQ switch by fading from what sounds now (2026-09-19)
+
+Katalyst step 5c-6, the filter swap's SECOND commit, a SOUND CHANGE under the 5c listening
+checkpoint (decided with the maintainer, `docs/tasks/katalyst-dsl.md` step 5c, "how every orbit
+stage switches" and "rapid changes").
+
+- **The law.** Every edge of `KatalystFilterSwap` is a linear crossfade over `KNOB_GLIDE_SECONDS`
+  (the 12 ms is gone). The pair in service and dry are fade partners: OFF (`clear`) makes the
+  pair an OUTGOING entry and dry the target, ON makes dry outgoing. Each outgoing entry is frozen
+  at the weight it has at that sample and ramps to exactly 0 over one fade of its OWN; the target
+  takes the complement `1 - sum(outgoing)`, so the weights always sum to 1 and a change arriving
+  mid-fade never drops a sounding bank. Off is entered only when the last weight has landed (the
+  output IS dry). `resume(left)` takes a fading pair back as the target: the fade turns around.
+  The first `set`/`clear` after construction or `reset` acts at once until a block has run (the
+  `KnobGlide` snap), so a body set on the orbit's first block is bit-identical to before.
+  `reset` stays a synchronous HARD cut (deactivation, chain swap, retire); `Cylinder.kt` did not
+  change, it already calls `reset`/`retire` only on a silent orbit or the shelf.
+- **Rejected:** one shared ramp restarted on every change (all outgoing re-frozen): banks never
+  land while changes keep coming, so the pool fills on any change stream faster than one per
+  fade; the maintainer's sizing (19 banks at a change per block) is the own-ramp model.
+- **The cap: `MAX_BANKS = 10` banks sound per stage** (dry is not a bank), preallocated arrays on
+  `Crossfading`. Decided by MEASUREMENT: dropping the QUIETEST bank (its weight moved to the old
+  target) measured -35 to -53 dB under a change every block (body -35 to -37, rapidoff -50 to
+  -53, vowel -48 to -50, eq -41 to -53), in the hard-switch class. So a change at a full pool is
+  PARKED, the latest wins, and goes in at the first block boundary after a bank has landed:
+  -76 to -96 dB in the same rows. Price: up to one fade of lag, only while the cap is engaged. At
+  48 kHz (2400 frames, 18.75 blocks) a change every OTHER block also reaches the cap.
+- **Hosts tell intent from sound.** `active` (intent) flips synchronously in `set`, `resume`,
+  `clear`, `reset`; `sounding` is "not Off". Body and vowel: `configure(null)` calls
+  `swap.clear()` (a second null is free), an unchanged def with the intent off asks
+  `swap.resume(curLeft)` and installs a FRESH bank when it answers false, so a config cache that
+  outlived a fade-out to Off never blocks the identical material (question 2 of the plan). The
+  EQ keeps no off door; it installs into any of `MAX_BANKS + 2` pre-built banks the swap does not
+  `holds` (10 sounding, 1 parked, 1 arriving), so no audible bank is ever zeroed; the old
+  two-bank ping-pong would have zeroed a bank that still sounds.
+- **Measured** (effect level, band-limited saw 110 Hz and a three-saw chord, both to 3 kHz,
+  44.1 and 48 kHz; HF > 8 kHz over 0.7 ms, peak re signal RMS; the steady floor is numerically
+  silent for these sources). HEAD `468b8a88` to tree: off -23..-33 to -93..-103; on -25..-36 to
+  -96..-102; off/on -17..-31 to -88..-98; owner handover every 250 ms -22..-24 to -90..-94; return
+  mid-fade-out -20..-33 to -92..-102; change then off mid-fade -20..-38 to -89..-99; second change
+  1/2/4 blocks into a fade -32..-65 to -93..-109; single change -81..-98 to -93..-109; body change
+  every block -14..-15 to -78..-80 (parked); vowel -15..-29 (off/on) to -85..-96, every block
+  -32..-33 to -93..-96; EQ every block -18..-20 to -87..-90, second change -36..-49 to -108..-115.
+  Engine (48 kHz renderer, the investigation's sine rows): `body("<wood none>")` -22.7 to -93.5 dB,
+  two patterns sharing an orbit -23.3 to -75.3, `body("<wood glass>")` -88.1 to -97.3.
+- **Songs** (15 built-in, 3 frozen, 256 cycles, raw doubles, wall clock pinned): 14 identical.
+  Differing, every difference attributed by a per-orbit event log: Synthkura (orbit 0 is shared by
+  the koto's mahogany body and the three noise layers without one: 443 owner handovers, each a
+  hard cut at HEAD, a fade now); Stranger Synths (orbits 3 and 4, the slowly patterned vowel: 63
+  changes each, 12 ms then, 50 ms now); frozen Stranger Things 2026-07-03 (orbit 0 shared by the
+  claps and the morse body: 3 on/off; orbit 1, two superimposed voices with wood and glass: 375
+  changes; orbits 2 and 3 vowel: 63 changes each); frozen piece Der Schmetterling 2026-09-16
+  (orbit 3 shared by guitar 3's rosewood body and the bass: 834 handovers). Every other event
+  (a snap on the orbit's first block, a reset at deactivation) is the same on both sides.
+- **Cost.** A settled stage is unchanged (Engaged processes in place). Der Schmetterling, 64
+  cycles, six interleaved runs each side: within noise. Rapid rows cost more only while fades
+  run: a body change every 125 ms +15 %, a vowel change every 62.5 ms +25 % (whole-engine render,
+  one voice), because a fade is now 50 ms of two banks instead of 12.
+- **Guards, each mutation-checked (31 mutants, all red):** `FilterSwapLaw` (spec helper, the law
+  per sample from scratch) is the oracle of `KatalystFilterSwapSpec` (the ramp, the landing, off
+  fades and releases, on fades in, the first-init snap, a change mid-fade keeps every bank, the
+  return turns around and a second clear is idempotent, clear mid-change, the cap with parking
+  and latest-wins, reset from every state, references, a pair's own clock), the body and vowel
+  host rows through `SwapHostScript` (reference banks from the bare DSP: off then the SAME
+  material installs afresh, the return takes the fading bank back, a change mid-fade, reset
+  mid-fade-out is dry at once and the next life snaps) and the EQ row (a curve change on every
+  block against fresh reference `EqCore`s; red for the ping-pong and for a pool one bank short).
+  `KatalystFilterSwapStateIdentitySpec` walks the new table. `OrbitBusPipelineSpec`'s hand-off
+  row reads the intent at once, the body still sounding on the next block, and dry after one fade
+  (red for the body hard-cut mutant since review round 1).
+- **No allocation at the first fade:** the swap's six scratch buffers are sized at construction
+  from `blockFrames` (the builder passes its own, default `RENDER_QUANTUM_FRAMES`); the grow
+  fallback remains only for a direct caller with a longer block.
+- **Not in this step:** the vowel morph (bands gliding by position, the `v1` tap, a Q setter),
+  the compressor and gain, the phaser and duck switch-off, other knob glides.
+
 ## The tail ceiling never under-reports a delay tail (2026-09-19)
 
 Katalyst step 5c-5. Closes the OPEN item of step 5c-1 below (and knob-glide pilot entry 7).
