@@ -168,6 +168,27 @@ class TailCeilingSpec : StringSpec({
         c.hasTail shouldBe false
     }
 
+    "reset() forgets the feedback history too: a reused ceiling decays like a new one" {
+        // The window's largest feedback and the ramp start are records of the finished life. Kept,
+        // a self-oscillating past would count 10x recirculation into the next life's first window.
+        fun decay(c: TailCeiling): Int {
+            c.observe(inputPeak = 1.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 2)
+            var w = 0
+            while (c.hasTail) {
+                c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 2)
+                w++
+                (w < 1000) shouldBe true
+            }
+            return w
+        }
+
+        val reused = TailCeiling()
+        reused.observe(inputPeak = 0.5, frames = 50, windowSamples = 100.0, feedback = 10.0, lapsPerWindow = 2)
+        reused.reset()
+
+        decay(reused) shouldBe decay(TailCeiling())
+    }
+
     "peakOf sees both channels, the sign, and only the first `frames`" {
         val b = StereoBuffer(8)
         TailCeiling.peakOf(b, 8) shouldBe 0.0
@@ -228,8 +249,163 @@ class TailCeilingSpec : StringSpec({
         // At feedback 0 the ring emits its content once more, during the window in progress...
         z.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
         z.hasTail shouldBe true // previous still holds the saturated value inside this window
-        // ...and holds nothing after that window closes: a real false, not a NaN one.
+        // ...but the cells this window wrote before the cut (the unit's feedback ramps from 10 down
+        // across the first block at 0) come round once more in the next window (Katalyst 5c-5; a
+        // ceiling recomputed with the feedback in force NOW said "no tail" here)...
         z.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
+        z.hasTail shouldBe true
+        // ...and it holds nothing after that one closes: a real false, not a NaN one.
+        z.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 2)
         z.hasTail shouldBe false
+    }
+
+    // ── A feedback that moves (Katalyst 5c-5) ─────────────────────────────────────────────────
+
+    "a feedback that FALLS inside a running window keeps the window's largest: its cells were written with it" {
+        // Window 100. Window 0 is fed at fb 0.7 and closes: previous = 1.0. Window 1 recirculates
+        // it at 0.7 for 50 samples (cells up to 0.7), then the feedback is cut to 0. Those cells
+        // are read during window 2, so window 1 must close with a ceiling of 0.7, not 0: the
+        // ceiling recomputed with the feedback in force now dropped an echo at -3 dBFS.
+        val c = TailCeiling()
+        c.observe(inputPeak = 1.0, frames = 100, windowSamples = 100.0, feedback = 0.7, lapsPerWindow = 1)
+        c.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.7, lapsPerWindow = 1)
+        // Two blocks at 0, so the second one's ramp starts at 0 too: this is the window's max
+        // speaking, not the ramp start.
+        c.observe(inputPeak = 0.0, frames = 25, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.observe(inputPeak = 0.0, frames = 25, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1) // window 1 closes
+        c.hasTail shouldBe true
+
+        // And it still falls: window 2 wrote nothing (feedback 0, silent input), so once it
+        // closes there is nothing left to hold the orbit with.
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.hasTail shouldBe false
+    }
+
+    "the block a feedback falls in is credited with where its ramp STARTED, in every window it touches" {
+        // The unit ramps the feedback per sample from the value the last block ended on. Window
+        // 100: window 0 is fed (50 samples), then ONE block of 100 at fb 0 closes it halfway;
+        // its second half already belongs to window 1 and was written with the ramp from 0.7
+        // (around 0.35 there) times a tap reading window 0. So window 1 closes holding content.
+        val c = TailCeiling()
+        c.observe(inputPeak = 1.0, frames = 50, windowSamples = 100.0, feedback = 0.7, lapsPerWindow = 1)
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1) // window 1 closes
+        c.hasTail shouldBe true
+
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.hasTail shouldBe false
+    }
+
+    "a steady feedback decays exactly as before: the window's largest IS the one in force" {
+        // The recurrence of the pre-5c-5 ceiling, ported: under a constant feedback the tracked
+        // maximum equals it, so every close lands on the same block. Uneven blocks and a
+        // non-dividing window, so the carry is exercised too.
+        fun blocksToSilence(c: TailCeiling, fb: Double): Int {
+            var n = 0
+            c.observe(inputPeak = 0.8, frames = 128, windowSamples = 300.0, feedback = fb, lapsPerWindow = 2)
+            while (c.hasTail) {
+                c.observe(inputPeak = 0.0, frames = if (n % 3 == 0) 64 else 128, windowSamples = 300.0, feedback = fb, lapsPerWindow = 2)
+                n++
+                (n < 100_000) shouldBe true
+            }
+            return n
+        }
+
+        fun reference(feedback: Double): Int {
+            val fb = if (feedback < 0.0) -feedback else feedback
+            var previous = 0.0
+            var current = 0.0
+            var peakInWindow = 0.0
+            var elapsed = 0.0
+
+            fun observe(peak: Double, frames: Int) {
+                if (peak > peakInWindow) {
+                    peakInWindow = peak
+                }
+                current = peakInWindow * (1.0 + fb) + fb * previous
+                elapsed += frames
+                while (elapsed >= 300.0) {
+                    previous = current
+                    elapsed -= 300.0
+                    peakInWindow = if (elapsed > 0.0) peak else 0.0
+                    current = peakInWindow * (1.0 + fb) + fb * previous
+                }
+            }
+
+            var n = 0
+            observe(0.8, 128)
+            while (previous > TailCeiling.SILENCE || current > TailCeiling.SILENCE) {
+                observe(0.0, if (n % 3 == 0) 64 else 128)
+                n++
+            }
+            return n
+        }
+
+        for (fb in listOf(0.0, 0.3, 0.7, -0.9, 0.99)) {
+            blocksToSilence(TailCeiling(), fb) shouldBe reference(fb)
+        }
+    }
+
+    "back from an unobserved stretch: resume re-measures only above feedback 1, and credits the stretch's feedback" {
+        fun charged(fb: Double): TailCeiling = TailCeiling().apply {
+            observe(inputPeak = 0.5, frames = 50, windowSamples = 100.0, feedback = fb, lapsPerWindow = 2)
+        }
+
+        // Up to 1 the unit only decayed or held under the frozen ceiling (the soft cap never
+        // expands); above 1 it grew toward the cap, whatever the window ran at.
+        charged(0.7).resume(0.7) shouldBe false
+        charged(0.05).resume(0.9) shouldBe false
+        charged(1.2).resume(1.0) shouldBe false
+        charged(1.2).resume(-1.0) shouldBe false
+        charged(1.2).resume(1.2) shouldBe true
+        charged(0.3).resume(-1.5) shouldBe true
+
+        // The stretch's feedback is credited to the running window. Window 0 is fed at fb 0 and
+        // closes (previous 1.0); the unit then drained unobserved at 0.9, writing about 0.9 into
+        // window 1, which window 2 reads. Resumed at fb 0, the window must close holding it.
+        val c = TailCeiling()
+        c.observe(inputPeak = 1.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.resume(0.9) shouldBe false
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1) // window 1 closes
+        c.hasTail shouldBe true
+        c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.0, lapsPerWindow = 1)
+        c.hasTail shouldBe false
+    }
+
+    "remeasure only ever raises, in both windows, and the raised ceiling still falls" {
+        // Window 100, fb 0.5. A measurement above the ceiling is carried: it counts as the previous
+        // window's content AND as written into the current one, so the next close keeps it.
+        val c = TailCeiling()
+        c.observe(inputPeak = 0.001, frames = 50, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+        c.remeasure(0.8)
+        c.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1) // closes
+        // previous is now >= 0.8: 0.8 halves below 1e-5 in 17 windows, so it holds past 15 more.
+        repeat(15) { c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1) }
+        c.hasTail shouldBe true
+        var w = 0
+        while (c.hasTail) {
+            c.observe(inputPeak = 0.0, frames = 100, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+            w++
+            (w < 100) shouldBe true
+        }
+
+        // A measurement BELOW the ceiling changes nothing: the same decay, block for block.
+        fun decay(measure: Double?): Int {
+            val x = TailCeiling()
+            // 150 samples: window 0 closed (previous 0.5), window 1 under way (current 0.75).
+            x.observe(inputPeak = 0.5, frames = 150, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+            if (measure != null) {
+                x.remeasure(measure)
+            }
+            var n = 0
+            while (x.hasTail) {
+                x.observe(inputPeak = 0.0, frames = 50, windowSamples = 100.0, feedback = 0.5, lapsPerWindow = 1)
+                n++
+                (n < 1000) shouldBe true
+            }
+            return n
+        }
+        decay(0.001) shouldBe decay(null)
+        (decay(0.9) > decay(null)) shouldBe true
     }
 })

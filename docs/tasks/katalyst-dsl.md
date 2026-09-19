@@ -752,7 +752,7 @@ complexity outranks the duplication.
   the declared path disagree on the depth. No song merges a duck; step 5b removes the fields and
   the disagreement with them. Optional alongside: fill the duck's voice fields on an orbit-named
   call, byte-identical by the phaser's argument, which would make every filled door readable.
-- **OPEN, pre-existing, found in the 5c-1 review (2026-09-19): the delay's tail ceiling can
+- **DONE in Katalyst 5c-5 (2026-09-19; was open, found in the 5c-1 review): the delay's tail ceiling could
   under-report a real tail** after a self-oscillating drain or after a feedback reduced to (near)
   zero, live or on return; worst measured an echo at about -3 dBFS dropped at a 0.7 to 0.0
   handover with a silent new owner. Details and the repair shapes in `audio/MEMORY.md`. Any fix
@@ -763,6 +763,30 @@ complexity outranks the duplication.
   The repair the 5b-2 review recommends: `TailCeiling` tracks the largest |feedback| seen in the
   running window, as it tracks the input peak, and uses it for both terms; O(1), closes the class
   on every path, unchanged for a steady feedback.
+  **As built in 5c-5:** exactly that repair, plus, for a return from a self-oscillating drain
+  (the frozen window's own feedback is above 1 there, so the window maximum alone does not close
+  it), the drain hands its feedback to the ceiling and, only above 1, the delay re-measures what
+  its tap can still reach (one O(delay) scan on that return only). Measured before and after at
+  effect level: a 0.7 to 0.0 handover dropped repeats at -9 dBFS in about 30 % of phases, now
+  nothing; the chain-swap ring-out the same; a self-oscillating drain and a tame return dropped
+  -39 to -87 dBFS, now -110 dBFS or quieter. A reset or retire only ever moves LATER: at most
+  about two windows after a fall; after a self-oscillating drain the orbit holds the ring's real
+  tail (minutes at a returning feedback of 0.99, an idle network). 18 of 18 songs bit-identical.
+  In review, the audio reviewer's independent fuzz (600 runs, time held fixed) found the old
+  ceiling wrong in 322 and the new one in none.
+- **OPEN, pre-existing, found in the 5c-5 review (2026-09-19): a LENGTHENED tap can re-reach
+  content the ceiling has already written off.** At a low feedback the ceiling rightly says "no
+  tail" once the short tap has passed a burst, but a new owner with a longer `delay.time` reads
+  the same ring further back: a delay at 0.03 s and feedback 0 takes a burst at -1 dBFS, two
+  windows later a quiet owner arrives at 0.18 s, and the orbit resets over a ring that would
+  still emit -1 dBFS. Live and on return; the old and the new ceiling agree. Arguably right to
+  cut (at feedback 0 it is a stale re-emission), but a reset in the middle of it is a cut. Decide
+  with the other 5c switch edges; a candidate is to re-measure on a time lengthening, as the
+  self-oscillating return already does.
+- **Candidate, pre-existing (5c-5 review): a LIVE self-oscillating delay that falls to a tame
+  feedback decays from `CEILING_MAX` (1e6)**, about twice the ring's real tail at 0.99, because
+  the ceiling saturates at 1e6 while softCap bounds every cell at the `cap`. Saturating the
+  delay's ceiling at the cap would align it with the drain path. Idle hold only, never audio.
 - **DECIDED 2026-09-19 with the maintainer: how every orbit stage switches and changes (step 5c).**
   The principle: **always glide from the CURRENT state of the effect to the target state; only the
   very first initialisation is instant.** It is the knob-glide rule (`docs/plans/knob-glide.md`)

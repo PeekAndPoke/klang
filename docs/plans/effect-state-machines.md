@@ -93,6 +93,13 @@ The rule of thumb for every `State.process()`, in three lines (maintainer, 2026-
    (`state.deactivate(line)`). That is why the common case's `configure`, an orbit whose delay is
    off and never had a ring, compiles to the same bytecode before and after; its `process` trades
    a null-check return for an empty virtual call, the same cost by another mechanism.
+   **Recorded exception (Katalyst 5c-5, 2026-09-19):** since the tail-ceiling fix the delay's
+   on-arm is no longer identical from every state: a return from Draining hands the drain's
+   feedback to the tail ceiling (`resume`, and above 1 a re-measure). It is written as ONE
+   reference compare, `if (state === draining)`, on the effect's arm rather than a dispatch
+   (`state.activate(line)`), because the arm stays otherwise shared and the compare is cheaper
+   than a virtual call on every configure. A conversion that copies this plan copies the rule,
+   not the exception: an arm that differs in MORE than one state-specific line dispatches.
 3. **`enter(...)` is the only way in, and the only thing that INITIALISES the state's own
    data.** `enter` sets `state = this` and initialises the fields that die with the state. The
    state's own `process` may ADVANCE them (the delay's countdown); nothing outside the state
@@ -152,7 +159,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
   wherever `hasTail()` is a constant. (4) which state data are REFERENCES (the swap's old pair and
   its fade position, the compressor's instance, the cylinder's outgoing chain), and which event of
   that state drops them on the way out; that event then dispatches to the state. The delay has
-  none (its one state datum is a `Double`), which is why its `reset()` and `release()` may enter
+  none (its state data are `Double`s: the countdown and, since 5c-5, the drain's feedback), which is why its `reset()` and `release()` may enter
   Off without dispatching; a copy of that shape for the swap's `clear()` would keep two dead
   banks alive.
 - **REQUIREMENT for every re-entry (an owner that comes back while the stage is on its way

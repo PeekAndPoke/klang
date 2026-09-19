@@ -47,12 +47,29 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * |feedback| ≥ 1 never decays and pins the orbit until the owner turns it off — the raw engine's
  * intent, and what the scan did for a charged self-oscillating ring.
  *
+ * **A feedback that moves (Katalyst 5c-5).** Both terms of a window take the LARGEST |feedback|
+ * any of its blocks ran at, tracked like the input peak, and each block counts from where the
+ * unit's per-sample ramp started (the previous block's value) as well as where it ends. A window
+ * holds cells written with every feedback it saw, so a feedback cut under a ringing unit (an owner
+ * handover, a glide falling toward 0) can no longer make the ceiling vanish at the next close
+ * while the ring still holds the repeat it wrote before the cut: measured at 0.7 to 0.0 on a 0.4 s
+ * delay, an echo at -9 dBFS was dropped in a third of the phases. The cost is a hold of at most
+ * about two extra windows after a fall (measured: 276 blocks at 0.4 s, 1.84 windows): the window
+ * the cut lands in keeps the old feedback, and the block that straddles or starts the next window
+ * credits its ramp start (still the old feedback) to that whole next window too. A steady or
+ * rising feedback computes the same numbers as before, bit for bit. A stretch the ceiling did not
+ * observe (a delay's drain) is handed back through [resume], and above |feedback| 1, where the unit
+ * grew under a frozen value, the owner raises the ceiling to a measurement ([remeasure]).
+ *
  * **When the answer differs from the scan.** The invariant, precisely: the ceiling bounds every
  * cell written under the CURRENT period within the current and the previous window, so "no
  * tail" here implies `tapWindowPeakAbs` would say so too. A delay-time LENGTHENING can reach
- * older cells the ceiling has already decayed (up to the ring's capacity, 0.5 s at class 0) —
- * raw live-change behaviour the delay effect's own KDoc already files, and the cut, if an orbit
- * deactivates right then, lands at `quiet/loud · 1e-5`, −60 to −90 dBFS. The comb damping's
+ * older cells the ceiling has already forgotten (up to the ring's capacity, 0.5 s at class 0),
+ * live or on a return from a drain. The ceiling tracks only the current and the previous window,
+ * so what the longer tap re-reaches is bounded by nothing it knows: at a low feedback those older
+ * cells never decayed, and the cut, if an orbit deactivates right then, can be the FULL level of
+ * anything still in the ring's span (review of 5c-5: a -1 dBFS burst into a 0.03 s delay at
+ * feedback 0, then a quiet owner at 0.18 s re-reaches it after "no tail"). Pre-existing and open. The comb damping's
  * one-pole carries a small weight (≤ d², 0.16 at most) of windows older than the previous one,
  * folded into the bound's own slack (its steady state overstates a comb by ~1.7× at fb 0.7).
  * On the other side it can hold the unit longer — up to one window, and by that slack (up to 2×
@@ -65,6 +82,16 @@ class TailCeiling {
 
     /** The largest input peak seen in the current window. */
     private var inputPeakInWindow = 0.0
+
+    /**
+     * The largest |feedback| any block of the current window ran at, both terms' coefficient.
+     * Tracked like [inputPeakInWindow], so a feedback that FALLS inside a running window cannot
+     * lower the ceiling below what the window's cells were written with (Katalyst 5c-5).
+     */
+    private var feedbackInWindow = 0.0
+
+    /** The |feedback| the last observed block ended on: where the unit's per-sample ramp starts. */
+    private var lastFeedback = 0.0
 
     /** Samples into the current window. */
     private var elapsed = 0.0
@@ -88,7 +115,11 @@ class TailCeiling {
      * @param lapsPerWindow how many times a sample can pass the shortest path within one window
      */
     fun observe(inputPeak: Double, frames: Int, windowSamples: Double, feedback: Double, lapsPerWindow: Int) {
-        val fb = if (feedback < 0.0) -feedback else feedback
+        val fbEnd = if (feedback < 0.0) -feedback else feedback
+        // The block runs from the feedback the last one ended on to this one (`DelayLine` ramps
+        // per sample), so it is credited with the larger of the two. Steady, both are [fbEnd].
+        val fb = if (lastFeedback > fbEnd) lastFeedback else fbEnd
+        lastFeedback = fbEnd
         val window = if (windowSamples >= 1.0) windowSamples else 1.0
 
         // Under a constant window the loop below always leaves `elapsed < window`, so arriving here
@@ -100,6 +131,7 @@ class TailCeiling {
         if (elapsed >= window) {
             previous = current
             inputPeakInWindow = 0.0
+            feedbackInWindow = 0.0
             elapsed = 0.0
         }
 
@@ -110,7 +142,12 @@ class TailCeiling {
         if (peak > inputPeakInWindow) {
             inputPeakInWindow = peak
         }
-        current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
+
+        if (fb > feedbackInWindow) {
+            feedbackInWindow = fb
+        }
+
+        current = saturate(fresh(inputPeakInWindow, feedbackInWindow, lapsPerWindow) + feedbackInWindow * previous)
 
         // Bounded by `frames / window + 1` by construction: one close through both 10 ms doors.
         elapsed += frames
@@ -118,9 +155,56 @@ class TailCeiling {
             previous = current
             elapsed -= window
             // The next window holds this block's peak only if the block reaches into it: a block
-            // that ends exactly on the boundary contributes nothing to what follows.
+            // that ends exactly on the boundary contributes nothing to what follows. Its feedback
+            // likewise, except the value it ended on, where the next block's ramp starts.
             inputPeakInWindow = if (elapsed > 0.0) peak else 0.0
-            current = saturate(fresh(inputPeakInWindow, fb, lapsPerWindow) + fb * previous)
+            feedbackInWindow = if (elapsed > 0.0) fb else fbEnd
+            current = saturate(fresh(inputPeakInWindow, feedbackInWindow, lapsPerWindow) + feedbackInWindow * previous)
+        }
+    }
+
+    /**
+     * The unit comes back from a stretch this ceiling did not observe (a delay's drain, which runs
+     * on silent input without calling [observe]) that ran at |feedback| up to [feedback]. O(1).
+     *
+     * That feedback is credited to the running window through the next block's ramp start, so the
+     * cells the stretch wrote at it are covered. Up to |feedback| 1 that is all it takes: the soft
+     * cap and the interpolating tap never expand, so the unit only decayed or held under the
+     * frozen value, and the ceiling resumes. Above 1 the unit GREW under a value frozen at a
+     * fraction of the cap, the answer is `true`, and the owner must [remeasure] from what the unit
+     * actually holds: resuming would under-report for as long as the tail lasts.
+     */
+    fun resume(feedback: Double): Boolean {
+        val fb = if (feedback < 0.0) -feedback else feedback
+
+        if (fb > lastFeedback) {
+            lastFeedback = fb
+        }
+
+        return fb > 1.0
+    }
+
+    /**
+     * Raises the ceiling to a MEASUREMENT of what the unit can still emit or recirculate ([peak],
+     * e.g. `DelayLine.tapWindowPeakAbs`), in both windows, and never lowers it: the measured
+     * content counts as held by the previous window and as written into the current one, so the
+     * next close carries it forward and the recurrence decays it from there. O(1); the scan that
+     * produced [peak] is the caller's.
+     */
+    fun remeasure(peak: Double) {
+        // A non-finite measurement is "louder than any audio", as in [observe].
+        val p = if (peak <= CEILING_MAX) peak else CEILING_MAX
+
+        if (p > previous) {
+            previous = p
+        }
+
+        if (p > inputPeakInWindow) {
+            inputPeakInWindow = p
+        }
+
+        if (p > current) {
+            current = p
         }
     }
 
@@ -132,6 +216,8 @@ class TailCeiling {
         previous = 0.0
         current = 0.0
         inputPeakInWindow = 0.0
+        feedbackInWindow = 0.0
+        lastFeedback = 0.0
         elapsed = 0.0
     }
 

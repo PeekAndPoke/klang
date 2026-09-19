@@ -1,5 +1,61 @@
 # Klang Audio — Memory
 
+## The tail ceiling never under-reports a delay tail (2026-09-19)
+
+Katalyst step 5c-5. Closes the OPEN item of step 5c-1 below (and knob-glide pilot entry 7).
+`TailCeiling` said "silent" over an audible repeat in two ways; both repairs only RAISE the
+ceiling, so an orbit reset or a chain-swap retire can move LATER, never earlier.
+
+- **Falling feedback (live, after a drain, on the ring-out).** `observe` now keeps the LARGEST
+  |feedback| any block of the running window ran at (`feedbackInWindow`, like the input peak) and
+  uses it for both terms; each block also counts the value its per-sample ramp STARTED from
+  (`lastFeedback`, `DelayLine` ramps from the previous block's feedback), in every window the block
+  touches. A steady or rising feedback computes the same doubles as before. Cost: a hold of at
+  most about TWO extra windows after a fall (measured 276 blocks at 0.4 s, 1.84 windows): the
+  window of the cut keeps the old feedback, and the block that straddles or starts the next window
+  credits its ramp start to that whole window too.
+- **Self-oscillating drain, tame return.** The drain does not observe, so the ceiling freezes.
+  On `Draining -> Active` the effect calls `TailCeiling.resume(drainFeedback)` (O(1)): it credits
+  the drain's largest feedback to the next block's ramp start, and up to |feedback| 1 that is
+  enough, because the soft cap and the tap never expand (the ring only decayed or held under the
+  frozen value). Above 1 it returns true and the effect RE-MEASURES: `remeasure(tapWindowPeakAbs())`
+  raises `previous`, the window's input peak and `current` to the measurement, never lowers them.
+  One O(delay) scan, only on a return from a self-oscillating drain. Rejected: re-measuring on
+  every return (a scan per note toggle, and it moved the steady toggle's fall by 138 blocks; as
+  built, two owners alternating per block, one self-oscillating and one with the delay off, still
+  pay one O(delay) scan on each off-edge, the countdown's, AND on each on-edge, the re-measure);
+  observing through the drain (at |feedback| > 1 the ceiling runs to `CEILING_MAX` while the ring
+  sits at the cap, a hold of minutes after a tame return); a `fb > windowFeedback` measure arm
+  (measured unexposed, -100 dBFS, and the credit covers it by the argument above).
+- **Measured** (effect level, one-off fixture, 0.4 s and 0.1 s, burst of 4 blocks at 0.5, the
+  note swept over the window, the cut swept over two windows; "dropped" is the loudest sample the
+  ring still emits after the orbit would reset). BEFORE: live handover 0.7 to 0.0 on the orbit
+  path (ten silent blocks) -9.1 dBFS in 354 of 1196 phases; the same after a 1/20/60-block drain
+  -9.1 dBFS in 373 of 1008; ring-out glide 0.7 to 0.0 (no wait) -9.1 dBFS in 405 of 1196, to 0.05
+  -87 dBFS; self-oscillating 1.2 drain, charges 0.1 / 0.01 / 0.005 / 0.001 / 0.0002, return at
+  0.9: -87 / -67 / -61 / -47 / -39 dBFS (at 0.3: -94 / -73 / -73 / -63 / -48). AFTER: nothing
+  above -110 dBFS in any of them (the fb 0.0 cases drop nothing at all); per phase, 0 resets
+  earlier, the rest the same or later (at most 276 blocks, two windows, for the cut; after a
+  self-oscillating drain the orbit now holds the real tail, up to 115 000 blocks at a return of
+  0.99). Steady and toggled controls: identical reset blocks. The rising-glide-at-leave case was
+  -100 dBFS before and after (sub-threshold, unchanged).
+- **Song identity.** 15 built-in songs and 3 frozen pieces, 256 cycles, 48 kHz, raw doubles of
+  the engine mix per block, wall clock pinned (`timeOfDay`, `sinOfDay`, `sinOfDay2`,
+  `timeOfNight`, `sinOfNight` to `pure(0.5)`): bit-identical at `8a2878e2` and on the tree, 18 of
+  18. Able to fail: a mutant ceiling without its recirculation term changed 12 of the 18.
+- **Guards, each mutation-checked:** `TailCeilingSpec` (falling feedback, ramp start, steady
+  equals the old recurrence, resume's answer and credit, remeasure raises only, reset forgets
+  the feedback history; the self-oscillation row now expects the extra window);
+  `KatalystDelayEffectSpec` (the cut swept over note and cut phase with a ring oracle, the
+  self-oscillating return, the steady toggle pinned at `8a2878e2`'s blocks 2476 / 2507);
+  `CylinderChainCrossfadeSpec` (the ring-out retires only over an empty ring).
+- **Still open:** a tap LENGTHENED, live or on return. The old price (`quiet/loud * 1e-5`, -60 to
+  -90 dBFS) was wrong: it assumed the older cells decayed by the feedback, false at a low one. At
+  feedback 0 the cut can be the full level of anything still in the ring's span (review of 5c-5:
+  a -1 dBFS burst into a 0.03 s delay, then a quiet owner at 0.18 s re-reaches it after "no
+  tail"). Pre-existing; the old and new ceilings answer the same there. The reverb's
+  drain return does not call `resume` (comb feedback below 1, measured unexposed).
+
 ## The orbit-bus fields left the wire (2026-09-19)
 
 Katalyst step 5b-3. `VoiceData` lost `delay*`, `reverb*`, `compressor*` and `duck*`; the orbit's
@@ -47,11 +103,8 @@ listening checkpoint.
   sounding (`reachSamples`), and the ceiling's laps per window count the SHORTEST one; both equal
   the settled values when nothing moves. The drain countdown takes the larger
   feedback magnitude while it glides (pilot entry 6, both directions guarded); entry 7 (a feedback
-  falling to 0) stays open for 5c, now with a fourth reader: the chain-swap ring-out retires the
-  leaving chain on the first block its ceiling says silent, without the orbit path's ten silent
-  blocks, so a feedback glide falling to near zero there can drop one repeat (review round 2).
-  Recommended repair for 5c: `TailCeiling` tracks the largest |feedback| seen in the running
-  window, as it tracks the input peak.
+  falling to 0, also on the chain-swap ring-out) was CLOSED by step 5c-5, see "The tail ceiling
+  never under-reports a delay tail" above.
 - **Evidence**: 21 renders at HEAD `e08143f3` and on the tree, raw doubles, 256 cycles, wall clock
   pinned. Unaffected songs are identical or at rounding level; every other difference is an orbit
   with a body or vowel before the room, a delay AND a reverb, or voices with and without a wet on
@@ -276,7 +329,8 @@ six sites besides its initializer. Byte-identical, proven twice (below).
   it is NOT a bound at `|feedback| >= 1`, nor across a LENGTHENED tap, nor after a feedback
   REDUCED to (near) zero, and each of those can let `hasTail` answer false over real content. The countdown really does die with
   `Draining`, so it moved.
-- **OPEN, pre-existing, recorded 2026-09-19 (not introduced by the state machine, bit-identical at
+- **CLOSED by step 5c-5 (see "The tail ceiling never under-reports a delay tail" above); kept as
+  the record of the finding. Recorded 2026-09-19 (not introduced by the state machine, bit-identical at
   HEAD, deliberately not fixed in an identity step): a self-oscillating delay can leave a stale
   ceiling that later under-reports a real tail, and so can a feedback reduced to (near) zero.**
   WIDENED in review round 4, measured on the compiled classes: `TailCeiling.observe` recomputes the

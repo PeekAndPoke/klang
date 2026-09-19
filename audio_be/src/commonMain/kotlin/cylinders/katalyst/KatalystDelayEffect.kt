@@ -209,47 +209,31 @@ class KatalystDelayEffect(
      * drain the ceiling is FROZEN while the ring moves underneath it.
      *
      * **This paragraph is the one home of what the frozen ceiling is worth.** It is a bound while
-     * Draining and at the moment of return, wherever the ring decays, which is every
-     * `|feedback| < 1`: there the stale number says "the ring holds no more than this", and that is
-     * the safe direction, because this number decides whether the orbit may be torn down. It is NOT
-     * a bound in at least the three places below (the list is what review found, not a proof that
-     * there are no more), and each can let [hasTail] answer false over real content:
-     * - a tap LENGTHENED on the way back reaches cells the ceiling has already decayed past. This
-     *   is the exception [TailCeiling] files itself, and it prices the cut it can make: -60 to
-     *   -90 dBFS if an orbit deactivates in that instant. It belongs to live delay-time changes
-     *   rather than to the drain.
-     * - at `|feedback| >= 1` the ring GROWS under the frozen ceiling. While the drain runs that
-     *   cannot cut anything (the drain is infinite by design and the frozen value is already above
-     *   [TailCeiling.SILENCE]), and neither can the moment of return. AFTERWARDS it can: a
-     *   self-oscillating delay takes a charge, the owner leaves, the ring grows to the cap under a
-     *   ceiling frozen at a fraction of it, and a new owner returns with a TAME feedback (the
-     *   escape this class's KDoc documents) and a silent feed. The stale ceiling then decays
-     *   geometrically and crosses [TailCeiling.SILENCE] while the ring still holds about
-     *   `(ring at return / frozen ceiling) * 1e-5`. Traced through [TailCeiling] at a 0.4 s
-     *   delay with a returning feedback near 1: a 0.1 feed peak leaves about -86 dBFS behind,
-     *   0.005 about -60 dBFS and 0.0002 about -32 dBFS, after several windows of silence. With a
-     *   returning feedback near ZERO it is louder and sooner, see the next bullet.
-     * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover:
-     *   [TailCeiling.observe] recomputes the running window with the feedback in force NOW, so the
-     *   ceiling vanishes at the next window close while the ring still holds one repeat written
-     *   under the old feedback. Measured on the compiled classes in the 5c-1 review: at 0.7 to
-     *   0.0 an echo at about -3 to -6 dBFS is dropped in a sizeable share of phases, the orbit
-     *   reset within about 80 blocks. It needs the new owner to send nothing audible and the mix
-     *   to be silent for the cylinder's ten blocks while the repeat is in flight; no built-in song
-     *   reaches it. A feedback of 0.01 or more stays below -83 dBFS. The feedback glide (step
-     *   5b-2) leaves this as it was: it spreads the reduction over 50 ms, which is shorter than
-     *   the window of any delay time long enough to matter, and the repair stays with the tail
-     *   fix of 5c (`docs/plans/knob-glide.md`, pilot log entry 7). A fourth reader since step
-     *   5b-2: a chain-swap ring-out (`Cylinder.processEffects`) retires the leaving chain on the
-     *   first block its ceiling says silent, without the ten silent blocks the orbit path waits,
-     *   so a feedback glide falling to near zero there can drop one repeat. The repair the step's
-     *   reviewers recommend for 5c: [TailCeiling] tracks the largest |feedback| seen in the
-     *   running window, as it tracks the input peak.
-     *   All three are PRE-EXISTING and bit-identical before this state machine, so they are
-     *   recorded as open (`audio/MEMORY.md`, `docs/tasks/katalyst-dsl.md`) rather than fixed here:
-     *   any repair moves the block on which an orbit resets and needs the listening checkpoint.
-     *   The reverb does not share them (fixed comb lengths, comb feedback structurally below 1),
-     *   so this paragraph must NOT be copied into its conversion.
+     * Draining and at the moment of return wherever the ring cannot grow, which is every
+     * `|feedback| <= 1`, once the drain's own feedback is credited to it ([Draining.resume],
+     * [TailCeiling.resume]): there the stale number says "the ring holds no more than this", and
+     * that is the safe direction, because this number decides whether the orbit may be torn down.
+     * What review found, and where each stands since Katalyst 5c-5:
+     * - a tap LENGTHENED, live or on the way back, reaches cells the ceiling no longer covers.
+     *   This is the exception [TailCeiling] files itself: at a low feedback those cells never
+     *   decayed, so the cut, if an orbit deactivates in that instant, can be the full level of
+     *   whatever is still in the ring's span. STILL OPEN.
+     * - at `|feedback| > 1` the ring GROWS under the frozen ceiling (to the cap, from a charge the
+     *   ceiling froze at a fraction of it), and a new owner returning with a tame feedback used to
+     *   resume that stale value: ring and ceiling then decayed together and the ceiling crossed
+     *   [TailCeiling.SILENCE] with the ring still at -39 to -87 dBFS (0.4 s, charges 0.1 to
+     *   0.0002). CLOSED: that return RE-MEASURES ([Draining.resume]); after it, nothing above
+     *   -110 dBFS is left when the orbit resets.
+     * - a feedback REDUCED to (near) zero, after a drain or LIVE on an owner handover or a glide:
+     *   [TailCeiling.observe] recomputed the running window with the feedback in force NOW, so the
+     *   ceiling vanished at the next window close while the ring still held the repeat written
+     *   under the old feedback, on the orbit path (after its ten silent blocks) and on the
+     *   chain-swap ring-out (which retires the leaving chain on the first silent answer). Worst
+     *   measured: -9 dBFS dropped at 0.7 to 0.0. CLOSED: the ceiling keeps the largest feedback its
+     *   window saw (see [TailCeiling]); after it, nothing above -110 dBFS is dropped.
+     * Both repairs only ever RAISE the ceiling, so an orbit can reset later than before, never
+     * earlier; for a steady feedback nothing moved. The reverb shares none of the drain half
+     * (fixed comb lengths, comb feedback structurally below 1).
      *
      * Entering [Off] is the one place the ceiling is forgotten, because there the ring is empty.
      * That line is load-bearing: without it the next life reads the previous life's ceiling and
@@ -268,13 +252,14 @@ class KatalystDelayEffect(
      * |---|---|---|---|---|---|
      * | **Off** | **Active** (a ring is rented if needed). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | Off | Off |
      * | **Active** | Active (the knobs are rewritten) | **Draining**, or **Off** when the tap window is already silent | (never) | Off | Off |
-     * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap) | Draining (the countdown keeps running) | **Off** | Off | Off |
+     * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first) | Draining (the countdown keeps running) | **Off** | Off | Off |
      *
-     * The ON arm of [configure] is the same from every state, so it stays on the effect and only
-     * the OFF arm dispatches ([deactivate]). Per block that is one virtual call for the block
-     * ([process]) and, on the OFF arm only, one more for the owner's config: a running delay takes
-     * the ON arm and dispatches nothing through [state]. That is the price of the `when`s they
-     * replace.
+     * The ON arm of [configure] is the same from every state but one line, so it stays on the
+     * effect and only the OFF arm dispatches ([deactivate]); the one line is a reference compare
+     * that hands a return from [Draining] its ceiling check ([Draining.resume], Katalyst 5c-5).
+     * Per block that is one virtual call for the block ([process]) and, on the OFF arm only, one
+     * more for the owner's config: a running delay takes the ON arm and dispatches nothing through
+     * [state]. That is the price of the `when`s they replace.
      *
      * `sealed` buys no exhaustive `when` here, because no `when` over the states is left: it is
      * documentation that the set is closed, and the compiler's guarantee that a fourth state
@@ -389,7 +374,7 @@ class KatalystDelayEffect(
                 line.reset()
                 off.enter()
             } else {
-                draining.enter(remaining)
+                draining.enter(remaining = remaining, feedback = drainFeedback)
             }
         }
     }
@@ -397,9 +382,9 @@ class KatalystDelayEffect(
     /**
      * The owner turned the delay off while the ring still held a tail: keep processing with SILENT
      * input under the retained last-active parameters, so the already-scheduled echoes complete on
-     * their own timeline. The countdown is this state's whole data, and [enter] is its only
-     * INITIALISER: [process] advances it every block, nothing outside this class touches it at
-     * all. That is why a delay that returns mid-drain and leaves again gets a fresh countdown and
+     * their own timeline. Its data is the countdown and the drain's feedback bound (for the
+     * return, see [resume]), and [enter] is the only INITIALISER of both: [process] advances the
+     * countdown every block, nothing outside this class touches either. That is why a delay that returns mid-drain and leaves again gets a fresh countdown and
      * never the remains of the previous one, and it is what made three defensive writes of the old
      * flag version dead code (the two `drainRemaining = 0.0` in [reset] and [release], and the
      * field write on the arm that went straight to Off).
@@ -408,9 +393,32 @@ class KatalystDelayEffect(
         /** Remaining drain samples; [Double.POSITIVE_INFINITY] while `|feedback| >= 1` (self-oscillation). */
         private var remaining = 0.0
 
-        fun enter(remaining: Double) {
+        /**
+         * The feedback bound the countdown was computed with (see [Active.deactivate]): mid-glide
+         * the larger magnitude of the value in force and the target, otherwise the line's own
+         * feedback, SIGNED. Its magnitude bounds every feedback this drain runs at; [resume]
+         * hands it to [TailCeiling.resume], which takes the magnitude.
+         */
+        private var feedback = 0.0
+
+        fun enter(remaining: Double, feedback: Double) {
             this.remaining = remaining
+            this.feedback = feedback
             state = this
+        }
+
+        /**
+         * The owner is back before the countdown ended. [TailCeiling.observe] did not run while
+         * the ring drained, so the ceiling is the one frozen at the drain's start. Up to
+         * |feedback| 1 it is still a bound once the drain's feedback is credited to it
+         * ([TailCeiling.resume]); above 1 the ring grew under it, and it re-measures what the tap
+         * can still reach: one O(delay) scan, on this edge and only after a self-oscillating
+         * drain (Katalyst 5c-5). Raise-only, so a return can move a reset later, never earlier.
+         */
+        fun resume(line: DelayLine) {
+            if (activeTail.resume(feedback)) {
+                activeTail.remeasure(line.tapWindowPeakAbs())
+            }
         }
 
         override fun process(ctx: KatalystContext) {
@@ -499,6 +507,13 @@ class KatalystDelayEffect(
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
             feedbackGlide.retarget(guardedFeedback)
             wetGlide.retarget(if (wet.isFinite()) wet else DELAY_WET)
+
+            // A return mid-drain: the frozen ceiling may need a measurement (after the knobs, so
+            // the scan reaches the longer of the old and the new tap).
+            if (state === draining) {
+                draining.resume(line)
+            }
+
             active.enter()
             return
         }

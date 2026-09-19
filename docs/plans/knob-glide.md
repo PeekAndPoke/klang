@@ -120,8 +120,11 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
    from the target" passed every test.
 7. **The tail ceiling under a FALLING coefficient** under-states a window by at most the ratio of
    the two feedbacks for about two windows. For the reverb (feedback floor 0.7) that is -97 dBFS
-   or quieter, left as it is. The delay's feedback can reach 0.0, the case `audio/MEMORY.md`
-   records as audible: decide it explicitly when delay feedback glides (with the tail fix of 5c).
+   or quieter. The delay's feedback can reach 0.0, the case `audio/MEMORY.md` recorded as
+   audible. CLOSED by Katalyst 5c-5 (2026-09-19): the ceiling uses the largest |feedback| any
+   block of its running window ran at (the ramp's start included), for the reverb's size as well
+   as the delay's feedback, so a falling coefficient holds about two windows longer instead of
+   under-stating.
 8. **What an identity fixture can claim for a coefficient on a recursive network:** bit-identical
    before the change, different from the first RE-EMITTED block on (one shortest comb later), the
    difference decaying with the tail. For the delay, expect it one delay time after the change.

@@ -1037,6 +1037,50 @@ class CylinderChainCrossfadeSpec : StringSpec({
         }
     }
 
+    "a leaving delay whose feedback falls to 0 is not retired while a repeat is still in flight" {
+        // The ring-out retires the leaving chain on the FIRST block its ceiling says silent, with
+        // no silent-block wait, so a feedback cut under the ring (here: a new owner with feedback
+        // 0 takes the orbit as the swap starts and still steers the leaving chain while it fades)
+        // used to end it one echo early: the ceiling recomputed the window with the feedback in
+        // force NOW (Katalyst 5c-5, measured at -9 dBFS). Swept over where the note sits in the
+        // 0.1 s window. The oracle is the leaving ring itself, read right after the block that
+        // retired it: the shelf takes it back dirty, so its content is still there to read.
+        for (pre in 0 until 36 step 2) {
+            val rig = Rig()
+            rig.registry.register("dry", dryChain(1.0))
+            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.7))
+
+            rig.render(blocks = 4, level = probe)
+            rig.render(blocks = pre)
+
+            val line = rig.cylinder.delay.shouldNotBeNull().delayLine.shouldNotBeNull()
+
+            rig.cylinder.requestChain("dry")
+            rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = echoState(wet = 1.0, time = 0.1, feedback = 0.0))
+            rig.skipBlock()
+
+            var retiredAfter = -1
+
+            for (b in 0 until 400) {
+                rig.block()
+
+                if (!rig.cylinder.isFading && !rig.cylinder.isDraining) {
+                    retiredAfter = b
+
+                    break
+                }
+            }
+
+            withClue("pre $pre: the leaving chain must retire, a ceiling that never falls pins the orbit") {
+                (retiredAfter in 0..(3 * 35 + fadeBlocks)) shouldBe true
+            }
+
+            withClue("pre $pre: retired over a ring that still holds ${line.tapWindowPeakAbs()}") {
+                (line.tapWindowPeakAbs() <= 0.00001) shouldBe true
+            }
+        }
+    }
+
     // ── Owner writers ────────────────────────────────────────────────────────────────────────────
 
     "the owner configures BOTH chains while they fade, and stops at the drain" {

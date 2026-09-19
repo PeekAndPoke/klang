@@ -638,4 +638,168 @@ class KatalystDelayEffectSpec : StringSpec({
         (off64 > 0) shouldBe true
         (abs(off128 - off64) <= 128) shouldBe true
     }
+
+    // ── The tail ceiling never under-reports (Katalyst 5c-5) ─────────────────────────────────
+
+    /**
+     * Runs [blocks] silent blocks with [owner] configuring before each, and asserts the one
+     * property the tail ceiling exists for, on every block: "no tail" only while the tap window
+     * (what the ring can still emit or recirculate, the oracle) is silent. Returns the first
+     * block that answered "no tail", or -1.
+     */
+    fun neverCutsAnEcho(effect: KatalystDelayEffect, blocks: Int, clue: String, owner: (Int) -> Unit): Int {
+        val ctx = createCtx()
+        var firstSilent = -1
+
+        for (b in 0 until blocks) {
+            owner(b)
+            ctx.mixBuffer.clear()
+            effect.process(ctx)
+
+            if (!effect.hasTail()) {
+                if (firstSilent < 0) {
+                    firstSilent = b
+                }
+
+                val line = effect.delayLine
+
+                if (line != null) {
+                    withClue("$clue, block $b: 'no tail' over a ring that still holds ${line.tapWindowPeakAbs()}") {
+                        (line.tapWindowPeakAbs() <= 0.00001) shouldBe true
+                    }
+                }
+            }
+        }
+
+        return firstSilent
+    }
+
+    "a feedback cut to 0 under a ringing delay is never answered 'no tail' while a repeat is in flight" {
+        // The 5b-2 review's case: the ceiling recomputed the running window with the feedback in
+        // force NOW, so a cut from 0.7 to 0.0 (an owner handover; the glide only spreads it over
+        // 50 ms) made it vanish at the next window close while the ring still held the repeat it
+        // had written under 0.7. Measured at 0.4 s: an echo at -9 dBFS dropped in a third of the
+        // phases. Swept here over where the note sits in the window (pre) and when the new owner
+        // arrives (at), both live and after a short drain, at 0.1 s so a window is 35 blocks.
+        for (pre in 0 until 35 step 4) {
+            for (at in 0 until 70 step 3) {
+                for (drain in listOf(0, 3)) {
+                    val effect = createEffect(delayTime = 0.1, feedback = 0.7)
+                    val ctx = createCtx()
+
+                    repeat(pre) {
+                        ctx.mixBuffer.clear()
+                        effect.process(ctx)
+                    }
+
+                    repeat(4) {
+                        ctx.mixBuffer.fill(0.5)
+                        effect.process(ctx)
+                    }
+
+                    val silentAt = neverCutsAnEcho(effect, blocks = 400, clue = "pre $pre, at $at, drain $drain") { b ->
+                        if (b >= at && b < at + drain) {
+                            effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                        } else if (b >= at) {
+                            effect.configure(time = 0.1, feedback = 0.0, cap = 1.0, wet = 1.0)
+                        }
+                    }
+
+                    // And it still falls, soon: feedback 0 empties the ring within two windows of
+                    // the cut, and a ceiling that never dropped would pin the orbit for ever.
+                    withClue("pre $pre, at $at, drain $drain: the ceiling must fall once the ring is empty") {
+                        (silentAt in 0..(at + drain + 3 * 35)) shouldBe true
+                    }
+                }
+            }
+        }
+    }
+
+    "a self-oscillating drain then a tame owner: the ceiling re-measures instead of resuming a frozen value" {
+        // Feedback 1.2 takes a small charge; the owner leaves, the drain is infinite and the ring
+        // grows to the cap under a ceiling frozen at a fraction of it; a new owner returns with a
+        // tame feedback and sends nothing. Ring and a resumed ceiling decay together, so the
+        // ceiling crossed the silence threshold while the ring still held
+        // `cap / frozen * 1e-5`: at 0.4 s, -63 dBFS for a charge of 0.001 returning at 0.3.
+        for (tame in listOf(0.0, 0.3, 0.8)) {
+            val effect = createEffect(delayTime = 0.1, feedback = 1.2)
+            val ctx = createCtx()
+            ctx.mixBuffer.fill(0.001)
+            effect.process(ctx)
+
+            // 2000 blocks: 57 windows of growth by 1.2, from 0.001 to the cap.
+            val silentAt = neverCutsAnEcho(effect, blocks = 2000 + 4000, clue = "tame $tame") { b ->
+                if (b < 2000) {
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                } else {
+                    effect.configure(time = 0.1, feedback = tame, cap = 1.0, wet = 1.0)
+                }
+            }
+
+            withClue("tame $tame: the re-measured ceiling must still fall") {
+                (silentAt > 2000) shouldBe true
+            }
+        }
+    }
+
+    "a glide rising ACROSS 1 when the owner leaves drains self-oscillating: the return re-measures too" {
+        // The owner asks for 1.2 from 0.9 and switches the delay off inside the 50 ms glide, so the
+        // line's feedback is still below 1 at the off-edge while the drain glides on to 1.2 and the
+        // ring grows to the cap under a ceiling frozen at the charge. The drain's bound (the larger
+        // of the glide's value and target) is what the return must be judged by, not the line's.
+        for (tame in listOf(0.0, 0.3)) {
+            val effect = createEffect(delayTime = 0.1, feedback = 0.9)
+            val ctx = createCtx()
+            ctx.mixBuffer.fill(0.001)
+            effect.process(ctx)
+
+            val silentAt = neverCutsAnEcho(effect, blocks = 2000 + 4000, clue = "rising glide, tame $tame") { b ->
+                if (b == 0) {
+                    effect.configure(time = 0.1, feedback = 1.2, cap = 1.0, wet = 1.0)
+                } else if (b == 1) {
+                    withClue("the off-edge must land inside the glide, below 1") {
+                        (abs(effect.delayLine!!.feedback) < 1.0) shouldBe true
+                    }
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                } else if (b < 2000) {
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                } else {
+                    effect.configure(time = 0.1, feedback = tame, cap = 1.0, wet = 1.0)
+                }
+            }
+
+            withClue("tame $tame: the re-measured ceiling must still fall") {
+                (silentAt > 2000) shouldBe true
+            }
+        }
+    }
+
+    "at a steady feedback a return from the drain resumes the frozen ceiling untouched" {
+        // No re-measure when the drain ran at the feedback the frozen window was computed for:
+        // the ring only decayed under it. The blocks are the pre-5c-5 ceiling's, measured on
+        // `8a2878e2`, so a scan-and-raise on every return (a later fall) turns this red.
+        fun fallsAt(toggle: Boolean): Int {
+            val effect = createEffect(delayTime = 0.4, feedback = 0.5)
+            val ctx = createCtx()
+
+            repeat(4) {
+                ctx.mixBuffer.fill(0.5)
+                effect.process(ctx)
+            }
+
+            return neverCutsAnEcho(effect, blocks = 5000, clue = "toggle $toggle") { b ->
+                // In the THIRD window, where no input has arrived yet: a re-measure there would
+                // count the ring as fresh input and hold the ceiling a window longer.
+                if (toggle && b in 300..330) {
+                    effect.configure(time = 0.0, feedback = 0.0, cap = 1.0, wet = 1.0)
+                } else {
+                    effect.configure(time = 0.4, feedback = 0.5, cap = 1.0, wet = 1.0)
+                }
+            }
+        }
+
+        fallsAt(toggle = false) shouldBe 2476
+        // The frozen ceiling resumes where it stood: the fall moves by exactly the 31 drained blocks.
+        fallsAt(toggle = true) shouldBe 2507
+    }
 })
