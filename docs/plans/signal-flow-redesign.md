@@ -293,6 +293,30 @@ The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisi
   master's `MasterStageDsl.Reverb` model. "The room hears the cab" is then just list order.
   The price is per-voice send variation within one orbit, which the lease already made unreliable;
   two orbits or a `katp` pattern cover it.
+  **WALL before Katalyst 5b-2, for the maintainer (2026-09-19).** The sentence above rests on
+  "the lease already made per-voice variation unreliable". Step 5b-1 verified what the code does:
+  that is true for `size`, `time`, `feedback` and every other stage knob (the orbit's owner
+  decides), and it is NOT true for the AMOUNT. `SendRenderer` sends each voice's own `wet`, and
+  that works reliably today: `stack(drums.reverb(0.1), lead.reverb(0.5))` on one orbit gives the
+  drums a little room and the lead a lot, whatever the order. With insert-style sends the owner's
+  `wet` feeds the whole orbit mix, so that pattern gets ONE amount, which one depends on who
+  holds the lease, and it JUMPS when ownership changes hands (the owner dies, the next voice
+  takes over). What the corpus says (event-stream survey, 256 cycles, sample voices included): no
+  built-in song and no frozen piece carries two send amounts on one orbit, so no song in the repo
+  changes for this reason; 5 of 953 doc examples do. What DOES change existing songs is list
+  order: the room hears the cab (body and vowel sit before the sends) and the reverb hears the
+  delay's echoes (its return is mixed in before the reverb stage); an orbit with only one of the
+  two sends and no resonator stays bit-identical. Options: (a) as decided, the owner's wet for
+  the orbit, the door KDoc "a dry voice on a wet orbit stays dry" is rewritten, the doc examples
+  that rely on it move to two orbits; (b) insert-style ROUTING (the stage is fed from the mix at
+  its list position, the room hears the cab) with a per-voice AMOUNT kept as one number per send
+  on the voice, summed into a per-stage feed instead of taken from the mix, which keeps today's
+  behaviour for stacked patterns at the price of two numbers staying on the minimal voice and
+  the feed tapping the voice sum, not the post-cab mix; (c) as (a), with the amount smoothed
+  across owner changes so it never jumps. Recommendation: (a) with (c)'s smoothing, because the
+  maintainer's own songs already work that way, the minimal voice of section 4 stays minimal,
+  and two orbits are the honest spelling of two rooms; but it changes what a beginner's stacked
+  `.reverb()` calls do, so it is the maintainer's call and carries the listening checkpoint.
 - **D5:** the orbit `gain` stage stays; it is the group fader after the inserts.
 - One chain per orbit, declared where the orbit is; patterns stacked on one orbit share it, and two
   patterns declaring different chains for one orbit is the author error it is on the master.
