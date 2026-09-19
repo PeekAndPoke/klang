@@ -159,6 +159,12 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
   out): the output is continuous across it, never a jump, never a restart that steps.** For the
   delay and the reverb that is met by identity with "stayed active" (see above). For the filter
   swap and the compressor the mechanism is OPEN and is not this plan's to settle.
+- **Decided 2026-09-19 (complexity rule): no identity-only commit where the lifecycle is trivial.**
+  The compressor effect's whole lifecycle today is one nullable field (about ten executable
+  lines), and the gain's is a snap flag and a ramp; converting either to state classes now would
+  multiply the code and change nothing. Each gets its states in 5c, in the same step that adds its
+  switch-off behaviour, where the states model something real; that step is then a sound change
+  accepted on identity for the edges HEAD already has.
 - **The filter swap and the compressor convert in TWO commits each.** First the lifecycle they
   have TODAY as states (identity, accepted on the full list below); then the switch-on and
   switch-off glides as a SOUND CHANGE under the 5c listening checkpoint. What those glides do
@@ -182,8 +188,8 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 | `KatalystDelayEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-1), the template |
 | `KatalystReverbEffect` | Off, Active, Draining | CONVERTED 2026-09-19 (Katalyst 5c-2); its off-arm test, `|| !remaining.isFinite()`, lives in `Active.deactivate` |
 | `KatalystFilterSwap` (body, vowel, eq) | first commit CONVERTED 2026-09-19 (Katalyst 5c-4): Off, Engaged, Crossfading; every event dispatches, `clear` included, because the outgoing pair (a reference) belongs to Crossfading. Second commit, a sound change: the switch-on and switch-off fades, with the open decision on rapid changes in `../tasks/katalyst-dsl.md` |
-| `KatalystCompressorEffect` | first commit: Off, Active; second commit, a sound change: the switch-off ramp, law open | nullable instance; ReleasingOut is the ramp on switch-off |
-| `KatalystGainEffect` | fresh, settled, ramping | fields |
+| `KatalystCompressorEffect` | converted together with its switch-off ramp in 5c (no identity-only commit: its lifecycle today is one nullable field) | nullable instance; ReleasingOut is the ramp on switch-off |
+| `KatalystGainEffect` | fresh, settled, ramping; converted in 5c together with the fader-through-zero fix (no identity-only commit) | fields |
 | `Cylinder` chain swap | Idle, Pending, Fading, Draining | five fields (`outgoing`, `draining`, `duckingOut`, `duckFadingIn`, `pendingKey`) |
 | voice strips (phase 3 of the signal-flow plan) | per strip, same shape | build-time gate plus per-block guards |
 
