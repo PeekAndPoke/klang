@@ -406,6 +406,12 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   post-fader output while its reset assumes nobody is playing; candidates: judge liveness before
   the fader, or never snap while voices are active. Belongs with Katalyst 5c (crossfade on every
   switch, the effect state machines), where the gain stage gets its states anyway.
+  **DECIDED 2026-09-19 with the maintainer: an orbit never deactivates while a voice plays on it.**
+  `Cylinder.tryDeactivate` already refuses while the chain has a tail or a swap runs; it also
+  refuses while the orbit's `VoiceLease` is held (every voice sounding on the orbit checks in each
+  block). A muted orbit with notes keeps running with the fader at 0, and the fader glides back up
+  from where it stands. Judging liveness before the fader was rejected (in a user chain the gain
+  stage can sit anywhere). Built with the gain stage's states in Katalyst 5c-8.
 - **Phase 3, from the pregain review (2026-09-19): a placed `pregain` costs CPU at unity.** Neither
   `mulConstInPlace` nor the `Affine` fold special-cases a block-constant multiplier of exactly 1.0
   at render, so every built-in that places the slot pays one multiply and one `safeOut` per sample
