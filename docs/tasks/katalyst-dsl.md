@@ -729,21 +729,43 @@ complexity outranks the duplication.
   zero, live or on return; worst measured an echo at about -3 dBFS dropped at a 0.7 to 0.0
   handover with a silent new owner. Details and the repair shapes in `audio/MEMORY.md`. Any fix
   moves the block on which an orbit resets, so it belongs with a listening checkpoint (5c).
-- **OPEN for the maintainer before the switch-off fades of step 5c are briefed (found in the
-  5c-1 review, 2026-09-19).** The decision below says every on/off edge crossfades and names
-  `fadeOut()`. It does not say: (1) what an owner that RETURNS mid-fade-out hears (proposal: one
-  wet/dry ramp with a direction, reversed in place when the same bank returns; today's swap can
-  represent exactly one ramp without allocating); (2) what a DIFFERENT material arriving
-  mid-fade-out does, and an off arriving mid-crossfade (three signals alive, two ramp positions;
-  today `set` mid-fade drops the oldest pair and "may tick faintly"); (3) whether switching ON
-  fades in (today a fresh bank is a hard edge of `(1 - dryGain) * x`); (4) the compressor's
-  switch-off law (its own release with a starved detector, which swells with a long release on a
-  per-note toggle, or a fixed short wet/dry ramp; today off is a level step of the whole current
-  gain reduction); (5) the EQ has no owner-driven off door at all today. Each changes what a
-  listener hears, so each is decided here first. The state-machine conversions of the filter
-  swap and the compressor therefore run in two commits each: today's lifecycle as states
-  (identity), then the fade as a sound change under the 5c listening checkpoint
-  (`docs/plans/effect-state-machines.md` §2).
+- **DECIDED 2026-09-19 with the maintainer: how every orbit stage switches and changes (step 5c).**
+  The principle: **always glide from the CURRENT state of the effect to the target state; only the
+  very first initialisation is instant.** It is the knob-glide rule (`docs/plans/knob-glide.md`)
+  applied to switching:
+  - OFF is "glide the stage's mix to 0 over 50 ms, then release its resources"; ON is "install at
+    mix 0 and glide up". An owner that returns mid-fade simply retargets, and the fade turns
+    around where it stands. Switching on fades in.
+  - A DIFFERENT material arriving mid-fade (or an off arriving mid-crossfade): crossfade from what
+    is sounding NOW (the old bank at its current, frozen level) to the new one at its target
+    level. One ramp, two banks, no tick, no delay. Today's "drop the oldest, may tick faintly"
+    retires.
+  - The compressor switches by gliding its gain reduction to 0 dB over the same 50 ms, not by
+    letting its own release run out.
+  - The EQ gets no off door: it exists only on a declared chain, and a chain swap already
+    crossfades.
+  - The maintainer remembers audible clicks on material changes with today's 12 ms crossfade.
+    Suspects, unmeasured: the new bank's cold start rings up for longer than 12 ms at the body's
+    low modes; a second change mid-crossfade drops the oldest bank; a linear blend of two
+    uncorrelated materials dips about 3 dB. First task of the filter swap's conversion: a render
+    that alternates materials, measured for sample-to-sample jumps, at 12 ms and at 50 ms.
+  - **One common resonator bank for body, vowel, and later a user surface where formants are
+    specified one by one.** Body (`BodyFilter`) and vowel (`FormantFilter`) are already the same
+    thing under the hood (a parallel bank of `SvfBPF` bandpasses in a `ParallelMixFilter`); they
+    differ in the band count and the vowel's legacy gain fold. They merge first, as an identity
+    step with the sound unchanged, so the glide and the morph are written once.
+  - **Morph rules of the bank:** bands pair BY POSITION (band n to band n; for vowels formant n to
+    formant n; for a user surface the order the user lists them), never by nearest frequency; a
+    band that exists on one side only keeps its frequency and fades its gain from or to 0 in
+    place; frequency and Q glide in log space, the gain linearly; the bank has a fixed capacity
+    preallocated with the effect (today's tables need at most 8; a user surface states its own
+    maximum). A band at gain 0 may be skipped; it then starts cold, which its own fade-in masks.
+    To verify first: that `SvfBPF` takes new coefficients without resetting its state.
+  - Morph or output crossfade is chosen per effect BY EAR at the 5c checkpoint: the proposal is
+    morph for vowels (a vowel change sweeps like a mouth), and for body whichever sounds better.
+  - Order inside 5c for body and vowel: merge into one bank (identity), the click measurement, the
+    state machine of the swap (identity, today's lifecycle), then the glides, fades and morph as
+    the sound change.
 - **Decided 2026-09-18 with the maintainer, step 5c (after 5b): switching any stage on or off
   always crossfades, body and vowel included.** Off is a pass-through (the hosts process in place,
   so off costs one comparison), but the EDGE between on and off is never a hard cut: a stage whose

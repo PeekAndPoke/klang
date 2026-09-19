@@ -159,22 +159,13 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
   delay and the reverb that is met by identity with "stayed active" (see above). For the filter
   swap and the compressor the mechanism is OPEN and is not this plan's to settle.
 - **The filter swap and the compressor convert in TWO commits each.** First the lifecycle they
-  have TODAY as states (the swap: Off, Engaged, Crossfading, with today's `set`-mid-fade policy
-  pinned as it is; the compressor: Off, Active), an identity refactor accepted on the full list
-  below. Then the switch-off state (`FadingOut`, `ReleasingOut`) as a SOUND CHANGE under the 5c
-  listening checkpoint, with the acceptance scoped to the edges HEAD has. Open design for that
-  second commit, each needing the maintainer: what a return mid-fade does (a proposal on file:
-  one wet/dry ramp with a direction, reversed in place for the same bank; note that the four states this
-  plan used to name have no home for a reversed ramp, and the swap can represent exactly ONE ramp without
-  allocating); what a DIFFERENT material mid-fade-out and an off mid-crossfade do (three signals
-  alive, two ramp positions); whether ON fades in (today it is a hard edge); the compressor's
-  ramp law (its own release with a starved detector, or a fixed wet/dry ramp); and that the EQ
-  has no owner-driven off door at all today. Whatever is decided, the oracle is an identity
-  computed from a reference that stayed engaged and the DECIDED law, never a step threshold
-  taken from a run of the code under test. For the swap under a linear crossfade of OUTPUTS it is
-  `out[n] == wetRef[n] * (1 - t[n]) + dry[n] * t[n]`, which matches the blend line's association
-  and is writable bit for bit; a ramp of the bank's wet knob, or a compressor released through
-  its own detector, needs its own.
+  have TODAY as states (identity, accepted on the full list below); then the switch-on and
+  switch-off glides as a SOUND CHANGE under the 5c listening checkpoint. What those glides do
+  was decided with the maintainer on 2026-09-19 and is recorded in `../tasks/katalyst-dsl.md`
+  ("how every orbit stage switches and changes"): always glide from the current state to the
+  target, the first initialisation instant; body and vowel first merge into one resonator bank.
+  Whatever the law, the oracle is an identity computed from a reference and the decided law,
+  never a step threshold taken from a run of the code under test.
 - **The gain** has three lifecycle situations today, not two: fresh (nothing multiplied since
   construction or reset: EVERY `configure` before the first `process` snaps, and it is `process`
   that leaves this situation; a chain arriving through `beginFade` can see two configures before
