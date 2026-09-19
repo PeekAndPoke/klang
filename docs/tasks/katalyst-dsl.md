@@ -560,7 +560,12 @@ complexity outranks the duplication.
   5b-1: the send amounts in `SendRenderer` (5b-2), `VoiceFactory`'s construction of the
   `Voice.*` objects, and the per-voice phaser of a CUSTOM pipeline that declares
   `StageDsl.Phaser` (`FilterPipelineBuilder`), so `phaser` cannot leave the wire in 5b-3 without
-  deciding what that stage reads. **For the 5b-2 plan (event-stream survey over 256 cycles, sample
+  deciding what that stage reads. **Decided 2026-09-19 with the maintainer:** it is not decided
+  per stage. Phase 3 of the signal-flow plan retires the whole Pipeline DSL in one go; its stages
+  move where they belong (filters, crush, coarse, distort, tremolo and the VCA to the instrument's
+  `.classic()`; the phaser is a bus effect and is already the Katalyst's). So 5b-3 leaves the
+  phaser fields on the wire for the custom pipeline's stage, and they leave with the pipeline in
+  phase 3. **For the 5b-2 plan (event-stream survey over 256 cycles, sample
   voices included, 2026-09-19):** NO built-in song and no frozen piece carries two distinct send
   amounts on one orbit in one cycle, so the per-voice send becoming the owner's insert amount
   changes no song in the repo. 5 of 953 playable doc examples do, four of them the "as much X as
@@ -783,7 +788,7 @@ complexity outranks the duplication.
       number of outgoing banks, for example drop one whose weight is under a few percent: not yet
       measured); 50 ms is optional for clicks and keeps one constant; no warm start.
     - WAVs for listening (today's clicks and the fixes): the session scratchpad, `clicks/`.
-  - **OPEN for the maintainer before the swap's second commit (found in the 5c-4 review,
+  - **DECIDED 2026-09-19 with the maintainer (was open before the swap's second commit, found in the 5c-4 review,
     2026-09-19): rapid changes and "crossfade from what sounds now".** Taken literally, every
     restart freezes the outgoing banks and ramps them out together. A `.katp` that changes the EQ
     (or a pattern that changes a material) every block piles up outgoing banks: at 50 ms and 128
@@ -794,6 +799,14 @@ complexity outranks the duplication.
     price is up to one fade of lag (12 or 50 ms) on a rapid change. (b) N banks with a hard cap on
     outgoing pairs and a drop rule; the measured restart click (-11 to -34 dB) says the drop rule
     needs a listening test. Recommendation: (a), the smaller and already proven answer.
+    **Decision: (b), a cap of banks, "for now", 10 suggested by the maintainer.** Sizing: a 50 ms
+    fade is 17 to 19 blocks of 128 frames, so a change on EVERY block keeps at most about 19 banks
+    sounding; 10 engages only under changes faster than about one per 5 ms and roughly halves the
+    worst case. The banks are preallocated with the stage (no allocation in the hot path). The drop
+    rule is decided by measurement in the step, not by argument: first drop the QUIETEST outgoing
+    bank (not the oldest, which is today's measured -11 to -34 dB click); if that measures in the
+    click class, a change arriving at a full pool is parked until a bank frees, latest wins (the
+    master's precedent as the overflow rule, so nothing sounding is ever cut).
     Also for the second commit, from the same review: the hosts must tell INTENT from SOUND (an
     `active` that flips synchronously in `set` and `clear`, separate from "a pair is still
     sounding"); `clear` during a fade-out is idempotent and `set` during it retargets; and the
