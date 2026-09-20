@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.ignitor.analogDriftStepRate
+import io.peekandpoke.klang.audio_be.ignitor.perVoiceCutoffOffsetMul
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
@@ -250,6 +251,8 @@ class VoiceFactory(
                     sound, data, freqHz ?: 0.0,
                     phasePools = playbackCtx.phasePools,
                     random = voiceRandom,
+                    sampleRate = sampleRate,
+                    blockFrames = blockFrames,
                 ) ?: return null
                 val signal = built.ignitor
 
@@ -408,17 +411,6 @@ class VoiceFactory(
             is FilterDef.Formant, is FilterDef.Body ->
                 error("Body/Formant are orbit-level resonators, not per-voice filters")
         }
-    }
-
-    /**
-     * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`
-     * (bit-identical to no offset). At `analog>0` returns `1 + uniform(-1,1) × analog ×
-     * cutoffOffsetPerAnalog`. At the shipped default (0.0002) that is ≈ ±0.02% at `analog=1`
-     * (≈ ±0.35 cents); ≈ ±0.06% at `analog=3` (≈ ±1 cent); ≈ ±0.2% at `analog=10` (≈ ±3.5 cents).
-     */
-    private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double, rng: Random): Double {
-        if (analog <= 0.0) return 1.0
-        return 1.0 + (rng.nextDouble() - 0.5) * 2.0 * cutoffOffsetPerAnalog * analog
     }
 
     private fun FilterDef.toModulator(

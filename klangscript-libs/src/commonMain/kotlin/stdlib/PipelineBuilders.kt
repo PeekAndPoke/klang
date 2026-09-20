@@ -160,8 +160,11 @@ fun PipelineFilterBuilder.drift(relToOsc: Double): PipelineFilterBuilder = copy(
  * The runtime hands numeric literals through as `Double`, so a `Boolean` parameter would throw a
  * raw ClassCastException on `on(1)`, and numeric flags are the established idiom on the sprudel
  * side (`adsrOn(0)`). Coerce rather than throw, per the project's user-facing-param rule.
+ *
+ * `internal` and not private: the Osc door's filter `humanize` flag reads the same way, and two
+ * copies of this would be two flag dialects.
  */
-private fun coerceFlag(flag: Any): Boolean = when (flag) {
+internal fun coerceFlag(flag: Any): Boolean = when (flag) {
     is Boolean -> flag
     is Number -> flag.toDouble() != 0.0
     else -> true

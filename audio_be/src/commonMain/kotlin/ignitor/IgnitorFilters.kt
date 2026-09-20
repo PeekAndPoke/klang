@@ -43,6 +43,16 @@ enum class SvfMode {
  * envelope shape. `depth = 0.0` stays the exact no-envelope identity.
  */
 data class FilterEnvDef(
+    // The per-field defaults below are NOT the surface defaults, and deliberately so: this is the
+    // RESOLVED struct the runtime reads, not a door. Every production construction names all five
+    // (`IgnitorDslRuntime.filterEnvDef`, which fills from
+    // `audio_bridge/constants/FilterEnvelopeDefaults.kt`), so these values are reachable only
+    // through [NONE] and through tests that want a partial shape. `depth = 0.0` IS [NONE]: it is
+    // the off switch this class is read through, so it must not be moved to the surface's 7
+    // semitones. The other four keep the neutral values they were written with (three zeros and
+    // a unity sustain) for the same reason: with `depth = 0` nothing reads them, and giving them
+    // the surface constants would suggest they were the source of truth, which
+    // `FilterEnvelopeDefaults.kt` is.
     val depth: Double = 0.0,
     val attackSec: Double = 0.0,
     val decaySec: Double = 0.0,
@@ -68,6 +78,29 @@ data class FilterEnvDef(
  * and Bresenham-style linearly interpolated per sample to avoid the ~187 Hz block-rate
  * stair-stepping that per-block-only recompute would produce.
  *
+ * **How this envelope differs from the voice strip's, on TWO counts, both open under decision D3
+ * of `docs/tasks/builtin-instruments.md`.**
+ *
+ *  - **The law.** [computeFilterEnvelope] has no curve term at all, so every segment here is a
+ *    straight LINE. The strip's filter envelope runs through `EnvelopeCalc` with
+ *    `AdsrCurve.Default`, which is Exponential with K = 3, because `VoiceFactory` builds its
+ *    `Voice.Envelope` without the three curve arguments. Measured at `env = 24`, the two shapes
+ *    are up to 806 cents apart at the same instant (RMS 256 cents on a pluck, 512 on a pad).
+ *    This is the BIGGER of the two differences by 4x to 100x.
+ *  - **The sampling.** The strip computes its envelope once per block and lets
+ *    `BaseSvf.setCutoff` ramp the coefficients over `FILTER_SMOOTH_SAMPLES` (32) samples and then
+ *    HOLD; this node computes the envelope at block start and at block end and interpolates the
+ *    coefficients across the WHOLE block.
+ *
+ * The two agree on the ENDPOINTS and on the stage times. Which law and which sampling phase 3
+ * keeps is D3's to answer and nothing here anticipates it: a node with `env.depth == 0.0` never
+ * enters this path at all, which is why step 3a can be bit-identical while D3 is open.
+ *
+ * Optional [humanize] is the per-voice analog character the voice strip gets from
+ * `VoiceFactory`: a fixed cutoff tolerance and a slow drift lane, both drawn once per voice.
+ * `null` is no humanization and renders bit-for-bit what this filter rendered without the
+ * feature. See [FilterHumanization].
+ *
  * Coefficient math is shared with `BaseSvf` via `computeSvfCoeffs`. NaN/Inf-safe
  * cutoff (via `bilinearK`); Q is clamped to `[0.1, 200.0]` with `isFinite` fallback.
  *
@@ -90,7 +123,8 @@ fun Ignitor.svf(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog, humanize)
 
 private class SvfIgnitor(
     private val upstream: Ignitor,
@@ -99,6 +133,7 @@ private class SvfIgnitor(
     private val q: Ignitor,
     private val env: FilterEnvDef,
     private val analog: Ignitor,
+    private val humanize: FilterHumanization?,
 ) : Ignitor {
     // Integrator state.
     private var ic1eq: Double = 0.0
@@ -109,6 +144,7 @@ private class SvfIgnitor(
     private val coefsEnd = SvfCoeffs()
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
+    private val hasDrift: Boolean = humanize?.hasDrift == true
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -117,6 +153,13 @@ private class SvfIgnitor(
             val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val qVal = Ignitors.readParam(q, freqHz, ctx)
             val analogVal = Ignitors.readParam(analog, freqHz, ctx).coerceAtLeast(0.0)
+            // Per-voice analog humanization, both 1.0 when the node has none, and `x * 1.0` is
+            // exactly `x` for every double, so a node without it renders bit-for-bit what it
+            // rendered before these two lines existed. The ORDER of the two multiplies is the
+            // voice strip's: `FilterModRenderer` multiplies the envelope's cutoff by the block's
+            // drift and `BaseSvf.setCutoff` then multiplies by the fixed tolerance.
+            val driftMul = humanize?.blockDriftMultiplier(ctx) ?: 1.0
+            val offsetMul = humanize?.cutoffOffsetMul ?: 1.0
             val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
             val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
             val sr = ctx.sampleRate.toDouble()
@@ -149,8 +192,8 @@ private class SvfIgnitor(
                 // C3 (filter unification): envelope depth is SEMITONES — the sweep is
                 // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
                 // down symmetrically, and there is no dead zone anywhere.
-                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart)
-                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd)
+                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart) * driftMul * offsetMul
+                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd) * driftMul * offsetMul
 
                 computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
                 computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
@@ -166,8 +209,11 @@ private class SvfIgnitor(
                     gStep = (coefsEnd.g - coefs.g) * invLen
                 }
                 initialized = true
-            } else if (!initialized || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
-                computeSvfCoeffs(baseCutoff, qVal, sr, coefs)
+            } else if (!initialized || hasDrift || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
+                // `hasDrift` is false without a lane, so the cheap latch below is untouched for
+                // every node that does not humanize; with one, the cutoff moves every block and
+                // there is nothing to latch.
+                computeSvfCoeffs(baseCutoff * driftMul * offsetMul, qVal, sr, coefs)
                 a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
@@ -345,7 +391,8 @@ fun Ignitor.lowpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Lowpass filter (convenience overload with fixed values).
@@ -370,7 +417,8 @@ fun Ignitor.highpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Highpass filter (convenience overload with fixed values).
@@ -395,7 +443,8 @@ fun Ignitor.bandpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Bandpass filter (convenience overload with fixed values).
@@ -420,7 +469,8 @@ fun Ignitor.notch(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog, humanize)
 
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).

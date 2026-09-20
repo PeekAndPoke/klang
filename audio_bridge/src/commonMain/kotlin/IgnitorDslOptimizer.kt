@@ -318,6 +318,20 @@ private fun expandPasses(
  * `EqCore` does not implement. A Param-backed analog is refused too, because an osc-param could
  * turn saturation on per note and the decision is made here, once, at registration.
  *
+ * Refuses on the same grounds when the filter carries a CUTOFF ENVELOPE (`env` anything but a
+ * literal zero) or the per-voice `humanize` lane: an `EqSection` has neither field, so fusing
+ * one would silently drop the sweep or the tolerance. `env` takes the Param-backed refusal too,
+ * for the same reason `analog` does: a slot could switch the envelope on per note, and this
+ * decision is made once, at registration. `humanize` is structural, so a plain `!humanize`
+ * answers it.
+ *
+ * **That refusal is CONSERVATIVE, and phase 3 step 5 will feel it.** Once a built-in carries an
+ * `lpenv` slot, its filters stop fusing whether or not any note ever writes the slot, because the
+ * decision is made at registration and a `Param` could be written per note. The alternative is
+ * deciding per note-on, which is the BUILD, not the optimizer, and which would mean carrying both
+ * a fused and an unfused tree. What it costs is the Eq fusion on the classic tail, which is real
+ * but is not correctness; measure it before trading the simple rule away.
+ *
  * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
  */
@@ -327,28 +341,28 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     // fuses as one section and silently loses 12 dB/oct. A Constant q folds per stage; a
     // modulated q gets a Times wrapper so every stage keeps sweeping coherently.
     is IgnitorDsl.Lowpass ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
         } else {
             null
         }
 
     is IgnitorDsl.Highpass ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
         } else {
             null
         }
 
     is IgnitorDsl.Bandpass ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             listOf(IgnitorDsl.EqSection.Bandpass(freq, q))
         } else {
             null
         }
 
     is IgnitorDsl.Notch ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             listOf(IgnitorDsl.EqSection.Notch(freq, q))
         } else {
             null

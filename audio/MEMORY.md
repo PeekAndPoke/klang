@@ -1,5 +1,79 @@
 # Klang Audio — Memory
 
+## The filter nodes grew a cutoff envelope and a per-voice lane (2026-09-20)
+
+Phase 3 step 3a of `docs/plans/signal-flow-redesign.md` (the missing-knobs table is
+`docs/tasks/builtin-instruments.md` section 4, first two rows). The four SVF filter nodes
+(`IgnitorDsl.Lowpass`, `Highpass`, `Bandpass`, `Notch`) now carry the cutoff ENVELOPE as five
+knobs (`env`, `attackSec`, `decaySec`, `sustainLevel`, `releaseSec`) and the per-voice analog
+character as ONE structural flag (`humanize`). Both doors, same names, same defaults.
+
+- **`env` is the NODE's envelope switch, and that is what keeps the step bit-identical.** At
+  exactly `0` no `FilterEnvDef` is built, `SvfIgnitor.hasEnv` is false and the filter takes the
+  same branch it took before the knobs existed.
+- **The DOORS fill, the node does not** (`/dsl-design` section 4, the compound-door rule, applied
+  to the first of the voice-side doors it named). The filter envelope has no NAME knob, so ANY of
+  its five knobs names the stage and a call that names one writes every companion it left out,
+  `env` included, from `audio_bridge/constants/FilterEnvelopeDefaults.kt`. Without that,
+  `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` would be a silent no-op while the identical
+  `lpf(800, decay = 0.3, sustain = 0.2)` is an audible pluck, because `SprudelVoiceData` builds a
+  `FilterDef` envelope when ANY of `lpattack`/`lpdecay`/`lpsustain`/`lprelease`/`lpenv` is present
+  and `FilterEnvDef.resolve()` fills the missing depth with `FILTER_ENV_DEPTH_SEMITONES`. One home
+  for the fill, `fillFilterEnvelope` in `audio_bridge`, reached by both doors. A call that names
+  NONE of the five is the untouched filter, which is what the identity render rests on; a
+  hand-built node is a value, not a call, and keeps the plain `0`.
+- **The knobs resolve at BUILD, from `Param` and `Constant` leaves only.** That is not timidity
+  and not a perf choice: the strip's envelope is a per-voice constant too (`FilterDef.envelope`
+  resolves at note-on), and a leaf provably takes no rng draw, so asking the five questions moves
+  no draw. A modulated knob has no build-time answer and the knob's default stands.
+- **`humanize` is a FLAG, not a knob, because both halves are per-voice DRAWS.** The fixed cutoff
+  tolerance and the `AnalogDrift` lane come off `IgnitorBuildCache.random` at build, and no
+  number a pattern writes can carry a draw. The ORDER has one home,
+  `ignitor/FilterHumanization.kt`: one `nextDouble()` for the tolerance, then the lane's three
+  (two doubles, one int); at `analog` at or below 0, or non-finite, NOTHING is drawn.
+  `perVoiceCutoffOffsetMul` is now ONE function that `VoiceFactory` and the tree build share,
+  because a second copy of a draw is a second reader of the stream.
+  A `passes` cascade draws ONCE and every stage shares the one tolerance and the one lane, the
+  way the strip's single `AudioFilter` with N stages does; the lane steps once per block, keyed
+  on `IgniteContext.voiceElapsedFrames`.
+- **What a tree CANNOT reproduce, recorded rather than hidden.** `VoiceFactory` draws every
+  filter's tolerance first and every filter's drift afterwards, in two passes over the filter
+  list, and it draws all of that BEFORE the exciter is built. A recursive per-node build
+  interleaves them and draws during the exciter. So at `analog > 0` with more than one filter the
+  stream shifts, which is exactly what `docs/tasks/builtin-instruments.md` section 8 already says
+  identity cannot survive. Nothing in step 3a is reached by it (no built-in sets `humanize`).
+- **Fusion refuses both.** `IgnitorDslOptimizer.asFusibleSections` now also refuses a filter whose
+  `env` is anything but a literal zero, and any filter with `humanize`: an `EqSection` carries
+  freq and q and nothing else, so a fused sweep would silently become a static filter. A
+  `Param`-backed `env` refuses for the same reason a `Param`-backed `analog` does.
+- **Identity, proven:** all 18 corpus rows (15 built-in songs, 2 `FrozenSongs`, 1 `FrozenPieces`)
+  render bit-identically at 256 cycles, wall clock pinned, base commit `ef6a1c4d` against the
+  tree. Two engagement controls: `env` defaulted to the shared depth constant instead of 0, and
+  `humanize` defaulted to true. The wire moved as designed and only there: six new fields on each
+  of the four filter variants in the generated codec, `WIRE_SCHEMA_HASH` -1128448217 to 846243239,
+  no `@WireName` touched. The sprudel `voicedata_golden.txt` did NOT move, and should not: it is
+  a `VoiceData` baseline and `VoiceData` carries no `IgnitorDsl`.
+- **A script-door default must be a LITERAL, and this step measured it rather than trusting the
+  rule.** A constant REFERENCE as a default makes KSP emit no thunk, and a named call that skips
+  that param then fails at RUNTIME with "complex Kotlin default". The first cut of these doors hit
+  it with `FILTER_ENV_ATTACK_SEC` and had to bake the numbers; the compound fill then removed the
+  duplication altogether, because every one of the five defaults is now the literal `null` and the
+  constants live in `fillFilterEnvelope`, which both doors call. `humanize`'s `false` is the same
+  shape of literal. So the lesson stands and the duplicate it used to force is gone.
+- **D3 is open on TWO counts, not one, and the LAW is the bigger one.** The spike framed D3 as a
+  SAMPLING question (the node computes the envelope at block start and end and interpolates the
+  coefficients across the block; the strip computes it once per block and lets `setCutoff` ramp
+  them over 32 samples, then holds). Round 1 of this step's review measured the other half: the
+  node's envelope is LINEAR (`computeFilterEnvelope` has no curve term at all) while the strip's
+  is the house Exponential (`AdsrCurve.Default`, K = 3, because `VoiceFactory` omits the three
+  curve arguments). At `env = 24` the two are up to 806 cents apart at the same instant, RMS 256
+  cents on a pluck and 512 on a pad, which is 4x to 100x the sampling difference. The two agree on
+  the ENDPOINTS and on the stage times. Step 3a changes neither law: it adds the knobs with the
+  node's existing behaviour and says so in every KDoc that could be read as claiming parity.
+  A third, smaller mismatch of the same family, recorded rather than fixed: the node truncates
+  stage frame counts to `Int` where the strip keeps them fractional (220 against 220.5 at
+  `attackSec = 0.005`), the same class as the ADSR frame-count item the spike already listed.
+
 ## The gate: a stage at its off value is NOT BUILT (2026-09-20)
 
 Phase 3 step 2 of `docs/plans/signal-flow-redesign.md`. At voice build, a stage whose gating knob

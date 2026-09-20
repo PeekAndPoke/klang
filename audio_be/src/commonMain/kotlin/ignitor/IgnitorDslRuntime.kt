@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
@@ -13,6 +14,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import kotlin.random.Random
 
 /**
@@ -49,10 +54,29 @@ fun IgnitorDsl.buildExciter(
     orbit: Int = 0,
     random: Random = Random,
     freqHz: Double = 0.0,
+    sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
+    blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ): BuiltIgnitor {
-    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz)
+    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz, sampleRate, blockFrames)
     return buildIgnitor(oscParams, cache)
 }
+
+/**
+ * The sample rate a build assumes when the caller does not say, a test/tool convenience exactly
+ * like `random = Random` above. Only ONE build-time consumer reads it: the drift lane of a
+ * filter with `humanize = true` derives its time constants from it (`analogDriftStepRate`).
+ *
+ * Every path that RENDERS A VOICE passes the backend's own rate, through
+ * `IgnitorRegistry.createExciter`. Two callers do NOT, and neither renders a voice: [toExciter],
+ * the signal-only convenience, does not forward the parameter at all, and `KatalystSlots` calls
+ * `buildExciter()` bare to resolve an orbit knob. A filter node CAN appear in a `katp` override
+ * (nothing rejects one); what it cannot do there is render, because `KatalystSlots` reads the
+ * built graph through `controlRateValueOrNull`, which returns null for a filter and sends the knob
+ * to its fallback. So a humanized filter written into an orbit knob would take its four draws off
+ * the wrong stream and build a lane at 44100 that nothing ever steps. Absurd rather than
+ * dangerous, and named here so the next reader does not have to rediscover it.
+ */
+const val DEFAULT_BUILD_SAMPLE_RATE: Int = 44100
 
 /**
  * Signal-only convenience over [buildExciter], for callers that do not need the build's findings
@@ -96,6 +120,13 @@ internal class IgnitorBuildCache(
      *  it), which is how a pitch-relative release such as `Osc.freq().recip().mul(200)` resolves for
      *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
     val freqHz: Double = 0.0,
+    /** The backend's sample rate; read only by a `humanize` filter's drift lane. See
+     *  [DEFAULT_BUILD_SAMPLE_RATE] for what the default means. */
+    val sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
+    /** The backend's block size; read only by a `humanize` filter's drift lane, which steps
+     *  once per block. Pinned to 128 everywhere (it is a tone parameter, see
+     *  [AudioBackendContext.RENDER_QUANTUM_FRAMES]). */
+    val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
 ) {
     /** The detune scope at the current recursion point — null at the root.
      *  Identity-compared as part of the cache key (pushed/popped by the Detune build arm). */
@@ -505,6 +536,90 @@ private fun IgnitorDsl.gatedOffWhenUnset(oscParams: Map<String, Double>?, cache:
 
 
 /**
+ * The five cutoff-envelope knobs of a filter node, resolved at BUILD into the runtime's
+ * [FilterEnvDef].
+ *
+ * **Why build time and not per block.** The runtime's envelope is a per-voice constant on the
+ * strip too (`FilterDef.envelope` is resolved once, at note-on, in `VoiceFactory.toModulator`),
+ * so a per-block read would be a new capability, not parity. It is also what lets the depth stay
+ * the envelope's SWITCH: `SvfIgnitor` decides `hasEnv` at construction and a whole branch of its
+ * block loop with it.
+ *
+ * **Leaf-only, through [buildTimeKnobValue], and that is load-bearing for the rng.** A
+ * [IgnitorDsl.Param] or [IgnitorDsl.Constant] leaf provably draws nothing, so asking these five
+ * moves no draw. Anything else has no build-time answer and the knob's own default stands, which
+ * is the same answer the house gives a non-finite value (`/dsl-design` section 4: a non-finite
+ * wire number reads as unset). The fallbacks are the shared constants, the same ones the door
+ * fills with and the same ones `FilterEnvDef.resolve()` uses on the strip.
+ *
+ * **The DEPTH's fallback is 0, and that is a sharper edge than the other four.** A stage knob
+ * that cannot be read falls back to a usable time; a depth that cannot be read falls back to the
+ * OFF value, so `lowpass(800, env = Osc.param("e", 24).max(36))` renders a static filter with no
+ * warning at all. It is the honest answer here (an unreadable depth is not a depth) and the
+ * alternative, substituting 7 semitones for an expression the author wrote, would invent a sweep
+ * nobody asked for. Both filter-node KDocs say it out loud; the editor diagnostic of step 11 is
+ * where it should become visible instead of silent.
+ */
+private fun filterEnvDef(
+    env: IgnitorDsl,
+    attackSec: IgnitorDsl,
+    decaySec: IgnitorDsl,
+    sustainLevel: IgnitorDsl,
+    releaseSec: IgnitorDsl,
+    oscParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+): FilterEnvDef {
+    val depth = env.filterEnvKnob(oscParams, cache, 0.0)
+
+    // The depth is the switch: with no sweep the four stage knobs are inert, and not reading
+    // them keeps a filter without an envelope exactly as cheap to build as it was.
+    if (depth == 0.0) {
+        return FilterEnvDef.NONE
+    }
+
+    return FilterEnvDef(
+        depth = depth,
+        attackSec = attackSec.filterEnvKnob(oscParams, cache, FILTER_ENV_ATTACK_SEC),
+        decaySec = decaySec.filterEnvKnob(oscParams, cache, FILTER_ENV_DECAY_SEC),
+        sustainLevel = sustainLevel.filterEnvKnob(oscParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
+        releaseSec = releaseSec.filterEnvKnob(oscParams, cache, FILTER_ENV_RELEASE_SEC),
+    )
+}
+
+/** One cutoff-envelope knob: its build-time value, or [fallback] when it has none. See [filterEnvDef]. */
+private fun IgnitorDsl.filterEnvKnob(
+    oscParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+    fallback: Double,
+): Double = buildTimeKnobValue(oscParams, cache)?.takeIf { it.isFinite() } ?: fallback
+
+/**
+ * The filter's per-voice humanization, or null when the node does not carry it.
+ *
+ * The DRAW ORDER lives in [buildFilterHumanization]; this function only resolves the `analog`
+ * amount that decides whether anything is drawn at all, and it resolves it the same leaf-only
+ * way [filterEnvDef] resolves its knobs, so asking the question moves no draw either. A
+ * modulated `analog` therefore humanizes nothing: there is no build-time answer, and the strip
+ * has no such case to match (its `analog` is one number off the voice's bag).
+ *
+ * A GATED-OFF filter never reaches here, which is the rule "the stage does not exist" applied to
+ * its draws as well: the gate's arm returns the inner before this runs.
+ */
+private fun IgnitorDsl.filterHumanization(
+    humanize: Boolean,
+    oscParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+): FilterHumanization? {
+    if (!humanize) {
+        return null
+    }
+
+    val analogValue = buildTimeKnobValue(oscParams, cache) ?: 0.0
+
+    return buildFilterHumanization(analogValue, cache.sampleRate, cache.blockFrames, cache.random)
+}
+
+/**
  * Builds the raw (non-memoised) Ignitor for a non-pitch-mod, non-leaf DSL node.
  *
  * Source nodes apply [accumulatedMod] via [ModApplyingIgnitor].
@@ -824,14 +939,24 @@ private fun IgnitorDsl.buildRaw(
             // factors — the modulated q scales every stage coherently). passes = 1 is the
             // untouched single-stage path, bit-identical. `analog` is handed to EVERY stage,
             // so its drive character compounds with the slope (documented, not a bug).
+            // Build order IS rng draw order, and this arm's is: the INNER first (the house
+            // convention, every other arm does it), then the envelope knobs, which are leaves and
+            // draw nothing, then the humanization's four draws, then freq / q / analog exactly
+            // where they were. A CASCADE draws ONCE: every stage shares the one tolerance and the
+            // one drift lane, the way the strip's single `AudioFilter` with N stages does.
+            // `q.noMod()` deliberately stays INSIDE the loop: the build cache counts consumers,
+            // and hoisting it would change the memo's shape for the whole voice.
+            val built = inner.withMod()
+            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val hum = analog.filterHumanization(humanize, oscParams, cache)
             val n = coercePasses(passes)
             if (n == 1) {
-                inner.withMod().lowpass(freq.noMod(), q.noMod(), analog = analog.noMod())
+                built.lowpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
             } else {
                 val rel = butterworthQLadder(n, 1.0)
-                var chain = inner.withMod()
+                var chain = built
                 for (k in 0 until n) {
-                    chain = chain.lowpass(freq.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                    chain = chain.lowpass(freq.noMod(), q.noMod().scaledBy(rel[k]), envDef, analog.noMod(), hum)
                 }
                 chain
             }
@@ -841,15 +966,19 @@ private fun IgnitorDsl.buildRaw(
             // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
             inner.withMod()
         } else {
-            // See Lowpass above: same ladder, same analog-compounding note.
+            // See Lowpass above: same ladder, same analog-compounding note, same build/draw
+            // order and the same one shared lane for the whole cascade.
+            val built = inner.withMod()
+            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val hum = analog.filterHumanization(humanize, oscParams, cache)
             val n = coercePasses(passes)
             if (n == 1) {
-                inner.withMod().highpass(freq.noMod(), q.noMod(), analog = analog.noMod())
+                built.highpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
             } else {
                 val rel = butterworthQLadder(n, 1.0)
-                var chain = inner.withMod()
+                var chain = built
                 for (k in 0 until n) {
-                    chain = chain.highpass(freq.noMod(), q.noMod().scaledBy(rel[k]), analog = analog.noMod())
+                    chain = chain.highpass(freq.noMod(), q.noMod().scaledBy(rel[k]), envDef, analog.noMod(), hum)
                 }
                 chain
             }
@@ -869,13 +998,21 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Bandpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
             inner.withMod()
         } else {
-            inner.withMod().bandpass(freq.noMod(), q.noMod(), analog = analog.noMod())
+            // Same build/draw order as Lowpass above.
+            val built = inner.withMod()
+            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val hum = analog.filterHumanization(humanize, oscParams, cache)
+            built.bandpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
         }
 
         is IgnitorDsl.Notch -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
             inner.withMod()
         } else {
-            inner.withMod().notch(freq.noMod(), q.noMod(), analog = analog.noMod())
+            // Same build/draw order as Lowpass above.
+            val built = inner.withMod()
+            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val hum = analog.filterHumanization(humanize, oscParams, cache)
+            built.notch(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
         }
 
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms

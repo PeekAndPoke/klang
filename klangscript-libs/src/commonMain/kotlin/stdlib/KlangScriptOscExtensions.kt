@@ -8,6 +8,7 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.fillFilterEnvelope
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -53,6 +54,13 @@ object KlangScriptOscExtensions {
      * positionally, `lowpass(800, 1.8, 1, 3)`, or all-named:
      * `lowpass(freq = 800, q = 1.8, analog = 3)`.
      *
+     * The cutoff envelope comes AFTER [analog] here and after `passes` in sprudel, so its five
+     * knobs have no shared positional slot; write them named. The NAMES and the SCALES are the
+     * same on both doors, and sprudel's `attack` / `decay` / `sustain` / `release` are this
+     * door's `attackSec` / `decaySec` / `sustainLevel` / `releaseSec`, the suffix every envelope
+     * on the `Osc` object carries (`adsr`, `pitchEnvelope`). The envelope LAW is not the same on
+     * the two surfaces yet: see [IgnitorDsl.Lowpass.env] and decision D3.
+     *
      * The cascade's per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at
      * the DEFAULT q it stays -3 dB AT the cutoff: `lowpass(800, 0.707, 2)` still means 800.
      * A resonant q keeps its character but COMPOUNDS across stages — gain at the cutoff is
@@ -64,6 +72,25 @@ object KlangScriptOscExtensions {
      * (default — bit-identical to pre-analog behaviour). Higher values engage
      * OB-X-style state-dependent damping that compresses the resonance peak.
      * 1–3 gives Diva-default warmth; higher = stronger "diode bite".
+     * @param env Cutoff-envelope DEPTH in semitones. The five envelope knobs are a COMPOUND
+     * DOOR: naming ANY of them fills the others from the shared constants, this one included, so
+     * `lowpass(freq = 800, decaySec = 0.3, sustainLevel = 0.2)` is the same audible pluck that
+     * sprudel's `lpf(freq = 800, decay = 0.3, sustain = 0.2)` is. A call that names none of the
+     * five has no envelope, which is the untouched filter. A non-leaf EXPRESSION as `env` is not
+     * readable at build and switches the envelope OFF with no warning (a stage knob falls back to
+     * its constant instead) - write `Osc.slot.lpenv` or a number.
+     * @param attackSec Cutoff-envelope attack in seconds. Inert when the envelope is off.
+     * @param decaySec Cutoff-envelope decay in seconds. Needs a `sustainLevel` below 1 to be heard.
+     * @param sustainLevel Cutoff-envelope sustain share of `env`, 0 to 1.
+     * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's
+     * lifetime on either surface: a filter release longer than the amp envelope's is cut off.
+     * @param humanize Per-voice analog character, scaled by [analog]: a fixed cutoff tolerance
+     * drawn once for each note plus a slow drift lane that wanders it, which is what makes two
+     * notes through "the same" filter not process identically. `false` (the default) changes
+     * nothing, and at `analog = 0` it changes nothing either. Accepts `true`/`false` or a number
+     * (`1` on, `0` off, the idiom of `Pipeline`'s `on(0)` and sprudel's `adsrOn(0)`); anything
+     * else, a string for instance, reads as ON, because the house rule is to coerce a
+     * user-reachable value rather than throw.
      */
     @KlangScript.Method
     fun lowpass(
@@ -72,12 +99,39 @@ object KlangScriptOscExtensions {
         q: IgnitorDslLike = 0.707,
         passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
-    ): IgnitorDsl = IgnitorDsl.Lowpass(
-        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
-    )
+        // `null` is "the call did not name this knob", which is what the compound fill reads
+        // (`fillFilterEnvelope` in `audio_bridge`, and `/dsl-design` section 4 for the rule).
+        // A literal default, not a constant reference: a non-literal default makes KSP emit no
+        // thunk and a named call that skips the param then fails at RUNTIME with "complex Kotlin
+        // default" (measured here on 2026-09-20).
+        env: IgnitorDslLike? = null,
+        attackSec: IgnitorDslLike? = null,
+        decaySec: IgnitorDslLike? = null,
+        sustainLevel: IgnitorDslLike? = null,
+        releaseSec: IgnitorDslLike? = null,
+        humanize: Any = false,
+    ): IgnitorDsl {
+        val envelope = fillFilterEnvelope(
+            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
+            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
+        )
 
-    /** Applies a resonant highpass filter. See [lowpass] for `passes` and `analog` semantics. */
+        return IgnitorDsl.Lowpass(
+            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+            analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
+            env = envelope.env,
+            attackSec = envelope.attackSec,
+            decaySec = envelope.decaySec,
+            sustainLevel = envelope.sustainLevel,
+            releaseSec = envelope.releaseSec,
+            humanize = coerceFlag(humanize),
+        )
+    }
+
+    /**
+     * Applies a resonant highpass filter. See [lowpass] for `passes`, `analog`, the cutoff
+     * envelope and `humanize`.
+     */
     @KlangScript.Method
     fun highpass(
         self: IgnitorDsl,
@@ -85,10 +139,30 @@ object KlangScriptOscExtensions {
         q: IgnitorDslLike = 0.707,
         passes: Double = 1.0,
         analog: IgnitorDslLike = 0.0,
-    ): IgnitorDsl = IgnitorDsl.Highpass(
-        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
-    )
+        // `null` is "the call did not name this knob": see [lowpass].
+        env: IgnitorDslLike? = null,
+        attackSec: IgnitorDslLike? = null,
+        decaySec: IgnitorDslLike? = null,
+        sustainLevel: IgnitorDslLike? = null,
+        releaseSec: IgnitorDslLike? = null,
+        humanize: Any = false,
+    ): IgnitorDsl {
+        val envelope = fillFilterEnvelope(
+            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
+            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
+        )
+
+        return IgnitorDsl.Highpass(
+            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+            analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
+            env = envelope.env,
+            attackSec = envelope.attackSec,
+            decaySec = envelope.decaySec,
+            sustainLevel = envelope.sustainLevel,
+            releaseSec = envelope.releaseSec,
+            humanize = coerceFlag(humanize),
+        )
+    }
 
     /**
      * Applies a one-pole lowpass at [freq] Hz — the gentlest filter there is (6 dB/oct, no
@@ -102,8 +176,12 @@ object KlangScriptOscExtensions {
     /**
      * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
      *
-     * @param analog Reserved — accepted for API consistency but currently a no-op
-     * (BP saturation not yet implemented). Same range as [lowpass.analog] when implemented.
+     * @param analog The analog SATURATION is not implemented for this tap and the value does not
+     * reach it (same range as [lowpass]'s when it is). The value is NOT inert, though: it scales
+     * [humanize]'s per-voice cutoff tolerance and its drift lane, exactly as it does on the voice
+     * strip's `SvfBPF`. So `analog = 0` on a humanized bandpass is not a tidy-up, it switches the
+     * lane and the tolerance off AND stops the four build-time rng draws, which shifts every later
+     * noise source on that voice.
      */
     @KlangScript.Method
     fun bandpass(
@@ -111,10 +189,30 @@ object KlangScriptOscExtensions {
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
-    ): IgnitorDsl = IgnitorDsl.Bandpass(
-        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
-    )
+        // `null` is "the call did not name this knob": see [lowpass].
+        env: IgnitorDslLike? = null,
+        attackSec: IgnitorDslLike? = null,
+        decaySec: IgnitorDslLike? = null,
+        sustainLevel: IgnitorDslLike? = null,
+        releaseSec: IgnitorDslLike? = null,
+        humanize: Any = false,
+    ): IgnitorDsl {
+        val envelope = fillFilterEnvelope(
+            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
+            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
+        )
+
+        return IgnitorDsl.Bandpass(
+            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+            analog = analog.toIgnitorDsl(),
+            env = envelope.env,
+            attackSec = envelope.attackSec,
+            decaySec = envelope.decaySec,
+            sustainLevel = envelope.sustainLevel,
+            releaseSec = envelope.releaseSec,
+            humanize = coerceFlag(humanize),
+        )
+    }
 
     /**
      * Turns the graph optimizer off for this sound (`optimizer(0)`), so it renders exactly as
@@ -167,17 +265,40 @@ object KlangScriptOscExtensions {
         return EqBuilder(opened).configuredBy("eq", configure).node
     }
 
-    /** SVF notch (band-reject) filter. See [bandpass] for `analog` semantics (currently a no-op). */
+    /**
+     * SVF notch (band-reject) filter. See [bandpass] for what `analog` does on a tap without
+     * saturation (it is not inert: it scales `humanize`) and [lowpass] for the cutoff envelope.
+     */
     @KlangScript.Method
     fun notch(
         self: IgnitorDsl,
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
         analog: IgnitorDslLike = 0.0,
-    ): IgnitorDsl = IgnitorDsl.Notch(
-        inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-        analog = analog.toIgnitorDsl(),
-    )
+        // `null` is "the call did not name this knob": see [lowpass].
+        env: IgnitorDslLike? = null,
+        attackSec: IgnitorDslLike? = null,
+        decaySec: IgnitorDslLike? = null,
+        sustainLevel: IgnitorDslLike? = null,
+        releaseSec: IgnitorDslLike? = null,
+        humanize: Any = false,
+    ): IgnitorDsl {
+        val envelope = fillFilterEnvelope(
+            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
+            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
+        )
+
+        return IgnitorDsl.Notch(
+            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
+            analog = analog.toIgnitorDsl(),
+            env = envelope.env,
+            attackSec = envelope.attackSec,
+            decaySec = envelope.decaySec,
+            sustainLevel = envelope.sustainLevel,
+            releaseSec = envelope.releaseSec,
+            humanize = coerceFlag(humanize),
+        )
+    }
 
     // ── Envelope ─────────────────────────────────────────────────────────────
 

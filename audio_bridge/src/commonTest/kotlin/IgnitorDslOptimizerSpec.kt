@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -164,6 +165,75 @@ class IgnitorDslOptimizerSpec : StringSpec({
         ).optimize()
 
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
+    }
+
+    // Phase 3 step 3a. `asFusibleSections` grew TWO new conjuncts, `env.isLiteralZero()` and
+    // `!humanize`, on FOUR arms. A refusal row that covers one arm leaves three unguarded: the
+    // conjunct can be deleted from any of the other three and every suite stays green, while the
+    // filter it should have protected fuses into an `EqSection` that carries only freq and q.
+    // So both refusals go through this helper, and both are mutation-checked arm by arm.
+    fun eachFilterKindSurvivesUnfused(build: (IgnitorDsl, String) -> IgnitorDsl) {
+        for (kind in listOf("lowpass", "highpass", "bandpass", "notch")) {
+            // Not `shouldNotBeInstanceOf<Eq>()`: the weaker form also passes if the optimizer
+            // DROPPED the filter, which is a different and worse bug. The claim is that the
+            // FILTER survives, unfused.
+            withClue(kind) {
+                val optimized = build(IgnitorDsl.Sine(), kind).optimize()
+
+                when (kind) {
+                    "lowpass" -> optimized.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
+                    "highpass" -> optimized.shouldBeInstanceOf<IgnitorDsl.Highpass>()
+                    "bandpass" -> optimized.shouldBeInstanceOf<IgnitorDsl.Bandpass>()
+                    else -> optimized.shouldBeInstanceOf<IgnitorDsl.Notch>()
+                }
+            }
+        }
+    }
+
+    "a CUTOFF ENVELOPE never fuses, on every one of the four kinds" {
+        // `EqSection.Lowpass` has freq and q and nothing else, so a fused filter with a sweep
+        // would render a STATIC one and lose the sweep without a word.
+        eachFilterKindSurvivesUnfused { inner, kind ->
+            when (kind) {
+                "lowpass" -> IgnitorDsl.Lowpass(inner, c(2000.0), c(0.707), env = c(24.0))
+                "highpass" -> IgnitorDsl.Highpass(inner, c(200.0), c(0.707), env = c(24.0))
+                "bandpass" -> IgnitorDsl.Bandpass(inner, c(1000.0), c(0.707), env = c(24.0))
+                else -> IgnitorDsl.Notch(inner, c(1000.0), c(0.707), env = c(24.0))
+            }
+        }
+    }
+
+    "a Param-backed env never fuses even when it defaults to zero" {
+        // Same argument as the analog row above: `oscp("lpenv", 24)` could switch the sweep on
+        // per note, and the decision is made once, here.
+        IgnitorDsl.Lowpass(IgnitorDsl.Sine(), c(2000.0), c(0.707), env = IgnitorDsl.Param("lpenv", 0.0))
+            .optimize()
+            .shouldBeInstanceOf<IgnitorDsl.Lowpass>()
+    }
+
+    "humanize never fuses, on every one of the four kinds" {
+        // An `EqSection` has no per-voice tolerance and no drift lane, so fusing a humanized
+        // filter loses both AND loses the four build-time rng draws that go with them, which
+        // shifts every later noise source on that voice.
+        //
+        // `analog` stays at its LITERAL ZERO default deliberately: that is what makes `!humanize`
+        // the DECIDING conjunct here. Give it a non-zero analog and `analog.isLiteralZero()`
+        // refuses first, the row passes with `!humanize` deleted, and it guards nothing. (That is
+        // exactly why the fuzz spec's humanized arm cannot reach this clause; see its comment.)
+        eachFilterKindSurvivesUnfused { inner, kind ->
+            when (kind) {
+                "lowpass" -> IgnitorDsl.Lowpass(inner, c(2000.0), c(0.707), humanize = true)
+                "highpass" -> IgnitorDsl.Highpass(inner, c(200.0), c(0.707), humanize = true)
+                "bandpass" -> IgnitorDsl.Bandpass(inner, c(1000.0), c(0.707), humanize = true)
+                else -> IgnitorDsl.Notch(inner, c(1000.0), c(0.707), humanize = true)
+            }
+        }
+    }
+
+    "the CONTROL for those three: a filter at their defaults still fuses" {
+        // Without this row the three above would pass on an optimizer that fused nothing.
+        IgnitorDsl.Lowpass(IgnitorDsl.Sine(), c(2000.0), c(0.707)).optimize()
+            .shouldBeInstanceOf<IgnitorDsl.Eq>()
     }
 
     "an unfusable FILTER between two fusible ones splits them, and both sides still fuse" {

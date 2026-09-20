@@ -5,6 +5,12 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+
 
 /**
  * Filter envelope for dynamic filter cutoff modulation.
@@ -69,11 +75,16 @@ data class FilterEnvDef(
      */
     fun resolve(): Resolved {
         return Resolved(
-            attack = attack ?: 0.01,
-            decay = decay ?: 0.1,
-            sustain = sustain ?: 1.0,
-            release = release ?: 0.1,
-            depth = depth ?: 7.0, // C3: semitones (7 ~= the old 0.5 ratio: 12*log2(1.5))
+            // The one home of these numbers is `constants/FilterEnvelopeDefaults.kt`, which the
+            // Ignitor filter nodes and their doors read as well: the two surfaces resolve the
+            // same STAGE TIMES and the same DEPTH. Not the same SHAPE, though: this envelope
+            // runs the house exponential curve and the tree's runs straight lines. See
+            // `IgnitorDsl.Lowpass.env` and decision D3.
+            attack = attack ?: FILTER_ENV_ATTACK_SEC,
+            decay = decay ?: FILTER_ENV_DECAY_SEC,
+            sustain = sustain ?: FILTER_ENV_SUSTAIN_LEVEL,
+            release = release ?: FILTER_ENV_RELEASE_SEC,
+            depth = depth ?: FILTER_ENV_DEPTH_SEMITONES,
         )
     }
 
@@ -82,11 +93,11 @@ data class FilterEnvDef(
          * Default filter envelope settings.
          */
         val default = FilterEnvDef(
-            attack = 0.01,
-            decay = 0.1,
-            sustain = 1.0,
-            release = 0.1,
-            depth = 7.0, // C3: semitones (7 ~= the old 0.5 ratio at full envelope: 12*log2(1.5))
+            attack = FILTER_ENV_ATTACK_SEC,
+            decay = FILTER_ENV_DECAY_SEC,
+            sustain = FILTER_ENV_SUSTAIN_LEVEL,
+            release = FILTER_ENV_RELEASE_SEC,
+            depth = FILTER_ENV_DEPTH_SEMITONES,
         )
     }
 }

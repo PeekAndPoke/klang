@@ -6,6 +6,11 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
@@ -1228,7 +1233,13 @@ sealed interface IgnitorDsl {
     // Filters
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** SVF lowpass filter. Attenuates frequencies above the cutoff; [passes] cascades the stage. */
+    /**
+     * SVF lowpass filter. Attenuates frequencies above the cutoff; [passes] cascades the stage.
+     *
+     * **The cutoff envelope ([env], [attackSec], [decaySec], [sustainLevel], [releaseSec]) and
+     * the per-voice [humanize] lane are documented once, here**, and the other three filter nodes
+     * point at this block rather than repeating it.
+     */
     @WireName("lowpass")
     data class Lowpass(
         val inner: IgnitorDsl,
@@ -1247,9 +1258,75 @@ sealed interface IgnitorDsl {
          * stays -3 dB at [freq]; a resonant q's peak compounds across stages.
          */
         val passes: Int = 1,
+        /**
+         * Cutoff-envelope DEPTH in semitones, and the node's envelope SWITCH: at exactly `0` no
+         * envelope is built and the filter is bit-identical to one without these knobs.
+         * `cutoff = freq * 2^(env/12 * envelopeValue)`, so `env = 12` doubles the cutoff at full
+         * envelope and a negative value sweeps down, with no dead zone. Same word, meaning and
+         * scale as sprudel's `lpf(env = ...)`.
+         *
+         * **The node's field default is `0`, the DOOR's is not.** A door call that names any of
+         * the five envelope knobs fills the companions it left out, this one included, from
+         * `constants/FilterEnvelopeDefaults.kt` (see `fillFilterEnvelope`), so
+         * `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` is the audible pluck that
+         * `lpf(800, decay = 0.3, sustain = 0.2)` is, not a silent no-op. Only a call that names
+         * NOTHING leaves the envelope off. A hand-built node is a value, not a call, so it gets
+         * the plain `0`.
+         *
+         * The four stage knobs below are read ONCE per voice, at build, from a [Param] or
+         * [Constant] leaf (which is what a slot is). That matches the strip, whose
+         * `FilterDef.envelope` is resolved at note-on too. **A non-leaf EXPRESSION here is not
+         * "modulated", it is UNREADABLE at build**, and the consequence differs per knob: a stage
+         * knob falls back to its constant, but this DEPTH falls back to `0`, which switches the
+         * whole envelope OFF with no warning. `lowpass(800, env = Osc.param("e", 24).max(36))`
+         * renders a static filter. Write a slot (`Osc.slot.lpenv`) or a constant.
+         *
+         * **Which envelope this is, and D3 is open on BOTH counts.** The law: this node's
+         * segments are LINEAR (`computeFilterEnvelope` has no curve term at all), while the voice
+         * strip's are the house Exponential curve (`AdsrCurve.Default`, K = 3), because
+         * `VoiceFactory` omits the three curve arguments. Measured at `env = 24`, the two are up
+         * to 806 cents apart at the same instant (RMS 256 cents on a pluck, 512 on a pad). The
+         * sampling: this node computes the envelope at block START and block END and interpolates
+         * the SVF coefficients across the block, while the strip computes it once per block and
+         * lets `setCutoff` ramp the coefficients over 32 samples and then hold. Same endpoints and
+         * the same stage times on both; the law and the sampling are what decision D3 decides,
+         * and the law is the larger of the two by 4x to 100x. Nothing here anticipates the answer.
+         */
+        val env: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope attack in seconds. Inert while [env] is `0`. */
+        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        /** Cutoff-envelope decay in seconds. Inert while [env] is `0`. */
+        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        /** Cutoff-envelope sustain share of [env], 0 to 1. Inert while [env] is `0`. */
+        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        /** Cutoff-envelope release in seconds. Inert while [env] is `0`. */
+        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /**
+         * Per-voice analog humanization: the FIXED cutoff tolerance this voice's copy of the
+         * filter gets, plus the slow drift lane that wanders it while the note sounds. Both are
+         * scaled by [analog] and both are per-voice RANDOM DRAWS, which is why this is a
+         * structural flag and not a knob: no number a pattern writes can carry a draw.
+         *
+         * `false` (the default) draws nothing and changes nothing. `true` draws only when
+         * [analog] resolves above 0, and then exactly as the voice strip does: one
+         * `nextDouble()` for the tolerance, then the drift lane's three
+         * (`buildFilterHumanization` in `audio_be` owns the order). [analog] is read at build from
+         * a [Param] or [Constant] LEAF, like the envelope knobs: a non-leaf expression there is
+         * unreadable at build, so the lane silently does not exist and this flag does nothing. The
+         * strip has no such case to match, its `analog` being one number off the voice's bag.
+         *
+         * It is what the built-in instruments of phase 3 switch on so `analog(3)` keeps meaning
+         * what it means today. Scales come from `constants/FilterHumanizationDefaults.kt`; the
+         * per-engine `StageDsl.Filter` overrides do NOT reach a tree filter, because a tree has
+         * no pipeline stage to carry them (the same asymmetry `FILTER_DRIVE_PER_ANALOG` already
+         * has in `IgnitorFilters`).
+         */
+        val humanize: Boolean = false,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
+            sustainLevel.collectParams(out); releaseSec.collectParams(out)
         }
     }
 
@@ -1263,9 +1340,23 @@ sealed interface IgnitorDsl {
         val analog: IgnitorDsl = Constant(0.0),
         /** Cascade count — see [Lowpass.passes]. */
         val passes: Int = 1,
+        /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
+        val env: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
+        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
+        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
+        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
+        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /** Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. */
+        val humanize: Boolean = false,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
+            sustainLevel.collectParams(out); releaseSec.collectParams(out)
         }
     }
 
@@ -1287,14 +1378,34 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(0.707),
         /**
-         * Reserved for forward-compat — accepted but currently a no-op (BP saturation
-         * not yet implemented; same pattern as the voice-strip `SvfBPF`).
-         * See [Lowpass.analog] for semantics when implemented.
+         * The analog SATURATION is not implemented for this tap and the value does not reach it
+         * (same pattern as the voice-strip `SvfBPF`); see [Lowpass.analog] for the semantics when
+         * it is. The value is NOT inert, though: it scales [humanize]'s per-voice cutoff tolerance
+         * and its drift lane, exactly as it does on the strip, so `analog` on a bandpass is a
+         * humanization amount today and a saturation amount as well later.
          */
         val analog: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
+        val env: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
+        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
+        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
+        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
+        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /**
+         * Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. The TOLERANCE and
+         * the DRIFT reach this tap even though [analog]'s saturation does not: the strip's
+         * `SvfBPF` takes the same `cutoffOffsetMul` and the same `FilterModRenderer` drift.
+         */
+        val humanize: Boolean = false,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
+            sustainLevel.collectParams(out); releaseSec.collectParams(out)
         }
     }
 
@@ -1304,11 +1415,25 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val freq: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(0.707),
-        /** Reserved for forward-compat — accepted but currently a no-op (see [Bandpass.analog]). */
+        /** The saturation is not implemented for this tap; it still scales [humanize]. See [Bandpass.analog]. */
         val analog: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
+        val env: IgnitorDsl = Constant(0.0),
+        /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
+        val attackSec: IgnitorDsl = Constant(FILTER_ENV_ATTACK_SEC),
+        /** Cutoff-envelope decay in seconds; see [Lowpass.env]. */
+        val decaySec: IgnitorDsl = Constant(FILTER_ENV_DECAY_SEC),
+        /** Cutoff-envelope sustain share of [env]; see [Lowpass.env]. */
+        val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
+        val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /** Per-voice cutoff tolerance and drift lane; see [Bandpass.humanize]. */
+        val humanize: Boolean = false,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
+            sustainLevel.collectParams(out); releaseSec.collectParams(out)
         }
     }
 
@@ -1940,6 +2065,68 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
 // Filters
 
 /**
+ * The five cutoff-envelope knobs a filter DOOR hands to a filter node, after the compound fill.
+ */
+data class FilterEnvelopeKnobs(
+    val env: IgnitorDsl,
+    val attackSec: IgnitorDsl,
+    val decaySec: IgnitorDsl,
+    val sustainLevel: IgnitorDsl,
+    val releaseSec: IgnitorDsl,
+)
+
+/**
+ * **The compound fill for the filter cutoff envelope.** `null` means the call did NOT name that
+ * knob; everything else is an explicit value and is never overwritten.
+ *
+ * The rule itself has ONE home and it is not here: `/dsl-design` section 4, "A compound door fills
+ * per param, at the door, everywhere". What THIS door does under it: the filter envelope has no
+ * NAME knob, so ANY of its five knobs names the stage, and a call that names one writes every
+ * companion it left out from `audio_bridge/constants/FilterEnvelopeDefaults.kt`. `env` (the DEPTH)
+ * is a companion like the rest, which is what makes `lowpass(800, decaySec = 0.3,
+ * sustainLevel = 0.2)` an audible pluck instead of a silent no-op.
+ *
+ * It exists because sprudel already behaved that way and the two surfaces have to agree:
+ * `SprudelVoiceData` builds a `FilterDef` envelope when ANY of `lpattack` / `lpdecay` /
+ * `lpsustain` / `lprelease` / `lpenv` is present, and `FilterEnvDef.resolve()` then fills the
+ * missing depth with [FILTER_ENV_DEPTH_SEMITONES]. `lpf(800, decay = 0.3, sustain = 0.2)` is a
+ * pluck, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be a pluck too, with the
+ * same depth and the same stage times. Not yet the same CURVE through them: the two surfaces
+ * differ in the envelope law, which is [IgnitorDsl.Lowpass.env] and decision D3, not this
+ * function's to settle.
+ *
+ * A call that names NOTHING gets `env = 0`, which is the node's "no envelope" switch, and the four
+ * stage knobs at their constants where they are inert. `lowpass(800)` is therefore exactly the
+ * filter it was before this fill existed.
+ *
+ * The NODE's own field defaults are deliberately not this function: a hand-built
+ * [IgnitorDsl.Lowpass] is a value, not a call, and has no "named" to read.
+ */
+fun fillFilterEnvelope(
+    env: IgnitorDsl?,
+    attackSec: IgnitorDsl?,
+    decaySec: IgnitorDsl?,
+    sustainLevel: IgnitorDsl?,
+    releaseSec: IgnitorDsl?,
+): FilterEnvelopeKnobs {
+    val namesTheStage =
+        env != null || attackSec != null || decaySec != null || sustainLevel != null || releaseSec != null
+
+    return FilterEnvelopeKnobs(
+        // The depth is a companion, not a gate: only a call that names NO knob at all leaves the
+        // envelope off.
+        env = env ?: if (namesTheStage) IgnitorDsl.Constant(FILTER_ENV_DEPTH_SEMITONES) else IgnitorDsl.Constant(0.0),
+        attackSec = attackSec ?: IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
+        decaySec = decaySec ?: IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC),
+        sustainLevel = sustainLevel ?: IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL),
+        releaseSec = releaseSec ?: IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
+    )
+}
+
+/** A scalar door argument as a knob: `null` (the call did not name it) stays null for the fill. */
+private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) }
+
+/**
  * Applies an SVF lowpass filter at [freq] with resonance [q].
  *
  * @param passes Cascade count (C5): run the 12 dB/oct stage that many times — `2` = 24 dB/oct,
@@ -1947,19 +2134,53 @@ fun IgnitorDsl.detune(semitones: Double) = IgnitorDsl.Detune(
  * default q the cascade is -3 dB AT [freq] — `lowpass(800, passes = 2)` still means 800.
  * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
  * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
+ * The five envelope knobs are a COMPOUND DOOR (`/dsl-design` section 4): `null` means the call
+ * did not name that knob, and naming ANY of them fills the others from
+ * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decaySec = 0.3,
+ * sustainLevel = 0.2)` is the pluck `lpf(800, decay = 0.3, sustain = 0.2)` is, and a call that
+ * names none of them is the filter this door built before the knobs existed.
+ *
+ * @param env Cutoff-envelope DEPTH in semitones. Named alone it sweeps with the constant stage
+ * times; left out of a call that names a stage knob it is filled with
+ * [FILTER_ENV_DEPTH_SEMITONES]; left out of a call that names none of the five it is `0`, which
+ * is the node's "no envelope". See [IgnitorDsl.Lowpass.env], which also says which envelope law
+ * this is and what decision D3 still owes.
+ * @param attackSec Cutoff-envelope attack in seconds. Inert when the envelope is off.
+ * @param decaySec Cutoff-envelope decay in seconds. Needs a [sustainLevel] below 1 to be audible.
+ * @param sustainLevel Cutoff-envelope sustain share of [env], 0 to 1.
+ * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's lifetime,
+ * on either surface: a filter release longer than the amp envelope's is cut off with the voice.
+ * @param humanize Per-voice cutoff tolerance and drift lane, both scaled by `analog`
+ * (see [IgnitorDsl.Lowpass.humanize]). `false` draws nothing and changes nothing.
  */
 fun IgnitorDsl.lowpass(
     freq: IgnitorDsl,
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     passes: Int = 1,
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
-): IgnitorDsl.Lowpass = IgnitorDsl.Lowpass(
-    inner = this,
-    freq = freq,
-    q = q,
-    analog = analog,
-    passes = passes,
-)
+    env: IgnitorDsl? = null,
+    attackSec: IgnitorDsl? = null,
+    decaySec: IgnitorDsl? = null,
+    sustainLevel: IgnitorDsl? = null,
+    releaseSec: IgnitorDsl? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Lowpass {
+    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+
+    return IgnitorDsl.Lowpass(
+        inner = this,
+        freq = freq,
+        q = q,
+        analog = analog,
+        passes = passes,
+        env = envelope.env,
+        attackSec = envelope.attackSec,
+        decaySec = envelope.decaySec,
+        sustainLevel = envelope.sustainLevel,
+        releaseSec = envelope.releaseSec,
+        humanize = humanize,
+    )
+}
 
 /** Scalar convenience overload of [lowpass]. */
 fun IgnitorDsl.lowpass(
@@ -1967,8 +2188,16 @@ fun IgnitorDsl.lowpass(
     q: Double = 0.707,
     passes: Int = 1,
     analog: Double = 0.0,
+    env: Double? = null,
+    attackSec: Double? = null,
+    decaySec: Double? = null,
+    sustainLevel: Double? = null,
+    releaseSec: Double? = null,
+    humanize: Boolean = false,
 ): IgnitorDsl.Lowpass = lowpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
+    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
+    humanize,
 )
 
 /**
@@ -1981,13 +2210,29 @@ fun IgnitorDsl.highpass(
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     passes: Int = 1,
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
-): IgnitorDsl.Highpass = IgnitorDsl.Highpass(
-    inner = this,
-    freq = freq,
-    q = q,
-    analog = analog,
-    passes = passes,
-)
+    env: IgnitorDsl? = null,
+    attackSec: IgnitorDsl? = null,
+    decaySec: IgnitorDsl? = null,
+    sustainLevel: IgnitorDsl? = null,
+    releaseSec: IgnitorDsl? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Highpass {
+    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+
+    return IgnitorDsl.Highpass(
+        inner = this,
+        freq = freq,
+        q = q,
+        analog = analog,
+        passes = passes,
+        env = envelope.env,
+        attackSec = envelope.attackSec,
+        decaySec = envelope.decaySec,
+        sustainLevel = envelope.sustainLevel,
+        releaseSec = envelope.releaseSec,
+        humanize = humanize,
+    )
+}
 
 /** Scalar convenience overload of [highpass]. */
 fun IgnitorDsl.highpass(
@@ -1995,8 +2240,16 @@ fun IgnitorDsl.highpass(
     q: Double = 0.707,
     passes: Int = 1,
     analog: Double = 0.0,
+    env: Double? = null,
+    attackSec: Double? = null,
+    decaySec: Double? = null,
+    sustainLevel: Double? = null,
+    releaseSec: Double? = null,
+    humanize: Boolean = false,
 ): IgnitorDsl.Highpass = highpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
+    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
+    humanize,
 )
 
 /**
@@ -2100,21 +2353,89 @@ fun IgnitorDsl.bandpass(
     freq: IgnitorDsl,
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
-): IgnitorDsl.Bandpass = IgnitorDsl.Bandpass(inner = this, freq = freq, q = q, analog = analog)
+    env: IgnitorDsl? = null,
+    attackSec: IgnitorDsl? = null,
+    decaySec: IgnitorDsl? = null,
+    sustainLevel: IgnitorDsl? = null,
+    releaseSec: IgnitorDsl? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Bandpass {
+    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+
+    return IgnitorDsl.Bandpass(
+        inner = this,
+        freq = freq,
+        q = q,
+        analog = analog,
+        env = envelope.env,
+        attackSec = envelope.attackSec,
+        decaySec = envelope.decaySec,
+        sustainLevel = envelope.sustainLevel,
+        releaseSec = envelope.releaseSec,
+        humanize = humanize,
+    )
+}
 
 /** Scalar convenience overload of [bandpass]. */
-fun IgnitorDsl.bandpass(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Bandpass =
-    bandpass(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
+fun IgnitorDsl.bandpass(
+    freq: Double,
+    q: Double = 0.707,
+    analog: Double = 0.0,
+    env: Double? = null,
+    attackSec: Double? = null,
+    decaySec: Double? = null,
+    sustainLevel: Double? = null,
+    releaseSec: Double? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Bandpass = bandpass(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
+    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
+    humanize,
+)
 
 fun IgnitorDsl.notch(
     freq: IgnitorDsl,
     q: IgnitorDsl = IgnitorDsl.Constant(0.707),
     analog: IgnitorDsl = IgnitorDsl.Constant(0.0),
-): IgnitorDsl.Notch = IgnitorDsl.Notch(inner = this, freq = freq, q = q, analog = analog)
+    env: IgnitorDsl? = null,
+    attackSec: IgnitorDsl? = null,
+    decaySec: IgnitorDsl? = null,
+    sustainLevel: IgnitorDsl? = null,
+    releaseSec: IgnitorDsl? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Notch {
+    val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
+
+    return IgnitorDsl.Notch(
+        inner = this,
+        freq = freq,
+        q = q,
+        analog = analog,
+        env = envelope.env,
+        attackSec = envelope.attackSec,
+        decaySec = envelope.decaySec,
+        sustainLevel = envelope.sustainLevel,
+        releaseSec = envelope.releaseSec,
+        humanize = humanize,
+    )
+}
 
 /** Scalar convenience overload of [notch]. */
-fun IgnitorDsl.notch(freq: Double, q: Double = 0.707, analog: Double = 0.0): IgnitorDsl.Notch =
-    notch(IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog))
+fun IgnitorDsl.notch(
+    freq: Double,
+    q: Double = 0.707,
+    analog: Double = 0.0,
+    env: Double? = null,
+    attackSec: Double? = null,
+    decaySec: Double? = null,
+    sustainLevel: Double? = null,
+    releaseSec: Double? = null,
+    humanize: Boolean = false,
+): IgnitorDsl.Notch = notch(
+    IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
+    env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
+    humanize,
+)
 
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)

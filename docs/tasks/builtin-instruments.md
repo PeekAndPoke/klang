@@ -50,16 +50,52 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   because the strip has its own downstream bounding stages. Drop the cap on the classic tail
   (identity, but a heavy-drive branch can then dominate a mix, which is what the cap exists for), or
   keep it and accept the change on every distorted voice.
-- **D3, the filter envelope.** The strip computes it once per block and lets `setCutoff` ramp the
-  coefficients over 32 samples and then hold; the ignitor computes it at block start and end and
-  interpolates across the whole block. Same law, different sampling. Port the strip's shape for
-  identity, or take the interpolated one (arguably better: the ignitor's KDoc says the per-block
-  recompute left a 187 Hz stair-step) with an ear checkpoint on Der Schmetterling and Stranger
-  Things.
+- **D3, the filter envelope. RE-SCOPED 2026-09-20 in the step 3a review: it is two decisions, and
+  the one the spike missed is the bigger.**
+  - **The LAW.** The node's envelope segments are LINEAR (`envelopeLevelAtPosition` has no curve in
+    it at all); the strip's take `AdsrCurve.Default`, which is Exponential with K = 3, because
+    `VoiceFactory` omits the three curve arguments when it builds the `Voice.Envelope`. Measured at
+    `env = 24`: up to 806 cents apart at the same instant, RMS 256 cents on a 10 ms / 100 ms pluck
+    and 512 on a 2 s pad. The reviewer recommends giving the NODE the house Exponential curve, since
+    `AdsrCurve.Default` is the default on every other stage in the engine and a filter envelope
+    should not be the one envelope that is secretly linear. If linear is wanted for a filter sweep
+    (defensible: with a pitch-linear sweep it is a constant-rate glide in semitones), then the STRIP
+    moves, and it is recorded as a deliberate curve choice rather than an accident of an omitted
+    constructor argument.
+  - **The SAMPLING.** The strip computes the envelope once per block and lets `setCutoff` ramp the
+    coefficients over 32 samples and then hold; the node computes it at block start and end and
+    interpolates across the whole block. Measured as a residual against an ideal per-sample law, the
+    node is 3 to 35 dB closer on every patch tried (a pluck at q 0.707: -56.7 dB against -41.9; a pad:
+    -85.8 against -50.3). In cutoff terms the strip lags by up to 635 cents and stairs at the 375 Hz
+    block rate, which is the stair-step the node's own KDoc says it exists to avoid. Neither is a
+    stability risk (worst pole-radius excess over the endpoints: 1.1e-16, because both endpoints
+    share one q). The reviewer recommends KEEPING the node's interpolation and porting it to the
+    strip, and notes the ramp exists to mask a block-boundary JUMP that interpolation removes
+    entirely. The node's one weakness is a segment CORNER inside a block (at a 0.3 ms attack it
+    chords over the peak); the fix, if wanted, is to split the block at segment boundaries, not to
+    shorten the ramp.
+  - The same sampling question exists for the DRIFT and is settled by measurement: inaudible at
+    every shipped setting (-78 to -101 dB RMS), because both branches HOLD the drift across the
+    block, which is the strip's law exactly, and only the block boundary differs.
+  - Also in this decision's record, from the same review: the node truncates stage frame counts to
+    Int where the strip keeps them fractional (220 against 220.5 at `attackSec = 0.005`), the same
+    class as the ADSR mismatch the spike recorded.
+  - Either way it is an ear checkpoint on Der Schmetterling and Stranger Things, and it changes every
+    song that already uses `lpf(env = ...)`, by up to 635 cents at the sweep's steepest.
 - **D4, the `pedal` pipeline.** `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
   FIRST. It retires with `PipelineDsl` and has no `classic()` spelling. Ship a second named tail
   (a second word for one concept, which the rules register argues against), rewrite the song, or let
   it change.
+- **D6, the door's shape (raised in the step 3a review).** The script door's `lowpass` is now eleven
+  parameters, nine of them defaulted, in the same file as an `eq` door that takes a `configure`
+  lambda, while `/dsl-design` section 2 says "anything with a default is a knob and lives on the
+  builder". The flat shape mirrors sprudel's slot-per-knob `lpf` and the door already had four
+  defaulted knobs, so this is growth rather than a new violation, but 3b and 3c add the same volume
+  to crush, coarse, distort and tremolo. Decide now or the four follow. Related, same door: the two
+  surfaces disagree on the FOURTH positional argument (`lowpass(freq, q, passes, analog, env, ...)`
+  against `lpf(freq, q, passes, env, attack, ...)`), so `lowpass(800, 1.2, 2, 24)` is a very dirty
+  filter and `lpf(800, 1.2, 2, 24)` is two octaves of sweep. Both KDocs say to write them named;
+  nothing guards it.
 - **D5, the frozen pieces.** `FrozenPieces` is captured verbatim and immutable except for door
   renames. Appending `.classic()` is not a rename, and without it those pieces lose their outer
   envelope. The maintainer's word is needed.
@@ -72,8 +108,8 @@ de-click may share the name `declickSeconds` with a slot whose default differs.
 
 | Missing | Kind | Who needs it |
 |---|---|---|
-| The filter ENVELOPE (attack, decay, sustain, release, depth) on the four filter nodes | 5 knobs per filter | every song with `lpf(env = ...)` |
-| `AnalogDrift` per filter, and the per-voice cutoff tolerance | node feature, per-voice rng draws | every song with `analog > 0` |
+| ~~The filter ENVELOPE on the four filter nodes~~ | DONE in 3a (2026-09-20) | `env` plus four stage knobs, both doors, the wire, the defaults in `audio_bridge/constants/FilterEnvelopeDefaults.kt` |
+| ~~`AnalogDrift` per filter, and the per-voice cutoff tolerance~~ | DONE in 3a | the structural `humanize` flag, because both halves are per-voice DRAWS and no knob can carry a draw; the draw order lives in `audio_be/.../ignitor/FilterHumanization.kt` |
 | `oversample` on crush and coarse | 1 knob each | Tetris, the frozen corpus |
 | `skew`, `phase`, `shape` on tremolo | 2 knobs + 1 index slot | the tremolo door |
 | `shape` and `oversample` on distort | 1 index slot + 1 knob | Tetris, the frozen corpus |
@@ -128,6 +164,30 @@ non-finite sample from finite input owes a substitution at its own read", not "n
 | the four SVF filters | only when the cutoff is UNSET | a lowpass at 20 kHz is not an off state, which is why the rule is "unset" and not a number. A non-finite AUTHORED cutoff used to build a 1 kHz filter (the `clampSvfCutoff` fallback) and now builds none: a behaviour change as well as a NaN fix |
 | the envelope | NOT gated | inverted from the plan: the strip VCA runs on every voice today, so `classic()`'s ADSR is built BY DEFAULT and switches off only through the `adsrOn`/`adsrOff` slot of step 3. Its unset case was NOT safe, and step 2 had to make it safe: the unity-`mul` fold removed the `TimesIgnitor` scrub that used to turn a NaN into silence, so `sustainLevel` and `expK` now substitute their own defaults (`ADSR_SUSTAIN_LEVEL`, `ADSR_EXP_K`) at the ADSR's read. Not a clamp: every finite value passes through untouched. The substitution runs BEFORE the existing coercion, so the infinities move too: a `+Inf` sustain used to hold at the 1.0 rail and a `-Inf` at 0.0, and both now read as unset and take the default, which is how every other knob reads a non-finite value. A non-finite `releaseSec` also stopped reporting a NaN release TAIL, which used to swallow a SIBLING's real one. What remains step 3c's is the `adsrOff` slot itself |
 | the phaser | NOT gated | the plan lists it; no per-voice phaser is in `classic()` and the stage retires with `PipelineDsl`, so the row would be dead code |
+
+**The compound fill does not survive SLOTTING, and step 5 must answer it again (3a review, round 2).**
+The filter doors adopted the rules register's compound-door fill in step 3a AT THE DOOR: any of the
+five envelope knobs names the stage, and a call that names one writes every companion it left out,
+`env` included. That reading happens at CALL time, on named-against-null. A slotted built-in does
+not call the door per note: `classic()` will hand `Lowpass(env = Param("lpenv", SLOT_UNSET),
+attackSec = Param("lpattack", SLOT_UNSET), ...)` once, and the per-note decision then happens in
+`filterEnvDef`, which has no notion of "named". A pattern that writes only `lpattack` leaves `env`
+unset, the depth resolves to 0, and the tree renders a STATIC filter where the same `lpf(attack =
+...)` through the strip builds a 7-semitone sweep. So the fill has to be answered a second time at
+the slot layer, in step 5, and the answer is a design question: what does "the stage is named" mean
+when the caller is a pattern writing slots?
+
+**A cheap shape for it, proposed in the 3a review and NOT built** (step 5 decides): ask the same
+question one layer down, against the bag instead of against `null`. A knob is "written" when it is a
+`Param` whose name resolves to a finite value in `oscParams`; in `filterEnvDef`, when the resolved
+depth is 0, if any of the five knobs is written, take `FILTER_ENV_DEPTH_SEMITONES` instead of
+returning `NONE`. It is the gate's existing move (the gate already reads the bag at build to decide
+whether a stage exists), it composes with the door fill rather than replacing it (a door-filled
+depth is a `Constant`, not a `Param`, so the question never arises), it costs five map lookups per
+filter per note-on and nothing per block, and an instrument that declares a real default
+(`env = Osc.param("lpenv", 24.0)`) is untouched. **The law to decide with it:** does "written" mean
+finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
+what sprudel's `!= null` means and is the recommendation.
 
 **The distort question this leaves open, for D2.** `IgnitorDsl.Distort` is legacy by its own KDoc and
 no production site builds it; both doors emit `Shape(Drive(...))`. `Drive` is gated, `Shape` cannot

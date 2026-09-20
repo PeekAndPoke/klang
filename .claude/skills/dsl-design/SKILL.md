@@ -162,7 +162,16 @@ the bug.
   calls of the same door is overwritten. The engine's non-finite guard stays as the NaN rule for
   a raw `katp` write, not as a second fill. The voice-side compound doors (`adsr`, `lpf`, FM and
   pitch envelopes) adopt it when phase 3 of `docs/plans/signal-flow-redesign.md` rebuilds the
-  built-ins as instruments with slots.
+  built-ins as instruments with slots. **First adoption, 2026-09-20 (phase 3 step 3a): the four
+  Ignitor filter doors.** Their envelope has no NAME knob, so ANY of its five knobs names the stage
+  and a call that names one writes every companion it left out, `env` included; a call that names
+  none is the untouched filter. **It is adopted AT THE DOOR only, and a door fill does not survive
+  SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
+  node one set of `Param`s once and the per-note decision moves into the build, which has no notion
+  of "named". A pattern writing only `lpattack` therefore leaves the depth unset and renders a
+  static filter, where the same `lpf(attack = ...)` through the voice strip sweeps. What "the stage
+  is named" means when the caller is a pattern writing slots is open, and phase 3's step 5 answers
+  it (`docs/tasks/builtin-instruments.md`, section 5b's neighbourhood).
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
   on the master only because a per-orbit lookahead would shift that orbit late). See
