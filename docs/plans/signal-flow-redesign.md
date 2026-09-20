@@ -441,7 +441,17 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   for the life of every voice. Folding it away at build would drop the `safeOut`, which changes
   bits for a NaN or an out-of-range sample, so it is a decision (is the extra scrub wanted?), not
   a blind optimisation. Measure in the phase 3 spike before the built-ins place the slot.
-- **Phase 3: `analog` is the one bag key with two readers that disagree on a non-finite value.**
+- **CLOSED 2026-09-20 (phase 3 step 1): `analog` was the one bag key whose readers disagreed on a
+  non-finite value.** Both readers on a render path carry `takeIf { it.isFinite() }` now, and the
+  sample ignitor's second, independent lookup takes the guarded local. On a RENDER path in the
+  backend `GraphCensus` is now the one unguarded reader, and it stays so on purpose (benchmark-only
+  and audio-inert); sprudel's field accessors read the bag unguarded too, but only on the query side
+  for pattern arithmetic. What the guard closed, measured: a NaN retuned every filter on the voice to
+  1 kHz (and, on an rng-drawing oscillator, shifted its noise stream as well, because failing
+  `analog <= 0.0` also consumes a draw per filter); `+Infinity` drove the saturating branch to NaN at
+  the first sample and put NaN into the orbit mix, on a sample voice as well as a synth one. The paragraph below is the record of what it was, in the
+  present tense it was written in.
+- **Phase 3: `analog` WAS the one bag key with two readers that disagree on a non-finite value.**
   Since the leaf guard, the oscillator's `Slots.analog` reads a NaN as its default, while
   `VoiceFactory` still hands the raw value to the filter-feel scales and the sample ignitor.
   `oscParams["onepole"]` is NaN-safe by accident and not `+Infinity`-safe. Both go away when those

@@ -103,7 +103,17 @@ class VoiceFactory(
         // (highpass-first / lowpass-last for clean nonlinear behaviour) is made
         // upstream by the language layer (see SprudelVoiceData.toVoiceData), which
         // keeps the engine a faithful consumer and leaves explicit routing open.
-        val analog = data.oscParams?.get("analog") ?: 0.0
+        //
+        // THE one place the factory reads `analog` off the bag, guarded here rather than at each
+        // use. A non-finite override reads as UNSET, the same rule the `Param` leaf applies to every
+        // slot (`IgnitorDslRuntime`, `/dsl-design` section 4) and the same rule `gain` follows below.
+        // It matters because the readers disagree on which test a non-finite value fails:
+        // `perVoiceCutoffOffsetMul` tests `analog <= 0.0` (a NaN fails it, and the cutoffs then go
+        // non-finite), `AnalogDrift` and the SVF's saturating branch test `analog > 0.0` (a NaN
+        // fails that too, an `+Infinity` passes both), and each test also decides whether the voice
+        // DRAWS from its rng. What each non-finite value used to render is written out once, in
+        // `VoiceBagGuardSpec`, which is the guard.
+        val analog = data.oscParams?.get("analog")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
         // The active engine's Filter stage carries the per-voice "filter feel" scales
         // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
         val filterStage = pipelineRegistry.get(data.pipeline).stages
@@ -344,7 +354,11 @@ class VoiceFactory(
                     loopEnd = loopEnd,
                     isLooping = isLooping,
                     stopFrame = endSample,
-                    analog = data.oscParams?.get("analog") ?: 0.0,
+                    // The guarded read from the top of this function, not a second lookup off the
+                    // bag: `SampleIgnitor` hands this straight to its `AnalogDrift`, whose lane
+                    // tests `analog > 0.0`, so an `+Infinity` used to take the playhead non-finite
+                    // on the first increment. Guard: `VoiceBagGuardSpec`.
+                    analog = analog,
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
                 )

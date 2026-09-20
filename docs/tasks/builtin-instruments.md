@@ -130,12 +130,22 @@ song with both a highpass and a lowpass at `analog > 0` (at analog 0 the filters
   the cost: today's built-ins carry no `pregain`, so keeping a unity multiply is the bit change, not
   removing it. What it drops is a `safeOut` scrub that only fires on a sample that is already NaN or
   above 1e15, which a bare oscillator cannot produce and every downstream stage still guards.
-- **`analog`'s readers disagree, and it is worse than recorded.** A NaN `analog` fails the
-  `analog <= 0.0` test in `perVoiceCutoffOffsetMul`, so the multiplier is NaN, the cutoff is NaN, and
-  `bilinearK`'s guard substitutes 1 kHz: a NaN `analog` silently retunes every filter on the voice to
-  1 kHz. `AnalogDrift` and the saturation branch are NaN-safe by accident and not Infinity-safe. The
-  oscillator's slot is clean. Close it in step 1 with one `takeIf { it.isFinite() }` at the one place
-  the factory reads the bag, and the same for `oscParams["onepole"]`.
+- **`analog`'s readers disagreed, and it was worse than recorded. CLOSED in step 1 (2026-09-20).**
+  A NaN `analog` failed the `analog <= 0.0` test in `perVoiceCutoffOffsetMul`, so the multiplier was
+  NaN, the cutoff NaN, and `bilinearK`'s guard substituted 1 kHz: a NaN `analog` silently retuned
+  every filter on the voice to 1 kHz, measured bit-identical to a genuine 1 kHz lowpass ON A SAW;
+  on a voice that draws from the rng (supersaw, dust, whitenoise, pluck) it was 1 kHz AND a shifted
+  noise stream, because failing `analog <= 0.0` also consumes one draw per filter. `+Infinity` was a
+  THIRD behaviour and the worst: it fails `<= 0.0` (the cutoffs clamp) AND passes `> 0.0`, so the
+  saturating branch runs with an infinite drive, `kEff = k + 2 * Infinity * 0.0` is NaN at the first
+  sample, and every sample of that voice came out NaN with nothing between it and the ORBIT MIX;
+  on a sample voice the infinite drift did the same (measured: frame 0 is the PCM's own first
+  sample, every frame after it NaN), so `note("c3").oscp("analog", "Infinity").lpf(2000)` poisoned
+  the whole orbit's send chain for the rest of the playback. `-Infinity` was always safe, and on the
+  sample read a NaN never was a defect (`AnalogDrift.active` is `analog > 0.0`, which a NaN fails). `oscParams["onepole"]` passed `+Infinity` through its `> 0.0` gate and then rendered
+  exactly what `onepole(1000)` renders. The sample ignitor read the bag a SECOND time, so the fix was
+  one guard plus one de-duplicated read, not one line. Every reader on a render path is guarded now;
+  `GraphCensus` is not, deliberately, because it is benchmark-only and audio-inert.
 
 ## 8. The migration risk, and it is bigger than the plan states
 

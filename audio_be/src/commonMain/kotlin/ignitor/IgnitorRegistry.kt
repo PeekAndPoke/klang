@@ -127,7 +127,11 @@ class IgnitorRegistry(
             random = random,
             freqHz = freqHz,
         )
-        val onepoleHz = oscParams?.get("onepole") ?: 0.0
+        // THE one place `onepole` is read off the bag. A non-finite override reads as UNSET, the
+        // rule the `Param` leaf applies to every slot (`IgnitorDslRuntime`, `/dsl-design` section 4):
+        // the `> 0.0` test below rejects a NaN but accepts an `+Infinity`. What that used to render
+        // is written out once, in `VoiceBagGuardSpec`, which is the guard.
+        val onepoleHz = oscParams?.get("onepole")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
         // Same kernel as the ignitor-door onepole(freq) — one filter, one law, both doors.
         return if (onepoleHz > 0.0) raw.copy(ignitor = raw.ignitor.onePoleLowpass(onepoleHz)) else raw
     }

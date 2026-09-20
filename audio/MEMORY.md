@@ -1275,14 +1275,50 @@ Second half of the signal-flow plan's phase 2 (spots A and C). The first half is
   sprudel today through a string atom (`"NaN"` and `"Infinity"` both parse) or an overflowing power;
   script division by zero throws instead. Checked before it was made general: the Katalyst's
   `SLOT_UNSET` slots never pass through this leaf (they resolve in `KatalystSlots` / `KatalystKnob`
-  off `katalystParams`, where non-finite is the DECLARED off state), and the only other reader of
-  the bag on a render path is `IgnitorRegistry.createExciter`'s `oscParams["onepole"]`, which
-  compares `> 0.0` and is therefore already non-finite-safe for NaN, though not for `+Infinity`;
-  `VoiceFactory`'s `oscParams["analog"]` is the other, both out of this step's scope.
+  off `katalystParams`, where non-finite is the DECLARED off state). The two other readers of the
+  bag on a render path, `IgnitorRegistry.createExciter`'s `oscParams["onepole"]` and
+  `VoiceFactory`'s `oscParams["analog"]`, were out of that step's scope and **carry the same guard
+  since 2026-09-20** (phase 3 step 1, the bullet below).
   `GraphCensus.of` is a FOURTH reader (`countOf`, `params[slot.name] ?: slot.default`) and resolves
   an override with no finite guard at all; it is audio-inert (benchmark only, never on a render
   path) and harmless as it stands, since `NaN.toInt()` is 0 and is then coerced to 1.
   Guard: `VoicePregainWireSpec`.
+- **The bag's RAW reads now follow the same rule** (2026-09-20, signal-flow phase 3 step 1): THREE
+  reads across two readers, `VoiceFactory`'s `oscParams["analog"]` (once for the filters, once again
+  in the sample branch) and `IgnitorRegistry.createExciter`'s `oscParams["onepole"]`. Each now takes
+  `?.takeIf { it.isFinite() } ?: 0.0`; `analog` is read once at the top of `makeVoice` and the sample
+  branch takes that local, so the bag is read once per voice. The detail is in `VoiceBagGuardSpec`,
+  which is the one home of it and the guard; in short, and every line of it MEASURED:
+  - The readers disagree about WHICH test a non-finite value fails, which is why one guard at the
+    read is the only tractable place. `perVoiceCutoffOffsetMul` tests `analog <= 0.0`;
+    `AnalogDrift` and the SVF's saturating branch test `analog > 0.0`.
+  - A **NaN** `analog` failed `<= 0.0`, so the multiplier and every cutoff went NaN and `bilinearK`
+    substituted 1 kHz. On an exciter that never touches the voice rng (`saw`) the poisoned voice was
+    a voice whose lowpass really sits at 1 kHz SAMPLE FOR SAMPLE. **It does not generalise**: failing
+    that test also consumes one `nextDouble()` PER FILTER off `voiceRandom` before the exciter is
+    built off the same stream, so on `supersaw` the poisoned voice was 1 kHz AND a shifted jitter
+    stream, measured NOT equal to the 1 kHz supersaw. The extra draw belongs to every non-finite
+    value, not to `+Infinity` alone.
+  - An **`+Infinity`** `analog` was WORSE, and is what makes this more than hygiene: it fails
+    `<= 0.0` and passes `> 0.0`, so the SVF took its saturating branch with `driveScale = Infinity`,
+    and at the first sample `ic1eq` is 0.0, so `tCfb` is exactly 0.0 and
+    `kEff = k + 2.0 * Infinity * 0.0` is NaN. Every sample of the voice was NaN from frame 0 (all
+    1024 frames of the spec's render), nothing in `Voice` or `Cylinder` scrubs it, so the NaN reached
+    the ORBIT MIX and stayed in the orbit's send chain for the rest of the playback:
+    `note("c3").oscp("analog", "Infinity").lpf(2000)` silenced an orbit. Same failure the `gain`
+    guard's comment describes for its own reader.
+  - On the SAMPLE read, only `+Infinity` was a defect (the lane tests `> 0.0`, which a NaN fails):
+    the drift multiplier went non-finite, the playhead with it, and every frame after the first was
+    NaN. Reverting that one read alone turns exactly one spec row red.
+  - An **`+Infinity` `onepole`** passed the registry's `> 0.0` gate and built a one-pole whose cutoff
+    `bilinearK` clamped to 1 kHz, rendering exactly what `onepole(1000)` renders.
+  - A **`-Infinity`** was already safe everywhere (it passes `<= 0.0` and fails `> 0.0`), and so was
+    a NaN on the two `> 0.0` gates. Those rows state the rule, they do not close a defect.
+
+  Identity proven for the shipped corpus: no song, frozen text or doc example writes a non-finite
+  one, and a one-off HEAD-against-tree render of all 15 built-in songs plus both frozen songs and the
+  frozen piece, 256 cycles each at 48 kHz with the wall clock pinned, was 18 of 18 bit-identical.
+  All three reads disappear when these doors become slots in the tree.
 - **The one behaviour the guard CHANGES, and it is wanted: it closes a voice leak.** An instrument
   whose envelope release is a slot (`.adsr(release = Osc.param("rel", 0.1))`) used to accept
   `oscp("rel", "Infinity")`, which the leaf handed on as an infinite `releaseTailSec`, so
