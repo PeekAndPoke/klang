@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -76,8 +76,11 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.body!!.isEngaged shouldBe false // the intent flips at once
         bodyActiveOn(cylinder) shouldBe true // the sound does not: the first block still carries the fading body
 
-        // The sound fades to dry over KNOB_GLIDE_SECONDS (Katalyst step 5c-6), then the body is gone.
-        repeat((sampleRate * KNOB_GLIDE_SECONDS / bf).toInt()) { bodyActiveOn(cylinder) }
+        // The sound fades to dry over BANK_CROSSFADE_SECONDS (Katalyst steps 5c-6 and 5c-11),
+        // then the body is gone. The fade is 6.9 blocks at 44.1 kHz, and a fade lands on a block
+        // BOUNDARY, so it takes 7: `toInt()` truncates the 6.9 to 6 and the `+ 1` is what makes
+        // this the ceiling.
+        repeat((sampleRate * BANK_CROSSFADE_SECONDS / bf).toInt() + 1) { bodyActiveOn(cylinder) }
         bodyActiveOn(cylinder) shouldBe false
     }
 

@@ -119,7 +119,12 @@ so "what Strudel does not have" named nothing a reader could use; every DSL file
 `TutorialScope` and the tutorial field `scope` (renamed 2026-09-08 to `TutorialDepth` / `depth`, with
 `scopeLabel`/`scopeColor` and the `?scope=` URL parameter: Quick/Standard/DeepDive is a depth ladder, and
 "scope" now means one thing only, WHERE audio runs, see `KlangScope` and the `@scope` KDoc tag).
-`postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
+The resonator MORPH (`ResonatorBank.morphTo`, the `MORPH` flags on the body and vowel hosts,
+`BaseSvf.retune` and `resetState`, the split bank and wrap factories, `MORPH_CAPACITY`) and
+`KatalystFilterSwap.MAX_BANKS` with its outgoing pool and drop rule, both gone 2026-09-20: the
+maintainer listened and rejected the morph (travelling a bank's resonances is an audible filter
+sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one parking slot holding a
+config, latest wins, at `BANK_CROSSFADE_SECONDS`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
 channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
 `velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
 `docs/plans/signal-flow-redesign.md` section 6).

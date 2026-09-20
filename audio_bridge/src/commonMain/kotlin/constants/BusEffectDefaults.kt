@@ -9,8 +9,10 @@ package io.peekandpoke.klang.audio_bridge.constants
 // Defaults of the per-orbit bus effects that are NOT sends: phaser, compressor,
 // duck, body, vowel. The send pair (delay, reverb) lives next door in
 // `SendEffectDefaults.kt`; the master limiter in `MasterLimiterDefaults.kt`.
-// At the end, one timing that is not a knob default but belongs to the orbit
-// knobs whose jump is audible, sends included: [KNOB_GLIDE_SECONDS].
+// At the end, two timings that are not knob defaults but belong to the orbit
+// knobs and stages whose jump is audible, sends included: [KNOB_GLIDE_SECONDS]
+// for a level or dynamics glide, [BANK_CROSSFADE_SECONDS] for a filter bank
+// crossfade.
 //
 // Same contract as its neighbours: ONE declaration that every surface reads, so
 // the `KatalystStageDsl` knob defaults, the engine's fill for a voice field the
@@ -133,8 +135,70 @@ const val VOWEL_FLOOR: Double = 0.2
  * owner change can move every knob of the chain at once (`docs/plans/knob-glide.md`, decided 2026-09-19).
  *
  * A safety net against clicks, applied per knob where a jump is AUDIBLE, not by default to every
- * knob: today only the orbit reverb's size uses it (its damping was measured to need none). The
- * engine rounds it to whole render blocks (`KnobGlide`). Not a knob today; it may become a user
- * knob one day, and this is where its default would then live.
+ * knob. It grew well past its pilot (the orbit reverb's size, whose damping was measured to need
+ * none) through Katalyst 5c-7 to 5c-9: it is now the orbit fader and gain, the compressor's blend
+ * and its per-sample knobs, the phaser's coefficients and breakpoint, the duck's weight and depth,
+ * the delay's `wet` and its tap crossfade, and the send `wet`s. What it is NOT, since 5c-11, is
+ * the filter-bank crossfade: that is [BANK_CROSSFADE_SECONDS] below. `KnobGlide` rounds this one
+ * to whole render blocks. Not a knob today; it may become a user knob one day, and this is where
+ * its default would then live.
  */
 const val KNOB_GLIDE_SECONDS: Double = 0.05
+
+// ── Bank crossfade ───────────────────────────────────────────────────────────
+
+/**
+ * How long ONE BANK CROSSFADE takes, in seconds: the time `KatalystFilterSwap` spends blending the
+ * bank in service into the arriving one, and the time the body, the vowel and the orbit EQ take to
+ * fade in from dry or out to it.
+ *
+ * Its own constant since Katalyst step 5c-11 (decided with the maintainer, 2026-09-20), SHORTER
+ * than [KNOB_GLIDE_SECONDS], which keeps every level and dynamics glide at 50 ms (the compressor's
+ * release measurably gets worse if that one is shortened). A bank swap is not a level move: what
+ * travels is a whole filter, so the fade is the time two materials are heard at once, and 50 ms of
+ * it smears an articulation.
+ *
+ * **The rate limit is tempo and rate SPECIFIC, and it is a block count.** A fade occupies
+ * `ceil(fadeLen / blockFrames)` blocks, so the swap can start a change every 20.3 ms at 44.1 kHz
+ * (7 blocks of 128) and every 21.3 ms at 48 kHz, not every 20 ms. 64ths at 174 BPM are 21.55 ms
+ * apart and clear it on both; at 176 BPM they are 21.3 ms apart and every change parks at 48 kHz. Past the limit the
+ * parking does not THIN a run, it ALIASES it: the changes that survive are phase-locked, so a
+ * four-material pattern at twice the limit is heard as a two-material alternation with two of the
+ * four never sounding at all.
+ *
+ * **Measured, and the verdict SPLITS by band** (Katalyst 5c-11; the round-1 numbers were taken
+ * through an 8th-order Butterworth whose skirt leaked the signal into both measured bands and are
+ * retracted). Instrument: a 16383-tap Blackman-Harris windowed sinc per band, stopband -142 dB at
+ * 110 Hz for the 60 Hz lowpass and -164 dB at 2970 Hz for the 8 kHz highpass, floors taken on a
+ * static render. Sources band-limited to 3 kHz at 55, 110 and 220 Hz, 15 body materials, 6 vowels,
+ * single changes, the on and off edges and runs at 174 BPM, worst of 8 change instants:
+ *
+ * - **Above 8 kHz, 20 ms holds with margin.** Worst body -74.9 dB relative to the signal, worst
+ *   vowel -81.6 dB, worst edge -80.7 dB, worst run -83.0 dB, against floors of -147 to -161 dB.
+ * - **Below 60 Hz it does NOT settle the question.** The worst burst at 20 ms is about -38 to
+ *   -40 dB relative to the signal (a material change, an on or off edge and a 64th-note run all
+ *   land there), and 8 to 10 dB LOUDER than the same case at 50 ms. That is the level and the
+ *   class of the phaser "blub" of 5c-9. It is loudest where a low mode starts cold, and it falls
+ *   about 10 dB per octave of source pitch, which says it is the transition spreading the source's
+ *   own low partials downward rather than the bank ringing.
+ *
+ * So 20 ms is proven click-free and NOT proven thump-free; the low half is the maintainer's by ear
+ * at the 5c listening checkpoint.
+ *
+ * **If it has to move, the trade is low end against rate, and it is sharp.** A fade occupies whole
+ * blocks, so each candidate time has its own rate ceiling (128-frame blocks, 174 BPM, where a 16th
+ * is 86.2 ms, a 32nd 43.1 and a 64th 21.55):
+ *
+ * | fade | 44.1 kHz | 48 kHz | the fastest rate that does not park |
+ * |---|---|---|---|
+ * | 20 ms | 882 samples, 7 blocks, 20.3 ms | 960, 8 blocks, 21.3 ms | **64ths**, and only just |
+ * | 30 ms | 1323 samples, 11 blocks, 31.9 ms | 1440, 12 blocks, 32.0 ms | 32nds |
+ * | 50 ms | 2205 samples, 18 blocks, 52.2 ms | 2400, 19 blocks, 50.7 ms | 16ths |
+ *
+ * So **20 ms is the only one of the three that lets 64ths through**, and 30 ms buys a quieter low
+ * end at the price of parking them. How much quieter depends on which instrument is asked, and the
+ * two do not agree: on the isolated sweep 30 ms recovers 4.8 of the 9.4 dB (about half), on the
+ * rendered diagnostic 6.4 of 7.9 dB (about 80 percent). Either way it recovers a substantial part
+ * of the cost, and neither number is worth quoting alone.
+ */
+const val BANK_CROSSFADE_SECONDS: Double = 0.02

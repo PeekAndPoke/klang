@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| Katalyst 5c-11, two banks and one slot at 20 ms (session 017L4Bxw, 2026-09-20) | `audio_be/.../cylinders/katalyst/KatalystFilterSwap.kt`, `KatalystBodyEffect.kt`, `KatalystFormantEffect.kt`, `KatalystEqEffect.kt`, `filters/ResonatorBank.kt` (the morph goes), `audio_bridge/constants/`, their specs | a SOUND CHANGE with a listening checkpoint; one implementer owns Gradle |
 
 ## The two layers
 

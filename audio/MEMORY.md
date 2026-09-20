@@ -1,5 +1,167 @@
 # Klang Audio — Memory
 
+## Two banks, one parking slot, 20 ms: the filter swap after the morph was rejected (2026-09-20)
+
+Katalyst step 5c-11, a SOUND CHANGE under the 5c listening checkpoint. The maintainer listened to
+5c-10 and **REJECTED the morph** on body and on vowel both: travelling the resonances is an audible
+filter sweep ("an 8-bit laser shot" on `body("<wood glass>")`, the same on the vowel), and the
+click metric could not see it because a sweep is not a discontinuity. The output crossfade stays.
+Then the 10-bank pool went too, and the fade got its own constant.
+
+- **The model.** `KatalystFilterSwap` carries TWO banks: one target and ONE outgoing entry (a pair,
+  or dry). Everything 5c-6 decided about the edges is unchanged: off fades to dry and enters Off
+  only on the landing, on fades in from dry, a returning owner turns the fade around, the first
+  initialisation is instant, `reset` is a synchronous hard cut, and the host's intent flips
+  synchronously. What changed is what happens to a change that arrives WHILE a fade runs: the swap
+  REFUSES it (`set` and `clear` are no-ops in `Crossfading`; the new `settled` says when they act),
+  and the HOST parks it.
+- **The parking slot holds a CONFIG, never a built bank.** One slot per host, latest wins; a
+  further change overwrites it, so a burst costs one install and not one per event. It is offered
+  again from the host's own `process`, AFTER `swap.process`, so the parked change starts on the
+  block after the landing rather than one later, and so a chain whose owner has died (still
+  processed, no longer configured) does not lose it. Parking the DEF is what keeps the EQ at TWO
+  pre-built banks: a parked BANK would have needed a third that nothing could hear, and body and
+  vowel would have allocated for a change that a later one overtakes. `KatalystFilterSwap.holds`
+  stays, and it is what the EQ asks for a bank nobody hears.
+- **The fade is `BANK_CROSSFADE_SECONDS = 0.02`, its own constant** in `audio_bridge/constants/`.
+  `KNOB_GLIDE_SECONDS` stays 0.05 and keeps every level and dynamics glide (the compressor's
+  release gets worse if shortened). The ONLY reader moved is the swap; the delay's tap crossfade,
+  the fader, the gain, the compressor, the phaser, the duck and `KnobGlide` all still read the knob
+  glide. `ResonatorBank`'s own reader went with the morph.
+- **The INSTRUMENT had to be rebuilt before any of this meant anything** (review round 1). The
+  first sweep measured both bands through an 8th-order Butterworth, whose 48 dB/octave skirt leaks
+  the SIGNAL into the measured band. Above 8 kHz the source's own top harmonic (2970 Hz, 1.43
+  octaves below the cutoff) set a "floor" of -95.3 dB; below 60 Hz the 110 Hz fundamental set one
+  of -42 dB, which is why every vowel row sat 0.1 to 0.4 dB over it and measured NOTHING. Proof that
+  it was leakage and not noise: the reading tracks the top harmonic and nothing else (1 harmonic
+  -303 dB, 5 -207, 10 -162, 20 -116, 27 -95.3, following the skirt), it is identical for two
+  sources whose phase arithmetic differs, and one 110 Hz sine six octaves below the cutoff reads
+  -261 dB. **The first report's claim that this was the source's own rounding noise is wrong by
+  150 dB.** Rebuilt with a 16383-tap Blackman-Harris windowed sinc per band, stopband MEASURED and
+  printed with the results (-142.0 dB at 110 Hz for the 60 Hz lowpass, -163.7 dB at 2970 Hz for
+  the 8 kHz highpass), and the floor established on a STATIC render (the same material throughout,
+  nothing switching) instead of a quiet stretch of the render under test. The lesson that survives:
+  **establish a metric's floor on a static render first, and if it is not tens of dB below the
+  effect, the instrument cannot answer the question.** That test alone would NOT have caught this
+  case: the HF floor WAS measured on a static render, at -95.3 dB, and the readings sat 13 to 33 dB
+  below it, which passes. Two more things are what caught it, and they belong to the lesson:
+  **vary the SOURCE and watch whether the floor follows it** (a floor that tracks the source's top
+  partial is the instrument's skirt, not a floor), and **print the analysis filter's MEASURED
+  stopband next to the results** so a reader can see the instrument's own limit without rebuilding
+  it.
+- **20 ms on the honest instrument**, worst of 8 change instants one block apart, 15 material pairs
+  and 6 vowel pairs, static floors -142 dB (sub-60) and -156 to -161 dB (HF):
+
+  | fade | body sub-60 @110 Hz | body sub-60 @220 Hz | vowel sub-60 @110 Hz | body HF @110 Hz | vowel HF @110 Hz |
+  |---|---|---|---|---|---|
+  | 5 ms | -25.6 | -40.4 | -56.1 | -62.8 | -73.1 |
+  | 10 ms | -31.6 | -42.4 | -61.0 | -68.8 | -79.1 |
+  | 12 ms | -35.1 | -43.9 | -63.2 | -69.9 | -80.7 |
+  | **20 ms** | **-39.6** | **-50.6** | **-68.2** | **-74.9** | **-85.2** |
+  | 50 ms | -49.0 | -59.1 | -76.1 | -82.9 | -93.2 |
+
+  At a 55 Hz fundamental the sub-60 band IS the signal (-2.3 dB against a -2.2 floor at every fade
+  time), so it says nothing there and is reported as such. The gap between 20 and 50 ms is **8 to
+  9.4 dB on both bands**, not the 5 to 8 dB the leaky instrument reported. Per-case HF numbers do
+  NOT converge at 8 instants (one pair's high band wanders several dB between fade times, while the
+  worst-over-8x15 and worst-over-8x6 columns are monotonic), so only the worst-over-a-family
+  columns are quoted, and no single HF case to a tenth of a dB.
+- **The on and off EDGES and the RUNS, on the same instrument** (review round 2 asked for this;
+  round 1 had them only through the leaky filter, where the sub-60 reading sat a few dB over the
+  skirt and therefore said nothing). At 110 Hz, sub-60: an ON edge at 20 ms **-39.2** against
+  -50.4 at 50 ms, an OFF edge **-41.3** against -50.3; a 174 BPM run at 20 ms **-38.3 to -40.3**
+  against -47.4 to -49.6 at 50 ms. Above 8 kHz the same rows are -80.7 to -82.3 (edges) and -83.0
+  to -83.7 (runs) at 20 ms, against floors of -147 to -161 dB. **The edges and the runs land where
+  a material change lands**, so the sub-60 headline is not a material-change-only number, and every
+  family moves the same 8 to 11 dB between 50 and 20 ms.
+- **The burst falls about 10 dB per OCTAVE of source pitch**, which says what it is: the
+  transition spreading the source's own low partials downward, not the bank's low mode ringing.
+  At 20 ms, worst over five material pairs: 110 Hz -39.6, 220 Hz -50.6, 440 Hz -60.1, 523 Hz
+  -59.1, 880 Hz -64.7 dB, all against a -142 dB floor. **So there is no "high source with no bass"
+  case that isolates it**: raising the pitch removes the artifact along with the masker. The
+  isolation has to come from the ENVELOPE, and it does: a soft attack and a long release drop the
+  notes' own sub-60 content by 17 dB (-27.5 to -44.8) while the artifact stays at -39.7 dB, so in
+  that render the bank swap is 5.1 dB LOUDER than the note itself below 60 Hz. That rendered
+  number agrees with the isolated harness's -39.6 dB to a tenth of a dB, which is the best
+  cross-check the two instruments could give each other.
+- **Designing a case that can EXPOSE the burst took three conditions at once, and only one of the
+  five candidates met them** (review round 2). Artifact relative to the note's own sub-60 content:
+  `body-single` (c2, change on a note onset) 20.4 dB UNDER, so a "no" there is not evidence and the
+  same holds for all three runs; `lowend-a2` 13.7 dB under; **`lowend-a2-soft` 5.1 dB OVER**;
+  `lowend-midnote` (c5, change mid-note) 29.2 dB under; `lowend-midnote-a2` (a2, mid-note, six
+  overlapping voices) 29.7 dB under, because the beating of six detuned supersaws puts 26 dB more
+  sub-60 into the mix than one soft voice does. The three conditions: the change must not sit under
+  a note ONSET, the source must have LOW PARTIALS, and the voice count must stay low. Moving the
+  change off the onset is worth doing and is NOT sufficient on its own.
+- **The verdict, split by band.** On the CLICK metric 20 ms holds with a wide margin: the worst
+  body case is -74.9 dB re the signal (110 Hz), the worst vowel -81.6 (220 Hz), the worst edge
+  -80.7 and the worst run -83.0, and the 12 ms this swap ran before
+  5c-6 (never the click of that era) measures -69.9. On the SUB-60 metric it does NOT settle the
+  question: the worst burst at 20 ms is -38 to -40 dB re the signal wherever it comes from (a
+  material change -39.6, an on edge -39.2, an off edge -41.3, a 64th-note run -38.3), 8 to 11 dB
+  louder than the same case at 50 ms, which is the level and the class of the phaser "blub" in
+  5c-9. **The trade, if it has to move, is low end against rate and it is sharp**: a fade occupies
+  whole blocks, so 20 ms lands at 7 blocks / 20.3 ms (44.1 kHz) and 8 / 21.3 ms (48 kHz), 30 ms at
+  11 / 31.9 and 12 / 32.0, and 50 ms at 18 / 52.2 and 19 / 50.7. Against 174 BPM (a 64th is
+  21.55 ms, a 32nd 43.1, a 16th 86.2) that makes **20 ms the only one of the three that lets 64ths
+  through**; 30 ms parks them and clears 32nds, 50 ms parks 32nds and clears 16ths. What 30 ms buys
+  below 60 Hz depends on which instrument is asked and the two DISAGREE: 4.8 of 9.4 dB on the
+  isolated sweep (about half), 6.4 of 7.9 dB on the rendered diagnostic (about 80 percent). It is
+  loudest where a low mode starts cold (`wood->cedar`, `croon->tube`, `bell->wood`);
+  the vowel is 25.1 dB quieter worst-to-worst (-64.7 at 220 Hz against the body's -39.6 at
+  110 Hz) and 14.1 dB quieter at the same note, and it is not in question at either reading. **That is the maintainer's call by ear, and the
+  listening set is built to put it in front of him** (the low end of `body-single` and the runs).
+- **The COLD START is what a shorter fade exposes** rather than hides: a fresh bank rings up in
+  0 to 30 ms on every material except `bell`, which takes 70 to 105 ms. At 20 ms the fade is over
+  before a bell has rung up, so the ring-up is heard in the clear. It is a level and timbre effect,
+  not a step: the on-edge metrics stay at -79.8 dB (HF) and -35.8 dB (sub-60).
+- **The rate limit is the point.** Block by block at 44.1 and 48 kHz, 174 BPM: the new model at
+  20 ms queues NOTHING and drops nothing at 16ths, 32nds or 64ths (21.6 ms apart), and never runs
+  more than two banks. The 10-bank pool at 50 ms also dropped nothing but ran up to 3 banks at
+  32nds, 4 at 64ths and 6 at 128ths. **Careful with that comparison** (review round 1): it is the
+  pool's behaviour on the paths that REACH it, which at `947c2023` were the orbit EQ's per-event
+  curve changes, `wet` and `floor` changes, the on and off edges and a change onto a fading pair.
+  A material run did NOT reach it there, because the 5c-10 morph carried material changes inside
+  the bank in service; the morph's rejection is what put them back on this path. The limit is also
+  a BLOCK count, `ceil(fadeLen / blockFrames)`, so it is 20.3 ms at 44.1 kHz (7 blocks of 128) and 21.3 ms at 48 kHz,
+  and 64ths clear it at 174 BPM but not at 176. Past it the parking ALIASES rather than thins: the
+  surviving changes are phase-locked, so at twice the limit a four-material pattern is heard as a
+  two-material alternation with two materials never sounding (at 128ths, 199 of 200 queued and
+  93 to 98 dropped). The maintainer accepts that, "a rate faster than that is chaotic in any case".
+- **Deleted with the morph:** `ResonatorBank.morphTo` and everything that existed only for it (the
+  `MORPH_CAPACITY` capacity preallocation, the log-space from/to arrays, `morphPos`, the bank's own
+  `fresh` snap, `bandNow`/`capacityBands`), `LowPassHighPassFilters.BaseSvf.retune` and
+  `resetState` (no other caller; `BaseSvf.q` is a `val` again), the split factories `bodyBank` /
+  `wrapBody` / `formantBank` / `wrapFormant` (the hosts build through `createBody` / `createFormant`
+  again), the `MORPH` flags and `morph` parameters on both hosts, `KatalystFilterSwap.isTarget`,
+  `ResonatorBankMorphSpec`. `clampSvfCutoff` / `clampSvfQ` STAY: `computeSvfCoeffs`, the vowel
+  gain fold and the bank's own construction use them.
+- **Songs** (15 built-in, 3 frozen, 256 cycles, 48 kHz, wall clock pinned, HEAD `947c2023` in a
+  throwaway worktree against the tree), **rendered TWICE, once per review round, and the second run
+  reproduced the first digit for digit** (same four songs, same worst counts, same first-difference
+  times, same span counts); the round-2 tree is also bit-identical to the round-1 tree on all 18,
+  so the round-2 delta moved no sample. 14 bit-identical. Four differ, and every one of them is a
+  song that changes a material or a vowel on a sounding orbit: Stranger Synths -20.9 dB re peak
+  (9 spans), Synthkura -23.3 dB (38 spans), frozen Der Schmetterling 2026-09-16 -23.4 dB (3 spans),
+  frozen Stranger Things 2026-07-03 -26.8 dB (1 span). **Attributed**: with every `.body(...)` and
+  `.vowel(...)` call stripped from the text on both sides, all four are BIT-IDENTICAL, so nothing
+  else in the step moves a sample.
+- **Guards, each mutation-checked (10 mutants, all red).** `FilterSwapLaw` is now the TWO-BANK law
+  (one entry; `set` and `clear` refused while it fades) and it does NOT model the parking: a spec
+  tells it about a parked config at the block the STAGE installs, so a host that installed early,
+  late, or dropped one departs from it sample for sample. `KatalystFilterSwapSpec` adds "the fade
+  is BANK_CROSSFADE_SECONDS, not the knob glide", "a change mid-fade is REFUSED", "at most two
+  banks run on a block", "a clear mid-change is refused too" and "a landed fade and a refused
+  change leave no reference behind". Body and vowel each get the four parking rows (parked and
+  installed on the landing, a further change replaces it, an OFF parks too with the intent flipping
+  at once, a return to the installed config drops what is parked) and "a change builds a NEW bank:
+  the bank in service is never retuned", whose teeth are the FRESH reference bank. The EQ's
+  every-block row now pins the parking, the overtaken changes and the install COUNT, plus "the
+  installs ALTERNATE between two banks", whose seam is which bank an install took: the COUNT
+  itself cannot be pinned, because an install only runs while the swap is settled, where it holds
+  at most one bank, so a third is unreachable by construction and a pool of three renders
+  identically (measured; the row's own comment records it).
+
 ## The filter nodes grew a cutoff envelope and a per-voice lane (2026-09-20)
 
 Phase 3 step 3a of `docs/plans/signal-flow-redesign.md` (the missing-knobs table is

@@ -29,21 +29,21 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
  * per-block coefficient change on a bus is a click), so the smoothing is built here, and it is the
  * house precedent rather than a new one: [KatalystFilterSwap], the same switch `body(...)` and
  * `vowel(...)` go through, crossfades from what sounds now to the new bank over
- * `KNOB_GLIDE_SECONDS`, and a change arriving mid-fade adds a bank instead of dropping one.
+ * `BANK_CROSSFADE_SECONDS`, and a change arriving mid-fade waits instead of dropping one.
  * The core's `process(buffer, offset, length)` IS the [AudioFilter] signature the swap wants, so
  * the adaptation is one delegating call per channel per block and nothing at all per sample. The
  * alternative, interpolating the five coefficients per sample inside the stage, would have been a
  * second smoothing policy in the engine for a stage that had a working one available. There is no
  * off door: the stage exists only on a declared chain, and a chain swap already crossfades.
  *
- * **A pool of pre-built banks, so a change allocates nothing.** The arriving configuration takes
- * a bank the swap does not hold ([KatalystFilterSwap.holds]), which is by definition not heard,
- * and zeroes it before it is reconfigured, which makes it exactly the fresh instance the body and
- * the vowel build on every change. The pool is [KatalystFilterSwap.MAX_BANKS] + 2: up to that
- * many banks may sound during rapid changes, one more may be PARKED behind a full pool, and the
- * arriving one needs its own (Katalyst step 5c-6; the old two-bank ping-pong zeroed the bank a
- * restart dropped, and a restart no longer drops a sounding bank). They can be pre-built because
- * an EQ's section count and types are fixed by the DECLARATION (structure is declared once, the
+ * **TWO pre-built banks and one parking slot** (Katalyst step 5c-11, 2026-09-20). The swap carries
+ * two banks and no more, so the arriving configuration takes the one the swap does not hold
+ * ([KatalystFilterSwap.holds]), which is by definition not heard, and zeroes it before it is
+ * reconfigured, which makes it exactly the fresh instance the body and the vowel build on every
+ * change. A change that arrives while a fade runs is not given a bank at all: its SCALARS wait in
+ * [parkedValues] until the fade lands, and a further change overwrites them (latest wins), so a
+ * `.katp` burst costs one `install` and not one per event. The banks can be pre-built because an
+ * EQ's section count and types are fixed by the DECLARATION (structure is declared once, the
  * signal-flow plan's rule 2), where a material decides how many bands a body has. That matters
  * because a `.katp` on an EQ knob is a change per event: the cost of one is a `reset` plus one
  * coefficient computation per section per channel (a `tan` each) plus one fade time of one more
@@ -91,17 +91,42 @@ class KatalystEqEffect(
         const val KNOB_GAIN = 3
     }
 
-    /** Holds the bank in service and, while a fade runs, the banks fading out. */
+    /** Holds the bank in service and, while a fade runs, the bank fading out. */
     private val swap = KatalystFilterSwap(sampleRate, blockFrames)
 
-    /** The pre-built banks (see the class KDoc); an install takes one the swap does not hold. */
-    private val banks = Array(KatalystFilterSwap.MAX_BANKS + 2) { EqBank(types.size) }
+    /**
+     * The TWO pre-built banks (see the class KDoc): one sounds, one is the fade partner, and an
+     * install takes the one the swap does not hold. Two is the whole capacity of the swap, so a
+     * third could never be heard.
+     */
+    private val banks = Array(2) { EqBank(types.size) }
 
     /** The scalars the installed bank was configured from, [KNOBS_PER_SECTION] per section. */
     private val current = DoubleArray(types.size * KNOBS_PER_SECTION)
 
+    /**
+     * The ONE parking slot: the scalars of a change that arrived while a fade was running,
+     * preallocated with the stage, so parking writes numbers and allocates nothing.
+     */
+    private val parkedValues = DoubleArray(types.size * KNOBS_PER_SECTION)
+
+    private var hasParked: Boolean = false
+
     /** Test seam: true while a bank is installed, so the stage is filtering rather than absent. */
     internal val isEngaged: Boolean get() = swap.active
+
+    /** Test seam: whether a curve is waiting for the fade in flight to land. */
+    internal val isParked: Boolean get() = hasParked
+
+    /**
+     * Test seam: WHICH of the banks the last install took, or -1 before the first. The stage keeps
+     * two (Katalyst 5c-11, the swap's whole capacity) and an install takes the one the swap does
+     * not hold, so consecutive installs ALTERNATE. That is the property, and it is invisible from
+     * the output: a third bank would simply never be reached, and a bank reconfigured while it
+     * still sounds is a thump the crossfade row would catch only with the right curve.
+     */
+    internal var lastInstalledBank: Int = -1
+        private set
 
     /**
      * Test seam for the one OUTPUT-INVISIBLE property of this stage (the `hasRawTap` /
@@ -128,29 +153,44 @@ class KatalystEqEffect(
         }
 
         if (swap.active && unchanged(values)) {
+            // The latest word is the curve already installed: anything parked behind it is overtaken.
+            hasParked = false
+
+            return
+        }
+
+        if (!swap.settled) {
+            // A fade is running and a third bank could not be heard: the SCALARS wait, latest wins.
+            values.copyInto(parkedValues)
+            hasParked = true
+
             return
         }
 
         values.copyInto(current)
 
-        val bank = freeBank()
+        val index = freeBank()
+        val bank = banks[index]
+
         bank.install(types, current, sampleRate)
         swap.set(bank.left, bank.right)
+        lastInstalledBank = index
         installs++
     }
 
     /**
-     * A bank nothing can hear: one the swap holds no reference to. The pool is sized so one always
-     * exists (see the class KDoc); the last bank is the fallback that keeps this total.
+     * The index of a bank nothing can hear: one the swap holds no reference to. An install only
+     * ever runs while the swap is settled, where it holds at most ONE bank, so the other is always
+     * free; the last index is the fallback that keeps this total when the swap holds none at all.
      */
-    private fun freeBank(): EqBank {
-        for (bank in banks) {
-            if (!swap.holds(bank.left)) {
-                return bank
+    private fun freeBank(): Int {
+        for (i in banks.indices) {
+            if (!swap.holds(banks[i].left)) {
+                return i
             }
         }
 
-        return banks[banks.size - 1]
+        return banks.size - 1
     }
 
     /**
@@ -163,6 +203,7 @@ class KatalystEqEffect(
      * (`KatalystEqEffectSpec`, "the bank that comes back from the pool is silent on silence").
      */
     override fun reset() {
+        hasParked = false
         swap.reset()
     }
 
@@ -179,8 +220,14 @@ class KatalystEqEffect(
         reset()
     }
 
+    /** The block, then the parked curve if the fade landed inside it; see [KatalystBodyEffect.process]. */
     override fun process(ctx: KatalystContext) {
         swap.process(ctx.mixBuffer, ctx.blockFrames)
+
+        if (hasParked && swap.settled) {
+            hasParked = false
+            configure(parkedValues)
+        }
     }
 
     private fun unchanged(values: DoubleArray): Boolean {

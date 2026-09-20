@@ -26,7 +26,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
  * **What the main row drives:** every cell of the table on `KatalystFilterSwap.State` except the one
  * marked "(never)", plus a `process` in each state that ends nothing, which must be a self-edge,
  * and both "fresh" arms (the first initialisation). The swap is built the way its three hosts
- * build it, `KatalystFilterSwap(sampleRate)`, so the fade is the production `KNOB_GLIDE_SECONDS`.
+ * build it, `KatalystFilterSwap(sampleRate)`, so the fade is the production `BANK_CROSSFADE_SECONDS`.
  * The seam is [KatalystFilterSwap.currentState].
  */
 class KatalystFilterSwapStateIdentitySpec : StringSpec({
@@ -57,8 +57,8 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
             }
         }
 
-        // 17.2 blocks at 44.1 kHz; this many blocks lands any fade.
-        val land = 19
+        // 6.9 blocks at 44.1 kHz; this many blocks lands any fade.
+        val land = 9
 
         // Off, as the hosts build it.
         val off = swap.currentState
@@ -87,28 +87,32 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
         swap.currentState shouldBeSameInstanceAs off
 
         // Off -> Crossfading: a set fades in from dry.
-        swap.set(gain(1.0), gain(1.0))
+        val first = gain(1.0)
+
+        swap.set(first, gain(1.0))
+
         val crossfading = swap.currentState
+
         see(crossfading)
         withClue("Crossfading is its own state") {
             crossfading shouldNotBeSameInstanceAs engaged
             crossfading shouldNotBeSameInstanceAs off
         }
 
-        // Crossfading + a block that ends nothing, + set, + clear, + resume: self-edges.
+        // Crossfading + a block that ends nothing, + a REFUSED set, + a REFUSED clear, + resume of
+        // the target: self-edges, every one of them.
         swap.process(mix, n)
         swap.currentState shouldBeSameInstanceAs crossfading
-        val back = gain(0.5)
-        swap.set(back, gain(0.5))
+        swap.set(gain(0.5), gain(0.5))
         swap.currentState shouldBeSameInstanceAs crossfading
         swap.clear()
         swap.currentState shouldBeSameInstanceAs crossfading
-        swap.resume(back) shouldBe true
-        withClue("a restart, a clear and a return mid-fade reuse the ONE Crossfading instance") {
+        swap.resume(first) shouldBe true
+        withClue("a refused change, a refused clear and a return mid-fade reuse the ONE Crossfading instance") {
             swap.currentState shouldBeSameInstanceAs crossfading
         }
 
-        // Crossfading -> Engaged, by the last fade landing on a pair.
+        // Crossfading -> Engaged, by the fade landing on a pair.
         repeat(land) { swap.process(mix, n) }
         withClue("the fade's end lands in the ONE Engaged instance") {
             swap.currentState shouldBeSameInstanceAs engaged
@@ -116,11 +120,14 @@ class KatalystFilterSwapStateIdentitySpec : StringSpec({
 
         // Engaged + a block, + resume of the pair in service: self-edges.
         swap.process(mix, n)
-        swap.resume(back) shouldBe true
+        swap.resume(first) shouldBe true
         swap.currentState shouldBeSameInstanceAs engaged
 
-        // Engaged -> Crossfading by set, then back to Engaged.
+        // Engaged -> Crossfading by set; the RETURN to the pair that is now fading out is a
+        // self-edge too, and then that turned-around fade lands back in Engaged.
         swap.set(gain(0.25), gain(0.25))
+        swap.currentState shouldBeSameInstanceAs crossfading
+        swap.resume(first) shouldBe true
         swap.currentState shouldBeSameInstanceAs crossfading
         repeat(land) { swap.process(mix, n) }
         swap.currentState shouldBeSameInstanceAs engaged

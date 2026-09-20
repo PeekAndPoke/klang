@@ -17,17 +17,14 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * Orbit-level **vowel / formant** resonator — the [KatalystBodyEffect] counterpart for `vowel(...)`.
  *
  * Like body, a vowel is a timbre shaper of the whole orbit, so it runs once on the summed stereo mix
- * (one mono formant bank per channel) instead of per voice. It builds the bank and its blend
- * itself, [LowPassHighPassFilters.formantBank] and [LowPassHighPassFilters.wrapFormant], because
- * a morph needs the bank; [LowPassHighPassFilters.createFormant] is those two composed and is now
- * reference DSP for the specs. Only the
- * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel) turns
- * the resonator OFF; [reset] deactivates it on orbit teardown.
+ * (one mono formant bank per channel) instead of per voice. The whole stage is one call,
+ * [LowPassHighPassFilters.createFormant]: a [ResonatorBank] inside its dry/wet blend. Only the
+ * orbit's owning voice configures it (see `Cylinder`'s VoiceLease), so `null` (owner has no vowel)
+ * turns the resonator OFF; [reset] deactivates it on orbit teardown.
  *
- * Every edge fades, intent and sound are two things, and [reset] / [retire] stay a hard cut, all
- * exactly as [KatalystBodyEffect]'s KDoc spells out (Katalyst step 5c-6). A VOWEL change morphs
- * the bank in service while [MORPH] holds (Katalyst step 5c-10): the five formants travel, formant
- * n to formant n, which is the change this morph was proposed for, a vowel sweeping like a mouth.
+ * Every edge fades, a change that arrives mid-fade waits in the ONE parking slot as the config it
+ * came as, intent and sound are two things, and [reset] / [retire] stay a hard cut, all exactly as
+ * [KatalystBodyEffect]'s KDoc spells out (Katalyst steps 5c-6 and 5c-11).
  *
  * NOTE: near-verbatim twin of [KatalystBodyEffect] (only the band type, the factory fn and the
  * WET/FLOOR constants differ); both build
@@ -37,19 +34,7 @@ class KatalystFormantEffect(
     private val sampleRate: Double,
     /** The frames of one render block; sizes the swap's scratch at construction (see [KatalystFilterSwap]). */
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
-    /** Whether a vowel change morphs the bank in service; see [MORPH]. */
-    private val morph: Boolean = MORPH,
 ) : KatalystEffect {
-
-    companion object {
-        /**
-         * The twin of [KatalystBodyEffect.MORPH], per stage because the choice is per stage: `true`
-         * morphs the bank in service on a vowel change, `false` crossfades two banks. Both paths
-         * are live for the maintainer's listening comparison and the loser is deleted with the
-         * choice; the full note is on the twin.
-         */
-        const val MORPH: Boolean = true
-    }
 
     private var curBands: List<FilterDef.Formant.Band>? = null
     private var curMix: Double = Double.NaN
@@ -58,26 +43,24 @@ class KatalystFormantEffect(
     /** The left filter of the pair the last install built: what [KatalystFilterSwap.resume] looks for. */
     private var curLeft: AudioFilter? = null
 
-    /** The two banks inside that pair, the things a morph travels; the twin's KDoc says why. */
-    private var curBankL: ResonatorBank? = null
-    private var curBankR: ResonatorBank? = null
-
-    /** The morph target's three arrays, allocated once; the twin of the body's, for its reason. */
-    private val morphFreq = DoubleArray(ResonatorBank.MORPH_CAPACITY)
-    private val morphQ = DoubleArray(ResonatorBank.MORPH_CAPACITY)
-    private val morphGain = DoubleArray(ResonatorBank.MORPH_CAPACITY)
+    /** The ONE parking slot, the twin of [KatalystBodyEffect]'s and for its reason. */
+    private var parked: FilterDef.Formant? = null
+    private var hasParked: Boolean = false
 
     // Boxed once at construction, the twin of `KatalystBodyEffect.unsetFloor` and for its reason.
     private val unsetFloor: Double? = VOWEL_FLOOR
 
-    // Holds the bank in service and, while a fade runs, the banks fading out; every edge fades.
+    // Holds the bank in service and, while a fade runs, the bank fading out; every edge fades.
     private val swap = KatalystFilterSwap(sampleRate, blockFrames)
 
-    /** Test seam: the INTENT, true while the owner asks for a vowel (a bank may still fade out after). */
-    internal val isEngaged: Boolean get() = swap.active
+    /** Test seam: the INTENT, the parked word first; the twin of [KatalystBodyEffect.isEngaged]. */
+    internal val isEngaged: Boolean get() = if (hasParked) parked != null else swap.active
 
     /** Test seam: the SOUND, true while any bank may still be heard, a fade-out included. */
     internal val isSounding: Boolean get() = swap.sounding
+
+    /** Test seam: whether a config is waiting for the fade in flight to land. */
+    internal val isParked: Boolean get() = hasParked
 
     /**
      * Test seams: WHAT is installed, the twins of `KatalystBodyEffect.installedBands` and friends,
@@ -99,12 +82,22 @@ class KatalystFormantEffect(
      * substitution [KatalystBodyEffect.configure] makes and of the one `KatalystSlots.vowelDef`
      * makes for a declared chain's slots, so all three paths install the same bank.
      *
-     * A null fades the bank out, the twin of [KatalystBodyEffect.configure].
+     * A null fades the bank out and a change that arrives mid-fade is parked, both the twin of
+     * [KatalystBodyEffect.configure].
      */
     fun configure(vowel: FilterDef.Formant?) {
         if (vowel == null) {
-            if (swap.active) {
+            if (!isEngaged) {
+                return // already off, or already heading there: idempotent
+            }
+
+            if (swap.settled) {
+                parked = null
+                hasParked = false
                 swap.clear() // the owner has no vowel: fade to dry, once
+            } else {
+                parked = null
+                hasParked = true // the off waits for the fade in flight (latest wins)
             }
 
             return
@@ -128,12 +121,16 @@ class KatalystFormantEffect(
         val unchanged = vowel.bands == curBands && mix == curMix && floor == curFloor
 
         if (unchanged) {
+            // The latest word is what is installed, so anything parked behind it is overtaken.
+            parked = null
+            hasParked = false
+
             if (swap.active) {
                 return
             }
 
             // A return after a DIFFERENT change is not found here: the twin's comment says what
-            // each mode does with it, and why both are continuous.
+            // happens to it, and why it is continuous either way.
             val left = curLeft
 
             if (left != null && swap.resume(left)) {
@@ -141,44 +138,18 @@ class KatalystFormantEffect(
             }
         }
 
-        // A change of the VOWEL alone, on the pair the swap still converges on, TRAVELS: the twin
-        // of the body's morph and for its reasons (Katalyst 5c-10), the formants pairing by
-        // position. A `wet`/`floor` change, or a pair that is not the target, crossfades as before.
-        if (morph && mix == curMix && floor == curFloor && vowel.bands.size <= morphFreq.size) {
-            val bankL = curBankL
-            val bankR = curBankR
-            val inService = curLeft
+        if (!swap.settled) {
+            // A fade is running and this change would need a third bank: park the DEF, latest wins.
+            parked = vowel
+            hasParked = true
 
-            if (bankL != null && bankR != null && inService != null && swap.isTarget(inService)) {
-                val count = vowel.bands.size
-
-                for (i in 0 until count) {
-                    val band = vowel.bands[i]
-
-                    morphFreq[i] = band.freq
-                    morphQ[i] = band.q
-                    morphGain[i] = LowPassHighPassFilters.vowelGain(band)
-                }
-
-                val tookL = bankL.morphTo(morphFreq, morphQ, morphGain, count)
-                val tookR = bankR.morphTo(morphFreq, morphQ, morphGain, count)
-
-                if (tookL && tookR) {
-                    curBands = vowel.bands
-
-                    return
-                }
-            }
+            return
         }
 
-        val bankL = LowPassHighPassFilters.formantBank(vowel.bands, sampleRate)
-        val bankR = LowPassHighPassFilters.formantBank(vowel.bands, sampleRate)
-        val left = LowPassHighPassFilters.wrapFormant(bankL, mix, floor)
+        val left = LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor)
 
-        swap.set(left, LowPassHighPassFilters.wrapFormant(bankR, mix, floor))
+        swap.set(left, LowPassHighPassFilters.createFormant(vowel.bands, mix, sampleRate, floor))
         curLeft = left
-        curBankL = bankL
-        curBankR = bankR
         curBands = vowel.bands
         curMix = mix
         curFloor = floor
@@ -190,8 +161,8 @@ class KatalystFormantEffect(
         curMix = Double.NaN
         curFloor = Double.NaN
         curLeft = null
-        curBankL = null
-        curBankR = null
+        parked = null
+        hasParked = false
         swap.reset()
     }
 
@@ -207,7 +178,16 @@ class KatalystFormantEffect(
         reset()
     }
 
+    /** The block, then the parked config if the fade landed inside it; see [KatalystBodyEffect.process]. */
     override fun process(ctx: KatalystContext) {
         swap.process(ctx.mixBuffer, ctx.blockFrames)
+
+        if (hasParked && swap.settled) {
+            val waiting = parked
+
+            parked = null
+            hasParked = false
+            configure(waiting)
+        }
     }
 }

@@ -445,46 +445,34 @@ object LowPassHighPassFilters {
     ): AudioFilter = SvfNotch(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     /**
-     * The whole vowel stage in one call: a [ResonatorBank] inside the dry/wet blend.
+     * The whole vowel stage in one call: a [ResonatorBank] inside the dry/wet blend. The one way
+     * the stage is built, by [KatalystFormantEffect] and by the specs and `audio_benchmark` alike.
      *
-     * Since Katalyst 5c-10 **no production path calls this**: [KatalystFormantEffect] builds the
-     * two parts itself ([formantBank] and [wrapFormant]) because a morph needs the bank. It stays
-     * as the REFERENCE DSP the specs and `audio_benchmark` build their oracles from, the way the
-     * dormant `OnePoleLPF` does; do not "clean up" behaviour documented on it.
+     * The split into a bank and a wrapper that Katalyst 5c-10 needed (a morph held the bank) went
+     * with the morph in 5c-11: a bank never changes, so nobody keeps one.
      */
     fun createFormant(
         bands: List<FilterDef.Formant.Band>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
-    ): AudioFilter = wrapFormant(formantBank(bands, sampleRate), mix, floor)
+    ): AudioFilter = ParallelMixFilter(
+        inner = ResonatorBank(bands.map(::vowelBand), sampleRate),
+        amount = mix,
+        floor = floor ?: VOWEL_FLOOR,
+    )
 
-    /**
-     * The vowel bank on its own, for a host that keeps the reference and MORPHS it
-     * ([ResonatorBank.morphTo]) instead of building a second bank per change.
-     */
-    internal fun formantBank(bands: List<FilterDef.Formant.Band>, sampleRate: Double): ResonatorBank =
-        ResonatorBank(bands.map(::vowelBand), sampleRate)
-
-    /** The one place the vowel's blend is written, whoever built the [bank]. */
-    internal fun wrapFormant(bank: ResonatorBank, mix: Double, floor: Double?): AudioFilter =
-        ParallelMixFilter(inner = bank, amount = mix, floor = floor ?: VOWEL_FLOOR)
-
-    /** The whole body stage in one call; the twin of [createFormant], reference DSP for its reason. */
+    /** The whole body stage in one call; the twin of [createFormant]. */
     fun createBody(
         bands: List<FilterDef.Body.Mode>,
         mix: Double,
         sampleRate: Double,
         floor: Double? = null,
-    ): AudioFilter = wrapBody(bodyBank(bands, sampleRate), mix, floor)
-
-    /** The body bank on its own, the twin of [formantBank] and for its reason. */
-    internal fun bodyBank(bands: List<FilterDef.Body.Mode>, sampleRate: Double): ResonatorBank =
-        ResonatorBank(bands.map(::bodyBand), sampleRate)
-
-    /** The one place the body's blend is written, whoever built the [bank]. */
-    internal fun wrapBody(bank: ResonatorBank, mix: Double, floor: Double?): AudioFilter =
-        ParallelMixFilter(bank, amount = mix, floor = floor ?: BODY_FLOOR)
+    ): AudioFilter = ParallelMixFilter(
+        inner = ResonatorBank(bands.map(::bodyBand), sampleRate),
+        amount = mix,
+        floor = floor ?: BODY_FLOOR,
+    )
 
     /**
      * A body mode as a [ResonatorBank] band. The SVF bandpass is unity-peak at fc (C2 of the filter
@@ -495,9 +483,8 @@ object LowPassHighPassFilters {
         ResonatorBank.Band(freq = mode.freq, q = mode.q, gain = bodyGain(mode))
 
     /**
-     * The body gain rule on its own, so a host can fill a preallocated array instead of building
-     * a [ResonatorBank.Band] per band on the audio thread (Katalyst 5c-10). [bodyBand] is this
-     * plus the raw `freq`/`q`, and there is no second copy of the rule.
+     * The body gain rule on its own: [bodyBand] is this plus the raw `freq`/`q`, and there is no
+     * second copy of the rule.
      */
     internal fun bodyGain(mode: FilterDef.Body.Mode): Double {
         // NaN-guard: a non-finite dB is 0 dB, unity gain.
@@ -682,8 +669,9 @@ object LowPassHighPassFilters {
      * math is identical across all 4 subclasses; only the per-sample tap differs.
      *
      * The voice-strip pipeline only modulates cutoff (`AudioFilter.Tunable.setCutoff`), which
-     * leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. The one control-rate mover of
-     * `q` is [retune], added for [ResonatorBank]'s band morph (Katalyst 5c-10).
+     * leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. NOTHING moves `q` after
+     * construction: the one control-rate mover, added for the resonator morph of Katalyst 5c-10,
+     * went with that morph in 5c-11, and `q` is a `val` again.
      *
      * Coefficient math is shared via [computeSvfCoeffs] (NaN/Inf-safe via [bilinearK]).
      * The helper writes into a private scratch holder; we then mirror to direct fields
@@ -707,10 +695,11 @@ object LowPassHighPassFilters {
     abstract class BaseSvf(
         cutoffHz: Double,
         /**
-         * Fixed for every voice-strip use ([setCutoff] never touches it). [retune] moves it, and
-         * [ResonatorBank]'s morph is its only caller: a band's Q travels with its frequency there.
+         * Fixed for the whole life of the filter: [setCutoff] never touches it, and nothing else
+         * may. The setter that moved it, for [ResonatorBank]'s morph, went with the morph in
+         * Katalyst 5c-11; a band's Q is now decided when its bank is built.
          */
-        private var q: Double,
+        private val q: Double,
         private val sampleRate: Double,
         private val cutoffOffsetMul: Double = 1.0,
     ) : AudioFilter, AudioFilter.Tunable {
@@ -776,53 +765,6 @@ object LowPassHighPassFilters {
             kInc = 0.0
             gInc = 0.0
             transitionSamples = 0
-        }
-
-        /**
-         * Moves cutoff AND [q] over a ramp of [rampSamples] samples, on the same coefficient path
-         * [setCutoff] uses; `rampSamples <= 0` snaps. A ramp still running starts the new one from
-         * where the coefficients stand, so a retarget mid-ramp never steps.
-         *
-         * The ramp length is the CALLER's, not [FILTER_SMOOTH_SAMPLES]: [ResonatorBank]'s morph
-         * retunes once per block and passes the block, which measured at the floor of an ideal
-         * per-sample glide, where 32 samples leaves a ramp-then-hold staircase 16 dB above it
-         * (Katalyst 5c-10). The shared constant stays what the `lpf` envelope wants.
-         *
-         * With [q] moving, [kInc] is no longer structurally 0 and the ramped coefficient set is no
-         * longer a set any (fc, q) pair produces. Measured over 20,000 random (f, q) pairs across
-         * the full clamped ranges: the mid-ramp pole radius can exceed BOTH endpoints' (by up to
-         * 0.050, which a fixed q never does) but never reached 1.0 (highest 0.999993), so the
-         * blend stays stable. A morph's per-block step is a fraction of a percent of that span.
-         */
-        internal fun retune(cutoffHz: Double, q: Double, rampSamples: Int) {
-            this.q = q
-
-            if (rampSamples <= 0) {
-                setCutoffSnap(cutoffHz)
-
-                return
-            }
-
-            computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
-
-            val inv = 1.0 / rampSamples
-
-            a1Inc = (coefs.a1 - a1) * inv
-            a2Inc = (coefs.a2 - a2) * inv
-            a3Inc = (coefs.a3 - a3) * inv
-            kInc = (coefs.k - k) * inv
-            gInc = (coefs.g - g) * inv
-            transitionSamples = rampSamples
-        }
-
-        /**
-         * Zeroes the integrators: a COLD start. [ResonatorBank] calls it for a band that comes in
-         * from gain 0 on a slot whose previous life rang at another frequency; the band's own
-         * fade-in masks the cold start (measured 0.2 dB apart from a warm one, Katalyst 5c-10).
-         */
-        internal fun resetState() {
-            ic1eq = 0.0
-            ic2eq = 0.0
         }
     }
 
@@ -1028,10 +970,11 @@ object LowPassHighPassFilters {
                 ic1eq = (2.0 * v1 - ic1eq).flushState()
                 ic2eq = (2.0 * v2 - ic2eq).flushState()
                 // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
-                // a pure width control. k belongs to the ramped coefficient set: with a fixed q
-                // (every voice-strip use) kInc is structurally 0; under `retune` (the resonator
-                // morph) k ramps with a1..a3, and the mismatch that leaves against a gain moved on
-                // the log-q axis measured -77 dB re peak (Katalyst 5c-10).
+                // a pure width control. k belongs to the ramped coefficient set, but `q` never
+                // moves after construction (see [BaseSvf]) and k is a function of q alone, so
+                // `kInc` is structurally 0 on every path and this add is the shape of the loop,
+                // not a move. It was NOT 0 while the resonator morph could retune a band's q
+                // (Katalyst 5c-10, gone in 5c-11).
                 buffer[i] = k * v1
             }
             transitionSamples = trans

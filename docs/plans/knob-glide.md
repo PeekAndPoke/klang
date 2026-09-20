@@ -17,6 +17,40 @@ compensation, no cleverness. Different-sounding voices that must not disturb eac
 different orbits; that is the user's call, and the glide does not try to make one orbit behave
 like two.
 
+**There are TWO transition times since 2026-09-20 (Katalyst 5c-11), and the split is by KIND.**
+`KNOB_GLIDE_SECONDS` (50 ms) is a LEVEL or a coefficient moving: a wet, a fader, a compressor knob,
+the delay's tap crossfade, the phaser's coefficients, the duck's weight. `BANK_CROSSFADE_SECONDS`
+(20 ms) is the time two MATERIALS are heard at once when a filter bank is swapped, which is not a
+level move at all: it is the width of an overlap, and the maintainer shortened it because at 50 ms
+a run of 32nd notes smears several materials together.
+
+Measured with 16383-tap Blackman-Harris analysis filters whose stopbands are PRINTED with the
+results (-142 dB at 110 Hz for the sub-60 band, -164 dB at 2970 Hz for the band above 8 kHz), floors
+established on a STATIC render, worst of 8 change instants one block apart, across 15 body material
+pairs, 6 vowel pairs and notes from 55 to 220 Hz. **The two bands do not give the same verdict.**
+- Above 8 kHz, the click question: 20 ms is clean with margin. Worst body -74.9 dB re the signal,
+  worst vowel about -81.6, against floors of -156 to -161. The 12 ms this swap ran before 5c-6
+  reads -69.9, and that era's clicks came from the hard off and on and from the drop-the-oldest
+  restart, not from the fade.
+- Below 60 Hz, a body material change at 20 ms reads **-39.6 dB re the signal against -49.0 at
+  50 ms**, a gap of 9.4 dB, loudest where a low mode starts cold (`croon` to `tube`, `wood` to
+  `cedar`, `bell` to `wood`). That is the level and the class of the phaser thump the maintainer
+  reports hearing, so the low half is an EAR decision and the measurement hands it over rather than
+  settling it. Vowels sit about 25 dB below the body and are not in question.
+
+**Two lessons about the instrument, both of which cost a round.** (1) A metric's FLOOR must be
+established on a static render before any reading from it means anything, and **a floor that MOVES
+when you change the source is the instrument, not the signal**: the first sweep reported a -95 dB
+"floor" that turned out to be the test source's own top harmonic coming through the analysis
+highpass's 48 dB per octave skirt, tracking `-8 * 20 * log10(8000 / top)` across seven harmonic
+counts, while a single sine six octaves down reads -261 dB and digital silence reads -400. Print the
+analysis filter's measured stopband next to the results. (2) The same trap from the other side: a
+sub-60 band whose edge leaks a 110 Hz fundamental calls that leakage its floor and under-states the
+real artifact by about 10 dB, which is how the first verdict table made the low end look settled.
+A third, smaller one: a crossfade's landing kink is proportional to the INSTANTANEOUS difference of
+the two banks, so a single change instant reads up to 12 dB off, and eight instants converge the
+low band but not always one pair's high band.
+
 **Measure before you glide (learned in the pilot, 2026-09-19).** A knob gets a glide only where
 its JUMP is audible. The pilot measured the orbit reverb in a Python copy of `Reverb.process`
 (low tones, energy above 3 kHz after the change as the artifact): a full-span DAMPING jump sits 66

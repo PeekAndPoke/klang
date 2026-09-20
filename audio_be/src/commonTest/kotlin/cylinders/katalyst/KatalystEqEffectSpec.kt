@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
@@ -28,7 +29,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import kotlin.math.PI
 import kotlin.math.abs
@@ -405,7 +406,7 @@ class KatalystEqEffectSpec : StringSpec({
         val data = sine(40 * blockFrames, 300.0)
         val out = DoubleArray(data.size)
         val ctx = ctx()
-        // KNOB_GLIDE_SECONDS at 44100 Hz is 2205 frames, 17.2 blocks: the fade ENDS inside the
+        // BANK_CROSSFADE_SECONDS at 44100 Hz is 882 frames, 6.9 blocks: the fade ENDS inside the
         // window below, so the seam where the old bank is dropped is measured too (the failure
         // `KatalystFilterSwap` would show if its ramp never advanced).
         val changeBlock = 12
@@ -707,17 +708,20 @@ class KatalystEqEffectSpec : StringSpec({
     }
     // ── Changes crossfade from what sounds now (Katalyst step 5c-6) ─────────────────────────────
 
-    "a curve change on every block: every bank that sounds is one that started from zero, none is zeroed while heard" {
-        // The old two-bank ping-pong zeroed the bank a restart dropped; with "crossfade from what
-        // sounds now" a restart drops nothing, so a reused bank must be one nobody hears. The
-        // oracle is the decided law (`FilterSwapLaw`, the cap and its parking included) over
-        // reference cores built from the bare `EqCore`, each configured fresh at its install and
-        // run on the dry input from then on. A bank zeroed or reconfigured while it still sounds,
-        // or a parked curve lost, departs from it.
+    "a curve change on every block: two banks, the later change parked, and the latest one wins" {
+        // Since 5c-11 the stage has TWO banks and one parking slot. A change that arrives while a
+        // fade runs does not take a bank at all: its scalars wait, a further change overwrites
+        // them, and the curve that installs when the fade lands is the LAST one offered. The
+        // oracle is the decided law (`FilterSwapLaw`, the swap alone) over reference cores built
+        // from the bare `EqCore`, each configured fresh at its install and run on the dry input
+        // from then on; the spec tells the law about a parked curve at the block the STAGE
+        // installs it, so a stage that installed early, dropped one, or zeroed a bank that still
+        // sounds departs from it.
         val sr = sampleRate.toDouble()
-        val fadeLen = (sr * KNOB_GLIDE_SECONDS).toInt()
+        val fadeLen = (sr * BANK_CROSSFADE_SECONDS).toInt()
         val fx = KatalystEqEffect(sampleRate = sr, types = intArrayOf(EqCore.BELL))
-        val dbs = doubleArrayOf(9.0, -9.0, 4.0, -3.0, 12.0)
+        // DISTINCT per change, so no offer is ever "the curve already installed": that rule has
+        // its own row below, and here it would hide a parking the law expects.
         val changes = 60
         val blocks = changes + fadeLen / blockFrames + 30
         val input = sine(blocks * blockFrames, 300.0)
@@ -740,26 +744,41 @@ class KatalystEqEffectSpec : StringSpec({
             return out
         }
 
-        val law = FilterSwapLaw(fadeLen, KatalystFilterSwap.MAX_BANKS)
+        val law = FilterSwapLaw(fadeLen)
         val mix = StereoBuffer(blockFrames)
         val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = mix)
         val curveOf = mutableMapOf<Int, Double>()
+        var pending = -1
         var parkedSeen = false
+        var overtaken = 0
+        var installs = 0
 
         for (b in 0 until blocks) {
             if (b <= changes) {
-                val db = dbs[b % dbs.size]
+                val db = -12.0 + 0.37 * b
+
                 fx.configure(curve(db))
                 curveOf[b] = db
-                law.set(b)
+
+                if (law.settled) {
+                    law.set(b)
+                    installs++
+                } else {
+                    if (pending >= 0) {
+                        overtaken++
+                    }
+
+                    pending = b
+                    parkedSeen = true
+                }
             }
 
-            if (law.parkedId != null) {
-                parkedSeen = true
+            withClue("block $b: the stage parks exactly when the law refuses") {
+                fx.isParked shouldBe (pending >= 0)
             }
 
             // A reference core starts at the block its id first sounds: at once for a change that
-            // found room, at the block boundary the law installs it for a parked one.
+            // found the stage settled, at the block the parked one installs otherwise.
             for (id in law.sounding) {
                 if (id !in refs) {
                     refs[id] = reference(curveOf.getValue(id), b)
@@ -783,8 +802,87 @@ class KatalystEqEffectSpec : StringSpec({
                     mix.right[k] shouldBe expected[k].plusOrMinus(1e-9)
                 }
             }
+
+            // The stage installs its parked curve at the end of the block the fade lands in, so
+            // the law is told here and the reference starts at the next block, exactly as it does.
+            if (pending >= 0 && law.settled) {
+                law.set(pending)
+                installs++
+                pending = -1
+            }
         }
 
-        withClue("the cap engaged, so the pool and the parking were exercised") { parkedSeen shouldBe true }
+        withClue("the parking was exercised and changes were overtaken in it") {
+            parkedSeen shouldBe true
+            overtaken intShouldBeGreaterThan 0
+        }
+
+        withClue("the stage installed exactly the curves the law did, no more") {
+            fx.installs shouldBe installs
+        }
+    }
+
+    "installs ALTERNATE between two banks, so the one that sounds is never the one reconfigured" {
+        // Katalyst 5c-11 replaced the MAX_BANKS + 2 pool with two. The property is not the COUNT
+        // but the CHOICE: an install takes the bank the swap does not hold, which with two banks
+        // means 0, 1, 0, 1. Red for a `freeBank` that stops asking the swap (measured: this row
+        // plus two crossfade rows).
+        //
+        // The count itself is NOT pinned here, and cannot be: an install only ever runs while the
+        // swap is settled, where it holds at most one bank, so a THIRD bank is unreachable by
+        // construction and a pool of three renders identically. Two is a memory decision, and the
+        // place it is stated is the field's KDoc.
+        val sr = sampleRate.toDouble()
+        val fx = KatalystEqEffect(sampleRate = sr, types = intArrayOf(EqCore.BELL))
+        val mix = StereoBuffer(blockFrames)
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = mix)
+        val landing = (sr * BANK_CROSSFADE_SECONDS).toInt() / blockFrames + 2
+
+        fun curve(db: Double) = doubleArrayOf(300.0, 4.0, db, 0.0)
+
+        fx.lastInstalledBank shouldBe -1
+
+        val taken = mutableListOf<Int>()
+
+        for (i in 0 until 4) {
+            fx.configure(curve(3.0 + i))
+            taken += fx.lastInstalledBank
+            // Let each fade LAND before the next install, so every one of them is a free choice.
+            repeat(landing) { fx.process(ctx) }
+        }
+
+        withClue("the install alternates between the two banks") {
+            taken shouldBe listOf(0, 1, 0, 1)
+        }
+    }
+
+    "re-offering the curve that is installed drops what is parked, and installs nothing" {
+        // The owner's latest word is what already sounds, so the change waiting behind it is
+        // overtaken. Without this the stage would install a curve nobody asked for any more.
+        val sr = sampleRate.toDouble()
+        val fx = KatalystEqEffect(sampleRate = sr, types = intArrayOf(EqCore.BELL))
+        val mix = StereoBuffer(blockFrames)
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = mix)
+
+        fun curve(db: Double) = doubleArrayOf(300.0, 4.0, db, 0.0)
+
+        fx.configure(curve(6.0))
+        fx.process(ctx)
+        fx.configure(curve(-6.0)) // installs: a fade starts
+        fx.process(ctx)
+
+        fx.installs shouldBe 2
+
+        fx.configure(curve(9.0)) // parked behind the fade
+
+        fx.isParked shouldBe true
+
+        fx.configure(curve(-6.0)) // back to what is installed
+
+        fx.isParked shouldBe false
+
+        repeat((sr * BANK_CROSSFADE_SECONDS).toInt() / blockFrames + 3) { fx.process(ctx) }
+
+        withClue("the parked curve never installed") { fx.installs shouldBe 2 }
     }
 })

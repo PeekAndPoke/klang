@@ -897,6 +897,15 @@ complexity outranks the duplication.
     metric, across wood (whose lowest mode is about 100 Hz, one period of which is 10 ms) and the
     other materials, vowels, and note frequencies from a 55 Hz bass upward, single changes and runs;
     and the cold start, which a shorter fade exposes rather than hides.
+  - **LISTENED 2026-09-20 by the maintainer on 5c-11, TWICE. The first verdict was WITHDRAWN** by
+    the coordinator: seven of the eight pairs had compared against the rejected MORPH rather than
+    the 50 ms crossfade, because at `947c2023` the `MORPH` flags were still true and a material
+    change at constant `wet` travelled the bank instead of pushing an outgoing entry. Re-rendered
+    with `MORPH = false` on the before side, with three proofs per case (before against after,
+    before against morph, morph against after), and extended with five low-end diagnostics because
+    the musical cases cannot expose the sub-60 burst at all: in `body-single` the note's own bass is
+    about 20 dB louder than the artifact and every change lands on a note attack louder still.
+    **The second verdict, on the corrected set including `lowend-a2-soft`: fine. 20 ms stands.**
   - **CLOSED by that listening (was open, the maintainer's ear, 5c-10): morph or crossfade, per
     effect.** Both are live behind
     `KatalystBodyEffect.MORPH` and `KatalystFormantEffect.MORPH`; the loser is DELETED with the

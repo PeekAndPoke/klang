@@ -23,7 +23,7 @@ internal class SwapHostScript(
     private val input: DoubleArray,
     private val stage: (KatalystContext) -> Unit,
 ) {
-    val law = FilterSwapLaw(fadeLen, KatalystFilterSwap.MAX_BANKS)
+    val law = FilterSwapLaw(fadeLen)
 
     private val refs = mutableListOf<DoubleArray>()
     private val mix = StereoBuffer(n)

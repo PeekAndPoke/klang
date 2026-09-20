@@ -13,10 +13,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.filters.ResonatorBank
-import io.peekandpoke.klang.audio_be.filters.morphTo
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import kotlin.math.PI
@@ -247,13 +245,16 @@ class KatalystFormantEffectSpec : StringSpec({
             withClue("wet = $wet") { fx.installedMix shouldBe wet }
         }
     }
-    // ── Every edge fades (Katalyst step 5c-6) ─────────────────────────────────────────────────────
+    // ── Every edge fades (Katalyst steps 5c-6 and 5c-11) ─────────────────────────────────────────────────────
     //
     // The oracle is `FilterSwapLaw`, the decided switching law, applied to reference banks built
     // from the bare DSP (`LowPassHighPassFilters.createFormant`) and run on the same input.
 
-    val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
-    val landBlocks = fadeLen / n + 2
+    val fadeLen = (sampleRate * BANK_CROSSFADE_SECONDS).toInt()
+
+    /** Blocks a fade needs to LAND: the stage installs a parked config at the end of the last one. */
+    val fadeBlocks = (fadeLen + n - 1) / n
+    val landBlocks = fadeBlocks + 1
 
     fun script(fx: KatalystFormantEffect, blocks: Int): SwapHostScript =
         SwapHostScript(n, fadeLen, drySine(700.0, blocks)) { fx.process(it) }
@@ -330,24 +331,105 @@ class KatalystFormantEffectSpec : StringSpec({
         }
     }
 
-    "a change mid-fade crossfades from what sounds now, keeping the bank that is still fading" {
+    "a change mid-fade is PARKED: the fade in flight is untouched, and it installs on the landing" {
+        // The twin of `KatalystBodyEffectSpec`'s parking row; the full note is there.
         val fx = KatalystFormantEffect(sampleRate)
-        val s = script(fx, blocks = 8 + 3 + landBlocks)
+        val s = script(fx, blocks = 8 + fadeBlocks + landBlocks)
         val a = s.reference(ref(vowelish))
 
         fx.configure(vowelish)
         s.law.set(a)
-        repeat(8) { s.step("a") }
+        repeat(8) { fx.configure(vowelish); s.step("a") }
 
         val b = s.reference(ref(ohish))
+
         fx.configure(ohish)
         s.law.set(b)
-        repeat(3) { s.step("a to b") }
+        s.step("a to b")
 
-        val c = s.reference(ref(vowelish.copy(mix = 0.5)))
-        fx.configure(vowelish.copy(mix = 0.5))
-        s.law.set(c)
-        repeat(landBlocks) { s.step("a, b to c") }
+        val c = vowelish.copy(mix = 0.5)
+
+        fx.configure(c)
+
+        withClue("the change waits, and what is installed is still b") {
+            fx.isParked shouldBe true
+            fx.isEngaged shouldBe true
+            fx.installedBands shouldBe ohish.bands
+        }
+
+        repeat(fadeBlocks - 1) { fx.configure(c); s.step("a to b, undisturbed") }
+
+        withClue("the fade landed, so the parked change is in") {
+            fx.isParked shouldBe false
+            fx.installedBands shouldBe c.bands
+            fx.installedMix shouldBe 0.5
+        }
+
+        val cRef = s.reference(ref(c))
+
+        s.law.set(cRef)
+        repeat(fadeBlocks) { fx.configure(c); s.step("b to c") }
+    }
+
+    "a further change REPLACES what is parked: only the last one ever sounds" {
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 4 + fadeBlocks + landBlocks)
+        val a = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(a)
+        repeat(4) { fx.configure(vowelish); s.step("a") }
+
+        val b = s.reference(ref(ohish))
+
+        fx.configure(ohish)
+        s.law.set(b)
+        s.step("a to b")
+
+        fx.configure(vowelish.copy(mix = 0.25))
+        fx.configure(vowelish.copy(mix = 0.75))
+
+        repeat(fadeBlocks - 1) { fx.configure(vowelish.copy(mix = 0.75)); s.step("a to b, undisturbed") }
+
+        withClue("the overtaken change never installed; the last one did") {
+            fx.installedMix shouldBe 0.75
+        }
+
+        val lastRef = s.reference(ref(vowelish.copy(mix = 0.75)))
+
+        s.law.set(lastRef)
+        repeat(fadeBlocks) { fx.configure(vowelish.copy(mix = 0.75)); s.step("b to the last change") }
+    }
+
+    "an OFF that arrives mid-fade is parked too: the intent flips at once, the fade to dry waits" {
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 4 + fadeBlocks + landBlocks)
+        val a = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(a)
+        repeat(4) { fx.configure(vowelish); s.step("a") }
+
+        val b = s.reference(ref(ohish))
+
+        fx.configure(ohish)
+        s.law.set(b)
+        s.step("a to b")
+
+        fx.configure(null)
+
+        withClue("intent off at once, the sound still fading in") {
+            fx.isEngaged shouldBe false
+            fx.isSounding shouldBe true
+            fx.isParked shouldBe true
+        }
+
+        repeat(fadeBlocks - 1) { fx.configure(null); s.step("a to b, undisturbed") }
+
+        s.law.clear()
+        repeat(fadeBlocks) { fx.configure(null); s.step("b to dry") }
+
+        withClue("landed on dry: released") { fx.isSounding shouldBe false }
     }
 
     "reset() mid-fade-out is a hard cut: dry at once, and the next life starts on a fresh bank at once" {
@@ -398,241 +480,92 @@ class KatalystFormantEffectSpec : StringSpec({
         }
     }
 
-    // ── A vowel change MORPHS the bank in service (Katalyst step 5c-10) ───────────────────────────
-    //
-    // The twin of the body's morph rows and their oracle: ONE `ParallelMixFilter` around ONE
-    // `ResonatorBank`, morphed BY HAND at the block the stage is configured at.
-
-    fun driveVowel(
-        fx: KatalystFormantEffect,
-        blocks: Int,
-        at: Int,
-        a: FilterDef.Formant,
-        b: FilterDef.Formant,
-    ): DoubleArray {
-        val out = DoubleArray(blocks * n)
-
-        fx.configure(a)
-
-        for (block in 0 until blocks) {
-            fx.configure(if (block >= at) b else a)
-
-            val (ctx, mix) = contextWithConstantMix(0.0)
-
-            for (i in 0 until n) {
-                val v = sineAt(300.0, block * n + i)
-
-                mix.left[i] = v
-                mix.right[i] = v
-            }
-
-            fx.process(ctx)
-
-            for (i in 0 until n) {
-                out[block * n + i] = mix.left[i]
-            }
-        }
-
-        return out
-    }
-
-    fun oneBankMorphing(blocks: Int, at: Int, a: FilterDef.Formant, b: FilterDef.Formant): DoubleArray {
-        val bank = LowPassHighPassFilters.formantBank(a.bands, sampleRate)
-        val filter = LowPassHighPassFilters.wrapFormant(bank, a.mix, a.floor)
-        val out = DoubleArray(blocks * n)
-
-        for (block in 0 until blocks) {
-            if (block == at) {
-                bank.morphTo(b.bands.map(LowPassHighPassFilters::vowelBand))
-            }
-
-            val buf = DoubleArray(n) { sineAt(300.0, block * n + it) }
-
-            filter.process(buf, 0, n)
-            buf.copyInto(out, block * n)
-        }
-
-        return out
-    }
-
-    "a vowel change with an unchanged wet MORPHS the bank: the formants travel, one by one" {
-        // Five formants, the shape a real vowel has, so the row is about pairing by position and
-        // not about a single band moving.
-        val a = FilterDef.Formant(
-            bands = listOf(
-                FilterDef.Formant.Band(freq = 600.0, db = 0.0, q = 60.0),
-                FilterDef.Formant.Band(freq = 1040.0, db = -7.0, q = 70.0),
-                FilterDef.Formant.Band(freq = 2250.0, db = -9.0, q = 110.0),
-                FilterDef.Formant.Band(freq = 2450.0, db = -9.0, q = 120.0),
-                FilterDef.Formant.Band(freq = 2750.0, db = -20.0, q = 130.0),
-            ),
-            mix = 1.0,
-        )
-        val b = a.copy(
-            bands = listOf(
-                FilterDef.Formant.Band(freq = 250.0, db = 0.0, q = 60.0),
-                FilterDef.Formant.Band(freq = 1750.0, db = -30.0, q = 70.0),
-                FilterDef.Formant.Band(freq = 2600.0, db = -16.0, q = 110.0),
-                FilterDef.Formant.Band(freq = 3050.0, db = -22.0, q = 120.0),
-                FilterDef.Formant.Band(freq = 3340.0, db = -28.0, q = 130.0),
-            ),
-        )
-        val blocks = 6 + landBlocks + 4
-
-        val morphed = driveVowel(KatalystFormantEffect(sampleRate, morph = true), blocks, at = 6, a = a, b = b)
-        val expected = oneBankMorphing(blocks, at = 6, a = a, b = b)
-
-        withClue("the stage IS the one bank travelling") {
-            morphed.indices.maxOf { abs(morphed[it] - expected[it]) } shouldBeLessThan 1e-12
-        }
-
-        val faded = driveVowel(KatalystFormantEffect(sampleRate, morph = false), blocks, at = 6, a = a, b = b)
-
-        withClue("and it is NOT what the crossfade does") {
-            morphed.indices.maxOf { abs(morphed[it] - faded[it]) } shouldBeGreaterThan 0.01
-        }
-    }
-
-    "a WET change crossfades even in morph mode: the blend lives outside the bank" {
-        // The body has this row; the two hosts are separate classes with their own copy of the
-        // branch, so the body's guards nothing here. Until this row existed the wet clause
-        // survived in the formant only because another row's second def happens to move the wet.
-        val fx = KatalystFormantEffect(sampleRate, morph = true)
-        val s = script(fx, blocks = 6 + landBlocks)
+    "a return to the config that is fading IN drops the parked change, and nothing is installed" {
+        // The twin of the body's row. Without it the two lines that clear the slot in the
+        // `unchanged` branch of `configure` are unguarded on this host.
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 4 + 2 * fadeBlocks + 4)
         val a = s.reference(ref(vowelish))
 
         fx.configure(vowelish)
         s.law.set(a)
-        repeat(6) {
-            fx.configure(vowelish)
-            s.step("on")
-        }
+        repeat(4) { fx.configure(vowelish); s.step("a") }
 
-        val quieter = vowelish.copy(mix = 0.4)
-        val b = s.reference(ref(quieter))
+        val b = s.reference(ref(ohish))
 
-        fx.configure(quieter)
+        fx.configure(ohish)
         s.law.set(b)
+        s.step("a to b")
 
-        repeat(landBlocks - 1) {
-            fx.configure(quieter)
-            s.step("wet change")
+        fx.configure(vowelish.copy(mix = 0.25))
+        fx.isParked shouldBe true
+
+        fx.configure(ohish)
+
+        withClue("back to what is installed: nothing waits any more") {
+            fx.isParked shouldBe false
+            fx.installedBands shouldBe ohish.bands
         }
+
+        repeat(fadeBlocks + 2) { fx.configure(ohish); s.step("a to b, and then b alone") }
     }
 
-    "a FLOOR change crossfades even in morph mode, and the stage remembers the new floor" {
-        // The twin of the body's floor row, and it needs its own for the same reason: without the
-        // floor clause the morph is taken, every band skips because the vowel is unchanged, and
-        // `curFloor` never updates, so the blend keeps the old floor for the orbit's life.
-        val fx = KatalystFormantEffect(sampleRate, morph = true)
-        val s = script(fx, blocks = 6 + landBlocks)
+    "a DIFFERENT vowel arriving during the fade-OUT parks, and installs from dry on the landing" {
+        // The host half of "a change mid-fade": the fade in flight is a fade to DRY, so the parked
+        // vowel installs from Off and fades in from dry, not from a bank. The swap half is
+        // `KatalystFilterSwapSpec`; this is the one that drives the host's own door.
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 4 + fadeBlocks + fadeBlocks + 4)
         val a = s.reference(ref(vowelish))
 
         fx.configure(vowelish)
         s.law.set(a)
-        repeat(6) {
-            fx.configure(vowelish)
-            s.step("on")
-        }
-
-        val floored = vowelish.copy(floor = 0.05)
-        val b = s.reference(ref(floored))
-
-        fx.configure(floored)
-        s.law.set(b)
-
-        repeat(landBlocks - 1) {
-            fx.configure(floored)
-            s.step("floor change")
-        }
-
-        withClue("and the cache took the new floor") { fx.installedFloor shouldBe 0.05 }
-    }
-
-    "a vowel WIDER than the bank can hold installs a new bank and crossfades, morph or not" {
-        // The twin of the body's row: the stage's morph scratch is sized to the bank's capacity,
-        // and a def with more bands than that must fall through to the install rather than index
-        // past it on the audio thread. No vowel table ships one; a direct caller can.
-        val wide = FilterDef.Formant(
-            bands = List(ResonatorBank.MORPH_CAPACITY + 1) {
-                FilterDef.Formant.Band(freq = 300.0 + 220.0 * it, db = -3.0, q = 60.0)
-            },
-            mix = vowelish.mix,
-        )
-        val fx = KatalystFormantEffect(sampleRate, morph = true)
-        val s = script(fx, blocks = 6 + landBlocks)
-        val a = s.reference(ref(vowelish))
-
-        fx.configure(vowelish)
-        s.law.set(a)
-        repeat(6) {
-            fx.configure(vowelish)
-            s.step("on")
-        }
-
-        val b = s.reference(ref(wide))
-
-        fx.configure(wide)
-        s.law.set(b)
-
-        repeat(landBlocks - 1) {
-            fx.configure(wide)
-            s.step("a wide vowel crossfades")
-        }
-    }
-
-    "with the morph OFF a vowel change crossfades two banks, exactly as it did in 5c-6" {
-        val fx = KatalystFormantEffect(sampleRate, morph = false)
-        val s = script(fx, blocks = 6 + landBlocks)
-        val a = s.reference(ref(vowelish))
-
-        fx.configure(vowelish)
-        s.law.set(a)
-        repeat(6) {
-            fx.configure(vowelish)
-            s.step("on")
-        }
-
-        val other = FilterDef.Formant(bands = ohish.bands, mix = vowelish.mix)
-        val b = s.reference(ref(other))
-
-        fx.configure(other)
-        s.law.set(b)
-
-        repeat(landBlocks - 1) {
-            fx.configure(other)
-            s.step("crossfading")
-        }
-    }
-
-    "a vowel change on a bank that is FADING OUT installs a fresh one and crossfades" {
-        val fx = KatalystFormantEffect(sampleRate, morph = true)
-        val s = script(fx, blocks = 6 + 3 + landBlocks)
-        val a = s.reference(ref(vowelish))
-
-        fx.configure(vowelish)
-        s.law.set(a)
-        repeat(6) {
-            fx.configure(vowelish)
-            s.step("on")
-        }
+        repeat(4) { fx.configure(vowelish); s.step("a") }
 
         fx.configure(null)
         s.law.clear()
-        repeat(3) {
-            fx.configure(null)
-            s.step("fading out")
+        s.step("a to dry")
+
+        fx.configure(ohish)
+
+        withClue("the new vowel waits behind the fade-out, and the intent is back on at once") {
+            fx.isParked shouldBe true
+            fx.isEngaged shouldBe true
+            fx.isSounding shouldBe true
         }
 
-        val other = FilterDef.Formant(bands = ohish.bands, mix = vowelish.mix)
-        val b = s.reference(ref(other))
+        repeat(fadeBlocks - 1) { fx.configure(ohish); s.step("a to dry, undisturbed") }
 
-        fx.configure(other)
+        withClue("the fade-out landed and the parked vowel went in") {
+            fx.isParked shouldBe false
+            fx.installedBands shouldBe ohish.bands
+        }
+
+        val b = s.reference(ref(ohish))
+
         s.law.set(b)
+        repeat(fadeBlocks) { fx.configure(ohish); s.step("dry to b") }
+    }
 
-        repeat(landBlocks - 1) {
-            fx.configure(other)
-            s.step("a fresh bank over the leaving one")
-        }
+    // ── A bank never changes (the morph of Katalyst 5c-10, REJECTED 2026-09-20) ──────────────────
+
+    "a vowel change builds a NEW bank and crossfades: the bank in service is never retuned" {
+        // The formants do NOT travel any more. The teeth are the reference bank, which is FRESH
+        // at the change: a stage that retuned the bank it had would carry its ringing state into
+        // the change and differ from this oracle from the first sample.
+        val fx = KatalystFormantEffect(sampleRate)
+        val s = script(fx, blocks = 6 + fadeBlocks + 4)
+        val a = s.reference(ref(vowelish))
+
+        fx.configure(vowelish)
+        s.law.set(a)
+        repeat(6) { fx.configure(vowelish); s.step("a vowel") }
+
+        val sameWet = FilterDef.Formant(bands = ohish.bands, mix = vowelish.mix)
+        val b = s.reference(ref(sameWet))
+
+        fx.configure(sameWet)
+        s.law.set(b)
+        repeat(fadeBlocks + 3) { fx.configure(sameWet); s.step("one vowel to another") }
     }
 })
