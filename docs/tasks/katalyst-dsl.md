@@ -878,6 +878,25 @@ complexity outranks the duplication.
     The metric could not have caught this: a travelling resonance is not a discontinuity, so it
     reads clean while the ear hears a sweep. That blind spot is recorded in
     `future/transition-times.md` section 1.
+  - **DECIDED 2026-09-20 with the maintainer, after that listening: the swap's shape and its time.**
+    The 10-bank pool with its parking overflow is replaced by the maintainer's model: **two banks
+    and ONE parking slot.** Crossfade the sounding bank into the new one; a change arriving mid-fade
+    is parked; a further change REPLACES what is parked (latest wins); when the fade lands, a parked
+    change starts its own crossfade. No pool, no cap, no drop rule, and the EQ's 12-bank pool goes
+    with them. It is not "unbounded banks": the mechanism can never need more than two, which is why
+    it is the raw shape rather than a clamp. It rate-limits material changes to one per fade, and
+    the maintainer accepts the consequence: a rate faster than that "is chaotic in any case".
+    **The swap's fade becomes 20 ms, its own constant**, separate from `KNOB_GLIDE_SECONDS`, which
+    stays 50 ms for level and dynamics glides (the compressor's release gets WORSE if shortened: it
+    already measures -62 to -65 dB releasing 25 dB in 50 ms). Evidence for 20: 12 ms was the swap's
+    value before 5c-6 and the click investigation measured a single material change there at worst
+    -66 dB against a -78 to -93 floor, so the clicks of that era were the hard off/on and the
+    drop-the-oldest restart, not the 12 ms fade. 50 ms was adopted to keep ONE constant, not because
+    12 clicked. At 20 ms the rate limit is 50 changes a second, so 64ths at 174 BPM (21 ms apart)
+    still land on time. To measure before it is believed: 20 ms on both the HF and the sub-60 Hz
+    metric, across wood (whose lowest mode is about 100 Hz, one period of which is 10 ms) and the
+    other materials, vowels, and note frequencies from a 55 Hz bass upward, single changes and runs;
+    and the cold start, which a shorter fade exposes rather than hides.
   - **CLOSED by that listening (was open, the maintainer's ear, 5c-10): morph or crossfade, per
     effect.** Both are live behind
     `KatalystBodyEffect.MORPH` and `KatalystFormantEffect.MORPH`; the loser is DELETED with the
