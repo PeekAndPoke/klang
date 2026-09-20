@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import kotlin.math.abs
 
@@ -47,6 +48,13 @@ class CylinderChainCrossfadeSpec : StringSpec({
 
     val blockFrames = 128
     val sampleRate = 44100
+
+    /**
+     * How many blocks one knob glide spans here: the same arithmetic [io.peekandpoke.klang
+     * .audio_be.KnobGlide] does, 17 at 44.1 kHz and 128 frames, 19 at 48 kHz. Derived, not
+     * hardcoded, so this row still means the same thing if the rig's rate moves.
+     */
+    val glideBlocks = kotlin.math.round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt().coerceAtLeast(1)
 
     /** Blocks the ramp spans, from the shared constant, plus one for the block it completes in. */
     val fadeBlocks = (Crossfade.XFADE_SECONDS * sampleRate / blockFrames).toInt() + 2
@@ -873,10 +881,18 @@ class CylinderChainCrossfadeSpec : StringSpec({
             ramping shouldBeGreaterThan 8
         }
 
-        // Past the ramp, the arriving chain's own duck engages on its fresh envelope. That
-        // duck-down is `Ducking`'s documented behaviour for a new owner, not the swap's step, so it
-        // is asserted here rather than measured above.
-        withClue("and the new owner's duck is live once the ramp is done") {
+        // Past the ramp, the arriving chain's own duck engages on its fresh envelope. Since
+        // Katalyst 5c-9 it RIDES IN over [KNOB_GLIDE_SECONDS] ([glideBlocks] blocks) instead of
+        // pulling the orbit down in one sample, which is the whole point of the
+        // stage's switch-on fade: the first block is barely ducked, and the reduction is there once
+        // the fade has run.
+        withClue("the new owner's duck does not arrive in one sample") {
+            peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeGreaterThan probe * 0.9
+        }
+
+        rig.render(blocks = glideBlocks, level = probe, sidechainLevel = 0.5)
+
+        withClue("and the new owner's duck is live once its fade has run") {
             peakOf(rig.block(level = probe, sidechainLevel = 0.5)) shouldBeLessThan probe * 0.5
         }
     }

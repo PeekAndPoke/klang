@@ -833,6 +833,36 @@ complexity outranks the duplication.
   - Known and accepted (5c-8 review): a fader edge takes effect when the lease changes hands, not
     when the pattern changes, and then glides 50 ms, so a patterned fader is not a rhythmic gate.
     No song does it; a gate would be its own feature.
+  - **The phaser and the duck, as built in 5c-9 (2026-09-20):** the phaser needs no fade of its
+    own, because OFF is exactly `dryC = 1, wetC = 0`, so the per-sample glide of the C4 law's two
+    coefficients IS the crossfade (verified in review against an exact crossfade: one ulp), and
+    the cascade is dropped only on the block it lands; `centre` and `sweep` glide per block with
+    alpha continuous across the seam; `rate` does not glide. The duck rides a weight to exactly
+    0 dB (`gain = 1 + w * (g - 1)`, no dry copy: ducking is one multiply) and lets go of the
+    envelope and the source orbit only then; `depth` glides per sample, `attack` does not. Neither
+    got state classes (the complexity rule, the 5c-8 precedent). Handover clicks were the loudest
+    thing in both stages (the duck's -6.0 dB HF and a thump LOUDER than the signal's low-frequency
+    RMS) and are now at their floors. 17 of 18 songs bit-identical; **The Synthsale Pipers' Last
+    Rave differs 66 to 246 s, worst -26.3 dB re local peak**: orbit 5 hosts two phasers (the pad's
+    at centre 1400 and the bassline's at 3500), so the orbit's notch used to JUMP between them at
+    every handover and now travels in 50 ms; level and timing are unchanged (per-0.5 s RMS equal
+    to 0.00 dB, cross-correlation lag 0), 12 bursts in 35 s, and stripping the three `.phaser(...)`
+    calls makes both sides bit-identical. Listening checkpoint: `5c9/listen/`.
+  - **OPEN for the maintainer, MEASURED in the 5c-9 review (2026-09-20): a `duck.orbit` switch onto
+    an already-sounding source clicks.** Moving the sidechain to a louder orbit steps the reduction
+    by -40.8 to -19.0 dB HF against a floor of -52.8, and the already-sounding sub-case (0.2 to
+    0.9) is no better than the silent one, so the old argument ("it steps by exactly as much as
+    that orbit's own onset would") bounds the magnitude but not the audibility: an orbit-to-orbit
+    switch brings no new sound into the mix to mask the drop. The other direction is at the floor.
+    Unchanged by 5c-9 and the same on HEAD. What it needs is a decision about what a sidechain
+    switch MEANS: (a) leave it (the ducker's instantaneous attack is its character, "the Motor
+    stays raw"); (b) blend the two sidechain sources over the glide (one extra envelope read per
+    sample while switching); (c) glide the reduction to 0 dB, switch, and glide back (an audible
+    dip, but no new machinery). Recommendation: (b) if it is to be fixed, because it keeps the
+    duck working through the switch.
+  - Also unchanged from HEAD, stated so nobody reads it as new (5c-9): a duck handover does not
+    carry the arriving chain's `duck.depth`, so two chains with different depths on one orbit step
+    the reduction by the difference.
   - The EQ gets no off door: it exists only on a declared chain, and a chain swap already
     crossfades.
   - The maintainer remembers audible clicks on material changes with today's 12 ms crossfade.

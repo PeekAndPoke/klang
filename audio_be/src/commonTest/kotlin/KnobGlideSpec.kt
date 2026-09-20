@@ -244,4 +244,132 @@ class KnobGlideSpec : StringSpec({
             out.left[short - 1].toRawBits() shouldBe glide.value.toRawBits()
         }
     }
+
+    "settleAt puts the knob there with nothing left to travel, and does NOT re-arm the snap" {
+        val glide = settledAt(1.0)
+
+        glide.retarget(0.0)
+        glide.advance()
+
+        withClue("a glide is running") {
+            glide.isGliding shouldBe true
+        }
+
+        glide.settleAt(0.0)
+
+        glide.value shouldBe 0.0
+        glide.target shouldBe 0.0
+        glide.isGliding shouldBe false
+
+        // The snap window stays SPENT: the next target is travelled to, not jumped to. That is the
+        // difference from `reset()`, and it is what keeps a stage's next switch-on a fade-in.
+        glide.retarget(1.0)
+
+        withClue("the next target glides, it does not snap") {
+            glide.value shouldBe 0.0
+            glide.isGliding shouldBe true
+        }
+    }
+
+    "carryOver takes the other glide's position over, mid-glide, and spends the snap window" {
+        val from = settledAt(1.0)
+
+        from.retarget(0.0)
+        from.advance()
+        from.advance()
+
+        val carried = from.value
+
+        withClue("the source really is mid-glide") {
+            (carried < 1.0 && carried > 0.0) shouldBe true
+            from.isGliding shouldBe true
+        }
+
+        // A FRESH glide: left alone it would snap to whatever arrives next.
+        val to = KnobGlide(sampleRate = 44100, blockFrames = frames)
+
+        to.carryOver(from)
+
+        to.value shouldBe carried
+        to.target shouldBe 0.0
+        to.isGliding shouldBe true
+
+        // The glide's START comes too. Nothing proves that through a retarget, which overwrites
+        // `start` anyway: it shows when the adopted glide simply CARRIES ON, which is what happens
+        // on any block the arriving chain's writer does not run.
+        val carriedOn = KnobGlide(sampleRate = 44100, blockFrames = frames)
+
+        carriedOn.carryOver(from)
+
+        val wantNext = from.advance()
+
+        withClue("an adopted glide carries on down the SOURCE's line") {
+            carriedOn.advance().toRawBits() shouldBe wantNext.toRawBits()
+        }
+
+        // The snap is spent, so the turn-around starts from where the knob stands.
+        to.retarget(1.0)
+        to.advance()
+
+        val blocks = 17
+        val expected = carried + (1.0 - carried) / blocks
+
+        withClue("it turns around from the carried value, it does not snap to the new target") {
+            (abs(to.value - expected) <= 1e-12) shouldBe true
+        }
+    }
+
+    "carryOver of a RISING glide keeps its target: the swap case a falling one cannot see" {
+        // Every falling glide's target is 0.0, which is also a fresh instance's default, so a
+        // carryOver that forgot the target would look right. A rising one is the realistic swap:
+        // a duck fading IN when the chain changes hands.
+        val from = settledAt(0.0)
+
+        from.retarget(1.0)
+        from.advance()
+        from.advance()
+        from.advance()
+
+        val carried = from.value
+
+        withClue("the source is mid fade-in") {
+            (carried > 0.0 && carried < 1.0) shouldBe true
+            from.target shouldBe 1.0
+            from.isGliding shouldBe true
+        }
+
+        val to = KnobGlide(sampleRate = 44100, blockFrames = frames)
+
+        to.carryOver(from)
+
+        to.value shouldBe carried
+        to.target shouldBe 1.0
+        to.isGliding shouldBe true
+
+        // Carried on with no retarget it keeps climbing the SOURCE's line, target and all.
+        val wantNext = from.advance()
+
+        to.advance().toRawBits() shouldBe wantNext.toRawBits()
+    }
+
+    "carryOver clamps a countdown longer than this glide spans" {
+        // The precondition is same-rate, same-block-size; the clamp is what keeps a shared helper
+        // from driving a value outside [start, target] if a caller ever breaks it. 19 blocks at
+        // 48 kHz into a 17-block glide at 44.1 kHz, falling from 1.0: uncoerced the first advance
+        // reads 1.0588, above the value it started from.
+        val wide = KnobGlide(sampleRate = 48000, blockFrames = frames)
+
+        wide.retarget(1.0)
+        wide.advance()
+        wide.retarget(0.0)
+
+        val narrow = settledAt(1.0)
+
+        narrow.carryOver(wide)
+        narrow.advance()
+
+        withClue("the value stays inside the glide it was handed to") {
+            (narrow.value <= 1.0 && narrow.value >= 0.0) shouldBe true
+        }
+    }
 })

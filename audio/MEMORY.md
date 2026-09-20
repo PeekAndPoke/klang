@@ -1,5 +1,176 @@
 # Klang Audio — Memory
 
+## The phaser and the duck switch and change without clicking (2026-09-20)
+
+Katalyst step 5c-9, the last two orbit stages that still switched hard. A SOUND CHANGE at the
+stage's own edges (a `.katp` that moves a knob, a `phaser.wet` or `duck.depth` that reaches 0, an
+owner handover where only one of two patterns has the stage). The swap's ramps around the duck
+(`Cylinder.processDuck`, `KatalystDuckEffect.takeOver`) are untouched: they were always right, and
+they never covered these edges.
+
+- **Measure first.** Metric: peak 0.7 ms RMS above 8 kHz and peak 20 ms RMS below 60 Hz, both
+  against the signal RMS, on sources band-limited to 3 kHz (saw 110 Hz, a three-saw chord at
+  220 Hz, a saw bass at 73 Hz), at 44.1 and 48 kHz, every knob swept its full range in BOTH
+  directions. **The phaser has a high own floor, -50 to -61 dB**, set by the block-rate kinks of
+  its interpolated alpha; the duck's is -49 to -53. Read every number against the floor of its own
+  row, never against the compressor's -81.
+- **What glides, and on which axis.**
+  - *Phaser `wet` and `floor`*: they feed the C4 law's two coefficients, which are MEMORYLESS, so
+    they are LEVEL knobs (jumps -14.8 to -49.8 dB). The output is LINEAR in the pair, so ramping
+    both per sample IS a linear crossfade from the old settings to the new: ONE mechanism for the
+    `wet` knob, the `floor` knob, the OFF edge and the ON edge, because OFF is exactly
+    `dryC = 1, wetC = 0`, which is where the depth gate's target sits. No separate fade was built.
+  - *Phaser `center` and `sweep`*: the loudest jumps of the whole stage (-9.7 dB on a chord for
+    100 Hz to 18 kHz), because the allpass multiplies its INPUT by alpha, so a step in alpha is a
+    step in the output. They glide PER BLOCK (a per-sample glide would put `tan` in the hot path),
+    and `PhaserCore.prepareBlock(frames, centerTo, sweepTo)` computes alpha at the block's start
+    from the breakpoint IN FORCE and at its end from the new one, so alpha is continuous across
+    the seam. With the breakpoint unchanged it is `alphaAt(lfoPhase)` either way, bit-identical.
+  - *Phaser `rate`*: NO glide. It only scales the LFO's phase increment and the phase carries on;
+    0 to 20 Hz both ways measured at or under the floor, HEAD and tree identical.
+  - *Duck `depth`*: a LEVEL knob in the rising direction (the detector's attack is instantaneous,
+    so a depth step is a level step: -17.0 to -37.2 dB); the falling direction was already at the
+    floor because the release smooths it. It glides PER SAMPLE on its own axis, the target gain
+    being linear in depth.
+  - *Duck `attack`*: NO glide, the release envelope's time constant, 1 ms to 1 s both ways at the
+    floor (the compressor's attack and release measured the same).
+  - *Duck sidechain ORBIT*: NO mechanism. The envelope belongs to the effect, not to the buffer,
+    so a changed orbit carries the reduction across (at the floor, measured). The other direction,
+    a silent trigger replaced by a loud one, reads -19 to -39 dB on BOTH sides and EQUALS a
+    control where nothing but the sidechain changed: that is `Ducking`'s instantaneous attack, the
+    same step the orbit's own onset makes, and it is not this stage's to smooth.
+- **The switch, per stage.** The phaser's OFF drops the cascade only once the coefficient glide has
+  landed on identity (entering Off early IS the click); the duck's OFF rides a WEIGHT down,
+  `gain = 1 + w * (g - 1)`, so the reduction reaches exactly 0 dB while the envelope keeps running,
+  and only then does it let go of the envelope and the source orbit. No dry copy for the duck:
+  ducking is one multiply, so scaling the reduction IS blending with dry.
+- **The duck's "first initialisation is instant" window is the ORBIT's first block, not its own.**
+  The duck runs in a later pass than the chain and not at all while it is off, so its `process`
+  cannot be the tick; `KatalystChain.process` calls `KatalystDuckEffect.orbitBlockRan()`. Without
+  it a duck that engages at bar five SNAPS to full reduction on a sounding orbit, which is the
+  -17 dB click. The phaser needs no such thing (it is in the serial list), but it does need an
+  explicit `fresh` flag for the BREAKPOINT: `KnobGlide`'s snap sets the glide's value while the
+  cores still hold their built-in 1 kHz, so the first block would start alpha there.
+- **Measured, HEAD `01d39fb6` to the tree** (HF above 8 kHz, dB re signal; the floor in brackets):
+  phaser wet ON/OFF -44.9..-14.8 -> -58.2..-50.7 (floor -52.8..-50.2); phaser floor -49.8..-24.5
+  -> -60.3..-49.6 (-58.5..-51.3); phaser centre -51.7..-9.7 -> -55.0..-48.1 (-56.9..-51.0);
+  phaser sweep -47.4..-18.0 -> -59.1..-49.1 (-61.4..-57.2); phaser handover (on/off/on over three
+  blocks) -31.4..-15.2 -> -60.0..-52.7 (-60.0..-52.7); duck off -45.8..-18.7 -> -50.5..-47.4
+  (-52.8..-49.1); duck on -53.1..-16.8 -> -52.6..-47.1; duck depth rising -52.8..-16.8 ->
+  -52.6..-47.1; duck handover -16.4..-6.0 -> -49.5..-48.3. Below 60 Hz the same rows go from
+  -20.4..+0.5 to -49.3..-5.9 (what is left is the level change itself, spread over the glide, and
+  on the bass row the source's own low content).
+  **What did NOT reach its floor: the phaser's `sweep` and `centre` glides sit 6 to 9 dB above it**
+  (absolute -48 to -55 dB, the same class as the phaser's own sound while it sweeps). That residue
+  is the MODULATION of a fast sweep, not a kink: a breakpoint crossing the spectrum in 50 ms makes
+  sidebands, and no axis removes them. A one-block alpha ramp with no glide was measured as the
+  alternative and is WORSE where it matters: HF a few dB better, but below 60 Hz -14.8 dB against
+  the glide's -37.5 on the same row, worse than HEAD's -24.4. The glide stays.
+- **Songs:** 15 built-in songs and 3 frozen pieces, 256 cycles, raw doubles, wall clock pinned,
+  HEAD `01d39fb6` in a throwaway worktree: **17 of 18 bit-identical**. No song ducks at all. Three
+  use the phaser; two of them (Stein um Stein, the frozen Schmetterling) set it once and are
+  unchanged. **The Synthsale Pipers' Last Rave** differs from 66 s to 246 s, worst -26.3 dB re the
+  local peak (-31.8 dB re the song's peak): orbit 5 carries `phaser(wet = saw.range(0.3, 0.6)
+  .slow(16))`, a continuous wet that moved in steps and now glides, and orbits 5 and 6 hand the
+  phaser between owners that have one and owners that do not. Stripping the three `.phaser(...)`
+  calls from BOTH sides makes the render bit-identical, so the phaser is the whole of it.
+- **No state classes for either stage** (the plan's complexity rule, the `KatalystGainEffect`
+  precedent). The phaser's situations are `KnobGlide`'s snap flag, countdown and rest plus
+  `Phaser`'s own `engaged` latch next to the cascade it guards; the duck's Off is `ducking` being
+  null, the field the stage already had and the one `Cylinders` reads through `duckCylinderId`.
+  The four questions of `docs/plans/effect-state-machines.md` are answered in each class's KDoc.
+- **A life can end without a fade, and its WEIGHT has to be put down anyway** (review round 1,
+  a MAJOR). A duck whose sidechain orbit does not resolve gets no pass at all (`Cylinders`
+  `continue`s), so the orbit's mix already goes out unducked and a switch-off there has nothing to
+  ride down; `endLife` runs with the weight normally at **1.0**, and leaving it there installs the
+  NEXT switch-on at full reduction, because `retarget(1.0)` on an unchanged target is free.
+  Reached mid-fade it froze the glide outright (`orbitBlockRan` only advances a settled one), so
+  the next life ducked at a wrong, frozen weight for good. `endLife` therefore ends with
+  `KnobGlide.settleAt(0.0)`: at 0 with nothing left to travel and **without re-arming the snap**,
+  which would make that next switch-on instant, the same click by another door. Reachable in an
+  ordinary song shape, not a corner: an orbit that goes inactive between two pad notes takes that
+  path, and the listening case `duck-depth` moved by **-11.7 dB re peak** when it was fixed.
+  Lesson for the next stage: **every door into a terminal state has to establish the SAME
+  precondition; a precondition that only one door happens to satisfy is not one.**
+- **A handover carries the WEIGHT and the DEPTH, not only the envelope** (review rounds 1 and 2).
+  `takeOver` does `KnobGlide.carryOver` on both, which copies value, target, start and countdown
+  and spends the snap window, so the arriving stage's first `configure` turns each glide around
+  exactly as a returning owner's would. Without it on the WEIGHT, a stage arriving on a duck that
+  stood at `w` snapped to full weight: at depth 0.95 and `w = 0.1` that is -25 dB in one sample,
+  and a cached arriving chain whose snap was spent jumped the other way, ramping up from 0.
+  Without it on the DEPTH, `Cylinder.beginFade`'s `next.reset()` re-armed the arriving stage's snap
+  and its own depth landed in one sample: two chains on one orbit at depth 0.2 and 0.9 on a
+  saturated sidechain measured **-38.5 to -18.0 dB against a floor of -52.8, and -50.7 to -49.3
+  after**, at the floor. Only the DEEPER direction ever stepped; the shallower one is the
+  detector's own release and was already at the floor (-49.9 to -48.9 both before and after).
+  A swap between two chains of the SAME depth reads exactly the floor, so the handover path itself
+  adds nothing: the two steps were the only things on it.
+- **The sidechain ORBIT switch is an OPEN question, measured** (review round 1, MINOR). Onto a
+  quieter or silent source it is at the floor (-50.4 to -49.2 against -52.8 to -52.1): the release
+  smooths it. Onto a LOUDER one it is in the **click class**, -21.8 to -19.0 dB on a saw and
+  -40.8 to -19.0 on a bass, and it stays there when the new source was ALREADY SOUNDING at 0.2
+  rather than silent, so the first round's "it equals the same orbit's own onset" is true about
+  the magnitude but does NOT make it harmless: an orbit-to-orbit switch brings no new sound into
+  the mix to cover it. Smoothing it means blending two sidechain sources, which is a decision
+  about what a sidechain switch MEANS. Not taken here.
+- **Guards, mutation-checked** (17 mutants, 16 red, 1 replaced): `KatalystPhaserEffectSpec`
+  (settled equals the bare DSP bit for bit; the first initialisation instant, breakpoint included;
+  the wet line per sample with an exact landing; the OFF edge still wet until it lands and the dry
+  mix from the landing sample on; the ON edge within a quarter of the full effect on its first
+  block; a breakpoint change continuous at the seam; the breakpoint line per block; rate in force
+  at once with a continuous phase; a gated owner not writing the kernel params; a reset mid-glide
+  snapping the next life; the gate), `KatalystDuckEffectSpec` (settled equals the bare `Ducking`;
+  the weight line per sample BIT for bit, both directions, and the life ending only on the landing
+  block; the reduction shrinking every block of the fade; the instant first initialisation and the
+  fading later switch-on; a return turning the fade around; the depth line against a bare
+  `Ducking` driven per sample; attack in force at once; a changed orbit bit-identical to an
+  unchanged one; the handover; a second life snapping its depth; the vanished sidechain; reset),
+  `KatalystChainBuilderSpec` (the chain gives its duck the per-block tick), `KnobGlideSpec` (what
+  `settleAt` and `carryOver` promise, the rising carry-over and the countdown clamp).
+  Review round 1 added
+  five rows and five mutants, all red: the weight landing on 0 through the pass-less door and the
+  next life still fading in (both red without `settleAt`, and the second also red on a
+  `reset()` + `retarget(0.0)` that re-arms the snap); the handover carrying the weight; and
+  **three rows at `floor < 1`, which is the only place the DRY coefficient moves** (at the default
+  floor of 1.0 the C4 law pins it at 1 for every wet, so the mutant `val dryC = dryTo` had
+  survived the whole spec). The mutant that survived round 1's first pass was equivalent code (writing the kernel params in the ON arm, where they are written
+  anyway); its real form, retargeting the breakpoint glides in the GATED arm, is red.
+  The bit-for-bit duck rows needed the oracle's `line()` to use `1.0 / blocks` as a reciprocal:
+  1/17 is not a binary fraction, and `x / 17` and `x * (1 / 17)` differ by a rounding.
+- **Timings** (medians of three, same machine, 64 cycles): the phaser-heavy Last Rave 4056 ms HEAD
+  against 4047 ms tree; a duck-heavy piece (four ducked orbits on one kick) 1386 ms against
+  1373 ms. Within noise.
+- **Two shapes of the duck's lifecycle that a reader will otherwise re-derive** (review round 2).
+  (1) The switch-off arm has only THREE live doors into the end of a life, not four: a switch-off
+  while the snap window is open is unreachable, because getting there needs `duckedLastBlock`,
+  which only a finished `process` sets, and that block advanced the fade and so spent the window.
+  The arm was deleted (the plan's "delete what no row guards"; no row CAN guard dead code).
+  (2) What closes the "first initialisation is instant" window depends on which side of the switch
+  the stage is on: while OFF the ORBIT's blocks close it, which is what makes a duck engaging at
+  bar five fade in; while ON only the first duck PASS does, because `orbitBlockRan` deliberately
+  advances nothing during a life. So a duck configured ON whose sidechain orbit never sounds keeps
+  an armed window. No audible failure could be constructed from it (the first pass can only come on
+  the block that creates the sidechain cylinder, whose own onset covers the reduction, or on a
+  silent orbit), and spending the window while ON would change the bar-five case, so it stays and
+  is written down instead.
+- **`KnobGlide.carryOver` has a precondition, and the helper clamps rather than trusts it**: the
+  countdown is in BLOCKS and the block count is per instance, so carrying a 19-block countdown into
+  a 17-block glide would drive the value outside `[start, target]` (1.0 towards 0.0 lands on 1.118,
+  which for the duck's weight is over-ducking). Unreachable today, one builder and one sample rate
+  per cylinder, but it is a shared helper.
+- **Two things the whole glide programme should know** (review round 1's audio reviewer, verified
+  by modelling):
+  - **A knob retargeted every block converges like a one-pole with tau about 49 ms**, so it is a
+    low-pass on the knob: -3 dB at 3.2 Hz, -10 dB at 10 Hz. A `phaser.wet` or `duck.depth` wobbled
+    faster than a few Hz LOSES modulation depth. That is a property of every glided knob, not of
+    these two stages; it becomes reachable here because these are the first stages whose knobs
+    people pattern continuously.
+  - **The breakpoint axis question is closed with numbers.** An IDEAL per-sample breakpoint glide
+    measures within 1.1 dB of the per-block one on every row, so the centre/sweep residue is
+    modulation and a finer rate buys nothing. Log-Hz costs 12 dB above 8 kHz and buys 7 to 18 dB
+    below 60 Hz; tan-warped is the mirror. **No axis dominates**, so linear Hz with a continuous
+    alpha stands, and the next frequency knob need not re-open it.
+
 ## An orbit never deactivates while a voice plays on it; the fader glides (2026-09-19)
 
 Katalyst step 5c-8, a SOUND CHANGE at two edges only: the group fader patterned through exactly 0

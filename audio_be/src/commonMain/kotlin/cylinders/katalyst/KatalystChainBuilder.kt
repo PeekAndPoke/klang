@@ -5,11 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
-import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.filters.EqSectionSpec
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
@@ -186,6 +184,8 @@ object KatalystChainBuilder {
                 is KatalystStageDsl.Phaser -> {
                     val fx = KatalystPhaserEffect(
                         phaser = Phaser(sampleRate),
+                        sampleRate = sampleRate,
+                        blockFrames = blockFrames,
                     )
                     pipeline.add(fx)
 
@@ -221,7 +221,7 @@ object KatalystChainBuilder {
                 // because it needs cross-orbit access to the sidechain source. The last
                 // declaration wins, so a second Duck stage replaces the first, instance and all.
                 is KatalystStageDsl.Duck -> {
-                    duck = KatalystDuckEffect()
+                    duck = KatalystDuckEffect(sampleRate = sampleRate, blockFrames = blockFrames)
                     duckStage = stage
                 }
 
@@ -269,7 +269,6 @@ object KatalystChainBuilder {
 
             duckWriter = KatalystDuckWriter(
                 fx = theDuck,
-                sampleRate = sampleRate,
                 orbit = KatalystKnob(winner.orbit, SLOT_UNSET),
                 depth = KatalystKnob(winner.depth, DUCK_DEPTH),
                 attack = KatalystKnob(winner.attack, DUCK_ATTACK_SECONDS),
@@ -356,68 +355,3 @@ internal fun sendStageRuns(wet: KatalystKnob): Boolean {
     return wet.written || (wet.value.isFinite() && wet.value > 0.0)
 }
 
-/**
- * Phaser: depth (the on/off + amount knob) is always written; the KERNEL params are written
- * only when the phaser is engaged. A no-phaser source must not zero the sweep CLOCK (ledger
- * D2, completed in review round 1): VoiceFactory defaults rate to 0.0, and a rate of 0 freezes
- * the LFO as surely as a skipped prepareBlock: the retained rate is what keeps the sweep on its
- * own timeline across owner handoffs, mirroring the delay's retained drain config. A source
- * that EXPLICITLY sets rate 0 with an engaged depth still gets its static notch: depth >= the
- * gate means its kernel params are written.
- *
- * Gate on the STORED depth, not the raw input: the setter silently rejects non-finite input,
- * and the two gates (this one and Phaser.process's) must never disagree about whether the
- * phaser is engaged (review round 2).
- *
- * A free function and not a method on the effect, because the gate and the kernel-param rule belong
- * together in one readable place and the effect is a thin shell over `Phaser` (see the class KDoc).
- */
-internal fun writePhaser(
-    fx: KatalystPhaserEffect,
-    depth: Double,
-    rate: Double,
-    center: Double,
-    sweep: Double,
-    floor: Double,
-) {
-    fx.phaser.depth = depth
-
-    if (fx.phaser.depth >= Phaser.MIN_ACTIVE_DEPTH) {
-        fx.phaser.rate = rate
-        fx.phaser.center = if (center > 0) center else PHASER_CENTER_HZ
-        fx.phaser.sweep = if (sweep > 0) sweep else PHASER_SWEEP_HZ
-        fx.phaser.floor = floor
-        fx.phaser.feedback = 0.5
-    }
-}
-
-/**
- * Duck / Sidechain: reuse the instance to preserve envelope state; clear when [settings] is
- * null (nobody asks for ducking).
- */
-internal fun writeDuck(fx: KatalystDuckEffect, settings: Voice.Ducking?, sampleRate: Int) {
-    if (fx.handedOver) {
-        // The incoming chain of a running crossfade owns this envelope now
-        // ([KatalystDuckEffect.takeOver]); writing here would build a second `Ducking` nobody
-        // runs, and `reset()` below would undo the handover.
-        return
-    }
-
-    if (settings != null) {
-        fx.duckCylinderId = settings.cylinderId
-        val existing = fx.ducking
-
-        if (existing == null) {
-            fx.ducking = Ducking(
-                sampleRate = sampleRate,
-                attackSeconds = settings.attackSeconds,
-                depth = settings.depth,
-            )
-        } else {
-            existing.attackSeconds = settings.attackSeconds
-            existing.depth = settings.depth
-        }
-    } else {
-        fx.reset()
-    }
-}

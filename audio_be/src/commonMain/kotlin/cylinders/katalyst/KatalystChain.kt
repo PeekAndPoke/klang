@@ -203,7 +203,8 @@ class KatalystChain internal constructor(
      * The callers are the two swap paths (`Cylinder.beginFade` and the late-duck correction in
      * `Cylinder.updateFromVoice`), which ask [ducksWith] before a live envelope is handed over and
      * must NOT write the stages first: the carried envelope is updated in place by the arriving
-     * chain's own writer AFTER the handover (see `writeDuck` and `KatalystDuckEffect.takeOver`).
+     * chain's own writer AFTER the handover (see [KatalystDuckEffect.configure] and
+     * [KatalystDuckEffect.takeOver]).
      * Without this, a chain whose duck is named by `.katp("duck.orbit", n)` still reads as "no
      * duck" at the moment the question is asked, and the swap ramps the reduction out and then
      * drops a fresh one on the orbit a block later.
@@ -230,6 +231,12 @@ class KatalystChain internal constructor(
         for (i in serial.indices) {
             serial[i].process(ctx)
         }
+
+        // The orbit has rendered a block with this chain in it. The duck is not in [serial] and
+        // does not run at all while it is off, so this is the one per-block event it can see, and
+        // it is what closes its "the first initialisation is instant" window: a duck that engages
+        // at bar five must fade in rather than snap (see [KatalystDuckEffect.orbitBlockRan]).
+        duck?.orbitBlockRan()
     }
 
     /**

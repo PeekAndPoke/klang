@@ -162,6 +162,55 @@ internal class KnobGlide(
         }
     }
 
+    /**
+     * Puts the knob AT [next] with nothing left to travel, without touching the snap window.
+     *
+     * For a stage that has established by other means that its output already IS what [next]
+     * describes, so there is nothing to ride: the duck's life ends this way when no pass ran at
+     * all last block and the orbit's mix therefore went out unducked. [reset] would be the wrong
+     * tool there, because re-arming the snap makes the stage's NEXT switch instant, which is the
+     * click by another door.
+     *
+     * A non-finite value is ignored, like [retarget]'s.
+     */
+    fun settleAt(next: Double) {
+        if (!next.isFinite()) { // NaN-guard, the same wall as [retarget]'s
+            return
+        }
+
+        value = next
+        target = next
+        remaining = 0
+    }
+
+    /**
+     * Takes [other]'s position over, mid-glide and all, and SPENDS the snap window.
+     *
+     * For a knob that MOVES between owners with the thing it describes: the duck's stage weight and
+     * its depth when a chain swap hands a live envelope to the arriving chain's duck
+     * (`KatalystDuckEffect.takeOver`, this method's one caller). The arriving knob must carry on
+     * from where the leaving one stood, so the next [retarget] turns the glide around instead of
+     * snapping to the target and stepping the output by whatever was not covered yet.
+     *
+     * The glide's START comes too, not only its value and countdown: without it a glide carried
+     * over halfway would interpolate from the wrong end.
+     *
+     * **PRECONDITION: [other] spans its glide over the same number of blocks**, which means the
+     * same sample rate and the same block size. The countdown is in blocks and [blocks] is per
+     * instance, so a longer glide's countdown read on a shorter one would drive the value OUTSIDE
+     * `[start, target]`: 17 blocks reading a countdown of 19 from 1.0 towards 0.0 lands on 1.0588,
+     * which for the duck's weight is over-ducking and for its mirror a boost. Unreachable today
+     * (one builder and one sample rate per cylinder), so the countdown is CLAMPED rather than
+     * rejected: this is a shared helper and the next caller should not have to rediscover the rule.
+     */
+    fun carryOver(other: KnobGlide) {
+        value = other.value
+        target = other.target
+        start = other.start
+        remaining = other.remaining.coerceAtMost(blocks)
+        snapNext = false
+    }
+
     /** Forgets the glide: the next [retarget] snaps. For a stage whose content has just been cleared. */
     fun reset() {
         remaining = 0

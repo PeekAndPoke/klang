@@ -163,6 +163,29 @@ exactly 0 when settled) brought it to the floor (-90 dB, or its own floor). Less
 effects: a coefficient that multiplies the signal directly behaves like a LEVEL knob and needs the
 per-sample ramp; only a coefficient inside a filter with continuous state is safe per block.
 
+**Katalyst 5c-9 (2026-09-20), the phaser and the duck.** Phaser `wet` and `floor` feed the C4 law's
+two MEMORYLESS coefficients, so both are LEVEL knobs and the output is LINEAR in the pair: ramping
+both per sample IS a crossfade from the old settings to the new ones, which carries the knobs AND
+the ON and OFF edges in one mechanism, because OFF is exactly `dryC = 1, wetC = 0` (verified in
+review against an exact crossfade: one ulp). Jumps -49.8 to -14.8 dB, landing -60.3 to -49.6.
+Phaser `centre` and `sweep`: the allpass multiplies its INPUT by alpha, so a breakpoint step is a
+level step; they glide per BLOCK, with alpha computed at the block start from the breakpoint IN
+FORCE (`PhaserCore.prepareBlock(frames, centerTo, sweepTo)`), which is bit-identical when nothing
+moves and leaves the alpha sequence continuous at the seam (measured: seam step equals the
+in-block step, ratio 1.0000). **They are the first knobs that do not reach their own floor** (6 to
+9 dB over), and that residue is MODULATION, not a staircase: an IDEAL per-sample breakpoint glide
+measures within 1.1 dB of the per-block one on every row. Axis question closed by measurement: a
+log-Hz axis costs 12 dB above 8 kHz and buys 7 to 18 dB below 60 Hz, tan-warped is the mirror, so
+no axis dominates and linear Hz stands. Phaser `rate` does not glide (it scales a phase increment,
+the phase carries on). Duck `depth` glides per sample (the target gain is linear in depth); duck
+`attack` does not (a time constant of a continuous envelope). **Read a row against its own floor:**
+the phaser's steady floor is -50 to -61 dB and the duck's -49 to -53, not the compressor's -81.
+
+**A glide is also a one-pole on a patterned knob (2026-09-20).** A retarget mid-glide restarts from
+the current value over the full time, so a knob repatterned every block converges like a one-pole
+with tau about 49 ms: -3 dB at 3.2 Hz, -10 dB at 10 Hz. A fast-wobbled `phaser.wet` or
+`duck.depth` therefore loses modulation depth. It is the price of "always glide", stated here once.
+
 **Katalyst 5c-8 (2026-09-19), the fader.** The orbit `gain.gain` is on the LEVEL law: a
 `KnobGlide` over `KNOB_GLIDE_SECONDS`, per sample from the end. Its one-block ramp measured -58 to
 -79 dB on jumps across 0.01 to 4 and through 0; the glide -82 to -100 dB.

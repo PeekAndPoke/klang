@@ -159,6 +159,37 @@ class KatalystChainBuilderSpec : StringSpec({
         duck.ducking.shouldNotBeNull() shouldBeSameInstanceAs ducking
     }
 
+    "the chain gives its duck the orbit's per-block tick, so a late switch-on fades in" {
+        // The duck runs in a LATER pass than the chain and not at all while it is off, so its own
+        // `process` cannot close the "first initialisation is instant" window. `KatalystChain
+        // .process` is the orbit's per-block event and the one caller of `orbitBlockRan`
+        // (Katalyst 5c-9). Without it the duck would SNAP to full reduction whenever it first
+        // engages, however long the orbit has been sounding.
+        val chain = build(
+            KatalystDsl.of(
+                KatalystStageDsl.Duck(
+                    orbit = IgnitorDsl.Param("duck.orbit", SLOT_UNSET),
+                    depth = IgnitorDsl.Param("duck.depth", DUCK_DEPTH),
+                    attack = IgnitorDsl.Param("duck.attack", DUCK_ATTACK_SECONDS),
+                )
+            )
+        )
+
+        val duck = chain.duck.shouldNotBeNull()
+        val ctx = KatalystContext(blockFrames = blockFrames, mixBuffer = StereoBuffer(blockFrames))
+
+        // Four blocks of a sounding orbit whose duck names no source orbit: off, but alive.
+        repeat(4) {
+            chain.applyParams(mapOf("duck.depth" to 0.0))
+            chain.process(ctx)
+        }
+
+        // Now it engages. The weight has to start from 0 and ride in.
+        chain.applyParams(mapOf("duck.orbit" to 3.0, "duck.depth" to 0.8))
+
+        duck.weight shouldBe 0.0
+    }
+
     "every stage variant the DSL has builds a stage, and every stage states its own lifecycle" {
         // The real guard for the lifecycle is the compiler: `reset` and `hasTail` are abstract on
         // [KatalystEffect], so a stage that forgets one does not compile. What a test can add is

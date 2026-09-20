@@ -1074,7 +1074,7 @@ class Cylinder(
         next.resolveParams(ownerParams)
 
         // BEFORE the writers, not after: a carried envelope has to be updated IN PLACE by the
-        // arriving chain's own writer (`writeDuck`'s `existing != null` branch), or the swap would
+        // arriving chain's own writer (`KatalystDuckEffect.configure`'s reuse branch), or the swap would
         // leave the orbit ducking off the leaving chain's orbit at the leaving chain's depth.
         handOverDuck(from = leaving, to = next)
 

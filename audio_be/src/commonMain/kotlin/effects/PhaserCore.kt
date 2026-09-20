@@ -102,12 +102,35 @@ internal class PhaserCore(
      * `blockFrames = 0` is a no-op (alphaIncrement set to 0; α unchanged).
      */
     fun prepareBlock(blockFrames: Int) {
+        prepareBlock(blockFrames, center, sweep)
+    }
+
+    /**
+     * The same, for a caller that MOVES [center] or [sweep] between blocks: α at the block's start
+     * is computed from the breakpoint in force so far, α at its end from [centerTo] / [sweepTo],
+     * and [step] interpolates between them. So a breakpoint change reaches the cascade as a ramp
+     * over the block instead of a jump at its first sample.
+     *
+     * Why that matters (Katalyst 5c-9, measured): the allpass multiplies its INPUT by α
+     * (`y = α·x + s`), so a step in α is a step in the output, the loudest click of the whole
+     * stage (a `center` of 100 Hz to 18 kHz measured -9.7 dB above 8 kHz against a chord, on a
+     * steady floor of -52). With [centerTo] and [sweepTo] equal to what the core already holds,
+     * this is `alphaAt(lfoPhase)` either way, so a phaser whose breakpoint stands is bit-identical
+     * to the one-argument form.
+     *
+     * `blockFrames = 0` is a no-op and adopts NOTHING: no sample is produced, so the breakpoint in
+     * force must not move out from under the next block's start.
+     */
+    fun prepareBlock(blockFrames: Int, centerTo: Double, sweepTo: Double) {
         if (blockFrames <= 0) {
             alphaIncrement = 0.0
             return
         }
 
         val alphaStart = alphaAt(lfoPhase)
+
+        center = centerTo
+        sweep = sweepTo
 
         val phaseAdvance = rate * TWO_PI * inverseSampleRate * blockFrames
         val newPhase = (lfoPhase + phaseAdvance).wrapPhase(TWO_PI)

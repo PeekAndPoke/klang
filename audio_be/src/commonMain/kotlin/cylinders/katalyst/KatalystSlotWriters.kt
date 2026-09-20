@@ -149,7 +149,8 @@ internal class KatalystReverbWriter(
 }
 
 /**
- * Phaser: the five knobs, through the one gate and kernel-param rule in [writePhaser].
+ * Phaser: the five knobs, through the one gate and kernel-param rule in
+ * [KatalystPhaserEffect.configure].
  *
  * `wet` and `floor` are NaN-guarded here, the way the reverb writer guards its `lowpass`, because
  * the two knobs behind them read a non-finite value as something other than unset:
@@ -160,7 +161,7 @@ internal class KatalystReverbWriter(
  * above the engage threshold, -1.4 dB at depth 0.25, -6 dB at 0.5, -20 dB at 0.8 and silent only
  * at 1.0. So it is audible at large depths and nearly inaudible at small ones, not a full notch.
  * `rate`, `center` and `sweep` need no guard: they are only written while the phaser is engaged,
- * and `center`/`sweep` already fall back on `> 0` inside [writePhaser].
+ * and `center`/`sweep` already fall back on `> 0` inside [KatalystPhaserEffect.configure].
  */
 internal class KatalystPhaserWriter(
     private val fx: KatalystPhaserEffect,
@@ -185,8 +186,7 @@ internal class KatalystPhaserWriter(
     }
 
     override fun apply() {
-        writePhaser(
-            fx = fx,
+        fx.configure(
             depth = depth,
             rate = rate.value,
             center = center.value,
@@ -313,11 +313,10 @@ internal class KatalystGainWriter(
 /**
  * Duck: on iff the stage names a source orbit AND asks for depth. The instance is reused so the
  * envelope follower survives, and the writer holds the settings the arriving chain applies after a
- * handover (see [writeDuck]).
+ * handover (see [KatalystDuckEffect.configure]).
  */
 internal class KatalystDuckWriter(
     private val fx: KatalystDuckEffect,
-    private val sampleRate: Int,
     private val orbit: KatalystKnob,
     private val depth: KatalystKnob,
     private val attack: KatalystKnob,
@@ -343,7 +342,7 @@ internal class KatalystDuckWriter(
     }
 
     override fun apply() {
-        writeDuck(fx, settings, sampleRate)
+        fx.configure(settings)
     }
 
     private fun settings(): Voice.Ducking? = KatalystSlots.duckSettings(
