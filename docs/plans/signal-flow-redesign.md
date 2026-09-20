@@ -113,10 +113,10 @@ stage gated on its slot:
 let classic = x => x
   .mul(OscSlot.pregain)
   .crush(OscSlot.crush).coarse(OscSlot.coarse).distort(OscSlot.distort)
-  .lowpass(freq = OscSlot.lpf, q = OscSlot.lpq, env = OscSlot.lpenv, ...)
   .highpass(freq = OscSlot.hpf, ...)
   .bandpass(freq = OscSlot.bpf, ...)
   .notch(freq = OscSlot.notch, ...)
+  .lowpass(freq = OscSlot.lpf, q = OscSlot.lpq, env = OscSlot.lpenv, ...)
   .tremolo(OscSlot.tremolo, ...)
   .adsr(OscSlot.attack, OscSlot.decay, OscSlot.sustain, OscSlot.release)
 
@@ -169,8 +169,22 @@ Osc.register("supersaw", Osc.supersaw().classic())
   before the drive writes an instrument, inline or registered, and the same doors fill the same
   slot names on it. `sound(myGuitar).lpf(100)` on a guitar without an `lpf` slot does nothing.
 - `PipelineDsl`, the filter pipeline builder, `Cmd.RegisterPipeline`, `PipelineRegistry` and the
-  `pedal` preset (unused) retire. The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
-  writes the frequency modulation buffer as today and is untouched by this plan.
+  `pedal` preset retire. (The preset is NOT unused: `DialogueWithTheStars` calls
+  `.pipeline("pedal")`, and a VCA-first tail has no `classic()` spelling. Decision D4 of
+  `../tasks/builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
+  writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
+  fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pAnchor`, `fmh` to `fmEnv`):
+  section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
+  own later item. Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
+  `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
+  compose with it on every Der Schmetterling voice today.
+- **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
+  `SprudelVoiceData.toVoiceData`: crush, coarse, distort, highpass, bandpass, notch, lowpass,
+  tremolo, adsr. The sketch above had the lowpass first, which would change every song with both a
+  highpass and a lowpass at `analog > 0` (at analog 0 the filters commute).
+- **The step list, the measured cost of the gate, the three stages that are NOT bit-identical today
+  and the five decisions this phase needs from the maintainer are in
+  `../tasks/builtin-instruments.md`** (the spike of 2026-09-20).
 - Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
   `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
   vocabulary from the instrument definitions.
