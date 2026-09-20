@@ -422,4 +422,4 @@ A negated equality in a spec is `a shouldNotBe b`, never `(a == b) shouldBe fals
 names both values instead of "expected false but was true". The one exception is a boxed `NaN`,
 where `shouldNotBe` passes for the wrong reason and the raw comparison is deliberate; say so in a
 comment at that site. (Added 2026-09-18 after the form recurred one round after it was retired
-at three sites; the review ledger in `/review-loop` Standard 3 has the row.)
+at three sites; `/review-loop`'s `escape-ledger.md` has the row.)
