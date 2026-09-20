@@ -862,7 +862,24 @@ complexity outranks the duplication.
     `ad9f0d64` (17 of 17, measured twice, the second time after the shared SVF clamps were
     extracted); with it on, Seltsamere Dinge and frozen Stranger Things differ at their vowel
     changes (worst -21.7 and -27.5 dB re peak) and nothing else does.
-  - **OPEN, the maintainer's ear (5c-10): morph or crossfade, per effect.** Both are live behind
+  - **LISTENED 2026-09-20, the maintainer, on 5c-7 to 5c-10.** 5c-7 (the compressor) and 5c-8 (the
+    fader, the orbit's liveness and the Last Rave phaser section): "fine ... the clicks are
+    successfully eliminated". 5c-9: the phaser's HIGH click is gone, but **a low "blub" remains on
+    every phaser transition** (`phaser.wet` and the other settings), audible because that listening
+    material is nearly silent. It measured at the floor of the metric we used, which is that
+    metric's blind spot; recorded with the transition-time question in
+    `future/transition-times.md` section 4, because it may be an argument for a different time on
+    that stage rather than a defect in the law. 5c-10: **the morph is REJECTED, for body and for
+    vowel both.** It makes an "8-bit laser shot" on `body-woodglass` and `body-woodglass-fast` and
+    the same on the vowel; the maintainer's diagnosis, which the measurements agree with: "moving
+    the filter resonances and q creates an audible filter-sweep". It is not audible on
+    `song-stranger-synths`, where the vowel changes are slow and the mix is dense, which is why the
+    synthetic cases were the ones that decided it. **The output crossfade stays, on both stages.**
+    The metric could not have caught this: a travelling resonance is not a discontinuity, so it
+    reads clean while the ear hears a sweep. That blind spot is recorded in
+    `future/transition-times.md` section 1.
+  - **CLOSED by that listening (was open, the maintainer's ear, 5c-10): morph or crossfade, per
+    effect.** Both are live behind
     `KatalystBodyEffect.MORPH` and `KatalystFormantEffect.MORPH`; the loser is DELETED with the
     choice. Evidence. VOWEL, for the morph: the formant really travels (F1 750 to 234 Hz in
     fifteen continuous steps against the crossfade's single jump), 12 to 19 dB fewer artifacts on

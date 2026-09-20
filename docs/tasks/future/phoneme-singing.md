@@ -9,6 +9,21 @@
 Robot / caricature singing: a fixed, learnable "mouth" bank, tuned by ear. Fits the caricature
 sound model (2 to 4 acoustic tells, sparse fill, non-moving target).
 
+## A finding that belongs here (2026-09-20, from Katalyst 5c-10)
+
+A formant MORPH was built and rejected by ear: when a material or a vowel changes, travelling the
+band frequencies and Qs from the old set to the new one over 50 ms is an audible filter sweep, "an
+8-bit laser shot" in the maintainer's words, on body and on vowel alike. Orbit material changes
+therefore keep the output crossfade, and the morph code was removed.
+
+That verdict is about a CHANGE the user did not ask to hear. It is not a verdict against a formant
+glide as a FEATURE: a mouth travelling from one vowel to the next is exactly what singing wants,
+and the same mechanism that sounds wrong as a safety net is the thing `sing()` would be built on.
+If this idea is picked up, the measurements and the law are in the 5c-10 commit (`9656266e`): bands
+pair by position, frequency and Q in log space, gain linearly per sample, a fixed preallocated
+capacity, an exact landing, and the glide time is the knob that decides whether it reads as a
+sweep (long) or a click (short), which is the open question in `future/transition-times.md`.
+
 ## What M1 had shipped (lost)
 
 - `Phoneme` enum in `audio_bridge`, 13 entries: vowels a/e/i/o/u (ids 0 to 4, all routed to one
