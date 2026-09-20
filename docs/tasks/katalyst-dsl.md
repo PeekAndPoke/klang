@@ -848,6 +848,32 @@ complexity outranks the duplication.
     every handover and now travels in 50 ms; level and timing are unchanged (per-0.5 s RMS equal
     to 0.00 dB, cross-correlation lag 0), 12 bursts in 35 s, and stripping the three `.phaser(...)`
     calls makes both sides bit-identical. Listening checkpoint: `5c9/listen/`.
+  - **The resonator morph, as built in 5c-10 (2026-09-20):** a MATERIAL change on body or vowel can
+    travel instead of crossfading. The decided rules are built exactly: pairing by position, log
+    space for frequency and Q, linear gain per sample, a band on one side only keeping its
+    frequency and fading in place, a preallocated capacity (`MORPH_CAPACITY = 8`, pinned against
+    both catalogues), a cold arrival masked by its fade-in, an exact landing and a snap on the
+    first morph. It covers a material change only: `wet` and `floor` changes, the on and off edges
+    and a fading-out pair keep 5c-6's output crossfade. The `v1` question is CLOSED: the fold
+    stays, because `v1` buys 29 dB on an artifact 121 dB down, needs a second band kind in the hot
+    loop, and would change the arithmetic of every settled vowel. The 5c-3 note "a Q glide needs a
+    setter on the same ramp path" is done (`BaseSvf.retune`), and the bank's coefficient ramp is a
+    block long, not the shared 32 samples. With the morph off the whole corpus is bit-identical to
+    `ad9f0d64` (17 of 17, measured twice, the second time after the shared SVF clamps were
+    extracted); with it on, Seltsamere Dinge and frozen Stranger Things differ at their vowel
+    changes (worst -21.7 and -27.5 dB re peak) and nothing else does.
+  - **OPEN, the maintainer's ear (5c-10): morph or crossfade, per effect.** Both are live behind
+    `KatalystBodyEffect.MORPH` and `KatalystFormantEffect.MORPH`; the loser is DELETED with the
+    choice. Evidence. VOWEL, for the morph: the formant really travels (F1 750 to 234 Hz in
+    fifteen continuous steps against the crossfade's single jump), 12 to 19 dB fewer artifacts on
+    the large F1/F2 moves and never worse than a wash, the low-end penalty 2 to 6 dB at -55 dB or
+    quieter, Q does not move inside a register so none of the new Q-glide risk is engaged, and the
+    one-pole smear cannot bite above 50 ms, which no pattern in the repertoire crosses. BODY,
+    against the morph: pairing by position sends wood's 100 Hz mode to glass's 700 Hz, a 2.8-octave
+    chirp in 50 ms that costs 11 dB more below 60 Hz at an audible -31 dB re signal and up to 3.3 dB
+    of level over both endpoints, while the click metric is a wash; the one case where the morph
+    clearly wins (a band-count change, where nothing travels) is unreachable from any song text.
+    Cost: the morph is 2 to 7 % more expensive, not cheaper.
   - **OPEN for the maintainer, MEASURED in the 5c-9 review (2026-09-20): a `duck.orbit` switch onto
     an already-sounding source clicks.** Moving the sidechain to a louder orbit steps the reduction
     by -40.8 to -19.0 dB HF against a floor of -52.8, and the already-sounding sub-case (0.2 to

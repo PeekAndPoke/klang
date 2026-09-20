@@ -13,6 +13,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.filters.ResonatorBank
+import io.peekandpoke.klang.audio_be.filters.morphTo
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
@@ -463,6 +465,251 @@ class KatalystBodyEffectSpec : StringSpec({
 
         withClue("the first block of the next life is the fresh bank alone") {
             (0 until n).all { got[it].toRawBits() == next[it].toRawBits() } shouldBe true
+        }
+    }
+
+    // ── A material change MORPHS the bank in service (Katalyst step 5c-10) ────────────────────────
+    //
+    // The oracle is the bare DSP: ONE `ParallelMixFilter` around ONE `ResonatorBank`, morphed BY
+    // HAND at the block the stage is configured at. A stage that crossfaded two banks instead
+    // cannot match it, and the teeth in each row measure how far the two paths really are apart.
+
+    fun driveBody(fx: KatalystBodyEffect, blocks: Int, at: Int, a: FilterDef.Body, b: FilterDef.Body): DoubleArray {
+        val out = DoubleArray(blocks * n)
+
+        fx.configure(a)
+
+        for (block in 0 until blocks) {
+            fx.configure(if (block >= at) b else a)
+
+            val (ctx, mix) = contextWithConstantMix(0.0)
+
+            for (i in 0 until n) {
+                val v = sineAt(300.0, block * n + i)
+
+                mix.left[i] = v
+                mix.right[i] = v
+            }
+
+            fx.process(ctx)
+
+            for (i in 0 until n) {
+                out[block * n + i] = mix.left[i]
+            }
+        }
+
+        return out
+    }
+
+    fun oneBankMorphing(blocks: Int, at: Int, a: FilterDef.Body, b: FilterDef.Body): DoubleArray {
+        val bank = LowPassHighPassFilters.bodyBank(a.bands, sampleRate)
+        val filter = LowPassHighPassFilters.wrapBody(bank, a.mix, a.floor)
+        val out = DoubleArray(blocks * n)
+
+        for (block in 0 until blocks) {
+            if (block == at) {
+                bank.morphTo(b.bands.map(LowPassHighPassFilters::bodyBand))
+            }
+
+            val buf = DoubleArray(n) { sineAt(300.0, block * n + it) }
+
+            filter.process(buf, 0, n)
+            buf.copyInto(out, block * n)
+        }
+
+        return out
+    }
+
+    "a material change with an unchanged wet MORPHS the bank in service" {
+        val a = woodish
+        val b = FilterDef.Body(bands = glassy.bands, mix = woodish.mix)
+        val blocks = 6 + landBlocks + 4
+
+        val morphed = driveBody(KatalystBodyEffect(sampleRate, morph = true), blocks, at = 6, a = a, b = b)
+        val expected = oneBankMorphing(blocks, at = 6, a = a, b = b)
+
+        withClue("the stage IS the one bank travelling") {
+            morphed.indices.maxOf { abs(morphed[it] - expected[it]) } shouldBeLessThan 1e-12
+        }
+
+        // Teeth: the crossfade path is a different sound, so this row can fail.
+        val faded = driveBody(KatalystBodyEffect(sampleRate, morph = false), blocks, at = 6, a = a, b = b)
+
+        withClue("and it is NOT what the crossfade does") {
+            morphed.indices.maxOf { abs(morphed[it] - faded[it]) } shouldBeGreaterThan 0.01
+        }
+    }
+
+    "a change of the band COUNT morphs too: the bands the new material drops fade out in place" {
+        // NO SONG TEXT CAN REACH THIS: every shipped body material has 8 modes and every vowel 5
+        // (pinned by `ResonatorBankMorphSpec`), so a band-count change needs a direct caller like
+        // this row, or the user formant surface the morph rules were written for.
+        val a = woodish.copy(
+            bands = listOf(
+                FilterDef.Body.Mode(freq = 300.0, db = 6.0, q = 8.0),
+                FilterDef.Body.Mode(freq = 900.0, db = 3.0, q = 6.0),
+                FilterDef.Body.Mode(freq = 1900.0, db = 0.0, q = 5.0),
+            ),
+        )
+        val b = a.copy(bands = a.bands.take(1))
+        val blocks = 6 + landBlocks + 4
+
+        val morphed = driveBody(KatalystBodyEffect(sampleRate, morph = true), blocks, at = 6, a = a, b = b)
+        val expected = oneBankMorphing(blocks, at = 6, a = a, b = b)
+
+        morphed.indices.maxOf { abs(morphed[it] - expected[it]) } shouldBeLessThan 1e-12
+
+        val faded = driveBody(KatalystBodyEffect(sampleRate, morph = false), blocks, at = 6, a = a, b = b)
+
+        withClue("still not the crossfade") {
+            morphed.indices.maxOf { abs(morphed[it] - faded[it]) } shouldBeGreaterThan 0.01
+        }
+    }
+
+    "a WET change crossfades even in morph mode: the blend lives outside the bank" {
+        val fx = KatalystBodyEffect(sampleRate, morph = true)
+        val s = script(fx, blocks = 6 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(6) {
+            fx.configure(woodish)
+            s.step("on")
+        }
+
+        val quieter = woodish.copy(mix = 0.4)
+        val b = s.reference(ref(quieter))
+
+        fx.configure(quieter)
+        s.law.set(b)
+
+        repeat(landBlocks - 1) {
+            fx.configure(quieter)
+            s.step("wet change")
+        }
+    }
+
+    "a material change on a bank that is FADING OUT installs a fresh one and crossfades" {
+        // `isTarget` is false there: nothing converges on that pair any more, so there is nothing
+        // to morph. The new bank fades in over the one still leaving.
+        val fx = KatalystBodyEffect(sampleRate, morph = true)
+        val s = script(fx, blocks = 6 + 3 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(6) {
+            fx.configure(woodish)
+            s.step("on")
+        }
+
+        fx.configure(null)
+        s.law.clear()
+        repeat(3) {
+            fx.configure(null)
+            s.step("fading out")
+        }
+
+        val other = FilterDef.Body(bands = glassy.bands, mix = woodish.mix)
+        val b = s.reference(ref(other))
+
+        fx.configure(other)
+        s.law.set(b)
+
+        repeat(landBlocks - 1) {
+            fx.configure(other)
+            s.step("a fresh bank over the leaving one")
+        }
+    }
+
+    "a FLOOR change crossfades even in morph mode, and the stage remembers the new floor" {
+        // The twin of the wet row, and it needs its own: the floor is the OTHER half of the blend
+        // outside the bank. Without its clause in the morph guard, two owners handing over with
+        // the same material and wet but a different floor take the morph, every band skips
+        // because the targets are identical, the stage returns having written only `curBands`,
+        // and the blend keeps the OLD floor for the rest of the orbit's life.
+        val fx = KatalystBodyEffect(sampleRate, morph = true)
+        val s = script(fx, blocks = 6 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(6) {
+            fx.configure(woodish)
+            s.step("on")
+        }
+
+        val floored = woodish.copy(floor = 0.05)
+        val b = s.reference(ref(floored))
+
+        fx.configure(floored)
+        s.law.set(b)
+
+        repeat(landBlocks - 1) {
+            fx.configure(floored)
+            s.step("floor change")
+        }
+
+        withClue("and the cache took the new floor, so the next block compares against it") {
+            fx.installedFloor shouldBe 0.05
+        }
+    }
+
+    "a material WIDER than the bank can hold installs a new bank and crossfades, morph or not" {
+        // The stage's morph scratch is sized to the bank's capacity. A def with more bands than
+        // that must fall through to the install, not index past it on the audio thread. No table
+        // ships one; a direct caller and a future user formant surface can.
+        val wide = FilterDef.Body(
+            bands = List(ResonatorBank.MORPH_CAPACITY + 1) {
+                FilterDef.Body.Mode(freq = 200.0 + 140.0 * it, db = 1.0, q = 6.0)
+            },
+            mix = woodish.mix,
+        )
+        val fx = KatalystBodyEffect(sampleRate, morph = true)
+        val s = script(fx, blocks = 6 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(6) {
+            fx.configure(woodish)
+            s.step("on")
+        }
+
+        val b = s.reference(ref(wide))
+
+        fx.configure(wide)
+        s.law.set(b)
+
+        repeat(landBlocks - 1) {
+            fx.configure(wide)
+            s.step("a wide material crossfades")
+        }
+    }
+
+    "with the morph OFF the same change crossfades two banks, exactly as it did in 5c-6" {
+        // The comparison path the maintainer chooses between stays alive and stays correct.
+        val fx = KatalystBodyEffect(sampleRate, morph = false)
+        val s = script(fx, blocks = 6 + landBlocks)
+        val a = s.reference(ref(woodish))
+
+        fx.configure(woodish)
+        s.law.set(a)
+        repeat(6) {
+            fx.configure(woodish)
+            s.step("on")
+        }
+
+        val other = FilterDef.Body(bands = glassy.bands, mix = woodish.mix)
+        val b = s.reference(ref(other))
+
+        fx.configure(other)
+        s.law.set(b)
+
+        repeat(landBlocks - 1) {
+            fx.configure(other)
+            s.step("crossfading")
         }
     }
 })

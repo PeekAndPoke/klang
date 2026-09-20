@@ -1,5 +1,159 @@
 # Klang Audio — Memory
 
+## A material change MORPHS the resonator bank (2026-09-20)
+
+Katalyst step 5c-10, a SOUND CHANGE under the 5c listening checkpoint, and the only one of the
+5c steps whose law is still the MAINTAINER'S to choose: both paths are live and the choice is by
+ear, per stage (`docs/tasks/katalyst-dsl.md`, "Morph or output crossfade is chosen per effect BY
+EAR"). Until 5c-6 a new body or vowel was a second bank crossfading over the old one; now the bank
+IN SERVICE travels its bands to the new material's, which for a vowel sweeps like a mouth.
+
+- **The law, as decided:** bands pair BY POSITION (band n to band n), never by nearest frequency;
+  FREQUENCY and Q travel in LOG space, the GAIN linearly, over `KNOB_GLIDE_SECONDS`; a band that
+  exists on ONE SIDE ONLY keeps its frequency and fades its gain to or from 0 in place; a band
+  arriving on a slot another band left starts COLD; the bank has a fixed preallocated capacity
+  (`ResonatorBank.MORPH_CAPACITY = 8`, the widest shipped table; every vowel has 5). The gain moves
+  per SAMPLE, the coefficients once per BLOCK with the BLOCK as the ramp length. The landing is
+  exact to within the RESOLUTION OF THE LOG AXIS: the last block retunes from the un-logged
+  target, because `exp(ln(x))` is x only to within an ulp; and because `ln` is not injective on
+  doubles (seven share `ln(1900.0)`), a target a few ulps from where a band already stands reads
+  as no move, is skipped, and lands about 3e-16 relative off. No shipped table asks for a move
+  that small. A band whose frequency AND q are unchanged is not retuned at all (exact: it
+  already stands there), which spares the `tan` for every band that only fades out.
+- **The morph allocates NOTHING.** The target crosses as three parallel `DoubleArray`s and a
+  count, filled into a scratch the host allocated with itself; the gain rules were split out
+  (`LowPassHighPassFilters.bodyGain` / `vowelGain`, with `bodyBand` / `vowelBand` now those plus
+  the raw freq and q) so the host can write a gain without building a `Band`.
+- **Where the morph applies, and where the 5c-6 crossfade stays:** only a change of the MATERIAL,
+  with `wet` and `floor` unchanged, on the pair the swap still converges on
+  (`KatalystFilterSwap.isTarget`), and only while the material fits the stage's scratch. ON, OFF,
+  a `wet`/`floor` change, a pair that is fading out or gone, and a material wider than the bank
+  all keep the output crossfade. The blend lives outside the bank, so a bank morphing under a
+  jumping blend would click where it clicks least today.
+- **A material change reaches the stage only on an OWNER HANDOVER** (the 5c-9 lesson, paid for
+  again here): a voice's material is fixed at note-on, so the stage sees a change when the orbit's
+  lease turns over to a voice carrying a different one. A pattern whose material period divides
+  the handover period hands the owner the SAME material every time and changes nothing at all:
+  `note("c3*8").legato(2.0).body("<wood glass>*8")` drove ONE morph in twelve seconds. Overlap the
+  notes only just (`legato` about 1.05 to 1.2) so every note owns in turn, or use an odd number of
+  materials. Count the morphs before believing a fixture: a temporary `println` on the taken morph
+  is the whole instrument, and it is the same trick the state-machine plan calls an enter counter.
+- **The four measurements, made BEFORE it was built** (a Python copy of `SvfBPF`, the click metric
+  = peak 0.7 ms RMS above 8 kHz re the signal RMS; the "staircase" = the same peak taken on the
+  residual against an IDEAL per-sample glide, which divides the intended sweep out):
+  (a) a Q 140 band gliding 800 to 1600 Hz per block, 50 ms: a SNAP measures -62.1 dB click and a
+  375 Hz comb at -39.6/-51.0 dB; the shared 32-sample ramp (`FILTER_SMOOTH_SAMPLES`) -91.8 dB and
+  -41.1/-57.1; a BLOCK-LONG ramp -108.1 dB and -60.3/-94.3, which IS the ideal per-sample glide
+  (-108.0, -60.7/-95.5). So the bank got its OWN ramp length, the block, and the shared constant
+  was left to the `lpf` envelope.
+  (b) A Q glide 60 to 130 with the shipped fold (the gain carries the clamped q, the tap is `k*v1`)
+  against the `v1` form (the un-normalised tap, no q in the gain): click -121.2 against -150.4 dB,
+  the two outputs 0.0009 apart, -76.9 dB re peak. The `v1` form buys 29 dB on an artifact 121 dB
+  down and would need a second band kind in the hot loop AND change the arithmetic of every
+  settled vowel (the 5c-3 regrouping lesson), so the FOLD STAYS.
+  (c) A band fading in from gain 0: cold start -121.8 dB, a warm slot from 400 Hz -122.0, a gain
+  step control -59.1. The fade-in masks the cold start completely, so a gain-0 band may be skipped.
+  (d) The band gain per SAMPLE against per BLOCK: -90.3/-88.9/-81.2 against -36.7/-35.3/-27.6 dB
+  over three swings. The per-sample ramp is not optional.
+- **Mid-ramp stability with q MOVING** (5c-3 checked a frequency ramp only, where the blended
+  radius never exceeds the endpoints'; with q moving it can). Three numbers, kept apart because
+  the first cut of this entry ran them together: over 20,000 random (f, q) pairs blended from
+  endpoint to endpoint, the HIGHEST radius seen is 0.999993, and that is an ENDPOINT'S OWN radius
+  (f 20 Hz, q 197: a 3 s ring), not an excess; the LARGEST EXCESS over both endpoints is +0.050,
+  and it sits at an absolute radius of 0.925, nowhere near 1. Restricted to the trajectory the
+  code actually produces, one block's worth of travel per ramp, the largest excess over 4,000 full
+  morphs is +0.017. Review round 1 ran its own per-block scan and found exactly 0.0; the two are
+  different scans over different (f, q) draws, not a disagreement, and the honest statement is
+  that a per-block excess is somewhere between nothing and a few hundredths. Stable, with room to
+  spare, in every form of the question.
+- **Artifact measurements, effect level** (band-limited saw 110 Hz and a three-saw chord, both to
+  3 kHz, 44.1 and 48 kHz; click above, plus the low-frequency check = peak 20 ms RMS below 60 Hz re
+  the signal, which needs an 8191-tap FIR or the 110 Hz fundamental leaks into the band). These
+  rows drive the stage DIRECTLY, with no voice lease between, so every one of them really changes
+  the material; the two modes differ on every row but the static controls, which is the proof.
+  Both modes, a static control first: body-static and vowel-static are IDENTICAL in the two modes
+  (-148 to -160 dB), so a settled bank costs nothing and sounds the same.
+  Click, crossfade against morph: body-single -94.9..-105.0 / -90.8..-107.0; body every 125 ms
+  -85.8..-88.6 / -82.1..-88.7; body every block -80.6..-84.3 / -81.3..-84.2; the band-count case
+  -91.8..-102.0 / -92.4..-115.8. Vowel: single -99.1..-111.5 / -107.1..-123.6; every 125 ms
+  -86.9..-91.3 / -102.2..-107.8; every 62.5 ms -85.4..-88.9 / -104.2..-107.0; every block
+  -85.6..-89.1 / -100.0..-102.4. On these rows, which are the large F1/F2 moves of the a-e-i-o-u
+  sweep, the vowel morph is 13 to 19 dB BELOW the crossfade (it never switches a bank at all).
+  **That is not universal:** review round 1 measured six further vowel pairs where two are a wash
+  (220 Hz, i to a: -3.4 dB; 220 Hz, a to u: +0.5 dB), so the gain belongs to the big moves. The
+  body click rows are a wash in both directions.
+- **The morph's low end, the one row that is worse, and why.** Below 60 Hz the body morph measures
+  11 to 16 dB ABOVE the crossfade on a wood-to-glass change (single: crossfade -52.4..-59.0
+  against morph -41.7..-46.8; every 125 ms: crossfade -48.7..-51.2 against morph -32.6..-34.9). **The mechanism is the SWEEP'S
+  OWN ENVELOPE MODULATION, and it is generic**: a resonance travelling 50 ms amplitude-modulates
+  whatever it passes, and the modulation's own spectrum lands under 60 Hz. It is NOT the crossing
+  of wood's 100 Hz mode over the source's 110 Hz fundamental: review round 1 measured the same
+  ratio with nothing at all under the travelling band (saw 440, sine 1500), and a Python rebuild
+  of both laws from the Kotlin confirms the sign on every source (saw 110 +6.7 dB, saw 440
+  +0.8 dB, sine 1500 +25.7 dB, saw 55 none; the per-source magnitudes differ between the two
+  reconstructions, the direction does not). What the fundamental decides is the ABSOLUTE level,
+  which is what decides audibility: only the source whose fundamental sits in the travelled range
+  reaches -31 to -35 dB re the signal; sine 1500 reaches only -68 dB, and a source whose own low
+  end swamps the band (saw 55) shows no difference at all. The vowel is the mirror image: its
+  morph is 2 to 6 dB WORSE below 60 Hz on four of review round 1's six rows, at -55 to -71 dB
+  absolute, which is inaudible. Where nothing travels in frequency the morph is far better
+  (the band-count case: crossfade -46.0..-56.9 against morph -62.9..-73.8), and under a change
+  every block, where a retarget never lets a band travel far, it is better too: crossfade
+  -39.7..-42.9 against morph -48.0..-49.7.
+  **This is the row the maintainer should judge the BODY by ear on.**
+- **Songs** (15 built-in and 2 frozen, 256 cycles, 48 kHz, raw post-master doubles, wall clock
+  pinned): with the morph OFF, all 17 are BIT-IDENTICAL to `ad9f0d64`, so nothing the step added
+  besides the morph changes any sound. Measured TWICE, the second time after the review round 1
+  fixes, because those touched `clampSvfCutoff` / `clampSvfQ` and the split-out gain rules, which
+  every voice filter in the engine goes through and not only this bank: the capacity and its
+  coercion, the bank factories, the `q` var, the fresh flag, the three-array morph door, the
+  `retune` skip and the extracted clamps together move not one bit of one song. Both sides ran in
+  throwaway worktrees, so the tree under review was never the instrument. With the morph ON, 15 are bit-identical and TWO differ, both the ones whose
+  material changes on a LIVE orbit: Seltsamere Dinge (max difference -21.7 dB re its peak, first
+  at 7.85 s, per-100 ms difference median -99.5 dB and p90 -60.1, so it sits at the vowel changes
+  and nowhere else) and frozen Stranger Things 2026-07-03 (-27.5 dB re peak, first at 7.49 s,
+  median -56.3 dB, p90 -29.9: its orbit 1 carries two superimposed voices with wood and glass and
+  changes constantly). Synthkura is unchanged because its 443 handovers are ON/OFF edges, and Der
+  Schmetterling because its bodies sit on different orbits: neither is a material change on a
+  live target. Once a bank's integrators diverge they never re-converge, so 98 % of samples differ
+  numerically; the LEVEL is what the numbers above report.
+- **Cost:** three timed renders each side, 60 cycles at 30 rpm, on cases that morph every 125 ms.
+  The morph is the MORE expensive path, not the cheaper one: +1.5 % on the body case and +2.8 % on
+  the vowel case against the crossfade (and +2.5 to +6.7 % on an earlier pair of cases that change
+  every 250 ms). It holds one bank instead of several, but it pays a `retune` per MOVING band per
+  block (a `tan` each) and a per-sample gain ramp for the whole 50 ms. Nothing when settled.
+  The crossfade path itself got slightly heavier (every bank now preallocates 8 SVFs and nine
+  small arrays where HEAD built `bands.size` SVFs and one array): measured against HEAD on the
+  same two cases, about 950 installs per render, **+1.0 %**, inside the run-to-run spread, so the
+  arrays were left at the capacity.
+- **Switching modes:** `KatalystBodyEffect.MORPH` and `KatalystFormantEffect.MORPH`, one constant
+  per stage. Flip and rebuild. Both are `true` as proposed; the loser is DELETED with the choice,
+  together with the constants and the hosts' `morph` parameter.
+- **Guards, each mutation-checked (31 mutants, 30 red).** `ResonatorBankMorphSpec` (oracle: the
+  law written from scratch over bare `SvfBPF` instances driven by hand) has one row per rule:
+  the whole trajectory, log frequency, log q, linear gain, pairing by position against a reversed
+  target, a band the target drops, a band that arrives cold, the exact landing, a retarget from
+  where the bands stand, the fresh snap, a capacity below the band count being raised, the
+  capacity refusal, every shipped table fitting the capacity, a non-finite band on the SVF's own
+  clamps, plus three rows that pin `retune` and `resetState` against a filter CONSTRUCTED at the
+  numbers. The hosts add: a material change with an unchanged wet morphs, a band-count change
+  morphs, a WET change still crossfades, a material wider than the bank installs and crossfades,
+  a change on a bank that is FADING OUT installs a fresh one, and with the morph OFF the change
+  crossfades exactly as in 5c-6. The ONE surviving mutant is the `retune` skip removed, which is
+  the correct outcome for an optimisation: the skip is behaviour-neutral by construction (the
+  opposite mutant, skipping every band, is red).
+- **Two lessons for the next glide.** (1) A metric built on an FFT brickwall filter reads its own
+  edge artifact: the first cut of these measurements reported -19 to -50 dB clicks on runs that
+  were at -100 dB, because the brickwall was applied to a WINDOW of the signal. Use a
+  windowed-sinc FIR on the whole run, cut its taps off both ends, and give a 60 Hz band a far
+  longer FIR than an 8 kHz one. (2) An oracle built from a production primitive cannot test that
+  primitive: the morph oracle drives the same `retune`, so a mutant that broke `retune` passed
+  every bank row until three rows were added whose oracle is a filter CONSTRUCTED at the numbers.
+  And an exactness that goes through `retune` may not be observable at all: `retune` turns the
+  target into an increment, `(target - current) / ramp`, and a one-ulp difference survives that
+  division only about a quarter of the time at a ramp of 128, so the landing row PROBES candidate
+  targets until it finds one that lands observably rather than assuming any will.
+
 ## The phaser and the duck switch and change without clicking (2026-09-20)
 
 Katalyst step 5c-9, the last two orbit stages that still switched hard. A SOUND CHANGE at the

@@ -163,6 +163,23 @@ exactly 0 when settled) brought it to the floor (-90 dB, or its own floor). Less
 effects: a coefficient that multiplies the signal directly behaves like a LEVEL knob and needs the
 per-sample ramp; only a coefficient inside a filter with continuous state is safe per block.
 
+**Katalyst 5c-10 (2026-09-20), the resonator morph: a glide that is MEANT to be heard.** The bank's
+band frequencies and Qs travel in log space, its gains linearly per sample, over the same 50 ms.
+Three lessons the earlier glides did not teach:
+1. **A coefficient ramp shared with another caller gets its own LENGTH at the call site, not a
+   changed constant.** Measured: a BLOCK-long coefficient ramp on a retuning band lands on an ideal
+   per-sample glide (click -108.1 against -108.0, the 375 Hz comb within 1 dB), while the shared
+   32-sample `FILTER_SMOOTH_SAMPLES` leaves it 16 dB above. `BaseSvf.retune` therefore takes the
+   ramp length from its caller and the `lpf` envelope's constant is untouched.
+2. **Read a resonator glide against the SWEEP it creates, not only against the click it removes.**
+   A travelling band modulates its own envelope, which is generic: a body morph puts 8 to 11 dB more
+   energy below 60 Hz than the crossfade even on a source with NOTHING under the travelling band
+   (sine 1500 Hz). What the source decides is the absolute level, and so the audibility: only a
+   source whose fundamental sits in the travelled range reaches -31 dB re signal.
+3. **Measure a discretisation as a RESIDUAL against an ideal per-sample law**, which divides the
+   intended motion out and leaves only the staircase; and never FFT-brickwall a WINDOW of a signal
+   (it reads its own edge artifact: -19 to -50 dB "clicks" on runs that are really at -100 dB).
+
 **Katalyst 5c-9 (2026-09-20), the phaser and the duck.** Phaser `wet` and `floor` feed the C4 law's
 two MEMORYLESS coefficients, so both are LEVEL knobs and the output is LINEAR in the pair: ramping
 both per sample IS a crossfade from the old settings to the new ones, which carries the knobs AND

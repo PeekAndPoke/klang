@@ -573,6 +573,14 @@ class KatalystFilterSwap(
         curL === filter || curR === filter || crossfading.references(filter)
 
     /**
+     * Whether [filter] is the left of the TARGET pair: the one pair a host may change IN PLACE
+     * (the resonator morph of Katalyst 5c-10), because it is the one every weight converges on.
+     * False for a pair that is fading out, for a parked one and while [Off] - there the host
+     * installs a new pair and this swap crossfades, exactly as it did before the morph existed.
+     */
+    internal fun isTarget(filter: AudioFilter): Boolean = curL === filter
+
+    /**
      * INTENT: the owner's latest word was a pair (set, or resumed), not off. Flips synchronously in
      * [set], [resume], [clear] and [reset], whatever is still fading.
      */
