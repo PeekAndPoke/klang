@@ -1,5 +1,151 @@
 # Klang Audio — Memory
 
+## The gate: a stage at its off value is NOT BUILT (2026-09-20)
+
+Phase 3 step 2 of `docs/plans/signal-flow-redesign.md`. At voice build, a stage whose gating knob
+is a `Param` or `Constant` LEAF and resolves to the unset sentinel or to that stage's OFF value is
+not built: the arm in `IgnitorDslRuntime.buildRaw` returns the inner. Everything about the rule
+lives in that file's `gatedOff` KDoc; the off VALUES are one table, in
+`docs/tasks/builtin-instruments.md` section 5b; `IgnitorGateSpec` holds both to their word.
+
+- **It is the optimisation phase 3 stands on.** One voice, 128-frame blocks, JVM, min..max of
+  3 x 200k blocks, base commit against the tree: a nine-stage slotted tail with nothing written
+  cost **2022..2040 ns per block** and costs **181..182**, against **146..150** and **136..142**
+  for a bare saw. Fully engaged the tail is 3424..3451 against 3365..3401, which is no change
+  beyond this box's own run-to-run drift (the bare-saw row, an untouched shape, drifts about 7
+  percent between runs); that row is the harness's control, because where the gate cannot fire
+  nothing may move. This entry is the ONE home of these numbers: the `gatedOff` KDoc points here
+  rather than repeating them, so a re-measurement is never chased through comments. A placed unity `pregain` multiply cost 240 ns as a `Times` and 258 as the
+  optimizer's `Affine` and both now fold to the bare saw. (The spike's own probe read 2531 and 149
+  for the first two shapes, so the baseline reproduces.) **Not measured anywhere: the ON path's
+  BUILD cost**, which is where the gate's own price sits.
+- **It is also a NaN GUARDRAIL, and that half is load-bearing.** `SLOT_UNSET` is `Double.NaN`, and
+  the `Param` leaf reads a non-finite OVERRIDE as unset and hands back the DEFAULT, so a slot
+  whose default IS the sentinel resolves to NaN at the leaf, with nothing downstream to scrub it.
+  The gate's `!isFinite()` arm is what keeps it out of the DSP, for every gated stage at once.
+- **Restricted to the two leaves, and that is not timidity.** `crackle`, `perlin`, `berlin` and the
+  sample ignitor's `AnalogDrift` lane take their rng draws in a PROPERTY INITIALISER, which is
+  construction, so a query that built a knob subtree in order to ask it would move those draws in
+  front of the inner's and shift the voice silently. The other sources capture the stream and draw
+  at generate time, where build order cannot reach them. `controlRateValueOrNull` folds pointwise
+  expressions over leaves too, which is stronger than the plan's wording, but telling a draw-free
+  expression from a drawing one needs a new walker; that strength stays unused.
+- **What the leaf restriction does NOT cover, and it was a choice between THREE options.** A
+  gated-off stage is not built at all, so its SIBLING knobs are not built either: a `perlin` in a
+  gated filter's `q` stops drawing and every later drawing node shifts. (1) Refusing to gate in
+  that case is the worst option, because a filter with an UNSET cutoff would then be built and
+  `bilinearK`'s guard would silently substitute 1 kHz, which is the step-1 defect on the stage the
+  gate exists for. (2) Gating but still BUILDING the knob subtrees in declaration order and
+  discarding them would reproduce the stream exactly and cost nothing per block, and it is the
+  option not taken: `buildIgnitor` caches every non-leaf build, so a discarded subtree that is also
+  on the live spine (a `let`-bound LFO) is reached again through `getOrPut`, which calls
+  `incConsumers()` and flips that node's `MemoizingIgnitor` from pure delegation to a per-block
+  cache plus a buffer copy for the whole voice; it also puts allocation back on the OFF path, which
+  is the path the gate exists to make cheap. (3) Letting the siblings go with the stage, taken.
+  `IgnitorGateSpec` pins it so nobody "fixes" it by accident. Worth revisiting in step 3, when
+  every filter cutoff becomes an unset-default slot and the case stops being hypothetical.
+- **`mul` is the one asymmetry: unset is NOT off there, and only a SIGNAL survivor folds.** Only
+  exactly 1.0 folds. `TimesIgnitor` already sanitises a non-finite factor to an exact zero, so
+  there is nothing to guard, and the node also sits in PARAMETER positions where that zero is the
+  point (`AffineIgnitorSpec`'s non-finite rows and the C5 non-finite-q row are what refuse the
+  other reading). The second half is the same insight: what the fold drops is the multiply's
+  `safeOut`, and in a parameter position that clamp does work, so `survivesUnityFold` folds only
+  over a survivor whose `isBlockConstant` is false. `q = param("res", +Inf).mul(pregain)` resolved
+  to `SAFE_MAX` and then to the filter's q ceiling; folded it would stay `+Inf` and land on the q
+  fallback, a different filter. Consequence for the slot side: a `mul` slot must default to a safe
+  literal, never to `SLOT_UNSET`, or an unwritten one silences the voice; `IgnitorDsl.pregain()` is
+  the one door that places such a slot today and a spec row guards its default. The two doors
+  differ on purpose: the hand-authoring `Ignitor.mul(Double)` short-circuits at unity
+  unconditionally, control-rate survivor included, because a Kotlin caller writing a literal `1.0`
+  has said "no multiply", while the DSL door's 1.0 may be a slot nobody wrote. The fold's safety
+  argument (a spine survivor cannot emit a non-finite sample from finite input) is a rule for NEW
+  nodes, not an audited invariant: the FEEDBACK sources are the known exception and must stay that
+  way, because `Pluck` and `SuperPluck` write `delayLine[writePos] = filtered * decayVal` with
+  `decay` read raw off `Slots.decay`, so `oscp("decay", 10)` diverges to an infinity and then to
+  NaN. That divergence is authored character and the Motor stays raw.
+- **The `Affine` arm is not optional.** Every registered tree renders OPTIMIZED, and the pass
+  rewrites a bare `x.mul(k)` into `Affine(x, -0.0, k, -0.0)`. Gating `Times` alone would leave the
+  `mul` row unable to fire on the shipping path. The absent-addend test now has ONE home,
+  `IgnitorDsl.Affine.isAbsentAddend`, because the optimizer WRITES that encoding and the build
+  READS it; a spec row runs the real `optimize()` output through the gate so a change to the
+  encoding cannot silently stop the row firing.
+- **The envelope is INVERTED from the plan's sketch and stays ungated.** Today's voice strip runs
+  its VCA on EVERY voice with `AdsrDef.defaultSynth` when the pattern sets nothing, so the classic
+  tail's ADSR has to be built by default; an explicit `adsrOff` slot is what will switch it off.
+  **Two of its knobs got a NaN guard in this step, and the unity-`mul` fold is why.** Of the five
+  ADSR knobs the three TIMES survive a non-finite value by accident of `Double.toInt()` being 0 for
+  a NaN, so a NaN-timed stage has no frames. `sustainLevel` and `expK` did not: `coerceIn` is the
+  identity on a NaN, the level multiplies every sample and `expK` reaches `adsrExpShape` the same
+  way. Before the fold, a `pregain` at unity after an envelope kept `TimesIgnitor`'s `safeOut` and
+  the voice went SILENT; after it the NaN would travel, and "a later stage guards it" is false for
+  a pregain placed at the end of a tail, which is where `classic()` puts it. `AdsrIgnitor.finiteOr`
+  substitutes `ADSR_SUSTAIN_LEVEL` and `ADSR_EXP_K` at the read. It is not a new clamp and the
+  Motor stays raw: every finite value passes through untouched. `ADSR_SUSTAIN_LEVEL` is 0.7, the
+  ignitor door's own default, deliberately NOT `AdsrDef.defaultSynth.sustain` (1.0), which is the
+  strip VCA's, and the substitution is the ignitor envelope's alone (the strip path has no
+  non-finite guard at all). It is not merely "completing the coercion that was there": `finiteOr`
+  runs BEFORE `coerceIn`, which is invisible on a NaN and decides the INFINITIES, where `coerceIn`
+  had a real answer and this overrules it. A `+Inf` sustain used to hold at the 1.0 rail and a
+  `-Inf` at the 0.0 rail; both now read as unset and take 0.7. Deliberate, and it is the house rule
+  (`/dsl-design` section 4) the gate applies to every knob it tests.
+  Separately, a non-finite `releaseSec` used to poison the subtree's release TAIL. `maxTail` is
+  `if (a >= b) a else b` and a NaN loses every comparison, so it wins ONLY as the second argument
+  (`maxTail(NaN, 2.0)` discards it, `maxTail(2.0, NaN)` returns it), and `VoiceFactory`'s
+  `ignitorTailSec > resolvedAdsr.release` is false for one. So the shapes that broke had the
+  non-finite release on the RIGHT: `s.adsr(release = 2.0) + s.adsr(release = NaN)`, because the
+  build accumulates the left operand first, and the commoner CHAIN
+  `s.adsr(release = 2.0).lowpass(...).adsr(release = NaN)`, because the Adsr arm builds its inner
+  before it reads its own release. Both cut the voice to the strip's release. The Adsr build arm
+  now contributes no tail for a non-finite release. What is still step 3c's is the `adsrOff` slot.
+- **`onepole` moved INTO the tree.** `IgnitorRegistry.createExciter` used to read the bag and test
+  `> 0.0` itself, the one stage gate in the engine that was not a door's own. It now hangs an
+  `IgnitorDsl.OnePoleLowpass` with a shared `Param("onepole", 0.0)` leaf on the optimized tree and
+  lets the build decide, so the rule has one home. Cost: one immutable node per note-on.
+- **The build cache needs no key change, verified by caller search.** `IgnitorBuildCache` is
+  constructed in exactly one place (`buildExciter`) and `buildExciter` has exactly two production
+  callers: `IgnitorRegistry.createExciter`, which `VoiceFactory` runs per note-on, and
+  `KatalystSlots`, per knob resolve. So a cache never spans two voices and the gate's decision is
+  constant for its whole lifetime. `IgnitorGateSpec`'s different-graphs row is the tripwire under
+  that, for the day someone wants a cross-voice cache.
+- **Six behaviour changes, all deliberate, none reached by the corpus.** The gate is a fold in
+  most rows but not in all, and the honest list is:
+  1. **`Distort` at or below 0** now does nothing. That node is `drive(amount).shape(shape)` and
+     only the DRIVE half ever bypassed, so the tree's chosen shaper stayed on the signal at unity
+     gain: modelled on a 220 Hz sine through the real chain, "soft" is -1.77 dB, "tube" -6.24 dB at
+     16.8 percent THD, "gentle" +0.64 to +5.21 dB, "zerosquare" +1.55 to +16.83 dB at 37 percent
+     THD, and "rectify" removes the fundamental altogether. It is a LEGACY node: neither authoring
+     door builds it (both spell `distort` as `Shape(Drive(...))`) and the only production site left
+     is `WarmupVocabulary` at 0.3. This does NOT reopen ledger W5's gate-flip pop, because W5 is a
+     MODULATED amount crossing 0 and a modulated amount is never a leaf.
+  2. **`Drive` at a non-finite amount** used to render ALL-NaN, and that is a closed hole, not a
+     change we chose: `amt <= 0.0` is false for a NaN, so the gain was `10^(NaN * 1.2)`. Step 3
+     would have walked into it, because a `classic()` distort slot defaulting to `SLOT_UNSET` wires
+     exactly this node. At or below 0 the same row is a true fold. `Shape` cannot be gated at all,
+     having no amount knob, so which node `classic()`'s distort stage becomes is a design question
+     for decision D2.
+  3. **An authored `onepole(0)`** on a tree node was a 5 Hz lowpass (`bilinearK` clamps to
+     `[5, Nyquist - 1]`), not a bypass, and is now a bypass. The registry path always treated it as
+     off, so the two agree now.
+  4. **The four SVFs at a non-finite authored cutoff** used to be a 1 kHz filter through the same
+     guard and are now absent.
+  5. **The unity multiply drops one `safeOut`** on the surviving SIGNAL, which fires only on a
+     sample that is already NaN or past `SAFE_MAX`. In the `coarse` band `(0, 1]` the same shape:
+     the engaged loop latched through `nanGuard()`, so a non-finite upstream sample came out 0.0
+     and now passes through.
+  6. **A NaN `sustainLevel` or `expK`** rendered NaN (or silence, behind a unity multiply) and now
+     renders the knob's own default; an INFINITE `sustainLevel` moves too, from the rail `coerceIn`
+     put it on (1.0 for `+Inf`, 0.0 for `-Inf`) to that same default, because the substitution runs
+     before the coercion and unset reads as unset rather than as a rail. **A non-finite
+     `releaseSec`** reported a release tail that swallowed a sibling's or an inner envelope's real
+     one and now reports none. Holes closed, and listed here because they ARE changes of what those
+     inputs produce.
+- **Identity, proven:** all 18 corpus rows (15 built-in songs, 2 `FrozenSongs`, 1 `FrozenPieces`)
+  render bit-identically at 256 cycles with the wall-clock seeds pinned, base commit against the
+  tree, and rendered again after every review round: rounds 1 and 2 changed production code, and
+  rounds 3 and 4 changed only comments and specs but were re-rendered anyway. Four runs, all
+  agreeing. Four engagement controls, each widening one gate
+  row, move 11, 8, 2 and 1 of the 18, so the net sees every row that the corpus can reach.
+
 ## A material change MORPHS the resonator bank (2026-09-20)
 
 Katalyst step 5c-10, a SOUND CHANGE under the 5c listening checkpoint, and the only one of the

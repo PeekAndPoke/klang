@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
@@ -932,6 +933,20 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); pre.collectParams(out); mul.collectParams(out); add.collectParams(out)
         }
+
+        companion object {
+            /**
+             * Is this the ABSENT pre-add or add, `Constant(-0.0)`?
+             *
+             * The one home of that test, because two modules decide things by it and they must not
+             * drift: the optimizer WRITES the encoding (its `ABSENT`, its multiply-run rule) and
+             * the voice build READS it, to tell an `Affine` folded out of a bare `.mul(k)` from
+             * one that also carries an add. Structural, and bitwise: `+0.0` is a different node
+             * with a different meaning, because `v + 0.0` turns a `-0.0` sample into `+0.0`.
+             */
+            fun isAbsentAddend(node: IgnitorDsl): Boolean =
+                node is Constant && node.value == 0.0 && 1.0 / node.value < 0.0
+        }
     }
 
     /**
@@ -1492,7 +1507,7 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val attackSec: IgnitorDsl = Constant(0.01),
         val decaySec: IgnitorDsl = Constant(0.1),
-        val sustainLevel: IgnitorDsl = Constant(0.7),
+        val sustainLevel: IgnitorDsl = Constant(ADSR_SUSTAIN_LEVEL),
         val releaseSec: IgnitorDsl = Constant(0.3),
         val attackCurve: AdsrCurve? = null,
         val decayCurve: AdsrCurve? = null,

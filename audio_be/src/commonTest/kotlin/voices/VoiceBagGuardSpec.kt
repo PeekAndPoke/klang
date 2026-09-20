@@ -84,14 +84,19 @@ import kotlin.random.Random
  * The branch now takes the guarded local, so the bag is read ONCE per voice and the sample
  * ignitor's drift cannot disagree with the filters'.
  *
- * ## `onepole`, read in `IgnitorRegistry.createExciter`
+ * ## `onepole`, reached through `IgnitorRegistry.createExciter`
  *
- * The gate is `oscParams["onepole"] > 0.0`, which a NaN fails but an `+Infinity` passes. So an
- * `+Infinity` built a one-pole lowpass over the whole instrument and `bilinearK` then clamped its
- * cutoff to 1 kHz: a value that named no frequency at all rendered exactly what `onepole(1000)`
- * renders. Measured.
+ * The gate used to be a bare `oscParams["onepole"] > 0.0` in that function, which a NaN fails but
+ * an `+Infinity` passes. So an `+Infinity` built a one-pole lowpass over the whole instrument and
+ * `bilinearK` then clamped its cutoff to 1 kHz: a value that named no frequency at all rendered
+ * exactly what `onepole(1000)` renders. Measured.
  *
- * All three reads disappear when these doors become slots in the tree (signal-flow plan phase 3).
+ * Since phase 3 step 2 (2026-09-20) the registry hangs an `IgnitorDsl.OnePoleLowpass` on the tree
+ * instead and THE gate decides it (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off
+ * value and the leaf's own unset rule. The rows below are unchanged and still green, which is how
+ * the move proved itself; keep them until the door becomes an ordinary instrument slot.
+ *
+ * The two `analog` reads disappear when those doors become slots in the tree too.
  */
 class VoiceBagGuardSpec : StringSpec({
 
@@ -314,7 +319,7 @@ class VoiceBagGuardSpec : StringSpec({
         assertSameBits("NaN analog against unset, sample voice", renderSample(null), renderSample(Double.NaN))
     }
 
-    // ── `onepole`, read once in IgnitorRegistry.createExciter ─────────────────────────────────
+    // ── `onepole`, hung on the tree by IgnitorRegistry.createExciter ──────────────────────────
 
     fun exciter(onepole: Double?): Ignitor {
         val registry = IgnitorRegistry().apply { registerDefaults() }

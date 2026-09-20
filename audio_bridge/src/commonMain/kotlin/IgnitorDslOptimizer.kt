@@ -426,7 +426,8 @@ private fun IgnitorDsl.carriesNoParams(): Boolean = mutableListOf<IgnitorDsl.Par
 /** The absent pre-add or add: `Constant(-0.0)`, the bitwise identity of the add (see [IgnitorDsl.Affine]). */
 private val ABSENT: IgnitorDsl = IgnitorDsl.Constant(-0.0)
 
-private fun IgnitorDsl.isAbsent(): Boolean = this is IgnitorDsl.Constant && value == 0.0 && 1.0 / value < 0.0
+/** The absent-addend test lives on [IgnitorDsl.Affine] itself: the voice build reads the same encoding. */
+private fun IgnitorDsl.isAbsent(): Boolean = IgnitorDsl.Affine.isAbsentAddend(this)
 
 /** A finite literal multiply coefficient, the only kind a run composes. */
 private fun IgnitorDsl.literalOrNull(): Double? = (this as? IgnitorDsl.Constant)?.value?.takeIf { it.isFinite() }

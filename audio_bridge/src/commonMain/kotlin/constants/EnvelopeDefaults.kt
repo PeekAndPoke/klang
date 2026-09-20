@@ -25,6 +25,26 @@ package io.peekandpoke.klang.audio_bridge.constants
 const val ADSR_EXP_K: Double = 3.0
 
 /**
+ * Sustain level of the IGNITOR `adsr(...)` surface, and what `AdsrIgnitor` substitutes for a
+ * NON-FINITE one.
+ *
+ * Scope, because the two envelope paths differ: the substitution is the IGNITOR envelope's alone.
+ * The voice STRIP's path (`AdsrDef.resolve`, `EnvelopeCalc`) has no non-finite guard at all, and
+ * this constant is not its default either.
+ *
+ * Deliberately NOT the same number as `AdsrDef.defaultSynth.sustain` (1.0), which is the voice
+ * STRIP's VCA default: the strip's envelope is an amp applied to a finished voice and holds it at
+ * full level when nothing is written, while an ignitor's own envelope is a shape inside the
+ * instrument and 0.7 is what the door has always meant by "a sustained note". Do not unify them
+ * without deciding which sound moves.
+ *
+ * Consumers: `IgnitorDsl.Adsr.sustainLevel`'s default, and `AdsrIgnitor`'s non-finite
+ * substitution (see its `finiteOr` note; the `Param` leaf's unset rule cannot reach a value that
+ * was authored non-finite).
+ */
+const val ADSR_SUSTAIN_LEVEL: Double = 0.7
+
+/**
  * Time constant (seconds) of the VCA-gain de-click one-pole.
  *
  * The shape curves are C0-continuous (the value reaches its endpoints exactly)

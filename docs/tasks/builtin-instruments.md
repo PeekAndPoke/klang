@@ -104,6 +104,55 @@ song with both a highpass and a lowpass at `analog > 0` (at analog 0 the filters
   gated off by an explicit `adsrOff` slot. Also add `mul(pregain)` at exactly 1.0 and `onepole` at or
   below 0 to the table.
 
+## 5b. The off-value table (the one home; built in step 2, 2026-09-20)
+
+A stage is not built when its gating knob is a `Param` or `Constant` LEAF and resolves either to a
+non-finite value (the unset sentinel, `SLOT_UNSET`, is `Double.NaN`) or to the stage's off value
+below. A knob that can MOVE within a note is never gated. This is the one home of these values;
+code and memory point here and do not restate them.
+
+| stage | off value | why, and what is not a fold |
+|---|---|---|
+| coarse | unset, or `<= 1.0` | at or below 0 and at a non-finite amount the render already takes a bit-exact bypass, so there the gate folds a bypass. In `(0, 1]` the engaged loop takes every sample but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as 0.0 and now passes through |
+| crush | unset, or `< 1.0` | a fold: `levels = 2^amount`, and the renderer bypasses below two levels. At exactly 1.0 the quantizer RUNS (a saw becomes a three-level staircase), so 1.0 is ON |
+| distort (`IgnitorDsl.Distort`, the legacy node) | unset, or `<= 0.0` | **A BEHAVIOUR CHANGE, not a fold.** The node is `drive(amount).shape(shape)` and only the DRIVE half ever bypassed, so the tree's chosen shaper stayed on the signal at unity gain. Modelled on a 220 Hz sine through the real chain (shaper, DC blocker, `softCap`): soft -1.77 dB, tube -6.24 dB at 16.8 % THD, gentle +0.64 to +5.21 dB, zerosquare +1.55 to +16.83 dB at 37 % THD, and `rectify` removes the fundamental altogether (full wave, an octave up). It is legacy: neither authoring door builds it (both spell `distort` as `Shape(Drive(...))`), and the only production site left is `WarmupVocabulary` at 0.3. Gating it aligns that node with the `drive` row and with `Ignitor.distort(Double)`, which always short-circuited at the same value. It does NOT reopen ledger W5's gate-flip pop: W5 is a MODULATED amount crossing 0, and a modulated amount is not a leaf, so it is never gated |
+| drive (`IgnitorDsl.Drive`, the row both doors reach) | unset, or `<= 0.0` | two things at once. At or below 0 a TRUE FOLD: `DriveIgnitor` already copies its input through unchanged. At a NON-FINITE amount it CLOSES A HOLE: `amt <= 0.0` is false for a NaN, so the gain was `10^(NaN * 1.2)` and every sample of the voice came out NaN with nothing between it and the orbit mix. Step 3 would have walked into it, because a `classic()` distort slot defaulting to `SLOT_UNSET` wires exactly this node. **`Shape` is not gated and cannot be**: it carries a transfer function and no amount knob, so there is nothing to read an off value from |
+| tremolo | unset, or depth `<= 0.0` | a fold. The RATE is not a gating knob |
+| `mul` (`Times`, and the optimizer's `Affine(x, -0.0, k, -0.0)`) | exactly `1.0`. **Unset is NOT off** | the one asymmetry, forced by three existing specs: `TimesIgnitor` already sanitises a non-finite factor to an exact zero, and the node also sits in PARAMETER positions where that zero is the point. **Consequence: a `mul` slot must default to a safe literal, never `SLOT_UNSET`, or an unwritten one silences the voice** (guarded since step 2 by a row over `pregain()`, the one door that places a `mul` slot today). The `Affine` form is required because the optimizer rewrites a bare `x.mul(k)` and every registered tree renders optimized. The fold also takes only a SIGNAL survivor (`Ignitor.isBlockConstant`, structural and fixed at construction): what it drops is the multiply's `safeOut`, which on the audio spine fires only on a sample the survivor cannot produce, but in a PARAMETER position is what keeps a non-finite coefficient in range (`q = param("res", +Inf).mul(pregain)` resolved to `SAFE_MAX` and then the q ceiling; folded it would stay `+Inf` and land on the q fallback, a different filter). One qualification, audited in review round 3: on the audio spine every
+arithmetic and unary node carries its own scrub, but the KARPLUS family writes `filtered * decay`
+straight into its delay line with `decay` read raw, so an authored `decay > 1` diverges and the
+fractional read turns the first infinity into a NaN. That divergence is authored character, not a
+defect (the Motor stays raw), but it means the rule is "any NEW spine node that can emit a
+non-finite sample from finite input owes a substitution at its own read", not "none can" |
+| onepole | unset, or `<= 0.0` | NOT a fold on an authored tree: `onepole(0)` was a 5 Hz lowpass (the `clampSvfCutoff` floor), which is -33 dB at 110 Hz and -52 dB at 1 kHz, so a tree that used it as an accidental mute gets 30 to 50 dB louder. It is still right: `0` means off on every other door. Note the wart: `lowpass(freq = 0)` is still a 5 Hz filter, because a NUMBER is never off for the four SVFs |
+| the four SVF filters | only when the cutoff is UNSET | a lowpass at 20 kHz is not an off state, which is why the rule is "unset" and not a number. A non-finite AUTHORED cutoff used to build a 1 kHz filter (the `clampSvfCutoff` fallback) and now builds none: a behaviour change as well as a NaN fix |
+| the envelope | NOT gated | inverted from the plan: the strip VCA runs on every voice today, so `classic()`'s ADSR is built BY DEFAULT and switches off only through the `adsrOn`/`adsrOff` slot of step 3. Its unset case was NOT safe, and step 2 had to make it safe: the unity-`mul` fold removed the `TimesIgnitor` scrub that used to turn a NaN into silence, so `sustainLevel` and `expK` now substitute their own defaults (`ADSR_SUSTAIN_LEVEL`, `ADSR_EXP_K`) at the ADSR's read. Not a clamp: every finite value passes through untouched. The substitution runs BEFORE the existing coercion, so the infinities move too: a `+Inf` sustain used to hold at the 1.0 rail and a `-Inf` at 0.0, and both now read as unset and take the default, which is how every other knob reads a non-finite value. A non-finite `releaseSec` also stopped reporting a NaN release TAIL, which used to swallow a SIBLING's real one. What remains step 3c's is the `adsrOff` slot itself |
+| the phaser | NOT gated | the plan lists it; no per-voice phaser is in `classic()` and the stage retires with `PipelineDsl`, so the row would be dead code |
+
+**The distort question this leaves open, for D2.** `IgnitorDsl.Distort` is legacy by its own KDoc and
+no production site builds it; both doors emit `Shape(Drive(...))`. `Drive` is gated, `Shape` cannot
+be (it has no amount knob). So `classic()`'s distort stage is either the legacy `Distort` node, which
+gates as a unit, or `Drive` plus a `Shape` that runs at unity gain on every voice, which is D2's
+divergence made unconditional. Decide it with D2.
+
+**One consequence recorded rather than fixed.** A gated-off stage does not build its NON-gating
+param subtrees, so a `perlin`, `berlin` or `crackle` knob in a gated stage's rate or q position no
+longer takes its build-time draws and every later drawing source shifts. Chosen deliberately over
+the alternative (refusing to gate unless every param is a leaf), because that would refuse to gate a
+filter whose cutoff is unset whenever its `q` draws, and the filter would then build with a NaN
+cutoff that `bilinearK` silently substitutes with 1 kHz: the step-1 defect, on the very stage the
+gate exists for. Pinned by a row. A third option exists and was recorded as not taken: gate the
+stage but still build its knob subtrees in declaration order and discard them, which reproduces the
+stream exactly. It is not free, because a discarded subtree that also sits on the live spine is
+reached again through the build cache and flips that node's memo from pure delegation to a per-block
+cache plus a buffer copy, for every block of the voice. Worth revisiting in step 3, when every
+filter cutoff becomes an unset-default slot.
+
+**The gate is also the NaN guardrail.** `SLOT_UNSET` is NaN and the `Param` leaf hands back its
+DEFAULT for a non-finite override, so a slot whose default IS the sentinel resolves to NaN. For a
+gated stage the gate keeps it out of the DSP. For an UNGATED stage with a NaN knob there is no
+second line of defence: the envelope's `sustainLevel` and `expK` are the live examples.
+
 ## 6. Two things the factory knows today that only the build can know tomorrow
 
 - **The cull rule.** `VoiceFactory` sets `VOICE_CULL_NEVER` when the tremolo depth is above 0,

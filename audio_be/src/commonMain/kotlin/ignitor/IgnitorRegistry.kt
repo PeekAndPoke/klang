@@ -23,6 +23,21 @@ class IgnitorRegistry(
     companion object {
         /** Default sound when none is specified */
         const val DEFAULT_SOUND = "triangle"
+
+        /**
+         * The `onepole` slot of the pattern's own lowpass tail, as a tree leaf. One shared
+         * immutable instance: the build reads a leaf's value, never its identity, and leaves take
+         * no cache entry.
+         *
+         * Default `0.0` = the stage is off, which is what the gate tests. Deliberately NOT in
+         * `IgnitorDsl.Slots`: that object is the authoring vocabulary an instrument places itself,
+         * and this tail is appended by the registry to every instrument, authored or built-in.
+         */
+        private val ONEPOLE_SLOT: IgnitorDsl = IgnitorDsl.Param(
+            name = "onepole",
+            default = 0.0,
+            description = "Pattern-level one-pole lowpass cutoff in Hz (0 = off)",
+        )
     }
 
     private val defs = mutableMapOf<String, IgnitorDsl>()
@@ -119,7 +134,20 @@ class IgnitorRegistry(
         // silently rendering unoptimized instead of failing a test.
         val dsl = optimized(key) ?: return null
 
-        val raw = dsl.buildExciter(
+        // The pattern's `onepole` tail, hung on the tree rather than wrapped around the built
+        // graph. Until 2026-09-20 this function read the bag itself and tested `> 0.0`, which made
+        // it the one stage gate in the engine living OUTSIDE the build; as a node it is decided by
+        // THE gate (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off value, the same
+        // unset rule and one home. Its `Param` leaf also subsumes the old `takeIf { isFinite() }`:
+        // a non-finite override reads as unset there and takes the default 0.0, which the gate
+        // then switches off. `VoiceBagGuardSpec` is still the guard on what that used to render.
+        //
+        // The wrapper node is allocated per note-on. That is one small immutable data class next
+        // to the `IgnitorBuildCache` and its four lists that every build already allocates, and it
+        // buys the rule its single home; caching it would need a third registry map to mirror
+        // `optimized`'s parent delegation, and would put an `onepole` slot into every instrument's
+        // `collectParams` listing, which is a surface change and not this step's.
+        return IgnitorDsl.OnePoleLowpass(inner = dsl, freq = ONEPOLE_SLOT).buildExciter(
             oscParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
@@ -127,13 +155,6 @@ class IgnitorRegistry(
             random = random,
             freqHz = freqHz,
         )
-        // THE one place `onepole` is read off the bag. A non-finite override reads as UNSET, the
-        // rule the `Param` leaf applies to every slot (`IgnitorDslRuntime`, `/dsl-design` section 4):
-        // the `> 0.0` test below rejects a NaN but accepts an `+Infinity`. What that used to render
-        // is written out once, in `VoiceBagGuardSpec`, which is the guard.
-        val onepoleHz = oscParams?.get("onepole")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
-        // Same kernel as the ignitor-door onepole(freq) — one filter, one law, both doors.
-        return if (onepoleHz > 0.0) raw.copy(ignitor = raw.ignitor.onePoleLowpass(onepoleHz)) else raw
     }
 
     /** Create a child that delegates to this registry for keys not found locally. */

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.releaseProgressOffset
 import io.peekandpoke.klang.audio_be.releaseProgressDenom
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
 
 /**
  * ADSR amplitude envelope combinator.
@@ -46,6 +47,34 @@ fun Ignitor.adsr(
     declickSeconds, expK,
 )
 
+/**
+ * [value] when it is finite, [fallback] when it is not.
+ *
+ * **Not a safety clamp, and the Motor stays raw.** Every finite value passes through untouched,
+ * negative and enormous ones included, so no character is taken away. What it closes is a NaN
+ * SOURCE that the build-time gate cannot reach: the gate switches a stage off when its knob
+ * resolves non-finite, but the envelope is deliberately NOT gated (the strip's VCA runs on every
+ * voice today), so an authored `Constant(NaN)` or a slot whose default is the sentinel arrives
+ * here intact. Two of the five knobs then carry it into the samples: [AdsrIgnitor.sustainLevel]
+ * because `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, and
+ * [AdsrIgnitor.expK] because it reaches `adsrExpShape` the same way.
+ *
+ * It is NOT merely "completing the existing coercion", and the difference is worth naming: on a
+ * NaN the substitution is the only thing that does anything, but on an INFINITY `coerceIn` already
+ * had an answer and this overrules it. `+Inf` used to sustain at 1.0 and `-Inf` at 0.0; both now
+ * sustain at [ADSR_SUSTAIN_LEVEL]. That is deliberate and it is the house rule, not a slip: a
+ * non-finite value reads as UNSET (`/dsl-design` section 4), which is exactly how the build-time
+ * gate one file over reads every knob it tests, and an unset knob takes its default rather than a
+ * rail. `IgnitorGateSpec` pins both infinities.
+ *
+ * The other three knobs need nothing: the two times become frame counts through
+ * `(seconds * sampleRate).toInt()`, and `Double.toInt()` of a NaN is 0 on both platforms, so a
+ * NaN-timed stage simply has no frames; `declickSeconds` is read through `> 0.0`, which a NaN
+ * fails, so a non-finite de-click is off. `releaseSec`'s other half, the voice's release TAIL,
+ * is nulled where the build reads it (`IgnitorDslRuntime`'s Adsr arm).
+ */
+private fun finiteOr(value: Double, fallback: Double): Double = if (value.isFinite()) value else fallback
+
 private class AdsrIgnitor(
     private val upstream: Ignitor,
     private val attackSec: Ignitor,
@@ -72,14 +101,19 @@ private class AdsrIgnitor(
 
             val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
             val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
-            val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
+            // finiteOr BEFORE the coercion. The order is invisible on a NaN (`coerceIn` is the
+            // identity on one, so either order ends at the default) and decides the INFINITIES:
+            // before, they take the default; after, they would take the rail `coerceIn` puts them
+            // on. Unset reads as unset, not as a rail. See the note on `finiteOr`.
+            val sustainLevelVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), ADSR_SUSTAIN_LEVEL)
+                .coerceIn(0.0, 1.0)
             val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
 
             // declick + expK are control-rate slots: read per block, derive their coefficients once here.
             val declickSecondsVal = Ignitors.readParam(declickSeconds, freqHz, ctx)
             val declickOn = declickSecondsVal > 0.0
             val declickCoeff = if (declickOn) envDeclickCoeff(declickSecondsVal, ctx.sampleRateD) else 0.0
-            val expKVal = Ignitors.readParam(expK, freqHz, ctx)
+            val expKVal = finiteOr(Ignitors.readParam(expK, freqHz, ctx), ADSR_EXP_K)
             val expNorm = adsrExpNorm(expKVal)
 
             val attackFrames = (attackSecVal * ctx.sampleRate).toInt()

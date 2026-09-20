@@ -331,6 +331,179 @@ private fun combineMods(existing: Ignitor?, newMod: Ignitor): Ignitor =
 private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
     if (mod != null) ModApplyingIgnitor(source, mod) else source
 
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// The build-time GATE (`docs/plans/signal-flow-redesign.md` section 5, phase 3 step 2)
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * **THE RULE.** At voice build, a stage whose gating knob is a build-time constant and resolves
+ * to the UNSET sentinel or to that stage's OFF value is NOT BUILT: the arm returns the inner.
+ * A knob that is not a build-time constant (an LFO on the amount) stays unconditional, because it
+ * can move within a note and no single build-time answer is correct for the whole note.
+ *
+ * Why it exists: a slotted tail (phase 3's `classic()`) declares every stage of today's voice
+ * strip, and a pattern writes two of them. Without the gate the other seven each pay a scratch
+ * render and a buffer copy per block per voice at their off value, and a nine-stage tail with
+ * nothing written costs more than ten times a bare saw. With the gate a plain `sound("saw")` IS a
+ * bare saw. The measurements have ONE home, `audio/MEMORY.md`'s entry for this rule, so that a
+ * re-measurement never has to be chased through comments.
+ *
+ * **It is also a NaN GUARDRAIL, and that is the half a reviewer must not weaken.** `SLOT_UNSET`
+ * is `Double.NaN`, and the [IgnitorDsl.Param] leaf above reads a NON-FINITE OVERRIDE as unset and
+ * hands back the slot's DEFAULT, so a slot whose default IS the sentinel resolves to NaN at the
+ * leaf, and nothing downstream of it is a second line of defence (a NaN cutoff is substituted by
+ * `bilinearK`'s guard, a NaN amount multiplies straight through). The `!isFinite()` arm below is
+ * what keeps that NaN out of the DSP, for EVERY gated stage and without a per-stage rule, which
+ * is why it sits here and not in each arm's own comparison. `IgnitorGateSpec` pins it.
+ *
+ * **Restricted to the two LEAVES on purpose.** The query has to be answered BEFORE the stage is
+ * built, and building a knob subtree in order to ask it would move that subtree's BUILD-TIME rng
+ * draws in front of the inner's. Several nodes take theirs in a property initialiser, which is
+ * construction: `crackle` seeds its chaotic map with two, `perlin` and `berlin` a permutation
+ * table and a start position, and the sample ignitor's `AnalogDrift` lane three. Moving those is
+ * the same class of hazard step 1 found in `perVoiceCutoffOffsetMul`, and it is silent (the other
+ * sources capture the stream and draw at GENERATE time instead, where build order cannot reach
+ * them). A [IgnitorDsl.Param] or [IgnitorDsl.Constant] leaf provably draws nothing, needs no cache
+ * entry and is the exact shape the plan's rule names. `controlRateValueOrNull` would fold
+ * pointwise EXPRESSIONS over those leaves too, which is strictly stronger, but telling a draw-free
+ * expression from a drawing one needs a new walker, so that strength stays unused here.
+ *
+ * **What the leaf restriction does NOT cover, stated because it is a real consequence and it was
+ * chosen.** A gated-off stage is not built at all, so its SIBLING knobs are not built either: a
+ * `perlin` in a gated filter's `q`, or in a gated tremolo's `rate`, no longer takes its build-time
+ * draws, and every drawing node after it in the build order shifts. That is not the query's doing,
+ * it is what "the stage does not exist" means. `IgnitorGateSpec` pins the chosen behaviour so
+ * nobody "fixes" it by accident, and no tree in the corpus has a drawing sibling under a gated
+ * stage (the whole-corpus render of 2026-09-20).
+ *
+ * Three options were on the table, not two, and this is the one taken:
+ *  1. **Do not gate when a sibling could draw.** Rejected, and it is the worst of the three: a
+ *     filter whose cutoff is UNSET would then be BUILT because its `q` happens to draw, and
+ *     `bilinearK`'s guard would silently substitute 1 kHz. That is the step-1 defect on the stage
+ *     the gate exists for.
+ *  2. **Gate, but still build the knob subtrees in declaration order and discard them.** This
+ *     reproduces the rng stream exactly, since the draws sit in property initialisers, and costs
+ *     nothing per block. NOT taken, and not because it is free: `buildIgnitor` CACHES every
+ *     non-leaf build, so a discarded knob subtree that is also referenced on the live spine (a
+ *     `let`-bound LFO, which is how people write them) is reached a second time through
+ *     `IgnitorBuildCache.getOrPut`, which calls `incConsumers()` and flips that node's
+ *     [MemoizingIgnitor] from pure delegation to a per-block cache plus a buffer copy, for every
+ *     block of the voice. It also reintroduces per-note-on allocation on the OFF path, which is
+ *     the path the gate exists to make cheap. Worth revisiting in step 3, when every filter cutoff
+ *     becomes an unset-default slot and the case stops being hypothetical.
+ *  3. **Gate, and let the siblings go with the stage.** Taken. Simple, and the consequence is
+ *     visible in a spec row rather than lurking.
+ *
+ * Cost: the ON path builds the knob leaf twice (once to ask, once in the arm) and the query boxes
+ * one `Double` on JVM. Both are note-on, both are one small object, and the OFF path removes far
+ * more than that (the stage node, its `BuiltIgnitor` and its [MemoizingIgnitor]). Nothing here
+ * runs per block. The ON path's build cost is not measured by any benchmark here.
+ *
+ * @param isOff the stage's own off test, applied to a FINITE value only. The off values are one
+ *   table and it lives in `docs/tasks/builtin-instruments.md`, section 5b; each call site below
+ *   carries its row.
+ */
+private inline fun IgnitorDsl.gatedOff(
+    oscParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+    isOff: (Double) -> Boolean,
+): Boolean {
+    val value = buildTimeKnobValue(oscParams, cache) ?: return false
+
+    return !value.isFinite() || isOff(value)
+}
+
+/**
+ * The knob's build-time value, or `null` when it is not a build-time constant and the stage must
+ * therefore be built unconditionally. The leaf restriction and its reason live in [gatedOff].
+ */
+private fun IgnitorDsl.buildTimeKnobValue(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Double? {
+    if (this !is IgnitorDsl.Param && this !is IgnitorDsl.Constant) {
+        return null
+    }
+
+    // The leaf resolves the wire bag and the unset rule in ONE place (the Param arm of
+    // buildIgnitor); asking the built leaf keeps this function from owning a second copy of it.
+    return buildIgnitor(oscParams, cache).ignitor.controlRateValueOrNull(cache.freqHz)
+}
+
+/**
+ * The `mul` row of the gate: a factor of EXACTLY 1.0 is not built.
+ *
+ * **Unset is NOT off here, and that is the one deliberate asymmetry in the table.** Every other
+ * gated knob steers a stage that would take a NaN into the DSP unguarded, which is why [gatedOff]
+ * switches those off on any non-finite value. A multiply is different in both directions: its own
+ * `safeOut` already turns a non-finite factor into an exact zero rather than into NaN, so there is
+ * nothing to guard; and a multiply is ARITHMETIC, not a stage, so it also sits in parameter
+ * positions where a non-finite coefficient is a value the graph is meant to sanitise, not an
+ * absence (`AffineIgnitorSpec`'s non-finite rows and the C5 non-finite-q row pin exactly that).
+ * The consequence for the slot side: a `mul` slot must default to a safe literal such as `1.0`,
+ * never to `SLOT_UNSET`, or an unwritten one silences the voice. `Slots.pregain` does.
+ *
+ * The caller must also check [survivesUnityFold] on the side that would survive. See there.
+ */
+private fun IgnitorDsl.gatedOffAtUnity(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+    val value = buildTimeKnobValue(oscParams, cache) ?: return false
+
+    return value == 1.0
+}
+
+/**
+ * May this built side survive a unity fold alone, with its multiply removed?
+ *
+ * Only if it is a SIGNAL. What the fold drops is the multiply's `safeOut`, and whether that scrub
+ * was doing work depends entirely on where the multiply sits:
+ *
+ *  - in a PARAMETER position the survivor is a control-rate expression, and the scrub is the thing
+ *    that keeps a non-finite coefficient inside the engine's range. `q = param("res", +Inf).mul(1)`
+ *    resolved to `SAFE_MAX` and then to the filter's q ceiling; folded, it stays `+Inf` and lands
+ *    on the q fallback instead. Do NOT fold.
+ *  - on the AUDIO spine the survivor is an oscillator, a filter or an envelope, and the scrub only
+ *    fires on a sample that is already NaN or past `SAFE_MAX`. Fold.
+ *
+ * **The second bullet is a claim about the ENGINE, not a hope, and it had to be made true.** Round
+ * 2 of this step's review found the counter-example inside the same change: `AdsrIgnitor` is not
+ * block-constant, so it folds, and a non-finite `sustainLevel` or `expK` used to multiply NaN into
+ * every sample. Before the fold `TimesIgnitor`'s scrub turned that into silence; after it the NaN
+ * would travel, and "a later stage guards it" is false for a `pregain` placed at the END of a tail,
+ * which is where `classic()` puts it. The fix is at the source, in `AdsrIgnitor`'s own read (see
+ * its `finiteOr`), not a clamp bolted back onto the multiply.
+ *
+ * **A rule for NEW nodes, not an audited invariant, and here is the known exception.** A node that
+ * can emit a non-finite sample from finite input owes a substitution at its own read, the way the
+ * envelope now does. The FEEDBACK sources do not obey it and must not be made to: `Pluck` and
+ * `SuperPluck` write `delayLine[writePos] = filtered * decayVal` with `decay` read raw off
+ * `Slots.decay`, so `oscp("decay", 10)` diverges geometrically to an infinity and the fractional
+ * read turns it into NaN. That divergence is authored character and the Motor stays raw, so the
+ * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").oscp("decay", 10)`
+ * is unguarded today with or without this fold, since no built-in places a `pregain` at all; what
+ * the fold contributes is that a future unity `pregain` will no longer MASK it by scrubbing the
+ * NaN to silence on its way out.
+ *
+ * `isBlockConstant` is exactly the parameter/signal distinction, structural and computed once at
+ * construction: it is true for the leaves and for pointwise combinators over them, false for
+ * everything that makes a signal. The pregain case (a saw, an adsr) folds; a coefficient never
+ * does.
+ *
+ * The two doors differ here and it is deliberate: the hand-authoring `Ignitor.mul(Double)`
+ * short-circuits at unity unconditionally, control-rate survivor included, because a Kotlin caller
+ * writing a literal `1.0` has said "no multiply" rather than "a coefficient of one". The DSL door
+ * cannot read intent that way, because the 1.0 it sees may be a slot nobody wrote.
+ */
+private fun Ignitor.survivesUnityFold(): Boolean = !isBlockConstant
+
+/**
+ * The gate for a stage whose only off state is an ABSENCE: the four filters. A lowpass at 20 kHz
+ * is not "off", which is why the rule is "unset" and not a number. There is no numeric off short
+ * of Nyquist, and picking one would silently delete a filter somebody meant.
+ *
+ * "Unset" here is ANY non-finite value, not only the `SLOT_UNSET` spelling: that is the house rule
+ * for every wire number (`/dsl-design` section 4), and `SLOT_UNSET` is simply the value we WRITE.
+ */
+private fun IgnitorDsl.gatedOffWhenUnset(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean =
+    gatedOff(oscParams, cache) { false }
+
+
 /**
  * Builds the raw (non-memoised) Ignitor for a non-pitch-mod, non-leaf DSL node.
  *
@@ -542,8 +715,50 @@ private fun IgnitorDsl.buildRaw(
         // ── Arithmetic: pass mod to both children ──
 
         is IgnitorDsl.Plus -> left.withMod() + right.withMod()
-        is IgnitorDsl.Times -> left.withMod() * right.withMod()
-        is IgnitorDsl.Affine -> inner.withMod().affine(pre.withMod(), mul.withMod(), add.withMod())
+
+        // GATE ROW `mul`: a factor of EXACTLY 1.0 over a SIGNAL is not built, and the signal is
+        // returned (unset is deliberately NOT off here, and a control-rate survivor never folds;
+        // see `gatedOffAtUnity` and `survivesUnityFold`). This is the row that folds a placed
+        // `.mul(OscSlot.pregain)` away at unity, which identity demands rather than merely allows:
+        // today's built-ins carry no pregain at all, so KEEPING a unity multiply would be the bit
+        // change, not removing it. The right side is asked first, because `x.mul(k)` is where a
+        // knob is written.
+        is IgnitorDsl.Times -> when {
+            right.gatedOffAtUnity(oscParams, cache) -> {
+                val survivor = left.withMod()
+
+                if (survivor.survivesUnityFold()) survivor else survivor * right.withMod()
+            }
+
+            left.gatedOffAtUnity(oscParams, cache) -> {
+                // The gated side is a leaf, so building it after the survivor draws nothing and
+                // the authored left-then-right order is unobservable.
+                val survivor = right.withMod()
+
+                if (survivor.survivesUnityFold()) survivor else left.withMod() * survivor
+            }
+
+            else -> left.withMod() * right.withMod()
+        }
+
+        // The same `mul` row, on the node the OPTIMIZER folds a bare `.mul(k)` into: every
+        // registered tree renders optimized, so `Times` alone would leave the row unable to fire
+        // on the shipping path. Only a BARE multiply qualifies (no pre-add, no add), and then the
+        // whole node is the identity `safeOut(1.0 * (x + -0.0)) + -0.0`. The absent-addend test
+        // has one home, on the node whose encoding it is.
+        is IgnitorDsl.Affine -> {
+            val bareUnity = IgnitorDsl.Affine.isAbsentAddend(pre) &&
+                    IgnitorDsl.Affine.isAbsentAddend(add) &&
+                    mul.gatedOffAtUnity(oscParams, cache)
+            val survivor = inner.withMod()
+
+            if (bareUnity && survivor.survivesUnityFold()) {
+                survivor
+            } else {
+                survivor.affine(pre.withMod(), mul.withMod(), add.withMod())
+            }
+        }
+
         is IgnitorDsl.Div -> left.withMod().div(right.withMod())
         is IgnitorDsl.Minus -> left.withMod().minus(right.withMod())
         is IgnitorDsl.Neg -> inner.withMod().neg()
@@ -601,7 +816,10 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Filters: pass mod through to inner ──
 
-        is IgnitorDsl.Lowpass -> {
+        is IgnitorDsl.Lowpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
+            // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
+            inner.withMod()
+        } else {
             // C5: `passes` cascades the stage with the Butterworth q ladder (relative
             // factors — the modulated q scales every stage coherently). passes = 1 is the
             // untouched single-stage path, bit-identical. `analog` is handed to EVERY stage,
@@ -619,7 +837,10 @@ private fun IgnitorDsl.buildRaw(
             }
         }
 
-        is IgnitorDsl.Highpass -> {
+        is IgnitorDsl.Highpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
+            // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
+            inner.withMod()
+        } else {
             // See Lowpass above: same ladder, same analog-compounding note.
             val n = coercePasses(passes)
             if (n == 1) {
@@ -633,9 +854,29 @@ private fun IgnitorDsl.buildRaw(
                 chain
             }
         }
-        is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(freq.noMod())
-        is IgnitorDsl.Bandpass -> inner.withMod().bandpass(freq.noMod(), q.noMod(), analog = analog.noMod())
-        is IgnitorDsl.Notch -> inner.withMod().notch(freq.noMod(), q.noMod(), analog = analog.noMod())
+        // GATE ROW `onepole`: at or below 0.0, or unset. Unlike the four SVF filters this one HAS
+        // a numeric off state and always had: until 2026-09-20 the test lived in
+        // `IgnitorRegistry.createExciter`, OUTSIDE the tree, as the only gate in the engine that
+        // was not a door's own. It is here now so the rule has one home, and the registry hangs
+        // the `onepole` slot on the tree instead of reading the bag itself.
+        is IgnitorDsl.OnePoleLowpass -> if (freq.gatedOff(oscParams, cache) { it <= 0.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().onePoleLowpass(freq.noMod())
+        }
+
+        // GATE ROW `a filter`: unset cutoff only (see `gatedOffWhenUnset`).
+        is IgnitorDsl.Bandpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
+            inner.withMod()
+        } else {
+            inner.withMod().bandpass(freq.noMod(), q.noMod(), analog = analog.noMod())
+        }
+
+        is IgnitorDsl.Notch -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
+            inner.withMod()
+        } else {
+            inner.withMod().notch(freq.noMod(), q.noMod(), analog = analog.noMod())
+        }
 
         // Eq: withMod ONLY on inner; noMod on all section params — mirrors the filter arms
         // above (a withMod param subtree would change the freqHz the params see and break
@@ -659,6 +900,11 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Envelope: pass mod through ──
 
+        // NOT gated, and this is inverted from the plan's sketch on purpose (the spike corrected
+        // it, `docs/tasks/builtin-instruments.md` section 5): today the voice strip's VCA runs on
+        // EVERY voice with `AdsrDef.defaultSynth` when the pattern sets nothing, so the classic
+        // tail's ADSR has to be built BY DEFAULT. What switches it off is an explicit `adsrOff`
+        // slot, which is a later step's gate knob, not an unset cutoff.
         is IgnitorDsl.Adsr -> {
             // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
             // so inner / attack / decay / sustain / release / declick / expK stay in sequence.
@@ -673,7 +919,21 @@ private fun IgnitorDsl.buildRaw(
             // exactly, and an `.oscp("release", ...)` override is already baked into the ParamIgnitor
             // (see the Param leaf in buildIgnitor). null = the release time is itself modulated, so
             // no static answer exists: contribute nothing rather than guess.
-            spineTail = maxTail(spineTail, release.controlRateValueOrNull(cache.freqHz))
+            //
+            // A NON-FINITE release is the same "no static answer", and it has to say so HERE.
+            // `maxTail` is `if (a >= b) a else b`, and a NaN loses every comparison, so it wins
+            // only as the SECOND argument: `maxTail(NaN, 2.0)` discards the NaN and returns 2.0,
+            // while `maxTail(2.0, NaN)` returns the NaN. `VoiceFactory` then tests
+            // `ignitorTailSec > resolvedAdsr.release`, which is false for a NaN, so the voice is
+            // cut to the strip's release. The two shapes that reach it, both with the non-finite
+            // release on the RIGHT of the accumulation:
+            //   `s.adsr(release = 2.0) + s.adsr(release = NaN)`, because `buildRaw` accumulates
+            //   the left operand first; and the commoner one, a CHAIN such as
+            //   `s.adsr(release = 2.0).lowpass(...).adsr(release = NaN)`, because this arm builds
+            //   its inner before it reaches the line below.
+            // The samples of a NaN-released envelope are fine (`Double.toInt()` of a NaN is 0
+            // frames); its TAIL is not.
+            spineTail = maxTail(spineTail, release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() })
 
             innerIgnitor.adsr(
                 attack, decay, sustain, release,
@@ -689,13 +949,85 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Effects: pass mod through to inner ──
 
-        is IgnitorDsl.Distort -> inner.withMod().distort(amount.noMod(), shape, Oversampler.factorToStages(oversample))
-        is IgnitorDsl.Drive -> inner.withMod().drive(amount.noMod(), driveType)
+        // GATE ROW `distort`: at or below 0.0, or unset. This is the LEGACY node: neither
+        // authoring door builds it (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at
+        // `IgnitorDsl.kt` and the script one at `KlangScriptOscExtensions`), and the only
+        // production site left is `WarmupVocabulary` at 0.3. Gating it is an alignment of that
+        // node with the `Drive` row below and with `Ignitor.distort(Double)`, which has always
+        // short-circuited at the same value.
+        //
+        // It is a BEHAVIOUR CHANGE on that node, not a fold, and the magnitude is shape-dependent:
+        // the node is `drive(amount).shape(shape)` and only the DRIVE half bypasses at 0, so the
+        // tree's chosen shaper stayed on the signal at unity gain. Modelled on a 220 Hz sine
+        // through the real chain (shaper, DC blocker, `softCap`): "soft" -1.77 dB, "tube"
+        // -6.24 dB at 16.8 percent THD, "gentle" +0.64 to +5.21 dB, "zerosquare" +1.55 to
+        // +16.83 dB at 37 percent THD, and "rectify" removes the fundamental altogether (full
+        // wave, an octave up). Now it does nothing. This does NOT reopen ledger W5's gate-flip
+        // pop: W5 is about a MODULATED amount crossing 0, and a modulated amount is not a leaf, so
+        // it is never gated.
+        is IgnitorDsl.Distort -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().distort(amount.noMod(), shape, Oversampler.factorToStages(oversample))
+        }
+
+        // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
+        // both build `Shape(Drive(...))`. Two different things at once:
+        //
+        //  - at or below 0 it is a true FOLD: `DriveIgnitor` already copies its input through
+        //    unchanged there, bit for bit, so the only thing removed is a buffer pass;
+        //  - at a NON-FINITE amount it CLOSES A HOLE. `amt <= 0.0` is false for a NaN, so the gain
+        //    became `10^(NaN * 1.2)` and every sample of the voice came out NaN, with nothing
+        //    between it and the orbit mix. That is the defect class of step 1, and step 3 would
+        //    have walked straight into it: a `classic()` distort slot defaulting to `SLOT_UNSET`,
+        //    wired to this node, would have made every voice of that instrument all-NaN.
+        //
+        // `Shape` is NOT gated and cannot be: it has no amount knob, only a transfer function, so
+        // there is nothing to read an off value from. Which node `classic()`'s distort stage
+        // becomes is therefore a design question, recorded with decision D2.
+        is IgnitorDsl.Drive -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().drive(amount.noMod(), driveType)
+        }
+
         is IgnitorDsl.Shape -> inner.withMod().shape(shape, Oversampler.factorToStages(oversample))
-        is IgnitorDsl.Crush -> inner.withMod().crush(amount.noMod())
-        is IgnitorDsl.Coarse -> inner.withMod().coarse(amount.noMod())
+
+        // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
+        // levels (`2^amount < 2`, i.e. amount below 1), and `Ignitor.crush(Double)` returns the
+        // inner below 1.0, so the whole range (0, 1) is already an exact bypass at render time
+        // and gating it is the fold of a bypass, not a change.
+        is IgnitorDsl.Crush -> if (amount.gatedOff(oscParams, cache) { it < 1.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().crush(amount.noMod())
+        }
+
+        // GATE ROW `coarse`: at or below 1.0, or unset. Both paths already agree on that value
+        // (`Ignitor.coarse(Double)` returns the inner, `FilterPipelineBuilder` adds no stage).
+        // At or below 0 and at a non-finite amount the render already takes a bit-exact bypass, so
+        // there the gate folds a bypass. In (0, 1] the engaged loop takes every sample (ledger W3)
+        // but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as
+        // 0.0 and now passes through: a change, on a sample a gated-off stage's upstream has no
+        // business producing, and one every later clamping stage still guards.
+        is IgnitorDsl.Coarse -> if (amount.gatedOff(oscParams, cache) { it <= 1.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().coarse(amount.noMod())
+        }
+
+        // NOT gated: no per-voice phaser is reachable from a built-in tail today, the stage
+        // retires with `PipelineDsl`, and the wet/dry law makes its off value a second question
+        // (`dryFloor`) that no caller needs answered yet.
         is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), wet.noMod(), center.noMod(), sweep.noMod(), dryFloor.noMod())
-        is IgnitorDsl.Tremolo -> inner.withMod().tremolo(rate.noMod(), depth.noMod())
+
+        // GATE ROW `tremolo`: DEPTH at or below 0.0, or unset. The rate is not a gating knob: a
+        // tremolo at rate 0 is a static gain, not an absence.
+        is IgnitorDsl.Tremolo -> if (depth.gatedOff(oscParams, cache) { it <= 0.0 }) {
+            inner.withMod()
+        } else {
+            inner.withMod().tremolo(rate.noMod(), depth.noMod())
+        }
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, dryFloor.noMod())
     }
 
