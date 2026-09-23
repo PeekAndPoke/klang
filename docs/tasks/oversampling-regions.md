@@ -1,6 +1,7 @@
 # Oversampling regions, and one core per effect
 
-Status: **scheduled, after the KatalystDsl work stream** (maintainer, 2026-09-23). Not started.
+Status: **scheduled, once the current plan (`../plans/signal-flow-redesign.md`, phase 3 included) is
+fully complete** (maintainer, 2026-09-23). Not started.
 
 Rewritten 2026-09-23 from the future draft of 2026-07-04 (`future/pipeline-oversampling-regions.md`,
 kept in git history). That draft was written for the Pipeline DSL, which phase 3 retires, and used an
@@ -40,8 +41,10 @@ three differently factored sets of effects, is the outcome this task exists to p
   drawn on.
 - **Factor 1 builds no region.** Bit-identical and free; one more row in the off-value table
   (`builtin-instruments.md` section 5b) when it lands.
-- **Ordering.** After the KatalystDsl work stream. Phase 3 drops its oversampling sub-tasks;
-  `builtin-instruments.md` section 4 and decision D7 record what that costs and what it leaves open.
+- **Ordering.** Once the current plan is fully complete. Phase 3 drops its oversampling sub-tasks
+  except one stopgap (`builtin-instruments.md` D7, decided (a)): distort's existing `oversample` becomes
+  a knob read at voice build so `classic()` can fill it, which keeps phase 3's step 6 identity. This
+  task retires that knob with the rest of the per-effect oversampling.
 
 ## 3. Phase 0: the effects audit and the factoring (first, before any region code)
 
@@ -131,7 +134,7 @@ more than one place per effect, the factoring is not done.
   each in a region of its own, the factor read from its sprudel slot. That is bit-identical because the
   region uses the same `Oversampler` the strip renderers use. Merging a run of stages into one region is
   a sound change an AUTHOR makes; the engine never does it (section 2).
-- **Retired by this task** (one word per concept): the `oversample` parameter of the Ignitor's
+- **Retired by this task** (one word per concept): the phase 3 stopgap knob (D7), the `oversample` parameter of the Ignitor's
   `distort(amount, shape, oversample)` and `shape(shape, oversample)`, and the `IgnitorDsl.Shape.oversample`
   field. Users today: Sandsturm, DialogueWithTheStars, ATruthWorthLyingFor, and eleven sites in
   `FrozenPieces` (changing those needs the maintainer's word, phase 3 D5).
