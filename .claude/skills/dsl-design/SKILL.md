@@ -68,13 +68,29 @@ master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
 - The builder exposes ONLY that node's knobs. Base wrappers (`lowpass`, `adsr`, `mul`, ...) live on
   the base type only. Calling the wrong function inside the lambda is not an error, it is not
   offered. This is what the editor shows, so the type split IS the documentation.
-- **Anything with a default is a knob** and lives on the builder. Construction inputs stay on the
-  door: `freq` on oscillators (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), the
-  wrapper's own inputs (`phaser(rate, center, sweep)`).
-- `configure` is always the LAST parameter, always named `configure`, and optional on a DOOR
-  (no lambda = defaults). The one exception: an operation whose whole purpose is the lambda, like
-  `tuneVca(configure)` on a pipeline preset, takes it REQUIRED, because an optional lambda there
-  would make `tuneVca()` a silent no-op.
+- **Which parameter goes where** (refined 2026-09-23 by the maintainer, walking every door of the
+  Ignitor, Katalyst and Master DSLs; the per-door record is `docs/tasks/builtin-instruments.md` §3b):
+  - The effect's MUSICAL inputs stay on the door, defaulted or not: `freq` on oscillators
+    (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
+    `tremolo(rate, depth)`, `fm(modulator, ratio, depth)`. SECONDARY knobs go on the builder
+    (`passes`, `analog`, `humanize`, `floor`, `cap`), even when one is the builder's only knob.
+  - **`wet` is the very FIRST parameter** of every door that has one, in all four DSLs, sprudel
+    included: `phaser(wet, rate, center, sweep)`, `body(wet, material)`, `reverb(wet, size, lowpass)`.
+    `floor` is always on the builder.
+  - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor`, `limiter`,
+    `duck`, each identical to sprudel's.
+  - An envelope on a builder is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec)` call plus
+    `adsrCurves(attack, decay, release)`, the chain's own pattern, never four stage knobs.
+  - A door whose only defaulted knob is temporary stays flat (`shape`, `distort`: their `oversample`
+    leaves with `docs/tasks/oversampling-regions.md`).
+  - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
+    `releaseSec` and `curve`).
+  - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
+    omitted one is unset and comes from the owner voice's slot.
+- `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
+  lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
+  `eq()` with no bands is a transparent stage, not an error). The one historical exception,
+  `tuneVca(configure)` on a pipeline preset, retires with the Pipeline DSL in phase 3.
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
 - Callable objects (`Master(...)`, `Pipeline(...)`) go through the `invoke` operator

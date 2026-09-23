@@ -86,7 +86,10 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   FIRST. It retires with `PipelineDsl` and has no `classic()` spelling. Ship a second named tail
   (a second word for one concept, which the rules register argues against), rewrite the song, or let
   it change.
-- **D6, the door's shape (raised in the step 3a review).** The script door's `lowpass` is now eleven
+- **D6, the door's shape (raised in the step 3a review). DECIDED 2026-09-23: a builder wherever a door
+  carries secondary knobs, decided function by function with the maintainer, and ONE shape per concept
+  across the Ignitor, Katalyst and Master DSLs.** The per-function record is section 3b below; the text
+  that follows is the question as it was raised. The script door's `lowpass` is now eleven
   parameters, nine of them defaulted, in the same file as an `eq` door that takes a `configure`
   lambda, while `/dsl-design` section 2 says "anything with a default is a knob and lives on the
   builder". The flat shape mirrors sprudel's slot-per-knob `lpf` and the door already had four
@@ -122,6 +125,65 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
 Minor, decidable inside their step: the ADSR's Int-against-Double frame counts and its sustain clamp
 (up to 7.1e-3 on the gain, about 0.06 dB, on a fractional frame count); whether `classic()`'s
 de-click may share the name `declickSeconds` with a slot whose default differs.
+
+## 3b. The door shapes, function by function (D6, maintainer, 2026-09-23)
+
+Walked one function at a time. The rule applied: the stage's own musical inputs stay on the door (the
+phaser precedent), secondary knobs move to a builder behind `configure`, and a door whose only
+defaulted knob is temporary stays flat. A knob that nothing reads is removed, not moved.
+
+| Door | Door parameters | Builder knobs | Notes |
+|---|---|---|---|
+| `lowpass`, `highpass` | `freq, q = 0.707, configure` | `passes`, `analog`, `humanize`, `env(semitones)`, `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `adsrCurves(attack, decay, release)` | the envelope is ONE `adsr` call, the pattern of the chain's own `adsr`; `env` and `adsr` each switch the cutoff envelope on and the other fills from the constants (the compound fill, now at the end of the lambda). The third positional argument becomes the lambda, which ends the `lowpass`/`lpf` positional trap |
+| `bandpass`, `notch` | `freq, q = 0.707, configure` | as above without `passes` | |
+| `drive` | `amount` | none | `driveType` is REMOVED everywhere (door, `IgnitorDsl.Drive`, the wire, `DriveIgnitor`): it had one value and nothing read it. `drive` is boost without shaping; every colour belongs to `shape` |
+| `shape` | `shape = "soft", oversample = 0` | none | flat: `oversample` is the D7 stopgap and leaves with `oversampling-regions.md` |
+| `distort` | `amount, shape = "soft", oversample = 0` | none | flat for the same reason; matches sprudel's `distort` position for position |
+| `pitchEnvelope` | `semitones, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `adsrCurves(attack, decay, release)` | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
+| `tremolo` | `rate, depth, configure` | `shape(name)`, `skew(amount)`, `phase(cycles)` | the three knobs are 3b's additions (they exist on the strip only). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, sync, ...)` differs in order and calls the rate `sync`, recorded for the sprudel side |
+| `shimmer` | `wet, feedback = 0.5, tone = 4000, pitches, configure` | `floor` | the wet rule below; `dryFloor` becomes `floor` |
+| `fm` | `modulator, ratio, depth, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `freq(hz)` | the node always had the index envelope and `freq`; the Kotlin door exposed the envelope (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `ignitor-dsl-open-items.md` |
+| `phaser` (Ignitor AND Katalyst) | `wet, rate, center, sweep, configure` | `floor` | ONE shape on both hosts. On the Katalyst the door parameters are OPTIONAL: an omitted one is unset and comes from the owner voice's slot, as every Katalyst knob does today. On the Ignitor `rate` stays required, so writing it means writing `wet` too. The PRINCIPLE, decided here for every bus effect: the effect's musical inputs on the door; secondary knobs on the builder |
+| `vibrato` | `rate, semitones` | none | no defaults, nothing to decide |
+| `eq` (Ignitor AND Katalyst) | `configure` | `band(freq, q = 0.707, db = 0)`, `tap(freq, q = 0.707, gain = 1)` | already one shape; the lambda stays optional like every `configure` (maintainer: all configure callbacks are optional), and an `eq()` with no bands is a transparent stage |
+| `reverb` (Katalyst AND Master) | `wet, size, lowpass` | none | all optional (Katalyst: unset = the voice's slot; Master: its default). Flat because nothing is left for a builder. The songs' `m.reverb(r => r.wet(0.05).size(7))` becomes `m.reverb(0.05, 7)` (five songs and the frozen pieces) |
+| `delay` (Katalyst AND Master) | `wet, time, feedback, configure` | `cap(level)` | all door parameters optional; `cap` is secondary, like `floor`, so it sits on a builder even as its only knob. The prefix matches sprudel's `delay(wet, time, feedback, cap)`, which stays flat (sprudel has no builder layer) |
+| `gain` (Katalyst AND Master) | `gain = 1.0` | none | a single construction input, nothing to decide |
+| `compressor` (Katalyst) | `threshold, ratio, knee, attack, release` | none | FLAT, all optional, identical to sprudel's: every knob of a dynamics stage is a musical input |
+| `limiter` (Master) | `threshold, ratio, knee, attack, lookahead, release` | none | flat, as the compressor. `thresholdDb` and `kneeDb` are RENAMED `threshold` and `knee` (builder, node, wire): the compressor and sprudel already say so, and the dB unit lives in the KDoc |
+| `body` (Katalyst) | `wet, material, configure` | `floor` | the wet rule; `material` leaves the builder, where it was a second spelling of the door parameter |
+| `vowel` (Katalyst) | `wet, vowel, configure` | `floor` | as `body` |
+| `duck` (Katalyst) | `orbit, depth, attack` | none | flat and all optional, like the compressor (a dynamics stage); identical to sprudel's |
+
+Not walked, nothing to decide: `onepole`, `crush`, `coarse`, `detune`, `accelerate` (no defaults), the
+oscillators (already `(freq, configure)`). The chain's `adsr`, `adsrCurves`, `declickSeconds` and `expK`
+belong to step 3c, which reshapes them anyway.
+
+**Consequences recorded with the decisions:**
+- **The default curve of a modulation envelope (filter and pitch) is ONE decision, and it is D3's.** Every
+  pitch sweep today is linear on both surfaces and the chain's `adsr` defaults to exp; the filter
+  envelope is linear on the node and exp on the strip. With `adsrCurves` on both builders, D3 becomes
+  "which default", not "which law".
+- **The wet rule (maintainer, 2026-09-23): `wet` is the VERY FIRST parameter of every door that has
+  one, in all four DSLs, and `floor` lives on the builder.** Consistency over each door's local
+  logic. It applies to phaser, shimmer, reverb, delay, body and vowel. SPRUDEL MOVES TOO: its
+  `phaser(rate, wet, ...)`, `body(material, wet, floor)` and `vowel(vowel, wet, floor)` become
+  wet-first. Measured cost: 7 positional `body("...")` calls in built-in songs (StrangerThings, Sakura,
+  IrishLamentTechno, SoundOfTheSea) and 4 in the frozen songs, which become `body(material = "...")`,
+  bit-identical; no song calls `vowel` or `phaser` positionally. One semantic knock-on: sprudel's
+  "no argument reinterprets the pattern's values as the first parameter" now reinterprets them as
+  `wet`, so `n("<0.2 0.5>").body()` patterns the wet where it patterned the material. The Lexikon,
+  the sprudel reference and the KDoc examples that write `body("wood")` move with it.
+- **The dry floor is `floor` everywhere** (maintainer, 2026-09-23): the Ignitor's `dryFloor` on the phaser
+  and shimmer builders, their nodes and the wire is renamed; the Katalyst and sprudel already say `floor`.
+- **Identity while D3 is open.** The new `adsrCurves` knobs on the filter and pitch builders must DEFAULT to
+  the law each envelope has today (linear on both nodes), or every filter sweep and every kick in the songs
+  changes in a door-shape step. D3 then decides the default for both at once, at its own ear checkpoint.
+- **Wire changes** (the wire golden is regenerated, never hand-edited): `driveType` removed; `dryFloor`
+  becomes `floor`; the limiter's `thresholdDb`/`kneeDb` become `threshold`/`knee`; the pitch envelope loses
+  `releaseSec`, `curve` and `anchor` and gains the ADSR fields.
+- **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
+  to a sustain. Raised for the sprudel side, not decided here.
 
 ## 4. What is missing from the Ignitor DSL (the spike's map)
 
@@ -312,6 +374,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
 | 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
+| 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) the Katalyst and Master doors, the limiter renames; (iii) sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |
