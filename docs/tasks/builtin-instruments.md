@@ -39,7 +39,7 @@ section 4.
 
 ## 3. Decisions the maintainer owes before the ear-checkpoint steps
 
-The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6, 7 and 10 do.
+The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6, 7 and 10 do; D7 gates step 6.
 
 - **D1, the crush.** The strip's quantizer floors (an asymmetric quantizer with a DC bias, and its
   KDoc claims the asymmetry IS the classic audible character); the ignitor's rounds (symmetric, no
@@ -90,8 +90,9 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   parameters, nine of them defaulted, in the same file as an `eq` door that takes a `configure`
   lambda, while `/dsl-design` section 2 says "anything with a default is a knob and lives on the
   builder". The flat shape mirrors sprudel's slot-per-knob `lpf` and the door already had four
-  defaulted knobs, so this is growth rather than a new violation, but 3b and 3c add the same volume
-  to crush, coarse, distort and tremolo. Decide now or the four follow. Related, same door: the two
+  defaulted knobs, so this is growth rather than a new violation, but 3b adds the same volume to
+  distort and tremolo and 3c to the envelope (crush and coarse gain nothing since their `oversample`
+  moved to `oversampling-regions.md`, 2026-09-23). Decide now or they follow. Related, same door: the two
   surfaces disagree on the FOURTH positional argument (`lowpass(freq, q, passes, analog, env, ...)`
   against `lpf(freq, q, passes, env, attack, ...)`), so `lowpass(800, 1.2, 2, 24)` is a very dirty
   filter and `lpf(800, 1.2, 2, 24)` is two octaves of sweep. Both KDocs say to write them named;
@@ -99,6 +100,24 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
 - **D5, the frozen pieces.** `FrozenPieces` is captured verbatim and immutable except for door
   renames. Appending `.classic()` is not a rename, and without it those pieces lose their outer
   envelope. The maintainer's word is needed.
+- **D7, distort's oversampling across step 6 (raised 2026-09-23).** The maintainer moved oversampling
+  out of phase 3 into its own task (`oversampling-regions.md`: a region in lambda form, the factor read
+  once when the note starts, after the KatalystDsl work stream). For crush and coarse that is free: every
+  shipped use pins `oversample = 1`. For distort it is not. The sprudel `distort(amount, shape, N)` is
+  oversampled by the strip in Tetris (2x), TetrisRemix (2x), IrishLamentTechno (five voices, 2x and 4x)
+  and the frozen songs (2x and 4x). The Ignitor's `Shape` node has an `oversample` field, but it is a
+  plain Int, so `classic()` cannot fill it from a per-note slot. So from step 6, when the built-ins leave
+  the strip, those voices lose their oversampling: more aliasing, audible at step 6's checkpoint, and the
+  step is no longer identity. (The Ignitor-level uses in Sandsturm, DialogueWithTheStars and
+  ATruthWorthLyingFor use the field directly and are untouched by phase 3.) Three ways:
+  - **(a) Keep one small piece in phase 3**: make `Shape.oversample` a knob read at voice build (step 2's
+    `buildTimeKnobValue`), so `classic()` fills it from `distort.oversample`. Cheap, keeps step 6
+    identity, and is replaced by the region when the new task lands.
+  - **(b) Land the Ignitor half of the regions before step 6.** This changes the agreed order.
+  - **(c) Accept the change** in those songs at step 6, and restore it when regions land.
+  Recommendation: (a), because it is the smallest change that keeps step 6 provable, and it is
+  explicitly temporary. It is also exactly the kind of oversampling sub-task the maintainer asked to
+  leave out, so it is the maintainer's call.
 
 Minor, decidable inside their step: the ADSR's Int-against-Double frame counts and its sustain clamp
 (up to 7.1e-3 on the gain, about 0.06 dB, on a fractional frame count); whether `classic()`'s
@@ -110,9 +129,9 @@ de-click may share the name `declickSeconds` with a slot whose default differs.
 |---|---|---|
 | ~~The filter ENVELOPE on the four filter nodes~~ | DONE in 3a (2026-09-20) | `env` plus four stage knobs, both doors, the wire, the defaults in `audio_bridge/constants/FilterEnvelopeDefaults.kt` |
 | ~~`AnalogDrift` per filter, and the per-voice cutoff tolerance~~ | DONE in 3a | the structural `humanize` flag, because both halves are per-voice DRAWS and no knob can carry a draw; the draw order lives in `audio_be/.../ignitor/FilterHumanization.kt` |
-| `oversample` on crush and coarse | 1 knob each | Tetris, the frozen corpus |
+| ~~`oversample` on crush and coarse~~ | MOVED 2026-09-23 to `oversampling-regions.md` | no shipped song: every crush and coarse use pins `oversample = 1` |
 | `skew`, `phase`, `shape` on tremolo | 2 knobs + 1 index slot | the tremolo door |
-| `shape` and `oversample` on distort | 1 index slot + 1 knob | Tetris, the frozen corpus |
+| `shape` on distort | 1 index slot | Tetris, the frozen corpus. Its `oversample` MOVED 2026-09-23 to `oversampling-regions.md`; what that costs is D7 |
 | `adsrOn`/`adsrOff` as a gate slot, and the three curves as slots | 1 gate + 3 index slots | every `.adsrOff()` instrument |
 | A sample node kind (or a hand-built head with a `classic()` tail) | node kind | `sound("bd")` and Der Schmetterling's drums |
 
@@ -292,7 +311,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 |---|---|---|---|
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
-| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers, 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
+| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers (distort `shape`, tremolo `skew`/`phase`/`shape`; no `oversample`, see D7), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |
