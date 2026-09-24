@@ -288,9 +288,9 @@ internal class MasterChain private constructor(
 
         private fun buildLimiter(stage: MasterStageDsl.Limiter, sampleRate: Int): Compressor = Compressor(
             sampleRate = sampleRate,
-            thresholdDb = finite(stage.thresholdDb, -1.0),
+            thresholdDb = finite(stage.threshold, -1.0),
             ratio = finite(stage.ratio, 20.0),
-            kneeDb = finite(stage.kneeDb, 2.0),
+            kneeDb = finite(stage.knee, 2.0),
             attackSeconds = finite(stage.attackSeconds, 0.001),
             releaseSeconds = finite(stage.releaseSeconds, 0.1),
             // Bounded, because this is the one stage parameter that SIZES AN ARRAY: a negative

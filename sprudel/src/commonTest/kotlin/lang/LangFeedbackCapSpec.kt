@@ -21,7 +21,7 @@ import io.peekandpoke.klang.sprudel.paramBagOf
  * recirculates without loss, and this is how the author says how loud that sits. (The reverb has no
  * twin: a Freeverb comb past unity latches to DC rather than ringing, so its range is bounded
  * instead — see `Reverb.normalizeSize`.) The master bus has the same knob as
- * `Master(m => m.delay(d => d.cap()))`.
+ * `Master(m => m.delay(configure = d => d.cap(3.0)))`.
  */
 class LangFeedbackCapSpec : StringSpec({
 

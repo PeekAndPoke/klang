@@ -341,7 +341,7 @@ object KatalystChainBuilder {
  * processing, which it spends anyway while it rings.
  *
  * The second half keeps the decision of 2026-09-17 for authored constants: a declared
- * `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents nothing, because nobody
+ * `k.reverb(0.0, 6)` that no pattern touches still rents nothing, because nobody
  * asked for a room, only for a chain that has one.
  *
  * Off is expressed by handing the effect a non-finite time respectively size, so the ONE threshold

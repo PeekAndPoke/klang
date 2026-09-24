@@ -667,13 +667,13 @@ attack    = M  = the smoothing length,  M <= D + 1     // they OVERLAP, see §2.
   "strictly less than" or its `⅔ × lookahead` — both were measured on the superseded ramp design, and citing them makes
   the next person re-derive the wrong constraint.
 
-Naming: **`.lookahead(...)`, lowercase** — the siblings are `thresholdDb`, `ratio`, `kneeDb`,
+Naming: **`.lookahead(...)`, lowercase**: the siblings are `thresholdDb`, `ratio`, `kneeDb` (renamed `threshold` and `knee` 2026-09-24),
 `attack`, `release`, all lowercase single words, and "lookahead" is one word in audio like
 "sidechain".
 
 ```kotlin
-master(Master(m => m.limiter()))                                 // house defaults: 5 ms window, 5 ms smoothing
-master(Master(m => m.limiter(l => l.lookahead(0.008).attack(0.008))))  // smoother, 8 ms latency
+master(Master(m => m.limiter()))                                 // authored defaults: no lookahead, 1 ms attack
+master(Master(m => m.limiter(attack = 0.008, lookahead = 0.008)))     // smoother, 8 ms latency (flat door since 2026-09-24)
 ```
 
 ⚠️ **The documentation burden this option carries — do not skip it.** Peak performance is *invariant*

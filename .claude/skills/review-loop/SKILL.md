@@ -83,6 +83,15 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   NaN (self-unequal, so a raw compare never settles), what is STORED afterwards, and does the
   mismatch branch allocate. The rule for the code: compare and store SUBSTITUTED values, never the
   raw input. A change that touches one such stage asks the reviewer to sweep the others.
+- **A claim about what existing code DOES is verified by reading it before it is written anywhere**
+  (2026-09-19, rewritten 2026-09-24 after the third recurrence, ledger): a plan, a task doc, a brief, a
+  reviewer's remark, a fix round's KDoc, and a table written during a design walk with the maintainer
+  alike. The walk is where it keeps escaping, because a decision is being made and the code is not open:
+  write the decision, and mark any sentence about current behaviour UNVERIFIED until someone has read
+  the code, then brief the implementer to confirm or refute it before building on it. A correction of
+  such a claim is CLOSED only by a repo-wide grep for its phrasing (not a fix of the file it was found
+  in), run and its result recorded before the fix is reported: step 3d(ii) corrected two copies and
+  left a third in the rule's own home, found one round later.
 - **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
   exercising the changed path. A render that predates the last edit, or a song that never calls
   the changed door, backs nothing.

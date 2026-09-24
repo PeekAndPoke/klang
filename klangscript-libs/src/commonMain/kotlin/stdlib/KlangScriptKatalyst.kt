@@ -21,8 +21,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * ```
  * let guitarBus = Katalyst(k => k
  *   .eq(e => e.band(freq = 300, q = 0.8, db = 2.0))
- *   .reverb(r => r.wet(0.15).size(3))
- *   .compressor(c => c.threshold(-21).ratio(3))
+ *   .reverb(0.15, 3)
+ *   .compressor(threshold = -21, ratio = 3)
  * )
  * stack(guitar1, guitar2, guitar3).katalyst(guitarBus)
  * ```
@@ -50,7 +50,7 @@ object KlangScriptKatalyst {
      * empty one, is the empty chain.
      *
      * ```
-     * katalyst(Katalyst.build(k => k.reverb(r => r.wet(0.2)).gain(1.4)))
+     * katalyst(Katalyst.build(k => k.reverb(0.2).gain(1.4)))
      * ```
      *
      * @param configure receives the [KatalystBuilder] and returns it.
@@ -70,7 +70,7 @@ object KlangScriptKatalyst {
      * ```
      * katalyst(Katalyst.classic())
      * katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 160, q = 1.0, db = -3.0))))
-     * katalyst(Katalyst(k => k.classic().duck(d => d.orbit(1).depth(0.8))))
+     * katalyst(Katalyst(k => k.classic().duck(orbit = 1, depth = 0.8)))
      * ```
      *
      * Its duck names no source, so nothing ducks until one is written. The third line above is how:
@@ -97,7 +97,7 @@ object KlangScriptKatalyst {
      * plain number instead of a slot where the chain should stay fixed.
      *
      * ```
-     * let bus = Katalyst(k => k.reverb(r => r.wet(0.5).size(Katalyst.param("room", 5.0))))
+     * let bus = Katalyst(k => k.reverb(0.5, Katalyst.param("room", 5.0)))
      * note("c3 e3 g3").s("supersaw").katalyst(bus).katp("room", "<2 9>")
      * ```
      *
@@ -121,7 +121,7 @@ object KlangScriptKatalyst {
      * `Katalyst(k => ...)`: the callable form of [build]. `Katalyst()` is the empty chain.
      *
      * ```
-     * katalyst(Katalyst(k => k.reverb(r => r.wet(0.2).size(4)).compressor(c => c.threshold(-18))))
+     * katalyst(Katalyst(k => k.reverb(0.2, 4).compressor(threshold = -18)))
      * ```
      */
     @KlangScript.Invoke

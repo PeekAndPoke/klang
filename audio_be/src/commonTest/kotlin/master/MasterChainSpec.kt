@@ -5,9 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.master
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 
@@ -155,6 +157,32 @@ class MasterChainSpec : StringSpec({
         // The parameter-parity rule is only worth something if the value actually arrives. Before
         // this, `limiters` was private and this hop could not be checked at all.
         build(MasterStageDsl.Limiter(lookaheadSeconds = 0.004)).limiters[0].lookaheadSeconds shouldBe 0.004
+    }
+
+    "every limiter field reaches its own Compressor setting, the renamed threshold and knee included" {
+        // Phase 3 step 3d(ii) renamed the node's `thresholdDb` / `kneeDb` to `threshold` / `knee`,
+        // and this hop is where a rename can cross two wires silently: both are dB values of the
+        // same stage. Each field is written ALONE with a value unlike every default and every
+        // sibling, so a reader that swaps two fields, or drops one to its fallback, goes red on
+        // that field's name.
+        listOf<Triple<String, MasterStageDsl.Limiter, (Compressor) -> Double>>(
+            Triple("threshold", MasterStageDsl.Limiter(threshold = -7.5), { it.thresholdDb }),
+            Triple("knee", MasterStageDsl.Limiter(knee = 3.25), { it.kneeDb }),
+            Triple("ratio", MasterStageDsl.Limiter(ratio = 6.5), { it.ratio }),
+            Triple("attack", MasterStageDsl.Limiter(attackSeconds = 0.0125), { it.attackSeconds }),
+            Triple("release", MasterStageDsl.Limiter(releaseSeconds = 0.375), { it.releaseSeconds }),
+        ).forEach { (field, stage, read) ->
+            val written = when (field) {
+                "threshold" -> stage.threshold
+                "knee" -> stage.knee
+                "ratio" -> stage.ratio
+                "attack" -> stage.attackSeconds
+                "release" -> stage.releaseSeconds
+                else -> error("no such limiter field: $field")
+            }
+
+            withClue(field) { read(build(stage).limiters[0]) shouldBe written }
+        }
     }
 
     "an authored limiter defaults to NO lookahead — the cross-playback desync guard" {

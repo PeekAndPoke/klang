@@ -41,7 +41,7 @@ object KlangScriptMaster {
      * (`gain`, `limiter`, `reverb`, `delay`). No lambda, or an empty one, is the unity chain.
      *
      * ```
-     * master(Master.build(m => m.reverb(r => r.wet(0.05)).gain(2.5)))
+     * master(Master.build(m => m.reverb(0.05).gain(2.5)))
      * ```
      *
      * @param configure receives the [MasterBuilder] and returns it.
@@ -70,7 +70,7 @@ object KlangScriptMaster {
      * `Master(m => ...)`: the callable form of [build]. `Master()` is [default].
      *
      * ```
-     * master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter(l => l.thresholdDb(-3))))
+     * master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter(threshold = -3)))
      * ```
      */
     @KlangScript.Invoke

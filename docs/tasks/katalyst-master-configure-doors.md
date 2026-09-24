@@ -12,7 +12,7 @@ Today a chain is built and handed over in two words:
 
 ```
 .katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 0.8, db = 2.0))))
-.master(Master(m => m.reverb(r => r.wet(0.2).size(7))))
+.master(Master(m => m.reverb(0.2, 7)))
 ```
 
 After this task both spellings work, on every form of the two doors:
@@ -20,7 +20,7 @@ After this task both spellings work, on every form of the two doors:
 ```
 .katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 0.8, db = 2.0)))
 .katalyst(Katalyst(k => k.classic()))          // unchanged
-.master(m => m.reverb(r => r.wet(0.2).size(7)))
+.master(m => m.reverb(0.2, 7))
 .master(Master.default())                      // unchanged
 ```
 

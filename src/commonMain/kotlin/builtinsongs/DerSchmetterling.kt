@@ -441,7 +441,7 @@ export song = stack(
   song_body.apply(song_arrange)
   , // Master
   master(Master(m =>
-    m.reverb(r => r.wet(0.2).size(7).lowpass(3500)).gain(3.3)
+    m.reverb(0.2, 7, 3500).gain(3.3)
   ))
 )
 

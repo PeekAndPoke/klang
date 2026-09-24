@@ -66,7 +66,8 @@
   door parameter, `.phaser(wet, rate, ..., x => x.floor())`, and the builders carry `floor` only)
   (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
   Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
-  .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
+  .limiter(l => ...))` (superseded by phase 3 step 3d(ii), 2026-09-24: `m.reverb(0.05, 9).gain(2.5)
+  .limiter(threshold = -3)`, reverb and limiter flat, delay keeps `configure` for `cap`) via the `invoke` operator, aliases `Master.build`/`Master.default`;
   `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
   float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
 

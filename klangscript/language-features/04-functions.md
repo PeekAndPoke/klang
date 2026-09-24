@@ -189,7 +189,7 @@ to the `invoke` callable (return type, typed lambda parameter, hover signature r
 `Master(...)`), and `invoke` never appears as a member completion.
 
 ```javascript
-master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5)))   // == Master.build(m => ...)
+master(Master(m => m.reverb(0.05).gain(2.5)))               // == Master.build(m => ...)
 master(Master())                                            // == Master.default()
 ```
 

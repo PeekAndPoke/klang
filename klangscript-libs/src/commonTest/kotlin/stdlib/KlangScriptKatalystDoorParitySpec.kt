@@ -6,9 +6,11 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -19,15 +21,182 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
+/** One door parameter: its name, a value unlike the bare stage's own, and that value as script. */
+private data class DoorParam(val name: String, val value: Double) {
+    val literal: String get() = value.toString()
+}
+
+/**
+ * One Katalyst stage door. [set] writes one field of the stage by its door-parameter name, so
+ * [expect] can build the stage a call SHOULD produce from the bare data class and nothing else,
+ * never from the door under test; [kotlin] calls the Kotlin door with only the parameters in its
+ * map (a missing key is an omitted parameter, which on these doors is `null`).
+ */
+private class StageDoor(
+    val stage: String,
+    val bare: KatalystStageDsl,
+    val params: List<DoorParam>,
+    val set: (KatalystStageDsl, String, IgnitorDsl) -> KatalystStageDsl,
+    val kotlin: (KatalystBuilder, Map<String, Any?>) -> KatalystBuilder,
+) {
+    fun expect(written: List<DoorParam>): KatalystStageDsl =
+        written.fold(bare) { stage, p -> set(stage, p.name, IgnitorDsl.Constant(p.value)) }
+}
+
+private fun unknown(stage: String, name: String): Nothing = error("$stage has no door parameter '$name'")
+
+/** The whole family of Katalyst stage doors with parameters: every row loops over this list. */
+private val doors: List<StageDoor> = listOf(
+    StageDoor(
+        stage = "body",
+        bare = KatalystStageDsl.Body(),
+        params = listOf(DoorParam("wet", 0.7), DoorParam("material", 3.0)),
+        set = { s, n, v ->
+            val b = s as KatalystStageDsl.Body
+            when (n) {
+                "wet" -> b.copy(wet = v)
+                "material" -> b.copy(material = v)
+                else -> unknown("body", n)
+            }
+        },
+        kotlin = { k, a -> k.body(wet = a["wet"], material = a["material"]) },
+    ),
+    StageDoor(
+        stage = "vowel",
+        bare = KatalystStageDsl.Vowel(),
+        params = listOf(DoorParam("wet", 0.6), DoorParam("vowel", 4.0)),
+        set = { s, n, v ->
+            val b = s as KatalystStageDsl.Vowel
+            when (n) {
+                "wet" -> b.copy(wet = v)
+                "vowel" -> b.copy(vowel = v)
+                else -> unknown("vowel", n)
+            }
+        },
+        kotlin = { k, a -> k.vowel(wet = a["wet"], vowel = a["vowel"]) },
+    ),
+    StageDoor(
+        stage = "delay",
+        bare = KatalystStageDsl.Delay(),
+        params = listOf(DoorParam("wet", 0.2), DoorParam("time", 0.5), DoorParam("feedback", 0.9)),
+        set = { s, n, v ->
+            val d = s as KatalystStageDsl.Delay
+            when (n) {
+                "wet" -> d.copy(wet = v)
+                "time" -> d.copy(time = v)
+                "feedback" -> d.copy(feedback = v)
+                else -> unknown("delay", n)
+            }
+        },
+        kotlin = { k, a -> k.delay(wet = a["wet"], time = a["time"], feedback = a["feedback"]) },
+    ),
+    StageDoor(
+        stage = "reverb",
+        bare = KatalystStageDsl.Reverb(),
+        params = listOf(DoorParam("wet", 0.3), DoorParam("size", 8.0), DoorParam("lowpass", 6000.0)),
+        set = { s, n, v ->
+            val r = s as KatalystStageDsl.Reverb
+            when (n) {
+                "wet" -> r.copy(wet = v)
+                "size" -> r.copy(size = v)
+                "lowpass" -> r.copy(lowpass = v)
+                else -> unknown("reverb", n)
+            }
+        },
+        kotlin = { k, a -> k.reverb(wet = a["wet"], size = a["size"], lowpass = a["lowpass"]) },
+    ),
+    StageDoor(
+        stage = "phaser",
+        bare = KatalystStageDsl.Phaser(),
+        params = listOf(
+            DoorParam("wet", 0.5), DoorParam("rate", 0.3), DoorParam("center", 800.0), DoorParam("sweep", 1200.0),
+        ),
+        set = { s, n, v ->
+            val p = s as KatalystStageDsl.Phaser
+            when (n) {
+                "wet" -> p.copy(wet = v)
+                "rate" -> p.copy(rate = v)
+                "center" -> p.copy(center = v)
+                "sweep" -> p.copy(sweep = v)
+                else -> unknown("phaser", n)
+            }
+        },
+        kotlin = { k, a -> k.phaser(wet = a["wet"], rate = a["rate"], center = a["center"], sweep = a["sweep"]) },
+    ),
+    StageDoor(
+        stage = "compressor",
+        bare = KatalystStageDsl.Compressor(),
+        params = listOf(
+            DoorParam("threshold", -21.0), DoorParam("ratio", 3.0), DoorParam("knee", 5.0),
+            DoorParam("attack", 0.005), DoorParam("release", 0.12),
+        ),
+        set = { s, n, v ->
+            val c = s as KatalystStageDsl.Compressor
+            when (n) {
+                "threshold" -> c.copy(threshold = v)
+                "ratio" -> c.copy(ratio = v)
+                "knee" -> c.copy(knee = v)
+                "attack" -> c.copy(attack = v)
+                "release" -> c.copy(release = v)
+                else -> unknown("compressor", n)
+            }
+        },
+        kotlin = { k, a ->
+            k.compressor(
+                threshold = a["threshold"], ratio = a["ratio"], knee = a["knee"],
+                attack = a["attack"], release = a["release"],
+            )
+        },
+    ),
+    StageDoor(
+        stage = "duck",
+        bare = KatalystStageDsl.Duck(),
+        params = listOf(DoorParam("orbit", 2.0), DoorParam("depth", 0.8), DoorParam("attack", 0.05)),
+        set = { s, n, v ->
+            val d = s as KatalystStageDsl.Duck
+            when (n) {
+                "orbit" -> d.copy(orbit = v)
+                "depth" -> d.copy(depth = v)
+                "attack" -> d.copy(attack = v)
+                else -> unknown("duck", n)
+            }
+        },
+        kotlin = { k, a -> k.duck(orbit = a["orbit"], depth = a["depth"], attack = a["attack"]) },
+    ),
+)
+
+/** A name knob (an index slot): the door, its parameter, a known name, and its catalogue. */
+private class NameKnob(
+    val stage: String,
+    val param: String,
+    val name: String,
+    val indexOf: (String) -> Double,
+    val stageWith: (IgnitorDsl) -> KatalystStageDsl,
+    val kotlin: (KatalystBuilder, Any) -> KatalystBuilder,
+)
+
+private val nameKnobs: List<NameKnob> = listOf(
+    NameKnob(
+        stage = "body", param = "material", name = "glass", indexOf = BodyMaterials::indexOf,
+        stageWith = { KatalystStageDsl.Body(material = it) },
+        kotlin = { k, v -> k.body(material = v) },
+    ),
+    NameKnob(
+        stage = "vowel", param = "vowel", name = "bass:a", indexOf = VowelBands::indexOf,
+        stageWith = { KatalystStageDsl.Vowel(vowel = it) },
+        kotlin = { k, v -> k.vowel(vowel = v) },
+    ),
+)
+
 /**
  * Dual-surface rule: every stage and every knob of an orbit chain must be reachable from
  * KlangScript AND from Kotlin, with the same name meaning the same thing. This spec compares the
  * two doors stage for stage and knob for knob.
  *
- * It compares against the STAGE DATA CLASSES rather than against the Kotlin builder calling the
- * same lambda, so a knob wired to the wrong field (`sweep` writing `center`) cannot look identical
- * on both sides. The one case that does go through the Kotlin builder is the last, which pins that
- * the two builders are the same object with two front doors.
+ * Both doors are compared against the STAGE DATA CLASSES written out by hand (never against each
+ * other alone), so a knob wired to the wrong field (`sweep` writing `center`) cannot look identical
+ * on both sides. The Kotlin door is the same builder function the script door registers, called
+ * from Kotlin; the door-shape rows call it for every stage of the family.
  */
 class KlangScriptKatalystDoorParitySpec : StringSpec({
 
@@ -44,7 +213,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     "Katalyst() is the empty chain, and Katalyst(k => ...) == Katalyst.build(k => ...)" {
         ks("Katalyst()") shouldBe KatalystDsl(emptyList())
 
-        val code = "k => k.reverb(r => r.wet(0.2)).gain(1.4)"
+        val code = "k => k.reverb(0.2).gain(1.4)"
         ks("Katalyst($code)") shouldBe ks("Katalyst.build($code)")
     }
 
@@ -103,7 +272,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     "an EXPLICIT stage written twice still stacks: that is an author asking for two" {
         // The other half of the idempotency rule, and the reason it is scoped to `classic()`: two
         // rooms in series is a legitimate mix, and nothing here may collapse it.
-        ks("Katalyst(k => k.reverb(r => r.size(2)).reverb(r => r.size(8)))") shouldBe KatalystDsl.of(
+        ks("Katalyst(k => k.reverb(size = 2).reverb(size = 8))") shouldBe KatalystDsl.of(
             KatalystStageDsl.Reverb(size = c(2.0)),
             KatalystStageDsl.Reverb(size = c(8.0)),
         )
@@ -111,119 +280,15 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         ks("Katalyst(k => k.gain(2).gain(3))").stages.size shouldBe 2
     }
 
-    "the material and the vowel are index knobs, reachable by NAME and by SLOT on both doors" {
-        // The name is the readable door and the slot is what a moving knob needs (Katalyst step
-        // 5a-2): both write the same field, and the name goes through the one shared `indexOf`.
-        ks("""Katalyst(k => k.body("glass"))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Body(material = c(BodyMaterials.indexOf("glass"))))
-
-        ks("""Katalyst(k => k.body(b => b.material(Katalyst.param("mat", 3))))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Body(material = IgnitorDsl.Param("mat", 3.0)))
-
-        ks("""Katalyst(k => k.vowel("bass:a"))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Vowel(vowel = c(VowelBands.indexOf("bass:a"))))
-
-        ks("""Katalyst(k => k.vowel(v => v.vowel(Katalyst.param("vw", 1))))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Vowel(vowel = IgnitorDsl.Param("vw", 1.0)))
-
-        // The knob takes a plain number as readily as a slot, like every other knob.
-        ks("""Katalyst(k => k.body(b => b.material(2)))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Body(material = c(2.0)))
-
-        // The Kotlin door, same builder, same answers.
-        KlangScriptKatalyst.build { it.body("glass") } shouldBe ks("""Katalyst(k => k.body("glass"))""")
-        KlangScriptKatalyst.build { it.vowel("bass:a") } shouldBe ks("""Katalyst(k => k.vowel("bass:a"))""")
-        KlangScriptKatalyst.build { k -> k.body { b -> b.material(2.0) } } shouldBe
-                ks("""Katalyst(k => k.body(b => b.material(2)))""")
-    }
-
-    "a name the catalogue does not know is index 0, which is the stage off, and never a throw" {
-        ks("""Katalyst(k => k.body("unobtainium"))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Body(material = c(0.0)))
-
-        ks("""Katalyst(k => k.vowel("zzz"))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Vowel(vowel = c(0.0)))
-
-        // And `none` is the same index, spelled by an author who means it.
-        ks("""Katalyst(k => k.body("none"))""") shouldBe ks("""Katalyst(k => k.body("unobtainium"))""")
-    }
-
     "stages append in written order, script == Kotlin data classes" {
-        ks("Katalyst(k => k.reverb(r => r.wet(0.05).size(9)).gain(2.5).compressor())") shouldBe KatalystDsl.of(
+        ks("Katalyst(k => k.reverb(0.05, 9).gain(2.5).compressor())") shouldBe KatalystDsl.of(
             KatalystStageDsl.Reverb(wet = c(0.05), size = c(9.0)),
             KatalystStageDsl.Gain(gain = c(2.5)),
             KatalystStageDsl.Compressor(),
         )
     }
 
-    "every knob of every stage reaches its own field" {
-        listOf(
-            "body" to (
-                    """Katalyst(k => k.body("wood", b => b.wet(0.7).floor(0.3)))""" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Body(
-                                    material = c(BodyMaterials.indexOf("wood")), wet = c(0.7), floor = c(0.3),
-                                )
-                            )
-                    ),
-            "vowel" to (
-                    """Katalyst(k => k.vowel("soprano:a", v => v.wet(0.6).floor(0.1)))""" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Vowel(
-                                    vowel = c(VowelBands.indexOf("soprano:a")), wet = c(0.6), floor = c(0.1),
-                                )
-                            )
-                    ),
-            "delay" to (
-                    "Katalyst(k => k.delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0)))" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Delay(wet = c(0.2), time = c(0.5), feedback = c(1.0), cap = c(3.0))
-                            )
-                    ),
-            "reverb" to (
-                    "Katalyst(k => k.reverb(r => r.wet(0.3).size(8).lowpass(6000)))" to
-                            KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.3), size = c(8.0), lowpass = c(6000.0)))
-                    ),
-            "phaser" to (
-                    "Katalyst(k => k.phaser(p => p.rate(0.3).wet(0.5).center(800).sweep(1200).floor(0.2)))" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Phaser(
-                                    rate = c(0.3), wet = c(0.5), center = c(800.0), sweep = c(1200.0), floor = c(0.2),
-                                )
-                            )
-                    ),
-            "compressor" to (
-                    "Katalyst(k => k.compressor(c => c.threshold(-21).ratio(3).knee(6).attack(0.005).release(0.12)))" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Compressor(
-                                    threshold = c(-21.0), ratio = c(3.0), knee = c(6.0),
-                                    attack = c(0.005), release = c(0.12),
-                                )
-                            )
-                    ),
-            "duck" to (
-                    "Katalyst(k => k.duck(d => d.orbit(2).depth(0.8).attack(0.05)))" to
-                            KatalystDsl.of(KatalystStageDsl.Duck(orbit = c(2.0), depth = c(0.8), attack = c(0.05)))
-                    ),
-            "eq" to (
-                    "Katalyst(k => k.eq(e => e.band(freq = 300, q = 0.8, db = 2.0).tap(850, 0.707, 1.7)))" to
-                            KatalystDsl.of(
-                                KatalystStageDsl.Eq(
-                                    sections = listOf(
-                                        IgnitorDsl.EqSection.Bell(freq = c(300.0), q = c(0.8), db = c(2.0)),
-                                        IgnitorDsl.EqSection.RawTap(freq = c(850.0), q = c(0.707), gain = c(1.7)),
-                                    )
-                                )
-                            )
-                    ),
-            "gain" to ("Katalyst(k => k.gain(1.45))" to KatalystDsl.of(KatalystStageDsl.Gain(gain = c(1.45)))),
-        ).forEach { (stage, case) ->
-            val (script, kotlin) = case
-            withClue(stage) { ks(script) shouldBe kotlin }
-        }
-    }
-
-    "a bare stage from the script door is the bare data class: same defaults on both surfaces" {
+    "a bare stage from the script door is the bare data class, the eq and the gain included" {
         ks("Katalyst(k => k.body().vowel().delay().reverb().phaser().compressor().duck().eq().gain())") shouldBe
                 KatalystDsl.of(
                     KatalystStageDsl.Body(),
@@ -238,18 +303,169 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 )
     }
 
-    "a knob takes an Osc.param slot as readily as a number, on both doors" {
-        ks("""Katalyst(k => k.reverb(r => r.wet(Osc.param("room", 0.2))))""") shouldBe
+    "the eq and the gain keep their shapes" {
+        ks("Katalyst(k => k.eq(e => e.band(freq = 300, q = 0.8, db = 2.0).tap(850, 0.707, 1.7)).gain(1.45))") shouldBe
+                KatalystDsl.of(
+                    KatalystStageDsl.Eq(
+                        sections = listOf(
+                            IgnitorDsl.EqSection.Bell(freq = c(300.0), q = c(0.8), db = c(2.0)),
+                            IgnitorDsl.EqSection.RawTap(freq = c(850.0), q = c(0.707), gain = c(1.7)),
+                        )
+                    ),
+                    KatalystStageDsl.Gain(gain = c(1.45)),
+                )
+    }
+
+    // ── The door shapes (phase 3 step 3d(ii), `docs/tasks/builtin-instruments.md` section 3b) ──
+    //
+    // Every row below LOOPS over [doors], the whole family, and compares THREE forms: the script
+    // door, the Kotlin door (the same builder function called from Kotlin) and the stage data class
+    // written out by hand. A door that stops handling one parameter goes red on that stage's name.
+
+    "every door parameter reaches its own field, positionally, on both doors" {
+        doors.forEach { door ->
+            val args = door.params.joinToString(", ") { it.literal }
+            val expected = door.expect(door.params)
+
+            withClue("${door.stage}: script, positional") {
+                ks("Katalyst(k => k.${door.stage}($args))") shouldBe KatalystDsl.of(expected)
+            }
+            withClue("${door.stage}: Kotlin") {
+                KlangScriptKatalyst.build { door.kotlin(it, door.params.associate { p -> p.name to p.value }) } shouldBe
+                        KatalystDsl.of(expected)
+            }
+        }
+    }
+
+    "an omitted door parameter is exactly what the bare stage carries, on both doors" {
+        // The identity rule of step 3d(ii): leaving a parameter out must mean what leaving the
+        // builder knob out meant before, which is the bare data class's own value (a touched
+        // constant, or the "never set" marker on a name knob). Each parameter is left out ONCE,
+        // with every other one written, so a door that invents its own default for any single
+        // parameter goes red on that parameter's name.
+        doors.forEach { door ->
+            door.params.forEach { omitted ->
+                val written = door.params - omitted
+                val args = written.joinToString(", ") { "${it.name} = ${it.literal}" }
+                val expected = door.expect(written)
+
+                withClue("${door.stage} without ${omitted.name}: script") {
+                    ks("Katalyst(k => k.${door.stage}($args))") shouldBe KatalystDsl.of(expected)
+                }
+                withClue("${door.stage} without ${omitted.name}: Kotlin") {
+                    KlangScriptKatalyst.build { door.kotlin(it, written.associate { p -> p.name to p.value }) } shouldBe
+                            KatalystDsl.of(expected)
+                }
+            }
+
+            withClue("${door.stage}: nothing written is the bare stage") {
+                ks("Katalyst(k => k.${door.stage}())") shouldBe KatalystDsl.of(door.bare)
+                KlangScriptKatalyst.build { door.kotlin(it, emptyMap()) } shouldBe KatalystDsl.of(door.bare)
+            }
+        }
+    }
+
+    "a Katalyst.param slot is accepted on every door parameter, on both doors" {
+        doors.forEach { door ->
+            door.params.forEach { param ->
+                val slot = IgnitorDsl.Param("s", param.value)
+                val expected = door.set(door.bare, param.name, slot)
+
+                withClue("${door.stage}(${param.name} = Katalyst.param(...)): script") {
+                    ks("""Katalyst(k => k.${door.stage}(${param.name} = Katalyst.param("s", ${param.literal})))""") shouldBe
+                            KatalystDsl.of(expected)
+                }
+                withClue("${door.stage}(${param.name} = Katalyst.param(...)): Kotlin") {
+                    KlangScriptKatalyst.build {
+                        door.kotlin(it, mapOf(param.name to KlangScriptKatalyst.param("s", param.value)))
+                    } shouldBe KatalystDsl.of(expected)
+                }
+            }
+        }
+    }
+
+    "the builder knobs reach their own field, and only the builder carries them" {
+        listOf(
+            "Katalyst(k => k.body(configure = b => b.floor(0.3)))" to KatalystStageDsl.Body(floor = c(0.3)),
+            "Katalyst(k => k.vowel(configure = v => v.floor(0.1)))" to KatalystStageDsl.Vowel(floor = c(0.1)),
+            "Katalyst(k => k.delay(configure = d => d.cap(3.0)))" to KatalystStageDsl.Delay(cap = c(3.0)),
+            "Katalyst(k => k.phaser(configure = p => p.floor(0.2)))" to KatalystStageDsl.Phaser(floor = c(0.2)),
+            // A trailing lambda floats past the unset door parameters to `configure`.
+            "Katalyst(k => k.phaser(0.5, p => p.floor(0.2)))" to KatalystStageDsl.Phaser(wet = c(0.5), floor = c(0.2)),
+        ).forEach { (script, stage) ->
+            withClue(script) { ks(script) shouldBe KatalystDsl.of(stage) }
+        }
+
+        KlangScriptKatalyst.build { it.delay(0.2, configure = { d -> d.cap(3.0) }) } shouldBe
+                KatalystDsl.of(KatalystStageDsl.Delay(wet = c(0.2), cap = c(3.0)))
+    }
+
+    "the name knobs take a NAME through the catalogue, a bare number, or a slot, on both doors" {
+        // Katalyst step 5a-2 (maintainer, 2026-09-18): the names are INDEX slots. The knob moved
+        // from the builder to the door in 3d(ii), and its reach did not shrink: a name still
+        // resolves through the one shared `indexOf`, and a number or a `Katalyst.param` is the
+        // index itself, which is what lets a chain move its material with `katp`.
+        nameKnobs.forEach { knob ->
+            withClue("${knob.stage}: a name") {
+                ks("""Katalyst(k => k.${knob.stage}(${knob.param} = "${knob.name}"))""") shouldBe
+                        KatalystDsl.of(knob.stageWith(c(knob.indexOf(knob.name))))
+                KlangScriptKatalyst.build { knob.kotlin(it, knob.name) } shouldBe
+                        KatalystDsl.of(knob.stageWith(c(knob.indexOf(knob.name))))
+            }
+            withClue("${knob.stage}: a bare number") {
+                ks("""Katalyst(k => k.${knob.stage}(${knob.param} = 2))""") shouldBe KatalystDsl.of(knob.stageWith(c(2.0)))
+                KlangScriptKatalyst.build { knob.kotlin(it, 2.0) } shouldBe KatalystDsl.of(knob.stageWith(c(2.0)))
+            }
+            withClue("${knob.stage}: a slot") {
+                ks("""Katalyst(k => k.${knob.stage}(${knob.param} = Katalyst.param("idx", 3)))""") shouldBe
+                        KatalystDsl.of(knob.stageWith(IgnitorDsl.Param("idx", 3.0)))
+                KlangScriptKatalyst.build { knob.kotlin(it, KlangScriptKatalyst.param("idx", 3.0)) } shouldBe
+                        KatalystDsl.of(knob.stageWith(IgnitorDsl.Param("idx", 3.0)))
+            }
+            withClue("${knob.stage}: an unknown name is index 0, the stage off, never a throw") {
+                ks("""Katalyst(k => k.${knob.stage}(${knob.param} = "unobtainium"))""") shouldBe
+                        KatalystDsl.of(knob.stageWith(c(0.0)))
+            }
+        }
+
+        // And `none` is the same index, spelled by an author who means it.
+        ks("""Katalyst(k => k.body(material = "none"))""") shouldBe ks("""Katalyst(k => k.body(material = "unobtainium"))""")
+    }
+
+    "the retired forms fail loudly instead of meaning something else" {
+        // Nothing here may be silently reinterpreted. A positional NAME now lands on `wet`, which
+        // takes a number or a sound, so it is a type error; an old stage lambda either lands on a
+        // flat door's first parameter (a type error) or floats to `configure`, where the knob it
+        // calls no longer exists.
+        val notANumber = "expected a sound or a number"
+        listOf(
+            """Katalyst(k => k.body("wood"))""" to notANumber,
+            """Katalyst(k => k.vowel("a"))""" to notANumber,
+            "Katalyst(k => k.body(b => b.material(2)))" to "has no method 'material'",
+            "Katalyst(k => k.vowel(v => v.vowel(2)))" to "has no method 'vowel'",
+            "Katalyst(k => k.body(b => b.wet(0.3)))" to "has no method 'wet'",
+            "Katalyst(k => k.delay(d => d.wet(0.2)))" to "has no method 'wet'",
+            "Katalyst(k => k.phaser(p => p.rate(0.3)))" to "has no method 'rate'",
+            "Katalyst(k => k.reverb(r => r.wet(0.2)))" to notANumber,
+            "Katalyst(k => k.compressor(c => c.ratio(3)))" to notANumber,
+            "Katalyst(k => k.duck(d => d.orbit(1)))" to notANumber,
+        ).forEach { (script, reason) ->
+            withClue(script) { shouldThrowAny { ks(script) }.message shouldContain reason }
+        }
+    }
+
+    "a knob takes an Osc.param slot as readily as a number" {
+        ks("""Katalyst(k => k.reverb(wet = Osc.param("room", 0.2)))""") shouldBe
                 KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Param("room", 0.2)))
     }
 
     "Katalyst.param is the chain's own slot door, on both doors, with the description" {
-        ks("""Katalyst(k => k.reverb(r => r.size(Katalyst.param("room", 5.0))))""") shouldBe
+        ks("""Katalyst(k => k.reverb(size = Katalyst.param("room", 5.0)))""") shouldBe
                 KatalystDsl.of(KatalystStageDsl.Reverb(size = IgnitorDsl.Param("room", 5.0)))
 
-        ks("""Katalyst(k => k.reverb(r => r.size(Katalyst.param("room", 5.0, "the tail"))))""") shouldBe
+        ks("""Katalyst(k => k.reverb(size = Katalyst.param("room", 5.0, "the tail")))""") shouldBe
                 KlangScriptKatalyst.build {
-                    it.reverb { r -> r.size(KlangScriptKatalyst.param("room", 5.0, "the tail")) }
+                    it.reverb(size = KlangScriptKatalyst.param("room", 5.0, "the tail"))
                 }
 
         // Same node type as `Osc.param`, and that is the point: one slot vocabulary, two
@@ -258,8 +474,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "the Kotlin door takes the same lambda" {
-        ks("Katalyst(k => k.reverb(r => r.wet(0.2)).gain(1.4))") shouldBe
-                KlangScriptKatalyst.build { it.reverb { r -> r.wet(0.2) }.gain(1.4) }
+        ks("Katalyst(k => k.reverb(0.2).gain(1.4))") shouldBe
+                KlangScriptKatalyst.build { it.reverb(0.2).gain(1.4) }
     }
 
     "Katalyst is still a value: stored, then called" {
@@ -273,8 +489,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
     }
 
     "a stage lambda that returns nothing names its stage" {
-        val err = shouldThrow<KlangScriptTypeError> { ks("Katalyst(k => k.reverb(r => { r.wet(0.2) }))") }
+        val err = shouldThrow<KlangScriptTypeError> { ks("Katalyst(k => k.delay(configure = d => { d.cap(2) }))") }
         err.message shouldBe
-                "the configure lambda of Katalyst reverb returned nothing; return the builder it received (`x => x.analog(3)`)"
+                "the configure lambda of Katalyst delay returned nothing; return the builder it received (`x => x.analog(3)`)"
     }
 })

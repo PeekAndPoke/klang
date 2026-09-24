@@ -49,9 +49,9 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  *
  * The cylinder reads a declared chain and runs it (Katalyst step 2 onward), swapping it in with a
  * crossfade when the orbit is already sounding; an orbit that declares nothing keeps the historical
- * chain, [classic]. Every chain takes its knobs from the orbit's param state, the born-with one
- * included (step 5b-1), so a declaration changes which STAGES an orbit has and not where their
- * values come from.
+ * chain, [classic]. Every chain's SLOTS (its `Param` knobs) read the orbit's param state, the
+ * born-with one included (step 5b-1), so a declaration changes which STAGES an orbit has and not
+ * where a slot's value comes from; a knob declared as a fixed value stays that value.
  */
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
@@ -258,8 +258,8 @@ sealed interface KatalystStageDsl {
      *
      * @param material the material's index in `BodyMaterials.names`, the number
      *   `BodyMaterials.indexOf("wood")` gives. The default is [SLOT_UNSET]: the chain names no
-     *   material and the stage is off. Write a name on either builder door (`k.body("wood")`) and
-     *   it is converted for you. Orbit twin: `body("wood")`.
+     *   material and the stage is off. Write a name on either builder door
+     *   (`k.body(material = "wood")`) and it is converted for you. Orbit twin: `body("wood")`.
      * @param wet how much of the orbit runs through the body, 0 to 1. Orbit twin: `body(wet = ...)`.
      * @param floor minimum dry share kept in the mix, 0 to 1. Lower = the modes sit over less dry
      *   and the body is more audible. Orbit twin: `body(floor = ...)`.
@@ -280,8 +280,8 @@ sealed interface KatalystStageDsl {
      *
      * @param vowel the vowel's index in `VowelBands.names`, the number `VowelBands.indexOf("a")`
      *   gives (a bare name is the soprano register). The default is [SLOT_UNSET]: the chain names
-     *   no vowel and the stage is off. Write a name on either builder door (`k.vowel("bass:a")`)
-     *   and it is converted for you. Orbit twin: `vowel("a")`.
+     *   no vowel and the stage is off. Write a name on either builder door
+     *   (`k.vowel(vowel = "bass:a")`) and it is converted for you. Orbit twin: `vowel("a")`.
      * @param wet how much of the orbit runs through the formant bank, 0 to 1. Orbit twin:
      *   `vowel(wet = ...)`.
      * @param floor minimum dry share kept between the formants, 0 to 1. Much lower than the body's:
@@ -360,8 +360,8 @@ sealed interface KatalystStageDsl {
      * Orbit compressor: the group dynamics, after the EQ so the detector sees the corrected
      * spectrum and a low cut turns into headroom.
      *
-     * The knobs follow sprudel (`threshold`, `knee`, `attack`), not the master limiter's
-     * `thresholdDb` / `kneeDb`; the master limiter is the recorded odd one out.
+     * The knobs follow sprudel (`threshold`, `knee`, `attack`), and so does the master limiter
+     * since phase 3 step 3d (2026-09-24), which renamed its `thresholdDb` / `kneeDb`.
      *
      * @param threshold ceiling in dBFS where gain reduction starts. Orbit twin:
      *   `compressor(threshold = ...)`.

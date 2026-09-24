@@ -124,12 +124,12 @@ same door shape as `Master(m => ...)`:
 ```
 let guitarBus = Katalyst(k => k
   .eq(e => e.band(freq = 300, q = 0.8, db = 2.0))     // the mix EQ, after the amp
-  .reverb(r => r.wet(0.15).size(3))
-  .compressor(c => c.threshold(-21).ratio(3).knee(6).attack(0.005).release(0.12))
+  .reverb(0.15, 3)                                    // reverb(wet, size, lowpass), flat since 3d(ii)
+  .compressor(-21, 3, 6, 0.005, 0.12)                 // (threshold, ratio, knee, attack, release)
 )
 
 stack(guitar1, guitar2, guitar3).katalyst(guitarBus)  // three orbits, one chain
-drums.orbit(5).katalyst(Katalyst(k => k.eq(e => e.band(freq = 160, q = 1.0, db = -3.0)).reverb(r => r.wet(0.25).size(4))))
+drums.orbit(5).katalyst(Katalyst(k => k.eq(e => e.band(freq = 160, q = 1.0, db = -3.0)).reverb(0.25, 4)))
 ```
 
 A song without `katalyst(...)` runs `KatalystDsl.classic`, which is today's hardcoded chain
@@ -193,7 +193,8 @@ Rules that fix the shape:
   floor)`, `vowel(vowel, wet, floor)`. The one recorded asymmetry to reconcile in the same
   deliverable: the master limiter builder says `thresholdDb`/`kneeDb`/`attack(seconds)`; the
   Katalyst compressor follows sprudel (`threshold`, `knee`, `attack`), and the follow-up file gets
-  a row saying the master limiter is the odd one out.
+  a row saying the master limiter is the odd one out. RECONCILED 2026-09-24 in phase 3 step 3d(ii):
+  the limiter says `threshold` and `knee` on the door, the node and the wire.
 - **`Duck` is declared in the list but runs outside it**, as today (`Cylinders.processAndMix` step 2
   needs every orbit processed first). Its position in the list is documented as ignored, and when a
   chain declares two, the last one wins (decided 2026-09-17; the chain builder says so in its KDoc).
@@ -232,7 +233,7 @@ Rules that fix the shape:
 > Kept for the record; step 2 still runs the owner-voice writers (byte identity), step 3's resolver
 > follows §7's contract, step 5 removes the fields.
 
-Two sources exist for the same knob: the chain says `reverb(r => r.size(3))`, the pattern says
+Two sources exist for the same knob: the chain says `reverb(size = 3)`, the pattern says
 `.reverb(size = 5)`. The rule, and it is one rule for every built-in stage:
 
 > **The chain is the instrument; a voice field, when set, is the performance.** A stage's knob
@@ -378,7 +379,7 @@ complexity outranks the duplication.
     feedback and cap take their constants. On a declared chain `delay.wet` is the stage's ON
     SWITCH (finite and above 0.0) until step 5b makes it the insert amount; the per-VOICE send
     amount (`SendRenderer` reads `voice.delay.amount`) still decides how much each voice sends.
-    Decided 2026-09-17 in step 3a's batch, so `Katalyst(k => k.reverb(r => r.wet(0.0).size(6)))`
+    Decided 2026-09-17 in step 3a's batch, so `Katalyst(k => k.reverb(0.0, 6))`
     rents nothing, consistent with phaser (depth) and duck (orbit).
   - Reverb: `configure(size = Reverb.normalizeSize(slot), lowpass = slot if finite else null)`;
     `reverb.wet` the same on switch, same caveat.
@@ -545,7 +546,7 @@ complexity outranks the duplication.
   0 included) and let `time`/`size` decide; the slot twin of touched is `KatalystKnob.written`
   ("the owner's map carries the key with a finite value"), and `sendStageRuns` is
   `written || (finite && > 0)`. The second half keeps the 2026-09-17 decision for authored
-  constants: a declared `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents
+  constants: a declared `k.reverb(0.0, 6)` that no pattern touches still rents
   nothing. Making `wet` mean the amount is 5b-2's, with the listening checkpoint. After the fix
   76 of 80 rendered rows are identical at HEAD and on the tree; the four that differ are (1) and
   the three non-finite rows of (3).
@@ -655,8 +656,8 @@ complexity outranks the duplication.
   806 Hz); a q of 1.2 to 1.5 lifts 300 Hz with less skirt, the ear decides. A confound the measurement
   exposed: DECLARING a chain on the guitars drops their `.body(material = "wood")` (a declared chain
   owns its material), which alone is +1.5 dB at 254 and 508 and +1.6 at 2.5 to 5 kHz. Decided
-  2026-09-18 for 5b: there is no string slot; a material is chain-declared (`k.classic().body("wood",
-  b => b.wet(0.3)).eq(...)`, the null-material body stage of classic stays off and the declared one
+  2026-09-18 for 5b: there is no string slot; a material is chain-declared (`k.classic().body(0.3,
+  "wood").eq(...)`, `body(wet, material)` since 3d(ii), the null-material body stage of classic stays off and the declared one
   runs), and at 5b the pattern-side `material`/`vowel` arguments retire with the voice fields while
   `wet` and `floor` stay `katp` aliases. **Superseded the same day by step 5a-2 (below):** the
   material and the vowel are numeric INDEX slots into the shared tables, so the pattern doors keep

@@ -113,6 +113,16 @@ full parametric EQ.
 - Freeverb's ~0.71 s tail floor (`FEEDBACK_OFFSET = 0.7`): nothing on either bus can go shorter. Worth stating in the
   user-facing docs, or revisiting the constant.
 
+## 7. Greensleeves' authored `limiter()` never engages (found 2026-09-24, by-ear item)
+
+Phase 3 step 3d(ii)'s engagement control perturbed the master limiter's default attack and expected
+Greensleeves and ATruthWorthLyingFor to move; only ATruthWorthLyingFor did. Greensleeves peaks at about
+-6.2 dBFS after its `gain(1.6)`, below the limiter's knee onset (threshold -1 dBFS minus half the 2 dB
+knee), where `Compressor.gainReductionDb` is exactly 0: the stage is present and does nothing. Not a
+defect (a ceiling that is never reached is a valid ceiling), but the song carries a stage its author
+may believe is shaping it. The maintainer's call, by ear: keep it as a safety ceiling, drop it, or push
+the song's gain into it.
+
 ## Links
 
 - Shipped plan + full review history: [

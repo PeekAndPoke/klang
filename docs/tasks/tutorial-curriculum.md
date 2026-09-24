@@ -10,7 +10,8 @@
 >   2026-09-24, phase 3 step 3d, `docs/tasks/builtin-instruments.md` section 3b). Filters:
 >   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
 >   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
-> - Master: `master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5).limiter()))`, `master(Master())`
+> - Master: `master(Master(m => m.reverb(0.05).gain(2.5).limiter()))` (`reverb(wet, size, lowpass)` and
+>   `limiter(threshold, ratio, knee, attack, lookahead, release)` flat since 2026-09-24), `master(Master())`
 >   for unity. `Master.of` and `MasterFx` are gone.
 > - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,
 >   `Pipeline.modern(p => p.tuneVca(v => v.expK(2.5)))`. `Pipeline.of` and `Stage` are gone.

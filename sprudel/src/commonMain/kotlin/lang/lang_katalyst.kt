@@ -229,7 +229,7 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *    changes, so a chord writes it once, not once per note.
  *  - **Only the OWNER is heard.** The first voice to sound owns the orbit; a second pattern on the
  *    same orbit writes into nothing. Give it its own orbit.
- *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(r => r.size(4))`) is
+ *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(size = 4)`) is
  *    fixed; write `Katalyst.param` where the chain should listen.
  *  - **A slot listens only when it IS the knob.** `Katalyst.param("room", 5).mul(2)` is an
  *    expression OVER a slot, and the bus folds it to one number when the chain is built, so
@@ -245,7 +245,7 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").katalyst(Katalyst(k => k.reverb(r => r.wet(0.5).size(Katalyst.param("room", 2)))))
+ * note("c3 e3").s("saw").katalyst(Katalyst(k => k.reverb(0.5, Katalyst.param("room", 2))))
  *   .katp("room", "<2 9>")
  * ```
  *

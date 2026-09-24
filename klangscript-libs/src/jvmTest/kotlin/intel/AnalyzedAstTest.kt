@@ -1147,11 +1147,11 @@ let a = placeholder("aa", Osc.sine())"""
     }
 
     "real stdlib: Master(m => m.gain(2)) resolves through invoke; m is the MasterBuilder" {
-        val code = "Master(m => m.reverb(r => r.wet(0.05)).gain(2))"
+        val code = "Master(m => m.delay(0.05, d => d.cap(2)).gain(2))"
         val a = analyze(code)
         a.typeOf(a.topExpr())?.simpleName shouldBe "MasterDsl"
-        a.receiverTypeBeforeDot(code.indexOf("m.reverb") + 1)?.simpleName shouldBe "MasterBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("r.wet") + 1)?.simpleName shouldBe "MasterReverbBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("m.delay") + 1)?.simpleName shouldBe "MasterBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("d.cap") + 1)?.simpleName shouldBe "MasterDelayBuilder"
         stdlibRegistry().getCallable("invoke", KlangType("Master"))!!.signature shouldBe
                 "Master(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl"
     }

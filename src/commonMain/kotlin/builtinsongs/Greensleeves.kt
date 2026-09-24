@@ -70,7 +70,7 @@ stack(
   , breathOf(melody).orbit(1).gain(0.01).pan(0.58).filterWhen(verse)
   , whistleOf(melody.transpose(-12)).orbit(1).gain(4.0).pan(0.36).filterWhen(secondTime)
 
-  , master(Master(m => m.reverb(r => r.wet(0.14).size(6)).gain(1.6).limiter()))
+  , master(Master(m => m.reverb(0.14, 6).gain(1.6).limiter()))
 )
     
     

@@ -1567,7 +1567,7 @@ writers, the `voiceDriven` flag and the `KatalystOwnerApply` interface are delet
   field non-null, a written 0 included) and let `time` / `size` decide, so the slot twin of touched
   is `KatalystKnob.written`: the owner's map carries the key with a FINITE value. `sendStageRuns`
   is `written || (finite && > 0)`, and the second half keeps the 2026-09-17 decision for AUTHORED
-  constants, so a declared `k.reverb(r => r.wet(0.0).size(6))` that no pattern touches still rents
+  constants, so a declared `k.reverb(0.0, 6)` that no pattern touches still rents
   nothing. That semantic change belongs to 5b-2, where `wet` becomes the insert amount and the
   maintainer listens.
 - **One parity asymmetry, recorded, not fixed**: a non-finite `delay.time` / `reverb.size` is the

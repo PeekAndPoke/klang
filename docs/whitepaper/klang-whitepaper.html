@@ -1527,11 +1527,11 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
                 <div class="code engine" data-lang="KlangScript"><pre>stack(
   lead, bass, drums,
   master(Master(m =&gt; m
-    .reverb(r =&gt; r.wet(0.03).size(6))      <span class="cm">// a breath of shared space, before the dynamics</span>
+    .reverb(0.03, 6)                        <span class="cm">// a breath of shared space, before the dynamics</span>
     .gain(1.45)
-    .limiter(l =&gt; l.thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25))
+    .limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
     .gain(1.40)
-    .limiter(l =&gt; l.thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15))
+    .limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
   ))
 )</pre>
                 </div>

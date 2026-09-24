@@ -53,13 +53,13 @@ class MasterDefaultsSyncSpec : StringSpec({
         // `MasterStageDsl.Limiter()` catches exactly that case.
         //
         // Every field, not only the timing pair: "enforced by construction" holds exactly as long
-        // as the reference survives, which is the assumption this test exists to distrust. kneeDb
+        // as the reference survives, which is the assumption this test exists to distrust. knee
         // is the sharpest example — the 2 dB soft knee is a non-obvious 2026-04-30 anti-britzel
         // fix, and a literal 0.0 there would put the C1 corner back on every authored limiter.
         val limiter = MasterStageDsl.Limiter()
-        limiter.thresholdDb shouldBe -1.0
+        limiter.threshold shouldBe -1.0
         limiter.ratio shouldBe 20.0
-        limiter.kneeDb shouldBe 2.0
+        limiter.knee shouldBe 2.0
         limiter.releaseSeconds shouldBe 0.1
         limiter.attackSeconds shouldBe 0.001
         limiter.lookaheadSeconds shouldBe 0.0

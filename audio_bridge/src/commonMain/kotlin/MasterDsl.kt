@@ -91,9 +91,11 @@ sealed interface MasterStageDsl {
      * for *shaping* rather than peak-catching — which is why lookahead is opt-in here. Stages
      * stack, so three authored limiters with lookahead cost three delay lines.
      *
-     * @param thresholdDb ceiling in dBFS.
+     * @param threshold ceiling in dBFS. The same word as the Katalyst compressor's and sprudel's
+     *   `threshold` (renamed from `thresholdDb` in phase 3 step 3d, 2026-09-24); the unit is dB.
      * @param ratio compression ratio (20.0 ≈ brick wall).
-     * @param kneeDb soft-knee width in dB — a hard corner injects harmonics on every crossing.
+     * @param knee soft-knee width in dB; a hard corner injects harmonics on every crossing.
+     *   Renamed from `kneeDb` together with [threshold].
      * @param attackSeconds how fast the gain closes: a one-pole attack when [lookaheadSeconds] is 0,
      *   the gain-smoothing length when it is not.
      * @param releaseSeconds envelope release.
@@ -101,9 +103,9 @@ sealed interface MasterStageDsl {
      */
     @WireName("limiter")
     data class Limiter(
-        val thresholdDb: Double = LIMITER_THRESHOLD_DB,
+        val threshold: Double = LIMITER_THRESHOLD_DB,
         val ratio: Double = LIMITER_RATIO,
-        val kneeDb: Double = LIMITER_KNEE_DB,
+        val knee: Double = LIMITER_KNEE_DB,
         val attackSeconds: Double = AUTHORED_LIMITER_ATTACK_SECONDS,
         val releaseSeconds: Double = LIMITER_RELEASE_SECONDS,
         /**

@@ -82,13 +82,13 @@ class LangMasterSpec : StringSpec({
         scriptEvents[0].data.control shouldBe true
     }
 
-    "stage configure lambdas reach the dsl (KlangScript == Kotlin)" {
+    "stage door parameters reach the dsl (KlangScript == Kotlin)" {
         val expected = MasterDsl.of(
             MasterStageDsl.Gain(gain = 1.5),
-            MasterStageDsl.Limiter(thresholdDb = -0.5),
+            MasterStageDsl.Limiter(threshold = -0.5),
         )
         val scriptEvents = SprudelPattern
-            .compile("""master(Master(m => m.gain(1.5).limiter(l => l.thresholdDb(-0.5))))""")!!
+            .compile("""master(Master(m => m.gain(1.5).limiter(threshold = -0.5)))""")!!
             .queryArc(0.0, 1.0)
 
         scriptEvents[0].data.master shouldBe MasterValue.Dsl(expected)
@@ -150,8 +150,8 @@ class LangMasterSpec : StringSpec({
         )
         val script = SprudelPattern.compile(
             """master(Master(m => m
-                 .reverb(r => r.wet(0.3).size(8).lowpass(6000))
-                 .delay(d => d.wet(0.2).time(0.5).feedback(1.0).cap(3.0))
+                 .reverb(0.3, 8, 6000)
+                 .delay(0.2, 0.5, 1.0, d => d.cap(3.0))
                ))"""
         )!!.queryArc(0.0, 1.0)
 

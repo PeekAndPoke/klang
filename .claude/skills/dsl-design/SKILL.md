@@ -60,7 +60,7 @@ door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```javascript
 Osc.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
-master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
+master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size): flat since 2026-09-24
 ```
 
 **Rules:**
@@ -86,7 +86,8 @@ master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
   - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
     `releaseSec` and `curve`).
   - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
-    omitted one is unset and comes from the owner voice's slot.
+    omitted one is the bare stage's fixed default, never the owner voice; only a `Param` slot reads
+    the orbit's `katp` state (per-door record: `docs/tasks/builtin-instruments.md` section 3b).
 - `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
   lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
   `eq()` with no bands is a transparent stage, not an error). The one historical exception,

@@ -70,7 +70,7 @@ class KatalystDoorFillRenderSpec : StringSpec({
     val duckSong =
         """stack(note("c1*4").s("triangle").orbit(0), note("c3 e3 g3 b3").s("supersaw").orbit(1)"""
     val duckChain =
-        """.katalyst(Katalyst(k => k.duck(d => d.orbit(0).depth(Katalyst.param("duck.depth", 0.8)).attack(0.3)))))"""
+        """.katalyst(Katalyst(k => k.duck(orbit = 0, depth = Katalyst.param("duck.depth", 0.8), attack = 0.3))))"""
     // The control's chain: a declaration that takes the orbit over but has no duck stage at all.
     // Both strings close the `stack(` that `duckSong` opens.
     val duckChainOff = """.katalyst(Katalyst(k => k.gain(1.0))))"""

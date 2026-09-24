@@ -12,20 +12,27 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /*
  * Builders for an orbit chain. `Katalyst(k => ...)` hands a [KatalystBuilder] to the lambda; every
  * knob appends ONE stage, in written order (the order IS the chain), and returns a new builder.
- * A stage with knobs of its own takes its own configure lambda:
+ * A stage's musical inputs are the parameters of its door, `wet` first wherever there is one; a
+ * secondary knob (`floor`, `cap`) sits on the stage's own builder behind a `configure` lambda:
  *
  *     katalyst(Katalyst(k => k
  *         .eq(e => e.band(freq = 300, q = 0.8, db = 2.0))
- *         .reverb(r => r.wet(0.15).size(3))
- *         .compressor(c => c.threshold(-21).ratio(3))
+ *         .reverb(0.15, 3)
+ *         .compressor(threshold = -21, ratio = 3)
  *     ))
+ *
+ * Every door parameter is optional. An omitted one is exactly what the bare stage carries (the
+ * defaults of the stage's [KatalystStageDsl] data class: the shared touched constants, or the "never set"
+ * marker on a name knob), so `k.reverb()` means what it always meant and `k.reverb(0.3)` what
+ * `k.reverb(r => r.wet(0.3))` meant before the door shapes of phase 3 step 3d. It is a
+ * fixed value of the chain, not a slot: only a slot (`Katalyst.param(...)`, or any `Param` such as
+ * `Osc.param(...)`) listens to the orbit's `katp` state.
  *
  * Effects are the same DSP the master stages use; only the host differs, and the knobs use the
  * same names and scales as their sprudel twins, so a number means the same on either bus.
@@ -109,103 +116,256 @@ private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>
 /**
  * Appends a resonant body: a bank of narrow modes over a broadband floor, the box a sound sits in.
  *
- * The name on the door is converted to the stage's `material` INDEX here, through the one shared
+ * A material NAME is converted to the stage's `material` INDEX here, through the one shared
  * `BodyMaterials.indexOf`, so a chain and a pattern mean the same box by the same word. An unknown
- * name is `none`, and so is no name at all: the stage is declared and off.
+ * name is `none`, and so is no material at all: the stage is declared and off.
  *
- * @param material material name (`"wood"`, `"glass"`, `"tube"`, ...); unset leaves the stage off.
- * @param configure receives the [KatalystBodyBuilder] (knobs: `material`, `wet`, `floor`) and returns it.
+ * **Why [material] takes more than a name.** The material is an index slot (Katalyst step 5a-2,
+ * 2026-09-18), so a chain that wants it to MOVE writes `k.body(material = Katalyst.param("mat", 3))`
+ * and listens to `katp("mat", n)`, and a plain number picks a fixed box by its index. The door
+ * therefore accepts a name, a number or a slot; anything else is a script-level type error.
+ *
+ * @param wet how much of the orbit runs through the body, 0 to 1 (default 0.5). Orbit twin:
+ *   `body(wet = ...)`.
+ * @param material a material name (`"wood"`, `"glass"`, `"tube"`, ...), an index into the
+ *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
+ *   `body("wood")`, or `katp("body.material", n)` for the number.
+ * @param configure receives the [KatalystBodyBuilder] (knob: `floor`) and returns it.
  */
 @KlangScript.Function
 fun KatalystBuilder.body(
-    material: String? = null,
+    wet: IgnitorDslLike? = null,
+    material: IgnitorDslLike? = null,
     configure: ((KatalystBodyBuilder) -> KatalystBodyBuilder)? = null,
-): KatalystBuilder =
-    plus(
-        KatalystBodyBuilder(KatalystStageDsl.Body(material = materialIndex(material)))
-            .configuredBy("Katalyst body", configure).node
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Body()
+
+    return plus(
+        KatalystBodyBuilder(
+            KatalystStageDsl.Body(
+                material = catalogueIndex(material, bare.material, BodyMaterials::indexOf),
+                wet = wet?.toIgnitorDsl() ?: bare.wet,
+                floor = bare.floor,
+            )
+        ).configuredBy("Katalyst body", configure).node
     )
+}
 
 /**
  * Appends a formant bank: the vowel a sound sings.
  *
- * The name on the door is converted to the stage's `vowel` INDEX here, through the one shared
+ * A vowel NAME is converted to the stage's `vowel` INDEX here, through the one shared
  * `VowelBands.indexOf`, so a bare `"a"` is the soprano register on this door exactly as it is on
- * the pattern one. An unknown name is `none`, and so is no name at all.
+ * the pattern one. An unknown name is `none`, and so is no vowel at all.
  *
- * @param vowel vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`); unset leaves the stage off.
- * @param configure receives the [KatalystVowelBuilder] (knobs: `vowel`, `wet`, `floor`) and returns it.
+ * **Why [vowel] takes more than a name.** The vowel is an index slot, as the body's material is
+ * (see [body]): `k.vowel(vowel = Katalyst.param("vw", 1))` listens to `katp("vw", n)`, and a plain
+ * number picks a fixed vowel by its index.
+ *
+ * @param wet how much of the orbit runs through the formant bank, 0 to 1 (default 0.5). Orbit
+ *   twin: `vowel(wet = ...)`.
+ * @param vowel a vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`), an index into the
+ *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
+ *   `vowel("a")`, or `katp("vowel.vowel", n)` for the number.
+ * @param configure receives the [KatalystVowelBuilder] (knob: `floor`) and returns it.
  */
 @KlangScript.Function
 fun KatalystBuilder.vowel(
-    vowel: String? = null,
+    wet: IgnitorDslLike? = null,
+    vowel: IgnitorDslLike? = null,
     configure: ((KatalystVowelBuilder) -> KatalystVowelBuilder)? = null,
-): KatalystBuilder =
-    plus(
-        KatalystVowelBuilder(KatalystStageDsl.Vowel(vowel = vowelIndex(vowel)))
-            .configuredBy("Katalyst vowel", configure).node
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Vowel()
+
+    return plus(
+        KatalystVowelBuilder(
+            KatalystStageDsl.Vowel(
+                vowel = catalogueIndex(vowel, bare.vowel, VowelBands::indexOf),
+                wet = wet?.toIgnitorDsl() ?: bare.wet,
+                floor = bare.floor,
+            )
+        ).configuredBy("Katalyst vowel", configure).node
     )
+}
 
-/** A material name as the knob the stage carries: its index, or the wire's "never set" for no name. */
-private fun materialIndex(material: String?): IgnitorDsl =
-    IgnitorDsl.Constant(if (material != null) BodyMaterials.indexOf(material) else SLOT_UNSET)
-
-/** A vowel name as the knob the stage carries. Twin of [materialIndex], through the vowel catalogue. */
-private fun vowelIndex(vowel: String?): IgnitorDsl =
-    IgnitorDsl.Constant(if (vowel != null) VowelBands.indexOf(vowel) else SLOT_UNSET)
+/**
+ * A name knob as the index the stage carries: a name through its catalogue's `indexOf`, a number or
+ * a slot as it is, and nothing at all as the bare stage's own value (the "never set" marker).
+ */
+private fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
+    when (value) {
+        null -> bare
+        is String -> IgnitorDsl.Constant(indexOf(value))
+        else -> value.toIgnitorDsl()
+    }
 
 /**
  * Appends an orbit delay (the shared delay line).
- * @param configure receives the [KatalystDelayBuilder] (knobs: `wet`, `time`, `feedback`, `cap`) and returns it.
+ *
+ * @param wet how much of the orbit goes into the delay (default 0.25; 0.0 = off). Orbit twin:
+ *   `delay(wet = ...)`.
+ * @param time delay time in seconds (default 0.25). Orbit twin: `delay(time = ...)`.
+ * @param feedback feedback amount (default 0.3). At or above 1.0 the delay recirculates without
+ *   loss and self-oscillates, allowed, with `cap` deciding how loud. Orbit twin:
+ *   `delay(feedback = ...)`.
+ * @param configure receives the [KatalystDelayBuilder] (knob: `cap`) and returns it.
  */
 @KlangScript.Function
-fun KatalystBuilder.delay(configure: ((KatalystDelayBuilder) -> KatalystDelayBuilder)? = null): KatalystBuilder =
-    plus(KatalystDelayBuilder(KatalystStageDsl.Delay()).configuredBy("Katalyst delay", configure).node)
+fun KatalystBuilder.delay(
+    wet: IgnitorDslLike? = null,
+    time: IgnitorDslLike? = null,
+    feedback: IgnitorDslLike? = null,
+    configure: ((KatalystDelayBuilder) -> KatalystDelayBuilder)? = null,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Delay()
+
+    return plus(
+        KatalystDelayBuilder(
+            KatalystStageDsl.Delay(
+                wet = wet?.toIgnitorDsl() ?: bare.wet,
+                time = time?.toIgnitorDsl() ?: bare.time,
+                feedback = feedback?.toIgnitorDsl() ?: bare.feedback,
+                cap = bare.cap,
+            )
+        ).configuredBy("Katalyst delay", configure).node
+    )
+}
 
 /**
- * Appends an orbit reverb (the shared Freeverb).
- * @param configure receives the [KatalystReverbBuilder] (knobs: `wet`, `size`, `lowpass`) and returns it.
+ * Appends an orbit reverb (the shared Freeverb). Flat: every knob is a musical input.
+ *
+ * @param wet how much of the orbit goes into the reverb (default 0.25; 0.0 = off). Orbit twin:
+ *   `reverb(wet = ...)`.
+ * @param size tail length, on the SAME scale as sprudel `reverb(size = ...)`: typical 1 to 10,
+ *   default 5. 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the shortest reachable is
+ *   about 0.7 s, and above 10 is bounded at 10. Orbit twin: `reverb(size = ...)`.
+ * @param lowpass high-frequency damping of the tail as a lowpass cutoff in Hz: lower is darker.
+ *   Omitted, the engine's fixed default damping applies. Orbit twin: `reverb(lowpass = ...)`.
  */
 @KlangScript.Function
-fun KatalystBuilder.reverb(configure: ((KatalystReverbBuilder) -> KatalystReverbBuilder)? = null): KatalystBuilder =
-    plus(KatalystReverbBuilder(KatalystStageDsl.Reverb()).configuredBy("Katalyst reverb", configure).node)
+fun KatalystBuilder.reverb(
+    wet: IgnitorDslLike? = null,
+    size: IgnitorDslLike? = null,
+    lowpass: IgnitorDslLike? = null,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Reverb()
+
+    return plus(
+        KatalystStageDsl.Reverb(
+            wet = wet?.toIgnitorDsl() ?: bare.wet,
+            size = size?.toIgnitorDsl() ?: bare.size,
+            lowpass = lowpass?.toIgnitorDsl() ?: bare.lowpass,
+        )
+    )
+}
 
 /**
  * Appends an orbit phaser: a sweeping all-pass notch comb.
- * @param configure receives the [KatalystPhaserBuilder] (knobs: `rate`, `wet`, `center`, `sweep`, `floor`) and returns it.
+ *
+ * A bare `k.phaser()` is declared and silent, because its default wet is 0; give it a `wet`.
+ *
+ * @param wet wet amount, 0 to 1 (default 0, off). Orbit twin: `phaser(wet = ...)`.
+ * @param rate sweep rate in Hz (default 0, standing still). Orbit twin: `phaser(rate = ...)`.
+ * @param center center frequency of the sweep in Hz (default 1000). Orbit twin:
+ *   `phaser(center = ...)`.
+ * @param sweep width of the sweep around the center, in Hz (default 1000). Orbit twin:
+ *   `phaser(sweep = ...)`.
+ * @param configure receives the [KatalystPhaserBuilder] (knob: `floor`) and returns it.
  */
 @KlangScript.Function
-fun KatalystBuilder.phaser(configure: ((KatalystPhaserBuilder) -> KatalystPhaserBuilder)? = null): KatalystBuilder =
-    plus(KatalystPhaserBuilder(KatalystStageDsl.Phaser()).configuredBy("Katalyst phaser", configure).node)
+fun KatalystBuilder.phaser(
+    wet: IgnitorDslLike? = null,
+    rate: IgnitorDslLike? = null,
+    center: IgnitorDslLike? = null,
+    sweep: IgnitorDslLike? = null,
+    configure: ((KatalystPhaserBuilder) -> KatalystPhaserBuilder)? = null,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Phaser()
+
+    return plus(
+        KatalystPhaserBuilder(
+            KatalystStageDsl.Phaser(
+                rate = rate?.toIgnitorDsl() ?: bare.rate,
+                wet = wet?.toIgnitorDsl() ?: bare.wet,
+                center = center?.toIgnitorDsl() ?: bare.center,
+                sweep = sweep?.toIgnitorDsl() ?: bare.sweep,
+                floor = bare.floor,
+            )
+        ).configuredBy("Katalyst phaser", configure).node
+    )
+}
 
 /**
- * Appends the orbit compressor: the group dynamics.
+ * Appends the orbit compressor: the group dynamics. Flat, like every dynamics stage: each knob is
+ * a musical input.
  *
  * Put it after the EQ so the detector sees the corrected spectrum and a low cut turns into
  * headroom.
  *
- * @param configure receives the [KatalystCompressorBuilder] (knobs: `threshold`, `ratio`, `knee`, `attack`, `release`) and returns it.
+ * @param threshold ceiling in dBFS where gain reduction starts (default -20). Orbit twin:
+ *   `compressor(threshold = ...)`.
+ * @param ratio compression ratio above the threshold (default 4, i.e. 4:1). Orbit twin:
+ *   `compressor(ratio = ...)`.
+ * @param knee soft-knee width in dB (default 6). A hard corner injects harmonics on every
+ *   crossing. Orbit twin: `compressor(knee = ...)`.
+ * @param attack how fast the gain closes, in seconds (default 0.003). Orbit twin:
+ *   `compressor(attack = ...)`.
+ * @param release how fast the gain opens again, in seconds (default 0.1). Orbit twin:
+ *   `compressor(release = ...)`.
  */
 @KlangScript.Function
 fun KatalystBuilder.compressor(
-    configure: ((KatalystCompressorBuilder) -> KatalystCompressorBuilder)? = null,
-): KatalystBuilder =
-    plus(
-        KatalystCompressorBuilder(KatalystStageDsl.Compressor())
-            .configuredBy("Katalyst compressor", configure).node
+    threshold: IgnitorDslLike? = null,
+    ratio: IgnitorDslLike? = null,
+    knee: IgnitorDslLike? = null,
+    attack: IgnitorDslLike? = null,
+    release: IgnitorDslLike? = null,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Compressor()
+
+    return plus(
+        KatalystStageDsl.Compressor(
+            threshold = threshold?.toIgnitorDsl() ?: bare.threshold,
+            ratio = ratio?.toIgnitorDsl() ?: bare.ratio,
+            knee = knee?.toIgnitorDsl() ?: bare.knee,
+            attack = attack?.toIgnitorDsl() ?: bare.attack,
+            release = release?.toIgnitorDsl() ?: bare.release,
+        )
     )
+}
 
 /**
  * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.
+ * Flat, like every dynamics stage.
  *
  * Declared in the chain, but run after every orbit has been processed, so where it sits in the
  * list makes no difference.
  *
- * @param configure receives the [KatalystDuckBuilder] (knobs: `orbit`, `depth`, `attack`) and returns it.
+ * @param orbit the orbit to listen to. Omitted means no ducking: the stage carries the wire's
+ *   non-finite "never set" marker, and the runtime tests `isFinite()` rather than comparing, so a
+ *   finite negative is an orbit REQUEST like any other and not an off switch. Orbit twin:
+ *   `duck(orbit = ...)`.
+ * @param depth how far this orbit is pulled down, 0 to 1 (default 0, no ducking). Orbit twin:
+ *   `duck(depth = ...)`.
+ * @param attack how fast the duck closes, in seconds (default 0.1). Orbit twin:
+ *   `duck(attack = ...)`.
  */
 @KlangScript.Function
-fun KatalystBuilder.duck(configure: ((KatalystDuckBuilder) -> KatalystDuckBuilder)? = null): KatalystBuilder =
-    plus(KatalystDuckBuilder(KatalystStageDsl.Duck()).configuredBy("Katalyst duck", configure).node)
+fun KatalystBuilder.duck(
+    orbit: IgnitorDslLike? = null,
+    depth: IgnitorDslLike? = null,
+    attack: IgnitorDslLike? = null,
+): KatalystBuilder {
+    val bare = KatalystStageDsl.Duck()
+
+    return plus(
+        KatalystStageDsl.Duck(
+            orbit = orbit?.toIgnitorDsl() ?: bare.orbit,
+            depth = depth?.toIgnitorDsl() ?: bare.depth,
+            attack = attack?.toIgnitorDsl() ?: bare.attack,
+        )
+    )
+}
 
 /**
  * Appends the mix equalizer: one stage whose sections apply left to right.
@@ -243,25 +403,8 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Body] stage. Knobs: `material`, `wet`, `floor`. */
+/** Builder for a [KatalystStageDsl.Body] stage. Knob: `floor`. */
 data class KatalystBodyBuilder(val node: KatalystStageDsl.Body)
-
-/**
- * The material as an INDEX into the material catalogue, for a chain that wants it to MOVE:
- * `k.body(b => b.material(Katalyst.param("mat", 3)))` listens to `katp("mat", n)`, and a plain
- * number picks a fixed box.
- *
- * The readable door is the name on `k.body("wood")`, which writes this same knob; this one is what
- * a slot needs, because a slot carries a number. 0 is `none`, and so is anything out of range.
- * Orbit twin: `body("wood")`, or `katp("body.material", n)` for the number.
- */
-@KlangScript.Function
-fun KatalystBodyBuilder.material(material: IgnitorDslLike): KatalystBodyBuilder =
-    copy(node = node.copy(material = material.toIgnitorDsl()))
-
-/** How much of the orbit runs through the body, 0 to 1 (default 0.5). Orbit twin: `body(wet = ...)`. */
-@KlangScript.Function
-fun KatalystBodyBuilder.wet(wet: IgnitorDslLike): KatalystBodyBuilder = copy(node = node.copy(wet = wet.toIgnitorDsl()))
 
 /**
  * Minimum dry share kept in the mix, 0 to 1 (default 0.4). Lower makes the body MORE audible: its
@@ -273,26 +416,8 @@ fun KatalystBodyBuilder.floor(floor: IgnitorDslLike): KatalystBodyBuilder =
 
 // ── Vowel ────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Vowel] stage. Knobs: `vowel`, `wet`, `floor`. */
+/** Builder for a [KatalystStageDsl.Vowel] stage. Knob: `floor`. */
 data class KatalystVowelBuilder(val node: KatalystStageDsl.Vowel)
-
-/**
- * The vowel as an INDEX into the vowel catalogue, for a chain that wants it to MOVE:
- * `k.vowel(v => v.vowel(Katalyst.param("vw", 1)))` listens to `katp("vw", n)`, and a plain number
- * picks a fixed vowel.
- *
- * The readable door is the name on `k.vowel("bass:a")`, which writes this same knob; this one is
- * what a slot needs. 0 is `none`, and so is anything out of range. Orbit twin: `vowel("a")`, or
- * `katp("vowel.vowel", n)` for the number.
- */
-@KlangScript.Function
-fun KatalystVowelBuilder.vowel(vowel: IgnitorDslLike): KatalystVowelBuilder =
-    copy(node = node.copy(vowel = vowel.toIgnitorDsl()))
-
-/** How much of the orbit runs through the formant bank, 0 to 1 (default 0.5). Orbit twin: `vowel(wet = ...)`. */
-@KlangScript.Function
-fun KatalystVowelBuilder.wet(wet: IgnitorDslLike): KatalystVowelBuilder =
-    copy(node = node.copy(wet = wet.toIgnitorDsl()))
 
 /**
  * Minimum dry share kept between the formants, 0 to 1 (default 0.2). Much lower than the body's: a
@@ -304,141 +429,20 @@ fun KatalystVowelBuilder.floor(floor: IgnitorDslLike): KatalystVowelBuilder =
 
 // ── Delay ────────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Delay] stage. Knobs: `wet`, `time`, `feedback`, `cap`. */
+/** Builder for a [KatalystStageDsl.Delay] stage. Knob: `cap`. */
 data class KatalystDelayBuilder(val node: KatalystStageDsl.Delay)
-
-/** How much of the orbit goes into the delay (default 0.25; 0.0 = off). Orbit twin: `delay(wet = ...)`. */
-@KlangScript.Function
-fun KatalystDelayBuilder.wet(wet: IgnitorDslLike): KatalystDelayBuilder =
-    copy(node = node.copy(wet = wet.toIgnitorDsl()))
-
-/** Delay time in seconds (default 0.25). Orbit twin: `delay(time = ...)`. */
-@KlangScript.Function
-fun KatalystDelayBuilder.time(seconds: IgnitorDslLike): KatalystDelayBuilder =
-    copy(node = node.copy(time = seconds.toIgnitorDsl()))
-
-/**
- * Feedback amount (default 0.3). At or above 1.0 the delay recirculates without loss and
- * self-oscillates, allowed, with `cap` deciding how loud. Orbit twin: `delay(feedback = ...)`.
- */
-@KlangScript.Function
-fun KatalystDelayBuilder.feedback(feedback: IgnitorDslLike): KatalystDelayBuilder =
-    copy(node = node.copy(feedback = feedback.toIgnitorDsl()))
 
 /** Level the recirculating signal saturates toward (default 1.0). Orbit twin: `delay(cap = ...)`. */
 @KlangScript.Function
 fun KatalystDelayBuilder.cap(cap: IgnitorDslLike): KatalystDelayBuilder =
     copy(node = node.copy(cap = cap.toIgnitorDsl()))
 
-// ── Reverb ───────────────────────────────────────────────────────────────────
-
-/** Builder for a [KatalystStageDsl.Reverb] stage. Knobs: `wet`, `size`, `lowpass`. */
-data class KatalystReverbBuilder(val node: KatalystStageDsl.Reverb)
-
-/** How much of the orbit goes into the reverb (default 0.25; 0.0 = off). Orbit twin: `reverb(wet = ...)`. */
-@KlangScript.Function
-fun KatalystReverbBuilder.wet(wet: IgnitorDslLike): KatalystReverbBuilder =
-    copy(node = node.copy(wet = wet.toIgnitorDsl()))
-
-/**
- * Tail length, on the SAME scale as sprudel `reverb(size = ...)`: typical 1..10, default 5.
- *
- * 3 is about a 1 s tail, 5 about 1.4 s, 10 about 12.5 s; the shortest reachable is about 0.7 s.
- * Above 10 is bounded at 10. Orbit twin: `reverb(size = ...)`.
- */
-@KlangScript.Function
-fun KatalystReverbBuilder.size(size: IgnitorDslLike): KatalystReverbBuilder =
-    copy(node = node.copy(size = size.toIgnitorDsl()))
-
-/**
- * High-frequency damping of the tail as a lowpass cutoff in Hz: lower is darker. Unset, the
- * engine's fixed default damping applies. Orbit twin: `reverb(lowpass = ...)`.
- */
-@KlangScript.Function
-fun KatalystReverbBuilder.lowpass(hz: IgnitorDslLike): KatalystReverbBuilder =
-    copy(node = node.copy(lowpass = hz.toIgnitorDsl()))
-
 // ── Phaser ───────────────────────────────────────────────────────────────────
 
-/** Builder for a [KatalystStageDsl.Phaser] stage. Knobs: `rate`, `wet`, `center`, `sweep`, `floor`. */
+/** Builder for a [KatalystStageDsl.Phaser] stage. Knob: `floor`. */
 data class KatalystPhaserBuilder(val node: KatalystStageDsl.Phaser)
-
-/** Sweep rate in Hz (default 0, standing still). Orbit twin: `phaser(rate = ...)`. */
-@KlangScript.Function
-fun KatalystPhaserBuilder.rate(hz: IgnitorDslLike): KatalystPhaserBuilder =
-    copy(node = node.copy(rate = hz.toIgnitorDsl()))
-
-/** Wet amount, 0 to 1 (default 0, off). Orbit twin: `phaser(wet = ...)`. */
-@KlangScript.Function
-fun KatalystPhaserBuilder.wet(wet: IgnitorDslLike): KatalystPhaserBuilder =
-    copy(node = node.copy(wet = wet.toIgnitorDsl()))
-
-/** Center frequency of the sweep in Hz (default 1000). Orbit twin: `phaser(center = ...)`. */
-@KlangScript.Function
-fun KatalystPhaserBuilder.center(hz: IgnitorDslLike): KatalystPhaserBuilder =
-    copy(node = node.copy(center = hz.toIgnitorDsl()))
-
-/** Width of the sweep around the center, in Hz (default 1000). Orbit twin: `phaser(sweep = ...)`. */
-@KlangScript.Function
-fun KatalystPhaserBuilder.sweep(hz: IgnitorDslLike): KatalystPhaserBuilder =
-    copy(node = node.copy(sweep = hz.toIgnitorDsl()))
 
 /** Minimum dry coefficient of the wet/dry law (default 1.0, purely additive). Orbit twin: `phaser(floor = ...)`. */
 @KlangScript.Function
 fun KatalystPhaserBuilder.floor(floor: IgnitorDslLike): KatalystPhaserBuilder =
     copy(node = node.copy(floor = floor.toIgnitorDsl()))
-
-// ── Compressor ───────────────────────────────────────────────────────────────
-
-/** Builder for a [KatalystStageDsl.Compressor] stage. Knobs: `threshold`, `ratio`, `knee`, `attack`, `release`. */
-data class KatalystCompressorBuilder(val node: KatalystStageDsl.Compressor)
-
-/** Ceiling in dBFS where gain reduction starts (default -20). Orbit twin: `compressor(threshold = ...)`. */
-@KlangScript.Function
-fun KatalystCompressorBuilder.threshold(db: IgnitorDslLike): KatalystCompressorBuilder =
-    copy(node = node.copy(threshold = db.toIgnitorDsl()))
-
-/** Compression ratio above the threshold (default 4, i.e. 4:1). Orbit twin: `compressor(ratio = ...)`. */
-@KlangScript.Function
-fun KatalystCompressorBuilder.ratio(ratio: IgnitorDslLike): KatalystCompressorBuilder =
-    copy(node = node.copy(ratio = ratio.toIgnitorDsl()))
-
-/** Soft-knee width in dB (default 6). A hard corner injects harmonics on every crossing. Orbit twin: `compressor(knee = ...)`. */
-@KlangScript.Function
-fun KatalystCompressorBuilder.knee(db: IgnitorDslLike): KatalystCompressorBuilder =
-    copy(node = node.copy(knee = db.toIgnitorDsl()))
-
-/** How fast the gain closes, in seconds (default 0.003). Orbit twin: `compressor(attack = ...)`. */
-@KlangScript.Function
-fun KatalystCompressorBuilder.attack(seconds: IgnitorDslLike): KatalystCompressorBuilder =
-    copy(node = node.copy(attack = seconds.toIgnitorDsl()))
-
-/** How fast the gain opens again, in seconds (default 0.1). Orbit twin: `compressor(release = ...)`. */
-@KlangScript.Function
-fun KatalystCompressorBuilder.release(seconds: IgnitorDslLike): KatalystCompressorBuilder =
-    copy(node = node.copy(release = seconds.toIgnitorDsl()))
-
-// ── Duck ─────────────────────────────────────────────────────────────────────
-
-/** Builder for a [KatalystStageDsl.Duck] stage. Knobs: `orbit`, `depth`, `attack`. */
-data class KatalystDuckBuilder(val node: KatalystStageDsl.Duck)
-
-/**
- * The orbit to listen to. Unset (the default) means no ducking: the stage carries the wire's
- * non-finite "never set" marker, and the runtime tests `isFinite()` rather than comparing, so a
- * finite negative is an orbit REQUEST like any other and not an off switch. Orbit twin:
- * `duck(orbit = ...)`.
- */
-@KlangScript.Function
-fun KatalystDuckBuilder.orbit(orbit: IgnitorDslLike): KatalystDuckBuilder =
-    copy(node = node.copy(orbit = orbit.toIgnitorDsl()))
-
-/** How far this orbit is pulled down, 0 to 1 (default 0, no ducking). Orbit twin: `duck(depth = ...)`. */
-@KlangScript.Function
-fun KatalystDuckBuilder.depth(depth: IgnitorDslLike): KatalystDuckBuilder =
-    copy(node = node.copy(depth = depth.toIgnitorDsl()))
-
-/** How fast the duck closes, in seconds (default 0.1). Orbit twin: `duck(attack = ...)`. */
-@KlangScript.Function
-fun KatalystDuckBuilder.attack(seconds: IgnitorDslLike): KatalystDuckBuilder =
-    copy(node = node.copy(attack = seconds.toIgnitorDsl()))

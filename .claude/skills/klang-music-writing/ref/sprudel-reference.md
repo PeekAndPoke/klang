@@ -189,10 +189,11 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
 > | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
+> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Master(m => m...))` with the stage doors `gain(gain)` (make-up level), `limiter(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, each appending a stage |
 
-**Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
-`attack(seconds)` `release(seconds)` `lookahead(seconds)`.
+**Master limiter.** `m.limiter(threshold, ratio, knee, attack, lookahead, release)`, flat and every parameter optional
+(an omitted one keeps its default): `threshold` in dBFS (-1), `ratio` (20), `knee` in dB (2), `attack`, `lookahead` and
+`release` in seconds (0.001, 0, 0.1). Name them: `m.limiter(threshold = -3, ratio = 4)`.
 
 - An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
   5 ms and peaks are already caught. An authored `limiter` stage is for *shaping*, not peak-catching.
@@ -203,8 +204,8 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
   is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
   low-frequency cleanliness tracks it.
 - **Staged gain** works better than one big push: split the total in dB evenly across stages, with descending thresholds
-  and ascending ratios, e.g. `gain(1.45)` → `limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25)`
-  → `gain(1.40)` → `limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)` → `gain(1.30)`. Slow attacks (30
+  and ascending ratios, e.g. `gain(1.45)` → `limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)`
+  → `gain(1.40)` → `limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)` → `gain(1.30)`. Slow attacks (30
   ms+) arrive after the transient and read as "shocks" on dense material.
 >
 > Example — two guitars that each need their **own** wood body must be on separate orbits:

@@ -77,7 +77,7 @@ stack(
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
   master(Master(m => m
-    .reverb(r => r.wet(0.05).size(9))
+    .reverb(0.05, 9)
     .gain(2.5)
   ))
 )
