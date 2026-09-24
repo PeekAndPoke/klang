@@ -30,9 +30,11 @@ enum class AdsrCurve {
     Linear, Square, Cube, SCurve, InvSquare, Exponential;
 
     companion object {
-        /** THE default curve on every stage and every door (maintainer decision, 2026-08-24):
-         *  unset means [Exponential]. Every fallback site references THIS value — flip it here,
-         *  it flips everywhere. */
+        /** THE default curve of every AMPLITUDE envelope stage on every door (maintainer decision,
+         *  2026-08-24): unset means [Exponential]. Every amplitude-envelope fallback site
+         *  references THIS value; flip it here, it flips everywhere. The MODULATION envelopes
+         *  (the Ignitor filter cutoff envelope and the Ignitor pitch envelope) fall back to
+         *  `MOD_ENV_CURVE` instead (`constants/EnvelopeDefaults.kt`), which decision D3 sets. */
         val Default = Exponential
     }
 }

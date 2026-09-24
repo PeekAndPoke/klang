@@ -95,18 +95,15 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 0.5 = moderate boost, 1.0 = loud,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
- * @param type Drive type. Default: "linear". Future: "tube", "fet", "tape".
+ *
+ * Gain without a curve: every colour belongs to `shape`, which is why there is no drive type.
  */
-fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor =
-    DriveIgnitor(this, amount, type)
+fun Ignitor.drive(amount: Ignitor): Ignitor =
+    DriveIgnitor(this, amount)
 
 private class DriveIgnitor(
     private val upstream: Ignitor,
     private val amount: Ignitor,
-    // Reserved for the future tube/fet/tape dispatch; "linear" is the only implemented type,
-    // so nothing stores or reads it today (ledger W12 hoisted the old per-block lowercase()
-    // out of generate; storing a lowercased copy per note-on would just move the allocation).
-    @Suppress("UNUSED_PARAMETER") type: String,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -135,11 +132,10 @@ private class DriveIgnitor(
  * Pre-amplification stage (convenience overload with fixed amount).
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 1.0 = loud. Default: 0.0.
- * @param type Drive type. Default: "linear".
  */
-fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
+fun Ignitor.drive(amount: Double): Ignitor {
     if (amount <= 0.0) return this
-    return drive(ParamIgnitor("amount", amount), type)
+    return drive(ParamIgnitor("amount", amount))
 }
 
 /**
@@ -366,24 +362,26 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  * effective Nyquist is `sampleRate / (2 * blockFrames)` (~187 Hz at 48 kHz / 128); above that the
  * sweep aliases at the block rate. `rate` is deliberately unclamped (raw engine).
  *
+ * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
+ *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0. FIRST,
+ *   as on the DSL door (`IgnitorDsl.phaser(wet, rate, ...)`), so a positional pair means the
+ *   same thing on both Kotlin surfaces.
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
  *   5.0+ = fast. Typical range: 0.1–5.0. Default: no default (required).
- * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
- *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0.
  * @param center Center frequency of the notch sweep in Hz. Default: 1000.0.
  *   Clamped to [100, 18000]. Typical range: 500–4000.
  * @param sweep Modulation width in Hz — how far the notch sweeps from center.
  *   Default: 1000.0. Clamped to [100, 18000]. Typical range: 500–3000.
- * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
+ * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
  *   1.0 makes the phaser purely additive like the orbit-side phaser.
  */
 fun Ignitor.phaser(
-    rate: Ignitor,
     wet: Ignitor,
+    rate: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
-    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
-): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, dryFloor)
+    floor: Ignitor = ParamIgnitor("floor", 0.0),
+): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, floor)
 
 private class PhaserIgnitor(
     private val upstream: Ignitor,
@@ -391,7 +389,7 @@ private class PhaserIgnitor(
     private val wet: Ignitor,
     private val center: Ignitor,
     private val sweep: Ignitor,
-    private val dryFloor: Ignitor,
+    private val floor: Ignitor,
 ) : Ignitor {
     // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
     // ctx.sampleRate on the first generate() call.
@@ -409,7 +407,7 @@ private class PhaserIgnitor(
             // Read every param and advance the LFO clock UNCONDITIONALLY (ledger D1): the sweep
             // is a function of note-relative time, not of how many blocks happened to observe
             // wet > 0, and a stateful param ignitor ticks through its per-block read. The read
-            // ORDER (wet, rate, center, sweep, dryFloor) is the pre-D1 order on purpose: a
+            // ORDER (wet, rate, center, sweep, floor) is the pre-D1 order on purpose: a
             // hand-built Kotlin graph may share one stateful instance across two slots, and the
             // slot assignment of its per-block draws is observable (review round 3). The
             // ctx.length guard on the kernel WRITES is defensive, currently unreachable: today a
@@ -427,7 +425,7 @@ private class PhaserIgnitor(
 
             phaser.prepareBlock(ctx.length)
 
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            val floorVal = Ignitors.readParam(floor, freqHz, ctx)
             val end = ctx.windowEnd
 
             if (wetVal <= 0.0) {
@@ -469,26 +467,27 @@ private class PhaserIgnitor(
 /**
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
+ * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. First and
+ *   required, as on the DSL door.
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
- * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.phaser(
+    wet: Double,
     rate: Double,
-    wet: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
-    dryFloor: Double = 0.0,
+    floor: Double = 0.0,
 ): Ignitor {
     if (wet <= 0.0) return this
     return phaser(
-        ParamIgnitor("rate", rate),
         ParamIgnitor("wet", wet),
+        ParamIgnitor("rate", rate),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
-        ParamIgnitor("dryFloor", dryFloor),
+        ParamIgnitor("floor", floor),
     )
 }
 
@@ -579,7 +578,7 @@ fun Ignitor.tremolo(
  * Granular shimmer effect — short overlapping grains read back from a ring buffer at
  * pitched rates, with a feedback loop through a tone lowpass.
  *
- * `wet`, `feedback`, `tone` and `dryFloor` are read once per block (control rate) with no
+ * `wet`, `feedback`, `tone` and `floor` are read once per block (control rate) with no
  * smoothing: a fast-modulated wet steps the mix gain at the block rate, and a modulated tone
  * switches the feedback-LPF coefficient at block boundaries — raw engine, no hidden ramps. The
  * grain machinery itself is sample-anchored (the first grain fires on the note's first sample).
@@ -587,7 +586,7 @@ fun Ignitor.tremolo(
  * @param wet Wet/dry balance. 0.0 = bit-exact bypass regardless of feedback, 1.0 = cloud only.
  * Mix: the shared wet/dry law, equal-POWER branch (p = 1) — the pitch-shifted tail is
  * decorrelated from the dry, so powers add and the level holds across the knob.
- * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade).
  * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
@@ -599,8 +598,8 @@ fun Ignitor.shimmer(
     feedback: Ignitor,
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
-): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, dryFloor)
+    floor: Ignitor = ParamIgnitor("floor", 0.0),
+): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, floor)
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -611,7 +610,7 @@ private class ShimmerIgnitor(
     private val feedback: Ignitor,
     private val tone: Ignitor,
     pitches: List<Double>,
-    private val dryFloor: Ignitor,
+    private val floor: Ignitor,
 ) : Ignitor {
     /** True once the grain engine has produced state that a bypass must clear. */
     private var stateDirty = false
@@ -644,8 +643,8 @@ private class ShimmerIgnitor(
             val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
             val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
-            // Read (tick) dryFloor unconditionally too — the D1 rule, all four slots.
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            // Read (tick) floor unconditionally too (the D1 rule, all four slots).
+            val floorVal = Ignitors.readParam(floor, freqHz, ctx)
             val end = ctx.windowEnd
 
             // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
@@ -768,14 +767,14 @@ private class ShimmerIgnitor(
  * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
  * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
  * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]`.
- * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.shimmer(
     wet: Double = 0.5,
     feedback: Double = 0.5,
     tone: Double = 4000.0,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-    dryFloor: Double = 0.0,
+    floor: Double = 0.0,
 ): Ignitor {
     if (wet <= 0.0) return this
     return shimmer(
@@ -783,7 +782,7 @@ fun Ignitor.shimmer(
         ParamIgnitor("feedback", feedback),
         ParamIgnitor("tone", tone),
         pitches,
-        ParamIgnitor("dryFloor", dryFloor),
+        ParamIgnitor("floor", floor),
     )
 }
 

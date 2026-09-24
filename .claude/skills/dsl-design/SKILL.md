@@ -181,7 +181,11 @@ the bug.
   built-ins as instruments with slots. **First adoption, 2026-09-20 (phase 3 step 3a): the four
   Ignitor filter doors.** Their envelope has no NAME knob, so ANY of its five knobs names the stage
   and a call that names one writes every companion it left out, `env` included; a call that names
-  none is the untouched filter. **It is adopted AT THE DOOR only, and a door fill does not survive
+  none is the untouched filter. Since step 3d (2026-09-24) the five knobs are two builder calls,
+  `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES of
+  `adsrCurves` are NOT stage knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does
+  not ask for one, so `adsrCurves` alone leaves the filter untouched. The pitch envelope's builder
+  has no depth to fill (the depth is its door input), so the rule has nothing to do there. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
   node one set of `Param`s once and the per-note decision moves into the build, which has no notion
   of "named". A pattern writing only `lpattack` therefore leaves the depth unset and renders a
@@ -285,7 +289,10 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
     actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
     trigger on the named orbit) and the comment describes what the engine does. Lesson of the
     accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
-    queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear.
+    queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear. An example that NAMES a
+    built-in ("the `sgbell` index envelope") quotes the built-in's values read from its definition,
+    never from memory: step 3d(i) (2026-09-24) shipped `sgbell` with release 0, the very variant the
+    preset's own comment says ticks on every note-off.
 11. A compound door fills its companions per param from `audio_bridge/constants/` when the
     stage is named, never overwrites an explicit value, and never invents a NAME knob. Check the
     door against the two closed lists in §4 (they are not repeated here on purpose); a new bus

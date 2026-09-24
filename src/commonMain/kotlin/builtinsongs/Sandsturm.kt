@@ -48,7 +48,7 @@ let bass = Osc.saw()
     .adsr(0.004, 0.09, 0.0, 0.04)
 
 // Synth kit
-let kick = Osc.sine().pitchEnvelope(48, 0.001, 0.05).adsr(0.001, 0.22, 0.0, 0.02)
+let kick = Osc.sine().pitchEnvelope(48, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.001, 0.22, 0.0, 0.02)
 let hat  = Osc.whitenoise().highpass(8000).adsr(0.001, 0.035, 0.0, 0.02)
 let ohat = Osc.whitenoise().highpass(7000).adsr(0.001, 0.12, 0.05, 0.10)
 let clap = Osc.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04)

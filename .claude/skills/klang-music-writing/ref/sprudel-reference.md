@@ -58,7 +58,7 @@ let koto = Osc.pluck()
   .highpass(200)
 
 let kick = Osc.sine()
-  .pitchEnvelope(24, 0.001, 0.04)
+  .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
   .adsr(0.001, 0.2, 0.0, 0.02)
 
 stack(

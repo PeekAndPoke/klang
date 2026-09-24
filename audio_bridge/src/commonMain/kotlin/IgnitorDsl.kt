@@ -1278,19 +1278,20 @@ sealed interface IgnitorDsl {
          * `FilterDef.envelope` is resolved at note-on too. **A non-leaf EXPRESSION here is not
          * "modulated", it is UNREADABLE at build**, and the consequence differs per knob: a stage
          * knob falls back to its constant, but this DEPTH falls back to `0`, which switches the
-         * whole envelope OFF with no warning. `lowpass(800, env = Osc.param("e", 24).max(36))`
+         * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
          * renders a static filter. Write a slot (`Osc.slot.lpenv`) or a constant.
          *
-         * **Which envelope this is, and D3 is open on BOTH counts.** The law: this node's
-         * segments are LINEAR (`computeFilterEnvelope` has no curve term at all), while the voice
-         * strip's are the house Exponential curve (`AdsrCurve.Default`, K = 3), because
-         * `VoiceFactory` omits the three curve arguments. Measured at `env = 24`, the two are up
-         * to 806 cents apart at the same instant (RMS 256 cents on a pluck, 512 on a pad). The
-         * sampling: this node computes the envelope at block START and block END and interpolates
-         * the SVF coefficients across the block, while the strip computes it once per block and
-         * lets `setCutoff` ramp the coefficients over 32 samples and then hold. Same endpoints and
-         * the same stage times on both; the law and the sampling are what decision D3 decides,
-         * and the law is the larger of the two by 4x to 100x. Nothing here anticipates the answer.
+         * **Which envelope this is, and D3 is open on BOTH counts.** The law: an unshaped stage
+         * (curve field `null`) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
+         * the house Exponential curve (`AdsrCurve.Default`, K = 3), because `VoiceFactory` omits
+         * the three curve arguments. Measured at `env = 24`, the two are up to 806 cents apart at
+         * the same instant (RMS 256 cents on a pluck, 512 on a pad). The sampling: this node
+         * computes the envelope at block START and block END and interpolates the SVF
+         * coefficients across the block, while the strip computes it once per block and lets
+         * `setCutoff` ramp the coefficients over 32 samples and then hold. Same endpoints and the
+         * same stage times on both; the default law and the sampling are what decision D3
+         * decides, and the law is the larger of the two by 4x to 100x. Nothing here anticipates
+         * the answer.
          */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds. Inert while [env] is `0`. */
@@ -1301,6 +1302,23 @@ sealed interface IgnitorDsl {
         val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds. Inert while [env] is `0`. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /**
+         * Curve of the cutoff envelope's attack, the same six shapes as the chain's `adsr`. `null`
+         * (the default) is `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had a
+         * curve; decision D3 decides that default. Inert while [env] is `0`.
+         *
+         * `Linear` here is this envelope's OWN historical law, kept bit for bit: its decay steps
+         * by `(1 - sustain) / decayFrames` and its release runs over N frames and ends a hair
+         * above the floor, where the chain's `Linear` composes `sustain + (1 - sustain) * (1 - p)`
+         * and lands on 0. The curved shapes take the chain's composition (`adsrCurveShape` in
+         * `audio_be`). One implementation of the shapes, two compositions of the linear case,
+         * because the linear one is what every song's sweep already is.
+         */
+        val attackCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's decay; see [attackCurve]. */
+        val decayCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's release; see [attackCurve]. */
+        val releaseCurve: AdsrCurve? = null,
         /**
          * Per-voice analog humanization: the FIXED cutoff tolerance this voice's copy of the
          * filter gets, plus the slow drift lane that wanders it while the note sounds. Both are
@@ -1350,6 +1368,12 @@ sealed interface IgnitorDsl {
         val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
+        val attackCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
+        val decayCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
+        val releaseCurve: AdsrCurve? = null,
         /** Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1395,6 +1419,12 @@ sealed interface IgnitorDsl {
         val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
+        val attackCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
+        val decayCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
+        val releaseCurve: AdsrCurve? = null,
         /**
          * Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. The TOLERANCE and
          * the DRIFT reach this tap even though [analog]'s saturation does not: the strip's
@@ -1427,6 +1457,12 @@ sealed interface IgnitorDsl {
         val sustainLevel: IgnitorDsl = Constant(FILTER_ENV_SUSTAIN_LEVEL),
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
+        /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
+        val attackCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
+        val decayCurve: AdsrCurve? = null,
+        /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
+        val releaseCurve: AdsrCurve? = null,
         /** Per-voice cutoff tolerance and drift lane; see [Bandpass.humanize]. */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1700,14 +1736,13 @@ sealed interface IgnitorDsl {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Pre-amplification stage. Boosts signal level before the waveshaper ([Shape]).
-     * Types: "linear" (current gain curve).
+     * Pre-amplification stage. Boosts signal level before the waveshaper ([Shape]): gain without
+     * a curve, every colour belongs to [Shape].
      */
     @WireName("drive")
     data class Drive(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
-        val driveType: String = "linear",
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -1784,17 +1819,18 @@ sealed interface IgnitorDsl {
      * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
      *
      * Wet/dry follows THE shared wet/dry law (`WetDryMix`, correlated branch, p = 2):
-     * `out = max(dryFloor, cos²(wet·π/2)) · dry + sin²(wet·π/2) · phased`. The phased path is
+     * `out = max(floor, cos²(wet·π/2)) · dry + sin²(wet·π/2) · phased`. The phased path is
      * the input through the allpass chain — fully correlated with the dry — so the crossfade
      * holds constant AMPLITUDE across the knob.
      *
      * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass, 1.0 = phased signal only,
-     *   0.5 = equal mix (both coefficients 0.5). Default: 0.5. Set via the typed knob:
-     *   `.phaser(rate).wet(0.3)`.
-     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
+     *   0.5 = equal mix (both coefficients 0.5). Default: 0.5. The FIRST parameter of the door on
+     *   both surfaces: `.phaser(0.3, rate)`.
+     * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade). Raising
      *   it keeps at least that much dry at every [wet]; at 1.0 the phaser is purely additive,
-     *   like the orbit-side phaser. (Named `dryFloor`, not `floor`: `floor()` is already the
-     *   arithmetic round-down on patterns, and one word must not mean two things.)
+     *   like the orbit-side phaser. `floor` is a knob on effect builders only, where it cannot
+     *   meet the round-down `floor()` of a signal, because a builder offers only its own knobs
+     *   (maintainer, 2026-09-24).
      */
     @WireName("phaser")
     data class Phaser(
@@ -1803,11 +1839,11 @@ sealed interface IgnitorDsl {
         val wet: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
-        val dryFloor: IgnitorDsl = Constant(0.0),
+        val floor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); wet.collectParams(out)
-            center.collectParams(out); sweep.collectParams(out); dryFloor.collectParams(out)
+            center.collectParams(out); sweep.collectParams(out); floor.collectParams(out)
         }
     }
 
@@ -1831,14 +1867,15 @@ sealed interface IgnitorDsl {
      * through a one-pole lowpass at [tone] Hz.
      *
      * Wet/dry follows THE shared wet/dry law (`WetDryMix`, decorrelated branch, p = 1):
-     * `out = max(dryFloor, cos(wet·π/2)) · dry + sin(wet·π/2) · cloud`. The grain cloud is
+     * `out = max(floor, cos(wet·π/2)) · dry + sin(wet·π/2) · cloud`. The grain cloud is
      * decorrelated from the dry, so this equal-POWER crossfade holds 0 dB across the knob.
      *
      * @param wet Wet/dry balance in [0, 1]. 0.0 = bit-exact bypass REGARDLESS of [feedback]
      *   (the grain state is cleared on bypass entry, so a modulated wet cannot resurrect a
-     *   stale tail), 1.0 = cloud only. Default: 0.5. Set via the typed knob: `.shimmer().wet(0.3)`.
-     * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade); see
-     *   [Phaser.dryFloor] for the name.
+     *   stale tail), 1.0 = cloud only. Default: 0.5. The FIRST parameter of the door on both
+     *   surfaces: `.shimmer(0.3)`.
+     * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade); see
+     *   [Phaser.floor] for the name.
      * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
      *   Hard-clamped to 0.95 internally for stability.
      * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
@@ -1853,11 +1890,11 @@ sealed interface IgnitorDsl {
         val feedback: IgnitorDsl = Constant(0.5),
         val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
         val tone: IgnitorDsl = Constant(4000.0),
-        val dryFloor: IgnitorDsl = Constant(0.0),
+        val floor: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); wet.collectParams(out); feedback.collectParams(out)
-            tone.collectParams(out); dryFloor.collectParams(out)
+            tone.collectParams(out); floor.collectParams(out)
         }
     }
 
@@ -1898,11 +1935,29 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Pitch envelope. Applies an attack-decay-release envelope to pitch, useful for
-     * kick drum sweeps, laser effects, and other transient pitch gestures.
+     * Pitch envelope: an ADSR on the pitch, the same pattern as the chain's own `adsr`, for kick
+     * drum sweeps, laser effects and other transient pitch gestures.
+     *
+     * The level rises from 0 to 1 over [attackSec], falls to [sustainLevel] over [decaySec],
+     * holds, and from the gate's end falls from wherever it is back to 0 over [releaseSec]. The
+     * pitch is `2^(semitones * level / 12)`, so a level of 0 is the note itself. The release does
+     * NOT extend the voice's life: a pitch release longer than the amp envelope's is cut off with
+     * the voice, and release `0` returns to the note at the gate's end.
+     *
+     * Frame counts are fractional (`seconds * sampleRate` as a Double), which is this envelope's
+     * law; the chain `adsr` truncates them to Int. That mismatch (pitch envelope fractional, chain
+     * `adsr` Int) is recorded in decision D3.
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.
+     * @param sustainLevel the held level, a share of [semitones]; 0 (the default) returns to the
+     *   note after the decay. Not clamped: the Motor stays raw. A non-finite one reads as unset (0),
+     *   the chain `adsr`'s rule.
+     * @param attackCurve curve of the attack; `null` (the default) is `MOD_ENV_CURVE`, LINEAR,
+     *   the law this envelope had before it had curves; decision D3 decides that default. The
+     *   shapes and their composition are the chain `adsr`'s (`adsrCurveShape` in `audio_be`).
+     * @param decayCurve curve of the decay; see [attackCurve].
+     * @param releaseCurve curve of the release; see [attackCurve].
      */
     @WireName("pitch-envelope")
     data class PitchEnvelope(
@@ -1910,13 +1965,15 @@ sealed interface IgnitorDsl {
         val semitones: IgnitorDsl = Constant(0.0),
         val attackSec: IgnitorDsl = Constant(0.01),
         val decaySec: IgnitorDsl = Constant(0.1),
+        val sustainLevel: IgnitorDsl = Constant(0.0),
         val releaseSec: IgnitorDsl = Constant(0.0),
-        val curve: IgnitorDsl = Constant(0.0),
-        val anchor: IgnitorDsl = Constant(0.0),
+        val attackCurve: AdsrCurve? = null,
+        val decayCurve: AdsrCurve? = null,
+        val releaseCurve: AdsrCurve? = null,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); semitones.collectParams(out); attackSec.collectParams(out)
-            decaySec.collectParams(out); releaseSec.collectParams(out); curve.collectParams(out); anchor.collectParams(out)
+            decaySec.collectParams(out); sustainLevel.collectParams(out); releaseSec.collectParams(out)
         }
     }
 
@@ -2133,7 +2190,9 @@ private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) 
  * `3` = 36. The per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at the
  * default q the cascade is -3 dB AT [freq] — `lowpass(800, passes = 2)` still means 800.
  * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
- * 1..[FILTER_MAX_PASSES]. Third slot on EVERY door: `lpf(freq, q, passes)`.
+ * 1..[FILTER_MAX_PASSES]. The third slot on THIS flat Kotlin door and on sprudel's
+ * `lpf(freq, q, passes)`; the script door takes it on its builder,
+ * `lowpass(freq, q, x => x.passes(n))`, and refuses a third number.
  * The five envelope knobs are a COMPOUND DOOR (`/dsl-design` section 4): `null` means the call
  * did not name that knob, and naming ANY of them fills the others from
  * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decaySec = 0.3,
@@ -2150,8 +2209,21 @@ private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) 
  * @param sustainLevel Cutoff-envelope sustain share of [env], 0 to 1.
  * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's lifetime,
  * on either surface: a filter release longer than the amp envelope's is cut off with the voice.
+ * @param attackCurve Curve of the envelope's attack; `null` is `MOD_ENV_CURVE` (see
+ * [IgnitorDsl.Lowpass.attackCurve]). The three curves are NOT companions of the fill: they shape an
+ * envelope, they do not ask for one, so naming only a curve leaves the envelope off.
+ * @param decayCurve Curve of the envelope's decay; see [attackCurve].
+ * @param releaseCurve Curve of the envelope's release; see [attackCurve].
  * @param humanize Per-voice cutoff tolerance and drift lane, both scaled by `analog`
  * (see [IgnitorDsl.Lowpass.humanize]). `false` draws nothing and changes nothing.
+ *
+ * This flat signature is the ENGINE-LEVEL Kotlin door (the precedent of `eq`/`band`/`tap`,
+ * `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`): `audio_bridge` cannot see the
+ * script builders, so the script door `lowpass(freq, q, configure)` collects its builder's knobs
+ * and calls THIS function after the lambda, which is where the compound fill runs, once, for both
+ * doors. The one asymmetry: here the four stage times can be named one at a time, while the
+ * builder's `adsr(attackSec, decaySec, sustainLevel, releaseSec)` names all four at once; every
+ * builder call is therefore one call of this door.
  */
 fun IgnitorDsl.lowpass(
     freq: IgnitorDsl,
@@ -2163,6 +2235,9 @@ fun IgnitorDsl.lowpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2178,6 +2253,9 @@ fun IgnitorDsl.lowpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
         humanize = humanize,
     )
 }
@@ -2193,11 +2271,14 @@ fun IgnitorDsl.lowpass(
     decaySec: Double? = null,
     sustainLevel: Double? = null,
     releaseSec: Double? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass = lowpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    humanize,
+    attackCurve, decayCurve, releaseCurve, humanize,
 )
 
 /**
@@ -2215,6 +2296,9 @@ fun IgnitorDsl.highpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2230,6 +2314,9 @@ fun IgnitorDsl.highpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
         humanize = humanize,
     )
 }
@@ -2245,11 +2332,14 @@ fun IgnitorDsl.highpass(
     decaySec: Double? = null,
     sustainLevel: Double? = null,
     releaseSec: Double? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass = highpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    humanize,
+    attackCurve, decayCurve, releaseCurve, humanize,
 )
 
 /**
@@ -2358,6 +2448,9 @@ fun IgnitorDsl.bandpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2372,6 +2465,9 @@ fun IgnitorDsl.bandpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
         humanize = humanize,
     )
 }
@@ -2386,11 +2482,14 @@ fun IgnitorDsl.bandpass(
     decaySec: Double? = null,
     sustainLevel: Double? = null,
     releaseSec: Double? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass = bandpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    humanize,
+    attackCurve, decayCurve, releaseCurve, humanize,
 )
 
 fun IgnitorDsl.notch(
@@ -2402,6 +2501,9 @@ fun IgnitorDsl.notch(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2416,6 +2518,9 @@ fun IgnitorDsl.notch(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
         humanize = humanize,
     )
 }
@@ -2430,15 +2535,19 @@ fun IgnitorDsl.notch(
     decaySec: Double? = null,
     sustainLevel: Double? = null,
     releaseSec: Double? = null,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch = notch(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    humanize,
+    attackCurve, decayCurve, releaseCurve, humanize,
 )
 
-fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
-    IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
+/** Pre-amplification: gain without a curve, see [IgnitorDsl.Drive]. */
+fun IgnitorDsl.drive(amount: Double) =
+    IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount))
 
 /**
  * Pure waveshaping without drive. See [IgnitorDsl.Shape] for the full list of supported [shape] values.
@@ -2512,12 +2621,15 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
 )
 
 /**
- * Applies a phaser effect. The wet/dry balance is NOT a builder parameter — it is the shared
- * wet knob, typed onto the node: `.phaser(rate).wet(0.3).dryFloor(0.2)` (defaults 0.5 / 0.0).
+ * Applies a phaser effect: [wet] first, as on every door that has one, then the sweep [rate] in
+ * Hz. Both are required, because a positional rate follows the wet. The dry floor is a field of
+ * the node (`floor`, default 0.0) and a knob on the script builder only: `floor` is never a
+ * method on a signal, where it would meet the round-down `floor()`.
  */
-fun IgnitorDsl.phaser(rate: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+fun IgnitorDsl.phaser(wet: Double, rate: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
+    wet = IgnitorDsl.Constant(wet),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
@@ -2530,47 +2642,23 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
 )
 
 /**
- * Applies a granular shimmer (pitch-shift cloud with feedback).
- * [pitches]: semitone transpositions. [tone]: feedback-path LPF cutoff in Hz.
- * The wet/dry balance is the shared wet knob, typed onto the node:
- * `.shimmer().wet(0.4).dryFloor(0.2)` (defaults 0.5 / 0.0).
+ * Applies a granular shimmer (pitch-shift cloud with feedback). [wet] first, as on every door
+ * that has one, default 0.5. [tone]: feedback-path LPF cutoff in Hz. [pitches]: semitone
+ * transpositions. Same order as the script door. The dry floor is the node's `floor` field
+ * (default 0.0), a knob on the script builder only; see [phaser].
  */
 fun IgnitorDsl.shimmer(
+    wet: Double = 0.5,
     feedback: Double = 0.5,
-    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     tone: Double = 4000.0,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
 ) = IgnitorDsl.Shimmer(
     inner = this,
+    wet = IgnitorDsl.Constant(wet),
     feedback = IgnitorDsl.Constant(feedback),
     pitches = pitches,
     tone = IgnitorDsl.Constant(tone),
 )
-
-// ── The shared wet knob (C4), typed per effect node ───────────────────────────
-
-/** Sets the wet/dry balance on a phaser node — the shared wet knob (see [IgnitorDsl.Phaser]). */
-fun IgnitorDsl.Phaser.wet(value: IgnitorDsl): IgnitorDsl.Phaser = copy(wet = value)
-
-/** Scalar convenience overload of [wet]. */
-fun IgnitorDsl.Phaser.wet(value: Double): IgnitorDsl.Phaser = wet(IgnitorDsl.Constant(value))
-
-/** Sets the minimum dry coefficient on a phaser node (see [IgnitorDsl.Phaser.dryFloor]). */
-fun IgnitorDsl.Phaser.dryFloor(value: IgnitorDsl): IgnitorDsl.Phaser = copy(dryFloor = value)
-
-/** Scalar convenience overload of [dryFloor]. */
-fun IgnitorDsl.Phaser.dryFloor(value: Double): IgnitorDsl.Phaser = dryFloor(IgnitorDsl.Constant(value))
-
-/** Sets the wet/dry balance on a shimmer node — the shared wet knob (see [IgnitorDsl.Shimmer]). */
-fun IgnitorDsl.Shimmer.wet(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(wet = value)
-
-/** Scalar convenience overload of [wet]. */
-fun IgnitorDsl.Shimmer.wet(value: Double): IgnitorDsl.Shimmer = wet(IgnitorDsl.Constant(value))
-
-/** Sets the minimum dry coefficient on a shimmer node (see [IgnitorDsl.Shimmer.dryFloor]). */
-fun IgnitorDsl.Shimmer.dryFloor(value: IgnitorDsl): IgnitorDsl.Shimmer = copy(dryFloor = value)
-
-/** Scalar convenience overload of [dryFloor]. */
-fun IgnitorDsl.Shimmer.dryFloor(value: Double): IgnitorDsl.Shimmer = dryFloor(IgnitorDsl.Constant(value))
 
 // Pitch modulation
 

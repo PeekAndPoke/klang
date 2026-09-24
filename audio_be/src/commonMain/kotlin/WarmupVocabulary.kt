@@ -191,7 +191,7 @@ object WarmupVocabulary {
         .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), shape = "soft", oversample = 2) } // the fused node, as the wire carries it
         .crush(6.0)
         .coarse(3.0)
-        .phaser(rate = 0.7, center = 800.0)
+        .phaser(wet = 0.5, rate = 0.7, center = 800.0)
         .tremolo(rate = 4.0, depth = 0.4)
         .shimmer()
         .vibrato(rate = 5.0, semitones = 0.2)

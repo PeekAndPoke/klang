@@ -9,10 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
-import io.peekandpoke.klang.audio_bridge.dryFloor
 import io.peekandpoke.klang.audio_bridge.phaser
 import io.peekandpoke.klang.audio_bridge.shimmer
-import io.peekandpoke.klang.audio_bridge.wet
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -20,8 +18,9 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 /**
  * C4.2 guard (docs/plans/filter-unification.md): the shared wet knob has ONE name per door —
- * prefixed `xxxWet`/`xxxFloor` on sprudel (fields on one unordered voice), typed `.wet()` /
- * `.dryFloor()` on the ignitor. These rows pin that every renamed surface still writes the
+ * prefixed `xxxWet`/`xxxFloor` on sprudel (fields on one unordered voice); on the ignitor `wet`
+ * is the FIRST door parameter and `floor` a builder knob (phase 3 step 3d(i)). These rows pin
+ * that every renamed surface still writes the
  * SAME wire field (wire names deliberately keep their old spelling; the reverb's follow its door word since
  * 2026-09-16, `reverb` and `reverbSize`), that the new
  * `phaserFloor` reaches the wire, and that the ignitor knobs land on the node.
@@ -80,36 +79,37 @@ class LangWetKnobSpec : StringSpec({
         firstData(note("c").phaser(wet = 0.5)).toVoiceData().phaserFloor shouldBe PHASER_FLOOR
     }
 
-    "ignitor Kotlin door: .wet()/.dryFloor() typed onto the node" {
-        val p = IgnitorDsl.Sine().phaser(1.0).wet(0.25).dryFloor(0.1)
+    "ignitor Kotlin door: wet is the first door parameter, floor a field of the node" {
+        val p = IgnitorDsl.Sine().phaser(0.25, 1.0).copy(floor = IgnitorDsl.Constant(0.1))
         p.wet shouldBe IgnitorDsl.Constant(0.25)
-        p.dryFloor shouldBe IgnitorDsl.Constant(0.1)
+        p.rate shouldBe IgnitorDsl.Constant(1.0)
+        p.floor shouldBe IgnitorDsl.Constant(0.1)
 
-        val sh = IgnitorDsl.Sine().shimmer().wet(0.3).dryFloor(0.2)
+        val sh = IgnitorDsl.Sine().shimmer(0.3).copy(floor = IgnitorDsl.Constant(0.2))
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
-        sh.dryFloor shouldBe IgnitorDsl.Constant(0.2)
+        sh.floor shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    "ignitor node defaults: wet 0.5, dryFloor 0.0 on both effects" {
-        val p = IgnitorDsl.Sine().phaser(1.0)
+    "ignitor node defaults: wet 0.5, floor 0.0 on both effects" {
+        val p = IgnitorDsl.Phaser(inner = IgnitorDsl.Sine())
         p.wet shouldBe IgnitorDsl.Constant(0.5)
-        p.dryFloor shouldBe IgnitorDsl.Constant(0.0)
+        p.floor shouldBe IgnitorDsl.Constant(0.0)
 
         val sh = IgnitorDsl.Sine().shimmer()
         sh.wet shouldBe IgnitorDsl.Constant(0.5)
-        sh.dryFloor shouldBe IgnitorDsl.Constant(0.0)
+        sh.floor shouldBe IgnitorDsl.Constant(0.0)
     }
 
-    "ignitor script door: wet()/dryFloor() are knobs on the configure builder" {
+    "ignitor script door: wet on the door, floor() a knob on the configure builder" {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        val p = eval("""Osc.saw().phaser(1.0, x => x.wet(0.25).dryFloor(0.1))""") as IgnitorDsl.Phaser
+        val p = eval("""Osc.saw().phaser(0.25, 1.0, x => x.floor(0.1))""") as IgnitorDsl.Phaser
         p.wet shouldBe IgnitorDsl.Constant(0.25)
-        p.dryFloor shouldBe IgnitorDsl.Constant(0.1)
+        p.floor shouldBe IgnitorDsl.Constant(0.1)
 
-        val sh = eval("""Osc.saw().shimmer(x => x.wet(0.3))""") as IgnitorDsl.Shimmer
+        val sh = eval("""Osc.saw().shimmer(0.3)""") as IgnitorDsl.Shimmer
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
     }
 })

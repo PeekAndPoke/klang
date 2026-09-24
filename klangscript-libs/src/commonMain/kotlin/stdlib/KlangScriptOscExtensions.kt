@@ -8,7 +8,10 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coercePasses
-import io.peekandpoke.klang.audio_bridge.fillFilterEnvelope
+import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.highpass
+import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -32,6 +35,20 @@ fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
 }
 
 /**
+ * An `adsrCurves` name as a curve, or `null` when the name is unknown. The chain's door coerces
+ * `null` to its default ("exp"); the filter and pitch builders to theirs (`toModEnvCurve`).
+ */
+internal fun parseAdsrCurveName(name: String): AdsrCurve? = when (name.trim().lowercase()) {
+    "linear", "lin" -> AdsrCurve.Linear
+    "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
+    "cube", "cb", "cubic" -> AdsrCurve.Cube
+    "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
+    "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
+    "exponential", "exp", "expo" -> AdsrCurve.Exponential
+    else -> null
+}
+
+/**
  * Extension methods on [IgnitorDsl] for KlangScript.
  *
  * Enables chaining: `Osc.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
@@ -47,120 +64,58 @@ object KlangScriptOscExtensions {
     /**
      * Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl.
      *
-     * `passes` is the THIRD slot on every door (`lpf(freq, q, passes)` in sprudel,
-     * `lowpass(freq, q, passes)` from Kotlin), so the same positional call means the same
-     * filter everywhere. [analog] is fourth, and exists on this door only. KlangScript does
-     * not allow MIXING positional and named arguments, so reach for [analog] either fully
-     * positionally, `lowpass(800, 1.8, 1, 3)`, or all-named:
-     * `lowpass(freq = 800, q = 1.8, analog = 3)`.
+     * The door carries the filter's musical inputs, [freq] and [q]; everything else is a knob on
+     * the [FilterBuilder] the lambda receives: `passes`, `analog`, `humanize`, and the cutoff
+     * envelope as `env(semitones)` plus ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec)`
+     * call, the chain `adsr`'s pattern, shaped by `adsrCurves`. `env` and `adsr` are a compound
+     * pair: naming either switches the envelope on and the other fills from the constants
+     * (`fillFilterEnvelope`, after the lambda). A curve alone does not switch it on.
      *
-     * The cutoff envelope comes AFTER [analog] here and after `passes` in sprudel, so its five
-     * knobs have no shared positional slot; write them named. The NAMES and the SCALES are the
-     * same on both doors, and sprudel's `attack` / `decay` / `sustain` / `release` are this
-     * door's `attackSec` / `decaySec` / `sustainLevel` / `releaseSec`, the suffix every envelope
-     * on the `Osc` object carries (`adsr`, `pitchEnvelope`). The envelope LAW is not the same on
-     * the two surfaces yet: see [IgnitorDsl.Lowpass.env] and decision D3.
+     * ```KlangScript
+     * Osc.saw().lowpass(800, 1.2, x => x.passes(2).analog(3))
+     * Osc.saw().lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))   // a pluck; q stays 0.707
+     * ```
      *
-     * The cascade's per-stage q is STAGGERED (Butterworth ladder scaled by `q/0.707`), so at
-     * the DEFAULT q it stays -3 dB AT the cutoff: `lowpass(800, 0.707, 2)` still means 800.
-     * A resonant q keeps its character but COMPOUNDS across stages — gain at the cutoff is
-     * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` sits +3 dB there, not -3. So
-     * does [analog]: every stage gets the full drive.
+     * The cutoff-envelope LAW is not the same as sprudel's `lpf(env = ...)` yet: see
+     * [IgnitorDsl.Lowpass.env] and decision D3.
      *
-     * @param passes Cascade count: `2` = 24 dB/oct, `3` = 36. Rounded, coerced to 1..16.
-     * @param analog Analog character amount, 0..10. `0` = clean linear filter
-     * (default — bit-identical to pre-analog behaviour). Higher values engage
-     * OB-X-style state-dependent damping that compresses the resonance peak.
-     * 1–3 gives Diva-default warmth; higher = stronger "diode bite".
-     * @param env Cutoff-envelope DEPTH in semitones. The five envelope knobs are a COMPOUND
-     * DOOR: naming ANY of them fills the others from the shared constants, this one included, so
-     * `lowpass(freq = 800, decaySec = 0.3, sustainLevel = 0.2)` is the same audible pluck that
-     * sprudel's `lpf(freq = 800, decay = 0.3, sustain = 0.2)` is. A call that names none of the
-     * five has no envelope, which is the untouched filter. A non-leaf EXPRESSION as `env` is not
-     * readable at build and switches the envelope OFF with no warning (a stage knob falls back to
-     * its constant instead) - write `Osc.slot.lpenv` or a number.
-     * @param attackSec Cutoff-envelope attack in seconds. Inert when the envelope is off.
-     * @param decaySec Cutoff-envelope decay in seconds. Needs a `sustainLevel` below 1 to be heard.
-     * @param sustainLevel Cutoff-envelope sustain share of `env`, 0 to 1.
-     * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's
-     * lifetime on either surface: a filter release longer than the amp envelope's is cut off.
-     * @param humanize Per-voice analog character, scaled by [analog]: a fixed cutoff tolerance
-     * drawn once for each note plus a slow drift lane that wanders it, which is what makes two
-     * notes through "the same" filter not process identically. `false` (the default) changes
-     * nothing, and at `analog = 0` it changes nothing either. Accepts `true`/`false` or a number
-     * (`1` on, `0` off, the idiom of `Pipeline`'s `on(0)` and sprudel's `adsrOn(0)`); anything
-     * else, a string for instance, reads as ON, because the house rule is to coerce a
-     * user-reachable value rather than throw.
+     * @param configure receives the [FilterBuilder] (knobs: `passes`, `analog`, `humanize`, `env`,
+     * `adsr`, `adsrCurves`) and returns it.
      */
     @KlangScript.Method
     fun lowpass(
         self: IgnitorDsl,
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
-        passes: Double = 1.0,
-        analog: IgnitorDslLike = 0.0,
-        // `null` is "the call did not name this knob", which is what the compound fill reads
-        // (`fillFilterEnvelope` in `audio_bridge`, and `/dsl-design` section 4 for the rule).
-        // A literal default, not a constant reference: a non-literal default makes KSP emit no
-        // thunk and a named call that skips the param then fails at RUNTIME with "complex Kotlin
-        // default" (measured here on 2026-09-20).
-        env: IgnitorDslLike? = null,
-        attackSec: IgnitorDslLike? = null,
-        decaySec: IgnitorDslLike? = null,
-        sustainLevel: IgnitorDslLike? = null,
-        releaseSec: IgnitorDslLike? = null,
-        humanize: Any = false,
+        configure: ((FilterBuilder) -> FilterBuilder)? = null,
     ): IgnitorDsl {
-        val envelope = fillFilterEnvelope(
-            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
-            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
-        )
+        val k = FilterBuilder().configuredBy("lowpass", configure).knobs
 
-        return IgnitorDsl.Lowpass(
-            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
-            env = envelope.env,
-            attackSec = envelope.attackSec,
-            decaySec = envelope.decaySec,
-            sustainLevel = envelope.sustainLevel,
-            releaseSec = envelope.releaseSec,
-            humanize = coerceFlag(humanize),
+        return self.lowpass(
+            freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
+            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
 
     /**
-     * Applies a resonant highpass filter. See [lowpass] for `passes`, `analog`, the cutoff
-     * envelope and `humanize`.
+     * Applies a resonant highpass filter. The knobs are [lowpass]'s, on the same [FilterBuilder].
+     *
+     * @param configure receives the [FilterBuilder] and returns it.
      */
     @KlangScript.Method
     fun highpass(
         self: IgnitorDsl,
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
-        passes: Double = 1.0,
-        analog: IgnitorDslLike = 0.0,
-        // `null` is "the call did not name this knob": see [lowpass].
-        env: IgnitorDslLike? = null,
-        attackSec: IgnitorDslLike? = null,
-        decaySec: IgnitorDslLike? = null,
-        sustainLevel: IgnitorDslLike? = null,
-        releaseSec: IgnitorDslLike? = null,
-        humanize: Any = false,
+        configure: ((FilterBuilder) -> FilterBuilder)? = null,
     ): IgnitorDsl {
-        val envelope = fillFilterEnvelope(
-            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
-            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
-        )
+        val k = FilterBuilder().configuredBy("highpass", configure).knobs
 
-        return IgnitorDsl.Highpass(
-            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(), passes = coercePasses(passes),
-            env = envelope.env,
-            attackSec = envelope.attackSec,
-            decaySec = envelope.decaySec,
-            sustainLevel = envelope.sustainLevel,
-            releaseSec = envelope.releaseSec,
-            humanize = coerceFlag(humanize),
+        return self.highpass(
+            freq.toIgnitorDsl(), q.toIgnitorDsl(), coercePasses(k.passes), k.analog,
+            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
 
@@ -174,43 +129,26 @@ object KlangScriptOscExtensions {
         IgnitorDsl.OnePoleLowpass(inner = self, freq = freq.toIgnitorDsl())
 
     /**
-     * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
+     * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. The knobs are
+     * [lowpass]'s without `passes`, on a [BandFilterBuilder]; its `analog` scales `humanize` only
+     * (the saturation is not implemented for this tap).
      *
-     * @param analog The analog SATURATION is not implemented for this tap and the value does not
-     * reach it (same range as [lowpass]'s when it is). The value is NOT inert, though: it scales
-     * [humanize]'s per-voice cutoff tolerance and its drift lane, exactly as it does on the voice
-     * strip's `SvfBPF`. So `analog = 0` on a humanized bandpass is not a tidy-up, it switches the
-     * lane and the tolerance off AND stops the four build-time rng draws, which shifts every later
-     * noise source on that voice.
+     * @param configure receives the [BandFilterBuilder] (knobs: `analog`, `humanize`, `env`,
+     * `adsr`, `adsrCurves`) and returns it.
      */
     @KlangScript.Method
     fun bandpass(
         self: IgnitorDsl,
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
-        analog: IgnitorDslLike = 0.0,
-        // `null` is "the call did not name this knob": see [lowpass].
-        env: IgnitorDslLike? = null,
-        attackSec: IgnitorDslLike? = null,
-        decaySec: IgnitorDslLike? = null,
-        sustainLevel: IgnitorDslLike? = null,
-        releaseSec: IgnitorDslLike? = null,
-        humanize: Any = false,
+        configure: ((BandFilterBuilder) -> BandFilterBuilder)? = null,
     ): IgnitorDsl {
-        val envelope = fillFilterEnvelope(
-            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
-            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
-        )
+        val k = BandFilterBuilder().configuredBy("bandpass", configure).knobs
 
-        return IgnitorDsl.Bandpass(
-            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
-            env = envelope.env,
-            attackSec = envelope.attackSec,
-            decaySec = envelope.decaySec,
-            sustainLevel = envelope.sustainLevel,
-            releaseSec = envelope.releaseSec,
-            humanize = coerceFlag(humanize),
+        return self.bandpass(
+            freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
+            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
 
@@ -266,37 +204,23 @@ object KlangScriptOscExtensions {
     }
 
     /**
-     * SVF notch (band-reject) filter. See [bandpass] for what `analog` does on a tap without
-     * saturation (it is not inert: it scales `humanize`) and [lowpass] for the cutoff envelope.
+     * SVF notch (band-reject) filter. The knobs are [bandpass]'s, on a [BandFilterBuilder].
+     *
+     * @param configure receives the [BandFilterBuilder] and returns it.
      */
     @KlangScript.Method
     fun notch(
         self: IgnitorDsl,
         freq: IgnitorDslLike,
         q: IgnitorDslLike = 0.707,
-        analog: IgnitorDslLike = 0.0,
-        // `null` is "the call did not name this knob": see [lowpass].
-        env: IgnitorDslLike? = null,
-        attackSec: IgnitorDslLike? = null,
-        decaySec: IgnitorDslLike? = null,
-        sustainLevel: IgnitorDslLike? = null,
-        releaseSec: IgnitorDslLike? = null,
-        humanize: Any = false,
+        configure: ((BandFilterBuilder) -> BandFilterBuilder)? = null,
     ): IgnitorDsl {
-        val envelope = fillFilterEnvelope(
-            env?.toIgnitorDsl(), attackSec?.toIgnitorDsl(), decaySec?.toIgnitorDsl(),
-            sustainLevel?.toIgnitorDsl(), releaseSec?.toIgnitorDsl(),
-        )
+        val k = BandFilterBuilder().configuredBy("notch", configure).knobs
 
-        return IgnitorDsl.Notch(
-            inner = self, freq = freq.toIgnitorDsl(), q = q.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
-            env = envelope.env,
-            attackSec = envelope.attackSec,
-            decaySec = envelope.decaySec,
-            sustainLevel = envelope.sustainLevel,
-            releaseSec = envelope.releaseSec,
-            humanize = coerceFlag(humanize),
+        return self.notch(
+            freq.toIgnitorDsl(), q.toIgnitorDsl(), k.analog,
+            k.env, k.attackSec, k.decaySec, k.sustainLevel, k.releaseSec,
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.humanize,
         )
     }
 
@@ -381,25 +305,15 @@ object KlangScriptOscExtensions {
         else -> IgnitorDsl.Adsr(inner = self, expK = k.toIgnitorDsl())
     }
 
-    private fun parseAdsrCurveName(name: String): AdsrCurve? = when (name.trim().lowercase()) {
-        "linear", "lin" -> AdsrCurve.Linear
-        "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
-        "cube", "cb", "cubic" -> AdsrCurve.Cube
-        "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
-        "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
-        "exponential", "exp", "expo" -> AdsrCurve.Exponential
-        else -> null
-    }
-
     // ── Effects ──────────────────────────────────────────────────────────────
 
     /**
-     * Pre-amplification stage. Boosts signal level before clipping.
-     * Types: "linear".
+     * Pre-amplification stage. Boosts signal level before clipping: gain without a curve, every
+     * colour belongs to `shape`.
      */
     @KlangScript.Method
-    fun drive(self: IgnitorDsl, amount: IgnitorDslLike, driveType: String = "linear"): IgnitorDsl =
-        IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl(), driveType = driveType)
+    fun drive(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl())
 
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
@@ -444,17 +358,20 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
     /**
-     * Applies a multi-stage phaser effect. The wet/dry balance is a knob on the [PhaserBuilder]
-     * the lambda receives: `.phaser(rate, x => x.wet(0.3).dryFloor(0.2))` (defaults 0.5 / 0.0).
+     * Applies a multi-stage phaser effect. [wet] comes FIRST, as on every door that has one, and
+     * both [wet] and [rate] are required, because a positional rate follows the wet. The dry floor
+     * is a knob on the [PhaserBuilder]: `.phaser(0.3, 0.5, x => x.floor(0.2))`.
      *
+     * @param wet wet/dry balance, 0..1 (0 is a bit-exact bypass).
      * @param rate sweep rate in Hz.
      * @param center sweep center frequency in Hz (default 1000).
      * @param sweep sweep width in Hz (default 1000).
-     * @param configure receives the [PhaserBuilder] (knobs: `wet`, `dryFloor`) and returns it.
+     * @param configure receives the [PhaserBuilder] (knob: `floor`) and returns it.
      */
     @KlangScript.Method
     fun phaser(
         self: IgnitorDsl,
+        wet: IgnitorDslLike,
         rate: IgnitorDslLike,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
@@ -463,6 +380,7 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Phaser(
             inner = self,
             rate = rate.toIgnitorDsl(),
+            wet = wet.toIgnitorDsl(),
             center = center.toIgnitorDsl(),
             sweep = sweep.toIgnitorDsl(),
         ),
@@ -474,18 +392,20 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
 
     /**
-     * Applies a granular shimmer cloud with configurable pitch transpositions and feedback.
-     * The wet/dry balance is a knob on the [ShimmerBuilder] the lambda receives:
-     * `.shimmer(0.5, 4000, [0, 7, 12], x => x.wet(0.4).dryFloor(0.2))` (defaults 0.5 / 0.0).
+     * Applies a granular shimmer cloud with configurable pitch transpositions and feedback. [wet]
+     * comes FIRST, as on every door that has one; the dry floor is a knob on the [ShimmerBuilder]:
+     * `.shimmer(0.4, 0.5, 4000, [0, 7, 12], x => x.floor(0.2))`.
      *
+     * @param wet Wet/dry balance, 0..1. Default 0.5. 0 is a bit-exact bypass.
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
      * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
-     * @param configure receives the [ShimmerBuilder] (knobs: `wet`, `dryFloor`) and returns it.
+     * @param configure receives the [ShimmerBuilder] (knob: `floor`) and returns it.
      */
     @KlangScript.Method
     fun shimmer(
         self: IgnitorDsl,
+        wet: IgnitorDslLike = 0.5,
         feedback: IgnitorDslLike = 0.5,
         tone: IgnitorDslLike = 4000.0,
         pitches: Any? = null,
@@ -498,6 +418,7 @@ object KlangScriptOscExtensions {
         return ShimmerBuilder(
             IgnitorDsl.Shimmer(
                 inner = self,
+                wet = wet.toIgnitorDsl(),
                 feedback = feedback.toIgnitorDsl(),
                 pitches = pitchList,
                 tone = tone.toIgnitorDsl(),
@@ -507,15 +428,27 @@ object KlangScriptOscExtensions {
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────
 
-    /** Applies FM synthesis with a modulator ignitor. */
+    /**
+     * Applies FM synthesis with a modulator ignitor. The modulation index envelope is a knob on the
+     * [FmBuilder]: `.fm(Osc.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))`, the built-in `sgbell`.
+     *
+     * @param configure receives the [FmBuilder] (knob: `adsr`) and returns it.
+     */
     @KlangScript.Method
-    fun fm(self: IgnitorDsl, modulator: IgnitorDslLike, ratio: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
+    fun fm(
+        self: IgnitorDsl,
+        modulator: IgnitorDslLike,
+        ratio: IgnitorDslLike,
+        depth: IgnitorDslLike,
+        configure: ((FmBuilder) -> FmBuilder)? = null,
+    ): IgnitorDsl = FmBuilder(
         IgnitorDsl.Fm(
             carrier = self,
             modulator = modulator.toIgnitorDsl(),
             ratio = ratio.toIgnitorDsl(),
             depth = depth.toIgnitorDsl(),
-        )
+        ),
+    ).configuredBy("fm", configure).node
 
     // ── Pitch Modulation ─────────────────────────────────────────────────────
 
@@ -553,24 +486,22 @@ object KlangScriptOscExtensions {
         IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
 
     /**
-     * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the
-     * envelope peak: `pitchEnvelope(semitones = 24, decaySec = 0.05)` sweeps a kick from
-     * two octaves up down to the note.
+     * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the envelope
+     * peak; the stages are ONE `adsr` call on the [PitchEnvelopeBuilder], the chain `adsr`'s
+     * pattern: `pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0, 0))` sweeps a kick from two octaves
+     * up down to the note. Without the lambda the stages are `adsr(0.01, 0.1, 0, 0)`. The release
+     * returns the pitch to the note from the gate's end and does not extend the voice's life.
+     *
+     * @param configure receives the [PitchEnvelopeBuilder] (knobs: `adsr`, `adsrCurves`) and returns it.
      */
     @KlangScript.Method
     fun pitchEnvelope(
         self: IgnitorDsl,
         semitones: IgnitorDslLike,
-        attackSec: IgnitorDslLike = 0.01,
-        decaySec: IgnitorDslLike = 0.1,
-        releaseSec: IgnitorDslLike = 0.0,
-    ): IgnitorDsl = IgnitorDsl.PitchEnvelope(
-        inner = self,
-        semitones = semitones.toIgnitorDsl(),
-        attackSec = attackSec.toIgnitorDsl(),
-        decaySec = decaySec.toIgnitorDsl(),
-        releaseSec = releaseSec.toIgnitorDsl(),
-    )
+        configure: ((PitchEnvelopeBuilder) -> PitchEnvelopeBuilder)? = null,
+    ): IgnitorDsl = PitchEnvelopeBuilder(
+        IgnitorDsl.PitchEnvelope(inner = self, semitones = semitones.toIgnitorDsl()),
+    ).configuredBy("pitchEnvelope", configure).node
 
     // ── Analog Drift ────────────────────────────────────────────────────────
 

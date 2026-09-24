@@ -254,17 +254,25 @@ modulation.
 
 | Method                      | Description                         |
 |-----------------------------|-------------------------------------|
-| `.lowpass(freq, q?, passes?, analog?)`  | Resonant lowpass (default q=0.707, passes=1)  |
-| `.highpass(freq, q?, passes?, analog?)` | Resonant highpass                            |
-| `.onepole(freq)`            | Gentle one-pole lowpass (-6 dB/oct) |
-| `.bandpass(freq, q?)`   | Bandpass filter                     |
-| `.notch(freq, q?)`      | Band-reject (notch) filter          |
+| `.lowpass(freq, q?, x => ...)`  | Resonant lowpass (default q=0.707); builder: `passes`, `analog`, `humanize`, `env`, `adsr`, `adsrCurves` |
+| `.highpass(freq, q?, x => ...)` | Resonant highpass, the same builder                                                                   |
+| `.onepole(freq)`                | Gentle one-pole lowpass (-6 dB/oct)                                                                   |
+| `.bandpass(freq, q?, x => ...)` | Bandpass filter; builder as lowpass without `passes`                                                  |
+| `.notch(freq, q?, x => ...)`    | Band-reject (notch) filter, the same builder as bandpass                                              |
 
-`passes` is the cascade count and sits in the SAME third slot on every door (`lpf(freq, q, passes)`
-in sprudel): `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q the cascade stays -3 dB
-AT the cutoff; a resonant q compounds across stages, and so does `analog` (every stage gets the
-full drive). KlangScript forbids mixing positional and named arguments, so combine with `analog`
-in the all-named form: `.lowpass(freq = 800, q = 1.8, analog = 3)`.
+The door carries the filter's musical inputs, `freq` and `q`; every secondary knob sits on the
+builder the lambda receives: `.lowpass(800, 1.8, x => x.passes(2).analog(3))`. The lambda floats
+past an omitted q: `.lowpass(800, x => x.analog(3))`.
+
+- `passes(n)` is the cascade count: `2` = 24 dB/oct, `3` = 36, coerced to 1..16. At the default q
+  the cascade stays -3 dB AT the cutoff; a resonant q compounds across stages, and so does
+  `analog` (every stage gets the full drive).
+- `env(semitones)` and `adsr(attackSec, decaySec, sustainLevel, releaseSec)` are the cutoff
+  envelope: naming EITHER switches it on and the other fills from the shared constants (depth 7
+  semitones; stages 0.01 / 0.1 / 1.0 / 0.1). `.lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))`
+  is a pluck. `adsrCurves(attackCurve, decayCurve, releaseCurve)` shapes the stages with the
+  chain's curves; unshaped stages are linear, and a curve alone does not switch the envelope on.
+- `humanize()` gives each note its own cutoff tolerance and a slow drift, scaled by `analog`.
 
 ### Equalizer
 
@@ -366,18 +374,19 @@ Put taps first unless you want that.
 
 | Method                                  | Description                                |
 |-----------------------------------------|--------------------------------------------|
-| `.drive(amount, driveType?)`            | Pre-amplification (type: "linear")         |
+| `.drive(amount)`                        | Pre-amplification: gain, no curve          |
 | `.shape(shape?, oversample?)`           | The waveshaper curve alone, no gain        |
 | `.distort(amount, shape?, oversample?)` | `.drive()` + `.shape()` in one node        |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
-| `.phaser(rate, center?, sweep?, x => x.wet(w).dryFloor(f))` | Allpass phaser (center/sweep default 1000; wet 0.5, dryFloor 0 are knobs on the configure builder) |
+| `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
+| `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
 | `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
 `shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
 Reach for the pair instead of the bundle only when something must sit BETWEEN them, e.g.
-`.drive(3).lowpass(800, 1.0, 1, 3).shape("tube")` — drive into a saturating filter, then shape.
+`.drive(3).lowpass(800, 1.0, x => x.analog(3)).shape("tube")`: drive into a saturating filter, then shape.
 Sprudel has only `distort()`; its voice model cannot express a node between the two.
 
 Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
@@ -391,10 +400,11 @@ Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to pow
 
 | Method                         | Description                                                        |
 |--------------------------------|--------------------------------------------------------------------|
-| `.fm(modulator, ratio, depth)` | FM synthesis with modulator, frequency ratio, and modulation depth |
+| `.fm(modulator, ratio, depth, x => x.adsr(a, d, s, r)?)` | FM synthesis with modulator, frequency ratio, and modulation depth; the builder's `adsr` is the modulation-index envelope |
 
 The modulator is another `Osc` node. `ratio` sets the modulator frequency relative to the carrier. `depth` is the
-modulation amount in Hz.
+modulation amount in Hz. Without the lambda the depth is constant; `x => x.adsr(0.001, 0.5, 0, 0.05)` is the decaying
+bell of the built-in `sgbell`.
 
 ### Pitch Modulation
 
@@ -405,7 +415,12 @@ modulation amount in Hz.
 | `.octaveDown()`                                     | -12 semitones                              |
 | `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
 | `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
-| `.pitchEnvelope(semitones, attack?, decay?, release?)` | Pitch sweep envelope (SEMITONES at peak)  |
+| `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); `adsrCurves` shapes it |
+
+`pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
+sustain (a share of `semitones`, usually 0 = the note) over the decay, and from the gate's end back to the note over
+the release. `x => x.adsr(0.001, 0.04, 0, 0)` is a kick's sweep. Without the lambda: `adsr(0.01, 0.1, 0, 0)`. Its
+stages are linear unless `adsrCurves` shapes them.
 
 ### Analog Drift
 
@@ -518,7 +533,7 @@ let flute = Osc.sine()
         .plus(Osc.perlin(8).mul(0.05))
         .lowpass(3000).highpass(400)
         .analog(0.15).vibrato(4.5, 0.012)
-        .pitchEnvelope(1.5, 0.01, 0.06)
+        .pitchEnvelope(1.5, x => x.adsr(0.01, 0.06, 0, 0))
         .adsr(0.06, 0.15, 0.75, 0.2)
 ```
 
@@ -532,7 +547,7 @@ let clarinet = Osc.triangle().mul(0.7)
         .plus(Osc.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01))
         .lowpass(2800).highpass(150).onepole(4000)
         .vibrato(5, 0.003)
-        .pitchEnvelope(0.5, 0.01, 0.06)
+        .pitchEnvelope(0.5, x => x.adsr(0.01, 0.06, 0, 0))
         .adsr(0.04, 0.08, 0.9, 0.1)
 ```
 
@@ -546,7 +561,7 @@ let alto = Osc.square().mul(0.6)
         .plus(Osc.perlin(15).mul(0.12).adsr(0.02, 0.15, 0.0, 0.01))
         .lowpass(3500).highpass(200)
         .vibrato(4.5, 0.015)
-        .pitchEnvelope(-2, 0.01, 0.12)
+        .pitchEnvelope(-2, x => x.adsr(0.01, 0.12, 0, 0))
         .adsr(0.03, 0.1, 0.85, 0.12)
 ```
 
@@ -638,7 +653,7 @@ let marimba = Osc.sine().mul(0.7)
         .plus(Osc.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
         .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
         .lowpass(2500).onepole(3000)
-        .pitchEnvelope(1, 0.001, 0.04)
+        .pitchEnvelope(1, x => x.adsr(0.001, 0.04, 0, 0))
         .adsr(0.005, 0.5, 0.0, 0.08)
 ```
 
@@ -671,7 +686,7 @@ let musicbox = Osc.sine().mul(0.6)
 
 ```javascript
 let kick = Osc.sine()
-        .pitchEnvelope(24, 0.001, 0.04)
+        .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
         .adsr(0.001, 0.2, 0.0, 0.02)
 ```
 
@@ -753,7 +768,7 @@ Osc.sine().mul(0.5)                                                // fundamenta
 **Pitch scoop** (attack transient):
 
 ```javascript
-.pitchEnvelope(semitones, attack, decay)
+.pitchEnvelope(semitones, x => x.adsr(attack, decay, 0, 0))
 // Positive = pitch drops (mallet percussion)
 // Negative = pitch scoops up (saxophone, brass)
 ```
@@ -802,7 +817,7 @@ let pad = Osc.supersine(x => x.analog(0.3))
     .adsr(0.8, 0.5, 0.9, 2.0)
 
 let kick = Osc.sine()
-    .pitchEnvelope(24, 0.001, 0.04)
+    .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
     .adsr(0.001, 0.2, 0.0, 0.02)
 
 let sub = Osc.sine().lowpass(200)

@@ -205,7 +205,8 @@ pinned by a bit-identity spec.
 
 `pitchedSource` gives the bank the accumulated pitch mod (vibrato, `pitchEnvelope`, `detune`)
 through `ctx.phaseMod`, as the sines get it today, so the song's `.pitchEnvelope(12, 0.001, 0.02)`
-keeps working unchanged.
+keeps working unchanged. (That spelling is `.pitchEnvelope(12, x => x.adsr(0.001, 0.02, 0, 0))` since
+phase 3 step 3d, 2026-09-24; the pitch path is the same.)
 
 ### 5.2 `PartialBankIgnitor` (phase 1, the deliverable; as built)
 

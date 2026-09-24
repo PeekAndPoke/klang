@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * Tests for [computeFilterEnvelope] — the control-rate ADSR used by Ignitor-level
@@ -42,6 +43,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 0.0,
             sustainLevel = 1.0,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.5 plusOrMinus 0.02)
     }
@@ -54,6 +58,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 100.0 / 48000,
             sustainLevel = 0.5,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.75 plusOrMinus 0.02)
     }
@@ -66,6 +73,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 100.0 / 48000,
             sustainLevel = 0.6,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.6 plusOrMinus 0.01)
     }
@@ -78,6 +88,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 10.0 / 48000,
             sustainLevel = 0.8,
             releaseSec = 200.0 / 48000,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.4 plusOrMinus 0.02)
     }
@@ -94,6 +107,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 100.0 / 48000,
             sustainLevel = 0.8,
             releaseSec = 100.0 / 48000,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // Level at gate-off = 100/200 = 0.5 (mid attack)
         // 50 frames into release: 0.5 - (50 * 0.5/100) = 0.25
@@ -109,6 +125,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 200.0 / 48000,
             sustainLevel = 0.4,
             releaseSec = 200.0 / 48000,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // At gate-off = frame 200, we're AT gate end, so release just started → level = 0.7
         result shouldBe (0.7 plusOrMinus 0.02)
@@ -124,6 +143,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 100.0 / 48000,
             sustainLevel = 0.5,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // With 0 attack, attRate = 1.0, absPos * 1.0 = 0. But absPos=0 < attackFrames=0 is false,
         // so we fall through to decay. decPos = 0 - 0 = 0, so level = 1.0
@@ -137,6 +159,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 10.0 / 48000,
             sustainLevel = 0.8,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // releaseFrames = 0, relRate = 1.0, result = 0.8 - (1 * 1.0) = -0.2 → clamped to 0.0
         result shouldBe (0.0 plusOrMinus 0.01)
@@ -152,6 +177,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 50.0 / 48000,
             sustainLevel = 0.0,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.0 plusOrMinus 0.01)
     }
@@ -164,6 +192,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 100.0 / 48000,
             sustainLevel = 1.0,
             releaseSec = 0.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // decRate = (1 - 1) / 100 = 0, so level stays at 1.0
         result shouldBe (1.0 plusOrMinus 0.01)
@@ -179,6 +210,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = -0.5,
             sustainLevel = 0.7,
             releaseSec = -2.0,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // attackFrames = 0, decayFrames = 0 → immediately at sustain
         result shouldBe (0.7 plusOrMinus 0.01)
@@ -195,6 +229,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 200.0 / 48000,
             sustainLevel = 0.5,
             releaseSec = 200.0 / 48000,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         // At gate-off (frame 100): attack just finished → level = 1.0
         // (100 < 100 is false, 100 < 100+200 is true, decPos=0, so level = 1.0)
@@ -211,6 +248,9 @@ class FilterEnvelopeTest : StringSpec({
             decaySec = 10.0 / 48000,
             sustainLevel = 0.5,
             releaseSec = 100.0 / 48000,
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         result shouldBe (0.0 plusOrMinus 0.001)
     }

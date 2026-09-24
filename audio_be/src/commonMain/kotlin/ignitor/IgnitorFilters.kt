@@ -5,7 +5,9 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.ADSR_EXP_NORM
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.adsrCurveShape
 import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
@@ -13,6 +15,10 @@ import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushState
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
+import io.peekandpoke.klang.audio_be.releaseProgressOffset
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
 import kotlin.math.pow
@@ -58,6 +64,12 @@ data class FilterEnvDef(
     val decaySec: Double = 0.0,
     val sustainLevel: Double = 1.0,
     val releaseSec: Double = 0.0,
+    // The three stage curves, RESOLVED (the node's `null` has become `MOD_ENV_CURVE` in
+    // `IgnitorDslRuntime.filterEnvDef`). Linear here for the reason above: it is the law with no
+    // curve term, the neutral value, not the surface default.
+    val attackCurve: AdsrCurve = AdsrCurve.Linear,
+    val decayCurve: AdsrCurve = AdsrCurve.Linear,
+    val releaseCurve: AdsrCurve = AdsrCurve.Linear,
 ) {
     companion object {
         val NONE = FilterEnvDef()
@@ -81,8 +93,9 @@ data class FilterEnvDef(
  * **How this envelope differs from the voice strip's, on TWO counts, both open under decision D3
  * of `docs/tasks/builtin-instruments.md`.**
  *
- *  - **The law.** [computeFilterEnvelope] has no curve term at all, so every segment here is a
- *    straight LINE. The strip's filter envelope runs through `EnvelopeCalc` with
+ *  - **The law.** An unshaped stage takes `MOD_ENV_CURVE`, which is LINEAR, so by default every
+ *    segment here is a straight LINE ([computeFilterEnvelope]); `adsrCurves` can shape each stage.
+ *    The strip's filter envelope runs through `EnvelopeCalc` with
  *    `AdsrCurve.Default`, which is Exponential with K = 3, because `VoiceFactory` builds its
  *    `Voice.Envelope` without the three curve arguments. Measured at `env = 24`, the two shapes
  *    are up to 806 cents apart at the same instant (RMS 256 cents on a pluck, 512 on a pad).
@@ -144,6 +157,9 @@ private class SvfIgnitor(
     private val coefsEnd = SvfCoeffs()
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
+
+    // Read once: see `computeFilterEnvelope`'s `expNorm`.
+    private val expNorm: Double = ADSR_EXP_NORM
     private val hasDrift: Boolean = humanize?.hasDrift == true
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -183,11 +199,13 @@ private class SvfIgnitor(
             if (hasEnv) {
                 val envStart = computeFilterEnvelope(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    sampleOffsetWithinBlock = 0,
+                    env.attackCurve, env.decayCurve, env.releaseCurve,
+                    sampleOffsetWithinBlock = 0, expNorm = expNorm,
                 )
                 val envEnd = computeFilterEnvelope(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    sampleOffsetWithinBlock = length,
+                    env.attackCurve, env.decayCurve, env.releaseCurve,
+                    sampleOffsetWithinBlock = length, expNorm = expNorm,
                 )
                 // C3 (filter unification): envelope depth is SEMITONES — the sweep is
                 // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
@@ -679,22 +697,38 @@ data class FormantBand(
  *
  * Used to determine the actual level at any point during the gate-on phase,
  * including at gate-end for correct release-start calculation.
+ *
+ * The attack takes its curve through [adsrCurveShape], which returns the progress itself for
+ * `Linear`, so the unshaped attack is the historical ramp bit for bit. The DECAY keeps its
+ * historical linear form for `Linear` (`1 - decPos * (1 - sustain) / decayFrames`), because the
+ * chain's composition `sustain + (1 - sustain) * (1 - p)` rounds differently in the last bit and
+ * every song's sweep is the historical one; a curved decay takes the chain's composition.
  */
 private fun envelopeLevelAtPosition(
     absPos: Int,
     attackFrames: Int,
     decayFrames: Int,
     sustainLevel: Double,
+    attackCurve: AdsrCurve,
+    decayCurve: AdsrCurve,
+    expNorm: Double,
 ): Double = when {
     absPos < attackFrames -> {
         val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        absPos * attRate
+        adsrCurveShape(attackCurve, absPos * attRate, ADSR_EXP_K, expNorm)
     }
 
     absPos < attackFrames + decayFrames -> {
         val decPos = absPos - attackFrames
-        val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
-        1.0 - (decPos * decRate)
+
+        if (decayCurve == AdsrCurve.Linear) {
+            val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
+            1.0 - (decPos * decRate)
+        } else {
+            val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
+            val omp = 1.0 - decPos * decRate
+            sustainLevel + (1.0 - sustainLevel) * adsrCurveShape(decayCurve, omp, ADSR_EXP_K, expNorm)
+        }
     }
 
     else -> sustainLevel
@@ -713,6 +747,15 @@ private fun envelopeLevelAtPosition(
  *
  * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
  * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
+ *
+ * The three curves shape the stages (`adsrCurves` on the filter doors). `Linear` on every stage is
+ * this envelope's historical law, bit for bit; a curved stage takes the chain `adsr`'s shape and
+ * composition ([adsrCurveShape]), the release included, whose time base is then the chain's
+ * (`releaseProgressDenom`/`releaseProgressOffset`, so a curved release lands on 0).
+ *
+ * [expNorm] is [ADSR_EXP_NORM], the Exponential curve's normaliser. A caller that evaluates this
+ * per sample passes it from a local or a field: on Kotlin/JS a top-level `val` is read through a
+ * lazy-init accessor, and an inline function's arguments are evaluated at every call.
  */
 internal fun computeFilterEnvelope(
     ctx: IgniteContext,
@@ -720,7 +763,11 @@ internal fun computeFilterEnvelope(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
+    attackCurve: AdsrCurve,
+    decayCurve: AdsrCurve,
+    releaseCurve: AdsrCurve,
     sampleOffsetWithinBlock: Int = 0,
+    expNorm: Double = ADSR_EXP_NORM,
 ): Double {
     val attackFrames = (attackSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
     val decayFrames = (decaySec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
@@ -731,17 +778,26 @@ internal fun computeFilterEnvelope(
     val gateEndPos = ctx.gateEndFrame
 
     val envValue = if (absPos >= gateEndPos) {
-        val levelAtGateEnd = envelopeLevelAtPosition(gateEndPos, attackFrames, decayFrames, clampedSustain)
+        val levelAtGateEnd = envelopeLevelAtPosition(
+            gateEndPos, attackFrames, decayFrames, clampedSustain, attackCurve, decayCurve, expNorm,
+        )
         val relPos = absPos - gateEndPos
-        // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
-        // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
-        // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
-        // the residual ends a sweep a hair above its floor rather than leaving a gain step.
-        // Changing it would move filter-sweep sound in existing songs for no click benefit.
-        val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
-        levelAtGateEnd - (relPos * relRate)
+
+        if (releaseCurve == AdsrCurve.Linear) {
+            // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
+            // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
+            // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
+            // the residual ends a sweep a hair above its floor rather than leaving a gain step.
+            // Changing it would move filter-sweep sound in existing songs for no click benefit.
+            val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
+            levelAtGateEnd - (relPos * relRate)
+        } else {
+            val rf = releaseFrames.toDouble()
+            val p = ((relPos + releaseProgressOffset(rf)) / releaseProgressDenom(rf)).coerceAtMost(1.0)
+            levelAtGateEnd * adsrCurveShape(releaseCurve, 1.0 - p, ADSR_EXP_K, expNorm)
+        }
     } else {
-        envelopeLevelAtPosition(absPos, attackFrames, decayFrames, clampedSustain)
+        envelopeLevelAtPosition(absPos, attackFrames, decayFrames, clampedSustain, attackCurve, decayCurve, expNorm)
     }
 
     return envValue.coerceIn(0.0, 1.0)

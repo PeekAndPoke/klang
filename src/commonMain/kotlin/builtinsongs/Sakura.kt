@@ -24,22 +24,22 @@ let wait = 14
 let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(freq = Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), analog = Osc.slot.analog)
+      .lowpass(Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x => x.analog(Osc.slot.analog))
 
 let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .lowpass(freq = 3500, q = 1.0, analog = Osc.slot.analog)
-      .highpass(freq = 600, analog = Osc.slot.analog)
+      .lowpass(3500, 1.0, x => x.analog(Osc.slot.analog))
+      .highpass(600, x => x.analog(Osc.slot.analog))
       // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
       // filters above still get their own `analog = Osc.slot.analog` saturation.
       .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
-      .pitchEnvelope(1, 0.02, 0.1)
+      .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
 
 let kick = Osc.sine()
-      .pitchEnvelope(24, 0.001, 0.04)
+      .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
       .adsr(0.001, 0.2, 0.0, 0.02)
 
 let rim = Osc.sine(800)
@@ -56,7 +56,7 @@ let sub = Osc.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
 
 let pad = Osc.supertri(x => x.voices(5).analog(5.0))
-      .lowpass(freq = Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), q = 3, analog = Osc.slot.analog)
+      .lowpass(Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), 3, x => x.analog(Osc.slot.analog))
       .adsr(1.5, 3.0, 0.6, 1.5).adsrCurves("scurve", "scurve", "scurve")
 
 

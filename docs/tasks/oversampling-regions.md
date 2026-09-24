@@ -74,6 +74,9 @@ more than one place per effect, the factoring is not done.
   strip and rounds in the Ignitor (D1); the distort soft cap is applied by `ShapeIgnitor` and not by
   `DistortionRenderer` (D2); the filter envelope is linear on the node and exponential on the strip
   (D3). Each is one effect written twice.
+- The ADSR curve law (`when (curve)` over the `AdsrCurve` kinds) was inlined three times in `AdsrIgnitor`
+  and three more times on the strip. Phase 3 step 3d(i) extracted the Ignitor's into `AdsrCurveMath.kt`
+  and shares it with the filter and pitch envelopes; the strip's three copies remain (found 2026-09-24).
 - The two coarse classes document a deliberate difference in their bypass thresholds (`CoarseRenderer`'s
   KDoc) that exists only because they are two classes.
 

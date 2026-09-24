@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.adsrExpNorm
-import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_be.adsrCurveShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_be.releaseProgressOffset
 import io.peekandpoke.klang.audio_be.releaseProgressDenom
@@ -72,8 +72,11 @@ fun Ignitor.adsr(
  * NaN-timed stage simply has no frames; `declickSeconds` is read through `> 0.0`, which a NaN
  * fails, so a non-finite de-click is off. `releaseSec`'s other half, the voice's release TAIL,
  * is nulled where the build reads it (`IgnitorDslRuntime`'s Adsr arm).
+ *
+ * The pitch envelope's sustain (`PitchModFactories`) takes the same substitution for the same
+ * reason: it multiplies every ratio of a settled block, so a NaN would freeze the pitch.
  */
-private fun finiteOr(value: Double, fallback: Double): Double = if (value.isFinite()) value else fallback
+internal fun finiteOr(value: Double, fallback: Double): Double = if (value.isFinite()) value else fallback
 
 private class AdsrIgnitor(
     private val upstream: Ignitor,
@@ -143,42 +146,21 @@ private class AdsrIgnitor(
                     val relPos = absPos - gateEndPos
                     val p = ((relPos + relOffset) / relDenom).coerceAtMost(1.0)
                     val omp = 1.0 - p
-                    val shape = when (relCurve) {
-                        AdsrCurve.Linear -> omp
-                        AdsrCurve.Square -> omp * omp
-                        AdsrCurve.Cube -> omp * omp * omp
-                        AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-                        AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                        AdsrCurve.Exponential -> adsrExpShape(omp, expKVal, expNorm)
-                    }
+                    val shape = adsrCurveShape(relCurve, omp, expKVal, expNorm)
                     currentLevel = releaseStartLevel * shape
                 } else {
                     releaseStarted = false
                     currentLevel = when {
                         absPos < attackFrames -> {
                             val p = absPos * attRate
-                            when (attCurve) {
-                                AdsrCurve.Linear -> p
-                                AdsrCurve.Square -> p * p
-                                AdsrCurve.Cube -> p * p * p
-                                AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
-                                AdsrCurve.InvSquare -> p * (2.0 - p)
-                                AdsrCurve.Exponential -> adsrExpShape(p, expKVal, expNorm)
-                            }
+                            adsrCurveShape(attCurve, p, expKVal, expNorm)
                         }
 
                         absPos < attDecFrames -> {
                             val decPos = absPos - attackFrames
                             val p = decPos * decRate
                             val omp = 1.0 - p
-                            val shape = when (decCurve) {
-                                AdsrCurve.Linear -> omp
-                                AdsrCurve.Square -> omp * omp
-                                AdsrCurve.Cube -> omp * omp * omp
-                                AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-                                AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                                AdsrCurve.Exponential -> adsrExpShape(omp, expKVal, expNorm)
-                            }
+                            val shape = adsrCurveShape(decCurve, omp, expKVal, expNorm)
                             sustainLevelVal + (1.0 - sustainLevelVal) * shape
                         }
                         else -> sustainLevelVal

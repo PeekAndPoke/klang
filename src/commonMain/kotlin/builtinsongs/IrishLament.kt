@@ -36,7 +36,7 @@ let blockfloete =
         .lowpass(3500, 0.8).highpass(300).onepole(3500)
         .vibrato(1/2, 0.1)
         // NOTE: `.analog(5)` was here and INERT (receiver was the Vibrato wrapper).
-        .pitchEnvelope(0.15, 0.01, 0.03)
+        .pitchEnvelope(0.15, x => x.adsr(0.01, 0.03, 0, 0))
         .adsr(0.01, 0.08, 0.5, 0.1)
 
 // Guitar — more sustain and release
@@ -54,7 +54,7 @@ let fingerpick =
 // Pizzicato contrabass
 let contrabass =
   Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
-    .pitchEnvelope(0.5, 0.003, 0.02)
+    .pitchEnvelope(0.5, x => x.adsr(0.003, 0.02, 0, 0))
     .plus(Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
     .plus(Osc.sine().detune(0.01).lowpass(200).mul(0.3).adsr(0.005, 0.6, 0.0, 0.15))
     .plus(Osc.triangle().lowpass(1200).mul(0.15).adsr(0.005, 0.3, 0.0, 0.05))

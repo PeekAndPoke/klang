@@ -43,7 +43,7 @@ class ShimmerSchedulerSpec : StringSpec({
         }
     }
 
-    // Every-block tick counter — used as dryFloor so both runs of a comparison read it
+    // Every-block tick counter, used as floor so both runs of a comparison read it
     // UNCONDITIONALLY (the D1 rule for the fourth slot, review round 5 pinned it): under the
     // read-only-when-engaged mutation the runs\' counters diverge and the equalities break.
     class Tick : Ignitor {
@@ -60,7 +60,7 @@ class ShimmerSchedulerSpec : StringSpec({
         wet = wet,
         feedback = ParamIgnitor("feedback", 0.5),
         tone = ParamIgnitor("tone", 4000.0),
-        dryFloor = Tick(),
+        floor = Tick(),
     )
 
     fun render(ig: Ignitor, c: IgniteContext, pos: Int, len: Int): DoubleArray {
@@ -114,10 +114,10 @@ class ShimmerSchedulerSpec : StringSpec({
         m shouldBe 0.0
     }
 
-    "the param read order is pinned — wet, feedback, tone, dryFloor" {
+    "the param read order is pinned: wet, feedback, tone, floor" {
         // Same contract as the phaser's order pin: a shared stateful instance deals its draws in
         // read order, observable on hand-built Kotlin graphs. (Pins wet vs feedback —
-        // representative; tone/dryFloor permutations are not separately pinned.) The instance
+        // representative; tone/floor permutations are not separately pinned.) The instance
         // ALTERNATES 0.3/0.6 per
         // draw (two draws per block), so the per-block assignment is stable: wet always gets 0.3
         // and feedback always gets 0.6 — unless the read order flips. In-range values so no

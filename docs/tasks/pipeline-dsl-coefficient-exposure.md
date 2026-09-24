@@ -132,7 +132,7 @@ not after. Three surfaces share `PhaserCore` and disagree:
 |---------------------|----------------------|------------------------------------------------------|
 | sprudel             | `phaser(wet)` + `phaser(floor)` | shared C4 law, `floor = 1` default (additive) |
 | cylinder bus        | `depth` + `floor`    | shared C4 law (same knob, same law)                  |
-| `IgnitorDsl.Phaser` | `.wet()` + `.dryFloor()` | shared C4 law, `dryFloor = 0` default (crossfade) |
+| `IgnitorDsl.Phaser` | `phaser(wet, ...)` + builder `floor` (renamed from `dryFloor` 2026-09-24, phase 3 step 3d) | shared C4 law, `floor = 0` default (crossfade) |
 
 RESOLVED by C4 (2026-08-24): one law (`WetDryMix`), one name per door; only the floor DEFAULT
 differs (additive on the orbit, crossfade on the ignitor). Still open here: `IgnitorDsl.Phaser`

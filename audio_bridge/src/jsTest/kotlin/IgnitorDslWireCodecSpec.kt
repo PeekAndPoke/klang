@@ -172,6 +172,14 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
+    "Lowpass, Highpass, Bandpass, Notch with envelope curves (non-default)" {
+        listOf(
+            IgnitorDsl.Square().lowpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().highpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().bandpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().notch(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+        ).forEach { check(it) }
+    }
     "Eq (every section variant, all fields non-default)" {
         check(
             IgnitorDsl.Eq(
@@ -224,14 +232,31 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
-    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5).wet(0.4).dryFloor(0.25)) }
+    "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
-    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0)).wet(0.3).dryFloor(0.1)) }
+    "Shimmer (pitches list)" {
+        check(IgnitorDsl.Square().shimmer(wet = 0.3, pitches = listOf(0.0, 7.0, 12.0)).copy(floor = IgnitorDsl.Constant(0.1)))
+    }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(5.0, 0.02)) }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
     "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
+    "PitchEnvelope (every ADSR field and curve non-default)" {
+        check(
+            IgnitorDsl.PitchEnvelope(
+                inner = IgnitorDsl.Sine(),
+                semitones = IgnitorDsl.Constant(24.0),
+                attackSec = IgnitorDsl.Constant(0.002),
+                decaySec = IgnitorDsl.Constant(0.07),
+                sustainLevel = IgnitorDsl.Constant(0.3),
+                releaseSec = IgnitorDsl.Constant(0.2),
+                attackCurve = AdsrCurve.Square,
+                decayCurve = AdsrCurve.Exponential,
+                releaseCurve = AdsrCurve.InvSquare,
+            )
+        )
+    }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------

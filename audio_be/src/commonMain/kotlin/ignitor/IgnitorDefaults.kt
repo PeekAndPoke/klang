@@ -266,7 +266,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead
-//   Pluck.phaser(0.3, x => x.wet(0.5))               — spacey pluck
+//   Pluck.phaser(0.5, 0.3)                           : spacey pluck (wet, rate)
 //   Square.crush(6.0)                               — retro / chiptune
 //   Saw.coarse(8.0)                                 — sample-rate reduced lo-fi
 //
@@ -274,7 +274,7 @@ fun IgnitorRegistry.registerDefaults() {
 //   WhiteNoise.adsr(0.001, 0.05, 0.0, 0.01)        — hi-hat
 //       .highpass(8000)
 //   Impulse.lowpass(200)                             — kick body
-//   Sine.pitchEnvelope(semitones=24, decaySec=0.05) — kick with pitch sweep
+//   Sine.pitchEnvelope(24, x => x.adsr(0.01, 0.05, 0, 0)): kick with pitch sweep
 //   Dust.mul(PinkNoise)                             — textured crackle
 //
 // ═════════════════════════════════════════════════════════════════════════════════

@@ -62,7 +62,9 @@
 
 - **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
   `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/
-  `PhaserBuilder`/`ShimmerBuilder` (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
+  `PhaserBuilder`/`ShimmerBuilder` (superseded by phase 3 step 3d(i), 2026-09-24: `wet` is the first
+  door parameter, `.phaser(wet, rate, ..., x => x.floor())`, and the builders carry `floor` only)
+  (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
   Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
   .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
   `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to

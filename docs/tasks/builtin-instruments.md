@@ -80,6 +80,10 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   - Also in this decision's record, from the same review: the node truncates stage frame counts to
     Int where the strip keeps them fractional (220 against 220.5 at `attackSec = 0.005`), the same
     class as the ADSR mismatch the spike recorded.
+  - And the PITCH envelope (step 3d(i), 2026-09-24): it became an ADSR with the chain's composition
+    but kept its FRACTIONAL frame counts (identity for the songs), while the chain `adsr` truncates to
+    Int. So one `adsr(a, d, s, r)` call counts frames two ways depending on whether it sits on the chain
+    or on a `pitchEnvelope` builder. Same class; D3's frame-count decision covers all three envelopes.
   - Either way it is an ear checkpoint on Der Schmetterling and Stranger Things, and it changes every
     song that already uses `lpf(env = ...)`, by up to 635 cents at the sweep's steepest.
 - **D4, the `pedal` pipeline.** `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
@@ -142,7 +146,7 @@ defaulted knob is temporary stays flat. A knob that nothing reads is removed, no
 | `pitchEnvelope` | `semitones, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `adsrCurves(attack, decay, release)` | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
 | `tremolo` | `rate, depth, configure` | `shape(name)`, `skew(amount)`, `phase(cycles)` | the three knobs are 3b's additions (they exist on the strip only). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, sync, ...)` differs in order and calls the rate `sync`, recorded for the sprudel side |
 | `shimmer` | `wet, feedback = 0.5, tone = 4000, pitches, configure` | `floor` | the wet rule below; `dryFloor` becomes `floor` |
-| `fm` | `modulator, ratio, depth, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `freq(hz)` | the node always had the index envelope and `freq`; the Kotlin door exposed the envelope (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `ignitor-dsl-open-items.md` |
+| `fm` | `modulator, ratio, depth, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)` | `freq` stays HIDDEN: the walk first put `freq(hz)` on the builder, then the maintainer, shown the recorded decision of 2026-08-30 ("a hidden internal of the pitch machinery; the default IS the semantics"), kept it hidden (2026-09-24). The node always had the index envelope; the Kotlin door exposed it (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `ignitor-dsl-open-items.md` |
 | `phaser` (Ignitor AND Katalyst) | `wet, rate, center, sweep, configure` | `floor` | ONE shape on both hosts. On the Katalyst the door parameters are OPTIONAL: an omitted one is unset and comes from the owner voice's slot, as every Katalyst knob does today. On the Ignitor `rate` stays required, so writing it means writing `wet` too. The PRINCIPLE, decided here for every bus effect: the effect's musical inputs on the door; secondary knobs on the builder |
 | `vibrato` | `rate, semitones` | none | no defaults, nothing to decide |
 | `eq` (Ignitor AND Katalyst) | `configure` | `band(freq, q = 0.707, db = 0)`, `tap(freq, q = 0.707, gain = 1)` | already one shape; the lambda stays optional like every `configure` (maintainer: all configure callbacks are optional), and an `eq()` with no bands is a transparent stage |
@@ -176,12 +180,27 @@ belong to step 3c, which reshapes them anyway.
   the sprudel reference and the KDoc examples that write `body("wood")` move with it.
 - **The dry floor is `floor` everywhere** (maintainer, 2026-09-23): the Ignitor's `dryFloor` on the phaser
   and shimmer builders, their nodes and the wire is renamed; the Katalyst and sprudel already say `floor`.
+  Re-asked 2026-09-24 with the reason the Ignitor KDoc gave for `dryFloor` (`floor()` is the arithmetic
+  round-down, one word must not mean two things); the maintainer kept `floor` ON A CONDITION: "as long as
+  floor() is only on effect builders we can live with the duplication in naming". So `floor` is a knob on
+  effect builders (and a named parameter of sprudel's effect doors, which have no builder layer), never a
+  door parameter of an Ignitor effect and never a method on `IgnitorDsl`.
 - **Identity while D3 is open.** The new `adsrCurves` knobs on the filter and pitch builders must DEFAULT to
   the law each envelope has today (linear on both nodes), or every filter sweep and every kick in the songs
   changes in a door-shape step. D3 then decides the default for both at once, at its own ear checkpoint.
 - **Wire changes** (the wire golden is regenerated, never hand-edited): `driveType` removed; `dryFloor`
   becomes `floor`; the limiter's `thresholdDb`/`kneeDb` become `threshold`/`knee`; the pitch envelope loses
   `releaseSec`, `curve` and `anchor` and gains the ADSR fields.
+- **Positional reinterpretation (step 3d(i), 2026-09-24).** Wet-first moves a positional meaning: `phaser(0.3,
+  800)` was rate 0.3 Hz and center 800, and is now wet 0.3 with an 800 Hz LFO; `shimmer(0.4)` was feedback 0.4
+  and is now wet 0.4, on both doors. No in-tree caller was affected (grepped), but a user script outside the
+  repo changes SILENTLY. The old positional filter and `pitchEnvelope` forms fail loudly instead. A release
+  note must say it.
+- **Recorded two-door asymmetries (step 3d(i)).** The Kotlin filter doors stay flat and name the four envelope
+  stages separately (audio_bridge cannot see the script builders; a superset of the builder). The Kotlin
+  `phaser`/`shimmer` set `floor` only by `.copy(floor = ...)`: `floor` exists only as an effect-builder knob
+  (the maintainer's condition), so the Kotlin node extensions `.wet()`/`.dryFloor()` were REMOVED, not renamed.
+  There is no Kotlin `pitchEnvelope` door (there was none before either); Kotlin builds the node.
 - **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
   to a sustain. Raised for the sprudel side, not decided here.
 
@@ -374,7 +393,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
 | 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
-| 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) the Katalyst and Master doors, the limiter renames; (iii) sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
+| 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) the Katalyst and Master doors, the limiter renames; (iii) sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |

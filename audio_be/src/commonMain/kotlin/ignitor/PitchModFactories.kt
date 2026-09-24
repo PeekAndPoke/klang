@@ -8,13 +8,20 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.safeDiv
 import io.peekandpoke.klang.audio_be.safeOut
 
+import io.peekandpoke.klang.audio_be.ADSR_EXP_NORM
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.adsrCurveShape
 import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_be.fastSin
+import io.peekandpoke.klang.audio_be.releaseProgressDenom
+import io.peekandpoke.klang.audio_be.releaseProgressOffset
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import kotlin.math.pow
 import kotlin.math.abs
 
@@ -148,9 +155,26 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
     accelerateModIgnitor(ParamIgnitor("semitones", semitones))
 
 /**
- * Pitch envelope — ADSR-shaped pitch ratio.
+ * Pitch envelope: an ADSR on the pitch ratio, the chain `adsr`'s pattern.
  *
- * Produces `2^(amount * envLevel / 12)` per sample.
+ * Produces `2^(semitones * envLevel / 12)` per sample. The level rises from 0 to 1 over the
+ * attack, falls to the sustain over the decay, holds, and from the gate's end falls from the
+ * level it had reached back to 0 over the release. The release does NOT extend the voice's life
+ * (nothing reports it as a tail), and release `0` returns to the note at the gate frame.
+ *
+ * **The law, and why the songs did not move.** The stage shapes and their composition are the
+ * chain's ([adsrCurveShape]; decay `sustain + (1 - sustain) * shape(1 - p)`; release
+ * `levelAtGateEnd * shape(1 - p)` on the chain's time base). The frame counts are this envelope's
+ * own: FRACTIONAL (`seconds * sampleRate` as a Double, progress by division), not the chain's
+ * truncated Int (the mismatch, pitch envelope fractional and chain `adsr` Int, is recorded in
+ * decision D3). With the curves at their default
+ * (`MOD_ENV_CURVE`, Linear) and sustain 0 that law is, bit for bit, the envelope this node had
+ * before it had a sustain and a release (anchor 0, attack-decay-hold), for every voice whose gate
+ * lasts at least the attack plus the decay: `0.0 + 1.0 * (1.0 - dp)` is exactly `1.0 - dp`. A
+ * gate that ends inside the sweep now releases, as the chain's envelope does.
+ *
+ * The level at the gate is the attack-decay law evaluated AT the gate frame (stateless, like the
+ * filter envelope's `computeFilterEnvelope`), not a remembered last sample.
  *
  * Output is passed through [safeOut] — extreme `amount` values cannot produce
  * `+Inf` ratios that would poison the oscillator phase accumulator.
@@ -159,27 +183,40 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  * @param semitones semitones of pitch shift at peak
  * @param attackSec attack time
  * @param decaySec decay time
- * @param releaseSec release time
- * @param curve envelope curve (not yet implemented — linear)
- * @param anchor starting envelope level: 0.0 = start shifted, 1.0 = start normal
+ * @param releaseSec release time, from the gate's end
+ * @param sustainLevel held level, a share of [semitones]; not clamped (the Motor stays raw), and a
+ *   non-finite one reads as unset, 0 (`finiteOr`, the chain `adsr`'s rule)
+ * @param attackCurve attack shape, [MOD_ENV_CURVE] when the node leaves it unset
+ * @param decayCurve decay shape
+ * @param releaseCurve release shape
  */
 fun pitchEnvelopeModIgnitor(
     attackSec: Ignitor,
     decaySec: Ignitor,
     releaseSec: Ignitor = ParamIgnitor("releaseSec", 0.0),
     semitones: Ignitor,
-    curve: Ignitor = ParamIgnitor("curve", 0.0),
-    anchor: Ignitor = ParamIgnitor("anchor", 0.0),
-): Ignitor = PitchEnvelopeModIgnitor(attackSec, decaySec, releaseSec, semitones, curve, anchor)
+    sustainLevel: Ignitor = ParamIgnitor("sustainLevel", 0.0),
+    attackCurve: AdsrCurve = MOD_ENV_CURVE,
+    decayCurve: AdsrCurve = MOD_ENV_CURVE,
+    releaseCurve: AdsrCurve = MOD_ENV_CURVE,
+): Ignitor = PitchEnvelopeModIgnitor(
+    attackSec, decaySec, releaseSec, semitones, sustainLevel, attackCurve, decayCurve, releaseCurve,
+)
 
 private class PitchEnvelopeModIgnitor(
     private val attackSec: Ignitor,
     private val decaySec: Ignitor,
     private val releaseSec: Ignitor,
     private val semitones: Ignitor,
-    private val curve: Ignitor,
-    private val anchor: Ignitor,
+    private val sustainLevel: Ignitor,
+    private val attackCurve: AdsrCurve,
+    private val decayCurve: AdsrCurve,
+    private val releaseCurve: AdsrCurve,
 ) : Ignitor {
+    // Read once, not per sample: on Kotlin/JS a top-level `val` is a lazy-init accessor, and
+    // `adsrCurveShape`'s arguments are evaluated at every call.
+    private val expNorm: Double = ADSR_EXP_NORM
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val amountVal = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.windowEnd
@@ -189,22 +226,51 @@ private class PitchEnvelopeModIgnitor(
             return
         }
 
+        // Read order is the pre-ADSR order (attack, decay, release, then the sustain in the slot the
+        // anchor had): a stateful param subtree advances when it is read.
         val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
         val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx)
-
-        @Suppress("UNUSED_VARIABLE")
         val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
-
-        @Suppress("UNUSED_VARIABLE")
-        val curveVal = Ignitors.readParam(curve, freqHz, ctx)
-        val anchorVal = Ignitors.readParam(anchor, freqHz, ctx)
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 0, the chain
+        // `adsr`'s rule (`finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw).
+        val sustainVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), 0.0)
 
         val attackFrames = attackSecVal * ctx.sampleRate
         val decayFrames = decaySecVal * ctx.sampleRate
+        val releaseFrames = releaseSecVal * ctx.sampleRate
+        val relDenom = releaseProgressDenom(releaseFrames)
+        val relOffset = releaseProgressOffset(releaseFrames)
+        val gateEndPos = ctx.gateEndFrame
+        val firstPos = ctx.voiceElapsedFrames
+        val lastPos = firstPos + (end - 1 - ctx.offset)
 
-        if (ctx.voiceElapsedFrames >= attackFrames + decayFrames) {
-            // Settled on the anchor for the whole block: one ratio, not one per sample.
-            val settled = safeOut(fastExp2(amountVal * anchorVal / 12.0))
+        if (firstPos >= attackFrames + decayFrames && lastPos < gateEndPos) {
+            // Settled on the sustain for the whole block: one ratio, not one per sample.
+            val settled = safeOut(fastExp2(amountVal * sustainVal / 12.0))
+
+            for (i in ctx.offset until end) {
+                buffer[i] = settled
+            }
+
+            return
+        }
+
+        // Only a block that reaches the gate needs the level the release starts from.
+        val levelAtGateEnd = if (lastPos >= gateEndPos) {
+            attackDecayLevel(gateEndPos.toDouble(), attackFrames, decayFrames, sustainVal)
+        } else {
+            0.0
+        }
+
+        // Released for the whole block, one ratio for all of it, in two cases: the progress is past
+        // 1 on the block's first sample, or the release starts from level 0 (the shape of every
+        // migrated call: sustain 0, gate after the sweep). In the second case every sample would
+        // compute `0 * shape(x)` for an x in 0..1, a signed zero whatever the curve, and
+        // `fastExp2` returns exactly 1.0 for both +0.0 and -0.0, so the settled ratio below is
+        // bit for bit what the per-sample loop writes.
+        if (firstPos >= gateEndPos && (levelAtGateEnd == 0.0 || (firstPos - gateEndPos + relOffset) / relDenom >= 1.0)) {
+            val level = levelAtGateEnd * adsrCurveShape(releaseCurve, 0.0, ADSR_EXP_K, expNorm)
+            val settled = safeOut(fastExp2(amountVal * level / 12.0))
 
             for (i in ctx.offset until end) {
                 buffer[i] = settled
@@ -215,20 +281,33 @@ private class PitchEnvelopeModIgnitor(
 
         for (i in ctx.offset until end) {
             val sampleOffset = i - ctx.offset
-            val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
+            val absPos = ctx.voiceElapsedFrames + sampleOffset
 
-            var envLevel = anchorVal
-            if (relPos < attackFrames) {
-                val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
-                envLevel = anchorVal + (1.0 - anchorVal) * progress
-            } else if (relPos < (attackFrames + decayFrames)) {
-                val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
-                envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
+            val envLevel = if (absPos >= gateEndPos) {
+                val p = ((absPos - gateEndPos + relOffset) / relDenom).coerceAtMost(1.0)
+                levelAtGateEnd * adsrCurveShape(releaseCurve, 1.0 - p, ADSR_EXP_K, expNorm)
+            } else {
+                attackDecayLevel(absPos.toDouble(), attackFrames, decayFrames, sustainVal)
             }
 
             buffer[i] = safeOut(fastExp2(amountVal * envLevel / 12.0))
         }
     }
+
+    /**
+     * The attack-decay-sustain level at [relPos] frames, in fractional frames. The progress is a
+     * DIVISION, as it always was here; with Linear curves and sustain 0 this is the pre-ADSR law.
+     */
+    private fun attackDecayLevel(relPos: Double, attackFrames: Double, decayFrames: Double, sustainVal: Double): Double =
+        if (relPos < attackFrames) {
+            val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
+            adsrCurveShape(attackCurve, progress, ADSR_EXP_K, expNorm)
+        } else if (relPos < (attackFrames + decayFrames)) {
+            val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
+            sustainVal + (1.0 - sustainVal) * adsrCurveShape(decayCurve, 1.0 - decayProgress, ADSR_EXP_K, expNorm)
+        } else {
+            sustainVal
+        }
 }
 
 /**
@@ -312,7 +391,12 @@ private class FmModIgnitor(
         // freeze a modulated envelope time. The same E2 shape, one level down.
         val envAttackSecVal = Ignitors.readParam(envAttackSec, fmFreqVal, ctx)
         val envDecaySecVal = Ignitors.readParam(envDecaySec, fmFreqVal, ctx)
-        val envSustainLevelVal = Ignitors.readParam(envSustainLevel, fmFreqVal, ctx)
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 1.0, the chain
+        // `adsr`'s rule (`finiteOr`); a NaN would otherwise make the depth NaN and `safeOut` would
+        // freeze the carrier at ratio 0. No clamp: every finite sustain passes raw. The three stage
+        // times need no guard: a NaN time fails every `> 0.0` and becomes 0 frames through
+        // `coerceAtLeast` and `toInt()`, and an infinite one is a huge frame count, never a NaN.
+        val envSustainLevelVal = finiteOr(Ignitors.readParam(envSustainLevel, fmFreqVal, ctx), 1.0)
         val envReleaseSecVal = Ignitors.readParam(envReleaseSec, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->
@@ -354,11 +438,17 @@ private class FmModIgnitor(
             // unless the attack happened to be a multiple of the block length. The envelope is
             // analytic and sample-addressable via `sampleOffsetWithinBlock`, so the hold bought
             // nothing but the bug. Cost: computeFilterEnvelope per sample, on FM-with-envelope
-            // voices only.
+            // voices only. The Exponential normaliser is read once per block, not per sample (see
+            // `computeFilterEnvelope`'s `expNorm`).
+            val expNorm = ADSR_EXP_NORM
+
             for (i in ctx.offset until end) {
+                // Linear on every stage: the FM index envelope has no curve surface yet
+                // (`ignitor-dsl-open-items.md`), and Linear is its historical law.
                 val envLevel = computeFilterEnvelope(
                     ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
-                    sampleOffsetWithinBlock = i - ctx.offset,
+                    AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear,
+                    sampleOffsetWithinBlock = i - ctx.offset, expNorm = expNorm,
                 )
                 val effectiveDepth = depthVal * envLevel
                 buffer[i] = safeOut((1.0 + modBuf[i] * effectiveDepth / safeFreq))

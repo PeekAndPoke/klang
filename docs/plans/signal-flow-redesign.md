@@ -116,7 +116,7 @@ let classic = x => x
   .highpass(freq = OscSlot.hpf, ...)
   .bandpass(freq = OscSlot.bpf, ...)
   .notch(freq = OscSlot.notch, ...)
-  .lowpass(freq = OscSlot.lpf, q = OscSlot.lpq, env = OscSlot.lpenv, ...)
+  .lowpass(OscSlot.lpf, OscSlot.lpq, f => f.env(OscSlot.lpenv) ...)   // builder form since phase 3 step 3d
   .tremolo(OscSlot.tremolo, ...)
   .adsr(OscSlot.attack, OscSlot.decay, OscSlot.sustain, OscSlot.release)
 

@@ -1467,7 +1467,7 @@
 <span class="cm">// A kick is four lines: sine, pitch drop, fast decay.</span>
 <span class="cm">// The drop depth is a named param — a slot the pattern can override.</span>
 <span class="kw">let</span> kick = Osc.sine()
-    .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), 0.001, 0.04)
+    .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), x =&gt; x.adsr(0.001, 0.04, 0, 0))
     .adsr(0.001, 0.2, 0.0, 0.02)
 
 note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).gain(0.3).roomWet(0.2)
@@ -1589,24 +1589,24 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
 <span class="kw">let</span> koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(freq = Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)),
-               analog = Osc.slot.analog)
+      .lowpass(Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)),
+               0.707, x =&gt; x.analog(Osc.slot.analog))
 
 <span class="cm">// Shakuhachi — sine body, triangle edge, two breath-noise layers, vibrato</span>
 <span class="kw">let</span> shaku = Osc.sine(x =&gt; x.analog(0.2)).mul(0.6)
       .plus(Osc.triangle(x =&gt; x.analog(0.2)).mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .highpass(freq = 300, analog = Osc.slot.analog)
-      .lowpass(freq = 3800, q = 1.0, analog = Osc.slot.analog)
+      .highpass(300, x => x.analog(Osc.slot.analog))
+      .lowpass(3800, 1.0, x => x.analog(Osc.slot.analog))
       .vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
-      .pitchEnvelope(1, 0.02, 0.1)
+      .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
 
 <span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
-      .lowpass(freq = Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
-               q = 2, analog = Osc.slot.analog)
-      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurve(<span class="st">"scurve"</span>)
+      .lowpass(Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
+               2, x =&gt; x.analog(Osc.slot.analog))
+      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurves(<span class="st">"scurve"</span>, <span class="st">"scurve"</span>, <span class="st">"scurve"</span>)
 
 stack(
   <span class="cm">// Melody — mahogany body, doubled an octave up and panned wide</span>

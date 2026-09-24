@@ -85,19 +85,19 @@ class FastExp2Spec : StringSpec({
 
     "a rendered pitch envelope matches the per-sample pow law, through and past the settled point" {
         // The envelope renderer computes one ratio per sample while attack and decay run and one
-        // per block once it has settled on the anchor. Both must be the same law; the reference
+        // per block once it has settled on the sustain. Both must be the same law; the reference
         // is the pow-based formula evaluated per sample, including the blocks after settling.
         val sampleRate = 48000
         val blockFrames = 128
         val attackSec = 0.02
         val decaySec = 0.05
         val semitones = 9.0
-        val anchor = 0.25
+        val sustain = 0.25
         val mod = pitchEnvelopeModIgnitor(
             attackSec = ParamIgnitor("a", attackSec),
             decaySec = ParamIgnitor("d", decaySec),
             semitones = ParamIgnitor("amount", semitones),
-            anchor = ParamIgnitor("anchor", anchor),
+            sustainLevel = ParamIgnitor("sustain", sustain),
         )
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,
@@ -130,12 +130,12 @@ class FastExp2Spec : StringSpec({
 
             for (i in offset until blockFrames) {
                 val relPos = (b * blockFrames + i).toDouble()
-                var level = anchor
+                var level = sustain
 
                 if (relPos < attackFrames) {
-                    level = anchor + (1.0 - anchor) * (relPos / attackFrames)
+                    level = relPos / attackFrames
                 } else if (relPos < attackFrames + decayFrames) {
-                    level = 1.0 - (1.0 - anchor) * ((relPos - attackFrames) / decayFrames)
+                    level = sustain + (1.0 - sustain) * (1.0 - (relPos - attackFrames) / decayFrames)
                 }
 
                 val expected = 2.0.pow(semitones * level / 12.0)

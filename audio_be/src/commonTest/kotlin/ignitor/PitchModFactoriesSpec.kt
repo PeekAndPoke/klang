@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.safeOut
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -365,5 +367,86 @@ class PitchModFactoriesSpec : StringSpec({
         // swings at full modulation index.
         (maxDev(relOnly, gate + 2200, gate + 2395) < 0.02) shouldBe true
         (maxDev(noEnv, gate + 2200, gate + 2395) > 0.3) shouldBe true
+    }
+
+    "fm env: a NON-FINITE sustain reads as unset (1.0, the node's default), never a carrier frozen at ratio 0" {
+        // Oracle written from the definition, not from the code: the modulator is a constant 0.5,
+        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the FM index envelope's
+        // law (the historical linear one on Int frame counts: attack `pos / af`, decay
+        // `1 - decPos * (1 - s) / df`, hold `s`, release from the level at the gate over `rf`
+        // frames, clamped to 0..1, the sustain clamped to 0..1 inside). A finite sustain passes raw
+        // (the 0.3 control); NaN, +Inf and -Inf all take 1.0 (the chain `adsr`'s `finiteOr` rule).
+        val sr = 48000
+        val gate = 1000
+        val total = gate + 800
+        val depth = 200.0
+        val freq = 440.0
+        val a = 0.002
+        val d = 0.01
+        val r = 0.005
+
+        fun oracleEnv(pos: Int, s: Double): Double {
+            val af = (a * sr).toInt()
+            val df = (d * sr).toInt()
+            val rf = (r * sr).toInt()
+            val cs = s.coerceIn(0.0, 1.0)
+
+            fun level(p: Int): Double = when {
+                p < af -> p * (1.0 / af)
+                p < af + df -> 1.0 - (p - af) * ((1.0 - cs) / df)
+                else -> cs
+            }
+
+            val v = if (pos >= gate) {
+                val atGate = level(gate)
+                atGate - (pos - gate) * (atGate / rf)
+            } else {
+                level(pos)
+            }
+
+            return v.coerceIn(0.0, 1.0)
+        }
+
+        fun renderFm(sustain: Double): DoubleArray {
+            val ig = fmModIgnitor(
+                ConstantIgnitor(0.5), ConstantIgnitor(1.0), ConstantIgnitor(depth),
+                envAttackSec = ConstantIgnitor(a),
+                envDecaySec = ConstantIgnitor(d),
+                envSustainLevel = ConstantIgnitor(sustain),
+                envReleaseSec = ConstantIgnitor(r),
+            )
+            val ctx = IgniteContext(
+                sampleRate = sr, voiceDurationFrames = gate, gateEndFrame = gate,
+                releaseFrames = 800, scratchBuffers = ScratchBuffers(128),
+            )
+            val out = DoubleArray(total)
+            val tmp = AudioBuffer(128)
+            var pos = 0
+
+            while (pos < total) {
+                val n = minOf(128, total - pos)
+                ctx.updateOffsetAndLength(0, n)
+                ctx.voiceElapsedFrames = pos
+                ig.generate(tmp, freq, ctx)
+
+                for (i in 0 until n) {
+                    out[pos + i] = tmp[i]
+                }
+
+                pos += n
+            }
+
+            return out
+        }
+
+        for ((given, substituted) in listOf(0.3 to 0.3, Double.NaN to 1.0, Double.POSITIVE_INFINITY to 1.0, Double.NEGATIVE_INFINITY to 1.0)) {
+            val out = renderFm(given)
+
+            for (pos in 0 until total) {
+                val expected = safeOut(1.0 + 0.5 * (depth * oracleEnv(pos, substituted)) / freq)
+
+                withClue("sustain=$given pos=$pos") { out[pos].toRawBits() shouldBe expected.toRawBits() }
+            }
+        }
     }
 })

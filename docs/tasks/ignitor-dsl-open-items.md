@@ -14,6 +14,15 @@ pitch envelope. Needs: curve fields on `IgnitorDsl.Fm`, the curve law in `FmModI
 `adsrCurves(attack, decay, release)` on the fm builder on both doors. The default curve must be the one
 D3 decides for modulation envelopes, or every existing FM patch (`sgbell`) changes.
 
+## A non-finite pitch amount freezes the oscillator (found 2026-09-24, pre-existing)
+
+Phase 3 step 3d(i) gave the pitch envelope's sustain and the FM index envelope's sustain the house
+`finiteOr` substitution. The same class remains, at HEAD before 3d(i) too, on the pitch envelope's
+`semitones` and FM's `depth` and `ratio`: a NaN passes the `== 0.0` bypass, the ratio becomes NaN, and
+`safeOut` turns it into 0, so the oscillator's phase stops and the note is a DC hold. Slots are guarded
+at build, so only arithmetic can produce it today; phase 3 step 5 slots these knobs. Fix shape: the
+house `finiteOr` at the read with the node's own default, plus a NaN row per knob.
+
 ## Per-Playback Numerical Attributes (CPS etc.)
 
 > **Status (2026-04-26)**: Postponed — nice-to-have, no real application today.

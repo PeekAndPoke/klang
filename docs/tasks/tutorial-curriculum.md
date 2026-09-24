@@ -5,8 +5,11 @@
 > (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`, `/dsl-design`):
 > - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
 >   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
-> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer wet knobs:
->   `.phaser(0.3, x => x.wet(0.3))`.
+> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer take `wet` FIRST
+>   on the door, `floor` on the builder: `.phaser(0.3, 0.5, x => x.floor(0.2))` (wet, rate; since
+>   2026-09-24, phase 3 step 3d, `docs/tasks/builtin-instruments.md` section 3b). Filters:
+>   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
+>   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
 > - Master: `master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5).limiter()))`, `master(Master())`
 >   for unity. `Master.of` and `MasterFx` are gone.
 > - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,

@@ -142,23 +142,23 @@ let cab4x12 = x => x
     .band(freq =  110, q = 1.2, db = 3.0)          // thump: closed-back box resonance
     .band(freq = 2700, q = 2.0, db = 4.0)          // bark: the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, 3)                         // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(5000, 0.707, x => x.passes(3))                         // the wall: 36 dB/oct, the fizz is gone
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
-  .highpass(120, 0.707, 2)                         // open back: no low end below the box
+  .highpass(120, 0.707, x => x.passes(2))                         // open back: no low end below the box
   .eq(e => e
     .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
   )
-  .lowpass(6500, 0.707, 2)                         // soft, late roll-off, some air stays
+  .lowpass(6500, 0.707, x => x.passes(2))                         // soft, late roll-off, some air stays
 
 // Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
 let cabCombo = x => x
-  .highpass(160, 0.707, 2)                         // small speaker: nothing down low
+  .highpass(160, 0.707, x => x.passes(2))                         // small speaker: nothing down low
   .eq(e => e
     .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
   )
-  .lowpass(3800, 0.707, 2)                         // early roll-off
+  .lowpass(3800, 0.707, x => x.passes(2))                         // early roll-off
 
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
 let makeGuitar = (pickup, pedal, preamp, power, cab) => {
@@ -186,7 +186,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
  
   let signal = saw //.mix(saw2, 1.0)
     // Simulate plucked string
-    .pitchEnvelope(0.5, 0.001, 0.02)
+    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.02, 0, 0))
     //.lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
     .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))
@@ -258,7 +258,7 @@ let marimba = (() => {
   let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2800).mul(0.6)   // yarn head: a thump, not a click
-  let tube = mallet.bandpass(freq = Osc.freq(), q = 20, analog = pAnalog).mul(3.0)                        // the resonator tube
+  let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(3.0)                        // the resonator tube
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
 })()
 
@@ -345,10 +345,10 @@ export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [
 let granCassa = (() => {
   let pAnalog = OscSlot.analog
   let ring = Osc.constant(150).div(Osc.freq()).mul(0.85)   // seconds: 2.2 s at 70 Hz
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, 0.001, 0.10).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
+  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Osc.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog)).pitchEnvelope(9, 0.001, 0.10).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
+  let harms = Osc.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
   let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
   let beater = Osc.whitenoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(3000).mul(3.00)     // wood core: a crack, the force of the hit

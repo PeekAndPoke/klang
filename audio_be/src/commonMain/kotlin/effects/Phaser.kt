@@ -38,7 +38,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * twice — the [voices.strip.filter.StripPhaserRenderer] KDoc carries that warning).
  *
  * The Ignitor-DSL phaser ([io.peekandpoke.klang.audio_be.ignitor.PhaserIgnitor]) is the
- * same law at `dryFloor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for
+ * same law at `floor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for
  * the per-sample math; only the floor default differs.
  *
  * **Stereo image**: both channels share the same LFO phase (centred-mono image).

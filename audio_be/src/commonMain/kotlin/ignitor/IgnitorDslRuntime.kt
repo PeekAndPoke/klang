@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import kotlin.random.Random
 
 /**
@@ -300,13 +301,18 @@ internal fun IgnitorDsl.buildIgnitor(
         }
 
         is IgnitorDsl.PitchEnvelope -> {
+            // Build order IS rng draw order: attack, decay, release, semitones as before, then the
+            // sustain in the slot the anchor had (the dropped `curve` was a leaf and drew nothing).
+            // The release is NOT reported as a tail: a pitch release never extends the voice.
             val peMod = pitchEnvelopeModIgnitor(
                 attackSec = this.attackSec.buildIgnitor(oscParams, cache).ignitor,
                 decaySec = this.decaySec.buildIgnitor(oscParams, cache).ignitor,
                 releaseSec = this.releaseSec.buildIgnitor(oscParams, cache).ignitor,
                 semitones = this.semitones.buildIgnitor(oscParams, cache).ignitor,
-                curve = this.curve.buildIgnitor(oscParams, cache).ignitor,
-                anchor = this.anchor.buildIgnitor(oscParams, cache).ignitor,
+                sustainLevel = this.sustainLevel.buildIgnitor(oscParams, cache).ignitor,
+                attackCurve = this.attackCurve ?: MOD_ENV_CURVE,
+                decayCurve = this.decayCurve ?: MOD_ENV_CURVE,
+                releaseCurve = this.releaseCurve ?: MOD_ENV_CURVE,
             )
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, peMod))
         }
@@ -554,7 +560,7 @@ private fun IgnitorDsl.gatedOffWhenUnset(oscParams: Map<String, Double>?, cache:
  *
  * **The DEPTH's fallback is 0, and that is a sharper edge than the other four.** A stage knob
  * that cannot be read falls back to a usable time; a depth that cannot be read falls back to the
- * OFF value, so `lowpass(800, env = Osc.param("e", 24).max(36))` renders a static filter with no
+ * OFF value, so `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))` renders a static filter with no
  * warning at all. It is the honest answer here (an unreadable depth is not a depth) and the
  * alternative, substituting 7 semitones for an expression the author wrote, would invent a sweep
  * nobody asked for. Both filter-node KDocs say it out loud; the editor diagnostic of step 11 is
@@ -566,6 +572,9 @@ private fun filterEnvDef(
     decaySec: IgnitorDsl,
     sustainLevel: IgnitorDsl,
     releaseSec: IgnitorDsl,
+    attackCurve: AdsrCurve?,
+    decayCurve: AdsrCurve?,
+    releaseCurve: AdsrCurve?,
     oscParams: Map<String, Double>?,
     cache: IgnitorBuildCache,
 ): FilterEnvDef {
@@ -583,6 +592,10 @@ private fun filterEnvDef(
         decaySec = decaySec.filterEnvKnob(oscParams, cache, FILTER_ENV_DECAY_SEC),
         sustainLevel = sustainLevel.filterEnvKnob(oscParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
         releaseSec = releaseSec.filterEnvKnob(oscParams, cache, FILTER_ENV_RELEASE_SEC),
+        // Structural, not knobs: a curve is part of the node, so there is nothing to read and no draw.
+        attackCurve = attackCurve ?: MOD_ENV_CURVE,
+        decayCurve = decayCurve ?: MOD_ENV_CURVE,
+        releaseCurve = releaseCurve ?: MOD_ENV_CURVE,
     )
 }
 
@@ -947,7 +960,9 @@ private fun IgnitorDsl.buildRaw(
             // `q.noMod()` deliberately stays INSIDE the loop: the build cache counts consumers,
             // and hoisting it would change the memo's shape for the whole voice.
             val built = inner.withMod()
-            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val envDef = filterEnvDef(
+                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
+            )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
             val n = coercePasses(passes)
             if (n == 1) {
@@ -969,7 +984,9 @@ private fun IgnitorDsl.buildRaw(
             // See Lowpass above: same ladder, same analog-compounding note, same build/draw
             // order and the same one shared lane for the whole cascade.
             val built = inner.withMod()
-            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val envDef = filterEnvDef(
+                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
+            )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
             val n = coercePasses(passes)
             if (n == 1) {
@@ -1000,7 +1017,9 @@ private fun IgnitorDsl.buildRaw(
         } else {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
-            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val envDef = filterEnvDef(
+                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
+            )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
             built.bandpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
         }
@@ -1010,7 +1029,9 @@ private fun IgnitorDsl.buildRaw(
         } else {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
-            val envDef = filterEnvDef(env, attackSec, decaySec, sustainLevel, releaseSec, oscParams, cache)
+            val envDef = filterEnvDef(
+                env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
+            )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
             built.notch(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
         }
@@ -1074,8 +1095,10 @@ private fun IgnitorDsl.buildRaw(
 
             innerIgnitor.adsr(
                 attack, decay, sustain, release,
-                // Unset curve = "exp" on EVERY stage and EVERY door (maintainer decision,
-                // 2026-08-24) — the strip path's AdsrDef.Resolved already defaults Exponential.
+                // Unset curve = "exp" on every stage of every AMPLITUDE envelope, on every door
+                // (maintainer decision, 2026-08-24); the strip path's AdsrDef.Resolved already
+                // defaults Exponential. The modulation envelopes (filter cutoff, pitch) fall back to
+                // `MOD_ENV_CURVE` instead, which decision D3 sets.
                 attackCurve ?: AdsrCurve.Default,
                 decayCurve ?: AdsrCurve.Default,
                 releaseCurve ?: AdsrCurve.Default,
@@ -1125,7 +1148,7 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Drive -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {
-            inner.withMod().drive(amount.noMod(), driveType)
+            inner.withMod().drive(amount.noMod())
         }
 
         is IgnitorDsl.Shape -> inner.withMod().shape(shape, Oversampler.factorToStages(oversample))
@@ -1155,8 +1178,11 @@ private fun IgnitorDsl.buildRaw(
 
         // NOT gated: no per-voice phaser is reachable from a built-in tail today, the stage
         // retires with `PipelineDsl`, and the wet/dry law makes its off value a second question
-        // (`dryFloor`) that no caller needs answered yet.
-        is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), wet.noMod(), center.noMod(), sweep.noMod(), dryFloor.noMod())
+        // (`floor`) that no caller needs answered yet.
+        // Named, in the historical order: each `noMod()` BUILDS, and build order is rng draw order.
+        is IgnitorDsl.Phaser -> inner.withMod().phaser(
+            rate = rate.noMod(), wet = wet.noMod(), center = center.noMod(), sweep = sweep.noMod(), floor = floor.noMod(),
+        )
 
         // GATE ROW `tremolo`: DEPTH at or below 0.0, or unset. The rate is not a gating knob: a
         // tremolo at rate 0 is a static gain, not an absence.
@@ -1165,7 +1191,7 @@ private fun IgnitorDsl.buildRaw(
         } else {
             inner.withMod().tremolo(rate.noMod(), depth.noMod())
         }
-        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, dryFloor.noMod())
+        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())
     }
 
     return BuiltIgnitor(ignitor, spineTail)

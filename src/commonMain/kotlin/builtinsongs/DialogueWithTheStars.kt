@@ -83,7 +83,7 @@ let accusticGuitar = (() => {
     .lowpass(Osc.constant(2400).plus(Osc.constant(3000).adsr(0.001, 0.45, 0.10, 0.20)))
     .highpass(85)
     .onepole(4200)
-    .pitchEnvelope(0.4, 0.001, 0.04)
+    .pitchEnvelope(0.4, x => x.adsr(0.001, 0.04, 0, 0))
     // NOTE: `.analog(0.6)` was here and INERT (receiver was the PitchEnvelope wrapper).
     .adsr(0.003, 0.7, 0.35, 0.4)
 })()

@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_bridge.constants
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Envelope character defaults — wire defaults for `StageDsl.Vca` and the
 // ignitor `adsr(...)` surface.
@@ -23,6 +25,21 @@ package io.peekandpoke.klang.audio_bridge.constants
  * no-arg `adsrExpShape` for the filter/FM and ignitor envelopes.
  */
 const val ADSR_EXP_K: Double = 3.0
+
+/**
+ * The curve of every stage of a MODULATION envelope that the author did not shape with
+ * `adsrCurves`: the Ignitor filter nodes' cutoff envelope (`IgnitorDsl.Lowpass` and its three
+ * siblings) and the Ignitor pitch envelope (`IgnitorDsl.PitchEnvelope`). Their curve fields are
+ * nullable and `null` reads this value at build.
+ *
+ * It is [AdsrCurve.Linear] because that is the law both envelopes had before they had curve
+ * fields at all, so adding the fields moved no sound. It is NOT the house default
+ * ([AdsrCurve.Default], Exponential) that the chain's `adsr` and the voice strip use: whether the
+ * modulation envelopes follow the house is decision D3 of `docs/tasks/builtin-instruments.md`,
+ * decided at an ear checkpoint, and this one declaration is what it flips. One constant for both
+ * envelopes, because the maintainer recorded it as ONE decision.
+ */
+val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Linear
 
 /**
  * Sustain level of the IGNITOR `adsr(...)` surface, and what `AdsrIgnitor` substitutes for a

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
@@ -51,6 +52,27 @@ internal inline fun adsrExpShape(x: Double): Double = (fastExp(ADSR_EXP_K * x) -
 /** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (fastExp(k * x) - 1.0) * norm
+
+/**
+ * THE shape of one ADSR stage at linear progress [x] in 0..1, for every [AdsrCurve]: the chain
+ * `adsr`'s implementation (`AdsrIgnitor`), and the one the Ignitor filter and pitch envelopes
+ * reuse for their `adsrCurves`. An attack passes `p`; a decay or release passes `omp = 1 - p`,
+ * which gives the falling shapes. [k] and [norm] are the Exponential curvature and its
+ * [adsrExpNorm]; the modulation envelopes pass [ADSR_EXP_K] and [ADSR_EXP_NORM].
+ *
+ * `Linear` returns [x] itself, bit for bit, which is what lets an unshaped stage keep its law.
+ * The voice strip's evaluators (`EnvelopeRenderer`, `EnvelopeCalc`) still carry their own copies
+ * of this `when`; folding them in is filed with the envelope factoring task.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm: Double): Double = when (curve) {
+    AdsrCurve.Linear -> x
+    AdsrCurve.Square -> x * x
+    AdsrCurve.Cube -> x * x * x
+    AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
+    AdsrCurve.InvSquare -> x * (2.0 - x)
+    AdsrCurve.Exponential -> adsrExpShape(x, k, norm)
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Release progress — the time base every release stage shares.

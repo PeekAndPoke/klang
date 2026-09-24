@@ -153,7 +153,7 @@ object SongBenchmarkCases {
           let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
             .phasePool(on = 1, kMin = 0.50, kMax = 0.90)
             .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20))
-            .pitchEnvelope(0.3, 0.001, 0.02)
+            .pitchEnvelope(0.3, x => x.adsr(0.001, 0.02, 0, 0))
             .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
             .distort(0.35, "hard", 4)
 
@@ -641,7 +641,7 @@ object SongBenchmarkCases {
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
-            swap("    .pitchEnvelope(0.5, 0.001, 0.02)\n", "")(
+            swap("    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.02, 0, 0))\n", "")(
                 swap("    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))\n", "")(it),
             )
         },

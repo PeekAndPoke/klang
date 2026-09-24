@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * MUST stay identical to the cylinder-bus Phaser (one knob, one law). At the default
  * `floor = 1.0` it is purely additive (`dry + wet · sin²(depth·π/2)`), the `phaserDepth`
  * semantic where the knob adds an effect on top of the source; `phaserFloor < 1` turns the
- * same knob into a crossfade. The Ignitor-DSL phaser is the same law at `dryFloor = 0.0`.
+ * same knob into a crossfade. The Ignitor-DSL phaser is the same law at `floor = 0.0`.
  *
  * ⚠ NOT in any built-in preset (2026-08-24): the bus owns the phaser (see
  * [io.peekandpoke.klang.audio_be.effects.Phaser]). This renderer only runs when a CUSTOM

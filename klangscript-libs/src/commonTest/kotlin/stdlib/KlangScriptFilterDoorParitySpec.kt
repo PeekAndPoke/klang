@@ -5,9 +5,11 @@
 
 package io.peekandpoke.klang.script.stdlib
 
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
@@ -22,25 +24,43 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
-/** The five cutoff-envelope knobs of whichever of the four filter nodes this is, in node order. */
-private fun IgnitorDsl.envKnobs(): List<IgnitorDsl> = when (this) {
-    is IgnitorDsl.Lowpass -> listOf(env, attackSec, decaySec, sustainLevel, releaseSec)
-    is IgnitorDsl.Highpass -> listOf(env, attackSec, decaySec, sustainLevel, releaseSec)
-    is IgnitorDsl.Bandpass -> listOf(env, attackSec, decaySec, sustainLevel, releaseSec)
-    is IgnitorDsl.Notch -> listOf(env, attackSec, decaySec, sustainLevel, releaseSec)
+/**
+ * Every field of a filter node except its input, by name: the door's inputs, the builder's knobs
+ * and the envelope after the fill. `passes` is 1 on the two band filters, which have no such knob.
+ */
+private fun IgnitorDsl.filterFields(): Map<String, Any?> = when (this) {
+    is IgnitorDsl.Lowpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Highpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Bandpass -> fields(freq, q, analog, 1, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Notch -> fields(freq, q, analog, 1, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
     else -> error("not a filter node: ${this::class.simpleName}")
 }
 
+private fun fields(
+    freq: IgnitorDsl, q: IgnitorDsl, analog: IgnitorDsl, passes: Int, env: IgnitorDsl,
+    a: IgnitorDsl, d: IgnitorDsl, s: IgnitorDsl, r: IgnitorDsl,
+    ac: AdsrCurve?, dc: AdsrCurve?, rc: AdsrCurve?, humanize: Boolean,
+): Map<String, Any?> = linkedMapOf(
+    "freq" to freq, "q" to q, "analog" to analog, "passes" to passes, "env" to env,
+    "attackSec" to a, "decaySec" to d, "sustainLevel" to s, "releaseSec" to r,
+    "attackCurve" to ac, "decayCurve" to dc, "releaseCurve" to rc, "humanize" to humanize,
+)
+
+/** The five cutoff-envelope values of a filter node after the fill, in node order. */
+private fun IgnitorDsl.envKnobs(): List<Any?> = filterFields().let { f ->
+    listOf(f["env"], f["attackSec"], f["decaySec"], f["sustainLevel"], f["releaseSec"])
+}
+
+private fun c(v: Double) = IgnitorDsl.Constant(v)
+
 /**
- * Dual-surface rule: every DSL must be usable from Kotlin directly, with the same parameters
- * meaning the same things. The filter doors drifted — the script door took an `IgnitorDsl` for
- * every knob plus `analog`, while the Kotlin door was `Double`-only and had no `analog` at all.
- * Sakura's `.lowpass(freq = Osc.sine(0.3)..., analog = Osc.slot.analog)` was therefore
- * expressible in a song and NOT from Kotlin.
- *
- * This spec compares the two doors node-for-node. It deliberately compares the FILTER node's
- * own fields rather than whole trees, so a difference in how the two sides build the upstream
- * oscillator cannot mask (or fake) a door difference.
+ * The two doors of the four filters, compared node for node (the filter node's own fields, never
+ * whole trees, so how either side builds the upstream oscillator cannot mask or fake a
+ * difference). Phase 3 step 3d(i): the script door is `door(freq, q = 0.707, configure)` with the
+ * knobs on a builder; the Kotlin door is the flat engine-level function the script door calls
+ * after the lambda, so the compound fill runs once, in one place. Every row LOOPS over the
+ * family, and each row names the node type it expects, so a door that stopped handling a knob
+ * goes red on its own name.
  */
 class KlangScriptFilterDoorParitySpec : StringSpec({
 
@@ -50,45 +70,164 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         return engine.execute(code).toObjectOrNull<IgnitorDsl>()!!
     }
 
+    val saw = IgnitorDsl.Sawtooth()
     val modulated = IgnitorDsl.Param("cut", 800.0)
-    val q = IgnitorDsl.Constant(1.2)
-    val analog = IgnitorDsl.Constant(4.0)
 
-    "lowpass: a modulated freq + analog is expressible on BOTH doors, identically" {
-        val script = ks("""Osc.saw().lowpass(freq = Osc.param("cut", 800), q = 1.2, passes = 2, analog = 4)""")
-            as IgnitorDsl.Lowpass
-        val kotlin = IgnitorDsl.Sawtooth().lowpass(modulated, q, passes = 2, analog = analog)
-
-        withClue("freq") { script.freq shouldBe kotlin.freq }
-        withClue("q") { script.q shouldBe kotlin.q }
-        withClue("analog") { script.analog shouldBe kotlin.analog }
-        withClue("passes") { script.passes shouldBe kotlin.passes }
+    /** The Kotlin door, by name, with everything named; `passes` is ignored by the band filters. */
+    fun kotlinDoor(
+        door: String,
+        freq: IgnitorDsl = c(800.0),
+        q: IgnitorDsl = c(0.707),
+        passes: Int = 1,
+        analog: IgnitorDsl = c(0.0),
+        env: IgnitorDsl? = null,
+        a: IgnitorDsl? = null,
+        d: IgnitorDsl? = null,
+        s: IgnitorDsl? = null,
+        r: IgnitorDsl? = null,
+        ac: AdsrCurve? = null,
+        dc: AdsrCurve? = null,
+        rc: AdsrCurve? = null,
+        humanize: Boolean = false,
+    ): IgnitorDsl = when (door) {
+        "lowpass" -> saw.lowpass(freq, q, passes, analog, env, a, d, s, r, ac, dc, rc, humanize)
+        "highpass" -> saw.highpass(freq, q, passes, analog, env, a, d, s, r, ac, dc, rc, humanize)
+        "bandpass" -> saw.bandpass(freq, q, analog, env, a, d, s, r, ac, dc, rc, humanize)
+        "notch" -> saw.notch(freq, q, analog, env, a, d, s, r, ac, dc, rc, humanize)
+        else -> error(door)
     }
 
-    "highpass: same" {
-        val script = ks("""Osc.saw().highpass(freq = Osc.param("cut", 800), q = 1.2, passes = 3, analog = 4)""")
-            as IgnitorDsl.Highpass
-        val kotlin = IgnitorDsl.Sawtooth().highpass(modulated, q, passes = 3, analog = analog)
-        script.freq shouldBe kotlin.freq
-        script.q shouldBe kotlin.q
-        script.analog shouldBe kotlin.analog
-        script.passes shouldBe kotlin.passes
+    val nodeType = mapOf(
+        "lowpass" to IgnitorDsl.Lowpass::class,
+        "highpass" to IgnitorDsl.Highpass::class,
+        "bandpass" to IgnitorDsl.Bandpass::class,
+        "notch" to IgnitorDsl.Notch::class,
+    )
+    val doors = nodeType.keys.toList()
+
+    fun script(door: String, args: String): IgnitorDsl = ks("Osc.saw().$door($args)").also {
+        withClue("$door builds its own node") { nodeType.getValue(door).isInstance(it) shouldBe true }
     }
 
-    "bandpass and notch: analog reaches the node from Kotlin too (it had no way in before)" {
-        val bp = ks("""Osc.saw().bandpass(freq = Osc.param("cut", 800), q = 1.2, analog = 4)""")
-            as IgnitorDsl.Bandpass
-        val bpk = IgnitorDsl.Sawtooth().bandpass(modulated, q, analog)
-        bp.freq shouldBe bpk.freq
-        bp.q shouldBe bpk.q
-        bp.analog shouldBe bpk.analog
+    "every knob of the builder reaches the node identically on both doors, all four filters" {
+        for (door in doors) {
+            val passes = if (door == "lowpass" || door == "highpass") ".passes(2)" else ""
+            val s = script(
+                door,
+                """Osc.param("cut", 800), 1.2, x => x$passes.analog(4).humanize(1).env(24)""" +
+                    """.adsr(0.005, 0.3, 0.2, 0.05).adsrCurves("exp", "square", "cube")""",
+            )
+            val k = kotlinDoor(
+                door, modulated, c(1.2), passes = 2, analog = c(4.0), env = c(24.0),
+                a = c(0.005), d = c(0.3), s = c(0.2), r = c(0.05),
+                ac = AdsrCurve.Exponential, dc = AdsrCurve.Square, rc = AdsrCurve.Cube, humanize = true,
+            )
 
-        val nt = ks("""Osc.saw().notch(freq = Osc.param("cut", 800), q = 1.2, analog = 4)""")
-            as IgnitorDsl.Notch
-        val ntk = IgnitorDsl.Sawtooth().notch(modulated, q, analog)
-        nt.freq shouldBe ntk.freq
-        nt.q shouldBe ntk.q
-        nt.analog shouldBe ntk.analog
+            withClue(door) { s.filterFields() shouldBe k.filterFields() }
+        }
+    }
+
+    "a bare call and a call with an empty lambda are the filter without envelope, lane or curves" {
+        val defaults = listOf(c(0.0), c(FILTER_ENV_ATTACK_SEC), c(FILTER_ENV_DECAY_SEC), c(FILTER_ENV_SUSTAIN_LEVEL), c(FILTER_ENV_RELEASE_SEC))
+
+        for (door in doors) {
+            val k = kotlinDoor(door)
+
+            withClue("$door bare") { script(door, "800").filterFields() shouldBe k.filterFields() }
+            withClue("$door x => x") { script(door, "800, x => x").filterFields() shouldBe k.filterFields() }
+            withClue("$door envelope off") { k.envKnobs() shouldBe defaults }
+            withClue("$door no curves") {
+                k.filterFields()["attackCurve"] shouldBe null
+                k.filterFields()["decayCurve"] shouldBe null
+                k.filterFields()["releaseCurve"] shouldBe null
+            }
+        }
+    }
+
+    "THE COMPOUND FILL at the end of the lambda: env alone gets the constant stages" {
+        val expected = listOf(c(24.0), c(FILTER_ENV_ATTACK_SEC), c(FILTER_ENV_DECAY_SEC), c(FILTER_ENV_SUSTAIN_LEVEL), c(FILTER_ENV_RELEASE_SEC))
+
+        for (door in doors) {
+            withClue("$door script") { script(door, "800, x => x.env(24)").envKnobs() shouldBe expected }
+            withClue("$door kotlin") { kotlinDoor(door, env = c(24.0)).envKnobs() shouldBe expected }
+        }
+    }
+
+    "THE COMPOUND FILL: adsr alone switches the envelope on at the constant depth" {
+        val expected = listOf(c(FILTER_ENV_DEPTH_SEMITONES), c(0.005), c(0.3), c(0.2), c(0.05))
+
+        for (door in doors) {
+            withClue("$door script") { script(door, "800, x => x.adsr(0.005, 0.3, 0.2, 0.05)").envKnobs() shouldBe expected }
+            withClue("$door kotlin") {
+                kotlinDoor(door, a = c(0.005), d = c(0.3), s = c(0.2), r = c(0.05)).envKnobs() shouldBe expected
+            }
+        }
+    }
+
+    "an explicit env is never overwritten by the fill, in either order inside the lambda" {
+        val expected = listOf(c(12.0), c(0.005), c(0.3), c(0.2), c(0.05))
+
+        for (door in doors) {
+            withClue("$door env first") { script(door, "800, x => x.env(12).adsr(0.005, 0.3, 0.2, 0.05)").envKnobs() shouldBe expected }
+            withClue("$door adsr first") { script(door, "800, x => x.adsr(0.005, 0.3, 0.2, 0.05).env(12)").envKnobs() shouldBe expected }
+            withClue("$door env 0 stays off") { script(door, "800, x => x.env(0).adsr(0.005, 0.3, 0.2, 0.05)").envKnobs()[0] shouldBe c(0.0) }
+        }
+    }
+
+    "adsrCurves alone does NOT switch the envelope on: a curve shapes an envelope, it does not ask for one" {
+        for (door in doors) {
+            val s = script(door, """800, x => x.adsrCurves("exp", "exp", "exp")""")
+
+            withClue("$door env off") { s.envKnobs()[0] shouldBe c(0.0) }
+            withClue("$door curves set") { s.filterFields()["decayCurve"] shouldBe AdsrCurve.Exponential }
+            withClue("$door kotlin agrees") {
+                kotlinDoor(door, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential)
+                    .filterFields() shouldBe s.filterFields()
+            }
+        }
+    }
+
+    "adsrCurves: an omitted argument and an unknown name both mean the default, as on the chain's adsrCurves" {
+        for (door in doors) {
+            // The second call names only the decay: it REPLACES the first call, it does not merge.
+            val later = script(door, """800, x => x.adsrCurves("square", "cube", "scurve").adsrCurves(decayCurve = "exp")""").filterFields()
+
+            withClue("$door omitted attack is the default") { later["attackCurve"] shouldBe null }
+            withClue("$door named stage set") { later["decayCurve"] shouldBe AdsrCurve.Exponential }
+            withClue("$door omitted release is the default") { later["releaseCurve"] shouldBe null }
+
+            val unknown = script(door, """800, x => x.adsrCurves("scurve", "cube", "scurve").adsrCurves("bogus", "cube", "square")""").filterFields()
+
+            withClue("$door unknown name is the default") { unknown["attackCurve"] shouldBe null }
+            withClue("$door known names beside it") { unknown["decayCurve"] shouldBe AdsrCurve.Cube }
+            withClue("$door known names beside it") { unknown["releaseCurve"] shouldBe AdsrCurve.Square }
+        }
+    }
+
+    "humanize: a flag, a truthy number, and on when called with no argument" {
+        for (door in doors) {
+            withClue("$door humanize()") { script(door, "800, x => x.humanize()").filterFields()["humanize"] shouldBe true }
+            withClue("$door humanize(1)") { script(door, "800, x => x.humanize(1)").filterFields()["humanize"] shouldBe true }
+            withClue("$door humanize(0)") { script(door, "800, x => x.humanize(0)").filterFields()["humanize"] shouldBe false }
+            withClue("$door humanize(true)") { script(door, "800, x => x.humanize(true)").filterFields()["humanize"] shouldBe true }
+        }
+    }
+
+    "passes is a knob of lowpass and highpass only, coerced like before" {
+        for (door in listOf("lowpass", "highpass")) {
+            withClue("$door passes(3)") { script(door, "800, x => x.passes(3)").filterFields()["passes"] shouldBe 3 }
+            withClue("$door passes(0) coerces to 1") { script(door, "800, x => x.passes(0)").filterFields()["passes"] shouldBe 1 }
+        }
+
+        for (door in listOf("bandpass", "notch")) {
+            withClue("$door offers no passes") { shouldThrowAny { ks("Osc.saw().$door(800, x => x.passes(2))") } }
+        }
+    }
+
+    "the third positional argument is the lambda: the old lowpass/lpf positional trap is gone" {
+        for (door in doors) {
+            withClue(door) { shouldThrowAny { ks("Osc.saw().$door(800, 1.2, 2)") } }
+        }
     }
 
     "onepole: a modulated freq works from Kotlin (it was Double-only)" {
@@ -97,197 +236,17 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         script.freq shouldBe kotlin.freq
     }
 
-    // ── Phase 3 step 3a: the cutoff envelope and the humanize lane, on both doors ──────────
+    "the Kotlin scalar overloads wrap in Constant and default the same as the node overloads" {
+        val f = c(800.0)
 
-    "the cutoff ENVELOPE is expressible on both doors, identically, on all four filters" {
-        val env = IgnitorDsl.Constant(24.0)
-        val attack = IgnitorDsl.Constant(0.005)
-        val decay = IgnitorDsl.Constant(0.3)
-        val sustain = IgnitorDsl.Constant(0.2)
-        val release = IgnitorDsl.Constant(0.05)
+        withClue("lowpass") { IgnitorDsl.Sawtooth().lowpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().lowpass(f).filterFields() }
+        withClue("highpass") { IgnitorDsl.Sawtooth().highpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().highpass(f).filterFields() }
+        withClue("bandpass") { IgnitorDsl.Sawtooth().bandpass(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().bandpass(f).filterFields() }
+        withClue("notch") { IgnitorDsl.Sawtooth().notch(800.0).filterFields() shouldBe IgnitorDsl.Sawtooth().notch(f).filterFields() }
 
-        fun assertEnv(script: IgnitorDsl, kotlin: IgnitorDsl) {
-            val s = script.envKnobs()
-            val k = kotlin.envKnobs()
-            withClue("env") { s[0] shouldBe k[0] }
-            withClue("attackSec") { s[1] shouldBe k[1] }
-            withClue("decaySec") { s[2] shouldBe k[2] }
-            withClue("sustainLevel") { s[3] shouldBe k[3] }
-            withClue("releaseSec") { s[4] shouldBe k[4] }
+        withClue("the scalar overload carries the curves and the fill too") {
+            IgnitorDsl.Sawtooth().lowpass(800.0, decaySec = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
+                IgnitorDsl.Sawtooth().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurve.Cube).filterFields()
         }
-
-        val tail = "env = 24, attackSec = 0.005, decaySec = 0.3, sustainLevel = 0.2, releaseSec = 0.05"
-
-        withClue("lowpass") {
-            assertEnv(
-                ks("""Osc.saw().lowpass(freq = 800, q = 1.2, $tail)"""),
-                IgnitorDsl.Sawtooth().lowpass(
-                    IgnitorDsl.Constant(800.0), q, env = env,
-                    attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
-                ),
-            )
-        }
-
-        withClue("highpass") {
-            assertEnv(
-                ks("""Osc.saw().highpass(freq = 800, q = 1.2, $tail)"""),
-                IgnitorDsl.Sawtooth().highpass(
-                    IgnitorDsl.Constant(800.0), q, env = env,
-                    attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
-                ),
-            )
-        }
-
-        withClue("bandpass") {
-            assertEnv(
-                ks("""Osc.saw().bandpass(freq = 800, q = 1.2, $tail)"""),
-                IgnitorDsl.Sawtooth().bandpass(
-                    IgnitorDsl.Constant(800.0), q, env = env,
-                    attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
-                ),
-            )
-        }
-
-        withClue("notch") {
-            assertEnv(
-                ks("""Osc.saw().notch(freq = 800, q = 1.2, $tail)"""),
-                IgnitorDsl.Sawtooth().notch(
-                    IgnitorDsl.Constant(800.0), q, env = env,
-                    attackSec = attack, decaySec = decay, sustainLevel = sustain, releaseSec = release,
-                ),
-            )
-        }
-    }
-
-    "a MODULATED envelope depth reaches the node from both doors" {
-        val script = ks("""Osc.saw().lowpass(freq = 800, env = Osc.param("lpenv", 0))""") as IgnitorDsl.Lowpass
-        val kotlin = IgnitorDsl.Sawtooth().lowpass(IgnitorDsl.Constant(800.0), env = IgnitorDsl.Param("lpenv", 0.0))
-
-        script.env shouldBe kotlin.env
-    }
-
-    "humanize is a flag on both doors, and the script door takes a truthy NUMBER" {
-        // The runtime hands numeric literals through as Double, so `humanize = 1` must work the
-        // way the sibling `Pipeline` door's `on(1)` and sprudel's `adsrOn(0)` do.
-        (ks("""Osc.saw().lowpass(freq = 800, humanize = true)""") as IgnitorDsl.Lowpass).humanize shouldBe true
-        (ks("""Osc.saw().lowpass(freq = 800, humanize = 1)""") as IgnitorDsl.Lowpass).humanize shouldBe true
-        (ks("""Osc.saw().lowpass(freq = 800, humanize = 0)""") as IgnitorDsl.Lowpass).humanize shouldBe false
-        (ks("""Osc.saw().notch(freq = 800, humanize = true)""") as IgnitorDsl.Notch).humanize shouldBe true
-
-        IgnitorDsl.Sawtooth().lowpass(800.0, humanize = true).humanize shouldBe true
-        IgnitorDsl.Sawtooth().highpass(800.0, humanize = true).humanize shouldBe true
-        IgnitorDsl.Sawtooth().bandpass(800.0, humanize = true).humanize shouldBe true
-        IgnitorDsl.Sawtooth().notch(800.0, humanize = true).humanize shouldBe true
-    }
-
-    "THE COMPOUND FILL: naming any stage knob writes the companions, env included, on both doors" {
-        // `/dsl-design` section 4. Without this, `lowpass(800, decaySec = 0.3)` is a silent no-op
-        // while the identical sprudel call, `lpf(800, decay = 0.3)`, is an audible pluck:
-        // SprudelVoiceData builds a FilterDef envelope when ANY of the five is present and
-        // FilterEnvDef.resolve() fills the depth with FILTER_ENV_DEPTH_SEMITONES.
-        val filled = listOf(
-            IgnitorDsl.Constant(FILTER_ENV_DEPTH_SEMITONES),
-            IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
-            IgnitorDsl.Constant(0.3),
-            IgnitorDsl.Constant(0.2),
-            IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
-        )
-        val f = IgnitorDsl.Constant(800.0)
-
-        withClue("script door") {
-            ks("""Osc.saw().lowpass(freq = 800, decaySec = 0.3, sustainLevel = 0.2)""").envKnobs() shouldBe filled
-            ks("""Osc.saw().highpass(freq = 800, decaySec = 0.3, sustainLevel = 0.2)""").envKnobs() shouldBe filled
-            ks("""Osc.saw().bandpass(freq = 800, decaySec = 0.3, sustainLevel = 0.2)""").envKnobs() shouldBe filled
-            ks("""Osc.saw().notch(freq = 800, decaySec = 0.3, sustainLevel = 0.2)""").envKnobs() shouldBe filled
-        }
-
-        withClue("Kotlin scalar overload") {
-            IgnitorDsl.Sawtooth().lowpass(800.0, decaySec = 0.3, sustainLevel = 0.2).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().highpass(800.0, decaySec = 0.3, sustainLevel = 0.2).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().bandpass(800.0, decaySec = 0.3, sustainLevel = 0.2).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().notch(800.0, decaySec = 0.3, sustainLevel = 0.2).envKnobs() shouldBe filled
-        }
-
-        withClue("Kotlin node overload") {
-            val d = IgnitorDsl.Constant(0.3)
-            val su = IgnitorDsl.Constant(0.2)
-
-            IgnitorDsl.Sawtooth().lowpass(f, decaySec = d, sustainLevel = su).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().highpass(f, decaySec = d, sustainLevel = su).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().bandpass(f, decaySec = d, sustainLevel = su).envKnobs() shouldBe filled
-            IgnitorDsl.Sawtooth().notch(f, decaySec = d, sustainLevel = su).envKnobs() shouldBe filled
-        }
-
-        withClue("an EXPLICIT env is never overwritten by the fill") {
-            ks("""Osc.saw().lowpass(freq = 800, env = 24, decaySec = 0.3)""").envKnobs()[0] shouldBe
-                IgnitorDsl.Constant(24.0)
-            IgnitorDsl.Sawtooth().lowpass(800.0, env = 24.0, decaySec = 0.3).envKnobs()[0] shouldBe
-                IgnitorDsl.Constant(24.0)
-            IgnitorDsl.Sawtooth().lowpass(f, env = IgnitorDsl.Constant(24.0), decaySec = IgnitorDsl.Constant(0.3))
-                .envKnobs()[0] shouldBe IgnitorDsl.Constant(24.0)
-        }
-
-        withClue("env alone names the stage and gets the constant stage times") {
-            ks("""Osc.saw().lowpass(freq = 800, env = 24)""").envKnobs() shouldBe listOf(
-                IgnitorDsl.Constant(24.0),
-                IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
-                IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC),
-                IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL),
-                IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
-            )
-        }
-    }
-
-    "the new knobs default the same on both doors, and the default is 'no envelope, no lane'" {
-        // A bare call NAMES no envelope knob, so the fill leaves the depth at the node's off
-        // value and the stage knobs at their constants: the filter this door built before the
-        // envelope existed, which is what the corpus identity render rests on.
-        val defaults = listOf(
-            IgnitorDsl.Constant(0.0),
-            IgnitorDsl.Constant(FILTER_ENV_ATTACK_SEC),
-            IgnitorDsl.Constant(FILTER_ENV_DECAY_SEC),
-            IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL),
-            IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC),
-        )
-
-        for (door in listOf("lowpass", "highpass", "bandpass", "notch")) {
-            withClue("$door, script door") { ks("""Osc.saw().$door(800)""").envKnobs() shouldBe defaults }
-        }
-
-        // BOTH Kotlin overloads: the scalar one and the IgnitorDsl one carry their own default
-        // lists, so a drift in either is a drift in the surface.
-        val f = IgnitorDsl.Constant(800.0)
-
-        withClue("lowpass, Kotlin scalar") { IgnitorDsl.Sawtooth().lowpass(800.0).envKnobs() shouldBe defaults }
-        withClue("lowpass, Kotlin node") { IgnitorDsl.Sawtooth().lowpass(f).envKnobs() shouldBe defaults }
-        withClue("highpass, Kotlin scalar") { IgnitorDsl.Sawtooth().highpass(800.0).envKnobs() shouldBe defaults }
-        withClue("highpass, Kotlin node") { IgnitorDsl.Sawtooth().highpass(f).envKnobs() shouldBe defaults }
-        withClue("bandpass, Kotlin scalar") { IgnitorDsl.Sawtooth().bandpass(800.0).envKnobs() shouldBe defaults }
-        withClue("bandpass, Kotlin node") { IgnitorDsl.Sawtooth().bandpass(f).envKnobs() shouldBe defaults }
-        withClue("notch, Kotlin scalar") { IgnitorDsl.Sawtooth().notch(800.0).envKnobs() shouldBe defaults }
-        withClue("notch, Kotlin node") { IgnitorDsl.Sawtooth().notch(f).envKnobs() shouldBe defaults }
-
-        withClue("humanize is off on both overloads too") {
-            IgnitorDsl.Sawtooth().lowpass(f).humanize shouldBe false
-            IgnitorDsl.Sawtooth().highpass(f).humanize shouldBe false
-            IgnitorDsl.Sawtooth().bandpass(f).humanize shouldBe false
-            IgnitorDsl.Sawtooth().notch(f).humanize shouldBe false
-        }
-
-        IgnitorDsl.Sawtooth().lowpass(800.0).humanize shouldBe false
-        (ks("""Osc.saw().lowpass(800)""") as IgnitorDsl.Lowpass).humanize shouldBe false
-    }
-
-    "the scalar overloads still wrap in Constant, and the defaults did not move" {
-        // Adding `analog` must not change what an existing Kotlin caller builds.
-        val lp = IgnitorDsl.Sawtooth().lowpass(800.0)
-        lp.freq shouldBe IgnitorDsl.Constant(800.0)
-        lp.q shouldBe IgnitorDsl.Constant(0.707)
-        lp.analog shouldBe IgnitorDsl.Constant(0.0)
-        lp.passes shouldBe 1
-
-        // ...and the scalar door reaches analog too, in the same fourth slot as the script door.
-        IgnitorDsl.Sawtooth().lowpass(800.0, 1.0, 2, 3.0).analog shouldBe IgnitorDsl.Constant(3.0)
-        IgnitorDsl.Sawtooth().notch(1000.0, 0.9, 2.0).analog shouldBe IgnitorDsl.Constant(2.0)
     }
 })

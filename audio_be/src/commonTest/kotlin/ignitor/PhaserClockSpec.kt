@@ -66,7 +66,7 @@ class PhaserClockSpec : StringSpec({
     }
 
     "ignitor door: a wet gap resumes exactly like a first engagement — LFO advanced, cascade clean" {
-        // Every-block tick counter as dryFloor: both runs read it UNCONDITIONALLY (the D1 rule for
+        // Every-block tick counter as floor: both runs read it UNCONDITIONALLY (the D1 rule for
         // the fourth slot, review round 5 pinned it) — under the read-only-when-engaged mutation
         // the two runs\' counters diverge and the equality below breaks.
         class Tick : Ignitor {
@@ -81,12 +81,12 @@ class PhaserClockSpec : StringSpec({
 
         // Gap run: wet 1 for blocks 0..3, 0 for 4..9, 1 again from 10.
         val gapWet = BlockValue(1.0)
-        val gapIg = TestTone().phaser(rate = ParamIgnitor("rate", 1.5), wet = gapWet, dryFloor = Tick())
+        val gapIg = TestTone().phaser(rate = ParamIgnitor("rate", 1.5), wet = gapWet, floor = Tick())
         val gapCtx = ctx()
 
         // Control run: never engaged before block 10.
         val ctlWet = BlockValue(0.0)
-        val ctlIg = TestTone().phaser(rate = ParamIgnitor("rate", 1.5), wet = ctlWet, dryFloor = Tick())
+        val ctlIg = TestTone().phaser(rate = ParamIgnitor("rate", 1.5), wet = ctlWet, floor = Tick())
         val ctlCtx = ctx()
 
         var gapBlock10 = DoubleArray(0)
@@ -203,8 +203,8 @@ class PhaserClockSpec : StringSpec({
         // A single stateful instance wired into TWO slots gets its per-block draws dealt in READ
         // order. Hand-built Kotlin graphs may share bare instances (the DSL door memoizes shared
         // nodes and never observes the order), so the pre-D1 order (wet, rate, center, sweep,
-        // dryFloor) is contract: here the shared counter must deal 1.0 to wet and 2.0 to rate.
-        // (This pins wet vs the kernel group — representative; center/sweep/dryFloor permutations
+        // floor) is contract: here the shared counter must deal 1.0 to wet and 2.0 to rate.
+        // (This pins wet vs the kernel group, representative; center/sweep/floor permutations
         // among themselves are not separately pinned.)
         class Counter : Ignitor {
             var n = 0.0
