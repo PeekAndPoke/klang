@@ -47,7 +47,7 @@ let kick = s("bd!4").gain(1.0).hpf(60).adsr(0.06, 0.20, 0.2, 0.02).orbit(0)
 let hat  = s("hh!8").gain(0.375).hpf(6000).adsr(0.001, 0.04, 0.0, 0.04).orbit(1)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
     .sound("supersaw").unison(spread = 0.1, voices = 15).legato(0.7).hpf(160).lpf(freq = sine.range(450, 1000).slow(7), env = 15.9, q = 1.5, attack = 0.005, decay = 0.08, sustain = 0.7, release = 0.05)
-    .adsr(0.01, 0.2, 0.4, 0.05).distort(0.5, "gentle", 2).onepole(23197).body("membrane")
+    .adsr(0.01, 0.2, 0.4, 0.05).distort(0.5, "gentle", 2).onepole(23197).body(material = "membrane")
     .gain(0.75 * 0.22).orbit(2) // . solo()
 let core = stack(kick, hat, bass)
 
@@ -213,7 +213,7 @@ let darkBuild = stack(
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
         .sound("supersine").unison(voices = 8, spread = 0.15).adsr(0.5, 0.3, 0.5, 0.5)
         .hpf(1500).lpf(freq = 3000, env = 19).bpf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibrato(depth = 0.1)
-        .gain(saw.range(0.0, 0.7).slow(64)).body("glass")
+        .gain(saw.range(0.0, 0.7).slow(64)).body(material = "glass")
         .pan(sine.range(0.25, 0.75).slow(5))
         .delay(wet = 0.4, time = pure(2/8).div(cps), feedback = 0.45)
         .orbit(7).reverb(wet = 0.7, size = 10),

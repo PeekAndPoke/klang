@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 /**
  * The name-to-index conversion both Katalyst doors and the backend resolver share (step 5a-2,
  * 2026-09-18): a `body.material` and a `vowel.vowel` slot carry the INDEX of a name in a closed,
- * ordered catalogue, so no string slot joins the wire and a pattern's `body("wood")` reaches a
+ * ordered catalogue, so no string slot joins the wire and a pattern's `body(material = "wood")` reaches a
  * declared chain.
  *
  * What is pinned here is the CONVERSION, both ways and at its edges, because it is the one place

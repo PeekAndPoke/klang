@@ -248,7 +248,7 @@ class VoiceCullingSpec : StringSpec({
             startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
             // The orbit's body reads the SLOT state (Katalyst step 5b-1): a material INDEX from
-            // the shared catalogue plus its mix, which is what `.body("wood", wet = 1)` writes.
+            // the shared catalogue plus its mix, which is what `.body(material = "wood", wet = 1)` writes.
             katalystParams = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0),
         )
         val ctx = createContext(blockStart = 0.0, blockFrames = 128, sampleRate = sampleRate)

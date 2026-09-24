@@ -1086,7 +1086,7 @@ fun SprudelPattern._liftOrReinterpretNumericalField(
  *
  * **Example:**
  * ```
- * note("a b c d").vowel("a e i o")
+ * note("a b c d").vowel(vowel = "a e i o")
  * ```
  *
  * @param args DSL arguments to convert to control pattern

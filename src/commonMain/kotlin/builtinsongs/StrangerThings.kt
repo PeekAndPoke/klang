@@ -33,7 +33,7 @@ stack(
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(1)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
     .sound("pulse").onepole(3743).crush(5).gain(0.2).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
-    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
+    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
@@ -52,7 +52,7 @@ stack(
     .superimpose(
       x => x.orbit(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
-    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body("glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
+    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body(material = "glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(2.2 * 0.45)).vibrato(rate = "0.51".add(perlin.div(20)), depth = 0.06)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the tuned sound; raise by ear.

@@ -132,7 +132,7 @@ class KatalystBodyEffectSpec : StringSpec({
 
     // ── Non-finite knobs ─────────────────────────────────────────────────────────────────────────
     //
-    // A pattern can write one: `body("wood", wet = "NaN")` parses to a NaN, and
+    // A pattern can write one: `body(material = "wood", wet = "NaN")` parses to a NaN, and
     // `SprudelVoiceData.toVoiceData` guards a null mix, not a non-finite one. The declared path
     // substitutes in `KatalystSlots.bodyDef`, so these rows are the born-with half of one rule.
 

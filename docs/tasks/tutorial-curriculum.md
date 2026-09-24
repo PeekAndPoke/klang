@@ -179,7 +179,7 @@ stages must not carry it.
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
 | A6 | Thickness — unison, spread, analog | `unison` (with the `spread` slot), `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
 | A7 | Space & dirt | `room`, `delay`, `distort`, `onepole` | none | Dress the sound (room/delay), dirty it (distort/onepole), set its level last (`gain`; `postgain` was retired into it on 2026-09-19). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages): sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
-| A8 | Body | `body(material, wet)` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
+| A8 | Body | `body(wet, material)`, or `body(material = "...")` (wet first since 2026-09-24) | (none) | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 | A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
 
@@ -255,7 +255,7 @@ stages must not carry it.
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11
   must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
-  spectrum ("body below, sparkle above"). A8 teaches `body(material, wet)` — the cabinet resonator —
+  spectrum ("body below, sparkle above"). A8 teaches `body(wet, material)`, the cabinet resonator,
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth

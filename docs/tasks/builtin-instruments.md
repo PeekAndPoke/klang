@@ -176,8 +176,17 @@ belong to step 3c, which reshapes them anyway.
   IrishLamentTechno, SoundOfTheSea) and 4 in the frozen songs, which become `body(material = "...")`,
   bit-identical; no song calls `vowel` or `phaser` positionally. One semantic knock-on: sprudel's
   "no argument reinterprets the pattern's values as the first parameter" now reinterprets them as
-  `wet`, so `n("<0.2 0.5>").body()` patterns the wet where it patterned the material. The Lexikon,
-  the sprudel reference and the KDoc examples that write `body("wood")` move with it.
+  `wet`, so `seq("<0.2 0.5>").body()` patterns the wet (the first wording here said `n(...)`, which carries
+  no value to reinterpret; corrected by the 3d(iii) implementer). What it cost, mapped in 3d(iii)'s plan:
+  the bare `"<wood glass>".body()` / `"<a e>".vowel()` shortcut no longer names the stage (write
+  `body(material = "<wood glass>")`), and the bare call's CLEAR path for material and vowel is gone (the
+  off switch is `material = "none"` / `vowel = "none"`). No song, frozen piece or doc used either. The
+  Lexikon, the sprudel reference and the KDoc examples moved with it (`body(0.7, "wood")`, `body(material = "wood")`).
+  AND a positional `body("wood")` / `vowel("a")` in a user script outside the repo now SILENTLY does
+  nothing: `"wood"` is a valid mini-notation pattern, so it lands in `wet` as a non-number, and the wet head
+  writes nothing (the house raw rule forbids a `require`). `phaser(0.3)` becomes wet 0.3 at the default
+  rate. Release-note item; whether the editor should WARN on a string literal in a wet slot is open for
+  the maintainer.
 - **The dry floor is `floor` everywhere** (maintainer, 2026-09-23): the Ignitor's `dryFloor` on the phaser
   and shimmer builders, their nodes and the wire is renamed; the Katalyst and sprudel already say `floor`.
   Re-asked 2026-09-24 with the reason the Ignitor KDoc gave for `dryFloor` (`floor()` is the arithmetic
@@ -397,7 +406,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
 | 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
-| 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) DONE 2026-09-24, the Katalyst and Master doors, the limiter renames; (iii) sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
+| 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) DONE 2026-09-24, the Katalyst and Master doors, the limiter renames; (iii) DONE 2026-09-24, sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |

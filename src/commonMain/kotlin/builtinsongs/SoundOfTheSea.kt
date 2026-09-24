@@ -47,7 +47,7 @@ internal val soundOfTheSeaSong = Song(
           .superimpose(x => x.sound("pink").adsr(0.3, 0.8, 0.2, 1.5).velocity(0.2).hpf(2500).lpf(8000))
 
              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-               n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").pan(0.3).body("glass")
+               n(randrun(16)).orbit(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").pan(0.3).body(material = "glass")
                  .gain(0.25 * windSpiel).distort(0.05).adsr(0.05, 0.2, 0.5, 5.0).hpf(400).lpf(freq = 3000, q = 2, env = 24)
                      .orbit(1).delay(wet = 0.25, time = pure(1/4).div(cps), feedback = 0.85) // . solo()
                            ).reverb(wet = 0.25, size = 10.0, lowpass = 12500).seed(sinOfDay.add(1).mul(24 * 60 * 60 * 100)).analog(2)

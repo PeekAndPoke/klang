@@ -44,6 +44,19 @@ Walk the rest of `lang/` file-by-file. For each file: run the IDE inspection, an
 "Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias (retired 2026-09-07 into `unison(voices)`)
 (2026-06-30) already ships with its form-(d) covered in `LangUnisonSpec` — use it as the template.
 
+### Found 2026-09-24: 44 doors put no ARGUMENT location on their events
+
+Phase 3 step 3d(iii) strengthened `CallInfoTest`'s helper so a row must show a location that starts
+inside the call's argument span (before, any location passed, including the receiver's own mini-notation,
+so the file guarded nothing about arguments). 72 of 116 rows hold the strict check. 44 cannot, because no
+argument location ever reaches an event: the structural and time doors that take their argument as a
+structure parameter (`euclid` and its variants, `bjork`, `unit`, `loop`, `loopAt`, `loopAtCps`, `slice`,
+`splice`, `early`, `late`, `compress`, `focus`, `fastGap`, `densityGap`, `swing`, `swingBy`) and the
+no-argument doors (the 17 `snd*` sounds, `rev`, `palindrome`, `brak`). Those rows now use
+`assertReceiverLocationsSurvive`, which proves only that the receiver's locations are not dropped.
+Open: should those doors put their argument's location on the events (the editor would then highlight
+the `euclid(3, 8)` argument while it plays)? A UI and sprudel-core decision, not a defect.
+
 ## Overall module review (fold in while sweeping)
 
 Since we're touching every file anyway, also note/fix:

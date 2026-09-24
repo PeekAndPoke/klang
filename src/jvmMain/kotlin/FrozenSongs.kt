@@ -29,7 +29,9 @@ package io.peekandpoke.klang
  * compounds (`fmh(2).fmenv(e)` -> `fm(env = e, h = 2)`, `vibrato(r).vibratoMod(d)` -> `vibrato(rate = r, depth = d)`,
  * `duckorbit`/`duckdepth`/`duckattack` -> `duck(...)`, `vowelWet`/`bodyWet` -> `vowel(wet = ...)`/`body(wet = ...)`, same values),
  * and the 2026-09-16 reverb unification (`room(...)` -> `reverb(...)`; `fade = f` -> `size = 10f`, which the engine
- * divides back to the same f, bit-exact for the values here; `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`).
+ * divides back to the same f, bit-exact for the values here; `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`),
+ * and the 2026-09-24 wet-first doors (`body("glass")` -> `body(material = "glass")`, four calls in Seltsamere
+ * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical).
  *
  * 2026-09-19, the ONE migration so far whose renders are not bit-identical to older captures:
  * `postgain` retired into `gain` (signal-flow plan section 6). The engine applied the two as one
@@ -149,16 +151,16 @@ stack(
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
     .sound("pulse").onepole(4916).crush(5).gain(0.06).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.1) // .solo()
-    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body("membrane")
+    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [0 -1 0 4 6 9 7 6] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(voices = 15, spread = saw.range(0.05, 0.35).slow(16))
     .gain(0.6 * 0.10).distort(1.0).adsr(0.005, 2.0, 0.5, 0.1).lpf(attack = 0.005, decay = 5.0, sustain = 0.5, release = 0.1).clip(1.0)
     .pan(0.5) // . solo()
-    .hpf(400).lpf(freq = 1200, env = perlin.range(21.7, 27.9).lpf(q = 3.0).slow(8)).analog(5).body("wood")
+    .hpf(400).lpf(freq = 1200, env = perlin.range(21.7, 27.9).lpf(q = 3.0).slow(8)).analog(5).body(material = "wood")
     .superimpose(x =>
-      x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.06).pan(0.2).superimpose(pan(0.8)).body("glass")
+      x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.06).pan(0.2).superimpose(pan(0.8)).body(material = "glass")
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a2]]>/4").clip(0.67).struct("x!4").slow(16)
@@ -168,7 +170,7 @@ stack(
     .superimpose(
       x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.15, 0.8).slow(32)).clip(0.79)
-    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.75).body("glass").vowel(vowel = "i a e".slow(12), wet = 0.2)
+    ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.75).body(material = "glass").vowel(vowel = "i a e".slow(12), wet = 0.2)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.25).mul(2.0 * 0.45)).vibrato(rate = "0.51".add(perlin.div(10)), depth = 0.05)
         // The oversample slot of coarse/crush (then coarseos/crushos) was inert until 2026-09-07 (the setter never wrote its field). Pinned to 1 to keep the frozen sound identical.

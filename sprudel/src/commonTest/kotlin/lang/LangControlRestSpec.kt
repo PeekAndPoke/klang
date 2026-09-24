@@ -88,15 +88,15 @@ class LangControlRestSpec : StringSpec({
         compound("compressor", *compressorSlots),
         compound("comp", *compressorSlots),
         // Effects
-        compound("body", t("material", "\"wood\"", "metal"), t("wet", "0.3", "0.6"), t("floor", "0.3", "0.6")),
-        compound("vowel", t("vowel", "\"a\"", "o"), t("wet", "0.3", "0.6"), t("floor", "0.3", "0.6")),
+        compound("body", t("wet", "0.3", "0.6"), t("material", "\"wood\"", "metal"), t("floor", "0.3", "0.6")),
+        compound("vowel", t("wet", "0.3", "0.6"), t("vowel", "\"a\"", "o"), t("floor", "0.3", "0.6")),
         compound("delay", t("wet", "0.3", "0.6"), t("time", "0.25", "0.5"), t("feedback", "0.4", "0.7"), t("cap", "1", "2")),
         compound("reverb", t("size", "3", "6"), t("lowpass", "1000", "2000")),
         compound("distort", t("amount", "0.3", "0.6"), t("oversample", "2", "4")),
         compound("crush", t("amount", "4", "8"), t("oversample", "2", "4")),
         compound("coarse", t("amount", "2", "4"), t("oversample", "2", "4")),
         compound(
-            "phaser", t("rate", "0.5", "1"), t("wet", "0.3", "0.6"), t("center", "1000", "2000"),
+            "phaser", t("wet", "0.3", "0.6"), t("rate", "0.5", "1"), t("center", "1000", "2000"),
             t("sweep", "500", "1000"), t("floor", "0.3", "0.6"),
         ),
         compound("tremolo", t("depth", "0.3", "0.6"), t("sync", "2", "4"), t("skew", "0.2", "0.4"), t("phase", "0.25", "0.5")),

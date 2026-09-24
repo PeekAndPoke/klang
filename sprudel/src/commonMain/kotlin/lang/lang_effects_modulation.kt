@@ -24,18 +24,19 @@ import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.putKatalystParam
 
-// -- phaser, the rate slot -------------------------------------------------------------------------------------------
+// -- phaser, the wet slot (the head) --------------------------------------------------------------------------------
 
-// Every phaser slot writes the voice field AND the orbit chain's matching slot (`phaser.rate`, ...),
+// Every phaser slot writes the voice field AND the orbit chain's matching slot (`phaser.wet`, ...),
 // which is what makes this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst
 // step 5a).
 //
 // A REST calls no setter at all and leaves both sources alone, and no setter here has a CLEAR arm.
 // No numeric TAIL setter of a compound BUS door can be handed a null: `_liftNumericField` returns early
 // on a control value that is not a number and `_mapNumericField` skips a null mapping (the
-// 2026-09-16 rule). The RATE is this door's head setter, so the bare-call reinterpret CAN hand it
-// one, and it returns on the spot (`?: return@voiceSetter`), writing nothing. The only two setters
-// that CLEAR on a null are `body`'s material and `vowel`'s vowel.
+// 2026-09-16 rule). The WET is this door's head setter (since step 3d(iii), 2026-09-24), so the
+// bare-call reinterpret CAN hand it one, and it returns on the spot (`?: return@voiceSetter`),
+// writing nothing, like the heads of `reverb` and `delay`. No setter of any compound bus door
+// clears on a null.
 
 /**
  * Fills the phaser stage's companions from `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the
@@ -87,24 +88,25 @@ private fun SprudelVoiceData.fillPhaserDefaults() {
     }
 }
 
-private val phaserMutation = voiceSetter {
-    val str = it?.toString() ?: return@voiceSetter
-    phaserRate = str.toDoubleOrNull() ?: phaserRate
-    putKatalystParam("phaser.rate", phaserRate)
+private val phaserWetMutation = voiceSetter {
+    val wet = it?.asDoubleOrNull() ?: return@voiceSetter
+
+    phaserDepth = wet
+    putKatalystParam("phaser.wet", wet)
     fillPhaserDefaults()
 }
 
-private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserRate }, update = phaserMutation)
+        return source._mapNumericField(mapper, read = { it.phaserDepth }, update = phaserWetMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, phaserMutation)
+    return source._liftOrReinterpretNumericalField(args, phaserWetMutation)
 }
 
 
 /**
- * The orbit phaser: rate, depth, centre, sweep and dry floor.
+ * The orbit phaser: depth, rate, centre, sweep and dry floor.
  *
  * One sweep over the summed [orbit bus](/manuals/lexikon/orbit-bus), the DAW-insert model, so every
  * knob belongs to the orbit's owning voice: with the built-in pipelines, a voice that sets phaser
@@ -114,18 +116,24 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
  * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.
  *
+ * `wet` comes first, as on every door that has one, and the LFO rate second: `phaser(0.5, 2)` is
+ * half depth at 2 Hz.
+ *
  * The call sets every slot: the ones you leave out take their shared defaults, rate 0, wet 0,
  * centre 1000 Hz, sweep 1000 Hz and floor 1, unless an earlier call already set them. Wet 0 is the
  * engine's own gate, so reaching for the phaser without a depth is still silent, exactly as before.
- * Slots apply in order, rate first, so a mapper on a later slot sees a default an earlier slot of
- * the same call filled in.
+ * Slots apply in order, wet first, so a mapper on a later slot sees a default an earlier slot of
+ * the same call filled in. A wet MAPPER runs before any other knob can fill the wet, so it maps
+ * nothing on a fresh note: `phaser(rate = 2, wet = add(0.3))` is wet 0, the rate's fill. Map the
+ * wet in a later call, once it is set: `phaser(rate = 2).phaser(wet = add(0.3))` is wet 0.3.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`phaser(wet = mul(2))`), and the numeric slots read back as `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
- * With no argument at all, the pattern's own values are reinterpreted as `rate`.
+ * a mapper (`phaser(wet = mul(2))`), and the numeric slots read back as `phaser.wet`, `phaser.rate`, `phaser.center`, `phaser.sweep`, `phaser.floor`.
+ * With no argument at all, the pattern's own values are reinterpreted as `wet`; a value that is not
+ * a number writes nothing.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").phaser(0.5, 0.5)                                 // rate and depth
+ * note("c3 e3").s("saw").phaser(0.5, 0.5)                                 // depth and rate
  * ```
  *
  * ```KlangScript(Playable)
@@ -133,11 +141,11 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").phaser("0.5 2", 0.5).delay(wet = phaser.wet, time = 0.25)   // as much delay as phaser
+ * note("c3 e3").s("saw").phaser("0.2 0.8", 0.5).delay(wet = phaser.wet, time = 0.25)   // as much delay as phaser
  * ```
  *
- * @param rate LFO rate in Hz.
  * @param wet Depth, 0 to 1. Engages above 0.01.
+ * @param rate LFO rate in Hz.
  * @param center Centre frequency of the sweep, Hz.
  * @param sweep Sweep range around the centre, Hz.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
@@ -145,24 +153,24 @@ private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  *
  * @scope orbit
  * @category effects
- * @tags phaser, rate, wet, center, sweep, floor
+ * @tags phaser, wet, rate, center, sweep, floor
  */
 @KlangScript.Function
 fun SprudelPattern.phaser(
-    rate: PatternLike? = null,
     wet: PatternLike? = null,
+    rate: PatternLike? = null,
     center: PatternLike? = null,
     sweep: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
-    // A tail-only call must not touch rate: reinterpret runs only on a fully bare call.
-    var p = if (rate != null || !(wet != null || center != null || sweep != null || floor != null)) {
-        applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
+    // A call without a wet must not touch wet: reinterpret runs only on a fully bare call.
+    var p = if (wet != null || !(rate != null || center != null || sweep != null || floor != null)) {
+        applyPhaserWet(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    if (wet != null) p = applyPhaserWet(p, listOf<Any?>(wet).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (rate != null) p = applyPhaserRate(p, listOf<Any?>(rate).asSprudelDslArgs(callInfo?.forParam(1)))
     if (center != null) p = applyPhaserCenter(p, listOf<Any?>(center).asSprudelDslArgs(callInfo?.forParam(2)))
     if (sweep != null) p = applyPhaserSweep(p, listOf<Any?>(sweep).asSprudelDslArgs(callInfo?.forParam(3)))
     if (floor != null) p = applyPhaserFloor(p, listOf<Any?>(floor).asSprudelDslArgs(callInfo?.forParam(4)))
@@ -172,26 +180,26 @@ fun SprudelPattern.phaser(
 /** Parses this string as a pattern, then applies [phaser]. */
 @KlangScript.Function
 fun String.phaser(
-    rate: PatternLike? = null,
     wet: PatternLike? = null,
+    rate: PatternLike? = null,
     center: PatternLike? = null,
     sweep: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, wet, center, sweep, floor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(wet, rate, center, sweep, floor, callInfo)
 
 /** Chains a [phaser] step onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.phaser(
-    rate: PatternLike? = null,
     wet: PatternLike? = null,
+    rate: PatternLike? = null,
     center: PatternLike? = null,
     sweep: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.phaser(rate, wet, center, sweep, floor, callInfo) }
+    this.chain { p -> p.phaser(wet, rate, center, sweep, floor, callInfo) }
 
 /**
  * The `phaser` object: `phaser(...)` sets the slots, and each numeric slot reads back as a child,
@@ -228,30 +236,30 @@ object phaser {
     /** The setter, see [SprudelPattern.phaser]. */
     @KlangScript.Invoke
     operator fun invoke(
-        rate: PatternLike? = null,
         wet: PatternLike? = null,
+        rate: PatternLike? = null,
         center: PatternLike? = null,
         sweep: PatternLike? = null,
         floor: PatternLike? = null,
         callInfo: CallInfo? = null
     ): PatternMapperFn =
-        { p -> p.phaser(rate, wet, center, sweep, floor, callInfo) }
+        { p -> p.phaser(wet, rate, center, sweep, floor, callInfo) }
 }
 
-// -- phaser.wet ------------------------------------------------------------------------------------------------------
+// -- phaser.rate -----------------------------------------------------------------------------------------------------
 
-private val phaserWetMutation = voiceSetter {
-    phaserDepth = it?.asDoubleOrNull()
-    putKatalystParam("phaser.wet", phaserDepth)
+private val phaserRateMutation = voiceSetter {
+    phaserRate = it?.asDoubleOrNull()
+    putKatalystParam("phaser.rate", phaserRate)
     fillPhaserDefaults()
 }
 
-private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaserRate(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.phaserDepth }, update = phaserWetMutation)
+        return source._mapNumericField(mapper, read = { it.phaserRate }, update = phaserRateMutation)
     }
 
-    return source._liftOrReinterpretNumericalField(args, phaserWetMutation)
+    return source._liftOrReinterpretNumericalField(args, phaserRateMutation)
 }
 
 // -- phaser.floor ----------------------------------------------------------------------------------------------------

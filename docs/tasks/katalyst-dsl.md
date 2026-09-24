@@ -189,8 +189,8 @@ Rules that fix the shape:
   stage (parity rule 4, maintainer 2026-09-16).
 - **Every knob keeps the name and scale of its sprudel door**: `reverb(wet, size, lowpass)`,
   `delay(wet, time, feedback, cap)`, `compressor(threshold, ratio, knee, attack, release)`,
-  `duck(orbit, depth, attack)`, `phaser(rate, wet, center, sweep, floor)`, `body(material, wet,
-  floor)`, `vowel(vowel, wet, floor)`. The one recorded asymmetry to reconcile in the same
+  `duck(orbit, depth, attack)`, `phaser(wet, rate, center, sweep, floor)`, `body(wet, material,
+  floor)`, `vowel(wet, vowel, floor)` (wet first since phase 3 step 3d, 2026-09-24). The one recorded asymmetry to reconcile in the same
   deliverable: the master limiter builder says `thresholdDb`/`kneeDb`/`attack(seconds)`; the
   Katalyst compressor follows sprudel (`threshold`, `knee`, `attack`), and the follow-up file gets
   a row saying the master limiter is the odd one out. RECONCILED 2026-09-24 in phase 3 step 3d(ii):
@@ -418,7 +418,7 @@ complexity outranks the duplication.
     done 2026-09-18): `BodyMaterials.modesFor` and `VowelBands.bandsFor`, pure data moved out of
     `sprudel` byte for byte, the sprudel-side symbols removed; `SprudelVoiceData.toVoiceData` and the
     body editor tool read the same objects, and `KatalystSlots` maps a stage's name through them at
-    chain build. Unknown or null name = stage off on both paths. A declared `body("wood", wet 0.5)`
+    chain build. Unknown or null name = stage off on both paths. A declared `k.body(0.5, "wood")` (wet first since phase 3 step 3d)
     renders bit-identically to the voice door; the one formal difference is the floor (null on the
     voice, the constant written out on the chain, the same number).
 
@@ -669,8 +669,8 @@ complexity outranks the duplication.
   become `IgnitorDsl` slots holding an INDEX into `BodyMaterials.names` and a flattened
   register-by-vowel catalogue in `VowelBands`, index 0 = `none`, unset or out of range = the stage
   is off, the same shape `duck.orbit` already has. Classic carries both as unset `Param` slots; the
-  pattern doors `.body("wood", ...)` and `.vowel("bass:a", ...)` write the index plus their
-  companions; the chain builders `k.body("wood", ...)` write a `Constant`; name-to-index and
+  pattern doors `.body(material = "wood", ...)` and `.vowel(vowel = "bass:a", ...)` write the index plus their
+  companions; the chain doors `k.body(wet, "wood")` write a `Constant` (wet first since phase 3 step 3d); name-to-index and
   index-to-bands live in one place next to the tables in `audio_bridge`, so both doors and the
   resolver agree. A typed (string) param kind was considered and not needed: the tables are closed
   lists, and a number is what the wire already carries. Off stages cost nothing new: `configure(null)`

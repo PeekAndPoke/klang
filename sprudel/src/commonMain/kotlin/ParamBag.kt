@@ -26,11 +26,13 @@ package io.peekandpoke.klang.sprudel
  * through, and only the facts about that method belong here.
  *
  * **[setOrDefault]'s default branch tests ABSENCE, not a value.** That is the never-overwrite half
- * of the rule: `body(wet = 0.3).body("wood")` must end at 0.3, so a fill has to tell an author's
+ * of the rule: `body(wet = 0.3).body(material = "wood")` must end at 0.3, so a fill has to tell an author's
  * 0.3 from a knob nobody has touched. Only "is this name already here" can, because every candidate
  * sentinel is also a legal value: `DUCK_DEPTH` and `PHASER_WET` are 0.0, a threshold is negative,
- * and `SLOT_UNSET` is what a CLEARED slot is deliberately written AS, so a cleared slot has to stay
- * cleared rather than be re-filled. Absence is the only honest "nobody said".
+ * and a raw `katp("body.wet", "NaN")` writes a non-finite value (`SLOT_UNSET` is NaN) that has to
+ * stay as written rather than be re-filled. Absence is the only honest "nobody said". (No door
+ * clears a slot any more: the two name setters that did lost their clear arm with the wet-first
+ * order, step 3d(iii), 2026-09-24.)
  *
  * **A companion passes null.** A companion is by definition a knob the call did not name, and the
  * knob it DID name is already in the bag from its own setter's [set]. Handing the voice FIELD
@@ -71,7 +73,7 @@ class ParamBag {
      * when [name] is absent.
      *
      * [value] is what THIS call named, never a voice field (see the class KDoc); a companion fill
-     * passes null. So an explicit value survives every later fill, a cleared slot stays cleared,
+     * passes null. So an explicit value survives every later fill, a non-finite one included,
      * and a knob nobody has named takes its shared constant the moment its stage is named.
      */
     fun setOrDefault(name: String, value: Double?, default: Double) {

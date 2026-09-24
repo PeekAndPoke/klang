@@ -120,7 +120,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * 5a-2's review, 2026-09-18). They are [SLOT_UNSET] rather than 0.0, because 0.0 is a SET
          * value: `KatalystSlots.bodyDef` substitutes [BODY_WET] for an unset mix exactly as
          * `fromParams` substitutes [COMPRESSOR_THRESHOLD_DB], and with a 0.0 default it never saw
-         * "unset", so a material-only `body("wood")` on a declared classic chain ran the bank at a
+         * "unset", so a material-only `body(material = "wood")` on a declared classic chain ran the bank at a
          * fully dry mix while the same call on an undeclared orbit played it at [BODY_WET]. Unset
          * is safe here and NOT on the sends, because these two stages are gated on their NAME:
          * `bodyDef` returns null whenever the bands are null, so an orbit that names no material
@@ -130,7 +130,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *
          * **What makes a door still feel familiar is the door, not this chain**: a sprudel door
          * fills the companions of the stage a call names (`/dsl-design` §4, the rule's one home),
-         * so `.reverb(wet = 0.3)` and `.body("wood")` sound as they always have on this chain.
+         * so `.reverb(wet = 0.3)` and `.body(material = "wood")` sound as they always have on this chain.
          *
          * A raw `katp(...)` is the other half of that bargain: it writes exactly ONE slot, so
          * `katp("reverb.wet", 0.3)` on this chain stays silent until `reverb.size` is written as
@@ -139,9 +139,9 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          * `body.material` and `vowel.vowel` are slots too, and they carry a NUMBER: the INDEX of a
          * name in `BodyMaterials.names` respectively `VowelBands.names` (Katalyst step 5a-2,
          * 2026-09-18). Unset here, because an untouched orbit names no material and no vowel, and
-         * unset is off. That is what lets `body("wood", wet = 0.3)` on a pattern keep working when
+         * unset is off. That is what lets `body(material = "wood", wet = 0.3)` on a pattern keep working when
          * its orbit declares a classic chain: the door writes the index, the same way it writes the
-         * wet. And `body("wood")` with no wet works because the door fills the wet and the floor
+         * wet. And `body(material = "wood")` with no wet works because the door fills the wet and the floor
          * from the same two constants the engine would have substituted.
          */
         val classic: KatalystDsl = KatalystDsl(
@@ -252,14 +252,14 @@ sealed interface KatalystStageDsl {
      *
      * The material is a knob like every other one, and the number it carries is an INDEX into
      * `BodyMaterials.names` (Katalyst step 5a-2, 2026-09-18). That is what keeps a name off the
-     * wire as a string and lets a pattern's `body("wood")` reach a declared chain through
+     * wire as a string and lets a pattern's `body(material = "wood")` reach a declared chain through
      * `katp("body.material", ...)`: both doors convert through `BodyMaterials.indexOf`, one place.
      * Index 0 is `none`, and so is an unset, negative or out-of-range index: the stage is off.
      *
      * @param material the material's index in `BodyMaterials.names`, the number
      *   `BodyMaterials.indexOf("wood")` gives. The default is [SLOT_UNSET]: the chain names no
      *   material and the stage is off. Write a name on either builder door
-     *   (`k.body(material = "wood")`) and it is converted for you. Orbit twin: `body("wood")`.
+     *   (`k.body(material = "wood")`) and it is converted for you. Orbit twin: `body(material = "wood")`.
      * @param wet how much of the orbit runs through the body, 0 to 1. Orbit twin: `body(wet = ...)`.
      * @param floor minimum dry share kept in the mix, 0 to 1. Lower = the modes sit over less dry
      *   and the body is more audible. Orbit twin: `body(floor = ...)`.
@@ -281,7 +281,7 @@ sealed interface KatalystStageDsl {
      * @param vowel the vowel's index in `VowelBands.names`, the number `VowelBands.indexOf("a")`
      *   gives (a bare name is the soprano register). The default is [SLOT_UNSET]: the chain names
      *   no vowel and the stage is off. Write a name on either builder door
-     *   (`k.vowel(vowel = "bass:a")`) and it is converted for you. Orbit twin: `vowel("a")`.
+     *   (`k.vowel(vowel = "bass:a")`) and it is converted for you. Orbit twin: `vowel(vowel = "a")`.
      * @param wet how much of the orbit runs through the formant bank, 0 to 1. Orbit twin:
      *   `vowel(wet = ...)`.
      * @param floor minimum dry share kept between the formants, 0 to 1. Much lower than the body's:

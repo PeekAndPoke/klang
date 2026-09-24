@@ -84,7 +84,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "coarse" to listOf("amount", "oversample"),
             "reverb" to listOf("wet", "size", "lowpass"),
             "delay" to listOf("wet", "time", "feedback", "cap"),
-            "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
+            "phaser" to listOf("wet", "rate", "center", "sweep", "floor"),
             "tremolo" to listOf("depth", "sync", "skew", "phase"),
             "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
@@ -167,7 +167,8 @@ class FreqAccessorIntelSpec : StringSpec({
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+                // Wet first, as on every door that has one (step 3d(iii), 2026-09-24).
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(wet"
                 val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
                 children shouldContainAll slots
                 children shouldNotContain name

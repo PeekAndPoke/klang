@@ -1,5 +1,36 @@
 # Sprudel — Memory
 
+## `phaser`, `body` and `vowel` are wet-first (2026-09-24, phase 3 step 3d(iii))
+
+- **The doors are `phaser(wet, rate, center, sweep, floor)`, `body(wet, material, floor)` and
+  `vowel(wet, vowel, floor)`**: the maintainer's wet rule (`docs/tasks/builtin-instruments.md`
+  section 3b, `/dsl-design` §2), the same order the Ignitor and Katalyst doors took in 3d(i) and
+  3d(ii). Still flat: sprudel has no builder layer. The entries below that name the old order
+  (batch E, batch G) are the history of those steps.
+- **A bare call reinterprets the pattern's values as the WET** on all three
+  (`seq("<0.2 0.5>").body()`), no longer as the rate, the material or the vowel. `note`, `s` and
+  `n` drop the value, so a bare call after them has nothing to reinterpret. A value that is not a
+  number writes NOTHING: the wet head returns early (`?: return@voiceSetter`), the shape of the
+  `reverb` and `delay` heads. Without it the field would clear and the slot would not (a null
+  slot write is skipped), and the phaser's fill would stamp `PHASER_WET` over the author's depth.
+- **No setter of a bus door clears on a null any more.** The material and vowel setters were the
+  two that did, and only because the bare call reached them; now nothing hands them a null, so
+  the clear arms and their reinterpret path are gone (`_liftStringField`, not the reinterpret
+  variant). The off switch is `material = "none"` / `vowel = "none"`, index 0, silent on both paths.
+- **The fill did not change**: `body` and `vowel` are still named only by their name knob, the
+  phaser by any knob. What changed is the ORDER inside one call, declaration order, wet first. A
+  wet mapper in the same call as the name therefore maps an unset wet, which does nothing:
+  `body(mul(2), "wood")` is wet 0.5 on a fresh note, where `body("wood", wet = mul(2))` was 1.0.
+  Doubling a wet takes a second call once it is set.
+- **The migration** was 11 positional `body("x")` calls, 7 in built-in songs and 4 in
+  `FrozenSongs` (Seltsamere Dinge), now `body(material = "x")`, the corpus bit-identical; no song
+  called `vowel` or `phaser` positionally. The phaser editor tool reads and writes the whole call
+  by the new indices and stays attached to `rate`.
+- Guards: `LangKatalystParamSpec` ("a bare body(), vowel() or phaser() on a value that is not a
+  number writes NOTHING"), the bare-call rows in `LangFieldAccessorsSpec` batch G, `LangPhaserSpec`,
+  `LangVowelSpec`, `LangBodySpec`, `LangWetKnobSpec` (positional wet on all five wet doors) and the
+  `invoke` signatures in `FreqAccessorIntelSpec`.
+
 ## The `pregain` door: the other level word (2026-09-19)
 
 - **`pregain(amount)` is exactly `oscp("pregain", amount)`**, one key of the oscParams bag, and it
@@ -446,7 +477,7 @@ return applyCat(patterns)
 - `lpf(freq, q, passes, env, attack, decay, sustain, release)` / `lowpass`; readers `lpf.freq/.q/.passes/.env/.attack/.decay/.sustain/.release`
 - `hpf(...)` / `highpass` the same; `bpf(freq, q, env, attack, decay, sustain, release)` / `bandpass`
 - `notch(freq, q, env, attack, decay, sustain, release)`; readers `notch.*`
-- `vowel()`
+- `vowel(wet, vowel, floor)` and `body(wet, material, floor)`, wet first since 2026-09-24; readers `vowel.wet/.floor`, `body.wet/.floor`
 
 ### Audio Effects — Filter Envelopes
 
@@ -481,7 +512,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Phaser
 
-- `phaser(rate, wet, center, sweep, floor)`; readers `phaser.rate/.wet/.center/.sweep/.floor`
+- `phaser(wet, rate, center, sweep, floor)`, wet first since 2026-09-24; readers `phaser.wet/.rate/.center/.sweep/.floor`
 
 ### Audio Effects — Duck / Sidechain
 

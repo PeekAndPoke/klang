@@ -21,7 +21,7 @@ class LangVowelComprehensiveSpec : StringSpec({
 
     // Helper to verify formant filter creation
     fun verifyFormantFilter(vowelSpec: String, shouldCreateFilter: Boolean = true) {
-        val p = note("c3").vowel(vowelSpec)
+        val p = note("c3").vowel(vowel = vowelSpec)
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
 
@@ -468,7 +468,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     // =================================================================================================================
 
     "soprano:a has correct formant frequencies" {
-        val p = note("c3").vowel("soprano:a")
+        val p = note("c3").vowel(vowel = "soprano:a")
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
         val formant = voiceData.filters.filters[0] as FilterDef.Formant
@@ -481,7 +481,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     }
 
     "bass:e has correct formant frequencies" {
-        val p = note("c3").vowel("bass:e")
+        val p = note("c3").vowel(vowel = "bass:e")
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
         val formant = voiceData.filters.filters[0] as FilterDef.Formant
@@ -494,7 +494,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     }
 
     "tenor:ü (umlaut) has correct formant frequencies" {
-        val p = note("c3").vowel("tenor:ü")
+        val p = note("c3").vowel(vowel = "tenor:ü")
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
         val formant = voiceData.filters.filters[0] as FilterDef.Formant
@@ -507,7 +507,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     }
 
     "alto:au (diphthong nucleus) has correct formant frequencies" {
-        val p = note("c3").vowel("alto:au")
+        val p = note("c3").vowel(vowel = "alto:au")
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
         val formant = voiceData.filters.filters[0] as FilterDef.Formant
@@ -525,7 +525,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     // =================================================================================================================
 
     "vowel sequence with different voices" {
-        val p = note("c3 c3 c3 c3").vowel("soprano:a bass:e tenor:i alto:o")
+        val p = note("c3 c3 c3 c3").vowel(vowel = "soprano:a bass:e tenor:i alto:o")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -539,7 +539,7 @@ class LangVowelComprehensiveSpec : StringSpec({
     }
 
     "vowel sequence with mixed valid and invalid" {
-        val p = note("c3 c3 c3").vowel("a x bass:e")
+        val p = note("c3 c3 c3").vowel(vowel = "a x bass:e")
         val events = p.queryArc(0.0, 1.0)
 
         // First event: 'a' - should have formant filter

@@ -39,6 +39,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.sprudel.ParamBag
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.paramBagOf
@@ -234,7 +235,7 @@ class LangKatalystParamSpec : StringSpec({
         // is not a number and `_mapNumericField` skips a null mapping (the 2026-09-16 rule), so
         // `duck(depth = "x")` never reaches the setter at all and the earlier 0.5 stands. That holds for every numeric TAIL setter of every compound BUS door, which is why
         // none of them carries a clear arm; a HEAD setter can be handed a null by the bare-call
-        // reinterpret, and the two NAME setters are the only ones that CLEAR on it.
+        // reinterpret, and it writes nothing then. No bus door setter clears on a null.
         val p = note("c3").duck(orbit = 1, depth = 0.5).duck(depth = "x")
 
         slot(p, "duck.depth") shouldBe 0.5
@@ -276,7 +277,7 @@ class LangKatalystParamSpec : StringSpec({
 
     "body(...) writes the material as an INDEX slot, next to its numbers" {
         // Katalyst step 5a-2: a material travels as the index of its name in `BodyMaterials.names`,
-        // so `body("wood", wet = 0.3)` reaches a DECLARED chain the same way `reverb(...)` does.
+        // so `body(material = "wood", wet = 0.3)` reaches a DECLARED chain the same way `reverb(...)` does.
         // The expected index is read off the catalogue, never typed here.
         val b = note("c3").body(material = "wood", wet = 0.3)
 
@@ -290,12 +291,12 @@ class LangKatalystParamSpec : StringSpec({
 
         // ...and it is really the WOOD index, not just some number: a different material is a
         // different slot value, and `none` is 0.
-        slot(b, "body.material") shouldNotBe slot(note("c3").body("glass"), "body.material")
-        slot(note("c3").body("none"), "body.material") shouldBe 0.0
+        slot(b, "body.material") shouldNotBe slot(note("c3").body(material = "glass"), "body.material")
+        slot(note("c3").body(material = "none"), "body.material") shouldBe 0.0
 
         // An unknown material is index 0 as well, which is the stage off, the same answer the
         // voice path gives a name it cannot resolve.
-        slot(note("c3").body("unobtainium"), "body.material") shouldBe 0.0
+        slot(note("c3").body(material = "unobtainium"), "body.material") shouldBe 0.0
     }
 
     "body(...) does not INVENT a material: a tail-only call writes no index and no companion" {
@@ -314,7 +315,7 @@ class LangKatalystParamSpec : StringSpec({
         // Katalyst step 5a-3, the compound-door fill rule. Byte-identical to what the engine did
         // with an unset field, on both the voice path and the declared path, which is what
         // `KatalystDoorFillRenderSpec` renders.
-        val p = note("c3").body("wood")
+        val p = note("c3").body(material = "wood")
         val data = p.queryArc(0.0, 1.0).first().data
 
         slot(p, "body.material") shouldBe BodyMaterials.indexOf("wood")
@@ -328,7 +329,7 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "body(...): an explicit wet survives a later material, and a later wet wins" {
-        val wetFirst = note("c3").body(wet = 0.3).body("wood")
+        val wetFirst = note("c3").body(wet = 0.3).body(material = "wood")
 
         withClue("naming the material must not overwrite the 0.3 the author already asked for") {
             slot(wetFirst, "body.wet") shouldBe 0.3
@@ -339,7 +340,7 @@ class LangKatalystParamSpec : StringSpec({
             slot(wetFirst, "body.floor") shouldBe BODY_FLOOR
         }
 
-        val wetLast = note("c3").body("wood").body(wet = 0.3)
+        val wetLast = note("c3").body(material = "wood").body(wet = 0.3)
 
         slot(wetLast, "body.wet") shouldBe 0.3
         wetLast.queryArc(0.0, 1.0).first().data.bodyMix shouldBe 0.3
@@ -350,7 +351,7 @@ class LangKatalystParamSpec : StringSpec({
         // writes no voice field, so the field is still null when the naming call fills. Absence in
         // the bag is the only thing that can tell "nobody said" from "the author said 0.7", which
         // is why `ParamBag.setOrDefault` tests for the name and not for a sentinel value.
-        val body = note("c3").katp("body.wet", 0.7).body("wood")
+        val body = note("c3").katp("body.wet", 0.7).body(material = "wood")
 
         slot(body, "body.wet") shouldBe 0.7
         withClue("the companion nobody named still takes its constant") {
@@ -374,25 +375,83 @@ class LangKatalystParamSpec : StringSpec({
         slot(ducked, "duck.orbit") shouldBe 1.0
     }
 
-    "a bare body() or vowel() with nothing to name CLEARS the name, field and slot together" {
-        // The two NAME setters are the only ones that CLEAR on a null (the string lift's bare-call
-        // reinterpret), and the only two that carry a clear arm. `note("c3")` has no value to
-        // reinterpret, so the name goes away and `SLOT_UNSET` goes into the slot: the wire's
-        // "never set", which turns the stage off on a declared chain exactly as a null field turns
-        // it off on the voice path.
-        val b = note("c3").body("wood").body()
-        val bodyData = b.queryArc(0.0, 1.0).first().data
+    "a bare body(), vowel() or phaser() on a value that is not a number writes NOTHING: no bus door clears" {
+        // Since step 3d(iii) (2026-09-24) the WET is the head of all three doors, so the bare-call
+        // reinterpret hands the WET setter the pattern's own value, and a null where that value is
+        // missing (`note`, `s` and `n` drop it) or is not a number. The head then writes nothing,
+        // like the heads of `reverb` and `delay`: without that early return the field would clear
+        // and the slot would not (a null slot write is skipped), so the two halves would disagree,
+        // and the phaser's fill would then stamp PHASER_WET over the author's depth.
+        //
+        // The two NAME setters no longer clear either: no bare call reaches them, so the material
+        // and the vowel survive a bare call. The off switch is `material = "none"` / `vowel = "none"`.
+        class Case(val name: String, val pattern: SprudelPattern, val check: (SprudelPatternEvent) -> Unit)
 
-        bodyData.body.shouldBeNull()
-        withClue("the slot is cleared with the field, never left at the stale index") {
-            slot(b, "body.material").shouldNotBeNull().isFinite() shouldBe false
+        fun bodyCheck(e: SprudelPatternEvent) {
+            e.data.body shouldBe "wood"
+            e.data.bodyMix shouldBe 0.3
+            e.data.katalystParams?.get("body.wet") shouldBe 0.3
+            e.data.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")
         }
 
-        val v = note("c3").vowel("a").vowel()
-        val vowelData = v.queryArc(0.0, 1.0).first().data
+        fun vowelCheck(e: SprudelPatternEvent) {
+            e.data.vowel shouldBe "a"
+            e.data.vowelMix shouldBe 0.3
+            e.data.katalystParams?.get("vowel.wet") shouldBe 0.3
+            e.data.katalystParams?.get("vowel.vowel") shouldBe VowelBands.indexOf("a")
+        }
 
-        vowelData.vowel.shouldBeNull()
-        slot(v, "vowel.vowel").shouldNotBeNull().isFinite() shouldBe false
+        fun phaserCheck(e: SprudelPatternEvent) {
+            e.data.phaserDepth shouldBe 0.3
+            e.data.katalystParams?.get("phaser.wet") shouldBe 0.3
+            e.data.phaserRate shouldBe 2.0
+        }
+
+        listOf(
+            Case("body, no value", note("c3").body(0.3, "wood").body(), ::bodyCheck),
+            Case("body, a name as value", seq("x y").body(0.3, "wood").body(), ::bodyCheck),
+            Case("vowel, no value", note("c3").vowel(0.3, "a").vowel(), ::vowelCheck),
+            Case("vowel, a name as value", seq("x y").vowel(0.3, "a").vowel(), ::vowelCheck),
+            Case("phaser, no value", note("c3").phaser(0.3, 2).phaser(), ::phaserCheck),
+            Case("phaser, a name as value", seq("x y").phaser(0.3, 2).phaser(), ::phaserCheck),
+        ).forEach { case ->
+            withClue(case.name) {
+                val events = case.pattern.queryArc(0.0, 1.0)
+                events.shouldNotBeEmpty()
+                events.forEach { case.check(it) }
+            }
+        }
+
+        withClue("on a voice that never had the stage, a bare call on no value writes no bag at all") {
+            note("c3").body().queryArc(0.0, 1.0).first().data.katalystParams.shouldBeNull()
+            note("c3").vowel().queryArc(0.0, 1.0).first().data.katalystParams.shouldBeNull()
+            note("c3").phaser().queryArc(0.0, 1.0).first().data.katalystParams.shouldBeNull()
+        }
+    }
+
+    "slots apply in declaration order, wet first: a same-call wet mapper maps an unset wet" {
+        // Step 3d(iii), 2026-09-24: the wet is the first parameter AND the first slot applied. On a
+        // fresh note the wet mapper therefore finds nothing to map (a mapper on an unset field is a
+        // no-op, the 2026-09-07 rule), and the name that follows fills the shared default. The KDoc
+        // says so; doubling a wet takes a second call, once it is set.
+        val body = note("c3").body(mul(2), "wood").queryArc(0.0, 1.0).first().data
+        body.bodyMix shouldBe BODY_WET
+        body.katalystParams?.get("body.wet") shouldBe BODY_WET
+
+        val bodyTwice = note("c3").body(material = "wood").body(wet = mul(2)).queryArc(0.0, 1.0).first().data
+        bodyTwice.bodyMix shouldBe BODY_WET * 2
+        bodyTwice.katalystParams?.get("body.wet") shouldBe BODY_WET * 2
+
+        val vowel = note("c3").vowel(mul(2), "a").queryArc(0.0, 1.0).first().data
+        vowel.vowelMix shouldBe VOWEL_WET
+        vowel.katalystParams?.get("vowel.wet") shouldBe VOWEL_WET
+
+        val vowelTwice = note("c3").vowel(vowel = "a").vowel(wet = mul(2)).queryArc(0.0, 1.0).first().data
+        vowelTwice.vowelMix shouldBe VOWEL_WET * 2
+
+        // The phaser's twin, the example its KDoc gives: the wet mapper runs before the rate fills.
+        note("c3").phaser(rate = 2, wet = add(0.3)).queryArc(0.0, 1.0).first().data.phaserDepth shouldBe PHASER_WET
+        note("c3").phaser(rate = 2).phaser(wet = add(0.3)).queryArc(0.0, 1.0).first().data.phaserDepth shouldBe PHASER_WET + 0.3
     }
 
     "a fill never stamps a constant over a katp written BETWEEN two calls of the same door" {
@@ -411,14 +470,14 @@ class LangKatalystParamSpec : StringSpec({
         slot(room, "reverb.wet") shouldBe 0.7
         slot(room, "reverb.size") shouldBe 4.0
 
-        val boxed = note("c3").body("wood").katp("body.wet", 0.8).body("glass")
+        val boxed = note("c3").body(material = "wood").katp("body.wet", 0.8).body(material = "glass")
 
         slot(boxed, "body.wet") shouldBe 0.8
         slot(boxed, "body.material") shouldBe BodyMaterials.indexOf("glass")
     }
 
     "vowel(name) alone fills wet and floor, the body's twin" {
-        val p = note("c3").vowel("a")
+        val p = note("c3").vowel(vowel = "a")
         val data = p.queryArc(0.0, 1.0).first().data
 
         slot(p, "vowel.vowel") shouldBe VowelBands.indexOf("a")
@@ -429,7 +488,7 @@ class LangKatalystParamSpec : StringSpec({
         data.vowelFloor shouldBe VOWEL_FLOOR
 
         // And the never-overwrite half, on the wet.
-        slot(note("c3").vowel(wet = 0.6).vowel("a"), "vowel.wet") shouldBe 0.6
+        slot(note("c3").vowel(wet = 0.6).vowel(vowel = "a"), "vowel.wet") shouldBe 0.6
     }
 
     "vowel(...) writes the vowel as an INDEX slot, register and all" {
@@ -443,12 +502,12 @@ class LangKatalystParamSpec : StringSpec({
 
         // A register-qualified name is its own index, and a bare name is the soprano one, exactly
         // as the voice path reads it.
-        slot(note("c3").vowel("bass:a"), "vowel.vowel") shouldBe VowelBands.indexOf("bass:a")
-        slot(note("c3").vowel("a"), "vowel.vowel") shouldBe VowelBands.indexOf("soprano:a")
+        slot(note("c3").vowel(vowel = "bass:a"), "vowel.vowel") shouldBe VowelBands.indexOf("bass:a")
+        slot(note("c3").vowel(vowel = "a"), "vowel.vowel") shouldBe VowelBands.indexOf("soprano:a")
         VowelBands.indexOf("bass:a") shouldNotBe VowelBands.indexOf("soprano:a")
 
-        slot(note("c3").vowel("none"), "vowel.vowel") shouldBe 0.0
-        slot(note("c3").vowel("zzz"), "vowel.vowel") shouldBe 0.0
+        slot(note("c3").vowel(vowel = "none"), "vowel.vowel") shouldBe 0.0
+        slot(note("c3").vowel(vowel = "zzz"), "vowel.vowel") shouldBe 0.0
 
         // Tail-only, the twin of the body's row: no name, no index, no companion.
         note("c3").vowel(wet = 0.5).queryArc(0.0, 1.0).first().data.katalystParams?.toMap()?.keys shouldBe
@@ -456,9 +515,9 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "a patterned material writes the index of the name at each event" {
-        // `body("wood glass")` is mini-notation, so the two halves of the cycle are two materials,
+        // `body(material = "wood glass")` is mini-notation, so the two halves of the cycle are two materials,
         // and the slot has to follow the name event for event.
-        val events = note("c3 e3").body("wood glass", 0.7).queryArc(0.0, 1.0)
+        val events = note("c3 e3").body(0.7, "wood glass").queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events[0].data.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")
@@ -470,8 +529,8 @@ class LangKatalystParamSpec : StringSpec({
         // true: `_liftNumericField` returns early on a value that is not a number (the 2026-09-16
         // rule), so the setter never runs and neither half moves. No numeric TAIL setter of a
         // compound BUS door can be handed a null at all, so none of them carries a clear arm.
-        // A HEAD setter can be, through the bare-call reinterpret, and the two NAME setters
-        // (`body`'s material, `vowel`'s vowel) are the only ones that CLEAR on it.
+        // A HEAD setter can be, through the bare-call reinterpret, and it writes nothing then (the
+        // row "a bare body(), vowel() or phaser() on a value that is not a number writes NOTHING").
         val p = note("c3 e3").phaser(wet = 0.4).phaser(wet = "0.7 x").body(wet = 0.3).body(wet = "0.6 x")
         val events = p.queryArc(0.0, 1.0)
 
@@ -560,9 +619,9 @@ class LangKatalystParamSpec : StringSpec({
         // event a different object, which is the "twenty allocations per note" class on the query
         // path: after step 5b every bus door writes here.
         //
-        // Numeric slots only, deliberately: a door that sets a NAME (`body("wood")`) runs the string
+        // Numeric slots only, deliberately: a door that sets a NAME (`body(material = "wood")`) runs the string
         // setter, which CLONES the whole voice data and therefore its map too. That is the
-        // pre-existing shape of `_liftOrReinterpretStringField`, not a map this change allocates.
+        // pre-existing shape of the name setters on `_liftStringField`, not a map this change allocates.
         var seeded: ParamBag? = null
 
         val events = note("c3")

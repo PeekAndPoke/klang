@@ -82,7 +82,7 @@ class ParamBagSpec : StringSpec({
     }
 
     "an explicit value survives a later fill: the never-overwrite half of the rule" {
-        // This is `body(wet = 0.3).body("wood")`: the second call names the stage and fills the
+        // This is `body(wet = 0.3).body(material = "wood")`: the second call names the stage and fills the
         // companions, and the 0.3 the author asked for has to come through untouched.
         val bag = ParamBag()
 

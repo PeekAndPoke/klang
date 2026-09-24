@@ -22,7 +22,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * [KatalystFilterSwap][io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFilterSwap]
  * crossfades the two outputs. The morph of Katalyst step 5c-10, which travelled the bands of the
  * bank in service instead, was REJECTED by the maintainer on 2026-09-20: a resonance that travels
- * is an audible filter sweep ("an 8-bit laser shot" on `body("<wood glass>")`, the same on the
+ * is an audible filter sweep ("an 8-bit laser shot" on `body(material = "<wood glass>")`, the same on the
  * vowel), and the click metric could not see it, because a sweep is not a discontinuity. Do not
  * bring a retune back into this class without that listening being redone.
  *

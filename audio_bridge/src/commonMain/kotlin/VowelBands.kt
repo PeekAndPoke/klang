@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_bridge
 import kotlin.math.round
 
 /**
- * Vowel formant catalogue: the fixed formant banks behind `vowel("<name>")`.
+ * Vowel formant catalogue: the fixed formant banks behind `vowel(vowel = "<name>")`.
  *
  * A vowel is *pure data*: a list of [FilterDef.Formant.Band] `(freq Hz, db, Q)` triples, one per
  * formant, played as a parallel SVF-bandpass bank blended over the dry source (the source-filter

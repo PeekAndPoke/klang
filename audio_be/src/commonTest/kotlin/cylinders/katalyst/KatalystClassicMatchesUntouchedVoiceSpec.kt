@@ -231,7 +231,7 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
     }
 
     "the classic chain installs the same bank the wire carries for a body call, slot for slot" {
-        // The equivalence the step-5a-2 index slot exists for: `body("wood", wet = 0.3)` must
+        // The equivalence the step-5a-2 index slot exists for: `body(material = "wood", wet = 0.3)` must
         // reach the orbit's resonator through the INDEX slot with the bank and the mix the wire
         // carries for the same call. The oracle is that wire value, the real `FilterDef` over the
         // catalogue's own modes; nothing here types a mode. The name-to-index half of the trip is

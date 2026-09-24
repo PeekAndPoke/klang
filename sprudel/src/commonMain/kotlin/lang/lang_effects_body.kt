@@ -11,13 +11,12 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
-import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
-import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
+import io.peekandpoke.klang.sprudel._liftStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -59,46 +58,41 @@ private fun SprudelVoiceData.fillBodyDefaults() {
 // doors use (Katalyst step 5a-2, 2026-09-18). That is what keeps `body(material = "wood")` working
 // on a DECLARED chain without a string ever reaching the wire as a slot. An unknown name is index
 // 0, `none`, which is the same "off" the voice field's unknown material resolves to. A control
-// value is always A STRING here (`asString` is total, so `body(5)` names "5.0" and lands on index
-// 0); only the BARE call, which has nothing to reinterpret, clears, and then SLOT_UNSET clears the
-// slot with the field (see the tail setters below).
+// value is always A STRING here (`asString` is total, so `body(material = 5)` names "5.0" and lands
+// on index 0).
 //
-// Naming the material is what fills the rest of the stage. Clearing it fills nothing: the stage has
-// no name any more, so there is nothing for a companion to be filled for.
+// Naming the material is what fills the rest of the stage. The material is not this door's head
+// (the wet is, since step 3d(iii), 2026-09-24), so no bare call reaches this setter and nothing
+// ever hands it a null: it has no clear arm and no reinterpret path. The off switch is
+// `body(material = "none")`, index 0.
 private fun applyBody(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { v ->
-        val material = v?.lowercase()
+    return source._liftStringField(args) { v ->
+        val material = v?.lowercase() ?: return@_liftStringField this
 
         clone().also { data ->
             data.body = material
-
-            if (material != null) {
-                data.putKatalystParam("body.material", BodyMaterials.indexOf(material))
-                data.fillBodyDefaults()
-            } else {
-                data.putKatalystParam("body.material", SLOT_UNSET)
-            }
+            data.putKatalystParam("body.material", BodyMaterials.indexOf(material))
+            data.fillBodyDefaults()
         }
     }
 }
 
 // The two NUMBERS go into the slot state as well (`body.wet`, `body.floor`), which is what makes
 // this door an alias of `katp` on a DECLARED chain (signal-flow plan §7, Katalyst step 5a). A
-// tail-only call writes only its own knob: the NAME KNOB of this stage is the MATERIAL, and a door
-// never invents a name knob.
+// wet-only or floor-only call writes only its own knob: the NAME KNOB of this stage is the
+// MATERIAL, and a door never invents a name knob.
 //
-// Neither tail setter has a CLEAR arm, and neither needs one: no numeric TAIL setter of a compound
-// BUS door can be handed a null (the voice-side compound doors are a different shape; `adsr`'s
-// stages sit on the STRING lift and do clear). `_liftNumericField` returns early on a control value that is not a
-// number, `_mapNumericField` skips a null mapping (the 2026-09-16 rule), and the only path that
-// passes null is the bare-call reinterpret, which reaches a door's HEAD setter. A REST calls no
-// setter at all. The material setter above IS a head setter, and it is one of only two that CLEAR
-// on a null (the vowel's is the other): it writes SLOT_UNSET so the field and the slot clear
-// together.
+// No setter here has a CLEAR arm. `_liftNumericField` returns early on a control value that is not
+// a number, `_mapNumericField` skips a null mapping (the 2026-09-16 rule), and a REST calls no
+// setter at all. The only path that passes null is the bare-call reinterpret, which reaches the
+// door's HEAD setter, the WET; it then writes nothing (`?: return@voiceSetter`), like the heads of
+// `reverb` and `delay`.
 
 private val bodyWetMutation = voiceSetter {
-    bodyMix = it?.asDoubleOrNull()
-    putKatalystParam("body.wet", bodyMix)
+    val wet = it?.asDoubleOrNull() ?: return@voiceSetter
+
+    bodyMix = wet
+    putKatalystParam("body.wet", wet)
 }
 
 private fun applyBodyWet(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -136,18 +130,26 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  *
  * Materials: woods `wood`, `cedar`, `spruce`, `mahogany`, `rosewood`, `maple`, `oak`; bowed string
  * `violin`; voice `croon`; pipe and glass `tube`, `glass`; skin `membrane`; metals `brass`, `steel`,
- * `bell`. `none` removes the body. One name at a time: `body("wood glass")` is mini-notation, so it
+ * `bell`. `none` removes the body. One name at a time: `body(material = "wood glass")` is mini-notation, so it
  * is wood for the first half of the cycle and glass for the second, not a blend of the two.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`body(floor = mul(2))`), and the numeric slots read back as `body.wet`, `body.floor`. `material` is a name and has no reader.
- * With no argument at all, the pattern's own values are reinterpreted as `material`.
+ * With no argument at all, the pattern's own values are reinterpreted as `wet`
+ * (`seq("<0.2 0.5>").body()`); a value that is not a number writes nothing.
+ *
+ * `wet` comes first, as on every door that has one. The material is the second parameter, so a
+ * material alone is written by name: `body(material = "wood")`.
  *
  * Naming a material sets the whole stage: `wet` and `floor` take their shared defaults, 0.5 and 0.4,
- * unless an earlier call already set them, so `body("wood")` is as audible as it always was. Naming
- * a tail knob alone does NOT invent a material, because the material is what switches the body on.
- * Slots apply in order, material first, so a mapper on a later slot sees a default the material of
- * the same call filled in (`body("wood", wet = mul(2))` is wet 1.0).
+ * unless an earlier call already set them, so `body(material = "wood")` is as audible as it always
+ * was. Naming `wet` or `floor` alone does NOT invent a material, because the material is what
+ * switches the body on. `body(material = "none")` switches it off again.
+ *
+ * Slots apply in order, `wet` first. A wet MAPPER in the same call as the material therefore maps a
+ * wet that is not set yet, which does nothing: `body(mul(2), "wood")` on a fresh note is wet 0.5,
+ * the material's default. To double the wet, map it in a later call, once it is set:
+ * `body(material = "wood").body(wet = mul(2))` is wet 1.0.
  *
  * All three reach a DECLARED orbit chain as chain slots, `material` as the index of its name in the
  * material catalogue (`body.material`, 0 = none), so the same call works whether the orbit declares
@@ -155,40 +157,40 @@ private fun applyBodyFloor(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * `KatalystDoorFillRenderSpec`, which renders the short and the long spelling and compares samples.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("wood", 0.7)                                 // a wooden box around the tone
+ * note("c3 e3").s("saw").body(0.7, "wood")                                 // a wooden box around the tone
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("wood glass", 0.7).body(wet = mul("<1 0.5>"))   // wood then glass, half as boxy every other bar
+ * note("c3 e3").s("saw").body(0.7, "wood glass").body(wet = mul("<1 0.5>"))   // wood then glass, half as boxy every other bar
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("saw").body("tube", "<0.2 0.9>").reverb(wet = body.wet, size = 4)   // as much reverb as body
+ * note("c3 e3").s("saw").body("<0.2 0.9>", "tube").reverb(wet = body.wet, size = 4)   // as much reverb as body
  * ```
  *
- * @param material Material name. See the list above.
  * @param wet How much of the orbit runs through the body, 0 to 1.
+ * @param material Material name. See the list above.
  * @param floor Minimum dry share kept in the mix, 0 to 1.
  * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
  *
  * @scope orbit
  * @category effects
- * @tags body, material, wet, floor
+ * @tags body, wet, material, floor
  */
 @KlangScript.Function
 fun SprudelPattern.body(
-    material: PatternLike? = null,
     wet: PatternLike? = null,
+    material: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
-    // A tail-only call must not touch material: reinterpret runs only on a fully bare call.
-    var p = if (material != null || !(wet != null || floor != null)) {
-        applyBody(this, listOfNotNull(material).asSprudelDslArgs(callInfo))
+    // A call without a wet must not touch wet: reinterpret runs only on a fully bare call.
+    var p = if (wet != null || !(material != null || floor != null)) {
+        applyBodyWet(this, listOfNotNull(wet).asSprudelDslArgs(callInfo))
     } else {
         this
     }
-    if (wet != null) p = applyBodyWet(p, listOf<Any?>(wet).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (material != null) p = applyBody(p, listOf<Any?>(material).asSprudelDslArgs(callInfo?.forParam(1)))
     if (floor != null) p = applyBodyFloor(p, listOf<Any?>(floor).asSprudelDslArgs(callInfo?.forParam(2)))
     return p
 }
@@ -196,22 +198,22 @@ fun SprudelPattern.body(
 /** Parses this string as a pattern, then applies [body]. */
 @KlangScript.Function
 fun String.body(
-    material: PatternLike? = null,
     wet: PatternLike? = null,
+    material: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).body(material, wet, floor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).body(wet, material, floor, callInfo)
 
 /** Chains a [body] step onto this [PatternMapperFn]. */
 @KlangScript.Function
 fun PatternMapperFn.body(
-    material: PatternLike? = null,
     wet: PatternLike? = null,
+    material: PatternLike? = null,
     floor: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.body(material, wet, floor, callInfo) }
+    this.chain { p -> p.body(wet, material, floor, callInfo) }
 
 /**
  * The `body` object: `body(...)` sets the slots, and each numeric slot reads back as a child,
@@ -236,10 +238,10 @@ object body {
     /** The setter, see [SprudelPattern.body]. */
     @KlangScript.Invoke
     operator fun invoke(
-        material: PatternLike? = null,
         wet: PatternLike? = null,
+        material: PatternLike? = null,
         floor: PatternLike? = null,
         callInfo: CallInfo? = null
     ): PatternMapperFn =
-        { p -> p.body(material, wet, floor, callInfo) }
+        { p -> p.body(wet, material, floor, callInfo) }
 }

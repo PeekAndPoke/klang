@@ -87,7 +87,7 @@ class KatalystFormantEffectSpec : StringSpec({
 
     // ── Non-finite knobs: the twin of KatalystBodyEffectSpec's rows, same rule, vowel constants ───
     //
-    // `vowel("a", wet = "NaN")` parses to a NaN and `SprudelVoiceData.toVoiceData` guards a null
+    // `vowel(vowel = "a", wet = "NaN")` parses to a NaN and `SprudelVoiceData.toVoiceData` guards a null
     // mix, not a non-finite one, so the born-with chain has to substitute here exactly as
     // `KatalystSlots.vowelDef` does for a declared chain's slots.
 

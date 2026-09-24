@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_bridge
 import kotlin.math.round
 
 /**
- * Body-resonator material catalogue: the fixed modal resonances behind `body("<material>")`.
+ * Body-resonator material catalogue: the fixed modal resonances behind `body(material = "<material>")`.
  *
  * A material is *pure data*: a list of [FilterDef.Body.Mode] `(freq Hz, db, Q)` triples. The audio
  * backend ([FilterDef.Body]) plays them as a parallel SVF-bandpass bank mixed over the dry source.
@@ -101,7 +101,7 @@ object BodyMaterials {
      * The INDEX of a material name, for a `body.material` slot: the position in [names], or 0.0
      * (`none`, the off state) for an unknown name.
      *
-     * Case-insensitive, the table's own rule, so `body("Wood")` and `body("wood")` are one index.
+     * Case-insensitive, the table's own rule, so `body(material = "Wood")` and `body(material = "wood")` are one index.
      * Never throws: an unknown name is user input and reads as "no body", which is what
      * [modesFor] has always answered for one.
      */
@@ -319,7 +319,7 @@ object BodyMaterials {
             m(1050.0, -3.0, 35.0),
         )
 
-        // Explicit "off": resolves to no body filter, so `body("none")` resets/clears the resonator.
+        // Explicit "off": resolves to no body filter, so `body(material = "none")` resets/clears the resonator.
         "none" -> null
 
         else -> null

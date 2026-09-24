@@ -17,45 +17,50 @@ class LangVowelSpec : StringSpec({
         val pat = "c3"
         val vowelVal = "a"
 
+        // Positional: wet FIRST, then the vowel (step 3d(iii), 2026-09-24).
         dslInterfaceTests(
-            "pattern.vowel(v)" to note(pat).vowel(vowelVal),
-            "script pattern.vowel(v)" to SprudelPattern.compile("""note("$pat").vowel("$vowelVal")"""),
-            "string.vowel(v)" to pat.vowel(vowelVal),
-            "script string.vowel(v)" to SprudelPattern.compile(""""$pat".vowel("$vowelVal")"""),
-            "vowel(v)" to note(pat).apply(vowel(vowelVal)),
-            "script vowel(v)" to SprudelPattern.compile("""note("$pat").apply(vowel("$vowelVal"))"""),
+            "pattern.vowel(w, v)" to note(pat).vowel(0.7, vowelVal),
+            "script pattern.vowel(w, v)" to SprudelPattern.compile("""note("$pat").vowel(0.7, "$vowelVal")"""),
+            "string.vowel(w, v)" to pat.vowel(0.7, vowelVal),
+            "script string.vowel(w, v)" to SprudelPattern.compile(""""$pat".vowel(0.7, "$vowelVal")"""),
+            "vowel(w, v)" to note(pat).apply(vowel(0.7, vowelVal)),
+            "script vowel(w, v)" to SprudelPattern.compile("""note("$pat").apply(vowel(0.7, "$vowelVal"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vowel shouldBe "a"
+            events[0].data.vowelMix shouldBe 0.7
         }
     }
 
-    "reinterpret voice data as vowel | seq(\"a e i\").vowel()" {
-        val p = seq("a e i").vowel()
+    // A bare call reinterprets the pattern's own values as the HEAD, which is the WET since step
+    // 3d(iii). It writes the wet alone: the vowel is the stage's name knob, and a wet never invents it.
+    "reinterpret voice data as wet | seq(\"0.2 0.5 0.8\").vowel()" {
+        val p = seq("0.2 0.5 0.8").vowel()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+        events.map { it.data.vowelMix } shouldBe listOf(0.2, 0.5, 0.8)
+        events.map { it.data.vowel } shouldBe listOf(null, null, null)
     }
 
-    "reinterpret voice data as vowel | \"a e i\".vowel()" {
-        val p = "a e i".vowel()
+    "reinterpret voice data as wet | \"0.2 0.5 0.8\".vowel()" {
+        val p = "0.2 0.5 0.8".vowel()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+        events.map { it.data.vowelMix } shouldBe listOf(0.2, 0.5, 0.8)
     }
 
-    "reinterpret voice data as vowel | seq(\"a e i\").apply(vowel())" {
-        val p = seq("a e i").apply(vowel())
+    "reinterpret voice data as wet | seq(\"0.2 0.5 0.8\").apply(vowel())" {
+        val p = seq("0.2 0.5 0.8").apply(vowel())
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+        events.map { it.data.vowelMix } shouldBe listOf(0.2, 0.5, 0.8)
     }
 
     "vowel() sets the vowel property" {
-        val p = note("c3").vowel("a")
+        val p = note("c3").vowel(vowel = "a")
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -64,7 +69,7 @@ class LangVowelSpec : StringSpec({
     }
 
     "vowel() works with string pattern sequences" {
-        val p = note("c3 e3").vowel("a o")
+        val p = note("c3 e3").vowel(vowel = "a o")
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -74,7 +79,7 @@ class LangVowelSpec : StringSpec({
     }
 
     "vowel() handles case insensitively" {
-        val p = note("c3").vowel("A")
+        val p = note("c3").vowel(vowel = "A")
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -82,7 +87,7 @@ class LangVowelSpec : StringSpec({
     }
 
     "vowel() converts to FilterDef.Formant in toVoiceData()" {
-        val p = note("c3").vowel("a")
+        val p = note("c3").vowel(vowel = "a")
 
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
@@ -110,7 +115,7 @@ class LangVowelSpec : StringSpec({
         val vowels = listOf("a", "e", "i", "o", "u")
 
         vowels.forEach { v ->
-            val p = note("c3").vowel(v)
+            val p = note("c3").vowel(vowel = v)
 
             val events = p.queryArc(0.0, 1.0)
             events[0].data.vowel shouldBe v
@@ -126,7 +131,7 @@ class LangVowelSpec : StringSpec({
     }
 
     "vowel() with unknown vowel is ignored" {
-        val p = note("c3").vowel("x")
+        val p = note("c3").vowel(vowel = "x")
 
         val events = p.queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
@@ -135,17 +140,17 @@ class LangVowelSpec : StringSpec({
         voiceData.filters.filters.size shouldBe 0
     }
 
-    "vowel(\"none\") resets — clears a previously set vowel" {
-        val p = note("c3").vowel("a").vowel("none")
+    "vowel(vowel = \"none\") is the off switch: it clears a previously set vowel" {
+        val p = note("c3").vowel(vowel = "a").vowel(vowel = "none")
 
         val voiceData = p.queryArc(0.0, 1.0)[0].data.toVoiceData()
 
-        // "none" is the explicit reset — no formant filter, even after an earlier vowel("a").
+        // "none" is the explicit reset: no formant filter, even after an earlier vowel(vowel = "a").
         voiceData.filters.filters.size shouldBe 0
     }
 
     "vowel() as string extension" {
-        val p = "c3 e3".vowel("a")
+        val p = "c3 e3".vowel(vowel = "a")
 
         val events = p.queryArc(0.0, 1.0)
 

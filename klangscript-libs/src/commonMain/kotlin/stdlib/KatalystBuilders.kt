@@ -129,7 +129,7 @@ private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>
  *   `body(wet = ...)`.
  * @param material a material name (`"wood"`, `"glass"`, `"tube"`, ...), an index into the
  *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
- *   `body("wood")`, or `katp("body.material", n)` for the number.
+ *   `body(material = "wood")`, or `katp("body.material", n)` for the number.
  * @param configure receives the [KatalystBodyBuilder] (knob: `floor`) and returns it.
  */
 @KlangScript.Function
@@ -166,7 +166,7 @@ fun KatalystBuilder.body(
  *   twin: `vowel(wet = ...)`.
  * @param vowel a vowel name, optionally `voice:vowel` (`"a"`, `"soprano:o"`), an index into the
  *   catalogue, or a `Katalyst.param` slot carrying one; omitted leaves the stage off. Orbit twin:
- *   `vowel("a")`, or `katp("vowel.vowel", n)` for the number.
+ *   `vowel(vowel = "a")`, or `katp("vowel.vowel", n)` for the number.
  * @param configure receives the [KatalystVowelBuilder] (knob: `floor`) and returns it.
  */
 @KlangScript.Function

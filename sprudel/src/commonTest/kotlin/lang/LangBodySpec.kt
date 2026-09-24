@@ -21,33 +21,35 @@ class LangBodySpec : StringSpec({
         val pat = "c3"
         val material = "wood"
 
+        // Positional: wet FIRST, then the material (step 3d(iii), 2026-09-24).
         dslInterfaceTests(
-            "pattern.body(m)" to note(pat).body(material),
-            "script pattern.body(m)" to SprudelPattern.compile("""note("$pat").body("$material")"""),
-            "string.body(m)" to pat.body(material),
-            "script string.body(m)" to SprudelPattern.compile(""""$pat".body("$material")"""),
-            "body(m)" to note(pat).apply(body(material)),
-            "script body(m)" to SprudelPattern.compile("""note("$pat").apply(body("$material"))"""),
+            "pattern.body(w, m)" to note(pat).body(0.7, material),
+            "script pattern.body(w, m)" to SprudelPattern.compile("""note("$pat").body(0.7, "$material")"""),
+            "string.body(w, m)" to pat.body(0.7, material),
+            "script string.body(w, m)" to SprudelPattern.compile(""""$pat".body(0.7, "$material")"""),
+            "body(w, m)" to note(pat).apply(body(0.7, material)),
+            "script body(w, m)" to SprudelPattern.compile("""note("$pat").apply(body(0.7, "$material"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.body shouldBe "wood"
+            events[0].data.bodyMix shouldBe 0.7
         }
     }
 
     "body() sets the body property case-insensitively" {
-        val events = note("c3").body("Wood").queryArc(0.0, 1.0)
+        val events = note("c3").body(material = "Wood").queryArc(0.0, 1.0)
         events[0].data.body shouldBe "wood"
     }
 
     "body() works across a sequence" {
-        val events = note("c3 e3").body("wood tube").queryArc(0.0, 1.0)
+        val events = note("c3 e3").body(material = "wood tube").queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.body shouldBe "wood"
         events[1].data.body shouldBe "tube"
     }
 
     "body() converts to FilterDef.Body in toVoiceData() with default mix" {
-        val events = note("c3").body("wood").queryArc(0.0, 1.0)
+        val events = note("c3").body(material = "wood").queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
 
         voiceData.filters.filters.size shouldBe 1
@@ -58,7 +60,7 @@ class LangBodySpec : StringSpec({
 
     "every catalogue material resolves to an 8-mode body (except 'none')" {
         BodyMaterials.names.filter { it != "none" }.forEach { material ->
-            val voiceData = note("c3").body(material).queryArc(0.0, 1.0)[0].data.toVoiceData()
+            val voiceData = note("c3").body(material = material).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
             withClue(material) {
                 voiceData.filters.filters.size shouldBe 1
@@ -67,8 +69,8 @@ class LangBodySpec : StringSpec({
         }
     }
 
-    "body(\"none\") resets — clears a previously set body" {
-        val voiceData = note("c3").body("wood").body("none").queryArc(0.0, 1.0)[0].data.toVoiceData()
+    "body(material = \"none\") is the off switch: it clears a previously set body" {
+        val voiceData = note("c3").body(material = "wood").body(material = "none").queryArc(0.0, 1.0)[0].data.toVoiceData()
         voiceData.filters.filters.size shouldBe 0
     }
 
@@ -92,7 +94,7 @@ class LangBodySpec : StringSpec({
         // Since Katalyst step 5a-3 the DOOR writes the floor when a call names the material, which
         // is the same number the engine substituted for a null (`floor ?: BODY_FLOOR`), so nothing
         // sounds different: one place decides it now instead of two.
-        val defaulted = note("c3").body("wood").queryArc(0.0, 1.0)[0]
+        val defaulted = note("c3").body(material = "wood").queryArc(0.0, 1.0)[0]
             .data.toVoiceData().filters.filters[0] as FilterDef.Body
         defaulted.floor shouldBe BODY_FLOOR
 
@@ -112,7 +114,7 @@ class LangBodySpec : StringSpec({
     }
 
     "body() with unknown material is ignored" {
-        val events = note("c3").body("unobtainium").queryArc(0.0, 1.0)
+        val events = note("c3").body(material = "unobtainium").queryArc(0.0, 1.0)
         val voiceData = events[0].data.toVoiceData()
 
         // No body filter is created for an unknown material — fail soft.
@@ -135,7 +137,7 @@ class LangBodySpec : StringSpec({
     }
 
     "body sits before the lowpass in the canonical filter order" {
-        val events = note("c3").lpf(800).body("wood").queryArc(0.0, 1.0)
+        val events = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)
         val filters = events[0].data.toVoiceData().filters.filters
 
         filters.size shouldBe 2

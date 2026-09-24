@@ -1613,7 +1613,7 @@ stack(
   note(`
     [a4 a4 b4 ~ a4 a4 b4 ~]       [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body(<span class="st">"mahogany"</span>)
+  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body(material = <span class="st">"mahogany"</span>)
     .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
 
   <span class="cm">// Shakuhachi enters at cycle 28, drifting in pan and cutoff</span>
@@ -1622,7 +1622,7 @@ stack(
     e5@2  ~  ~  c5@2  b4 a4
   `).orbit(1).sound(shaku).slow(14).gain(0.23)
     .pan(perlin.range(0.3, 0.7).slow(8))
-    .lpf(perlin.range(3600, 3800).slow(2)).body(<span class="st">"rosewood"</span>)
+    .lpf(perlin.range(3600, 3800).slow(2)).body(material = <span class="st">"rosewood"</span>)
     .filterWhen(x =&gt; x &gt;= wait * 2)
 
   <span class="cm">// Pad — independent voices, each panned and high-passed differently,</span>
@@ -1632,7 +1632,7 @@ stack(
    ,note(<span class="st">"c3  f2  c3  a2  e2  gs2 c3"</span>).sound(pad).slow(14).gain(0.250).pan(0.7).hpf(280)
    ,note(<span class="st">"e3  a2  e3  c3  g2  b2  e3"</span>).sound(pad).slow(14).gain(0.250).pan(0.2).hpf(400)
    ,note(<span class="st">"a3  d3  a3  f3  c3  e3  a3"</span>).sound(pad).slow(14).gain(0.200).pan(0.8).hpf(600)
-  ).orbit(4).coarse(3).body(<span class="st">"tube"</span>).bodyWet(0.3).filterWhen(x =&gt; x &gt;= wait * 3)
+  ).orbit(4).coarse(3).body(0.3, <span class="st">"tube"</span>).filterWhen(x =&gt; x &gt;= wait * 3)
 
   <span class="cm">// Three noise beds, each breathing on its own slow LFO</span>
   , sound(<span class="st">"dust"</span>).gain(0.025).vel(sine.range(0.750, 1.0).slow(21)).lpf(8000)

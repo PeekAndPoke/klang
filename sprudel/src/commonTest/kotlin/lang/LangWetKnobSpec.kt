@@ -48,7 +48,7 @@ class LangWetKnobSpec : StringSpec({
         firstData(SprudelPattern.compile("""note("c").vowel(wet = 0.6)""")).vowelMix shouldBe 0.6
     }
 
-    "compound heads: the wet slot stays the head's first/second slot" {
+    "compound heads: wet is the FIRST positional slot of every door that has one (step 3d(iii))" {
         val reverb = firstData(note("c").reverb(0.4, 5.0))
         reverb.katalystParams?.get("reverb.wet") shouldBe 0.4
         reverb.katalystParams?.get("reverb.size") shouldBe 5.0
@@ -58,9 +58,17 @@ class LangWetKnobSpec : StringSpec({
         delay.katalystParams?.get("delay.time") shouldBe 0.25
         delay.katalystParams?.get("delay.feedback") shouldBe 0.6
 
-        val phaser = firstData(note("c").phaser(2.0, 0.8))
+        val phaser = firstData(note("c").phaser(0.8, 2.0))
         phaser.phaserRate shouldBe 2.0
         phaser.phaserDepth shouldBe 0.8
+
+        val body = firstData(note("c").body(0.7, "wood"))
+        body.bodyMix shouldBe 0.7
+        body.body shouldBe "wood"
+
+        val vowel = firstData(note("c").vowel(0.6, "a"))
+        vowel.vowelMix shouldBe 0.6
+        vowel.vowel shouldBe "a"
     }
 
     "phaserFloor takes the engine's additive default 1.0 unless set" {

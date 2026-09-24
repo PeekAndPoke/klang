@@ -124,7 +124,7 @@ class KatalystBodyEffect(
      *
      * A non-finite `mix` or `floor` is UNSET and takes [BODY_WET] / [BODY_FLOOR], the rule
      * `KatalystSlots.bodyDef` applies to a declared chain's slots, applied here so the BORN-WITH
-     * chain answers the same. The voice path can carry one: `body("wood", wet = "NaN")` parses to a
+     * chain answers the same. The voice path can carry one: `body(material = "wood", wet = "NaN")` parses to a
      * NaN and `SprudelVoiceData.toVoiceData` only guards a null.
      *
      * A null fades the bank out (see the class KDoc); a second null while it fades is free. Closed

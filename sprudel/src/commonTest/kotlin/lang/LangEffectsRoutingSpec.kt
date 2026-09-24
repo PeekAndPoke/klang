@@ -335,8 +335,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events[0].data.katalystParams?.get("reverb.size") shouldBe 4.0
     }
 
-    "phaser().phaser(wet = ...) can be chained as PatternMapperFn" {
-        val p = note("c3 e3").apply(phaser(0.5).phaser(wet = 0.8))
+    "phaser().phaser(rate = ...) can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(phaser(0.8).phaser(rate = 0.5))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.phaserRate shouldBe 0.5

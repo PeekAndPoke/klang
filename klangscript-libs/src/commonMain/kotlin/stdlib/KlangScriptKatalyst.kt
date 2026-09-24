@@ -83,7 +83,7 @@ object KlangScriptKatalyst {
      * `Katalyst(k => k.classic())` the one line to add before automating a classic knob. The sound
      * is the same either way; what changes is who the knobs listen to. Its `body` material and its
      * `vowel` are slots as well, carrying the INDEX of a name in the shared catalogues, so a
-     * pattern's `body("wood")` still reaches it.
+     * pattern's `body(material = "wood")` still reaches it.
      */
     @KlangScript.Method
     fun classic(): KatalystDsl = KatalystDsl.classic

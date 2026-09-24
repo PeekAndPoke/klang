@@ -129,7 +129,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
         // `body.wet` and `vowel.wet` are NOT here, and that is the fix of round 1: a 0.0 amount is
         // a SET amount, so the engine never substituted its constant and a material-only
-        // `body("wood")` played dry on a declared chain. They are in family 2 below.
+        // `body(material = "wood")` played dry on a declared chain. They are in family 2 below.
         listOf("body.wet", "vowel.wet").forEach { name ->
             withClue(name) { classicSlots.getValue(name).isFinite() shouldBe false }
         }
@@ -147,7 +147,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         //
         // `body.wet` and `vowel.wet` joined them in round 1 of that step's review, for the
         // compressor's reason and not the index's: `KatalystSlots.bodyDef` substitutes BODY_WET for
-        // an UNSET mix, and a 0.0 default is set, so a material-only `body("wood")` ran the bank
+        // an UNSET mix, and a 0.0 default is set, so a material-only `body(material = "wood")` ran the bank
         // fully dry on a declared chain. Safe here and nowhere else in this family, because these
         // two stages are gated on their NAME: no material, no stage, whatever the amount says.
         listOf(
@@ -306,7 +306,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
     "the classic body and vowel carry their NAME as an unset index slot, like every other knob" {
         // Katalyst step 5a-2 (2026-09-18): a name travels as the INDEX of a name in a closed
         // catalogue, so the two stages that used to be the exception are slots like the rest, and
-        // `body("wood")` on a pattern reaches a declared classic chain through `katp`.
+        // `body(material = "wood")` on a pattern reaches a declared classic chain through `katp`.
         val body = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Body>().single()
         val vowel = KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Vowel>().single()
 

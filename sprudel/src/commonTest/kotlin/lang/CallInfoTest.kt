@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -95,7 +96,19 @@ class CallInfoTest : StringSpec({
     }
 
     "vowel passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").vowel("a")""")
+        assertCallInfoPresent("""note("c3").vowel(vowel = "a")""")
+    }
+
+    "body's material passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").body(material = "wood")""")
+    }
+
+    "phaser's rate passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").phaser(rate = "2")""")
+    }
+
+    "phaser's wet, the head, passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").phaser("0.5")""")
     }
 
     "firstOf passes CallInfo from KlangScript" {
@@ -166,36 +179,36 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").notch(attack = 0.01, decay = 0.3, sustain = 0.5, release = 0.5)""")
     }
 
-    "euclid passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclid(3, 8)""")
+    "euclid keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclid(3, 8)""")
     }
 
-    "euclidRot passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclidRot(3, 8, 2)""")
+    "euclidRot keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclidRot(3, 8, 2)""")
     }
 
-    "euclidrot passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclidrot(3, 8, 2)""")
+    "euclidrot keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclidrot(3, 8, 2)""")
     }
 
-    "bjork passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").bjork(3, 8, 0)""")
+    "bjork keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").bjork(3, 8, 0)""")
     }
 
-    "euclidLegato passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclidLegato(3, 8)""")
+    "euclidLegato keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclidLegato(3, 8)""")
     }
 
-    "euclidLegatoRot passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclidLegatoRot(3, 8, 2)""")
+    "euclidLegatoRot keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclidLegatoRot(3, 8, 2)""")
     }
 
-    "euclidish passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").euclidish(3, 8, 0.5)""")
+    "euclidish keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").euclidish(3, 8, 0.5)""")
     }
 
-    "eish passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1 2 3").eish(3, 8, 0.5)""")
+    "eish keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""seq("0 1 2 3").eish(3, 8, 0.5)""")
     }
 
     "notch(freq) passes CallInfo from KlangScript" {
@@ -238,12 +251,12 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""s("bd").speed("2")""")
     }
 
-    "unit passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").unit("c")""")
+    "unit keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").unit("c")""")
     }
 
-    "loop passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loop(1)""")
+    "loop keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").loop(1)""")
     }
 
     "loopBegin passes CallInfo from KlangScript" {
@@ -262,100 +275,100 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""s("bd").loope("0.75")""")
     }
 
-    "loopAt passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopAt("1")""")
+    "loopAt keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").loopAt("1")""")
     }
 
-    "loopAtCps passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopAtCps("1", "0.5")""")
+    "loopAtCps keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").loopAtCps("1", "0.5")""")
     }
 
-    "loopatcps passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopatcps("1", "0.5")""")
+    "loopatcps keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").loopatcps("1", "0.5")""")
     }
 
     "cut passes CallInfo from KlangScript" {
         assertCallInfoPresent("""s("bd").cut("1")""")
     }
 
-    "slice passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").slice(8, 0)""")
+    "slice keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").slice(8, 0)""")
     }
 
-    "splice passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").splice(8, 0)""")
+    "splice keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""s("bd").splice(8, 0)""")
     }
 
     "sndPluck passes CallInfo from KlangScript" {
         assertCallInfoPresent("""note("c3").sndPluck(0.99, 0.5)""")
     }
 
-    "sndSuperPluck passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperPluck()""")
+    "sndSuperPluck keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperPluck()""")
     }
 
-    "sndSine passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSine()""")
+    "sndSine keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSine()""")
     }
 
-    "sndSuperSine passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperSine()""")
+    "sndSuperSine keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperSine()""")
     }
 
-    "sndSaw passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSaw()""")
+    "sndSaw keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSaw()""")
     }
 
-    "sndSuperSaw passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperSaw()""")
+    "sndSuperSaw keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperSaw()""")
     }
 
-    "sndSquare passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSquare()""")
+    "sndSquare keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSquare()""")
     }
 
-    "sndSuperSquare passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperSquare()""")
+    "sndSuperSquare keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperSquare()""")
     }
 
-    "sndTriangle passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndTriangle()""")
+    "sndTriangle keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndTriangle()""")
     }
 
-    "sndSuperTri passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperTri()""")
+    "sndSuperTri keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperTri()""")
     }
 
-    "sndRamp passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndRamp()""")
+    "sndRamp keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndRamp()""")
     }
 
-    "sndSuperRamp passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndSuperRamp()""")
+    "sndSuperRamp keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndSuperRamp()""")
     }
 
-    "sndPulze passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndPulze()""")
+    "sndPulze keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndPulze()""")
     }
 
-    "sndPink passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndPink()""")
+    "sndPink keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndPink()""")
     }
 
-    "sndBrown passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndBrown()""")
+    "sndBrown keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndBrown()""")
     }
 
-    "sndNoise passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndNoise()""")
+    "sndNoise keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndNoise()""")
     }
 
-    "sndCrackle passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndCrackle()""")
+    "sndCrackle keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndCrackle()""")
     }
 
-    "sndDust passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c3").sndDust()""")
+    "sndDust keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c3").sndDust()""")
     }
 
     "slow passes CallInfo from KlangScript" {
@@ -366,32 +379,32 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""note("c d").fast(2)""")
     }
 
-    "rev passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d e f").rev()""")
+    "rev keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d e f").rev()""")
     }
 
-    "revv passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d e f").revv()""")
+    "revv keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d e f").revv()""")
     }
 
-    "palindrome passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d e f").palindrome()""")
+    "palindrome keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d e f").palindrome()""")
     }
 
-    "early passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").early("0.25")""")
+    "early keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").early("0.25")""")
     }
 
-    "late passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").late("0.25")""")
+    "late keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").late("0.25")""")
     }
 
-    "compress passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").compress("0.25", "0.75")""")
+    "compress keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").compress("0.25", "0.75")""")
     }
 
-    "focus passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").focus("0.25", "0.75")""")
+    "focus keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").focus("0.25", "0.75")""")
     }
 
     "ply passes CallInfo from KlangScript" {
@@ -405,27 +418,27 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""note("c d").hurry("2")""")
     }
 
-    "fastGap passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").fastGap("2")""")
+    "fastGap keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").fastGap("2")""")
     }
 
-    "densityGap passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").densityGap("2")""")
+    "densityGap keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").densityGap("2")""")
     }
 
     // inside / outside intentionally not tested — applyInside/applyOutside reconstruct
     // patterns through slow/transform/fast which does not reliably propagate source locations.
 
-    "swing passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").swing("2")""")
+    "swing keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").swing("2")""")
     }
 
-    "swingBy passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").swingBy("0.3", "2")""")
+    "swingBy keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").swingBy("0.3", "2")""")
     }
 
-    "brak passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""note("c d").brak()""")
+    "brak keeps the receiver's locations" {
+        assertReceiverLocationsSurvive("""note("c d").brak()""")
     }
 
     "lpf passes CallInfo from KlangScript" {
@@ -494,8 +507,45 @@ class CallInfoTest : StringSpec({
 })
 
 /**
- * Shared helper: compile a KlangScript expression, query events, and assert
- * that at least one event carries source-location info from CallInfo.
+ * The WEAK check, named for what it is: at least one event still carries a source location, which
+ * the receiver alone supplies. It proves the call does not DROP the receiver's locations, and
+ * nothing about its own arguments.
+ *
+ * It is the check for the rows whose arguments never put a location on an event, found when
+ * [assertCallInfoPresent] was made strict (round 1 of step 3d(iii), 2026-09-24). Three groups:
+ * - the structural and time doors `euclid`, `euclidRot`/`euclidrot`, `bjork`, `euclidLegato`,
+ *   `euclidLegatoRot`, `euclidish`/`eish`, `early`/`late`, `compress`/`focus`,
+ *   `fastGap`/`densityGap`, `swing`/`swingBy`, `slice`/`splice`, `loopAt` and
+ *   `loopAtCps`/`loopatcps` take their argument as a structure parameter (a factor, a step count,
+ *   an inner join) and never prepend its location;
+ * - `unit` and `loop` lift through `_liftData`, whose merge copies the control's DATA but not its
+ *   `sourceLocations`: that merge is where the gap would be fixed. (`loopBegin`/`loopb`,
+ *   `loopEnd`/`loope` are not in this group; they carry their locations and stay strict.)
+ * - the no-argument doors (the `snd*` sounds, `rev`, `revv`, `palindrome`, `brak`) have no
+ *   argument to locate.
+ * Whether the first two groups SHOULD carry argument locations is a separate question; this helper
+ * only keeps the old guarantee honest.
+ */
+fun assertReceiverLocationsSurvive(scriptExpr: String) {
+    val pattern = SprudelPattern.compile(scriptExpr)
+    pattern.shouldNotBeNull()
+
+    val events = pattern.queryArc(0.0, 1.0)
+    events.shouldNotBeEmpty()
+
+    events.any { it.sourceLocations != null } shouldBe true
+}
+
+/**
+ * Shared helper: compile a KlangScript expression, query events, and assert that CallInfo reached
+ * them FROM THE ARGUMENTS of the expression's last call.
+ *
+ * The expression's own receiver (`seq("0 1")`, `note("c3")`) always carries a location, so "some
+ * event has some location" proved nothing about the call under test (round 1 of step 3d(iii),
+ * 2026-09-24: dropping the vowel name's CallInfo left the old helper green). The check is therefore
+ * that at least one event carries a location that STARTS inside the column span of the last call's
+ * argument list. A call with an empty argument list has no argument to locate and is refused:
+ * such a row belongs to [assertReceiverLocationsSurvive].
  */
 fun assertCallInfoPresent(scriptExpr: String) {
     val pattern = SprudelPattern.compile(scriptExpr)
@@ -504,6 +554,61 @@ fun assertCallInfoPresent(scriptExpr: String) {
     val events = pattern.queryArc(0.0, 1.0)
     events.shouldNotBeEmpty()
 
-    val hasLocations = events.any { it.sourceLocations != null }
-    hasLocations shouldBe true
+    val span = lastCallSpan(scriptExpr)
+    val locations = events.flatMap { it.sourceLocations?.locations ?: emptyList() }
+
+    withClue("$scriptExpr: a location inside columns ${span.first} until ${span.last + 1}; found ${locations.distinct()}") {
+        locations.any { it.startLine == 1 && it.startColumn in span } shouldBe true
+    }
+}
+
+/**
+ * The 1-based column range of the last top-level call's argument list in a one-line expression.
+ * String literals are skipped, so a parenthesis inside mini-notation does not count.
+ */
+private fun lastCallSpan(expr: String): IntRange {
+    var depth = 0
+    var quote: Char? = null
+    var lastOpen = -1
+    var lastClose = -1
+
+    for ((i, c) in expr.withIndex()) {
+        if (quote != null) {
+            if (c == quote) {
+                quote = null
+            }
+            continue
+        }
+
+        when (c) {
+            '"', '\'', '`' -> quote = c
+            '(' -> {
+                if (depth == 0) {
+                    lastOpen = i
+                }
+                depth++
+            }
+
+            ')' -> {
+                depth--
+                if (depth == 0) {
+                    lastClose = i
+                }
+            }
+
+            else -> {}
+        }
+    }
+
+    check(lastOpen >= 0 && lastClose > lastOpen) { "no call in '$expr'" }
+
+    val argsStart = lastOpen + 1
+    val argsEnd = lastClose - 1
+
+    check(expr.substring(argsStart, lastClose).isNotBlank()) {
+        "strict check needs an argument; use assertReceiverLocationsSurvive for '$expr'"
+    }
+
+    // 0-based index i is column i + 1.
+    return (argsStart + 1)..(argsEnd + 1)
 }

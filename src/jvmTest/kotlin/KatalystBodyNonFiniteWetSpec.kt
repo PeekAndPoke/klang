@@ -15,8 +15,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
  * A CONTRACT row in the sense of the signal-flow plan §12, not a migration fixture: a non-finite
- * `wet` is UNSET on every surface, so `body("wood", wet = "NaN")` has to sound exactly like
- * `body("wood")`.
+ * `wet` is UNSET on every surface, so `body(material = "wood", wet = "NaN")` has to sound exactly like
+ * `body(material = "wood")`.
  *
  * **What it pins TODAY, restated in step 5b-1**, because the mechanism it was born for is no longer
  * the one it can catch. It was written on 2026-09-18 for a defect in `KatalystBodyEffect.configure`:
