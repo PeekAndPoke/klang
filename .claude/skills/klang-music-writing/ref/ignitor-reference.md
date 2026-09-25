@@ -254,7 +254,7 @@ modulation.
 
 | Method                      | Description                         |
 |-----------------------------|-------------------------------------|
-| `.lowpass(freq, q?, x => ...)`  | Resonant lowpass (default q=0.707); builder: `passes`, `analog`, `humanize`, `env`, `adsr`, `adsrCurves` |
+| `.lowpass(freq, q?, x => ...)`  | Resonant lowpass (default q=0.707); builder: `passes`, `analog`, `humanize`, `env`, `adsr`                |
 | `.highpass(freq, q?, x => ...)` | Resonant highpass, the same builder                                                                   |
 | `.onepole(freq)`                | Gentle one-pole lowpass (-6 dB/oct)                                                                   |
 | `.bandpass(freq, q?, x => ...)` | Bandpass filter; builder as lowpass without `passes`                                                  |
@@ -270,8 +270,9 @@ past an omitted q: `.lowpass(800, x => x.analog(3))`.
 - `env(semitones)` and `adsr(attackSec, decaySec, sustainLevel, releaseSec)` are the cutoff
   envelope: naming EITHER switches it on and the other fills from the shared constants (depth 7
   semitones; stages 0.01 / 0.1 / 1.0 / 0.1). `.lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))`
-  is a pluck. `adsrCurves(attackCurve, decayCurve, releaseCurve)` shapes the stages with the
-  chain's curves; unshaped stages are linear, and a curve alone does not switch the envelope on.
+  is a pluck. The `adsr` takes its own lambda to shape the stages with the chain's curves,
+  `x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp"))`; unshaped stages
+  are linear.
 - `humanize()` gives each note its own cutoff tolerance and a slow drift, scaled by `analog`.
 
 ### Equalizer
@@ -366,9 +367,14 @@ Put taps first unless you want that.
 
 ### Envelope
 
-| Method                                   | Description                                                    |
-|------------------------------------------|----------------------------------------------------------------|
-| `.adsr(attack, decay, sustain, release)` | ADSR amplitude envelope (all in seconds, sustain is 0-1 level) |
+| Method                                             | Description                                                    |
+|----------------------------------------------------|----------------------------------------------------------------|
+| `.adsr(attack, decay, sustain, release, e => ...)` | ADSR amplitude envelope (all in seconds, sustain is 0-1 level) |
+
+The lambda is optional and receives the envelope's builder: `curves(attack, decay, release)` shapes
+the stages (`"exp"`, the default, `"linear"`, `"square"`, `"cube"`, `"scurve"`, `"invsquare"`, with
+their short names) and `declick(seconds)` rounds the gain's corners (0 = off, the default; about
+0.0005 is gentle): `.adsr(0.005, 1.0, 0.0, 0.03, e => e.curves("linear", "linear", "linear"))`.
 
 ### Effects
 
@@ -420,12 +426,12 @@ bell of the built-in `sgbell`.
 | `.octaveDown()`                                     | -12 semitones                              |
 | `.vibrato(rate, semitones)`                         | Sinusoidal pitch LFO                       |
 | `.accelerate(semitones)`                            | Exponential pitch ramp over the voice (12 = one octave) |
-| `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); `adsrCurves` shapes it |
+| `.pitchEnvelope(semitones, x => x.adsr(a, d, s, r))` | Pitch sweep envelope (SEMITONES at peak); the `adsr`'s own lambda shapes it with `curves` |
 
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
 sustain (a share of `semitones`, usually 0 = the note) over the decay, and from the gate's end back to the note over
 the release. `x => x.adsr(0.001, 0.04, 0, 0)` is a kick's sweep. Without the lambda: `adsr(0.01, 0.1, 0, 0)`. Its
-stages are linear unless `adsrCurves` shapes them.
+stages are linear unless its `adsr` shapes them: `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("lin", "exp", "exp"))`.
 
 ### Analog Drift
 

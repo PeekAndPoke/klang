@@ -21,16 +21,19 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * Larger = steeper initial change (faster decay drop / sharper attack finish).
  * Tunable by ear; `3.0` ≈ a moderate analog decay, steeper-tailed than `Square`.
  *
- * Consumers: `StageDsl.Vca.expK` (amp VCA, per-engine), and `AdsrCurveMath`'s
- * no-arg `adsrExpShape` for the filter/FM and ignitor envelopes.
+ * Consumers: `StageDsl.Vca.expK` (amp VCA, per-engine, until the Pipeline DSL retires),
+ * `AdsrCurveMath`'s no-arg `adsrExpShape` for the filter/FM envelopes, and the Ignitor `adsr`
+ * (`AdsrIgnitor`), where it is the ONE bend of every exponential stage: its per-envelope `expK`
+ * knob was removed in phase 3 step 3c (maintainer, 2026-09-25; a per-curve bend is a later design).
  */
 const val ADSR_EXP_K: Double = 3.0
 
 /**
  * The curve of every stage of a MODULATION envelope that the author did not shape with
- * `adsrCurves`: the Ignitor filter nodes' cutoff envelope (`IgnitorDsl.Lowpass` and its three
- * siblings) and the Ignitor pitch envelope (`IgnitorDsl.PitchEnvelope`). Their curve fields are
- * nullable and `null` reads this value at build.
+ * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
+ * envelope (`IgnitorDsl.Lowpass` and its three siblings) and the Ignitor pitch envelope
+ * (`IgnitorDsl.PitchEnvelope`). Their curve knobs default to this curve's `AdsrCurves` index, and
+ * a knob that cannot be read at build, or reads as a bad index, falls back to it too.
  *
  * It is [AdsrCurve.Linear] because that is the law both envelopes had before they had curve
  * fields at all, so adding the fields moved no sound. It is NOT the house default

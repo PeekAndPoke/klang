@@ -48,7 +48,7 @@ let guitar = (() => {
     .lowpass(pBrightness, 1.8, x => x.analog(pAnalog))                                             // Post-distortion: control fizz + warmth roll-off
     .highpass(Osc.freq(), 0.7, x => x.analog(pAnalog))                                             // Cut away muddy low frequencies
     .coarse(2)
-    .adsr(pAttack, 8.0, pSustain, 0.07).adsrCurves("exp", "exp", "exp")             // Tight rhythm envelope
+    .adsr(pAttack, 8.0, pSustain, 0.07, e => e.curves("exp", "exp", "exp"))         // Tight rhythm envelope
     // cabinett
     .lowpass(5000).lowpass(5000)
 })()

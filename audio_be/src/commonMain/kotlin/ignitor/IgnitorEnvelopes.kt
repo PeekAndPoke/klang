@@ -6,7 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.adsrExpNorm
+import io.peekandpoke.klang.audio_be.ADSR_EXP_NORM
 import io.peekandpoke.klang.audio_be.adsrCurveShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
 import io.peekandpoke.klang.audio_be.releaseProgressOffset
@@ -40,11 +40,10 @@ fun Ignitor.adsr(
     decayCurve: AdsrCurve = AdsrCurve.Default,
     releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Ignitor = ParamIgnitor("declickSeconds", 0.0),
-    expK: Ignitor = ParamIgnitor("expK", ADSR_EXP_K),
 ): Ignitor = AdsrIgnitor(
     this, attackSec, decaySec, sustainLevel, releaseSec,
     attackCurve, decayCurve, releaseCurve,
-    declickSeconds, expK,
+    declickSeconds,
 )
 
 /**
@@ -53,11 +52,12 @@ fun Ignitor.adsr(
  * **Not a safety clamp, and the Motor stays raw.** Every finite value passes through untouched,
  * negative and enormous ones included, so no character is taken away. What it closes is a NaN
  * SOURCE that the build-time gate cannot reach: the gate switches a stage off when its knob
- * resolves non-finite, but the envelope is deliberately NOT gated (the strip's VCA runs on every
- * voice today), so an authored `Constant(NaN)` or a slot whose default is the sentinel arrives
- * here intact. Two of the five knobs then carry it into the samples: [AdsrIgnitor.sustainLevel]
- * because `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, and
- * [AdsrIgnitor.expK] because it reaches `adsrExpShape` the same way.
+ * resolves non-finite, but the envelope is gated only by its ON/OFF switch, for which unset means
+ * ON (the strip's VCA runs on every voice today), so an authored `Constant(NaN)` or a slot whose
+ * default is the sentinel arrives here intact. One knob then carries it into the samples:
+ * [AdsrIgnitor.sustainLevel], because `coerceIn(0.0, 1.0)` is the identity on a NaN and the level
+ * multiplies every sample. (`expK` was the second until phase 3 step 3c removed that knob; every
+ * exponential stage now bends at [ADSR_EXP_K].)
  *
  * It is NOT merely "completing the existing coercion", and the difference is worth naming: on a
  * NaN the substitution is the only thing that does anything, but on an INFINITY `coerceIn` already
@@ -67,7 +67,7 @@ fun Ignitor.adsr(
  * gate one file over reads every knob it tests, and an unset knob takes its default rather than a
  * rail. `IgnitorGateSpec` pins both infinities.
  *
- * The other three knobs need nothing: the two times become frame counts through
+ * The other knobs need nothing: the two times become frame counts through
  * `(seconds * sampleRate).toInt()`, and `Double.toInt()` of a NaN is 0 on both platforms, so a
  * NaN-timed stage simply has no frames; `declickSeconds` is read through `> 0.0`, which a NaN
  * fails, so a non-finite de-click is off. `releaseSec`'s other half, the voice's release TAIL,
@@ -88,7 +88,6 @@ private class AdsrIgnitor(
     private val decayCurve: AdsrCurve,
     private val releaseCurve: AdsrCurve,
     private val declickSeconds: Ignitor,
-    private val expK: Ignitor,
 ) : Ignitor {
     private var currentLevel: Double = 0.0
     private var releaseStartLevel: Double = 0.0
@@ -112,12 +111,13 @@ private class AdsrIgnitor(
                 .coerceIn(0.0, 1.0)
             val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
 
-            // declick + expK are control-rate slots: read per block, derive their coefficients once here.
+            // declick is a control-rate slot: read per block, derive its coefficient once here.
             val declickSecondsVal = Ignitors.readParam(declickSeconds, freqHz, ctx)
             val declickOn = declickSecondsVal > 0.0
             val declickCoeff = if (declickOn) envDeclickCoeff(declickSecondsVal, ctx.sampleRateD) else 0.0
-            val expKVal = finiteOr(Ignitors.readParam(expK, freqHz, ctx), ADSR_EXP_K)
-            val expNorm = adsrExpNorm(expKVal)
+            // Every exponential stage bends at ADSR_EXP_K (the per-envelope knob was removed in 3c).
+            val expKVal = ADSR_EXP_K
+            val expNorm = ADSR_EXP_NORM
 
             val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
             val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
@@ -200,12 +200,11 @@ fun Ignitor.adsr(
     decayCurve: AdsrCurve = AdsrCurve.Default,
     releaseCurve: AdsrCurve = AdsrCurve.Default,
     declickSeconds: Double = 0.0,
-    expK: Double = ADSR_EXP_K,
 ): Ignitor = adsr(
     ParamIgnitor("attackSec", attackSec),
     ParamIgnitor("decaySec", decaySec),
     ParamIgnitor("sustainLevel", sustainLevel),
     ParamIgnitor("releaseSec", releaseSec),
     attackCurve, decayCurve, releaseCurve,
-    ParamIgnitor("declickSeconds", declickSeconds), ParamIgnitor("expK", expK),
+    ParamIgnitor("declickSeconds", declickSeconds),
 )

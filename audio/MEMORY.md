@@ -1,5 +1,46 @@
 # Klang Audio — Memory
 
+## The envelopes: one adsr shape, curve index knobs, an on switch, one exp bend (2026-09-25)
+
+Phase 3 step 3c (`docs/tasks/builtin-instruments.md` section 3b, the envelope sub-table), identity-preserving.
+
+- **One `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` everywhere.** The chain's lambda
+  gets an `AdsrBuilder` (`curves`, `declick`); the filter and pitch builders' `adsr` get a `ModAdsrBuilder`
+  (`curves` only); fm's `adsr` takes no lambda. The reach-back chain methods `adsrCurves`,
+  `declickSeconds` and `expK` are GONE: they copied onto an `Adsr` that was their IMMEDIATE receiver and
+  otherwise WRAPPED a second envelope with the node defaults, so `.adsr(..).lowpass(..).adsrCurves(..)`
+  was two envelopes. All four corpus sites sat directly after `adsr` (a pure move).
+- **One `adsr` call is the whole envelope** inside a builder: a later call replaces an earlier one,
+  curves included, and a call without a lambda is unshaped.
+- **Curves are INDEX knobs** through `AdsrCurves` (audio_bridge), on the chain, the four filters and the
+  pitch envelope. Unlike the shape catalogues there is NO single fallback: `curveOf` returns null for an
+  unknown name, and `indexOf(name, fallback)` / `curveAt(index, fallback)` take the READER's default
+  (the chain `AdsrCurve.Default`, the modulation envelopes `MOD_ENV_CURVE`). Read once at build,
+  leaf-only (`adsrCurveKnob`). Sprudel's private parser goes through `curveOf`; `AdsrCurvesSpec` pins
+  the table against the retired `when` copied verbatim.
+- **`expK` is gone from the node, the slot, the wire and `Ignitor.adsr`.** `AdsrIgnitor` bends every exp
+  stage at `ADSR_EXP_K` with the shared `ADSR_EXP_NORM` (the same function of the same constant, so
+  bit-identical to the per-block computation it replaced). `oscp("expK", k)` is now an unread key. The
+  Pipeline DSL's `StageDsl.Vca.expK` stays until the Pipeline DSL retires.
+- **`Adsr.on`, a node field only.** OFF at exactly 0.0 (the flag rule: non-zero is on, so -1 is ON);
+  unset, any other number and a non-leaf are ON: the second "unset is not off" after `mul`. OFF does
+  not build the stage or its knob subtrees, but STILL REPORTS THE RELEASE TAIL (leaf-only), because
+  the strip's `adsrOff` keeps the voice's lifetime and step 6's identity needs the node to match. A
+  non-leaf release on an off envelope reports none (asking would build it and take its draws).
+- **Evidence.** The corpus (18 rows) IDENTICAL through `compare.sh`. Six controls, each predicted from
+  the arrangements before running and each exact: the name "linear" moved DerSchmetterling and the
+  frozen piece; "scurve" moved Sakura (its pad plays from cycle 42); "exp" moved ATruthWorthLyingFor;
+  the chain's default curve knob and the inverted `on` test each moved the eight songs that play an
+  authored Ignitor `adsr`; the modulation default moved the six pitch-envelope songs. No song plays an
+  Ignitor filter envelope or a `declick`, so those paths are proven by specs only.
+- **The render harness takes ABSOLUTE corpus paths**: `gradlew -p <tree>` runs the CLI from the tree,
+  so a relative `--file` is "File not found" and every row is a FAIL (the compare refuses it).
+- **A retyped node field breaks JS-only test sources too.** The first migration pass compiled the JVM
+  test sources only, and `audio_bridge/src/jsTest/.../WireCodecRoundTripSpec.kt` still passed an
+  `AdsrCurve` to the now-`IgnitorDsl` field; the wire mutation run surfaced it as a compile error.
+  Compile `compileTestKotlinJs` of every module before calling a retype migrated.
+
+
 ## The waveshaper and tremolo knobs: one tremolo law, index shapes, a build-time factor (2026-09-25)
 
 Phase 3 step 3b (`docs/tasks/builtin-instruments.md`), identity-preserving.
@@ -2304,6 +2345,10 @@ reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
   values now lag; exact raw-curve shape stays in `EnvelopeShapeTest` (generator).
 
 ## Ignitor ADSR knobs — declick + expK as Slots (2026-07-04)
+
+**Superseded in part (2026-09-25, phase 3 step 3c):** `expK` is removed everywhere on the Ignitor side
+(node, slot, door, `Ignitor.adsr`); every exp stage bends at `ADSR_EXP_K`. `declickSeconds` stays, written
+by the chain `adsr` builder's `declick`. See the 3c entry at the top.
 
 `.adsr(...)` (per-ignitor envelope, `IgnitorEnvelopes.AdsrIgnitor`) gained two knobs on
 `IgnitorDsl.Adsr`, wired as **`IgnitorDsl.Slots` Params** (like the noise knobs), so they're

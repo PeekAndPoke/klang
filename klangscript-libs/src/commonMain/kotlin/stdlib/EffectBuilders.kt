@@ -8,25 +8,109 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.band
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /*
  * Builders for the wrappers that carry secondary knobs: the four filters, the equalizer's
- * sections, the pitch envelope, fm's index envelope, the dry floor of phaser and shimmer, and the
- * tremolo's LFO knobs. Same
+ * sections, the pitch envelope, fm's index envelope, the envelopes' own `adsr` builders, the dry
+ * floor of phaser and shimmer, and the tremolo's LFO knobs. Same
  * shape as the oscillator builders (`IgnitorBuilders.kt`): immutable values, one knob = one
  * `@KlangScript.Function` extension. The door keeps the stage's musical inputs, the builder the
  * rest (`/dsl-design` section 2).
  *
  *     Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
- *     Osc.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2))
+ *     Osc.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
+ *     Osc.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("square", "exp", "exp").declick(0.0005))
  *     Osc.saw().phaser(0.3, 0.5, x => x.floor(0.2))
  */
+
+// ── Envelopes ────────────────────────────────────────────────────────────────
+
+/**
+ * Builder for the chain `.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)`, the
+ * amplitude envelope. Knobs: `curves`, `declick` (phase 3 step 3c, maintainer, 2026-09-25; they
+ * replaced the reach-back chain methods `adsrCurves` and `declickSeconds`). `null` = not named: the
+ * node keeps its default. Immutable: every knob returns a new builder.
+ */
+data class AdsrBuilder(
+    val attackCurve: IgnitorDsl? = null,
+    val decayCurve: IgnitorDsl? = null,
+    val releaseCurve: IgnitorDsl? = null,
+    val declickSeconds: IgnitorDsl? = null,
+)
+
+/**
+ * Builder for the `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` INSIDE a
+ * modulation envelope's builder: the four filters' cutoff envelope and the pitch envelope. Knob:
+ * `curves`. No `declick`: those envelopes have no de-click stage, and a knob that does nothing is
+ * not offered. `null` = not named: the node keeps its default.
+ */
+data class ModAdsrBuilder(
+    val attackCurve: IgnitorDsl? = null,
+    val decayCurve: IgnitorDsl? = null,
+    val releaseCurve: IgnitorDsl? = null,
+)
+
+/**
+ * One `curves` argument as the curve knob it sets, for an envelope whose default is [fallback]:
+ * a NAME through [AdsrCurves] (an unknown one is [fallback]), a number or a slot as it is, and an
+ * OMITTED one as [fallback] too. So every `curves` call sets all three stages, and a later call
+ * replaces an earlier one completely: the rule `adsrCurves` always had.
+ */
+internal fun curveKnob(value: IgnitorDslLike?, fallback: AdsrCurve): IgnitorDsl =
+    catalogueIndex(value, IgnitorDsl.Constant(AdsrCurves.indexOf(fallback))) { AdsrCurves.indexOf(it, fallback) }
+
+/**
+ * Shapes the amplitude envelope's stages: `"exp"` (the default, every amplitude envelope's),
+ * `"linear"` (`lin`), `"square"` (`sq`/`quad`), `"cube"` (`cb`), `"scurve"` (`s`/`smooth`/`sigmoid`)
+ * or `"invsquare"` (`inv`/`concave`). An omitted argument and an unknown name both mean `"exp"`, so
+ * every call sets all three stages. Each argument may also be the curve's index in that list, or a
+ * slot carrying it; it is chosen once per note. Every exponential stage bends at the engine's one
+ * curvature (`ADSR_EXP_K`).
+ */
+@KlangScript.Function
+fun AdsrBuilder.curves(
+    attack: IgnitorDslLike? = null,
+    decay: IgnitorDslLike? = null,
+    release: IgnitorDslLike? = null,
+): AdsrBuilder = copy(
+    attackCurve = curveKnob(attack, AdsrCurve.Default),
+    decayCurve = curveKnob(decay, AdsrCurve.Default),
+    releaseCurve = curveKnob(release, AdsrCurve.Default),
+)
+
+/**
+ * De-clicks the envelope's gain by [seconds]: a one-pole low-pass that rounds the corners at the
+ * segment joins (the attack peak, the gate's end, the cutoff), removing the low-note "plop". `0` is
+ * off, which is this envelope's default; a gentle value is about 0.0005 to 0.001.
+ */
+@KlangScript.Function
+fun AdsrBuilder.declick(seconds: IgnitorDslLike): AdsrBuilder = copy(declickSeconds = seconds.toIgnitorDsl())
+
+/**
+ * Shapes a modulation envelope's stages (a filter's cutoff envelope, the pitch envelope), with the
+ * chain's six curves and their short names. Unshaped stages are LINEAR, which is what every filter
+ * sweep and pitch sweep has been (decision D3 decides that default); an omitted argument and an
+ * unknown name both mean it, so every call sets all three stages. A number or a slot is the curve's
+ * index, chosen once per note.
+ */
+@KlangScript.Function
+fun ModAdsrBuilder.curves(
+    attack: IgnitorDslLike? = null,
+    decay: IgnitorDslLike? = null,
+    release: IgnitorDslLike? = null,
+): ModAdsrBuilder = copy(
+    attackCurve = curveKnob(attack, MOD_ENV_CURVE),
+    decayCurve = curveKnob(decay, MOD_ENV_CURVE),
+    releaseCurve = curveKnob(release, MOD_ENV_CURVE),
+)
 
 // ── Filters ──────────────────────────────────────────────────────────────────
 
@@ -44,31 +128,35 @@ data class FilterKnobs(
     val decaySec: IgnitorDsl? = null,
     val sustainLevel: IgnitorDsl? = null,
     val releaseSec: IgnitorDsl? = null,
-    val attackCurve: AdsrCurve? = null,
-    val decayCurve: AdsrCurve? = null,
-    val releaseCurve: AdsrCurve? = null,
+    val attackCurve: IgnitorDsl? = null,
+    val decayCurve: IgnitorDsl? = null,
+    val releaseCurve: IgnitorDsl? = null,
 ) {
-    internal fun adsr(a: IgnitorDslLike, d: IgnitorDslLike, s: IgnitorDslLike, r: IgnitorDslLike): FilterKnobs = copy(
-        attackSec = a.toIgnitorDsl(), decaySec = d.toIgnitorDsl(), sustainLevel = s.toIgnitorDsl(), releaseSec = r.toIgnitorDsl(),
-    )
+    /**
+     * The builder's `adsr`: the four stages AND the curves its own lambda set (unshaped without
+     * one). One `adsr` call is the whole envelope, so a later call replaces an earlier one
+     * completely, curves included.
+     */
+    internal fun adsr(
+        a: IgnitorDslLike,
+        d: IgnitorDslLike,
+        s: IgnitorDslLike,
+        r: IgnitorDslLike,
+        configure: ((ModAdsrBuilder) -> ModAdsrBuilder)?,
+    ): FilterKnobs {
+        val curves = ModAdsrBuilder().configuredBy("adsr", configure)
 
-    internal fun adsrCurves(a: String?, d: String?, r: String?): FilterKnobs = copy(
-        attackCurve = a.toModEnvCurve(), decayCurve = d.toModEnvCurve(), releaseCurve = r.toModEnvCurve(),
-    )
+        return copy(
+            attackSec = a.toIgnitorDsl(), decaySec = d.toIgnitorDsl(), sustainLevel = s.toIgnitorDsl(), releaseSec = r.toIgnitorDsl(),
+            attackCurve = curves.attackCurve, decayCurve = curves.decayCurve, releaseCurve = curves.releaseCurve,
+        )
+    }
 }
 
 /**
- * The curve one `adsrCurves` argument of a MODULATION envelope builder (the filters, the pitch
- * envelope) asks for: a known name sets that curve; an omitted argument and an unknown name both
- * mean the DEFAULT, `null`, which resolves to `MOD_ENV_CURVE` at build. The same rule as the chain's
- * `adsrCurves`, which resets an omitted stage and an unknown name to its own default, "exp": every
- * call sets all three stages, and a later call replaces an earlier one completely.
- */
-internal fun String?.toModEnvCurve(): AdsrCurve? = this?.let { parseAdsrCurveName(it) }
-
-/**
  * Builder for `.lowpass(freq, q, configure)` and `.highpass(freq, q, configure)`. Knobs: `passes`,
- * `analog`, `humanize`, `env`, `adsr`, `adsrCurves`. Immutable: every knob returns a new builder.
+ * `analog`, `humanize`, `env`, `adsr` (whose own lambda carries `curves`). Immutable: every knob
+ * returns a new builder.
  */
 data class FilterBuilder(val knobs: FilterKnobs = FilterKnobs())
 
@@ -113,9 +201,14 @@ fun FilterBuilder.humanize(on: Any = true): FilterBuilder = copy(knobs = knobs.c
 fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(env = semitones.toIgnitorDsl()))
 
 /**
- * The cutoff envelope's four stages at once, the chain `adsr`'s pattern: attack, decay, sustain
- * (a share of `env`, 0 to 1) and release in seconds. Switches the envelope on; without `env` the
- * depth fills from the constants. The release does NOT extend the voice's life.
+ * The cutoff envelope, ONE call, the chain `adsr`'s shape: attack, decay, sustain (a share of
+ * `env`, 0 to 1) and release in seconds, and a lambda on a [ModAdsrBuilder] that shapes the stages
+ * with `curves` (unshaped stages are LINEAR, decision D3 decides that default):
+ * `.lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))`.
+ * Switches the envelope on; without `env` the depth fills from the constants. A later `adsr` call
+ * replaces an earlier one completely, curves included. The release does NOT extend the voice's life.
+ *
+ * @param configure receives the [ModAdsrBuilder] (knob: `curves`) and returns it.
  */
 @KlangScript.Function
 fun FilterBuilder.adsr(
@@ -123,21 +216,8 @@ fun FilterBuilder.adsr(
     decaySec: IgnitorDslLike,
     sustainLevel: IgnitorDslLike,
     releaseSec: IgnitorDslLike,
-): FilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec))
-
-/**
- * Shapes the cutoff envelope's stages, the chain's six curves: `"exp"`, `"linear"`, `"square"`,
- * `"cube"`, `"scurve"`, `"invsquare"` (and their short names). Unshaped stages are LINEAR, which is
- * what every filter sweep has been (decision D3 decides that default). An omitted argument and an
- * unknown name both mean that default, as on the chain's `adsrCurves`, so every call sets all three
- * stages. A curve does not switch the envelope on: it shapes one.
- */
-@KlangScript.Function
-fun FilterBuilder.adsrCurves(
-    attackCurve: String? = null,
-    decayCurve: String? = null,
-    releaseCurve: String? = null,
-): FilterBuilder = copy(knobs = knobs.adsrCurves(attackCurve, decayCurve, releaseCurve))
+    configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
+): FilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure))
 
 /**
  * The analog SATURATION is not implemented for this tap and the value does not reach it. The value
@@ -156,33 +236,35 @@ fun BandFilterBuilder.humanize(on: Any = true): BandFilterBuilder = copy(knobs =
 @KlangScript.Function
 fun BandFilterBuilder.env(semitones: IgnitorDslLike): BandFilterBuilder = copy(knobs = knobs.copy(env = semitones.toIgnitorDsl()))
 
-/** The cutoff envelope's four stages at once; see `FilterBuilder.adsr`. */
+/**
+ * The cutoff envelope, one call with its `curves` lambda; see `FilterBuilder.adsr`.
+ *
+ * @param configure receives the [ModAdsrBuilder] (knob: `curves`) and returns it.
+ */
 @KlangScript.Function
 fun BandFilterBuilder.adsr(
     attackSec: IgnitorDslLike,
     decaySec: IgnitorDslLike,
     sustainLevel: IgnitorDslLike,
     releaseSec: IgnitorDslLike,
-): BandFilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec))
-
-/** Shapes the cutoff envelope's stages; see `FilterBuilder.adsrCurves`. */
-@KlangScript.Function
-fun BandFilterBuilder.adsrCurves(
-    attackCurve: String? = null,
-    decayCurve: String? = null,
-    releaseCurve: String? = null,
-): BandFilterBuilder = copy(knobs = knobs.adsrCurves(attackCurve, decayCurve, releaseCurve))
+    configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
+): BandFilterBuilder = copy(knobs = knobs.adsr(attackSec, decaySec, sustainLevel, releaseSec, configure))
 
 // ── Pitch envelope ───────────────────────────────────────────────────────────
 
-/** Builder for [IgnitorDsl.PitchEnvelope], handed to the `configure` lambda of `.pitchEnvelope(...)`. Knobs: `adsr`, `adsrCurves`. */
+/** Builder for [IgnitorDsl.PitchEnvelope], handed to the `configure` lambda of `.pitchEnvelope(...)`. Knob: `adsr` (whose own lambda carries `curves`). */
 data class PitchEnvelopeBuilder(val node: IgnitorDsl.PitchEnvelope)
 
 /**
- * The pitch envelope's four stages, the chain `adsr`'s pattern: the pitch rises to `semitones`
- * over the attack, falls to the sustain (a share of `semitones`, default 0 = the note) over the
- * decay, holds, and from the gate's end returns to the note over the release. Defaults without
- * this call: `adsr(0.01, 0.1, 0, 0)`. The release does NOT extend the voice's life.
+ * The pitch envelope, ONE call, the chain `adsr`'s shape: the pitch rises to `semitones` over the
+ * attack, falls to the sustain (a share of `semitones`, default 0 = the note) over the decay, holds,
+ * and from the gate's end returns to the note over the release. The lambda shapes the stages with
+ * `curves`, the filters' rules (unshaped stages are LINEAR, decision D3 decides that):
+ * `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("lin", "exp", "exp")))`.
+ * Defaults without this call: `adsr(0.01, 0.1, 0, 0)`, linear. A later `adsr` call replaces an
+ * earlier one completely, curves included. The release does NOT extend the voice's life.
+ *
+ * @param configure receives the [ModAdsrBuilder] (knob: `curves`) and returns it.
  */
 @KlangScript.Function
 fun PitchEnvelopeBuilder.adsr(
@@ -190,32 +272,23 @@ fun PitchEnvelopeBuilder.adsr(
     decaySec: IgnitorDslLike,
     sustainLevel: IgnitorDslLike,
     releaseSec: IgnitorDslLike,
-): PitchEnvelopeBuilder = copy(
-    node = node.copy(
-        attackSec = attackSec.toIgnitorDsl(),
-        decaySec = decaySec.toIgnitorDsl(),
-        sustainLevel = sustainLevel.toIgnitorDsl(),
-        releaseSec = releaseSec.toIgnitorDsl(),
-    ),
-)
+    configure: ((ModAdsrBuilder) -> ModAdsrBuilder)? = null,
+): PitchEnvelopeBuilder {
+    val curves = ModAdsrBuilder().configuredBy("adsr", configure)
+    val defaults = IgnitorDsl.PitchEnvelope(inner = node.inner)
 
-/**
- * Shapes the pitch envelope's stages; the same six curves, defaults and argument rules as the
- * filters' `adsrCurves` (unshaped stages are LINEAR, decision D3 decides that; an omitted argument
- * and an unknown name both mean that default).
- */
-@KlangScript.Function
-fun PitchEnvelopeBuilder.adsrCurves(
-    attackCurve: String? = null,
-    decayCurve: String? = null,
-    releaseCurve: String? = null,
-): PitchEnvelopeBuilder = copy(
-    node = node.copy(
-        attackCurve = attackCurve.toModEnvCurve(),
-        decayCurve = decayCurve.toModEnvCurve(),
-        releaseCurve = releaseCurve.toModEnvCurve(),
-    ),
-)
+    return copy(
+        node = node.copy(
+            attackSec = attackSec.toIgnitorDsl(),
+            decaySec = decaySec.toIgnitorDsl(),
+            sustainLevel = sustainLevel.toIgnitorDsl(),
+            releaseSec = releaseSec.toIgnitorDsl(),
+            attackCurve = curves.attackCurve ?: defaults.attackCurve,
+            decayCurve = curves.decayCurve ?: defaults.decayCurve,
+            releaseCurve = curves.releaseCurve ?: defaults.releaseCurve,
+        ),
+    )
+}
 
 // ── FM ───────────────────────────────────────────────────────────────────────
 
@@ -226,7 +299,8 @@ data class FmBuilder(val node: IgnitorDsl.Fm)
  * The modulation INDEX envelope: the depth rises over the attack, falls to the sustain (a share of
  * `depth`) over the decay, holds, and releases from the gate's end. Without this call the depth is
  * constant, which is `adsr(0, 0, 1, 0)`. The built-in `sgbell` is `adsr(0.001, 0.5, 0, 0.05)`. Its
- * stages are linear; there is no `adsrCurves` on fm yet.
+ * stages are linear, and it takes no lambda yet: the FM index envelope has no curve support (a filed
+ * follow-up adds `curves` when it has), and a knob that does nothing is not offered.
  */
 @KlangScript.Function
 fun FmBuilder.adsr(

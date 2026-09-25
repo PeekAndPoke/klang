@@ -180,6 +180,17 @@ class IgnitorDslWireCodecSpec : StringSpec({
             IgnitorDsl.Square().notch(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
         ).forEach { check(it) }
     }
+    // Step 3c: the curves are index KNOBS now, so a slot must survive too (one per node, a
+    // different stage each time, so a codec that drops one field of three still shows up).
+    "Lowpass, Highpass, Bandpass, Notch with a curve SLOT" {
+        val slot = IgnitorDsl.Param("lpcurve", 3.0)
+        listOf(
+            IgnitorDsl.Square().lowpass(800.0, env = 24.0).copy(attackCurve = slot),
+            IgnitorDsl.Square().highpass(800.0, env = 24.0).copy(decayCurve = slot),
+            IgnitorDsl.Square().bandpass(800.0, env = 24.0).copy(releaseCurve = slot),
+            IgnitorDsl.Square().notch(800.0, env = 24.0).copy(attackCurve = slot, releaseCurve = slot),
+        ).forEach { check(it) }
+    }
     "Eq (every section variant, all fields non-default)" {
         check(
             IgnitorDsl.Eq(
@@ -202,18 +213,23 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- envelope / FM --------------------------------------------------------------------------------------
     "Adsr" { check(IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)) }
-    "Adsr with declick + expK" {
-        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008), expK = IgnitorDsl.Constant(4.5)))
+    "Adsr with declick" {
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008)))
     }
-    "Adsr with curves" {
+    // Every field step 3c added or retyped, each NON-default: the three curve knobs (one a slot)
+    // and the ON/OFF switch (off, and a slot).
+    "Adsr with curves and the on switch (every step-3c field non-default)" {
         check(
             IgnitorDsl.Adsr(
                 inner = IgnitorDsl.SuperSaw(),
                 attackSec = IgnitorDsl.Constant(0.02),
-                attackCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.Square,
+                attackCurve = AdsrCurves.knob(AdsrCurve.Linear),
+                decayCurve = IgnitorDsl.Param("adsr.decayCurve", 1.0),
+                releaseCurve = AdsrCurves.knob(AdsrCurve.Square),
+                on = IgnitorDsl.Constant(0.0),
             )
         )
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), on = IgnitorDsl.Param("adsrOn", 1.0)))
     }
     "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, envDecaySec = 0.5)) }
     "Fm with absolute freq" {
@@ -278,9 +294,9 @@ class IgnitorDslWireCodecSpec : StringSpec({
                 decaySec = IgnitorDsl.Constant(0.07),
                 sustainLevel = IgnitorDsl.Constant(0.3),
                 releaseSec = IgnitorDsl.Constant(0.2),
-                attackCurve = AdsrCurve.Square,
-                decayCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.InvSquare,
+                attackCurve = AdsrCurves.knob(AdsrCurve.Square),
+                decayCurve = AdsrCurves.knob(AdsrCurve.Exponential),
+                releaseCurve = IgnitorDsl.Param("pcurve", 4.0),
             )
         )
     }

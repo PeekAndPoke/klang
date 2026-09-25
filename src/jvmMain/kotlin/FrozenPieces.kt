@@ -191,7 +191,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     // noise burst
     .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))
     // the string - lowpass adsr for the string sound and adsr for the string
-    .adsr(pAttack, pDecay, pSustain, pRelease).adsrCurves("linear", "linear", "linear")
+    .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
   // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
   let toned = preamp(pedal(pickup(signal)))

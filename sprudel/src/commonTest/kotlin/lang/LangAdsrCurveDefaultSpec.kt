@@ -8,6 +8,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
@@ -17,7 +18,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 /**
  * ADSR curve default pin (maintainer decision, 2026-08-24): NOTHING SET means
  * [AdsrCurve.Default] (= Exponential) on every stage and every door. On the IGNITOR door,
- * a bare `adsrCurves()` also means exp and an unrecognized name coerces to exp.
+ * a bare `curves()` (in the chain `adsr`'s lambda since step 3c) also means exp and an
+ * unrecognized name coerces to exp.
  * (The SPRUDEL door deliberately differs on those two: a bare control call is a no-op and
  * a bad name keeps the prior curve — per-event control-pattern semantics, pinned by
  * `LangAdsrCurvesSpec`; only the UNSET default is shared across doors.) The ignitor door
@@ -48,34 +50,36 @@ class LangAdsrCurveDefaultSpec : StringSpec({
         data.releaseCurve shouldBe null
     }
 
-    "ignitor node: unset curves are null — and the script door's bare adsrCurves() means exp" {
+    "ignitor node: unset curves are the exp knob, and so are a bare curves() and an unknown name" {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        // no call at all -> null on the node (the runtime resolves null to Exponential)
+        // Since step 3c a curve is an INDEX knob on the node; its default is exp's index.
+        val exp = AdsrCurves.knob(AdsrCurve.Exponential)
+
+        // no call at all -> the node's default knob, exp
         val plain = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3)""") as IgnitorDsl.Adsr
-        plain.attackCurve shouldBe null
-        plain.decayCurve shouldBe null
-        plain.releaseCurve shouldBe null
+        plain.attackCurve shouldBe exp
+        plain.decayCurve shouldBe exp
+        plain.releaseCurve shouldBe exp
 
-        // bare adsrCurves() -> Exponential on every stage
-        val bare = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves()""") as IgnitorDsl.Adsr
-        bare.attackCurve shouldBe AdsrCurve.Exponential
-        bare.decayCurve shouldBe AdsrCurve.Exponential
-        bare.releaseCurve shouldBe AdsrCurve.Exponential
+        // bare curves() -> Exponential on every stage
+        val bare = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves())""") as IgnitorDsl.Adsr
+        bare.attackCurve shouldBe exp
+        bare.decayCurve shouldBe exp
+        bare.releaseCurve shouldBe exp
 
-
-        // an unrecognized name coerces to the default, not to Square — on ALL three stages
-        val typo = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves("sqare", "sqare", "sqare")""") as IgnitorDsl.Adsr
-        typo.attackCurve shouldBe AdsrCurve.Exponential
-        typo.decayCurve shouldBe AdsrCurve.Exponential
-        typo.releaseCurve shouldBe AdsrCurve.Exponential
+        // an unrecognized name coerces to the default, not to Square, on ALL three stages
+        val typo = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("sqare", "sqare", "sqare"))""") as IgnitorDsl.Adsr
+        typo.attackCurve shouldBe exp
+        typo.decayCurve shouldBe exp
+        typo.releaseCurve shouldBe exp
 
         // explicit names still win
-        val explicit = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3).adsrCurves("square", "cube", "linear")""") as IgnitorDsl.Adsr
-        explicit.attackCurve shouldBe AdsrCurve.Square
-        explicit.decayCurve shouldBe AdsrCurve.Cube
-        explicit.releaseCurve shouldBe AdsrCurve.Linear
+        val explicit = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("square", "cube", "linear"))""") as IgnitorDsl.Adsr
+        explicit.attackCurve shouldBe AdsrCurves.knob(AdsrCurve.Square)
+        explicit.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Cube)
+        explicit.releaseCurve shouldBe AdsrCurves.knob(AdsrCurve.Linear)
     }
 })

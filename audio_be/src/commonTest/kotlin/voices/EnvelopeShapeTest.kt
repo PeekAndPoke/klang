@@ -59,9 +59,9 @@ class EnvelopeShapeTest : StringSpec({
         // g(0.5) = (e^(K·0.5) − 1) / (e^K − 1) at K = ADSR_EXP_K.
         //
         // Added 2026-08-11 (review): this is the ONLY value coverage ADSR_EXP_K has anywhere in the
-        // repo. Every other envelope test is either symmetric in K (AdsrIgnitorKnobsSpec compares
-        // bare adsr() against expK = ADSR_EXP_K — green for any value) or checks stage endpoints,
-        // which are K-invariant by construction: g(0)=0, g(1)=1. So K could be changed to anything
+        // repo. Every other envelope test is either symmetric in K (AdsrIgnitorKnobsSpec's closed-form
+        // row writes its oracle with ADSR_EXP_K itself, so it is green for any value) or checks stage
+        // endpoints, which are K-invariant by construction: g(0)=0, g(1)=1. So K could be changed to anything
         // and the whole suite stayed green, while every Exponential segment in the amp VCA, the
         // filter/FM envelopes and the ignitor envelopes reshaped on every shipped song.
         //

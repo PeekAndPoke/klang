@@ -34,7 +34,7 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
 `@KlangScript.TypeExtensions` chained methods → dual-language + render-effect + sync-guard specs. Each field
 **defaults to today's `OscillatorTuning` const** (behavior-identical).
 
-1. ✅ **DONE (2026-07-04) — `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** Both landed as **`IgnitorDsl.Slots`
+1. ✅ **DONE (2026-07-04): `IgnitorDsl.Adsr` gained `declickSeconds` + `expK`.** (`expK` REMOVED 2026-09-25 in phase 3 step 3c, maintainer: a per-curve bend is a later design; every exp stage bends at `ADSR_EXP_K`. `declickSeconds` stays, as the chain `adsr` builder's `declick`.) Both landed as **`IgnitorDsl.Slots`
    Params** (`Slots.declickSeconds` = 0.0/off; `Slots.expK` = `ADSR_EXP_K`, one declaration in
    `audio_bridge/constants/`)
    — i.e. **nodes/slots, not plain `Double`** → oscParam-addressable / patternable / in `collectParams()`,

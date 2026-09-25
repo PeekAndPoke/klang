@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
 import io.peekandpoke.klang.audio_be.lfoShapeAt
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
@@ -309,6 +310,7 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.PitchEnvelope -> {
             // Build order IS rng draw order: attack, decay, release, semitones as before, then the
             // sustain in the slot the anchor had (the dropped `curve` was a leaf and drew nothing).
+            // The three curves are read leaf-only (`adsrCurveKnob`) and build nothing.
             // The release is NOT reported as a tail: a pitch release never extends the voice.
             val peMod = pitchEnvelopeModIgnitor(
                 attackSec = this.attackSec.buildIgnitor(oscParams, cache).ignitor,
@@ -316,9 +318,9 @@ internal fun IgnitorDsl.buildIgnitor(
                 releaseSec = this.releaseSec.buildIgnitor(oscParams, cache).ignitor,
                 semitones = this.semitones.buildIgnitor(oscParams, cache).ignitor,
                 sustainLevel = this.sustainLevel.buildIgnitor(oscParams, cache).ignitor,
-                attackCurve = this.attackCurve ?: MOD_ENV_CURVE,
-                decayCurve = this.decayCurve ?: MOD_ENV_CURVE,
-                releaseCurve = this.releaseCurve ?: MOD_ENV_CURVE,
+                attackCurve = this.attackCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
+                decayCurve = this.decayCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
+                releaseCurve = this.releaseCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
             )
             return inner.buildIgnitor(oscParams, cache, combineMods(accumulatedMod, peMod))
         }
@@ -506,8 +508,8 @@ private fun IgnitorDsl.gatedOffAtUnity(oscParams: Map<String, Double>?, cache: I
  *
  * **The second bullet is a claim about the ENGINE, not a hope, and it had to be made true.** Round
  * 2 of this step's review found the counter-example inside the same change: `AdsrIgnitor` is not
- * block-constant, so it folds, and a non-finite `sustainLevel` or `expK` used to multiply NaN into
- * every sample. Before the fold `TimesIgnitor`'s scrub turned that into silence; after it the NaN
+ * block-constant, so it folds, and a non-finite `sustainLevel` or `expK` (a knob removed in step
+ * 3c) used to multiply NaN into every sample. Before the fold `TimesIgnitor`'s scrub turned that into silence; after it the NaN
  * would travel, and "a later stage guards it" is false for a `pregain` placed at the END of a tail,
  * which is where `classic()` puts it. The fix is at the source, in `AdsrIgnitor`'s own read (see
  * its `finiteOr`), not a clamp bolted back onto the multiply.
@@ -578,9 +580,9 @@ private fun filterEnvDef(
     decaySec: IgnitorDsl,
     sustainLevel: IgnitorDsl,
     releaseSec: IgnitorDsl,
-    attackCurve: AdsrCurve?,
-    decayCurve: AdsrCurve?,
-    releaseCurve: AdsrCurve?,
+    attackCurve: IgnitorDsl,
+    decayCurve: IgnitorDsl,
+    releaseCurve: IgnitorDsl,
     oscParams: Map<String, Double>?,
     cache: IgnitorBuildCache,
 ): FilterEnvDef {
@@ -598,10 +600,10 @@ private fun filterEnvDef(
         decaySec = decaySec.filterEnvKnob(oscParams, cache, FILTER_ENV_DECAY_SEC),
         sustainLevel = sustainLevel.filterEnvKnob(oscParams, cache, FILTER_ENV_SUSTAIN_LEVEL),
         releaseSec = releaseSec.filterEnvKnob(oscParams, cache, FILTER_ENV_RELEASE_SEC),
-        // Structural, not knobs: a curve is part of the node, so there is nothing to read and no draw.
-        attackCurve = attackCurve ?: MOD_ENV_CURVE,
-        decayCurve = decayCurve ?: MOD_ENV_CURVE,
-        releaseCurve = releaseCurve ?: MOD_ENV_CURVE,
+        // Index knobs since step 3c, read the same leaf-only way: no build, no draw.
+        attackCurve = attackCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
+        decayCurve = decayCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
+        releaseCurve = releaseCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
     )
 }
 
@@ -647,6 +649,48 @@ private fun IgnitorDsl.lfoShapeKnob(oscParams: Map<String, Double>?, cache: Igni
  */
 private fun IgnitorDsl.startPhaseKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Double =
     buildTimeKnobValue(oscParams, cache) ?: 0.0
+
+/**
+ * The curve an envelope's curve knob selects (phase 3 step 3c): `AdsrCurves.curveAt`'s rule, so a
+ * non-finite, negative or past-the-end index is [fallback], as a non-leaf is. The fallback is the
+ * reading envelope's OWN default: [AdsrCurve.Default] on the chain `adsr`, `MOD_ENV_CURVE` on the
+ * filter and pitch envelopes.
+ */
+private fun IgnitorDsl.adsrCurveKnob(
+    oscParams: Map<String, Double>?,
+    cache: IgnitorBuildCache,
+    fallback: AdsrCurve,
+): AdsrCurve = buildTimeKnobValue(oscParams, cache)?.let { AdsrCurves.curveAt(it, fallback) } ?: fallback
+
+/**
+ * The envelope row of the gate: the ADSR's `on` switch is OFF only when it is a build-time leaf at
+ * exactly `0.0` (either sign). **Unset is NOT off**, the second asymmetry in the table after `mul`:
+ * a non-finite value, a non-zero value and a non-leaf all leave the envelope ON, because the classic
+ * envelope is built by default and only an explicit `adsrOff` switches it off. Exactly `0.0` rather
+ * than `<= 0.0` because this is a FLAG, not an amount: the house flag rule is "non-zero is on"
+ * (`coerceFlag` on the script door, `isTruthy` in sprudel), so a negative value is on there too.
+ */
+private fun IgnitorDsl.switchedOff(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Boolean {
+    val value = buildTimeKnobValue(oscParams, cache) ?: return false
+
+    return value == 0.0
+}
+
+/**
+ * The release tail a switched-OFF envelope still reports, so the voice keeps the lifetime the
+ * envelope would have given it (as the strip's `adsrOff` does).
+ *
+ * Leaf-only, the build-time knobs' rule, and it differs from the ON path in one case on purpose.
+ * The ON path asks the BUILT release (`controlRateValueOrNull`), which also folds a pointwise
+ * expression over leaves (`pRel.mul(2)`). An OFF envelope builds no knob subtree, and building the
+ * release only to ask it would take that subtree's rng draws and register it in the build cache
+ * (the gate's recorded hazard, `gatedOff`'s KDoc), so a NON-LEAF release on an off envelope reports
+ * no tail: the voice then lives as long as the rest of the voice says. `classic()` places a slot, a
+ * leaf, so the case that matters for step 6 is covered. A non-finite release reports none either,
+ * the ON path's rule.
+ */
+private fun IgnitorDsl.offEnvelopeTail(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Double? =
+    buildTimeKnobValue(oscParams, cache)?.takeIf { it.isFinite() }
 
 /**
  * The filter's per-voice humanization, or null when the node does not carry it.
@@ -1107,14 +1151,25 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Envelope: pass mod through ──
 
-        // NOT gated, and this is inverted from the plan's sketch on purpose (the spike corrected
-        // it, `docs/tasks/builtin-instruments.md` section 5): today the voice strip's VCA runs on
-        // EVERY voice with `AdsrDef.defaultSynth` when the pattern sets nothing, so the classic
-        // tail's ADSR has to be built BY DEFAULT. What switches it off is an explicit `adsrOff`
-        // slot, which is a later step's gate knob, not an unset cutoff.
-        is IgnitorDsl.Adsr -> {
+        // GATE ROW `the envelope`: OFF only at an explicit `on` of exactly 0.0; UNSET IS ON. Inverted
+        // from the plan's sketch on purpose (the spike corrected it, `docs/tasks/builtin-instruments.md`
+        // section 5): today the voice strip's VCA runs on EVERY voice with `AdsrDef.defaultSynth` when
+        // the pattern sets nothing, so the classic tail's ADSR has to be built BY DEFAULT, and only an
+        // explicit `adsrOff` (filled into `on` by `classic()`) switches it off. See `switchedOff`.
+        //
+        // OFF keeps the voice's LIFETIME: the envelope would have released over `releaseSec`, the
+        // strip's `adsrOff` keeps that lifetime (its `renderGate` fades over the last frames of it),
+        // and step 6's identity depends on the node doing the same. So the signal skips the stage
+        // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). No
+        // teardown fade here yet: that is step 6.
+        is IgnitorDsl.Adsr -> if (on.switchedOff(oscParams, cache)) {
+            val signal = inner.withMod()
+            spineTail = maxTail(spineTail, releaseSec.offEnvelopeTail(oscParams, cache))
+            signal
+        } else {
             // Order matters and is unchanged: build order IS rng draw order (IgniteContext.random),
-            // so inner / attack / decay / sustain / release / declick / expK stay in sequence.
+            // so inner / attack / decay / sustain / release / declick stay in sequence. The switch
+            // and the three curves are read leaf-only and build nothing, so they draw nothing.
             val innerIgnitor = inner.withMod()
             val attack = attackSec.noMod()
             val decay = decaySec.noMod()
@@ -1148,11 +1203,10 @@ private fun IgnitorDsl.buildRaw(
                 // (maintainer decision, 2026-08-24); the strip path's AdsrDef.Resolved already
                 // defaults Exponential. The modulation envelopes (filter cutoff, pitch) fall back to
                 // `MOD_ENV_CURVE` instead, which decision D3 sets.
-                attackCurve ?: AdsrCurve.Default,
-                decayCurve ?: AdsrCurve.Default,
-                releaseCurve ?: AdsrCurve.Default,
+                attackCurve.adsrCurveKnob(oscParams, cache, AdsrCurve.Default),
+                decayCurve.adsrCurveKnob(oscParams, cache, AdsrCurve.Default),
+                releaseCurve.adsrCurveKnob(oscParams, cache, AdsrCurve.Default),
                 declickSeconds = declickSeconds.noMod(),
-                expK = expK.noMod(),
             )
         }
 

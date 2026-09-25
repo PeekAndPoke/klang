@@ -57,7 +57,7 @@ let sub = Osc.sine().lowpass(200)
 
 let pad = Osc.supertri(x => x.voices(5).analog(5.0))
       .lowpass(Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), 3, x => x.analog(Osc.slot.analog))
-      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurves("scurve", "scurve", "scurve")
+      .adsr(1.5, 3.0, 0.6, 1.5, e => e.curves("scurve", "scurve", "scurve"))
 
 
 stack(

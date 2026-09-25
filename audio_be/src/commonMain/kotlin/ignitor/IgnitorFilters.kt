@@ -94,7 +94,7 @@ data class FilterEnvDef(
  * of `docs/tasks/builtin-instruments.md`.**
  *
  *  - **The law.** An unshaped stage takes `MOD_ENV_CURVE`, which is LINEAR, so by default every
- *    segment here is a straight LINE ([computeFilterEnvelope]); `adsrCurves` can shape each stage.
+ *    segment here is a straight LINE ([computeFilterEnvelope]); `curves` can shape each stage.
  *    The strip's filter envelope runs through `EnvelopeCalc` with
  *    `AdsrCurve.Default`, which is Exponential with K = 3, because `VoiceFactory` builds its
  *    `Voice.Envelope` without the three curve arguments. Measured at `env = 24`, the two shapes
@@ -748,10 +748,10 @@ private fun envelopeLevelAtPosition(
  * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
  * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
  *
- * The three curves shape the stages (`adsrCurves` on the filter doors). `Linear` on every stage is
- * this envelope's historical law, bit for bit; a curved stage takes the chain `adsr`'s shape and
- * composition ([adsrCurveShape]), the release included, whose time base is then the chain's
- * (`releaseProgressDenom`/`releaseProgressOffset`, so a curved release lands on 0).
+ * The three curves shape the stages (`curves` in the filter doors' `adsr` lambda). `Linear` on
+ * every stage is this envelope's historical law, bit for bit; a curved stage takes the chain
+ * `adsr`'s shape and composition ([adsrCurveShape]), the release included, whose time base is then
+ * the chain's (`releaseProgressDenom`/`releaseProgressOffset`, so a curved release lands on 0).
  *
  * [expNorm] is [ADSR_EXP_NORM], the Exponential curve's normaliser. A caller that evaluates this
  * per sample passes it from a local or a field: on Kotlin/JS a top-level `val` is read through a

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
@@ -79,7 +80,6 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SIDE_ATTEN
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_SPREAD_POWER
 import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
 
-import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 
 
 /**
@@ -193,7 +193,6 @@ sealed interface IgnitorDsl {
         val depth: IgnitorDsl = Param(name = "depth", default = 0.02)
         val duty: IgnitorDsl = Param(name = "duty", default = 0.5)
 
-        val expK: IgnitorDsl = Param(name = "expK", default = ADSR_EXP_K)
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
         val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
@@ -1282,7 +1281,7 @@ sealed interface IgnitorDsl {
          * renders a static filter. Write a slot (`Osc.slot.lpenv`) or a constant.
          *
          * **Which envelope this is, and D3 is open on BOTH counts.** The law: an unshaped stage
-         * (curve field `null`) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
+         * (curve knob at its default) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
          * the house Exponential curve (`AdsrCurve.Default`, K = 3), because `VoiceFactory` omits
          * the three curve arguments. Measured at `env = 24`, the two are up to 806 cents apart at
          * the same instant (RMS 256 cents on a pluck, 512 on a pad). The sampling: this node
@@ -1303,9 +1302,11 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope release in seconds. Inert while [env] is `0`. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /**
-         * Curve of the cutoff envelope's attack, the same six shapes as the chain's `adsr`. `null`
-         * (the default) is `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had a
-         * curve; decision D3 decides that default. Inert while [env] is `0`.
+         * Curve of the cutoff envelope's attack, the same six shapes as the chain's `adsr`, as an
+         * INDEX into [AdsrCurves] (phase 3 step 3c: a knob, so a slot can carry it). Read ONCE at
+         * build from a [Param] or [Constant] leaf; a non-leaf, a non-finite value and a bad index
+         * all read as the default, `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had
+         * a curve; decision D3 decides that default. Inert while [env] is `0`.
          *
          * `Linear` here is this envelope's OWN historical law, kept bit for bit: its decay steps
          * by `(1 - sustain) / decayFrames` and its release runs over N frames and ends a hair
@@ -1314,11 +1315,11 @@ sealed interface IgnitorDsl {
          * `audio_be`). One implementation of the shapes, two compositions of the linear case,
          * because the linear one is what every song's sweep already is.
          */
-        val attackCurve: AdsrCurve? = null,
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [attackCurve]. */
-        val decayCurve: AdsrCurve? = null,
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's release; see [attackCurve]. */
-        val releaseCurve: AdsrCurve? = null,
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /**
          * Per-voice analog humanization: the FIXED cutoff tolerance this voice's copy of the
          * filter gets, plus the slow drift lane that wanders it while the note sounds. Both are
@@ -1345,6 +1346,7 @@ sealed interface IgnitorDsl {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
 
@@ -1369,11 +1371,11 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
-        val attackCurve: AdsrCurve? = null,
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
-        val decayCurve: AdsrCurve? = null,
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
-        val releaseCurve: AdsrCurve? = null,
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1381,6 +1383,7 @@ sealed interface IgnitorDsl {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
 
@@ -1420,11 +1423,11 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
-        val attackCurve: AdsrCurve? = null,
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
-        val decayCurve: AdsrCurve? = null,
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
-        val releaseCurve: AdsrCurve? = null,
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /**
          * Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. The TOLERANCE and
          * the DRIFT reach this tap even though [analog]'s saturation does not: the strip's
@@ -1436,6 +1439,7 @@ sealed interface IgnitorDsl {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
 
@@ -1458,11 +1462,11 @@ sealed interface IgnitorDsl {
         /** Cutoff-envelope release in seconds; see [Lowpass.env]. */
         val releaseSec: IgnitorDsl = Constant(FILTER_ENV_RELEASE_SEC),
         /** Curve of the cutoff envelope's attack; see [Lowpass.attackCurve]. */
-        val attackCurve: AdsrCurve? = null,
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [Lowpass.attackCurve]. */
-        val decayCurve: AdsrCurve? = null,
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's release; see [Lowpass.attackCurve]. */
-        val releaseCurve: AdsrCurve? = null,
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Per-voice cutoff tolerance and drift lane; see [Bandpass.humanize]. */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1470,6 +1474,7 @@ sealed interface IgnitorDsl {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
 
@@ -1662,7 +1667,12 @@ sealed interface IgnitorDsl {
     // Envelope
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** ADSR amplitude envelope. Shapes the inner signal's volume over the note lifecycle. */
+    /**
+     * ADSR amplitude envelope. Shapes the inner signal's volume over the note lifecycle.
+     *
+     * Every exponential stage bends at `ADSR_EXP_K` (3.0): the per-envelope `expK` knob was REMOVED
+     * in phase 3 step 3c (maintainer, 2026-09-25); a per-curve bend is its own later design.
+     */
     @WireName("adsr")
     data class Adsr(
         val inner: IgnitorDsl,
@@ -1670,26 +1680,48 @@ sealed interface IgnitorDsl {
         val decaySec: IgnitorDsl = Constant(0.1),
         val sustainLevel: IgnitorDsl = Constant(ADSR_SUSTAIN_LEVEL),
         val releaseSec: IgnitorDsl = Constant(0.3),
-        val attackCurve: AdsrCurve? = null,
-        val decayCurve: AdsrCurve? = null,
-        val releaseCurve: AdsrCurve? = null,
         /**
-         * De-click smoothing on the final gain, in seconds (`Slots.declickSeconds`, default `0` = off —
+         * Curve of the attack, as an INDEX into [AdsrCurves] (phase 3 step 3c: a knob, so a slot can
+         * carry it). Read ONCE at voice build from a [Param] or [Constant] leaf; a non-leaf, a
+         * non-finite value and a bad index all read as the default, [AdsrCurve.Default]
+         * (exponential), which is the house default of every amplitude envelope stage.
+         */
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(AdsrCurve.Default)),
+        /** Curve of the decay; see [attackCurve]. */
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(AdsrCurve.Default)),
+        /** Curve of the release; see [attackCurve]. */
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(AdsrCurve.Default)),
+        /**
+         * De-click smoothing on the final gain, in seconds (`Slots.declickSeconds`, default `0` = off:
          * this per-ignitor envelope is intentionally not de-clicked). `>0` runs a one-pole low-pass on
-         * the gain that rounds the C1 corners at segment joins (attack→decay peak, gate-off, cutoff),
+         * the gain that rounds the C1 corners at segment joins (attack to decay peak, gate-off, cutoff),
          * killing the low-note "plop" the same way the amp VCA does. `oscParam`-addressable / patternable.
          */
         val declickSeconds: IgnitorDsl = Slots.declickSeconds,
         /**
-         * Curvature of [AdsrCurve.Exponential] segments (`Slots.expK`, defaults to [ADSR_EXP_K]).
-         * Larger = steeper initial change (faster decay drop / sharper attack finish). `oscParam`-addressable.
+         * The envelope's ON/OFF switch, read ONCE at voice build from a [Param] or [Constant] leaf.
+         * OFF is exactly `0.0`; anything else is ON, and so is UNSET (a non-finite value) and a
+         * non-leaf: the house flag rule (a non-zero number is on), and the envelope is built by
+         * default (`docs/tasks/builtin-instruments.md` section 5b, the envelope row).
+         *
+         * A NODE FIELD ONLY, deliberately: no Ignitor door writes it. `classic()` fills it from
+         * sprudel's `adsrOn`/`adsrOff`; on the Ignitor doors, not writing `adsr()` already means no
+         * envelope (a recorded two-door asymmetry, maintainer, 2026-09-25).
+         *
+         * What OFF does today: the stage is not built, so the inner signal passes unchanged, and its
+         * knob subtrees are not built either (a drawing source there takes no draws, the gate's
+         * usual consequence). The voice's LIFETIME is kept: the node still reports the release tail
+         * the envelope would have had, as the voice strip's `adsrOff` keeps it. There is no
+         * teardown fade yet, so the voice ends on whatever its last frame carries; step 6's
+         * teardown fade (section 6 of that plan) fills those last frames.
          */
-        val expK: IgnitorDsl = Slots.expK,
+        val on: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
-            declickSeconds.collectParams(out); expK.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
+            declickSeconds.collectParams(out); on.collectParams(out)
         }
     }
 
@@ -2005,9 +2037,11 @@ sealed interface IgnitorDsl {
      * @param sustainLevel the held level, a share of [semitones]; 0 (the default) returns to the
      *   note after the decay. Not clamped: the Motor stays raw. A non-finite one reads as unset (0),
      *   the chain `adsr`'s rule.
-     * @param attackCurve curve of the attack; `null` (the default) is `MOD_ENV_CURVE`, LINEAR,
-     *   the law this envelope had before it had curves; decision D3 decides that default. The
-     *   shapes and their composition are the chain `adsr`'s (`adsrCurveShape` in `audio_be`).
+     * @param attackCurve curve of the attack, as an INDEX into [AdsrCurves], read once at build
+     *   from a leaf (phase 3 step 3c). The default, and what a non-leaf, a non-finite value or a bad
+     *   index read as, is `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had curves;
+     *   decision D3 decides that default. The shapes and their composition are the chain `adsr`'s
+     *   (`adsrCurveShape` in `audio_be`).
      * @param decayCurve curve of the decay; see [attackCurve].
      * @param releaseCurve curve of the release; see [attackCurve].
      */
@@ -2019,13 +2053,14 @@ sealed interface IgnitorDsl {
         val decaySec: IgnitorDsl = Constant(0.1),
         val sustainLevel: IgnitorDsl = Constant(0.0),
         val releaseSec: IgnitorDsl = Constant(0.0),
-        val attackCurve: AdsrCurve? = null,
-        val decayCurve: AdsrCurve? = null,
-        val releaseCurve: AdsrCurve? = null,
+        val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
+        val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
+        val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); semitones.collectParams(out); attackSec.collectParams(out)
             decaySec.collectParams(out); sustainLevel.collectParams(out); releaseSec.collectParams(out)
+            attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
         }
     }
 
@@ -2235,6 +2270,12 @@ fun fillFilterEnvelope(
 /** A scalar door argument as a knob: `null` (the call did not name it) stays null for the fill. */
 private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) }
 
+/** A scalar door's curve as its index knob: `null` (not named) stays null, the node's default. */
+private fun AdsrCurve?.asCurveKnob(): IgnitorDsl? = this?.let { AdsrCurves.knob(it) }
+
+/** A modulation envelope's unshaped curve: the index of `MOD_ENV_CURVE`, the node fields' default. */
+private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
+
 /**
  * Applies an SVF lowpass filter at [freq] with resonance [q].
  *
@@ -2261,9 +2302,10 @@ private fun Double?.asKnob(): IgnitorDsl? = this?.let { IgnitorDsl.Constant(it) 
  * @param sustainLevel Cutoff-envelope sustain share of [env], 0 to 1.
  * @param releaseSec Cutoff-envelope release in seconds. It does NOT extend the voice's lifetime,
  * on either surface: a filter release longer than the amp envelope's is cut off with the voice.
- * @param attackCurve Curve of the envelope's attack; `null` is `MOD_ENV_CURVE` (see
- * [IgnitorDsl.Lowpass.attackCurve]). The three curves are NOT companions of the fill: they shape an
- * envelope, they do not ask for one, so naming only a curve leaves the envelope off.
+ * @param attackCurve Curve of the envelope's attack, as its [AdsrCurves] index knob (a constant or a
+ * slot); `null` is `MOD_ENV_CURVE` (see [IgnitorDsl.Lowpass.attackCurve]). The scalar overload takes
+ * an [AdsrCurve]. The three curves are NOT companions of the fill: they shape an envelope, they do
+ * not ask for one, so naming only a curve leaves the envelope off.
  * @param decayCurve Curve of the envelope's decay; see [attackCurve].
  * @param releaseCurve Curve of the envelope's release; see [attackCurve].
  * @param humanize Per-voice cutoff tolerance and drift lane, both scaled by `analog`
@@ -2287,9 +2329,9 @@ fun IgnitorDsl.lowpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
-    attackCurve: AdsrCurve? = null,
-    decayCurve: AdsrCurve? = null,
-    releaseCurve: AdsrCurve? = null,
+    attackCurve: IgnitorDsl? = null,
+    decayCurve: IgnitorDsl? = null,
+    releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Lowpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2305,9 +2347,9 @@ fun IgnitorDsl.lowpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
-        attackCurve = attackCurve,
-        decayCurve = decayCurve,
-        releaseCurve = releaseCurve,
+        attackCurve = attackCurve ?: modEnvCurveKnob(),
+        decayCurve = decayCurve ?: modEnvCurveKnob(),
+        releaseCurve = releaseCurve ?: modEnvCurveKnob(),
         humanize = humanize,
     )
 }
@@ -2330,7 +2372,7 @@ fun IgnitorDsl.lowpass(
 ): IgnitorDsl.Lowpass = lowpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve, decayCurve, releaseCurve, humanize,
+    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
 )
 
 /**
@@ -2348,9 +2390,9 @@ fun IgnitorDsl.highpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
-    attackCurve: AdsrCurve? = null,
-    decayCurve: AdsrCurve? = null,
-    releaseCurve: AdsrCurve? = null,
+    attackCurve: IgnitorDsl? = null,
+    decayCurve: IgnitorDsl? = null,
+    releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Highpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2366,9 +2408,9 @@ fun IgnitorDsl.highpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
-        attackCurve = attackCurve,
-        decayCurve = decayCurve,
-        releaseCurve = releaseCurve,
+        attackCurve = attackCurve ?: modEnvCurveKnob(),
+        decayCurve = decayCurve ?: modEnvCurveKnob(),
+        releaseCurve = releaseCurve ?: modEnvCurveKnob(),
         humanize = humanize,
     )
 }
@@ -2391,7 +2433,7 @@ fun IgnitorDsl.highpass(
 ): IgnitorDsl.Highpass = highpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), passes, IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve, decayCurve, releaseCurve, humanize,
+    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
 )
 
 /**
@@ -2500,9 +2542,9 @@ fun IgnitorDsl.bandpass(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
-    attackCurve: AdsrCurve? = null,
-    decayCurve: AdsrCurve? = null,
-    releaseCurve: AdsrCurve? = null,
+    attackCurve: IgnitorDsl? = null,
+    decayCurve: IgnitorDsl? = null,
+    releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Bandpass {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2517,9 +2559,9 @@ fun IgnitorDsl.bandpass(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
-        attackCurve = attackCurve,
-        decayCurve = decayCurve,
-        releaseCurve = releaseCurve,
+        attackCurve = attackCurve ?: modEnvCurveKnob(),
+        decayCurve = decayCurve ?: modEnvCurveKnob(),
+        releaseCurve = releaseCurve ?: modEnvCurveKnob(),
         humanize = humanize,
     )
 }
@@ -2541,7 +2583,7 @@ fun IgnitorDsl.bandpass(
 ): IgnitorDsl.Bandpass = bandpass(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve, decayCurve, releaseCurve, humanize,
+    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
 )
 
 fun IgnitorDsl.notch(
@@ -2553,9 +2595,9 @@ fun IgnitorDsl.notch(
     decaySec: IgnitorDsl? = null,
     sustainLevel: IgnitorDsl? = null,
     releaseSec: IgnitorDsl? = null,
-    attackCurve: AdsrCurve? = null,
-    decayCurve: AdsrCurve? = null,
-    releaseCurve: AdsrCurve? = null,
+    attackCurve: IgnitorDsl? = null,
+    decayCurve: IgnitorDsl? = null,
+    releaseCurve: IgnitorDsl? = null,
     humanize: Boolean = false,
 ): IgnitorDsl.Notch {
     val envelope = fillFilterEnvelope(env, attackSec, decaySec, sustainLevel, releaseSec)
@@ -2570,9 +2612,9 @@ fun IgnitorDsl.notch(
         decaySec = envelope.decaySec,
         sustainLevel = envelope.sustainLevel,
         releaseSec = envelope.releaseSec,
-        attackCurve = attackCurve,
-        decayCurve = decayCurve,
-        releaseCurve = releaseCurve,
+        attackCurve = attackCurve ?: modEnvCurveKnob(),
+        decayCurve = decayCurve ?: modEnvCurveKnob(),
+        releaseCurve = releaseCurve ?: modEnvCurveKnob(),
         humanize = humanize,
     )
 }
@@ -2594,7 +2636,7 @@ fun IgnitorDsl.notch(
 ): IgnitorDsl.Notch = notch(
     IgnitorDsl.Constant(freq), IgnitorDsl.Constant(q), IgnitorDsl.Constant(analog),
     env.asKnob(), attackSec.asKnob(), decaySec.asKnob(), sustainLevel.asKnob(), releaseSec.asKnob(),
-    attackCurve, decayCurve, releaseCurve, humanize,
+    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), humanize,
 )
 
 /** Pre-amplification: gain without a curve, see [IgnitorDsl.Drive]. */
@@ -2622,13 +2664,60 @@ fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.S
 
 // Envelope
 
-/** Wraps this signal in an ADSR amplitude envelope. */
-fun IgnitorDsl.adsr(attackSec: Double, decaySec: Double, sustainLevel: Double, releaseSec: Double) = IgnitorDsl.Adsr(
-    inner = this,
-    attackSec = IgnitorDsl.Constant(attackSec),
-    decaySec = IgnitorDsl.Constant(decaySec),
-    sustainLevel = IgnitorDsl.Constant(sustainLevel),
-    releaseSec = IgnitorDsl.Constant(releaseSec),
+/**
+ * Wraps this signal in an ADSR amplitude envelope.
+ *
+ * @param attackCurve curve of the attack, as its [AdsrCurves] index knob (a constant or a slot);
+ *   `null` keeps the node's default, [AdsrCurve.Default] (exponential).
+ * @param decayCurve curve of the decay; see [attackCurve].
+ * @param releaseCurve curve of the release; see [attackCurve].
+ * @param declickSeconds the de-click one-pole on the gain, in seconds; `null` keeps the node's
+ *   default, the `declickSeconds` slot (0 = off). See [IgnitorDsl.Adsr.declickSeconds].
+ *
+ * This flat signature is the ENGINE-LEVEL Kotlin door, the filter doors' precedent: `audio_bridge`
+ * cannot see the script builders, so the script door `adsr(a, d, s, r, e => e.curves(...).declick(...))`
+ * collects its builder's knobs and calls THIS function. The builder's `declick` is `declickSeconds`
+ * here, the node's name: the prefix drops inside a builder only (`/dsl-design` section 2). The
+ * envelope's ON/OFF switch is not on either door ([IgnitorDsl.Adsr.on]).
+ */
+fun IgnitorDsl.adsr(
+    attackSec: IgnitorDsl,
+    decaySec: IgnitorDsl,
+    sustainLevel: IgnitorDsl,
+    releaseSec: IgnitorDsl,
+    attackCurve: IgnitorDsl? = null,
+    decayCurve: IgnitorDsl? = null,
+    releaseCurve: IgnitorDsl? = null,
+    declickSeconds: IgnitorDsl? = null,
+): IgnitorDsl.Adsr {
+    val defaults = IgnitorDsl.Adsr(inner = this)
+
+    return defaults.copy(
+        attackSec = attackSec,
+        decaySec = decaySec,
+        sustainLevel = sustainLevel,
+        releaseSec = releaseSec,
+        attackCurve = attackCurve ?: defaults.attackCurve,
+        decayCurve = decayCurve ?: defaults.decayCurve,
+        releaseCurve = releaseCurve ?: defaults.releaseCurve,
+        declickSeconds = declickSeconds ?: defaults.declickSeconds,
+    )
+}
+
+/** Scalar convenience overload of [adsr]: the curves as [AdsrCurve]s, `null` for the default. */
+fun IgnitorDsl.adsr(
+    attackSec: Double,
+    decaySec: Double,
+    sustainLevel: Double,
+    releaseSec: Double,
+    attackCurve: AdsrCurve? = null,
+    decayCurve: AdsrCurve? = null,
+    releaseCurve: AdsrCurve? = null,
+    declickSeconds: Double? = null,
+): IgnitorDsl.Adsr = adsr(
+    IgnitorDsl.Constant(attackSec), IgnitorDsl.Constant(decaySec),
+    IgnitorDsl.Constant(sustainLevel), IgnitorDsl.Constant(releaseSec),
+    attackCurve.asCurveKnob(), decayCurve.asCurveKnob(), releaseCurve.asCurveKnob(), declickSeconds.asKnob(),
 )
 
 // FM

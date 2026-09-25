@@ -7,12 +7,15 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowAny
+import io.kotest.matchers.string.shouldContain
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.band
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.eq
 import io.peekandpoke.klang.audio_bridge.fm
@@ -112,13 +115,13 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         n.decaySec shouldBe IgnitorDsl.Constant(0.1)
         n.sustainLevel shouldBe IgnitorDsl.Constant(0.0)
         n.releaseSec shouldBe IgnitorDsl.Constant(0.0)
-        n.attackCurve shouldBe null
-        n.decayCurve shouldBe null
-        n.releaseCurve shouldBe null
+        n.attackCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
+        n.decayCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
+        n.releaseCurve shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
     }
 
-    "pitchEnvelope: ONE adsr call and adsrCurves == the node fields" {
-        ks("""Osc.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0.2, 0.1).adsrCurves("exp", "square", "cube"))""") shouldBe
+    "pitchEnvelope: ONE adsr call with its curves lambda == the node fields" {
+        ks("""Osc.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0.2, 0.1, e => e.curves("exp", "square", "cube")))""") shouldBe
                 IgnitorDsl.PitchEnvelope(
                     inner = saw,
                     semitones = IgnitorDsl.Constant(24.0),
@@ -126,9 +129,9 @@ class KlangScriptEffectBuilderSpec : StringSpec({
                     decaySec = IgnitorDsl.Constant(0.05),
                     sustainLevel = IgnitorDsl.Constant(0.2),
                     releaseSec = IgnitorDsl.Constant(0.1),
-                    attackCurve = AdsrCurve.Exponential,
-                    decayCurve = AdsrCurve.Square,
-                    releaseCurve = AdsrCurve.Cube,
+                    attackCurve = AdsrCurves.knob(AdsrCurve.Exponential),
+                    decayCurve = AdsrCurves.knob(AdsrCurve.Square),
+                    releaseCurve = AdsrCurves.knob(AdsrCurve.Cube),
                 )
     }
 
@@ -143,19 +146,31 @@ class KlangScriptEffectBuilderSpec : StringSpec({
         shouldThrowAny { ks("Osc.saw().pitchEnvelope(24, 0.001, 0.04)") }
     }
 
-    "pitchEnvelope: in adsrCurves an omitted argument and an unknown name both mean the default" {
-        // The second call names only the decay: it REPLACES the first call, it does not merge.
-        val later = ks("""Osc.saw().pitchEnvelope(12, x => x.adsrCurves("square", "cube", "scurve").adsrCurves(decayCurve = "exp"))""")
-            as IgnitorDsl.PitchEnvelope
-        later.attackCurve shouldBe null
-        later.decayCurve shouldBe AdsrCurve.Exponential
-        later.releaseCurve shouldBe null
+    "pitchEnvelope: in curves an omitted argument and an unknown name both mean the default" {
+        val default = AdsrCurves.knob(MOD_ENV_CURVE)
 
-        val unknown = ks("""Osc.saw().pitchEnvelope(12, x => x.adsrCurves("scurve", "cube", "scurve").adsrCurves("bogus", "cube", "square"))""")
+        // The second call names only the decay: it REPLACES the first call, it does not merge.
+        val later = ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("square", "cube", "scurve").curves(decay = "exp")))""")
             as IgnitorDsl.PitchEnvelope
-        unknown.attackCurve shouldBe null
-        unknown.decayCurve shouldBe AdsrCurve.Cube
-        unknown.releaseCurve shouldBe AdsrCurve.Square
+        later.attackCurve shouldBe default
+        later.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Exponential)
+        later.releaseCurve shouldBe default
+
+        val unknown = ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("bogus", "cube", "square")))""")
+            as IgnitorDsl.PitchEnvelope
+        unknown.attackCurve shouldBe default
+        unknown.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Cube)
+        unknown.releaseCurve shouldBe AdsrCurves.knob(AdsrCurve.Square)
+    }
+
+    "pitchEnvelope: a later adsr call replaces an earlier one completely, curves included" {
+        ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.02, 0.2, 0, 0, e => e.curves("square", "cube", "scurve")).adsr(0.01, 0.1, 0, 0))""") shouldBe
+                IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0))
+    }
+
+    "pitchEnvelope: the 3d(i) builder knob adsrCurves is gone (it moved into the adsr lambda as curves)" {
+        shouldThrowAny { ks("""Osc.saw().pitchEnvelope(12, x => x.adsrCurves("square", "cube", "scurve"))""") }
+            .message shouldContain "has no method 'adsrCurves'"
     }
 
     "fm: the index envelope is ONE adsr call on the builder == the Kotlin door's env fields" {

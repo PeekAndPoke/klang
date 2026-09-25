@@ -180,8 +180,9 @@ references, because `audio_be` is invisible from `audio_bridge`:
 | `Pulze.flankSamples` / `riseFlank` / `fallFlank`       | `PULSE_MIN_FLANK_SAMPLES` / `PULSE_RISE_FLANK` / `PULSE_FALL_FLANK`                                                  | `2.0` / `0.0` / `0.0` |
 | `Slots.chaos` / `color` / `depth` / `tail` / `bipolar` | `CRACKLE_CHAOS_DEFAULT` / `NOISE_TILT_DEFAULT` / `BROWN_LEAK_DEFAULT` / `DUST_TAIL_DEFAULT` / `DUST_BIPOLAR_DEFAULT` |                       |
 
-`Slots.expK` is the **only** one that references its constant (`ADSR_EXP_K`) — it is the model to follow for all the
-others.
+`Slots.expK` was the **only** one that referenced its constant (`ADSR_EXP_K`) and was the model to follow for all the
+others; it was removed 2026-09-25 (phase 3 step 3c, with `expK` itself). The pattern it showed, a slot default that
+names its constant, still stands.
 
 Do this before S1 lands, or at least before Phase 3 flips any defaults: Phase 3 resolves *instance → engine profile →
 field default*, and a field default that is a stale literal poisons the bottom of that cascade silently.

@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.ceil
 import kotlin.random.Random
@@ -304,9 +305,9 @@ class PitchEnvelopeAdsrSpec : StringSpec({
             val dsl = IgnitorDsl.PitchEnvelope(
                 inner = IgnitorDsl.Sine(),
                 semitones = c(e.amount), attackSec = c(e.a), decaySec = c(e.d), sustainLevel = c(e.s), releaseSec = c(e.r),
-                attackCurve = e.ac.takeUnless { it == AdsrCurve.Linear },
-                decayCurve = e.dc.takeUnless { it == AdsrCurve.Linear },
-                releaseCurve = e.rc.takeUnless { it == AdsrCurve.Linear },
+                attackCurve = AdsrCurves.knob(e.ac),
+                decayCurve = AdsrCurves.knob(e.dc),
+                releaseCurve = AdsrCurves.knob(e.rc),
             )
             val viaNode = renderVoice(dsl, sr, gateEnd, blocks = 40)
             val viaOracle = renderVoice(IgnitorDsl.Sine(), sr, gateEnd, blocks = 40) { pos -> adsrLaw(pos, gateEnd, e, sr) }

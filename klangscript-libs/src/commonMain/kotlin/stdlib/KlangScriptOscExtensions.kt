@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.highpass
@@ -50,20 +50,6 @@ internal fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (
     }
 
 /**
- * An `adsrCurves` name as a curve, or `null` when the name is unknown. The chain's door coerces
- * `null` to its default ("exp"); the filter and pitch builders to theirs (`toModEnvCurve`).
- */
-internal fun parseAdsrCurveName(name: String): AdsrCurve? = when (name.trim().lowercase()) {
-    "linear", "lin" -> AdsrCurve.Linear
-    "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
-    "cube", "cb", "cubic" -> AdsrCurve.Cube
-    "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
-    "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
-    "exponential", "exp", "expo" -> AdsrCurve.Exponential
-    else -> null
-}
-
-/**
  * Extension methods on [IgnitorDsl] for KlangScript.
  *
  * Enables chaining: `Osc.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
@@ -81,21 +67,22 @@ object KlangScriptOscExtensions {
      *
      * The door carries the filter's musical inputs, [freq] and [q]; everything else is a knob on
      * the [FilterBuilder] the lambda receives: `passes`, `analog`, `humanize`, and the cutoff
-     * envelope as `env(semitones)` plus ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec)`
-     * call, the chain `adsr`'s pattern, shaped by `adsrCurves`. `env` and `adsr` are a compound
-     * pair: naming either switches the envelope on and the other fills from the constants
-     * (`fillFilterEnvelope`, after the lambda). A curve alone does not switch it on.
+     * envelope as `env(semitones)` plus ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec,
+     * configure)` call, the chain `adsr`'s shape, whose own lambda shapes the stages with `curves`.
+     * `env` and `adsr` are a compound pair: naming either switches the envelope on and the other
+     * fills from the constants (`fillFilterEnvelope`, after the lambda).
      *
      * ```KlangScript
      * Osc.saw().lowpass(800, 1.2, x => x.passes(2).analog(3))
      * Osc.saw().lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))   // a pluck; q stays 0.707
+     * Osc.saw().lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))
      * ```
      *
      * The cutoff-envelope LAW is not the same as sprudel's `lpf(env = ...)` yet: see
      * [IgnitorDsl.Lowpass.env] and decision D3.
      *
      * @param configure receives the [FilterBuilder] (knobs: `passes`, `analog`, `humanize`, `env`,
-     * `adsr`, `adsrCurves`) and returns it.
+     * `adsr`) and returns it.
      */
     @KlangScript.Method
     fun lowpass(
@@ -149,7 +136,7 @@ object KlangScriptOscExtensions {
      * (the saturation is not implemented for this tap).
      *
      * @param configure receives the [BandFilterBuilder] (knobs: `analog`, `humanize`, `env`,
-     * `adsr`, `adsrCurves`) and returns it.
+     * `adsr`) and returns it.
      */
     @KlangScript.Method
     fun bandpass(
@@ -241,7 +228,22 @@ object KlangScriptOscExtensions {
 
     // ── Envelope ─────────────────────────────────────────────────────────────
 
-    /** Applies an ADSR amplitude envelope. All times accept Number or IgnitorDsl. */
+    /**
+     * Applies an ADSR amplitude envelope: attack, decay and release in seconds, the sustain as a
+     * level 0 to 1. All four accept a Number or an IgnitorDsl. The lambda receives an [AdsrBuilder]
+     * whose knobs shape the stages and de-click the gain:
+     *
+     * ```KlangScript
+     * Osc.saw().adsr(0.01, 0.3, 0.5, 0.2)
+     * Osc.saw().adsr(0.005, 1.0, 0.0, 0.03, e => e.curves("linear", "linear", "linear"))
+     * Osc.sine().adsr(0.001, 0.4, 0.0, 0.1, e => e.declick(0.0005))
+     * ```
+     *
+     * Unshaped stages are exponential, every amplitude envelope's default, and every exponential
+     * stage bends at the engine's one curvature.
+     *
+     * @param configure receives the [AdsrBuilder] (knobs: `curves`, `declick`) and returns it.
+     */
     @KlangScript.Method
     fun adsr(
         self: IgnitorDsl,
@@ -249,75 +251,14 @@ object KlangScriptOscExtensions {
         decaySec: IgnitorDslLike,
         sustainLevel: IgnitorDslLike,
         releaseSec: IgnitorDslLike,
-    ): IgnitorDsl = IgnitorDsl.Adsr(
-        inner = self,
-        attackSec = attackSec.toIgnitorDsl(),
-        decaySec = decaySec.toIgnitorDsl(),
-        sustainLevel = sustainLevel.toIgnitorDsl(),
-        releaseSec = releaseSec.toIgnitorDsl(),
-    )
-
-    /**
-     * Sets per-stage ADSR shape curves. Each stage takes `"exp"` (the DEFAULT everywhere —
-     * analog-style curvature, see `expK`), `"linear"` (`lin`), `"square"` (`sq`/`quad`),
-     * `"cube"` (`cb`), `"scurve"` (`s`/`smooth`/`sigmoid`) or `"invsquare"` (`inv`/`concave`).
-     * An unrecognized name coerces to `"exp"`, the same as not setting it.
-     *
-     * ⚠ A PARTIAL call RESETS the omitted stages to `"exp"` (every param defaults to it) —
-     * unlike the sprudel door's `adsrCurves`, whose omitted stages keep their current curve
-     * (per-event control-pattern semantics). Set all three when you mean all three.
-     *
-     * If [self] is already an [IgnitorDsl.Adsr], the curves are set on it via copy.
-     * Otherwise, a new [IgnitorDsl.Adsr] is wrapped around [self] with default times.
-     */
-    @KlangScript.Method
-    fun adsrCurves(
-        self: IgnitorDsl,
-        attackCurve: String = "exp",
-        decayCurve: String = "exp",
-        releaseCurve: String = "exp",
+        configure: ((AdsrBuilder) -> AdsrBuilder)? = null,
     ): IgnitorDsl {
-        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Default
-        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Default
-        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Default
-        return when (self) {
-            is IgnitorDsl.Adsr -> self.copy(
-                attackCurve = a, decayCurve = d, releaseCurve = r,
-            )
+        val k = AdsrBuilder().configuredBy("adsr", configure)
 
-            else -> IgnitorDsl.Adsr(
-                inner = self,
-                attackCurve = a, decayCurve = d, releaseCurve = r,
-            )
-        }
-    }
-
-    /**
-     * De-click the ADSR gain by [seconds] — a one-pole low-pass that rounds the corners at segment
-     * joins (attack→decay peak, gate-off, cutoff), removing the low-note "plop". `0` = off; a gentle
-     * value is ~0.0005–0.001. This per-ignitor envelope is not de-clicked by default.
-     *
-     * If [self] is already an [IgnitorDsl.Adsr], the value is set on it via copy; otherwise a new
-     * [IgnitorDsl.Adsr] is wrapped around [self] with default times.
-     */
-    @KlangScript.Method
-    fun declickSeconds(self: IgnitorDsl, seconds: IgnitorDslLike): IgnitorDsl = when (self) {
-        is IgnitorDsl.Adsr -> self.copy(declickSeconds = seconds.toIgnitorDsl())
-        else -> IgnitorDsl.Adsr(inner = self, declickSeconds = seconds.toIgnitorDsl())
-    }
-
-    /**
-     * Sets the curvature [k] of the ADSR `"exponential"` shape (larger = steeper initial change,
-     * faster decay drop / sharper attack finish). Only affects stages using the exponential curve.
-     * Omit for the engine default (3.0).
-     *
-     * If [self] is already an [IgnitorDsl.Adsr], the value is set on it via copy; otherwise a new
-     * [IgnitorDsl.Adsr] is wrapped around [self] with default times.
-     */
-    @KlangScript.Method
-    fun expK(self: IgnitorDsl, k: IgnitorDslLike): IgnitorDsl = when (self) {
-        is IgnitorDsl.Adsr -> self.copy(expK = k.toIgnitorDsl())
-        else -> IgnitorDsl.Adsr(inner = self, expK = k.toIgnitorDsl())
+        return self.adsr(
+            attackSec.toIgnitorDsl(), decaySec.toIgnitorDsl(), sustainLevel.toIgnitorDsl(), releaseSec.toIgnitorDsl(),
+            k.attackCurve, k.decayCurve, k.releaseCurve, k.declickSeconds,
+        )
     }
 
     // ── Effects ──────────────────────────────────────────────────────────────
@@ -529,10 +470,12 @@ object KlangScriptOscExtensions {
      * Applies a pitch envelope (pitch sweep over time). [semitones] is the shift at the envelope
      * peak; the stages are ONE `adsr` call on the [PitchEnvelopeBuilder], the chain `adsr`'s
      * pattern: `pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0, 0))` sweeps a kick from two octaves
-     * up down to the note. Without the lambda the stages are `adsr(0.01, 0.1, 0, 0)`. The release
-     * returns the pitch to the note from the gate's end and does not extend the voice's life.
+     * up down to the note. That `adsr` takes its own lambda to shape the stages with `curves`
+     * (`x => x.adsr(0.001, 0.05, 0, 0, e => e.curves("lin", "exp", "exp"))`); unshaped stages are
+     * linear. Without the lambda the stages are `adsr(0.01, 0.1, 0, 0)`. The release returns the
+     * pitch to the note from the gate's end and does not extend the voice's life.
      *
-     * @param configure receives the [PitchEnvelopeBuilder] (knobs: `adsr`, `adsrCurves`) and returns it.
+     * @param configure receives the [PitchEnvelopeBuilder] (knob: `adsr`) and returns it.
      */
     @KlangScript.Method
     fun pitchEnvelope(

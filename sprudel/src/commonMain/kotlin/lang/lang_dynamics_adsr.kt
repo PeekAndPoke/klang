@@ -9,6 +9,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -194,15 +195,9 @@ object adsr {
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
-private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.lowercase()) {
-    "linear", "lin" -> AdsrCurve.Linear
-    "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
-    "cube", "cb", "cubic" -> AdsrCurve.Cube
-    "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
-    "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
-    "exponential", "exp", "expo" -> AdsrCurve.Exponential
-    else -> null
-}
+// The curve names have ONE home, `AdsrCurves` in audio_bridge (phase 3 step 3c): the Ignitor doors
+// read the same table, and `AdsrCurvesSpec` pins it against the table this file used to carry.
+private fun parseAdsrCurveName(name: String?): AdsrCurve? = AdsrCurves.curveOf(name)
 
 private val attackCurveMutation = voiceSetter {
     attackCurve = parseAdsrCurveName(it?.toString()) ?: attackCurve

@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
@@ -55,7 +56,7 @@ class ReleaseEndsAtZeroSpec : StringSpec({
         decaySec = IgnitorDsl.Constant(10.0),
         sustainLevel = IgnitorDsl.Constant(1.0),   // hold at 1.0 so release starts from exactly 1.0
         releaseSec = IgnitorDsl.Constant(relSec),
-        releaseCurve = curve,
+        releaseCurve = AdsrCurves.knob(curve),
         declickSeconds = IgnitorDsl.Constant(0.0), // the curve alone, no smoother residual
     )
 

@@ -187,9 +187,11 @@ the bug.
   Ignitor filter doors.** Their envelope has no NAME knob, so ANY of its five knobs names the stage
   and a call that names one writes every companion it left out, `env` included; a call that names
   none is the untouched filter. Since step 3d (2026-09-24) the five knobs are two builder calls,
-  `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES of
-  `adsrCurves` are NOT stage knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does
-  not ask for one, so `adsrCurves` alone leaves the filter untouched. The pitch envelope's builder
+  `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES are NOT stage
+  knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does not ask for one. Since 3c they
+  live only inside the envelope's own builder (`adsr(..., e => e.curves(...))`), so on the script door a
+  curve cannot be written without naming the stage; on the flat Kotlin door a curve alone still leaves
+  the filter untouched. The pitch envelope's builder
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
   node one set of `Param`s once and the per-note decision moves into the build, which has no notion

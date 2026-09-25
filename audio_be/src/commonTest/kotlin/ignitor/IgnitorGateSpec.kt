@@ -14,7 +14,6 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.abs
 import io.peekandpoke.klang.audio_bridge.bandpass
-import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.highpass
@@ -28,25 +27,25 @@ import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.random.Random
 
 /**
- * Which of the ADSR's five knobs survive a NON-FINITE value, and by WHAT.
+ * Which of the ADSR's four time and level knobs survive a NON-FINITE value, and by WHAT.
  *
  * Two different mechanisms, and the difference is the point of the row that uses this:
  *
- *  - `sustainLevel` and `expK` survive BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`.
- *    Without it `coerceIn(0.0, 1.0)` is the identity on a NaN, the level multiplies every sample
- *    and `expK` reaches `adsrExpShape` the same way, so both put NaN into the orbit mix. That
- *    mattered the moment the unity-`mul` fold landed: before it, a `pregain` at 1.0 after an
- *    envelope kept `TimesIgnitor`'s scrub and the voice went silent instead.
+ *  - `sustainLevel` survives BY GUARD, added 2026-09-20 in `AdsrIgnitor`'s `finiteOr`. Without it
+ *    `coerceIn(0.0, 1.0)` is the identity on a NaN and the level multiplies every sample, so it
+ *    puts NaN into the orbit mix. That mattered the moment the unity-`mul` fold landed: before it,
+ *    a `pregain` at 1.0 after an envelope kept `TimesIgnitor`'s scrub and the voice went silent
+ *    instead. (`expK` was the second guarded knob until step 3c removed it.)
  *  - `attackSec`, `decaySec` and `releaseSec` survive BY CONVERSION, and by accident: a time
  *    becomes a frame count through `(seconds * sampleRate).toInt()`, and `Double.toInt()` of a NaN
  *    is 0 on both platforms, so a NaN-timed stage simply has no frames. `declickSeconds` is the
  *    same shape (`> 0.0` fails for a NaN). Nobody should rely on it: `releaseSec` was NOT safe in
  *    its other half, the voice's release TAIL, which is its own row below.
  *
- * So the set is all five, and the row asserts that with the reason attached rather than a number.
+ * So the set is all four, and the row asserts that with the reason attached rather than a number.
  */
 private val NAN_SAFE_ADSR_KNOBS: Set<String> = setOf(
-    "attackSec", "decaySec", "sustainLevel", "releaseSec", "expK",
+    "attackSec", "decaySec", "sustainLevel", "releaseSec",
 )
 
 /**
@@ -424,17 +423,125 @@ class IgnitorGateSpec : StringSpec({
     "an envelope is NOT gated on unset: the classic tail's ADSR is built by default" {
         // Inverted from the plan's sketch, and the spike is why: today the voice strip's VCA runs
         // on EVERY voice with `AdsrDef.defaultSynth` when the pattern sets nothing. What switches
-        // the tail's envelope off is an explicit `adsrOff` slot, a later step's knob.
+        // the tail's envelope off is an explicit `adsrOff`, which `classic()` writes into `on`.
         val unsetAttack = IgnitorDsl.Adsr(inner = saw, attackSec = IgnitorDsl.Constant(SLOT_UNSET))
 
         shapeOf(build(unsetAttack)) shouldNotBe bareShape
         render(unsetAttack).bits() shouldNotBe bare
     }
 
-    "the ungated envelope's knobs under a NaN: all five stay finite, two of them by guard" {
-        // The envelope is NOT gated, so the gate is not what stands between a NaN on one of its
-        // knobs and the DSP. Two knobs needed a guard of their own and now have one; see
-        // NAN_SAFE_ADSR_KNOBS for which survive by what.
+    "the envelope: `on` at exactly 0.0 is not built; unset, any other number and a non-leaf are" {
+        // The envelope row of the off-value table (step 3c). A FLAG, not an amount, so the house flag
+        // rule decides it (`coerceFlag`, sprudel's `isTruthy`: non-zero is on) and a NEGATIVE value is
+        // ON. And unset is ON: the second asymmetry after `mul`, because the classic envelope is built
+        // by default. Each ON value is its own failure mode: -1.0 catches an `<= 0.0` test, the unset
+        // sentinel and +Inf catch the gate's usual "non-finite is off", 0.5 a `< 1.0`.
+        fun env(on: IgnitorDsl) = IgnitorDsl.Adsr(inner = saw, on = on)
+
+        for (off in listOf(0.0, -0.0)) {
+            withClue("on = $off must not be built") {
+                shapeOf(build(env(IgnitorDsl.Constant(off)))) shouldBe bareShape
+                render(env(IgnitorDsl.Constant(off))).bits() shouldBe bare
+            }
+        }
+
+        val builtDefault = render(IgnitorDsl.Adsr(inner = saw)).bits()
+
+        builtDefault shouldNotBe bare
+
+        for (on in listOf(1.0, -1.0, 0.5, SLOT_UNSET, Double.POSITIVE_INFINITY)) {
+            withClue("on = $on must be built, and render the default envelope") {
+                shapeOf(build(env(IgnitorDsl.Constant(on)))) shouldNotBe bareShape
+                render(env(IgnitorDsl.Constant(on))).bits() shouldBe builtDefault
+            }
+        }
+
+        withClue("a non-leaf `on` has no build-time answer, so the envelope is built even where it is 0") {
+            val expression = IgnitorDsl.Constant(4.0).mul(IgnitorDsl.Constant(0.0))
+
+            shapeOf(build(env(expression))) shouldNotBe bareShape
+        }
+    }
+
+    "the envelope's `on` as a SLOT: a pattern writing 0 switches it off, an unwritten one leaves it on" {
+        // The shape `classic()` will place: a Param leaf the bag overrides per note.
+        val instrument = IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Param("adsrOn", 1.0))
+
+        shapeOf(build(instrument, mapOf("adsrOn" to 0.0))) shouldBe bareShape
+        render(instrument, mapOf("adsrOn" to 0.0)).bits() shouldBe bare
+
+        shapeOf(build(instrument, emptyMap())) shouldNotBe bareShape
+        render(instrument, emptyMap()).bits() shouldNotBe bare
+    }
+
+    "an OFF envelope keeps the release tail it would have had, the strip's `adsrOff` lifetime" {
+        // The strip keeps the voice's lifetime when `adsrOff` switches its VCA to a gate, and step
+        // 6's identity depends on the node doing the same: off drops the SAMPLES of the stage, not
+        // the note's length. A leaf release only (see `offEnvelopeTail`).
+        fun env(on: Double, release: IgnitorDsl) =
+            IgnitorDsl.Adsr(inner = saw, releaseSec = release, on = IgnitorDsl.Constant(on))
+
+        env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe 2.0
+        env(0.0, IgnitorDsl.Constant(2.0)).tail() shouldBe env(1.0, IgnitorDsl.Constant(2.0)).tail()
+
+        withClue("a slot release reports its WRITTEN value, as on the ON path") {
+            val slotted = IgnitorDsl.Adsr(
+                inner = saw, releaseSec = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
+            )
+
+            slotted.buildExciter(oscParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
+                .releaseTailSec shouldBe 3.0
+        }
+
+        withClue("a non-finite release reports none, the ON path's rule") {
+            env(0.0, IgnitorDsl.Constant(SLOT_UNSET)).tail() shouldBe null
+        }
+
+        withClue("a NON-LEAF release on an off envelope reports none: asking it would build it") {
+            // The ON path folds this pointwise expression to 2.0; the OFF path builds no knob
+            // subtree and says nothing. Pinned so the difference is a decision, not a surprise.
+            val expression = IgnitorDsl.Constant(1.0).mul(IgnitorDsl.Constant(2.0))
+
+            env(0.0, expression).tail() shouldBe null
+            env(1.0, expression).tail() shouldBe 2.0
+        }
+
+        withClue("and the tail still competes with a sibling's like any other") {
+            IgnitorDsl.Plus(
+                left = IgnitorDsl.Adsr(inner = saw, releaseSec = IgnitorDsl.Constant(0.5)),
+                right = env(0.0, IgnitorDsl.Constant(2.0)),
+            ).tail() shouldBe 2.0
+        }
+    }
+
+    "an OFF envelope builds none of its knob subtrees, so a drawing knob there takes no draws" {
+        // The gate's recorded consequence, applied to the envelope: the stage does not exist, its
+        // knobs with it. A `perlin` in TWO knobs of an off envelope (a stage time, built by the ON
+        // path's `noMod`, and the de-click, built after the curves) stops drawing, and the crackle
+        // after it renders exactly as in a tree that never had the envelope. Two knobs, so a build
+        // of either one alone is red here.
+        val crackle = IgnitorDsl.Crackle()
+
+        fun envelope(attack: IgnitorDsl?, declick: IgnitorDsl?, on: Double) = IgnitorDsl.Plus(
+            left = IgnitorDsl.Adsr(inner = IgnitorDsl.Silence, on = IgnitorDsl.Constant(on)).let {
+                it.copy(attackSec = attack ?: it.attackSec, declickSeconds = declick ?: it.declickSeconds)
+            },
+            right = crackle,
+        )
+        val never = IgnitorDsl.Plus(left = IgnitorDsl.Silence, right = crackle)
+
+        render(envelope(IgnitorDsl.PerlinNoise(), IgnitorDsl.PerlinNoise(), on = 0.0)).bits() shouldBe render(never).bits()
+
+        withClue("engagement: ON, each knob's perlin draws on its own, and the crackle moves") {
+            render(envelope(IgnitorDsl.PerlinNoise(), null, on = 1.0)).bits() shouldNotBe render(never).bits()
+            render(envelope(null, IgnitorDsl.PerlinNoise(), on = 1.0)).bits() shouldNotBe render(never).bits()
+        }
+    }
+
+    "the envelope's knobs under a NaN: all four stay finite, one of them by guard" {
+        // The envelope is gated only by its `on` switch, for which unset means ON, so the gate is
+        // not what stands between a NaN on one of its knobs and the DSP. One knob needed a guard of
+        // its own and has one; see NAN_SAFE_ADSR_KNOBS for which survive by what.
         val unset = IgnitorDsl.Constant(SLOT_UNSET)
 
         val perKnob = mapOf(
@@ -442,14 +549,13 @@ class IgnitorGateSpec : StringSpec({
             "decaySec" to IgnitorDsl.Adsr(inner = saw, decaySec = unset),
             "sustainLevel" to IgnitorDsl.Adsr(inner = saw, sustainLevel = unset),
             "releaseSec" to IgnitorDsl.Adsr(inner = saw, releaseSec = unset),
-            "expK" to IgnitorDsl.Adsr(inner = saw, expK = unset),
         )
 
         val survives = perKnob.filterValues { tree -> render(tree).all { it.isFinite() } }.keys
 
         survives shouldBe NAN_SAFE_ADSR_KNOBS
 
-        // What the two guarded knobs render, so the substitution is pinned to a VALUE and not
+        // What the guarded knob renders, so the substitution is pinned to a VALUE and not
         // merely to "finite": the same thing the knob's own default renders.
         withClue("a non-finite sustainLevel renders what ADSR_SUSTAIN_LEVEL renders") {
             val atDefault = render(
@@ -478,16 +584,9 @@ class IgnitorGateSpec : StringSpec({
             }
         }
 
-        withClue("a non-finite expK renders what ADSR_EXP_K renders") {
-            render(IgnitorDsl.Adsr(inner = saw, expK = unset)).bits() shouldBe
-                    render(IgnitorDsl.Adsr(inner = saw, expK = IgnitorDsl.Constant(ADSR_EXP_K))).bits()
-        }
-
-        withClue("engagement: a DIFFERENT finite value still renders differently, both knobs") {
+        withClue("engagement: a DIFFERENT finite value still renders differently") {
             render(IgnitorDsl.Adsr(inner = saw, sustainLevel = IgnitorDsl.Constant(0.2))).bits() shouldNotBe
                     render(IgnitorDsl.Adsr(inner = saw, sustainLevel = unset)).bits()
-            render(IgnitorDsl.Adsr(inner = saw, expK = IgnitorDsl.Constant(9.0))).bits() shouldNotBe
-                    render(IgnitorDsl.Adsr(inner = saw, expK = unset)).bits()
         }
     }
 

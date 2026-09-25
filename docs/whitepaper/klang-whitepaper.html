@@ -1606,7 +1606,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
 <span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
       .lowpass(Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
                2, x =&gt; x.analog(Osc.slot.analog))
-      .adsr(1.5, 3.0, 0.6, 1.5).adsrCurves(<span class="st">"scurve"</span>, <span class="st">"scurve"</span>, <span class="st">"scurve"</span>)
+      .adsr(1.5, 3.0, 0.6, 1.5, e =&gt; e.curves(<span class="st">"scurve"</span>, <span class="st">"scurve"</span>, <span class="st">"scurve"</span>))
 
 stack(
   <span class="cm">// Melody — mahogany body, doubled an octave up and panned wide</span>

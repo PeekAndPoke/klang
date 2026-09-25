@@ -20,7 +20,8 @@ import io.peekandpoke.klang.audio_bridge.notch
 import kotlin.random.Random
 
 /**
- * `adsrCurves` on the four Ignitor filter nodes (phase 3 step 3d(i)).
+ * The cutoff-envelope curves of the four Ignitor filter nodes (phase 3 step 3d(i); since step 3c
+ * they are index knobs, written by `curves` inside the filter builder's `adsr` lambda).
  *
  * The LAW is pinned against two oracles written out here, never against the code under test:
  *  - [headEnv] is `computeFilterEnvelope` as it was at HEAD `0f1b774f`, which had no curve term:
@@ -34,8 +35,9 @@ import kotlin.random.Random
  *
  * What this spec does NOT guard: the settled rule "a curve named alone does not switch the envelope
  * on" is a decision of the DOOR's compound fill (`fillFilterEnvelope` behind the Kotlin door, which
- * the script builder calls), and `KlangScriptFilterDoorParitySpec` pins it ("adsrCurves alone does
- * NOT switch the envelope on"). Inside the runtime the depth is the only switch (`SvfIgnitor.hasEnv`
+ * the script builder calls), and `KlangScriptFilterDoorParitySpec` pins it on the Kotlin door (the
+ * row "the curves live INSIDE adsr's own lambda since step 3c"; the script door can no longer write
+ * a curve without naming the stage). Inside the runtime the depth is the only switch (`SvfIgnitor.hasEnv`
  * is `depth != 0.0`, and no other code reads a `FilterEnvDef`), so a runtime that let a curve
  * "switch the envelope on" at depth 0 would still render `2^(0 * level) = 1` exactly: that mutant is
  * equivalent by construction, not a gap in this spec.

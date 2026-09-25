@@ -43,17 +43,27 @@ class StdLibOscTest : StringSpec({
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    // ── ADSR knobs: declickSeconds + expK (opt-in, wrap-or-copy onto an Adsr) ─────────
-    "Osc.saw().declickSeconds(0.001) wraps an Adsr with the declickSeconds slot set" {
-        val dsl = evalIgnitorDsl("Osc.saw().declickSeconds(0.001)")
+    // ── The chain adsr's builder (step 3c): curves and declick live in its lambda ──
+    "Osc.saw().adsr(..., e => e.declick(0.001)) sets the declickSeconds knob on the Adsr node" {
+        val dsl = evalIgnitorDsl("Osc.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
         dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
+        dsl.inner shouldBe IgnitorDsl.Sawtooth()
     }
 
-    "Osc.saw().adsr(...).expK(4.0) sets the expK slot on the Adsr node" {
-        val dsl = evalIgnitorDsl("Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).expK(4.0)")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
-        dsl.expK shouldBe IgnitorDsl.Constant(4.0)
+    "the reach-back chain methods adsrCurves, declickSeconds and expK are gone, and fail loudly" {
+        // They modified the preceding adsr, or WRAPPED a second envelope around anything else; the
+        // builder replaced them (maintainer, 2026-09-25). Directly after adsr and anywhere else.
+        for (code in listOf(
+            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).adsrCurves("lin", "lin", "lin")""",
+            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).declickSeconds(0.001)""",
+            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).expK(4.0)""",
+            """Osc.saw().lowpass(800).adsrCurves("lin", "lin", "lin")""",
+            """Osc.saw().declickSeconds(0.001)""",
+        )) {
+            val error = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl(code) }
+            error.message shouldContain "has no method"
+        }
     }
 
     "Osc.sine(5) returns Sine with Constant freq" {

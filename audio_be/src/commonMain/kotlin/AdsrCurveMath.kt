@@ -56,7 +56,7 @@ internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (
 /**
  * THE shape of one ADSR stage at linear progress [x] in 0..1, for every [AdsrCurve]: the chain
  * `adsr`'s implementation (`AdsrIgnitor`), and the one the Ignitor filter and pitch envelopes
- * reuse for their `adsrCurves`. An attack passes `p`; a decay or release passes `omp = 1 - p`,
+ * reuse for their `curves`. An attack passes `p`; a decay or release passes `omp = 1 - p`,
  * which gives the falling shapes. [k] and [norm] are the Exponential curvature and its
  * [adsrExpNorm]; the modulation envelopes pass [ADSR_EXP_K] and [ADSR_EXP_NORM].
  *

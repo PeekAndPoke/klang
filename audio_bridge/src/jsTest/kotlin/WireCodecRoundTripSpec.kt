@@ -258,7 +258,7 @@ class WireCodecRoundTripSpec : StringSpec({
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(freq = IgnitorDsl.Freq),
-                IgnitorDsl.Adsr(inner = IgnitorDsl.SuperSaw(), attackSec = IgnitorDsl.Constant(0.02), attackCurve = AdsrCurve.Exponential),
+                IgnitorDsl.Adsr(inner = IgnitorDsl.SuperSaw(), attackSec = IgnitorDsl.Constant(0.02), attackCurve = AdsrCurves.knob(AdsrCurve.Linear)),
                 IgnitorDsl.Shimmer(inner = IgnitorDsl.Square(), pitches = listOf(0.0, 7.0, 12.0)),
             )
         )

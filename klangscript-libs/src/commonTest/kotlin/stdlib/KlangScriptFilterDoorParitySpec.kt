@@ -6,10 +6,12 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrowAny
+import io.kotest.matchers.string.shouldContain
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
@@ -17,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
@@ -39,7 +42,7 @@ private fun IgnitorDsl.filterFields(): Map<String, Any?> = when (this) {
 private fun fields(
     freq: IgnitorDsl, q: IgnitorDsl, analog: IgnitorDsl, passes: Int, env: IgnitorDsl,
     a: IgnitorDsl, d: IgnitorDsl, s: IgnitorDsl, r: IgnitorDsl,
-    ac: AdsrCurve?, dc: AdsrCurve?, rc: AdsrCurve?, humanize: Boolean,
+    ac: IgnitorDsl, dc: IgnitorDsl, rc: IgnitorDsl, humanize: Boolean,
 ): Map<String, Any?> = linkedMapOf(
     "freq" to freq, "q" to q, "analog" to analog, "passes" to passes, "env" to env,
     "attackSec" to a, "decaySec" to d, "sustainLevel" to s, "releaseSec" to r,
@@ -85,9 +88,9 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         d: IgnitorDsl? = null,
         s: IgnitorDsl? = null,
         r: IgnitorDsl? = null,
-        ac: AdsrCurve? = null,
-        dc: AdsrCurve? = null,
-        rc: AdsrCurve? = null,
+        ac: IgnitorDsl? = null,
+        dc: IgnitorDsl? = null,
+        rc: IgnitorDsl? = null,
         humanize: Boolean = false,
     ): IgnitorDsl = when (door) {
         "lowpass" -> saw.lowpass(freq, q, passes, analog, env, a, d, s, r, ac, dc, rc, humanize)
@@ -115,12 +118,13 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             val s = script(
                 door,
                 """Osc.param("cut", 800), 1.2, x => x$passes.analog(4).humanize(1).env(24)""" +
-                    """.adsr(0.005, 0.3, 0.2, 0.05).adsrCurves("exp", "square", "cube")""",
+                    """.adsr(0.005, 0.3, 0.2, 0.05, e => e.curves("exp", "square", "cube"))""",
             )
             val k = kotlinDoor(
                 door, modulated, c(1.2), passes = 2, analog = c(4.0), env = c(24.0),
                 a = c(0.005), d = c(0.3), s = c(0.2), r = c(0.05),
-                ac = AdsrCurve.Exponential, dc = AdsrCurve.Square, rc = AdsrCurve.Cube, humanize = true,
+                ac = AdsrCurves.knob(AdsrCurve.Exponential), dc = AdsrCurves.knob(AdsrCurve.Square),
+                rc = AdsrCurves.knob(AdsrCurve.Cube), humanize = true,
             )
 
             withClue(door) { s.filterFields() shouldBe k.filterFields() }
@@ -136,10 +140,10 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             withClue("$door bare") { script(door, "800").filterFields() shouldBe k.filterFields() }
             withClue("$door x => x") { script(door, "800, x => x").filterFields() shouldBe k.filterFields() }
             withClue("$door envelope off") { k.envKnobs() shouldBe defaults }
-            withClue("$door no curves") {
-                k.filterFields()["attackCurve"] shouldBe null
-                k.filterFields()["decayCurve"] shouldBe null
-                k.filterFields()["releaseCurve"] shouldBe null
+            withClue("$door unshaped curves: MOD_ENV_CURVE's knob") {
+                k.filterFields()["attackCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
+                k.filterFields()["decayCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
+                k.filterFields()["releaseCurve"] shouldBe AdsrCurves.knob(MOD_ENV_CURVE)
             }
         }
     }
@@ -174,33 +178,52 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         }
     }
 
-    "adsrCurves alone does NOT switch the envelope on: a curve shapes an envelope, it does not ask for one" {
+    "the curves live INSIDE adsr's own lambda since step 3c: the builder knob adsrCurves is gone" {
+        // One `adsr(a, d, s, r, configure)` shape everywhere (maintainer, 2026-09-25). A curve can
+        // therefore only be written by a call that also names the stage, so "a curve alone" no longer
+        // exists on this door; the Kotlin door keeps it (a curve with no stage knob leaves the
+        // envelope off, the rule of section 4 of the dsl-design skill).
         for (door in doors) {
-            val s = script(door, """800, x => x.adsrCurves("exp", "exp", "exp")""")
+            withClue(door) {
+                shouldThrowAny { ks("""Osc.saw().$door(800, x => x.adsrCurves("exp", "exp", "exp"))""") }
+                    .message shouldContain "has no method 'adsrCurves'"
+            }
+        }
 
-            withClue("$door env off") { s.envKnobs()[0] shouldBe c(0.0) }
-            withClue("$door curves set") { s.filterFields()["decayCurve"] shouldBe AdsrCurve.Exponential }
-            withClue("$door kotlin agrees") {
-                kotlinDoor(door, ac = AdsrCurve.Exponential, dc = AdsrCurve.Exponential, rc = AdsrCurve.Exponential)
-                    .filterFields() shouldBe s.filterFields()
+        for (door in doors) {
+            withClue("$door kotlin: a curve alone leaves the envelope off") {
+                kotlinDoor(door, dc = AdsrCurves.knob(AdsrCurve.Exponential)).envKnobs()[0] shouldBe c(0.0)
             }
         }
     }
 
-    "adsrCurves: an omitted argument and an unknown name both mean the default, as on the chain's adsrCurves" {
+    "curves: an omitted argument and an unknown name both mean the default, and an adsr without a lambda is unshaped" {
+        val default = AdsrCurves.knob(MOD_ENV_CURVE)
+
         for (door in doors) {
             // The second call names only the decay: it REPLACES the first call, it does not merge.
-            val later = script(door, """800, x => x.adsrCurves("square", "cube", "scurve").adsrCurves(decayCurve = "exp")""").filterFields()
+            val later = script(
+                door, """800, x => x.adsr(0.01, 0.1, 0.5, 0.1, e => e.curves("square", "cube", "scurve").curves(decay = "exp"))""",
+            ).filterFields()
 
-            withClue("$door omitted attack is the default") { later["attackCurve"] shouldBe null }
-            withClue("$door named stage set") { later["decayCurve"] shouldBe AdsrCurve.Exponential }
-            withClue("$door omitted release is the default") { later["releaseCurve"] shouldBe null }
+            withClue("$door omitted attack is the default") { later["attackCurve"] shouldBe default }
+            withClue("$door named stage set") { later["decayCurve"] shouldBe AdsrCurves.knob(AdsrCurve.Exponential) }
+            withClue("$door omitted release is the default") { later["releaseCurve"] shouldBe default }
 
-            val unknown = script(door, """800, x => x.adsrCurves("scurve", "cube", "scurve").adsrCurves("bogus", "cube", "square")""").filterFields()
+            val unknown = script(door, """800, x => x.adsr(0.01, 0.1, 0.5, 0.1, e => e.curves("bogus", "cube", "square"))""").filterFields()
 
-            withClue("$door unknown name is the default") { unknown["attackCurve"] shouldBe null }
-            withClue("$door known names beside it") { unknown["decayCurve"] shouldBe AdsrCurve.Cube }
-            withClue("$door known names beside it") { unknown["releaseCurve"] shouldBe AdsrCurve.Square }
+            withClue("$door unknown name is the default") { unknown["attackCurve"] shouldBe default }
+            withClue("$door known names beside it") { unknown["decayCurve"] shouldBe AdsrCurves.knob(AdsrCurve.Cube) }
+            withClue("$door known names beside it") { unknown["releaseCurve"] shouldBe AdsrCurves.knob(AdsrCurve.Square) }
+
+            // One adsr call is the whole envelope: a later call without a lambda leaves it unshaped.
+            val replaced = script(
+                door, """800, x => x.adsr(0.01, 0.1, 0.5, 0.1, e => e.curves("square", "cube", "scurve")).adsr(0.02, 0.2, 0.4, 0.2)""",
+            ).filterFields()
+
+            withClue("$door a later adsr replaces the curves") {
+                listOf(replaced["attackCurve"], replaced["decayCurve"], replaced["releaseCurve"]) shouldBe listOf(default, default, default)
+            }
         }
     }
 
@@ -246,7 +269,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
 
         withClue("the scalar overload carries the curves and the fill too") {
             IgnitorDsl.Sawtooth().lowpass(800.0, decaySec = 0.3, releaseCurve = AdsrCurve.Cube).filterFields() shouldBe
-                IgnitorDsl.Sawtooth().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurve.Cube).filterFields()
+                IgnitorDsl.Sawtooth().lowpass(f, decaySec = c(0.3), releaseCurve = AdsrCurves.knob(AdsrCurve.Cube)).filterFields()
         }
     }
 })

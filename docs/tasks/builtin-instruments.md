@@ -147,12 +147,12 @@ defaulted knob is temporary stays flat. A knob that nothing reads is removed, no
 
 | Door | Door parameters | Builder knobs | Notes |
 |---|---|---|---|
-| `lowpass`, `highpass` | `freq, q = 0.707, configure` | `passes`, `analog`, `humanize`, `env(semitones)`, `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `adsrCurves(attack, decay, release)` | the envelope is ONE `adsr` call, the pattern of the chain's own `adsr`; `env` and `adsr` each switch the cutoff envelope on and the other fills from the constants (the compound fill, now at the end of the lambda). The third positional argument becomes the lambda, which ends the `lowpass`/`lpf` positional trap |
+| `lowpass`, `highpass` | `freq, q = 0.707, configure` | `passes`, `analog`, `humanize`, `env(semitones)`, `adsr(attackSec, decaySec, sustainLevel, releaseSec, e => e.curves(attack, decay, release))` (nested since 3c) | the envelope is ONE `adsr` call, the pattern of the chain's own `adsr`; `env` and `adsr` each switch the cutoff envelope on and the other fills from the constants (the compound fill, now at the end of the lambda). The third positional argument becomes the lambda, which ends the `lowpass`/`lpf` positional trap |
 | `bandpass`, `notch` | `freq, q = 0.707, configure` | as above without `passes` | |
 | `drive` | `amount` | none | `driveType` is REMOVED everywhere (door, `IgnitorDsl.Drive`, the wire, `DriveIgnitor`): it had one value and nothing read it. `drive` is boost without shaping; every colour belongs to `shape` |
 | `shape` | `shape = "soft", oversample = 0` | none | flat: `oversample` is the D7 stopgap and leaves with `oversampling-regions.md` |
 | `distort` | `amount, shape = "soft", oversample = 0` | none | flat for the same reason; matches sprudel's `distort` position for position |
-| `pitchEnvelope` | `semitones, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)`, `adsrCurves(attack, decay, release)` | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
+| `pitchEnvelope` | `semitones, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec, e => e.curves(attack, decay, release))` (nested since 3c) | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
 | `tremolo` | `rate, depth, configure` | `shape(name)`, `skew(amount)`, `phase(cycles)` | the three knobs are 3b's additions (they exist on the strip only). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, sync, ...)` differs in order and calls the rate `sync`, recorded for the sprudel side |
 | `shimmer` | `wet, feedback = 0.5, tone = 4000, pitches, configure` | `floor` | the wet rule below; `dryFloor` becomes `floor` |
 | `fm` | `modulator, ratio, depth, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)` | `freq` stays HIDDEN: the walk first put `freq(hz)` on the builder, then the maintainer, shown the recorded decision of 2026-08-30 ("a hidden internal of the pitch machinery; the default IS the semantics"), kept it hidden (2026-09-24). The node always had the index envelope; the Kotlin door exposed it (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `ignitor-dsl-open-items.md` |
@@ -185,7 +185,7 @@ oscillators (already `(freq, configure)`).
 **Consequences recorded with the decisions:**
 - **The default curve of a modulation envelope (filter and pitch) is ONE decision, and it is D3's.** Every
   pitch sweep today is linear on both surfaces and the chain's `adsr` defaults to exp; the filter
-  envelope is linear on the node and exp on the strip. With `adsrCurves` on both builders, D3 becomes
+  envelope is linear on the node and exp on the strip. With `curves` on every envelope (nested inside `adsr` since 3c), D3 becomes
   "which default", not "which law".
 - **The wet rule (maintainer, 2026-09-23): `wet` is the VERY FIRST parameter of every door that has
   one, in all four DSLs, and `floor` lives on the builder.** Consistency over each door's local
@@ -213,7 +213,7 @@ oscillators (already `(freq, configure)`).
   floor() is only on effect builders we can live with the duplication in naming". So `floor` is a knob on
   effect builders (and a named parameter of sprudel's effect doors, which have no builder layer), never a
   door parameter of an Ignitor effect and never a method on `IgnitorDsl`.
-- **Identity while D3 is open.** The new `adsrCurves` knobs on the filter and pitch builders must DEFAULT to
+- **Identity while D3 is open.** The curve knobs on the filter and pitch envelopes (`adsr(..., e => e.curves(...))` since 3c) must DEFAULT to
   the law each envelope has today (linear on both nodes), or every filter sweep and every kick in the songs
   changes in a door-shape step. D3 then decides the default for both at once, at its own ear checkpoint.
 - **Wire changes** (the wire golden is regenerated, never hand-edited): `driveType` removed; `dryFloor`
@@ -241,6 +241,32 @@ oscillators (already `(freq, configure)`).
 - **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
   to a sustain. Raised for the sprudel side, not decided here.
 
+## 3c. Release notes, collected (the one home; append per step)
+
+What a user's own script, outside the repo, experiences from phase 3's door work. No song in the repo is
+affected by any of these (each step proved its corpus bit-identical). Loud means the old form now fails
+with an error; SILENT means it now means something else or nothing.
+
+| Step | Old form | Now | Kind |
+|---|---|---|---|
+| 3d(i) | Ignitor `phaser(0.3, 800)` (rate, center) | wet 0.3, rate 800 Hz | SILENT |
+| 3d(i) | Ignitor `shimmer(0.4)` (feedback) | wet 0.4 | SILENT |
+| 3d(i) | positional `lowpass(800, 1.2, 2)`, `pitchEnvelope(24, 0.001, 0.04)` | the third argument is the builder lambda | loud |
+| 3d(i) | `drive(x, "linear")`, `.dryFloor(...)` | removed / renamed `floor` (effect builders only) | loud |
+| 3d(ii) | Katalyst `k.body("wood")`, `k.vowel("a")` | `k.body(material = "wood")` or `k.body(wet, "wood")` | loud |
+| 3d(ii) | every Katalyst/Master stage lambda (`k.reverb(r => ...)`, `m.limiter(l => l.thresholdDb(...))`) | flat doors, `threshold`/`knee` | loud |
+| 3d(ii) | a compressor-shaped 5-argument `m.limiter(-3, 4, 2, 0.01, 0.2)` | the 5th argument is `lookahead` (bounded to 50 ms latency), not a release; use named arguments | SILENT (a new form, not an old one) |
+| 3d(iii) | sprudel `body("wood")`, `vowel("a")` | the string lands in `wet` as a non-number and writes NOTHING; write `body(material = "wood")` | SILENT |
+| 3d(iii) | sprudel `phaser(0.3)` | wet 0.3 at the default rate | SILENT |
+| 3d(iii) | bare `"<wood glass>".body()` / `"<a e>".vowel()` | reinterprets as wet; the bare call no longer clears | SILENT |
+| 3c | Ignitor `.adsrCurves(...)`, `.declickSeconds(...)`, `.expK(...)` after `adsr` | `adsr(a, d, s, r, e => e.curves(...).declick(...))` | loud |
+| 3c | the same reach-back methods NOT directly after `adsr` (they wrapped a second envelope) | shape the envelope itself: `adsr(a, d, s, r, e => e.curves(...))` | loud |
+| 3c | the 3d(i) filter and pitch builder knob `x.adsrCurves(...)` | `x.adsr(a, d, s, r, e => e.curves(...))` | loud |
+| 3c | sprudel `oscp("expK", k)` on an ignitor with an `adsr` | an unread key; every exp stage bends at 3 | SILENT |
+
+Open for the maintainer: whether the editor should WARN on the silent rows (a string literal in a wet slot is
+the obvious first one).
+
 ## 4. What is missing from the Ignitor DSL (the spike's map)
 
 | Missing | Kind | Who needs it |
@@ -250,7 +276,7 @@ oscillators (already `(freq, configure)`).
 | ~~`oversample` on crush and coarse~~ | MOVED 2026-09-23 to `oversampling-regions.md` | no shipped song: every crush and coarse use pins `oversample = 1` |
 | ~~`skew`, `phase`, `shape` on tremolo~~ | DONE in 3b (2026-09-25) | one law with the strip (`TremoloCore`), `shape` an index slot through `LfoShapes`, skew per block, phase and shape read at build |
 | ~~`shape` on distort, and its existing `oversample` read at voice build~~ | DONE in 3b (2026-09-25) | `shape` an index slot through `DistortionShapes`, `oversample` a build-time knob (the D7 stopgap) on `Shape` and the legacy `Distort` |
-| `adsrOn`/`adsrOff` as a gate slot, and the three curves as slots | 1 gate + 3 index slots | every `.adsrOff()` instrument |
+| ~~`adsrOn`/`adsrOff` as a gate slot, and the three curves as slots~~ | DONE on the node in 3c (2026-09-25) | `Adsr.on` (a node field, off at exactly 0.0, unset is ON) and the three curves as index knobs through `AdsrCurves`; `classic()` fills them from sprudel's slots in step 5 |
 | A sample node kind (or a hand-built head with a `classic()` tail) | node kind | `sound("bd")` and Der Schmetterling's drums |
 
 A string knob becomes a numeric INDEX slot, the way `body.material` already does.
@@ -299,7 +325,7 @@ defect (the Motor stays raw), but it means the rule is "any NEW spine node that 
 non-finite sample from finite input owes a substitution at its own read", not "none can" |
 | onepole | unset, or `<= 0.0` | NOT a fold on an authored tree: `onepole(0)` was a 5 Hz lowpass (the `clampSvfCutoff` floor), which is -33 dB at 110 Hz and -52 dB at 1 kHz, so a tree that used it as an accidental mute gets 30 to 50 dB louder. It is still right: `0` means off on every other door. Note the wart: `lowpass(freq = 0)` is still a 5 Hz filter, because a NUMBER is never off for the four SVFs |
 | the four SVF filters | only when the cutoff is UNSET | a lowpass at 20 kHz is not an off state, which is why the rule is "unset" and not a number. A non-finite AUTHORED cutoff used to build a 1 kHz filter (the `clampSvfCutoff` fallback) and now builds none: a behaviour change as well as a NaN fix |
-| the envelope | NOT gated | inverted from the plan: the strip VCA runs on every voice today, so `classic()`'s ADSR is built BY DEFAULT and switches off only through the `adsrOn`/`adsrOff` slot of step 3. Its unset case was NOT safe, and step 2 had to make it safe: the unity-`mul` fold removed the `TimesIgnitor` scrub that used to turn a NaN into silence, so `sustainLevel` and `expK` now substitute their own defaults (`ADSR_SUSTAIN_LEVEL`, `ADSR_EXP_K`) at the ADSR's read. Not a clamp: every finite value passes through untouched. The substitution runs BEFORE the existing coercion, so the infinities move too: a `+Inf` sustain used to hold at the 1.0 rail and a `-Inf` at 0.0, and both now read as unset and take the default, which is how every other knob reads a non-finite value. A non-finite `releaseSec` also stopped reporting a NaN release TAIL, which used to swallow a SIBLING's real one. What remains step 3c's is the `adsrOff` slot itself |
+| the envelope | `on` at exactly 0.0 (either sign); unset is ON (since 3c) | inverted from the plan: the strip VCA runs on every voice today, so `classic()`'s ADSR is built BY DEFAULT and switches off only through the `adsrOn`/`adsrOff` slot of step 3. Its unset case was NOT safe, and step 2 had to make it safe: the unity-`mul` fold removed the `TimesIgnitor` scrub that used to turn a NaN into silence, so `sustainLevel` now substitutes its own default (`ADSR_SUSTAIN_LEVEL`) at the ADSR's read (`expK` did too until 3c removed it; every exp stage now bends at `ADSR_EXP_K`). SINCE 3c the envelope has its own switch: `Adsr.on` OFF at exactly 0.0 (either sign), unset ON (the second 'unset is not off' after `mul`), any other number and a non-leaf ON. OFF is not built, but it still reports the release tail from a LEAF release (a non-leaf release on an off envelope reports none, to avoid building it), because the strip's `adsrOff` keeps the voice's lifetime. Not a clamp: every finite value passes through untouched. The substitution runs BEFORE the existing coercion, so the infinities move too: a `+Inf` sustain used to hold at the 1.0 rail and a `-Inf` at 0.0, and both now read as unset and take the default, which is how every other knob reads a non-finite value. A non-finite `releaseSec` also stopped reporting a NaN release TAIL, which used to swallow a SIBLING's real one. The `adsrOff` slot itself landed in 3c as `Adsr.on`; `classic()` fills it in step 5 (see section 6's caveats). |
 | the phaser | NOT gated | the plan lists it; no per-voice phaser is in `classic()` and the stage retires with `PipelineDsl`, so the row would be dead code |
 
 **The compound fill does not survive SLOTTING, and step 5 must answer it again (3a review, round 2).**
@@ -350,7 +376,7 @@ filter cutoff becomes an unset-default slot.
 **The gate is also the NaN guardrail.** `SLOT_UNSET` is NaN and the `Param` leaf hands back its
 DEFAULT for a non-finite override, so a slot whose default IS the sentinel resolves to NaN. For a
 gated stage the gate keeps it out of the DSP. For an UNGATED stage with a NaN knob there is no
-second line of defence: the envelope's `sustainLevel` and `expK` are the live examples.
+second line of defence: the envelope's `sustainLevel` is the live example (`expK` was the other until 3c removed it).
 
 ## 6. Two things the factory knows today that only the build can know tomorrow
 
@@ -362,6 +388,13 @@ second line of defence: the envelope's `sustainLevel` and `expK` are the live ex
   hazard reachable from a script (a square tree tremolo at depth 1 on a voice in its release), so 3b
   lands the minimal `BuiltIgnitor.gatesOutput` and the factory's OR into the cull-never decision; step 6
   builds its teardown-fade work on it.
+- **Caveats for steps 5 and 6 from the 3c review (2026-09-25, measured by the audio reviewer):** `classic()`
+  must default the `Adsr.on` slot to 1.0 or `SLOT_UNSET`, never 0.0 (an unwritten 0.0 slot is OFF, the same
+  guidance as the `mul` slots); it must fill `releaseSec` explicitly or give its slot the strip's default
+  0.05 (the node's bare default is 0.3), or an `adsrOff` voice lives longer than on the strip; and the strip
+  VCA must not retire before the teardown fade lands: an OFF node alone ends on a hard cut (modelled at 48 kHz
+  on a 110 Hz tone: a mean last-frame step of 0.64 of peak on a sine, where the strip's 4 ms fade takes about
+  36 dB off the energy above 2 kHz).
 - **The teardown fade.** `EnvelopeRenderer.renderGate` is the `adsrOff()` path: a unity gate with a
   linear fade to exact zero over the last frames, which exists because an instrument's own envelope
   sits BEFORE its amp stages. Phase 3 removes the only stage that guarantees an amplitude ramp at the
@@ -435,7 +468,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 |---|---|---|---|
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
-| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; 3a filters DONE, 3b waveshapers DONE 2026-09-25 (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
+| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; 3a filters DONE; 3b waveshapers DONE 2026-09-25 (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse); 3c envelopes DONE 2026-09-25 (one nested `adsr` shape, `expK` removed, curves as index knobs, the `on` switch). The filter build's rng draw order must reproduce the factory's exactly |
 | 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) DONE 2026-09-24, the Katalyst and Master doors, the limiter renames; (iii) DONE 2026-09-24, sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
