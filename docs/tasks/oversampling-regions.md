@@ -77,6 +77,12 @@ more than one place per effect, the factoring is not done.
 - The ADSR curve law (`when (curve)` over the `AdsrCurve` kinds) was inlined three times in `AdsrIgnitor`
   and three more times on the strip. Phase 3 step 3d(i) extracted the Ignitor's into `AdsrCurveMath.kt`
   and shares it with the filter and pitch envelopes; the strip's three copies remain (found 2026-09-24).
+- **The distort's soft cap, deferred here by the maintainer (D2, 2026-09-25).** Phase 3 kept two laws: the
+  strip's (and `classic()`'s fused `Distort` node) has no cap and drives inside the oversampler; the Ignitor
+  `Shape(Drive(...))` path caps every sample above 0.95 and drives before it. When this task builds the one
+  distort core, it picks ONE law, and that choice changes either the strip-distort songs (Tetris,
+  TetrisRemix, IrishLamentTechno, the frozen songs) or the Ignitor-distort songs (DerSchmetterling's guitars,
+  Sandsturm, ATruthWorthLyingFor): a listening checkpoint.
 - The two coarse classes document a deliberate difference in their bypass thresholds (`CoarseRenderer`'s
   KDoc) that exists only because they are two classes.
 

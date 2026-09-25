@@ -41,12 +41,22 @@ section 4.
 
 The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6, 7 and 10 do. D7 is decided.
 
-- **D1, the crush.** The strip's quantizer floors (an asymmetric quantizer with a DC bias, and its
+- **D1, the crush. DECIDED 2026-09-25 (maintainer): FLOOR everywhere**, the strip's law ported into the Ignitor
+  node in step 4. No song changes (no song crushes at the Ignitor level; StrangerThings, its frozen copy and
+  ATruthWorthLyingFor crush through the strip); a user's own Ignitor `.crush()` outside the repo changes
+  slightly (release notes). The question as it was raised: the strip's quantizer floors (an asymmetric quantizer with a DC bias, and its
   KDoc claims the asymmetry IS the classic audible character); the ignitor's rounds (symmetric, no
   DC bias, its KDoc defends that too). Up to 0.125 apart at amount 4. Port `floor` into the ignitor
   (identity for the songs, changes every authored `.crush()` in an ignitor), keep `round` (changes
   the songs that crush), or make it a shape knob.
-- **D2, the distort.** `ShapeIgnitor` applies `softCap` per sample, `DistortionRenderer` does not,
+- **D2, the distort. DECIDED 2026-09-25 (maintainer): option A, KEEP BOTH LAWS.** `classic()`'s distort is the
+  fused `IgnitorDsl.Distort` node running the STRIP's exact law (no soft cap, the drive inside the
+  oversampler, ideally the same loop `DistortionRenderer` runs rather than a copy), so no song changes; the
+  Ignitor `distort`/`shape` doors keep today's capped `Shape(Drive(...))` law, so no song changes there
+  either. Chosen as the least effort because `oversampling-regions.md` phase 0 rebuilds the distort around
+  one core anyway and answers the cap question there, once. The second divergence (drive before vs inside
+  the oversampler) is inaudible (linear interpolation commutes with the multiply; only the last bits
+  differ) and matters only for bit-identity. The question as it was raised: `ShapeIgnitor` applies `softCap` per sample, `DistortionRenderer` does not,
   because the strip has its own downstream bounding stages. Drop the cap on the classic tail
   (identity, but a heavy-drive branch can then dominate a mix, which is what the cap exists for), or
   keep it and accept the change on every distorted voice.
@@ -263,6 +273,7 @@ with an error; SILENT means it now means something else or nothing.
 | 3c | the same reach-back methods NOT directly after `adsr` (they wrapped a second envelope) | shape the envelope itself: `adsr(a, d, s, r, e => e.curves(...))` | loud |
 | 3c | the 3d(i) filter and pitch builder knob `x.adsrCurves(...)` | `x.adsr(a, d, s, r, e => e.curves(...))` | loud |
 | 3c | sprudel `oscp("expK", k)` on an ignitor with an `adsr` | an unread key; every exp stage bends at 3 | SILENT |
+| 4 (D1) | a user's Ignitor `.crush(n)` | quantizes with the strip's FLOOR instead of round (up to 0.125 apart at amount 4, a small DC bias) | SILENT |
 
 Open for the maintainer: whether the editor should WARN on the silent rows (a string literal in a wet slot is
 the obvious first one).
@@ -397,6 +408,11 @@ second line of defence: the envelope's `sustainLevel` is the live example (`expK
   VCA must not retire before the teardown fade lands: an OFF node alone ends on a hard cut (modelled at 48 kHz
   on a 110 Hz tone: a mean last-frame step of 0.64 of peak on a sine, where the strip's 4 ms fade takes about
   36 dB off the energy above 2 kHz).
+- **The exciter's `onepole` wrap moves (found in step 5's plan, 2026-09-25).** `IgnitorRegistry.createExciter`
+  wraps every instrument in `onepole`, so today it runs BEFORE the strip's crush. Once a built-in is a
+  `classic()` tree, that wrap would sit AFTER the ADSR: StrangerThings (`pulse.onepole(3743).crush(5)`) and
+  IrishLamentTechno (`distort(...).onepole(...)`) would change. Step 6 must put the wrap where the strip had it
+  (on the source, before `classic()`'s stages), and its corpus render proves it.
 - **The teardown fade.** `EnvelopeRenderer.renderGate` is the `adsrOff()` path: a unity gate with a
   linear fade to exact zero over the last frames, which exists because an instrument's own envelope
   sits BEFORE its amp stages. Phase 3 removes the only stage that guarantees an amplitude ramp at the
