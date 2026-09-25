@@ -264,11 +264,11 @@ private fun passesLadderRel(k: Int, n: Int): Double =
  * node type added later.
  */
 private fun expandPasses(
-    passes: Int,
+    passes: IgnitorDsl.Constant,
     q: IgnitorDsl,
     build: (stageQ: IgnitorDsl) -> IgnitorDsl.EqSection,
 ): List<IgnitorDsl.EqSection> {
-    val n = coercePasses(passes)
+    val n = coercePasses(passes.value)
     if (n == 1) {
         return listOf(build(q))
     }
@@ -325,12 +325,16 @@ private fun expandPasses(
  * decision is made once, at registration. `humanize` is structural, so a plain `!humanize`
  * answers it.
  *
- * **That refusal is CONSERVATIVE, and phase 3 step 5 will feel it.** Once a built-in carries an
- * `lpenv` slot, its filters stop fusing whether or not any note ever writes the slot, because the
+ * **That refusal is CONSERVATIVE.** A filter carrying an `env` slot (`classic()`'s `lpf.env`)
+ * never fuses, whether or not any note ever writes the slot, because the
  * decision is made at registration and a `Param` could be written per note. The alternative is
  * deciding per note-on, which is the BUILD, not the optimizer, and which would mean carrying both
  * a fused and an unfused tree. What it costs is the Eq fusion on the classic tail, which is real
  * but is not correctness; measure it before trading the simple rule away.
+ *
+ * Refuses a filter whose `passes` is not a `Constant` (phase 3 step 5 made it a knob): the
+ * section count is decided here, once, and a slot could change it per note. A `Constant` count
+ * expands through `coercePasses`, the same rounding and bounds the runtime reads it with.
  *
  * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
@@ -340,19 +344,25 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     // the SAME commit the field landed — there is never a window where a passes-2 filter
     // fuses as one section and silently loses 12 dB/oct. A Constant q folds per stage; a
     // modulated q gets a Times wrapper so every stage keeps sweeping coherently.
-    is IgnitorDsl.Lowpass ->
-        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
-        } else {
-            null
-        }
+    is IgnitorDsl.Lowpass -> {
+        val count = passes
 
-    is IgnitorDsl.Highpass ->
-        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
         } else {
             null
         }
+    }
+
+    is IgnitorDsl.Highpass -> {
+        val count = passes
+
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
+        } else {
+            null
+        }
+    }
 
     is IgnitorDsl.Bandpass ->
         if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {

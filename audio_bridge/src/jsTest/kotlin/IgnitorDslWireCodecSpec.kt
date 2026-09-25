@@ -168,6 +168,20 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
     "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(2000.0, 1.2, passes = 3)) }
+    "Lowpass with a slotted passes (a knob since phase 3 step 5)" {
+        check(IgnitorDsl.Lowpass(IgnitorDsl.Square(), passes = IgnitorDsl.Param("lpf.passes", 2.0)))
+    }
+
+    // An inline `sound(Osc.saw().classic())` crosses the wire; its filter slots default to SLOT_UNSET,
+    // so this is the same NaN-through-the-codec question the Katalyst's classic chain answers.
+    "classic(): the whole slotted tail round-trips, its unset defaults included, and keeps its name" {
+        val tail = IgnitorDsl.Sawtooth().classic()
+        val decoded = roundTrip(tail)
+
+        decoded shouldBe tail
+        decoded.uniqueId() shouldBe tail.uniqueId()
+        decoded.getParamSlots().first { it.name == "lpf.freq" }.default.isFinite() shouldBe false
+    }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }

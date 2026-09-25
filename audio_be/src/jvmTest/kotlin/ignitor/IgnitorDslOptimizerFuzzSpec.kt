@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
@@ -145,7 +146,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             11 -> IgnitorDsl.Highpass(inner, freq = IgnitorDsl.Constant(50.0 + r.nextDouble() * 2000.0))
             12 -> IgnitorDsl.Bandpass(inner, freq = IgnitorDsl.Constant(200.0 + r.nextDouble() * 4000.0))
             13 -> IgnitorDsl.Notch(inner, freq = IgnitorDsl.Constant(200.0 + r.nextDouble() * 4000.0))
-            14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = 1 + r.nextInt(3))
+            14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = IgnitorDsl.Constant((1 + r.nextInt(3)).toDouble()))
             15 -> IgnitorDsl.Drive(inner, amount = IgnitorDsl.Constant(r.nextDouble()))
             16 -> inner.shape(listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)])
             17 -> IgnitorDsl.Adsr(inner, attackSec = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.2))
@@ -275,8 +276,8 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                         is IgnitorDsl.Eq -> node.sections.size
                         // a filter with passes = N renders N cascaded stages, which the pass
                         // expands into N sections: the same work before and after
-                        is IgnitorDsl.Lowpass -> node.passes.coerceAtLeast(1)
-                        is IgnitorDsl.Highpass -> node.passes.coerceAtLeast(1)
+                        is IgnitorDsl.Lowpass -> coercePasses((node.passes as IgnitorDsl.Constant).value)
+                        is IgnitorDsl.Highpass -> coercePasses((node.passes as IgnitorDsl.Constant).value)
                         else -> 1
                     }
 

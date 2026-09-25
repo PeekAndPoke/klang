@@ -5,6 +5,11 @@
 
 package io.peekandpoke.klang.audio_bridge
 
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
+
 
 /**
  * Per-stage envelope shape applied to attack / decay / release.
@@ -109,12 +114,16 @@ sealed interface AdsrDef {
         companion object {
             val empty = Std()
 
-            /** Standard Synth defaults (Organ-like) */
+            /**
+             * Standard Synth defaults (Organ-like): the voice envelope every voice gets when the
+             * pattern writes nothing. The numbers live in `constants/EnvelopeDefaults.kt`, the one
+             * home `classic()`'s envelope slots read as well.
+             */
             val defaultSynth = Std(
-                attack = 0.01,
-                decay = 0.1,
-                sustain = 1.0,
-                release = 0.05,
+                attack = VOICE_ADSR_ATTACK_SEC,
+                decay = VOICE_ADSR_DECAY_SEC,
+                sustain = VOICE_ADSR_SUSTAIN_LEVEL,
+                release = VOICE_ADSR_RELEASE_SEC,
                 attackCurve = AdsrCurve.Default,
                 decayCurve = AdsrCurve.Default,
                 releaseCurve = AdsrCurve.Default,

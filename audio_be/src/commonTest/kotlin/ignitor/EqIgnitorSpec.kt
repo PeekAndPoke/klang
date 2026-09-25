@@ -715,7 +715,7 @@ class EqIgnitorSpec : StringSpec({
                 inner = IgnitorDsl.Sawtooth(),
                 freq = IgnitorDsl.Constant(1200.0),
                 q = IgnitorDsl.Param("res", 1.2),
-                passes = 3,
+                passes = IgnitorDsl.Constant(3.0),
             ).optimize().toExciter()
         )
 

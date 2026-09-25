@@ -37,13 +37,16 @@ class GraphCensusSpec : StringSpec({
             it.traffic shouldBe 3
             it.bytes shouldBe 64 + 48
         }
-        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = 3)).let {
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = c(3.0))).let {
             it.passes shouldBe 4
             it.traffic shouldBe 7
             it.bytes shouldBe 64 + 3 * 48
         }
         // the engine clamps a cascade at FILTER_MAX_PASSES (16), so does the count
-        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = 64)).passes shouldBe 1 + 16
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = c(64.0))).passes shouldBe 1 + 16
+        // a slotted count (phase 3 step 5) is read through the voice's params, as the runtime reads it
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = IgnitorDsl.Param("p", 1.0)), params = mapOf("p" to 3.0))
+            .passes shouldBe 4
     }
 
     "scalar-only arithmetic is one value per block: no pass, no traffic" {

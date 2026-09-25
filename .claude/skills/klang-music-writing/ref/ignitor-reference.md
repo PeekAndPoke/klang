@@ -482,6 +482,43 @@ Osc.sine(Osc.freq())  // equivalent to above
 Osc.sine(5)  // fixed 5 Hz (for LFO use)
 ```
 
+### `.classic()`: the pattern's voice doors on your instrument
+
+`.classic()` wraps a sound in the classic synth voice: crush, coarse, distort, highpass, bandpass,
+notch, lowpass, tremolo and the amplitude envelope, in that order. Every stage is a slot the pattern's
+doors fill, and a stage the note does not write is not built, so an untouched `.classic()` costs one
+envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
+
+```javascript
+let guitar = Osc.saw().distort(0.4, "tube").classic()
+// .adsrOff(): until step 6 the old voice strip still puts its own envelope on EVERY voice, after the
+// instrument; without it the two envelopes multiply (the strip's release follows the instrument's tail,
+// so nothing is cut, but the attack and the release are applied twice).
+note("c3 e3 g3").sound(guitar).adsrOff().oscp("lpf.freq", 1800).oscp("adsr.release", 0.2)
+```
+
+The slots it places are grouped per stage on `OscSlot` (also `Osc.slot`), named after the sprudel
+readers: `OscSlot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
+same on `hpf`; `bpf` and `notch` without `passes`), `OscSlot.crush.amount`, `OscSlot.coarse.amount`,
+`OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape|skew|phase`,
+`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.adsrCurves.attack|decay|release`.
+
+Want another order? Write your own tail from the same slots, as far as a door takes them:
+`Osc.saw().highpass(OscSlot.hpf.freq, OscSlot.hpf.q).crush(OscSlot.crush.amount).lowpass(OscSlot.lpf.freq)`.
+The doors take a slot for every filter's `freq`, `q`, `env` and envelope stages, for `crush`, `coarse`,
+the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.classic()` can place:
+- `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;
+- `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
+- `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
+  output, while `.classic()` uses the one distort node that switches drive AND shape off together (and
+  gets the voice strip's exact law in a later step). A slot on the door's distort would shape every
+  note, written or not.
+
+**Transitional (phase 3, until the built-ins move in step 6):** the pattern doors (`.lpf(...)`,
+`.adsr(...)`, `.crush(...)`) still write the old voice strip, which runs AFTER every instrument, not
+these slots; reach a slot with `.oscp("lpf.freq", 1800)`. The strip's own envelope also still runs
+on every voice, so a `.classic()` instrument is enveloped twice unless the pattern says `.adsrOff()`.
+
 ### Audio-rate Modulation
 
 Any parameter can accept an Osc node instead of a number:

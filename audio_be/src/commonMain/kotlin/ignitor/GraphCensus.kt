@@ -286,8 +286,19 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return if (drive) shape + inPlace() else shape
         }
 
-        private fun filter(passes: Int): GraphCensus {
-            val n = coercePasses(passes)
+        /**
+         * A filter's `passes` knob as the count the runtime reads at voice build: a `Constant` or `Param`
+         * leaf through [coercePasses]; anything else is one pass, the runtime's leaf-only answer. A
+         * non-finite override reads as unset and takes the slot's default, as the `Param` leaf does.
+         */
+        private fun passesOf(knob: IgnitorDsl): Int = when (knob) {
+            is IgnitorDsl.Constant -> coercePasses(knob.value)
+            is IgnitorDsl.Param -> coercePasses(params[knob.name]?.takeIf { it.isFinite() } ?: knob.default)
+            else -> 1
+        }
+
+        private fun filter(passes: IgnitorDsl): GraphCensus {
+            val n = passesOf(passes)
 
             return GraphCensus(n, 2 * n, SECTION_BYTES * n)
         }

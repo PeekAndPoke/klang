@@ -109,6 +109,10 @@ oscillator for authoring; the built-in sound behind `sound("saw")` is an instrum
 the Ignitor DSL, registered once, whose stages are today's voice pipeline in today's order, every
 stage gated on its slot:
 
+(SUPERSEDED as a sketch: the built function is `IgnitorDsl.classic()` in `audio_bridge/.../IgnitorDslClassic.kt`,
+phase 3 step 5, with slots named `<door>.<param>` (`OscSlot.lpf.freq`, `OscSlot.adsr.attack`, ...); the flat
+names below were retired before they shipped.)
+
 ```
 let classic = x => x
   .mul(OscSlot.pregain)
@@ -169,7 +173,8 @@ Osc.register("supersaw", Osc.supersaw().classic())
   before the drive writes an instrument, inline or registered, and the same doors fill the same
   slot names on it. `sound(myGuitar).lpf(100)` on a guitar without an `lpf` slot does nothing.
 - `PipelineDsl`, the filter pipeline builder, `Cmd.RegisterPipeline`, `PipelineRegistry` and the
-  `pedal` preset retire. (The preset is NOT unused: `DialogueWithTheStars` calls
+  `pedal` preset retire. (The preset is NOT unused: three corpus songs use it, DialogueWithTheStars,
+  FrozenDerSchmetterling and TetrisRemix, see `builtin-instruments.md` D4; `DialogueWithTheStars` calls
   `.pipeline("pedal")`, and a VCA-first tail has no `classic()` spelling. Decision D4 of
   `../tasks/builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
   writes the frequency modulation buffer as today and is untouched by this plan, **so its wire

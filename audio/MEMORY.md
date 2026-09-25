@@ -1,5 +1,53 @@
 # Klang Audio — Memory
 
+## `classic()`: the voice strip as a slotted tail, and the filter envelope's slot-layer fill (2026-09-25)
+
+Phase 3 step 5 (`docs/tasks/builtin-instruments.md` section 9), identity-preserving: no built-in is
+re-registered (that is step 6), so no song can change.
+
+- **One function, one order.** `IgnitorDsl.classic()` (`audio_bridge/IgnitorDslClassic.kt`) wraps a
+  source in crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr; the script `x.classic()` calls
+  it. No arguments. It does NOT contain `pregain` (an instrument places it) or `onepole` (the registry
+  hangs it on every instrument, which today is BEFORE the strip; step 6 must re-place it for the
+  built-ins or StrangerThings and IrishLamentTechno move).
+- **Slot names are sprudel's readers, `<door>.<param>`** (`lpf.freq`, `adsr.attack`, `tremolo.sync`,
+  `adsrCurves.attack`, plus `adsr.on`), grouped in `IgnitorDsl.Slots` and exposed as `OscSlot.lpf.freq`.
+  The plan's flat sketch (`lpf`, `lpenv`, `lpattack`) was wrong: `decay` is already pluck's slot and
+  songs' instruments read `attack` / `sustain` / `release`.
+- **Every default is the strip's UNTOUCHED value**, from the constant the strip reads, which is not the
+  node's default: tremolo rate 0 (node 5), ADSR sustain 1.0 and release 0.05 (node 0.7 and 0.3; the four
+  voice-envelope numbers now live in `VOICE_ADSR_*` and `AdsrDef.Std.defaultSynth` reads them), filter
+  cutoffs and depths UNSET, crush / coarse / distort / tremolo depth 0, `adsr.on` 1.0. The de-click is
+  `Constant(ENV_DECLICK_SECONDS)`, not a slot: no door writes the strip's de-click per note, and a slot
+  named `declickSeconds` with the strip's default would collide with the node's own slot.
+- **Distort is the fused `IgnitorDsl.Distort` node** (D2 decided, option A: step 4 gives it the strip's
+  law). `Shape(Drive(...))` would put the shaper on every voice, since `Shape` cannot be gated.
+- **The filter envelope's slot-layer fill** (`slotLayerDepth` in `IgnitorDslRuntime`): an UNSET depth
+  slot (a `Param` whose DEFAULT is non-finite, as `classic()` places it) that the bag did not write takes
+  `FILTER_ENV_DEPTH_SEMITONES` when any of the four stage knobs is a `Param` with a FINITE value in the
+  bag. A written depth stands (an explicit 0 included), an AUTHORED depth default stands (0 included:
+  the first cut filled `Osc.param("e", 0)`, round 1 of the review caught it), a `Constant` depth is
+  never a question, an authored stage default alone is not written, a non-finite bag value is unset. The brief first said "any of the five", which would have turned `lpf(env = 0)` plus a
+  stage into a 7-semitone sweep; the strip's `depth ?: 7` and `/dsl-design` section 4 say otherwise.
+- **`passes` is a knob** (`Lowpass`/`Highpass.passes: IgnitorDsl`, it was an `Int`), read once at
+  build, leaf-only, through `coercePasses`, which ROUNDS (as the strip always has for sprudel's value)
+  and since this step reads a non-finite value as one pass (`+Infinity` used to saturate to 16 on the
+  strip). The optimizer fuses only a `Constant` count. The Kotlin flat doors keep an `Int` parameter.
+- **Against the strip, measured** (`ClassicStripParitySpec`, 44 rows, one voice each through the real
+  `VoiceFactory`, the classic voice on an EMPTY pipeline): bit-identical for the untouched voice, coarse,
+  every static filter (passes and all four together included), tremolo at every shape/skew/phase, the
+  ADSR at whole frame counts, its curves, analog on the oscillator alone, and a combination. Divergent,
+  each named for its decision: crush (D1, up to 0.707 at amount 1), distort (D2, the soft cap, up to 0.69
+  on `gentle`; `tube`/`rectify` at 0.5 only 1.4e-7), every filter envelope (D3), analog with a filter
+  (the drift sampling, 7e-6 on one filter; the section 8 draw order with two, 4.8e-4), fractional ADSR
+  frame counts (2e-3), a slot release shorter than 0.05 (the factory's lifetime floor keeps the classic
+  voice's de-click tail rendering after the strip voice is cut: step 6), and adsrOff (the strip's 4 ms
+  teardown fade, exactly the last 192 frames: step 6).
+- **A lone filter is FUSED into an `Eq` by the optimizer and never reaches `filterEnvDef`**, so the
+  corpus exercises the fill only through UNFUSED filters, the ones with a non-literal `analog`. The
+  engagement control (fill always taking 7) moved exactly the four songs predicted from that:
+  ATruthWorthLyingFor, DerSchmetterling, FrozenPieceDerSchmetterling, Sakura.
+
 ## The envelopes: one adsr shape, curve index knobs, an on switch, one exp bend (2026-09-25)
 
 Phase 3 step 3c (`docs/tasks/builtin-instruments.md` section 3b, the envelope sub-table), identity-preserving.

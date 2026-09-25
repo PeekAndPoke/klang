@@ -63,13 +63,13 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.Frac -> listOf(inner)
         is IgnitorDsl.Freq -> emptyList()
         is IgnitorDsl.Highpass -> listOf(
-            inner, freq, q, analog, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.Impulse -> listOf(freq, analog)
         is IgnitorDsl.Lerp -> listOf(left, right, t)
         is IgnitorDsl.Log -> listOf(inner)
         is IgnitorDsl.Lowpass -> listOf(
-            inner, freq, q, analog, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
+            inner, freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve,
         )
         is IgnitorDsl.Max -> listOf(left, right)
         is IgnitorDsl.Min -> listOf(left, right)
@@ -215,17 +215,17 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.Frac -> copy(inner = new[0])
         is IgnitorDsl.Freq -> this
         is IgnitorDsl.Highpass -> copy(
-            inner = new[0], freq = new[1], q = new[2], analog = new[3],
-            env = new[4], attackSec = new[5], decaySec = new[6], sustainLevel = new[7], releaseSec = new[8],
-            attackCurve = new[9], decayCurve = new[10], releaseCurve = new[11],
+            inner = new[0], freq = new[1], q = new[2], analog = new[3], passes = new[4],
+            env = new[5], attackSec = new[6], decaySec = new[7], sustainLevel = new[8], releaseSec = new[9],
+            attackCurve = new[10], decayCurve = new[11], releaseCurve = new[12],
         )
         is IgnitorDsl.Impulse -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Lerp -> copy(left = new[0], right = new[1], t = new[2])
         is IgnitorDsl.Log -> copy(inner = new[0])
         is IgnitorDsl.Lowpass -> copy(
-            inner = new[0], freq = new[1], q = new[2], analog = new[3],
-            env = new[4], attackSec = new[5], decaySec = new[6], sustainLevel = new[7], releaseSec = new[8],
-            attackCurve = new[9], decayCurve = new[10], releaseCurve = new[11],
+            inner = new[0], freq = new[1], q = new[2], analog = new[3], passes = new[4],
+            env = new[5], attackSec = new[6], decaySec = new[7], sustainLevel = new[8], releaseSec = new[9],
+            attackCurve = new[10], decayCurve = new[11], releaseCurve = new[12],
         )
         is IgnitorDsl.Max -> copy(left = new[0], right = new[1])
         is IgnitorDsl.Min -> copy(left = new[0], right = new[1])

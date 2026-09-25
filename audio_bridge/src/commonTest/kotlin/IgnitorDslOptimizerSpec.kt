@@ -56,7 +56,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
             inner = IgnitorDsl.Sine(),
             freq = IgnitorDsl.Constant(2000.0),
             q = lfoQ,
-            passes = 2,
+            passes = IgnitorDsl.Constant(2.0),
         )
         val eq = node.optimize().shouldBeInstanceOf<IgnitorDsl.Eq>()
         eq.sections.size shouldBe 2

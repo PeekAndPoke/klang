@@ -228,6 +228,42 @@ sealed interface IgnitorDsl {
         val stiffness: IgnitorDsl = Param(name = "stiffness", default = 0.0)
         val tail: IgnitorDsl = Param(name = "tail", default = 1.0)
         val voices: IgnitorDsl = Param(name = "voices", default = 8.0)
+
+        // ── The slots of the classic tail (phase 3 step 5), one group per stage ──
+        //
+        // `classic()` places them; an author writing a tail of their own places the same ones, and
+        // the same doors fill them. Named `<door>.<param>` after sprudel's readers (`lpf.freq`); each
+        // group's KDoc in `IgnitorDslClassic.kt` names the defaults and why.
+
+        /** The crush stage: `crush.amount`. */
+        val crush: AmountSlots = AmountSlots("crush")
+
+        /** The coarse stage: `coarse.amount`. */
+        val coarse: AmountSlots = AmountSlots("coarse")
+
+        /** The distort stage: `distort.amount`, `distort.shape`, `distort.oversample`. */
+        val distort: DistortSlots = DistortSlots()
+
+        /** The highpass stage: `hpf.freq`, `hpf.q`, `hpf.passes`, `hpf.env` and its four stages. */
+        val hpf: PassFilterSlots = PassFilterSlots("hpf")
+
+        /** The bandpass stage: `bpf.freq`, `bpf.q`, `bpf.env` and its four stages. */
+        val bpf: BandFilterSlots = BandFilterSlots("bpf")
+
+        /** The notch stage: `notch.freq`, `notch.q`, `notch.env` and its four stages. */
+        val notch: BandFilterSlots = BandFilterSlots("notch")
+
+        /** The lowpass stage: `lpf.freq`, `lpf.q`, `lpf.passes`, `lpf.env` and its four stages. */
+        val lpf: PassFilterSlots = PassFilterSlots("lpf")
+
+        /** The tremolo stage: `tremolo.depth`, `tremolo.sync`, `tremolo.shape`, `tremolo.skew`, `tremolo.phase`. */
+        val tremolo: TremoloSlots = TremoloSlots()
+
+        /** The amplitude envelope: `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`, `adsr.on`. */
+        val adsr: AdsrSlots = AdsrSlots()
+
+        /** The amplitude envelope's curves: `adsrCurves.attack`, `adsrCurves.decay`, `adsrCurves.release`. */
+        val adsrCurves: AdsrCurvesSlots = AdsrCurvesSlots()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -1252,11 +1288,20 @@ sealed interface IgnitorDsl {
          */
         val analog: IgnitorDsl = Constant(0.0),
         /**
-         * Cascade count (C5, structural): run the stage [passes] times — 2 = 24 dB/oct.
-         * Per-stage q is staggered (Butterworth ladder scaled by `q/0.707`) so the cascade
-         * stays -3 dB at [freq]; a resonant q's peak compounds across stages.
+         * Cascade count (C5): run the stage [passes] times, 2 = 24 dB/oct. Per-stage q is
+         * staggered (Butterworth ladder scaled by `q/0.707`) so the cascade stays -3 dB at
+         * [freq]; a resonant q's peak compounds across stages.
+         *
+         * A KNOB since phase 3 step 5 (2026-09-25; it was a structural `Int`), so that
+         * `classic()` can fill it from the `lpf.passes` / `hpf.passes` slot. **Read ONCE, at voice
+         * build**, the leaf-only way of the 3b `oversample` knob: a `Param` or `Constant` leaf gives
+         * its value, anything else has no build-time answer and is one pass (and is not built, so
+         * no rng draw moves). The value goes through `coercePasses`, the one coercion, which ROUNDS
+         * (as the strip always has for sprudel's `lpf(passes = ...)`), bounds it to
+         * 1..[FILTER_MAX_PASSES] and reads a non-finite value as one pass. The graph optimizer
+         * fuses only a `Constant` count; a slot could change it per note. Default: one pass.
          */
-        val passes: Int = 1,
+        val passes: IgnitorDsl = Constant(1.0),
         /**
          * Cutoff-envelope DEPTH in semitones, and the node's envelope SWITCH: at exactly `0` no
          * envelope is built and the filter is bit-identical to one without these knobs.
@@ -1278,7 +1323,7 @@ sealed interface IgnitorDsl {
          * "modulated", it is UNREADABLE at build**, and the consequence differs per knob: a stage
          * knob falls back to its constant, but this DEPTH falls back to `0`, which switches the
          * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
-         * renders a static filter. Write a slot (`Osc.slot.lpenv`) or a constant.
+         * renders a static filter. Write a slot (`OscSlot.lpf.env`) or a constant.
          *
          * **Which envelope this is, and D3 is open on BOTH counts.** The law: an unshaped stage
          * (curve knob at its default) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
@@ -1344,6 +1389,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            passes.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
@@ -1358,8 +1404,8 @@ sealed interface IgnitorDsl {
         val q: IgnitorDsl = Constant(0.707),
         /** See [Lowpass.analog] — same semantics for the HP tap. */
         val analog: IgnitorDsl = Constant(0.0),
-        /** Cascade count — see [Lowpass.passes]. */
-        val passes: Int = 1,
+        /** Cascade count, a knob read once at voice build; see [Lowpass.passes]. */
+        val passes: IgnitorDsl = Constant(1.0),
         /** Cutoff-envelope depth in semitones, and the node's envelope switch; see [Lowpass.env]. */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds; see [Lowpass.env]. */
@@ -1381,6 +1427,7 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); freq.collectParams(out); q.collectParams(out); analog.collectParams(out)
+            passes.collectParams(out)
             env.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
             sustainLevel.collectParams(out); releaseSec.collectParams(out)
             attackCurve.collectParams(out); decayCurve.collectParams(out); releaseCurve.collectParams(out)
@@ -1826,7 +1873,11 @@ sealed interface IgnitorDsl {
      * 5b). Neither authoring door builds it: both spell `distort` as `Shape(Drive(...))`, whose `Shape`
      * half has no amount and cannot be gated. That difference is why the node is KEPT (phase 3 step
      * 3b, 2026-09-25): it is the one node that switches a distort off completely, which a slotted
-     * `classic()` distort stage needs (decision D2 decides which node that stage becomes).
+     * tail needs, and it IS `classic()`'s distort stage (phase 3 step 5). Decision D2 (decided
+     * 2026-09-25, option A, `docs/tasks/builtin-instruments.md` section 3): step 4 gives THIS node the
+     * voice strip's exact law (no soft cap, the drive inside the oversampler), while the
+     * `distort`/`shape` doors keep their capped `Shape(Drive(...))` law. Until step 4 it renders that
+     * capped chain; `ClassicStripParitySpec` holds the measured difference.
      *
      * Its KDoc used to call it "kept for backward compatibility with serialized trees"; wire trees are
      * never persisted (the W5 note in `IgnitorEffects`), and that was not the reason it exists.
@@ -2285,7 +2336,9 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * A resonant q compounds instead (`q = 1.0, passes = 2` is +3 dB at the cutoff). Coerced to
  * 1..[FILTER_MAX_PASSES]. The third slot on THIS flat Kotlin door and on sprudel's
  * `lpf(freq, q, passes)`; the script door takes it on its builder,
- * `lowpass(freq, q, x => x.passes(n))`, and refuses a third number.
+ * `lowpass(freq, q, x => x.passes(n))`, and refuses a third number. The node carries it as a knob
+ * ([IgnitorDsl.Lowpass.passes]); a SLOT there is written through the node constructor, which is
+ * what `classic()` does (a recorded two-door asymmetry, the `shape`/`distort` precedent of step 3b).
  * The five envelope knobs are a COMPOUND DOOR (`/dsl-design` section 4): `null` means the call
  * did not name that knob, and naming ANY of them fills the others from
  * `constants/FilterEnvelopeDefaults.kt`, `env` included. So `lowpass(800.0, decaySec = 0.3,
@@ -2341,7 +2394,7 @@ fun IgnitorDsl.lowpass(
         freq = freq,
         q = q,
         analog = analog,
-        passes = passes,
+        passes = IgnitorDsl.Constant(passes.toDouble()),
         env = envelope.env,
         attackSec = envelope.attackSec,
         decaySec = envelope.decaySec,
@@ -2402,7 +2455,7 @@ fun IgnitorDsl.highpass(
         freq = freq,
         q = q,
         analog = analog,
-        passes = passes,
+        passes = IgnitorDsl.Constant(passes.toDouble()),
         env = envelope.env,
         attackSec = envelope.attackSec,
         decaySec = envelope.decaySec,

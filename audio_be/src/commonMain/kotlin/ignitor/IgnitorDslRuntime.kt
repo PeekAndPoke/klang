@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
@@ -586,7 +587,12 @@ private fun filterEnvDef(
     oscParams: Map<String, Double>?,
     cache: IgnitorBuildCache,
 ): FilterEnvDef {
-    val depth = env.filterEnvKnob(oscParams, cache, 0.0)
+    val authoredDepth = env.filterEnvKnob(oscParams, cache, 0.0)
+
+    // THE SLOT-LAYER FILL (phase 3 step 5, maintainer 2026-09-25): an UNSET depth slot the bag did not
+    // write takes the shared depth when any of the four STAGE knobs is written, the strip's `depth ?: 7`.
+    // See `writtenIn` for what "written" means, and `slotLayerDepth` for the whole rule.
+    val depth = slotLayerDepth(authoredDepth, env, attackSec, decaySec, sustainLevel, releaseSec, oscParams)
 
     // The depth is the switch: with no sweep the four stage knobs are inert, and not reading
     // them keeps a filter without an envelope exactly as cheap to build as it was.
@@ -606,6 +612,62 @@ private fun filterEnvDef(
         releaseCurve = releaseCurve.adsrCurveKnob(oscParams, cache, MOD_ENV_CURVE),
     )
 }
+
+/**
+ * **The compound fill for the filter envelope, answered at the SLOT layer** (phase 3 step 5; decided by
+ * the maintainer 2026-09-25, `docs/tasks/builtin-instruments.md` section 5b's neighbourhood). The rule's
+ * text has one home, `/dsl-design` section 4; this is what a SLOTTED filter does under it.
+ *
+ * A slotted filter (`classic()`'s) never calls the door per note, so the door's fill, which reads
+ * "named against null" at call time, never happens. The same question is asked here one layer down,
+ * against the note's bag: when the depth knob is an UNSET slot (a [IgnitorDsl.Param] whose DEFAULT is
+ * non-finite, the `SLOT_UNSET` sentinel `classic()` places, and which the bag did NOT write) and ANY of
+ * the four stage knobs is a `Param` the bag DID write, the depth is [FILTER_ENV_DEPTH_SEMITONES]
+ * instead of "no envelope". That is the strip's `FilterEnvDef.resolve`, `depth ?: 7`, reached from a
+ * pattern that writes only `lpf.attack`.
+ *
+ * What does NOT switch it on, each pinned by a row of `FilterSlotLayerFillSpec`:
+ *  - a WRITTEN depth, an explicit 0 included: an explicit value is never overwritten by a fill (the
+ *    strip keeps `lpf(env = 0)` static too);
+ *  - an AUTHORED depth default, 0 included: `Osc.param("e", 0)` is the author saying "no sweep", and an
+ *    authored default is never filled (round 1 of step 5's review found the first cut filling it);
+ *  - an authored stage default alone: a stage `Param` whose default is a real number but that the bag
+ *    did not write (`Osc.param("fa", 0.02)`) is not "written";
+ *  - a non-finite value in the bag: it reads as unset, as it does at the `Param` leaf;
+ *  - a CONSTANT depth: a door-filled or an authored constant is an explicit value, never a question.
+ *
+ * Five map lookups per filter per note-on at most, and nothing per block.
+ */
+private fun slotLayerDepth(
+    authoredDepth: Double,
+    env: IgnitorDsl,
+    attackSec: IgnitorDsl,
+    decaySec: IgnitorDsl,
+    sustainLevel: IgnitorDsl,
+    releaseSec: IgnitorDsl,
+    oscParams: Map<String, Double>?,
+): Double {
+    // Only an UNSET depth slot is a question: a `Param` whose DEFAULT is the non-finite sentinel,
+    // as `classic()` places it, and which the bag did not write. An authored default (0 or any other
+    // number) and a written value are answers already. (An unset, unwritten slot always resolves to
+    // 0 here, `filterEnvKnob`'s fallback, so no separate "depth is 0" test is needed.)
+    if (env !is IgnitorDsl.Param || env.default.isFinite() || env.writtenIn(oscParams)) {
+        return authoredDepth
+    }
+
+    val aStageIsWritten = attackSec.writtenIn(oscParams) || decaySec.writtenIn(oscParams) ||
+        sustainLevel.writtenIn(oscParams) || releaseSec.writtenIn(oscParams)
+
+    return if (aStageIsWritten) FILTER_ENV_DEPTH_SEMITONES else authoredDepth
+}
+
+/**
+ * Is this knob WRITTEN by the note: a [IgnitorDsl.Param] whose name the bag holds a FINITE value for.
+ * Finite-in-the-bag only (maintainer, 2026-09-25): an authored default never counts, and a non-finite
+ * value is unset, the rule the `Param` leaf applies to every slot.
+ */
+private fun IgnitorDsl.writtenIn(oscParams: Map<String, Double>?): Boolean =
+    this is IgnitorDsl.Param && oscParams?.get(name)?.isFinite() == true
 
 /** One cutoff-envelope knob: its build-time value, or [fallback] when it has none. See [filterEnvDef]. */
 private fun IgnitorDsl.filterEnvKnob(
@@ -638,6 +700,15 @@ private fun IgnitorDsl.distortionShapeKnob(oscParams: Map<String, Double>?, cach
  */
 private fun IgnitorDsl.oversampleStagesKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
     Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(oscParams, cache) ?: 0.0))
+
+/**
+ * The cascade count a filter's `passes` knob asks for (phase 3 step 5, the `lpf.passes` / `hpf.passes`
+ * slots of `classic()`): through [coercePasses], the one coercion, so it ROUNDS, bounds to
+ * 1..`FILTER_MAX_PASSES` and reads a non-finite value as one pass, exactly as the strip reads sprudel's
+ * `lpf(passes = ...)`. A non-leaf has no build-time answer and is one pass.
+ */
+private fun IgnitorDsl.passesKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+    coercePasses(buildTimeKnobValue(oscParams, cache) ?: 1.0)
 
 /** The LFO waveform a tremolo `shape` knob selects, `LfoShapes.indexAt`'s rule; a non-leaf is `sine`. */
 private fun IgnitorDsl.lfoShapeKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): LfoShape =
@@ -1057,7 +1128,8 @@ private fun IgnitorDsl.buildRaw(
                 env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
             )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
-            val n = coercePasses(passes)
+            val n = passes.passesKnob(oscParams, cache)
+
             if (n == 1) {
                 built.lowpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
             } else {
@@ -1081,7 +1153,8 @@ private fun IgnitorDsl.buildRaw(
                 env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, oscParams, cache,
             )
             val hum = analog.filterHumanization(humanize, oscParams, cache)
-            val n = coercePasses(passes)
+            val n = passes.passesKnob(oscParams, cache)
+
             if (n == 1) {
                 built.highpass(freq.noMod(), q.noMod(), envDef, analog.noMod(), hum)
             } else {
@@ -1212,12 +1285,13 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Effects: pass mod through to inner ──
 
-        // GATE ROW `distort`: at or below 0.0, or unset. This is the LEGACY node: neither
-        // authoring door builds it (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at
-        // `IgnitorDsl.kt` and the script one at `KlangScriptOscExtensions`), and the only
-        // production site left is `WarmupVocabulary` at 0.3. Gating it is an alignment of that
-        // node with the `Drive` row below and with `Ignitor.distort(Double)`, which has always
-        // short-circuited at the same value.
+        // GATE ROW `distort`: at or below 0.0, or unset. Neither authoring door builds this node
+        // (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at `IgnitorDsl.kt` and the
+        // script one at `KlangScriptOscExtensions`); `classic()` does (its distort stage, phase 3
+        // step 5, the one node that switches drive AND shape off as a unit), and `WarmupVocabulary`
+        // at 0.3. D2 (decided, option A) gives this node the strip's law in step 4; do not change it
+        // before. Gating it is an alignment of that node with the `Drive` row below and with
+        // `Ignitor.distort(Double)`, which has always short-circuited at the same value.
         //
         // It is a BEHAVIOUR CHANGE on that node, not a fold, and the magnitude is shape-dependent:
         // the node is `drive(amount).shape(shape)` and only the DRIVE half bypasses at 0, so the
@@ -1252,8 +1326,8 @@ private fun IgnitorDsl.buildRaw(
         //    wired to this node, would have made every voice of that instrument all-NaN.
         //
         // `Shape` is NOT gated and cannot be: it has no amount knob, only a transfer function, so
-        // there is nothing to read an off value from. Which node `classic()`'s distort stage
-        // becomes is therefore a design question, recorded with decision D2.
+        // there is nothing to read an off value from. That is why `classic()`'s distort stage is the
+        // fused `Distort` node above, not this pair (decision D2).
         is IgnitorDsl.Drive -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {

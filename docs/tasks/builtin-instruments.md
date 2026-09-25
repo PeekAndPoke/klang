@@ -104,7 +104,9 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   - Either way it is an ear checkpoint on Der Schmetterling and Stranger Things, and it changes every
     song that already uses `lpf(env = ...)`, by up to 635 cents at the sweep's steepest.
 - **D4, the `pedal` pipeline.** `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
-  FIRST. It retires with `PipelineDsl` and has no `classic()` spelling. Ship a second named tail
+  FIRST. **Undercounted until step 5's review (2026-09-25): THREE of the 18 corpus songs use it**:
+  DialogueWithTheStars, FrozenDerSchmetterling (three patterns, with distort) and TetrisRemix (the bass,
+  `distort(0.8, "soft", 2).pipeline("pedal")`). All three have no `classic()` spelling; the preset retires with `PipelineDsl`. Ship a second named tail
   (a second word for one concept, which the rules register argues against), rewrite the song, or let
   it change.
 - **D6, the door's shape (raised in the step 3a review). DECIDED 2026-09-23: a builder wherever a door
@@ -274,6 +276,7 @@ with an error; SILENT means it now means something else or nothing.
 | 3c | the 3d(i) filter and pitch builder knob `x.adsrCurves(...)` | `x.adsr(a, d, s, r, e => e.curves(...))` | loud |
 | 3c | sprudel `oscp("expK", k)` on an ignitor with an `adsr` | an unread key; every exp stage bends at 3 | SILENT |
 | 4 (D1) | a user's Ignitor `.crush(n)` | quantizes with the strip's FLOOR instead of round (up to 0.125 apart at amount 4, a small DC bias) | SILENT |
+| 5 | `passes = +Inf` (either door, or a pattern) | 1 pass (non-finite reads as 1); it was 16 on the strip | SILENT |
 
 Open for the maintainer: whether the editor should WARN on the silent rows (a string literal in a wet slot is
 the obvious first one).
@@ -363,7 +366,12 @@ filter per note-on and nothing per block, and an instrument that declares a real
 finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
 what sprudel's `!= null` means and is the recommendation. **DECIDED 2026-09-25 (maintainer): finite-in-the-bag only.** A
 knob is written when the note's bag holds a finite value for its slot; an authored default alone never
-switches the envelope on. Step 5 builds it.
+switches the envelope on. **BUILT in step 5 (2026-09-25)** as `slotLayerDepth`/`writtenIn` in
+`IgnitorDslRuntime.filterEnvDef`, with the implementer's correction: a WRITTEN depth always stands (an explicit
+0 included, the strip's `depth ?: 7`); only an UNSET depth slot (a `Param` whose default is `SLOT_UNSET`, as
+`classic()` places it) takes `FILTER_ENV_DEPTH_SEMITONES`, when any of the FOUR stage knobs is written; an
+authored depth default, 0 included, is never filled (corrected in step 5's round 1); a `Constant` depth (a
+door fill) is never the question. The rule's text lives in `/dsl-design` section 4.
 
 **The distort question this leaves open, for D2.** `IgnitorDsl.Distort` WAS legacy by its own KDoc (step 3b
 corrected it: it is kept as the one node that gates drive and shape as a unit, and the only one that could
@@ -413,6 +421,12 @@ second line of defence: the envelope's `sustainLevel` is the live example (`expK
   `classic()` tree, that wrap would sit AFTER the ADSR: StrangerThings (`pulse.onepole(3743).crush(5)`) and
   IrishLamentTechno (`distort(...).onepole(...)`) would change. Step 6 must put the wrap where the strip had it
   (on the source, before `classic()`'s stages), and its corpus render proves it.
+- **Found in step 5 (2026-09-25), for step 6:** (1) the optimizer fuses every lone filter with a literal
+  `analog` into an `Eq`, which never reaches `filterEnvDef`, so the slot-layer fill only runs on filters that
+  stay filters; (2) the factory's lifetime floor (0.05 s) keeps a `classic()` voice with a shorter slot release
+  rendering its de-click tail where the strip cut it; (3) an authored instrument with `.classic()` is
+  enveloped TWICE until the strip VCA stops running for it; (4) the `adsrOff` difference is exactly the last
+  192 frames, the strip's 4 ms teardown fade.
 - **The teardown fade.** `EnvelopeRenderer.renderGate` is the `adsrOff()` path: a unity gate with a
   linear fade to exact zero over the last frames, which exists because an instrument's own envelope
   sits BEFORE its amp stages. Phase 3 removes the only stage that guarantees an amplitude ramp at the
@@ -489,7 +503,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; 3a filters DONE; 3b waveshapers DONE 2026-09-25 (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse); 3c envelopes DONE 2026-09-25 (one nested `adsr` shape, `expK` removed, curves as index knobs, the `on` switch). The filter build's rng draw order must reproduce the factory's exactly |
 | 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) DONE 2026-09-24, the Katalyst and Master doors, the limiter renames; (iii) DONE 2026-09-24, sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
-| 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
+| 5 | DONE 2026-09-25: `classic()` on both doors, in the order of section 4 (`IgnitorDslClassic.kt`, the order written once; slots `<door>.<param>` in `IgnitorDsl.Slots.*` / `OscSlot.*`; `passes` a build-time knob that ROUNDS like the strip; the committed `ClassicStripParitySpec` pins 18 rows bit-identical to the strip and 26 divergent rows at 48 kHz (17 and 27 at 44.1 kHz, where the whole-frame ADSR row also diverges: the frame-count minor), each divergent row naming its cause: D1, D2 (step 4), D3, the ADSR frame counts, the lifetime floor, the teardown fade) | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |
 | 7 | The sample instrument | needs a JS or in-memory PCM harness: the jvm renderer has no sample bank | its own safety net |
 | 8 | The doors become `oscp` aliases (about 50 to 60 functions) | door-parity specs, the wire golden regenerated | mechanical but wide; one door group at a time |

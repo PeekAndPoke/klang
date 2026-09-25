@@ -164,10 +164,17 @@ fun coercePasses(passes: Int): Int = passes.coerceIn(1, FILTER_MAX_PASSES)
  * `Double`, and pattern arithmetic lands on things like `2.9999999996` — truncating there
  * silently drops a cascade stage, so the value is ROUNDED. `roundToInt()` throws on NaN, and
  * this runs on the render thread, hence the explicit guard rather than a try.
+ *
+ * A NON-FINITE value is one pass, the house rule that a non-finite wire number reads as unset
+ * (`/dsl-design` section 4). Until phase 3 step 5 only the NaN was guarded and `+Infinity`
+ * saturated `roundToInt()` to the 16-pass ceiling; the filters' `passes` knob (read at voice
+ * build for `classic()`'s `lpf.passes` / `hpf.passes` slots) reads through here too, so the
+ * strip and the tree agree on every value.
  */
 fun coercePasses(passes: Double): Int {
-    if (passes != passes) { // NaN-guard
+    if (!passes.isFinite()) { // NaN-guard: non-finite reads as unset, one pass
         return 1
     }
+
     return coercePasses(passes.roundToInt())
 }

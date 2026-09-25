@@ -195,10 +195,13 @@ the bug.
   has no depth to fill (the depth is its door input), so the rule has nothing to do there. **It is adopted AT THE DOOR only, and a door fill does not survive
   SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
   node one set of `Param`s once and the per-note decision moves into the build, which has no notion
-  of "named". A pattern writing only `lpattack` therefore leaves the depth unset and renders a
-  static filter, where the same `lpf(attack = ...)` through the voice strip sweeps. What "the stage
-  is named" means when the caller is a pattern writing slots is open, and phase 3's step 5 answers
-  it (`docs/tasks/builtin-instruments.md`, section 5b's neighbourhood).
+  of "named". **The SLOT layer answers it a second time (decided 2026-09-25, built in phase 3 step 5 as
+  `slotLayerDepth` in `IgnitorDslRuntime.filterEnvDef`):** a knob is WRITTEN when the note's bag holds a
+  finite value for its slot (sprudel's `!= null`; an authored default alone never counts). A written depth
+  always stands, an explicit 0 included. Only an UNSET depth slot (a `Param` whose default is the
+  `SLOT_UNSET` sentinel, as `classic()` places it) takes `FILTER_ENV_DEPTH_SEMITONES`, and only when one of
+  the FOUR stage knobs is written. An authored depth default, 0 included, is the author's value and is
+  never filled; a `Constant` depth (a door fill) is never the question.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
 - Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
   on the master only because a per-orbit lookahead would shift that orbit late). See

@@ -29,18 +29,18 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
  * Every field of a filter node except its input, by name: the door's inputs, the builder's knobs
- * and the envelope after the fill. `passes` is 1 on the two band filters, which have no such knob.
+ * and the envelope after the fill. `passes` is a constant 1 on the two band filters, which have no such knob.
  */
 private fun IgnitorDsl.filterFields(): Map<String, Any?> = when (this) {
     is IgnitorDsl.Lowpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
     is IgnitorDsl.Highpass -> fields(freq, q, analog, passes, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
-    is IgnitorDsl.Bandpass -> fields(freq, q, analog, 1, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
-    is IgnitorDsl.Notch -> fields(freq, q, analog, 1, env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Bandpass -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
+    is IgnitorDsl.Notch -> fields(freq, q, analog, IgnitorDsl.Constant(1.0), env, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve, humanize)
     else -> error("not a filter node: ${this::class.simpleName}")
 }
 
 private fun fields(
-    freq: IgnitorDsl, q: IgnitorDsl, analog: IgnitorDsl, passes: Int, env: IgnitorDsl,
+    freq: IgnitorDsl, q: IgnitorDsl, analog: IgnitorDsl, passes: IgnitorDsl, env: IgnitorDsl,
     a: IgnitorDsl, d: IgnitorDsl, s: IgnitorDsl, r: IgnitorDsl,
     ac: IgnitorDsl, dc: IgnitorDsl, rc: IgnitorDsl, humanize: Boolean,
 ): Map<String, Any?> = linkedMapOf(
@@ -238,8 +238,8 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
 
     "passes is a knob of lowpass and highpass only, coerced like before" {
         for (door in listOf("lowpass", "highpass")) {
-            withClue("$door passes(3)") { script(door, "800, x => x.passes(3)").filterFields()["passes"] shouldBe 3 }
-            withClue("$door passes(0) coerces to 1") { script(door, "800, x => x.passes(0)").filterFields()["passes"] shouldBe 1 }
+            withClue("$door passes(3)") { script(door, "800, x => x.passes(3)").filterFields()["passes"] shouldBe IgnitorDsl.Constant(3.0) }
+            withClue("$door passes(0) coerces to 1") { script(door, "800, x => x.passes(0)").filterFields()["passes"] shouldBe IgnitorDsl.Constant(1.0) }
         }
 
         for (door in listOf("bandpass", "notch")) {

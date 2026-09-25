@@ -265,7 +265,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 inner = IgnitorDsl.Sawtooth(),
                 freq = IgnitorDsl.Constant(600.0),
                 q = IgnitorDsl.Param("res", 1.2),
-                passes = 3,
+                passes = IgnitorDsl.Constant(3.0),
             )
         )
     }
@@ -308,7 +308,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                         inner = IgnitorDsl.Sawtooth(),
                         freq = IgnitorDsl.Constant(1500.0),
                         q = IgnitorDsl.Param("res", poisoned),
-                        passes = n,
+                        passes = IgnitorDsl.Constant(n.toDouble()),
                     ),
                     // Non-vacuity: a poisoned q that silenced BOTH doors would compare two
                     // silences and pass. Every one of these lands on a finite q at a finite
@@ -351,7 +351,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                 inner = IgnitorDsl.Sawtooth(),
                 freq = IgnitorDsl.Constant(1500.0),
                 q = IgnitorDsl.Param("res", q),
-                passes = n,
+                passes = IgnitorDsl.Constant(n.toDouble()),
             ).toExciter(random = rng)
             val out = DoubleArray(blockFrames * blocks)
             val buf = AudioBuffer(blockFrames)
@@ -433,7 +433,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                     IgnitorDsl.Constant(1.4),
                     IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(3.0)), IgnitorDsl.Constant(0.5)),
                 ),
-                passes = 2,
+                passes = IgnitorDsl.Constant(2.0),
             )
         )
     }

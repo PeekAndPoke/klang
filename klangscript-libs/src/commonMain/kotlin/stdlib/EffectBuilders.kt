@@ -195,7 +195,7 @@ fun FilterBuilder.humanize(on: Any = true): FilterBuilder = copy(knobs = knobs.c
  * a compound pair: naming either switches the envelope on and the other fills from
  * `audio_bridge/constants/FilterEnvelopeDefaults.kt` (the fill runs after the lambda, once). A
  * non-leaf EXPRESSION here is unreadable at build and switches the envelope OFF; write a number or
- * a slot (`Osc.slot.lpenv`).
+ * a slot (`OscSlot.lpf.env`).
  */
 @KlangScript.Function
 fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(env = semitones.toIgnitorDsl()))

@@ -98,4 +98,50 @@ object KlangScriptOscSlot {
      */
     @KlangScript.Property
     val pregain: IgnitorDsl = IgnitorDsl.Slots.pregain
+
+    // ── The slots of the classic tail, one group per stage (`OscSlot.lpf.freq`) ──
+    //
+    // What `x.classic()` places, and what a tail of your own places when it wants the pattern's
+    // voice doors to reach it. Named after sprudel's readers (`lpf.freq`, `adsr.attack`); the Kotlin
+    // door is `IgnitorDsl.Slots.lpf.freq`, the same object.
+
+    /** The crush stage's slot: `OscSlot.crush.amount`. */
+    @KlangScript.Property
+    val crush: KlangScriptCrushSlots = KlangScriptCrushSlots
+
+    /** The coarse stage's slot: `OscSlot.coarse.amount`. */
+    @KlangScript.Property
+    val coarse: KlangScriptCoarseSlots = KlangScriptCoarseSlots
+
+    /** The distort stage's slots: `amount`, `shape`, `oversample`. */
+    @KlangScript.Property
+    val distort: KlangScriptDistortSlots = KlangScriptDistortSlots
+
+    /** The highpass stage's slots: `freq`, `q`, `passes`, `env`, `attack`, `decay`, `sustain`, `release`. */
+    @KlangScript.Property
+    val hpf: KlangScriptHpfSlots = KlangScriptHpfSlots
+
+    /** The bandpass stage's slots: `freq`, `q`, `env`, `attack`, `decay`, `sustain`, `release`. */
+    @KlangScript.Property
+    val bpf: KlangScriptBpfSlots = KlangScriptBpfSlots
+
+    /** The notch stage's slots: `freq`, `q`, `env`, `attack`, `decay`, `sustain`, `release`. */
+    @KlangScript.Property
+    val notch: KlangScriptNotchSlots = KlangScriptNotchSlots
+
+    /** The lowpass stage's slots: `freq`, `q`, `passes`, `env`, `attack`, `decay`, `sustain`, `release`. */
+    @KlangScript.Property
+    val lpf: KlangScriptLpfSlots = KlangScriptLpfSlots
+
+    /** The tremolo stage's slots: `depth`, `sync`, `shape`, `skew`, `phase`. */
+    @KlangScript.Property
+    val tremolo: KlangScriptTremoloSlots = KlangScriptTremoloSlots
+
+    /** The amplitude envelope's slots: `attack`, `decay`, `sustain`, `release`, `on`. */
+    @KlangScript.Property
+    val adsr: KlangScriptAdsrSlots = KlangScriptAdsrSlots
+
+    /** The amplitude envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val adsrCurves: KlangScriptAdsrCurvesSlots = KlangScriptAdsrCurvesSlots
 }

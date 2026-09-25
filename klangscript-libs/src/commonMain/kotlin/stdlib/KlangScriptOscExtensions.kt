@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
@@ -260,6 +261,36 @@ object KlangScriptOscExtensions {
             k.attackCurve, k.decayCurve, k.releaseCurve, k.declickSeconds,
         )
     }
+
+    // ── The classic tail ─────────────────────────────────────────────────────
+
+    /**
+     * Wraps this sound in the classic synth voice: crush, coarse, distort, highpass, bandpass, notch,
+     * lowpass, tremolo and the amplitude envelope, in that order, every one of them driven by a slot
+     * the pattern's doors fill (`OscSlot.lpf.freq`, `OscSlot.adsr.attack`, ...). A stage the note does
+     * not write is not built, so an untouched `classic()` costs one envelope and nothing else.
+     *
+     * It gives an instrument you build the slots of the classic voice, so a pattern reaches them by
+     * name: `oscp("lpf.freq", 1800)`. (The voice doors, `lpf(...)`, `adsr(...)`, still write the old
+     * voice strip while phase 3 moves the built-in sounds; they write these slots once it has.)
+     *
+     * Want another order? Write your own tail from the same `OscSlot` slots, as far as a door takes
+     * them: every filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's
+     * knobs and the envelope's stages and curves. Three groups only `classic()` can place:
+     * `lpf.passes` / `hpf.passes` (the filter builder's `passes(n)` takes a number), `adsr.on` (no door
+     * has the switch) and `distort.*` (the `distort` door builds a drive into a shaper that always runs
+     * and caps its output; `classic()` uses the one distort node that switches off as a whole, so a
+     * slot on the door's distort would shape every note, written or not).
+     *
+     * ```KlangScript
+     * let guitar = Osc.saw().distort(0.4).classic()
+     * ```
+     *
+     * No arguments: everything it does is a slot. It is the same function as the Kotlin
+     * `IgnitorDsl.classic()`, which is the one place the order is written.
+     */
+    @KlangScript.Method
+    fun classic(self: IgnitorDsl): IgnitorDsl = self.classic()
 
     // ── Effects ──────────────────────────────────────────────────────────────
 

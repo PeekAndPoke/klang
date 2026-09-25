@@ -64,6 +64,29 @@ val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Linear
  */
 const val ADSR_SUSTAIN_LEVEL: Double = 0.7
 
+// ── The VOICE envelope: what every voice gets when the pattern writes nothing ──
+//
+// `AdsrDef.Std.defaultSynth` (the voice strip's VCA) and the envelope slots of `classic()`
+// (`IgnitorDsl.Slots.adsr`) both read these four, so the classic tail's unwritten envelope is the
+// strip's unwritten envelope by construction. They are NOT the Ignitor `adsr(...)` node's own
+// defaults (sustain [ADSR_SUSTAIN_LEVEL], release 0.3): see [ADSR_SUSTAIN_LEVEL] for why the two
+// differ and must not be unified without deciding which sound moves.
+
+/** Voice envelope attack in seconds. */
+const val VOICE_ADSR_ATTACK_SEC: Double = 0.01
+
+/** Voice envelope decay in seconds. */
+const val VOICE_ADSR_DECAY_SEC: Double = 0.1
+
+/** Voice envelope sustain level, 0 to 1: the voice holds at full level when nothing is written. */
+const val VOICE_ADSR_SUSTAIN_LEVEL: Double = 1.0
+
+/**
+ * Voice envelope release in seconds. Also the lifetime of an `adsrOff` voice past its gate, on the
+ * strip and on `classic()` alike (the off envelope still reports this release as its tail).
+ */
+const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
+
 /**
  * Time constant (seconds) of the VCA-gain de-click one-pole.
  *
