@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
@@ -401,7 +402,7 @@ class IgnitorBenchmark(
             fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
                 val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
 
-                return IgnitorDsl.Shape(inner = driven, shape = shape, oversample = if (oversample) os else 0)
+                return driven.shape(shape, oversample = if (oversample) os else 0)
             }
 
             val string = guitarString(muls)

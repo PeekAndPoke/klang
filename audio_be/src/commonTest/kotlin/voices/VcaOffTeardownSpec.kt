@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
 import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import kotlin.math.abs
 
 /**
@@ -53,7 +54,8 @@ class VcaOffTeardownSpec : StringSpec({
 
     fun amp(inner: IgnitorDsl) = IgnitorDsl.Highpass(
         inner = IgnitorDsl.Distort(
-            inner = inner, amount = IgnitorDsl.Constant(0.80), shape = "tube", oversample = 4,
+            inner = inner, amount = IgnitorDsl.Constant(0.80),
+            shape = IgnitorDsl.Constant(DistortionShapes.indexOf("tube")), oversample = IgnitorDsl.Constant(4.0),
         ),
         freq = IgnitorDsl.Constant(100.0),
     )

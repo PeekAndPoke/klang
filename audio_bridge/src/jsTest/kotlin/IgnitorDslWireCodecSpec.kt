@@ -229,11 +229,38 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
     "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
+    // Phase 3 step 3b: `shape` is an INDEX knob and `oversample` a knob read at build (D7). Both
+    // non-default, one of them a slot, so a dropped or swapped field cannot round-trip green.
+    "Shape (index and oversample knobs)" {
+        check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Constant(10.0), oversample = IgnitorDsl.Param("os", 4.0)))
+    }
     "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
+    "Distort (the gated unit node, every field non-default)" {
+        check(
+            IgnitorDsl.Distort(
+                inner = IgnitorDsl.Sine(),
+                amount = IgnitorDsl.Constant(0.7),
+                shape = IgnitorDsl.Param("d.shape", 14.0),
+                oversample = IgnitorDsl.Constant(8.0),
+            )
+        )
+    }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
     "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
+    "Tremolo (shape, skew and phase non-default, one a slot)" {
+        check(
+            IgnitorDsl.Tremolo(
+                inner = IgnitorDsl.Sine(),
+                rate = IgnitorDsl.Constant(3.0),
+                depth = IgnitorDsl.Constant(0.8),
+                shape = IgnitorDsl.Constant(2.0),
+                skew = IgnitorDsl.Param("t.skew", 0.3),
+                phase = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
     "Shimmer (pitches list)" {
         check(IgnitorDsl.Square().shimmer(wet = 0.3, pitches = listOf(0.0, 7.0, 12.0)).copy(floor = IgnitorDsl.Constant(0.1)))
     }

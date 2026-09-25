@@ -38,6 +38,27 @@ data class BuiltIgnitor(
      * regardless of attack. Including attack could only over-allocate or mis-rank.
      */
     val releaseTailSec: Double? = null,
+    /**
+     * True when the SIGNAL SPINE of this subtree carries a stage that can silence the voice's own
+     * output for a stretch and then bring it back: today, any BUILT tremolo node (one the gate did
+     * not remove). A square tremolo at full depth is exact silence for half a cycle, a skewed one
+     * for longer, and the silence culler, which ends a voice whose release stays under the floor for
+     * `VOICE_CULL_SECONDS`, would kill the voice at its first off-half. The voice factory ORs this
+     * into its cull-never decision, the rule the strip's tremolo has always had (`VoiceFactory`:
+     * depth above 0, whatever the shape).
+     *
+     * Section 6 of `docs/tasks/builtin-instruments.md` ("the build must report 'this tree gates its
+     * own output'"), landed in phase 3 step 3b (2026-09-25), when the square and skewed shapes made
+     * the hazard easy to reach from a script. It was reachable before, more rarely: the floor is
+     * absolute (`VOICE_CULL_FLOOR`, 1e-5), so even the old sine-only tremolo at depth 1 held a voice
+     * under it for `VOICE_CULL_SECONDS` or longer when slow or quiet enough (a full-scale sine below
+     * about 0.04 Hz, a -40 dB release tail at about 0.4 Hz). Step 6's teardown-fade work builds on
+     * this same field: the build reporting what the voice must do about the tree's own amplitude shape.
+     *
+     * Absorbed along the spine like [releaseTailSec] (a tremolo on a CUTOFF silences nothing), and
+     * carried in the cached value for the same reason.
+     */
+    val gatesOutput: Boolean = false,
 )
 
 /** Null-tolerant max: `null` means "no tail", so it loses to any actual value. */

@@ -5,9 +5,12 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
+
 /**
- * Distortion waveshaper shapes. Internal-only enum — the DSL surface stays
- * string-based (sprudel / klangscript) and is mapped via [parseDistortionShape].
+ * Distortion waveshaper shapes. Internal-only enum: the DSL surface names a shape and the
+ * Ignitor nodes carry its index in `DistortionShapes`; both map here via [parseDistortionShape]
+ * and [distortionShapeAt]. **The entry order is the catalogue's**, append only.
  *
  * Dispatch at the audio-rate per-sample loop uses [applyDistortionShape], which
  * is `inline` so each `when` case expands to a literal `ShapingFuncs.foo(x)`
@@ -20,27 +23,21 @@ internal enum class DistortionShape {
 }
 
 /**
- * Maps a DSL shape name to the enum. Unknown / null → [DistortionShape.SOFT]
- * (the `tanh` fallback). Case-insensitive.
+ * Maps a DSL shape name to the enum. Unknown → [DistortionShape.SOFT] (the `tanh` fallback).
+ * Case-insensitive.
+ *
+ * The names and aliases live in ONE table, `DistortionShapes` in `audio_bridge` (phase 3 step 3b,
+ * 2026-09-25), and this goes through its INDEX, so the strip (which reads a name off the voice)
+ * and the Ignitor `Shape`/`Distort` nodes (which carry the index as a knob) cannot disagree.
  */
-internal fun parseDistortionShape(shape: String): DistortionShape = when (shape.lowercase()) {
-    "hard" -> DistortionShape.HARD
-    "gentle" -> DistortionShape.GENTLE
-    "cubic" -> DistortionShape.CUBIC
-    "diode" -> DistortionShape.DIODE
-    "fold" -> DistortionShape.FOLD
-    "chebyshev" -> DistortionShape.CHEBYSHEV
-    "rectify" -> DistortionShape.RECTIFY
-    "exp" -> DistortionShape.EXP
-    "softsat", "soft_sat" -> DistortionShape.SOFT_SAT
-    "tube" -> DistortionShape.TUBE
-    "linearfold", "linear_fold", "lfold" -> DistortionShape.LINEAR_FOLD
-    "zerosquare", "zero_square", "square" -> DistortionShape.ZERO_SQUARE
-    "sineshaper", "sine_shaper", "sshape" -> DistortionShape.SINE_SHAPER
-    "asym" -> DistortionShape.ASYM
-    "stompbox", "stomp_box", "stomp" -> DistortionShape.STOMP_BOX
-    else -> DistortionShape.SOFT // "soft" + fallback
-}
+internal fun parseDistortionShape(shape: String): DistortionShape = distortionShapeAt(DistortionShapes.indexOf(shape))
+
+/**
+ * The shape an index knob selects: `DistortionShapes.indexAt`'s rule (nearest position; non-finite,
+ * negative or past the end is [DistortionShape.SOFT]). The enum's order IS the catalogue's, pinned
+ * by `ShapeCatalogueSpec`.
+ */
+internal fun distortionShapeAt(index: Double): DistortionShape = DistortionShape.entries[DistortionShapes.indexAt(index)]
 
 /**
  * Applies the shape to a single sample. `inline` is load-bearing: it expands

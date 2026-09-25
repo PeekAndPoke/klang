@@ -6,11 +6,17 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.DistortionShape
+import io.peekandpoke.klang.audio_be.LfoShape
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.distortionShapeAt
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
+import io.peekandpoke.klang.audio_be.lfoShapeAt
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.coercePasses
@@ -606,6 +612,42 @@ private fun IgnitorDsl.filterEnvKnob(
     fallback: Double,
 ): Double = buildTimeKnobValue(oscParams, cache)?.takeIf { it.isFinite() } ?: fallback
 
+// ── The knobs read ONCE at voice build (phase 3 step 3b, 2026-09-25) ──
+//
+// A waveshaper's shape, its oversampling factor, and a tremolo's shape and start phase are chosen
+// once per note, as they always were on both hosts: the shaper and the oversampler are built with
+// the stage, and the start phase SEEDS the LFO's clock. They are knobs so that `classic()` can fill
+// them from slots. Each is read the leaf-only way [filterEnvDef] reads its knobs: a `Param` or
+// `Constant` leaf gives its value, and anything else has no build-time answer, takes the knob's
+// default and is NOT BUILT, so asking moves no rng draw. None of them is a gate: they choose HOW a
+// stage renders, never WHETHER it exists.
+
+/**
+ * The waveshaper a `shape` knob selects: `DistortionShapes.indexAt`'s rule, so a non-finite,
+ * negative or past-the-end index is `soft`, as an unknown name is. A non-leaf is `soft`.
+ */
+private fun IgnitorDsl.distortionShapeKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): DistortionShape =
+    distortionShapeAt(buildTimeKnobValue(oscParams, cache) ?: DistortionShapes.SOFT_INDEX.toDouble())
+
+/**
+ * The oversampler STAGES an `oversample` factor knob asks for, through the one conversion
+ * ([Oversampler.factorOf], then [Oversampler.factorToStages]): a factor of 1 or less, a non-finite
+ * one and a non-leaf are all 0 stages, today's plain path. Decision D7's stopgap.
+ */
+private fun IgnitorDsl.oversampleStagesKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+    Oversampler.factorToStages(Oversampler.factorOf(buildTimeKnobValue(oscParams, cache) ?: 0.0))
+
+/** The LFO waveform a tremolo `shape` knob selects, `LfoShapes.indexAt`'s rule; a non-leaf is `sine`. */
+private fun IgnitorDsl.lfoShapeKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): LfoShape =
+    lfoShapeAt(buildTimeKnobValue(oscParams, cache) ?: LfoShapes.SINE_INDEX.toDouble())
+
+/**
+ * A tremolo's start phase in cycles; a non-leaf is 0. A non-finite value passes through on purpose:
+ * `TremoloCore` folds the seed with `wrapPhase`, which turns it into 0, the strip's own rule.
+ */
+private fun IgnitorDsl.startPhaseKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Double =
+    buildTimeKnobValue(oscParams, cache) ?: 0.0
+
 /**
  * The filter's per-voice humanization, or null when the node does not carry it.
  *
@@ -655,9 +697,16 @@ private fun IgnitorDsl.buildRaw(
     // the opposite direction (under-counting) is what truncates.
     var spineTail: Double? = null
 
+    // Does this subtree gate its own OUTPUT (see [BuiltIgnitor.gatesOutput])? Absorbed along the same
+    // signal edges as the tail, for the same reason: a tremolo in a PARAMETER position (an LFO on a
+    // cutoff) silences nothing. The seven over-counting arms named above over-count here too, which
+    // only switches the silence culler off for a voice that did not need it: harmless.
+    var spineGatesOutput = false
+
     fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
         val built = buildIgnitor(oscParams, cache, mod)
         spineTail = maxTail(spineTail, built.releaseTailSec)
+        spineGatesOutput = spineGatesOutput || built.gatesOutput
         return built.ignitor
     }
 
@@ -1125,10 +1174,16 @@ private fun IgnitorDsl.buildRaw(
         // wave, an octave up). Now it does nothing. This does NOT reopen ledger W5's gate-flip
         // pop: W5 is about a MODULATED amount crossing 0, and a modulated amount is not a leaf, so
         // it is never gated.
+        //
+        // Built as `drive(amount).shape(...)`, exactly what `Ignitor.distort(amount, ...)` builds; the
+        // shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
         is IgnitorDsl.Distort -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {
-            inner.withMod().distort(amount.noMod(), shape, Oversampler.factorToStages(oversample))
+            inner.withMod().drive(amount.noMod()).shape(
+                shape.distortionShapeKnob(oscParams, cache),
+                oversample.oversampleStagesKnob(oscParams, cache),
+            )
         }
 
         // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
@@ -1151,7 +1206,12 @@ private fun IgnitorDsl.buildRaw(
             inner.withMod().drive(amount.noMod())
         }
 
-        is IgnitorDsl.Shape -> inner.withMod().shape(shape, Oversampler.factorToStages(oversample))
+        // NOT gated (no amount knob, see the `drive` row). Its shape and oversampling factor are knobs
+        // read once, here, at voice build (phase 3 step 3b; the factor is decision D7's stopgap).
+        is IgnitorDsl.Shape -> inner.withMod().shape(
+            shape.distortionShapeKnob(oscParams, cache),
+            oversample.oversampleStagesKnob(oscParams, cache),
+        )
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
         // levels (`2^amount < 2`, i.e. amount below 1), and `Ignitor.crush(Double)` returns the
@@ -1185,14 +1245,26 @@ private fun IgnitorDsl.buildRaw(
         )
 
         // GATE ROW `tremolo`: DEPTH at or below 0.0, or unset. The rate is not a gating knob: a
-        // tremolo at rate 0 is a static gain, not an absence.
+        // tremolo at rate 0 is a static gain, not an absence. Nor are shape, skew and phase.
+        //
+        // Build order is rng draw order: inner, rate, depth as before, then the skew (read per
+        // block, so built); the shape and the start phase are read once, leaf-only, and build
+        // nothing. A BUILT tremolo reports that it gates its own output (see `BuiltIgnitor`).
         is IgnitorDsl.Tremolo -> if (depth.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {
-            inner.withMod().tremolo(rate.noMod(), depth.noMod())
+            spineGatesOutput = true
+
+            inner.withMod().tremolo(
+                rate = rate.noMod(),
+                depth = depth.noMod(),
+                skew = skew.noMod(),
+                shape = shape.lfoShapeKnob(oscParams, cache),
+                startPhase = phase.startPhaseKnob(oscParams, cache),
+            )
         }
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())
     }
 
-    return BuiltIgnitor(ignitor, spineTail)
+    return BuiltIgnitor(ignitor, spineTail, spineGatesOutput)
 }

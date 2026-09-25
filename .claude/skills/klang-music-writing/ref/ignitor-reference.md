@@ -381,7 +381,7 @@ Put taps first unless you want that.
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
-| `.tremolo(rate, depth)`                 | Amplitude LFO modulation                   |
+| `.tremolo(rate, depth, x => x.shape(name).skew(s).phase(p))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), the skew (-1 to 1, 0 symmetric, positive stays high longer) and the start phase in cycles |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
 `shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
@@ -390,11 +390,16 @@ Reach for the pair instead of the bundle only when something must sit BETWEEN th
 Sprudel has only `distort()`; its voice model cannot express a node between the two.
 
 Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
-`"rectify"`, `"exp"`
+`"rectify"`, `"exp"`, `"softsat"`, `"tube"`, `"linearfold"`, `"zerosquare"`, `"sineshaper"`, `"asym"`, `"stompbox"`.
+An unknown name is `"soft"`. The node carries the curve as its index in that list, so the door also takes the
+number, or an `Osc.param(...)` slot carrying it (read once per note).
 
 Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to power of 2. `0` or `1` = off,
 `2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
-`"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`.
+`"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`. Read once per note; a number or an `Osc.param(...)` slot.
+
+Tremolo shapes are read once per note; the skew is read every block. A `"square"` at depth 1 is silence for half
+of each cycle, on purpose; a voice with a tremolo is not cut short by the silence culler unless you set `cull(...)`.
 
 ### FM Synthesis
 

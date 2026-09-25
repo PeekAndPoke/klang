@@ -188,11 +188,12 @@ object WarmupVocabulary {
         .drive(0.4)
         .shape("soft")
         .distort(0.5, "hard", oversample = 4) // = Drive + Shape (oversampled)
-        .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), shape = "soft", oversample = 2) } // the fused node, as the wire carries it
+        .let { IgnitorDsl.Distort(inner = it, amount = Constant(0.3), oversample = Constant(2.0)) } // the gated drive+shape unit
         .crush(6.0)
         .coarse(3.0)
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)
         .tremolo(rate = 4.0, depth = 0.4)
+        .tremolo(rate = 3.0, depth = 0.3, shape = "triangle", skew = 0.3, phase = 0.25) // the skewed, non-sine law
         .shimmer()
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)

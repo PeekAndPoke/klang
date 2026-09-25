@@ -50,6 +50,13 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   because the strip has its own downstream bounding stages. Drop the cap on the classic tail
   (identity, but a heavy-drive branch can then dominate a mix, which is what the cap exists for), or
   keep it and accept the change on every distorted voice.
+  **A second divergence, found in step 3b's plan (2026-09-25), read from the code:** oversampled, the
+  strip applies the drive INSIDE the oversampler (`shape(work[i] * d)` on the upsampled stream), while the
+  tree drives at the base rate and then upsamples; linear interpolation does not round the same either
+  way. So even with the cap dropped, an oversampled distort through `Shape(Drive(...))` is not
+  bit-identical to the strip. The legacy fused `IgnitorDsl.Distort` node (kept and retyped in 3b for this
+  reason) is the one shape that could drive inside the oversampler; D2's answer decides which node
+  `classic()` uses.
 - **D3, the filter envelope. RE-SCOPED 2026-09-20 in the step 3a review: it is two decisions, and
   the one the spike missed is the bigger.**
   - **The LAW.** The node's envelope segments are LINEAR (`envelopeLevelAtPosition` has no curve in
@@ -112,12 +119,14 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   out of phase 3 into its own task (`oversampling-regions.md`: a region in lambda form, the factor read
   once when the note starts, after the KatalystDsl work stream). For crush and coarse that is free: every
   shipped use pins `oversample = 1`. For distort it is not. The sprudel `distort(amount, shape, N)` is
-  oversampled by the strip in Tetris (2x), TetrisRemix (2x), IrishLamentTechno (five voices, 2x and 4x)
+  oversampled by the strip in Tetris (2x), TetrisRemix (2x, through `import { sub } from "peekandpoke/tetris"`: step 6's identity list must carry it wherever Tetris is), IrishLamentTechno (five voices, 2x and 4x)
   and the frozen songs (2x and 4x). The Ignitor's `Shape` node has an `oversample` field, but it is a
   plain Int, so `classic()` cannot fill it from a per-note slot. So from step 6, when the built-ins leave
   the strip, those voices lose their oversampling: more aliasing, audible at step 6's checkpoint, and the
-  step is no longer identity. (The Ignitor-level uses in Sandsturm, DialogueWithTheStars and
-  ATruthWorthLyingFor use the field directly and are untouched by phase 3.) Three ways:
+  step is no longer identity. (The Ignitor-level uses in Sandsturm, ATruthWorthLyingFor and DerSchmetterling (its guitar rig at 2x
+  and 4x, `granCassa` at 2x; the frozen piece too) use the field directly and are untouched by phase 3.
+  DialogueWithTheStars DEFINES oversampled tube guitars but its arrangement never plays them; both
+  corrections from step 3b, the second found by a control that missed its prediction.) Three ways:
   - **(a) Keep one small piece in phase 3**: make `Shape.oversample` a knob read at voice build (step 2's
     `buildTimeKnobValue`), so `classic()` fills it from `distort.oversample`. Cheap, keeps step 6
     identity, and is replaced by the region when the new task lands.
@@ -209,6 +218,11 @@ belong to step 3c, which reshapes them anyway.
   puts `lookahead` FIFTH, where the compressor and sprudel put `release`: a compressor-shaped 5-argument call
   `m.limiter(-3, 4, 2, 0.01, 0.2)` sets 200 ms of lookahead (bounded to 50 ms, i.e. latency), not a release. It
   is the maintainer's table; the release note recommends named arguments for the limiter.
+- **Recorded two-door asymmetries (step 3b, 2026-09-25).** The Kotlin `tremolo` door stays FLAT
+  (`tremolo(rate, depth, shape = "sine", skew = 0.0, phase = 0.0)`) where the script door takes a builder, the
+  filter doors' precedent. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int` factor, while
+  the script doors also take a number or a slot; a Kotlin caller writes a slot through the node constructor, as
+  for `floor` and the pitch envelope.
 - **Recorded two-door asymmetries (step 3d(i)).** The Kotlin filter doors stay flat and name the four envelope
   stages separately (audio_bridge cannot see the script builders; a superset of the builder). The Kotlin
   `phaser`/`shimmer` set `floor` only by `.copy(floor = ...)`: `floor` exists only as an effect-builder knob
@@ -224,8 +238,8 @@ belong to step 3c, which reshapes them anyway.
 | ~~The filter ENVELOPE on the four filter nodes~~ | DONE in 3a (2026-09-20) | `env` plus four stage knobs, both doors, the wire, the defaults in `audio_bridge/constants/FilterEnvelopeDefaults.kt` |
 | ~~`AnalogDrift` per filter, and the per-voice cutoff tolerance~~ | DONE in 3a | the structural `humanize` flag, because both halves are per-voice DRAWS and no knob can carry a draw; the draw order lives in `audio_be/.../ignitor/FilterHumanization.kt` |
 | ~~`oversample` on crush and coarse~~ | MOVED 2026-09-23 to `oversampling-regions.md` | no shipped song: every crush and coarse use pins `oversample = 1` |
-| `skew`, `phase`, `shape` on tremolo | 2 knobs + 1 index slot | the tremolo door |
-| `shape` on distort, and its existing `oversample` read at voice build | 1 index slot, 1 build-time knob | Tetris, TetrisRemix, IrishLamentTechno, the frozen corpus. The knob is TEMPORARY (D7): `oversampling-regions.md` replaces it with a region |
+| ~~`skew`, `phase`, `shape` on tremolo~~ | DONE in 3b (2026-09-25) | one law with the strip (`TremoloCore`), `shape` an index slot through `LfoShapes`, skew per block, phase and shape read at build |
+| ~~`shape` on distort, and its existing `oversample` read at voice build~~ | DONE in 3b (2026-09-25) | `shape` an index slot through `DistortionShapes`, `oversample` a build-time knob (the D7 stopgap) on `Shape` and the legacy `Distort` |
 | `adsrOn`/`adsrOff` as a gate slot, and the three curves as slots | 1 gate + 3 index slots | every `.adsrOff()` instrument |
 | A sample node kind (or a hand-built head with a `classic()` tail) | node kind | `sound("bd")` and Der Schmetterling's drums |
 
@@ -266,7 +280,7 @@ code and memory point here and do not restate them.
 | crush | unset, or `< 1.0` | a fold: `levels = 2^amount`, and the renderer bypasses below two levels. At exactly 1.0 the quantizer RUNS (a saw becomes a three-level staircase), so 1.0 is ON |
 | distort (`IgnitorDsl.Distort`, the legacy node) | unset, or `<= 0.0` | **A BEHAVIOUR CHANGE, not a fold.** The node is `drive(amount).shape(shape)` and only the DRIVE half ever bypassed, so the tree's chosen shaper stayed on the signal at unity gain. Modelled on a 220 Hz sine through the real chain (shaper, DC blocker, `softCap`): soft -1.77 dB, tube -6.24 dB at 16.8 % THD, gentle +0.64 to +5.21 dB, zerosquare +1.55 to +16.83 dB at 37 % THD, and `rectify` removes the fundamental altogether (full wave, an octave up). It is legacy: neither authoring door builds it (both spell `distort` as `Shape(Drive(...))`), and the only production site left is `WarmupVocabulary` at 0.3. Gating it aligns that node with the `drive` row and with `Ignitor.distort(Double)`, which always short-circuited at the same value. It does NOT reopen ledger W5's gate-flip pop: W5 is a MODULATED amount crossing 0, and a modulated amount is not a leaf, so it is never gated |
 | drive (`IgnitorDsl.Drive`, the row both doors reach) | unset, or `<= 0.0` | two things at once. At or below 0 a TRUE FOLD: `DriveIgnitor` already copies its input through unchanged. At a NON-FINITE amount it CLOSES A HOLE: `amt <= 0.0` is false for a NaN, so the gain was `10^(NaN * 1.2)` and every sample of the voice came out NaN with nothing between it and the orbit mix. Step 3 would have walked into it, because a `classic()` distort slot defaulting to `SLOT_UNSET` wires exactly this node. **`Shape` is not gated and cannot be**: it carries a transfer function and no amount knob, so there is nothing to read an off value from |
-| tremolo | unset, or depth `<= 0.0` | a fold. The RATE is not a gating knob |
+| tremolo | unset, or depth `<= 0.0` | a fold. The RATE is not a gating knob, nor are `shape`, `skew` and `phase` (added in 3b). A BUILT tremolo on the signal path sets `BuiltIgnitor.gatesOutput`, so the voice is never culled (section 6, pulled into 3b) |
 | `mul` (`Times`, and the optimizer's `Affine(x, -0.0, k, -0.0)`) | exactly `1.0`. **Unset is NOT off** | the one asymmetry, forced by three existing specs: `TimesIgnitor` already sanitises a non-finite factor to an exact zero, and the node also sits in PARAMETER positions where that zero is the point. **Consequence: a `mul` slot must default to a safe literal, never `SLOT_UNSET`, or an unwritten one silences the voice** (guarded since step 2 by a row over `pregain()`, the one door that places a `mul` slot today). The `Affine` form is required because the optimizer rewrites a bare `x.mul(k)` and every registered tree renders optimized. The fold also takes only a SIGNAL survivor (`Ignitor.isBlockConstant`, structural and fixed at construction): what it drops is the multiply's `safeOut`, which on the audio spine fires only on a sample the survivor cannot produce, but in a PARAMETER position is what keeps a non-finite coefficient in range (`q = param("res", +Inf).mul(pregain)` resolved to `SAFE_MAX` and then the q ceiling; folded it would stay `+Inf` and land on the q fallback, a different filter). One qualification, audited in review round 3: on the audio spine every
 arithmetic and unary node carries its own scrub, but the KARPLUS family writes `filtered * decay`
 straight into its delay line with `decay` read raw, so an authored `decay > 1` diverges and the
@@ -302,8 +316,10 @@ filter per note-on and nothing per block, and an instrument that declares a real
 finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
 what sprudel's `!= null` means and is the recommendation.
 
-**The distort question this leaves open, for D2.** `IgnitorDsl.Distort` is legacy by its own KDoc and
-no production site builds it; both doors emit `Shape(Drive(...))`. `Drive` is gated, `Shape` cannot
+**The distort question this leaves open, for D2.** `IgnitorDsl.Distort` WAS legacy by its own KDoc (step 3b
+corrected it: it is kept as the one node that gates drive and shape as a unit, and the only one that could
+drive inside the oversampler as the strip does; `Shape` itself is still not gated, its shape and factor are
+read at build) and no production site builds it; both doors emit `Shape(Drive(...))`. `Drive` is gated, `Shape` cannot
 be (it has no amount knob). So `classic()`'s distort stage is either the legacy `Distort` node, which
 gates as a unit, or `Drive` plus a `Shape` that runs at unity gain on every voice, which is D2's
 divergence made unconditional. Decide it with D2.
@@ -332,6 +348,10 @@ second line of defence: the envelope's `sustainLevel` and `expK` are the live ex
   because a square tremolo at full depth is exact silence for half a cycle and the silence culler
   would kill the voice at its first off-half. Once the tremolo is a tree node the factory cannot see
   it: the build must report "this tree gates its own output", the shape `releaseTailSec` already has.
+  **Pulled forward into step 3b (2026-09-25):** 3b gives the node tremolo its shapes, which makes the
+  hazard reachable from a script (a square tree tremolo at depth 1 on a voice in its release), so 3b
+  lands the minimal `BuiltIgnitor.gatesOutput` and the factory's OR into the cull-never decision; step 6
+  builds its teardown-fade work on it.
 - **The teardown fade.** `EnvelopeRenderer.renderGate` is the `adsrOff()` path: a unity gate with a
   linear fade to exact zero over the last frames, which exists because an instrument's own envelope
   sits BEFORE its amp stages. Phase 3 removes the only stage that guarantees an amplitude ramp at the
@@ -405,7 +425,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 |---|---|---|---|
 | 1 | The bag guard: `takeIf { isFinite() }` on `analog` and `onepole` | provable, no song writes a non-finite one | none; the line deletes itself later |
 | 2 | The gate alone (`controlRateValueOrNull` in `buildRaw`), with the off-value table as ONE list | today's built-ins have no slotted stages, so nothing is gated; a spec compares gated-off against inner in raw bits | a knob subtree that draws rng would shift the stream: restrict the query to `Param` and `Constant` leaves. Add the cross-voice-cache invariant spec |
-| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; consider 3a filters, 3b waveshapers (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
+| 3 | The missing knobs of section 4, every default preserving today's tree bit for bit | the spike's five probes become the specs; door parity per knob | the biggest step by volume; 3a filters DONE, 3b waveshapers DONE 2026-09-25 (distort `shape`, tremolo `skew`/`phase`/`shape`, and distort's existing `oversample` read at voice build per D7; no `oversample` on crush or coarse), 3c envelope. The filter build's rng draw order must reproduce the factory's exactly |
 | 3d | THE DOOR SHAPES of section 3b (D6), inserted 2026-09-23 BEFORE 3b so 3b lands its knobs on builders. Three commits: (i) DONE 2026-09-24, the Ignitor doors, `driveType` removed, `dryFloor` renamed, the pitch envelope on `adsr`; (ii) DONE 2026-09-24, the Katalyst and Master doors, the limiter renames; (iii) DONE 2026-09-24, sprudel wet-first (`phaser`, `body`, `vowel`) with the song migration and the docs | the trees of every song bit-identical (a door moves, the sound does not); the wire golden regenerated for the renames; door parity per door | the pitch envelope is the one ENGINE change (it moves onto ADSR fields, the release becomes real): its default curve must stay today's linear law or 12 songs change. Sprudel's no-argument reinterpretation moves from `material` to `wet` |
 | 4 | D1 and D2 landed | by ear | the checkpoint is the gate |
 | 5 | `classic()` on both doors, in the order of section 4 | a one-voice render per door, each slot written in turn | the order: write it once, in one place |

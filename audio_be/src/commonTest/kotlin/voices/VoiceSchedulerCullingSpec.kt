@@ -10,10 +10,12 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.tremolo
 
 /**
  * Silence culling through the real path: a scheduled voice, the factory, the scheduler's render
@@ -119,5 +121,61 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
         scheduler.renderingVoiceCount() shouldBe 1
         scheduler.culledVoicesTotal() shouldBe 0
+    }
+
+    // ── A tremolo INSIDE the tree (phase 3 step 3b, `BuiltIgnitor.gatesOutput`) ────────────────────
+
+    /**
+     * A sustained note whose own ignitor carries a SQUARE tremolo at full depth, 4 Hz: exact silence
+     * from 125 ms to 250 ms, and the gate ends at 100 ms, so that first off-half lies in the release.
+     * The strip has no tremolo here; only the build can see this one.
+     */
+    fun treeTremolo(cull: Double?) = ScheduledVoice(
+        playbackId = pid,
+        startTime = 0.0,
+        gateEndTime = 0.1,
+        data = VoiceData.empty.copy(
+            sound = "tremsine",
+            freqHz = 440.0,
+            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
+            cull = cull,
+        ),
+        playbackStartTime = 0.0,
+    )
+
+    fun registerTreeTremolo(d: PlaybackEngineDispatcher) {
+        d.handle(
+            KlangCommLink.Cmd.RegisterIgnitor(
+                playbackId = pid,
+                name = "tremsine",
+                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square"),
+            )
+        )
+    }
+
+    "a square tremolo in the TREE, on a voice in release, survives its first off-half" {
+        val d = newDispatcher()
+        registerTreeTremolo(d)
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = null)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)                           // past the off-half (125 to 250 ms), into the next on-half
+
+        scheduler.culledVoicesTotal() shouldBe 0
+        scheduler.renderingVoiceCount() shouldBe 1
+    }
+
+    "the tree tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
+        // The engagement row for the one above: the same voice, the author's 50 ms window instead of
+        // the build's cull-never, and the off-half culls it. So the row above passes because of the
+        // report, not because the scenario never goes silent.
+        val d = newDispatcher()
+        registerTreeTremolo(d)
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = 0.05)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 1
     }
 })

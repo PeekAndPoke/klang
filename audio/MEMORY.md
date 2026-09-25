@@ -1,5 +1,52 @@
 # Klang Audio — Memory
 
+## The waveshaper and tremolo knobs: one tremolo law, index shapes, a build-time factor (2026-09-25)
+
+Phase 3 step 3b (`docs/tasks/builtin-instruments.md`), identity-preserving.
+
+- **One tremolo law, `TremoloCore`.** The strip's `TremoloRenderer` and the Ignitor `Tremolo` node are thin
+  wrappers around it; the per-sample loop is the strip's, moved verbatim. The node gained `shape` (an index
+  into `LfoShapes`), `skew` and `phase`. `TremoloNodeStripParitySpec` proves node == strip in RAW BITS on a
+  grid (every shape, six skews including NaN, five start phases including 3.25 and -0.4, fractional rates,
+  a mid-block voice start). The two sides already agreed at neutral because `(TWO_PI * rate)` and
+  `(rate * TWO_PI)` are the same bits (IEEE multiplication commutes) and the node's inlined sine was
+  `lfoNorm`'s fast path; what was missing was only the seed, the skew and the shape.
+- **A parity spec over a SHARED law only tests the plumbing.** A mutation of `TremoloCore` moves both
+  sides and the parity spec stays green; that is `TremoloRendererSpec`'s job (it pins absolute
+  waveforms). Mutation-check a parity spec on what is NOT shared: the knob reads, the seeding, the
+  host's block contract.
+- **Shapes are catalogue INDICES** (`DistortionShapes`, `LfoShapes` in `audio_bridge`, beside
+  `BodyMaterials`). The backend's `parseDistortionShape` / `parseLfoShape` go through the index, so the
+  strip (a name off the voice) and the tree (an index knob) cannot disagree. The enum order IS the
+  catalogue order: append only, pinned by `ShapeCatalogueSpec` against the pre-3b `when` arms copied
+  verbatim as the oracle. Resolution: nearest position, ties to even; non-finite, negative or past the
+  end is index 0 (`soft`, `sine`), the same as an unknown name. Never a throw.
+- **Build-time knobs** (`Shape.shape`, `Shape.oversample`, the same on `Distort`, `Tremolo.shape`,
+  `Tremolo.phase`) are read leaf-only through `buildTimeKnobValue`; a non-leaf takes the knob's default
+  and is NOT BUILT, so no rng draw moves (the `filterEnvKnob` rule). The skew is read per block, so it
+  is built, and an expression works there. `Oversampler.factorOf` is the one factor conversion:
+  non-finite is 0, a fraction truncates (sprudel's `asIntOrNull`), no upper clamp (D7 stopgap; the OOM
+  edge of a huge factor is the maintainer's to decide).
+- **The legacy `Distort` node is kept and retyped**: it is the one node that gates drive and shape as a
+  unit, which a slotted `classic()` distort stage needs (D2). Its old KDoc reason ("serialized trees")
+  was wrong: wire trees are never persisted.
+- **`BuiltIgnitor.gatesOutput`**: a built tremolo on the spine reports it, and the voice factory ORs it
+  into the cull-never decision (the strip's rule, section 6). Landed in 3b because a square tree tremolo
+  made the culler's first-off-half kill reachable from a script. Step 6's teardown fade builds on it.
+- **The KlangScript door forbids mixing positional and named arguments**: `distort(0.5, oversample = 4)`
+  is an argument error; write `distort(amount = 0.5, oversample = 4)`.
+- **Evidence.** The whole corpus (18 rows) IDENTICAL through `compare.sh` against the pre-3d(i) baseline.
+  Controls: perturbing `Oversampler.factorOf` moved ATruthWorthLyingFor, DerSchmetterling,
+  FrozenPieceDerSchmetterling and Sandsturm; the "tube" entry moved those that use tube on either host
+  (including TetrisRemix, through its import of Tetris's `sub`); `TremoloCore`'s gain moved DrunkenSailor
+  alone. No song carries an Ignitor tremolo, so the node side is proven by the parity spec only.
+- **An engagement prediction must follow what PLAYS, not what is DEFINED, and must follow imports.**
+  Two predictions of this step missed by grep alone: DialogueWithTheStars defines three oversampled tube
+  guitars but its arrangement plays only the acoustic placeholder, so neither control moved it; and
+  TetrisRemix reaches a tube distort through `import { sub } from "peekandpoke/tetris"`. Before
+  predicting, read the song's arrangement and its imports.
+
+
 ## Two banks, one parking slot, 20 ms: the filter swap after the morph was rejected (2026-09-20)
 
 Katalyst step 5c-11, a SOUND CHANGE under the 5c listening checkpoint. The maintainer listened to

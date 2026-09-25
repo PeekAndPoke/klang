@@ -8,7 +8,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -237,13 +239,10 @@ class ModulationClockSpec : StringSpec({
         }
 
         val legacy = render(
-            IgnitorDsl.Distort(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5), shape = "soft", oversample = 2)
+            IgnitorDsl.Distort(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5), shape = IgnitorDsl.Constant(DistortionShapes.indexOf("soft")), oversample = IgnitorDsl.Constant(2.0))
         )
         val modern = render(
-            IgnitorDsl.Shape(
-                IgnitorDsl.Drive(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5)),
-                shape = "soft", oversample = 2,
-            )
+            IgnitorDsl.Drive(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5)).shape("soft", oversample = 2)
         )
 
         legacy.any { it != 0.0 } shouldBe true

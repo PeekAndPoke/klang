@@ -9,6 +9,7 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.annotations.KlangScript
@@ -16,7 +17,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /*
  * Builders for the wrappers that carry secondary knobs: the four filters, the equalizer's
- * sections, the pitch envelope, fm's index envelope and the dry floor of phaser and shimmer. Same
+ * sections, the pitch envelope, fm's index envelope, the dry floor of phaser and shimmer, and the
+ * tremolo's LFO knobs. Same
  * shape as the oscillator builders (`IgnitorBuilders.kt`): immutable values, one knob = one
  * `@KlangScript.Function` extension. The door keeps the stage's musical inputs, the builder the
  * rest (`/dsl-design` section 2).
@@ -302,6 +304,42 @@ data class PhaserBuilder(val node: IgnitorDsl.Phaser)
  */
 @KlangScript.Function
 fun PhaserBuilder.floor(floor: IgnitorDslLike): PhaserBuilder = copy(node = node.copy(floor = floor.toIgnitorDsl()))
+
+// ── Tremolo ──────────────────────────────────────────────────────────────────
+
+/**
+ * Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knobs:
+ * `shape`, `skew`, `phase`, the LFO knobs the voice strip's tremolo always had (phase 3 step 3b,
+ * 2026-09-25).
+ */
+data class TremoloBuilder(val node: IgnitorDsl.Tremolo)
+
+/**
+ * The LFO's waveform: `"sine"` (default), `"triangle"`, `"square"`, `"sawtooth"` or `"ramp"`, with the
+ * oscillator aliases (`"tri"`, `"sqr"`, `"pulse"`, `"saw"`, `"sin"`); an unknown name is sine. [name]
+ * may also be the index in that list as a number, or a slot carrying it, and the door is the only
+ * way to write one. Chosen once per note, so give it a name, a number or a slot: a moving signal
+ * has no value to choose by and reads as sine. A `square` at full depth is silence for half of
+ * every cycle, which is the point.
+ */
+@KlangScript.Function
+fun TremoloBuilder.shape(name: IgnitorDslLike): TremoloBuilder =
+    copy(node = node.copy(shape = catalogueIndex(name, node.shape, LfoShapes::indexOf)))
+
+/**
+ * The LFO's skew, -1 to +1 (default 0, symmetric): positive keeps the level HIGH for more of each
+ * cycle, negative LOW, on every shape. Read once per block.
+ */
+@KlangScript.Function
+fun TremoloBuilder.skew(amount: IgnitorDslLike): TremoloBuilder = copy(node = node.copy(skew = amount.toIgnitorDsl()))
+
+/**
+ * Where the LFO starts in its own cycle, in cycles (default 0; 0.25 is a quarter cycle, 3.25 the
+ * same quarter). Set once, when the note starts, so give it a number or a slot: a moving signal
+ * reads as 0.
+ */
+@KlangScript.Function
+fun TremoloBuilder.phase(cycles: IgnitorDslLike): TremoloBuilder = copy(node = node.copy(phase = cycles.toIgnitorDsl()))
 
 // ── Shimmer ──────────────────────────────────────────────────────────────────
 

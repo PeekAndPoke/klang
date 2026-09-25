@@ -5,10 +5,12 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 
 /**
- * LFO waveforms for modulation sources. Internal-only enum — the DSL surface stays
- * string-based (sprudel / klangscript) and is mapped via [parseLfoShape].
+ * LFO waveforms for modulation sources. Internal-only enum: the DSL surface names a shape and
+ * the Ignitor `Tremolo` node carries its index in `LfoShapes`; both map here via [parseLfoShape]
+ * and [lfoShapeAt]. **The entry order is the catalogue's**, append only.
  *
  * The vocabulary is deliberately the OSCILLATOR vocabulary: every accepted name is one the
  * user already knows from `s(...)` and the ignitor registry, aliases included. There are no
@@ -28,14 +30,19 @@ internal enum class LfoShape {
  * Maps a DSL shape name to the enum. Unknown / null → [LfoShape.SINE]: an unrecognised name
  * degrades to the shipped waveform, never to silence and never to a throw (it arrives from a
  * user pattern value). Case-insensitive; the aliases mirror the ignitor registry's.
+ *
+ * The names and aliases live in ONE table, `LfoShapes` in `audio_bridge` (phase 3 step 3b,
+ * 2026-09-25), and this goes through its INDEX, so the strip (which reads a name off the voice)
+ * and the Ignitor `Tremolo` node (which carries the index as a knob) cannot disagree.
  */
-internal fun parseLfoShape(shape: String?): LfoShape = when (shape?.lowercase()) {
-    "triangle", "tri" -> LfoShape.TRIANGLE
-    "square", "sqr", "pulse" -> LfoShape.SQUARE
-    "sawtooth", "saw" -> LfoShape.SAWTOOTH
-    "ramp" -> LfoShape.RAMP
-    else -> LfoShape.SINE // "sine", "sin", null + fallback
-}
+internal fun parseLfoShape(shape: String?): LfoShape = lfoShapeAt(LfoShapes.indexOf(shape))
+
+/**
+ * The shape an index knob selects: `LfoShapes.indexAt`'s rule (nearest position; non-finite,
+ * negative or past the end is [LfoShape.SINE]). The enum's order IS the catalogue's, pinned by
+ * `ShapeCatalogueSpec`.
+ */
+internal fun lfoShapeAt(index: Double): LfoShape = LfoShape.entries[LfoShapes.indexAt(index)]
 
 /** Skew 0.0 — the duty at which the [skewPhase] warp is an exact identity. */
 internal const val LFO_SYMMETRIC_DUTY = 0.5

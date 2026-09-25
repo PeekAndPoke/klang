@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.neg
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.pregain
+import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.random.Random
 
 /**
@@ -219,7 +220,7 @@ class IgnitorGateSpec : StringSpec({
     "shape is NOT gated: it has no amount knob to read an off value from" {
         // Recorded, not a defect: `Shape` carries a transfer function and nothing else, so there
         // is no off value. Which node `classic()`'s distort stage becomes is decision D2's.
-        val shaped = IgnitorDsl.Shape(inner = saw, shape = "soft")
+        val shaped = saw.shape("soft")
 
         shapeOf(build(shaped)) shouldNotBe bareShape
         render(shaped).bits() shouldNotBe bare

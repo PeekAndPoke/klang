@@ -251,8 +251,20 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** A count slot: a literal, a `Param` through the voice's params or its default, else one. */
         private fun countOf(slot: IgnitorDsl): Int = when (slot) {
             is IgnitorDsl.Constant -> slot.value.toInt().coerceAtLeast(1)
-            is IgnitorDsl.Param -> (params[slot.name] ?: slot.default).toInt().coerceAtLeast(1)
+            is IgnitorDsl.Param -> (params[slot.name]?.takeIf { it.isFinite() } ?: slot.default).toInt().coerceAtLeast(1)
             else -> 1
+        }
+
+        /**
+         * An `oversample` knob as the whole factor the runtime reads at voice build: a `Constant` or
+         * `Param` leaf through the one conversion, [Oversampler.factorOf]; anything else is 0, which is
+         * what the runtime's leaf-only read gives it. A non-finite override reads as unset and takes the
+         * slot's default, as the runtime's `Param` leaf does.
+         */
+        private fun factorOf(knob: IgnitorDsl): Int = when (knob) {
+            is IgnitorDsl.Constant -> Oversampler.factorOf(knob.value)
+            is IgnitorDsl.Param -> Oversampler.factorOf(params[knob.name]?.takeIf { it.isFinite() } ?: knob.default)
+            else -> 0
         }
 
         private fun source(bytes: Int = SOURCE_BYTES) = GraphCensus(1, 1, bytes)
@@ -356,8 +368,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             }
 
             // shapers
-            is IgnitorDsl.Shape -> shaped(node.oversample, drive = false)
-            is IgnitorDsl.Distort -> shaped(node.oversample, drive = true)
+            is IgnitorDsl.Shape -> shaped(factorOf(node.oversample), drive = false)
+            is IgnitorDsl.Distort -> shaped(factorOf(node.oversample), drive = true)
             is IgnitorDsl.Drive -> inPlace()
             is IgnitorDsl.Crush -> inPlace()
             is IgnitorDsl.Coarse -> inPlace(16)

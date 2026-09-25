@@ -12,13 +12,14 @@ import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.HALF_PI
+import io.peekandpoke.klang.audio_be.LfoShape
+import io.peekandpoke.klang.audio_be.TremoloCore
 import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import kotlin.math.exp
@@ -155,14 +156,17 @@ fun Ignitor.drive(amount: Double): Ignitor {
  *   "rectify").
  */
 fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
+    ShapeIgnitor(this, parseDistortionShape(shape), oversampleStages)
+
+/** The waveshaper with the shape already resolved (from an index knob, at build): the DSL runtime's form. */
+internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignitor =
     ShapeIgnitor(this, shape, oversampleStages)
 
 private class ShapeIgnitor(
     private val upstream: Ignitor,
-    shape: String,
+    private val shape: DistortionShape,
     oversampleStages: Int,
 ) : Ignitor {
-    private val shape: DistortionShape = parseDistortionShape(shape)
     private val oversampler: Oversampler? =
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
@@ -496,7 +500,7 @@ fun Ignitor.phaser(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Amplitude modulation (tremolo) via sine LFO. Processes per-sample.
+ * Amplitude modulation (tremolo) via an LFO. Processes per-sample.
  *
  * Modulates the volume up and down rhythmically, creating a pulsing effect.
  * Rate and depth are read once per block (control rate). Bypasses when depth <= 0.
@@ -510,14 +514,35 @@ fun Ignitor.phaser(
 fun Ignitor.tremolo(
     rate: Ignitor,
     depth: Ignitor,
-): Ignitor = TremoloIgnitor(this, rate, depth)
+): Ignitor = TremoloIgnitor(this, rate, depth, skew = null, shape = LfoShape.SINE, startPhase = 0.0)
 
+/**
+ * The tremolo with every knob of the voice strip's (phase 3 step 3b, 2026-09-25), the form the DSL
+ * runtime builds. [shape] and [startPhase] (in cycles) are resolved once, at build; [skew] is read
+ * once per block like [rate] and [depth], and `null` means a constant 0 without the read.
+ */
+internal fun Ignitor.tremolo(
+    rate: Ignitor,
+    depth: Ignitor,
+    skew: Ignitor?,
+    shape: LfoShape,
+    startPhase: Double,
+): Ignitor = TremoloIgnitor(this, rate, depth, skew, shape, startPhase)
+
+/**
+ * The Ignitor host of [TremoloCore], the one tremolo law the voice strip's `TremoloRenderer` renders
+ * through too: this class only adapts the node's contract (rate, depth and skew read once per block,
+ * the clock kept running through a bypassed block).
+ */
 private class TremoloIgnitor(
     private val upstream: Ignitor,
     private val rate: Ignitor,
     private val depth: Ignitor,
+    private val skew: Ignitor?,
+    shape: LfoShape,
+    startPhase: Double,
 ) : Ignitor {
-    private var phase: Double = 0.0
+    private val core = TremoloCore(shape, startPhase, skew = 0.0)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -526,14 +551,20 @@ private class TremoloIgnitor(
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
             val depthVal = Ignitors.readParam(depth, freqHz, ctx)
             val end = ctx.windowEnd
-            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
+            // A non-finite rate reads as phase 0 every sample (wrapPhase) = a steady 1 - depth/2
+            // gain on the sine (a level change, not silence), healing the moment the rate returns.
+            val phaseInc = TremoloCore.increment(rateVal, ctx.sampleRate)
+
+            if (skew != null) {
+                core.setSkew(Ignitors.readParam(skew, freqHz, ctx))
+            }
 
             if (depthVal <= 0.0) {
                 // The LFO is a clock (ledger W2, the D1/D2 shape one file over): it advances
                 // through a depth gap by the whole window, so a modulated depth dipping to 0
-                // resumes exactly where an ungated LFO would be — not at a block-quantised
+                // resumes exactly where an ungated LFO would be, not at a block-quantised
                 // stale phase. A zero-length window advances nothing by construction.
-                phase = (phase + phaseInc * ctx.length).wrapPhase(TWO_PI)
+                core.skip(ctx.length, phaseInc)
 
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
@@ -541,17 +572,7 @@ private class TremoloIgnitor(
                 return@use
             }
 
-            for (i in ctx.offset until end) {
-                // wrapPhase over the bare subtract (ledger W2): identical in range, and a
-                // non-finite or negative rate can no longer kill the phase for the note's life.
-                // A non-finite rate reads as phase 0 every sample = a steady 1 - depth/2 gain
-                // (a level change, not silence), healing the moment the rate returns.
-                phase = (phase + phaseInc).wrapPhase(TWO_PI)
-
-                val lfoNorm = (fastSin(phase) + 1.0) * 0.5
-                val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
-                buffer[i] = (input[i] * gain)
-            }
+            core.apply(input, buffer, ctx.offset, end, phaseInc, depthVal)
         }
     }
 }

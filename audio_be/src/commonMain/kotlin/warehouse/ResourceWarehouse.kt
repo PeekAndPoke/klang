@@ -182,8 +182,9 @@ class ResourceWarehouse(
         const val SCRATCH_DEPTH: Int = 64
 
         /**
-         * The WARMED oversample factors — not the set the DSL accepts. `IgnitorDsl` takes any Int
-         * and `Oversampler.factorToStages` floors it to a power of two, so 32× is legal; a factor
+         * The WARMED oversample factors, not the set the DSL accepts. The `IgnitorDsl` `oversample`
+         * knob takes any number (`Oversampler.factorOf` truncates it to a whole factor) and
+         * `Oversampler.factorToStages` floors that to a power of two, so 32× is legal; a factor
          * outside this list builds its sub-pool on first use, inside render, and `lateAllocations`
          * cannot see that (it counts growth, not creation). 16× is the largest anyone has authored;
          * beyond it the trade is the user's.

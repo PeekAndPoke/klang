@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -33,6 +34,20 @@ fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is Function<*> -> throw KlangScriptTypeError("expected a sound or a number, got a function", operation = "sound parameter")
     else -> throw KlangScriptTypeError("expected a sound or a number, got ${this::class.simpleName}", operation = "sound parameter")
 }
+
+/**
+ * A name knob as the index its node carries (a body material, a vowel, a waveshaper, an LFO shape):
+ * a NAME through its catalogue's `indexOf`, a number or a slot as it is, and nothing at all as
+ * [bare], the stage's own value. The one conversion every such door shares (Katalyst step 5a-2 for
+ * `body` and `vowel`, phase 3 step 3b for `shape`, `distort` and the tremolo builder), so a name,
+ * its index and a slot carrying the index are one knob on every door.
+ */
+internal fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
+    when (value) {
+        null -> bare
+        is String -> IgnitorDsl.Constant(indexOf(value))
+        else -> value.toIgnitorDsl()
+    }
 
 /**
  * An `adsrCurves` name as a curve, or `null` when the name is unknown. The chain's door coerces
@@ -323,28 +338,40 @@ object KlangScriptOscExtensions {
      *  - **Symmetric hard / wavefolding:** "hard", "zerosquare", "chebyshev", "fold", "linearfold".
      *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
      *
-     * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
+     * @param shape a shape NAME, converted to its index in `DistortionShapes` (an unknown name is
+     *   "soft"); or the index itself as a number; or a slot carrying it (`Osc.param("drive-shape", 10)`),
+     *   the door being the only way to write one. Read once per note.
+     * @param oversample the oversampling factor (2 = 2x, 4 = 4x, 8 = 8x; 0 or 1 = off; a non-power of
+     *   two is floored), a number or a slot, read once per note. A stopgap until oversampling regions.
      */
     @KlangScript.Method
-    fun shape(self: IgnitorDsl, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
-        IgnitorDsl.Shape(inner = self, shape = shape, oversample = oversample)
+    fun shape(self: IgnitorDsl, shape: IgnitorDslLike = "soft", oversample: IgnitorDslLike = 0): IgnitorDsl =
+        shapeNode(self, shape, oversample)
 
     /**
-     * Waveshaping distortion. Convenience for drive(amount) + shape(shape).
+     * Waveshaping distortion. Convenience for drive(amount) + shape(shape, oversample).
      *
      * Shapes:
      *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".
      *  - **Symmetric hard / wavefolding:** "hard", "zerosquare", "chebyshev", "fold", "linearfold".
      *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
      *
-     * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
+     * [shape] and [oversample] take what [shape]'s do: a name, a number or a slot.
      */
     @KlangScript.Method
-    fun distort(self: IgnitorDsl, amount: IgnitorDslLike, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
+    fun distort(
+        self: IgnitorDsl,
+        amount: IgnitorDslLike,
+        shape: IgnitorDslLike = "soft",
+        oversample: IgnitorDslLike = 0,
+    ): IgnitorDsl = shapeNode(IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()), shape, oversample)
+
+    /** The one construction behind [shape] and [distort]: the name, number or slot to its index knob. */
+    private fun shapeNode(inner: IgnitorDsl, shape: IgnitorDslLike, oversample: IgnitorDslLike): IgnitorDsl.Shape =
         IgnitorDsl.Shape(
-            inner = IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()),
-            shape = shape,
-            oversample = oversample,
+            inner = inner,
+            shape = catalogueIndex(shape, IgnitorDsl.Constant(DistortionShapes.SOFT_INDEX.toDouble()), DistortionShapes::indexOf),
+            oversample = oversample.toIgnitorDsl(),
         )
 
     /** Applies bit-depth reduction (bitcrusher). */
@@ -386,10 +413,23 @@ object KlangScriptOscExtensions {
         ),
     ).configuredBy("phaser", configure).node
 
-    /** Applies amplitude tremolo. */
+    /**
+     * Applies amplitude tremolo: an LFO at [rate] Hz pulls the level down by up to [depth] (0 to 1).
+     * The LFO's shape, skew and start phase are knobs on the [TremoloBuilder]:
+     * `.tremolo(4, 0.8, x => x.shape("square").skew(0.3).phase(0.25))`. Rate first, like every
+     * Ignitor LFO door; the pattern door is `tremolo(depth, sync, shape, skew, phase)`.
+     *
+     * @param configure receives the [TremoloBuilder] (knobs: `shape`, `skew`, `phase`) and returns it.
+     */
     @KlangScript.Method
-    fun tremolo(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
+    fun tremolo(
+        self: IgnitorDsl,
+        rate: IgnitorDslLike,
+        depth: IgnitorDslLike,
+        configure: ((TremoloBuilder) -> TremoloBuilder)? = null,
+    ): IgnitorDsl = TremoloBuilder(
+        IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl()),
+    ).configuredBy("tremolo", configure).node
 
     /**
      * Applies a granular shimmer cloud with configurable pitch transpositions and feedback. [wet]

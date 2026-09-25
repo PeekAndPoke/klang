@@ -233,4 +233,64 @@ class CatalogueIndexSpec : StringSpec({
             VowelBands.bandsAt(4.5) shouldNotBe VowelBands.bandsFor(VowelBands.names[5])
         }
     }
+
+    // ── The waveshaper and LFO catalogues (phase 3 step 3b, 2026-09-25) ────────────────────────────
+    //
+    // The conversion only. That position i IS the backend enum's entry i, and that every name and
+    // alias still reaches the shape it reached before 3b, is `ShapeCatalogueSpec` in audio_be, which
+    // can see the enums.
+
+    "every waveshaper and LFO name is its own position, and every alias its canonical name's" {
+        for ((names, aliases, indexOf) in listOf(
+            Triple(DistortionShapes.names, DistortionShapes.aliases, { n: String -> DistortionShapes.indexOf(n) }),
+            Triple(LfoShapes.names, LfoShapes.aliases, { n: String -> LfoShapes.indexOf(n) }),
+        )) {
+            names.forEachIndexed { i, name ->
+                withClue(name) {
+                    indexOf(name) shouldBe i.toDouble()
+                    indexOf(name.uppercase()) shouldBe i.toDouble()
+                }
+            }
+
+            for ((alias, canonical) in aliases) {
+                withClue(alias) { indexOf(alias) shouldBe names.indexOf(canonical).toDouble() }
+            }
+        }
+    }
+
+    "an unknown waveshaper is soft (0) and an unknown or absent LFO shape the sine (0)" {
+        DistortionShapes.names[DistortionShapes.SOFT_INDEX] shouldBe "soft"
+        LfoShapes.names[LfoShapes.SINE_INDEX] shouldBe "sine"
+
+        DistortionShapes.indexOf("nonexistent") shouldBe 0.0
+        LfoShapes.indexOf("rampup") shouldBe 0.0
+        LfoShapes.indexOf(null) shouldBe 0.0
+    }
+
+    "indexAt: the nearest position, ties to even, and the fallback outside the catalogue" {
+        for (index in listOf(SLOT_UNSET, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, -1.0, -0.51)) {
+            withClue(index) {
+                DistortionShapes.indexAt(index) shouldBe DistortionShapes.SOFT_INDEX
+                LfoShapes.indexAt(index) shouldBe LfoShapes.SINE_INDEX
+            }
+        }
+
+        DistortionShapes.indexAt(DistortionShapes.names.size.toDouble()) shouldBe 0
+        DistortionShapes.indexAt(DistortionShapes.names.size - 0.6) shouldBe DistortionShapes.names.size - 1
+        LfoShapes.indexAt(4.5) shouldBe 4 // the last position, by the tie rule: half-up would be 5, past the end
+        DistortionShapes.indexAt(-0.49) shouldBe 0
+        DistortionShapes.indexAt(2.5) shouldBe 2 // half-up would be 3
+        LfoShapes.indexAt(2.5) shouldBe 2
+        DistortionShapes.indexAt(1.6) shouldBe 2 // nearest, not truncated
+    }
+
+    "the shared rule answers its FALLBACK for a non-finite index, whatever the fallback is" {
+        // Both catalogues fall back to position 0, and a NaN that slipped past the guard would ALSO land
+        // on 0 (`NaN.toInt()` is 0 on both platforms), so through them the guard cannot be seen. The rule
+        // itself must not depend on that coincidence: a catalogue whose fallback is not 0 is one append
+        // away.
+        for (index in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            withClue(index) { catalogueIndexAt(index, size = 5, fallback = 3) shouldBe 3 }
+        }
+    }
 })

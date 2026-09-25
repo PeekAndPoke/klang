@@ -267,13 +267,17 @@ class VoiceFactory(
                     resolvedAdsr
                 }
 
+                // The same cull rule for a tremolo INSIDE the tree, which only the build can see
+                // (`BuiltIgnitor.gatesOutput`, phase 3 step 3b): an author's `cull(...)` still wins.
+                val treeCull = cull ?: if (built.gatesOutput) VOICE_CULL_NEVER else null
+
                 buildVoice(
                     data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     phaser, tremolo, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
-                    cull = cull,
+                    cull = treeCull,
                 )
             }
 

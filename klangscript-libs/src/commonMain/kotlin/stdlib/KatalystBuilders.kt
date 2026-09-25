@@ -189,17 +189,6 @@ fun KatalystBuilder.vowel(
 }
 
 /**
- * A name knob as the index the stage carries: a name through its catalogue's `indexOf`, a number or
- * a slot as it is, and nothing at all as the bare stage's own value (the "never set" marker).
- */
-private fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
-    when (value) {
-        null -> bare
-        is String -> IgnitorDsl.Constant(indexOf(value))
-        else -> value.toIgnitorDsl()
-    }
-
-/**
  * Appends an orbit delay (the shared delay line).
  *
  * @param wet how much of the orbit goes into the delay (default 0.25; 0.0 = off). Orbit twin:

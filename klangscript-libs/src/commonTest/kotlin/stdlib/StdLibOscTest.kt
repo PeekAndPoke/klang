@@ -11,6 +11,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -279,7 +280,7 @@ class StdLibOscTest : StringSpec({
     "distort chaining produces Shape(Drive(...))" {
         val dsl = evalIgnitorDsl("Osc.saw().distort(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.oversample shouldBe 0
+        dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
         val drive = dsl.inner
         drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
         drive.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
@@ -288,8 +289,8 @@ class StdLibOscTest : StringSpec({
     "distort with oversample factor" {
         val dsl = evalIgnitorDsl("""Osc.saw().distort(0.8, "exp", 4)""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.shape shouldBe "exp"
-        dsl.oversample shouldBe 4
+        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("exp"))
+        dsl.oversample shouldBe IgnitorDsl.Constant(4.0)
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }
 
@@ -455,21 +456,21 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("""Osc.sine().shape("hard")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.shape shouldBe "hard"
+        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("hard"))
     }
 
     "shape with default curve" {
         val dsl = evalIgnitorDsl("Osc.sine().shape()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.shape shouldBe "soft"
-        dsl.oversample shouldBe 0
+        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("soft"))
+        dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
     }
 
     "shape with oversample factor" {
         val dsl = evalIgnitorDsl("""Osc.sine().shape("hard", 2)""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.shape shouldBe "hard"
-        dsl.oversample shouldBe 2
+        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("hard"))
+        dsl.oversample shouldBe IgnitorDsl.Constant(2.0)
     }
 
     "bandpass chaining" {
@@ -579,7 +580,7 @@ class StdLibOscTest : StringSpec({
     "drive + shape chain" {
         val dsl = evalIgnitorDsl("""Osc.saw().drive(0.3).shape("fold")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        dsl.shape shouldBe "fold"
+        dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("fold"))
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }
 })

@@ -8,6 +8,11 @@ Since last revision, these editor tools have been added (see `sprudel/src/jsMain
 `SprudelSuperPluckEditorTool`, `SprudelSuperSawEditorTool`, `SprudelTremoloEditorTool`. Tier tables below still
 reflect proposals — cross-check the directory before starting a "new" tool.
 
+> **2026-09-25 follow-up (phase 3 step 3b):** the LFO and distortion shape names now have ONE home each,
+> `audio_bridge/.../LfoShapes.kt` and `DistortionShapes.kt` (names, aliases, `indexOf`). `SprudelTremoloEditorTool`,
+> `SprudelDistortEditorTool` and `SprudelDistortShapeEditorTool` still hold their own copies of the lists and
+> should read the catalogues.
+
 ## Summary
 
 Most core DSL params have editor tools; a backlog of ~16 param editors remains (see the Tier tables below).

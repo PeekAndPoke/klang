@@ -1750,46 +1750,68 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
-     * Includes DC blocker for asymmetric shapes.
+     * Pure waveshaping without drive. Applies a nonlinear transfer function per sample, then a DC
+     * blocker (on every shape, not only the asymmetric ones: see `Ignitor.distort` in the backend).
      *
-     * Shapes:
+     * Shapes (the catalogue is [DistortionShapes]; the knob carries a name's INDEX in it):
      *  - **Symmetric soft:** "soft" (tanh), "gentle" (soft clip, 2× gain), "softsat"
      *    (algebraic, gentler), "cubic", "exp" (transistor), "sineshaper" (peak-at-unity fold).
      *  - **Symmetric hard / harsh:** "hard" (clip), "zerosquare" (→ square), "chebyshev"
      *    (3rd-harmonic), "fold" (sin wavefold), "linearfold" (triangle wavefold).
      *  - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly),
      *    "stompbox" (diode pedal), "rectify" (full-wave).
+     *
+     * @param shape the waveshaper as an INDEX into [DistortionShapes.names] (phase 3 step 3b,
+     *   2026-09-25; it was a name). A knob so that `classic()` can fill it from a slot. Both doors
+     *   take a NAME and convert it through [DistortionShapes.indexOf]; the script door also takes a
+     *   number or a slot. **Read ONCE, at voice build** (the shaper is chosen once per note, as it
+     *   always was): a `Param` or `Constant` leaf gives its value, anything else has no build-time
+     *   answer and is `soft`, and is not built at all (no rng draw moves). The index rounds to the
+     *   nearest position; a non-finite, negative or past-the-end one is `soft`, exactly what an
+     *   unknown name has always been. Default: `soft` (index 0).
+     * @param oversample the oversampling FACTOR (2 = 2x, 4 = 4x, 8 = 8x; floored to a power of two;
+     *   1 or less is no oversampler, today's plain path). **Read ONCE, at voice build**, the same
+     *   leaf-only way as [shape] (a non-leaf is 0, off), and truncated to a whole factor, as the
+     *   pattern door's `asIntOrNull` does; a non-finite one is off. No upper clamp (the Motor stays
+     *   raw). A STOPGAP (decision D7, `docs/tasks/builtin-instruments.md` section 3): a knob so that
+     *   `classic()` can fill it from `distort.oversample`, and `docs/tasks/oversampling-regions.md`
+     *   retires it for a region. Default: 0 (off).
      */
     @WireName("shape")
     data class Shape(
         val inner: IgnitorDsl,
-        val shape: String = "soft",
-        val oversample: Int = 0,
+        val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
+        val oversample: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out)
+            inner.collectParams(out); shape.collectParams(out); oversample.collectParams(out)
         }
     }
 
     /**
-     * Legacy distortion node. Kept for backward compatibility with serialized trees.
-     * New code should use [Drive] + [Shape] instead. The builder extension [IgnitorDsl.distort]
-     * creates a Shape(Drive(...)) chain — and since the W5 decision (2026-08-30) the RUNTIME
-     * builds this node as that exact chain too: the fused DistortIgnitor is deleted, so a
-     * legacy tree renders through the modern Drive+Shape path (the shaper stays engaged at
-     * unity drive where the fused node's gate bypassed everything — the one nuance, recorded
-     * in the ledger).
+     * Drive and shape as ONE unit: `drive(amount)` into `shape(shape, oversample)`, gated as a whole on
+     * [amount] (the `distort` row of the off-value table, `docs/tasks/builtin-instruments.md` section
+     * 5b). Neither authoring door builds it: both spell `distort` as `Shape(Drive(...))`, whose `Shape`
+     * half has no amount and cannot be gated. That difference is why the node is KEPT (phase 3 step
+     * 3b, 2026-09-25): it is the one node that switches a distort off completely, which a slotted
+     * `classic()` distort stage needs (decision D2 decides which node that stage becomes).
+     *
+     * Its KDoc used to call it "kept for backward compatibility with serialized trees"; wire trees are
+     * never persisted (the W5 note in `IgnitorEffects`), and that was not the reason it exists.
+     * The runtime builds it as that exact chain since the W5 decision (2026-08-30): the fused
+     * DistortIgnitor is deleted.
+     *
+     * [shape] and [oversample] are the knobs of [Shape], read the same way, at voice build.
      */
     @WireName("distort")
     data class Distort(
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
-        val shape: String = "soft",
-        val oversample: Int = 0,
+        val shape: IgnitorDsl = Constant(DistortionShapes.SOFT_INDEX.toDouble()),
+        val oversample: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); amount.collectParams(out)
+            inner.collectParams(out); amount.collectParams(out); shape.collectParams(out); oversample.collectParams(out)
         }
     }
 
@@ -1847,15 +1869,45 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change. */
+    /**
+     * Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change.
+     *
+     * The LFO law is the voice strip's, ONE copy both use (`TremoloCore` in the backend): at every
+     * [shape], [skew] and [phase] this node renders what the strip's tremolo renders, bit for bit, which
+     * is what lets `classic()` rebuild it (phase 3 step 3b, 2026-09-25).
+     *
+     * @param rate LFO rate in Hz, read once per block. Default 5.0.
+     * @param depth modulation depth, 0 to 1, read once per block; at or below 0 the tremolo passes the
+     *   signal through and its clock keeps running. Default 0.5.
+     * @param shape the LFO waveform as an INDEX into [LfoShapes.names] (`sine`, `triangle`, `square`,
+     *   `sawtooth`, `ramp`). Both doors take a NAME (the script door also a number or a slot). **Read
+     *   ONCE, at voice build**, leaf-only (a non-leaf is `sine` and is not built); the index rounds to
+     *   the nearest position, and a non-finite, negative or past-the-end one is `sine`, as an unknown
+     *   name is. Default: `sine` (index 0).
+     * @param skew -1 to +1, 0 symmetric: positive keeps the LFO HIGH for more of the cycle, negative LOW,
+     *   on every shape. A non-finite one reads as symmetric. Default 0.0. **Read once per block and held**
+     *   for it: the skew warps the unwarped phase accumulator, which is never remapped (that keeps the
+     *   LFO locked to the beat, ledger W2), so a MOVING skew steps the gain at every block edge. The
+     *   step is about `depth * pi * deltaSkew / 2` mid-range and grows as `0.5 / duty` toward
+     *   |skew| = 1; a full-range skew moving at 2 Hz on a 5 Hz sine at depth 1 steps by up to about 0.19,
+     *   a zipper at the block rate (344 Hz at 128 frames). A constant skew, which is every slot
+     *   `classic()` writes, never steps.
+     * @param phase where in its own cycle the LFO starts, in cycles (0 to 1 is one cycle; 3.25 is a
+     *   quarter). **Read ONCE, at voice build** (it seeds the clock), leaf-only (a non-leaf is 0 and
+     *   is not built); a non-finite one is 0. Default 0.0.
+     */
     @WireName("tremolo")
     data class Tremolo(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
         val depth: IgnitorDsl = Constant(0.5),
+        val shape: IgnitorDsl = Constant(LfoShapes.SINE_INDEX.toDouble()),
+        val skew: IgnitorDsl = Constant(0.0),
+        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+            shape.collectParams(out); skew.collectParams(out); phase.collectParams(out)
         }
     }
 
@@ -2556,8 +2608,17 @@ fun IgnitorDsl.drive(amount: Double) =
  *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
  *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
+ *
+ * The node carries the shape as an INDEX and [oversample] as a knob; this door takes a name and a
+ * whole factor. A SLOT in either position is written through the node (`IgnitorDsl.Shape(inner,
+ * shape = IgnitorDsl.Param(...))`): a recorded two-door asymmetry, since the script door, which has no
+ * node constructor, also accepts a number or a slot (phase 3 step 3b, 2026-09-25).
  */
-fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Shape(this, shape, oversample)
+fun IgnitorDsl.shape(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Shape(
+    inner = this,
+    shape = IgnitorDsl.Constant(DistortionShapes.indexOf(shape)),
+    oversample = IgnitorDsl.Constant(oversample.toDouble()),
+)
 
 // Envelope
 
@@ -2604,9 +2665,12 @@ fun IgnitorDsl.fm(
  *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
  *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
  *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
+ *
+ * A name and a whole factor, as on [shape]; a slot is written through the node (the same recorded
+ * asymmetry).
  */
 fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
-    IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
+    IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)).shape(shape, oversample)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun IgnitorDsl.crush(amount: Double) = IgnitorDsl.Crush(
@@ -2634,11 +2698,29 @@ fun IgnitorDsl.phaser(wet: Double, rate: Double, center: Double = 1000.0, sweep:
     sweep = IgnitorDsl.Constant(sweep),
 )
 
-/** Applies a tremolo (amplitude modulation) at the given LFO [rate] and [depth]. */
-fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
+/**
+ * Applies a tremolo (amplitude modulation) at the given LFO [rate] in Hz and [depth], with the LFO's
+ * [shape] (a name from [LfoShapes], converted to its index), [skew] (-1 to +1) and start [phase] in
+ * cycles. See [IgnitorDsl.Tremolo] for each knob.
+ *
+ * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape`, `skew` and `phase` on
+ * a builder: a recorded two-door asymmetry, the filter doors' precedent (`audio_bridge` cannot see the
+ * script builders; the flat door is a superset of the builder). A slot in any knob is written through
+ * the node (phase 3 step 3b, 2026-09-25).
+ */
+fun IgnitorDsl.tremolo(
+    rate: Double,
+    depth: Double,
+    shape: String = "sine",
+    skew: Double = 0.0,
+    phase: Double = 0.0,
+) = IgnitorDsl.Tremolo(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
     depth = IgnitorDsl.Constant(depth),
+    shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
+    skew = IgnitorDsl.Constant(skew),
+    phase = IgnitorDsl.Constant(phase),
 )
 
 /**
