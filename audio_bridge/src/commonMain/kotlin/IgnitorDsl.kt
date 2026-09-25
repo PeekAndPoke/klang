@@ -1325,17 +1325,14 @@ sealed interface IgnitorDsl {
          * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
          * renders a static filter. Write a slot (`OscSlot.lpf.env`) or a constant.
          *
-         * **Which envelope this is, and D3 is open on BOTH counts.** The law: an unshaped stage
+         * **Which envelope this is, and where D3 still stands.** The law: an unshaped stage
          * (curve knob at its default) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
          * the house Exponential curve (`AdsrCurve.Default`, K = 3), because `VoiceFactory` omits
          * the three curve arguments. Measured at `env = 24`, the two are up to 806 cents apart at
-         * the same instant (RMS 256 cents on a pluck, 512 on a pad). The sampling: this node
-         * computes the envelope at block START and block END and interpolates the SVF
-         * coefficients across the block, while the strip computes it once per block and lets
-         * `setCutoff` ramp the coefficients over 32 samples and then hold. Same endpoints and the
-         * same stage times on both; the default law and the sampling are what decision D3
-         * decides, and the law is the larger of the two by 4x to 100x. Nothing here anticipates
-         * the answer.
+         * the same instant (RMS 256 cents on a pluck, 512 on a pad). The sampling is the same on
+         * both since D3's commit (a2): the envelope is computed at block START and block END and the
+         * SVF coefficients are interpolated across the block. Same endpoints and the same stage
+         * times on both; D3 decided exponential for the default law, which lands in its own commit.
          */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds. Inert while [env] is `0`. */

@@ -28,11 +28,12 @@ class FilterEnvSemitoneSpec : StringSpec({
 
     // ── Strip path (FilterModRenderer): exact formula ────────────────────────
 
-    // Tunable is a standalone interface (no process contract) - a pure recorder suffices.
+    // Tunable is a standalone interface (no process contract) - a pure recorder suffices. It records
+    // the sweep's START cutoff; with attack 0 / decay 0 / sustain 1 the end is the same value.
     class RecordingFilter : AudioFilter.Tunable {
         var lastCutoff: Double = Double.NaN
-        override fun setCutoff(cutoffHz: Double) {
-            lastCutoff = cutoffHz
+        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
+            lastCutoff = startHz
         }
     }
 
@@ -77,7 +78,7 @@ class FilterEnvSemitoneSpec : StringSpec({
 
     "strip path: clamp saturation goes THROUGH the shared clamp (deep depth on a real HPF)" {
         // A REAL SvfHPF as the Tunable: FilterModRenderer computes 15000 * 2^(48/12) = 240 kHz,
-        // setCutoff funnels it through bilinearK's [5, Nyquist-1] clamp, and a highpass at
+        // sweepCutoff funnels it through bilinearK's [5, Nyquist-1] clamp, and a highpass at
         // Nyquist passes (near) nothing.
         val sr = 48000.0
         val real = LowPassHighPassFilters.SvfHPF(15000.0, 0.707, sr)
@@ -94,7 +95,9 @@ class FilterEnvSemitoneSpec : StringSpec({
         repeat(40) { blk ->
             val buf = AudioBuffer(128)
             for (i in 0 until 128) buf[i] = rng.nextDouble() * 2.0 - 1.0
-            renderer.renderInPlace(buf)
+            // The gate far away: the sweep reads the block's END too, and a gate at the block's end
+            // (the helper's default) would release the envelope there.
+            renderer.renderInPlace(buf, gateEndFrame = 1_000_000.0)
             real.process(buf, 0, 128)
             if (blk >= 20) {
                 for (i in 0 until 128) {

@@ -74,7 +74,7 @@ Cmd → PlaybackEngineDispatcher.handle
 ## Filters
 
 - `filters/` — `AudioFilter`, `LowPassHighPassFilters` (SVF/one-pole/DcBlocker), `Formant`, `Body`, `ParallelMixFilter`,
-  `Chain`/`NoOp`, `FilterHumanizationCoeffs`.
+  `Chain`/`NoOp`, `SvfCoeffSweep` (the per-block coefficient glide both filter hosts share).
 
 ## Ignitors (oscillators / exciters)
 

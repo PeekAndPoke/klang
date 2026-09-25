@@ -22,7 +22,7 @@ private object NoOpSignalIgnitor : Ignitor {
  * Convenience for testing: runs a [BlockRenderer] on a raw buffer without full voice setup.
  * Creates a minimal [BlockContext] wrapping the buffer.
  */
-fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
+fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100, gateEndFrame: Double = buffer.size.toDouble()) {
     val ctx = BlockContext(
         audioBuffer = buffer,
         freqModBuffer = DoubleArray(buffer.size),
@@ -30,7 +30,7 @@ fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
         sampleRate = sampleRate,
         startFrame = 0.0,
         endFrame = buffer.size.toDouble(),
-        gateEndFrame = buffer.size.toDouble(),
+        gateEndFrame = gateEndFrame,
         freqHz = 440.0,
         signal = NoOpSignalIgnitor,
         signalCtx = IgniteContext(

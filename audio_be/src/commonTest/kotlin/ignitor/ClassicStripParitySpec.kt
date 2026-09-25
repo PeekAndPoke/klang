@@ -212,14 +212,14 @@ class ClassicStripParitySpec : StringSpec({
         },
 
         // ── the cutoff envelope, D3 ──
-        Row("lpf env 24: D3, the law (linear against exp) and the sampling", false, mapOf("lpf.freq" to 600.0, "lpf.env" to 24.0)) {
+        Row("lpf env 24: D3 (b), the default curve (linear against exp)", false, mapOf("lpf.freq" to 600.0, "lpf.env" to 24.0)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(depth = 24.0))))
         },
-        Row("lpf attack only (the fill itself is proven by the door-sweep row): D3", false, mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)) {
+        Row("lpf attack only (the fill itself is proven by the door-sweep row): D3 (b), the default curve", false, mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(attack = 0.05))))
         },
         Row(
-            "lpf pluck env 24 decay 0.2 sustain 0.1: D3",
+            "lpf pluck env 24 decay 0.2 sustain 0.1: D3 (b), the default curve",
             false,
             mapOf("lpf.freq" to 500.0, "lpf.env" to 24.0, "lpf.attack" to 0.002, "lpf.decay" to 0.2, "lpf.sustain" to 0.1, "lpf.release" to 0.1),
         ) {
@@ -228,22 +228,69 @@ class ClassicStripParitySpec : StringSpec({
         Row("lpf explicit env 0 with a decay: static on both", true, mapOf("lpf.freq" to 600.0, "lpf.env" to 0.0, "lpf.decay" to 0.3)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(decay = 0.3, depth = 0.0))))
         },
-        Row("hpf env -12 decay 0.2 sustain 0.3: D3", false, mapOf("hpf.freq" to 800.0, "hpf.env" to -12.0, "hpf.decay" to 0.2, "hpf.sustain" to 0.3)) {
+        Row("hpf env -12 decay 0.2 sustain 0.3: D3 (b), the default curve", false, mapOf("hpf.freq" to 800.0, "hpf.env" to -12.0, "hpf.decay" to 0.2, "hpf.sustain" to 0.3)) {
             copy(filters = filters(FilterDef.HighPass(800.0, 0.707, envelope = FilterEnvDef(decay = 0.2, sustain = 0.3, depth = -12.0))))
         },
-        Row("bpf env 12: D3", false, mapOf("bpf.freq" to 700.0, "bpf.env" to 12.0)) {
+        Row("bpf env 12: D3 (b), the default curve", false, mapOf("bpf.freq" to 700.0, "bpf.env" to 12.0)) {
             copy(filters = filters(FilterDef.BandPass(700.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
         },
-        Row("notch env 12: D3", false, mapOf("notch.freq" to 700.0, "notch.env" to 12.0)) {
+        Row("notch env 12: D3 (b), the default curve", false, mapOf("notch.freq" to 700.0, "notch.env" to 12.0)) {
             copy(filters = filters(FilterDef.Notch(700.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
         },
+        // A STEP envelope (attack 0, decay 0, release 0) has no curved stage, so the default-curve half of
+        // D3 cannot reach it: these rows see the sampling alone (the sweep at the gate block) and the
+        // sweep's step placement in each strip loop, the saturated ones with the drift lane.
+        *listOf("lpf" to 600.0, "hpf" to 900.0, "bpf" to 800.0, "notch" to 800.0).map { (f, freq) ->
+            Row(
+                "$f env 24, a step envelope (attack 0, decay 0, sustain 0.4, release 0): the sampling alone",
+                true,
+                mapOf("$f.freq" to freq, "$f.env" to 24.0, "$f.attack" to 0.0, "$f.decay" to 0.0, "$f.sustain" to 0.4, "$f.release" to 0.0),
+            ) {
+                val env = FilterEnvDef(attack = 0.0, decay = 0.0, sustain = 0.4, release = 0.0, depth = 24.0)
+                val def = when (f) {
+                    "lpf" -> FilterDef.LowPass(freq, 0.707, envelope = env)
+                    "hpf" -> FilterDef.HighPass(freq, 0.707, envelope = env)
+                    "bpf" -> FilterDef.BandPass(freq, 0.707, envelope = env)
+                    else -> FilterDef.Notch(freq, 0.707, envelope = env)
+                }
+
+                copy(filters = filters(def))
+            }
+        }.toTypedArray(),
+        Row(
+            "lpf env 24 q 3 passes 3, a step envelope: the sweep forwarded to every stage of the cascade",
+            true,
+            mapOf(
+                "lpf.freq" to 600.0, "lpf.q" to 3.0, "lpf.passes" to 3.0, "lpf.env" to 24.0,
+                "lpf.attack" to 0.0, "lpf.decay" to 0.0, "lpf.sustain" to 0.4, "lpf.release" to 0.0,
+            ),
+        ) {
+            val env = FilterEnvDef(attack = 0.0, decay = 0.0, sustain = 0.4, release = 0.0, depth = 24.0)
+
+            copy(filters = filters(FilterDef.LowPass(600.0, 3.0, envelope = env, passes = 3)))
+        },
+        *listOf("lpf" to 600.0, "hpf" to 900.0).map { (f, freq) ->
+            Row(
+                "analog 2, $f env 24 q 3, a step envelope: the sweep through the saturated branch with the drift",
+                true,
+                mapOf(
+                    "analog" to 2.0, "$f.freq" to freq, "$f.q" to 3.0, "$f.env" to 24.0,
+                    "$f.attack" to 0.0, "$f.decay" to 0.0, "$f.sustain" to 0.4, "$f.release" to 0.0,
+                ),
+            ) {
+                val env = FilterEnvDef(attack = 0.0, decay = 0.0, sustain = 0.4, release = 0.0, depth = 24.0)
+                val def = if (f == "lpf") FilterDef.LowPass(freq, 3.0, envelope = env) else FilterDef.HighPass(freq, 3.0, envelope = env)
+
+                copy(filters = filters(def))
+            }
+        }.toTypedArray(),
 
         // ── analog: the humanize lane ──
         Row("analog 2, no filter: the oscillator drift alone", true, mapOf("analog" to 2.0)) { this },
-        Row("analog 2, lpf 1200: one filter, the drift sampling (D3)", false, mapOf("analog" to 2.0, "lpf.freq" to 1200.0)) {
+        Row("analog 2, lpf 1200: one filter, the drift lane (one sampling since D3 a2)", true, mapOf("analog" to 2.0, "lpf.freq" to 1200.0)) {
             copy(filters = filters(FilterDef.LowPass(1200.0, 0.707)))
         },
-        Row("analog 2, hpf and lpf: the draw order (section 8) and the drift sampling (D3)", false, mapOf("analog" to 2.0, "hpf.freq" to 300.0, "lpf.freq" to 1200.0)) {
+        Row("analog 2, hpf and lpf: the draw order (section 8)", false, mapOf("analog" to 2.0, "hpf.freq" to 300.0, "lpf.freq" to 1200.0)) {
             copy(filters = filters(FilterDef.HighPass(300.0, 0.707), FilterDef.LowPass(1200.0, 0.707)))
         },
 

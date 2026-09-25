@@ -461,9 +461,9 @@ class VoiceFactory(
             is FilterDef.Body -> 0.0
         }
 
-        // When there's no envelope but drift is active, build a degenerate envelope
-        // with depth=0 so the per-block `2^(0/12 * envValue) = 1` math (C3: semitone law)
-        // leaves the cutoff untouched by the envelope side — only drift multiplies it.
+        // When there's no envelope but drift is active, build a degenerate envelope with
+        // depth=0: `FilterModRenderer` never reads the envelope of a depth-0 modulator, so
+        // only the drift moves the cutoff.
         val envelope: Voice.Envelope
         val depth: Double
         if (envData != null) {

@@ -15,9 +15,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 // cannot drift apart. They did drift apart while they were duplicated — see
 // `docs/tasks/audio-bridge-constants.md` §1.
 //
-// Engine-internal filter tuning with no DSL field (`FILTER_SMOOTH_SAMPLES`,
-// the oscillator drift depths in `AnalogDriftCoeffs`) deliberately stays in
-// `audio_be`. The rule is: a constant belongs here iff it is a wire default.
+// Engine-internal tuning with no DSL field (the oscillator drift depths in
+// `AnalogDriftCoeffs`) deliberately stays in `audio_be`. The rule is: a constant belongs here iff it is a wire default.
 //
 // All scaled by the `analog` parameter. `analog = 0` is exactly no humanization —
 // bit-identical to the textbook filter, and the saturated branch is skipped entirely.
@@ -34,7 +33,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 /**
  * Per-voice cutoff offset scale, per unit `analog`. Each filter instance gets a
  * uniform random multiplier in `1 ± FILTER_CUTOFF_OFFSET_PER_ANALOG × analog`
- * applied at construction and at every runtime `setCutoff` call.
+ * applied at construction and to both ends of every runtime `sweepCutoff` call.
  *
  * At `analog=1` ≈ ±0.35 cents per voice; at `analog=3` ≈ ±1 cent; at `analog=10`
  * ≈ ±3.5 cents. Tuned by ear — larger values smear the filter's character

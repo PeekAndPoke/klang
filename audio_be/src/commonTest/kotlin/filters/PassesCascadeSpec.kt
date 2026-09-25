@@ -164,10 +164,10 @@ class PassesCascadeSpec : StringSpec({
         db(rmsIgnitorHp(2, 1000.0) / rmsIgnitorHp(1, 1000.0)) shouldBe (0.0 plusOrMinus 0.4)
     }
 
-    "Tunable: setCutoff retunes EVERY stage of the cascade" {
+    "Tunable: sweepCutoff retunes EVERY stage of the cascade" {
         val fc = 500.0
         val cascade = LowPassHighPassFilters.createLPF(cutoffHz = 8000.0, q = 0.707, sampleRate = sr, passes = 2)
-        (cascade as AudioFilter.Tunable).setCutoff(fc)
+        (cascade as AudioFilter.Tunable).sweepCutoff(fc, fc, 128)
         // after retuning to 500 Hz, a 1 kHz sine (one octave above) must see the full
         // -24 dB/oct cascade attenuation — a single-stage-forwarding mutant reads ~-12
         val att = db(rmsThrough(cascade, 2.0 * fc) / rmsThrough(NoOpAudioFilter, 2.0 * fc))

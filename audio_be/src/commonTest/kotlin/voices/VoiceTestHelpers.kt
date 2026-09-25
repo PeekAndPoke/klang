@@ -294,15 +294,17 @@ object VoiceTestHelpers {
     }
 
     /**
-     * Tunable spy filter that also tracks setCutoff() calls.
+     * Tunable spy filter that also tracks sweepCutoff() calls: [cutoffHistory] and [currentCutoff]
+     * record each sweep's START cutoff (the block's first frame), [endHistory] its end cutoff.
      * Useful for testing filter modulation.
      */
     class TunableSpyFilter(name: String = "tunableSpy") : SpyFilter(name), AudioFilter.Tunable {
         val cutoffHistory = mutableListOf<Double>()
+        val endHistory = mutableListOf<Double>()
         var currentCutoff = 0.0
 
         /**
-         * How many `setCutoff` calls had already landed when each `process` began. This is the only
+         * How many `sweepCutoff` calls had already landed when each `process` began. This is the only
          * way to check "modulation updates the cutoff BEFORE the filter processes" — comparing two
          * independent counters after the fact cannot distinguish the two orders.
          */
@@ -313,14 +315,16 @@ object VoiceTestHelpers {
             super.process(buffer, offset, length)
         }
 
-        override fun setCutoff(cutoffHz: Double) {
-            currentCutoff = cutoffHz
-            cutoffHistory.add(cutoffHz)
+        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
+            currentCutoff = startHz
+            cutoffHistory.add(startHz)
+            endHistory.add(endHz)
         }
 
         override fun reset() {
             super.reset()
             cutoffHistory.clear()
+            endHistory.clear()
             cutoffCountAtProcess.clear()
             currentCutoff = 0.0
         }

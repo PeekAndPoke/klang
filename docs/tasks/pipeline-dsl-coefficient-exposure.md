@@ -94,14 +94,14 @@ Lowest-risk item on the list: the stage exists, is wired, and has KlangScript ex
 | coefficient              | default  | declared in                      | proposed field  |
 |--------------------------|----------|----------------------------------|-----------------|
 | `SAT_STATE_SCALE`        | `0.0876` | `LowPassHighPassFilters.kt:152`  | `satStateScale` |
-| `FILTER_SMOOTH_SAMPLES`  | `32`     | `FilterHumanizationCoeffs.kt:36` | `smoothSamples` |
+| `FILTER_SMOOTH_SAMPLES`  | `32`     | retired 2026-09-25 (step 5b (a2): the block-long `SvfCoeffSweep` replaced the ramp) | none |
 | `DEFAULT_DC_BLOCK_COEFF` | `0.995`  | `LowPassHighPassFilters.kt:159`  | `dcBlockCoeff`  |
 
 Notes that matter:
 
 - `SAT_STATE_SCALE` is read by **both** `SvfLPF`/`SvfHPF` and `IgnitorFilters.kt:182,211` — the exact S0 shape. Do not
   expose it on the stage without deciding what the ignitor path reads.
-- `FILTER_SMOOTH_SAMPLES` is an `Int` and `FILTER_INV_SMOOTH_SAMPLES` is derived from it — expose the one, keep deriving
+- (Retired 2026-09-25 with the ramp, phase 3 step 5b (a2); kept as history.) `FILTER_SMOOTH_SAMPLES` is an `Int` and `FILTER_INV_SMOOTH_SAMPLES` is derived from it: expose the one, keep deriving
   the other. Its KDoc already documents the "drop to 8 or 16" tuning direction and the click test that must accompany
   it; carry that KDoc onto the field.
 - `DEFAULT_DC_BLOCK_COEFF` already has a constructor param (`DcBlocker(coefficient)`) with a guarded fallback — this is

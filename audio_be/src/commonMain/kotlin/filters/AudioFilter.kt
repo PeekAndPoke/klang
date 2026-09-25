@@ -21,10 +21,14 @@ interface AudioFilter {
     }
 
     /**
-     * Interface for filters that support runtime cutoff frequency changes.
+     * A filter whose cutoff a control-rate modulator moves (the voice strip's `FilterModRenderer`).
      */
     interface Tunable {
-        fun setCutoff(cutoffHz: Double)
+        /**
+         * The cutoff snaps to [startHz] and moves linearly (in the filter's coefficients) to [endHz]
+         * over the next [frames] samples, then holds: one block's sweep.
+         */
+        fun sweepCutoff(startHz: Double, endHz: Double, frames: Int)
     }
 
     fun process(buffer: AudioBuffer, offset: Int, length: Int)

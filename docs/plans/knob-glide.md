@@ -204,7 +204,8 @@ Three lessons the earlier glides did not teach:
    changed constant.** Measured: a BLOCK-long coefficient ramp on a retuning band lands on an ideal
    per-sample glide (click -108.1 against -108.0, the 375 Hz comb within 1 dB), while the shared
    32-sample `FILTER_SMOOTH_SAMPLES` leaves it 16 dB above. `BaseSvf.retune` therefore takes the
-   ramp length from its caller and the `lpf` envelope's constant is untouched.
+   ramp length from its caller and the `lpf` envelope's constant is untouched. (Both retired: the morph
+   and `BaseSvf.retune` on 2026-09-20, the 32-sample ramp on 2026-09-25 in phase 3 step 5b (a2).)
 2. **Read a resonator glide against the SWEEP it creates, not only against the click it removes.**
    A travelling band modulates its own envelope, which is generic: a body morph puts 8 to 11 dB more
    energy below 60 Hz than the crossfade even on a source with NOTHING under the travelling band

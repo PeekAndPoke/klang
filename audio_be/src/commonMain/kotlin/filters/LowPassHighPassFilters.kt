@@ -209,7 +209,7 @@ internal const val VOWEL_TAME: Double = 0.05
  * Bundled TPT-SVF coefficient set (`a1, a2, a3, k`, plus the exposed angle [g] and the bell
  * mix [m1]). Mutable holder, allocated once per filter instance (not per call) so the
  * compute helpers can write the whole bundle without returning a tuple. Consumers:
- * `BaseSvf`, `Ignitor.svf`, and `EqCore`.
+ * [SvfCoeffSweep] (for `BaseSvf` and `Ignitor.svf`), `Ignitor.svf`, and `EqCore`.
  */
 internal class SvfCoeffs {
     var a1: Double = 0.0
@@ -239,8 +239,8 @@ internal class SvfCoeffs {
  * Computes the TPT-SVF coefficient bundle from `cutoffHz` and `q`. NaN/Inf-safe via
  * [bilinearK]; `q` is clamped to `[0.1, 200.0]` and falls back to `1/√2` (Butterworth)
  * if non-finite. Single source of truth for the SVF coefficient math — used by
- * `BaseSvf.setCutoff`, `Ignitor.svf` (per-block recompute), and the env-modulated
- * coefficient-lerp path (computed at block start and end).
+ * `Ignitor.svf` (per-block recompute), [SvfCoeffSweep] (the swept path of `Ignitor.svf` and
+ * `BaseSvf`, computed at block start and end), and `EqCore`.
  *
  * **Q clamp note (2026-04-29)**: widened from `[0.1, 50.0]` to `[0.1, 200.0]` for
  * formant synthesis. Vowel tables in `SprudelVoiceData` use Q=60-130 per band and
@@ -344,8 +344,8 @@ object LowPassHighPassFilters {
      * A `passes`-deep serial cascade of identical-cutoff stages (C5). Not [ChainAudioFilter]:
      * that one is a plain chain of arbitrary filters and deliberately NOT [AudioFilter.Tunable]
      * — making it tunable would silently hand filter-envelope sweeps to every baked voice chain.
-     * This cascade forwards the cutoff to every stage, which is exactly what a cascade of ONE
-     * filter split into N sections must do.
+     * This cascade forwards the cutoff sweep to every stage, which is exactly what a cascade of ONE
+     * filter split into N sections must do (each stage sweeps at its own ladder q).
      */
     internal class PassCascadeFilter(private val stages: List<AudioFilter>) : AudioFilter, AudioFilter.Tunable {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
@@ -354,11 +354,11 @@ object LowPassHighPassFilters {
             }
         }
 
-        override fun setCutoff(cutoffHz: Double) {
+        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
             for (i in stages.indices) {
                 val stage = stages[i]
                 if (stage is AudioFilter.Tunable) {
-                    stage.setCutoff(cutoffHz)
+                    stage.sweepCutoff(startHz, endHz, frames)
                 }
             }
         }
@@ -535,7 +535,7 @@ object LowPassHighPassFilters {
         cutoffHz: Double,
         private val sampleRate: Double,
         private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter, AudioFilter.Tunable {
+    ) : AudioFilter {
         private var y = 0.0
         private var a: Double = 0.0
 
@@ -543,7 +543,7 @@ object LowPassHighPassFilters {
             setCutoff(cutoffHz)
         }
 
-        override fun setCutoff(cutoffHz: Double) {
+        fun setCutoff(cutoffHz: Double) {
             a = onePoleLpfCoeff(cutoffHz * cutoffOffsetMul, sampleRate)
         }
 
@@ -572,7 +572,7 @@ object LowPassHighPassFilters {
         cutoffHz: Double,
         private val sampleRate: Double,
         private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter, AudioFilter.Tunable {
+    ) : AudioFilter {
         private var y = 0.0
         private var xPrev = 0.0
         private var b0: Double = 0.0
@@ -582,7 +582,7 @@ object LowPassHighPassFilters {
             setCutoff(cutoffHz)
         }
 
-        override fun setCutoff(cutoffHz: Double) {
+        fun setCutoff(cutoffHz: Double) {
             val k = bilinearK(cutoffHz * cutoffOffsetMul, sampleRate)
             val invOnePlusK = 1.0 / (1.0 + k)
             b0 = invOnePlusK
@@ -668,7 +668,7 @@ object LowPassHighPassFilters {
      * specialize `process()` to select the output tap (LP/HP/BP/Notch). The state-update
      * math is identical across all 4 subclasses; only the per-sample tap differs.
      *
-     * The voice-strip pipeline only modulates cutoff (`AudioFilter.Tunable.setCutoff`), which
+     * The voice-strip pipeline only modulates cutoff (`AudioFilter.Tunable.sweepCutoff`), which
      * leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. NOTHING moves `q` after
      * construction: the one control-rate mover, added for the resonator morph of Katalyst 5c-10,
      * went with that morph in 5c-11, and `q` is a `val` again.
@@ -677,15 +677,12 @@ object LowPassHighPassFilters {
      * The helper writes into a private scratch holder; we then mirror to direct fields
      * so subclasses' inner loops touch fields, not getters (JIT specialization safety).
      *
-     * **Coefficient smoothing**: `setCutoff` does NOT snap coefficients into place.
-     * Instead it stores per-sample increments and a [transitionSamples] counter; the
-     * subclass's per-sample loop advances the coefficients via increments for the
-     * first [FILTER_SMOOTH_SAMPLES] samples after each `setCutoff`. This masks the
-     * coefficient discontinuity at block boundaries when `FilterModRenderer` updates
-     * the cutoff per block. After [transitionSamples] reaches 0 the loop runs with
-     * static coefficients — no ongoing cost. 32 samples ≈ 0.67 ms at 48 kHz. Long
-     * enough to mask the click, short enough to add no audible lag to a swept envelope.
-     * Construction snaps directly to the target (no ramp on note-on) via [setCutoffSnap].
+     * **The cutoff sweep** (decision D3, the sampling): [sweepCutoff] snaps the coefficients to the
+     * block's start cutoff and hands the subclass's per-sample loop the steps of [SvfCoeffSweep], the
+     * interpolation the Ignitor filter node runs too: each coefficient takes its step AFTER every
+     * sample, for [sweepFrames] samples, and then holds. `FilterModRenderer` calls it once per block
+     * with the block's length, so the coefficients arrive at the block's end cutoff as the next block
+     * begins. Construction snaps to the constructor's cutoff and steps nothing.
      *
      * **Nonlinear character**: SvfLPF/SvfHPF have an active `analog`-gated
      * saturated branch that uses analog-style state-dependent damping
@@ -695,7 +692,7 @@ object LowPassHighPassFilters {
     abstract class BaseSvf(
         cutoffHz: Double,
         /**
-         * Fixed for the whole life of the filter: [setCutoff] never touches it, and nothing else
+         * Fixed for the whole life of the filter: [sweepCutoff] never touches it, and nothing else
          * may. The setter that moved it, for [ResonatorBank]'s morph, went with the morph in
          * Katalyst 5c-11; a band's Q is now decided when its bank is built.
          */
@@ -718,53 +715,41 @@ object LowPassHighPassFilters {
          */
         protected var g: Double = 0.0
 
-        // Coefficient transition state. When transitionSamples > 0, the subclass's
-        // process() loop advances each coef by its `Inc` value per sample.
-        protected var a1Inc: Double = 0.0
-        protected var a2Inc: Double = 0.0
-        protected var a3Inc: Double = 0.0
-        protected var kInc: Double = 0.0
-        protected var gInc: Double = 0.0
-        protected var transitionSamples: Int = 0
+        // The sweep's per-sample steps; the subclass's loop adds them after each sample while
+        // sweepFrames > 0 and counts it down.
+        protected var a1Step: Double = 0.0
+        protected var a2Step: Double = 0.0
+        protected var a3Step: Double = 0.0
+        protected var kStep: Double = 0.0
+        protected var gStep: Double = 0.0
+        protected var sweepFrames: Int = 0
 
-        private val coefs = SvfCoeffs()
+        private val sweep = SvfCoeffSweep()
 
         init {
-            setCutoffSnap(cutoffHz)
+            sweepCutoff(cutoffHz, cutoffHz, 0)
         }
 
         /**
-         * Computes new coefficients and sets up a [FILTER_SMOOTH_SAMPLES]-sample linear
-         * transition from the current values. Called per-block by
-         * `FilterModRenderer` whenever the cutoff envelope updates.
+         * Starts a sweep: the coefficients snap to [startHz] and step linearly toward [endHz] over
+         * the next [frames] samples, then hold. Both ends get this filter's cutoff tolerance.
          */
-        override fun setCutoff(cutoffHz: Double) {
-            computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
-            a1Inc = (coefs.a1 - a1) * FILTER_INV_SMOOTH_SAMPLES
-            a2Inc = (coefs.a2 - a2) * FILTER_INV_SMOOTH_SAMPLES
-            a3Inc = (coefs.a3 - a3) * FILTER_INV_SMOOTH_SAMPLES
-            kInc = (coefs.k - k) * FILTER_INV_SMOOTH_SAMPLES
-            gInc = (coefs.g - g) * FILTER_INV_SMOOTH_SAMPLES
-            transitionSamples = FILTER_SMOOTH_SAMPLES
-        }
+        final override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
+            sweep.prepare(startHz * cutoffOffsetMul, endHz * cutoffOffsetMul, q, sampleRate, frames)
 
-        /**
-         * Snaps coefficients directly to the target — no transition. Used at
-         * construction (no prior coefs to be discontinuous from).
-         */
-        protected fun setCutoffSnap(cutoffHz: Double) {
-            computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
-            a1 = coefs.a1
-            a2 = coefs.a2
-            a3 = coefs.a3
-            k = coefs.k
-            g = coefs.g
-            a1Inc = 0.0
-            a2Inc = 0.0
-            a3Inc = 0.0
-            kInc = 0.0
-            gInc = 0.0
-            transitionSamples = 0
+            val c = sweep.start
+
+            a1 = c.a1
+            a2 = c.a2
+            a3 = c.a3
+            k = c.k
+            g = c.g
+            a1Step = sweep.a1Step
+            a2Step = sweep.a2Step
+            a3Step = sweep.a3Step
+            kStep = sweep.kStep
+            gStep = sweep.gStep
+            sweepFrames = frames
         }
     }
 
@@ -792,7 +777,7 @@ object LowPassHighPassFilters {
      * `kEff = k + 2·driveScale·tCfb` formula we use in the saturated branch.
      *
      * Linear branch (`analog == 0`) is bit-identical to the pre-saturation
-     * code path. Per-voice cutoff offset and coefficient smoothing on `setCutoff`
+     * code path. Per-voice cutoff offset and the cutoff sweep (`sweepCutoff`)
      * are still active via the [BaseSvf] machinery.
      *
      * References:
@@ -825,7 +810,8 @@ object LowPassHighPassFilters {
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
-            var trans = transitionSamples
+            var left = sweepFrames
+
             if (saturate) {
                 // ── Analog-style state-dependent damping (nonlinear ZDF SVF) ────────
                 // Per-sample `kEff = k + 2·driveScale·tCfb` where `tCfb` grows monotonically
@@ -834,11 +820,6 @@ object LowPassHighPassFilters {
                 // 2 because the OB-X-style `R` corresponds to our k/2.
                 val drv = driveScale
                 for (i in offset until end) {
-                    if (trans > 0) {
-                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                        g += gInc
-                        trans--
-                    }
                     val v0 = buffer[i]
                     val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                     val kEff = k + 2.0 * drv * tCfb
@@ -852,15 +833,15 @@ object LowPassHighPassFilters {
                     // OB-X-style filters output a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
                     // With `mm = 0` (pure LP) this collapses to `vLp`.
                     buffer[i] = vLp
+
+                    if (left > 0) {
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        left--
+                    }
                 }
             } else {
                 // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
                 for (i in offset until end) {
-                    if (trans > 0) {
-                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                        g += gInc
-                        trans--
-                    }
                     val v0 = buffer[i]
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
@@ -868,9 +849,15 @@ object LowPassHighPassFilters {
                     ic1eq = (2.0 * v1 - ic1eq).flushState()
                     ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = v2
+
+                    if (left > 0) {
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        left--
+                    }
                 }
             }
-            transitionSamples = trans
+
+            sweepFrames = left
         }
     }
 
@@ -904,18 +891,14 @@ object LowPassHighPassFilters {
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
-            var trans = transitionSamples
+            var left = sweepFrames
+
             if (saturate) {
                 // Same analog-style state-dependent damping as [SvfLPF]; output the HP tap directly
                 // from the explicit-feedback form (no need for `v0 − k·v1 − v2` algebra since
                 // `vHp` is computed in the closed-form solve already).
                 val drv = driveScale
                 for (i in offset until end) {
-                    if (trans > 0) {
-                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                        g += gInc
-                        trans--
-                    }
                     val v0 = buffer[i]
                     val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
                     val kEff = k + 2.0 * drv * tCfb
@@ -926,15 +909,15 @@ object LowPassHighPassFilters {
                     ic1eq = (2.0 * vBp - ic1eq).flushState()
                     ic2eq = (2.0 * vLp - ic2eq).flushState()
                     buffer[i] = vHp
+
+                    if (left > 0) {
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        left--
+                    }
                 }
             } else {
                 // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
                 for (i in offset until end) {
-                    if (trans > 0) {
-                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                        g += gInc
-                        trans--
-                    }
                     val v0 = buffer[i]
                     val v3 = v0 - ic2eq
                     val v1 = a1 * ic1eq + a2 * v3
@@ -942,9 +925,15 @@ object LowPassHighPassFilters {
                     ic1eq = (2.0 * v1 - ic1eq).flushState()
                     ic2eq = (2.0 * v2 - ic2eq).flushState()
                     buffer[i] = (v0 - k * v1 - v2)
+
+                    if (left > 0) {
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        left--
+                    }
                 }
             }
-            transitionSamples = trans
+
+            sweepFrames = left
         }
     }
 
@@ -956,13 +945,8 @@ object LowPassHighPassFilters {
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
-            var trans = transitionSamples
+            var left = sweepFrames
             for (i in offset until end) {
-                if (trans > 0) {
-                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc
-                    trans--
-                }
                 val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
@@ -970,14 +954,20 @@ object LowPassHighPassFilters {
                 ic1eq = (2.0 * v1 - ic1eq).flushState()
                 ic2eq = (2.0 * v2 - ic2eq).flushState()
                 // C2 (filter unification): k * v1 normalises the peak at fc to unity, so q is
-                // a pure width control. k belongs to the ramped coefficient set, but `q` never
+                // a pure width control. k belongs to the swept coefficient set, but `q` never
                 // moves after construction (see [BaseSvf]) and k is a function of q alone, so
-                // `kInc` is structurally 0 on every path and this add is the shape of the loop,
+                // `kStep` is structurally 0 on every path and this add is the shape of the loop,
                 // not a move. It was NOT 0 while the resonator morph could retune a band's q
                 // (Katalyst 5c-10, gone in 5c-11).
                 buffer[i] = k * v1
+
+                if (left > 0) {
+                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    left--
+                }
             }
-            transitionSamples = trans
+
+            sweepFrames = left
         }
     }
 
@@ -989,13 +979,8 @@ object LowPassHighPassFilters {
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
-            var trans = transitionSamples
+            var left = sweepFrames
             for (i in offset until end) {
-                if (trans > 0) {
-                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc
-                    trans--
-                }
                 val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
@@ -1003,8 +988,14 @@ object LowPassHighPassFilters {
                 ic1eq = (2.0 * v1 - ic1eq).flushState()
                 ic2eq = (2.0 * v2 - ic2eq).flushState()
                 buffer[i] = (v0 - k * v1)
+
+                if (left > 0) {
+                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    left--
+                }
             }
-            transitionSamples = trans
+
+            sweepFrames = left
         }
     }
 }

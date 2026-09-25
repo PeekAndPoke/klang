@@ -151,7 +151,7 @@ class VoicePipelineTest : StringSpec({
 
         // The "before" in the name (audit finding F13). Two independent counters compared after the
         // fact cannot distinguish the orders — both are 1 either way. This records how many
-        // setCutoff calls had landed WHEN process began, so it can only be 1 if modulation ran first.
+        // sweepCutoff calls had landed WHEN process began, so it can only be 1 if modulation ran first.
         spyFilter.cutoffCountAtProcess shouldBe listOf(1)
     }
 

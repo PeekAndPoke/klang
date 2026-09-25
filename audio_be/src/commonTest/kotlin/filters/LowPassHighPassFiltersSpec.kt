@@ -191,14 +191,14 @@ class LowPassHighPassFiltersSpec : StringSpec({
         outputRms shouldBeGreaterThan (inputRms * 0.85)
     }
 
-    "SvfLPF - setCutoff updates behavior" {
+    "SvfLPF - sweepCutoff updates behavior" {
         val filter = LowPassHighPassFilters.SvfLPF(cutoffHz = 20000.0, q = 1.0, sampleRate = sampleRate)
 
         val buf1 = sine(freq = 5000.0, length = blockFrames)
         filter.process(buf1, 0, buf1.size)
         val rmsWide = rms(buf1)
 
-        filter.setCutoff(200.0)
+        filter.sweepCutoff(200.0, 200.0, blockFrames)
         repeat(3) {
             val settle = sine(freq = 5000.0, length = blockFrames)
             filter.process(settle, 0, settle.size)
@@ -274,14 +274,14 @@ class LowPassHighPassFiltersSpec : StringSpec({
         outputRms shouldBeGreaterThan (inputRms * 0.85)
     }
 
-    "SvfHPF - setCutoff updates behavior" {
+    "SvfHPF - sweepCutoff updates behavior" {
         val filter = LowPassHighPassFilters.SvfHPF(cutoffHz = 5.0, q = 1.0, sampleRate = sampleRate)
 
         val buf1 = sine(freq = 500.0, length = blockFrames)
         filter.process(buf1, 0, buf1.size)
         val rmsLowCutoff = rms(buf1)
 
-        filter.setCutoff(15000.0)
+        filter.sweepCutoff(15000.0, 15000.0, blockFrames)
         repeat(3) {
             val settle = sine(freq = 500.0, length = blockFrames)
             filter.process(settle, 0, settle.size)
@@ -358,7 +358,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         outputRms shouldBeLessThan (inputRms * 0.15)
     }
 
-    "SvfBPF - setCutoff updates behavior" {
+    "SvfBPF - sweepCutoff updates behavior" {
         val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = 1000.0, q = 2.0, sampleRate = sampleRate)
 
         // Center at 1 kHz - 1 kHz signal passes well
@@ -367,7 +367,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val rmsCenter = rms(buf1)
 
         // Move center far away from 1 kHz
-        filter.setCutoff(15000.0)
+        filter.sweepCutoff(15000.0, 15000.0, blockFrames)
         repeat(3) {
             val settle = sine(freq = 1000.0, length = blockFrames)
             filter.process(settle, 0, settle.size)
@@ -416,7 +416,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         outputRms shouldBeGreaterThan (inputRms * 0.8)
     }
 
-    "SvfNotch - setCutoff updates behavior" {
+    "SvfNotch - sweepCutoff updates behavior" {
         val filter = LowPassHighPassFilters.SvfNotch(cutoffHz = 1000.0, q = 5.0, sampleRate = sampleRate)
 
         // Notch at 1 kHz - 1 kHz is attenuated
@@ -425,7 +425,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val rmsAtNotch = rms(buf1)
 
         // Move notch away from 1 kHz
-        filter.setCutoff(10000.0)
+        filter.sweepCutoff(10000.0, 10000.0, blockFrames)
         repeat(3) {
             val settle = sine(freq = 1000.0, length = blockFrames)
             filter.process(settle, 0, settle.size)
@@ -538,8 +538,8 @@ class LowPassHighPassFiltersSpec : StringSpec({
         for (v in buf) {
             v.isFinite() shouldBe true
         }
-        // setCutoff with NaN must also recover.
-        filter.setCutoff(Double.NaN)
+        // a sweep with NaN must also recover.
+        filter.sweepCutoff(Double.NaN, Double.NaN, blockFrames)
         val buf2 = sine(freq = 440.0, length = blockFrames)
         filter.process(buf2, 0, buf2.size)
         for (v in buf2) {
@@ -819,7 +819,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
     // Per-voice cutoff offset (Step 2)
     //
     // Filters take an optional `cutoffOffsetMul` that multiplies the cutoff at
-    // both construction and runtime setCutoff. Two filters with the same patch
+    // both construction and runtime sweepCutoff. Two filters with the same patch
     // but different offsets should behave differently.
     // -----------------------------------------------------------------------
 
@@ -862,18 +862,16 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     // -----------------------------------------------------------------------
-    // Coefficient ramp on setCutoff (Step 4)
+    // The cutoff sweep (decision D3, the sampling)
     //
-    // setCutoff sets up a 32-sample linear transition from current coefs to new
-    // coefs. Masks block-boundary discontinuities when FilterModRenderer updates
-    // the cutoff per block during envelope sweeps. Construction snaps directly
-    // (no ramp on note-on).
+    // sweepCutoff snaps to the start cutoff and interpolates the coefficients to the end
+    // cutoff over `frames` samples (the exact law is pinned in StripFilterSweepSpec).
+    // Construction snaps directly (no sweep on note-on).
     // -----------------------------------------------------------------------
 
-    "SvfLPF setCutoff - output transitions smoothly across a cutoff jump" {
-        // Construct at low cutoff, settle, then jump to high cutoff via setCutoff.
-        // The output must not contain a discontinuity (large sample-to-sample jump)
-        // — the coefficient ramp should distribute the change over ~32 samples.
+    "SvfLPF sweepCutoff - output moves smoothly across a large swept cutoff change" {
+        // Construct at low cutoff, settle, then sweep 500 Hz to 8 kHz over 64 samples. The output
+        // must not contain a discontinuity (large sample-to-sample jump).
         val filter = LowPassHighPassFilters.SvfLPF(500.0, q = 1.0, sampleRate = sampleRate)
         val buf = sine(freq = 2000.0, length = blockFrames, amplitude = 0.5)
 
@@ -883,17 +881,12 @@ class LowPassHighPassFiltersSpec : StringSpec({
         // Snapshot the last output value before the cutoff change
         val sampleBeforeJump = buf[255]
 
-        // Now jump the cutoff to 8 kHz — big change, would normally cause a click
-        filter.setCutoff(8000.0)
+        filter.sweepCutoff(500.0, 8000.0, 64)
 
-        // Process one more sample at a time, looking for any single-sample discontinuity
-        // larger than reasonable
+        // Process one sample at a time, looking for any single-sample discontinuity
         var maxSingleSampleJump = 0.0
         var prevOutput = sampleBeforeJump
-        for (i in 256 until 320) {  // 64 samples covering the transition
-            // Re-process a single sample (process a single-sample chunk).
-            // We can't truly do that because process() is block-based, so we use
-            // a single-sample slice approach.
+        for (i in 256 until 320) {  // 64 samples covering the sweep
             val singleBuf = AudioBuffer(1) { _ -> buf[i] }
             filter.process(singleBuf, 0, 1)
             val cur = singleBuf[0]
@@ -902,7 +895,6 @@ class LowPassHighPassFiltersSpec : StringSpec({
             prevOutput = cur
         }
 
-        // With smoothing, no single-sample jump should be huge.
         // The input is a 2 kHz sine at amplitude 0.5, so adjacent-sample diff is
         // bounded by 2π·2000/44100·0.5 ≈ 0.14. We allow up to 3x that as headroom
         // for the actual signal motion.
@@ -910,7 +902,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     "SvfLPF - construction snaps to target cutoff (no ramp on first sample)" {
-        // The constructor uses setCutoffSnap so the first process() call should
+        // The constructor snaps (a sweep of 0 frames), so the first process() call should
         // produce output as if the filter has been at the target cutoff forever.
         // Specifically: filter the same input two ways and check that filtering
         // works immediately, not gradually.
@@ -929,9 +921,9 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     "SvfLPF - static cutoff has zero transition overhead" {
-        // After construction with no setCutoff calls, processing many blocks
-        // should NOT exhibit any per-sample ramp behavior. This is mostly a
-        // smoke test that setCutoffSnap properly zeroed the increments.
+        // After construction with no sweepCutoff calls, processing many blocks
+        // should NOT exhibit any per-sample sweep behavior. This is mostly a
+        // smoke test that construction zeroed the steps.
         val filter = LowPassHighPassFilters.SvfLPF(1000.0, q = 1.0, sampleRate = sampleRate)
 
         // Send DC — coefs should be static.

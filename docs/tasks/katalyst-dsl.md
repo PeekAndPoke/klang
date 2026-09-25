@@ -1026,7 +1026,8 @@ complexity outranks the duplication.
     sound anyway). Decide this before writing a Q setter. (3) `setCutoff`'s 32-sample coefficient
     ramp retuned every 128 frames is a ramp-then-hold staircase repeating at 375 Hz; a ramp as long
     as the block would be continuous. `FILTER_SMOOTH_SAMPLES` is shared with the `lpf` envelope, so
-    it is not simply changed; measure before choosing. (4) Mid-ramp stability at Q 80 to 140 is not
+    it is not simply changed; measure before choosing. (Settled 2026-09-25, phase 3 step 5b (a2): the
+    ramp is gone; the strip glides across the whole block like the node, `SvfCoeffSweep`.) (4) Mid-ramp stability at Q 80 to 140 is not
     a risk: checked analytically and over 20,000 random coefficient pairs, the pole radius never
     exceeded the larger endpoint's. First measurements of the morph step: a steady tone through a
     Q 140 band gliding its frequency per block (jump detector, 375 Hz sidebands, 32- against

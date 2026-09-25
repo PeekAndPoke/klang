@@ -39,7 +39,7 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  * structural `humanize` flag (`IgnitorDsl.Lowpass.humanize`).
  *
  * **Why the cascade shares ONE of these.** `passes = N` chains N `SvfIgnitor`s, and the voice
- * strip's equivalent is ONE `AudioFilter` whose `setCutoff` fans out to its N stages: one
+ * strip's equivalent is ONE `AudioFilter` whose `sweepCutoff` fans out to its N stages: one
  * tolerance, one drift lane, one multiplier per block for the whole cascade. So the build hands
  * the same instance to every stage of a cascade, and [blockDriftMultiplier] steps the lane only
  * when the block moved on, keyed on `IgniteContext.voiceElapsedFrames`.
@@ -55,11 +55,10 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  *
  * **The drift is held across the block, not ramped, which is the strip's law too**
  * (`FilterModRenderer` takes one `nextMultiplier()` per block and does not ramp it; the
- * oscillator lanes are the ones that ramp). What still differs is the SAMPLING half of decision
- * D3: the strip's `setCutoff` eases the COEFFICIENTS over 32 samples into the new value and then
- * holds, while the node snaps them at the block boundary (or, with an envelope, interpolates them
- * across the block). The drift has no LAW half, unlike the envelope: both surfaces step the same
- * `AnalogDrift`, so the multiplier sequence itself is the same process.
+ * oscillator lanes are the ones that ramp). Both surfaces also switch it the same way at the block
+ * boundary (decision D3, the sampling): the coefficients snap to the new value there (or, with an
+ * envelope, the block's sweep starts from it). The drift has no LAW half, unlike the envelope: both
+ * surfaces step the same `AnalogDrift`, so the multiplier sequence itself is the same process.
  */
 class FilterHumanization(
     /** This voice's fixed cutoff tolerance, `1.0` when `analog` was at or below 0. */

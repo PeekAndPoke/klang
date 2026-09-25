@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.shape
@@ -340,6 +341,27 @@ class IgnitorBenchmark(
 
                 // ── Compositions ──────────────────────────────────────────────
                 Case("supersaw+lpf+adsr", voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k)),
+                // The voice strip's filter envelope (`FilterModRenderer` plus the swept SVF): one
+                // envelope that keeps moving for the whole run (a 100 s decay), and one that sits
+                // at its sustain, where both block ends read the same cutoff.
+                Case(
+                    "lpf-env-moving",
+                    voiceData = voice(
+                        "sawtooth",
+                        filters = FilterDefs(
+                            listOf(FilterDef.LowPass(freq = 400.0, q = 1.0, envelope = FilterEnvDef(0.01, 100.0, 0.0, 0.1, 24.0))),
+                        ),
+                    ),
+                ),
+                Case(
+                    "lpf-env-held",
+                    voiceData = voice(
+                        "sawtooth",
+                        filters = FilterDefs(
+                            listOf(FilterDef.LowPass(freq = 400.0, q = 1.0, envelope = FilterEnvDef(0.01, 0.1, 0.5, 0.1, 24.0))),
+                        ),
+                    ),
+                ),
                 Case(
                     "supersaw+lpf+adsr+reverb",
                     voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k, reverb = 0.5, reverbSize = 0.5)

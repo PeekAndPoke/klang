@@ -306,7 +306,8 @@ class BlockFramingInvarianceSpec : StringSpec({
     // sample), so they are Class 1.
     //
     // `FilterModRenderer` and `FmRenderer` are deliberately NOT here, and cannot be: they evaluate
-    // their envelope ONCE PER BLOCK, so their note-relative sampling grid is a function of where the
+    // their envelope at BLOCK granularity (the FM once per block, the filter at each block's two ends
+    // with a linear sweep between), so their note-relative sampling grid is a function of where the
     // block boundaries fall. That makes them Class 2 on BOTH axes — block size and onset alignment —
     // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of them that
     // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.

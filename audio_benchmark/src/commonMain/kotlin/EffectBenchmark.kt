@@ -292,8 +292,8 @@ class EffectBenchmark(
                 LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr, analog = 3.0)
             },
 
-            // Full envelope-modulated hot path: setCutoff per block (triggers tan + the
-            // 32-sample coefficient ramp) AND the saturated process loop. Mimics what an
+            // Full envelope-modulated hot path: sweepCutoff per block (two tan + the
+            // block-long coefficient sweep) AND the saturated process loop. Mimics what an
             // `lpf(..., env = 2.0)` patch actually does each block.
             Case("SvfLPF (mod, 1k, q=1, analog=3)") { sr, bf ->
                 val filter = LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr.toDouble(), analog = 3.0)
@@ -302,10 +302,11 @@ class EffectBenchmark(
                 var phase = 0
                 val step: () -> Unit = {
                     // Sweep cutoff 500 Hz → 2000 Hz over 256 blocks, then repeat. Each block
-                    // triggers a setCutoff so the coefficient ramp runs at the block boundary.
-                    phase = (phase + 1) and 0xFF
+                    // sweeps from this block's cutoff to the next one's.
                     val cutoff = 500.0 + (phase / 256.0) * 1500.0
-                    filter.setCutoff(cutoff)
+                    phase = (phase + 1) and 0xFF
+                    val next = 500.0 + (phase / 256.0) * 1500.0
+                    filter.sweepCutoff(cutoff, next, bf)
                     src.copyInto(buf)
                     filter.process(buf, 0, bf)
                 }

@@ -105,8 +105,8 @@ more than one place per effect, the factoring is not done.
   never changes. A build-time factor lets the build hand the drift lanes the region's rate.
 - **Counted in samples:** coarse's `amount` means "hold every Nth input sample"; the strip divides its
   counter increment by the factor to keep that meaning, and inside a generic region coarse has to learn
-  the factor from the context. The draft's list of sample-count constants (`FILTER_SMOOTH_SAMPLES`, the
-  ADSR de-click coefficient) belongs here too. The audit finds the rest.
+  the factor from the context. The draft's list of sample-count constants (`FILTER_SMOOTH_SAMPLES`, retired
+  2026-09-25 in step 5b (a2); the ADSR de-click coefficient) belongs here too. The audit finds the rest.
 
 ## 5. Where it applies
 

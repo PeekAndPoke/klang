@@ -63,14 +63,14 @@ class FilterModulationTest : StringSpec({
         }
     }
 
-    // Spy filter that tracks setCutoff calls
+    // Spy filter that tracks sweepCutoff calls (the start cutoff: the block's first frame)
     class SpyFilter : AudioFilter, AudioFilter.Tunable {
         val cutoffHistory = mutableListOf<Double>()
         var currentCutoff = 0.0
 
-        override fun setCutoff(cutoffHz: Double) {
-            currentCutoff = cutoffHz
-            cutoffHistory.add(cutoffHz)
+        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
+            currentCutoff = startHz
+            cutoffHistory.add(startHz)
         }
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
@@ -119,7 +119,7 @@ class FilterModulationTest : StringSpec({
         val ctx = createCtx()
         voice.render(ctx)
 
-        // No setCutoff should have been called
+        // No sweepCutoff should have been called
         spyFilter.cutoffHistory.size shouldBe 0
     }
 

@@ -8,10 +8,12 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
+import io.peekandpoke.klang.audio_be.filters.SvfCoeffSweep
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
+import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -83,20 +85,17 @@ data class FilterEnvDef(
  * notch simultaneously; [mode] selects which output is used. Each instance creates
  * per-voice filter state in its closure. Optional [env] modulates cutoff over the
  * voice's lifetime: when active, the envelope ([EnvelopeCore], the engine's one envelope law) is
- * read at block start AND at block end, and the coefficients are linearly interpolated per sample
- * between the two, which avoids the 375 Hz block-rate stair-stepping (128 frames at 48 kHz) that a
- * per-block-only recompute would produce. The level is clamped to [0, 1] before it scales the depth.
+ * read at block start AND at block end (`filterEnvCutoff`), and the coefficients are linearly
+ * interpolated per sample between the two (`SvfCoeffSweep`), which avoids the 375 Hz block-rate
+ * stair-stepping (128 frames at 48 kHz) that a per-block-only recompute would produce. The level is
+ * clamped to [0, 1] before it scales the depth. The voice strip's filter envelope runs the same two
+ * helpers (`FilterModRenderer`, `BaseSvf.sweepCutoff`; decision D3, the sampling).
  *
  * **Where this envelope still differs from the voice strip's** (decision D3 of
- * `docs/tasks/builtin-instruments.md`; since phase 3's envelope law both evaluate the same law):
- *
- *  - **The default curve.** An unshaped stage takes `MOD_ENV_CURVE`, which is still LINEAR here;
- *    `curves` can shape each stage. The strip's filter envelope takes `AdsrCurve.Default`
- *    (Exponential) because `VoiceFactory` builds its `Voice.Envelope` without curve arguments. D3
- *    decided exponential for both; it lands with its own ear checkpoint.
- *  - **The sampling.** The strip reads its envelope once per block and lets `BaseSvf.setCutoff`
- *    ramp the coefficients over `FILTER_SMOOTH_SAMPLES` (32) samples and then HOLD; this node
- *    interpolates across the WHOLE block. D3 decided this node's sampling for both.
+ * `docs/tasks/builtin-instruments.md`): **the default curve.** An unshaped stage takes
+ * `MOD_ENV_CURVE`, which is still LINEAR here; `curves` can shape each stage. The strip's filter
+ * envelope takes `AdsrCurve.Default` (Exponential) because `VoiceFactory` builds its `Voice.Envelope`
+ * without curve arguments. D3 decided exponential for both; it lands with its own ear checkpoint.
  *
  * A node with `env.depth == 0.0` never enters this path at all.
  *
@@ -143,9 +142,9 @@ private class SvfIgnitor(
     private var ic1eq: Double = 0.0
     private var ic2eq: Double = 0.0
 
-    // Coefficient buffers (start-of-block, plus end-of-block when env is active).
+    // The static path's coefficients, and the envelope path's sweep (start coefficients plus steps).
     private val coefs = SvfCoeffs()
-    private val coefsEnd = SvfCoeffs()
+    private val sweep = SvfCoeffSweep()
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
 
@@ -164,7 +163,7 @@ private class SvfIgnitor(
             // exactly `x` for every double, so a node without it renders bit-for-bit what it
             // rendered before these two lines existed. The ORDER of the two multiplies is the
             // voice strip's: `FilterModRenderer` multiplies the envelope's cutoff by the block's
-            // drift and `BaseSvf.setCutoff` then multiplies by the fixed tolerance.
+            // drift and `BaseSvf.sweepCutoff` then multiplies both ends by the fixed tolerance.
             val driftMul = humanize?.blockDriftMultiplier(ctx) ?: 1.0
             val offsetMul = humanize?.cutoffOffsetMul ?: 1.0
             val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
@@ -192,27 +191,18 @@ private class SvfIgnitor(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
                     env.attackCurve, env.decayCurve, env.releaseCurve,
                 )
-                val envStart = envCore.at(ctx.voiceElapsedFrames).coerceIn(0.0, 1.0)
-                val envEnd = envCore.at(ctx.voiceElapsedFrames + length).coerceIn(0.0, 1.0)
-                // C3 (filter unification): envelope depth is SEMITONES — the sweep is
-                // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
-                // down symmetrically, and there is no dead zone anywhere.
-                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart) * driftMul * offsetMul
-                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd) * driftMul * offsetMul
+                // The cutoff at the block's two ends, the drift held across the block
+                // (`filterEnvCutoff`: depth in SEMITONES, C3), swept linearly in between.
+                val pos = ctx.voiceElapsedFrames
+                val cutoffStart = envCore.filterEnvCutoff(pos, baseCutoff, env.depth) * driftMul * offsetMul
+                val cutoffEnd = envCore.filterEnvCutoff(pos + length, baseCutoff, env.depth) * driftMul * offsetMul
 
-                computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
-                computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
+                sweep.prepare(cutoffStart, cutoffEnd, qVal, sr, length)
 
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
+                val c = sweep.start
 
-                if (length > 0) {
-                    val invLen = 1.0 / length
-                    a1Step = (coefsEnd.a1 - coefs.a1) * invLen
-                    a2Step = (coefsEnd.a2 - coefs.a2) * invLen
-                    a3Step = (coefsEnd.a3 - coefs.a3) * invLen
-                    kStep = (coefsEnd.k - coefs.k) * invLen
-                    gStep = (coefsEnd.g - coefs.g) * invLen
-                }
+                a1 = c.a1; a2 = c.a2; a3 = c.a3; k = c.k; g = c.g
+                a1Step = sweep.a1Step; a2Step = sweep.a2Step; a3Step = sweep.a3Step; kStep = sweep.kStep; gStep = sweep.gStep
                 initialized = true
             } else if (!initialized || hasDrift || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
                 // `hasDrift` is false without a lane, so the cheap latch below is untouched for
@@ -293,7 +283,7 @@ private class SvfIgnitor(
                     // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
                     // q is a pure width control, matching SvfBPF and the fused EqCore
                     // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
-                    // per-block q, so kStep is structurally 0 — no mid-ramp mismatch.
+                    // per-block q, so kStep is structurally 0: no mid-sweep mismatch.
                     for (i in ctx.offset until end) {
                         val v0 = input[i]
                         val v3 = v0 - ic2eq
