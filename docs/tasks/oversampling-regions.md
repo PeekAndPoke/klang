@@ -80,7 +80,7 @@ more than one place per effect, the factoring is not done.
 - **The distort's soft cap, deferred here by the maintainer (D2, 2026-09-25).** Phase 3 kept two laws: the
   strip's (and `classic()`'s fused `Distort` node) has no cap and drives inside the oversampler; the Ignitor
   `Shape(Drive(...))` path caps every sample above 0.95 and drives before it. When this task builds the one
-  distort core, it picks ONE law, and that choice changes either the strip-distort songs (Tetris,
+  distort core, it picks ONE law, and that choice changes either the strip-distort songs (verified in phase 3 step 4 by a control: ATruthWorthLyingFor, DerSchmetterling's sample kick, DrunkenSailor, the three frozen rows, IrishLamentTechno, SoundOfTheSea's sample glockenspiel, StrangerThings, Tetris, TetrisRemix; the list that followed here was short: Tetris,
   TetrisRemix, IrishLamentTechno, the frozen songs) or the Ignitor-distort songs (DerSchmetterling's guitars,
   Sandsturm, ATruthWorthLyingFor): a listening checkpoint.
 - The two coarse classes document a deliberate difference in their bypass thresholds (`CoarseRenderer`'s
@@ -149,8 +149,8 @@ more than one place per effect, the factoring is not done.
   `FrozenPieces` (changing those needs the maintainer's word, phase 3 D5).
 - **Open:** whether the sprudel doors `crush`, `coarse` and `distort` keep an `oversample` slot (read by
   `classic()` into a one-stage region, so the word keeps its meaning) or lose it. Every shipped crush and
-  coarse use pins `oversample = 1`; distort's is used by Tetris, TetrisRemix, IrishLamentTechno and the
-  frozen songs.
+  coarse use pins `oversample = 1`; distort's is used by Tetris, TetrisRemix, IrishLamentTechno,
+  ATruthWorthLyingFor (its bass, `distort(0.8, "tube", 4)`) and the frozen songs.
 
 ## 8. Tests
 

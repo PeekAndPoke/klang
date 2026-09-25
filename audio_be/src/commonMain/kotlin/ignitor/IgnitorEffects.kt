@@ -8,6 +8,8 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.ShapingFuncs
+import io.peekandpoke.klang.audio_be.CrushCore
+import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
@@ -24,7 +26,6 @@ import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import kotlin.math.exp
 import kotlin.math.pow
-import kotlin.math.round
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion
@@ -63,18 +64,11 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
 // full-scale input; identity only well below |x| ~ 0.3). A CONSTANT 0 through the Double
 // overload below still short-circuits to a true bypass; the DSL door has always behaved like
 // this chain. (Ledger W5.)
-// ^ The fused legacy DistortIgnitor is DELETED (ledger W5, maintainer decision): every live
-// authoring door already built this exact Drive+Shape chain, the fused node was the file's
-// third bypass policy (stale DC blocker + oversampler across its gate, plus a group-delay pop
-// at every gate flip), and wire trees are never persisted, so nothing can miss it. The chain
-// is the documented equivalence ("Equivalent to this.drive(amount).shape(shape, oversample)")
-// — same gain, same shaper, same DC blocker and softCap, applied by ShapeIgnitor, which has
-// NO bypass and therefore no policy to disagree about. One audible nuance vs the fused node:
-// an amount at or crossing 0 (modulated, or a CONSTANT 0 in a legacy wire tree — the Double
-// convenience below still short-circuits) now bypasses only the DRIVE; the shaper keeps
-// shaping at unity gain. For the default soft shape that is a real squash at full scale
-// (tanh(1.0) = 0.76, -2.4 dB + odd harmonics; identity only below |x| ~ 0.3) — the DSL door
-// has ALWAYS behaved this way, and the shaper state staying contiguous is the point.
+// ^ The DOORS' law, kept by decision D2 (option A, 2026-09-25): `Shape(Drive(...))`, the drive at the
+// base rate, the shaper, the DC blocker and `softCap`. The fused `IgnitorDsl.Distort` node is a
+// DIFFERENT law since phase 3 step 4, the voice strip's (see `fusedDistort` below): `classic()` needs
+// it to rebuild the strip bit for bit. The chain here renders DerSchmetterling's guitars, Sandsturm
+// and ATruthWorthLyingFor and does not change.
 
 /**
  * Distortion / waveshaping combinator (convenience overload with fixed amount).
@@ -120,7 +114,7 @@ private class DriveIgnitor(
                 return@use
             }
 
-            val driveGain = 10.0.pow(amt * 1.2)
+            val driveGain = DistortionCore.drive(amt)
 
             for (i in ctx.offset until end) {
                 buffer[i] = (work[i] * driveGain)
@@ -203,6 +197,55 @@ private class ShapeIgnitor(
     }
 }
 
+/**
+ * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds: drive and
+ * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the same loop the strip's
+ * `DistortionRenderer` runs (phase 3 step 4, decision D2 option A, 2026-09-25): the drive INSIDE the
+ * oversampler, the DC blocker, NO soft cap. The doors keep their own law (`distort` above).
+ *
+ * **D2 supersedes ledger W5's "delete it"** (maintainer, 2026-08-30), which removed an earlier fused
+ * node. W5's REASON is designed out rather than reintroduced: that node bypassed per block, so a
+ * MODULATED amount crossing 0 left the oversampler and the DC blocker holding stale state and popped
+ * at every crossing. Here there is one bypass policy, and it is the build's:
+ *  - a LEAF amount at or below 0 (or unset) is the build gate (`IgnitorDslRuntime`): the node is not
+ *    built, which is exactly the strip skipping its stage for the note;
+ *  - a MODULATED (non-leaf) amount at or below 0 is NOT a bypass: the core keeps running at UNITY drive
+ *    (what the `Drive` node does there), so its state stays contiguous through the crossing. A NaN
+ *    amount drives with NaN: the core's NaN guard writes 0 for every shaped sample of that block, and
+ *    what leaves it is the oversampler's and the DC blocker's decaying tail from the block before;
+ *    the next finite block renders the signal again.
+ *
+ * @param amount the drive amount, read once per block; see [DistortionCore.drive].
+ * @param shape the waveshaper, resolved at build.
+ * @param oversampleStages 2x stages, read at build; 0 is the plain path.
+ */
+internal fun Ignitor.fusedDistort(amount: Ignitor, shape: DistortionShape, oversampleStages: Int): Ignitor =
+    FusedDistortIgnitor(this, amount, DistortionCore(shape, oversampleStages))
+
+private class FusedDistortIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+    private val core: DistortionCore,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
+
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            // Unity at or below 0, never a bypass: see the KDoc (W5's hazard).
+            val drive = if (amt <= 0.0) 1.0 else DistortionCore.drive(amt)
+
+            core.process(work, ctx.offset, ctx.length, drive, ctx.scratchBuffers)
+
+            val end = ctx.windowEnd
+
+            for (i in ctx.offset until end) {
+                buffer[i] = work[i]
+            }
+        }
+    }
+}
+
 // ResolvedShape and resolveDistortionShape() moved to audio_be/DistortionShape.kt
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -212,13 +255,14 @@ private class ShapeIgnitor(
 /**
  * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
  *
- * Symmetric midtread quantizer: `round(x * halfLevels) / halfLevels`, output
- * clamped to `[-1, 1]`. No DC bias, no amplitude inflation. The clamp catches
- * the non-integer `halfLevels` case where a unit input would otherwise map to
- * a grid point outside the input range (e.g. `amount = 1.5` → `hl ≈ 1.414` →
- * raw output `2/1.414 ≈ 1.414`, clamped to `1.0`).
+ * The law is [CrushCore], the ONE copy the voice strip's `CrushRenderer` renders through too (phase 3
+ * step 4, decision D1, 2026-09-25: FLOOR everywhere): an asymmetric `floor` quantizer,
+ * `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`, with a DC offset of about
+ * `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated amount: the classic crunch. A
+ * NaN sample comes out as 0. Until step 4 this node rounded (a symmetric midtread quantizer),
+ * up to one grid step (0.125 at amount 4) away from the strip.
  *
- * Amount is read once per block (control rate). **Bypasses when amount < 1.0** —
+ * Amount is read once per block (control rate). **Bypasses when amount < 1.0**, and at a NaN amount:
  * fewer than 2 levels means the grid step exceeds the input range entirely.
  *
  * @param amount Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
@@ -235,24 +279,17 @@ private class CrushIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(amount, freqHz, ctx))
             val end = ctx.windowEnd
 
-            val levels = 2.0.pow(amt)
-            if (levels < 2.0) {
+            if (halfLevels == CrushCore.BYPASS) {
                 for (i in ctx.offset until end) {
                     buffer[i] = work[i]
                 }
                 return@use
             }
 
-            val halfLevels = levels / 2.0
-            for (i in ctx.offset until end) {
-                // Midtread symmetric quantizer (round, not floor) — no DC bias.
-                // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
-                val q = round(work[i] * halfLevels) / halfLevels
-                buffer[i] = q.coerceIn(-1.0, 1.0)
-            }
+            CrushCore.quantize(work, buffer, ctx.offset, end, halfLevels)
         }
     }
 }

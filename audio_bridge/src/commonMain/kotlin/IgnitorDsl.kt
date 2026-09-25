@@ -1868,21 +1868,26 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Drive and shape as ONE unit: `drive(amount)` into `shape(shape, oversample)`, gated as a whole on
-     * [amount] (the `distort` row of the off-value table, `docs/tasks/builtin-instruments.md` section
-     * 5b). Neither authoring door builds it: both spell `distort` as `Shape(Drive(...))`, whose `Shape`
-     * half has no amount and cannot be gated. That difference is why the node is KEPT (phase 3 step
-     * 3b, 2026-09-25): it is the one node that switches a distort off completely, which a slotted
-     * tail needs, and it IS `classic()`'s distort stage (phase 3 step 5). Decision D2 (decided
-     * 2026-09-25, option A, `docs/tasks/builtin-instruments.md` section 3): step 4 gives THIS node the
-     * voice strip's exact law (no soft cap, the drive inside the oversampler), while the
-     * `distort`/`shape` doors keep their capped `Shape(Drive(...))` law. Until step 4 it renders that
-     * capped chain; `ClassicStripParitySpec` holds the measured difference.
+     * Drive and shape as ONE unit, gated as a whole on [amount] (the `distort` row of the off-value
+     * table, `docs/tasks/builtin-instruments.md` section 5b). Neither authoring door builds it: both
+     * spell `distort` as `Shape(Drive(...))`, whose `Shape` half has no amount and cannot be gated. It is
+     * `classic()`'s distort stage (phase 3 step 5), the one node that switches a distort off completely,
+     * which a slotted tail needs.
+     *
+     * **Its law is the VOICE STRIP's, not the doors'** (phase 3 step 4, decision D2 option A,
+     * 2026-09-25): the backend renders it through the same loop as the strip's `DistortionRenderer`
+     * (`DistortionCore`): `shape(x * 10^(amount * 1.2))` with the drive applied INSIDE the oversampler,
+     * then a DC blocker, and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`.
+     * `ClassicStripParitySpec` proves it bit-identical to the strip. The `distort`/`shape` doors keep
+     * their capped `Shape(Drive(...))` law (drive at the base rate, `softCap` last), unchanged, because
+     * songs depend on it.
+     *
+     * [amount] is read once per block. A leaf amount at or below 0, or unset, is not built (the gate);
+     * a MODULATED amount at or below 0 is not a bypass: the node keeps shaping at unity drive, so its
+     * oversampler and DC blocker never go stale across a crossing (ledger W5's hazard).
      *
      * Its KDoc used to call it "kept for backward compatibility with serialized trees"; wire trees are
-     * never persisted (the W5 note in `IgnitorEffects`), and that was not the reason it exists.
-     * The runtime builds it as that exact chain since the W5 decision (2026-08-30): the fused
-     * DistortIgnitor is deleted.
+     * never persisted, and that was not the reason it exists.
      *
      * [shape] and [oversample] are the knobs of [Shape], read the same way, at voice build.
      */
@@ -1898,7 +1903,13 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Bit-crush effect. Reduces amplitude resolution to create quantization noise. */
+    /**
+     * Bit-crush effect. Reduces amplitude resolution to create quantization noise: the voice strip's
+     * asymmetric `floor` quantizer, `floor(x * 2^amount / 2) / (2^amount / 2)` clamped to `[-1, 1]`,
+     * with a DC offset of about `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated
+     * amount (phase 3 step 4, decision D1, 2026-09-25: FLOOR everywhere; it rounded before). Below an
+     * amount of 1.0 it passes through.
+     */
     @WireName("crush")
     data class Crush(
         val inner: IgnitorDsl,

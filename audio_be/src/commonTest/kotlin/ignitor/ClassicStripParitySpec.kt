@@ -171,24 +171,24 @@ class ClassicStripParitySpec : StringSpec({
     val rows = listOf(
         Row("untouched: the envelope alone, at the voice envelope's defaults", true, emptyMap()) { this },
 
-        // ── crush, D1 ──
-        Row("crush 4: D1 decided, floor, lands in step 4", false, mapOf("crush.amount" to 4.0)) { copy(crush = 4.0) },
-        Row("crush 8: D1 decided, floor, lands in step 4", false, mapOf("crush.amount" to 8.0)) { copy(crush = 8.0) },
-        Row("crush 1 (the quantizer runs): D1 decided, floor, lands in step 4", false, mapOf("crush.amount" to 1.0)) { copy(crush = 1.0) },
+        // ── crush: one law since step 4 (D1, floor, CrushCore) ──
+        Row("crush 4", true, mapOf("crush.amount" to 4.0)) { copy(crush = 4.0) },
+        Row("crush 8", true, mapOf("crush.amount" to 8.0)) { copy(crush = 8.0) },
+        Row("crush 1 (the quantizer runs)", true, mapOf("crush.amount" to 1.0)) { copy(crush = 1.0) },
 
         // ── coarse ──
         Row("coarse 3", true, mapOf("coarse.amount" to 3.0)) { copy(coarse = 3.0) },
         Row("coarse 7.5", true, mapOf("coarse.amount" to 7.5)) { copy(coarse = 7.5) },
 
-        // ── distort, D2 ──
+        // ── distort: one law since step 4 (D2 option A, DistortionCore) ──
         *listOf(
             Triple(0.3, "soft", 0), Triple(0.5, "soft", 0), Triple(1.0, "soft", 0), Triple(2.0, "soft", 0),
             Triple(0.5, "tube", 0), Triple(0.5, "gentle", 0), Triple(1.0, "hard", 0), Triple(1.0, "fold", 0),
             Triple(0.5, "rectify", 0), Triple(0.5, "soft", 2), Triple(0.5, "tube", 4),
         ).map { (amount, shape, os) ->
             Row(
-                "distort $amount $shape x$os: D2 decided, A, the strip's law lands in step 4",
-                false,
+                "distort $amount $shape x$os",
+                true,
                 mapOf("distort.amount" to amount, "distort.shape" to DistortionShapes.indexOf(shape), "distort.oversample" to os.toDouble()),
             ) { copy(distort = amount, distortShape = shape, distortOversample = os) }
         }.toTypedArray(),
@@ -314,8 +314,8 @@ class ClassicStripParitySpec : StringSpec({
             )
         },
         Row(
-            "crush and distort in the chain: D1 and D2 (each cause pinned by its own single-stage rows)",
-            false,
+            "crush and distort in the chain",
+            true,
             mapOf("crush.amount" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0),
         ) { copy(crush = 5.0, distort = 0.4, filters = filters(FilterDef.LowPass(3000.0, 0.707))) },
     )

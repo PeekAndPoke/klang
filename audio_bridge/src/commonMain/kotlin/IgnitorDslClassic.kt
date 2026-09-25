@@ -182,11 +182,14 @@ class AdsrCurvesSlots internal constructor() {
  *
  * Per stage, what each node is and where it still differs from the strip (the measured table lives in
  * `ClassicStripParitySpec`):
- *  - the crush quantizer ROUNDS where the strip floors: decision D1 (decided: floor, lands in step 4);
+ *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4):
+ *    bit-identical at a crush `oversample` of 1 or less only. The strip's crush has an oversampler and
+ *    the node has none, so a pattern that writes `crush(oversample = 2)` or more still differs (tracked
+ *    in `docs/tasks/oversampling-regions.md`);
  *  - the distort is the fused [IgnitorDsl.Distort] node, the one that switches drive AND shape off as a
- *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (decided 2026-09-25,
- *    option A): this node gets the strip's exact law in step 4 (no soft cap, the drive inside the
- *    oversampler), while the `distort`/`shape` doors keep today's capped law;
+ *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (option A, landed in
+ *    step 4): the node renders the strip's loop (no soft cap, the drive inside the oversampler), so it
+ *    is bit-identical, while the `distort`/`shape` doors keep their capped law;
  *  - the four filters humanize from the voice's `analog` slot, as the strip does, but draw per filter
  *    where the strip draws every tolerance first (the section 8 migration cost), and their cutoff
  *    envelopes are linear and block-interpolated where the strip's are exponential and ramped (D3; the

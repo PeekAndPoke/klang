@@ -278,12 +278,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(n, 2 * n - 1, SOURCE_BYTES + n * UNISON_VOICE_BYTES)
         }
 
-        private fun shaped(oversample: Int, drive: Boolean): GraphCensus {
-            // the shaper: its loop at the oversampled rate, the DC blocker and the soft cap in place
+        private fun shaped(oversample: Int): GraphCensus {
+            // the shaper: its loop at the oversampled rate, the DC blocker, and the output pass in place
+            // (the soft cap on `Shape`, the copy out on the fused `Distort`, whose drive rides in the loop)
             val f = 1 shl Oversampler.factorToStages(oversample)
-            val shape = GraphCensus(1, 2 * f + 2 + 2 + oversampleTraffic(oversample), oversampleBytes(oversample) + 24)
 
-            return if (drive) shape + inPlace() else shape
+            return GraphCensus(1, 2 * f + 2 + 2 + oversampleTraffic(oversample), oversampleBytes(oversample) + 24)
         }
 
         /**
@@ -379,8 +379,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             }
 
             // shapers
-            is IgnitorDsl.Shape -> shaped(factorOf(node.oversample), drive = false)
-            is IgnitorDsl.Distort -> shaped(factorOf(node.oversample), drive = true)
+            is IgnitorDsl.Shape -> shaped(factorOf(node.oversample))
+            // since phase 3 step 4 (D2) one fused stage, not a drive pass plus a shaper
+            is IgnitorDsl.Distort -> shaped(factorOf(node.oversample))
             is IgnitorDsl.Drive -> inPlace()
             is IgnitorDsl.Crush -> inPlace()
             is IgnitorDsl.Coarse -> inPlace(16)

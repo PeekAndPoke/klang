@@ -1,5 +1,30 @@
 # Klang Audio — Memory
 
+## One crush law, one distort loop: D1 and D2 landed (phase 3 step 4, 2026-09-25)
+
+- **`CrushCore` and `DistortionCore`** (`audio_be/`, next to `TremoloCore`) are the one copy of each law;
+  the strip's `CrushRenderer`/`DistortionRenderer` and the Ignitor `Crush` node / fused `Distort` node
+  (`fusedDistort` in `IgnitorEffects`) are thin hosts. D1: the Ignitor crush FLOORS (it rounded) and takes
+  the strip's NaN handling (a NaN sample out as 0, a NaN amount a bypass, +Inf silence). D2 option A: the
+  fused node runs the strip's loop (drive inside the oversampler, DC blocker, no cap); the `distort`/`shape`
+  doors keep `Shape(Drive(...))` with the cap, untouched. `ClassicStripParitySpec`: every crush and distort
+  row and the combination row flipped to bit-identical at both rates (33/11 at 48 kHz, 32/12 at 44.1 kHz).
+- **D2 superseded ledger W5's "delete it"; W5's hazard is designed out, not reintroduced.** The fused
+  node has ONE bypass, the build gate on a leaf amount at or below 0. A MODULATED amount at or below 0
+  runs the core at unity drive, so the oversampler and DC blocker never go stale across a crossing.
+- **A shared core is invisible to a parity spec.** Mutating the law inside the core (floor to round, the
+  drive moved outside the oversampler, the cap put back) left all 91 parity rows GREEN, because both
+  hosts moved together. `StripLawCoresSpec` pins each law against an ORACLE written in the test; that is
+  where those mutations go red. Any future "one law, two hosts" needs the same pair: a parity spec for
+  the hosts and an oracle spec for the law.
+- **The oversampler's transform lambda is built once per instance** in both cores' hosts (it was a new
+  closure per block in the strip's crush and distort); it reads a field set per block. Same bits (the
+  oracle rows and the corpus prove it).
+- **Songs that PLAY a strip distort are more than the plan listed**: besides Tetris, TetrisRemix,
+  IrishLamentTechno and the frozen songs, StrangerThings (melody), ATruthWorthLyingFor (`Gitarre!`,
+  bass), DrunkenSailor (bass), SoundOfTheSea (glockenspiel sample) and DerSchmetterling (sample kick).
+  Every corpus crush writes `oversample = 1`, which is 0 stages: the corpus never runs an oversampled crush.
+
 ## `classic()`: the voice strip as a slotted tail, and the filter envelope's slot-layer fill (2026-09-25)
 
 Phase 3 step 5 (`docs/tasks/builtin-instruments.md` section 9), identity-preserving: no built-in is
@@ -487,7 +512,8 @@ lives in that file's `gatedOff` KDoc; the off VALUES are one table, in
      16.8 percent THD, "gentle" +0.64 to +5.21 dB, "zerosquare" +1.55 to +16.83 dB at 37 percent
      THD, and "rectify" removes the fundamental altogether. It is a LEGACY node: neither authoring
      door builds it (both spell `distort` as `Shape(Drive(...))`) and the only production site left
-     is `WarmupVocabulary` at 0.3. This does NOT reopen ledger W5's gate-flip pop, because W5 is a
+     is `WarmupVocabulary` at 0.3. (Superseded: since phase 3 step 5 it is `classic()`'s distort
+     stage, and since step 4, 2026-09-25, it runs the strip's law through `DistortionCore`.) This does NOT reopen ledger W5's gate-flip pop, because W5 is a
      MODULATED amount crossing 0 and a modulated amount is never a leaf.
   2. **`Drive` at a non-finite amount** used to render ALL-NaN, and that is a closed hole, not a
      change we chose: `amt <= 0.0` is false for a NaN, so the gain was `10^(NaN * 1.2)`. Step 3

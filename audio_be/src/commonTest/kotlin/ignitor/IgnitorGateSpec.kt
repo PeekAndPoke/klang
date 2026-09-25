@@ -188,9 +188,10 @@ class IgnitorGateSpec : StringSpec({
         }
 
         withClue("crush at exactly 1.0 is ON, and audibly so") {
-            // `levels` is `2^amount`, so amount 1 is exactly TWO levels: `levels < 2.0` is false,
-            // the quantizer RUNS with `halfLevels = 1.0`, and a saw comes out a three-level
-            // staircase. The boundary is `< 1.0`, not `<= 1.0`, and both halves say so.
+            // `CrushCore.halfLevels` engages at `amount >= 1.0`, so amount 1 is exactly TWO levels:
+            // the quantizer RUNS with `halfLevels = 1.0`, and under the floor law (D1, step 4) a saw
+            // comes out a two-level pulse, -1 on its negative half and 0 on its positive half. The
+            // boundary is `< 1.0`, not `<= 1.0`, and both halves say so.
             val atOne = IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(1.0))
 
             shapeOf(build(atOne)) shouldNotBe bareShape
@@ -199,9 +200,9 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "distort: at or below 0.0 is not built, above it is" {
-        // The LEGACY node: neither authoring door builds it (both spell `distort` as
-        // `Shape(Drive(...))`), so this row guards an alignment, and `drive` below guards the
-        // shape that actually ships.
+        // The fused node (classic()'s distort stage, the strip's law since step 4): neither authoring
+        // door builds it (both spell `distort` as `Shape(Drive(...))`, which `drive` below guards),
+        // and `classic()` relies on this gate to switch its distort stage off.
         stageRow("distort", listOf(0.0, -1.0, SLOT_UNSET), on = 0.5) {
             IgnitorDsl.Distort(inner = saw, amount = it)
         }

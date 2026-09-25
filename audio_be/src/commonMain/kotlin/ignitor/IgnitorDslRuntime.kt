@@ -1289,26 +1289,27 @@ private fun IgnitorDsl.buildRaw(
         // (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at `IgnitorDsl.kt` and the
         // script one at `KlangScriptOscExtensions`); `classic()` does (its distort stage, phase 3
         // step 5, the one node that switches drive AND shape off as a unit), and `WarmupVocabulary`
-        // at 0.3. D2 (decided, option A) gives this node the strip's law in step 4; do not change it
-        // before. Gating it is an alignment of that node with the `Drive` row below and with
-        // `Ignitor.distort(Double)`, which has always short-circuited at the same value.
+        // at 0.3. Gating it aligns that node with the `Drive` row below and with the strip, which
+        // adds no distort stage for an amount at or below 0.
         //
-        // It is a BEHAVIOUR CHANGE on that node, not a fold, and the magnitude is shape-dependent:
-        // the node is `drive(amount).shape(shape)` and only the DRIVE half bypasses at 0, so the
-        // tree's chosen shaper stayed on the signal at unity gain. Modelled on a 220 Hz sine
-        // through the real chain (shaper, DC blocker, `softCap`): "soft" -1.77 dB, "tube"
-        // -6.24 dB at 16.8 percent THD, "gentle" +0.64 to +5.21 dB, "zerosquare" +1.55 to
-        // +16.83 dB at 37 percent THD, and "rectify" removes the fundamental altogether (full
-        // wave, an octave up). Now it does nothing. This does NOT reopen ledger W5's gate-flip
-        // pop: W5 is about a MODULATED amount crossing 0, and a modulated amount is not a leaf, so
-        // it is never gated.
+        // Since phase 3 step 4 (decision D2, option A) the node renders the VOICE STRIP's law through
+        // `DistortionCore` (`fusedDistort`): the drive inside the oversampler, the DC blocker, no soft
+        // cap; `ClassicStripParitySpec` proves it bit-identical to the strip. The gate is its ONLY
+        // bypass: a modulated amount at or below 0 is not a leaf, is never gated, and runs at unity
+        // drive with its state contiguous (ledger W5's hazard, see `fusedDistort`).
         //
-        // Built as `drive(amount).shape(...)`, exactly what `Ignitor.distort(amount, ...)` builds; the
-        // shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
+        // Gating was a BEHAVIOUR CHANGE on that node when it landed (step 2), and the magnitude was
+        // shape-dependent: the node was then `drive(amount).shape(shape)` and only the DRIVE half
+        // bypassed at 0, so the tree's chosen shaper stayed on the signal at unity gain (modelled on a
+        // 220 Hz sine: "soft" -1.77 dB, "tube" -6.24 dB, "zerosquare" up to +16.83 dB, "rectify" an
+        // octave up). Now it does nothing, as on the strip.
+        //
+        // The shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
         is IgnitorDsl.Distort -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {
-            inner.withMod().drive(amount.noMod()).shape(
+            inner.withMod().fusedDistort(
+                amount.noMod(),
                 shape.distortionShapeKnob(oscParams, cache),
                 oversample.oversampleStagesKnob(oscParams, cache),
             )
@@ -1327,7 +1328,7 @@ private fun IgnitorDsl.buildRaw(
         //
         // `Shape` is NOT gated and cannot be: it has no amount knob, only a transfer function, so
         // there is nothing to read an off value from. That is why `classic()`'s distort stage is the
-        // fused `Distort` node above, not this pair (decision D2).
+        // fused `Distort` node above, not this pair; D2 also gave that node the strip's law.
         is IgnitorDsl.Drive -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.withMod()
         } else {
@@ -1342,7 +1343,7 @@ private fun IgnitorDsl.buildRaw(
         )
 
         // GATE ROW `crush`: BELOW 1.0, or unset, and NOT 0. `CrushIgnitor` itself bypasses below two
-        // levels (`2^amount < 2`, i.e. amount below 1), and `Ignitor.crush(Double)` returns the
+        // levels (`CrushCore.halfLevels`, amount below 1), and `Ignitor.crush(Double)` returns the
         // inner below 1.0, so the whole range (0, 1) is already an exact bypass at render time
         // and gating it is the fold of a bypass, not a change.
         is IgnitorDsl.Crush -> if (amount.gatedOff(oscParams, cache) { it < 1.0 }) {

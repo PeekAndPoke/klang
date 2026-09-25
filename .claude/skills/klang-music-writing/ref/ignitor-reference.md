@@ -510,9 +510,9 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
 - `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;
 - `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
 - `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
-  output, while `.classic()` uses the one distort node that switches drive AND shape off together (and
-  gets the voice strip's exact law in a later step). A slot on the door's distort would shape every
-  note, written or not.
+  output, while `.classic()` uses the one distort node that switches drive AND shape off together and
+  renders the voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
+  oversampler). A slot on the door's distort would shape every note, written or not.
 
 **Transitional (phase 3, until the built-ins move in step 6):** the pattern doors (`.lpf(...)`,
 `.adsr(...)`, `.crush(...)`) still write the old voice strip, which runs AFTER every instrument, not
