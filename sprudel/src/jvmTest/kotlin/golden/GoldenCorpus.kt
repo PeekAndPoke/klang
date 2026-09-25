@@ -35,7 +35,9 @@ object GoldenCorpus {
      * changing, but the golden needs a stable fixture at a good complexity level. The only change from
      * the live version is the seed: the live song uses `seed(timeOfDay.mul(...))` (wall-clock,
      * non-deterministic); here it is pinned to a constant so the random `|`-choices and noise signals
-     * (`berlin`, `saw`) are fully reproducible.
+     * (`berlin`, `saw`) are fully reproducible. And on 2026-09-25 its three `pipeline("pedal")` calls
+     * went with the preset (`docs/tasks/builtin-instruments.md` D4): the golden lost exactly the
+     * `pipeline=pedal` field of those events.
      */
     private val derSchmetterlingPinned = """
 import * from "stdlib"
@@ -55,7 +57,7 @@ stack(
     .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(amount = 2, oversample = 8)
     .superimpose(x => x.transpose(12).unison(spread = 0.10).velocity("<0!32 0.15!32>").pan(0.3).late(0.001),
                  x => x.transpose(12).unison(spread = 0.15).velocity("<0!32 0.15!32>").pan(0.7).late(0.0015))
-    .mute("<1!32 0!256>").pipeline("pedal"),
+    .mute("<1!32 0!256>"),
   // Guitar 1
   n(`<[7 4 2 <-1 4 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [4 7@3] [4 6@3]>]!4
       [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] [0, -3]>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`)
@@ -67,7 +69,7 @@ stack(
     .clip("<0.96!31 0.9 0.96!31 0.825>".fast(2))
     .gain(0.6 * 0.365).hpf("<400!48 700!16 400!32 300!32>").lpf(freq = saw.range(1,0).pow(1.5).mul(1000).add(1200).slow(4), q = 1.5, env = 12).lpf(q = 2.0)
     .pan(0.2).superimpose(pan(0.8))
-    .orbit(1).pipeline("pedal")
+    .orbit(1)
   ,
   // Guitar 2
   n("<0 0 2 4 0 0 -2 -1>")
@@ -81,7 +83,7 @@ stack(
       x => x.pan(0.65),
       x => x.gain(0.8 * 0.25).hpf(180).lpf(1900)
             .scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-3 [-4 -3@3]]>").pan(0.3).superimpose(pan(0.7))
-    ).orbit(2).mute("<0!128 1!16 0!16>").pipeline("pedal")
+    ).orbit(2).mute("<0!128 1!16 0!16>")
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!32 [x@3 x]!32 [x!4]!64>").fast(2).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5 * 0.6).distort(0.2, "tube", 1).coarse(2).clip(1.0)

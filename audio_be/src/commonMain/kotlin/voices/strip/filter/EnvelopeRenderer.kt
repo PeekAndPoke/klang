@@ -173,8 +173,8 @@ class EnvelopeRenderer(
      * 20 dB louder, and teardown steps that straight to zero. See [VCA_OFF_TEARDOWN_FADE_SECONDS]
      * for the measurements and `VcaOffTeardownSpec` for the guard.
      *
-     * **Known limit: this guarantees silence at THIS stage's output, not the voice's.** `pedal`
-     * places the VCA second, ahead of Crush / Coarse / Distort / Filter / Tremolo, and those carry
+     * **Known limit: this guarantees silence at THIS stage's output, not the voice's.** A custom
+     * pipeline may place the VCA ahead of Crush / Coarse / Distort / Filter / Tremolo, and those carry
      * state (IIR memory, sample-and-hold) that keeps emitting from a zero input. On such a pipeline
      * the fade removes the gate's own step but not the downstream tail. Closing that properly means
      * a guard at the END of the strip, which would also change the `on = true` path, so it is left

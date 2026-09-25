@@ -16,11 +16,9 @@ import io.peekandpoke.klang.audio_bridge.StageDsl
  * Builds the filter pipeline (BlockRenderer chain) from voice parameters.
  *
  * The stage ORDER and PRESENCE come from the resolved [PipelineDsl]: the pipeline iterates
- * its [StageDsl] slots and maps each to its `BlockRenderer`. The built-in engines:
- *
- * - `modern` (default): classic subtractive `osc → waveshaper → VCF → VCA`.
- *   ADSR (VCA) runs last so the filter sees steady-state amplitude.
- * - `pedal`: VCA runs first so the waveshapers respond to dynamics.
+ * its [StageDsl] slots and maps each to its `BlockRenderer`. The built-in engine, `modern`
+ * (the default), is classic subtractive `osc → waveshaper → VCF → VCA`: ADSR (VCA) runs last
+ * so the filter sees steady-state amplitude. A custom pipeline may put its stages in any order.
  *
  * Only ACTIVE stages are included — a waveshaper/tremolo/phaser slot is skipped when its
  * per-voice amount is off. The pipeline sets order/presence/feel; the note sets amounts.

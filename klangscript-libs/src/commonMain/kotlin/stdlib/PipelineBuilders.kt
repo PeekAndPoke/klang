@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * Builders for the per-voice pipeline. `Pipeline(p => ...)` hands a [PipelineBuilder] to the lambda;
  * every stage knob APPENDS one stage, in written order (the order is the topology, and it is
  * audible), and returns a new builder. The two stages with knobs of their own take a configure
- * lambda. Presets (`Pipeline.modern(p => ...)`, `Pipeline.pedal(p => ...)`) hand over a builder
+ * lambda. The preset (`Pipeline.modern(p => ...)`) hands over a builder
  * that already holds the preset's stages; `tuneVca` / `tuneFilter` configure the stages that are
  * ALREADY there, which is how a preset's character is nudged without rebuilding it.
  *
@@ -92,7 +92,7 @@ fun PipelineBuilder.tuneVca(configure: (PipelineVcaBuilder) -> PipelineVcaBuilde
 
 /**
  * Configures every filter stage ALREADY in the pipeline instead of appending one:
- * `Pipeline.pedal(p => p.tuneFilter(f => f.drive(1.0)))`. An error when there is no filter stage to
+ * `Pipeline.modern(p => p.tuneFilter(f => f.drive(1.0)))`. An error when there is no filter stage to
  * tune; append one with `filter(...)` instead.
  * @param configure receives the [PipelineFilterBuilder] of each existing filter stage and returns it.
  */

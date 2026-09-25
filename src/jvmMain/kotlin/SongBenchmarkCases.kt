@@ -8,7 +8,7 @@ package io.peekandpoke.klang
 import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
 
 /**
- * Benchmark cases for "Der Schmetterling" (frozen 2026-07-03).
+ * Benchmark cases for "Der Schmetterling".
  *
  * Two flavours of case:
  *  - **Isolated voices** — each layer of the `stack(...)` on its own, with section gating
@@ -17,7 +17,10 @@ import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
  *  - **Effect-strip ladders** — a heavy voice built up one effect group at a time. The delta in
  *    RTF between consecutive rungs is the marginal CPU cost of that effect group *in context*.
  *
- * The chains are transcribed verbatim from the frozen song, only removing the section gates.
+ * The chains are transcribed verbatim from the 2026-07-03 frozen snapshot, only removing the section
+ * gates. That snapshot was replaced on 2026-09-25 by a fresh one ([FrozenSongs]); the transcriptions
+ * stay as they are, a fixed workload of their own, minus the `pipeline("pedal")` calls, which went
+ * with the preset (`docs/tasks/builtin-instruments.md` D4).
  */
 object SongBenchmarkCases {
 
@@ -79,7 +82,9 @@ object SongBenchmarkCases {
             "4 +superimpose (transpose+2xsuper)" to
                     """.superimpose(x => x.transpose(12).unison(spread = 0.12).velocity(0.10).pan(0.15).superimpose(pan(0.85)))""",
             "5 +analog(feel)" to """.analog(feel)""",
-            "6 +pipeline(pedal)" to """.pipeline("pedal")""",
+            // Rung 6, `.pipeline("pedal")`, went with the preset (2026-09-25). The later rungs keep
+            // their numbers so benchmark files still line up by name (rungs 7 and 8 are cumulative, so
+            // their workload differs only by that reorder, which measured roughly free).
             "7 +room(0.3:5:0.1)" to """.reverb(0.3, 1)""",
             // The ladder had NO delay coverage before the master round needed to price a
             // per-sample guard on DelayLine's ring store (2026-08-31). Feedback is deliberately
@@ -114,7 +119,7 @@ object SongBenchmarkCases {
             "3 +coarse(2,os4)" to """.coarse(amount = 2, oversample = 4)""",
             "4 +superimpose#1 (pan copy)" to """.pan(0.15).superimpose(pan(0.85))""",
             "5 +superimpose#2 (hpf/lpf air)" to """.superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""",
-            "6 +pipeline(pedal)" to """.pipeline("pedal")""",
+            // Rung 6, `.pipeline("pedal")`, went with the preset (2026-09-25); see the LEAD ladder.
             "7 +body(wood, mix0.3)" to """.body(material = "wood", wet = 0.3)""",
             "8 +room(0.10:8:0.12)" to """.reverb(0.10, 1.2)""",
         ),
@@ -313,7 +318,7 @@ object SongBenchmarkCases {
             x => x.pan(0.7),
             x => x.gain(0.75 * 0.09).hpf(240).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
                  .pan(0.2).superimpose(pan(0.8))
-          ).superimpose(hpf(3500).lpf(6200).gain(0.75 * 0.03)).pipeline("pedal").body(material = "wood", wet = 0.30)
+          ).superimpose(hpf(3500).lpf(6200).gain(0.75 * 0.03)).body(material = "wood", wet = 0.30)
         """.trimIndent(),
     )
 
@@ -377,7 +382,7 @@ object SongBenchmarkCases {
         """.lpf(attack = 0.005, decay = 1.1, sustain = 0.0, release = 0.015).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)""" +
                 """.distort(1, "tube", 4).distort(0.80).clip(0.85).coarse(amount = 2, oversample = 4)""" +
                 """.pan(0.15).superimpose(pan(0.85)).superimpose(hpf(3800).lpf(6700).gain(0.75 * 0.03))""" +
-                """.pipeline("pedal").body(material = "wood", wet = 0.3)"""
+                """.body(material = "wood", wet = 0.3)"""
 
     private fun unisonCase(n: Int): SongBenchmark.Case =
         voice(
@@ -388,7 +393,7 @@ object SongBenchmarkCases {
 
     private val unisonSweep = listOf(1, 5, 9, 15).map { unisonCase(it) }
 
-    // Body / pipeline isolation on a fixed base — clean marginal cost of each.
+    // Body / room isolation on a fixed base: the clean marginal cost of each.
     private val fxBase = """
         n("0 2 4 5").fast(2).orbit(1).scale("e3:minor").sound("supersaw").unison(voices = 9, spread = 0.08)
           .gain(0.75).adsr(0.005, 2.5, 0.0, 0.029).hpf(400).lpf(freq = 3000, env = 8.1, q = 2.0)
@@ -397,12 +402,11 @@ object SongBenchmarkCases {
 
     private val fxIsolation = listOf(
         voice("FX: base (osc+filt+dist)", "exp-fx", fxBase),
-        voice("FX: base +pipeline(pedal)", "exp-fx", """$fxBase.pipeline("pedal")"""),
         voice("FX: base +body(wood)", "exp-fx", """$fxBase.body(material = "wood", wet = 0.3)"""),
         voice("FX: base +body(glass)", "exp-fx", """$fxBase.body(material = "glass", wet = 0.3)"""),
         voice("FX: base +vowel(a)", "exp-fx", """$fxBase.vowel(vowel = "a", wet = 0.3)"""),
         voice("FX: base +room", "exp-fx", """$fxBase.reverb(0.10, 1.2)"""),
-        voice("FX: base +pipeline+body+room", "exp-fx", """$fxBase.pipeline("pedal").body(material = "wood", wet = 0.3).reverb(0.10, 1.2)"""),
+        voice("FX: base +body+room", "exp-fx", """$fxBase.body(material = "wood", wet = 0.3).reverb(0.10, 1.2)"""),
     )
 
     // 2x2 interaction: does `superimpose` MULTIPLY the cost of a per-voice effect (`body`)?
@@ -427,10 +431,10 @@ object SongBenchmarkCases {
 
     fun frozenSongs(): List<SongBenchmark.Case> = listOf(
         SongBenchmark.Case(
-            name = "Der Schmetterling (FULL frozen)",
-            code = FrozenSongs.derSchmetterling_2026_07_03,
+            name = "Der Schmetterling (FULL frozen 09-25)",
+            code = FrozenSongs.derSchmetterling_2026_09_25,
             group = "full-song",
-            rpm = 34.5,
+            rpm = 32.5,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -452,10 +456,10 @@ object SongBenchmarkCases {
      */
     fun live(): List<SongBenchmark.Case> = listOf(
         SongBenchmark.Case(
-            name = "Der Schmetterling (FROZEN 07-03)",
-            code = FrozenSongs.derSchmetterling_2026_07_03,
+            name = "Der Schmetterling (FROZEN 09-25)",
+            code = FrozenSongs.derSchmetterling_2026_09_25,
             group = "full-song",
-            rpm = 34.5,
+            rpm = 32.5,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -535,15 +539,10 @@ object SongBenchmarkCases {
         fun ungatedLenient(code: String): String =
             Regex("""seed\(timeOfDay[^)]*\)\)""").replace(Regex("""\.mute\("<[^"]*>"\)""").replace(code, ""), "seed(0.5)")
 
-        val frozen = SongBenchmark.Case(
-            name = "frozen 2026-07-03",
-            group = "snapshots",
-            rpm = 34.5,
-            cycles = 8,
-            code = ungatedLenient(FrozenSongs.derSchmetterling_2026_07_03),
-        )
-
-        return listOf(frozen) + files.map { file ->
+        // The frozen row used to open the axis as its July anchor; since the 2026-09-25 re-snapshot it is
+        // the same text as the HEAD file `console/song-snapshots.sh` appends last, so it is not repeated
+        // here: the axis is the tag files, oldest first.
+        return files.map { file ->
             val parts = file.name.removeSuffix(".klang").split("__", limit = 3)
 
             require(parts.size == 3) { "snapshots: ${file.name} is not NN__<rpm>__<label>.klang" }

@@ -12,7 +12,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 /**
  * `Pipeline` for KlangScript: builds [PipelineDsl] voice-pipeline configs.
  *
- * Start from a built-in (`Pipeline.modern(...)` / `Pipeline.pedal(...)`) and tune it, or build a
+ * Start from the built-in (`Pipeline.modern(...)`) and tune it, or build a
  * custom one by CALLING `Pipeline` with a configure lambda; the lambda receives a
  * [PipelineBuilder] whose stage knobs append stages in written order. Pass the result to a
  * pattern's `.pipeline(...)`:
@@ -38,14 +38,6 @@ object KlangScriptPipeline {
     @KlangScript.Method
     fun modern(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl =
         PipelineBuilder(PipelineDsl.modern).configuredBy("Pipeline.modern", configure).node
-
-    /**
-     * Guitar-pedal engine: VCA first, so the waveshapers respond to dynamics.
-     * @param configure receives a [PipelineBuilder] holding the preset's stages; tune them with `tuneVca` / `tuneFilter`, or append more.
-     */
-    @KlangScript.Method
-    fun pedal(configure: ((PipelineBuilder) -> PipelineBuilder)? = null): PipelineDsl =
-        PipelineBuilder(PipelineDsl.pedal).configuredBy("Pipeline.pedal", configure).node
 
     /**
      * Builds a custom engine from scratch: the lambda receives an EMPTY [PipelineBuilder] and

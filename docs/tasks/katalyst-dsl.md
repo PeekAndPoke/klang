@@ -425,7 +425,7 @@ complexity outranks the duplication.
 
 ### 8. Tests (mandatory tier, every one mutation-checked)
 
-1. **Default parity, the byte-identity guard.** The frozen July song (`FrozenSongs`) renders
+1. **Default parity, the byte-identity guard.** The frozen July song (`FrozenSongs`; replaced 2026-09-25 by a fresh snapshot of the live song, D4) renders
    byte-identical with `KatalystDsl.classic` driving every cylinder versus the pre-DSL engine, and
    `KatalystDefaultsSyncSpec` pins the default list to the historical order and the wire constants.
 2. **Door parity.** `KatalystDoorParitySpec`: the script form and the Kotlin form build equal

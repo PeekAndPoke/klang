@@ -18,23 +18,16 @@ import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 
 class PipelinePresetSpec : StringSpec({
 
-    "built-in presets carry NO Phaser stage — the bus owns the phaser (2026-08-24)" {
+    "the built-in preset carries NO Phaser stage: the bus owns the phaser (2026-08-24)" {
         // Per-voice phasing is opt-in via a CUSTOM pipeline; the built-ins must never
         // reintroduce the double application (same knobs, dry floored twice).
         PipelineDsl.modern.stages.none { it is StageDsl.Phaser } shouldBe true
-        PipelineDsl.pedal.stages.none { it is StageDsl.Phaser } shouldBe true
     }
 
     "fromName resolves modern (case-insensitive)" {
         PipelinePreset.fromName("modern") shouldBe PipelinePreset.Modern
         PipelinePreset.fromName("MODERN") shouldBe PipelinePreset.Modern
         PipelinePreset.fromName("Modern") shouldBe PipelinePreset.Modern
-    }
-
-    "fromName resolves pedal (case-insensitive)" {
-        PipelinePreset.fromName("pedal") shouldBe PipelinePreset.Pedal
-        PipelinePreset.fromName("PEDAL") shouldBe PipelinePreset.Pedal
-        PipelinePreset.fromName("Pedal") shouldBe PipelinePreset.Pedal
     }
 
     "fromName falls back to Modern for null" {
@@ -62,20 +55,6 @@ class PipelinePresetSpec : StringSpec({
         (distIdx < envIdx) shouldBe true
     }
 
-    "Pedal engine: ADSR is BEFORE all waveshapers" {
-        val pipeline = activePipeline(PipelinePreset.Pedal)
-        val envIdx = pipeline.indexOfFirst { it is EnvelopeRenderer }
-        val crushIdx = pipeline.indexOfFirst { it is CrushRenderer }
-        val distIdx = pipeline.indexOfFirst { it is DistortionRenderer }
-        (envIdx < crushIdx) shouldBe true
-        (envIdx < distIdx) shouldBe true
-    }
-
-    "Pedal engine: envelope is NOT the last renderer" {
-        val pipeline = activePipeline(PipelinePreset.Pedal)
-        (pipeline.last() is EnvelopeRenderer) shouldBe false
-    }
-
     // ── Minimal pipeline tests (all waveshapers inactive) ─────────────────────
 
     "Modern minimal: with all effects off, envelope is still last" {
@@ -83,13 +62,6 @@ class PipelinePresetSpec : StringSpec({
         // Pipeline should be: AudioFilterRenderer + EnvelopeRenderer (at minimum)
         pipeline.size shouldBe 2
         (pipeline.last() is EnvelopeRenderer) shouldBe true
-    }
-
-    "Pedal minimal: with all effects off, envelope is still first" {
-        val pipeline = minimalPipeline(PipelinePreset.Pedal)
-        // Pipeline should be: EnvelopeRenderer + AudioFilterRenderer (at minimum)
-        pipeline.size shouldBe 2
-        (pipeline.first() is EnvelopeRenderer) shouldBe true
     }
 })
 

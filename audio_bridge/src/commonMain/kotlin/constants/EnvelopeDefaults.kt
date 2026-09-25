@@ -112,11 +112,11 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  * exactly on the last frame the voice renders (`floor(endFrame) - 1`).
  *
  * Scope: this guarantees silence at the VCA stage's OUTPUT. In a VCA-last pipeline (`modern`) that
- * is the voice's output; `pedal` puts the VCA second and its downstream stateful stages still ring
- * from a zero input. See `EnvelopeRenderer.renderGate`.
+ * is the voice's output; a custom pipeline that puts the VCA ahead of stateful stages leaves them
+ * ringing from a zero input. See `EnvelopeRenderer.renderGate`.
  *
  * **Why an envelope-less voice needs this and an ADSR one does not.** The VCA runs after the
- * exciter and its amp (last in `modern`; see the scope note above for `pedal`). With a curve it
+ * exciter and its amp (last in `modern`; see the scope note above for custom orders). With a curve it
  * drove the fully amplified signal to zero before teardown, so `Voice.render` could drop the voice
  * on a silent sample. With `on = false`
  * nothing guarantees that: an ignitor's own envelope sits BEFORE its amp stages, so a tail the

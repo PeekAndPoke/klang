@@ -87,11 +87,12 @@ class AdsrOnFlagSpec : StringSpec({
         StageDsl.Vca().on shouldBe true
     }
 
-    "the built-in engines leave the VCA on" {
-        // Flipping these would change how every existing song sounds. Vca(on = false) is for
+    "the built-in engine leaves the VCA on" {
+        // Flipping it would change how every existing song sounds. Vca(on = false) is for
         // engines built around ignitors that carry their own envelope.
-        for (preset in listOf(PipelineDsl.modern, PipelineDsl.pedal)) {
-            preset.stages.filterIsInstance<StageDsl.Vca>().forEach { it.on shouldBe true }
-        }
+        val vcas = PipelineDsl.modern.stages.filterIsInstance<StageDsl.Vca>()
+
+        vcas.size shouldBe 1
+        vcas.forEach { it.on shouldBe true }
     }
 })

@@ -162,8 +162,8 @@ data class VoiceData(
     /**
      * Voice pipeline name — selects the topology of the Filter stage.
      *
-     * Known values (case-insensitive): `"modern"` (default, ADSR last — classic subtractive VCF→VCA),
-     * `"pedal"` (ADSR first — guitar-pedal feel, waveshapers respond to dynamics).
+     * Known values (case-insensitive): `"modern"` (the default and only built-in, ADSR last: classic
+     * subtractive VCF, then VCA), or the synthetic name of a registered custom pipeline.
      * Unknown or null values fall back to modern.
      */
     val pipeline: String? = null,

@@ -42,27 +42,25 @@ private fun applyPipeline(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 /**
  * Selects the voice pipeline for this pattern.
  *
- * Each pipeline is a different topology for the voice's Filter stage. Currently:
- *
- * - `"modern"` (default) — classic subtractive `osc → VCF → VCA`. ADSR runs last so the filter
- *   sees steady-amplitude signal — no attack smearing. Waveshapers still precede
- *   the filter so LP/HP can clean up their harmonics. (The phaser is a BUS effect, not a
- *   pipeline stage, since 2026-08-24.)
- * - `"pedal"` — guitar-pedal feel. ADSR runs first so the waveshapers respond to dynamics
- *   (quiet attack stays clean, hot sustain saturates, release tail fades through the drive).
+ * A pipeline is a topology for the voice's Filter stage. The one built-in name is `"modern"`
+ * (the default): classic subtractive `osc → VCF → VCA`. ADSR runs last so the filter sees a
+ * steady-amplitude signal, with no attack smearing. Waveshapers still precede the filter so
+ * LP/HP can clean up their harmonics. (The phaser is a BUS effect, not a pipeline stage, since
+ * 2026-08-24.) A custom or tuned pipeline is built with `Pipeline(p => ...)` or
+ * `Pipeline.modern(p => ...)` and passed inline.
  *
  * Unknown or null names fall back to `modern`.
  *
- * @param name The pipeline name (case-insensitive).
+ * @param name The pipeline name (case-insensitive), or an inline pipeline.
  * @return A new pattern using the selected pipeline.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").distort(0.8).pipeline("pedal")   // dynamics-responsive distortion
+ * note("c3 e3 g3").s("supersaw").distort(0.8).pipeline(Pipeline.modern(p => p.tuneVca(v => v.expK(2.5))))   // the default order, a tuned VCA curve
  * ```
  *
  * @scope voice
  * @category effects
- * @tags pipeline, topology, modern, pedal, motor
+ * @tags pipeline, topology, modern, motor
  */
 @KlangScript.Function
 fun SprudelPattern.pipeline(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
@@ -75,7 +73,7 @@ fun SprudelPattern.pipeline(name: PatternLike, callInfo: CallInfo? = null): Spru
  * @return A new pattern using the selected pipeline.
  *
  * ```KlangScript(Playable)
- * "c3 e3 g3".pipeline("pedal").s("supersaw").distort(0.8)
+ * "c3 e3 g3".pipeline("modern").s("supersaw").distort(0.8)
  * ```
  */
 @KlangScript.Function
@@ -88,12 +86,12 @@ fun String.pipeline(name: PatternLike, callInfo: CallInfo? = null): SprudelPatte
  * @param name The pipeline name (case-insensitive). See [SprudelPattern.pipeline] for known pipelines.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").apply(pipeline("pedal"))   // selects pedal pipeline via mapper
+ * note("c3 e3 g3").apply(pipeline("modern"))   // selects the default pipeline via mapper
  * ```
  *
  * @scope voice
  * @category effects
- * @tags pipeline, topology, modern, pedal, motor
+ * @tags pipeline, topology, modern, motor
  */
 @KlangScript.Function
 fun pipeline(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =

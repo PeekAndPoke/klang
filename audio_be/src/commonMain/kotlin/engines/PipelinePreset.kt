@@ -10,10 +10,10 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 /**
  * Named preset for the voice filter pipeline topology.
  *
- * Each engine defines a different ordering (and potentially a different set) of
- * `BlockRenderer` stages in the voice's Filter stage. The song DSL selects an
- * pipeline per voice via `.pipeline("name")` — unknown or missing names fall back
- * to [Modern].
+ * Each engine defines an ordering (and potentially a set) of `BlockRenderer` stages in the
+ * voice's Filter stage. The song DSL selects a pipeline per voice via `.pipeline("name")`;
+ * unknown or missing names fall back to [Modern], which is the only built-in since the `pedal`
+ * preset was removed (2026-09-25, `builtin-instruments.md` D4).
  *
  * String-keyed lookup keeps the door open for a future `PipelineDsl` similar to
  * `IgnitorDsl` — a declarative, user-extensible way to build custom engines
@@ -32,22 +32,7 @@ enum class PipelinePreset(val pipelineName: String, val dsl: PipelineDsl) {
      * and don't smear the attack. Waveshapers still precede the filter so
      * their harmonics get cleaned up.
      */
-    Modern("modern", PipelineDsl.modern),
-
-    /**
-     * Guitar-pedal feel: envelope drives the waveshapers, so distortion
-     * responds to dynamics.
-     *
-     * ```
-     * FilterMod → Envelope → Crush → Coarse → Distort → AudioFilter → Tremolo
-     * ```
-     *
-     * Quiet attack stays clean, hot sustain saturates, release tail fades
-     * through the drive. Filter is after the waveshapers but before the
-     * modulation FX. Trades "no attack smearing" for "dynamics-responsive
-     * distortion" — use when you want the pedal-chain character.
-     */
-    Pedal("pedal", PipelineDsl.pedal);
+    Modern("modern", PipelineDsl.modern);
 
     companion object {
         /**

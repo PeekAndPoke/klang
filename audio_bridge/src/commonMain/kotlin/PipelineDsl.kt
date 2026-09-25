@@ -16,9 +16,9 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
  *
  * An engine is an ordered list of [StageDsl] slots — the topology — where each
  * stage also carries its own character constants (envelope curve, declick,
- * filter humanization). Built-ins [modern] / [pedal] reproduce the historical
- * hardcoded pipelines' TOPOLOGY; their character constants have since been retuned
- * (see [StageDsl]). Users author arbitrary pipelines and may omit stages.
+ * filter humanization). The built-in [modern] reproduces the historical hardcoded
+ * pipeline's TOPOLOGY; its character constants have since been retuned (see [StageDsl]).
+ * Users author arbitrary pipelines and may omit stages.
  *
  * Mirrors [IgnitorDsl]: a `@WireFormat` root, registered by name, referenced from `VoiceData.pipeline`. The
  * backend maps each [StageDsl] to a `BlockRenderer`. Marked `@WireFormat` so the codec is generated now (the
@@ -36,6 +36,10 @@ data class PipelineDsl(val stages: List<StageDsl>) {
         // the DAW-insert model); running it per voice AND on the bus double-applied the
         // same knobs (dry floored twice under the C4 law). StageDsl.Phaser stays available
         // for custom pipelines that deliberately want per-voice phasing.
+        //
+        // NOTE (2026-09-25, maintainer decision, builtin-instruments.md D4): [modern] is the only
+        // built-in. The VCA-first `pedal` preset was removed, not deprecated; a voice that still
+        // names it resolves like any unknown name, to the default (`PipelineRegistry.get`).
 
         /** Classic subtractive: osc → waveshaper → VCF → VCA. ADSR (VCA) last. */
         val modern: PipelineDsl = PipelineDsl(
@@ -47,19 +51,6 @@ data class PipelineDsl(val stages: List<StageDsl>) {
                 StageDsl.Filter(),
                 StageDsl.Tremolo,
                 StageDsl.Vca(),
-            )
-        )
-
-        /** Guitar-pedal feel: VCA drives the waveshapers. ADSR (VCA) early. */
-        val pedal: PipelineDsl = PipelineDsl(
-            listOf(
-                StageDsl.FilterMod,
-                StageDsl.Vca(),
-                StageDsl.Crush,
-                StageDsl.Coarse,
-                StageDsl.Distort,
-                StageDsl.Filter(),
-                StageDsl.Tremolo,
             )
         )
     }

@@ -71,8 +71,8 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
 - Ignitor building is opt-in (6/14 songs) with a natural teaching ladder:
-  Sandsturm → IrishLament → DialogueWithTheStars → Sakura → ATruthWorthLyingFor.
-- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"`.
+  Sandsturm → IrishLament → Sakura → ATruthWorthLyingFor (DialogueWithTheStars left the built-in songs 2026-09-25).
+- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"` (the `pedal` preset was REMOVED 2026-09-25, and the Pipeline DSL retires in phase 3).
 - Two arrangement idioms both in real use: `arrange([bars, section], ...)` vs. one big `stack` + `filterWhen(t => ...)`.
 
 ## Principles (the anti-slop rules)
@@ -190,10 +190,10 @@ stages must not carry it.
 | C1 | Caricature drums (recipes) | kick = sine + `pitchEnvelope`, hat = noise + `hpf`, snare | everything so far | Build a drum kit from raw waves, pattern-level. *Listen for: the pitch drop that makes a kick a kick.* Caricature model: 2–4 acoustic tells, tune by ear. |
 | C2 | Your first Ignitor | `Osc.*` chains: osc → filter → adsr | — | Sandsturm's lead, explained line by line; rebuild C1's kick as an Ignitor. *Listen for: detuned square joining the saw.* |
 | C3 | Layered ignitors | additive `.plus()` stacks | — | IrishLament's flute/fingerpick/contrabass: many layers, flat wiring. *Listen for: the noise crackle that makes the pluck "wood".* |
-| C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | — | DialogueWithTheStars' three guitars, round-robin. *Listen for: open vs. muted variant.* |
+| C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
 | C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
 | C6 | The Master bus | `master(Master(m => m.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
-| C7 | Pipeline — modern vs. pedal | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
+| C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed and the Pipeline DSL retires in phase 3; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
 | C10 | Capstone: a song from zero | everything | — | Build a Sandsturm-lite start to finish — the "worked song". |

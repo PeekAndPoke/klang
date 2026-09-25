@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_bridge.PipelineDsl
 /**
  * Backend registry: engine name → [PipelineDsl].
  *
- * The built-in `modern` / `pedal` engines are seeded from [PipelinePreset] on the **root**; custom
+ * The built-in `modern` engine is seeded from [PipelinePreset] on the **root**; custom
  * engines arrive at runtime via `KlangCommLink.Cmd.RegisterPipeline` and land on the **per-playback
  * fork** (so they die with that playback's engine), with built-ins inherited through [parent]. Mirror
  * of [io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry] (engines need no per-voice instantiation,

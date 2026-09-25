@@ -37,7 +37,8 @@ class WireCodecRoundTripSpec : StringSpec({
     "PipelineDsl round-trips (sealed StageDsl: data-object markers + Filter/Vca config)" {
         listOf(
             PipelineDsl.modern,
-            PipelineDsl.pedal,
+            // VCA first: a stage order other than modern's, so an order-losing codec cannot pass.
+            PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter(), StageDsl.Tremolo)),
             PipelineDsl(
                 listOf(
                     StageDsl.FilterMod,

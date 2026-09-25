@@ -18,8 +18,8 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 /**
  * `analog` used to be ONE method on the base [IgnitorDsl] — a `when` over 17 oscillator types
  * ending in `else -> self`. Asking a noise source or a filter wrapper for drift therefore
- * returned it unchanged: the knob did nothing and said nothing. Four shipped songs carried
- * such a call (IrishLament x3, Sakura, DialogueWithTheStars) and nobody could have known.
+ * returned it unchanged: the knob did nothing and said nothing. Shipped songs carried such a
+ * call (IrishLament x3, Sakura, and one song since retired) and nobody could have known.
  *
  * It now lives on each oscillator's BUILDER (`Osc.sine(x => x.analog(3))`), which makes an
  * unsupported receiver a type error. This spec is what keeps it that way: drop the knob from one

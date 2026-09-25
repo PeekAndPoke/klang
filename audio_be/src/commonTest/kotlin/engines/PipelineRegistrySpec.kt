@@ -24,10 +24,19 @@ class PipelineRegistrySpec : StringSpec({
     "seeds built-ins, case-insensitive, falls back to modern" {
         val reg = PipelineRegistry()
         reg.get("modern") shouldBe PipelineDsl.modern
-        reg.get("pedal") shouldBe PipelineDsl.pedal
-        reg.get("PEDAL") shouldBe PipelineDsl.pedal
+        reg.get("MODERN") shouldBe PipelineDsl.modern
         reg.get(null) shouldBe PipelineDsl.modern
         reg.get("does-not-exist") shouldBe PipelineDsl.modern
+    }
+
+    "the retired pedal preset is gone: its name resolves like any unknown name, to modern" {
+        // Removed 2026-09-25 (builtin-instruments.md D4). A song that still says
+        // `.pipeline("pedal")` plays the default topology, VCA last, and no error is raised.
+        val reg = PipelineRegistry()
+        PipelinePreset.entries.map { it.pipelineName } shouldBe listOf("modern")
+        reg.get("pedal") shouldBe PipelineDsl.modern
+        reg.get("PEDAL") shouldBe PipelineDsl.modern
+        reg.fork().get("pedal") shouldBe PipelineDsl.modern
     }
 
     "a registered custom engine is resolvable by name" {

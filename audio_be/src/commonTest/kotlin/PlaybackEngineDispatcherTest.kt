@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_be.voices.TestSamples
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
@@ -65,12 +66,15 @@ class PlaybackEngineDispatcherTest : StringSpec({
     "RegisterPipeline lands on the per-playback engine fork, not the shared parent" {
         val d = newDispatcher()
 
-        d.handle(KlangCommLink.Cmd.RegisterPipeline(playbackId = "song", name = "myeng", dsl = PipelineDsl.pedal))
+        // A custom pipeline that is NOT the default, so the parent's fallback cannot pass for it.
+        val custom = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Filter()))
+
+        d.handle(KlangCommLink.Cmd.RegisterPipeline(playbackId = "song", name = "myeng", dsl = custom))
 
         // Resolvable on the engine's fork...
-        d.engine("song").shouldNotBeNull().scheduler.resolvePipeline("myeng") shouldBe PipelineDsl.pedal
+        d.engine("song").shouldNotBeNull().scheduler.resolvePipeline("myeng") shouldBe custom
         // ...but the shared parent doesn't know "myeng" (falls back to the default engine).
-        d.pipelineRegistry.get("myeng") shouldNotBe PipelineDsl.pedal
+        d.pipelineRegistry.get("myeng") shouldNotBe custom
     }
 
     "Sample routes to the shared sample store" {

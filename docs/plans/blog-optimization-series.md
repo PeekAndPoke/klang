@@ -631,6 +631,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   fixed harness loop into the older worktree for the run. Tags whose build fails with today's
   toolchain are recorded as such, not skipped silently. Expect a day of wall clock; run it last,
   after every other post is drafted.
+  (**2026-09-25:** `FrozenSongs`' Der Schmetterling was REPLACED by a fresh snapshot (`derSchmetterling_2026_09_25`, phase 3 D4). At HEAD the song axis now renders the 09-25 text; the 2026-07-03 text lives in git (`0cc351a2` and earlier), so a fixed-work comparison across tags must check out that const explicitly.)
 - **Mechanics, the song axis** (opus). At HEAD only: render every snapshot of Der Schmetterling
   the repository can reproduce (the 2026-07-03 frozen text; the live text at each tag from
   `git show <tag>:src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`, migrated where a

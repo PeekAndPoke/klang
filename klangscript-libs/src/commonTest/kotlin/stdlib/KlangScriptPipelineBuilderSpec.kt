@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -18,7 +19,7 @@ import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
  * The pipeline doors: `Pipeline(configure)` (the `invoke` operator), its alias `Pipeline.build`,
- * the presets `Pipeline.modern(configure)` / `Pipeline.pedal(configure)`, and the two operations
+ * the preset `Pipeline.modern(configure)`, and the two operations
  * on a [PipelineBuilder]: stage knobs APPEND, `tuneVca` / `tuneFilter` configure existing stages.
  * Script vs the Kotlin data classes, node for node.
  */
@@ -35,7 +36,11 @@ class KlangScriptPipelineBuilderSpec : StringSpec({
     "Pipeline() is the engine default, same as Pipeline.modern()" {
         ks("Pipeline()") shouldBe PipelineDsl.modern
         ks("Pipeline.modern()") shouldBe PipelineDsl.modern
-        ks("Pipeline.pedal()") shouldBe PipelineDsl.pedal
+    }
+
+    "the retired Pipeline.pedal door fails loudly instead of meaning something else" {
+        // Removed 2026-09-25 (builtin-instruments.md D4), not deprecated.
+        shouldThrowAny { ks("Pipeline.pedal()") }.message shouldContain "pedal"
     }
 
     "Pipeline(p => ...) == Pipeline.build(p => ...), node for node" {
@@ -75,8 +80,8 @@ class KlangScriptPipelineBuilderSpec : StringSpec({
     }
 
     "a preset's filter is tuned in place with tuneFilter" {
-        ks("Pipeline.pedal(p => p.tuneFilter(f => f.drive(1.0)))") shouldBe PipelineDsl(
-            PipelineDsl.pedal.stages.map { if (it is StageDsl.Filter) it.copy(drivePerAnalog = 1.0) else it }
+        ks("Pipeline.modern(p => p.tuneFilter(f => f.drive(1.0)))") shouldBe PipelineDsl(
+            PipelineDsl.modern.stages.map { if (it is StageDsl.Filter) it.copy(drivePerAnalog = 1.0) else it }
         )
     }
 

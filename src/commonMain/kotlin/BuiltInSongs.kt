@@ -9,7 +9,6 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.builtinsongs.aTruthWorthLyingForSong
 import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
-import io.peekandpoke.klang.builtinsongs.dialogueWithTheStarsSong
 import io.peekandpoke.klang.builtinsongs.drunkenSailorSong
 import io.peekandpoke.klang.builtinsongs.finalFantasy7PreludeSong
 import io.peekandpoke.klang.builtinsongs.greensleevesSong
@@ -41,7 +40,6 @@ object BuiltInSongs {
     val soundOfTheSea: Song = soundOfTheSeaSong
     val sakura: Song = sakuraSong
     val aTruthWorthLyingFor: Song = aTruthWorthLyingForSong
-    val dialogueWithTheStars: Song = dialogueWithTheStarsSong
     val strangerThings: Song = strangerThingsSong
     val irishLamentTechno: Song = irishLamentTechnoSong
     val sandsturm: Song = sandsturmSong
@@ -66,6 +64,5 @@ object BuiltInSongs {
         irishLament,
         smallTownBoy,
         drunkenSailor,
-        dialogueWithTheStars,
     )
 }

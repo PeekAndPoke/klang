@@ -21,7 +21,7 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangScriptOscSlot.kt` / `KlangScriptClassicSlots.kt` | `OscSlot` and its slot groups (`OscSlot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
 | `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt` | `Master(m => ...)` (`invoke`), `Master.build`, `Master.default`               |
 | `src/commonMain/kotlin/stdlib/MasterBuilders.kt` | `MasterBuilder` (gain, limiter, reverb, delay) and the one stage builder (`MasterDelayBuilder`, `cap`) |
-| `src/commonMain/kotlin/stdlib/KlangScriptPipeline.kt` | `Pipeline(p => ...)` (`invoke`), `Pipeline.build`, `Pipeline.modern`, `Pipeline.pedal` |
+| `src/commonMain/kotlin/stdlib/KlangScriptPipeline.kt` | `Pipeline(p => ...)` (`invoke`), `Pipeline.build`, `Pipeline.modern` |
 | `src/commonMain/kotlin/stdlib/PipelineBuilders.kt` | `PipelineBuilder` (stage knobs append; `tuneVca`/`tuneFilter` configure existing stages) and the two stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |

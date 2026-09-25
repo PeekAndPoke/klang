@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
+import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -158,7 +159,7 @@ class InlineDslRegistrarTest : StringSpec({
 
     "each DSL kind announces once and lands as its own Cmd type" {
         val (reg, sent) = newRegistrar()
-        val pipeline = PipelineDsl.pedal
+        val pipeline = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter()))
         val master = MasterDsl.of()
         val katalyst = KatalystDsl.of(KatalystStageDsl.Reverb())
 
@@ -180,7 +181,7 @@ class InlineDslRegistrarTest : StringSpec({
     "announceAll registers every inline DSL kind found in the events" {
         val (reg, sent) = newRegistrar()
         val osc = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Constant(123.45))
-        val pipeline = PipelineDsl.pedal
+        val pipeline = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter()))
         val master = MasterDsl.of()
         val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
 

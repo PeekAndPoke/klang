@@ -11,7 +11,7 @@ that explicit: the built-in sounds become INSTRUMENTS written in the Ignitor DSL
 whose stages are today's voice pipeline in today's order, every stage gated on its slot. `.classic()`
 is a plain function over the node type, shipped on both doors. A pattern fills slots, never adds
 structure. `PipelineDsl`, the filter pipeline builder, `Cmd.RegisterPipeline`, `PipelineRegistry` and
-the `pedal` preset retire; every voice door becomes an `oscp` alias; `VoiceData` is cut to the plan's
+the `pedal` preset retire (the `pedal` preset went early, 2026-09-25, D4); every voice door becomes an `oscp` alias; `VoiceData` is cut to the plan's
 section 4.
 
 ## 2. The spike's headline (2026-09-20, all numbers MEASURED on the JVM)
@@ -149,7 +149,9 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   against `lpf(freq, q, passes, env, attack, ...)`), so `lowpass(800, 1.2, 2, 24)` is a very dirty
   filter and `lpf(800, 1.2, 2, 24)` is two octaves of sweep. Both KDocs say to write them named;
   nothing guards it.
-- **D5, the frozen pieces.** `FrozenPieces` is captured verbatim and immutable except for door
+- **D5, the frozen pieces.** (2026-09-25: the maintainer REPLACED the frozen Der Schmetterling SONG in
+  `FrozenSongs.kt` with a fresh snapshot, `derSchmetterling_2026_09_25`, D4; `FrozenPieces` itself is still
+  open here.) `FrozenPieces` is captured verbatim and immutable except for door
   renames. Appending `.classic()` is not a rename, and without it those pieces lose their outer
   envelope. The maintainer's word is needed.
 - **D7, distort's oversampling across step 6 (raised 2026-09-23). DECIDED 2026-09-23: (a).** It
@@ -302,6 +304,8 @@ with an error; SILENT means it now means something else or nothing.
 | 3c | the 3d(i) filter and pitch builder knob `x.adsrCurves(...)` | `x.adsr(a, d, s, r, e => e.curves(...))` | loud |
 | 3c | sprudel `oscp("expK", k)` on an ignitor with an `adsr` | an unread key; every exp stage bends at 3 | SILENT |
 | 4 (D1) | a user's Ignitor `.crush(n)` | quantizes with the strip's FLOOR instead of round (up to 0.125 apart at amount 4) and carries its DC offset of about -0.5/halfLevels (-0.5 at amount 1). On the Ignitor the amount can be MODULATED, which the strip could not: the offset then moves with it (a 0.8 sine with an amount LFO of 1 to 3 at 0.5 Hz puts about 60 % of the output RMS amplitude (about 36 % of the power) below 20 Hz, where round gave almost none). Measured by the step 4 audio reviewer | SILENT |
+| D4 | a song's `pipeline("pedal")` | the preset is gone; the name resolves like any unknown name to `modern` (envelope last), silently | SILENT |
+| D4 | a script's `Pipeline.pedal(...)` | removed | loud |
 | 4 (D2) | a user's Kotlin-built `IgnitorDsl.Distort` node (no authoring door emits it; `classic()`, new in step 5 and unreleased, does) | the strip's law: no soft cap, the drive inside the oversampler | SILENT |
 | 4 (D1) | a user's Ignitor `.crush` with a NaN or +Inf modulated amount, or a NaN input sample | the strip's handling: a NaN amount bypasses (it output NaN), a NaN sample becomes 0, +Inf is silence | SILENT |
 | 5 | `passes = +Inf` (either door, or a pattern) | 1 pass (non-finite reads as 1); it was 16 on the strip | SILENT |

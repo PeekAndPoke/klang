@@ -9,7 +9,7 @@ package io.peekandpoke.klang.audio_bridge
 /**
  * Authoring-layer representation of a voice-pipeline reference.
  *
- * A voice may select its pipeline either by name (a built-in like `"modern"`/`"pedal"`, or a
+ * A voice may select its pipeline either by name (the built-in `"modern"`, or a
  * pre-registered custom pipeline) or by inlining a [PipelineDsl] tree directly.
  *
  * At the playback → wire boundary, [Dsl] is denormalized to a stable synthetic name — the playback
@@ -21,7 +21,7 @@ package io.peekandpoke.klang.audio_bridge
  */
 sealed interface PipelineValue {
 
-    /** Pipeline referenced by a stable name (built-in `modern`/`pedal`, or a pre-registered custom). */
+    /** Pipeline referenced by a stable name (the built-in `modern`, or a pre-registered custom). */
     data class Named(val name: String) : PipelineValue
 
     /** Pipeline defined inline as a [PipelineDsl] stage chain. */

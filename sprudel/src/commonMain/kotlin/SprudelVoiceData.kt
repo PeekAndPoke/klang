@@ -151,8 +151,8 @@ data class SprudelVoiceData(
     var patternId: String?,
 
     /**
-     * The voice pipeline this voice references. Either a [PipelineValue.Named] (a built-in like
-     * `"modern"`/`"pedal"`, or a pre-registered custom) or a [PipelineValue.Dsl] inlining a [PipelineDsl]
+     * The voice pipeline this voice references. Either a [PipelineValue.Named] (the built-in
+     * `"modern"`, or a pre-registered custom) or a [PipelineValue.Dsl] inlining a [PipelineDsl]
      * stage chain — the latter gets denormalized to a synthetic name in [toVoiceData]. Unknown/null → modern.
      */
     var pipeline: PipelineValue?,

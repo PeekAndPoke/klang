@@ -145,7 +145,7 @@ more than one place per effect, the factoring is not done.
   a sound change an AUTHOR makes; the engine never does it (section 2).
 - **Retired by this task** (one word per concept): the phase 3 stopgap knob (D7), the `oversample` parameter of the Ignitor's
   `distort(amount, shape, oversample)` and `shape(shape, oversample)`, and the `IgnitorDsl.Shape.oversample`
-  field. Users today: Sandsturm, DialogueWithTheStars, ATruthWorthLyingFor, and eleven sites in
+  field. Users today: Sandsturm, ATruthWorthLyingFor, DerSchmetterling (DialogueWithTheStars left the built-in songs 2026-09-25), and eleven sites in
   `FrozenPieces` (changing those needs the maintainer's word, phase 3 D5).
 - **Open:** whether the sprudel doors `crush`, `coarse` and `distort` keep an `oversample` slot (read by
   `classic()` into a one-stage region, so the word keeps its meaning) or lose it. Every shipped crush and
