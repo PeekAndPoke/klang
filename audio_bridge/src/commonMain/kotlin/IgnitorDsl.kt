@@ -12,6 +12,10 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_RISE_FLANK
@@ -2082,6 +2086,8 @@ sealed interface IgnitorDsl {
      *
      * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
      * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
+     * The voice strip's pitch envelope (sprudel's `penv`) is a host of the same law with the same
+     * defaults (`constants/PitchEnvelopeDefaults.kt`), so the two sweep alike.
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.
@@ -2100,10 +2106,10 @@ sealed interface IgnitorDsl {
     data class PitchEnvelope(
         val inner: IgnitorDsl,
         val semitones: IgnitorDsl = Constant(0.0),
-        val attackSec: IgnitorDsl = Constant(0.01),
-        val decaySec: IgnitorDsl = Constant(0.1),
-        val sustainLevel: IgnitorDsl = Constant(0.0),
-        val releaseSec: IgnitorDsl = Constant(0.0),
+        val attackSec: IgnitorDsl = Constant(PITCH_ENV_ATTACK_SEC),
+        val decaySec: IgnitorDsl = Constant(PITCH_ENV_DECAY_SEC),
+        val sustainLevel: IgnitorDsl = Constant(PITCH_ENV_SUSTAIN_LEVEL),
+        val releaseSec: IgnitorDsl = Constant(PITCH_ENV_RELEASE_SEC),
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         val decayCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),

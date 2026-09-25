@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.sprudel
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -87,6 +89,42 @@ class SprudelVoiceDataSpec : StringSpec({
         // and the base side survives an empty over side (the `?: base` half)
         val kept = a.merge(createSprudelVoiceData { })
         kept.phaserFloor shouldBe a.phaserFloor
+    }
+
+    "merge() completeness has an INDEPENDENT oracle for the pitch envelope group (sustain and the curves)" {
+        // As the phaser row: mergeFrom and merge share mergeSvdPitchEnv, so only the inputs can see a field
+        // the helper drops, swaps or takes from the wrong side.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+
+        withClue("the seeds give every curve a different value on each side") {
+            a.pAttackCurve shouldNotBe b.pAttackCurve
+            a.pDecayCurve shouldNotBe b.pDecayCurve
+            a.pReleaseCurve shouldNotBe b.pReleaseCurve
+        }
+
+        val merged = a.merge(b)
+
+        merged.pAttack shouldBe b.pAttack
+        merged.pDecay shouldBe b.pDecay
+        merged.pSustain shouldBe b.pSustain
+        merged.pRelease shouldBe b.pRelease
+        merged.pEnv shouldBe b.pEnv
+        merged.pAttackCurve shouldBe b.pAttackCurve
+        merged.pDecayCurve shouldBe b.pDecayCurve
+        merged.pReleaseCurve shouldBe b.pReleaseCurve
+
+        // and the base side survives an over side with an empty pitch envelope group (the `?: base` half)
+        val kept = a.merge(createSprudelVoiceData { pEnv = 5.0 })
+
+        kept.pEnv shouldBe 5.0
+        kept.pAttack shouldBe a.pAttack
+        kept.pDecay shouldBe a.pDecay
+        kept.pSustain shouldBe a.pSustain
+        kept.pRelease shouldBe a.pRelease
+        kept.pAttackCurve shouldBe a.pAttackCurve
+        kept.pDecayCurve shouldBe a.pDecayCurve
+        kept.pReleaseCurve shouldBe a.pReleaseCurve
     }
 
     "can create SprudelVoiceData with basic fields" {
@@ -351,7 +389,12 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false
         accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
-        pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pCurve = b + 19; pAnchor = b + 20
+        pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pSustain = b + 19
+        // Picked from the seed, so the two sides of a merge row differ in every curve (seed 0: Linear, Square,
+        // Cube; seed 1000: InvSquare, Exponential, Linear) and a dropped or swapped curve merge shows.
+        pAttackCurve = AdsrCurve.entries[seed % 6]
+        pDecayCurve = AdsrCurve.entries[(seed + 1) % 6]
+        pReleaseCurve = AdsrCurve.entries[(seed + 2) % 6]
         fmh = b + 21; fmAttack = b + 22; fmDecay = b + 23; fmSustain = b + 24; fmEnv = b + 25
         distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
         coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31

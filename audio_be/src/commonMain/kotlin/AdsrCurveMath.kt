@@ -10,8 +10,8 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts; the strip pitch envelope
-// joins in commit (c) of phase 3 step 5b):
+// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the strip pitch envelope
+// included since phase 3 step 5b (c1)):
 // the stage shapes, the release time base, and the de-click coefficient.
 //
 // The tunable values themselves (ADSR_EXP_K, ENV_DECLICK_SECONDS) live in

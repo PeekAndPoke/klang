@@ -104,7 +104,7 @@ grouping, `<>` alternation
 |-----|-----------------------|--------------|---------------------------------------|------------------|---------------------------------------------------------------------------------|
 | M5  | Dynamic Filters       | Intermediate | `lpf(env = ...)`, `lpf(attack = ...)`, filter ADSR    | **Acid House**   | TB-303 squelch IS a filter envelope. The genre was born from this one parameter |
 | M6  | Scale Modes           | Intermediate | `mode()`, `scale()` modes             | **Flamenco**     | Phrygian mode = instant Spain. Most viscerally clear mode demonstration         |
-| M7  | Pitch Bends and Drops | Intermediate | `accelerate()`, `penv()`, `penv(anchor = ...)` | **Grime**        | Wiley's "Eskimo" sound = pitch envelopes on bass. Every hit dives               |
+| M7  | Pitch Bends and Drops | Intermediate | `accelerate()`, `penv()`, `penv(sustain = ...)` | **Grime**        | Wiley's "Eskimo" sound = pitch envelopes on bass. Every hit dives               |
 | M8  | Sidechain Pumping     | Intermediate | `duck()`, `duck(attack = ...)`         | **French House** | Daft Punk's Alesis 3630 pumping defined the genre                               |
 | L13 | Sound Banks           | Beginner     | `bank()`, browsing sounds             | **Reggae**       | Reggae has iconic, specific sounds — teaches why banks matter                   |
 

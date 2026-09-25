@@ -63,14 +63,16 @@ data class SvdPitchMod(
     var vibratoMod: Double? = null,
 )
 
-/** Pitch envelope. */
+/** Pitch envelope: `penv(amount, attack, decay, sustain, release)` and `penvCurves(attack, decay, release)`. */
 data class SvdPitchEnv(
     var pAttack: Double? = null,
     var pDecay: Double? = null,
+    var pSustain: Double? = null,
     var pRelease: Double? = null,
     var pEnv: Double? = null,
-    var pCurve: Double? = null,
-    var pAnchor: Double? = null,
+    var pAttackCurve: AdsrCurve? = null,
+    var pDecayCurve: AdsrCurve? = null,
+    var pReleaseCurve: AdsrCurve? = null,
 )
 
 /** FM synthesis. */
@@ -186,10 +188,12 @@ fun mergeSvdPitchEnv(base: SvdPitchEnv?, over: SvdPitchEnv?): SvdPitchEnv? {
     return SvdPitchEnv(
         pAttack = over.pAttack ?: base.pAttack,
         pDecay = over.pDecay ?: base.pDecay,
+        pSustain = over.pSustain ?: base.pSustain,
         pRelease = over.pRelease ?: base.pRelease,
         pEnv = over.pEnv ?: base.pEnv,
-        pCurve = over.pCurve ?: base.pCurve,
-        pAnchor = over.pAnchor ?: base.pAnchor,
+        pAttackCurve = over.pAttackCurve ?: base.pAttackCurve,
+        pDecayCurve = over.pDecayCurve ?: base.pDecayCurve,
+        pReleaseCurve = over.pReleaseCurve ?: base.pReleaseCurve,
     )
 }
 

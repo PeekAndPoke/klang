@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * Pipeline order:
  * 1. Vibrato (LFO pitch modulation)
  * 2. Accelerate (pitch glide over voice lifetime)
- * 3. Pitch Envelope (attack/decay pitch transient)
+ * 3. Pitch Envelope (an ADSR on the pitch, sprudel's `penv`)
  * 4. FM Synthesis (frequency modulation)
  *
  * Only active stages are included (e.g. vibrato is skipped if depth == 0).

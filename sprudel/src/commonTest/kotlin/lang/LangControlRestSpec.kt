@@ -57,7 +57,7 @@ class LangControlRestSpec : StringSpec({
     val unisonSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"), t("pan", "0.3", "0.6"))
     val penvSlots = arrayOf(
         t("amount", "12", "24"), t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"),
-        t("release", "0.1", "0.2"), t("curve", "1", "2"), t("anchor", "0.25", "0.5"),
+        t("sustain", "0.25", "0.5"), t("release", "0.1", "0.2"),
     )
     val vibratoSlots = arrayOf(t("rate", "4", "6"), t("depth", "0.3", "0.6"))
     val superSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"))

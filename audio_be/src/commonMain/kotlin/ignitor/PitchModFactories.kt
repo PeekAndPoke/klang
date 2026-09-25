@@ -18,6 +18,8 @@ import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import kotlin.math.pow
 import kotlin.math.abs
 
@@ -160,8 +162,9 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  *
  * **The law** is [EnvelopeCore], the engine's one envelope law (fractional attack and decay frames,
  * the release on `floor(N)` frames, the release starting from the level AT the gate frame, the
- * sustain raw). This host maps the level onto the pitch raw, and renders a block that sits wholly in
- * the sustain, or wholly past a finished release, as one ratio.
+ * sustain raw). The level becomes a ratio in [renderPitchEnvelopeRatios], the ONE mapping this node
+ * and the voice strip's pitch envelope (sprudel's `penv`, `PitchEnvelopeRenderer`) share, so the two
+ * render the same numbers by construction.
  *
  * Output is passed through [safeOut] — extreme `amount` values cannot produce
  * `+Inf` ratios that would poison the oscillator phase accumulator.
@@ -172,7 +175,7 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  * @param decaySec decay time
  * @param releaseSec release time, from the gate's end
  * @param sustainLevel held level, a share of [semitones]; not clamped (the Motor stays raw), and a
- *   non-finite one reads as unset, 0 (`finiteOr`, the chain `adsr`'s rule)
+ *   non-finite one reads as unset, [PITCH_ENV_SUSTAIN_LEVEL] (`finiteOr`, the chain `adsr`'s rule)
  * @param attackCurve attack shape, [MOD_ENV_CURVE] when the node leaves it unset
  * @param decayCurve decay shape
  * @param releaseCurve release shape
@@ -180,9 +183,9 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
 fun pitchEnvelopeModIgnitor(
     attackSec: Ignitor,
     decaySec: Ignitor,
-    releaseSec: Ignitor = ParamIgnitor("releaseSec", 0.0),
+    releaseSec: Ignitor = ParamIgnitor("releaseSec", PITCH_ENV_RELEASE_SEC),
     semitones: Ignitor,
-    sustainLevel: Ignitor = ParamIgnitor("sustainLevel", 0.0),
+    sustainLevel: Ignitor = ParamIgnitor("sustainLevel", PITCH_ENV_SUSTAIN_LEVEL),
     attackCurve: AdsrCurve = MOD_ENV_CURVE,
     decayCurve: AdsrCurve = MOD_ENV_CURVE,
     releaseCurve: AdsrCurve = MOD_ENV_CURVE,
@@ -216,58 +219,82 @@ private class PitchEnvelopeModIgnitor(
         val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
         val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx)
         val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
-        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 0, the chain
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the shared default, the chain
         // `adsr`'s rule (`finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw).
-        val sustainVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), 0.0)
-
-        val gateEndPos = ctx.gateEndFrame
+        val sustainVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), PITCH_ENV_SUSTAIN_LEVEL)
 
         core.prepare(
             attackFrames = attackSecVal * ctx.sampleRate,
             decayFrames = decaySecVal * ctx.sampleRate,
             sustainLevel = sustainVal,
             releaseFrames = releaseSecVal * ctx.sampleRate,
-            gateEndPos = gateEndPos,
+            gateEndPos = ctx.gateEndFrame,
             attackCurve = attackCurve,
             decayCurve = decayCurve,
             releaseCurve = releaseCurve,
         )
 
-        val firstPos = ctx.voiceElapsedFrames
-        val lastPos = firstPos + (end - 1 - ctx.offset)
+        renderPitchEnvelopeRatios(core, amountVal, buffer, ctx.offset, end, ctx.voiceElapsedFrames, multiply = false)
+    }
+}
 
-        if (firstPos >= core.sustainFrom && lastPos < gateEndPos) {
-            // Settled on the sustain for the whole block: one ratio, not one per sample.
-            val settled = safeOut(fastExp2(amountVal * sustainVal / 12.0))
+/**
+ * THE pitch envelope's level-to-ratio mapping, one copy for both hosts (phase 3 step 5b (c1)): the
+ * Ignitor node ([pitchEnvelopeModIgnitor], which writes) and the voice strip's pitch envelope
+ * (`PitchEnvelopeRenderer`, which writes, or multiplies into a buffer an earlier pitch stage wrote).
+ *
+ * Fills `buffer[from until to]` with `safeOut(2^(amount * level / 12))`, where `level` is [core]'s
+ * law at the voice-relative frame `firstPos + (i - from)`. [core] must be prepared for this block.
+ *
+ * Two shortcuts write ONE ratio for the whole block, and each is bit for bit what the per-sample loop
+ * would write:
+ *  - the block sits wholly in the sustain, before the gate;
+ *  - the block is wholly released: the release is complete on its first sample, or it starts from
+ *    level 0 (sustain 0, gate after the sweep). In the second case every sample would compute
+ *    `0 * shape(x)` for an x in 0..1, a signed zero whatever the curve, and `fastExp2` returns exactly
+ *    1.0 for both +0.0 and -0.0.
+ *
+ * No allocation; the [multiply] branch is taken once per block, outside the loops.
+ */
+internal fun renderPitchEnvelopeRatios(
+    core: EnvelopeCore,
+    amount: Double,
+    buffer: DoubleArray,
+    from: Int,
+    to: Int,
+    firstPos: Int,
+    multiply: Boolean,
+) {
+    val gateEndPos = core.gateEndPos
+    val lastPos = firstPos + (to - 1 - from)
 
-            for (i in ctx.offset until end) {
+    val inSustain = firstPos >= core.sustainFrom && lastPos < gateEndPos
+    val released = firstPos >= gateEndPos && (core.levelAtGate == 0.0 || core.releaseDone(firstPos - gateEndPos))
+
+    if (inSustain || released) {
+        val level = if (inSustain) core.sustain else core.releaseEndLevel()
+        val settled = safeOut(fastExp2(amount * level / 12.0))
+
+        if (multiply) {
+            for (i in from until to) {
+                buffer[i] *= settled
+            }
+        } else {
+            for (i in from until to) {
                 buffer[i] = settled
             }
-
-            return
         }
 
-        // Released for the whole block, one ratio for all of it, in two cases: the release is complete
-        // on the block's first sample, or it starts from level 0 (the shape of every migrated call:
-        // sustain 0, gate after the sweep). In the second case every sample would compute
-        // `0 * shape(x)` for an x in 0..1, a signed zero whatever the curve, and `fastExp2` returns
-        // exactly 1.0 for both +0.0 and -0.0, so the settled ratio below is bit for bit what the
-        // per-sample loop writes.
-        if (firstPos >= gateEndPos && (core.levelAtGate == 0.0 || core.releaseDone(firstPos - gateEndPos))) {
-            val level = core.releaseEndLevel()
-            val settled = safeOut(fastExp2(amountVal * level / 12.0))
+        return
+    }
 
-            for (i in ctx.offset until end) {
-                buffer[i] = settled
-            }
-
-            return
+    if (multiply) {
+        for (i in from until to) {
+            buffer[i] *= safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
         }
-
-        for (i in ctx.offset until end) {
-            val absPos = ctx.voiceElapsedFrames + (i - ctx.offset)
-
-            buffer[i] = safeOut(fastExp2(amountVal * core.at(absPos) / 12.0))
+    } else {
+        for (i in from until to) {
+            buffer[i] = safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
         }
     }
 }

@@ -84,13 +84,17 @@ data class VoiceData(
     val vibrato: Double?,
     val vibratoMod: Double?,
 
-    // Pitch envelope
+    // Pitch envelope: sprudel's `penv(amount, attack, decay, sustain, release)` and `penvCurves(...)`.
+    // `pEnv` is the amount in semitones and the switch (0 or unset: none). Unset stages resolve from
+    // `constants/PitchEnvelopeDefaults.kt`, unset curves to `MOD_ENV_CURVE`, as on the Ignitor node.
     val pAttack: Double?,
     val pDecay: Double?,
+    val pSustain: Double?,
     val pRelease: Double?,
     val pEnv: Double?,
-    val pCurve: Double?,
-    val pAnchor: Double?,
+    val pAttackCurve: AdsrCurve? = null,
+    val pDecayCurve: AdsrCurve? = null,
+    val pReleaseCurve: AdsrCurve? = null,
 
     // FM Synthesis
     val fmh: Double?,
@@ -245,10 +249,9 @@ data class VoiceData(
             vibratoMod = null,
             pAttack = null,
             pDecay = null,
+            pSustain = null,
             pRelease = null,
             pEnv = null,
-            pCurve = null,
-            pAnchor = null,
             fmh = null,
             fmAttack = null,
             fmDecay = null,

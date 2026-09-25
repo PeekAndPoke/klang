@@ -160,10 +160,13 @@ class FastExp2Spec : StringSpec({
         // second against a buffer prefilled with 2.0.
         val sampleRate = 48000
         val blockFrames = 128
-        val pEnv = Voice.PitchEnvelope(
-            attackFrames = 0.02 * sampleRate, decayFrames = 0.05 * sampleRate, releaseFrames = 0.0,
-            semitones = 9.0, curve = 0.0, anchor = 0.25,
+        // Linear stages keep the level oracle below plain; the curves are pinned in EnvelopeLawSpec.
+        val lin = AdsrCurve.Linear
+        val env = Voice.Envelope(
+            attackFrames = 0.02 * sampleRate, decayFrames = 0.05 * sampleRate, sustainLevel = 0.25, releaseFrames = 0.0,
+            attackCurve = lin, decayCurve = lin, releaseCurve = lin,
         )
+        val pEnv = Voice.PitchEnvelope(semitones = 9.0, envelope = env)
         val renderer = PitchEnvelopeRenderer(pEnv, startFrame = 0.0)
         val ctx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames),
@@ -200,12 +203,12 @@ class FastExp2Spec : StringSpec({
 
                 for (i in offset until blockFrames) {
                     val relPos = (b * blockFrames + i).toDouble()
-                    var level = pEnv.anchor
+                    var level = env.sustainLevel
 
-                    if (relPos < pEnv.attackFrames) {
-                        level = pEnv.anchor + (1.0 - pEnv.anchor) * (relPos / pEnv.attackFrames)
-                    } else if (relPos < pEnv.attackFrames + pEnv.decayFrames) {
-                        level = 1.0 - (1.0 - pEnv.anchor) * ((relPos - pEnv.attackFrames) / pEnv.decayFrames)
+                    if (relPos < env.attackFrames) {
+                        level = relPos / env.attackFrames
+                    } else if (relPos < env.attackFrames + env.decayFrames) {
+                        level = 1.0 - (1.0 - env.sustainLevel) * ((relPos - env.attackFrames) / env.decayFrames)
                     }
 
                     val expected = (if (multiplyIn) 2.0 else 1.0) * 2.0.pow(pEnv.semitones * level / 12.0)

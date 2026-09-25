@@ -106,7 +106,7 @@
 
 - **Batch G, the last compounds.** `compressor(threshold, ratio, knee, attack, release)`,
   `unison(voices, spread, pan)`, `duck(orbit, depth, attack)`, `vibrato(rate, depth)`,
-  `penv(amount, attack, decay, release, curve, anchor)`, `fm(env, h, attack, decay, sustain)`,
+  `penv(amount, attack, decay, sustain, release)`, `fm(env, h, attack, decay, sustain)`,
   `vowel(vowel, wet, floor)`, `body(material, wet, floor)`: objects with a child per numeric slot;
   the name slots `vowel` and `material` have no readers (`docs/tasks/future/string-slot-readers.md`).
   Retired: `vibratoMod`, the `p*` pitch stage doors, `fmenv/fmmod/fmh/fmattack/fmdecay/fmsustain`,
@@ -486,7 +486,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Pitch Envelope
 
-- `penv(amount, attack, decay, release, curve, anchor)` / `pamt`; readers `penv.*`
+- `penv(amount, attack, decay, sustain, release)` / `pamt`; readers `penv.*`; curves `penvCurves(attack, decay, release)`
 
 ### Audio Effects — Waveshaping / Distortion
 
@@ -568,7 +568,7 @@ return applyCat(patterns)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
 - `velocity()`
 - FM synthesis: `fm(env, h, attack, decay, sustain)`; readers `fm.*`
-- Pitch envelope: `penv(amount, attack, decay, release, curve, anchor)`
+- Pitch envelope: `penv(amount, attack, decay, sustain, release)`
 
 ### System Functions
 

@@ -13,8 +13,9 @@ import kotlin.math.floor
  * THE envelope law of the engine, one copy for every host (phase 3, decision D3, 2026-09-25). Every
  * ADSR-shaped envelope is a thin host of it: the Ignitor chain `adsr` (`AdsrIgnitor`), the Ignitor filter
  * cutoff envelope (`SvfIgnitor`), the Ignitor FM index envelope (`FmModIgnitor`), the Ignitor pitch
- * envelope (`PitchEnvelopeModIgnitor`), the voice strip's VCA (`EnvelopeRenderer`), and the strip's filter
- * envelope (`FilterModRenderer`) and FM envelope (`calculateControlRateEnvelope`). A host adapts only its block contract (per sample, or
+ * envelope (`PitchEnvelopeModIgnitor`), the voice strip's VCA (`EnvelopeRenderer`), the strip's filter
+ * envelope (`FilterModRenderer`) and FM envelope (`calculateControlRateEnvelope`), and the strip's pitch
+ * envelope (`PitchEnvelopeRenderer`, sprudel's `penv`, since phase 3 step 5b (c1)). A host adapts only its block contract (per sample, or
  * at a block's two ends) and maps the level onto its destination; the level itself is computed here.
  *
  * **The shape.** Its entry points are [prepare], once per block, and [at], per sample: the "per-block
@@ -44,8 +45,9 @@ import kotlin.math.floor
  *    from 0: the envelope is 0 on every frame (an amplitude envelope silences the voice, as before this
  *    law; the modulation envelopes used to release from the attack curve evaluated at the gate).
  *  - **The sustain is RAW** (the Motor stays raw): no clamp here. The chain `adsr`, the strip VCA, the
- *    FM node and the pitch node substitute their own default for a non-finite sustain before [prepare]
- *    (the filter node's knobs are finite by construction); the strip's control-rate envelopes
+ *    FM node, the pitch node and the strip pitch envelope (`VoiceFactory`) substitute their own default for
+ *    a non-finite sustain before [prepare] (the filter node's knobs are finite by construction); the strip's
+ *    control-rate envelopes
  *    (`prepareControlRateEnvelope`, the filter's and the FM's) do not. Each host maps the level onto its destination: an
  *    amplitude floors at 0, a filter or FM depth is clamped to [0, 1], a pitch passes raw.
  */

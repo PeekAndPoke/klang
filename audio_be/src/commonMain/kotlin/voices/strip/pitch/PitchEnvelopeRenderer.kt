@@ -5,76 +5,53 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
-import io.peekandpoke.klang.audio_be.fastExp2
+import io.peekandpoke.klang.audio_be.EnvelopeCore
+import io.peekandpoke.klang.audio_be.ignitor.renderPitchEnvelopeRatios
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import io.peekandpoke.klang.audio_be.voices.strip.prepareControlRateEnvelope
 
 /**
- * Pitch envelope: attack/decay transient pitch modulation.
- * Creates pitch bends during the voice onset (e.g., drum tuning, synth swoops).
+ * The voice strip's pitch envelope (sprudel's `penv`): an ADSR on the pitch ratio, a thin host of
+ * [EnvelopeCore], the engine's one envelope law (phase 3 step 5b (c1), decision D3).
  *
- * All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
+ * The level rises from 0 to 1 over the attack, falls to the sustain over the decay, holds, and from the
+ * gate's end falls back to 0 over the release; the pitch is `2^(semitones * level / 12)`. The release
+ * does NOT extend the voice's life. The level becomes a ratio in `renderPitchEnvelopeRatios`, the one
+ * mapping this renderer shares with the Ignitor pitch envelope, so the same stages, sustain and curves
+ * render the same numbers on both hosts.
+ *
+ * Per sample, from the voice-relative frame `blockStart + offset - startFrame` (block-framing Class 1).
+ * The gate is read from the [BlockContext] on every call, as the strip's filter and FM envelopes read
+ * it, so a realtime note-off moves the release. The first pitch stage of a block WRITES the frequency
+ * modulation buffer, a later one multiplies into it.
  */
 class PitchEnvelopeRenderer(
     private val pitchEnvelope: Voice.PitchEnvelope,
-        // Absolute backend frame — Double, see RenderClock.cursorFrame.
+    // Absolute backend frame, Double, see RenderClock.cursorFrame.
     private val startFrame: Double,
 ) : BlockRenderer {
+    private val core = EnvelopeCore()
 
     override fun render(ctx: BlockContext) {
-        val buf = ctx.freqModBuffer
-        val pEnv = pitchEnvelope
+        core.prepareControlRateEnvelope(pitchEnvelope.envelope, startFrame, ctx.gateEndFrame)
 
-        // Compute voice-relative position as Int (once per block)
-        val blockRelStart = (ctx.blockStart + ctx.offset - startFrame).toInt()
+        // Voice-relative position of the block's first rendered frame, Int (no Long on Kotlin/JS).
+        val firstPos = (ctx.blockStart + ctx.offset - startFrame).toInt()
+        val from = ctx.offset
+        val to = ctx.offset + ctx.length
 
-        if (blockRelStart >= pEnv.attackFrames + pEnv.decayFrames) {
-            // Settled on the anchor for the whole block: one ratio, not one per sample.
-            val settled = fastExp2(pEnv.semitones * pEnv.anchor / 12.0)
+        renderPitchEnvelopeRatios(
+            core = core,
+            amount = pitchEnvelope.semitones,
+            buffer = ctx.freqModBuffer,
+            from = from,
+            to = to,
+            firstPos = firstPos,
+            multiply = ctx.freqModBufferWritten,
+        )
 
-            if (ctx.freqModBufferWritten) {
-                for (i in 0 until ctx.length) {
-                    buf[ctx.offset + i] *= settled
-                }
-            } else {
-                for (i in 0 until ctx.length) {
-                    buf[ctx.offset + i] = settled
-                }
-
-                ctx.freqModBufferWritten = true
-            }
-
-            return
-        }
-
-        if (ctx.freqModBufferWritten) {
-            for (i in 0 until ctx.length) {
-                val idx = ctx.offset + i
-                buf[idx] *= calculatePitchMod(blockRelStart + i, pEnv)
-            }
-        } else {
-            for (i in 0 until ctx.length) {
-                val idx = ctx.offset + i
-                buf[idx] = calculatePitchMod(blockRelStart + i, pEnv)
-            }
-            ctx.freqModBufferWritten = true
-        }
-    }
-
-    private fun calculatePitchMod(relPos: Int, pEnv: Voice.PitchEnvelope): Double {
-        val relPosD = relPos.toDouble()
-
-        var envLevel = pEnv.anchor
-
-        if (relPosD < pEnv.attackFrames) {
-            val progress = relPosD / pEnv.attackFrames
-            envLevel = pEnv.anchor + (1.0 - pEnv.anchor) * progress
-        } else if (relPosD < (pEnv.attackFrames + pEnv.decayFrames)) {
-            val decayProgress = (relPosD - pEnv.attackFrames) / pEnv.decayFrames
-            envLevel = 1.0 - (1.0 - pEnv.anchor) * decayProgress
-        }
-
-        return fastExp2(pEnv.semitones * envLevel / 12.0)
+        ctx.freqModBufferWritten = true
     }
 }

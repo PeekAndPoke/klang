@@ -313,8 +313,10 @@ class BlockFramingInvarianceSpec : StringSpec({
     // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
         "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
+        // A sustain and a release inside the render: the gate at 4813 frames starts a 0.03 s release
+        // (1323 frames) that ends inside the rendered tail, so the release path is framed too.
         "strip pitch envelope" to { d ->
-            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pRelease = 0.0)
+            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pSustain = 0.4, pRelease = 0.03)
         },
     )
 

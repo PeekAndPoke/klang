@@ -97,8 +97,8 @@ class PitchModulationTest : StringSpec({
         val explicitNull = render(null)
         val real = render(
             Voice.PitchEnvelope(
-                attackFrames = 0.0, decayFrames = 200.0, releaseFrames = 0.0,
-                semitones = 12.0, curve = 1.0, anchor = 0.0,
+                semitones = 12.0,
+                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 200.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
 
@@ -112,12 +112,8 @@ class PitchModulationTest : StringSpec({
             blockFrames = bfLocal,
             signal = Ignitors.sine(),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 100.0,
-                decayFrames = 0.0,
-                releaseFrames = 0.0,
                 semitones = 2.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 100.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceWithout = createSynthVoice(
@@ -141,12 +137,8 @@ class PitchModulationTest : StringSpec({
             blockFrames = bfLocal,
             signal = Ignitors.sine(),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 0.0,
-                decayFrames = 100.0,
-                releaseFrames = 0.0,
                 semitones = -1.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 100.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceWithout = createSynthVoice(
@@ -171,12 +163,8 @@ class PitchModulationTest : StringSpec({
             blockFrames = bfLocal,
             signal = Ignitors.sine(),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 50.0,
-                decayFrames = 50.0,
-                releaseFrames = 0.0,
                 semitones = 1.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceWithout = createSynthVoice(
@@ -232,8 +220,8 @@ class PitchModulationTest : StringSpec({
             signal = Ignitors.sine(),
             vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 100.0, decayFrames = 0.0, releaseFrames = 0.0,
-                semitones = 2.0, curve = 0.0, anchor = 0.0
+                semitones = 2.0,
+                envelope = Voice.Envelope(attackFrames = 100.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceVibratoOnly = createSynthVoice(
@@ -258,8 +246,8 @@ class PitchModulationTest : StringSpec({
             signal = Ignitors.sine(),
             accelerate = Voice.Accelerate(semitones = 0.5),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 50.0, decayFrames = 50.0, releaseFrames = 0.0,
-                semitones = 1.0, curve = 0.0, anchor = 0.0
+                semitones = 1.0,
+                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceAccelOnly = createSynthVoice(
@@ -285,8 +273,8 @@ class PitchModulationTest : StringSpec({
             vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
             accelerate = Voice.Accelerate(semitones = 0.5),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 50.0, decayFrames = 0.0, releaseFrames = 0.0,
-                semitones = 1.0, curve = 0.0, anchor = 0.0
+                semitones = 1.0,
+                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
         val voiceNone = createSynthVoice(
@@ -416,12 +404,8 @@ class PitchModulationTest : StringSpec({
             blockFrames = bf,
             signal = Ignitors.sine(),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 0.0,
-                decayFrames = 0.0,
-                releaseFrames = 0.0,
                 semitones = 1.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0),
             )
         )
 

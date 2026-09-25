@@ -63,7 +63,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
             vowel = "a"; vowelMix = 0.45; vowelFloor = 0.15; body = "wood"; bodyMix = 0.4; bodyFloor = 0.25
             accelerate = 0.1; vibrato = 5.0; vibratoMod = 0.3
-            pAttack = 0.01; pDecay = 0.05; pRelease = 0.1; pEnv = 12.0; pCurve = 1.0; pAnchor = 0.5
+            pAttack = 0.01; pDecay = 0.05; pSustain = 0.5; pRelease = 0.1; pEnv = 12.0
+            pAttackCurve = AdsrCurve.Square; pDecayCurve = AdsrCurve.SCurve; pReleaseCurve = AdsrCurve.InvSquare
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
             distort = 0.3; distortShape = "tube"; distortOversample = 4; coarse = 2.0; coarseOversample = 2; crush = 8.0; crushOversample =
             2

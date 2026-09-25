@@ -187,12 +187,8 @@ class SynthVoiceTest : StringSpec({
             vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
             accelerate = Voice.Accelerate(semitones = 1.0),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 50.0,
-                decayFrames = 50.0,
-                releaseFrames = 0.0,
                 semitones = 1.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.0, releaseFrames = 0.0),
             ),
             fm = Voice.Fm(
                 ratio = 2.0,

@@ -153,10 +153,8 @@ class GraalSprudelPattern(
             ?: value.safeGetMember("prel").safeNumberOrNull()
         val pEnv = value.safeGetMember("penv").safeNumberOrNull()
             ?: value.safeGetMember("pamt").safeNumberOrNull()
-        val pCurve = value.safeGetMember("pcurve").safeNumberOrNull()
-            ?: value.safeGetMember("pcrv").safeNumberOrNull()
-        val pAnchor = value.safeGetMember("panchor").safeNumberOrNull()
-            ?: value.safeGetMember("panc").safeNumberOrNull()
+        // Strudel's `pcurve` and `panchor` have no sprudel counterpart since phase 3 step 5b (c1): sprudel's
+        // `penv` is an ADSR (`sustain`, `penvCurves`), not Strudel's anchored ramp, so they are not mapped.
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // FM Synthesis
@@ -354,8 +352,6 @@ class GraalSprudelPattern(
                 it.pDecay = pDecay
                 it.pRelease = pRelease
                 it.pEnv = pEnv
-                it.pCurve = pCurve
-                it.pAnchor = pAnchor
                 // FM Synthesis
                 it.fmh = fmh
                 it.fmAttack = fmAttack

@@ -6,8 +6,9 @@
   inline `at(pos)` per sample (block-framing ledger E1's agreed shape). Thin hosts: the chain `adsr`
   (`AdsrIgnitor`), the strip VCA (`EnvelopeRenderer`), the node filter envelope (`SvfIgnitor`, via
   `prepareModEnvelope`), the node FM index envelope, the node pitch envelope, and the strip's
-  `calculateControlRateEnvelope` (strip filter and strip FM). The strip pitch envelope (anchor law) joins
-  with sprudel's `penv` vocabulary in commit (c). `EnvelopeDeclick` is the one de-click smoother.
+  `calculateControlRateEnvelope` (strip filter and strip FM). The strip pitch envelope joined in commit c1
+  (`PitchEnvelopeRenderer`, through the mapping `renderPitchEnvelopeRatios` it shares with the node), with
+  sprudel's `penv(amount, attack, decay, sustain, release)` vocabulary. `EnvelopeDeclick` is the one de-click smoother.
 - **The law:** attack and decay frames FRACTIONAL; release on `floor(N)` frames over `floor(N) - 1`, so the
   last rendered frame is an exact 0.0; the release offset ("0 means 0") everywhere; the release starts
   from the attack-decay-sustain law AT the gate frame (stateless: `Voice.Envelope` lost `level`,

@@ -5,9 +5,12 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.kotest.assertions.throwables.shouldThrowAny
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -182,85 +185,153 @@ class LangPitchEnvelopeSpec : StringSpec({
         events[0].data.pEnv shouldBe 12.0
     }
 
-    // ---- pcurve / pcrv ----
+    // ---- sustain (replaced the anchor, phase 3 step 5b (c1)) ----
 
-    "pcurve dsl interface" {
+    "psustain dsl interface" {
         val pat = "c4 e4"
-        val amount = 0.5
+        val amount = 0.4
 
         dslInterfaceTests(
-            "pattern.penv(curve = v)" to note(pat).penv(curve = amount),
-            "script pattern.penv(curve = v)" to SprudelPattern.compile("""note("$pat").penv(curve = $amount)"""),
-            "string.penv(curve = v)" to pat.penv(curve = amount),
-            "script string.penv(curve = v)" to SprudelPattern.compile(""""$pat".penv(curve = $amount)"""),
-            "penv(curve = v)" to note(pat).apply(penv(curve = amount)),
-            "script penv(curve = v)" to SprudelPattern.compile("""note("$pat").apply(penv(curve = $amount))"""),
+            "pattern.penv(sustain = v)" to note(pat).penv(sustain = amount),
+            "script pattern.penv(sustain = v)" to SprudelPattern.compile("""note("$pat").penv(sustain = $amount)"""),
+            "string.penv(sustain = v)" to pat.penv(sustain = amount),
+            "script string.penv(sustain = v)" to SprudelPattern.compile(""""$pat".penv(sustain = $amount)"""),
+            "penv(sustain = v)" to note(pat).apply(penv(sustain = amount)),
+            "script penv(sustain = v)" to SprudelPattern.compile("""note("$pat").apply(penv(sustain = $amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.pCurve shouldBe amount
+            events[0].data.pSustain shouldBe amount
         }
     }
 
-    "penv(curve = ...) sets SprudelVoiceData.pCurve" {
-        val p = note("a b").penv(curve = "0.5 1.5")
+    "penv(sustain = ...) sets SprudelVoiceData.pSustain" {
+        val p = note("a b").penv(sustain = "0.0 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.pCurve } shouldBe listOf(0.5, 1.5)
+        events.map { it.data.pSustain } shouldBe listOf(0.0, 1.0)
     }
 
-    "penv(curve = ...) works as pattern extension" {
-        val p = note("c").penv(curve = "0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.pCurve shouldBe 0.5
-    }
-
-    // ---- panchor / panc ----
-
-    "panchor dsl interface" {
-        val pat = "c4 e4"
-        val amount = 0.0
-
+    "the five positional arguments are amount, attack, decay, SUSTAIN, release, on both doors" {
         dslInterfaceTests(
-            "pattern.penv(anchor = v)" to note(pat).penv(anchor = amount),
-            "script pattern.penv(anchor = v)" to SprudelPattern.compile("""note("$pat").penv(anchor = $amount)"""),
-            "string.penv(anchor = v)" to pat.penv(anchor = amount),
-            "script string.penv(anchor = v)" to SprudelPattern.compile(""""$pat".penv(anchor = $amount)"""),
-            "penv(anchor = v)" to note(pat).apply(penv(anchor = amount)),
-            "script penv(anchor = v)" to SprudelPattern.compile("""note("$pat").apply(penv(anchor = $amount))"""),
+            "pattern.penv(a, b, c, d, e)" to note("c").penv(12, 0.01, 0.2, 0.5, 0.3),
+            "script pattern.penv(a, b, c, d, e)" to SprudelPattern.compile("""note("c").penv(12, 0.01, 0.2, 0.5, 0.3)"""),
+            "pattern.pamt(a, b, c, d, e)" to note("c").pamt(12, 0.01, 0.2, 0.5, 0.3),
+            "script pattern.pamt(a, b, c, d, e)" to SprudelPattern.compile("""note("c").pamt(12, 0.01, 0.2, 0.5, 0.3)"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.pAnchor shouldBe amount
+            with(events[0].data) {
+                pEnv shouldBe 12.0
+                pAttack shouldBe 0.01
+                pDecay shouldBe 0.2
+                pSustain shouldBe 0.5
+                pRelease shouldBe 0.3
+            }
         }
     }
 
-    "penv(anchor = ...) sets SprudelVoiceData.pAnchor" {
-        val p = note("a b").penv(anchor = "0.0 1.0")
-        val events = p.queryArc(0.0, 1.0)
+    "every penv and pamt form forwards sustain and release to their own slots, by name and positionally" {
+        // Sustain and release are the two slots a forwarding call can swap unseen: both are numbers with
+        // neighbouring positions. Distinct values in each, on all forms of both names, mapper and chained
+        // mapper included (the chain forwards its own argument list).
+        fun check(forms: List<Pair<String, SprudelPattern?>>) = dslInterfaceTests(*forms.toTypedArray()) { _, events ->
+            events.shouldNotBeEmpty()
+            with(events[0].data) {
+                pEnv shouldBe 12.0
+                pAttack shouldBe 0.01
+                pDecay shouldBe 0.2
+                pSustain shouldBe 0.5
+                pRelease shouldBe 0.3
+            }
+        }
 
-        events.size shouldBe 2
-        events.map { it.data.pAnchor } shouldBe listOf(0.0, 1.0)
+        for (name in listOf("penv", "pamt")) {
+            val named = "amount = 12, attack = 0.01, decay = 0.2, sustain = 0.5, release = 0.3"
+            val positional = "12, 0.01, 0.2, 0.5, 0.3"
+
+            for (args in listOf(named, positional)) {
+                withClue("$name($args)") {
+                    check(
+                        listOf(
+                            "script pattern" to SprudelPattern.compile("""note("c").$name($args)"""),
+                            "script string" to SprudelPattern.compile(""""c".$name($args)"""),
+                            "script mapper" to SprudelPattern.compile("""note("c").apply($name($args))"""),
+                            "script chained mapper" to SprudelPattern.compile("""note("c").apply(gain(1).$name($args))"""),
+                        ),
+                    )
+                }
+            }
+        }
+
+        check(
+            listOf(
+                "penv pattern" to note("c").penv(amount = 12, attack = 0.01, decay = 0.2, sustain = 0.5, release = 0.3),
+                "penv string" to "c".penv(12, 0.01, 0.2, 0.5, 0.3),
+                "penv mapper" to note("c").apply(penv(12, 0.01, 0.2, 0.5, 0.3)),
+                "penv chained mapper" to note("c").apply(gain(1).penv(12, 0.01, 0.2, 0.5, 0.3)),
+                "pamt pattern" to note("c").pamt(12, 0.01, 0.2, 0.5, 0.3),
+                "pamt string" to "c".pamt(12, 0.01, 0.2, 0.5, 0.3),
+                "pamt mapper" to note("c").apply(pamt(12, 0.01, 0.2, 0.5, 0.3)),
+                "pamt chained mapper" to note("c").apply(gain(1).pamt(12, 0.01, 0.2, 0.5, 0.3)),
+            ),
+        )
     }
 
-    "penv(anchor = ...) works as pattern extension" {
-        val p = note("c").penv(anchor = "0.0")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- The tail-only guard: one row per term (the 2026-09-24 ledger rule) ----
+    //
+    // Each tail-only row runs on a NUMERIC receiver, `seq("5 7")`, where a wrongly fired bare
+    // reinterpret would write 5 and 7 into the amount; on a `note(...)` receiver that misfire writes
+    // nothing and a deleted term would stay green.
 
-        events.size shouldBe 1
-        events[0].data.pAnchor shouldBe 0.0
+    "tail-only: penv(attack = ...) leaves the amount untouched on a numeric receiver" {
+        seq("5 7").penv(attack = 0.01).queryArc(0.0, 1.0).map { it.data.pEnv } shouldBe listOf(null, null)
+    }
+
+    "tail-only: penv(decay = ...) leaves the amount untouched on a numeric receiver" {
+        seq("5 7").penv(decay = 0.1).queryArc(0.0, 1.0).map { it.data.pEnv } shouldBe listOf(null, null)
+    }
+
+    "tail-only: penv(sustain = ...) leaves the amount untouched on a numeric receiver" {
+        seq("5 7").penv(sustain = 0.3).queryArc(0.0, 1.0).map { it.data.pEnv } shouldBe listOf(null, null)
+    }
+
+    "tail-only: penv(release = ...) leaves the amount untouched on a numeric receiver" {
+        seq("5 7").penv(release = 0.2).queryArc(0.0, 1.0).map { it.data.pEnv } shouldBe listOf(null, null)
+    }
+
+    "an amount WITH a stage is written: the amount term of the guard" {
+        val events = seq("5 7").penv(amount = 24, attack = 0.01).queryArc(0.0, 1.0)
+
+        events.map { it.data.pEnv } shouldBe listOf(24.0, 24.0)
+        events.map { it.data.pAttack } shouldBe listOf(0.01, 0.01)
+    }
+
+    // ---- The retired surface fails loudly ----
+
+    "the retired curve and anchor slots are gone on the script door, loudly" {
+        // Each error names the retired word, so it fails for the right reason and not a typo elsewhere.
+        for ((code, word) in listOf(
+            """note("c").penv(curve = 1)""" to "curve",
+            """note("c").penv(anchor = 0.5)""" to "anchor",
+            """note("c").penv(12).pan(penv.curve)""" to "curve",
+            """note("c").penv(12).pan(penv.anchor)""" to "anchor",
+        )) {
+            withClue(code) {
+                shouldThrowAny { SprudelPattern.compile(code)!!.queryArc(0.0, 1.0) }.message shouldContain word
+            }
+        }
     }
 
     // ---- Combined test ----
 
     "pitch envelope functions work together" {
-        val p = note("c").penv(attack = "0.1", decay = "0.3", release = "0.5", amount = "12")
+        val p = note("c").penv(attack = "0.1", decay = "0.3", sustain = "0.2", release = "0.5", amount = "12")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         events[0].data.pAttack shouldBe 0.1
         events[0].data.pDecay shouldBe 0.3
+        events[0].data.pSustain shouldBe 0.2
         events[0].data.pRelease shouldBe 0.5
         events[0].data.pEnv shouldBe 12.0
     }

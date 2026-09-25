@@ -154,8 +154,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pdecay", """s("bd sd").penv(decay = 0.2).penv(decay = mul(2))""", { it.pDecay }, 0.4, s("bd sd").penv(decay = 0.2).penv(decay = mul(2))),
         row("prelease", """s("bd sd").penv(release = 0.3).penv(release = mul(2))""", { it.pRelease }, 0.6, s("bd sd").penv(release = 0.3).penv(release = mul(2))),
         row("penv.amount", """s("bd sd").penv(12).penv(mul(2))""", { it.pEnv }, 24.0, s("bd sd").penv(12).penv(mul(2))),
-        row("pcurve", """s("bd sd").penv(curve = 1).penv(curve = add(1))""", { it.pCurve }, 2.0, s("bd sd").penv(curve = 1).penv(curve = add(1))),
-        row("panchor", """s("bd sd").penv(anchor = 0.5).penv(anchor = mul(2))""", { it.pAnchor }, 1.0, s("bd sd").penv(anchor = 0.5).penv(anchor = mul(2))),
+        row("psustain", """s("bd sd").penv(sustain = 0.25).penv(sustain = mul(2))""", { it.pSustain }, 0.5, s("bd sd").penv(sustain = 0.25).penv(sustain = mul(2))),
         row("accelerate", """s("bd sd").accelerate(2).accelerate(mul(2))""", { it.accelerate }, 4.0, s("bd sd").accelerate(2).accelerate(mul(2))),
         row("notch.freq", """s("bd sd").notch(1000).notch(mul(2))""", { it.notchf }, 2000.0, s("bd sd").notch(1000).notch(mul(2))),
         row("notch.q", """s("bd sd").notch(q = 4).notch(q = mul(2))""", { it.nresonance }, 8.0, s("bd sd").notch(q = 4).notch(q = mul(2))),
@@ -205,8 +204,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("pdecay", """s("bd sd").penv(decay = 0.2).pan(penv.decay)""", { it.pan }, 0.2, s("bd sd").penv(decay = 0.2).pan(penv.decay)),
         row("prelease", """s("bd sd").penv(release = 0.3).pan(penv.release)""", { it.pan }, 0.3, s("bd sd").penv(release = 0.3).pan(penv.release)),
         row("penv.amount", """s("bd sd").penv(12).pan(penv.amount)""", { it.pan }, 12.0, s("bd sd").penv(12).pan(penv.amount)),
-        row("pcurve", """s("bd sd").penv(curve = 1).pan(penv.curve)""", { it.pan }, 1.0, s("bd sd").penv(curve = 1).pan(penv.curve)),
-        row("panchor", """s("bd sd").penv(anchor = 0.5).pan(penv.anchor)""", { it.pan }, 0.5, s("bd sd").penv(anchor = 0.5).pan(penv.anchor)),
+        row("psustain", """s("bd sd").penv(sustain = 0.5).pan(penv.sustain)""", { it.pan }, 0.5, s("bd sd").penv(sustain = 0.5).pan(penv.sustain)),
         row("accelerate", """s("bd sd").accelerate(2).pan(accelerate)""", { it.pan }, 2.0, s("bd sd").accelerate(2).pan(accelerate)),
         row("notch.freq", """s("bd sd").notch(1000).pan(notch.freq)""", { it.pan }, 1000.0, s("bd sd").notch(1000).pan(notch.freq)),
         row("notch.q", """s("bd sd").notch(q = 4).pan(notch.q)""", { it.pan }, 4.0, s("bd sd").notch(q = 4).pan(notch.q)),
@@ -732,13 +730,12 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.vibrato shouldBe 5.0
                 it.vibratoMod shouldBe 1.0
             },
-            Case("penv(curve = mul(2))", note("c e").penv(12, 0.01, 0.2, 0.3, 1.0, 0.5).penv(curve = mul(2)), """note("c e").penv(12, 0.01, 0.2, 0.3, 1.0, 0.5).penv(curve = mul(2))""") {
+            Case("penv(sustain = mul(2))", note("c e").penv(12, 0.01, 0.2, 0.25, 0.3).penv(sustain = mul(2)), """note("c e").penv(12, 0.01, 0.2, 0.25, 0.3).penv(sustain = mul(2))""") {
                 it.pEnv shouldBe 12.0
                 it.pAttack shouldBe 0.01
                 it.pDecay shouldBe 0.2
+                it.pSustain shouldBe 0.5
                 it.pRelease shouldBe 0.3
-                it.pCurve shouldBe 2.0
-                it.pAnchor shouldBe 0.5
             },
             Case("fm(h = mul(2))", note("c e").fm(200, 2, 0.01, 0.3, 0.5).fm(h = mul(2)), """note("c e").fm(200, 2, 0.01, 0.3, 0.5).fm(h = mul(2))""") {
                 it.fmEnv shouldBe 200.0
@@ -786,8 +783,7 @@ class LangFieldAccessorsSpec : StringSpec({
         add("penv", s("bd sd").penv(attack = "0.1 0.5"), """s("bd sd").penv(attack = "0.1 0.5")""") { it.pAttack }
         add("penv", s("bd sd").penv(decay = "0.1 0.5"), """s("bd sd").penv(decay = "0.1 0.5")""") { it.pDecay }
         add("penv", s("bd sd").penv(release = "0.1 0.5"), """s("bd sd").penv(release = "0.1 0.5")""") { it.pRelease }
-        add("penv", s("bd sd").penv(curve = "0.1 0.5"), """s("bd sd").penv(curve = "0.1 0.5")""") { it.pCurve }
-        add("penv", s("bd sd").penv(anchor = "0.1 0.5"), """s("bd sd").penv(anchor = "0.1 0.5")""") { it.pAnchor }
+        add("penv", s("bd sd").penv(sustain = "0.1 0.5"), """s("bd sd").penv(sustain = "0.1 0.5")""") { it.pSustain }
         add("fm", s("bd sd").fm(env = "0.1 0.5"), """s("bd sd").fm(env = "0.1 0.5")""") { it.fmEnv }
         add("fm", s("bd sd").fm(h = "0.1 0.5"), """s("bd sd").fm(h = "0.1 0.5")""") { it.fmh }
         add("fm", s("bd sd").fm(attack = "0.1 0.5"), """s("bd sd").fm(attack = "0.1 0.5")""") { it.fmAttack }

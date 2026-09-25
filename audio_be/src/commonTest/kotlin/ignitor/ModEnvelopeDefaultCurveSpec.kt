@@ -31,8 +31,8 @@ import kotlin.random.Random
  * **Every modulation envelope defaults to the house EXPONENTIAL curve** (decision D3 (b), 2026-09-25): an
  * envelope whose author writes no curve bends every stage by `g(x) = (e^(3x) - 1) / (e^3 - 1)`, the curve
  * of the chain `adsr` and the strip VCA, on every host that has one: the Ignitor pitch, FM and filter
- * envelopes and the voice strip's FM and filter envelopes. (The strip's pitch envelope runs its own law
- * until commit (c).)
+ * envelopes and the voice strip's FM, filter and pitch envelopes (the strip pitch envelope, sprudel's
+ * `penv`, since phase 3 step 5b (c1)).
  *
  * The oracles are written out HERE, never read from `MOD_ENV_CURVE` or from the curve code: `g` below is
  * plain arithmetic, and the DSL rows compare against the curve NAMED as the enum literal. A default that
@@ -40,7 +40,8 @@ import kotlin.random.Random
  *
  * Where the level is observable it is compared frame by frame (the pitch node's ratio is `2^level` at 12
  * semitones, the FM node's is `1 + level` with a constant modulator and `depth == freq`, the strip FM's
- * multiplier is read off the voice's frequency-modulation buffer against a flat reference). The filters'
+ * multiplier is read off the voice's frequency-modulation buffer against a flat reference, and the strip
+ * pitch envelope's ratio is `2^level` at 12 semitones, read off the same buffer). The filters'
  * level is not observable on their output, so their rows pin the unwritten curve against the same node
  * with the curve named Exponential; the exponential law itself through the filter is pinned against a
  * written-out oracle in `EnvelopeLawSpec` (the filter host row), and the strip's filter against the node
@@ -282,5 +283,72 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         }
 
         withClue("anti-vacuous: the modulator moved the buffer") { (compared > gate / 2) shouldBe true }
+    }
+
+    "the strip's pitch envelope (sprudel's penv): an unwritten wire curve sweeps on the exponential curve" {
+        // Through the real VoiceFactory: 12 semitones, so log2 of the ratio the renderer writes into the
+        // frequency-modulation buffer is the level, frame by frame, gate and release included.
+        fun ratios(named: AdsrCurve?): DoubleArray {
+            val registry = IgnitorRegistry().apply { registerDefaults() }
+            val voiceBuffer = DoubleArray(blockFrames)
+            val freqModBuffer = DoubleArray(blockFrames)
+            val factory = VoiceFactory(
+                sampleRate = sampleRate,
+                sampleRateDouble = sampleRate.toDouble(),
+                blockFrames = blockFrames,
+                ignitorRegistry = registry,
+                pipelineRegistry = PipelineRegistry(),
+                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+                voiceBuffer = voiceBuffer,
+                freqModBuffer = freqModBuffer,
+                scratchBuffers = ScratchBuffers(blockFrames),
+            )
+            val voice = factory.makeVoice(
+                scheduled = ScheduledVoice(
+                    playbackId = "penv",
+                    data = VoiceData.empty.copy(
+                        freqHz = 220.0, sound = "sine", adsr = AdsrDef.Std(on = false),
+                        pEnv = 12.0, pAttack = sec(a), pDecay = sec(d), pSustain = s, pRelease = sec(r),
+                        pAttackCurve = named, pDecayCurve = named, pReleaseCurve = named,
+                    ),
+                    startTime = 0.0,
+                    gateEndTime = sec(gate.toDouble()),
+                    playbackStartTime = 0.0,
+                ),
+                backendStartTimeSec = 0.0,
+                playbackCtx = PlaybackCtx(playbackId = "penv", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
+                getSample = { null },
+            ) ?: error("makeVoice returned null")
+            val rc = Voice.RenderContext(
+                cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+                sampleRate = sampleRate,
+                blockFrames = blockFrames,
+                voiceBuffer = voiceBuffer,
+                freqModBuffer = DoubleArray(blockFrames),
+                scratchBuffers = ScratchBuffers(blockFrames),
+            )
+            val out = DoubleArray(total)
+
+            for (b in 0 until total / blockFrames) {
+                rc.blockStart = (b * blockFrames).toDouble()
+                voice.render(rc)
+                freqModBuffer.copyInto(out, b * blockFrames)
+            }
+
+            return out
+        }
+
+        val unwritten = ratios(null)
+
+        for (pos in 0 until total) {
+            withClue("frame $pos") { ln(unwritten[pos]) / ln(2.0) shouldBe (oracleLevel(pos) plusOrMinus 1e-9) }
+        }
+
+        withClue("a curve named on the wire reaches the strip: linear sounds different here") {
+            ratios(AdsrCurve.Linear).toList() shouldNotBe unwritten.toList()
+        }
+        withClue("and naming the default is the unwritten sweep, bit for bit") {
+            ratios(AdsrCurve.Exponential).map { it.toRawBits() } shouldBe unwritten.map { it.toRawBits() }
+        }
     }
 })

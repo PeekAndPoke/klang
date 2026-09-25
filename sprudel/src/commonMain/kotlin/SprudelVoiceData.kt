@@ -490,6 +490,11 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pDecay = v
         }
+    var pSustain: Double?
+        get() = pitchEnv?.pSustain
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pSustain = v
+        }
     var pRelease: Double?
         get() = pitchEnv?.pRelease
         set(v) {
@@ -500,15 +505,20 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || pitchEnv != null) pitchEnvOrNew().pEnv = v
         }
-    var pCurve: Double?
-        get() = pitchEnv?.pCurve
+    var pAttackCurve: AdsrCurve?
+        get() = pitchEnv?.pAttackCurve
         set(v) {
-            if (v != null || pitchEnv != null) pitchEnvOrNew().pCurve = v
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pAttackCurve = v
         }
-    var pAnchor: Double?
-        get() = pitchEnv?.pAnchor
+    var pDecayCurve: AdsrCurve?
+        get() = pitchEnv?.pDecayCurve
         set(v) {
-            if (v != null || pitchEnv != null) pitchEnvOrNew().pAnchor = v
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pDecayCurve = v
+        }
+    var pReleaseCurve: AdsrCurve?
+        get() = pitchEnv?.pReleaseCurve
+        set(v) {
+            if (v != null || pitchEnv != null) pitchEnvOrNew().pReleaseCurve = v
         }
 
     var fmh: Double?
@@ -1048,10 +1058,12 @@ data class SprudelVoiceData(
             vibratoMod = vibratoMod,
             pAttack = pAttack,
             pDecay = pDecay,
+            pSustain = pSustain,
             pRelease = pRelease,
             pEnv = pEnv,
-            pCurve = pCurve,
-            pAnchor = pAnchor,
+            pAttackCurve = pAttackCurve,
+            pDecayCurve = pDecayCurve,
+            pReleaseCurve = pReleaseCurve,
             fmh = fmh,
             fmAttack = fmAttack,
             fmDecay = fmDecay,

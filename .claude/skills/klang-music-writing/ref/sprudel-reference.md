@@ -396,8 +396,9 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function          | Aliases | Description          | Example                             |
 |-------------------|---------|----------------------|-------------------------------------|
-| `penv(amount, attack, decay, release, curve, anchor)`                  | `pamt`     | Pitch envelope: depth in semitones, its stages, curve (1 linear, below concave) and sustain anchor                                                     | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
-| `penv.amount` / `penv.attack` / ... / `penv.anchor`                    |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
+| `penv(amount, attack, decay, sustain, release)`                        | `pamt`     | Pitch envelope, the Ignitor `pitchEnvelope`'s law: depth in semitones and an ADSR (sustain a share of the depth, 0 = the note); stages exponential by default; unset stages 0.01 / 0.1 / 0 / 0 | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
+| `penvCurves(attack, decay, release)`                                   |            | Stage curves of the pitch envelope, like `adsrCurves` (`"exp"`, `"linear"`, `"square"`, ...; an omitted stage keeps its curve) | `s("bd*4").penv(24, 0.001, 0.08).penvCurves("linear", "linear", "linear")`                          |
+| `penv.amount` / `penv.attack` / ... / `penv.release`                   |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
 
 ### Sampling
 

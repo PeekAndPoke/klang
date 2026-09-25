@@ -340,7 +340,7 @@ stages must not carry it.
   - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
     never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
     dust grain rate, not a unison knob; `duck(attack)` is the recovery time (the duck-down is
-    instant); `penv(curve)` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
+    instant); `penv(curve)` is gone (step 5b c1: `penvCurves`); `loopBegin`/`loopEnd` are not read by
     `VoiceFactory`; negative `speed` is silence, not reverse.
   - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
     example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the

@@ -75,7 +75,7 @@ See archived `20260409-distortion-oversampling.md` for full review findings (A1-
 
 ## 6. Minor Items
 
-- **PitchEnvelopeRenderer per-sample `pow()`** — could optimize sustain phase (constant value).
+- **PitchEnvelopeRenderer per-sample `pow()`**: done 2026-09-25 (step 5b c1): the shared mapping has a sustain shortcut on both hosts.
 - **Triangle oscillator** — now renders via the shared finite-slope `waveTrapezoid` (mono `triangle`
   and `supertri`); corners soften with pitch via the min-flank floor (`PULSE_MIN_FLANK_SAMPLES`).
   Residual ~-12dB/oct aliasing at very high pitch is accepted (raw-engine philosophy, no PolyBLEP).

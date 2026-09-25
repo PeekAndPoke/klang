@@ -81,8 +81,8 @@ data class ScheduledVoice(
 | `pDecay`     | `Double?` | Pitch envelope decay (s)         |
 | `pRelease`   | `Double?` | Pitch envelope release (s)       |
 | `pEnv`       | `Double?` | Pitch envelope depth (semitones) |
-| `pCurve`     | `Double?` | Pitch envelope curve shape       |
-| `pAnchor`    | `Double?` | Pitch envelope start value       |
+| `pSustain`   | `Double?` | Pitch envelope sustain (a share of the depth) |
+| `pAttackCurve` / `pDecayCurve` / `pReleaseCurve` | `AdsrCurve?` | Pitch envelope stage curves (unset = `MOD_ENV_CURVE`) |
 
 ### FM Synthesis
 

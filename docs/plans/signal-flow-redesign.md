@@ -178,7 +178,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   `.pipeline("pedal")`, and a VCA-first tail has no `classic()` spelling. Decision D4 of
   `../tasks/builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
   writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
-  fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pAnchor`, `fmh` to `fmEnv`):
+  fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pSustain` (`pAnchor` renamed in step 5b c1), `fmh` to `fmEnv`):
   section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
   own later item. Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
   `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods

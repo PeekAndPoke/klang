@@ -33,7 +33,8 @@ const val ADSR_EXP_K: Double = 3.0
  * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
  * envelope (`IgnitorDsl.Lowpass` and its three siblings), the Ignitor pitch envelope
  * (`IgnitorDsl.PitchEnvelope`) and the Ignitor FM index envelope (`IgnitorDsl.Fm`, which has no
- * curve knob yet), and on the voice strip the filter and FM envelopes (`VoiceFactory`). The Ignitor
+ * curve knob yet), and on the voice strip the filter, FM and pitch envelopes (`VoiceFactory`; the
+ * pitch envelope's curves come from sprudel's `penvCurves` when named). The Ignitor
  * curve knobs default to this curve's `AdsrCurves` index, and a knob that cannot be read at build,
  * or reads as a bad index, falls back to it too.
  *
@@ -42,8 +43,7 @@ const val ADSR_EXP_K: Double = 3.0
  * (maintainer, 2026-09-25), which moved the Ignitor filter, pitch and FM envelopes off the LINEAR
  * law they had before, a deliberate sound change. It stays a constant of its own, and not a
  * reference to [AdsrCurve.Default], because the maintainer recorded the modulation envelopes'
- * default as ONE decision of its own. The strip's pitch envelope (`PitchEnvelopeRenderer`) still
- * runs its own law and does not read this.
+ * default as ONE decision of its own.
  */
 val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Exponential
 
