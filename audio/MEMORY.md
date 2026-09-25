@@ -79,7 +79,8 @@ re-registered (that is step 6), so no song can change.
   hangs it on every instrument, which today is BEFORE the strip; step 6 must re-place it for the
   built-ins or StrangerThings and IrishLamentTechno move).
 - **Slot names are sprudel's readers, `<door>.<param>`** (`lpf.freq`, `adsr.attack`, `tremolo.sync`,
-  `adsrCurves.attack`, plus `adsr.on`), grouped in `IgnitorDsl.Slots` and exposed as `OscSlot.lpf.freq`.
+  `adsrCurves.attack`, the filter curve groups `lpfCurves.attack` / `hpfCurves` / `bpfCurves` / `notchCurves`
+  since step 5b c2, plus `adsr.on`), grouped in `IgnitorDsl.Slots` and exposed as `OscSlot.lpf.freq`.
   The plan's flat sketch (`lpf`, `lpenv`, `lpattack`) was wrong: `decay` is already pluck's slot and
   songs' instruments read `attack` / `sustain` / `release`.
 - **Every default is the strip's UNTOUCHED value**, from the constant the strip reads, which is not the

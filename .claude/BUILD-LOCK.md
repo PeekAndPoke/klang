@@ -15,7 +15,7 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 ---
 
 **HOLDER: (none)**
-**SINCE: 2026-09-25**
+**SINCE: 2026-09-26**
 **STATE: FREE**
 
 ## Uncommitted in this tree
@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| KatalystDsl session, phase 3 envelope law (D3) | every envelope evaluator in `audio_be` (ignitor and strip), `AdsrCurveMath`, `audio_bridge` envelope constants and nodes, sprudel's filter and `penv` doors, their tests | one envelope law across hosts; exp defaults; sprudel curve doors; a deliberate SOUND CHANGE (kicks, filter sweeps). Commits (a1), (a2), (b) and (c1) are committed; (c2) follows |
 
 ## The two layers
 

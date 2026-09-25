@@ -144,4 +144,20 @@ object KlangScriptOscSlot {
     /** The amplitude envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
     val adsrCurves: KlangScriptAdsrCurvesSlots = KlangScriptAdsrCurvesSlots
+
+    /** The highpass envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val hpfCurves: KlangScriptHpfCurvesSlots = KlangScriptHpfCurvesSlots
+
+    /** The bandpass envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val bpfCurves: KlangScriptBpfCurvesSlots = KlangScriptBpfCurvesSlots
+
+    /** The notch envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val notchCurves: KlangScriptNotchCurvesSlots = KlangScriptNotchCurvesSlots
+
+    /** The lowpass envelope's curve slots: `attack`, `decay`, `release`. */
+    @KlangScript.Property
+    val lpfCurves: KlangScriptLpfCurvesSlots = KlangScriptLpfCurvesSlots
 }

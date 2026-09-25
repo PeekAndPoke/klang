@@ -94,8 +94,9 @@ data class FilterEnvDef(
  * helpers (`FilterModRenderer`, `BaseSvf.sweepCutoff`; decision D3, the sampling).
  *
  * **The default curve** is the voice strip's too (decision D3 of `docs/tasks/builtin-instruments.md`):
- * an unshaped stage takes `MOD_ENV_CURVE`, exponential, which `VoiceFactory` hands the strip's filter
- * envelope as well; `curves` can shape each stage.
+ * an unshaped stage takes `MOD_ENV_CURVE`, exponential, which the wire's `FilterEnvDef.resolve`
+ * (audio_bridge) hands the strip's filter envelope as well; `curves` can shape each stage here, sprudel's `lpfCurves` (and its three
+ * siblings) on the strip.
  *
  * A node with `env.depth == 0.0` never enters this path at all.
  *

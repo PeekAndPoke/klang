@@ -91,6 +91,9 @@ class ClassicTailSpec : StringSpec({
     "the slot vocabulary: every name, in placement order, with the strip's untouched value as its default" {
         val unset = Double.NaN
         val exp = AdsrCurves.indexOf(AdsrCurve.Default)
+        // The filter envelopes' curve slots default to the modulation envelopes' curve (D3), written as the
+        // literal here: Exponential, the same index as the amplitude default today, a separate decision.
+        val modExp = AdsrCurves.indexOf(AdsrCurve.Exponential)
         val expected: List<Pair<String, Double>> = listOf(
             "crush.amount" to 0.0,
             "coarse.amount" to 0.0,
@@ -114,6 +117,9 @@ class ClassicTailSpec : StringSpec({
                 add("$door.decay" to 0.1)
                 add("$door.sustain" to 1.0)
                 add("$door.release" to 0.1)
+                add("${door}Curves.attack" to modExp)
+                add("${door}Curves.decay" to modExp)
+                add("${door}Curves.release" to modExp)
             }
         } + listOf(
             "tremolo.sync" to 0.0,
@@ -146,7 +152,9 @@ class ClassicTailSpec : StringSpec({
     }
 
     "a slot's user-visible description claims a sprudel reader only where sprudel has one" {
-        val noReader = setOf("distort.shape", "tremolo.shape", "adsr.on", "adsrCurves.attack", "adsrCurves.decay", "adsrCurves.release")
+        val curveDoors = listOf("adsrCurves", "hpfCurves", "bpfCurves", "notchCurves", "lpfCurves")
+        val noReader = setOf("distort.shape", "tremolo.shape", "adsr.on") +
+            curveDoors.flatMap { d -> listOf("$d.attack", "$d.decay", "$d.release") }
         val slots = tail.getParamSlots().filter { it.name != "analog" }
 
         for (p in slots) {

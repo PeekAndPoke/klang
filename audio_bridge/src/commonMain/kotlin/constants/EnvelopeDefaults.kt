@@ -33,9 +33,12 @@ const val ADSR_EXP_K: Double = 3.0
  * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
  * envelope (`IgnitorDsl.Lowpass` and its three siblings), the Ignitor pitch envelope
  * (`IgnitorDsl.PitchEnvelope`) and the Ignitor FM index envelope (`IgnitorDsl.Fm`, which has no
- * curve knob yet), and on the voice strip the filter, FM and pitch envelopes (`VoiceFactory`; the
- * pitch envelope's curves come from sprudel's `penvCurves` when named). The Ignitor
- * curve knobs default to this curve's `AdsrCurves` index, and a knob that cannot be read at build,
+ * curve knob yet), and on the voice strip the filter, FM and pitch envelopes. On the strip a curve
+ * the pattern named wins: the filter envelopes' from sprudel's `lpfCurves`, `hpfCurves`, `bpfCurves`
+ * and `notchCurves` (an unset one is filled with this curve in `FilterEnvDef.resolve`), the pitch
+ * envelope's from `penvCurves` (filled in `VoiceFactory`); the strip FM envelope has no curve door and
+ * always takes this one. The Ignitor curve knobs default to this curve's `AdsrCurves` index, and so
+ * do `classic()`'s filter curve slots (`FilterCurvesSlots`); a knob that cannot be read at build,
  * or reads as a bad index, falls back to it too.
  *
  * It is [AdsrCurve.Exponential], the house curve every other envelope already had

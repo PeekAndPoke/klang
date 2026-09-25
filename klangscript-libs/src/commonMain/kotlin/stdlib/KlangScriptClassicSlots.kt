@@ -282,3 +282,79 @@ object KlangScriptAdsrCurvesSlots {
     @KlangScript.Property
     val release: IgnitorDsl = IgnitorDsl.Slots.adsrCurves.release
 }
+
+/** `OscSlot.hpfCurves`: the highpass envelope's curve slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptHpfCurvesSlots::class)
+object KlangScriptHpfCurvesSlots {
+    override fun toString(): String = "[OscSlot.hpfCurves]"
+
+    /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `hpfCurves(attack = ...)`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.hpfCurves.attack
+
+    /** The decay's curve, default `exp`. Mirrors sprudel's `hpfCurves(decay = ...)`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.hpfCurves.decay
+
+    /** The release's curve, default `exp`. Mirrors sprudel's `hpfCurves(release = ...)`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.hpfCurves.release
+}
+
+/** `OscSlot.bpfCurves`: the bandpass envelope's curve slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptBpfCurvesSlots::class)
+object KlangScriptBpfCurvesSlots {
+    override fun toString(): String = "[OscSlot.bpfCurves]"
+
+    /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `bpfCurves(attack = ...)`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.bpfCurves.attack
+
+    /** The decay's curve, default `exp`. Mirrors sprudel's `bpfCurves(decay = ...)`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.bpfCurves.decay
+
+    /** The release's curve, default `exp`. Mirrors sprudel's `bpfCurves(release = ...)`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.bpfCurves.release
+}
+
+/** `OscSlot.notchCurves`: the notch envelope's curve slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptNotchCurvesSlots::class)
+object KlangScriptNotchCurvesSlots {
+    override fun toString(): String = "[OscSlot.notchCurves]"
+
+    /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `notchCurves(attack = ...)`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.notchCurves.attack
+
+    /** The decay's curve, default `exp`. Mirrors sprudel's `notchCurves(decay = ...)`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.notchCurves.decay
+
+    /** The release's curve, default `exp`. Mirrors sprudel's `notchCurves(release = ...)`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.notchCurves.release
+}
+
+/** `OscSlot.lpfCurves`: the lowpass envelope's curve slots. */
+@KlangScript.Library(KlangScriptLibraries.STDLIB)
+@KlangScript.TypeExtensions(KlangScriptLpfCurvesSlots::class)
+object KlangScriptLpfCurvesSlots {
+    override fun toString(): String = "[OscSlot.lpfCurves]"
+
+    /** The attack's curve as its index in the curve list, default `exp`. Mirrors sprudel's `lpfCurves(attack = ...)`. */
+    @KlangScript.Property
+    val attack: IgnitorDsl = IgnitorDsl.Slots.lpfCurves.attack
+
+    /** The decay's curve, default `exp`. Mirrors sprudel's `lpfCurves(decay = ...)`. */
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.lpfCurves.decay
+
+    /** The release's curve, default `exp`. Mirrors sprudel's `lpfCurves(release = ...)`. */
+    @KlangScript.Property
+    val release: IgnitorDsl = IgnitorDsl.Slots.lpfCurves.release
+}

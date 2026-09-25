@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 
 
 /**
@@ -45,6 +46,16 @@ data class FilterEnvDef(
      * halves it; negative depths are first-class (no dead zone). No upper bound.
      */
     val depth: Double? = null,
+    /**
+     * Curve of the attack, sprudel's `lpfCurves(attack = ...)` (and `hpfCurves`, `bpfCurves`, `notchCurves`);
+     * `null` is unset and resolves to `MOD_ENV_CURVE` in [resolve], the default of every modulation envelope
+     * (decision D3). The same words as `AdsrDef.Std`'s curves.
+     */
+    val attackCurve: AdsrCurve? = null,
+    /** Curve of the decay; see [attackCurve]. */
+    val decayCurve: AdsrCurve? = null,
+    /** Curve of the release; see [attackCurve]. */
+    val releaseCurve: AdsrCurve? = null,
 ) {
     /**
      * Resolved envelope with all non-null values.
@@ -55,20 +66,10 @@ data class FilterEnvDef(
         val sustain: Double,
         val release: Double,
         val depth: Double,
+        val attackCurve: AdsrCurve,
+        val decayCurve: AdsrCurve,
+        val releaseCurve: AdsrCurve,
     )
-
-    /**
-     * Merges this envelope with a fallback, using fallback values for any null fields.
-     */
-    fun mergeWith(fallback: FilterEnvDef): FilterEnvDef {
-        return FilterEnvDef(
-            attack = attack ?: fallback.attack,
-            decay = decay ?: fallback.decay,
-            sustain = sustain ?: fallback.sustain,
-            release = release ?: fallback.release,
-            depth = depth ?: fallback.depth,
-        )
-    }
 
     /**
      * Resolves this envelope to non-null values using defaults.
@@ -77,14 +78,17 @@ data class FilterEnvDef(
         return Resolved(
             // The one home of these numbers is `constants/FilterEnvelopeDefaults.kt`, which the
             // Ignitor filter nodes and their doors read as well: the two surfaces resolve the
-            // same STAGE TIMES and the same DEPTH. The curve is not resolved here: the engine
-            // hands this envelope `MOD_ENV_CURVE`, the tree's default too (decision D3). See
+            // same STAGE TIMES and the same DEPTH. An unset curve is `MOD_ENV_CURVE`, the tree's
+            // default too (decision D3), filled HERE and nowhere else on the strip. See
             // `IgnitorDsl.Lowpass.env`.
             attack = attack ?: FILTER_ENV_ATTACK_SEC,
             decay = decay ?: FILTER_ENV_DECAY_SEC,
             sustain = sustain ?: FILTER_ENV_SUSTAIN_LEVEL,
             release = release ?: FILTER_ENV_RELEASE_SEC,
             depth = depth ?: FILTER_ENV_DEPTH_SEMITONES,
+            attackCurve = attackCurve ?: MOD_ENV_CURVE,
+            decayCurve = decayCurve ?: MOD_ENV_CURVE,
+            releaseCurve = releaseCurve ?: MOD_ENV_CURVE,
         )
     }
 

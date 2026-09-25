@@ -53,6 +53,10 @@ data class SvdFilter(
     var env: Double? = null,
     /** Cascade count (C5, `lpx`/`hpx`): null = 1. Only lp/hp surfaces exist. */
     var passes: Double? = null,
+    /** The envelope's stage curves (`lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves`); null = unset. */
+    var attackCurve: AdsrCurve? = null,
+    var decayCurve: AdsrCurve? = null,
+    var releaseCurve: AdsrCurve? = null,
 )
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
@@ -169,6 +173,9 @@ fun mergeSvdFilter(base: SvdFilter?, over: SvdFilter?): SvdFilter? {
         release = over.release ?: base.release,
         env = over.env ?: base.env,
         passes = over.passes ?: base.passes,
+        attackCurve = over.attackCurve ?: base.attackCurve,
+        decayCurve = over.decayCurve ?: base.decayCurve,
+        releaseCurve = over.releaseCurve ?: base.releaseCurve,
     )
 }
 

@@ -97,6 +97,63 @@ class ClassicStripParitySpec : StringSpec({
         )
         .adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
 
+    /** The named curves the curve rows use: every stage its own, so a swapped stage shows. */
+    // The release is InvSquare, about 4.2 st from the default Exponential on this envelope (Square is within
+    // about 0.85 st of it, too close to tell a release that silently kept the default).
+    val namedCurves = Triple(AdsrCurve.Linear, AdsrCurve.SCurve, AdsrCurve.InvSquare)
+
+    /** The four filters of the curve rows: the door, its cutoff, and the strip definition with [namedCurves] or none. */
+    val curveFilters = listOf("lpf" to 600.0, "hpf" to 900.0, "bpf" to 800.0, "notch" to 800.0)
+
+    /** The curve rows' envelope on the strip: every stage curved and inside the render (the gate at 0.25 s). */
+    fun curveEnv(named: Boolean): FilterEnvDef = FilterEnvDef(
+        attack = 0.01, decay = 0.15, sustain = 0.3, release = 0.1, depth = 24.0,
+        attackCurve = if (named) namedCurves.first else null,
+        decayCurve = if (named) namedCurves.second else null,
+        releaseCurve = if (named) namedCurves.third else null,
+    )
+
+    fun curveFilterDef(door: String, freq: Double, named: Boolean): FilterDef = when (door) {
+        "lpf" -> FilterDef.LowPass(freq, 0.707, envelope = curveEnv(named))
+        "hpf" -> FilterDef.HighPass(freq, 0.707, envelope = curveEnv(named))
+        "bpf" -> FilterDef.BandPass(freq, 0.707, envelope = curveEnv(named))
+        else -> FilterDef.Notch(freq, 0.707, envelope = curveEnv(named))
+    }
+
+    /**
+     * The strip-host oracle of the curve rows: the Ignitor filter NODE, built by hand with the same stages and its
+     * three curves named as the ENUM LITERALS of [namedCurves], in front of `classic()`'s unwritten envelope. A named
+     * curve that never reaches the strip (or reaches the wrong stage) renders the strip unlike this node.
+     */
+    fun namedCurveNode(door: String, freq: Double): IgnitorDsl {
+        val c = { v: Double -> IgnitorDsl.Constant(v) }
+        val a = AdsrCurves.knob(namedCurves.first)
+        val d = AdsrCurves.knob(namedCurves.second)
+        val r = AdsrCurves.knob(namedCurves.third)
+        val saw = IgnitorDsl.Sawtooth()
+        val an = IgnitorDsl.Slots.analog
+        val filter: IgnitorDsl = when (door) {
+            "lpf" -> IgnitorDsl.Lowpass(
+                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+            )
+            "hpf" -> IgnitorDsl.Highpass(
+                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+            )
+            "bpf" -> IgnitorDsl.Bandpass(
+                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+            )
+            else -> IgnitorDsl.Notch(
+                saw, c(freq), c(0.707), an, env = c(24.0), attackSec = c(0.01), decaySec = c(0.15), sustainLevel = c(0.3),
+                releaseSec = c(0.1), attackCurve = a, decayCurve = d, releaseCurve = r, humanize = true,
+            )
+        }
+
+        return filter.adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
+    }
+
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {
         val onsetSec = 37.0 / sampleRate
         val registry = IgnitorRegistry().apply {
@@ -105,6 +162,10 @@ class ClassicStripParitySpec : StringSpec({
             register("doorfill", doorFilledLowpass)
             register("expfilter", namedCurveLowpass(AdsrCurve.Exponential))
             register("linfilter", namedCurveLowpass(AdsrCurve.Linear))
+
+            for ((door, freq) in curveFilters) {
+                register("curved$door", namedCurveNode(door, freq))
+            }
         }
         val pipelines = PipelineRegistry().apply { register("bare", PipelineDsl(emptyList())) }
         val factory = VoiceFactory(
@@ -251,6 +312,22 @@ class ClassicStripParitySpec : StringSpec({
         Row("notch env 12", true, mapOf("notch.freq" to 700.0, "notch.env" to 12.0)) {
             copy(filters = filters(FilterDef.Notch(700.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
         },
+        // ── the named filter curves, step 5b (c2): `<door>Curves` reaches classic() exactly as it reaches the strip ──
+        *curveFilters.map { (f, freq) ->
+            Row(
+                "${f}Curves linear, scurve, invsquare (env 24, every stage curved)",
+                true,
+                mapOf(
+                    "$f.freq" to freq, "$f.env" to 24.0, "$f.attack" to 0.01, "$f.decay" to 0.15, "$f.sustain" to 0.3,
+                    "$f.release" to 0.1,
+                    "${f}Curves.attack" to AdsrCurves.indexOf(namedCurves.first),
+                    "${f}Curves.decay" to AdsrCurves.indexOf(namedCurves.second),
+                    "${f}Curves.release" to AdsrCurves.indexOf(namedCurves.third),
+                ),
+            ) {
+                copy(filters = filters(curveFilterDef(f, freq, named = true)))
+            }
+        }.toTypedArray(),
         // A STEP envelope (attack 0, decay 0, release 0) has no curved stage, so the default-curve half of
         // D3 cannot reach it: these rows see the sampling alone (the sweep at the gate block) and the
         // sweep's step placement in each strip loop, the saturated ones with the drift lane.
@@ -425,6 +502,20 @@ class ClassicStripParitySpec : StringSpec({
             }
             withClue("anti-vacuous: the Linear-named lowpass is not the strip") {
                 firstMismatch(classic(emptyMap(), rate, sound = "linfilter"), s) shouldNotBe -1
+            }
+        }
+
+        for ((door, freq) in curveFilters) {
+            "[$rate Hz] the strip's named $door curves ARE the node's curves named as enum literals, and they move the sweep" {
+                val named = strip({ copy(filters = filters(curveFilterDef(door, freq, named = true))) }, null, rate)
+                val unnamed = strip({ copy(filters = filters(curveFilterDef(door, freq, named = false))) }, null, rate)
+
+                withClue("first mismatching frame against the node with Linear, SCurve, InvSquare named") {
+                    firstMismatch(classic(emptyMap(), rate, sound = "curved$door"), named) shouldBe -1
+                }
+                withClue("anti-vacuous: the named curves change the strip's sweep") {
+                    firstMismatch(unnamed, named) shouldNotBe -1
+                }
             }
         }
 

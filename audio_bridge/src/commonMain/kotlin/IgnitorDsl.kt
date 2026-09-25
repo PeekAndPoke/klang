@@ -268,6 +268,18 @@ sealed interface IgnitorDsl {
 
         /** The amplitude envelope's curves: `adsrCurves.attack`, `adsrCurves.decay`, `adsrCurves.release`. */
         val adsrCurves: AdsrCurvesSlots = AdsrCurvesSlots()
+
+        /** The highpass envelope's curves: `hpfCurves.attack`, `hpfCurves.decay`, `hpfCurves.release`. */
+        val hpfCurves: FilterCurvesSlots = FilterCurvesSlots("hpfCurves")
+
+        /** The bandpass envelope's curves: `bpfCurves.attack`, `bpfCurves.decay`, `bpfCurves.release`. */
+        val bpfCurves: FilterCurvesSlots = FilterCurvesSlots("bpfCurves")
+
+        /** The notch envelope's curves: `notchCurves.attack`, `notchCurves.decay`, `notchCurves.release`. */
+        val notchCurves: FilterCurvesSlots = FilterCurvesSlots("notchCurves")
+
+        /** The lowpass envelope's curves: `lpfCurves.attack`, `lpfCurves.decay`, `lpfCurves.release`. */
+        val lpfCurves: FilterCurvesSlots = FilterCurvesSlots("lpfCurves")
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -1331,7 +1343,8 @@ sealed interface IgnitorDsl {
          *
          * **Which envelope this is (decision D3).** The law is the engine's one envelope law, and an
          * unshaped stage (curve knob at its default) takes `MOD_ENV_CURVE`, the house Exponential
-         * curve (K = 3), which `VoiceFactory` hands the voice strip's filter envelope too. The
+         * curve (K = 3), which the voice strip's filter envelope takes too when sprudel's `lpfCurves`
+         * names none (`FilterEnvDef.resolve`). The
          * sampling is the same on both: the envelope is computed at block START and block END and
          * the SVF coefficients are interpolated across the block. So the same stage times, depth and
          * curve give the same sweep on both surfaces.

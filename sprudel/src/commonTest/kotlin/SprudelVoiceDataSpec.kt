@@ -127,6 +127,52 @@ class SprudelVoiceDataSpec : StringSpec({
         kept.pReleaseCurve shouldBe a.pReleaseCurve
     }
 
+    "merge() completeness has an INDEPENDENT oracle for the four filter groups' curves" {
+        // mergeFrom and merge share mergeSvdFilter, so only the inputs can see a curve the helper drops, swaps or
+        // takes from the wrong side. Read through the flat accessors, one filter group at a time.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+
+        fun curves(d: SprudelVoiceData): List<AdsrCurve?> = listOf(
+            d.lpAttackCurve, d.lpDecayCurve, d.lpReleaseCurve,
+            d.hpAttackCurve, d.hpDecayCurve, d.hpReleaseCurve,
+            d.bpAttackCurve, d.bpDecayCurve, d.bpReleaseCurve,
+            d.nfAttackCurve, d.nfDecayCurve, d.nfReleaseCurve,
+        )
+
+        withClue("the seeds give every curve a different value on each side") {
+            curves(a).zip(curves(b)).forEach { (x, y) -> x shouldNotBe y }
+        }
+
+        curves(a.merge(b)) shouldBe curves(b)
+
+        // and the base side survives an over side whose filter groups hold a cutoff only (the `?: base` half)
+        val kept = a.merge(
+            createSprudelVoiceData {
+                cutoff = 1.0; hcutoff = 2.0; bandf = 3.0; notchf = 4.0
+            },
+        )
+
+        curves(kept) shouldBe curves(a)
+    }
+
+    "merge() completeness has an INDEPENDENT oracle for the amplitude envelope's curves" {
+        // The same gap the filter row closes, found by its mutation run: mergeSvdAdsr's three curve lines
+        // could be dropped, swapped or read base-first with every row green, because both seeds carried the
+        // same fixed curves.
+        val a = populatedVoiceData(0)
+        val b = populatedVoiceData(1000)
+
+        fun curves(d: SprudelVoiceData): List<AdsrCurve?> = listOf(d.attackCurve, d.decayCurve, d.releaseCurve)
+
+        withClue("the seeds give every curve a different value on each side") {
+            curves(a).zip(curves(b)).forEach { (x, y) -> x shouldNotBe y }
+        }
+
+        curves(a.merge(b)) shouldBe curves(b)
+        curves(a.merge(createSprudelVoiceData { attack = 1.0 })) shouldBe curves(a)
+    }
+
     "can create SprudelVoiceData with basic fields" {
         val data = createSprudelVoiceData {
             note = "c4"
@@ -386,7 +432,9 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         oscParams = paramBagOf("k$seed" to b + 7)
         katalystParams = paramBagOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
-        attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
+        // Seed-picked like the pitch and filter curves, so a merge row sees each amplitude curve differ per side.
+        attackCurve = AdsrCurve.entries[(seed + 9) % 6]; decayCurve = AdsrCurve.entries[(seed + 10) % 6]
+        releaseCurve = AdsrCurve.entries[(seed + 11) % 6]
             adsrOn = false
         accelerate = b + 12; vibrato = b + 13; vibratoMod = b + 14
         pAttack = b + 15; pDecay = b + 16; pRelease = b + 17; pEnv = b + 18; pSustain = b + 19
@@ -407,6 +455,16 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         hpattack = b + 56; hpdecay = b + 57; hpsustain = b + 58; hprelease = b + 59; hpenv = b + 60
         bpattack = b + 61; bpdecay = b + 62; bpsustain = b + 63; bprelease = b + 64; bpenv = b + 65
         nfattack = b + 66; nfdecay = b + 67; nfsustain = b + 68; nfrelease = b + 69; nfenv = b + 70
+        // The filter curves, picked from the seed like the pitch curves, and each filter offset by one more, so the
+        // two sides of a merge differ in every curve and no two filters share a curve at the same stage.
+        lpAttackCurve = AdsrCurve.entries[(seed + 3) % 6]; lpDecayCurve = AdsrCurve.entries[(seed + 4) % 6]
+        lpReleaseCurve = AdsrCurve.entries[(seed + 5) % 6]
+        hpAttackCurve = AdsrCurve.entries[(seed + 4) % 6]; hpDecayCurve = AdsrCurve.entries[(seed + 5) % 6]
+        hpReleaseCurve = AdsrCurve.entries[(seed + 6) % 6]
+        bpAttackCurve = AdsrCurve.entries[(seed + 5) % 6]; bpDecayCurve = AdsrCurve.entries[(seed + 6) % 6]
+        bpReleaseCurve = AdsrCurve.entries[(seed + 7) % 6]
+        nfAttackCurve = AdsrCurve.entries[(seed + 6) % 6]; nfDecayCurve = AdsrCurve.entries[(seed + 7) % 6]
+        nfReleaseCurve = AdsrCurve.entries[(seed + 8) % 6]
         cylinder = seed + 71; pan = b + 72
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
         loopBegin = b + 85; loopEnd = b + 86

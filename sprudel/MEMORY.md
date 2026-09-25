@@ -123,7 +123,8 @@
   The long names `lowpass`/`highpass`/`bandpass` stay as constants. Compound objects have NO bare
   read: children only, one rule for every compound. `adsrCurves` is an object with the setter
   only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
-  Filter curve objects wait for engine fields (`docs/tasks/filter-envelope-configuration.md`).
+  Filter curve objects landed 2026-09-25 (phase 3 step 5b c2): `lpfCurves`, `hpfCurves`, `bpfCurves`,
+  `notchCurves(attack, decay, release)`, setters like `adsrCurves`, on `FilterEnvDef`'s curve fields.
 
 - **Compound effects are objects with named slots (batch E).** `reverb(wet, size, lowpass)`,
   `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,

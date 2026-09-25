@@ -104,6 +104,13 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("$door.decay", mapOf(f, "$door.decay" to 0.3)))
         add(Row("$door.sustain", mapOf(f, "$door.sustain" to 0.3)))
         add(Row("$door.release", mapOf(f, "$door.release" to 0.2)))
+
+        // The curve slots (step 5b (c2)): each against the same full envelope without that one curve.
+        val env = mapOf(f, "$door.env" to 12.0, "$door.attack" to 0.05, "$door.decay" to 0.3, "$door.sustain" to 0.3, "$door.release" to 0.2)
+
+        add(Row("${door}Curves.attack", env + ("${door}Curves.attack" to AdsrCurves.indexOf(AdsrCurve.Linear))))
+        add(Row("${door}Curves.decay", env + ("${door}Curves.decay" to AdsrCurves.indexOf(AdsrCurve.SCurve))))
+        add(Row("${door}Curves.release", env + ("${door}Curves.release" to AdsrCurves.indexOf(AdsrCurve.InvSquare))))
     }
 
     val trem = mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 5.0)

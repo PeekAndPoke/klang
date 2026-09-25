@@ -56,6 +56,10 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
         "adsr.attack" to s.adsr.attack, "adsr.decay" to s.adsr.decay, "adsr.sustain" to s.adsr.sustain,
         "adsr.release" to s.adsr.release, "adsr.on" to s.adsr.on,
         "adsrCurves.attack" to s.adsrCurves.attack, "adsrCurves.decay" to s.adsrCurves.decay, "adsrCurves.release" to s.adsrCurves.release,
+        "hpfCurves.attack" to s.hpfCurves.attack, "hpfCurves.decay" to s.hpfCurves.decay, "hpfCurves.release" to s.hpfCurves.release,
+        "bpfCurves.attack" to s.bpfCurves.attack, "bpfCurves.decay" to s.bpfCurves.decay, "bpfCurves.release" to s.bpfCurves.release,
+        "notchCurves.attack" to s.notchCurves.attack, "notchCurves.decay" to s.notchCurves.decay, "notchCurves.release" to s.notchCurves.release,
+        "lpfCurves.attack" to s.lpfCurves.attack, "lpfCurves.decay" to s.lpfCurves.decay, "lpfCurves.release" to s.lpfCurves.release,
     )
 
     "the script door builds the Kotlin door's tree, on a bare source" {

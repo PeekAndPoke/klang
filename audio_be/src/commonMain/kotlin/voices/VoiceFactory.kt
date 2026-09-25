@@ -485,15 +485,16 @@ class VoiceFactory(
         val depth: Double
         if (envData != null) {
             val resolved = envData.resolve()
-            // The modulation envelopes' curve, the Ignitor filter node's (decision D3).
+            // The curves sprudel's `lpfCurves` etc. named, an unnamed one `MOD_ENV_CURVE` (resolved in
+            // `FilterEnvDef.resolve`), the Ignitor filter node's default too (decision D3).
             envelope = Voice.Envelope(
                 attackFrames = resolved.attack * sampleRate,
                 decayFrames = resolved.decay * sampleRate,
                 sustainLevel = resolved.sustain,
                 releaseFrames = resolved.release * sampleRate,
-                attackCurve = MOD_ENV_CURVE,
-                decayCurve = MOD_ENV_CURVE,
-                releaseCurve = MOD_ENV_CURVE,
+                attackCurve = resolved.attackCurve,
+                decayCurve = resolved.decayCurve,
+                releaseCurve = resolved.releaseCurve,
             )
             depth = resolved.depth
         } else {

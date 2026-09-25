@@ -95,7 +95,7 @@ tutorial phase instead of blocking it.
 it changes no surface and no sound, so it fails the rule).
 
 **Additive, so a tutorial written before them does not become wrong:** `filter-envelope-configuration`
-(lpadsr curves), `sprudel-field-accessors` and its `klangscript-native-object-operators`
+(the filter curve doors; done 2026-09-25 in phase 3 step 5b c2), `sprudel-field-accessors` and its `klangscript-native-object-operators`
 prerequisite, `ignitor-dsl-open-items`, `future/ignitor-optimizer-open-items`, `master-dsl-followups`
 (except the parity audit, which is the gate above), `klangscript-named-args-docs-polish`.
 

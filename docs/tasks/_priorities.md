@@ -123,9 +123,9 @@ The release-defining set, regardless of when they're sequenced:
     [`20260903-soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
     Three stacked defects; in the browser no soundfont had ever looped (the worklet dropped every sample's metadata).
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
-17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
-    `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴
-    Engine / by-ear feature; well-scoped, not started.
+17. **NICE** · **Filter-envelope curve config**: DONE 2026-09-25 (phase 3 step 5b c2: `lpfCurves`, `hpfCurves`,
+    `bpfCurves`, `notchCurves`), archived as
+    [`20260925-filter-envelope-configuration.md`](../tasks-archive/2026-09/20260925-filter-envelope-configuration.md).
 18. **NICE** · **Constant-control fast-path** — [`constant-control-fast-path.md`](constant-control-fast-path.md) 🔴
     Optional sprudel perf; modest (~7% of query frame) after the VoiceData grouping. Measure-first.
 19. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — [`reduce-js-bundle-size.md`](reduce-js-bundle-size.md) 🔴

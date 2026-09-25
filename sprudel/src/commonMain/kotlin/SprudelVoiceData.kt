@@ -350,6 +350,21 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || lpf != null) lpfOrNew().passes = v
         }
+    var lpAttackCurve: AdsrCurve?
+        get() = lpf?.attackCurve
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().attackCurve = v
+        }
+    var lpDecayCurve: AdsrCurve?
+        get() = lpf?.decayCurve
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().decayCurve = v
+        }
+    var lpReleaseCurve: AdsrCurve?
+        get() = lpf?.releaseCurve
+        set(v) {
+            if (v != null || lpf != null) lpfOrNew().releaseCurve = v
+        }
 
     var hcutoff: Double?
         get() = hpf?.cutoff
@@ -391,6 +406,21 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || hpf != null) hpfOrNew().env = v
         }
+    var hpAttackCurve: AdsrCurve?
+        get() = hpf?.attackCurve
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().attackCurve = v
+        }
+    var hpDecayCurve: AdsrCurve?
+        get() = hpf?.decayCurve
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().decayCurve = v
+        }
+    var hpReleaseCurve: AdsrCurve?
+        get() = hpf?.releaseCurve
+        set(v) {
+            if (v != null || hpf != null) hpfOrNew().releaseCurve = v
+        }
 
     var bandf: Double?
         get() = bpf?.cutoff
@@ -427,6 +457,21 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || bpf != null) bpfOrNew().env = v
         }
+    var bpAttackCurve: AdsrCurve?
+        get() = bpf?.attackCurve
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().attackCurve = v
+        }
+    var bpDecayCurve: AdsrCurve?
+        get() = bpf?.decayCurve
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().decayCurve = v
+        }
+    var bpReleaseCurve: AdsrCurve?
+        get() = bpf?.releaseCurve
+        set(v) {
+            if (v != null || bpf != null) bpfOrNew().releaseCurve = v
+        }
 
     var notchf: Double?
         get() = notch?.cutoff
@@ -462,6 +507,21 @@ data class SprudelVoiceData(
         get() = notch?.env
         set(v) {
             if (v != null || notch != null) notchOrNew().env = v
+        }
+    var nfAttackCurve: AdsrCurve?
+        get() = notch?.attackCurve
+        set(v) {
+            if (v != null || notch != null) notchOrNew().attackCurve = v
+        }
+    var nfDecayCurve: AdsrCurve?
+        get() = notch?.decayCurve
+        set(v) {
+            if (v != null || notch != null) notchOrNew().decayCurve = v
+        }
+    var nfReleaseCurve: AdsrCurve?
+        get() = notch?.releaseCurve
+        set(v) {
+            if (v != null || notch != null) notchOrNew().releaseCurve = v
         }
 
     var accelerate: Double?
@@ -898,6 +958,9 @@ data class SprudelVoiceData(
                             sustain = lpsustain,
                             release = lprelease,
                             depth = lpenv,
+                            attackCurve = lpAttackCurve,
+                            decayCurve = lpDecayCurve,
+                            releaseCurve = lpReleaseCurve,
                         )
                     } else {
                         null
@@ -922,6 +985,9 @@ data class SprudelVoiceData(
                             sustain = hpsustain,
                             release = hprelease,
                             depth = hpenv,
+                            attackCurve = hpAttackCurve,
+                            decayCurve = hpDecayCurve,
+                            releaseCurve = hpReleaseCurve,
                         )
                     } else {
                         null
@@ -946,6 +1012,9 @@ data class SprudelVoiceData(
                             sustain = bpsustain,
                             release = bprelease,
                             depth = bpenv,
+                            attackCurve = bpAttackCurve,
+                            decayCurve = bpDecayCurve,
+                            releaseCurve = bpReleaseCurve,
                         )
                     } else {
                         null
@@ -969,6 +1038,9 @@ data class SprudelVoiceData(
                             sustain = nfsustain,
                             release = nfrelease,
                             depth = nfenv,
+                            attackCurve = nfAttackCurve,
+                            decayCurve = nfDecayCurve,
+                            releaseCurve = nfReleaseCurve,
                         )
                     } else {
                         null

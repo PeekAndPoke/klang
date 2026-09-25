@@ -502,7 +502,8 @@ The slots it places are grouped per stage on `OscSlot` (also `Osc.slot`), named 
 readers: `OscSlot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
 same on `hpf`; `bpf` and `notch` without `passes`), `OscSlot.crush.amount`, `OscSlot.coarse.amount`,
 `OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape|skew|phase`,
-`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.adsrCurves.attack|decay|release`.
+`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.adsrCurves.attack|decay|release`, and the filter envelope curves
+`OscSlot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
 `Osc.saw().highpass(OscSlot.hpf.freq, OscSlot.hpf.q).crush(OscSlot.crush.amount).lowpass(OscSlot.lpf.freq)`.

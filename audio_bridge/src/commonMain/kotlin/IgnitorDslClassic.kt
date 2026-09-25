@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
@@ -144,9 +145,12 @@ class AdsrSlots internal constructor() {
     val on: IgnitorDsl = slot("adsr", "on", 1.0, "The envelope's switch, 0 is off; what sprudel's `adsrOn()` / `adsrOff()` write")
 }
 
-/** The description of the three curve slots, which sprudel writes by name and has no reader for. */
-private const val CURVE_SLOT_DESCRIPTION =
-    "A stage's curve as its index in the curve list; what sprudel's `adsrCurves(...)` names"
+/** The description of a curves group's three slots, which sprudel writes by name ([door]) and has no reader for. */
+private fun curveSlotDescription(door: String): String =
+    "A stage's curve as its index in the curve list; what sprudel's `$door(...)` names"
+
+/** The description of the amplitude envelope's three curve slots. */
+private val CURVE_SLOT_DESCRIPTION = curveSlotDescription("adsrCurves")
 
 /**
  * The curve slots of the amplitude envelope (`Slots.adsrCurves`), mirroring sprudel's
@@ -158,6 +162,22 @@ class AdsrCurvesSlots internal constructor() {
     val attack: IgnitorDsl = slot("adsrCurves", "attack", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
     val decay: IgnitorDsl = slot("adsrCurves", "decay", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
     val release: IgnitorDsl = slot("adsrCurves", "release", AdsrCurves.indexOf(AdsrCurve.Default), CURVE_SLOT_DESCRIPTION)
+}
+
+/**
+ * The curve slots of a filter's cutoff envelope (`Slots.lpfCurves`, `Slots.hpfCurves`, `Slots.bpfCurves`,
+ * `Slots.notchCurves`), mirroring sprudel's `lpfCurves(attack, decay, release)` and its three siblings
+ * (phase 3 step 5b (c2)): `<door>Curves.attack|decay|release`, each an INDEX into [AdsrCurves] (sprudel
+ * writes names, and the curves objects have no readers), default the index of `MOD_ENV_CURVE`, the curve
+ * every modulation envelope has when nothing is written (decision D3), which is what the strip's
+ * `FilterEnvDef.resolve` fills an unset curve with.
+ */
+class FilterCurvesSlots internal constructor(door: String) {
+    private val description = curveSlotDescription(door)
+
+    val attack: IgnitorDsl = slot(door, "attack", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
+    val decay: IgnitorDsl = slot(door, "decay", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
+    val release: IgnitorDsl = slot(door, "release", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
 }
 
 /**
@@ -193,7 +213,7 @@ class AdsrCurvesSlots internal constructor() {
  *  - the four filters humanize from the voice's `analog` slot, as the strip does, but draw per filter
  *    where the strip draws every tolerance first (the section 8 migration cost); their cutoff
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
- *    `MOD_ENV_CURVE` on both; the curves are not slots yet);
+ *    `MOD_ENV_CURVE` on both), and their curves are the `<door>Curves` slots since step 5b (c2);
  *  - the envelope evaluates the strip's law (one envelope law on both hosts since phase 3 D3), and its
  *    de-click is the strip's constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the strip's
  *    de-click per note.
@@ -223,6 +243,9 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         decaySec = s.hpf.decay,
         sustainLevel = s.hpf.sustain,
         releaseSec = s.hpf.release,
+        attackCurve = s.hpfCurves.attack,
+        decayCurve = s.hpfCurves.decay,
+        releaseCurve = s.hpfCurves.release,
         humanize = true,
     )
     val bandpassed = IgnitorDsl.Bandpass(
@@ -235,6 +258,9 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         decaySec = s.bpf.decay,
         sustainLevel = s.bpf.sustain,
         releaseSec = s.bpf.release,
+        attackCurve = s.bpfCurves.attack,
+        decayCurve = s.bpfCurves.decay,
+        releaseCurve = s.bpfCurves.release,
         humanize = true,
     )
     val notched = IgnitorDsl.Notch(
@@ -247,6 +273,9 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         decaySec = s.notch.decay,
         sustainLevel = s.notch.sustain,
         releaseSec = s.notch.release,
+        attackCurve = s.notchCurves.attack,
+        decayCurve = s.notchCurves.decay,
+        releaseCurve = s.notchCurves.release,
         humanize = true,
     )
     val lowpassed = IgnitorDsl.Lowpass(
@@ -260,6 +289,9 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         decaySec = s.lpf.decay,
         sustainLevel = s.lpf.sustain,
         releaseSec = s.lpf.release,
+        attackCurve = s.lpfCurves.attack,
+        decayCurve = s.lpfCurves.decay,
+        releaseCurve = s.lpfCurves.release,
         humanize = true,
     )
     val tremoloed = IgnitorDsl.Tremolo(

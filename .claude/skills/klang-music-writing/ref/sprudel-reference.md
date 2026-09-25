@@ -360,6 +360,7 @@ at the cutoff). Same third slot on the ignitor door.
 | `hpf(freq, q, passes, env, attack, decay, sustain, release)`           | `highpass` | Highpass, same slots and readers as `lpf` (`hpf.freq`, `hpf.env`, ...)                                                                                 | `s("bd").hpf(freq = 200, q = 2)`                                                                     |
 | `bpf(freq, q, env, attack, decay, sustain, release)`                   | `bandpass` | Bandpass: centre Hz, Q, envelope depth in semitones and the stages; readers `bpf.freq`, `bpf.q`, ...                                                   | `note("c3").bpf(freq.mul(4), 3)`                                                                     |
 | `notch(freq, q, env, attack, decay, sustain, release)`                 |            | Notch (band reject), same slots as `bpf`; readers `notch.freq`, `notch.q`, ...                                                                         | `s("sd").notch(freq = 1000, q = 2)`                                                                  |
+| `lpfCurves(attack, decay, release)` / `hpfCurves` / `bpfCurves` / `notchCurves` |            | Stage curves of that filter's envelope, like `adsrCurves` (`"exp"` default, `"linear"`, `"square"`, ...); an omitted or unknown stage keeps its curve; a curve alone switches no envelope on | `note("c3").s("saw").lpf(freq = 400, env = 24, decay = 0.3).lpfCurves("linear", "linear", "linear")` |
 
 ### Effects
 
