@@ -350,7 +350,9 @@ depth is a `Constant`, not a `Param`, so the question never arises), it costs fi
 filter per note-on and nothing per block, and an instrument that declares a real default
 (`env = Osc.param("lpenv", 24.0)`) is untouched. **The law to decide with it:** does "written" mean
 finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
-what sprudel's `!= null` means and is the recommendation.
+what sprudel's `!= null` means and is the recommendation. **DECIDED 2026-09-25 (maintainer): finite-in-the-bag only.** A
+knob is written when the note's bag holds a finite value for its slot; an authored default alone never
+switches the envelope on. Step 5 builds it.
 
 **The distort question this leaves open, for D2.** `IgnitorDsl.Distort` WAS legacy by its own KDoc (step 3b
 corrected it: it is kept as the one node that gates drive and shape as a unit, and the only one that could
