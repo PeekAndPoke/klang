@@ -188,7 +188,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.17)
+    .mul(0.16)
 }
 
 // The rigs. A/B one stage at a time:
@@ -365,15 +365,15 @@ export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.n(0).gain(0.24).velocity("0.98 0.94 0.96 0.94").pan(0.5)
-  .hpf(freq = 40).lpf(12000).adsr(0.001, 0.030, 0.30, 0.25).distort(0.02)
+export kick_shape = x => x.n(0).gain(0.25).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+  .hpf(freq = 40).lpf(12000).adsr(0.001, 0.050, 0.30, 0.25).distort(0.02)
   .superimpose(x => x.bpf(freq = "80", q = 1.0).vel(0.75))
 export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  //. solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[~ sd] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.n(5).gain(0.26).pan(0.65)
-  .hpf(160).lpf(freq = 13500, q = 0.6).adsr(0.001, 0.10, 0.60, 0.50) //c. mute()
+export snare_shape = x => x.n(5).gain(0.28).pan(0.65)
+  .hpf(160).lpf(freq = 13500, q = 0.6).adsr(0.001, 0.080, 0.60, 0.50) //c. mute()
   .superimpose(x => x.bpf(freq = pure(snareHz).add(berlin.mul(10).slow(4)), q = 3.0).vel(0.75))
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
@@ -430,7 +430,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
-  ).analog(feel / 2).reverb(wet = 0.25, size = 4.0) //. solo() //  .mute()
+  ).analog(feel / 2).reverb(wet = 0.25, size = 5.0) //. solo() //  .mute()
     .compressor(-27, 4, 6, 0.005, 0.12)
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>")
 
@@ -441,7 +441,7 @@ export song = stack(
   song_body.apply(song_arrange)
   , // Master
   master(Master(m =>
-    m.reverb(0.2, 7, 3500).gain(3.3)
+    m.reverb(0.2, 7, 3500).gain(3.5)
   ))
 )
 
