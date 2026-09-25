@@ -169,8 +169,18 @@ defaulted knob is temporary stays flat. A knob that nothing reads is removed, no
 | `duck` (Katalyst) | `orbit, depth, attack` | none | flat and all optional, like the compressor (a dynamics stage); identical to sprudel's |
 
 Not walked, nothing to decide: `onepole`, `crush`, `coarse`, `detune`, `accelerate` (no defaults), the
-oscillators (already `(freq, configure)`). The chain's `adsr`, `adsrCurves`, `declickSeconds` and `expK`
-belong to step 3c, which reshapes them anyway.
+oscillators (already `(freq, configure)`).
+
+**The envelopes, walked 2026-09-25 for step 3c (maintainer):**
+
+| Door | Door parameters | Builder knobs | Notes |
+|---|---|---|---|
+| chain `adsr` | `attackSec, decaySec, sustainLevel, releaseSec, configure` | `curves(attack, decay, release)`, `declick(seconds)` | the reach-back chain methods `adsrCurves`, `declickSeconds` and `expK` RETIRE (they modified the preceding `adsr`, or wrapped a fresh default one). Inside a builder the prefix goes: `curves`, `declick` |
+| `adsr` inside the filter and pitch builders | the same | `curves(attack, decay, release)` | NESTED, one shape everywhere: `.lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves(...)))`. The 3d(i) builder knob `adsrCurves` on the filter and pitch builders moves into the envelope's builder as `curves`. No `declick`: those envelopes have no de-click stage, and a knob that does nothing is not offered |
+| `adsr` inside the fm builder | the same, without `configure` | none yet | FM's index envelope has no curve support (the filed follow-up); it gains `configure` with `curves` when that lands |
+| `expK` | REMOVED | | "maybe the user wants to set different k for each individual curve": a per-curve bend is its own later design. Until then every exp stage bends at `ADSR_EXP_K` = 3 |
+| the ADSR on/off switch | node field only, no Ignitor door | | `classic()` fills it from sprudel's `adsrOn`/`adsrOff` (a built-in's envelope is ON by default and only the slot turns it off); on the Ignitor door, not writing `adsr()` already means no envelope. A deliberate two-door asymmetry |
+
 
 **Consequences recorded with the decisions:**
 - **The default curve of a modulation envelope (filter and pitch) is ONE decision, and it is D3's.** Every

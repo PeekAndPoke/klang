@@ -79,8 +79,12 @@ master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size
     `floor` is always on the builder.
   - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor`, `limiter`,
     `duck`, each identical to sprudel's.
-  - An envelope on a builder is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec)` call plus
-    `adsrCurves(attack, decay, release)`, the chain's own pattern, never four stage knobs.
+  - An envelope is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` call, never four
+    stage knobs, with the SAME shape wherever it appears: on the chain and nested inside a filter's or the
+    pitch envelope's builder (`x => x.adsr(a, d, s, r, e => e.curves(...))`). Inside a builder a knob drops
+    the prefix its door needed (`curves`, not `adsrCurves`; `declick`, not `declickSeconds`). An envelope's
+    builder offers only what THAT envelope can do (the chain: `curves`, `declick`; the filter and pitch
+    envelopes: `curves`; FM's index envelope: none yet). Maintainer, 2026-09-25.
   - A door whose only defaulted knob is temporary stays flat (`shape`, `distort`: their `oversample`
     leaves with `docs/tasks/oversampling-regions.md`).
   - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
