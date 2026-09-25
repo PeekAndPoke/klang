@@ -12,7 +12,9 @@ FM index envelope has no curve support and a knob that does nothing is not offer
 wants it later, so `fm` speaks the same envelope vocabulary as the chain, the four filters and the
 pitch envelope. Needs: curve fields on `IgnitorDsl.Fm`, the curve law in `FmModIgnitor`'s envelope,
 the envelope's own builder on the fm `adsr`, `adsr(a, d, s, r, e => e.curves(attack, decay, release))`, the shape every other envelope has since step 3c, on both doors. The default curve must be the one
-D3 decides for modulation envelopes, or every existing FM patch (`sgbell`) changes.
+D3 decides for modulation envelopes, or every existing FM patch (`sgbell`) changes. (2026-09-25: D3
+decided exponential; since step 5b (b) the FM envelope reads `MOD_ENV_CURVE` and `sgbell` changed with it,
+so the knob only has to default to `MOD_ENV_CURVE`.)
 
 ## A non-finite pitch amount freezes the oscillator (found 2026-09-24, pre-existing)
 

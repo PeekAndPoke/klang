@@ -14,6 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.safeOut
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.sqrt
 
 class PitchModFactoriesSpec : StringSpec({
@@ -312,8 +313,11 @@ class PitchModFactoriesSpec : StringSpec({
             for (i in from until until) m = maxOf(m, abs(x[i] - 1.0))
             return m
         }
+        // With a release the index is still alive: the stages run the exponential default (decision D3),
+        // so the level at the gate is g(1 - (6000 - 44.1) / 22050) = g(0.73) ~ 0.42 of the depth, and the
+        // ratio swings by about 300 * 0.42 / 523.25 ~ 0.24 right after it.
         maxDev(steppedRender, gate + 2, gate + 100) shouldBe 0.0          // the raw hard cut: 0 means 0
-        (maxDev(rampedRender, gate + 2, gate + 100) > 0.3) shouldBe true  // a release keeps the depth alive
+        (maxDev(rampedRender, gate + 2, gate + 100) > 0.15) shouldBe true // a release keeps the depth alive
     }
 
     "fm env: a RELEASE-ONLY envelope is honoured, not silently dropped (hasEnv counts release)" {
@@ -371,9 +375,10 @@ class PitchModFactoriesSpec : StringSpec({
 
     "fm env: a NON-FINITE sustain reads as unset (1.0, the node's default), never a carrier frozen at ratio 0" {
         // Oracle written from the definition, not from the code: the modulator is a constant 0.5,
-        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the envelope law with linear
-        // curves (attack `pos / af`, decay `s + (1 - s) * (1 - decPos / df)`, hold `s`, release from
-        // the level at the gate over `rf - 1` frames), the level clamped to 0..1 by the FM host, the
+        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the envelope law with the
+        // exponential curve every stage of the FM index envelope runs (decision D3), `g(x) = (e^3x - 1) /
+        // (e^3 - 1)` (attack `g(pos / af)`, decay `s + (1 - s) * g(1 - decPos / df)`, hold `s`, release
+        // from the level at the gate, `L * g(1 - relPos / (rf - 1))`), the level clamped to 0..1 by the FM host, the
         // sustain raw inside. A finite sustain passes raw (the 0.3 control); NaN, +Inf and -Inf all
         // take 1.0 (the chain `adsr`'s `finiteOr` rule).
         val sr = 48000
@@ -390,15 +395,17 @@ class PitchModFactoriesSpec : StringSpec({
             val df = d * sr
             val rf = r * sr
 
+            fun g(x: Double): Double = (exp(3.0 * x) - 1.0) / (exp(3.0) - 1.0)
+
             fun level(p: Int): Double = when {
-                p < af -> p * (1.0 / af)
-                p < af + df -> s + (1.0 - s) * (1.0 - (p - af) * (1.0 / df))
+                p < af -> g(p / af)
+                p < af + df -> s + (1.0 - s) * g(1.0 - (p - af) / df)
                 else -> s
             }
 
             val v = if (pos >= gate) {
                 val atGate = level(gate)
-                atGate * (1.0 - minOf((pos - gate) / (rf - 1.0), 1.0))
+                atGate * g(1.0 - minOf((pos - gate) / (rf - 1.0), 1.0))
             } else {
                 level(pos)
             }
@@ -444,7 +451,8 @@ class PitchModFactoriesSpec : StringSpec({
             for (pos in 0 until total) {
                 val expected = safeOut(1.0 + 0.5 * (depth * oracleEnv(pos, substituted)) / freq)
 
-                withClue("sustain=$given pos=$pos") { out[pos].toRawBits() shouldBe expected.toRawBits() }
+                // 1e-9: the engine bends the curve through `fastExp` (relative error under 1e-10).
+                withClue("sustain=$given pos=$pos") { out[pos] shouldBe (expected plusOrMinus 1e-9) }
             }
         }
     }

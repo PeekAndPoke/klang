@@ -276,7 +276,8 @@ private class PitchEnvelopeModIgnitor(
  * FM — frequency modulation in ratio space.
  *
  * Generates the [modulator] at `fmFreq * ratio`, scales by `depth / fmFreq`, applies
- * an optional ADSR envelope to the depth. Output: `1.0 + modOutput * effectiveDepth / fmFreq`,
+ * an optional ADSR envelope to the depth (every stage on `MOD_ENV_CURVE`, exponential).
+ * Output: `1.0 + modOutput * effectiveDepth / fmFreq`,
  * where `fmFreq` is the [freq] param — DEFAULTING to the note ([FreqIgnitor] answers the freq
  * argument), so default-authored FM behaves exactly as before, while an absolute [freq] makes
  * the patch immune to `detune` like any absolute oscillator (the D13 anchor; the runtime no
@@ -403,11 +404,12 @@ private class FmModIgnitor(
             // unless the attack happened to be a multiple of the block length. The envelope core is
             // prepared once per block and read per sample.
             //
-            // Linear on every stage: the FM index envelope has no curve surface yet
-            // (`ignitor-dsl-open-items.md`), and Linear is its historical law.
+            // `MOD_ENV_CURVE` on every stage, the default of every modulation envelope (decision D3):
+            // the FM index envelope has no curve surface yet (`ignitor-dsl-open-items.md`), so the
+            // default is all it gets.
             envCore.prepareModEnvelope(
                 ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
-                AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear,
+                MOD_ENV_CURVE, MOD_ENV_CURVE, MOD_ENV_CURVE,
             )
 
             for (i in ctx.offset until end) {

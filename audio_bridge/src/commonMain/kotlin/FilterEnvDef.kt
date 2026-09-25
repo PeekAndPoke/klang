@@ -77,9 +77,9 @@ data class FilterEnvDef(
         return Resolved(
             // The one home of these numbers is `constants/FilterEnvelopeDefaults.kt`, which the
             // Ignitor filter nodes and their doors read as well: the two surfaces resolve the
-            // same STAGE TIMES and the same DEPTH. Not the same SHAPE, though: this envelope
-            // runs the house exponential curve and the tree's runs straight lines. See
-            // `IgnitorDsl.Lowpass.env` and decision D3.
+            // same STAGE TIMES and the same DEPTH. The curve is not resolved here: the engine
+            // hands this envelope `MOD_ENV_CURVE`, the tree's default too (decision D3). See
+            // `IgnitorDsl.Lowpass.env`.
             attack = attack ?: FILTER_ENV_ATTACK_SEC,
             decay = decay ?: FILTER_ENV_DECAY_SEC,
             sustain = sustain ?: FILTER_ENV_SUSTAIN_LEVEL,

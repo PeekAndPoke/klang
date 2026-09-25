@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -98,6 +99,11 @@ class FastExp2Spec : StringSpec({
             decaySec = ParamIgnitor("d", decaySec),
             semitones = ParamIgnitor("amount", semitones),
             sustainLevel = ParamIgnitor("sustain", sustain),
+            // Pinned Linear: this row is about the ratio's exp2 against pow, and its reference below
+            // writes the linear stages out; the default curve is `ModEnvelopeDefaultCurveSpec`'s.
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,

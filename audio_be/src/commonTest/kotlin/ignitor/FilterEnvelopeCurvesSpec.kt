@@ -119,18 +119,18 @@ class FilterEnvelopeCurvesSpec : StringSpec({
         }
     }
 
-    "an UNSET curve is MOD_ENV_CURVE, linear: bit for bit the explicit Linear and the envelope without curves" {
+    "an UNSET curve is MOD_ENV_CURVE, exponential: bit for bit the explicit Exponential and the resolved envelope without curves" {
         for (kind in kinds) {
             val unset = render(node(kind, 24.0, null, null, null))
 
-            withClue("$kind: null == Linear") {
-                unset shouldBe render(node(kind, 24.0, AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear))
+            withClue("$kind: null == Exponential") {
+                unset shouldBe render(node(kind, 24.0, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential))
             }
-            withClue("$kind: == the runtime door with the envelope it always had") {
+            withClue("$kind: == the runtime door with a resolved envelope that names no curve") {
                 unset shouldBe renderRaw(raw(kind, FilterEnvDef(depth = 24.0, attackSec = 0.01, decaySec = 0.02, sustainLevel = 0.2, releaseSec = 0.01)))
             }
             withClue("$kind: a shaped decay is heard (the control)") {
-                render(node(kind, 24.0, null, AdsrCurve.Exponential, null)) shouldNotBe unset
+                render(node(kind, 24.0, null, AdsrCurve.Linear, null)) shouldNotBe unset
             }
         }
     }

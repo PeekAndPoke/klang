@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.tan
@@ -62,12 +63,13 @@ data class FilterEnvDef(
     val decaySec: Double = 0.0,
     val sustainLevel: Double = 1.0,
     val releaseSec: Double = 0.0,
-    // The three stage curves, RESOLVED (the node's `null` has become `MOD_ENV_CURVE` in
-    // `IgnitorDslRuntime.filterEnvDef`). Linear here for the reason above: it is the law with no
-    // curve term, the neutral value, not the surface default.
-    val attackCurve: AdsrCurve = AdsrCurve.Linear,
-    val decayCurve: AdsrCurve = AdsrCurve.Linear,
-    val releaseCurve: AdsrCurve = AdsrCurve.Linear,
+    // The three stage curves, RESOLVED (`IgnitorDslRuntime.filterEnvDef` names them from the node's
+    // knobs). Unlike the values above these default to the surface's own constant, `MOD_ENV_CURVE`:
+    // a curve has no neutral value, and a partial shape built to mean "the node's envelope" must run
+    // the curve the node runs.
+    val attackCurve: AdsrCurve = MOD_ENV_CURVE,
+    val decayCurve: AdsrCurve = MOD_ENV_CURVE,
+    val releaseCurve: AdsrCurve = MOD_ENV_CURVE,
 ) {
     companion object {
         val NONE = FilterEnvDef()
@@ -91,11 +93,9 @@ data class FilterEnvDef(
  * clamped to [0, 1] before it scales the depth. The voice strip's filter envelope runs the same two
  * helpers (`FilterModRenderer`, `BaseSvf.sweepCutoff`; decision D3, the sampling).
  *
- * **Where this envelope still differs from the voice strip's** (decision D3 of
- * `docs/tasks/builtin-instruments.md`): **the default curve.** An unshaped stage takes
- * `MOD_ENV_CURVE`, which is still LINEAR here; `curves` can shape each stage. The strip's filter
- * envelope takes `AdsrCurve.Default` (Exponential) because `VoiceFactory` builds its `Voice.Envelope`
- * without curve arguments. D3 decided exponential for both; it lands with its own ear checkpoint.
+ * **The default curve** is the voice strip's too (decision D3 of `docs/tasks/builtin-instruments.md`):
+ * an unshaped stage takes `MOD_ENV_CURVE`, exponential, which `VoiceFactory` hands the strip's filter
+ * envelope as well; `curves` can shape each stage.
  *
  * A node with `env.depth == 0.0` never enters this path at all.
  *

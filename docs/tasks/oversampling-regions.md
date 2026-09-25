@@ -72,8 +72,8 @@ more than one place per effect, the factoring is not done.
   Ignitor's `ShapeIgnitor`; each builds its own and wires its own up and down.
 - Twins that drifted, and each cost a maintainer decision in phase 3: the crush quantizer floors in the
   strip and rounds in the Ignitor (D1); the distort soft cap is applied by `ShapeIgnitor` and not by
-  `DistortionRenderer` (D2); the filter envelope is linear on the node and exponential on the strip
-  (D3). Each is one effect written twice.
+  `DistortionRenderer` (D2); the filter envelope was linear on the node and exponential on the strip
+  (D3, settled 2026-09-25 by one `EnvelopeCore` and an exponential default on both). Each is one effect written twice.
 - The ADSR curve law (`when (curve)` over the `AdsrCurve` kinds) was inlined three times in `AdsrIgnitor`
   and three more times on the strip. Phase 3 step 3d(i) extracted the Ignitor's into `AdsrCurveMath.kt`
   and shares it with the filter and pitch envelopes; the strip's three copies remain (found 2026-09-24).

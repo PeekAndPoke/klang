@@ -96,10 +96,9 @@ fun AdsrBuilder.declick(seconds: IgnitorDslLike): AdsrBuilder = copy(declickSeco
 
 /**
  * Shapes a modulation envelope's stages (a filter's cutoff envelope, the pitch envelope), with the
- * chain's six curves and their short names. Unshaped stages are LINEAR, which is what every filter
- * sweep and pitch sweep has been (decision D3 decides that default); an omitted argument and an
- * unknown name both mean it, so every call sets all three stages. A number or a slot is the curve's
- * index, chosen once per note.
+ * chain's six curves and their short names. Unshaped stages are `"exp"`, the house curve (decision
+ * D3; they were linear before); an omitted argument and an unknown name both mean it, so every
+ * call sets all three stages. A number or a slot is the curve's index, chosen once per note.
  */
 @KlangScript.Function
 fun ModAdsrBuilder.curves(
@@ -203,7 +202,7 @@ fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = k
 /**
  * The cutoff envelope, ONE call, the chain `adsr`'s shape: attack, decay, sustain (a share of
  * `env`, 0 to 1) and release in seconds, and a lambda on a [ModAdsrBuilder] that shapes the stages
- * with `curves` (unshaped stages are LINEAR, decision D3 decides that default):
+ * with `curves` (unshaped stages are `"exp"`, decision D3):
  * `.lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))`.
  * Switches the envelope on; without `env` the depth fills from the constants. A later `adsr` call
  * replaces an earlier one completely, curves included. The release does NOT extend the voice's life.
@@ -259,9 +258,9 @@ data class PitchEnvelopeBuilder(val node: IgnitorDsl.PitchEnvelope)
  * The pitch envelope, ONE call, the chain `adsr`'s shape: the pitch rises to `semitones` over the
  * attack, falls to the sustain (a share of `semitones`, default 0 = the note) over the decay, holds,
  * and from the gate's end returns to the note over the release. The lambda shapes the stages with
- * `curves`, the filters' rules (unshaped stages are LINEAR, decision D3 decides that):
+ * `curves`, the filters' rules (unshaped stages are `"exp"`, decision D3):
  * `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("lin", "exp", "exp")))`.
- * Defaults without this call: `adsr(0.01, 0.1, 0, 0)`, linear. A later `adsr` call replaces an
+ * Defaults without this call: `adsr(0.01, 0.1, 0, 0)`, exponential. A later `adsr` call replaces an
  * earlier one completely, curves included. The release does NOT extend the voice's life.
  *
  * @param configure receives the [ModAdsrBuilder] (knob: `curves`) and returns it.
@@ -299,8 +298,8 @@ data class FmBuilder(val node: IgnitorDsl.Fm)
  * The modulation INDEX envelope: the depth rises over the attack, falls to the sustain (a share of
  * `depth`) over the decay, holds, and releases from the gate's end. Without this call the depth is
  * constant, which is `adsr(0, 0, 1, 0)`. The built-in `sgbell` is `adsr(0.001, 0.5, 0, 0.05)`. Its
- * stages are linear, and it takes no lambda yet: the FM index envelope has no curve support (a filed
- * follow-up adds `curves` when it has), and a knob that does nothing is not offered.
+ * stages are exponential (decision D3), and it takes no lambda yet: the FM index envelope has no curve
+ * support (a filed follow-up adds `curves` when it has), and a knob that does nothing is not offered.
  */
 @KlangScript.Function
 fun FmBuilder.adsr(

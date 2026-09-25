@@ -79,8 +79,8 @@ object KlangScriptOscExtensions {
      * Osc.saw().lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))
      * ```
      *
-     * The cutoff-envelope LAW is not the same as sprudel's `lpf(env = ...)` yet: see
-     * [IgnitorDsl.Lowpass.env] and decision D3.
+     * The cutoff envelope runs the law, the sampling and the default curve (exponential) of
+     * sprudel's `lpf(env = ...)`: see [IgnitorDsl.Lowpass.env] and decision D3.
      *
      * @param configure receives the [FilterBuilder] (knobs: `passes`, `analog`, `humanize`, `env`,
      * `adsr`) and returns it.
@@ -503,7 +503,7 @@ object KlangScriptOscExtensions {
      * pattern: `pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0, 0))` sweeps a kick from two octaves
      * up down to the note. That `adsr` takes its own lambda to shape the stages with `curves`
      * (`x => x.adsr(0.001, 0.05, 0, 0, e => e.curves("lin", "exp", "exp"))`); unshaped stages are
-     * linear. Without the lambda the stages are `adsr(0.01, 0.1, 0, 0)`. The release returns the
+     * exponential. Without the lambda the stages are `adsr(0.01, 0.1, 0, 0)`. The release returns the
      * pitch to the note from the gate's end and does not extend the voice's life.
      *
      * @param configure receives the [PitchEnvelopeBuilder] (knob: `adsr`) and returns it.

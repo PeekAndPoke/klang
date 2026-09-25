@@ -435,9 +435,13 @@ character as ONE structural flag (`humanize`). Both doors, same names, same defa
   cents on a pluck and 512 on a pad, which is 4x to 100x the sampling difference. The two agree on
   the ENDPOINTS and on the stage times. Step 3a changes neither law: it adds the knobs with the
   node's existing behaviour and says so in every KDoc that could be read as claiming parity.
+  (Settled 2026-09-25 in step 5b: (a2) gave the strip the node's sampling, (b) set `MOD_ENV_CURVE =
+  Exponential`, so both hosts now share one law, one sampling and one default curve.)
   A third, smaller mismatch of the same family, recorded rather than fixed: the node truncates
   stage frame counts to `Int` where the strip keeps them fractional (220 against 220.5 at
   `attackSec = 0.005`), the same class as the ADSR frame-count item the spike already listed.
+  (Settled 2026-09-25 by step 5b (a1): one `EnvelopeCore` counts attack and decay in fractional frames
+  on every host.)
 
 ## The gate: a stage at its off value is NOT BUILT (2026-09-20)
 

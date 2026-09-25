@@ -20,8 +20,9 @@ import kotlin.random.Random
 /**
  * The envelope curves as INDEX KNOBS (phase 3 step 3c): the chain `adsr`, the four filters' cutoff
  * envelope and the pitch envelope each read their three curve knobs ONCE at build, leaf-only,
- * through `AdsrCurves.curveAt`, and fall back to THEIR OWN default: exponential on the chain,
- * `MOD_ENV_CURVE` (linear) on the modulation envelopes.
+ * through `AdsrCurves.curveAt`, and fall back to THEIR OWN default: `AdsrCurve.Default` on the chain,
+ * `MOD_ENV_CURVE` on the modulation envelopes. Both are exponential since decision D3 (b), but they are
+ * two constants, so each envelope's fallback is still pinned to its own.
  *
  * The chain rows compare against an INDEPENDENT oracle, the hand-authoring runtime API
  * `Ignitor.adsr(..., attackCurve = AdsrCurve.X)`, which takes the enum directly and never sees a
@@ -114,7 +115,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
         withClue("the node's default knobs are exponential") { renderDsl(chain()) shouldBe chainDefault }
     }
 
-    "the chain: an unreadable curve is EXPONENTIAL, the chain's own default, never the modulation one" {
+    "the chain: an unreadable curve is EXPONENTIAL, the chain's own default" {
         // A non-finite, negative and past-the-end index each on its own stage, and a non-leaf
         // expression (it would evaluate to 1.0, square, if it were read) on all three.
         val bad = listOf(
@@ -130,8 +131,9 @@ class EnvelopeCurveKnobSpec : StringSpec({
             withClue("$name on the release") { renderDsl(chain(release = knob)) shouldBe chainDefault }
         }
 
-        // The fallback is OBSERVABLE: the modulation default renders differently here.
-        oracle(MOD_ENV_CURVE, MOD_ENV_CURVE, MOD_ENV_CURVE) shouldNotBe chainDefault
+        // The fallback is OBSERVABLE: linear, the curve an index clamped to the first entry would read,
+        // renders differently here (the first row proves every other curve does too).
+        oracle(AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear) shouldNotBe chainDefault
     }
 
     "the chain: a curve SLOT reads the pattern's value from the voice's bag" {
@@ -146,70 +148,98 @@ class EnvelopeCurveKnobSpec : StringSpec({
 
     val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
 
-    // Each envelope with ONE curve knob set (on its decay, the stage that runs longest here), so a
+    // Each envelope with ONE curve knob set on ONE stage (the other two at the node's default), so a
     // curve read on the wrong envelope or the wrong stage cannot hide behind the others.
     val cutoff = IgnitorDsl.Constant(400.0)
     val sweep = IgnitorDsl.Constant(24.0)
     val decay = IgnitorDsl.Constant(0.03)
     val sustain = IgnitorDsl.Constant(0.2)
 
+    // The pitch envelope's own release is 0 s, which would make its release curve inert here.
+    val pitchRelease = IgnitorDsl.Constant(0.02)
+
     // `null` = the node's own default knob, which IS `AdsrCurves.knob(MOD_ENV_CURVE)`; the first
     // assertion of the fallback row pins that equality by render.
     fun IgnitorDsl?.orNodeDefault(): IgnitorDsl = this ?: IgnitorDsl.PitchEnvelope(inner = saw).decayCurve
 
-    val modulationEnvelopes: List<Pair<String, (IgnitorDsl?) -> IgnitorDsl>> = listOf(
-        "lowpass" to { k ->
-            IgnitorDsl.Lowpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain, decayCurve = k.orNodeDefault())
+    val stages = listOf("attack", "decay", "release")
+
+    // The knob on the stage under test, the node's default on the other two.
+    fun IgnitorDsl?.on(stage: String, at: String): IgnitorDsl = (if (stage == at) this else null).orNodeDefault()
+
+    val modulationEnvelopes: List<Pair<String, (String, IgnitorDsl?) -> IgnitorDsl>> = listOf(
+        "lowpass" to { s, k ->
+            IgnitorDsl.Lowpass(
+                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+            )
         },
-        "highpass" to { k ->
-            IgnitorDsl.Highpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain, decayCurve = k.orNodeDefault())
+        "highpass" to { s, k ->
+            IgnitorDsl.Highpass(
+                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+            )
         },
-        "bandpass" to { k ->
-            IgnitorDsl.Bandpass(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain, decayCurve = k.orNodeDefault())
+        "bandpass" to { s, k ->
+            IgnitorDsl.Bandpass(
+                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+            )
         },
-        "notch" to { k ->
-            IgnitorDsl.Notch(saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain, decayCurve = k.orNodeDefault())
+        "notch" to { s, k ->
+            IgnitorDsl.Notch(
+                saw, cutoff, env = sweep, decaySec = decay, sustainLevel = sustain,
+                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+            )
         },
-        "pitch" to { k ->
-            IgnitorDsl.PitchEnvelope(saw, IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain, decayCurve = k.orNodeDefault())
+        "pitch" to { s, k ->
+            IgnitorDsl.PitchEnvelope(
+                saw, IgnitorDsl.Constant(12.0), decaySec = decay, sustainLevel = sustain, releaseSec = pitchRelease,
+                attackCurve = k.on(s, "attack"), decayCurve = k.on(s, "decay"), releaseCurve = k.on(s, "release"),
+            )
         },
     )
 
-    "the modulation envelopes: an unreadable curve is MOD_ENV_CURVE, their own default, never exponential" {
+    "the modulation envelopes: an unreadable curve is MOD_ENV_CURVE, their own default, on every stage" {
         for ((name, envelope) in modulationEnvelopes) {
-            val atDefault = renderDsl(envelope(null))
+            val atDefault = renderDsl(envelope("decay", null))
 
-            withClue("$name: the default knob is MOD_ENV_CURVE") {
-                renderDsl(envelope(AdsrCurves.knob(MOD_ENV_CURVE))) shouldBe atDefault
-            }
+            for (stage in stages) {
+                withClue("$name $stage: the default knob is MOD_ENV_CURVE") {
+                    renderDsl(envelope(stage, AdsrCurves.knob(MOD_ENV_CURVE))) shouldBe atDefault
+                }
 
-            for (knob in listOf(IgnitorDsl.Constant(SLOT_UNSET), IgnitorDsl.Constant(-1.0), IgnitorDsl.Constant(99.0))) {
-                withClue("$name: $knob falls back to MOD_ENV_CURVE") { renderDsl(envelope(knob)) shouldBe atDefault }
-            }
+                for (knob in listOf(IgnitorDsl.Constant(SLOT_UNSET), IgnitorDsl.Constant(-1.0), IgnitorDsl.Constant(99.0))) {
+                    withClue("$name $stage: $knob falls back to MOD_ENV_CURVE") {
+                        renderDsl(envelope(stage, knob)) shouldBe atDefault
+                    }
+                }
 
-            withClue("$name: a non-leaf falls back to MOD_ENV_CURVE") {
-                renderDsl(envelope(IgnitorDsl.Plus(IgnitorDsl.Constant(2.5), IgnitorDsl.Constant(2.5)))) shouldBe atDefault
-            }
+                withClue("$name $stage: a non-leaf falls back to MOD_ENV_CURVE") {
+                    renderDsl(envelope(stage, IgnitorDsl.Plus(IgnitorDsl.Constant(2.5), IgnitorDsl.Constant(2.5)))) shouldBe
+                            atDefault
+                }
 
-            // The fallback is OBSERVABLE (exponential, the chain's default, sounds different) and a
-            // written curve is READ (square is not the default either).
-            withClue("$name: exponential and square are audible") {
-                renderDsl(envelope(AdsrCurves.knob(AdsrCurve.Exponential))) shouldNotBe atDefault
-                renderDsl(envelope(AdsrCurves.knob(AdsrCurve.Square))) shouldNotBe atDefault
+                // The fallback is OBSERVABLE on this stage (linear, the default before decision D3, sounds
+                // different) and a written curve is READ (square is not the default either).
+                withClue("$name $stage: linear and square are audible") {
+                    renderDsl(envelope(stage, AdsrCurves.knob(AdsrCurve.Linear))) shouldNotBe atDefault
+                    renderDsl(envelope(stage, AdsrCurves.knob(AdsrCurve.Square))) shouldNotBe atDefault
+                }
             }
         }
     }
 
     "the modulation envelopes: a curve SLOT reads the pattern's value from the voice's bag" {
-        // Square, not Cube: exponential and square are the two curves the fallback row proves AUDIBLE
+        // Square, not Cube: linear and square are the two curves the fallback row proves AUDIBLE
         // in this fixture, so a slot that was never read cannot pass by rendering the same thing.
         for ((name, envelope) in modulationEnvelopes) {
-            val slotted = envelope(IgnitorDsl.Param("curve", AdsrCurves.indexOf(MOD_ENV_CURVE)))
+            val slotted = envelope("decay", IgnitorDsl.Param("curve", AdsrCurves.indexOf(MOD_ENV_CURVE)))
 
             withClue(name) {
-                renderDsl(slotted, emptyMap()) shouldBe renderDsl(envelope(null))
+                renderDsl(slotted, emptyMap()) shouldBe renderDsl(envelope("decay", null))
                 renderDsl(slotted, mapOf("curve" to AdsrCurves.indexOf(AdsrCurve.Square))) shouldBe
-                        renderDsl(envelope(AdsrCurves.knob(AdsrCurve.Square)))
+                        renderDsl(envelope("decay", AdsrCurves.knob(AdsrCurve.Square)))
             }
         }
     }

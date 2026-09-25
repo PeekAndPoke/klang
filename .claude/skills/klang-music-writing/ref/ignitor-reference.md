@@ -272,7 +272,7 @@ past an omitted q: `.lowpass(800, x => x.analog(3))`.
   semitones; stages 0.01 / 0.1 / 1.0 / 0.1). `.lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))`
   is a pluck. The `adsr` takes its own lambda to shape the stages with the chain's curves,
   `x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp"))`; unshaped stages
-  are linear.
+  are exponential (`"exp"`, the house curve every envelope defaults to since 2026-09-25).
 - `humanize()` gives each note its own cutoff tolerance and a slow drift, scaled by `analog`.
 
 ### Equalizer
@@ -431,7 +431,8 @@ bell of the built-in `sgbell`.
 `pitchEnvelope` is an ADSR on the pitch, the chain `adsr`'s pattern: up to `semitones` over the attack, down to the
 sustain (a share of `semitones`, usually 0 = the note) over the decay, and from the gate's end back to the note over
 the release. `x => x.adsr(0.001, 0.04, 0, 0)` is a kick's sweep. Without the lambda: `adsr(0.01, 0.1, 0, 0)`. Its
-stages are linear unless its `adsr` shapes them: `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("lin", "exp", "exp"))`.
+stages are exponential unless its `adsr` shapes them (since 2026-09-25; the drop reaches the note sooner than a linear
+one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"))` gives a straight, slower sweep.
 
 ### Analog Drift
 

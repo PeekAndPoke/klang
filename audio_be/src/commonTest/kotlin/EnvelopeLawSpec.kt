@@ -281,7 +281,9 @@ class EnvelopeLawSpec : StringSpec({
     }
 
     "host: the Ignitor FM index envelope (fractional attack, raw sustain, the depth clamped to [0, 1])" {
-        // A constant modulator of 1.0 with depth == freq makes the output exactly 1 + envelope.
+        // A constant modulator of 1.0 with depth == freq makes the output exactly 1 + envelope. The FM node
+        // has no curve knob, so every stage runs the modulation default, Exponential (decision D3): the
+        // oracles below are `expCurve`, written out in this spec. 1e-9: the core bends through `fastExp`.
         fun fm(a: Double, d: Double, s: Double, r: Double): Ignitor = fmModIgnitor(
             modulator = ParamIgnitor("m", 1.0),
             ratio = ParamIgnitor("ratio", 1.0),
@@ -293,20 +295,20 @@ class EnvelopeLawSpec : StringSpec({
             freq = FreqIgnitor,
         )
 
-        renderNode(fm(240.5, 100.0, 0.5, 12.0), 400, gate = far / 2)[240] - 1.0 shouldBe (240.0 / 240.5 plusOrMinus 1e-12)
+        renderNode(fm(240.5, 100.0, 0.5, 12.0), 400, gate = far / 2)[240] - 1.0 shouldBe (expCurve(240.0 / 240.5) plusOrMinus 1e-9)
 
         val gated = renderNode(fm(100.0, 100.0, 0.2, 11.0), 80, gate = 50)
 
-        gated[50] - 1.0 shouldBe (0.5 plusOrMinus 1e-12)
+        gated[50] - 1.0 shouldBe (expCurve(0.5) plusOrMinus 1e-9)
         gated[60] shouldBe 1.0
 
-        // The sustain is raw: -0.5 over a 10-frame decay is 0.25 at frame 5 (a clamped sustain of 0
-        // would give 0.5 there), and the host clamps what goes below 0 (the raw -0.5 at frame 20)...
+        // The sustain is raw: -0.5 over a 10-frame decay is -0.5 + 1.5 g(0.8) at frame 2 (a clamped sustain
+        // of 0 would give g(0.8) there), and the host clamps what goes below 0 (the raw -0.5 at frame 20)...
         val low = renderNode(fm(0.0, 10.0, -0.5, 12.0), 40, gate = far / 2)
 
-        low[5] - 1.0 shouldBe (0.25 plusOrMinus 1e-12)
+        low[2] - 1.0 shouldBe (-0.5 + 1.5 * expCurve(0.8) plusOrMinus 1e-9)
         low[20] shouldBe 1.0
-        // ...and what goes above 1: a sustain of 1.5 is 1.25 at frame 5 in the law, a full depth here.
+        // ...and what goes above 1: a sustain of 1.5 is 1.5 - 0.5 g(0.5) at frame 5 in the law, a full depth here.
         renderNode(fm(0.0, 10.0, 1.5, 12.0), 40, gate = far / 2)[5] shouldBe (2.0 plusOrMinus 1e-12)
     }
 
@@ -345,7 +347,8 @@ class EnvelopeLawSpec : StringSpec({
         // linearly across the block through the plain TPT lowpass recursion. Only the coefficient helper
         // is shared with the node. Two envelopes: three different curves (Square up, Exponential down,
         // Cube on release, so a swap of any two is heard), and linear curves with a raw sustain of 1.5,
-        // which only the host's [0, 1] clamp keeps from sweeping past the full depth.
+        // which only the host's [0, 1] clamp keeps from sweeping past the full depth. A third names no
+        // curve and is checked against the Exponential oracle: the modulation default (decision D3).
         val a = 300.5
         val d = 200.0
         val r = 400.0
@@ -363,7 +366,7 @@ class EnvelopeLawSpec : StringSpec({
             else -> error("not used here")
         }
 
-        fun check(sus: Double, ac: AdsrCurve, dc: AdsrCurve, rc: AdsrCurve) {
+        fun check(sus: Double, ac: AdsrCurve, dc: AdsrCurve, rc: AdsrCurve, nameCurves: Boolean = true) {
             fun ads(p: Int): Double = when {
                 p < a -> curve(ac, p / a)
                 p < a + d -> sus + (1.0 - sus) * curve(dc, 1.0 - (p - a) / d)
@@ -417,22 +420,21 @@ class EnvelopeLawSpec : StringSpec({
                     }
                 }
             }
-            val env = FilterEnvDef(
-                depth = depth, attackSec = sec(a), decaySec = sec(d), sustainLevel = sus, releaseSec = sec(r),
-                attackCurve = ac, decayCurve = dc, releaseCurve = rc,
-            )
+            val unnamed = FilterEnvDef(depth = depth, attackSec = sec(a), decaySec = sec(d), sustainLevel = sus, releaseSec = sec(r))
+            val env = if (nameCurves) unnamed.copy(attackCurve = ac, decayCurve = dc, releaseCurve = rc) else unnamed
             val node = source.lowpass(ParamIgnitor("f", base), ParamIgnitor("q", q), env)
             val out = renderNode(node, total, gate = gate)
 
             for (i in 0 until total) {
                 // 1e-9: the core bends Exponential through `fastExp` (relative error under 1e-10), the
                 // oracle through the library `exp`.
-                withClue("sustain $sus, $ac / $dc / $rc, frame $i") { out[i] shouldBe (expected[i] plusOrMinus 1e-9) }
+                withClue("sustain $sus, $ac / $dc / $rc (named: $nameCurves), frame $i") { out[i] shouldBe (expected[i] plusOrMinus 1e-9) }
             }
         }
 
         check(0.3, AdsrCurve.Square, AdsrCurve.Exponential, AdsrCurve.Cube)
         check(1.5, AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear)
+        check(0.3, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential, nameCurves = false)
     }
 
     "host: the strip's control-rate envelope (the offset on a zero release, the level clamped to [0, 1])" {

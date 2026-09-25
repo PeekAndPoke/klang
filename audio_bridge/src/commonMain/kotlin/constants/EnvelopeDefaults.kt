@@ -31,18 +31,21 @@ const val ADSR_EXP_K: Double = 3.0
 /**
  * The curve of every stage of a MODULATION envelope that the author did not shape with
  * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
- * envelope (`IgnitorDsl.Lowpass` and its three siblings) and the Ignitor pitch envelope
- * (`IgnitorDsl.PitchEnvelope`). Their curve knobs default to this curve's `AdsrCurves` index, and
- * a knob that cannot be read at build, or reads as a bad index, falls back to it too.
+ * envelope (`IgnitorDsl.Lowpass` and its three siblings), the Ignitor pitch envelope
+ * (`IgnitorDsl.PitchEnvelope`) and the Ignitor FM index envelope (`IgnitorDsl.Fm`, which has no
+ * curve knob yet), and on the voice strip the filter and FM envelopes (`VoiceFactory`). The Ignitor
+ * curve knobs default to this curve's `AdsrCurves` index, and a knob that cannot be read at build,
+ * or reads as a bad index, falls back to it too.
  *
- * It is [AdsrCurve.Linear] because that is the law both envelopes had before they had curve
- * fields at all, so adding the fields moved no sound. It is NOT the house default
- * ([AdsrCurve.Default], Exponential) that the chain's `adsr` and the voice strip use: whether the
- * modulation envelopes follow the house is decision D3 of `docs/tasks/builtin-instruments.md`,
- * decided at an ear checkpoint, and this one declaration is what it flips. One constant for both
- * envelopes, because the maintainer recorded it as ONE decision.
+ * It is [AdsrCurve.Exponential], the house curve every other envelope already had
+ * ([AdsrCurve.Default], bending at [ADSR_EXP_K]): decision D3 of `docs/tasks/builtin-instruments.md`
+ * (maintainer, 2026-09-25), which moved the Ignitor filter, pitch and FM envelopes off the LINEAR
+ * law they had before, a deliberate sound change. It stays a constant of its own, and not a
+ * reference to [AdsrCurve.Default], because the maintainer recorded the modulation envelopes'
+ * default as ONE decision of its own. The strip's pitch envelope (`PitchEnvelopeRenderer`) still
+ * runs its own law and does not read this.
  */
-val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Linear
+val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Exponential
 
 /**
  * Sustain level of the IGNITOR `adsr(...)` surface, and what `AdsrIgnitor` substitutes for a

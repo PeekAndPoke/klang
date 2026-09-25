@@ -1325,14 +1325,12 @@ sealed interface IgnitorDsl {
          * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
          * renders a static filter. Write a slot (`OscSlot.lpf.env`) or a constant.
          *
-         * **Which envelope this is, and where D3 still stands.** The law: an unshaped stage
-         * (curve knob at its default) takes `MOD_ENV_CURVE`, which is LINEAR, while the voice strip's are
-         * the house Exponential curve (`AdsrCurve.Default`, K = 3), because `VoiceFactory` omits
-         * the three curve arguments. Measured at `env = 24`, the two are up to 806 cents apart at
-         * the same instant (RMS 256 cents on a pluck, 512 on a pad). The sampling is the same on
-         * both since D3's commit (a2): the envelope is computed at block START and block END and the
-         * SVF coefficients are interpolated across the block. Same endpoints and the same stage
-         * times on both; D3 decided exponential for the default law, which lands in its own commit.
+         * **Which envelope this is (decision D3).** The law is the engine's one envelope law, and an
+         * unshaped stage (curve knob at its default) takes `MOD_ENV_CURVE`, the house Exponential
+         * curve (K = 3), which `VoiceFactory` hands the voice strip's filter envelope too. The
+         * sampling is the same on both: the envelope is computed at block START and block END and
+         * the SVF coefficients are interpolated across the block. So the same stage times, depth and
+         * curve give the same sweep on both surfaces.
          */
         val env: IgnitorDsl = Constant(0.0),
         /** Cutoff-envelope attack in seconds. Inert while [env] is `0`. */
@@ -1347,15 +1345,9 @@ sealed interface IgnitorDsl {
          * Curve of the cutoff envelope's attack, the same six shapes as the chain's `adsr`, as an
          * INDEX into [AdsrCurves] (phase 3 step 3c: a knob, so a slot can carry it). Read ONCE at
          * build from a [Param] or [Constant] leaf; a non-leaf, a non-finite value and a bad index
-         * all read as the default, `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had
-         * a curve; decision D3 decides that default. Inert while [env] is `0`.
-         *
-         * `Linear` here is this envelope's OWN historical law, kept bit for bit: its decay steps
-         * by `(1 - sustain) / decayFrames` and its release runs over N frames and ends a hair
-         * above the floor, where the chain's `Linear` composes `sustain + (1 - sustain) * (1 - p)`
-         * and lands on 0. The curved shapes take the chain's composition (`adsrCurveShape` in
-         * `audio_be`). One implementation of the shapes, two compositions of the linear case,
-         * because the linear one is what every song's sweep already is.
+         * all read as the default, `MOD_ENV_CURVE`, exponential (decision D3; the envelope was
+         * linear before). Inert while [env] is `0`. The shapes and their composition are the chain
+         * `adsr`'s (`adsrCurveShape` and `EnvelopeCore` in `audio_be`).
          */
         val attackCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /** Curve of the cutoff envelope's decay; see [attackCurve]. */
@@ -1775,7 +1767,8 @@ sealed interface IgnitorDsl {
 
     /**
      * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
-     * at audio rate, with an optional ADSR envelope controlling modulation depth over time.
+     * at audio rate, with an optional ADSR envelope controlling modulation depth over time. The
+     * envelope has no curve knob yet; its stages run `MOD_ENV_CURVE`, exponential (decision D3).
      */
     @WireName("fm")
     data class Fm(
@@ -2087,9 +2080,8 @@ sealed interface IgnitorDsl {
      * NOT extend the voice's life: a pitch release longer than the amp envelope's is cut off with
      * the voice, and release `0` returns to the note at the gate's end.
      *
-     * Frame counts are fractional (`seconds * sampleRate` as a Double), which is this envelope's
-     * law; the chain `adsr` truncates them to Int. That mismatch (pitch envelope fractional, chain
-     * `adsr` Int) is recorded in decision D3.
+     * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
+     * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
      *   +12 sweeps from an octave up, -24 from two octaves down.
@@ -2098,9 +2090,9 @@ sealed interface IgnitorDsl {
      *   the chain `adsr`'s rule.
      * @param attackCurve curve of the attack, as an INDEX into [AdsrCurves], read once at build
      *   from a leaf (phase 3 step 3c). The default, and what a non-leaf, a non-finite value or a bad
-     *   index read as, is `MOD_ENV_CURVE`, LINEAR, the law this envelope had before it had curves;
-     *   decision D3 decides that default. The shapes and their composition are the chain `adsr`'s
-     *   (`adsrCurveShape` in `audio_be`).
+     *   index read as, is `MOD_ENV_CURVE`, exponential (decision D3; the envelope was linear
+     *   before). The shapes and their composition are the chain `adsr`'s (`adsrCurveShape` in
+     *   `audio_be`).
      * @param decayCurve curve of the decay; see [attackCurve].
      * @param releaseCurve curve of the release; see [attackCurve].
      */
@@ -2294,9 +2286,8 @@ data class FilterEnvelopeKnobs(
  * `lpsustain` / `lprelease` / `lpenv` is present, and `FilterEnvDef.resolve()` then fills the
  * missing depth with [FILTER_ENV_DEPTH_SEMITONES]. `lpf(800, decay = 0.3, sustain = 0.2)` is a
  * pluck, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be a pluck too, with the
- * same depth and the same stage times. Not yet the same CURVE through them: the two surfaces
- * differ in the envelope law, which is [IgnitorDsl.Lowpass.env] and decision D3, not this
- * function's to settle.
+ * same depth and the same stage times, and (decision D3) the same default curve through them,
+ * `MOD_ENV_CURVE`; see [IgnitorDsl.Lowpass.env].
  *
  * A call that names NOTHING gets `env = 0`, which is the node's "no envelope" switch, and the four
  * stage knobs at their constants where they are inert. `lowpass(800)` is therefore exactly the
@@ -2357,7 +2348,7 @@ private fun modEnvCurveKnob(): IgnitorDsl = AdsrCurves.knob(MOD_ENV_CURVE)
  * times; left out of a call that names a stage knob it is filled with
  * [FILTER_ENV_DEPTH_SEMITONES]; left out of a call that names none of the five it is `0`, which
  * is the node's "no envelope". See [IgnitorDsl.Lowpass.env], which also says which envelope law
- * this is and what decision D3 still owes.
+ * this is.
  * @param attackSec Cutoff-envelope attack in seconds. Inert when the envelope is off.
  * @param decaySec Cutoff-envelope decay in seconds. Needs a [sustainLevel] below 1 to be audible.
  * @param sustainLevel Cutoff-envelope sustain share of [env], 0 to 1.

@@ -20,12 +20,9 @@ package io.peekandpoke.klang.audio_bridge.constants
 //
 // What that buys, stated exactly: the two surfaces read the same STAGE TIMES
 // and the same DEPTH from this one declaration, so `lpf(800, env = 24)` and
-// `lowpass(800, env = 24)` start from the same numbers. It does NOT make the
-// two sweeps the same SHAPE, and nobody arriving here should read it that way:
-// the node's envelope segments are linear and the strip's are the house
-// exponential curve, a difference of up to 806 cents at the same instant.
-// `IgnitorDsl.Lowpass.env` is the one home of that comparison and of what
-// decision D3 still owes on it.
+// `lowpass(800, env = 24)` start from the same numbers. The CURVE through them
+// is not a value here: both surfaces take `MOD_ENV_CURVE` (`EnvelopeDefaults.kt`,
+// decision D3). `IgnitorDsl.Lowpass.env` says which envelope law this is.
 //
 // The values are the literals `FilterEnvDef` carried from the start; moving
 // them here changed no number. The DEPTH is deliberately NOT a node default:

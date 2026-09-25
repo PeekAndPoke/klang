@@ -29,6 +29,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
@@ -223,11 +224,15 @@ class VoiceFactory(
         val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
             val ratio = data.fmh ?: 1.0
             val depth = data.fmEnv ?: 0.0
+            // The modulation envelopes' curve, the Ignitor FM node's (decision D3).
             val fmEnv = Voice.Envelope(
                 attackFrames = (data.fmAttack ?: 0.0) * sampleRate,
                 decayFrames = (data.fmDecay ?: 0.0) * sampleRate,
                 sustainLevel = data.fmSustain ?: 1.0,
                 releaseFrames = 0.0,
+                attackCurve = MOD_ENV_CURVE,
+                decayCurve = MOD_ENV_CURVE,
+                releaseCurve = MOD_ENV_CURVE,
             )
             Voice.Fm(ratio, depth, fmEnv)
         } else {
@@ -468,11 +473,15 @@ class VoiceFactory(
         val depth: Double
         if (envData != null) {
             val resolved = envData.resolve()
+            // The modulation envelopes' curve, the Ignitor filter node's (decision D3).
             envelope = Voice.Envelope(
                 attackFrames = resolved.attack * sampleRate,
                 decayFrames = resolved.decay * sampleRate,
                 sustainLevel = resolved.sustain,
                 releaseFrames = resolved.release * sampleRate,
+                attackCurve = MOD_ENV_CURVE,
+                decayCurve = MOD_ENV_CURVE,
+                releaseCurve = MOD_ENV_CURVE,
             )
             depth = resolved.depth
         } else {

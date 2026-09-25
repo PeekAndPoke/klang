@@ -191,9 +191,9 @@ class AdsrCurvesSlots internal constructor() {
  *    step 4): the node renders the strip's loop (no soft cap, the drive inside the oversampler), so it
  *    is bit-identical, while the `distort`/`shape` doors keep their capped law;
  *  - the four filters humanize from the voice's `analog` slot, as the strip does, but draw per filter
- *    where the strip draws every tolerance first (the section 8 migration cost), and their cutoff
- *    envelopes are linear and block-interpolated where the strip's are exponential and ramped (D3; the
- *    curves stay at `MOD_ENV_CURVE`, which D3 flips);
+ *    where the strip draws every tolerance first (the section 8 migration cost); their cutoff
+ *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
+ *    `MOD_ENV_CURVE` on both; the curves are not slots yet);
  *  - the envelope evaluates the strip's law (one envelope law on both hosts since phase 3 D3), and its
  *    de-click is the strip's constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the strip's
  *    de-click per note.

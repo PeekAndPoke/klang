@@ -91,7 +91,9 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   the code, then brief the implementer to confirm or refute it before building on it. A correction of
   such a claim is CLOSED only by a repo-wide grep for its phrasing (not a fix of the file it was found
   in), run and its result recorded before the fix is reported: step 3d(ii) corrected two copies and
-  left a third in the rule's own home, found one round later.
+  left a third in the rule's own home, found one round later. Repo-wide includes `.claude/skills/` (the references agents write patches from):
+  a brief that splits the grep between implementer (code) and coordinator (docs) names the skills in the
+  coordinator's half (step 5b (b), 2026-09-25: the music-writing reference still taught the old default).
 - **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
   exercising the changed path. A render that predates the last edit, or a song that never calls
   the changed door, backs nothing.

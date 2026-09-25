@@ -85,12 +85,26 @@ class ClassicStripParitySpec : StringSpec({
         .lowpass(IgnitorDsl.Constant(600.0), analog = IgnitorDsl.Slots.analog, attackSec = IgnitorDsl.Constant(0.05), humanize = true)
         .adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
 
+    /**
+     * What the default-curve row is compared against: the door's lowpass with `env = 24` and its three curves
+     * NAMED (Exponential, and Linear for the anti-vacuous side), in front of `classic()`'s unwritten envelope.
+     */
+    fun namedCurveLowpass(curve: AdsrCurve): IgnitorDsl = IgnitorDsl.Sawtooth()
+        .lowpass(
+            IgnitorDsl.Constant(600.0), analog = IgnitorDsl.Slots.analog, env = IgnitorDsl.Constant(24.0),
+            attackCurve = AdsrCurves.knob(curve), decayCurve = AdsrCurves.knob(curve), releaseCurve = AdsrCurves.knob(curve),
+            humanize = true,
+        )
+        .adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
+
     fun render(data: VoiceData, sampleRate: Int): DoubleArray {
         val onsetSec = 37.0 / sampleRate
         val registry = IgnitorRegistry().apply {
             registerDefaults()
             register("classicsaw", classicSaw)
             register("doorfill", doorFilledLowpass)
+            register("expfilter", namedCurveLowpass(AdsrCurve.Exponential))
+            register("linfilter", namedCurveLowpass(AdsrCurve.Linear))
         }
         val pipelines = PipelineRegistry().apply { register("bare", PipelineDsl(emptyList())) }
         val factory = VoiceFactory(
@@ -212,15 +226,15 @@ class ClassicStripParitySpec : StringSpec({
         },
 
         // ── the cutoff envelope, D3 ──
-        Row("lpf env 24: D3 (b), the default curve (linear against exp)", false, mapOf("lpf.freq" to 600.0, "lpf.env" to 24.0)) {
+        Row("lpf env 24: one default curve since D3 (b)", true, mapOf("lpf.freq" to 600.0, "lpf.env" to 24.0)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(depth = 24.0))))
         },
-        Row("lpf attack only (the fill itself is proven by the door-sweep row): D3 (b), the default curve", false, mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)) {
+        Row("lpf attack only (the fill itself is proven by the door-sweep row)", true, mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(attack = 0.05))))
         },
         Row(
-            "lpf pluck env 24 decay 0.2 sustain 0.1: D3 (b), the default curve",
-            false,
+            "lpf pluck env 24 decay 0.2 sustain 0.1",
+            true,
             mapOf("lpf.freq" to 500.0, "lpf.env" to 24.0, "lpf.attack" to 0.002, "lpf.decay" to 0.2, "lpf.sustain" to 0.1, "lpf.release" to 0.1),
         ) {
             copy(filters = filters(FilterDef.LowPass(500.0, 0.707, envelope = FilterEnvDef(0.002, 0.2, 0.1, 0.1, 24.0))))
@@ -228,13 +242,13 @@ class ClassicStripParitySpec : StringSpec({
         Row("lpf explicit env 0 with a decay: static on both", true, mapOf("lpf.freq" to 600.0, "lpf.env" to 0.0, "lpf.decay" to 0.3)) {
             copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(decay = 0.3, depth = 0.0))))
         },
-        Row("hpf env -12 decay 0.2 sustain 0.3: D3 (b), the default curve", false, mapOf("hpf.freq" to 800.0, "hpf.env" to -12.0, "hpf.decay" to 0.2, "hpf.sustain" to 0.3)) {
+        Row("hpf env -12 decay 0.2 sustain 0.3", true, mapOf("hpf.freq" to 800.0, "hpf.env" to -12.0, "hpf.decay" to 0.2, "hpf.sustain" to 0.3)) {
             copy(filters = filters(FilterDef.HighPass(800.0, 0.707, envelope = FilterEnvDef(decay = 0.2, sustain = 0.3, depth = -12.0))))
         },
-        Row("bpf env 12: D3 (b), the default curve", false, mapOf("bpf.freq" to 700.0, "bpf.env" to 12.0)) {
+        Row("bpf env 12", true, mapOf("bpf.freq" to 700.0, "bpf.env" to 12.0)) {
             copy(filters = filters(FilterDef.BandPass(700.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
         },
-        Row("notch env 12: D3 (b), the default curve", false, mapOf("notch.freq" to 700.0, "notch.env" to 12.0)) {
+        Row("notch env 12", true, mapOf("notch.freq" to 700.0, "notch.env" to 12.0)) {
             copy(filters = filters(FilterDef.Notch(700.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
         },
         // A STEP envelope (attack 0, decay 0, release 0) has no curved stage, so the default-curve half of
@@ -398,6 +412,19 @@ class ClassicStripParitySpec : StringSpec({
                         c.toList() shouldNotBe untouchedClassic.getValue(rate).toList()
                     }
                 }
+            }
+        }
+
+        "[$rate Hz] the strip's unwritten filter curve IS Exponential (D3 b): `lpf env 24` renders the door's lowpass with its curves named Exponential" {
+            // The rows above prove the strip and `classic()` AGREE; this one pins WHAT they agree on, against
+            // the curve named as an enum literal, so a default moved back to linear on both hosts is red here.
+            val s = strip({ copy(filters = filters(FilterDef.LowPass(600.0, 0.707, envelope = FilterEnvDef(depth = 24.0)))) }, null, rate)
+
+            withClue("first mismatching frame against the Exponential-named lowpass") {
+                firstMismatch(classic(emptyMap(), rate, sound = "expfilter"), s) shouldBe -1
+            }
+            withClue("anti-vacuous: the Linear-named lowpass is not the strip") {
+                firstMismatch(classic(emptyMap(), rate, sound = "linfilter"), s) shouldNotBe -1
             }
         }
 
