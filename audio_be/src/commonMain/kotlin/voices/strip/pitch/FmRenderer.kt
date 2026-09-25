@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.pitch
 
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.smallNumFastMod
@@ -27,6 +28,7 @@ class FmRenderer(
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
     private val startFrame: Double,
 ) : BlockRenderer {
+    private val core = EnvelopeCore()
 
     override fun render(ctx: BlockContext) {
         val buf = ctx.freqModBuffer
@@ -45,7 +47,7 @@ class FmRenderer(
         val safeWrap = !(abs(modInc) < TWO_PI)
 
         // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
-        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame)
+        val envLevel = calculateControlRateEnvelope(fm.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame, core)
         // Hoisted: the divide and the offset read are loop-invariant, and after the sine swap
         // the divide would be the loop's largest remaining cost.
         val depthOverFreq = fm.depth * envLevel / freqHz

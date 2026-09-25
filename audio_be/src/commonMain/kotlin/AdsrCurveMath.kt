@@ -10,9 +10,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shape math for AdsrCurve.Exponential — shared by every envelope evaluator
-// (EnvelopeRenderer, EnvelopeCalc, IgnitorEnvelopes) so the curve is identical
-// across the amp VCA, the filter/FM envelopes, and the ignitor envelopes.
+// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts; the strip pitch envelope
+// joins in commit (c) of phase 3 step 5b):
+// the stage shapes, the release time base, and the de-click coefficient.
 //
 // The tunable values themselves (ADSR_EXP_K, ENV_DECLICK_SECONDS) live in
 // `audio_bridge/constants/EnvelopeDefaults.kt` — they are the defaults of
@@ -35,34 +35,25 @@ internal inline fun adsrExpNorm(k: Double): Double = 1.0 / (fastExp(k) - 1.0)
 internal val ADSR_EXP_NORM: Double = adsrExpNorm(ADSR_EXP_K)
 
 /**
- * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]`,
- * with `g(0)=0`, `g(1)=1`. Convex (like `Square` but longer-tailed). For decay /
- * release the caller passes `omp = 1−p`, giving the natural "fast drop, long tail".
- *
- * This no-arg form uses the global-default [ADSR_EXP_K] (the filter/FM and ignitor
- * envelopes). The amp VCA passes a per-engine curvature via [adsrExpShape] below.
+ * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]` at curvature [k], with
+ * the precomputed [norm] = [adsrExpNorm]\(k\); `g(0)=0`, `g(1)=1`. Convex (like `Square` but
+ * longer-tailed). For decay / release the caller passes `omp = 1−p`, giving the natural "fast drop,
+ * long tail". Every envelope passes [ADSR_EXP_K] except the strip VCA, whose engine may carry its own.
  *
  * NOTE: one [fastExp] per call (since 2026-09-15; it was a library `exp`, one transcendental
  * per sample in every renderer, the rest of the curve family being multiply-only). The next
  * step down, if the curve ever shows up again, is a recursive multiply-only one-pole per stage.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrExpShape(x: Double): Double = (fastExp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
-
-/** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (fastExp(k * x) - 1.0) * norm
 
 /**
- * THE shape of one ADSR stage at linear progress [x] in 0..1, for every [AdsrCurve]: the chain
- * `adsr`'s implementation (`AdsrIgnitor`), and the one the Ignitor filter and pitch envelopes
- * reuse for their `curves`. An attack passes `p`; a decay or release passes `omp = 1 - p`,
- * which gives the falling shapes. [k] and [norm] are the Exponential curvature and its
- * [adsrExpNorm]; the modulation envelopes pass [ADSR_EXP_K] and [ADSR_EXP_NORM].
+ * THE shape of one ADSR stage at linear progress [x] in 0..1, for every [AdsrCurve]: the one `when`
+ * of the engine, evaluated by `EnvelopeCore` for every envelope. An attack passes `p`; a decay or
+ * release passes `omp = 1 - p`, which gives the falling shapes. [k] and [norm] are the Exponential
+ * curvature and its [adsrExpNorm].
  *
- * `Linear` returns [x] itself, bit for bit, which is what lets an unshaped stage keep its law.
- * The voice strip's evaluators (`EnvelopeRenderer`, `EnvelopeCalc`) still carry their own copies
- * of this `when`; folding them in is filed with the envelope factoring task.
+ * `Linear` returns [x] itself, bit for bit.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm: Double): Double = when (curve) {

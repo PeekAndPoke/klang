@@ -41,12 +41,12 @@ class VoiceCullingSpec : StringSpec({
 
     /** Decays to silence 10 ms in, stays silent: the percussive shape. */
     fun percussive(releaseFrames: Double) = Voice.Envelope(
-        attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = releaseFrames, level = 1.0,
+        attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = releaseFrames,
     )
 
     /** Holds full level through the gate, then releases: audible until the release ends. */
     fun held(releaseFrames: Double) = Voice.Envelope(
-        attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = releaseFrames, level = 1.0,
+        attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = releaseFrames,
     )
 
     fun voice(envelope: Voice.Envelope, cull: Double?, blockFrames: Int = 128, end: Double = endFrame) = createVoice(

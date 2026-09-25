@@ -35,10 +35,9 @@ import kotlin.math.abs
  * `EnvelopeShapeTest`'s endpoint case did not catch it because it sampled `relPos = N`, one frame
  * past the end, where the `coerceAtMost(1.0)` masks the off-by-one. That case now samples `N-1`.
  *
- * The three CURVE evaluators share `releaseProgressDenom` and all three are pinned: the ignitor
- * envelope (`AdsrIgnitor`) and the strip VCA (`EnvelopeRenderer`) here, the filter/FM envelope
- * (`calculateControlRateEnvelope`) in `EnvelopeShapeTest`. A fourth, linear evaluator
- * (`IgnitorFilters.computeFilterEnvelope`) is deliberately exempt — see the note there.
+ * Every envelope evaluates one law (`EnvelopeCore`, pinned against its oracles in `EnvelopeLawSpec`);
+ * the two amplitude hosts are pinned here end to end: the ignitor envelope (`AdsrIgnitor`) and the
+ * strip VCA (`EnvelopeRenderer`).
  *
  * These cases set `declickSeconds = 0` so they measure the CURVE. On the strip VCA the shipped
  * default runs a de-click one-pole downstream of it, which lags and dominates the residual; see

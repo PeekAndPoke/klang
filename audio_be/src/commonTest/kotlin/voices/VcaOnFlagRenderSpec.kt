@@ -96,10 +96,8 @@ class VcaOnFlagRenderSpec : StringSpec({
         // and Voice.Envelope.of always starts unprimed (a steal or a live edit builds a NEW Voice),
         // so it provably never leaves unity — per-sample work for a known constant. This pins that
         // decision: even seeded away from unity, the gate does not ramp toward it.
-        val env = envelope().apply {
-            smoothedLevel = 0.0
-            smoothPrimed = true
-        }
+        // Primes the shared smoother at 0.0, as a previous Vca stage of the same pipeline would.
+        val env = envelope().apply { declick.next(0.0, 0.0) }
         val buf = AudioBuffer(blockFrames)
         for (i in 0 until blockFrames) buf[i] = 1.0
 

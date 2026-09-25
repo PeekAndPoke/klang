@@ -328,16 +328,12 @@ class EnvelopeTest : StringSpec({
     }
 
     // Audit finding F8: the row above is named for `EnvelopeRenderer`'s negative clamp but cannot
-    // observe it. It is a single first-ever render, so `env.releaseStartLevel` is still its default
-    // 0.0 when the release branch primes it, and every release output is `0.0 * shape` = 0.0 for any
-    // shape. Deleting the clamp left the whole spec green.
+    // observe it: it renders only past the release's end, where every curve is exactly 0.0.
     //
     // Walking the branches shows why no amount of release tuning would help: attack has p in [0,1),
     // decay has omp in (0,1], and release clamps p with `coerceAtMost(1.0)` so omp >= 0. Every path
-    // is non-negative — UNLESS `sustain` itself is negative, which the VCA path allows: `Voice.kt:247`
-    // passes `sustainLevel = adsr.sustain` straight through. The ignitor door coerces to [0,1]
-    // (`IgnitorEnvelopes.kt:75`), the strip VCA does not, and per the raw-Motor rule that is a choice,
-    // not an oversight. So a negative sustain is the clamp's actual reach.
+    // is non-negative, UNLESS `sustain` itself is negative, which the envelope law allows: the sustain
+    // is raw on every host (the Motor stays raw). So a negative sustain is the clamp's actual reach.
     "envelope clamps a NEGATIVE sustain to zero instead of inverting the signal" {
         val voice = createSynthVoice(
             startFrame = 0.0,

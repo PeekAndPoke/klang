@@ -570,7 +570,7 @@ class RealtimeVoiceSpec : StringSpec({
         filter.currentCutoff shouldBe 1600.0 // sustain: 800 * 2^(12/12 * 1.0)
 
         // The realtime note-off moves the gate BETWEEN blocks — the renderer must see it.
-        ctx.gateEndFrame = 0.0
+        ctx.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
         ctx.blockStart = blockFrames.toDouble()
         renderer.render(ctx)
         filter.currentCutoff shouldBe 800.0 // released (release 0): envelope 0 -> base cutoff
@@ -588,7 +588,7 @@ class RealtimeVoiceSpec : StringSpec({
         renderer.render(ctx)
         ctx.freqModBuffer.any { it != 1.0 }.shouldBeTrue() // sustain: fm depth modulates pitch
 
-        ctx.gateEndFrame = 0.0
+        ctx.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
         ctx.blockStart = blockFrames.toDouble()
         ctx.freqModBufferWritten = false
         renderer.render(ctx)

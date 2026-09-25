@@ -11,27 +11,28 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ADSR_EXP_NORM
 import io.peekandpoke.klang.audio_be.adsrExpShape
+import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.random.Random
 
 /**
  * The Ignitor pitch envelope on ADSR fields (phase 3 step 3d(i)).
  *
- * Two ORACLES, both written out here from their definitions and never calling the envelope under
- * test (they share only the output primitives `fastExp2` and `safeOut`, and `adsrExpShape` for
- * the Exponential curve):
- *  - [headLaw] is the envelope as it was at HEAD `0f1b774f`, transcribed from its generate loop
- *    with the anchor at its default 0: attack from 0 to 1 by DIVISION on FRACTIONAL frame counts,
- *    decay back to 0, hold. Every shipped call is `(semitones, attack, decay)` in that shape.
- *  - [adsrLaw] is the new envelope from its definition: the chain `adsr`'s composition (decay
- *    `s + (1 - s) * shape(1 - p)`, release `levelAtGate * shape(1 - p)` on the chain's
- *    N-1 time base), with this envelope's fractional frames.
+ * One ORACLE, written out here from its definition and never calling the envelope under test (it
+ * shares only the output primitives `fastExp2` and `safeOut`, and `adsrExpShape` for the Exponential
+ * curve): [adsrLaw], the engine's envelope law (`EnvelopeCore`) with this host's raw mapping, i.e.
+ * the chain `adsr`'s composition (decay `s + (1 - s) * shape(1 - p)`, release
+ * `levelAtGate * shape(1 - p)`), fractional attack and decay frames with progress by a reciprocal,
+ * and the release on `floor(N) - 1` frames. (The step 3d(i) identity against the pre-ADSR envelope
+ * retired with phase 3's envelope law, which changed the progress arithmetic by an ulp.)
  *
  * Every comparison is on raw bits.
  */
@@ -39,25 +40,13 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
     val blockFrames = 128
 
-    fun headLaw(relPos: Double, amount: Double, attackFrames: Double, decayFrames: Double): Double {
-        var envLevel = 0.0
-        if (relPos < attackFrames) {
-            val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
-            envLevel = 0.0 + (1.0 - 0.0) * progress
-        } else if (relPos < (attackFrames + decayFrames)) {
-            val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
-            envLevel = 1.0 - (1.0 - 0.0) * decayProgress
-        }
-        return safeOut(fastExp2(amount * envLevel / 12.0))
-    }
-
     fun shape(curve: AdsrCurve, x: Double): Double = when (curve) {
         AdsrCurve.Linear -> x
         AdsrCurve.Square -> x * x
         AdsrCurve.Cube -> x * x * x
         AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
         AdsrCurve.InvSquare -> x * (2.0 - x)
-        AdsrCurve.Exponential -> adsrExpShape(x)
+        AdsrCurve.Exponential -> adsrExpShape(x, ADSR_EXP_K, ADSR_EXP_NORM)
     }
 
     class Env(
@@ -70,9 +59,9 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         val df = e.d * sr
 
         return if (relPos < af) {
-            shape(e.ac, if (af > 0) relPos / af else 1.0)
+            shape(e.ac, relPos * (1.0 / af))
         } else if (relPos < af + df) {
-            e.s + (1.0 - e.s) * shape(e.dc, 1.0 - (if (df > 0) (relPos - af) / df else 1.0))
+            e.s + (1.0 - e.s) * shape(e.dc, 1.0 - (relPos - af) * (1.0 / df))
         } else {
             e.s
         }
@@ -80,7 +69,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
 
     fun adsrLaw(absPos: Int, gateEnd: Int, e: Env, sr: Int): Double {
         val level = if (absPos >= gateEnd) {
-            val rf = e.r * sr
+            val rf = floor(e.r * sr)
             val denom = if (rf > 1.0) rf - 1.0 else 1.0
             val off = if (rf > 1.0) 0.0 else 1.0
             val p = minOf(((absPos - gateEnd) + off) / denom, 1.0)
@@ -132,22 +121,20 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         Triple(0.3, 0.001, 0.02), Triple(-12.0, 0.005, 0.05),
     )
 
-    "IDENTITY: sustain 0 and linear curves render HEAD's pitch envelope bit for bit when the gate outlasts attack + decay" {
+    "the shipped calls (sustain 0, linear curves) render the law bit for bit, at both rates" {
         for (sr in listOf(44100, 48000)) {
             for ((amount, a, d) in shipped) {
-                val af = a * sr
-                val df = d * sr
                 // The gate exactly at the end of the sweep, and well past it; the release 0 (every
                 // migrated call) and a real one, which must not matter while the level is 0.
-                val sweepEnd = ceil(af + df).toInt()
+                val sweepEnd = ceil((a + d) * sr).toInt()
 
                 for (gateEnd in listOf(sweepEnd, sweepEnd + 1000)) {
                     for (r in listOf(0.0, 0.05)) {
-                        val c = ctx(sr, gateEnd)
+                        val e = Env(amount, a, d, 0.0, r)
 
-                        renderMod(mod(Env(amount, a, d, 0.0, r)), c, blocks = 72) { pos, v ->
+                        renderMod(mod(e), ctx(sr, gateEnd), blocks = 72) { pos, v ->
                             withClue("sr=$sr ($amount, $a, $d) gate=$gateEnd r=$r pos=$pos") {
-                                v.toRawBits() shouldBe headLaw(pos.toDouble(), amount, af, df).toRawBits()
+                                v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits()
                             }
                         }
                     }
@@ -156,12 +143,11 @@ class PitchEnvelopeAdsrSpec : StringSpec({
         }
     }
 
-    "a gate that ends INSIDE the sweep now releases, as the chain's envelope does (not HEAD's law any more)" {
+    "a gate that ends INSIDE the sweep releases, as the chain's envelope does" {
         val sr = 48000
         val e = Env(24.0, 0.001, 0.04, 0.0, 0.0)
         val gateEnd = 1000 // 20.8 ms, inside the 41 ms sweep
         val c = ctx(sr, gateEnd)
-        var differs = 0
 
         renderMod(mod(e), c, blocks = 24) { pos, v ->
             withClue("pos=$pos") { v.toRawBits() shouldBe adsrLaw(pos, gateEnd, e, sr).toRawBits() }
@@ -170,12 +156,7 @@ class PitchEnvelopeAdsrSpec : StringSpec({
                 withClue("release 0 returns to the note at the gate frame, pos=$pos") { v shouldBe safeOut(fastExp2(0.0)) }
             }
 
-            if (v.toRawBits() != headLaw(pos.toDouble(), e.amount, e.a * sr, e.d * sr).toRawBits()) {
-                differs++
-            }
         }
-
-        withClue("HEAD's law carried on sweeping after the gate") { differs shouldNotBe 0 }
 
         val withRelease = Env(24.0, 0.001, 0.04, 0.0, 0.03)
         renderMod(mod(withRelease), ctx(sr, gateEnd), blocks = 24) { pos, v ->

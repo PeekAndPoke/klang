@@ -54,7 +54,7 @@ import kotlin.random.Random
  * and compares the left mix bus in raw bits. The onset is mid-block (frame 37) and the gate ends at a
  * quarter second, so the release and the voice's lifetime are inside the render. Every row runs at
  * 48 kHz AND at 44.1 kHz, because a stage time that is a whole number of frames at one rate is
- * fractional at the other, which is where the frame-count minor shows.
+ * fractional at the other (the envelope law counts attack and decay frames fractionally on both hosts).
  *
  * Every row carries a VERDICT. An IDENTICAL row is pinned bit for bit. A DIVERGENT row is pinned as
  * NOT identical and names, in its title, the decision that explains the difference, so the row turns
@@ -152,17 +152,11 @@ class ClassicStripParitySpec : StringSpec({
     val untouchedStrip: Map<Int, DoubleArray> by lazy { rates.associateWith { strip({ this }, null, it) } }
     val untouchedClassic: Map<Int, DoubleArray> by lazy { rates.associateWith { classic(emptyMap(), it) } }
 
-    /**
-     * A row: its bag, the same settings on the strip's fields, and whether the two are identical at
-     * 48 kHz ([identical]) and at 44.1 kHz ([identical44], the same unless the row says otherwise; then
-     * [cause44] names why the lower rate differs).
-     */
+    /** A row: its bag, the same settings on the strip's fields, and whether the two are identical at both rates. */
     class Row(
         val title: String,
         val identical: Boolean,
         val bag: Map<String, Double>,
-        val identical44: Boolean = identical,
-        val cause44: String? = null,
         val strip: VoiceData.() -> VoiceData,
     )
 
@@ -267,15 +261,13 @@ class ClassicStripParitySpec : StringSpec({
 
         // ── the envelope ──
         Row(
-            "adsr 0.005 / 0.2 / 0.5 / 0.2, whole frame counts at 48 kHz",
+            "adsr 0.005 / 0.2 / 0.5 / 0.2 (whole frame counts at 48 kHz, 220.5 attack frames at 44.1 kHz)",
             true,
             mapOf("adsr.attack" to 0.005, "adsr.decay" to 0.2, "adsr.sustain" to 0.5, "adsr.release" to 0.2),
-            identical44 = false,
-            cause44 = "0.005 s is 220.5 frames, the frame-count minor (Int against Double)",
         ) { copy(adsr = AdsrDef.Std(attack = 0.005, decay = 0.2, sustain = 0.5, release = 0.2)) },
         Row(
-            "adsr at fractional frame counts: the frame-count minor (Int against Double)",
-            false,
+            "adsr at fractional frame counts (one envelope law: fractional attack and decay on both hosts)",
+            true,
             mapOf("adsr.attack" to 0.00501, "adsr.decay" to 0.20001, "adsr.sustain" to 0.5, "adsr.release" to 0.20001),
         ) { copy(adsr = AdsrDef.Std(attack = 0.00501, decay = 0.20001, sustain = 0.5, release = 0.20001)) },
         Row(
@@ -331,10 +323,9 @@ class ClassicStripParitySpec : StringSpec({
         val teardownFrames = (VCA_OFF_TEARDOWN_FADE_SECONDS * rate).toInt()
 
         for (row in rows) {
-            val identical = if (rate == 48000) row.identical else row.identical44
-            val title = if (rate != 48000 && row.cause44 != null) "${row.title}; at $rate Hz: ${row.cause44}" else row.title
+            val identical = row.identical
 
-            "[$rate Hz] ${if (identical) "IDENTICAL" else "DIVERGENT"}: $title" {
+            "[$rate Hz] ${if (identical) "IDENTICAL" else "DIVERGENT"}: ${row.title}" {
                 val analog = row.bag["analog"]
                 val s = strip(row.strip, analog, rate)
                 val c = classic(row.bag, rate)

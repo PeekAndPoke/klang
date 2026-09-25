@@ -5,28 +5,28 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.adsrExpNorm
-import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_be.envDeclickCoeff
-import io.peekandpoke.klang.audio_be.releaseProgressDenom
-import io.peekandpoke.klang.audio_be.releaseProgressOffset
+import io.peekandpoke.klang.audio_be.ignitor.finiteOr
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.ceil
 import kotlin.math.floor
 import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VCA_OFF_TEARDOWN_FADE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 
 /**
  * ADSR amplitude envelope (VCA stage).
  * Multiplies the audio buffer by the envelope value per sample.
  *
- * Per-stage shape curves (Linear/Square/Cube/SCurve/InvSquare/Exponential; default exp) are applied to attack, decay
- * and release independently. All math is multiplies only — no `pow()`, no
- * LUT — so a Square curve adds two multiplies/sample over the linear path.
+ * The level is [EnvelopeCore]'s, the engine's one envelope law (per-stage curves, fractional attack and
+ * decay frames, the release on `floor(N)` frames from the level at the gate frame). This host reads a
+ * non-finite sustain as unset (`VOICE_ADSR_SUSTAIN_LEVEL`), floors the level at 0 (a negative gain would
+ * invert the signal) and always runs the de-click ([EnvelopeDeclick]).
  *
  * All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
  * Voice-relative offsets are computed once at the block boundary.
@@ -49,6 +49,8 @@ class EnvelopeRenderer(
     // Exp-curve normalisation for this engine's curvature (precomputed once per voice).
     private val expNorm: Double = adsrExpNorm(expK)
 
+    private val core = EnvelopeCore()
+
     override fun render(ctx: BlockContext) {
         if (!on) {
             renderGate(ctx)
@@ -56,111 +58,41 @@ class EnvelopeRenderer(
         }
 
         val env = envelope
-        val sustain = env.sustainLevel
-        val attackFrames = env.attackFrames
-        val decayFrames = env.decayFrames
-        val attDecFrames = attackFrames + decayFrames
-        val attackCurve = env.attackCurve
-        val decayCurve = env.decayCurve
-        val releaseCurve = env.releaseCurve
-
-        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
-        // Divides by N-1, so p reaches exactly 1.0 on the LAST frame the voice renders.
-        // floor(): releaseFrames is a raw Double, but the voice renders floor(N) frames of release.
-        val relFrames = floor(env.releaseFrames)
-        val relDenom = releaseProgressDenom(relFrames)
-        val relOffset = releaseProgressOffset(relFrames)
-
-        // Per-engine exp curvature, hoisted into locals for the per-sample loop.
-        val k = expK
-        val norm = expNorm
         // One-pole de-click coefficient for the VCA gain (rounds segment-join corners).
-        val declick = envDeclickCoeff(declickSeconds, ctx.sampleRateD)
+        val declickCoeff = envDeclickCoeff(declickSeconds, ctx.sampleRateD)
 
         // Voice-relative gate end position (Int, avoids Long in the per-sample loop). Read from
-        // the ctx PER RENDER CALL — a realtime note-off may move the gate between blocks
+        // the ctx PER RENDER CALL: a realtime note-off may move the gate between blocks
         // (Voice.releaseGate); never bake this at construction.
         val gateEndPos = (ctx.gateEndFrame - startFrame).toInt()
 
+        core.prepare(
+            attackFrames = env.attackFrames,
+            decayFrames = env.decayFrames,
+            // NaN-guard: a non-finite sustain reads as UNSET, the voice envelope's sustain.
+            sustainLevel = finiteOr(env.sustainLevel, VOICE_ADSR_SUSTAIN_LEVEL),
+            releaseFrames = env.releaseFrames,
+            gateEndPos = gateEndPos,
+            attackCurve = env.attackCurve,
+            decayCurve = env.decayCurve,
+            releaseCurve = env.releaseCurve,
+            k = expK,
+            norm = expNorm,
+        )
+
         // Compute voice-relative position as Int (once per block, not per sample)
         var absPos = (ctx.blockStart + ctx.offset - startFrame).toInt()
-        var currentEnv = env.level
-        var smoothed = env.smoothedLevel
+        val declick = env.declick
 
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
+            // The amplitude floors at 0: a negative gain would invert the signal.
+            val level = core.at(absPos)
+            val gain = if (level < 0.0) 0.0 else level
 
-            if (absPos >= gateEndPos) {
-                // Release phase: level = releaseStartLevel * shape(1 - p)
-                if (!env.releaseStarted) {
-                    env.releaseStartLevel = currentEnv
-                    env.releaseStarted = true
-                }
-                val relPos = absPos - gateEndPos
-                val p = ((relPos + relOffset) / relDenom).coerceAtMost(1.0)
-                val omp = 1.0 - p
-                val shape = when (releaseCurve) {
-                    AdsrCurve.Linear -> omp
-                    AdsrCurve.Square -> omp * omp
-                    AdsrCurve.Cube -> omp * omp * omp
-                    AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-                    AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                    AdsrCurve.Exponential -> adsrExpShape(omp, k, norm)
-                }
-                currentEnv = env.releaseStartLevel * shape
-            } else {
-                env.releaseStarted = false
-                currentEnv = when {
-                    // Attack: level = shape(p)
-                    absPos < attackFrames -> {
-                        val p = absPos * attRate
-                        when (attackCurve) {
-                            AdsrCurve.Linear -> p
-                            AdsrCurve.Square -> p * p
-                            AdsrCurve.Cube -> p * p * p
-                            AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
-                            AdsrCurve.InvSquare -> p * (2.0 - p)
-                            AdsrCurve.Exponential -> adsrExpShape(p, k, norm)
-                        }
-                    }
-                    // Decay: level = sustain + (1 - sustain) * shape(1 - p)
-                    absPos < attDecFrames -> {
-                        val decPos = absPos - attackFrames
-                        val p = decPos * decRate
-                        val omp = 1.0 - p
-                        val shape = when (decayCurve) {
-                            AdsrCurve.Linear -> omp
-                            AdsrCurve.Square -> omp * omp
-                            AdsrCurve.Cube -> omp * omp * omp
-                            AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-                            AdsrCurve.InvSquare -> omp * (2.0 - omp)
-                            AdsrCurve.Exponential -> adsrExpShape(omp, k, norm)
-                        }
-                        sustain + (1.0 - sustain) * shape
-                    }
-
-                    else -> sustain
-                }
-            }
-
-            if (currentEnv < 0.0) currentEnv = 0.0
-
-            // Seed the smoother to the first rendered gain so always-on voices and
-            // the note onset are not faded in; then round subsequent corners.
-            if (!env.smoothPrimed) {
-                smoothed = currentEnv
-                env.smoothPrimed = true
-            }
-            smoothed += declick * (currentEnv - smoothed)
-
-            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * smoothed)
+            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * declick.next(gain, declickCoeff))
             absPos++
         }
-
-        // Update envelope state
-        env.level = currentEnv
-        env.smoothedLevel = smoothed
     }
 
     /**
@@ -238,7 +170,7 @@ class EnvelopeRenderer(
             ctx.audioBuffer[idx] = ctx.audioBuffer[idx] * gain
         }
 
-        // Deliberately NOT writing env.level / smoothedLevel / smoothPrimed. The Envelope instance
+        // Deliberately NOT touching env.declick, the smoother state. The Envelope instance
         // is shared by every Vca stage in the pipeline (FilterPipelineBuilder hands the same one to
         // each), so priming it here would make a LATER ADSR Vca skip its own seeding and render the
         // note ONSET fading down from unity. A pipeline like

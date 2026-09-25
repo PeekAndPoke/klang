@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.adsrExpShape
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -23,11 +22,8 @@ import kotlin.random.Random
  * The cutoff-envelope curves of the four Ignitor filter nodes (phase 3 step 3d(i); since step 3c
  * they are index knobs, written by `curves` inside the filter builder's `adsr` lambda).
  *
- * The LAW is pinned against two oracles written out here, never against the code under test:
- *  - [headEnv] is `computeFilterEnvelope` as it was at HEAD `0f1b774f`, which had no curve term:
- *    the unshaped envelope must still be it, bit for bit, or every filter sweep in the songs moves
- *    while decision D3 is open.
- *  - [curvedEnv] is the chain `adsr`'s composition from its definition, for a SHAPED stage.
+ * The LAW of the envelope is not pinned here: it is the engine's one envelope law, and
+ * `EnvelopeLawSpec` pins it against its oracles.
  *
  * The WIRING is pinned through the runtime, on all four filter kinds: a curve on the node reaches
  * the SVF (oracle: the runtime door with the resolved `FilterEnvDef`), an unset curve is
@@ -45,136 +41,6 @@ import kotlin.random.Random
 class FilterEnvelopeCurvesSpec : StringSpec({
 
     val sr = 48000
-
-    fun headLevelAt(absPos: Int, af: Int, df: Int, s: Double): Double = when {
-        absPos < af -> {
-            val attRate = if (af > 0) 1.0 / af else 1.0
-            absPos * attRate
-        }
-
-        absPos < af + df -> {
-            val decPos = absPos - af
-            val decRate = if (df > 0) (1.0 - s) / df else 0.0
-            1.0 - (decPos * decRate)
-        }
-
-        else -> s
-    }
-
-    fun headEnv(absPos: Int, gateEnd: Int, a: Double, d: Double, s: Double, r: Double): Double {
-        val af = (a.coerceAtLeast(0.0) * sr).toInt()
-        val df = (d.coerceAtLeast(0.0) * sr).toInt()
-        val rf = (r.coerceAtLeast(0.0) * sr).toInt()
-        val cs = s.coerceIn(0.0, 1.0)
-        val v = if (absPos >= gateEnd) {
-            val level = headLevelAt(gateEnd, af, df, cs)
-            val relRate = if (rf > 0) level / rf else 1.0
-            level - ((absPos - gateEnd) * relRate)
-        } else {
-            headLevelAt(absPos, af, df, cs)
-        }
-        return v.coerceIn(0.0, 1.0)
-    }
-
-    fun shape(curve: AdsrCurve, x: Double): Double = when (curve) {
-        AdsrCurve.Linear -> x
-        AdsrCurve.Square -> x * x
-        AdsrCurve.Cube -> x * x * x
-        AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
-        AdsrCurve.InvSquare -> x * (2.0 - x)
-        AdsrCurve.Exponential -> adsrExpShape(x)
-    }
-
-    /** The chain's composition for a shaped stage; an unshaped (Linear) stage is HEAD's form. */
-    fun curvedLevelAt(absPos: Int, af: Int, df: Int, s: Double, ac: AdsrCurve, dc: AdsrCurve): Double = when {
-        absPos < af -> shape(ac, absPos * (if (af > 0) 1.0 / af else 1.0))
-        absPos < af + df -> if (dc == AdsrCurve.Linear) {
-            headLevelAt(absPos, af, df, s)
-        } else {
-            s + (1.0 - s) * shape(dc, 1.0 - (absPos - af) * (if (df > 0) 1.0 / df else 1.0))
-        }
-        else -> s
-    }
-
-    fun curvedEnv(
-        absPos: Int, gateEnd: Int, a: Double, d: Double, s: Double, r: Double,
-        ac: AdsrCurve, dc: AdsrCurve, rc: AdsrCurve,
-    ): Double {
-        val af = (a * sr).toInt()
-        val df = (d * sr).toInt()
-        val rf = (r * sr).toInt()
-        val v = if (absPos >= gateEnd) {
-            val level = curvedLevelAt(gateEnd, af, df, s, ac, dc)
-            val rel = absPos - gateEnd
-
-            if (rc == AdsrCurve.Linear) {
-                level - rel * (if (rf > 0) level / rf else 1.0)
-            } else {
-                val denom = if (rf > 1) rf - 1.0 else 1.0
-                val off = if (rf > 1) 0.0 else 1.0
-                level * shape(rc, 1.0 - minOf((rel + off) / denom, 1.0))
-            }
-        } else {
-            curvedLevelAt(absPos, af, df, s, ac, dc)
-        }
-        return v.coerceIn(0.0, 1.0)
-    }
-
-    fun envAt(absPos: Int, gateEnd: Int, a: Double, d: Double, s: Double, r: Double, ac: AdsrCurve, dc: AdsrCurve, rc: AdsrCurve): Double {
-        val c = IgniteContext(
-            sampleRate = sr, voiceDurationFrames = gateEnd + sr, gateEndFrame = gateEnd, releaseFrames = 0,
-            scratchBuffers = ScratchBuffers(128),
-        )
-        c.voiceElapsedFrames = absPos
-        return computeFilterEnvelope(c, a, d, s, r, ac, dc, rc)
-    }
-
-    // Stage times include 0 and a single frame (the degenerate ramps) and gate ends inside the
-    // attack, inside the decay and in the sustain.
-    val shapes = listOf(
-        doubleArrayOf(0.005, 0.02, 0.2, 0.03),
-        doubleArrayOf(0.0, 0.01, 0.5, 0.0),
-        doubleArrayOf(1.0 / 48000, 1.0 / 48000, 0.0, 1.0 / 48000),
-        doubleArrayOf(0.002, 0.0, 0.7, 0.01),
-        doubleArrayOf(0.01, 0.1, 1.0, 0.1),
-    )
-    val gates = listOf(50, 700, 3000)
-
-    "UNSHAPED is HEAD's filter envelope, bit for bit, at every position" {
-        for (sh in shapes) {
-            for (gate in gates) {
-                for (pos in 0 until gate + 3000 step 7) {
-                    val (a, d, s, r) = sh.toList()
-                    withClue("a=$a d=$d s=$s r=$r gate=$gate pos=$pos") {
-                        envAt(pos, gate, a, d, s, r, AdsrCurve.Linear, AdsrCurve.Linear, AdsrCurve.Linear).toRawBits() shouldBe
-                            headEnv(pos, gate, a, d, s, r).toRawBits()
-                    }
-                }
-            }
-        }
-    }
-
-    "a SHAPED stage takes the chain's composition, every curve on every stage" {
-        for (curve in AdsrCurve.entries) {
-            for (stage in 0..2) {
-                val ac = if (stage == 0) curve else AdsrCurve.Linear
-                val dc = if (stage == 1) curve else AdsrCurve.Linear
-                val rc = if (stage == 2) curve else AdsrCurve.Linear
-
-                for (sh in shapes) {
-                    for (gate in gates) {
-                        for (pos in 0 until gate + 3000 step 11) {
-                            val (a, d, s, r) = sh.toList()
-                            withClue("$curve on stage $stage, a=$a d=$d s=$s r=$r gate=$gate pos=$pos") {
-                                envAt(pos, gate, a, d, s, r, ac, dc, rc).toRawBits() shouldBe
-                                    curvedEnv(pos, gate, a, d, s, r, ac, dc, rc).toRawBits()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // ── Through the runtime, all four filter kinds ───────────────────────────────────────────────
 
@@ -253,7 +119,7 @@ class FilterEnvelopeCurvesSpec : StringSpec({
         }
     }
 
-    "an UNSET curve is MOD_ENV_CURVE, linear: bit for bit the explicit Linear and HEAD's sweep" {
+    "an UNSET curve is MOD_ENV_CURVE, linear: bit for bit the explicit Linear and the envelope without curves" {
         for (kind in kinds) {
             val unset = render(node(kind, 24.0, null, null, null))
 

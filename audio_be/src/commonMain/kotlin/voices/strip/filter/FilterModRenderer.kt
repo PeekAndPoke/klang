@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
@@ -26,10 +27,12 @@ class FilterModRenderer(
         // Absolute backend frame — Double, see RenderClock.cursorFrame.
     private val startFrame: Double,
 ) : BlockRenderer {
+    private val core = EnvelopeCore()
+
     override fun render(ctx: BlockContext) {
         for (mod in modulators) {
             // Gate read from the ctx per call — a realtime note-off may move it (Voice.releaseGate)
-            val envValue = calculateControlRateEnvelope(mod.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame)
+            val envValue = calculateControlRateEnvelope(mod.envelope, ctx.blockStart, startFrame, ctx.gateEndFrame, core)
             val drift = mod.drift
             val driftMul = if (drift != null && drift.active) drift.nextMultiplier() else 1.0
             // C3 (filter unification): depth is SEMITONES (cutoff = base * 2^(depth/12 * env)).

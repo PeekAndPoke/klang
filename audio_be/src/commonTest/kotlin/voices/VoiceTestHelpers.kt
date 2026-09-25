@@ -74,7 +74,7 @@ object VoiceTestHelpers {
         // Dynamics
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0), // Always on
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0), // Always on
 
         // Filters & Modulation
         filter: AudioFilter = NoOpFilter,
@@ -183,7 +183,7 @@ object VoiceTestHelpers {
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
@@ -225,7 +225,7 @@ object VoiceTestHelpers {
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),

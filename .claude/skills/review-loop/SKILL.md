@@ -95,6 +95,13 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 - **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
   exercising the changed path. A render that predates the last edit, or a song that never calls
   the changed door, backs nothing.
+- **A rung renders its predicted rows, in parallel; the step ends on one full corpus** (maintainer,
+  2026-09-25: the serial full-corpus render per rung was the bottleneck, ~9.5 minutes each). Each rung
+  renders the rows it predicts to move plus one or two control rows it predicts IDENTICAL; the full
+  corpus renders once before the step is reported, to catch the moves nobody predicted. Renders run as
+  plain `java` on a classpath captured by one locked Gradle run and snapshotted, several at a time,
+  never one Gradle run per row. A new render tool proves itself first: the same sha as the serial
+  render on the same tree.
 - **The effort ladder: every round that is not clean escalates one level, up to max**
   (maintainer, 2026-09-18). The Agent tool has no per-call effort dial, so the levels are agent
   definitions in `.claude/agents/` with model and effort pinned:
@@ -156,7 +163,9 @@ A green test proves nothing until it has been RED for the right reason.
    fallback when the code can't be safely touched.
 3. **RED** — run the test. It MUST fail. If it stays green, the test is toothless → fix the test and repeat from 1.
 4. **RESTORE** — revert the mutation exactly; run again → green. **Verify with `git diff` that only the intended change
-   remains. NEVER leave a mutation behind.**
+   remains. NEVER leave a mutation behind.** An agent can be stopped mid-run with a mutant applied (2026-09-25,
+   ledger): a worker that takes over from a stopped one first `cmp`s every production file the predecessor's
+   mutation runner touched against that runner's backups, before it reads the code as the predecessor's work.
 5. **REPORT** one line per test: `mutation-checked: <what was mutated> → red ✓`
 
 ### Scope — two tiers (maintainer, 2026-08-28)

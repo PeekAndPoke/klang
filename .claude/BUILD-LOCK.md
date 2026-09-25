@@ -26,6 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
+| KatalystDsl session, phase 3 envelope law (D3) | every envelope evaluator in `audio_be` (ignitor and strip), `AdsrCurveMath`, `audio_bridge` envelope constants and nodes, sprudel's filter and `penv` doors, their tests | one envelope law across hosts; exp defaults; sprudel curve doors; a deliberate SOUND CHANGE (kicks, filter sweeps). Commit (a1) is committed; (a2), (b) and (c) follow |
 
 ## The two layers
 

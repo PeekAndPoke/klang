@@ -1,5 +1,47 @@
 # Klang Audio — Memory
 
+## One envelope law: `EnvelopeCore` for every envelope (phase 3, D3 commit a1, 2026-09-25)
+
+- **`EnvelopeCore` (`audio_be/`) is the one copy of the ADSR law**, with `prepare` once per block and an
+  inline `at(pos)` per sample (block-framing ledger E1's agreed shape). Thin hosts: the chain `adsr`
+  (`AdsrIgnitor`), the strip VCA (`EnvelopeRenderer`), the node filter envelope (`SvfIgnitor`, via
+  `prepareModEnvelope`), the node FM index envelope, the node pitch envelope, and the strip's
+  `calculateControlRateEnvelope` (strip filter and strip FM). The strip pitch envelope (anchor law) joins
+  with sprudel's `penv` vocabulary in commit (c). `EnvelopeDeclick` is the one de-click smoother.
+- **The law:** attack and decay frames FRACTIONAL; release on `floor(N)` frames over `floor(N) - 1`, so the
+  last rendered frame is an exact 0.0; the release offset ("0 means 0") everywhere; the release starts
+  from the attack-decay-sustain law AT the gate frame (stateless: `Voice.Envelope` lost `level`,
+  `releaseStartLevel`, `releaseStarted`); a non-positive or NaN time is a zero-length stage; the sustain is
+  RAW (the chain's and the filter node's [0, 1] clamps went). Per destination: amplitude floors at 0,
+  filter and FM depth clamp to [0, 1], pitch raw. Attack and decay progress multiply by a hoisted
+  reciprocal, the release divides. The strip VCA reads a non-finite sustain as `VOICE_ADSR_SUSTAIN_LEVEL`.
+- **A gate at or before the onset releases from 0** (round 1's MAJOR, found by both reviewers). The
+  stateless law evaluated at a negative gate (sprudel `legato(-0.1)` reaches the engine raw) extrapolated
+  the attack curve: a Square attack squared a negative progress, a burst at 0 dBFS, and with a zero attack
+  about +120 dB. HEAD's stateful latch held 0, a silent voice. The lesson: a stateless rewrite of a
+  stateful evaluator must state the DOMAIN of its law, not only its formula. Also: a stage too short to
+  have a finite reciprocal (below about 5.6e-309 frames) is a zero-length stage (`0 * Inf` is NaN).
+- **Proof by a rung ladder.** Rung 0 was the core with per-host legacy switches (17 of 17 corpus rows
+  identical, the old audio_be suite green through shims); then one rule per rung, each with a written
+  prediction; every prediction held (after one correction made before its result, below). The switches
+  and shims were deleted and a final full render matched the last rung.
+- **A 16-bit render cannot see a sub-LSB change.** Phase A predicted Sandsturm and Sakura would move on
+  fractional frame counts (0.035 s and 0.07 s are 1e-13 frames off whole at 48 kHz); the level difference
+  on that one frame is ~1e-16, far below one LSB (3e-5), and they did not move. Likewise the pitch
+  envelope's divide-to-reciprocal change moved no row. Predict with the WAV's resolution in mind; a
+  bit-level claim needs a spec, not the corpus.
+- **The per-sample read is inline, and the evidence for it is soft.** With `at()` a plain method, Node.js
+  ran the `guitar-rig-string-only` benchmark slower than HEAD (23.5 us/block against HEAD's 22.0, three runs
+  each); inlined (fields `internal`), no regression was measured (18.4 us/block). The runs were NOT
+  interleaved (every HEAD run came first, every inlined run last) and the savings vary by case in a way
+  the envelope cannot explain, so read it as "no regression after inlining", not as a speed-up. An
+  interleaved A/B (HEAD, tree, HEAD, tree) is the method next time. JVM unchanged either way.
+- **The filter node's envelope endpoints were pinned by nothing.** Mutating the block-end read (one frame
+  early) or the [0, 1] clamp left the whole audio_be suite green; `EnvelopeLawSpec`'s filter-node row (an
+  SVF oracle written in the test, sharing only `computeSvfCoeffs`) now catches both.
+- **Running the renderer's `java` from a source directory writes a sample `cache/` there.** Run
+  `render-par.sh` from the repo root.
+
 ## One crush law, one distort loop: D1 and D2 landed (phase 3 step 4, 2026-09-25)
 
 - **`CrushCore` and `DistortionCore`** (`audio_be/`, next to `TremoloCore`) are the one copy of each law;

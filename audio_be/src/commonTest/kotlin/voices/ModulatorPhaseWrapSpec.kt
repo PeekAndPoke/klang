@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.vibratoModIgnitor
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.VibratoRenderer
 import kotlin.math.abs
@@ -122,7 +123,7 @@ class ModulatorPhaseWrapSpec : StringSpec({
         var worst = 0.0
 
         repeat(blocks) { b ->
-            val level = calculateControlRateEnvelope(fm.envelope, (b * blockFrames).toDouble(), 0.0, 500_000.0)
+            val level = calculateControlRateEnvelope(fm.envelope, (b * blockFrames).toDouble(), 0.0, 500_000.0, EnvelopeCore())
 
             for (i in 0 until blockFrames) {
                 val expected = 1.0 + sin(phase) * fm.depth * level / freqHz

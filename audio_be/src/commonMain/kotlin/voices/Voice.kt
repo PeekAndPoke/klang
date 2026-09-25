@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.EnvelopeDeclick
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
@@ -171,16 +172,18 @@ class Voice(
     /**
      * Releases the gate NOW (realtime note-off): every gate consumer sees the moved gate through
      * [BlockContext] / [io.peekandpoke.klang.audio_be.ignitor.IgniteContext] and the envelopes
-     * enter their release from the current level (the release-from-history latch in the amp VCA
-     * and the ignitor door). The release SPAN is untouched — only WHEN it begins moves.
+     * enter their release from the level the envelope law gives AT the new gate frame
+     * (`EnvelopeCore`, stateless), which is the level the voice would have rendered there. The release
+     * SPAN is untouched: only WHEN it begins moves.
      *
      * Deliberately untouched: `IgniteContext.voiceDurationFrames` (the `accelerate` glide base) —
      * see its KDoc; on held realtime voices `accelerate` is inert by decision.
      *
      * PRECONDITION: `atFrame >= startFrame` — the caller owns it (the scheduler floors at
      * `startFrame + blockFrames`, see `VoiceScheduler.releaseRealtimeVoice`). An earlier frame
-     * would write a NEGATIVE ignitor-door gate and the ignitor envelope would release from
-     * level 0 on its first sample: a silent voice, no exception, no error.
+     * would write a gate at or before the onset, and the envelope law releases such a gate from
+     * level 0 (`EnvelopeCore.prepare`): every envelope is 0 on every frame (an amplitude envelope
+     * silences the voice), no exception, no error.
      */
     fun releaseGate(atFrame: Double) {
         // Natural gate is earlier — no-op (also makes a double-stop idempotent).
@@ -339,16 +342,13 @@ class Voice(
         val attackCurve: AdsrCurve = AdsrCurve.Default,
         val decayCurve: AdsrCurve = AdsrCurve.Default,
         val releaseCurve: AdsrCurve = AdsrCurve.Default,
-        var level: Double = 0.0,
-        var releaseStartLevel: Double = 0.0,
-        var releaseStarted: Boolean = false,
-        // One-pole de-click smoother state on the final VCA gain (see envDeclickCoeff).
-        // Rounds the slope-discontinuity ("corner") at segment joins that radiates a
-        // click — most audible on low notes. `smoothPrimed` seeds it to the first
-        // rendered gain so always-on voices and the note onset are not faded in.
-        var smoothedLevel: Double = 0.0,
-        var smoothPrimed: Boolean = false,
     ) {
+        /**
+         * The VCA gain's de-click smoother state (see [EnvelopeDeclick]). It lives here, on the envelope,
+         * because every Vca stage of a pipeline shares this instance.
+         */
+        internal val declick: EnvelopeDeclick = EnvelopeDeclick()
+
         companion object {
             fun of(adsr: AdsrDef.Resolved, sampleRate: Int) = Envelope(
                 attackFrames = adsr.attack * sampleRate,

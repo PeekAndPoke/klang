@@ -21,10 +21,10 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * Larger = steeper initial change (faster decay drop / sharper attack finish).
  * Tunable by ear; `3.0` ≈ a moderate analog decay, steeper-tailed than `Square`.
  *
- * Consumers: `StageDsl.Vca.expK` (amp VCA, per-engine, until the Pipeline DSL retires),
- * `AdsrCurveMath`'s no-arg `adsrExpShape` for the filter/FM envelopes, and the Ignitor `adsr`
- * (`AdsrIgnitor`), where it is the ONE bend of every exponential stage: its per-envelope `expK`
- * knob was removed in phase 3 step 3c (maintainer, 2026-09-25; a per-curve bend is a later design).
+ * Consumers: `StageDsl.Vca.expK` (amp VCA, per-engine, until the Pipeline DSL retires) and the
+ * envelope law `EnvelopeCore`, where it is the ONE bend of every other envelope's exponential stages:
+ * the Ignitor `adsr`'s per-envelope `expK` knob was removed in phase 3 step 3c (maintainer,
+ * 2026-09-25; a per-curve bend is a later design).
  */
 const val ADSR_EXP_K: Double = 3.0
 
@@ -48,9 +48,9 @@ val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Linear
  * Sustain level of the IGNITOR `adsr(...)` surface, and what `AdsrIgnitor` substitutes for a
  * NON-FINITE one.
  *
- * Scope, because the two envelope paths differ: the substitution is the IGNITOR envelope's alone.
- * The voice STRIP's path (`AdsrDef.resolve`, `EnvelopeCalc`) has no non-finite guard at all, and
- * this constant is not its default either.
+ * Scope: the substitution is the IGNITOR envelope's. The voice STRIP's VCA substitutes its own
+ * default for a non-finite sustain, [VOICE_ADSR_SUSTAIN_LEVEL]; the strip's filter and FM envelopes
+ * have no non-finite guard.
  *
  * Deliberately NOT the same number as `AdsrDef.defaultSynth.sustain` (1.0), which is the voice
  * STRIP's VCA default: the strip's envelope is an amp applied to a finished voice and holds it at
@@ -78,7 +78,10 @@ const val VOICE_ADSR_ATTACK_SEC: Double = 0.01
 /** Voice envelope decay in seconds. */
 const val VOICE_ADSR_DECAY_SEC: Double = 0.1
 
-/** Voice envelope sustain level, 0 to 1: the voice holds at full level when nothing is written. */
+/**
+ * Voice envelope sustain level, 0 to 1: the voice holds at full level when nothing is written. Also what
+ * the strip VCA reads a non-finite sustain as.
+ */
 const val VOICE_ADSR_SUSTAIN_LEVEL: Double = 1.0
 
 /**

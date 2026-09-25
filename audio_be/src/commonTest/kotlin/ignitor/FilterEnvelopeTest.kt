@@ -8,16 +8,34 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
- * Tests for [computeFilterEnvelope] — the control-rate ADSR used by Ignitor-level
- * filter and FM modulation.
+ * The control-rate ADSR the Ignitor filter and FM envelopes read: the envelope law ([EnvelopeCore]) as
+ * those two hosts prepare it ([prepareModEnvelope]) and clamp it to [0, 1].
  *
  * Covers edge cases: early gate-off during attack/decay, zero segment times,
  * sustain 0/1, and boundary conditions.
  */
 class FilterEnvelopeTest : StringSpec({
+
+    fun computeFilterEnvelope(
+        ctx: IgniteContext,
+        attackSec: Double,
+        decaySec: Double,
+        sustainLevel: Double,
+        releaseSec: Double,
+        attackCurve: AdsrCurve,
+        decayCurve: AdsrCurve,
+        releaseCurve: AdsrCurve,
+    ): Double {
+        val core = EnvelopeCore()
+
+        core.prepareModEnvelope(ctx, attackSec, decaySec, sustainLevel, releaseSec, attackCurve, decayCurve, releaseCurve)
+
+        return core.at(ctx.voiceElapsedFrames).coerceIn(0.0, 1.0)
+    }
 
     fun ctx(
         sampleRate: Int = 48000,

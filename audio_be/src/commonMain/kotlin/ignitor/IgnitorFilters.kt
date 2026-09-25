@@ -5,9 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.ADSR_EXP_NORM
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.adsrCurveShape
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
@@ -15,10 +14,7 @@ import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.releaseProgressDenom
-import io.peekandpoke.klang.audio_be.releaseProgressOffset
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.PI
 import kotlin.math.pow
@@ -41,7 +37,7 @@ enum class SvfMode {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Optional ADSR-style envelope that modulates filter cutoff at control rate (once per block).
+ * Optional ADSR-style envelope that modulates filter cutoff at control rate (at each block's two ends).
  *
  * When applied, the effective cutoff becomes: `baseCutoff * 2^(depth/12 * envValue)` —
  * depth is SEMITONES (C3 of the filter unification; +12 doubles the cutoff at full
@@ -86,28 +82,23 @@ data class FilterEnvDef(
  * The TPT/Zavalishin canonical Cytomic form computes lowpass, highpass, bandpass, and
  * notch simultaneously; [mode] selects which output is used. Each instance creates
  * per-voice filter state in its closure. Optional [env] modulates cutoff over the
- * voice's lifetime — when active, coefficients are computed at block start AND end
- * and Bresenham-style linearly interpolated per sample to avoid the ~187 Hz block-rate
- * stair-stepping that per-block-only recompute would produce.
+ * voice's lifetime: when active, the envelope ([EnvelopeCore], the engine's one envelope law) is
+ * read at block start AND at block end, and the coefficients are linearly interpolated per sample
+ * between the two, which avoids the 375 Hz block-rate stair-stepping (128 frames at 48 kHz) that a
+ * per-block-only recompute would produce. The level is clamped to [0, 1] before it scales the depth.
  *
- * **How this envelope differs from the voice strip's, on TWO counts, both open under decision D3
- * of `docs/tasks/builtin-instruments.md`.**
+ * **Where this envelope still differs from the voice strip's** (decision D3 of
+ * `docs/tasks/builtin-instruments.md`; since phase 3's envelope law both evaluate the same law):
  *
- *  - **The law.** An unshaped stage takes `MOD_ENV_CURVE`, which is LINEAR, so by default every
- *    segment here is a straight LINE ([computeFilterEnvelope]); `curves` can shape each stage.
- *    The strip's filter envelope runs through `EnvelopeCalc` with
- *    `AdsrCurve.Default`, which is Exponential with K = 3, because `VoiceFactory` builds its
- *    `Voice.Envelope` without the three curve arguments. Measured at `env = 24`, the two shapes
- *    are up to 806 cents apart at the same instant (RMS 256 cents on a pluck, 512 on a pad).
- *    This is the BIGGER of the two differences by 4x to 100x.
- *  - **The sampling.** The strip computes its envelope once per block and lets
- *    `BaseSvf.setCutoff` ramp the coefficients over `FILTER_SMOOTH_SAMPLES` (32) samples and then
- *    HOLD; this node computes the envelope at block start and at block end and interpolates the
- *    coefficients across the WHOLE block.
+ *  - **The default curve.** An unshaped stage takes `MOD_ENV_CURVE`, which is still LINEAR here;
+ *    `curves` can shape each stage. The strip's filter envelope takes `AdsrCurve.Default`
+ *    (Exponential) because `VoiceFactory` builds its `Voice.Envelope` without curve arguments. D3
+ *    decided exponential for both; it lands with its own ear checkpoint.
+ *  - **The sampling.** The strip reads its envelope once per block and lets `BaseSvf.setCutoff`
+ *    ramp the coefficients over `FILTER_SMOOTH_SAMPLES` (32) samples and then HOLD; this node
+ *    interpolates across the WHOLE block. D3 decided this node's sampling for both.
  *
- * The two agree on the ENDPOINTS and on the stage times. Which law and which sampling phase 3
- * keeps is D3's to answer and nothing here anticipates it: a node with `env.depth == 0.0` never
- * enters this path at all, which is why step 3a can be bit-identical while D3 is open.
+ * A node with `env.depth == 0.0` never enters this path at all.
  *
  * Optional [humanize] is the per-voice analog character the voice strip gets from
  * `VoiceFactory`: a fixed cutoff tolerance and a slow drift lane, both drawn once per voice.
@@ -158,8 +149,8 @@ private class SvfIgnitor(
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
 
-    // Read once: see `computeFilterEnvelope`'s `expNorm`.
-    private val expNorm: Double = ADSR_EXP_NORM
+    // The cutoff envelope's evaluator, one per node (prepared per block).
+    private val envCore = EnvelopeCore()
     private val hasDrift: Boolean = humanize?.hasDrift == true
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
@@ -197,16 +188,12 @@ private class SvfIgnitor(
             var gStep = 0.0
 
             if (hasEnv) {
-                val envStart = computeFilterEnvelope(
+                envCore.prepareModEnvelope(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
                     env.attackCurve, env.decayCurve, env.releaseCurve,
-                    sampleOffsetWithinBlock = 0, expNorm = expNorm,
                 )
-                val envEnd = computeFilterEnvelope(
-                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    env.attackCurve, env.decayCurve, env.releaseCurve,
-                    sampleOffsetWithinBlock = length, expNorm = expNorm,
-                )
+                val envStart = envCore.at(ctx.voiceElapsedFrames).coerceIn(0.0, 1.0)
+                val envEnd = envCore.at(ctx.voiceElapsedFrames + length).coerceIn(0.0, 1.0)
                 // C3 (filter unification): envelope depth is SEMITONES — the sweep is
                 // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
                 // down symmetrically, and there is no dead zone anywhere.
@@ -689,75 +676,16 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Internal: filter/FM envelope computation — the ONE shared envelope law
+// Internal: the filter and FM envelopes' block setup, one place for both node hosts
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Computes the ADSR envelope level at a given position (attack/decay/sustain — no release).
- *
- * Used to determine the actual level at any point during the gate-on phase,
- * including at gate-end for correct release-start calculation.
- *
- * The attack takes its curve through [adsrCurveShape], which returns the progress itself for
- * `Linear`, so the unshaped attack is the historical ramp bit for bit. The DECAY keeps its
- * historical linear form for `Linear` (`1 - decPos * (1 - sustain) / decayFrames`), because the
- * chain's composition `sustain + (1 - sustain) * (1 - p)` rounds differently in the last bit and
- * every song's sweep is the historical one; a curved decay takes the chain's composition.
+ * Prepares this [EnvelopeCore] for one block of a MODULATION envelope on the Ignitor side: the filter
+ * cutoff envelope (`SvfIgnitor`, which reads [EnvelopeCore.at] at the block's two ends) and the FM index
+ * envelope (`FmModIgnitor`, which reads it per sample). The level is the core's; each host clamps it to
+ * [0, 1], the depth range of both destinations.
  */
-private fun envelopeLevelAtPosition(
-    absPos: Int,
-    attackFrames: Int,
-    decayFrames: Int,
-    sustainLevel: Double,
-    attackCurve: AdsrCurve,
-    decayCurve: AdsrCurve,
-    expNorm: Double,
-): Double = when {
-    absPos < attackFrames -> {
-        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        adsrCurveShape(attackCurve, absPos * attRate, ADSR_EXP_K, expNorm)
-    }
-
-    absPos < attackFrames + decayFrames -> {
-        val decPos = absPos - attackFrames
-
-        if (decayCurve == AdsrCurve.Linear) {
-            val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
-            1.0 - (decPos * decRate)
-        } else {
-            val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
-            val omp = 1.0 - decPos * decRate
-            sustainLevel + (1.0 - sustainLevel) * adsrCurveShape(decayCurve, omp, ADSR_EXP_K, expNorm)
-        }
-    }
-
-    else -> sustainLevel
-}
-
-/**
- * Computes a simple ADSR envelope value at the current block position.
- * Sample-addressable via [sampleOffsetWithinBlock]. Two calling patterns exist and BOTH are
- * load-bearing: `SvfIgnitor` evaluates it at a block's endpoints (its control-rate coefficient
- * chord), and `FmModIgnitor` calls it PER SAMPLE (block-framing ledger E1). Do NOT memoize the
- * result per block or hoist a call out of a per-sample loop — that reintroduces the zero-FM-head
- * defect, and `BlockFramingInvarianceSpec`'s "fm with envelope" case goes red. If per-sample cost
- * ever shows in a profile, the agreed shape is a per-block precompute (frames, rates,
- * levelAtGateEnd) plus a thin `at(absPos)` body — ONE law with two entry points, never a second
- * copy of this math.
- *
- * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
- * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
- *
- * The three curves shape the stages (`curves` in the filter doors' `adsr` lambda). `Linear` on
- * every stage is this envelope's historical law, bit for bit; a curved stage takes the chain
- * `adsr`'s shape and composition ([adsrCurveShape]), the release included, whose time base is then
- * the chain's (`releaseProgressDenom`/`releaseProgressOffset`, so a curved release lands on 0).
- *
- * [expNorm] is [ADSR_EXP_NORM], the Exponential curve's normaliser. A caller that evaluates this
- * per sample passes it from a local or a field: on Kotlin/JS a top-level `val` is read through a
- * lazy-init accessor, and an inline function's arguments are evaluated at every call.
- */
-internal fun computeFilterEnvelope(
+internal fun EnvelopeCore.prepareModEnvelope(
     ctx: IgniteContext,
     attackSec: Double,
     decaySec: Double,
@@ -766,39 +694,15 @@ internal fun computeFilterEnvelope(
     attackCurve: AdsrCurve,
     decayCurve: AdsrCurve,
     releaseCurve: AdsrCurve,
-    sampleOffsetWithinBlock: Int = 0,
-    expNorm: Double = ADSR_EXP_NORM,
-): Double {
-    val attackFrames = (attackSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val decayFrames = (decaySec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val releaseFrames = (releaseSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val clampedSustain = sustainLevel.coerceIn(0.0, 1.0)
-
-    val absPos = ctx.voiceElapsedFrames + sampleOffsetWithinBlock
-    val gateEndPos = ctx.gateEndFrame
-
-    val envValue = if (absPos >= gateEndPos) {
-        val levelAtGateEnd = envelopeLevelAtPosition(
-            gateEndPos, attackFrames, decayFrames, clampedSustain, attackCurve, decayCurve, expNorm,
-        )
-        val relPos = absPos - gateEndPos
-
-        if (releaseCurve == AdsrCurve.Linear) {
-            // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
-            // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
-            // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
-            // the residual ends a sweep a hair above its floor rather than leaving a gain step.
-            // Changing it would move filter-sweep sound in existing songs for no click benefit.
-            val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
-            levelAtGateEnd - (relPos * relRate)
-        } else {
-            val rf = releaseFrames.toDouble()
-            val p = ((relPos + releaseProgressOffset(rf)) / releaseProgressDenom(rf)).coerceAtMost(1.0)
-            levelAtGateEnd * adsrCurveShape(releaseCurve, 1.0 - p, ADSR_EXP_K, expNorm)
-        }
-    } else {
-        envelopeLevelAtPosition(absPos, attackFrames, decayFrames, clampedSustain, attackCurve, decayCurve, expNorm)
-    }
-
-    return envValue.coerceIn(0.0, 1.0)
+) {
+    prepare(
+        attackFrames = attackSec * ctx.sampleRate,
+        decayFrames = decaySec * ctx.sampleRate,
+        sustainLevel = sustainLevel,
+        releaseFrames = releaseSec * ctx.sampleRate,
+        gateEndPos = ctx.gateEndFrame,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
+    )
 }

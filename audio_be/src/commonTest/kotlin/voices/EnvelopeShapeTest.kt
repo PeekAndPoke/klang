@@ -9,8 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
-import io.peekandpoke.klang.audio_be.voices.strip.envelopeLevelAtPosition
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
@@ -43,6 +43,15 @@ class EnvelopeShapeTest : StringSpec({
         attackFrames, decayFrames, sustainLevel, releaseFrames,
         attackCurve, decayCurve, releaseCurve,
     )
+
+    /** The attack-decay-sustain level at [absPos] (the gate far away), through the one envelope law. */
+    fun envelopeLevelAtPosition(e: Voice.Envelope, absPos: Int): Double = EnvelopeCore().apply {
+        prepare(e.attackFrames, e.decayFrames, e.sustainLevel, e.releaseFrames, Int.MAX_VALUE, e.attackCurve, e.decayCurve, e.releaseCurve)
+    }.at(absPos)
+
+    /** The strip's control-rate envelope with a fresh evaluator. */
+    fun calculateControlRateEnvelope(e: Voice.Envelope, blockStart: Double, startFrame: Double, gateEndFrame: Double): Double =
+        calculateControlRateEnvelope(e, blockStart, startFrame, gateEndFrame, EnvelopeCore())
 
     // ── Attack midpoint ────────────────────────────────────────────────────────
 
@@ -148,7 +157,7 @@ class EnvelopeShapeTest : StringSpec({
             releaseFrames = 101.0,
             releaseCurve = AdsrCurve.Square,
         )
-        calculateControlRateEnvelope(e, blockStart = 50.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+        calculateControlRateEnvelope(e, blockStart = 51.0, startFrame = 0.0, gateEndFrame = 1.0) shouldBe
                 (0.25 plusOrMinus 0.001)
     }
 
@@ -166,11 +175,11 @@ class EnvelopeShapeTest : StringSpec({
                 releaseCurve = curve,
             )
             withClue("curve=$curve at the last rendered frame (relPos = N-1)") {
-                calculateControlRateEnvelope(e, blockStart = 99.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 1.0) shouldBe
                         (0.0 plusOrMinus 1e-9)
             }
             withClue("curve=$curve past the end stays clamped at 0") {
-                calculateControlRateEnvelope(e, blockStart = 100.0, startFrame = 0.0, gateEndFrame = 0.0) shouldBe
+                calculateControlRateEnvelope(e, blockStart = 101.0, startFrame = 0.0, gateEndFrame = 1.0) shouldBe
                         (0.0 plusOrMinus 1e-9)
             }
         }

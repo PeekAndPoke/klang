@@ -371,11 +371,11 @@ class PitchModFactoriesSpec : StringSpec({
 
     "fm env: a NON-FINITE sustain reads as unset (1.0, the node's default), never a carrier frozen at ratio 0" {
         // Oracle written from the definition, not from the code: the modulator is a constant 0.5,
-        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the FM index envelope's
-        // law (the historical linear one on Int frame counts: attack `pos / af`, decay
-        // `1 - decPos * (1 - s) / df`, hold `s`, release from the level at the gate over `rf`
-        // frames, clamped to 0..1, the sustain clamped to 0..1 inside). A finite sustain passes raw
-        // (the 0.3 control); NaN, +Inf and -Inf all take 1.0 (the chain `adsr`'s `finiteOr` rule).
+        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the envelope law with linear
+        // curves (attack `pos / af`, decay `s + (1 - s) * (1 - decPos / df)`, hold `s`, release from
+        // the level at the gate over `rf - 1` frames), the level clamped to 0..1 by the FM host, the
+        // sustain raw inside. A finite sustain passes raw (the 0.3 control); NaN, +Inf and -Inf all
+        // take 1.0 (the chain `adsr`'s `finiteOr` rule).
         val sr = 48000
         val gate = 1000
         val total = gate + 800
@@ -386,20 +386,19 @@ class PitchModFactoriesSpec : StringSpec({
         val r = 0.005
 
         fun oracleEnv(pos: Int, s: Double): Double {
-            val af = (a * sr).toInt()
-            val df = (d * sr).toInt()
-            val rf = (r * sr).toInt()
-            val cs = s.coerceIn(0.0, 1.0)
+            val af = a * sr
+            val df = d * sr
+            val rf = r * sr
 
             fun level(p: Int): Double = when {
                 p < af -> p * (1.0 / af)
-                p < af + df -> 1.0 - (p - af) * ((1.0 - cs) / df)
-                else -> cs
+                p < af + df -> s + (1.0 - s) * (1.0 - (p - af) * (1.0 / df))
+                else -> s
             }
 
             val v = if (pos >= gate) {
                 val atGate = level(gate)
-                atGate - (pos - gate) * (atGate / rf)
+                atGate * (1.0 - minOf((pos - gate) / (rf - 1.0), 1.0))
             } else {
                 level(pos)
             }

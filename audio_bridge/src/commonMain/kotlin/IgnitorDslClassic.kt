@@ -194,8 +194,9 @@ class AdsrCurvesSlots internal constructor() {
  *    where the strip draws every tolerance first (the section 8 migration cost), and their cutoff
  *    envelopes are linear and block-interpolated where the strip's are exponential and ramped (D3; the
  *    curves stay at `MOD_ENV_CURVE`, which D3 flips);
- *  - the envelope counts whole frames where the strip keeps fractional ones, and its de-click is the
- *    strip's constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the strip's de-click per note.
+ *  - the envelope evaluates the strip's law (one envelope law on both hosts since phase 3 D3), and its
+ *    de-click is the strip's constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the strip's
+ *    de-click per note.
  *
  * No arguments and no configure lambda: an author who wants another order writes their own tail from
  * the same slots, and the same doors fill it.
