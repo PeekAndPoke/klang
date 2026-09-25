@@ -108,7 +108,10 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
     or on a `pitchEnvelope` builder. Same class; D3's frame-count decision covers all three envelopes.
   - Either way it is an ear checkpoint on Der Schmetterling and Stranger Things, and it changes every
     song that already uses `lpf(env = ...)`, by up to 635 cents at the sweep's steepest.
-- **D4, the `pedal` pipeline.** `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
+- **D4, the `pedal` pipeline. DECIDED 2026-09-25 (maintainer): REMOVE it fully.** The preset retires with the
+  Pipeline DSL; DialogueWithTheStars ("an empty song") drops its call; TetrisRemix's bass drops it (a SOUND
+  CHANGE: that bass goes on step 6's listening list); FrozenDerSchmetterling needs "a new frozen version"
+  (which one is being clarified with the maintainer). The question as it was raised: `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
   FIRST. **Undercounted until step 5's review (2026-09-25): THREE of the 18 corpus songs use it**:
   DialogueWithTheStars, FrozenDerSchmetterling (three patterns, with distort) and TetrisRemix (the bass,
   `distort(0.8, "soft", 2).pipeline("pedal")`). All three have no `classic()` spelling; the preset retires with `PipelineDsl`. Ship a second named tail
