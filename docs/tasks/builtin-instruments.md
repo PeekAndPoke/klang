@@ -37,6 +37,13 @@ section 4.
   notes say the two diverge on exactly this kind of loop. Re-run the voice probe as `IgnitorBenchmark`
   rows on JS before the step that lands `classic()`.
 
+> **The phase's principle, stated by the maintainer (2026-09-25): a CONSISTENT FOUNDATION comes first, and the
+> songs are adjusted to it.** "Sound changes are fine. The whole point of what we are currently doing is to
+> build a consistent foundation. Current songs are built on the 'wrong' foundation and need to therefore be
+> adjusted." Bit-identity is still the PROOF METHOD for steps that mean to change nothing; it is no longer a
+> reason to keep two laws, two defaults or two vocabularies. A step that changes sound on purpose renders
+> before/after pairs for the maintainer's ear instead.
+
 ## 3. Decisions the maintainer owes before the ear-checkpoint steps
 
 The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6, 7 and 10 do. D7 is decided.
@@ -72,8 +79,17 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
   bit-identical to the strip. The legacy fused `IgnitorDsl.Distort` node (kept and retyped in 3b for this
   reason) is the one shape that could drive inside the oversampler; D2's answer decides which node
   `classic()` uses.
-- **D3, the filter envelope. RE-SCOPED 2026-09-20 in the step 3a review: it is two decisions, and
-  the one the spike missed is the bigger.**
+- **D3, the filter envelope. DECIDED 2026-09-25 (maintainer), and widened to every modulation envelope:**
+  (1) the CURVE: the filter AND the pitch envelopes default to EXPONENTIAL on all three stages
+  (`MOD_ENV_CURVE`); (2) the SAMPLING: the node's smooth per-block interpolation (option A); (3) sprudel gets
+  configurable curves: `lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves` and `penvCurves(attack, decay,
+  release)`, mirroring `adsrCurves`; (4) sprudel's `penv` gets the Ignitor pitch envelope's vocabulary (a
+  REAL release, `sustain` in place of `anchor`, the dead `curve` slot retired); (5) the envelope frame counts
+  become FRACTIONAL everywhere (the coordinator's call under the principle above: one rule, the precise one).
+  Sound changes accepted: the Ignitor pitch envelopes' kicks and drops in DerSchmetterling, Sakura, Sandsturm,
+  IrishLament and the frozen piece curve now; the maintainer listens to before/after pairs. The decision as it
+  was first raised: RE-SCOPED 2026-09-20 in the step 3a review: it is two decisions, and
+  the one the spike missed is the bigger.
   - **The LAW.** The node's envelope segments are LINEAR (`envelopeLevelAtPosition` has no curve in
     it at all); the strip's take `AdsrCurve.Default`, which is Exponential with K = 3, because
     `VoiceFactory` omits the three curve arguments when it builds the `Voice.Envelope`. Measured at
@@ -110,8 +126,10 @@ The identity-provable steps (1, 2, 3, 5 below) do not wait for these. Steps 4, 6
     song that already uses `lpf(env = ...)`, by up to 635 cents at the sweep's steepest.
 - **D4, the `pedal` pipeline. DECIDED 2026-09-25 (maintainer): REMOVE it fully.** The preset retires with the
   Pipeline DSL; DialogueWithTheStars ("an empty song") drops its call; TetrisRemix's bass drops it (a SOUND
-  CHANGE: that bass goes on step 6's listening list); FrozenDerSchmetterling needs "a new frozen version"
-  (which one is being clarified with the maintainer). The question as it was raised: `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
+  CHANGE: that bass goes on the listening list); FrozenDerSchmetterling is REPLACED by a FRESH SNAPSHOT of
+  today's DerSchmetterling (the live song has no `pipeline("pedal")`; its `pedal*` names are the guitar rig's
+  effect pedals). And DialogueWithTheStars LEAVES the built-in songs (maintainer: "I will not work on this one
+  any time soon"). Done as a song-housekeeping step before step 6. The question as it was raised: `DialogueWithTheStars` calls `.pipeline("pedal")`, which puts the VCA
   FIRST. **Undercounted until step 5's review (2026-09-25): THREE of the 18 corpus songs use it**:
   DialogueWithTheStars, FrozenDerSchmetterling (three patterns, with distort) and TetrisRemix (the bass,
   `distort(0.8, "soft", 2).pipeline("pedal")`). All three have no `classic()` spelling; the preset retires with `PipelineDsl`. Ship a second named tail
