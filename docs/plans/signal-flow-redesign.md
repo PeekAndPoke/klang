@@ -135,7 +135,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
 - **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
   so a pregain inside it would land in the wrong place for every instrument with its own
-  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed in step 6, 2026-09-26: `source.pregain().onepole(slot).classic()`); an author places
+  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed: `source.pregain().onepole(slot).classic()` in step 6; since step 10 the onepole is `classic()`'s first stage, so `source.pregain().classic()`); an author places
   `.mul(OscSlot.pregain)` where the player's touch enters, or does not place it, and then the
   instrument has no drive knob (§6: no unconsumed rule, no magic).
 - **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs
@@ -185,7 +185,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   compose with it on every Der Schmetterling voice today.
 - **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
   `SprudelVoiceData.toVoiceData`: crush, coarse, distort, highpass, bandpass, notch, lowpass,
-  tremolo, adsr. The sketch above had the lowpass first, which would change every song with both a
+  tremolo, adsr (since step 10, 2026-09-26, preceded by `onepole`, which the strip ran on the source). The sketch above had the lowpass first, which would change every song with both a
   highpass and a lowpass at `analog > 0` (at analog 0 the filters commute).
 - **The step list, the measured cost of the gate, the three stages that are NOT bit-identical today
   and the five decisions this phase needs from the maintainer are in

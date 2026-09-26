@@ -17,6 +17,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.random.Random
 
@@ -44,6 +45,32 @@ class ClassicTailRenderSpec : StringSpec({
             firstBitMismatch(expected, renderVoiceWindows(tail.optimize(), emptyMap())) shouldBe -1
         }
         withClue("and the envelope is really there") { firstBitMismatch(renderVoiceWindows(saw), expected) shouldNotBe -1 }
+    }
+
+    "classic()'s FIRST stage is the pattern's onepole: the `onepole` slot renders the source's onepole in front of the envelope" {
+        // Since step 10 (it sat on a built-in's source before, the same place): `onepole` 900 is `saw.onepole(900)`
+        // under the unwritten envelope, bit for bit, and an unwritten slot builds no onepole (the row above).
+        val expected = renderVoiceWindows(
+            saw.onepole(900.0).adsr(
+                VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC,
+                declickSeconds = ENV_DECLICK_SECONDS,
+            ),
+        )
+
+        withClue("raw tree") { firstBitMismatch(expected, renderVoiceWindows(tail, mapOf("onepole" to 900.0))) shouldBe -1 }
+        withClue("optimized tree") { firstBitMismatch(expected, renderVoiceWindows(tail.optimize(), mapOf("onepole" to 900.0))) shouldBe -1 }
+        withClue("engaged: the onepole changes the sound") { firstBitMismatch(renderVoiceWindows(envelopeAlone), expected) shouldNotBe -1 }
+        withClue("in front of crush, not behind it: the other order is a different signal") {
+            val behind = renderVoiceWindows(
+                IgnitorDsl.Crush(inner = saw, amount = IgnitorDsl.Constant(5.0)).onepole(900.0).adsr(
+                    VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC,
+                    declickSeconds = ENV_DECLICK_SECONDS,
+                ),
+            )
+            val inFront = renderVoiceWindows(tail, mapOf("onepole" to 900.0, "crush.amount" to 5.0))
+
+            firstBitMismatch(behind, inFront) shouldNotBe -1
+        }
     }
 
     "adsr.on = 0 builds no stage at all: the source passes bit for bit" {

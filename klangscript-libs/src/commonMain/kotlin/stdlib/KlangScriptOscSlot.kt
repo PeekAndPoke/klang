@@ -105,6 +105,13 @@ object KlangScriptOscSlot {
     // voice doors to reach it. Named after sprudel's readers (`lpf.freq`, `adsr.attack`); the Kotlin
     // door is `IgnitorDsl.Slots.lpf.freq`, the same object.
 
+    /**
+     * The one-pole lowpass stage's slot (default 0.0, off): the cutoff in Hz that the pattern's `onepole(hz)`
+     * writes. `classic()`'s first stage.
+     */
+    @KlangScript.Property
+    val onepole: IgnitorDsl = IgnitorDsl.Slots.onepole
+
     /** The crush stage's slot: `OscSlot.crush.amount`. */
     @KlangScript.Property
     val crush: KlangScriptCrushSlots = KlangScriptCrushSlots

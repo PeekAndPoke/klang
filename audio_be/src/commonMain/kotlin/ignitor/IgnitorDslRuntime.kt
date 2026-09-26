@@ -1215,9 +1215,10 @@ private fun IgnitorDsl.buildRaw(
         // GATE ROW `onepole`: at or below 0.0, or unset. Unlike the four SVF filters this one HAS
         // a numeric off state and always had: until 2026-09-20 the test lived in
         // `IgnitorRegistry.createExciter`, OUTSIDE the tree, as the only gate in the engine that
-        // was not a door's own. It is here now so the rule has one home, and the registry places
-        // the `onepole` slot in the tree instead of reading the bag itself (around an authored
-        // instrument at note-on, on a built-in's source since phase 3 step 6).
+        // was not a door's own. It is here now so the rule has one home, and the `onepole` slot sits
+        // in the tree instead of the registry reading the bag itself: `classic()`'s first stage since
+        // phase 3 step 10 (every built-in, and an authored instrument that ends in `classic()`), and the
+        // registry's note-on wrap around an instrument that does not end in it.
         is IgnitorDsl.OnePoleLowpass -> if (freq.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.passThrough()
         } else {
@@ -1317,8 +1318,14 @@ private fun IgnitorDsl.buildRaw(
             //   its inner before it reaches the line below.
             // The samples of a NaN-released envelope are fine (`Double.toInt()` of a NaN is 0
             // frames); its TAIL is not.
-            spineTail = maxTail(spineTail, release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() })
-            builtEnvelope = true
+            val ownTail = release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() }
+
+            spineTail = maxTail(spineTail, ownTail)
+            // It ENDS the voice only with a release of static length: a modulated or non-finite release cannot
+            // promise to reach zero by the voice's end, which is set from static tails, so such an envelope
+            // leaves the voice its teardown fade (`BuiltIgnitor.endsInEnvelope`, step 10's review). No built-in
+            // and no sample is affected: `classic()`'s envelope reads a slot, a leaf, always static.
+            builtEnvelope = ownTail != null
 
             innerIgnitor.adsr(
                 attack, decay, sustain, release,

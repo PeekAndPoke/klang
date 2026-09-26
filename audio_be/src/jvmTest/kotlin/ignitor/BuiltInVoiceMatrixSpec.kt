@@ -28,8 +28,8 @@ import kotlin.random.Random
  * **Every built-in sound, as a built-in, against its own source through the voice strip** (phase 3
  * step 6). Each built-in name renders the same note twice through the real `VoiceFactory`:
  *
- *  - BUILT-IN: the name as `registerDefaults` registers it (the shape `IgnitorRegistry.registerBuiltIn`
- *    writes, the voice strip off), the row's settings on the typed `VoiceData` fields the sprudel doors write today;
+ *  - BUILT-IN: the name as `registerDefaults` registers it (`IgnitorRegistry.builtInVoice`'s shape, which
+ *    ends in `classic()`, the voice strip off), the row's settings on the typed `VoiceData` fields the sprudel doors write today;
  *  - STRIP: the SAME source (`builtInSources()`) registered as an authored instrument, so the voice strip
  *    runs after it, with the same fields: what that name was before step 6.
  *
@@ -167,7 +167,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
     }
 
     "the matrix covers every built-in and hears them: the untouched strip side of every sounding source is not silence" {
-        registry.names().filter { registry.isBuiltIn(it) }.toSet() shouldBe sources.keys
+        registry.names().filter { registry.endsInClassic(it) }.toSet() shouldBe sources.keys
 
         for ((name, _) in sources) {
             if (name == "silence") {

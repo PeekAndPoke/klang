@@ -182,6 +182,8 @@ class IgnitorDslWireCodecSpec : StringSpec({
         decoded shouldBe tail
         decoded.uniqueId() shouldBe tail.uniqueId()
         decoded.getParamSlots().first { it.name == "lpf.freq" }.default.isFinite() shouldBe false
+        // the tag survives the wire (phase 3 step 10): a registered instrument reaches the engine through here
+        decoded.endsInClassic() shouldBe true
     }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }

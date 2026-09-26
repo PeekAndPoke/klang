@@ -90,8 +90,9 @@ class OnepoleParitySpec : StringSpec({
     }
 
     "a built-in carries the oscParam onepole on its SOURCE, in front of classic()'s envelope (phase 3 step 6)" {
-        // Where the voice strip had it: the source, then crush ... adsr. The registry's own note-on wrap
-        // would put it AFTER the envelope, which the anti-vacuous side shows is a different signal.
+        // Where the voice strip had it: the source, then crush ... adsr (step 6 hung it on the source, step 10
+        // made it `classic()`'s first stage, the same place). A wrap around the whole tree would put it AFTER the
+        // envelope, which the anti-vacuous side shows is a different signal.
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = mapOf("onepole" to 800.0))
         val viaRegistry = render(

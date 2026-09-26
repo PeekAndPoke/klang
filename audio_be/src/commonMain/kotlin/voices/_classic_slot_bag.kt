@@ -21,16 +21,17 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 //
 // Scaffolding: removed in step 8 when the sprudel doors write the slot keys.
 //
-// A built-in sound is a source in `classic()` since step 6 (its one home is `IgnitorRegistry.registerBuiltIn`),
-// and its voice strip is off, so every stage the strip used to run from a typed `VoiceData` field now reads
-// a `classic()` slot. The sprudel doors still write the typed fields until step 8 turns them into `oscp`
+// A built-in sound is a source in `classic()` since step 6 (its one home is `IgnitorRegistry.builtInVoice`), and
+// since step 10 so is an authored instrument whose last call is `.classic()`. For a tree that ends in `classic()`
+// the voice strip is off, so every stage the strip used to run from a typed `VoiceData` field now reads a
+// `classic()` slot. The sprudel doors still write the typed fields until step 8 turns them into `oscp`
 // aliases of these very keys; until then this file is the bridge, and deleting it is the step 8 change.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 /**
- * The bag a BUILT-IN voice is built from: the voice's own `oscParams` plus every typed field the voice
- * strip would have read, written under its `classic()` slot (`<door>.<param>`, the names read from the
- * `Param` objects of [IgnitorDsl.Slots], never retyped).
+ * The bag a voice whose tree ends in `classic()` (and a sample voice) is built from: the voice's own
+ * `oscParams` plus every typed field the voice strip would have read, written under its `classic()` slot
+ * (`<door>.<param>`, the names read from the `Param` objects of [IgnitorDsl.Slots], never retyped).
  *
  * The rules:
  *  - only a field that is SET and FINITE is written; an unset one stays unset, so the slot's default

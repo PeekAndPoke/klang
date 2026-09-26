@@ -1,5 +1,20 @@
 # Klang Audio — Memory
 
+## Authored instruments ending in classic() leave the strip (phase 3 step 10, commit 1, 2026-09-26)
+
+- **The strip-off tag is structural**: `IgnitorDsl.endsInClassic()` is true when the root is an `Adsr` whose `on`
+  switch is the slot `adsr.on`, which only `classic()` places; it checks the root only, so `classic()` is the LAST
+  call. `IgnitorRegistry.endsInClassic(name)` asks the AUTHORED tree through `get` on each note-on (no stored
+  flag, nothing to keep in sync on re-register); it replaced step 6's `isBuiltIn`, and `registerBuiltIn` is gone
+  (`registerDefaults` calls `register(name, builtInVoice(source))`). It is the first piece of the `.sprudel()` tag
+  in `docs/plans/future/signal-graph-engine.md`.
+- **`onepole` is `classic()`'s first stage** (slot `onepole`), so `builtInVoice(source)` is
+  `source.pregain().classic()` and builds step 6's tree unchanged; `createExciter` still wraps an authored tree
+  WITHOUT `classic()` in the onepole, exactly as before. The step 6 and 7 entries below name the older shape.
+- **The strip stretched its release to an instrument's own tail** (the 2026-08-27 envelope-ownership fix);
+  `classic()` releases over its slot. So a song whose instrument has a longer own tail writes
+  `adsr(release = <tail>)` (maintainer, 2026-09-26: no engine stretch).
+
 ## The sample instrument, the strip off for samples (phase 3 step 7, 2026-09-26)
 
 - **A sample voice is the built-in shape over its PCM.** `IgnitorRegistry.builtInVoice(source)` is the one

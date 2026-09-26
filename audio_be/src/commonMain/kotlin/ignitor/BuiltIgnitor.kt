@@ -62,7 +62,9 @@ data class BuiltIgnitor(
     val gatesOutput: Boolean = false,
     /**
      * True when the ROOT of this subtree is an amplitude envelope that the build BUILT (an `Adsr`
-     * whose `on` switch did not turn it off). Set by the envelope's own arm; a stage the gate did NOT
+     * whose `on` switch did not turn it off) and whose release has a STATIC, finite length: a modulated
+     * release cannot promise to reach zero by the voice's end, which the static tails set, so it does not
+     * count (phase 3 step 10). Set by the envelope's own arm; a stage the gate did NOT
      * build (a gate row, the unity `mul` fold included) hands its inner's answer through, because
      * that node IS its inner (`classic()`'s unwritten lowpass over an authored envelope, step 10's case),
      * and so does a `detune`, which scales the frequency and leaves the amplitude alone.

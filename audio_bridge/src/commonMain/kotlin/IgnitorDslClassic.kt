@@ -187,23 +187,26 @@ class FilterCurvesSlots internal constructor(door: String) {
  * order is written.
  *
  * ```
- * crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+ * onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
  * That is the strip's order (`PipelineDsl.modern`) with the canonical filter sub-order of
- * `SprudelVoiceData.toVoiceData`. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
+ * `SprudelVoiceData.toVoiceData`, behind the pattern's `onepole`, which sat on the source in front of the
+ * strip. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
  * pattern FILLS it and never adds structure, and every unwritten stage is NOT BUILT: its slot's default
  * is the stage's off value in the gate's table (`docs/tasks/builtin-instruments.md` section 5b), so an
  * unwritten `classic()` builds exactly one stage, the envelope, at the voice envelope's defaults.
  *
- * What it deliberately does NOT contain:
- *  - `pregain`: an instrument places `.pregain()` where the player's touch enters (section 5 of the plan);
- *  - `onepole`: the registry places it, never an author: on a built-in's SOURCE, inside this tail
- *    (`IgnitorRegistry.registerBuiltIn`, the voice strip's order), and around an authored instrument at
- *    note-on (`IgnitorRegistry.createExciter`).
+ * What it deliberately does NOT contain: `pregain`. An instrument places `.pregain()` where the player's
+ * touch enters (section 5 of the plan).
  *
- * Every built-in sound is `source.pregain().onepole(slot).classic()` since phase 3 step 6, and the voice strip
- * is off for it: this tail IS the voice of `sound("saw")`, and the built-in places the `pregain` itself.
+ * A tree that ENDS in `classic()` ([endsInClassic]) is the whole voice: the voice strip does not run after
+ * it and the registry adds nothing around it (phase 3 step 10). Every built-in sound is
+ * `source.pregain().classic()` (since step 6), and so is an authored instrument that appends `.classic()` as
+ * its LAST call. An instrument that does not end in it keeps the voice strip, and the registry wraps the
+ * pattern's `onepole` around it at note-on, until the strip retires. So a stage after `classic()` (or a tree that
+ * only contains it, `a.classic().plus(b.classic())`) keeps the strip AND gets the `onepole` twice, the registry's
+ * and `classic()`'s own on the same slot: `classic()` goes last.
  *
  * Per stage, what each node is and where it still differs from the strip (the measured table lives in
  * `ClassicStripParitySpec`):
@@ -229,7 +232,8 @@ class FilterCurvesSlots internal constructor(door: String) {
 fun IgnitorDsl.classic(): IgnitorDsl {
     val s = IgnitorDsl.Slots
 
-    val crushed = IgnitorDsl.Crush(inner = this, amount = s.crush.amount)
+    val onepoled = IgnitorDsl.OnePoleLowpass(inner = this, freq = s.onepole)
+    val crushed = IgnitorDsl.Crush(inner = onepoled, amount = s.crush.amount)
     val coarsened = IgnitorDsl.Coarse(inner = crushed, amount = s.coarse.amount)
     val distorted = IgnitorDsl.Distort(
         inner = coarsened,
@@ -320,4 +324,34 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         declickSeconds = IgnitorDsl.Constant(ENV_DECLICK_SECONDS),
         on = s.adsr.on,
     )
+}
+
+/**
+ * True when this tree ENDS in [classic]: its ROOT is `classic()`'s envelope, recognised by its switch, the slot
+ * `adsr.on`. `classic()` is the one place that slot is placed (no door has the switch), so the root's switch IS
+ * the tag, and no marker node or wire field is needed (phase 3 step 10, `docs/tasks/builtin-instruments.md`).
+ *
+ * Such a tree is the whole voice: the voice strip does not run after it, and the registry adds no `onepole`
+ * around it (`IgnitorRegistry.endsInClassic`). Every built-in sound is one, and so is an authored instrument
+ * whose LAST call is `.classic()`.
+ *
+ * It compares the switch by NAME: a registered tree reaches the engine through the wire codec, which builds new
+ * `Param` instances.
+ *
+ * It reads the ROOT only, so `classic()` must be the last call: `x.classic().mul(0.5)` does not end in it and
+ * keeps the voice strip. An optimizer hint is not a stage, so it looks through one at the root:
+ * `x.classic().optimizer(0)` (the by-ear A/B, which its KDoc says to put last on a sound) ends in `classic()`,
+ * and switching the optimizer off does not switch the voice path. This is the tag the `.sprudel()` auto-attach
+ * of `docs/plans/future/signal-graph-engine.md` asks for: "does this instrument carry the voice chain yet?".
+ */
+fun IgnitorDsl.endsInClassic(): Boolean {
+    var root = this
+
+    while (root is IgnitorDsl.OptimizerHint) {
+        root = root.inner
+    }
+
+    // The name is read from the slot, never retyped. Not a top-level val: `Slots` reads this file's own vals
+    // while it initializes, so a val here that reads `Slots` back would see it half built on the JVM.
+    return root is IgnitorDsl.Adsr && (root.on as? IgnitorDsl.Param)?.name == (IgnitorDsl.Slots.adsr.on as IgnitorDsl.Param).name
 }

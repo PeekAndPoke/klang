@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -31,6 +32,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
@@ -43,18 +45,21 @@ import kotlin.random.Random
 
 /**
  * **The built-in `saw` on `classic()` against the voice strip, one voice per slot row: STEP 6'S TABLE**
- * (phase 3 steps 5 and 6, `docs/tasks/builtin-instruments.md` section 9). Every row renders the same note
- * three times through the real `VoiceFactory`,
+ * (phase 3 steps 5, 6 and 10, `docs/tasks/builtin-instruments.md` section 9). Every row renders the same note
+ * four times through the real `VoiceFactory`,
  *
  *  - STRIP: the saw's SOURCE registered as an AUTHORED instrument (`stripsaw`, the strip still runs after
  *    it), the row's settings on the typed `VoiceData` fields sprudel writes today, through the `modern`
  *    pipeline (crush, coarse, distort, the filters, tremolo, the VCA): what `sound("saw")` was before step 6;
- *  - TYPED: the BUILT-IN `saw` (`source.pregain().onepole(slot).classic()`, `IgnitorRegistry.registerBuiltIn`,
- *    the strip off), the SAME typed fields,
+ *  - TYPED: the BUILT-IN `saw` (`source.pregain().classic()`, `IgnitorRegistry.builtInVoice`, the strip off),
+ *    the SAME typed fields,
  *    which reach its slots through the factory's translation (`classicSlotBag`): the path every song
  *    takes until step 8;
  *  - BAG: the built-in `saw` with the same settings written as SLOTS in the bag and no typed field: the
  *    path the doors take from step 8,
+ *  - AUTHORED: the same tree registered by an AUTHOR (`authoredsaw`, plain `register`, step 10): an
+ *    instrument whose last call is `.classic()` is the whole voice, the strip off, so it must render
+ *    bit for bit what TYPED renders, on EVERY row, the divergent ones included,
  *
  * and compares the left mix bus in raw bits. The onset is mid-block (frame 37) and the gate ends at a
  * quarter second, so the release and the voice's lifetime are inside the render. Every row runs at
@@ -69,11 +74,12 @@ import kotlin.random.Random
  * recorded in the step 5 report, not here, because a number pinned in a spec invites "tuning" the
  * law to meet it.
  *
- * What is not a slot row here: `onepole` and `pregain`, the two stages the REGISTRY places on a built-in's
- * source (`registerBuiltIn`), not `classic()`. The onepole reaches both sides the same way (the registry
- * wraps the authored `stripsaw` at note-on), and its placement has rows of its own below. The pregain does
- * NOT: the `stripsaw` oracle has no pregain slot and ignores one, while the built-in applies it, so the
- * `[pregain]` tests pin it against scaled oracle registrations (`stripsaw2x`, `stripsaw1p7x`).
+ * What is not a slot row here: `onepole` and `pregain`. The onepole is `classic()`'s first stage since step 10
+ * (it sat on the built-in's source before, the same place) and reaches the strip side through the registry's
+ * note-on wrap around the authored `stripsaw`, so it reaches every column the same way; its placement has rows
+ * of its own below. The pregain is placed by the built-in shape on the source, not by `classic()`, and does NOT
+ * reach the strip side: the `stripsaw` oracle has no pregain slot and ignores one, while the built-in applies it,
+ * so the `[pregain]` tests pin it against scaled oracle registrations (`stripsaw2x`, `stripsaw1p7x`).
  */
 class ClassicStripParitySpec : StringSpec({
 
@@ -167,8 +173,11 @@ class ClassicStripParitySpec : StringSpec({
             // The built-in saw's own source, AUTHORED: the voice strip runs after it, as it did after
             // every built-in before step 6.
             register("stripsaw", builtInSources().getValue("saw"))
+            // The built-in saw's own tree, registered by an AUTHOR: it ends in `classic()`, so it is the whole
+            // voice exactly like the built-in (phase 3 step 10), with no second onepole around it.
+            register("authoredsaw", builtInSources().getValue("saw").pregain().classic())
             // The pregain oracle, written here: the same source played exactly twice as hard, AUTHORED, so the
-            // voice strip (and the registry's onepole around it) runs after the doubled source.
+            // voice strip (and the registry's onepole wrap around it) runs after the doubled source.
             register("stripsaw2x", builtInSources().getValue("saw").mul(IgnitorDsl.Constant(2.0)))
             register("stripsaw1p7x", builtInSources().getValue("saw").mul(IgnitorDsl.Constant(1.7)))
             // The other order, for the 1.7 row's anti-vacuous side: the source, the onepole, THEN the gain
@@ -230,7 +239,8 @@ class ClassicStripParitySpec : StringSpec({
 
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
-    /** The bag keys that are not `classic()` slots: the voice's own, which every column carries. */
+    /** The bag keys every column carries as the voice's own: `analog`, and `onepole`, which reaches the strip side
+     *  through the registry's wrap and the classic columns through `classic()`'s first stage. */
     val ownKeys = setOf("analog", "onepole")
 
     fun own(bag: Map<String, Double>): Map<String, Double>? = bag.filterKeys { it in ownKeys }.takeIf { it.isNotEmpty() }
@@ -479,7 +489,8 @@ class ClassicStripParitySpec : StringSpec({
             copy(adsr = AdsrDef.Std(on = false, release = 0.2))
         },
 
-        // ── the registry's onepole: on the built-in's SOURCE, in front of every stage (step 6) ──
+        // ── the onepole: `classic()`'s first stage, in front of every other (on the source since step 6, in
+        //    `classic()` since step 10); the strip side gets it from the registry's wrap ──
         Row("onepole 900 with crush 5: in front of the quantizer", true, mapOf("onepole" to 900.0, "crush.amount" to 5.0)) {
             copy(crush = 5.0)
         },
@@ -577,7 +588,7 @@ class ClassicStripParitySpec : StringSpec({
         }
     }
 
-    "[pregain] ...and in front of the registry's onepole: the source, then pregain, then onepole (a 1.7 gain, so the order shows in the bits)" {
+    "[pregain] ...and in front of the onepole: the source, then pregain, then onepole (a 1.7 gain, so the order shows in the bits)" {
         // Scaling by 2 commutes with the linear one-pole bit for bit; a gain of 1.7 rounds differently on
         // either side of it, so this row is what tells `source.pregain().onepole()` from `source.onepole().pregain()`.
         for (rate in rates) {
@@ -585,7 +596,7 @@ class ClassicStripParitySpec : StringSpec({
             val builtIn = classic(bag, rate)
             val oracle = render(base.copy(sound = "stripsaw1p7x", oscParams = mapOf("onepole" to 900.0)), rate)
 
-            withClue("$rate Hz: first mismatch against the 1.7x source through the registry's onepole") {
+            withClue("$rate Hz: first mismatch against the 1.7x source through the registry's onepole wrap") {
                 firstMismatch(oracle, builtIn) shouldBe -1
             }
             withClue("$rate Hz: anti-vacuous, the onepole-then-gain order is a different signal") {
@@ -610,10 +621,17 @@ class ClassicStripParitySpec : StringSpec({
             "[$rate Hz] ${if (identical) "IDENTICAL" else "DIVERGENT"}: ${row.title}" {
                 val own = own(row.bag)
                 val s = strip(row.strip, own, rate, row.voice)
+                val typedColumn = typed(row.strip, own, rate, row.voice)
+                val authoredColumn = render(row.voice(row.strip(base.copy(sound = "authoredsaw", oscParams = own))), rate)
                 val columns = listOf(
-                    "TYPED" to typed(row.strip, own, rate, row.voice),
+                    "TYPED" to typedColumn,
                     "BAG" to classic(row.bag, rate, voice = row.voice),
+                    "AUTHORED" to authoredColumn,
                 )
+
+                withClue("AUTHORED against TYPED: an authored tree that ends in classic() IS the built-in, first mismatch") {
+                    firstMismatch(typedColumn, authoredColumn) shouldBe -1
+                }
 
                 if (row.bag.isNotEmpty()) {
                     withClue("engagement: the strip renders something other than the untouched voice") {

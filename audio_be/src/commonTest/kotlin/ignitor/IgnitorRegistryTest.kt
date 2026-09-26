@@ -11,6 +11,12 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.pregain
+import io.peekandpoke.klang.audio_bridge.endsInClassic
+import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -298,44 +304,121 @@ class IgnitorRegistryTest : StringSpec({
             negative[i] shouldBe sawRef[i]
         }
     }
-    // ── Built-ins: the tree is the whole voice (phase 3 step 6) ──────────────────
+    // ── The whole voice: a tree that ends in classic() (phase 3 steps 6 and 10) ──────────────────
 
-    "registerBuiltIn flags the name as a built-in; register, an unknown name and a sample name do not" {
+    "endsInClassic: a name whose tree ends in classic(), registered by any caller; not a plain tree, a stage after classic(), an unknown name, a sample name" {
         val registry = IgnitorRegistry()
-        registry.registerBuiltIn("Saw", IgnitorDsl.Sawtooth())
-        registry.register("guitar", IgnitorDsl.Sawtooth())
+        registry.register("Saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()))
+        registry.register("guitar", IgnitorDsl.Sawtooth().classic())
+        registry.register("plain", IgnitorDsl.Sawtooth())
+        registry.register("after", IgnitorDsl.Sawtooth().classic().mul(IgnitorDsl.Constant(0.5)))
 
-        registry.isBuiltIn("saw") shouldBe true
-        registry.isBuiltIn("SAW") shouldBe true
-        registry.isBuiltIn("guitar") shouldBe false
-        registry.isBuiltIn("bd") shouldBe false
+        registry.endsInClassic("saw") shouldBe true
+        registry.endsInClassic("SAW") shouldBe true
+        registry.endsInClassic("guitar") shouldBe true
+        registry.endsInClassic("plain") shouldBe false
+        registry.endsInClassic("after") shouldBe false
+        registry.endsInClassic("bd") shouldBe false
     }
 
-    "registerDefaults registers every name as a built-in, and the default sound is one" {
+    "endsInClassic: an optimizer hint on a classic() tree (the by-ear A/B) keeps the name on the whole-voice path" {
+        val registry = IgnitorRegistry().apply {
+            register("ab0", IgnitorDsl.Sawtooth().classic().optimizer(0))
+            register("ab1", IgnitorDsl.Sawtooth().classic().optimizer(1))
+        }
+
+        registry.endsInClassic("ab0") shouldBe true
+        registry.endsInClassic("ab1") shouldBe true
+    }
+
+    "the tag reads the same on the authored and the optimized tree: no optimizer rewrite makes or hides it" {
+        // Why `endsInClassic(name)` may ask the AUTHORED tree (`get`) and not the one that renders: the optimizer
+        // rewrites no `Adsr` root, and an `on != 0` hint at the root dissolves, which the tag looks through. A
+        // future pass that rewrote the classic root would turn this row red before it changed a voice's path.
+        val saw = IgnitorDsl.Sawtooth()
+        val trees = listOf(
+            saw.classic(),
+            saw.classic().optimizer(1),
+            saw.classic().optimizer(0),
+            IgnitorRegistry.builtInVoice(saw),
+            saw.lowpass(900.0).lowpass(900.0).classic(),
+            saw.classic().mul(IgnitorDsl.Constant(0.5)),
+            saw.classic().mul(IgnitorDsl.Constant(1.0)),
+            saw.lowpass(900.0),
+        )
+
+        for (tree in trees) {
+            tree.optimize().endsInClassic() shouldBe tree.endsInClassic()
+        }
+    }
+
+    "registerDefaults: every name ends in classic(), and so does the default sound" {
         val registry = IgnitorRegistry().apply { registerDefaults() }
 
-        registry.names().all { registry.isBuiltIn(it) } shouldBe true
-        registry.isBuiltIn(null) shouldBe true
+        registry.names().all { registry.endsInClassic(it) } shouldBe true
+        registry.endsInClassic(null) shouldBe true
     }
 
-    "a fork inherits the built-in flag, and a fork's own register of that name shadows it as authored" {
-        // Live coding may register a tree under a built-in's name on the playback's fork: that name is
-        // then the author's instrument there (the strip runs after it), and still the built-in elsewhere.
-        val root = IgnitorRegistry().apply { registerBuiltIn("saw", IgnitorDsl.Sawtooth()) }
+    "a fork inherits the answer, and a fork's own register of that name answers by its own tree, in both directions" {
+        // Live coding may register a tree under a name its parent already has, on the playback's fork: that name
+        // is then the author's instrument there, and the parent's elsewhere. A plain tree over a built-in keeps the
+        // strip; a classic() tree over a plain one is the whole voice.
+        val root = IgnitorRegistry().apply {
+            register("saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()))
+            register("pad", IgnitorDsl.Sine())
+        }
         val inheriting = root.fork()
-        val shadowing = root.fork().apply { register("saw", IgnitorDsl.Sine()) }
+        val shadowing = root.fork().apply {
+            register("saw", IgnitorDsl.Sine())
+            register("pad", IgnitorDsl.Sine().classic())
+        }
 
-        inheriting.isBuiltIn("saw") shouldBe true
-        shadowing.isBuiltIn("saw") shouldBe false
-        root.isBuiltIn("saw") shouldBe true
+        inheriting.endsInClassic("saw") shouldBe true
+        inheriting.endsInClassic("pad") shouldBe false
+        shadowing.endsInClassic("saw") shouldBe false
+        shadowing.endsInClassic("pad") shouldBe true
+        root.endsInClassic("saw") shouldBe true
+        root.endsInClassic("pad") shouldBe false
     }
 
-    "a built-in re-registered with register in the SAME registry is authored from then on" {
-        val registry = IgnitorRegistry().apply { registerBuiltIn("saw", IgnitorDsl.Sawtooth()) }
+    "a name re-registered in the SAME registry answers by its new tree, in both directions" {
+        val registry = IgnitorRegistry().apply { register("saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth())) }
         registry.register("saw", IgnitorDsl.Sawtooth())
 
-        registry.isBuiltIn("saw") shouldBe false
+        registry.endsInClassic("saw") shouldBe false
+
+        registry.register("saw", IgnitorDsl.Sawtooth().classic())
+
+        registry.endsInClassic("saw") shouldBe true
     }
+
+    "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole on the pregained source" {
+        // Step 6 wrote it `OnePoleLowpass(source.pregain(), slot).classic()`; since step 10 the onepole is classic()'s
+        // first stage, so the same tree comes out of `source.pregain().classic()`.
+        val saw = IgnitorDsl.Sawtooth()
+        val shape = IgnitorRegistry.builtInVoice(saw)
+
+        shape.let { root ->
+            var n: IgnitorDsl = root
+
+            while (n !is IgnitorDsl.Crush) {
+                n = when (n) {
+                    is IgnitorDsl.Adsr -> n.inner
+                    is IgnitorDsl.Tremolo -> n.inner
+                    is IgnitorDsl.Lowpass -> n.inner
+                    is IgnitorDsl.Notch -> n.inner
+                    is IgnitorDsl.Bandpass -> n.inner
+                    is IgnitorDsl.Highpass -> n.inner
+                    is IgnitorDsl.Distort -> n.inner
+                    is IgnitorDsl.Coarse -> n.inner
+                    else -> error("unexpected stage $n")
+                }
+            }
+
+            n.inner shouldBe IgnitorDsl.OnePoleLowpass(inner = saw.pregain(), freq = IgnitorDsl.Slots.onepole)
+        }
+    }
+
     "a built-in's UNITY pregain is folded at build: no multiply node, and a written pregain builds one" {
         // With the envelope switched off and nothing else written every classic stage passes through, so
         // the built root is whatever the pregain left behind: the bare source when it folded at unity.

@@ -116,6 +116,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val trem = mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 5.0)
 
     val rows: List<Row> = buildList {
+        add(Row("onepole", mapOf("onepole" to 900.0)))
         add(Row("crush.amount", mapOf("crush.amount" to 4.0)))
         add(Row("coarse.amount", mapOf("coarse.amount" to 3.0)))
         add(Row("distort.amount", mapOf("distort.amount" to 0.5)))

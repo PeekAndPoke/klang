@@ -14,18 +14,19 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 /**
- * Registers every built-in sound, each as a BUILT-IN ([IgnitorRegistry.registerBuiltIn]): its source from
- * [builtInSources] wrapped in the classic voice, the voice strip switched off for it (phase 3 step 6).
+ * Registers every built-in sound: its source from [builtInSources] in the built-in voice shape
+ * ([IgnitorRegistry.builtInVoice], `source.pregain().classic()`). The tree ends in `classic()`, so the voice
+ * strip is off for it (phase 3 steps 6 and 10, [IgnitorRegistry.endsInClassic]).
  */
 fun IgnitorRegistry.registerDefaults() {
     for ((name, source) in builtInSources()) {
-        registerBuiltIn(name = name, source = source)
+        register(name = name, dsl = IgnitorRegistry.builtInVoice(source))
     }
 }
 
 /**
  * The built-in sounds' SOURCES by name (several names share one tree), in registration order: what a
- * built-in is before [IgnitorRegistry.registerBuiltIn] wraps it in the classic voice. The one list
+ * built-in is before [IgnitorRegistry.builtInVoice] wraps it in the classic voice. The one list
  * [registerDefaults] registers, and the list a spec renders each built-in against its own raw source from.
  *
  * Every tree opens explicit Param slots, pulled from [IgnitorDsl.Slots], for the parameters that

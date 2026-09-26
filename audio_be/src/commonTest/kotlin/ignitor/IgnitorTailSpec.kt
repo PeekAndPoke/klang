@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.plus
 
 /**
  * Guards [BuiltIgnitor.releaseTailSec] — the number `VoiceFactory` turns into voice lifetime.
@@ -205,6 +206,11 @@ class IgnitorTailSpec : StringSpec({
         ends(IgnitorDsl.Sine()) shouldBe false
         ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2)) shouldBe true
         ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).lowpass(800.0)) shouldBe false
+        // a MODULATED release has no static length, so it cannot promise to reach zero by the voice's end: the
+        // voice keeps its teardown fade (step 10); the same envelope with a static release ends the voice
+        val modulated = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Constant(0.3).plus(IgnitorDsl.PerlinNoise().mul(c(0.01))))
+        ends(modulated) shouldBe false
+        ends(modulated.copy(releaseSec = c(0.3))) shouldBe true
         // ...but a stage the gate did NOT build is its inner, so it hands the envelope's answer through:
         // an unwritten lowpass slot, and a `mul` at exactly unity
         val unsetLowpass = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2), freq = IgnitorDsl.Slots.lpf.freq)

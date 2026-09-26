@@ -485,24 +485,27 @@ Osc.sine(5)  // fixed 5 Hz (for LFO use)
 
 ### `.classic()`: the pattern's voice doors on your instrument
 
-`.classic()` wraps a sound in the classic synth voice: crush, coarse, distort, highpass, bandpass,
-notch, lowpass, tremolo and the amplitude envelope, in that order. Every stage is a slot the pattern's
+`.classic()` wraps a sound in the classic synth voice: onepole, crush, coarse, distort, highpass, bandpass,
+notch, lowpass, tremolo and the amplitude envelope, in that order. Make it the LAST call: an instrument whose
+tree ends in `.classic()` is a whole voice, and the old voice strip does not run for it (phase 3 step 10). A stage
+after it (`.classic().mul(0.5)`) undoes that: the strip runs again and the `onepole` runs twice. An `.optimizer(...)`
+hint after it is fine; it is not a stage. Every stage is a slot the pattern's
 doors fill, and a stage the note does not write is not built, so an untouched `.classic()` costs one
 envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
 
 ```javascript
 let guitar = Osc.saw().distort(0.4, "tube").classic()
-// .adsrOff(): until step 9 the old voice strip still puts its own envelope on every AUTHORED instrument (the
-// built-in sounds left the strip in step 6), after the instrument; without it the two envelopes multiply (the strip's release follows the instrument's tail,
-// so nothing is cut, but the attack and the release are applied twice).
-note("c3 e3 g3").sound(guitar).adsrOff().oscp("lpf.freq", 1800).oscp("adsr.release", 0.2)
+// the pattern's doors reach classic()'s slots: .lpf(1800) writes lpf.freq, .adsr(release = 0.2) the envelope.
+// Do NOT add .adsrOff() here: it switches classic()'s OWN envelope off (use it only when the instrument
+// brings its own envelope and should end on the voice's short teardown fade instead).
+note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 ```
 
 The slots it places are grouped per stage on `OscSlot` (also `Osc.slot`), named after the sprudel
 readers: `OscSlot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
 same on `hpf`; `bpf` and `notch` without `passes`), `OscSlot.crush.amount`, `OscSlot.coarse.amount`,
 `OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape|skew|phase`,
-`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.adsrCurves.attack|decay|release`, and the filter envelope curves
+`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.onepole`, `OscSlot.adsrCurves.attack|decay|release`, and the filter envelope curves
 `OscSlot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
@@ -516,13 +519,13 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
   renders the voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
   oversampler). A slot on the door's distort would shape every note, written or not.
 
-**Transitional (phase 3):** since step 6 (2026-09-26) the BUILT-IN sounds (`sound("saw")`, ...) are
-`classic()` trees, and since step 7 the SAMPLES are too; the pattern doors (`.lpf(...)`, `.adsr(...)`,
-`.crush(...)`) reach their slots. On an
-AUTHORED instrument the doors still write the old voice strip, which runs AFTER the instrument, until step
-9; reach its slots with `.oscp("lpf.freq", 1800)` (a door beats an `oscp` on the same slot until step 8). The
-strip's own envelope still runs on every authored instrument, so a `.classic()` instrument is enveloped twice
-unless the pattern says `.adsrOff()`.
+**Transitional (phase 3):** the BUILT-IN sounds (`sound("saw")`, step 6), the SAMPLES (step 7) and every
+authored instrument whose tree ENDS in `.classic()` (step 10) are whole voices: the pattern doors (`.lpf(...)`,
+`.adsr(...)`, `.crush(...)`) reach their slots, and the old voice strip does not run. An authored instrument
+WITHOUT `.classic()` still gets the old strip after it (its own envelope, then the strip's) until step 9 retires
+the strip; a door beats an `oscp` on the same slot until step 8. If your instrument has a long own tail
+(a pad's release), write the pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over
+its own slot (0.05 s by default), where the old strip stretched to the instrument's tail.
 
 ### Audio-rate Modulation
 

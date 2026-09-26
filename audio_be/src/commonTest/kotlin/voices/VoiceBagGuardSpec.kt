@@ -92,8 +92,9 @@ import kotlin.random.Random
  * `bilinearK` then clamped its cutoff to 1 kHz: a value that named no frequency at all rendered
  * exactly what `onepole(1000)` renders. Measured.
  *
- * Since phase 3 step 2 (2026-09-20) the registry places an `IgnitorDsl.OnePoleLowpass` in the tree
- * instead (around an authored instrument at note-on; on a built-in's source since step 6) and THE gate decides it (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off
+ * Since phase 3 step 2 (2026-09-20) an `IgnitorDsl.OnePoleLowpass` sits in the tree instead (the registry's
+ * note-on wrap around an instrument that does not end in `classic()`; `classic()`'s first stage since step 10,
+ * on every built-in) and THE gate decides it (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off
  * value and the leaf's own unset rule. The rows below are unchanged and still green, which is how
  * the move proved itself; keep them until the door becomes an ordinary instrument slot.
  *

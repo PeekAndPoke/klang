@@ -239,6 +239,14 @@ sealed interface IgnitorDsl {
         // the same doors fill them. Named `<door>.<param>` after sprudel's readers (`lpf.freq`); each
         // group's KDoc in `IgnitorDslClassic.kt` names the defaults and why.
 
+        /**
+         * The one-pole lowpass stage, `classic()`'s FIRST stage: the cutoff in Hz, which sprudel's
+         * `onepole(hz)` writes. Default 0.0, which the gate reads as off. A flat name, not `<door>.<param>`:
+         * the door has one knob, and `onepole` is the key it has always written (phase 3 step 10 moved the
+         * stage from the registry into `classic()`).
+         */
+        val onepole: IgnitorDsl = Param(name = "onepole", default = 0.0, description = "Mirrors sprudel's reader `onepole`")
+
         /** The crush stage: `crush.amount`. */
         val crush: AmountSlots = AmountSlots("crush")
 

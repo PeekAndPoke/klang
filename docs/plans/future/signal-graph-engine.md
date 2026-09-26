@@ -50,7 +50,9 @@ general mechanism, and a frontend chooses a routing.
   `IgnitorDsl` (which needs extension functions and type annotations in KlangScript), or a Kotlin-side
   extension on `IgnitorDsl`, which needs no new language feature. The Kotlin side is the smaller step
   (stone rule: complexity is the enemy); script extension functions can follow as their own feature.
-- **The tag.** How an Ignitor tree says "already has the sprudel chain": a marker node, or a field on
+- **The tag.** ANSWERED in phase 3 step 10 (2026-09-26): structural, `IgnitorDsl.endsInClassic()` (the root is
+  the `Adsr` whose `on` is the slot `adsr.on`); the auto-attach becomes one line in sprudel's sound resolution.
+  The question as first written: how an Ignitor tree says "already has the sprudel chain": a marker node, or a field on
   the tree. It must survive the wire and immutability (DSL values are immutable at construction).
 - **Double stages on authored instruments.** An authored instrument with its own `adsr` or `lowpass`
   gets `.sprudel()` appended. Its classic stages are gated on their slots, so they stay silent until

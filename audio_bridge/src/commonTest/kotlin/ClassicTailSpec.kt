@@ -14,8 +14,9 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 /**
  * `classic()`'s STRUCTURE and its SLOT VOCABULARY (phase 3 step 5), pinned where they are written.
  *
- * The order is the strip's (`docs/tasks/builtin-instruments.md` section 4): crush, coarse, distort,
- * highpass, bandpass, notch, lowpass, tremolo, adsr. The slot table below is the contract step 8 builds
+ * The order is the strip's (`docs/tasks/builtin-instruments.md` section 4) behind the pattern's onepole
+ * (its first stage since step 10): onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
+ * tremolo, adsr. The slot table below is the contract step 8 builds
  * on (the sprudel doors become `oscp` aliases and write exactly these keys), so a renamed key or a moved
  * default is a red row here before it is a silent door anywhere else. What the tail RENDERS is pinned in
  * `audio_be` (`ClassicStripParitySpec`, `ClassicTailRenderSpec`).
@@ -42,14 +43,15 @@ class ClassicTailSpec : StringSpec({
                 is IgnitorDsl.Distort -> n.inner
                 is IgnitorDsl.Coarse -> n.inner
                 is IgnitorDsl.Crush -> n.inner
+                is IgnitorDsl.OnePoleLowpass -> n.inner
                 else -> return@buildList
             }
         }
     }
 
-    "the order is the strip's: crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
+    "the order is the strip's behind the onepole: onepole, crush, coarse, distort, hpf, bpf, notch, lpf, tremolo, adsr (read inside out)" {
         spine(tail).map { it::class.simpleName } shouldBe listOf(
-            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "Sawtooth",
+            "Adsr", "Tremolo", "Lowpass", "Notch", "Bandpass", "Highpass", "Distort", "Coarse", "Crush", "OnePoleLowpass", "Sawtooth",
         )
         spine(tail).last() shouldBe saw
     }
@@ -95,6 +97,7 @@ class ClassicTailSpec : StringSpec({
         // literal here: Exponential, the same index as the amplitude default today, a separate decision.
         val modExp = AdsrCurves.indexOf(AdsrCurve.Exponential)
         val expected: List<Pair<String, Double>> = listOf(
+            "onepole" to 0.0,
             "crush.amount" to 0.0,
             "coarse.amount" to 0.0,
             "distort.amount" to 0.0,
@@ -176,6 +179,37 @@ class ClassicTailSpec : StringSpec({
         (IgnitorDsl.Slots.adsr.decay as IgnitorDsl.Param).default shouldBe adsr.decay
         (IgnitorDsl.Slots.adsr.sustain as IgnitorDsl.Param).default shouldBe adsr.sustain
         (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).default shouldBe adsr.release
+    }
+
+    // ── endsInClassic(): the tag (phase 3 step 10) ──
+
+    "endsInClassic: a tree whose last call is classic() ends in it, on any source" {
+        saw.classic().endsInClassic() shouldBe true
+        IgnitorDsl.Sine().lowpass(900.0).classic().endsInClassic() shouldBe true
+    }
+
+    "endsInClassic reads the ROOT only: a stage after classic() is not the tag" {
+        saw.classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
+        saw.classic().lowpass(900.0).endsInClassic() shouldBe false
+    }
+
+    "endsInClassic looks through an optimizer hint at the root: the by-ear A/B does not switch the voice path" {
+        saw.classic().optimizer(0).endsInClassic() shouldBe true
+        saw.classic().optimizer(1).endsInClassic() shouldBe true
+        saw.classic().optimizer(0).optimizer(1).endsInClassic() shouldBe true
+        // ...and it is still the ROOT only: a hint is not a stage, a stage after the hint is
+        saw.classic().optimizer(0).mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
+        saw.adsr(0.01, 0.1, 1.0, 0.05).optimizer(0).endsInClassic() shouldBe false
+    }
+
+    "endsInClassic: an envelope written by hand is not the tag, unless its switch is classic()'s own slot" {
+        saw.endsInClassic() shouldBe false
+        saw.adsr(0.01, 0.1, 1.0, 0.05).endsInClassic() shouldBe false
+        IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Param("on", 1.0)).endsInClassic() shouldBe false
+        IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Constant(1.0)).endsInClassic() shouldBe false
+        // the switch compared by NAME, as the wire codec builds a new Param: a hand-built tail of your own that
+        // places classic()'s switch is classic()'s envelope
+        IgnitorDsl.Adsr(inner = saw, on = IgnitorDsl.Param("adsr.on", 1.0)).endsInClassic() shouldBe true
     }
 
     "classic() is a function of its input only: two calls on one source build equal trees" {

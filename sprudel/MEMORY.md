@@ -57,8 +57,8 @@
   mapper-spelled trim costs.
 - **What it does NOT do** is the part worth remembering: it writes a slot, and a slot does what
   the instrument's tree wires it to. Since phase 3 step 6 (2026-09-26) every built-in SYNTH sound places it at the
-  source, `source.pregain().onepole(slot).classic()`, in front of every nonlinear stage; at unity it
-  folds away bit for bit (samples do not place it). With no nonlinear stage written it is a plain level.
+  source, `source.pregain().classic()` (the onepole is `classic()`'s first stage since step 10), in front of every nonlinear stage; at unity it
+  folds away bit for bit (samples place it too since step 7: `Sample.pregain().classic()`). With no nonlinear stage written it is a plain level.
 - Guards: `LangPregainSpec`, rows in `LangControlRestSpec`, `LangFieldAccessorsSpec`,
   `SprudelScopeSpec`, `CallInfoTest` and `FreqAccessorIntelSpec`. What the slot DOES is
   audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`); nothing in sprudel can hear it.
