@@ -635,6 +635,12 @@ cost section 8 names) are accepted under the principle and go on the listening l
 built-in and a crush/coarse `oversample` above 1 on a built-in go inert (release notes; the latter until
 `oversampling-regions.md`); `pregain` on the built-ins is its own later commit (section 7; landed as commit 2: `source.pregain().onepole(slot).classic()`).
 
+**Listening checkpoint PASSED (maintainer, 2026-09-26: "listening test is fine").** Covers every pair on the phase 3
+listening list: the D4 TetrisRemix bass, the envelope law's (a2) filter sweeps, (b) kicks and `sgbell`, (c1) `penv`
+and (c2) `lpfCurves`, step 6 (the built-ins on `classic()`) and step 7 (the samples). Sakura's kick level and
+Greensleeves' inert limiter stay as they are. Steps 6 and 7 are ear-confirmed, which is step 9's precondition; the
+order of steps 9 and 10 below is the one thing still open before step 8.
+
 **OPEN for the maintainer (found in step 6's plan, 2026-09-26): the order of steps 9 and 10.** Step 9 retires the
 strip and `VoiceData`, step 10 migrates the songs whose AUTHORED instruments still rely on the strip (section 8's
 list, `.classic()` appended). Done in that order, those songs lose their outer envelope and every door between the
