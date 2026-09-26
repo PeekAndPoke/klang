@@ -53,7 +53,7 @@ fun Ignitor.adsr(
  * negative and enormous ones included, so no character is taken away. What it closes is a NaN
  * SOURCE that the build-time gate cannot reach: the gate switches a stage off when its knob
  * resolves non-finite, but the envelope is gated only by its ON/OFF switch, for which unset means
- * ON (the strip's VCA runs on every voice today), so an authored `Constant(NaN)` or a slot whose
+ * ON (as the strip's VCA was on every voice, and a built-in's classic envelope is since phase 3 step 6), so an authored `Constant(NaN)` or a slot whose
  * default is the sentinel arrives here intact. One knob then carries it into the samples:
  * [AdsrIgnitor.sustainLevel], because the sustain is raw (no clamp since the envelope law, phase 3
  * D3) and the level multiplies every sample. (`expK` was the second until phase 3 step 3c removed

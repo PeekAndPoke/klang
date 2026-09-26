@@ -211,7 +211,8 @@ class IgnitorDefaultsTest : StringSpec({
         // preset knob teaches users what "the" bell width is, so it must not disagree with
         // the node it configures. Invisible at the shipped eqdb=0 (the section is retired),
         // so only an explicit pin catches it.
-        val eq = registry.get("eqdemo").shouldBeInstanceOf<IgnitorDsl.Eq>()
+        // The SOURCE: since phase 3 step 6 the registered tree is that source in the classic voice.
+        val eq = builtInSources().getValue("eqdemo").shouldBeInstanceOf<IgnitorDsl.Eq>()
         val bell = eq.sections.filterIsInstance<IgnitorDsl.EqSection.Bell>().single()
         val knob = bell.q.shouldBeInstanceOf<IgnitorDsl.Param>()
 

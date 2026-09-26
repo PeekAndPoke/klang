@@ -198,7 +198,12 @@ class FilterCurvesSlots internal constructor(door: String) {
  *
  * What it deliberately does NOT contain:
  *  - `pregain`: an instrument places `.pregain()` where the player's touch enters (section 5 of the plan);
- *  - `onepole`: the registry hangs it on EVERY instrument, outside this tail (`IgnitorRegistry.createExciter`).
+ *  - `onepole`: the registry places it, never an author: on a built-in's SOURCE, inside this tail
+ *    (`IgnitorRegistry.registerBuiltIn`, the voice strip's order), and around an authored instrument at
+ *    note-on (`IgnitorRegistry.createExciter`).
+ *
+ * Every built-in sound is `source.onepole(slot).classic()` since phase 3 step 6, and the voice strip is off
+ * for it: this tail IS the voice of `sound("saw")`.
  *
  * Per stage, what each node is and where it still differs from the strip (the measured table lives in
  * `ClassicStripParitySpec`):

@@ -53,12 +53,31 @@ data class BuiltIgnitor(
      * absolute (`VOICE_CULL_FLOOR`, 1e-5), so even the old sine-only tremolo at depth 1 held a voice
      * under it for `VOICE_CULL_SECONDS` or longer when slow or quiet enough (a full-scale sine below
      * about 0.04 Hz, a -40 dB release tail at about 0.4 Hz). Step 6's teardown-fade work builds on
-     * this same field: the build reporting what the voice must do about the tree's own amplitude shape.
+     * this same idea: the build reporting what the voice must do about the tree's own amplitude shape
+     * ([endsInEnvelope]).
      *
      * Absorbed along the spine like [releaseTailSec] (a tremolo on a CUTOFF silences nothing), and
      * carried in the cached value for the same reason.
      */
     val gatesOutput: Boolean = false,
+    /**
+     * True when the ROOT of this subtree is an amplitude envelope that the build BUILT (an `Adsr`
+     * whose `on` switch did not turn it off). Set by the envelope's own arm; a stage the gate did NOT
+     * build (a gate row, the unity `mul` fold included) hands its inner's answer through, because
+     * that node IS its inner (`classic()`'s unwritten lowpass over an authored envelope, step 10's case),
+     * and so does a `detune`, which scales the frequency and leaves the amplitude alone.
+     *
+     * Unlike [releaseTailSec] and [gatesOutput] it is NOT absorbed along the spine: an envelope
+     * UNDER a later BUILT stage does not take the voice's last frames to zero, so it answers only for
+     * the node it is. Pitch-mod wrappers and optimizer hints pass their inner's answer through (they
+     * do not touch the amplitude).
+     *
+     * The voice factory reads it for a voice whose tree is the whole voice (a built-in on `classic()`,
+     * phase 3 step 6): when it is false, the voice appends the teardown fade the strip's `adsrOff`
+     * always had (`TeardownFadeRenderer`, section 6 of `docs/tasks/builtin-instruments.md`). When it is
+     * true, the envelope ends the voice and a fade on top would change its last frames.
+     */
+    val endsInEnvelope: Boolean = false,
 )
 
 /** Null-tolerant max: `null` means "no tail", so it loses to any actual value. */

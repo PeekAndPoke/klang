@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
@@ -49,7 +50,12 @@ class VoiceFactoryBodyVowelRoutingSpec : StringSpec({
     val blockFrames = 128
 
     fun voiceOf(filters: List<FilterDef>): Voice {
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+        // The voice STRIP's chain is the subject, so the sound is an AUTHORED triangle: a built-in runs no
+        // strip since phase 3 step 6 (its filters are `classic()` slots in its own tree).
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("striptriangle", IgnitorDsl.Triangle())
+        }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             sampleRateDouble = sampleRate.toDouble(),
@@ -67,7 +73,7 @@ class VoiceFactoryBodyVowelRoutingSpec : StringSpec({
                 playbackId = "test",
                 data = VoiceData.empty.copy(
                     freqHz = 440.0,
-                    sound = "triangle",
+                    sound = "striptriangle",
                     filters = FilterDefs(filters),
                 ),
                 startTime = 0.0,

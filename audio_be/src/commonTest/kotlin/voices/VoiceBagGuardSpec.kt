@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.builtInSources
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_bridge.FilterDef
@@ -91,8 +92,8 @@ import kotlin.random.Random
  * `bilinearK` then clamped its cutoff to 1 kHz: a value that named no frequency at all rendered
  * exactly what `onepole(1000)` renders. Measured.
  *
- * Since phase 3 step 2 (2026-09-20) the registry hangs an `IgnitorDsl.OnePoleLowpass` on the tree
- * instead and THE gate decides it (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off
+ * Since phase 3 step 2 (2026-09-20) the registry places an `IgnitorDsl.OnePoleLowpass` in the tree
+ * instead (around an authored instrument at note-on; on a built-in's source since step 6) and THE gate decides it (`IgnitorDslRuntime`, its `gatedOff` KDoc), with the same off
  * value and the leaf's own unset rule. The rows below are unchanged and still green, which is how
  * the move proved itself; keep them until the door becomes an ordinary instrument slot.
  *
@@ -108,7 +109,14 @@ class VoiceBagGuardSpec : StringSpec({
     // ── `analog` at the factory: the filters, and the sample branch ───────────────────────────
 
     fun voiceOf(data: VoiceData, getSample: (SampleRequest) -> SampleStore.SampleEntry.Complete?): Voice {
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+        // `stripsaw` / `stripsupersaw`: the built-ins' sources as AUTHORED instruments, so the factory's own
+        // `analog` read and the voice STRIP's filters are what these rows reach. A built-in runs no strip
+        // since phase 3 step 6; its twin row below pins the tree's `Param` leaf instead.
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("stripsaw", builtInSources().getValue("saw"))
+            register("stripsupersaw", builtInSources().getValue("supersaw"))
+        }
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             sampleRateDouble = sampleRate.toDouble(),
@@ -168,7 +176,7 @@ class VoiceBagGuardSpec : StringSpec({
     }
 
     /** An oscillator through one lowpass. [lowpassHz] is where that filter is asked to sit. */
-    fun throughLowpass(analog: Double?, sound: String = "saw", lowpassHz: Double = 8000.0): VoiceData =
+    fun throughLowpass(analog: Double?, sound: String = "stripsaw", lowpassHz: Double = 8000.0): VoiceData =
         VoiceData.empty.copy(
             freqHz = 220.0,
             sound = sound,
@@ -224,8 +232,8 @@ class VoiceBagGuardSpec : StringSpec({
         // the exciter is built off the same stream, so a supersaw's detune jitter moved as well as
         // its cutoff. Nothing but the bit comparison can state that; the poisoned voice was not any
         // nameable voice.
-        val unset = renderVoice(throughLowpass(null, sound = "supersaw"))
-        val poisoned = renderVoice(throughLowpass(Double.NaN, sound = "supersaw"))
+        val unset = renderVoice(throughLowpass(null, sound = "stripsupersaw"))
+        val poisoned = renderVoice(throughLowpass(Double.NaN, sound = "stripsupersaw"))
 
         withClue("not-silence floor") {
             peakOf(unset) shouldBeGreaterThan 0.01
@@ -260,6 +268,24 @@ class VoiceBagGuardSpec : StringSpec({
         val unset = renderVoice(throughLowpass(null))
 
         assertSameBits("analog 0 against unset", unset, renderVoice(throughLowpass(0.0)))
+    }
+
+    "the BUILT-IN twin: a non-finite analog reads as unset in classic()'s filters too (the Param leaf)" {
+        // A built-in's filters read `analog` through the `Slots.analog` leaf, which reads a non-finite
+        // override as unset: the same rule as the factory's guard, at the one place a slot resolves.
+        val unset = renderVoice(throughLowpass(null, sound = "saw"))
+
+        withClue("not-silence floor") {
+            peakOf(unset) shouldBeGreaterThan 0.01
+        }
+
+        for (poison in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            assertSameBits("$poison analog against unset, built-in saw", unset, renderVoice(throughLowpass(poison, sound = "saw")))
+        }
+
+        withClue("engagement: a finite analog does change the built-in") {
+            renderVoice(throughLowpass(5.0, sound = "saw")).toList() shouldNotBe unset.toList()
+        }
     }
 
     // ── `analog` in the sample branch: the wow and flutter of SampleIgnitor ───────────────────

@@ -26,6 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
+| phase 3 step 6 (2b9d5146) | `audio_be/**` (VoiceFactory, IgnitorRegistry, IgnitorDefaults, BuiltIgnitor, runtime, EnvelopeRenderer, new classic slot bag, teardown fade) and their specs; `audio_bridge` classic KDoc; `klangscript-libs` classic KDoc | commit 1 (the built-ins on `classic()`, the strip off for them) is COMMITTED; the `pregain` commit and the benchmark commit follow |
 
 ## The two layers
 

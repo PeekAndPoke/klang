@@ -8,10 +8,14 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.optimize
 
 /**
  * Guards [BuiltIgnitor.releaseTailSec] — the number `VoiceFactory` turns into voice lifetime.
@@ -188,5 +192,43 @@ class IgnitorTailSpec : StringSpec({
         // The onepole wrap replaces the ignitor; it must not drop the finding with it.
         val withOnepole = data.copy(oscParams = mapOf("onepole" to 900.0))
         registry.createExciter("pad", withOnepole, 440.0)?.releaseTailSec shouldBe 1.1
+    }
+    // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
+
+    "endsInEnvelope: classic()'s envelope when it is on; not when switched off, not for a bare source, not under a later stage" {
+        fun ends(dsl: IgnitorDsl, oscParams: Map<String, Double>? = null): Boolean =
+            dsl.buildExciter(oscParams, freqHz = 440.0).endsInEnvelope
+
+        ends(IgnitorDsl.Sine().classic()) shouldBe true
+        ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false
+        ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 1.0, "lpf.freq" to 800.0)) shouldBe true
+        ends(IgnitorDsl.Sine()) shouldBe false
+        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2)) shouldBe true
+        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).lowpass(800.0)) shouldBe false
+        // ...but a stage the gate did NOT build is its inner, so it hands the envelope's answer through:
+        // an unwritten lowpass slot, and a `mul` at exactly unity
+        val unsetLowpass = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2), freq = IgnitorDsl.Slots.lpf.freq)
+        ends(unsetLowpass) shouldBe true
+        ends(unsetLowpass, mapOf("lpf.freq" to 800.0)) shouldBe false
+        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0))) shouldBe true
+        // the unity fold with the knob on the LEFT
+        ends(IgnitorDsl.Times(left = IgnitorDsl.Param("level", 1.0), right = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2))) shouldBe true
+        // a written, non-unity level is a built multiply over the envelope: it does not end in it
+        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0)), mapOf("level" to 0.5)) shouldBe false
+        // a detune scales the frequency, not the amplitude: both of its branches hand the answer on
+        ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).detune(semitones = 12.0)) shouldBe true
+        ends(IgnitorDsl.Sine(freq = c(5.0)).adsr(0.01, 0.1, 0.5, 0.2).detune(semitones = 12.0)) shouldBe true
+        // a pitch-mod wrapper does not touch the amplitude, so it hands the envelope's answer through
+        ends(IgnitorDsl.Vibrato(inner = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2), rate = c(5.0), semitones = c(0.2))) shouldBe true
+    }
+
+    "endsInEnvelope on the SHIPPING path: a registered tree renders OPTIMIZED, where a bare mul is an Affine" {
+        // `buildExciter` alone does not optimize, so the rows above reach the `Times` arms. Every registered
+        // tree renders `optimize()`d, and the optimizer folds a bare `x.mul(k)` into an `Affine`.
+        val optimized = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).mul(IgnitorDsl.Param("level", 1.0)).optimize()
+
+        optimized.shouldBeInstanceOf<IgnitorDsl.Affine>()
+        optimized.buildExciter(freqHz = 440.0).endsInEnvelope shouldBe true
+        optimized.buildExciter(mapOf("level" to 0.5), freqHz = 440.0).endsInEnvelope shouldBe false
     }
 })

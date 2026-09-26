@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.builtInSources
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
@@ -45,7 +46,13 @@ class VoiceFactoryFilterEnvWireSpec : StringSpec({
     val blocks = 24
 
     fun energyOf(envelope: FilterEnvDef?): Double {
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+        // The saw's source as an AUTHORED instrument, so the voice STRIP runs and `toModulator` is reached:
+        // a built-in runs no strip since phase 3 step 6 (its envelope is a `classic()` slot,
+        // `ClassicStripParitySpec` pins that side).
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("stripsaw", builtInSources().getValue("saw"))
+        }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate,
@@ -64,7 +71,7 @@ class VoiceFactoryFilterEnvWireSpec : StringSpec({
                 playbackId = "wire",
                 data = VoiceData.empty.copy(
                     freqHz = 220.0,
-                    sound = "sawtooth",
+                    sound = "stripsaw",
                     // VCA off: the amplitude envelope must not be what moves the energy.
                     adsr = AdsrDef.Std(release = 0.05, on = false),
                     filters = FilterDefs(listOf(FilterDef.LowPass(freq = 300.0, q = 0.707, envelope = envelope))),

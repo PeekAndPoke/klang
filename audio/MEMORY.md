@@ -1,5 +1,43 @@
 # Klang Audio — Memory
 
+## The built-ins on `classic()`, the strip off for them (phase 3 step 6, 2026-09-26)
+
+- **One registry method writes the built-in shape**: `IgnitorRegistry.registerBuiltIn(name, source)` registers
+  `source.onepole(ONEPOLE_SLOT).classic()` and flags the name. `registerDefaults` registers every entry of
+  `builtInSources()` (43 names, 28 trees) through it. `isBuiltIn(name)` answers from the NEAREST registry that
+  defines the name, so a fork's `register("saw", ...)` shadows the built-in as an authored instrument.
+- **A built-in voice runs no strip.** The factory decides it right after the rng deal and then builds NO strip
+  filters: `toFilter`/`toModulator` draw from `voiceRandom` at `analog > 0`, and a discarded draw would shift
+  the tree's own. The voice runs ignite plus, only when the build reports `endsInEnvelope = false` (the tree's
+  `adsrOff`), `TeardownFadeRenderer`, the strip's `adsrOff` fade extracted unchanged (one law, two hosts).
+  Authored instruments and samples keep the strip until step 9.
+- **The typed fields reach the slots through `_classic_slot_bag.kt`** (scaffolding: removed in step 8 when the
+  sprudel doors write the slot keys). Only set, finite fields are written, so the filter envelope's slot-layer
+  fill decides as the strip's `depth ?: 7`, with one accepted difference: an envelope whose only set stage is
+  non-finite switches nothing on here, where the strip built one at depth 7. A typed door WINS over a raw
+  `oscp` of the same slot. No wire change.
+- **A built-in's lifetime is the tree's alone** (`releaseTailSec`, which a switched-off envelope still reports),
+  floored at 0: a raw negative release is a zero-length release stage and the voice still plays to its gate
+  (review round 1's MAJOR: without the floor it ended 0.1 s early from the sustain level). With the typed
+  release still on the wire it equals the strip's; it also removes the 0.05 s floor for a release written
+  only as a slot.
+- **`BuiltIgnitor.endsInEnvelope`** is a ROOT property: set by the `Adsr` arm when it builds, never absorbed
+  from a child of a BUILT stage (an envelope under a later stage does not end the voice). A node that IS its
+  inner hands the answer through (`passThrough`): every gate arm that did not build (the filters, onepole,
+  distort, drive, crush, coarse, tremolo, a switched-off `Adsr`), the three unity-`mul` folds (both `Times`
+  sides and the optimizer's `Affine`, the shipping path), `detune`, and the pitch-mod wrappers.
+- **The analog draw order is the one corpus move**, and it is small: the strip draws every filter's tolerance,
+  then every drift; the tree draws per filter. The TOTAL draw count per voice is unchanged, so every
+  render-time stream (noise, pluck, oscillator drift) starts where it did; only which filter gets which
+  tolerance and drift seed moves. 9 of 17 corpus songs moved, -49.5 to -81.9 dB RMS. A scratch control with
+  the humanization draws off on BOTH hosts rendered those 9 bit-identical: the draw order is the only cause.
+- **Engagement controls need the scenario, not the song name.** Der Schmetterling's built-in shaker (release
+  0.01) looked like the lifetime-floor control, but its sustain is 0 and it decays to silence inside its gate,
+  so a floored lifetime renders zeros. ATruthWorthLyingFor's bass and IrishLamentTechno's sub (a short release
+  from a held level) are the rows that see it.
+- `perlin`, `berlin` and `crackle` draw at CONSTRUCTION, so with `analog > 0` even ONE pattern filter moves them
+  (`BuiltInVoiceMatrixSpec` records it); every other source draws when it renders.
+
 ## One envelope law: `EnvelopeCore` for every envelope (phase 3, D3 commit a1, 2026-09-25)
 
 - **`EnvelopeCore` (`audio_be/`) is the one copy of the ADSR law**, with `prepare` once per block and an

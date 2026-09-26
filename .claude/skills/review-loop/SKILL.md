@@ -94,6 +94,11 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   left a third in the rule's own home, found one round later. Repo-wide includes `.claude/skills/` (the references agents write patches from):
   a brief that splits the grep between implementer (code) and coordinator (docs) names the skills in the
   coordinator's half (step 5b (b), 2026-09-25: the music-writing reference still taught the old default).
+- **A decision that REPLACES an expression lists every clause of the old one** (2026-09-26, ledger, a
+  recurrence of 2026-09-25): when a brief or an approved plan swaps one evaluator, lifetime source, default or
+  formula for another (state for a stateless law, `max(tail ?: 0, release)` for "the tree alone"), it first
+  writes out the OLD expression's clauses and implicit defaults (floors, initial values, fallbacks, `?:`
+  arms) and marks each one kept, changed by a named decision, or gone. A clause nobody named is kept.
 - **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
   exercising the changed path. A render that predates the last edit, or a song that never calls
   the changed door, backs nothing.

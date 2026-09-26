@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
@@ -32,9 +33,11 @@ class IgnitorRegistry(
          *
          * Default `0.0` = the stage is off, which is what the gate tests. Deliberately NOT in
          * `IgnitorDsl.Slots`: that object is the authoring vocabulary an instrument places itself,
-         * and this tail is appended by the registry to every instrument, authored or built-in.
+         * and this stage is placed by the registry, never by an author: around every AUTHORED
+         * instrument at note-on ([createExciter]), and on the SOURCE of every built-in at
+         * registration ([registerBuiltIn]), where the voice strip always had it.
          */
-        private val ONEPOLE_SLOT: IgnitorDsl = IgnitorDsl.Param(
+        internal val ONEPOLE_SLOT: IgnitorDsl = IgnitorDsl.Param(
             name = "onepole",
             default = 0.0,
             description = "Pattern-level one-pole lowpass cutoff in Hz (0 = off)",
@@ -42,6 +45,13 @@ class IgnitorRegistry(
     }
 
     private val defs = mutableMapOf<String, IgnitorDsl>()
+
+    /**
+     * The names THIS registry registered through [registerBuiltIn]. A name registered here through
+     * [register] is removed again, so a playback that re-registers `saw` with its own tree shadows the
+     * built-in as an authored instrument. See [isBuiltIn].
+     */
+    private val builtIns = mutableSetOf<String>()
 
     /**
      * Optimized twin of [defs] — what voices actually render. Kept separate so [get] can keep
@@ -70,6 +80,49 @@ class IgnitorRegistry(
      */
     fun register(name: String, dsl: IgnitorDsl) {
         val key = name.lowercase()
+        builtIns.remove(key)
+        store(key, dsl)
+    }
+
+    /**
+     * Registers a BUILT-IN sound (phase 3 step 6): [source] becomes the subtractive synth voice
+     * `sound("saw")` has always been, written as one Ignitor tree,
+     *
+     * ```
+     * source.onepole(ONEPOLE_SLOT).classic()
+     * ```
+     *
+     * the voice strip's own order (the pattern's `onepole` on the source, then crush ... adsr), and
+     * the name is recorded as a built-in, which switches the voice strip OFF for its voices: the tree
+     * is the whole voice ([isBuiltIn], `VoiceFactory`). This is the one place the built-in shape is
+     * written.
+     *
+     * Scaffolding lifetime: the built-in flag exists only while the strip still serves authored
+     * instruments and samples; it goes with the strip (step 9 of `docs/tasks/builtin-instruments.md`).
+     */
+    internal fun registerBuiltIn(name: String, source: IgnitorDsl) {
+        val key = name.lowercase()
+        store(key, IgnitorDsl.OnePoleLowpass(inner = source, freq = ONEPOLE_SLOT).classic())
+        builtIns.add(key)
+    }
+
+    /**
+     * True when the NEAREST registry that defines [name] registered it through [registerBuiltIn]:
+     * a built-in sound, whose tree is the whole voice (no voice strip, no registry `onepole` wrap).
+     * A name this registry registered through [register] is authored here, whatever the parent has.
+     * [name] null means the default sound, as in [contains].
+     */
+    internal fun isBuiltIn(name: String?): Boolean {
+        val key = (name ?: DEFAULT_SOUND).lowercase()
+
+        if (defs.containsKey(key)) {
+            return key in builtIns
+        }
+
+        return parent?.isBuiltIn(key) == true
+    }
+
+    private fun store(key: String, dsl: IgnitorDsl) {
         defs[key] = dsl
         optimizedDefs[key] = try {
             dsl.optimize()
@@ -130,9 +183,11 @@ class IgnitorRegistry(
          *  lane, whose time constants follow the rate it is stepped at. */
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
         blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+        /** The slot bag the build reads. A built-in voice hands the bag with its typed fields
+         *  translated into `classic()` slots (`classicSlotBag`); everything else, its own. */
+        oscParams: Map<String, Double>? = data.oscParams,
     ): BuiltIgnitor? {
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        val oscParams = data.oscParams
 
         // No `?: get(key)` fallback on purpose: it could never fire (register writes both maps
         // together), so it would only mask a future regression in optimized()'s delegation by
@@ -152,7 +207,11 @@ class IgnitorRegistry(
         // buys the rule its single home; caching it would need a third registry map to mirror
         // `optimized`'s parent delegation, and would put an `onepole` slot into every instrument's
         // `collectParams` listing, which is a surface change and not this step's.
-        return IgnitorDsl.OnePoleLowpass(inner = dsl, freq = ONEPOLE_SLOT).buildExciter(
+        // A built-in carries its `onepole` on its SOURCE already ([registerBuiltIn]), where the voice
+        // strip had it; wrapping it again here would put a second one after its envelope.
+        val tree = if (isBuiltIn(key)) dsl else IgnitorDsl.OnePoleLowpass(inner = dsl, freq = ONEPOLE_SLOT)
+
+        return tree.buildExciter(
             oscParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,

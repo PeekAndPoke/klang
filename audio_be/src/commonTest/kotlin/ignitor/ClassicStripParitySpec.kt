@@ -31,7 +31,6 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.adsr
-import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
@@ -42,14 +41,18 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * **`classic()` against today's voice strip, one voice per slot row: THE TABLE STEP 6 IS JUDGED
- * AGAINST** (phase 3 step 5, `docs/tasks/builtin-instruments.md` section 9). A measurement, not an
- * identity claim: every row renders the same note twice through the real `VoiceFactory`,
+ * **The built-in `saw` on `classic()` against the voice strip, one voice per slot row: STEP 6'S TABLE**
+ * (phase 3 steps 5 and 6, `docs/tasks/builtin-instruments.md` section 9). Every row renders the same note
+ * three times through the real `VoiceFactory`,
  *
- *  - STRIP: the bare built-in `saw`, the row's settings on the typed `VoiceData` fields sprudel writes
- *    today, through the `modern` pipeline (crush, coarse, distort, the filters, tremolo, the VCA);
- *  - CLASSIC: `Sawtooth().classic()` registered as an instrument, the SAME settings as slots in the
- *    bag, on an EMPTY pipeline, so the strip adds nothing and the tree is the whole voice,
+ *  - STRIP: the saw's SOURCE registered as an AUTHORED instrument (`stripsaw`, the strip still runs after
+ *    it), the row's settings on the typed `VoiceData` fields sprudel writes today, through the `modern`
+ *    pipeline (crush, coarse, distort, the filters, tremolo, the VCA): what `sound("saw")` was before step 6;
+ *  - TYPED: the BUILT-IN `saw` (`source.onepole(slot).classic()`, the strip off), the SAME typed fields,
+ *    which reach its slots through the factory's translation (`classicSlotBag`): the path every song
+ *    takes until step 8;
+ *  - BAG: the built-in `saw` with the same settings written as SLOTS in the bag and no typed field: the
+ *    path the doors take from step 8,
  *
  * and compares the left mix bus in raw bits. The onset is mid-block (frame 37) and the gate ends at a
  * quarter second, so the release and the voice's lifetime are inside the render. Every row runs at
@@ -73,8 +76,6 @@ class ClassicStripParitySpec : StringSpec({
     val blocks = 220
     val frames = blocks * blockFrames
     val gateSec = 0.25
-
-    val classicSaw: IgnitorDsl = IgnitorDsl.Sawtooth().classic()
 
     /**
      * What the D3 fill row is compared against: the DOOR's filter with the same one stage named (its
@@ -158,7 +159,9 @@ class ClassicStripParitySpec : StringSpec({
         val onsetSec = 37.0 / sampleRate
         val registry = IgnitorRegistry().apply {
             registerDefaults()
-            register("classicsaw", classicSaw)
+            // The built-in saw's own source, AUTHORED: the voice strip runs after it, as it did after
+            // every built-in before step 6.
+            register("stripsaw", builtInSources().getValue("saw"))
             register("doorfill", doorFilledLowpass)
             register("expfilter", namedCurveLowpass(AdsrCurve.Exponential))
             register("linfilter", namedCurveLowpass(AdsrCurve.Linear))
@@ -212,11 +215,32 @@ class ClassicStripParitySpec : StringSpec({
 
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
-    fun strip(settings: VoiceData.() -> VoiceData, analog: Double?, sampleRate: Int): DoubleArray =
-        render(base.copy(sound = "saw", oscParams = analog?.let { mapOf("analog" to it) }).settings(), sampleRate)
+    /** The bag keys that are not `classic()` slots: the voice's own, which every column carries. */
+    val ownKeys = setOf("analog", "onepole")
 
-    fun classic(bag: Map<String, Double>, sampleRate: Int, sound: String = "classicsaw"): DoubleArray =
-        render(base.copy(sound = sound, pipeline = "bare", oscParams = bag), sampleRate)
+    fun own(bag: Map<String, Double>): Map<String, Double>? = bag.filterKeys { it in ownKeys }.takeIf { it.isNotEmpty() }
+
+    fun strip(
+        settings: VoiceData.() -> VoiceData,
+        own: Map<String, Double>?,
+        sampleRate: Int,
+        voice: VoiceData.() -> VoiceData = { this },
+    ): DoubleArray = render(base.copy(sound = "stripsaw", oscParams = own).settings().voice(), sampleRate)
+
+    fun typed(
+        settings: VoiceData.() -> VoiceData,
+        own: Map<String, Double>?,
+        sampleRate: Int,
+        voice: VoiceData.() -> VoiceData = { this },
+    ): DoubleArray = render(base.copy(sound = "saw", oscParams = own).settings().voice(), sampleRate)
+
+    /** The built-in `saw` (or an authored helper [sound] on the EMPTY pipeline) with [bag] as its slots. */
+    fun classic(
+        bag: Map<String, Double>,
+        sampleRate: Int,
+        sound: String = "saw",
+        voice: VoiceData.() -> VoiceData = { this },
+    ): DoubleArray = render(base.copy(sound = sound, pipeline = "bare", oscParams = bag).voice(), sampleRate)
 
     fun maxDiff(a: DoubleArray, b: DoubleArray): Double = a.indices.maxOf { abs(a[it] - b[it]) }
 
@@ -227,11 +251,16 @@ class ClassicStripParitySpec : StringSpec({
     val untouchedStrip: Map<Int, DoubleArray> by lazy { rates.associateWith { strip({ this }, null, it) } }
     val untouchedClassic: Map<Int, DoubleArray> by lazy { rates.associateWith { classic(emptyMap(), it) } }
 
-    /** A row: its bag, the same settings on the strip's fields, and whether the two are identical at both rates. */
+    /**
+     * A row: its bag, the same settings on the strip's typed fields, the voice-level fields every column
+     * carries ([voice]: the pitch pipeline, which is not a `classic()` stage), and whether the classic
+     * columns are identical to the strip at both rates.
+     */
     class Row(
         val title: String,
         val identical: Boolean,
         val bag: Map<String, Double>,
+        val voice: VoiceData.() -> VoiceData = { this },
         val strip: VoiceData.() -> VoiceData,
     )
 
@@ -409,8 +438,8 @@ class ClassicStripParitySpec : StringSpec({
             mapOf("adsr.attack" to 0.00501, "adsr.decay" to 0.20001, "adsr.sustain" to 0.5, "adsr.release" to 0.20001),
         ) { copy(adsr = AdsrDef.Std(attack = 0.00501, decay = 0.20001, sustain = 0.5, release = 0.20001)) },
         Row(
-            "adsr release 0.02: the factory's lifetime floor (the voice envelope's 0.05) keeps the de-click tail, step 6",
-            false,
+            "adsr release 0.02: a built-in lives as long as its tree says, no floor from the voice envelope's 0.05 (step 6)",
+            true,
             mapOf("adsr.release" to 0.02),
         ) { copy(adsr = AdsrDef.Std(release = 0.02)) },
         Row(
@@ -425,7 +454,43 @@ class ClassicStripParitySpec : StringSpec({
         ) {
             copy(adsr = AdsrDef.Std(sustain = 0.4, attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.SCurve, releaseCurve = AdsrCurve.Square))
         },
-        Row("adsrOff: the strip's teardown fade, step 6", false, mapOf("adsr.on" to 0.0)) { copy(adsr = AdsrDef.Std(on = false)) },
+        Row(
+            "adsr release -0.1: a zero-length release stage, and the voice still lives to its gate (the lifetime floored at 0)",
+            true,
+            mapOf("adsr.release" to -0.1),
+        ) { copy(adsr = AdsrDef.Std(release = -0.1)) },
+        Row("adsrOff: the teardown fade, one law on both hosts (step 6)", true, mapOf("adsr.on" to 0.0)) { copy(adsr = AdsrDef.Std(on = false)) },
+        Row("adsrOff with release 0.2: the fade over a longer tail", true, mapOf("adsr.on" to 0.0, "adsr.release" to 0.2)) {
+            copy(adsr = AdsrDef.Std(on = false, release = 0.2))
+        },
+
+        // ── the registry's onepole: on the built-in's SOURCE, in front of every stage (step 6) ──
+        Row("onepole 900 with crush 5: in front of the quantizer", true, mapOf("onepole" to 900.0, "crush.amount" to 5.0)) {
+            copy(crush = 5.0)
+        },
+        Row("onepole 900 with distort 0.8: in front of the shaper", true, mapOf("onepole" to 900.0, "distort.amount" to 0.8)) {
+            copy(distort = 0.8)
+        },
+
+        // ── names the catalogues do not know: both hosts fall back through the same `indexOf` ──
+        Row(
+            "unknown tremolo and distort shape names",
+            true,
+            mapOf(
+                "tremolo.depth" to 0.6, "tremolo.sync" to 3.0, "tremolo.shape" to LfoShapes.indexOf("wobble"),
+                "distort.amount" to 0.5, "distort.shape" to DistortionShapes.indexOf("nope"),
+            ),
+        ) { copy(tremoloDepth = 0.6, tremoloSync = 3.0, tremoloShape = "wobble", distort = 0.5, distortShape = "nope") },
+
+        // ── the voice's pitch pipeline under a filtered built-in: it stays on the voice ──
+        Row(
+            "vibrato and FM from the voice's pitch pipeline, under lpf env and hpf",
+            true,
+            mapOf("lpf.freq" to 900.0, "lpf.env" to 12.0, "hpf.freq" to 120.0),
+            voice = { copy(vibrato = 5.0, vibratoMod = 0.4, fmh = 2.0, fmEnv = 150.0) },
+        ) {
+            copy(filters = filters(FilterDef.HighPass(120.0, 0.707), FilterDef.LowPass(900.0, 0.707, envelope = FilterEnvDef(depth = 12.0))))
+        },
 
         // ── in combination ──
         Row(
@@ -450,6 +515,19 @@ class ClassicStripParitySpec : StringSpec({
         ) { copy(crush = 5.0, distort = 0.4, filters = filters(FilterDef.LowPass(3000.0, 0.707))) },
     )
 
+    "[crush oversample] DIVERGENT: classic()'s crush has no oversampler (docs/tasks/oversampling-regions.md)" {
+        for (rate in rates) {
+            val plain = strip({ copy(crush = 4.0) }, null, rate)
+
+            withClue("$rate Hz: engaged, the oversampled strip crush is not the plain one") {
+                firstMismatch(strip({ copy(crush = 4.0, crushOversample = 2) }, null, rate), plain) shouldNotBe -1
+            }
+            withClue("$rate Hz: the built-in renders the plain crush") {
+                firstMismatch(typed({ copy(crush = 4.0, crushOversample = 2) }, null, rate), plain) shouldBe -1
+            }
+        }
+    }
+
     "the harness sees sound: the untouched voice is not silence" {
         for (rate in rates) {
             withClue("$rate Hz") { untouchedStrip.getValue(rate).maxOf { abs(it) } shouldBeGreaterThan 0.1 }
@@ -464,13 +542,11 @@ class ClassicStripParitySpec : StringSpec({
             val identical = row.identical
 
             "[$rate Hz] ${if (identical) "IDENTICAL" else "DIVERGENT"}: ${row.title}" {
-                val analog = row.bag["analog"]
-                val s = strip(row.strip, analog, rate)
-                val c = classic(row.bag, rate)
-                val mismatch = firstMismatch(s, c)
-
-                println(
-                    "CLASSIC-TABLE | $rate | ${row.title} | first mismatch $mismatch | max diff ${maxDiff(s, c)} | teardown window $teardownFrames",
+                val own = own(row.bag)
+                val s = strip(row.strip, own, rate, row.voice)
+                val columns = listOf(
+                    "TYPED" to typed(row.strip, own, rate, row.voice),
+                    "BAG" to classic(row.bag, rate, voice = row.voice),
                 )
 
                 if (row.bag.isNotEmpty()) {
@@ -479,14 +555,22 @@ class ClassicStripParitySpec : StringSpec({
                     }
                 }
 
-                if (identical) {
-                    withClue("first mismatching frame") { mismatch shouldBe -1 }
-                } else {
-                    withClue("recorded as divergent, and it still is") { mismatch shouldNotBe -1 }
-                    // ...and the CLASSIC side is not its unwritten tail. For a single-knob row that makes the
-                    // stated cause true; a multi-knob row leans on its single-knob siblings for each cause.
-                    withClue("engagement: classic() renders something other than its unwritten tail") {
-                        c.toList() shouldNotBe untouchedClassic.getValue(rate).toList()
+                for ((column, c) in columns) {
+                    val mismatch = firstMismatch(s, c)
+
+                    println(
+                        "CLASSIC-TABLE | $rate | $column | ${row.title} | first mismatch $mismatch | max diff ${maxDiff(s, c)} | teardown window $teardownFrames",
+                    )
+
+                    if (identical) {
+                        withClue("$column: first mismatching frame") { mismatch shouldBe -1 }
+                    } else {
+                        withClue("$column: recorded as divergent, and it still is") { mismatch shouldNotBe -1 }
+                        // ...and the CLASSIC side is not its unwritten tail. For a single-knob row that makes the
+                        // stated cause true; a multi-knob row leans on its single-knob siblings for each cause.
+                        withClue("$column engagement: classic() renders something other than its unwritten tail") {
+                            c.toList() shouldNotBe untouchedClassic.getValue(rate).toList()
+                        }
                     }
                 }
             }

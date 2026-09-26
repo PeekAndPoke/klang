@@ -298,4 +298,42 @@ class IgnitorRegistryTest : StringSpec({
             negative[i] shouldBe sawRef[i]
         }
     }
+    // ── Built-ins: the tree is the whole voice (phase 3 step 6) ──────────────────
+
+    "registerBuiltIn flags the name as a built-in; register, an unknown name and a sample name do not" {
+        val registry = IgnitorRegistry()
+        registry.registerBuiltIn("Saw", IgnitorDsl.Sawtooth())
+        registry.register("guitar", IgnitorDsl.Sawtooth())
+
+        registry.isBuiltIn("saw") shouldBe true
+        registry.isBuiltIn("SAW") shouldBe true
+        registry.isBuiltIn("guitar") shouldBe false
+        registry.isBuiltIn("bd") shouldBe false
+    }
+
+    "registerDefaults registers every name as a built-in, and the default sound is one" {
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+
+        registry.names().all { registry.isBuiltIn(it) } shouldBe true
+        registry.isBuiltIn(null) shouldBe true
+    }
+
+    "a fork inherits the built-in flag, and a fork's own register of that name shadows it as authored" {
+        // Live coding may register a tree under a built-in's name on the playback's fork: that name is
+        // then the author's instrument there (the strip runs after it), and still the built-in elsewhere.
+        val root = IgnitorRegistry().apply { registerBuiltIn("saw", IgnitorDsl.Sawtooth()) }
+        val inheriting = root.fork()
+        val shadowing = root.fork().apply { register("saw", IgnitorDsl.Sine()) }
+
+        inheriting.isBuiltIn("saw") shouldBe true
+        shadowing.isBuiltIn("saw") shouldBe false
+        root.isBuiltIn("saw") shouldBe true
+    }
+
+    "a built-in re-registered with register in the SAME registry is authored from then on" {
+        val registry = IgnitorRegistry().apply { registerBuiltIn("saw", IgnitorDsl.Sawtooth()) }
+        registry.register("saw", IgnitorDsl.Sawtooth())
+
+        registry.isBuiltIn("saw") shouldBe false
+    }
 })

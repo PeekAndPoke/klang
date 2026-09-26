@@ -271,8 +271,9 @@ object KlangScriptOscExtensions {
      * not write is not built, so an untouched `classic()` costs one envelope and nothing else.
      *
      * It gives an instrument you build the slots of the classic voice, so a pattern reaches them by
-     * name: `oscp("lpf.freq", 1800)`. (The voice doors, `lpf(...)`, `adsr(...)`, still write the old
-     * voice strip while phase 3 moves the built-in sounds; they write these slots once it has.)
+     * name: `oscp("lpf.freq", 1800)`. Every built-in sound (`sound("saw")`) IS a source with this tail,
+     * and the voice doors (`lpf(...)`, `adsr(...)`) reach its slots. On an instrument you build, those
+     * doors still drive the old voice strip that runs after it, until the doors become these slots.
      *
      * Want another order? Write your own tail from the same `OscSlot` slots, as far as a door takes
      * them: every filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's

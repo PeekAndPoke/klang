@@ -818,11 +818,29 @@ private fun IgnitorDsl.buildRaw(
     // only switches the silence culler off for a voice that did not need it: harmless.
     var spineGatesOutput = false
 
+    // Does THIS node end the voice in a built amplitude envelope (see [BuiltIgnitor.endsInEnvelope])?
+    // Set by the `Adsr` arm when it builds, and by a stage that is NOT built (a gate row) from its
+    // inner, because such a node IS its inner. Never absorbed from a child of a built stage: an
+    // envelope under a later stage does not end the voice.
+    var builtEnvelope = false
+
+    // The last child `withMod` built, so a pass-through can hand its answer on.
+    var lastChildEndsInEnvelope = false
+
     fun IgnitorDsl.withMod(mod: Ignitor? = accumulatedMod): Ignitor {
         val built = buildIgnitor(oscParams, cache, mod)
         spineTail = maxTail(spineTail, built.releaseTailSec)
         spineGatesOutput = spineGatesOutput || built.gatesOutput
+        lastChildEndsInEnvelope = built.endsInEnvelope
         return built.ignitor
+    }
+
+    /** A gated-off stage: the node is not built and IS its inner, [BuiltIgnitor.endsInEnvelope] included. */
+    fun IgnitorDsl.passThrough(): Ignitor {
+        val ignitor = withMod()
+        builtEnvelope = lastChildEndsInEnvelope
+
+        return ignitor
     }
 
     fun IgnitorDsl.noMod(): Ignitor = buildIgnitor(oscParams, cache).ignitor
@@ -1018,16 +1036,28 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Times -> when {
             right.gatedOffAtUnity(oscParams, cache) -> {
                 val survivor = left.withMod()
+                val survivorEnds = lastChildEndsInEnvelope
 
-                if (survivor.survivesUnityFold()) survivor else survivor * right.withMod()
+                if (survivor.survivesUnityFold()) {
+                    builtEnvelope = survivorEnds
+                    survivor
+                } else {
+                    survivor * right.withMod()
+                }
             }
 
             left.gatedOffAtUnity(oscParams, cache) -> {
                 // The gated side is a leaf, so building it after the survivor draws nothing and
                 // the authored left-then-right order is unobservable.
                 val survivor = right.withMod()
+                val survivorEnds = lastChildEndsInEnvelope
 
-                if (survivor.survivesUnityFold()) survivor else left.withMod() * survivor
+                if (survivor.survivesUnityFold()) {
+                    builtEnvelope = survivorEnds
+                    survivor
+                } else {
+                    left.withMod() * survivor
+                }
             }
 
             else -> left.withMod() * right.withMod()
@@ -1043,8 +1073,10 @@ private fun IgnitorDsl.buildRaw(
                     IgnitorDsl.Affine.isAbsentAddend(add) &&
                     mul.gatedOffAtUnity(oscParams, cache)
             val survivor = inner.withMod()
+            val survivorEnds = lastChildEndsInEnvelope
 
             if (bareUnity && survivor.survivesUnityFold()) {
+                builtEnvelope = survivorEnds
                 survivor
             } else {
                 survivor.affine(pre.withMod(), mul.withMod(), add.withMod())
@@ -1090,7 +1122,9 @@ private fun IgnitorDsl.buildRaw(
             if (cache.usesMusicalFreq(inner)) {
                 val outer = cache.detuneContext
                 cache.detuneContext = DetuneContext()
-                val forked = inner.withMod()
+                // A detune scales the freq argument, not the amplitude: it hands on its inner's
+                // `endsInEnvelope` (`passThrough`), in both branches.
+                val forked = inner.passThrough()
                 cache.detuneContext = outer
 
                 // Semitones is built OUTSIDE the child context — it controls the detune, it is
@@ -1102,7 +1136,7 @@ private fun IgnitorDsl.buildRaw(
                 // DECORRELATE noise (a second instance draws different rng). Build shared, in
                 // the unchanged context, no DetuneIgnitor — the wrap site below reuses the
                 // child's own memo instead of stacking a second one.
-                inner.withMod()
+                inner.passThrough()
             }
         }
 
@@ -1110,7 +1144,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Lowpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
             // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
-            inner.withMod()
+            inner.passThrough()
         } else {
             // C5: `passes` cascades the stage with the Butterworth q ladder (relative
             // factors — the modulated q scales every stage coherently). passes = 1 is the
@@ -1144,7 +1178,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Highpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
             // GATE ROW `a filter`: unset cutoff only. See `gatedOffWhenUnset`.
-            inner.withMod()
+            inner.passThrough()
         } else {
             // See Lowpass above: same ladder, same analog-compounding note, same build/draw
             // order and the same one shared lane for the whole cascade.
@@ -1169,17 +1203,18 @@ private fun IgnitorDsl.buildRaw(
         // GATE ROW `onepole`: at or below 0.0, or unset. Unlike the four SVF filters this one HAS
         // a numeric off state and always had: until 2026-09-20 the test lived in
         // `IgnitorRegistry.createExciter`, OUTSIDE the tree, as the only gate in the engine that
-        // was not a door's own. It is here now so the rule has one home, and the registry hangs
-        // the `onepole` slot on the tree instead of reading the bag itself.
+        // was not a door's own. It is here now so the rule has one home, and the registry places
+        // the `onepole` slot in the tree instead of reading the bag itself (around an authored
+        // instrument at note-on, on a built-in's source since phase 3 step 6).
         is IgnitorDsl.OnePoleLowpass -> if (freq.gatedOff(oscParams, cache) { it <= 0.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             inner.withMod().onePoleLowpass(freq.noMod())
         }
 
         // GATE ROW `a filter`: unset cutoff only (see `gatedOffWhenUnset`).
         is IgnitorDsl.Bandpass -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
@@ -1191,7 +1226,7 @@ private fun IgnitorDsl.buildRaw(
         }
 
         is IgnitorDsl.Notch -> if (freq.gatedOffWhenUnset(oscParams, cache)) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             // Same build/draw order as Lowpass above.
             val built = inner.withMod()
@@ -1226,17 +1261,19 @@ private fun IgnitorDsl.buildRaw(
 
         // GATE ROW `the envelope`: OFF only at an explicit `on` of exactly 0.0; UNSET IS ON. Inverted
         // from the plan's sketch on purpose (the spike corrected it, `docs/tasks/builtin-instruments.md`
-        // section 5): today the voice strip's VCA runs on EVERY voice with `AdsrDef.defaultSynth` when
-        // the pattern sets nothing, so the classic tail's ADSR has to be built BY DEFAULT, and only an
-        // explicit `adsrOff` (filled into `on` by `classic()`) switches it off. See `switchedOff`.
+        // section 5): the voice strip's VCA ran on EVERY voice with `AdsrDef.defaultSynth` when the
+        // pattern set nothing, and since step 6 a built-in's classic ADSR is that VCA, so it has to be
+        // built BY DEFAULT, and only an explicit `adsrOff` (filled into `on` by `classic()`) switches it
+        // off. See `switchedOff`.
         //
         // OFF keeps the voice's LIFETIME: the envelope would have released over `releaseSec`, the
         // strip's `adsrOff` keeps that lifetime (its `renderGate` fades over the last frames of it),
         // and step 6's identity depends on the node doing the same. So the signal skips the stage
-        // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). No
-        // teardown fade here yet: that is step 6.
+        // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). The
+        // teardown fade is the VOICE's: it reads `BuiltIgnitor.endsInEnvelope`, which this switched-off
+        // node hands on from its inner (`passThrough`), so a `classic()` tree reports false here.
         is IgnitorDsl.Adsr -> if (on.switchedOff(oscParams, cache)) {
-            val signal = inner.withMod()
+            val signal = inner.passThrough()
             spineTail = maxTail(spineTail, releaseSec.offEnvelopeTail(oscParams, cache))
             signal
         } else {
@@ -1269,6 +1306,7 @@ private fun IgnitorDsl.buildRaw(
             // The samples of a NaN-released envelope are fine (`Double.toInt()` of a NaN is 0
             // frames); its TAIL is not.
             spineTail = maxTail(spineTail, release.controlRateValueOrNull(cache.freqHz)?.takeIf { it.isFinite() })
+            builtEnvelope = true
 
             innerIgnitor.adsr(
                 attack, decay, sustain, release,
@@ -1306,7 +1344,7 @@ private fun IgnitorDsl.buildRaw(
         //
         // The shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
         is IgnitorDsl.Distort -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             inner.withMod().fusedDistort(
                 amount.noMod(),
@@ -1330,7 +1368,7 @@ private fun IgnitorDsl.buildRaw(
         // there is nothing to read an off value from. That is why `classic()`'s distort stage is the
         // fused `Distort` node above, not this pair; D2 also gave that node the strip's law.
         is IgnitorDsl.Drive -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             inner.withMod().drive(amount.noMod())
         }
@@ -1347,7 +1385,7 @@ private fun IgnitorDsl.buildRaw(
         // inner below 1.0, so the whole range (0, 1) is already an exact bypass at render time
         // and gating it is the fold of a bypass, not a change.
         is IgnitorDsl.Crush -> if (amount.gatedOff(oscParams, cache) { it < 1.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             inner.withMod().crush(amount.noMod())
         }
@@ -1360,7 +1398,7 @@ private fun IgnitorDsl.buildRaw(
         // 0.0 and now passes through: a change, on a sample a gated-off stage's upstream has no
         // business producing, and one every later clamping stage still guards.
         is IgnitorDsl.Coarse -> if (amount.gatedOff(oscParams, cache) { it <= 1.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             inner.withMod().coarse(amount.noMod())
         }
@@ -1380,7 +1418,7 @@ private fun IgnitorDsl.buildRaw(
         // block, so built); the shape and the start phase are read once, leaf-only, and build
         // nothing. A BUILT tremolo reports that it gates its own output (see `BuiltIgnitor`).
         is IgnitorDsl.Tremolo -> if (depth.gatedOff(oscParams, cache) { it <= 0.0 }) {
-            inner.withMod()
+            inner.passThrough()
         } else {
             spineGatesOutput = true
 
@@ -1395,5 +1433,5 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())
     }
 
-    return BuiltIgnitor(ignitor, spineTail, spineGatesOutput)
+    return BuiltIgnitor(ignitor, spineTail, spineGatesOutput, builtEnvelope)
 }

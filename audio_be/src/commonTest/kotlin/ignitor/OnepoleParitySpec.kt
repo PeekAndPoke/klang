@@ -10,7 +10,11 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -66,10 +70,16 @@ class OnepoleParitySpec : StringSpec({
         // twice — once through the oscParam key ("onepole" in Hz), once plain plus a manual
         // .onePoleLowpass(800.0). A dropped registry line, a changed key, a halved value, or
         // a reinstated coefficient interpretation (the old warmth semantics) all go red.
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+        //
+        // The sound is an AUTHORED sine: the registry wraps an authored instrument at note-on, which is
+        // the route this row pins. A built-in carries the slot on its source instead (the row below).
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("rawsine", IgnitorDsl.Sine())
+        }
         fun exciter(params: Map<String, Double>?): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = params)
-            return registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", oscParams = params)
+            return registry.createExciter("rawsine", data, freqHz = 220.0, random = Random(7))
                 ?.ignitor ?: error("no exciter")
         }
         val viaOscParam = render(exciter(mapOf("onepole" to 800.0)))
@@ -77,6 +87,28 @@ class OnepoleParitySpec : StringSpec({
         for (i in 0 until frames) {
             viaOscParam[i].toRawBits() shouldBe manual[i].toRawBits()
         }
+    }
+
+    "a built-in carries the oscParam onepole on its SOURCE, in front of classic()'s envelope (phase 3 step 6)" {
+        // Where the voice strip had it: the source, then crush ... adsr. The registry's own note-on wrap
+        // would put it AFTER the envelope, which the anti-vacuous side shows is a different signal.
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = mapOf("onepole" to 800.0))
+        val viaRegistry = render(
+            registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))?.ignitor ?: error("no exciter"),
+        )
+
+        fun built(tree: IgnitorDsl): Ignitor = tree.optimize().buildExciter(freqHz = 220.0, random = Random(7)).ignitor
+
+        val sine = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Slots.analog)
+        val onSource = render(built(sine.onepole(800.0).classic()))
+        val afterEnvelope = render(built(sine.classic().onepole(800.0)))
+
+        for (i in 0 until frames) {
+            viaRegistry[i].toRawBits() shouldBe onSource[i].toRawBits()
+        }
+
+        (0 until frames).any { viaRegistry[it].toRawBits() != afterEnvelope[it].toRawBits() } shouldBe true
     }
 
     "live path frequency response: |H| at the nominal cutoff is pinned (~0.437, all-pole)" {

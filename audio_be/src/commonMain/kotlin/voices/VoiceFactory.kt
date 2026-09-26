@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
@@ -71,6 +72,11 @@ class VoiceFactory(
      */
     private val driftUpdateRate: Int = analogDriftStepRate(sampleRate, blockFrames)
 
+    private companion object {
+        /** The stages of a built-in voice whose tree does not end in its envelope: the teardown fade alone. */
+        val TEARDOWN_FADE_ONLY: List<BlockRenderer> = listOf(TeardownFadeRenderer)
+    }
+
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
      *
@@ -104,11 +110,13 @@ class VoiceFactory(
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
-        // Create filters. The chain is baked in the EXACT order received from
-        // `data.filters` — VoiceFactory never reorders. The chain-order decision
-        // (highpass-first / lowpass-last for clean nonlinear behaviour) is made
-        // upstream by the language layer (see SprudelVoiceData.toVoiceData), which
-        // keeps the engine a faithful consumer and leaves explicit routing open.
+        // Create filters, for the voice STRIP (authored instruments and samples). The strip bakes the
+        // chain in the EXACT order received from `data.filters`; VoiceFactory never reorders it. The
+        // chain-order decision (highpass-first / lowpass-last for clean nonlinear behaviour) is made
+        // upstream by the language layer (see SprudelVoiceData.toVoiceData), which keeps the engine a
+        // faithful consumer and leaves explicit routing open. A BUILT-IN has no strip: its filters are
+        // `classic()`'s, in `classic()`'s fixed order, and the typed filters reach their slots one slot
+        // per kind (`classicSlotBag`).
         //
         // THE one place the factory reads `analog` off the bag, guarded here rather than at each
         // use. A non-finite override reads as UNSET, the same rule the `Param` leaf applies to every
@@ -138,9 +146,21 @@ class VoiceFactory(
         // (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
-        val filters = voiceFilterDefs.map { it.toFilter(analog, filterStage, voiceRandom) }
-        val modulators = voiceFilterDefs.zip(filters).mapNotNull { (def, filter) ->
-            def.toModulator(filter, sampleRate, analog, filterStage, voiceRandom)
+        // A BUILT-IN sound is one Ignitor tree, `source.onepole(slot).classic()` (phase 3 step 6,
+        // `IgnitorRegistry.registerBuiltIn`): the tree IS the whole voice and the voice strip is off
+        // for it. So no strip filters are built for it, and that matters beyond the saving: building
+        // them draws from `voiceRandom` at `analog > 0` (tolerance and drift), and a discarded draw
+        // would shift every draw of the tree's own filters. Authored instruments and samples keep
+        // the strip until it retires (step 9 of `docs/tasks/builtin-instruments.md`).
+        val builtIn = playbackCtx.ignitorRegistry.isBuiltIn(data.sound)
+
+        val filters = if (builtIn) emptyList() else voiceFilterDefs.map { it.toFilter(analog, filterStage, voiceRandom) }
+        val modulators = if (builtIn) {
+            emptyList()
+        } else {
+            voiceFilterDefs.zip(filters).mapNotNull { (def, filter) ->
+                def.toModulator(filter, sampleRate, analog, filterStage, voiceRandom)
+            }
         }
         val bakedFilters = filters.combine()
 
@@ -270,18 +290,31 @@ class VoiceFactory(
                     random = voiceRandom,
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
+                    // A built-in reads the typed fields as its `classic()` slots (scaffolding until step 8).
+                    oscParams = if (builtIn) classicSlotBag(data) else data.oscParams,
                 ) ?: return null
                 val signal = built.ignitor
 
-                // Extend voice lifetime to cover an ignitor-level release tail. Because the tail
-                // falls out of the build, `.oscp("release", ...)` overrides and folded release
-                // expressions are already resolved in it. null = nothing tail-bearing, or a release
-                // time that is itself modulated (no static answer): the voice's own release governs.
-                val ignitorTailSec = built.releaseTailSec ?: 0.0
-                val effectiveAdsr = if (ignitorTailSec > resolvedAdsr.release) {
-                    resolvedAdsr.copy(release = ignitorTailSec)
+                val effectiveAdsr = if (builtIn) {
+                    // A built-in's lifetime is the TREE's alone: its envelope's release, which a switched-off
+                    // envelope still reports. So a release written only as a slot lives exactly that long, with
+                    // no floor from the voice envelope's default. `null` (no static answer) keeps the resolved one.
+                    // The LIFETIME (not the envelope) never ends before the gate: a raw negative release is a
+                    // zero-length release stage, and the voice plays to its gate, as the strip's voices always did
+                    // (their tail read `?: 0.0`). Not a clamp on an audio parameter: the envelope still reads it raw.
+                    resolvedAdsr.copy(release = maxOf(built.releaseTailSec ?: resolvedAdsr.release, 0.0))
                 } else {
-                    resolvedAdsr
+                    // Extend voice lifetime to cover an ignitor-level release tail. Because the tail
+                    // falls out of the build, `.oscp("release", ...)` overrides and folded release
+                    // expressions are already resolved in it. null = nothing tail-bearing, or a release
+                    // time that is itself modulated (no static answer): the voice's own release governs.
+                    val ignitorTailSec = built.releaseTailSec ?: 0.0
+
+                    if (ignitorTailSec > resolvedAdsr.release) {
+                        resolvedAdsr.copy(release = ignitorTailSec)
+                    } else {
+                        resolvedAdsr
+                    }
                 }
 
                 // The same cull rule for a tremolo INSIDE the tree, which only the build can see
@@ -295,6 +328,13 @@ class VoiceFactory(
                     fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
                     cull = treeCull,
+                    // A built-in runs no strip. Its one voice-level stage is the teardown fade the strip's
+                    // `adsrOff` always had, when the tree does not end in its own envelope.
+                    treeStages = when {
+                        !builtIn -> null
+                        built.endsInEnvelope -> emptyList()
+                        else -> TEARDOWN_FADE_ONLY
+                    },
                 )
             }
 
@@ -540,6 +580,9 @@ class VoiceFactory(
         voiceRandom: Random,
         cut: Int? = null,
         cull: Double? = null,
+        /** The stages after the ignite stage when the Ignitor tree is the whole voice (a built-in),
+         *  or `null` to run the voice strip of the voice's pipeline. */
+        treeStages: List<BlockRenderer>? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
         val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
@@ -568,7 +611,7 @@ class VoiceFactory(
             signalCtx = signalCtx,
             freqHz = freqHz,
             startFrame = startFrame,
-        ) + buildFilterPipeline(
+        ) + (treeStages ?: buildFilterPipeline(
             pipeline = pipelineRegistry.get(data.pipeline),
             modulators = modulators,
             startFrame = startFrame,
@@ -581,7 +624,7 @@ class VoiceFactory(
             phaser = phaser,
             sampleRate = sampleRate,
             vcaOn = resolvedAdsr.on,
-        )
+        ))
 
         val blockCtx = BlockContext(
             audioBuffer = voiceBuffer,

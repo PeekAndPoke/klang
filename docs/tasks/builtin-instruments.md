@@ -344,6 +344,13 @@ with an error; SILENT means it now means something else or nothing.
 | D3 (c1) | a bare sprudel `penv(amount)` with no stages | sweeps over 0.01 s / 0.1 s, the Ignitor `pitchEnvelope`'s defaults (`PitchEnvelopeDefaults`); it used to do nothing | SILENT |
 | D3 (c1) | a NaN `penv` amount, a NaN sustain | no pitch envelope; the sustain reads as 0 | SILENT |
 | D3 (c1) | the readers `penv.curve` / `penv.anchor`, the named arguments `curve =` / `anchor =`, a 6th positional argument | an error naming the word | loud |
+| 6 | a `.pipeline(...)` on a built-in sound | no longer applies (stage order, VCA-off, the filter feel scales); it still does on authored instruments and samples until step 9 | SILENT |
+| 6 | `crush`/`coarse` with `oversample` above 1 on a built-in | renders without oversampling until `docs/tasks/oversampling-regions.md` (D7's stopgap covers distort only) | SILENT |
+| 6 | `analog > 0` with two or more pattern filters on a built-in | the per-filter tolerance and drift draws go to other filters: the same distribution, other values (9 corpus songs, -50 to -82 dB) | SILENT |
+| 6 | a built-in's filter with a non-finite `freq`, or a filter envelope whose only written stage is non-finite | the stage is not built (non-finite reads as unset); the strip built the filter at 1 kHz, and swept an envelope at depth 7 | SILENT |
+| 6 | `perlin`/`berlin`/`crackle` as a sound with `analog > 0` and a pattern filter | its construction draws now come before the filter's | SILENT |
+| 6 | a negative `release` on a built-in (`adsr(release = -0.1)`) | the voice lives to its gate (the lifetime is floored at 0, as before step 6); the envelope's release is a zero-length stage | none (unchanged; a review-round fix kept it) |
+| 6 | a classic slot written with `oscp` (`oscp("lpf.freq", ...)`, `oscp("adsr.release", ...)`) on a built-in | now reaches it; a typed door beats an `oscp` of the same slot on one event (until step 8); a built-in lives exactly as long as its tree's release, no 0.05 s floor | SILENT (a new reach, not a changed meaning) |
 | D4 | a song's `pipeline("pedal")` | the preset is gone; the name resolves like any unknown name to `modern` (envelope last), silently | SILENT |
 | D4 | a script's `Pipeline.pedal(...)` | removed | loud |
 | 4 (D2) | a user's Kotlin-built `IgnitorDsl.Distort` node (no authoring door emits it; `classic()`, new in step 5 and unreleased, does) | the strip's law: no soft cap, the drive inside the oversampler | SILENT |
@@ -492,20 +499,29 @@ second line of defence: the envelope's `sustainLevel` is the live example (`expK
   wraps every instrument in `onepole`, so today it runs BEFORE the strip's crush. Once a built-in is a
   `classic()` tree, that wrap would sit AFTER the ADSR: StrangerThings (`pulse.onepole(3743).crush(5)`) and
   IrishLamentTechno (`distort(...).onepole(...)`) would change. Step 6 must put the wrap where the strip had it
-  (on the source, before `classic()`'s stages), and its corpus render proves it.
+  (on the source, before `classic()`'s stages), and its corpus render proves it. DONE in step 6 (2026-09-26):
+  built-ins register as `source.onepole(slot).classic()`; proven by the humanize-off control (the 9 moved songs
+  identical on both sides) and an engagement mutation that moves DrunkenSailor.
 - **Found in step 5 (2026-09-25), for step 6:** (1) the optimizer fuses every lone filter with a literal
   `analog` into an `Eq`, which never reaches `filterEnvDef`, so the slot-layer fill only runs on filters that
   stay filters; (2) the factory's lifetime floor (0.05 s) keeps a `classic()` voice with a shorter slot release
   rendering its de-click tail where the strip cut it; (3) an authored instrument with `.classic()` is
   enveloped TWICE until the strip VCA stops running for it; (4) the `adsrOff` difference is exactly the last
-  192 frames, the strip's 4 ms teardown fade.
+  192 frames, the strip's 4 ms teardown fade. Status after step 6 (2026-09-26): (1) never applies to a
+  `classic()` built-in (its filters carry Param `analog`/`env`/`passes` and `humanize`, so the optimizer never fuses
+  them); (2) does not bite with the typed release, and a built-in's lifetime now comes from its tree alone; (3)
+  unchanged for AUTHORED `.classic()` instruments until the strip retires; (4) closed by the shared
+  `TeardownFadeRenderer`.
 - **The teardown fade.** `EnvelopeRenderer.renderGate` is the `adsrOff()` path: a unity gate with a
   linear fade to exact zero over the last frames, which exists because an instrument's own envelope
   sits BEFORE its amp stages. Phase 3 removes the only stage that guarantees an amplitude ramp at the
-  voice's end, and Der Schmetterling's lead, three guitars and Orchestertrommel all rely on it. The
+  voice's end, and Der Schmetterling's lead, three guitars and Orchestertrommel all rely on it (and A Truth
+  Worth Lying For's three guitars, found in step 6; all AUTHORED, so all still on the strip until step 9). The
   build reports whether it built the classic ADSR node, and the voice applies the teardown fade when
   it did not. Applying it unconditionally would multiply the last 5 ms of every built-in and break
-  identity.
+  identity. LANDED in step 6 (2026-09-26): `BuiltIgnitor.endsInEnvelope` (the root only), one stateless
+  `TeardownFadeRenderer` shared by the strip's `adsrOff` and a built-in without a built root `Adsr`. No corpus
+  built-in uses `adsrOff`, so the corpus cannot click here; the fade is proven by specs.
 
 ## 7. The open points of the plan's section 11, answered
 
@@ -537,6 +553,17 @@ second line of defence: the envelope's `sustainLevel` is the live example (`expK
   `GraphCensus` is not, deliberately, because it is benchmark-only and audio-inert.
 
 ## 8. The migration risk, and it is bigger than the plan states
+
+(Step 6 correction, 2026-09-26: the built-in sounds left the strip; the lists below were written for the whole
+migration. For step 6 itself exactly 9 songs moved, all from the analog draw order: A Truth Worth Lying For,
+Final Fantasy 7 Prelude, Frozen Stranger Things, Irish Lament Techno, Sakura, Sound Of The Sea, Stranger Things,
+Tetris and Tetris Remix (Sound Of The Sea and Tetris Remix set `analog` at stack or song level, so the list below
+missed them; the Der Schmetterling family did not move, being authored plus a one-filter shaker). The draw COUNT
+per voice is unchanged, so no noise realisation changes: only which filter gets which tolerance and drift seed
+moves, -49.5 to -81.9 dB RMS. Proven twice: with the humanization OFF on both sides the 9 are identical; and the
+step 6 audio review's stronger control, HEAD's strip reordered to the tree's per-filter draw order for built-ins
+only, humanization ON, rendered all 9 bit-identical to the step 6 tree, so how the drawn values are applied did
+not change either.)
 
 Not only the doors. **Today the strip's VCA runs on EVERY voice, including every authored ignitor,
 with `AdsrDef.defaultSynth` when the pattern set nothing.** So every authored instrument in every
@@ -577,12 +604,28 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 4 | DONE 2026-09-25: D1 and D2 landed, NO listening needed (both decided so that no song changes): `CrushCore` (floor, the strip's NaN rule) and `DistortionCore` (the strip's law) shared by the strip and the tree; the 15 D1/D2 rows of `ClassicStripParitySpec` flipped to bit-identical at both rates (now 33/11 at 48 kHz, 32/12 at 44.1 kHz) | the corpus identical; controls moved exactly the 3 strip-crush and 11 strip-distort songs | a shared core moves both hosts together, so the parity spec cannot see a mutation inside it: `StripLawCoresSpec` pins the laws with oracles written in the test |
 | 5 | DONE 2026-09-25: `classic()` on both doors, in the order of section 4 (`IgnitorDslClassic.kt`, the order written once; slots `<door>.<param>` in `IgnitorDsl.Slots.*` / `OscSlot.*`; `passes` a build-time knob that ROUNDS like the strip; the committed `ClassicStripParitySpec` pins 18 rows bit-identical to the strip and 26 divergent rows at 48 kHz (17 and 27 at 44.1 kHz, where the whole-frame ADSR row also diverges: the frame-count minor), each divergent row naming its cause: D1, D2 (step 4), D3, the ADSR frame counts, the lifetime floor, the teardown fade) | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 5b | DONE 2026-09-26. ONE ENVELOPE LAW (D3, decided 2026-09-25), inserted before step 6, four commits: (a1, DONE 2026-09-25: `EnvelopeCore.kt` with six hosts, `EnvelopeLawSpec`; the corpus moved by at most 2 LSB; a gate at or before the onset releases from 0) one `EnvelopeCore` that all seven evaluators become thin hosts of (the chain ADSR, the strip VCA, the node and strip filter envelopes, the node and strip FM, the node pitch envelope; the strip pitch envelope joins in c): fractional attack/decay, release on floor(N) to an exact 0, one curve `when`, N-1 release base, a STATELESS release start, raw core with per-use output clamps; (a2, DONE 2026-09-25: the shared `SvfCoeffSweep`, the strip drift on the block edge; 13 corpus rows moved) the strip filter takes the node's per-block interpolation (the 32-sample ramp retires); (b, DONE 2026-09-25: the FM node's hard-coded Linear and the strip's omitted curve arguments found and fixed; 6 songs moved through their pitch envelopes) `MOD_ENV_CURVE = Exponential` (filter, pitch, FM); (c; c2 DONE 2026-09-26: `lpfCurves`/`hpfCurves`/`bpfCurves`/`notchCurves`, `FilterEnvDef`'s curve fields, `classic()`'s curve slots, no corpus song moved; c1 DONE 2026-09-25: the strip pitch envelope on `EnvelopeCore` through the mapping it shares with the node, `penv(amount, attack, decay, sustain, release)`, `penvCurves`, `PitchEnvelopeDefaults`; no corpus song moved) sprudel `lpfCurves`/`hpfCurves`/`bpfCurves`/`notchCurves`/`penvCurves`, `penv(amount, attack, decay, sustain, release)` with a real release, `classic()`'s filter curve slots | a ladder: rung 0 (the core behind temporary legacy switches) renders 17/17 identical, then one rule per rung with its predicted rows | deliberate SOUND CHANGES in a1 (fractional frames: a few decays), a2 (8 `lpf(env)` songs, audibly at steep onsets: -32 to -52 dB RMS, see the section 3c row), b (the kicks and pitch drops of 6 songs); the maintainer listens to before/after pairs |
-| 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices. Re-run the benchmark against 9290 ns |
+| 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices (step 6 found neither bites the corpus: no built-in uses `adsrOff`, and the tree cull landed in 3b; both are spec-proven). Re-run the benchmark against 9290 ns. IN PROGRESS: commit 1 (the switch) DONE 2026-09-26 (9 songs moved by the analog draw order, -50 to -82 dB, proven the only cause); then `pregain`, then the benchmark |
 | 7 | The sample instrument | needs a JS or in-memory PCM harness: the jvm renderer has no sample bank | its own safety net |
 | 8 | The doors become `oscp` aliases (about 50 to 60 functions) | door-parity specs, the wire golden regenerated | mechanical but wide; one door group at a time |
 | 9 | `VoiceData` cut, `PipelineDsl` retired | compile-time, the golden regenerated | irreversible: only after 6 and 7 are ear-confirmed |
 | 10 | The songs migrated with `.classic()` | per-song render against HEAD | D5 |
 | 11 | The editor's unknown-slot diagnostic | UI, no audio | none |
+
+**Step 6, the plan's decisions (coordinator, 2026-09-26, following the record):** built-ins register as
+`source.onepole(slot).classic()` and are flagged; an authored instrument keeps the strip until it retires (step 9, or with step 10, see the
+OPEN point below), and the two paths coexist per voice; the backend maps the typed `VoiceData` fields onto the classic slot keys as SCAFFOLDING in
+one file, removed in step 8 when the sprudel doors write the slot keys (the backend stays lean, as
+`docs/plans/future/signal-graph-engine.md` wants); a door beats an `oscp` on the same slot until step 8; a built-in's
+lifetime comes from its tree alone; the teardown fade is one `TeardownFadeRenderer` the strip's `adsrOff` and a built-in
+without a root `Adsr` share (`BuiltIgnitor.endsInEnvelope`); the analog draw-order moves (9 corpus songs, the
+cost section 8 names) are accepted under the principle and go on the listening list; a custom `.pipeline()` on a
+built-in and a crush/coarse `oversample` above 1 on a built-in go inert (release notes; the latter until
+`oversampling-regions.md`); `pregain` on the built-ins is its own later commit (section 7).
+
+**OPEN for the maintainer (found in step 6's plan, 2026-09-26): the order of steps 9 and 10.** Step 9 retires the
+strip and `VoiceData`, step 10 migrates the songs whose AUTHORED instruments still rely on the strip (section 8's
+list, `.classic()` appended). Done in that order, those songs lose their outer envelope and every door between the
+two commits. Either step 10 comes before step 9, or they land together.
 
 ## 10. What the spike could not settle
 

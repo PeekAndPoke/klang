@@ -11,6 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
@@ -172,6 +173,46 @@ class VoiceSchedulerCullingSpec : StringSpec({
         val d = newDispatcher()
         registerTreeTremolo(d)
         d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = 0.05)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 1
+    }
+    // ── A built-in's tremolo written only as SLOTS (phase 3 step 6) ────────────────────────────────
+
+    /**
+     * The built-in `sine` with its `classic()` tremolo written straight into the bag (the step 8 path):
+     * no typed tremolo field, so only the build's `gatesOutput` can keep the voice from being culled.
+     */
+    fun slotTremolo(cull: Double?) = ScheduledVoice(
+        playbackId = pid,
+        startTime = 0.0,
+        gateEndTime = 0.1,
+        data = VoiceData.empty.copy(
+            sound = "sine",
+            freqHz = 440.0,
+            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
+            oscParams = mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
+            cull = cull,
+        ),
+        playbackStartTime = 0.0,
+    )
+
+    "a built-in's slot-written square tremolo survives its first off-half in the release" {
+        val d = newDispatcher()
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = null)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 0
+        scheduler.renderingVoiceCount() shouldBe 1
+    }
+
+    "the slot-written tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
+        val d = newDispatcher()
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = 0.05)))
         val scheduler = d.engine(pid).shouldNotBeNull().scheduler
 
         Clock(d).render(0.4)

@@ -492,8 +492,8 @@ envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
 
 ```javascript
 let guitar = Osc.saw().distort(0.4, "tube").classic()
-// .adsrOff(): until step 6 the old voice strip still puts its own envelope on EVERY voice, after the
-// instrument; without it the two envelopes multiply (the strip's release follows the instrument's tail,
+// .adsrOff(): until step 9 the old voice strip still puts its own envelope on every AUTHORED instrument (the
+// built-in sounds left the strip in step 6), after the instrument; without it the two envelopes multiply (the strip's release follows the instrument's tail,
 // so nothing is cut, but the attack and the release are applied twice).
 note("c3 e3 g3").sound(guitar).adsrOff().oscp("lpf.freq", 1800).oscp("adsr.release", 0.2)
 ```
@@ -516,10 +516,12 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
   renders the voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
   oversampler). A slot on the door's distort would shape every note, written or not.
 
-**Transitional (phase 3, until the built-ins move in step 6):** the pattern doors (`.lpf(...)`,
-`.adsr(...)`, `.crush(...)`) still write the old voice strip, which runs AFTER every instrument, not
-these slots; reach a slot with `.oscp("lpf.freq", 1800)`. The strip's own envelope also still runs
-on every voice, so a `.classic()` instrument is enveloped twice unless the pattern says `.adsrOff()`.
+**Transitional (phase 3):** since step 6 (2026-09-26) the BUILT-IN sounds (`sound("saw")`, ...) are
+`classic()` trees and the pattern doors (`.lpf(...)`, `.adsr(...)`, `.crush(...)`) reach their slots. On an
+AUTHORED instrument the doors still write the old voice strip, which runs AFTER the instrument, until step
+9; reach its slots with `.oscp("lpf.freq", 1800)` (a door beats an `oscp` on the same slot until step 8). The
+strip's own envelope still runs on every authored instrument, so a `.classic()` instrument is enveloped twice
+unless the pattern says `.adsrOff()`.
 
 ### Audio-rate Modulation
 

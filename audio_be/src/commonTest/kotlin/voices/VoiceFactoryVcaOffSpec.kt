@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.builtInSources
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -43,9 +44,16 @@ class VoiceFactoryVcaOffSpec : StringSpec({
     val sampleRate = 44100
     val blockFrames = 128
 
-    /** Builds a voice through the real VoiceFactory and renders it to its end. */
-    fun renderVoice(on: Boolean?): DoubleArray {
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+    /**
+     * Builds a voice through the real VoiceFactory and renders it to its end. The default [sound] is the
+     * saw's source registered as an AUTHORED instrument, so the voice STRIP (its VCA) is what runs: a
+     * built-in runs no strip since phase 3 step 6 and would not cross the seam this spec pins.
+     */
+    fun renderVoice(on: Boolean?, sound: String = "stripsaw"): DoubleArray {
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("stripsaw", builtInSources().getValue("saw"))
+        }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate,
@@ -61,7 +69,7 @@ class VoiceFactoryVcaOffSpec : StringSpec({
 
         val data = VoiceData.empty.copy(
             freqHz = 220.0,
-            sound = "sawtooth",
+            sound = sound,
             // release 0.05 (defaultSynth) so the voice has a real teardown window
             adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 1.0, release = 0.05, on = on),
         )
@@ -137,5 +145,16 @@ class VoiceFactoryVcaOffSpec : StringSpec({
         for (i in unset.indices) {
             abs(unset[i] - explicit[i]) shouldBe 0.0
         }
+    }
+
+    "the BUILT-IN twin: an on = false built-in ends on the same EXACTLY zero last frame (the voice's teardown fade)" {
+        // A built-in's envelope switched off is not built, and the voice appends the strip's own fade
+        // (`TeardownFadeRenderer`) instead of the VCA: the same framing, the same exact-zero endpoint.
+        val out = renderVoice(on = false, sound = "sawtooth")
+        val lastRendered = 6614
+
+        out.size shouldBe 6656
+        abs(out[lastRendered]) shouldBe 0.0
+        (abs(out[lastRendered - 100]) > 0.0) shouldBe true
     }
 })
