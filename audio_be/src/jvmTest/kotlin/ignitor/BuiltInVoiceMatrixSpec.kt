@@ -28,8 +28,8 @@ import kotlin.random.Random
  * **Every built-in sound, as a built-in, against its own source through the voice strip** (phase 3
  * step 6). Each built-in name renders the same note twice through the real `VoiceFactory`:
  *
- *  - BUILT-IN: the name as `registerDefaults` registers it (`source.onepole(slot).classic()`, the voice
- *    strip off), the row's settings on the typed `VoiceData` fields the sprudel doors write today;
+ *  - BUILT-IN: the name as `registerDefaults` registers it (the shape `IgnitorRegistry.registerBuiltIn`
+ *    writes, the voice strip off), the row's settings on the typed `VoiceData` fields the sprudel doors write today;
  *  - STRIP: the SAME source (`builtInSources()`) registered as an authored instrument, so the voice strip
  *    runs after it, with the same fields: what that name was before step 6.
  *

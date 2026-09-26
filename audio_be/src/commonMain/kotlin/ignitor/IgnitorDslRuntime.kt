@@ -511,8 +511,9 @@ private fun IgnitorDsl.gatedOffAtUnity(oscParams: Map<String, Double>?, cache: I
  * 2 of this step's review found the counter-example inside the same change: `AdsrIgnitor` is not
  * block-constant, so it folds, and a non-finite `sustainLevel` or `expK` (a knob removed in step
  * 3c) used to multiply NaN into every sample. Before the fold `TimesIgnitor`'s scrub turned that into silence; after it the NaN
- * would travel, and "a later stage guards it" is false for a `pregain` placed at the END of a tail,
- * which is where `classic()` puts it. The fix is at the source, in `AdsrIgnitor`'s own read (see
+ * would travel, and "a later stage guards it" is false for a unity `mul` placed after an envelope
+ * at the END of a tail (an authored `adsr(...).mul(slot)`; `classic()` itself places no pregain, and
+ * the built-ins place theirs at the SOURCE, in front of every stage). The fix is at the source, in `AdsrIgnitor`'s own read (see
  * its `finiteOr`), not a clamp bolted back onto the multiply.
  *
  * **A rule for NEW nodes, not an audited invariant, and here is the known exception.** A node that
@@ -522,9 +523,9 @@ private fun IgnitorDsl.gatedOffAtUnity(oscParams: Map<String, Double>?, cache: I
  * `Slots.decay`, so `oscp("decay", 10)` diverges geometrically to an infinity and the fractional
  * read turns it into NaN. That divergence is authored character and the Motor stays raw, so the
  * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").oscp("decay", 10)`
- * is unguarded today with or without this fold, since no built-in places a `pregain` at all; what
- * the fold contributes is that a future unity `pregain` will no longer MASK it by scrubbing the
- * NaN to silence on its way out.
+ * is unguarded with or without this fold; what the fold contributes is that the built-ins' unity
+ * `pregain` (placed on every built-in's source since phase 3 step 6) does not MASK it by scrubbing
+ * the NaN to silence on its way out.
  *
  * `isBlockConstant` is exactly the parameter/signal distinction, structural and computed once at
  * construction: it is true for the leaves and for pointwise combinators over them, false for
@@ -1030,9 +1031,10 @@ private fun IgnitorDsl.buildRaw(
         // returned (unset is deliberately NOT off here, and a control-rate survivor never folds;
         // see `gatedOffAtUnity` and `survivesUnityFold`). This is the row that folds a placed
         // `.mul(OscSlot.pregain)` away at unity, which identity demands rather than merely allows:
-        // today's built-ins carry no pregain at all, so KEEPING a unity multiply would be the bit
-        // change, not removing it. The right side is asked first, because `x.mul(k)` is where a
-        // knob is written.
+        // the built-ins carried no pregain until phase 3 step 6 placed it on their sources, so
+        // KEEPING a unity multiply would be the change, not removing it. (A registered tree renders
+        // optimized, where a bare `x.mul(k)` is the `Affine` arm below.) The right side is asked
+        // first, because `x.mul(k)` is where a knob is written.
         is IgnitorDsl.Times -> when {
             right.gatedOffAtUnity(oscParams, cache) -> {
                 val survivor = left.withMod()

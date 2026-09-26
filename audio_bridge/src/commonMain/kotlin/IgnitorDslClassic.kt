@@ -202,8 +202,8 @@ class FilterCurvesSlots internal constructor(door: String) {
  *    (`IgnitorRegistry.registerBuiltIn`, the voice strip's order), and around an authored instrument at
  *    note-on (`IgnitorRegistry.createExciter`).
  *
- * Every built-in sound is `source.onepole(slot).classic()` since phase 3 step 6, and the voice strip is off
- * for it: this tail IS the voice of `sound("saw")`.
+ * Every built-in sound is `source.pregain().onepole(slot).classic()` since phase 3 step 6, and the voice strip
+ * is off for it: this tail IS the voice of `sound("saw")`, and the built-in places the `pregain` itself.
  *
  * Per stage, what each node is and where it still differs from the strip (the measured table lives in
  * `ClassicStripParitySpec`):

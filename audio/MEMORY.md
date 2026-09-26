@@ -3,7 +3,11 @@
 ## The built-ins on `classic()`, the strip off for them (phase 3 step 6, 2026-09-26)
 
 - **One registry method writes the built-in shape**: `IgnitorRegistry.registerBuiltIn(name, source)` registers
-  `source.onepole(ONEPOLE_SLOT).classic()` and flags the name. `registerDefaults` registers every entry of
+  `source.pregain().onepole(ONEPOLE_SLOT).classic()` and flags the name. The `pregain` slot sits on the source,
+  in front of every nonlinearity (signal-flow plan sections 5 and 6; commit 2 of step 6, before which a sprudel
+  `pregain(x)` on a built-in did nothing); unwritten it folds away at build (the `Affine` arm, the optimizer's
+  form of `x.mul(k)`). A gain of 2 commutes with the linear onepole bit for bit, so the spec that pins the
+  pregain-before-onepole order uses 1.7. `registerDefaults` registers every entry of
   `builtInSources()` (43 names, 28 trees) through it. `isBuiltIn(name)` answers from the NEAREST registry that
   defines the name, so a fork's `register("saw", ...)` shadows the built-in as an authored instrument.
 - **A built-in voice runs no strip.** The factory decides it right after the rng deal and then builds NO strip
@@ -561,7 +565,8 @@ lives in that file's `gatedOff` KDoc; the off VALUES are one table, in
   identity on a NaN, the level multiplies every sample and `expK` reaches `adsrExpShape` the same
   way. Before the fold, a `pregain` at unity after an envelope kept `TimesIgnitor`'s `safeOut` and
   the voice went SILENT; after it the NaN would travel, and "a later stage guards it" is false for
-  a pregain placed at the end of a tail, which is where `classic()` puts it. `AdsrIgnitor.finiteOr`
+  a pregain placed at the end of a tail (the plan then had `classic()` put it there; it landed at the SOURCE
+  instead, step 6 commit 2, where a later stage does guard it). `AdsrIgnitor.finiteOr`
   substitutes `ADSR_SUSTAIN_LEVEL` and `ADSR_EXP_K` at the read. It is not a new clamp and the
   Motor stays raw: every finite value passes through untouched. `ADSR_SUSTAIN_LEVEL` is 0.7, the
   ignitor door's own default, deliberately NOT `AdsrDef.defaultSynth.sustain` (1.0), which is the

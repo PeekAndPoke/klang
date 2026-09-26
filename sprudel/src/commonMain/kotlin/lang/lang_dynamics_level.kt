@@ -182,7 +182,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").pregain(2).gain(0.3)   // the default sounds place no slot: this changes nothing
+ * note("c3 e3 g3 e3").sound("saw").distort(0.4).pregain("1 2.5").gain(0.3)   // every built-in SYNTH sound places the slot (samples do not): the distort bites harder on the loud notes
  * ```
  *
  * **Per VOICE, which is what makes it touch at all**: every note carries its own value, so

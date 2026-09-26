@@ -21,10 +21,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 //
 // Scaffolding: removed in step 8 when the sprudel doors write the slot keys.
 //
-// A built-in sound is `source.onepole(slot).classic()` since step 6, and its voice strip is off, so
-// every stage the strip used to run from a typed `VoiceData` field now reads a `classic()` slot. The
-// sprudel doors still write the typed fields until step 8 turns them into `oscp` aliases of these
-// very keys; until then this file is the bridge, and deleting it is the step 8 change.
+// A built-in sound is a source in `classic()` since step 6 (its one home is `IgnitorRegistry.registerBuiltIn`),
+// and its voice strip is off, so every stage the strip used to run from a typed `VoiceData` field now reads
+// a `classic()` slot. The sprudel doors still write the typed fields until step 8 turns them into `oscp`
+// aliases of these very keys; until then this file is the bridge, and deleting it is the step 8 change.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 /**

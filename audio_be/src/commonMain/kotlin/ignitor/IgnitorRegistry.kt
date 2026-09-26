@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
@@ -89,11 +90,14 @@ class IgnitorRegistry(
      * `sound("saw")` has always been, written as one Ignitor tree,
      *
      * ```
-     * source.onepole(ONEPOLE_SLOT).classic()
+     * source.pregain().onepole(ONEPOLE_SLOT).classic()
      * ```
      *
-     * the voice strip's own order (the pattern's `onepole` on the source, then crush ... adsr), and
-     * the name is recorded as a built-in, which switches the voice strip OFF for its voices: the tree
+     * The `pregain` slot sits on the source, where the player's touch enters, in front of every
+     * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Osc -> pregain -> classic").
+     * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
+     * nothing until a pattern writes `pregain(x)`. Then the voice strip's own order: the pattern's
+     * `onepole` on the source, then crush ... adsr. The name is recorded as a built-in, which switches the voice strip OFF for its voices: the tree
      * is the whole voice ([isBuiltIn], `VoiceFactory`). This is the one place the built-in shape is
      * written.
      *
@@ -102,7 +106,7 @@ class IgnitorRegistry(
      */
     internal fun registerBuiltIn(name: String, source: IgnitorDsl) {
         val key = name.lowercase()
-        store(key, IgnitorDsl.OnePoleLowpass(inner = source, freq = ONEPOLE_SLOT).classic())
+        store(key, IgnitorDsl.OnePoleLowpass(inner = source.pregain(), freq = ONEPOLE_SLOT).classic())
         builtIns.add(key)
     }
 

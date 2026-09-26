@@ -336,4 +336,22 @@ class IgnitorRegistryTest : StringSpec({
 
         registry.isBuiltIn("saw") shouldBe false
     }
+    "a built-in's UNITY pregain is folded at build: no multiply node, and a written pregain builds one" {
+        // With the envelope switched off and nothing else written every classic stage passes through, so
+        // the built root is whatever the pregain left behind: the bare source when it folded at unity.
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+
+        fun rootOf(bag: Map<String, Double>): Ignitor {
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", oscParams = bag)
+            val root = registry.createExciter("saw", data, freqHz = 220.0, oscParams = bag)?.ignitor ?: error("no exciter")
+
+            return (root as MemoizingIgnitor).inner
+        }
+
+        val bareSource = (builtInSources().getValue("saw").buildExciter(freqHz = 220.0).ignitor as MemoizingIgnitor).inner
+
+        rootOf(mapOf("adsr.on" to 0.0))::class shouldBe bareSource::class
+        rootOf(mapOf("adsr.on" to 0.0, "pregain" to 1.0))::class shouldBe bareSource::class
+        rootOf(mapOf("adsr.on" to 0.0, "pregain" to 2.0)).shouldBeInstanceOf<AffineIgnitor>()
+    }
 })

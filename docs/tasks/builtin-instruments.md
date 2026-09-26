@@ -347,6 +347,7 @@ with an error; SILENT means it now means something else or nothing.
 | 6 | a `.pipeline(...)` on a built-in sound | no longer applies (stage order, VCA-off, the filter feel scales); it still does on authored instruments and samples until step 9 | SILENT |
 | 6 | `crush`/`coarse` with `oversample` above 1 on a built-in | renders without oversampling until `docs/tasks/oversampling-regions.md` (D7's stopgap covers distort only) | SILENT |
 | 6 | `analog > 0` with two or more pattern filters on a built-in | the per-filter tolerance and drift draws go to other filters: the same distribution, other values (9 corpus songs, -50 to -82 dB) | SILENT |
+| 6 | sprudel `pregain(x)` on a built-in sound (commit 2) | used to do nothing; now scales the source in front of every classic stage (`distort` and `crush` bite harder above 1; with no nonlinear stage written it is a plain level) | SILENT (a new effect of an old form) |
 | 6 | a built-in's filter with a non-finite `freq`, or a filter envelope whose only written stage is non-finite | the stage is not built (non-finite reads as unset); the strip built the filter at 1 kHz, and swept an envelope at depth 7 | SILENT |
 | 6 | `perlin`/`berlin`/`crackle` as a sound with `analog > 0` and a pattern filter | its construction draws now come before the filter's | SILENT |
 | 6 | a negative `release` on a built-in (`adsr(release = -0.1)`) | the voice lives to its gate (the lifetime is floored at 0, as before step 6); the envelope's release is a zero-length stage | none (unchanged; a review-round fix kept it) |
@@ -394,7 +395,7 @@ song with both a highpass and a lowpass at `analog > 0` (at analog 0 the filters
   bypasses below 2 levels). The ENVELOPE is inverted: today the VCA runs on EVERY voice with
   `AdsrDef.defaultSynth` when the pattern sets nothing, so `classic()`'s ADSR is built BY DEFAULT and
   gated off by an explicit `adsrOff` slot. Also add `mul(pregain)` at exactly 1.0 and `onepole` at or
-  below 0 to the table.
+  below 0 to the table. (Both landed; the built-ins place `pregain` since step 6 commit 2, 2026-09-26.)
 
 ## 5b. The off-value table (the one home; built in step 2, 2026-09-20)
 
@@ -532,8 +533,9 @@ second line of defence: the envelope's `sustainLevel` is the live example (`expK
 - **The placed `pregain` at unity costs 115 ns per block at node level and about 90 per voice**, 12.5
   percent of the phase-3 target. FOLD IT AWAY at build when the resolved value is exactly 1.0, and do
   it through the gate rather than as a special case in `mul`. The decisive argument is identity, not
-  the cost: today's built-ins carry no `pregain`, so keeping a unity multiply is the bit change, not
-  removing it. What it drops is a `safeOut` scrub that only fires on a sample that is already NaN or
+  the cost: the built-ins carried no `pregain` before step 6, so keeping a unity multiply would be the bit
+  change, not removing it. Landed in step 6 commit 2 (2026-09-26): `source.pregain().onepole(slot).classic()`,
+  the unity `mul` folded by the optimizer's `Affine` arm. What it drops is a `safeOut` scrub that only fires on a sample that is already NaN or
   above 1e15, which a bare oscillator cannot produce and every downstream stage still guards.
 - **`analog`'s readers disagreed, and it was worse than recorded. CLOSED in step 1 (2026-09-20).**
   A NaN `analog` failed the `analog <= 0.0` test in `perVoiceCutoffOffsetMul`, so the multiplier was
@@ -604,7 +606,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 4 | DONE 2026-09-25: D1 and D2 landed, NO listening needed (both decided so that no song changes): `CrushCore` (floor, the strip's NaN rule) and `DistortionCore` (the strip's law) shared by the strip and the tree; the 15 D1/D2 rows of `ClassicStripParitySpec` flipped to bit-identical at both rates (now 33/11 at 48 kHz, 32/12 at 44.1 kHz) | the corpus identical; controls moved exactly the 3 strip-crush and 11 strip-distort songs | a shared core moves both hosts together, so the parity spec cannot see a mutation inside it: `StripLawCoresSpec` pins the laws with oracles written in the test |
 | 5 | DONE 2026-09-25: `classic()` on both doors, in the order of section 4 (`IgnitorDslClassic.kt`, the order written once; slots `<door>.<param>` in `IgnitorDsl.Slots.*` / `OscSlot.*`; `passes` a build-time knob that ROUNDS like the strip; the committed `ClassicStripParitySpec` pins 18 rows bit-identical to the strip and 26 divergent rows at 48 kHz (17 and 27 at 44.1 kHz, where the whole-frame ADSR row also diverges: the frame-count minor), each divergent row naming its cause: D1, D2 (step 4), D3, the ADSR frame counts, the lifetime floor, the teardown fade) | a one-voice render per door, each slot written in turn | the order: write it once, in one place |
 | 5b | DONE 2026-09-26. ONE ENVELOPE LAW (D3, decided 2026-09-25), inserted before step 6, four commits: (a1, DONE 2026-09-25: `EnvelopeCore.kt` with six hosts, `EnvelopeLawSpec`; the corpus moved by at most 2 LSB; a gate at or before the onset releases from 0) one `EnvelopeCore` that all seven evaluators become thin hosts of (the chain ADSR, the strip VCA, the node and strip filter envelopes, the node and strip FM, the node pitch envelope; the strip pitch envelope joins in c): fractional attack/decay, release on floor(N) to an exact 0, one curve `when`, N-1 release base, a STATELESS release start, raw core with per-use output clamps; (a2, DONE 2026-09-25: the shared `SvfCoeffSweep`, the strip drift on the block edge; 13 corpus rows moved) the strip filter takes the node's per-block interpolation (the 32-sample ramp retires); (b, DONE 2026-09-25: the FM node's hard-coded Linear and the strip's omitted curve arguments found and fixed; 6 songs moved through their pitch envelopes) `MOD_ENV_CURVE = Exponential` (filter, pitch, FM); (c; c2 DONE 2026-09-26: `lpfCurves`/`hpfCurves`/`bpfCurves`/`notchCurves`, `FilterEnvDef`'s curve fields, `classic()`'s curve slots, no corpus song moved; c1 DONE 2026-09-25: the strip pitch envelope on `EnvelopeCore` through the mapping it shares with the node, `penv(amount, attack, decay, sustain, release)`, `penvCurves`, `PitchEnvelopeDefaults`; no corpus song moved) sprudel `lpfCurves`/`hpfCurves`/`bpfCurves`/`notchCurves`/`penvCurves`, `penv(amount, attack, decay, sustain, release)` with a real release, `classic()`'s filter curve slots | a ladder: rung 0 (the core behind temporary legacy switches) renders 17/17 identical, then one rule per rung with its predicted rows | deliberate SOUND CHANGES in a1 (fractional frames: a few decays), a2 (8 `lpf(env)` songs, audibly at steep onsets: -32 to -52 dB RMS, see the section 3c row), b (the kicks and pitch drops of 6 songs); the maintainer listens to before/after pairs |
-| 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices (step 6 found neither bites the corpus: no built-in uses `adsrOff`, and the tree cull landed in 3b; both are spec-proven). Re-run the benchmark against 9290 ns. IN PROGRESS: commit 1 (the switch) DONE 2026-09-26 (9 songs moved by the analog draw order, -50 to -82 dB, proven the only cause); then `pregain`, then the benchmark |
+| 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices (step 6 found neither bites the corpus: no built-in uses `adsrOff`, and the tree cull landed in 3b; both are spec-proven). Re-run the benchmark against 9290 ns. IN PROGRESS: commit 1 (the switch) DONE 2026-09-26 (9 songs moved by the analog draw order, -50 to -82 dB, proven the only cause); commit 2 (`pregain` at the source, folded at unity, no song moved) DONE 2026-09-26; then the benchmark |
 | 7 | The sample instrument | needs a JS or in-memory PCM harness: the jvm renderer has no sample bank | its own safety net |
 | 8 | The doors become `oscp` aliases (about 50 to 60 functions) | door-parity specs, the wire golden regenerated | mechanical but wide; one door group at a time |
 | 9 | `VoiceData` cut, `PipelineDsl` retired | compile-time, the golden regenerated | irreversible: only after 6 and 7 are ear-confirmed |
@@ -620,7 +622,7 @@ lifetime comes from its tree alone; the teardown fade is one `TeardownFadeRender
 without a root `Adsr` share (`BuiltIgnitor.endsInEnvelope`); the analog draw-order moves (9 corpus songs, the
 cost section 8 names) are accepted under the principle and go on the listening list; a custom `.pipeline()` on a
 built-in and a crush/coarse `oversample` above 1 on a built-in go inert (release notes; the latter until
-`oversampling-regions.md`); `pregain` on the built-ins is its own later commit (section 7).
+`oversampling-regions.md`); `pregain` on the built-ins is its own later commit (section 7; landed as commit 2: `source.pregain().onepole(slot).classic()`).
 
 **OPEN for the maintainer (found in step 6's plan, 2026-09-26): the order of steps 9 and 10.** Step 9 retires the
 strip and `VoiceData`, step 10 migrates the songs whose AUTHORED instruments still rely on the strip (section 8's

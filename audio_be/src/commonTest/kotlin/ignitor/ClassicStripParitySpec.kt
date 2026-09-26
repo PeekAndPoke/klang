@@ -30,6 +30,7 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.lowpass
+import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
@@ -48,7 +49,8 @@ import kotlin.random.Random
  *  - STRIP: the saw's SOURCE registered as an AUTHORED instrument (`stripsaw`, the strip still runs after
  *    it), the row's settings on the typed `VoiceData` fields sprudel writes today, through the `modern`
  *    pipeline (crush, coarse, distort, the filters, tremolo, the VCA): what `sound("saw")` was before step 6;
- *  - TYPED: the BUILT-IN `saw` (`source.onepole(slot).classic()`, the strip off), the SAME typed fields,
+ *  - TYPED: the BUILT-IN `saw` (`source.pregain().onepole(slot).classic()`, `IgnitorRegistry.registerBuiltIn`,
+ *    the strip off), the SAME typed fields,
  *    which reach its slots through the factory's translation (`classicSlotBag`): the path every song
  *    takes until step 8;
  *  - BAG: the built-in `saw` with the same settings written as SLOTS in the bag and no typed field: the
@@ -67,8 +69,11 @@ import kotlin.random.Random
  * recorded in the step 5 report, not here, because a number pinned in a spec invites "tuning" the
  * law to meet it.
  *
- * What is not a slot row here: `onepole` (the registry's tail, outside every instrument) and `pregain`
- * (not in `classic()`); both are identical by construction because both voices get them the same way.
+ * What is not a slot row here: `onepole` and `pregain`, the two stages the REGISTRY places on a built-in's
+ * source (`registerBuiltIn`), not `classic()`. The onepole reaches both sides the same way (the registry
+ * wraps the authored `stripsaw` at note-on), and its placement has rows of its own below. The pregain does
+ * NOT: the `stripsaw` oracle has no pregain slot and ignores one, while the built-in applies it, so the
+ * `[pregain]` tests pin it against scaled oracle registrations (`stripsaw2x`, `stripsaw1p7x`).
  */
 class ClassicStripParitySpec : StringSpec({
 
@@ -162,6 +167,16 @@ class ClassicStripParitySpec : StringSpec({
             // The built-in saw's own source, AUTHORED: the voice strip runs after it, as it did after
             // every built-in before step 6.
             register("stripsaw", builtInSources().getValue("saw"))
+            // The pregain oracle, written here: the same source played exactly twice as hard, AUTHORED, so the
+            // voice strip (and the registry's onepole around it) runs after the doubled source.
+            register("stripsaw2x", builtInSources().getValue("saw").mul(IgnitorDsl.Constant(2.0)))
+            register("stripsaw1p7x", builtInSources().getValue("saw").mul(IgnitorDsl.Constant(1.7)))
+            // The other order, for the 1.7 row's anti-vacuous side: the source, the onepole, THEN the gain
+            // (the registry adds no second onepole, because the bag this voice carries writes none).
+            register(
+                "onepolethen1p7x",
+                IgnitorDsl.OnePoleLowpass(builtInSources().getValue("saw"), IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)),
+            )
             register("doorfill", doorFilledLowpass)
             register("expfilter", namedCurveLowpass(AdsrCurve.Exponential))
             register("linfilter", namedCurveLowpass(AdsrCurve.Linear))
@@ -524,6 +539,57 @@ class ClassicStripParitySpec : StringSpec({
             }
             withClue("$rate Hz: the built-in renders the plain crush") {
                 firstMismatch(typed({ copy(crush = 4.0, crushOversample = 2) }, null, rate), plain) shouldBe -1
+            }
+        }
+    }
+
+    // ── pregain: placed on every built-in's source (phase 3 step 6, commit 2) ──
+
+    "[pregain] a built-in's pregain 2 doubles every sample exactly: nothing nonlinear is written" {
+        for (rate in rates) {
+            val unity = classic(emptyMap(), rate)
+            val doubled = classic(mapOf("pregain" to 2.0), rate)
+
+            withClue("$rate Hz: engaged, the unity voice sounds") { unity.any { it != 0.0 } shouldBe true }
+            withClue("$rate Hz: first frame that is not exactly twice the unity voice") {
+                (unity.indices.firstOrNull { doubled[it].toRawBits() != (2.0 * unity[it]).toRawBits() } ?: -1) shouldBe -1
+            }
+        }
+    }
+
+    "[pregain] a built-in's pregain sits IN FRONT of its nonlinear stages: distort and crush see the doubled source" {
+        for (rate in rates) {
+            for ((label, settings) in listOf<Pair<String, VoiceData.() -> VoiceData>>(
+                "distort 0.5" to { copy(distort = 0.5) },
+                "crush 5 with onepole 900" to { copy(crush = 5.0, oscParams = mapOf("onepole" to 900.0)) },
+            )) {
+                val builtIn = render(base.copy(sound = "saw").settings().let { it.copy(oscParams = (it.oscParams ?: emptyMap()) + ("pregain" to 2.0)) }, rate)
+                val oracle = render(base.copy(sound = "stripsaw2x").settings(), rate)
+                val afterTheStage = typed(settings, null, rate).map { 2.0 * it }
+
+                withClue("$rate Hz, $label: first mismatch against the doubled source through the strip") {
+                    firstMismatch(oracle, builtIn) shouldBe -1
+                }
+                withClue("$rate Hz, $label: anti-vacuous, doubling AFTER the stage is a different signal") {
+                    firstMismatch(afterTheStage.toDoubleArray(), builtIn) shouldNotBe -1
+                }
+            }
+        }
+    }
+
+    "[pregain] ...and in front of the registry's onepole: the source, then pregain, then onepole (a 1.7 gain, so the order shows in the bits)" {
+        // Scaling by 2 commutes with the linear one-pole bit for bit; a gain of 1.7 rounds differently on
+        // either side of it, so this row is what tells `source.pregain().onepole()` from `source.onepole().pregain()`.
+        for (rate in rates) {
+            val bag = mapOf("onepole" to 900.0, "pregain" to 1.7)
+            val builtIn = classic(bag, rate)
+            val oracle = render(base.copy(sound = "stripsaw1p7x", oscParams = mapOf("onepole" to 900.0)), rate)
+
+            withClue("$rate Hz: first mismatch against the 1.7x source through the registry's onepole") {
+                firstMismatch(oracle, builtIn) shouldBe -1
+            }
+            withClue("$rate Hz: anti-vacuous, the onepole-then-gain order is a different signal") {
+                firstMismatch(render(base.copy(sound = "onepolethen1p7x"), rate), builtIn) shouldNotBe -1
             }
         }
     }

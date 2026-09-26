@@ -63,7 +63,7 @@ class VoicePregainWireSpec : StringSpec({
      */
     val driven: IgnitorDsl = IgnitorDsl.Sawtooth().pregain().distort(0.5)
 
-    /** The same instrument with no slot anywhere, which is every built-in today. */
+    /** The same instrument with no slot anywhere, like an authored instrument that never places it. */
     val plain: IgnitorDsl = IgnitorDsl.Sawtooth().distort(0.5)
 
     /**

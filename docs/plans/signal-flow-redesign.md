@@ -135,7 +135,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
 - **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
   so a pregain inside it would land in the wrong place for every instrument with its own
-  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed in step 6, 2026-09-26: `source.onepole(slot).classic()`, the `pregain` placement its own later commit); an author places
+  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed in step 6, 2026-09-26: `source.pregain().onepole(slot).classic()`); an author places
   `.mul(OscSlot.pregain)` where the player's touch enters, or does not place it, and then the
   instrument has no drive knob (§6: no unconsumed rule, no magic).
 - **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs

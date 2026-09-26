@@ -146,7 +146,7 @@ class VoiceFactory(
         // (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
-        // A BUILT-IN sound is one Ignitor tree, `source.onepole(slot).classic()` (phase 3 step 6,
+        // A BUILT-IN sound is one Ignitor tree (phase 3 step 6; its one home is
         // `IgnitorRegistry.registerBuiltIn`): the tree IS the whole voice and the voice strip is off
         // for it. So no strip filters are built for it, and that matters beyond the saving: building
         // them draws from `voiceRandom` at `analog > 0` (tolerance and drift), and a discarded draw
