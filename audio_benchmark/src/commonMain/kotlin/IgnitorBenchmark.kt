@@ -250,6 +250,10 @@ class IgnitorBenchmark(
                 // ── Individual oscillators ─────────────────────────────────────
                 Case("sine", voiceData = voice("sine")),
                 Case("sawtooth", voiceData = voice("sawtooth")),
+                // The phase 3 target (`docs/tasks/builtin-instruments.md` section 2): 8 sustained plain saws
+                // through the real renderer, 9290 ns per block on the JVM before phase 3. Kept as a case so
+                // the number can be re-measured on both platforms instead of quoted.
+                Case("sawtooth_8v", voiceCount = 8, voiceData = voice("sawtooth")),
                 Case("square", voiceData = voice("square")),
                 Case("triangle", voiceData = voice("triangle")),
                 Case("ramp", voiceData = voice("ramp")),

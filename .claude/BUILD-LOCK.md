@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| phase 3 step 6 (2b9d5146) | `audio_be/**` (IgnitorRegistry, runtime comments) and its specs; sprudel `pregain` door KDoc | commits 1 (the switch) and 2 (`pregain`) are COMMITTED; the benchmark commit follows |
 
 ## The two layers
 
