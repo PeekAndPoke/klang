@@ -613,8 +613,8 @@ object SongBenchmarkCases {
 
     fun rig(): List<SongBenchmark.Case> = listOf(
         // each part solo
-        liveCase("guitar1 (melody rig, uni 15)", "part", "guitar1.apply(guitar1_arrange)$BAND"),
-        liveCase("guitar2+3 (rhythm rig, uni 13+11)", "part", RHYTHM),
+        liveCase("guitar1 (melody rig, uni 19)", "part", "guitar1.apply(guitar1_arrange)$BAND"),
+        liveCase("guitar2+3 (rhythm rig, uni 19+19)", "part", RHYTHM),
         liveCase("lead (marimba)", "part", LEAD),
         liveCase("trommel", "part", TROMMEL),
         liveCase("bass", "part", "bass.apply(bass_arrange)$BAND"),
@@ -633,15 +633,14 @@ object SongBenchmarkCases {
 
         // the string side of the same guitars: what the unison count, the analog drift and the
         // string extras (pitch envelope, crackle burst) cost, the rig untouched
+        // all three guitars share the one `unison(...)` value; guitar 1 is not rendered by RHYTHM
         liveCase("rhythm: uni 7+7", "string", RHYTHM) {
-            swap("unison(voices = 13, spread = 0.05)", "unison(voices = 7, spread = 0.05)")(
-                swap("unison(voices = 11, spread = 0.05)", "unison(voices = 7, spread = 0.05)")(it),
-            )
+            swapAll(Regex.fromLiteral("unison(voices = 19, spread = 0.10)"), "unison(voices = 7, spread = 0.10)", expected = 3)(it)
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
-            swap("    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.02, 0, 0))\n", "")(
-                swap("    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))\n", "")(it),
+            swap("    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))\n", "")(
+                swap("    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.015, 0.1, 0.0, 0.05).mul(1.0))\n", "")(it),
             )
         },
         // the marimba, one component at a time
@@ -653,16 +652,16 @@ object SongBenchmarkCases {
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
         liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
-        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(150)", "let pAnalog = 0\n  let ring = Osc.constant(150)")),
+        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n \n  let ring = Osc.constant(150)", "let pAnalog = 0\n \n  let ring = Osc.constant(150)")),
 
-        // the whole song, and the whole song without its orbit compressors (three calls, one
-        // compressor per orbit they cover, nine instances; the master limiter stays): what the
+        // the whole song, and the whole song without its orbit compressors (four calls, one
+        // compressor per orbit they cover, ten instances; the master limiter stays): what the
         // compressor's per-sample ln and exp cost across the mix. The song's arrangement holds two
         // count-in cycles before the band; both cases drop that gate and the count-in itself, so
         // all eight rendered cycles play the band and nothing else.
         liveCase("song: full", "song", "song", ungateSong),
         liveCase("song: no compressors", "song", "song") {
-            swapAll(Regex("""\.compressor\([^)]*\)"""), "", expected = 3)(ungateSong(it))
+            swapAll(Regex("""\.compressor\([^)]*\)"""), "", expected = 4)(ungateSong(it))
         },
     )
 
