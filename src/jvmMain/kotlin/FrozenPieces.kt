@@ -16,6 +16,14 @@ package io.peekandpoke.klang
  * so the sound stays identical. A materially changed instrument gets a NEW dated snapshot; the old
  * one stays so its rows remain comparable.
  *
+ * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
+ * `docs/tasks/builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
+ * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
+ * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,
+ * `traffic`, `KiB`, `ns/smp/pass`) now count `classic()`'s stages in the graph, which they never counted on
+ * the strip: rows from before and after this date are not comparable in those columns.
+ *
  * 2026-09-19, `postgain` retired into `gain` (signal-flow plan section 6): every `postgain(x)` here
  * became `gain(mul(x))`, which is the same multiplication against the gain each `*_shape` sets, and
  * no value changed. Unlike the earlier renames this one RE-ASSOCIATES the product the engine used
@@ -32,6 +40,7 @@ object FrozenPieces {
     const val derSchmetterlingRpm_2026_09_16: Double = 32.5
 
     const val derSchmetterling_2026_09_16: String = """
+// 2026-09-26: .classic() appended to the authored instruments (phase 3 step 10, D5); nothing else changed
 import * from "stdlib"
 import * from "sprudel"
 
@@ -204,6 +213,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
     .mul(0.17)
+    .classic()
 }
 
 // The rigs. A/B one stage at a time:
@@ -237,6 +247,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
     .mul(0.2)
+    .classic()
 })()
 
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
@@ -260,6 +271,7 @@ let marimba = (() => {
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2800).mul(0.6)   // yarn head: a thump, not a click
   let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(3.0)                        // the resonator tube
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
+    .classic()
 })()
 
 export lead_shape = x => x.gain(0.8).sound(marimba).adsrOff()
@@ -355,6 +367,7 @@ let granCassa = (() => {
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .classic()
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.

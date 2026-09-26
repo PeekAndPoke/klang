@@ -19,12 +19,21 @@ package io.peekandpoke.klang
  * preset was removed, which would have changed the snapshot's sound. The maintainer replaced it
  * with a fresh snapshot of the live song instead, `derSchmetterling_2026_09_25` (the text committed
  * at `0cc351a2`, rpm 32.5). The old text is in git history (this file at `0cc351a2`). The migration
- * notes below describe Seltsamere Dinge and that retired text; the new snapshot has had none.
+ * notes below describe Seltsamere Dinge and that retired text; the new snapshot has had one, below.
+ *
+ * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
+ * `docs/tasks/builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
+ * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
+ * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,
+ * `traffic`, `KiB`, `ns/smp/pass`) now count `classic()`'s stages in the graph, which they never counted on
+ * the strip: rows from before and after this date are not comparable in those columns.
  *
  * EXCEPTION (maintainer decision, 2026-08-23, docs/plans/filter-unification.md):
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
- * nothing. Values must never change; each such migration keeps the sound identical.
+ * nothing. Values must never change; each such migration keeps the sound identical (two exceptions, both named
+ * below: the 2026-09-19 `postgain` re-association and the 2026-09-26 `.classic()` migration).
  * Applied so far: C6a filter-alias renames, C0 per-param argument split, C3 lpe semitone re-expression, C4 wet renames (room->roomWet, delay->delayWet, phaserdepth->phaserWet), P pitch-param unification (warmth(w) -> onepole(Hz) via fc = sr/pi*atan((1-w)/w), sound-identical at 48k),
  * 2026-09-07 envelope slots (`.release(x)` -> `.adsr(release = x)`) and the all-named form of a mixed call
  * (`delayWet(0.2, feedback = 0.5)` -> `delayWet(wet = 0.2, feedback = 0.5)`, which the language no longer parses mixed),
@@ -40,7 +49,8 @@ package io.peekandpoke.klang
  * and the 2026-09-24 wet-first doors (`body("glass")` -> `body(material = "glass")`, four calls in Seltsamere
  * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical).
  *
- * 2026-09-19, the ONE migration so far whose renders are not bit-identical to older captures:
+ * 2026-09-19, the first migration whose renders are not bit-identical to older captures (the second is the
+ * 2026-09-26 `.classic()` migration above):
  * `postgain` retired into `gain` (signal-flow plan section 6). The engine applied the two as one
  * multiplier at one point already, so the level of every line is the same number, but writing it as
  * ONE call re-associates the product. The real grouping in `SendRenderer`, with the scheduler's
@@ -58,6 +68,7 @@ object FrozenSongs {
 
     /** "Der Schmetterling", the song this benchmark investigates. Snapshot 2026-09-25 of the live song (rpm 32.5), verbatim. */
     const val derSchmetterling_2026_09_25: String = """
+// 2026-09-26: .classic() appended to the authored instruments (phase 3 step 10, D5); nothing else changed
 import * from "stdlib"
 import * from "sprudel"
 
@@ -231,6 +242,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
     .mul(0.17)
+    .classic()
 }
 
 // The rigs. A/B one stage at a time:
@@ -264,6 +276,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
     .mul(0.2)
+    .classic()
 })()
 
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
@@ -288,6 +301,7 @@ let marimba = (() => {
   let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(3.0)                        // the resonator tube
   
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
+    .classic()
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
@@ -388,6 +402,7 @@ let granCassa = (() => {
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .classic()
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
