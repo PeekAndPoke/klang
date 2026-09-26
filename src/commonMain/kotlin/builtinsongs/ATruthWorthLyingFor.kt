@@ -51,6 +51,7 @@ let guitar = (() => {
     .adsr(pAttack, 8.0, pSustain, 0.07, e => e.curves("exp", "exp", "exp"))         // Tight rhythm envelope
     // cabinett
     .lowpass(5000).lowpass(5000)
+    .classic()
 })()
 
 stack( // Gitarre! ------------------------------------------------------------------------------------------------------------------------------------------

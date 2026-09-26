@@ -26,7 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| step 10 implementer (017L4Bxw) | `audio_bridge`: `IgnitorDsl.kt` (Slots.onepole), `IgnitorDslClassic.kt`; `audio_be`: `ignitor/IgnitorRegistry.kt`, `IgnitorDefaults.kt`, `IgnitorDslRuntime.kt` (the `Adsr` arm's `endsInEnvelope`), `BuiltIgnitor.kt` (KDoc), `voices/VoiceFactory.kt`, `voices/_classic_slot_bag.kt`; `klangscript-libs`: `KlangScriptOscExtensions.kt`, `KlangScriptOscSlot.kt`; specs in those modules (new: `voices/AuthoredClassicSpec.kt`) and sprudel `ClassicDoorRenderParitySpec` | commit 1 (the engine: the `endsInClassic` tag, onepole into `classic()`) is COMMITTED; commit 2 (the songs) and commit 3 (the frozen texts) follow |
+| step 10 implementer (017L4Bxw) | `src/commonMain/kotlin/builtinsongs/{ATruthWorthLyingFor,DerSchmetterling,Sakura,Sandsturm,IrishLament,Greensleeves}.kt`, `src/jvmMain/kotlin/SongBenchmarkCases.kt` (the `rig()` anchors), `src/jvmTest/kotlin/SongBenchmarkCasesCompileSpec.kt` | commits 1 (the engine) and 2 (the songs) are COMMITTED; commit 3 (the frozen texts, D5) follows |
 
 ## The two layers
 

@@ -94,6 +94,13 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   left a third in the rule's own home, found one round later. Repo-wide includes `.claude/skills/` (the references agents write patches from):
   a brief that splits the grep between implementer (code) and coordinator (docs) names the skills in the
   coordinator's half (step 5b (b), 2026-09-25: the music-writing reference still taught the old default).
+- **An audibility claim that reaches the maintainer is measured on the isolated voice and verified first**
+  (2026-09-26, twice in one day: step 7's "about 10 cents per hit" was sub-cent, step 10's "vibrato 15 to 30 cents,
+  up to 7 cents per note" was about 1 cent): a detune, level or onset figure measured on the full mix (cross-correlation,
+  1 ms frames over noise) mixes other voices and noise statistics into it. The implementer measures the changed
+  voice soloed and names the metric and its resolution; the coordinator relays the audio reviewer's verified numbers,
+  never the implementer's first ones, and a listening note says what changed (a texture, other dice), not a number
+  nobody checked.
 - **A decision that REPLACES an expression lists every clause of the old one** (2026-09-26, ledger, a
   recurrence of 2026-09-25): when a brief or an approved plan swaps one evaluator, lifetime source, default or
   formula for another (state for a stateless law, `max(tail ?: 0, release)` for "the tree alone"), it first

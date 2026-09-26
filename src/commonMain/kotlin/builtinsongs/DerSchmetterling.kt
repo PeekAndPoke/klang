@@ -189,6 +189,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
     .mul(0.17)
+    .classic()
 }
 
 // The rigs. A/B one stage at a time:
@@ -222,6 +223,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
     .mul(0.2)
+    .classic()
 })()
 
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
@@ -247,6 +249,7 @@ let marimba = (() => {
  
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(2.0, "softsat")
     .adsr(0.010, 1.0, 0.0, 0.4).mul(0.175)
+    .classic()
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
@@ -348,6 +351,7 @@ let granCassa = (() => {
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard
+    .classic()
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
