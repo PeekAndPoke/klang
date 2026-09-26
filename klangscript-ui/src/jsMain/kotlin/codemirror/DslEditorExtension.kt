@@ -15,11 +15,11 @@ import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.script.intel.AnalyzedAst
-import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolCall
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.badgeTool
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.ui.scheduleShow
 import io.peekandpoke.kraft.popups.PopupsManager
@@ -173,8 +173,7 @@ fun dslEditorExtension(
         // clicked argument's text is not part of the scanned span, refuse the whole-call view
         // rather than risk rewriting the wrong source range.
         if (span.argTexts.none { argInfo.argText == it || argInfo.argText in it }) return null
-        val callable = argInfo.symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
-        val paramNames = callable.params.map { it.name }
+        val paramNames = argInfo.callable.params.map { it.name }
         if (paramNames.isEmpty()) return null
         val aligned = alignArgsToParams(paramNames, span.argTexts)
         var argsTo = span.argsTo
@@ -212,7 +211,8 @@ fun dslEditorExtension(
                 argTo = argInfo.argFrom + result.length
             },
             onCancel = {},
-            call = makeToolCall(argInfo, view),
+            // An ambiguous untyped call gets the scalar tool, never the whole-call rewrite.
+            call = if (argInfo.wholeCall) makeToolCall(argInfo, view) else null,
         )
     }
 
@@ -336,8 +336,14 @@ fun dslEditorExtension(
         }
     }
 
+    /** Identifies the badge an argument shows, so the DOM is rebuilt only when it changes. */
+    fun badgeKey(argInfo: CallArgInfo): String =
+        "${argInfo.argFrom}:${argInfo.tools.badgeTool(argInfo.argText)?.first}"
+
     fun showBadges(argInfo: CallArgInfo, view: EditorView, mouseX: Double) {
-        if (onOpenTool == null || argInfo.tools.isEmpty()) {
+        val badge = argInfo.tools.badgeTool(argInfo.argText)
+
+        if (onOpenTool == null || badge == null) {
             hideBadges(); return
         }
 
@@ -354,31 +360,32 @@ fun dslEditorExtension(
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
-        val key = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
+        val key = badgeKey(argInfo)
         if (key == badgeCacheKey) return
         badgeCacheKey = key
         badgeArgInfo = argInfo
         container.innerHTML = ""
 
-        argInfo.tools.forEach { (toolName, tool) ->
-            val iconCss = SemanticIcon.cssClassOf(tool.iconFn)
-            val btn = document.createElement("button")
-            btn.asDynamic().title = tool.title ?: toolName
-            btn.asDynamic().style.cssText =
-                "cursor:pointer;background:${KlangTheme.Hex.cardBackground};" +
-                        "border:1px solid ${KlangTheme.Hex.textSecondary};border-radius:3px;" +
-                        "padding:2px 8px;font-size:12px;line-height:1.5;color:${KlangTheme.Hex.gold};"
+        // One badge per argument; the context menu lists every tool of the param.
+        val (toolName, tool) = badge
 
-            btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:12px;"></i>"""
+        val iconCss = SemanticIcon.cssClassOf(tool.iconFn)
+        val btn = document.createElement("button")
+        btn.asDynamic().title = tool.title ?: toolName
+        btn.asDynamic().style.cssText =
+            "cursor:pointer;background:${KlangTheme.Hex.cardBackground};" +
+                    "border:1px solid ${KlangTheme.Hex.textSecondary};border-radius:3px;" +
+                    "padding:2px 8px;font-size:12px;line-height:1.5;color:${KlangTheme.Hex.gold};"
 
-            btn.addEventListener("click", { event ->
-                event.asDynamic().preventDefault()
-                event.asDynamic().stopPropagation()
-                hideBadges()
-                onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event.asDynamic())
-            })
-            container.appendChild(btn)
-        }
+        btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:12px;"></i>"""
+
+        btn.addEventListener("click", { event ->
+            event.asDynamic().preventDefault()
+            event.asDynamic().stopPropagation()
+            hideBadges()
+            onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event.asDynamic())
+        })
+        container.appendChild(btn)
     }
 
     // ── DOM event handlers ─────────────────────────────────────────────────
@@ -483,7 +490,7 @@ fun dslEditorExtension(
                 val argInfo = argInfoAt(event, view)
                 if (argInfo != null && argInfo.tools.isNotEmpty()) {
                     cancelBadgesClose()
-                    val newKey = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
+                    val newKey = badgeKey(argInfo)
                     if (newKey != badgeCacheKey) {
                         // New arg — schedule the badge. The timer re-arms on every
                         // move, so the mouseX that fires is where the mouse came to

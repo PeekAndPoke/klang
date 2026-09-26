@@ -132,4 +132,20 @@ class AstCallFinderTest : StringSpec({
         result.functionName shouldBe "adsr"
         result.argIndex shouldBe 0
     }
+
+    "named argument - reports its name next to its position" {
+        val src = "x.body(material = \"wood\", wet = 0.4)"
+        val wood = findAt(src, src.indexOf("wood")).shouldNotBeNull()
+        wood.argIndex shouldBe 0
+        wood.argName shouldBe "material"
+
+        val wet = findAt(src, src.indexOf("0.4")).shouldNotBeNull()
+        wet.argIndex shouldBe 1
+        wet.argName shouldBe "wet"
+    }
+
+    "positional argument - has no name" {
+        val src = "x.body(0.4, \"wood\")"
+        findAt(src, src.indexOf("wood")).shouldNotBeNull().argName shouldBe null
+    }
 })

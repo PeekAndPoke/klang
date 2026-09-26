@@ -5,10 +5,11 @@
 
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.script.ast.MemberAccess
 import io.peekandpoke.klang.script.intel.AnalyzedAst
+import io.peekandpoke.klang.script.intel.CallReceiver
+import io.peekandpoke.klang.script.intel.argumentAt
+import io.peekandpoke.klang.script.intel.bindArgument
 import io.peekandpoke.klang.script.types.KlangCallable
-import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
@@ -18,6 +19,9 @@ import io.peekandpoke.klang.ui.KlangUiToolRegistry
  *
  * @param functionName  Name of the enclosing function/method call.
  * @param symbol        The resolved KlangSymbol for that function.
+ * @param callable      The variant of [symbol] the argument belongs to; its params are the call's params.
+ * @param wholeCall     Whether a tool may rewrite the whole argument list with [callable]'s params
+ *                      (false when the variant is a guess another variant contradicts).
  * @param paramIndex    Zero-based index of the argument the cursor is on.
  * @param paramName     Name of the corresponding parameter.
  * @param tools         Resolved ui tools for this param (name -> tool), in declaration order.
@@ -28,6 +32,8 @@ import io.peekandpoke.klang.ui.KlangUiToolRegistry
 data class CallArgInfo(
     val functionName: String,
     val symbol: KlangSymbol,
+    val callable: KlangCallable,
+    val wholeCall: Boolean,
     val paramIndex: Int,
     val paramName: String,
     val tools: List<Pair<String, KlangUiTool>>,
@@ -108,7 +114,10 @@ fun scanCallArgsSpan(source: String, innerPos: Int): CallArgsSpan? {
     return CallArgsSpan(argsFrom = openParen + 1, argsTo = closeParen, argTexts = cleaned)
 }
 
-private val namedArgRegex = Regex("^(\\w+)\\s*=(?!=)\\s*([\\s\\S]*)$")
+private val namedArgRegex = Regex("^(\\w+)\\s*=(?![=>])\\s*([\\s\\S]*)$")
+
+/** An argument text that starts with an arrow function literal: `x => ...` or `(a, b) => ...`. */
+private val functionLiteralRegex = Regex("^(\\w+|\\([\\w\\s,]*\\))\\s*=>")
 
 /**
  * Aligns raw argument texts to declared parameter positions. All-named calls align by name;
@@ -148,15 +157,6 @@ fun serializeCallArgs(paramNames: List<String>, texts: List<String?>): String {
         texts.mapIndexedNotNull { i, t -> t?.let { "${paramNames[i]} = $it" } }
             .joinToString(", ")
     }
-}
-
-/**
- * Resolves the parameter for a given argument index, handling vararg params.
- * If argIndex is beyond the param list and the last param is vararg, returns the last param.
- */
-private fun resolveParam(callable: KlangCallable, argIndex: Int): KlangParam? {
-    return callable.params.getOrNull(argIndex)
-        ?: callable.params.lastOrNull()?.takeIf { it.isVararg }
 }
 
 /**
@@ -262,24 +262,41 @@ fun findCallArgAt(
 
     val bound = argBounds[argIndex]
     val rawSlice = source.substring(bound.from, bound.to)
-    val trimmed = rawSlice.trim()
-    if (trimmed.isEmpty()) return null
+    val trimmedArg = rawSlice.trim()
+
+    if (trimmedArg.isEmpty()) {
+        return null
+    }
+
     val leadingSpaces = rawSlice.indexOfFirst { !it.isWhitespace() }
-    val argFrom = bound.from + leadingSpaces
+
+    // A named argument `name = value`: the name picks the parameter, and the tool edits the value only.
+    val named = namedArgRegex.matchEntire(trimmedArg)
+    val argName = named?.groupValues?.get(1)
+    val trimmed = named?.groupValues?.get(2) ?: trimmedArg
+
+    if (trimmed.isEmpty()) {
+        return null
+    }
+
+    val argFrom = bound.from + leadingSpaces + (trimmedArg.length - trimmed.length)
     val argTo = argFrom + trimmed.length
 
     // -- Step 6: match param + resolve tools --
 
-    val callable = symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
-    val param = resolveParam(callable, argIndex) ?: return null
-    val tools = KlangUiToolRegistry.resolve(param.uitools)
+    // No analysis here, so no receiver type: the untyped rule of the shared resolution.
+    val functionArgs = argBounds.map { b -> functionLiteralRegex.containsMatchIn(source.substring(b.from, b.to).trim()) }
+    val binding = symbol.bindArgument(CallReceiver.Untyped, argIndex, argName, functionArgs) ?: return null
+    val tools = KlangUiToolRegistry.resolve(binding.param.uitools)
     if (tools.isEmpty()) return null
 
     return CallArgInfo(
         functionName = functionName,
         symbol = symbol,
+        callable = binding.callable,
+        wholeCall = binding.wholeCall,
         paramIndex = argIndex,
-        paramName = param.name,
+        paramName = binding.param.name,
         tools = tools,
         argFrom = argFrom,
         argTo = argTo,
@@ -310,31 +327,9 @@ fun findCallArgAtAst(
         return findCallArgAt(source, pos, docProvider)
     }
 
-    val result = analysis.astIndex.callArgAt(pos) ?: return null
-    if (result.argIndex < 0) {
-        return null
-    }
-
-    val symbol = docProvider(result.functionName) ?: return null
-
-    // Try receiver-aware variant resolution using the cached type map
-    val registry = analysis.registry
-    val callable = run {
-        val callee = result.call.callee
-        if (callee is MemberAccess) {
-            // O(1) lookup from the pre-computed type map
-            val receiverType = analysis.typeOf(callee.obj)
-            if (receiverType != null) {
-                registry.getCallable(result.functionName, receiverType)
-            } else {
-                symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
-            }
-        } else {
-            registry.getCallable(result.functionName, receiverType = null)
-                ?: symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
-        }
-    } ?: return null
-    val param = resolveParam(callable, result.argIndex) ?: return null
+    val found = analysis.argumentAt(pos, docProvider) ?: return null
+    val result = found.site
+    val param = found.binding.param
     val tools = KlangUiToolRegistry.resolve(param.uitools)
     if (tools.isEmpty()) return null
 
@@ -356,7 +351,9 @@ fun findCallArgAtAst(
 
     return CallArgInfo(
         functionName = result.functionName,
-        symbol = symbol,
+        symbol = found.symbol,
+        callable = found.binding.callable,
+        wholeCall = found.binding.wholeCall,
         paramIndex = result.argIndex,
         paramName = param.name,
         tools = tools,

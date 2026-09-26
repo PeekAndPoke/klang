@@ -56,6 +56,27 @@ data class KlangSymbol(
     fun getLibrary(): Origin.Library? = origin as? Origin.Library
 
     /**
+     * The callable variant an argument belongs to when the call's receiver type is unknown, as the
+     * editor's param tools see it (`x => x.body(material = "oak")`: nothing types `x`).
+     *
+     * One rule, in variant order (library registration order, then each library's declaration
+     * order): the first variant whose parameter for this argument ([KlangCallable.paramForArgument])
+     * declares ui tools wins; with none, the first callable variant. Several libraries share a door
+     * name (the Katalyst `body` and sprudel's `body`), and only the pattern language declares tools,
+     * so taking the first variant blindly found the tool-less one.
+     *
+     * Known asymmetry: an untyped receiver is assumed to be a pattern, since the tools live there.
+     * On an untyped Ignitor or Katalyst call this may pick a variant the call does not belong to;
+     * `bindArgument` then reports the binding as not safe for a whole-call rewrite.
+     */
+    fun callableForArgument(argIndex: Int, argName: String?, functionArgs: List<Boolean>): KlangCallable? {
+        val callables = variants.filterIsInstance<KlangCallable>()
+
+        return callables.firstOrNull { it.paramForArgument(argIndex, argName, functionArgs)?.uitools?.isNotEmpty() == true }
+            ?: callables.firstOrNull()
+    }
+
+    /**
      * Merge another [KlangSymbol] of the same name into this one.
      *
      * Variants are concatenated and deduplicated by `(name, receiver/owner.simpleName, library)`,

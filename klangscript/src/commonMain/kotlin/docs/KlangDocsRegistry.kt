@@ -138,17 +138,8 @@ class KlangDocsRegistry {
      * @param receiverType The receiver type to match, or null for top-level functions
      * @return The matching callable, or null
      */
-    fun getCallable(name: String, receiverType: KlangType?): KlangCallable? {
-        val symbol = _symbols[name] ?: return null
-        val callables = symbol.variants.filterIsInstance<KlangCallable>()
-        // Try the receiver's own type first, then its supertypes (most-specific wins),
-        // so an inherited base-type method (e.g. `IgnitorDsl.lowpass`) resolves on a
-        // narrowed subtype receiver (e.g. `IgnitorDsl.SuperSaw`).
-        for (candidate in receiverChain(receiverType)) {
-            callables.firstOrNull { typeMatches(it.receiver, candidate) }?.let { return it }
-        }
-        return null
-    }
+    fun getCallable(name: String, receiverType: KlangType?): KlangCallable? =
+        _symbols[name]?.callableForReceiver(receiverType)
 
     /**
      * Get all symbols that have at least one variant with the given receiver type.
@@ -206,36 +197,52 @@ class KlangDocsRegistry {
         }
         return symbol.copy(variants = filtered, origin = newOrigin)
     }
+}
 
-    /**
-     * The query type followed by its (script-registered) supertypes, most-specific
-     * first. Receiver-matched lookups walk this chain so a narrowed subtype receiver
-     * falls through to the base type that actually declares an inherited method
-     * (e.g. `IgnitorDsl.SuperSaw` → `IgnitorDsl`). A null query yields a single null
-     * element (top-level lookup).
-     *
-     * [KlangType.supertypes] is populated by KSP only for inferred return/property
-     * types; hand-built query types carry none, so this collapses to `[query]` and
-     * matching behaves exactly as before.
-     */
-    private fun receiverChain(query: KlangType?): List<KlangType?> =
-        if (query == null) listOf(null) else listOf(query) + query.supertypes
+/**
+ * The variant of this symbol callable on [receiverType]: the receiver's own type first, then its
+ * supertypes (most-specific wins), so an inherited base-type method (e.g. `IgnitorDsl.lowpass`)
+ * resolves on a narrowed subtype receiver (e.g. `IgnitorDsl.SuperSaw`). A null [receiverType]
+ * asks for the top-level variant. Null when no variant matches.
+ */
+fun KlangSymbol.callableForReceiver(receiverType: KlangType?): KlangCallable? {
+    val callables = variants.filterIsInstance<KlangCallable>()
 
-    /**
-     * Match a registered owner type against a query type.
-     *
-     * FQCN is the canonical cross-module identity key — when both sides carry
-     * one, that's the only field consulted. Otherwise falls back to
-     * [KlangType.simpleName]. Null query = top-level (owner must also be null).
-     */
-    private fun typeMatches(owner: KlangType?, query: KlangType?): Boolean {
-        if (query == null) return owner == null
-        if (owner == null) return false
-        val ownerFqcn = owner.fqcn
-        val queryFqcn = query.fqcn
-        if (ownerFqcn != null && queryFqcn != null) {
-            return ownerFqcn == queryFqcn
-        }
-        return owner.simpleName == query.simpleName
+    for (candidate in receiverChain(receiverType)) {
+        callables.firstOrNull { typeMatches(it.receiver, candidate) }?.let { return it }
     }
+
+    return null
+}
+
+/**
+ * The query type followed by its (script-registered) supertypes, most-specific
+ * first. Receiver-matched lookups walk this chain so a narrowed subtype receiver
+ * falls through to the base type that actually declares an inherited method
+ * (e.g. `IgnitorDsl.SuperSaw` → `IgnitorDsl`). A null query yields a single null
+ * element (top-level lookup).
+ *
+ * [KlangType.supertypes] is populated by KSP only for inferred return/property
+ * types; hand-built query types carry none, so this collapses to `[query]` and
+ * matching behaves exactly as before.
+ */
+internal fun receiverChain(query: KlangType?): List<KlangType?> =
+    if (query == null) listOf(null) else listOf(query) + query.supertypes
+
+/**
+ * Match a registered owner type against a query type.
+ *
+ * FQCN is the canonical cross-module identity key: when both sides carry
+ * one, that's the only field consulted. Otherwise falls back to
+ * [KlangType.simpleName]. Null query = top-level (owner must also be null).
+ */
+internal fun typeMatches(owner: KlangType?, query: KlangType?): Boolean {
+    if (query == null) return owner == null
+    if (owner == null) return false
+    val ownerFqcn = owner.fqcn
+    val queryFqcn = query.fqcn
+    if (ownerFqcn != null && queryFqcn != null) {
+        return ownerFqcn == queryFqcn
+    }
+    return owner.simpleName == query.simpleName
 }

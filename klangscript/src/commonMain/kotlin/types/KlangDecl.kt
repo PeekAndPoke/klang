@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.script.types
 
+import io.peekandpoke.klang.script.runtime.ArgAlignment
 import io.peekandpoke.klang.script.runtime.NativeOperatorNames
 
 /** Base interface for a KlangScript declaration (callable or property). */
@@ -61,6 +62,41 @@ data class KlangCallable(
             append(")")
             returnType?.let { append(": ${it.render()}") }
         }
+
+    /**
+     * The parameter an argument binds to: a named argument ([argName] not null) binds by name, a
+     * positional one by [argIndex] through [ArgAlignment], the rule the interpreter and the analyzer
+     * share (the trailing lambda floats to the one function-typed parameter after it), with a
+     * trailing vararg parameter taking the overflow.
+     *
+     * [functionArgs] holds, per argument of the call, whether it is a function literal; its size is
+     * the call's argument count. Null when nothing binds, including a negative index and a name no
+     * parameter has; a named argument never falls back to its position.
+     */
+    fun paramForArgument(argIndex: Int, argName: String?, functionArgs: List<Boolean>): KlangParam? {
+        if (argName != null) {
+            return params.firstOrNull { it.name == argName }
+        }
+
+        if (argIndex < 0) {
+            return null
+        }
+
+        val vararg = params.lastOrNull()?.takeIf { it.isVararg }
+        // The interpreter's vararg branch maps positionally and never floats (see ArgAlignment).
+        val target = if (vararg != null) {
+            argIndex
+        } else {
+            ArgAlignment.positionalTargets(
+                argCount = functionArgs.size,
+                paramCount = params.size,
+                isFunctionArg = { functionArgs[it] },
+                isFunctionParam = { params[it].type.isFunction },
+            ).getOrNull(argIndex) ?: argIndex
+        }
+
+        return params.getOrNull(target) ?: vararg
+    }
 }
 
 /** Mutability mode for a [KlangProperty]. */

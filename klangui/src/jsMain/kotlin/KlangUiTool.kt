@@ -81,7 +81,29 @@ fun interface KlangUiTool {
      */
     val prefersPopover: Boolean get() = false
 
+    /**
+     * True for a tool that edits a whole mini-notation sequence, usually by wrapping a value tool.
+     * The editor's inline badge offers it for a string argument and the value tool for anything
+     * else (see [badgeTool]); the context menu offers both.
+     */
+    val editsSequence: Boolean get() = false
+
     fun FlowContent.render(ctx: KlangUiToolContext)
+}
+
+/**
+ * The one tool the editor's inline badge offers for an argument whose trimmed source text is
+ * [argText]: the sequence tool for a string literal, a value tool for anything else, and the
+ * first tool when no tool of that kind is declared. Null for an empty list.
+ *
+ * One badge per argument, because a param declares its value tool AND the sequence tool that wraps
+ * it (`@param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor`), and the wrapper borrows
+ * the value tool's icon: listing both drew every icon twice.
+ */
+fun List<Pair<String, KlangUiTool>>.badgeTool(argText: String): Pair<String, KlangUiTool>? {
+    val isStringLiteral = argText.startsWith("\"") || argText.startsWith("'") || argText.startsWith("`")
+
+    return firstOrNull { (_, tool) -> tool.editsSequence == isStringLiteral } ?: firstOrNull()
 }
 
 /**
