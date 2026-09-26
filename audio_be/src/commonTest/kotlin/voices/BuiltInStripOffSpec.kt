@@ -29,12 +29,14 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * **Who runs the voice strip in phase 3 step 6.** A BUILT-IN sound is one Ignitor tree and runs no strip;
- * an AUTHORED instrument and a SAMPLE keep the strip until it retires (step 9). The two paths coexist per
- * voice, decided by the name's registry entry (`IgnitorRegistry.isBuiltIn`).
+ * **Who runs the voice strip in phase 3 (steps 6 and 7).** A BUILT-IN sound is one Ignitor tree and runs no
+ * strip; since step 7 a SAMPLE runs the sample instrument, the same shape over its PCM, and no strip either;
+ * an AUTHORED instrument keeps the strip until it retires (step 9). The paths coexist per voice, decided by
+ * the name's registry entry (`IgnitorRegistry.isBuiltIn`, and a name no registry defines is a sample).
  *
- * The built-in side is pinned wide by `BuiltInVoiceMatrixSpec` and deep by `ClassicStripParitySpec`; this
- * spec pins the OTHER side (the strip still runs where it must) and the one path those two cannot reach,
+ * The built-in side is pinned wide by `BuiltInVoiceMatrixSpec` and deep by `ClassicStripParitySpec`, the
+ * sample side bit for bit by `SampleInstrumentSpec`; this spec pins the doors on a sample and the strip where
+ * it must still run (an authored instrument), and the one path the first two cannot reach,
  * a realtime note-off on a built-in whose envelope is switched off, where the teardown fade has to follow
  * the moved end.
  */
@@ -110,7 +112,7 @@ class BuiltInStripOffSpec : StringSpec({
     val lpf = FilterDefs(listOf(FilterDef.LowPass(300.0, 0.707)))
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
-    "a SAMPLE voice still runs the voice strip: its typed lowpass and its envelope apply" {
+    "a SAMPLE voice runs the sample instrument: its typed lowpass and its envelope apply" {
         val plain = render(base.copy(sound = "probe"))
         val filtered = render(base.copy(sound = "probe", filters = lpf))
         val slowAttack = render(base.copy(sound = "probe", adsr = AdsrDef.Std(attack = 0.1)))

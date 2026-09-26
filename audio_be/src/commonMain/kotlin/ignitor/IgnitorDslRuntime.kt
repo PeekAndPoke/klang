@@ -65,8 +65,11 @@ fun IgnitorDsl.buildExciter(
     freqHz: Double = 0.0,
     sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
     blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /** The voice's sample playhead, the runtime of every [IgnitorDsl.Sample] leaf in this tree; null
+     *  (every voice that is not a sample) builds that leaf as silence. See [IgnitorBuildCache.sampleSource]. */
+    sampleSource: Ignitor? = null,
 ): BuiltIgnitor {
-    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz, sampleRate, blockFrames)
+    val cache = IgnitorBuildCache(soundIndex, phasePools, orbit, random, freqHz, sampleRate, blockFrames, sampleSource)
     return buildIgnitor(oscParams, cache)
 }
 
@@ -136,6 +139,11 @@ internal class IgnitorBuildCache(
      *  once per block. Pinned to 128 everywhere (it is a tone parameter, see
      *  [AudioBackendContext.RENDER_QUANTUM_FRAMES]). */
     val blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+    /** The voice's sample playhead (phase 3 step 7): the runtime of the [IgnitorDsl.Sample] leaf. The engine
+     *  resolves the sample and builds the playhead from the voice's playback fields (`VoiceFactory`), before the
+     *  build, so its drift lane draws first; carried here like [soundIndex] to reach the leaf. Null builds the
+     *  leaf as silence. */
+    val sampleSource: Ignitor? = null,
 ) {
     /** The detune scope at the current recursion point — null at the root.
      *  Identity-compared as part of the cache key (pushed/popped by the Detune build arm). */
@@ -919,6 +927,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.RawPulze -> pitchedSource(freq, Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()))
         is IgnitorDsl.Impulse -> pitchedSource(freq, Ignitors.impulse(freq.noMod(), analog.noMod()))
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
+        // The voice's sample (step 7): a playhead, pitched by `phaseMod` like every source. Silence without one.
+        is IgnitorDsl.Sample -> applyMod(cache.sampleSource ?: Ignitors.silence(), accumulatedMod)
 
         // Noise sources ignore phaseMod — skip ModApplyingIgnitor to avoid wasting cycles.
         is IgnitorDsl.WhiteNoise -> Ignitors.whiteNoise(cache.random, color.noMod())

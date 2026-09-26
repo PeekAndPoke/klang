@@ -504,8 +504,10 @@ migration fixture: written for the step, deleted with it, its result recorded in
 Two things it needs: enough cycles to reach every section (the longest `arrange` and the longest
 `mute` alternation set the bar; 256 covered the corpus of 2026-09-19), and the WALL CLOCK PINNED,
 because four songs seed their randomness from `timeOfDay` or `sinOfDay` and otherwise differ for
-a reason that has nothing to do with the engine. What it cannot see: sample voices (the jvm
-offline renderer has no sample bank), differences under one 16-bit count, JS-only behaviour.
+a reason that has nothing to do with the engine. What it cannot see: differences under one 16-bit count, JS-only behaviour. (Corrected 2026-09-26: it DOES
+see sample voices; the CLI render loads the samples from the repo-root `./cache` before scheduling any voice,
+so run it from the repo root and check each log's sample-load count. Only the `:jvmTest` `renderSong` helper has
+no sample bank.)
 
 **Checkpoints.** A checkpoint is the maintainer saying "this sounds right". The foreseen ones:
 after the insert-style sends (Katalyst 5b), after the switch fades (5c), after the phase 3

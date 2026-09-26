@@ -1,5 +1,34 @@
 # Klang Audio — Memory
 
+## The sample instrument, the strip off for samples (phase 3 step 7, 2026-09-26)
+
+- **A sample voice is the built-in shape over its PCM.** `IgnitorRegistry.builtInVoice(source)` is the one
+  home of `source.pregain().onepole(ONEPOLE_SLOT).classic()`; `registerBuiltIn` and
+  `IgnitorRegistry.SAMPLE_INSTRUMENT` (= `builtInVoice(IgnitorDsl.Sample)`, optimized once, never throws) both
+  use it. The sample instrument is NOT registered under a name: a name would enter the sound namespace.
+- **`IgnitorDsl.Sample`** is a knob-less leaf (`@WireName("sample")`, no door on either side). Its runtime is the
+  voice's `SampleIgnitor`, handed to the build as `buildExciter(sampleSource = ...)` and carried on
+  `IgnitorBuildCache.sampleSource`; without one the leaf builds as silence. `VoiceFactory` still resolves the
+  sample and builds the playhead from the typed playback fields (begin, end, speed, loop; `cut` and `n` stay
+  voice-level); those become slots in step 8.
+- **The sample's meta envelope is per-sample slot defaults** (`_sample_envelope_defaults.kt`): every `adsr.*`
+  slot without a finite value takes the meta value, the `mergeWith` layering (pattern, meta, `VOICE_ADSR_*`).
+  Plain wavs carry none (no copy); a SoundFont zone carries attack 0, decay 0, sustain 1, release 0.05. No
+  corpus song plays a SoundFont sound: `SampleInstrumentSpec` alone guards this.
+- **The lifetime is the tree voice's rule** (`treeLifetime`, shared with the built-ins): a negative release
+  now plays to the gate (it used to end the voice early). The tail stages are shared too (`treeStages`).
+- **The strip-off decision is made before any strip filter is built**, so a sample draws nothing for a strip.
+  The playhead is built BEFORE the tree, so its drift lane draws first; the tree's filters draw per filter
+  after it. The strip drew all tolerances, all drifts, then the playhead. That is the one corpus move: 7 of 17
+  songs, every one with `analog > 0` and a pattern filter on a sample voice. A scratch copy of HEAD whose
+  sample path draws in the tree's order rendered all 7 bit-identical to the tree.
+- **The corpus render DOES play samples**: the CLI loads them from `./cache` (relative: render from the repo
+  root) and `KlangOfflineRenderer` preloads every request before scheduling. Only the `:jvmTest` helper
+  `renderSong` has no sample bank.
+- **The oracle that outlives the strip**: `SampleInstrumentSpec` plays the plain sine's own output as a sample
+  at rate 1.0 (the playhead's interpolation then returns each value exactly), so a sample voice must equal the
+  built-in `sine` bit for bit, per classic stage, at 48 and 44.1 kHz.
+
 ## The built-ins on `classic()`, the strip off for them (phase 3 step 6, 2026-09-26)
 
 - **One registry method writes the built-in shape**: `IgnitorRegistry.registerBuiltIn(name, source)` registers
@@ -14,7 +43,7 @@
   filters: `toFilter`/`toModulator` draw from `voiceRandom` at `analog > 0`, and a discarded draw would shift
   the tree's own. The voice runs ignite plus, only when the build reports `endsInEnvelope = false` (the tree's
   `adsrOff`), `TeardownFadeRenderer`, the strip's `adsrOff` fade extracted unchanged (one law, two hosts).
-  Authored instruments and samples keep the strip until step 9.
+  Authored instruments keep the strip until step 9 (samples left it in step 7, the entry above).
 - **The typed fields reach the slots through `_classic_slot_bag.kt`** (scaffolding: removed in step 8 when the
   sprudel doors write the slot keys). Only set, finite fields are written, so the filter envelope's slot-layer
   fill decides as the strip's `depth ?: 7`, with one accepted difference: an envelope whose only set stage is

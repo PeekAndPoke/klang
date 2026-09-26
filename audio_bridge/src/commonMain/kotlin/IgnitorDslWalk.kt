@@ -98,6 +98,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.RawPulze -> listOf(freq, duty, analog)
         is IgnitorDsl.Recip -> listOf(inner)
         is IgnitorDsl.Round -> listOf(inner)
+        is IgnitorDsl.Sample -> emptyList()
         is IgnitorDsl.Sawtooth -> listOf(freq, analog)
         is IgnitorDsl.Select -> listOf(cond, whenTrue, whenFalse)
         is IgnitorDsl.Shape -> listOf(inner, shape, oversample)
@@ -271,6 +272,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.RawPulze -> copy(freq = new[0], duty = new[1], analog = new[2])
         is IgnitorDsl.Recip -> copy(inner = new[0])
         is IgnitorDsl.Round -> copy(inner = new[0])
+        is IgnitorDsl.Sample -> this
         is IgnitorDsl.Sawtooth -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Select -> copy(cond = new[0], whenTrue = new[1], whenFalse = new[2])
         is IgnitorDsl.Shape -> copy(inner = new[0], shape = new[1], oversample = new[2])

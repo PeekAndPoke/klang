@@ -35,14 +35,51 @@ class IgnitorRegistry(
          * Default `0.0` = the stage is off, which is what the gate tests. Deliberately NOT in
          * `IgnitorDsl.Slots`: that object is the authoring vocabulary an instrument places itself,
          * and this stage is placed by the registry, never by an author: around every AUTHORED
-         * instrument at note-on ([createExciter]), and on the SOURCE of every built-in at
-         * registration ([registerBuiltIn]), where the voice strip always had it.
+         * instrument at note-on ([createExciter]), and on the SOURCE of every built-in and of the
+         * sample instrument ([builtInVoice]), where the voice strip had it for a built-in.
          */
         internal val ONEPOLE_SLOT: IgnitorDsl = IgnitorDsl.Param(
             name = "onepole",
             default = 0.0,
             description = "Pattern-level one-pole lowpass cutoff in Hz (0 = off)",
         )
+
+        /**
+         * THE built-in voice shape (phase 3 steps 6 and 7), the one place it is written: [source] becomes the
+         * subtractive synth voice `sound("saw")` has always been, as one Ignitor tree,
+         *
+         * ```
+         * source.pregain().onepole(ONEPOLE_SLOT).classic()
+         * ```
+         *
+         * The `pregain` slot sits on the source, where the player's touch enters, in front of every
+         * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Osc -> pregain -> classic").
+         * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
+         * nothing until a pattern writes `pregain(x)`. Then the voice strip's own order: the pattern's
+         * `onepole` on the source, then crush ... adsr. Every built-in sound ([registerBuiltIn]) and the
+         * sample instrument ([SAMPLE_INSTRUMENT]) are this shape.
+         */
+        internal fun builtInVoice(source: IgnitorDsl): IgnitorDsl =
+            IgnitorDsl.OnePoleLowpass(inner = source.pregain(), freq = ONEPOLE_SLOT).classic()
+
+        /**
+         * The SAMPLE INSTRUMENT (phase 3 step 7): the tree every sample voice (`sound("bd")`, any name that is
+         * not a registered instrument) runs, [builtInVoice] over the voice's sample ([IgnitorDsl.Sample]). So a
+         * sample takes the pattern's doors exactly as a built-in synth does, and the voice strip is off for it.
+         *
+         * One generic instrument, keyed by nothing: the voice's sample is resolved by the engine and handed to
+         * the build (`VoiceFactory`). Deliberately NOT registered under a name: a name would enter the sound
+         * namespace (`sound("sample")` would pick an instrument with no sample) and invite a fork to shadow it.
+         * Optimized once, here, like every registered tree; like [register] it never throws, falling back to
+         * the authored tree ([optimizerFailures] cannot count it: no registry owns it).
+         */
+        internal val SAMPLE_INSTRUMENT: IgnitorDsl = builtInVoice(IgnitorDsl.Sample).let { tree ->
+            try {
+                tree.optimize()
+            } catch (_: Throwable) {
+                tree
+            }
+        }
     }
 
     private val defs = mutableMapOf<String, IgnitorDsl>()
@@ -86,27 +123,16 @@ class IgnitorRegistry(
     }
 
     /**
-     * Registers a BUILT-IN sound (phase 3 step 6): [source] becomes the subtractive synth voice
-     * `sound("saw")` has always been, written as one Ignitor tree,
-     *
-     * ```
-     * source.pregain().onepole(ONEPOLE_SLOT).classic()
-     * ```
-     *
-     * The `pregain` slot sits on the source, where the player's touch enters, in front of every
-     * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Osc -> pregain -> classic").
-     * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
-     * nothing until a pattern writes `pregain(x)`. Then the voice strip's own order: the pattern's
-     * `onepole` on the source, then crush ... adsr. The name is recorded as a built-in, which switches the voice strip OFF for its voices: the tree
-     * is the whole voice ([isBuiltIn], `VoiceFactory`). This is the one place the built-in shape is
-     * written.
+     * Registers a BUILT-IN sound (phase 3 step 6): [source] in [builtInVoice]'s shape,
+     * `source.pregain().onepole(ONEPOLE_SLOT).classic()`. The name is recorded as a built-in, which switches the
+     * voice strip OFF for its voices: the tree is the whole voice ([isBuiltIn], `VoiceFactory`).
      *
      * Scaffolding lifetime: the built-in flag exists only while the strip still serves authored
-     * instruments and samples; it goes with the strip (step 9 of `docs/tasks/builtin-instruments.md`).
+     * instruments; it goes with the strip (step 9 of `docs/tasks/builtin-instruments.md`).
      */
     internal fun registerBuiltIn(name: String, source: IgnitorDsl) {
         val key = name.lowercase()
-        store(key, IgnitorDsl.OnePoleLowpass(inner = source.pregain(), freq = ONEPOLE_SLOT).classic())
+        store(key, builtInVoice(source))
         builtIns.add(key)
     }
 

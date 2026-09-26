@@ -517,7 +517,8 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
   oversampler). A slot on the door's distort would shape every note, written or not.
 
 **Transitional (phase 3):** since step 6 (2026-09-26) the BUILT-IN sounds (`sound("saw")`, ...) are
-`classic()` trees and the pattern doors (`.lpf(...)`, `.adsr(...)`, `.crush(...)`) reach their slots. On an
+`classic()` trees, and since step 7 the SAMPLES are too; the pattern doors (`.lpf(...)`, `.adsr(...)`,
+`.crush(...)`) reach their slots. On an
 AUTHORED instrument the doors still write the old voice strip, which runs AFTER the instrument, until step
 9; reach its slots with `.oscp("lpf.freq", 1800)` (a door beats an `oscp` on the same slot until step 8). The
 strip's own envelope still runs on every authored instrument, so a `.classic()` instrument is enveloped twice

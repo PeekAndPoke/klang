@@ -168,6 +168,7 @@ class IgnitorDslWalkSpec : StringSpec({
         Triple("Shimmer", IgnitorDsl.Shimmer(inner = m(0), wet = m(1), feedback = m(2), tone = m(3), floor = m(4), pitches = listOf(3.0, 7.0)), 5),
         Triple("Sign", IgnitorDsl.Sign(inner = m(0)), 1),
         Triple("Silence", IgnitorDsl.Silence, 0),
+        Triple("Sample", IgnitorDsl.Sample, 0),
         Triple(
             "Sine",
             IgnitorDsl.Sine(
@@ -209,8 +210,8 @@ class IgnitorDslWalkSpec : StringSpec({
 
     "the corpus covers every IgnitorDsl node type" {
         // Bump this together with a new node's walker arms and its corpus entry.
-        corpus.size shouldBe 79
-        corpus.map { it.first }.toSet().size shouldBe 79
+        corpus.size shouldBe 80
+        corpus.map { it.first }.toSet().size shouldBe 80
     }
 
     "every node reports exactly the declared number of children" {

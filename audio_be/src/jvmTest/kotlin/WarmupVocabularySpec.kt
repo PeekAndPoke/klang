@@ -39,6 +39,7 @@ class WarmupVocabularySpec : StringSpec({
     val excluded: Map<String, String> = mapOf(
         "OptimizerHint" to "dissolves in the optimizer before anything is built — there is no runtime node to warm",
         "Variants" to "dissolves at the registry boundary (children[soundIndex]) — no runtime node; the chosen child is warmed",
+        "Sample" to "built only by a sample voice, with the voice's playhead: WarmupRunner's reserved sample runs the sample instrument",
     )
 
     /**

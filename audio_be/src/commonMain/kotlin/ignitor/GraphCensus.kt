@@ -312,7 +312,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Sawtooth, is IgnitorDsl.Square, is IgnitorDsl.Triangle, is IgnitorDsl.Ramp,
             is IgnitorDsl.Pulze, is IgnitorDsl.RawPulze, is IgnitorDsl.Zawtooth, is IgnitorDsl.Zamp,
             is IgnitorDsl.Impulse, is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise,
-            is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise -> source()
+            is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise,
+            is IgnitorDsl.Sample -> source()
 
             // a sine with partials is one pass over a bank; every partial keeps a phase, an increment and a gain
             is IgnitorDsl.Sine -> {

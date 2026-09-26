@@ -30,6 +30,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- parameter slots / special leaves -------------------------------------------------------------------
     "Freq" { check(IgnitorDsl.Freq) }
     "Silence" { check(IgnitorDsl.Silence) }
+    "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where

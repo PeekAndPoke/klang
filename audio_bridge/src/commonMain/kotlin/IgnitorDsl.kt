@@ -847,6 +847,20 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
+    /**
+     * The voice's resolved SAMPLE, as a source: the PCM that `sound("bd")` names, played with the voice's
+     * pitch, `speed`, `begin`/`end` and loop (phase 3 step 7).
+     *
+     * The engine resolves and plays the sample itself (`VoiceFactory` builds the playhead from the voice's
+     * playback fields) and hands it to the build, so this leaf carries no knobs. Its one user is the engine's
+     * sample instrument (`IgnitorRegistry.SAMPLE_INSTRUMENT`, the built-in shape over this source), which every
+     * sample voice runs. It has no authoring door on either side; built anywhere else it renders silence.
+     */
+    @WireName("sample")
+    data object Sample : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Physical Models
     // ═════════════════════════════════════════════════════════════════════════════
