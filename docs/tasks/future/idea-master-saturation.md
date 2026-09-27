@@ -30,8 +30,10 @@ approximation `x (27 + x^2) / (27 + 9 x^2)`, clamped at |x| > 3.
 - The engine has the parts: `effects/Compressor.kt` (the orbit compressor and the master limiter
   share it) and the waveshapers in `ShapingFuncs.kt` / `DistortionCore.kt`, several of them
   asymmetric already (`DistortionShape`).
-- The March plan targeted `KlangAudioRenderer` and 16-bit output. That architecture is gone; only the
-  idea and the presets carry over. It would be built as master stages.
+- The March plan put the chain inside `KlangAudioRenderer`'s output loop. That class is now only the
+  offline and benchmark renderer; the realtime path does not go through it, and the house output stage
+  is `MasterStage` (DC blockers, limiter, clip). Only the idea and the presets carry over; it would be
+  built as authored master stages.
 
 ## To decide when it is picked up
 
