@@ -337,7 +337,7 @@ Template per decision:
 
 ### 6.3 Optimizer rounds and affine folding
 - Decision: rounds until fixpoint [PF9]; runtime fusion deferred [PF10]; TDD for the optimizer [P15].
-- Evidence: `docs/tasks/future/affine-chain-fusion.md`, `docs/tasks/future/ignitor-optimizer-open-items.md`.
+- Evidence: `docs/tasks/future/optimize-affine-chain-fusion.md`, `docs/tasks/future/ignitor-optimizer-open-items.md`.
 
 ### 6.4 Voice culling
 - Decision: per-voice window [PF8]. Commit `2133056a` (2026-09-15); blog `2026-09-15-zombies`.

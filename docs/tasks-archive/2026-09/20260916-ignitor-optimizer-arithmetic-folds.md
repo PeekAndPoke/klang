@@ -206,5 +206,5 @@ parity, a mutation check, a rig A/B, a commit.
    move in the end (constancy and params equal on both sides, since the zero divisor keeps its
    subtree). The rules did not move: still nothing merges across an addition;
    `mul(2).add(2).mul(2).add(2)` stays two Affines. Merging them, algebraically or as a fused
-   runtime pass, is parked with its reasoning in `docs/tasks/future/affine-chain-fusion.md`
+   runtime pass, is parked with its reasoning in `docs/tasks/future/optimize-affine-chain-fusion.md`
    (maintainer, 2026-09-16: last in line, more complexity than gain).

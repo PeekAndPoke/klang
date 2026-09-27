@@ -116,7 +116,7 @@ next deploy; the JVM and node numbers are in the archive record.
 ## 7. Refinements recorded and not taken
 
 - Merging two nested Affines, algebraically or as one fused runtime pass:
-  `docs/tasks/future/affine-chain-fusion.md` (last in line, more complexity than gain).
+  `docs/tasks/future/optimize-affine-chain-fusion.md` (last in line, more complexity than gain).
 - A literal reciprocal composing with a following literal run (`div(4).mul(2)` as one node):
   needs `SAFE_MIN`/`SAFE_MAX` in the bridge to reproduce the runtime's guard; the expression form
   costs one guarded divide per block.

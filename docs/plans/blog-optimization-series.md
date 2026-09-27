@@ -615,7 +615,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   tags, the song's work across its snapshots on one engine, and the phone timeline with the
   song's work at each date. The sentence the post exists for: the live song's RTF rose over the
   summer AND the engine's cost per pass fell, and both are true. What is open
-  (`docs/tasks/future/ignitor-optimizer-open-items.md`, `affine-chain-fusion.md`,
+  (`docs/tasks/future/ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimizer-on-the-frontend.md`, `high-performance-audio-backend.md`) and what the next
   complexity increase will cost at the current cost per pass.
 - **Mechanics, the engine axis** (opus, the big one). For each tag in the map: `git worktree
