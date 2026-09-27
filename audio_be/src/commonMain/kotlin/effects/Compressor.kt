@@ -146,8 +146,8 @@ class Compressor(
     /** Signal delay D in frames. 0 disables the whole lookahead path. */
     private val delayFrames: Int = run {
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
-        // ask for a 2-billion-element array. MasterChain already guards, but this class is public
-        // with three other call sites.
+        // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
+        // with two other call sites (MasterStage and EffectBenchmark).
         val seconds = guardOr(lookaheadSeconds, 0.0)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames

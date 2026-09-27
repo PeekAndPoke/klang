@@ -68,7 +68,7 @@ import kotlin.math.min
  *   delay-time change (a longer tap can always reach older ring content).
  *
  * "Off" is a threshold rather than zero because a zero time would be coerced up to the DSP minimum
- * and ring as a metallic comb instead of being silent (see the MasterChain gate note).
+ * and ring as a metallic comb instead of being silent.
  */
 class KatalystDelayEffect(
     /** Where the ring comes from. Rented on first activation, never before (resource warehouse, 2b). */

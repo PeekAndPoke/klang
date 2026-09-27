@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * **Raw.** A negative factor (a polarity flip) and one far above unity are the author's business;
  * nothing here clamps. The two guards are reads of "unset" rather than clamps, and they answer it
  * differently on purpose: the WRITER reads a non-finite slot as unity and hands that on (see
- * [KatalystGainWriter], the same thing `MasterChain.buildGain` does with this knob on the master
+ * [KatalystGainWriter], the same thing `MasterDslShim` does with this knob on the master
  * bus), while this stage's DOOR ignores the call entirely and leaves the current target standing
  * (see [configure], which spells out when the difference shows).
  *

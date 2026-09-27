@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
-import io.peekandpoke.klang.audio_be.master.MasterChain
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterStageDsl
@@ -297,22 +296,6 @@ class LazyReverbSpec : StringSpec({
     }
 
     // ── The master bus: same shelf, same return path ────────────────────────────────────────────
-
-    "a master reverb rents from the shelf; a refused unit skips the stage, counted" {
-        val alloc = Recording()
-        val (units, _) = shelf(alloc)
-        val dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 7.0))
-
-        val chain = MasterChain.build(dsl, sampleRate, blockFrames, reverbs = units)
-        chain.reverbs.size shouldBe 1
-        alloc.asked shouldBe 1
-
-        alloc.failing = true
-        val denied = MasterChain.build(dsl, sampleRate, blockFrames, reverbs = units)
-        denied.reverbs.size shouldBe 0
-        denied.deniedRents shouldBe 1
-        denied.isActive shouldBe false // nothing else in the chain
-    }
 
     "an evicted master chain returns its unit, and the next master reverb takes it without allocating" {
         val (units, alloc) = shelf()

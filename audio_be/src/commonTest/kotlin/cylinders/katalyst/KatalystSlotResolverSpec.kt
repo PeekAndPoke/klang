@@ -306,6 +306,41 @@ class KatalystSlotResolverSpec : StringSpec({
         chain.reverb.shouldNotBeNull().reverb.shouldBeNull()
     }
 
+    // Moved here from the master's parity specs in phase 3 step 12 C3 (the output runs these stages
+    // now, so a master-against-orbit comparison compares a stage with itself); these halves were the
+    // orbit's and had no other row.
+
+    "reverb: the room switches on at authored size 0.1 exactly, and stays off below" {
+        // 0.1 / 10 is the normalized 0.01 of the stage's own gate, so a `>` there, or a second /10
+        // anywhere on the way, moves the edge.
+        fun room(authored: Double) = declared(KatalystStageDsl.Reverb(wet = c(0.6), size = c(authored)))
+            .reverb.shouldNotBeNull().reverb
+
+        room(0.05).shouldBeNull()
+        room(0.1).shouldNotBeNull().size shouldBe 0.01
+    }
+
+    "reverb: a non-finite SIZE written into the classic chain is off for NaN and the largest room for +Infinity" {
+        // Two answers, both written down: the writer's `Reverb.normalizeSize` reads NaN as 0.0 (off)
+        // and CLAMPS +Infinity to 1.0, where a master stage used to substitute the shared constant.
+        fun classicRoom(size: Double) = declared(*KatalystDsl.classic.stages.toTypedArray())
+            .also { it.applyParams(mapOf("reverb.wet" to 0.4, "reverb.size" to size)) }
+            .reverb.shouldNotBeNull().reverb
+
+        classicRoom(Double.NaN).shouldBeNull()
+        classicRoom(Double.POSITIVE_INFINITY).shouldNotBeNull().size shouldBe 1.0
+    }
+
+    "delay: a state that names ONLY the send leaves the classic chain's line off" {
+        // Filling the companions is the DOOR's job (`/dsl-design` §4): a raw `katp("delay.wet", 0.4)`
+        // writes one slot, the classic chain's own `delay.time` is the untouched 0.0, and nothing runs.
+        val chain = declared(*KatalystDsl.classic.stages.toTypedArray())
+
+        chain.applyParams(mapOf("delay.wet" to 0.4))
+
+        chain.delay.shouldNotBeNull().delayLine.shouldBeNull()
+    }
+
     // ── Phaser ───────────────────────────────────────────────────────────────────────────────────
 
     "phaser: depth IS wet, and below the gate the kernel params stay untouched" {

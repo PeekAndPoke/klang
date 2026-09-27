@@ -13,13 +13,15 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.effects.TailCeiling
-import io.peekandpoke.klang.audio_be.master.MasterChain
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
  * The Active-state tail question answered from a content ceiling (`TailCeiling`) instead of by scanning
- * the ring or the combs, for both orbit effects and the master chain. The scans (`DelayLine.hasTail`,
+ * the ring or the combs, for both orbit effects and a whole chain. The scans (`DelayLine.hasTail`,
  * `Reverb.hasTail`) stay as the ORACLE here: the closed form must never say "no tail" while the
  * scan still finds audible energy in what the tap can reach — and must eventually say it.
  */
@@ -188,30 +190,47 @@ class ClosedFormTailSpec : StringSpec({
         blocks shouldBeGreaterThan 100 // a real decay was held (~0.7 s minimum tail ≈ 240 blocks)
     }
 
-    // ── Master chain ─────────────────────────────────────────────────────────────────────────────
+    // ── A whole chain ────────────────────────────────────────────────────────────────────────────
 
-    "a master chain: no tail before input, tail while fed and through the echoes, then provably none" {
-        val chain = MasterChain.build(
-            MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, time = 0.05, feedback = 0.5), MasterStageDsl.Reverb(wet = 0.4, size = 5.0)),
-            sampleRate, blockFrames,
+    "a delay-then-reverb chain: no tail before input, tail while fed and through the echoes, then provably none" {
+        // Each stage answers from its OWN feed, so the delay's echoes keep the room's ceiling up after
+        // the mix went silent. Configured every block from no param state, as the output runs it (the
+        // master's chain until phase 3 step 12 C3 had this row).
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Constant(0.5),
+                    time = IgnitorDsl.Constant(0.05),
+                    feedback = IgnitorDsl.Constant(0.5),
+                ),
+                KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0)),
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
         )
-        chain.hasActiveTail() shouldBe false
-        val bus = StereoBuffer(blockFrames)
-        repeat(20) {
-            bus.left.fill(0.5); bus.right.fill(0.5)
-            chain.process(bus, blockFrames)
+        val ctx = ctx()
+
+        fun block(level: Double) {
+            ctx.mixBuffer.fill(level)
+            chain.applyParams(null)
+            chain.process(ctx)
         }
-        chain.hasActiveTail() shouldBe true
+
+        chain.applyParams(null)
+        chain.hasTail() shouldBe false
+        repeat(20) { block(0.5) }
+        chain.hasTail() shouldBe true
 
         var blocks = 0
-        while (chain.hasActiveTail()) {
-            bus.clear()
-            chain.process(bus, blockFrames)
+        while (chain.hasTail()) {
+            block(0.0)
             blocks++
             (blocks < 20000) shouldBe true
         }
-        chain.delays[0].hasTail() shouldBe false
-        chain.reverbs[0].hasTail() shouldBe false
+        chain.delay!!.delayLine!!.hasTail() shouldBe false
+        chain.reverb!!.reverb!!.hasTail() shouldBe false
         blocks shouldBeGreaterThan 100
     }
 })

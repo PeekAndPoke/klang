@@ -44,7 +44,7 @@ internal interface KatalystSlotWriter {
  * Instances are **stateful** (delay ring, reverb network, compressor envelope, phaser sweep
  * clock), so a chain belongs to exactly one cylinder and is never shared. Building can rent from
  * the warehouse, so a chain is built ONCE per cylinder, never per block and never per voice (see
- * `Cylinder`). Mirror of [io.peekandpoke.klang.audio_be.master.MasterChain] on the orbit bus.
+ * `Cylinder`), and one per output chain in `MasterBus`, which runs the same class at the output.
  *
  * **The duck is not in [pipeline].** It needs every orbit processed first, so `Cylinders` runs it
  * after the chains, which is what it has always done; the duck stage's position in the DSL list is
@@ -60,7 +60,7 @@ class KatalystChain internal constructor(
      * The duck is deliberately absent (see the class KDoc); [stages] is the whole set the chain
      * owns.
      *
-     * Array, not List, like `MasterChain`'s: iterated once per block per orbit, so no iterator
+     * Array, not List: iterated once per block per orbit, so no iterator
      * allocation. Private, because an array hands every reader a write: what leaves the chain is
      * the read-only [pipeline] view.
      */

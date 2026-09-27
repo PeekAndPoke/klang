@@ -19,15 +19,12 @@ import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.master.MasterChain
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
@@ -819,32 +816,39 @@ class KatalystCompressorLookaheadSpec : StringSpec({
 
     // ── The master-shaped chain and the bound ───────────────────────────────────────────────────
 
-    "at the output, the limiter stage is the master's authored limiter bit for bit" {
-        // Pins what C3 relies on: a chain configured with no owner (applyParams(null), a Param is
-        // its default) runs the same Compressor the Master DSL's `limiter` builds, from the same
-        // numbers, through the setter path instead of the constructor.
-        val built = chain(limiterStage(lookahead))
-        val master = MasterChain.build(
-            MasterDsl.of(MasterStageDsl.Limiter(lookaheadSeconds = lookahead)),
-            sampleRate = sampleRate,
-            blockFrames = blockFrames,
-        ).limiters[0]
+    "the limiter stage is the Compressor its constructor builds from the same numbers, bit for bit" {
+        // Pins what phase 3 step 12 C3 relies on: the output's limiter used to be a Compressor built
+        // through its constructor, and is now this stage configured with no owner (applyParams(null),
+        // a Param is its default), whose instance takes the five numbers through its setters. Both
+        // paths, with and without a lookahead (the corpus has none).
+        for (seconds in listOf(0.0, lookahead)) {
+            val built = chain(limiterStage(seconds))
+            val constructed = Compressor(
+                sampleRate = sampleRate,
+                thresholdDb = LIMITER_THRESHOLD_DB,
+                ratio = LIMITER_RATIO,
+                kneeDb = LIMITER_KNEE_DB,
+                attackSeconds = AUTHORED_LIMITER_ATTACK_SECONDS,
+                releaseSeconds = LIMITER_RELEASE_SECONDS,
+                lookaheadSeconds = seconds,
+            )
 
-        // Loud enough to limit hard: the input times 4.
-        fun loud(ctx: KatalystContext) {
-            for (i in 0 until blockFrames) {
-                ctx.mixBuffer.left[i] *= 4.0
-                ctx.mixBuffer.right[i] *= 4.0
+            // Loud enough to limit hard: the input times 4.
+            fun loud(ctx: KatalystContext) {
+                for (i in 0 until blockFrames) {
+                    ctx.mixBuffer.left[i] *= 4.0
+                    ctx.mixBuffer.right[i] *= 4.0
+                }
             }
-        }
 
-        val a = run(40, process = { loud(it); built.process(it) })
-        val b = run(40, process = { loud(it); master.process(it.mixBuffer.left, it.mixBuffer.right, it.blockFrames) })
+            val a = run(40, process = { loud(it); built.applyParams(null); built.process(it) })
+            val b = run(40, process = { loud(it); constructed.process(it.mixBuffer.left, it.mixBuffer.right, it.blockFrames) })
 
-        for (k in a.l.indices) {
-            withClue("sample $k") {
-                a.l[k].toRawBits() shouldBe b.l[k].toRawBits()
-                a.r[k].toRawBits() shouldBe b.r[k].toRawBits()
+            for (k in a.l.indices) {
+                withClue("lookahead $seconds, sample $k") {
+                    a.l[k].toRawBits() shouldBe b.l[k].toRawBits()
+                    a.r[k].toRawBits() shouldBe b.r[k].toRawBits()
+                }
             }
         }
     }

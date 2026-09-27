@@ -78,7 +78,8 @@ class MasterDefaultsSyncSpec : StringSpec({
 
     // NOTE (2026-09-16): the reverb size and delay cap sync tests went the way of the limiter's: both
     // sides read `constants/SendEffectDefaults.kt` now, so they compared a value with itself. Drift
-    // between the surfaces is guarded behaviourally by `SendEffectDefaultsParitySpec`.
+    // between the surfaces is guarded by `KatalystDefaultsSyncSpec` (the chain's defaults) and
+    // `MasterDslShimSpec` (the master's fallbacks); the output runs the orbit's stages since step 12 C3.
 
     "the reverb lowpass defaults to absent on both sides — the DSP's fixed default damping applies" {
         MasterStageDsl.Reverb().lowpass shouldBe null

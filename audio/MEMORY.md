@@ -1422,7 +1422,7 @@ listening checkpoint.
   voice and, now, fed into the room. `tryDeactivate` clears the mix; with that one line on both
   sides the two songs read 1.7e-16 and 3.6e-16. Guard: `OrbitCleanupTest`. Guards: `KnobGlideSpec`,
   `DelayLineSpec`, `KatalystDelayGlideSpec`, `KatalystReverbGlideSpec`, `KatalystInsertFeedSpec`,
-  `CylinderKatalystParamsSpec`, `SendEffectDefaultsParitySpec`, `CylinderChainCrossfadeSpec`.
+  `CylinderKatalystParamsSpec`, `CylinderChainCrossfadeSpec` (`SendEffectDefaultsParitySpec` retired in step 12 C3).
 - **For 5c (review round 1, m6): the wet glide is bypassed exactly where the feed moves most.** Out
   of Off the wet snaps; Active to Draining cuts the feed in one sample; Draining to Active restarts
   from the wet frozen at the drain's start although the real feed was 0. Since the feed is the
@@ -1901,10 +1901,11 @@ writers, the `voiceDriven` flag and the `KatalystOwnerApply` interface are delet
   maintainer listens.
 - **One parity asymmetry, recorded, not fixed**: a non-finite `delay.time` / `reverb.size` is the
   orbit's declared OFF state, while the MASTER's same knob substitutes the shared constant
-  (`MasterChain.buildDelay`'s `finite(...)`). It follows from the Katalyst slot rule ("non-finite
+  (the master translation `MasterDslShim`'s `finite(...)` since step 12 C3, until C5). It follows from the Katalyst slot rule ("non-finite
   is the declared off state", the reason the `Param` leaf guard was NOT extended to this map) and
-  is unreachable from either door, both of which fill with numbers. `SendEffectDefaultsParitySpec`
-  states it. Second half of the same corner: `Reverb.normalizeSize` guards NaN (to 0.0) but CLAMPS
+  is unreachable from either door, both of which fill with numbers. `MasterDslShimSpec` ("a
+  non-finite knob takes the old master's fallback") states the master half, `KatalystSlotResolverSpec`
+  ("a non-finite SIZE written into the classic chain") the orbit's. Second half of the same corner: `Reverb.normalizeSize` guards NaN (to 0.0) but CLAMPS
   `+Infinity` (to 1.0), so an infinite size is the largest room rather than "unset".
 - **The NaN guard in `KatalystBodyEffect.configure` / `KatalystFormantEffect.configure` is now
   defence in depth.** It was added for the born-with voice path, where `toVoiceData` could hand a

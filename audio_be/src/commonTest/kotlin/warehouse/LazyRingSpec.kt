@@ -17,10 +17,15 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
+import kotlin.math.ceil
 
 /**
  * Resource warehouse step 2b: a delay ring exists only once a voice asks for one, sized to its
@@ -128,6 +133,67 @@ class LazyRingSpec : StringSpec({
         val second = effect(rings)
         second.configure(time = 0.5 + 1.0 / sampleRate, feedback = 0.0, cap = 1.0, wet = 1.0)
         alloc.asked shouldBe listOf(base, 2 * base)
+    }
+
+    "a 20 s time is a real 20 s echo: the ring holds it, no ceiling" {
+        // Moved from the master's ring spec in phase 3 step 12 C3 (the output runs this stage now).
+        // Between warehouse steps 2b and 2e one bus had a 10 s ceiling and the other none, so
+        // `delay(20)` meant two different echoes.
+        val (rings, _) = shelf()
+        val fx = effect(rings)
+
+        fx.configure(time = 20.0, feedback = 0.3, cap = 1.0, wet = 1.0)
+
+        val line = fx.delayLine.shouldNotBeNull()
+
+        line.time shouldBe 20.0
+        line.effectiveDelaySeconds shouldBe 20.0
+        (line.capacityFrames >= ceil(20.0 * sampleRate).toInt() + ResourceWarehouse.RING_MARGIN_FRAMES) shouldBe true
+    }
+
+    "a retired chain never writes into its old ring again: process() and reset() leave it alone" {
+        // Moved from the master's ring spec in phase 3 step 12 C3, where the old master chain had its
+        // own `released` guard (review round 3 of warehouse 2e): a stray block on a chain whose ring
+        // another owner has rented would be cross-talk the double-return guard cannot see.
+        val (rings, _) = shelf()
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Constant(1.0),
+                    time = IgnitorDsl.Constant(0.3),
+                    feedback = IgnitorDsl.Constant(0.0),
+                ),
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = rings,
+            reverbs = ReverbUnits(sampleRate),
+        ).also { it.applyParams(null) }
+        val ring = chain.delay.shouldNotBeNull().delayLine.shouldNotBeNull().ring
+        val c = ctx()
+
+        repeat(4) {
+            c.mixBuffer.fill(0.5)
+            chain.process(c)
+        }
+        chain.hasTail() shouldBe true // charged: its tail ceiling is up
+
+        chain.retire()
+
+        val next = rings.rent(1).shouldNotBeNull() // the same ring, zeroed for its next owner
+        next shouldBeSameInstanceAs ring
+
+        repeat(4) {
+            c.mixBuffer.fill(0.9)
+            chain.process(c)
+        }
+        (ring.left.all { it == 0.0 } && ring.right.all { it == 0.0 }) shouldBe true // process() wrote nothing
+        chain.hasTail() shouldBe false // and it claims no tail: the ring is not its own any more
+
+        // The new owner's audio in the ring survives the old chain's reset(): it is not its ring to zero.
+        next.left[10] = 0.3
+        chain.reset()
+        next.left[10] shouldBe 0.3
     }
 
     "an off-config on a fresh effect rents nothing — 'off' does not need a ring" {

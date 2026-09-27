@@ -388,7 +388,7 @@ roomFade AND roomSize 0..1 stability bounds now live INSIDE `configure` (one con
 caller; production bit-identical via VoiceFactory's normalize), and the MASTER door's
 `buildReverb` was incoherent on non-finite roomFade (gated on `isFinite` but wrote `coerceIn` —
 +Inf became the LONGEST room while the orbit door read it as unset): both doors now agree,
-non-finite fade = no override (parity row in `MasterOrbitReverbParitySpec`). Non-finite
+non-finite fade = no override (parity row in `MasterOrbitReverbParitySpec`, retired in phase 3 step 12 C3; its non-finite rows live on in `KatalystSlotResolverSpec` and `MasterDslShimSpec`). Non-finite
 countdowns reset immediately (the heal the old gate's takeover path provided) — and round 2
 found the NaN half: `NaN > peak` is false, so a magnitude scan is BLIND to NaN cells and a
 finite peak beside them would start a finite drain that pumps NaN into the mix; `combPeakAbs`
@@ -413,7 +413,7 @@ pins, `OrbitCleanupTest`
 inaudibly-charged clean-slate row (kills the resetBusEffects wiring drop, a network-only-reset
 mutant AND an Active->true hasTail mutation; the delay sibling row gained the factory-param
 assert as a retrofit), `OrbitBusPipelineSpec` drain-through-cleanup rewrite of the old
-freeze-row, `MasterOrbitReverbParitySpec` non-finite-fade parity row. The old fresh-off spec row
+freeze-row, `MasterOrbitReverbParitySpec` non-finite-fade parity row (retired in phase 3 step 12 C3, see `KatalystSlotResolverSpec` and `MasterDslShimSpec`). The old fresh-off spec row
 was vacuous (single-block probe cannot see comb latency; delay sibling `KatalystDelayEffectSpec:35`
 shares the weakness — retrofit opportunistically when touched), and round 2 put audibility
 thresholds on the wet-presence rows (any-nonzero was satisfied by the ~1e-20 anti-denormal
@@ -443,7 +443,7 @@ cleared-mix probe and the mutant now dies. All restores byte-exact.
 `applyBusEffects` KDoc claim "nothing leaks from a previous owner" is contradicted by D3: a frozen
 ring is exactly a deferred leak.
 
-**Class calls for the P2 catalogue:** `DelayLine` core, `MasterChain` delay stage, `MasterBus`
+**Class calls for the P2 catalogue:** `DelayLine` core, `MasterChain` delay stage (retired in phase 3 step 12 C3: the output runs `KatalystChain`), `MasterBus`
 crossfade, shimmer grain machinery (live path), `SendRenderer` indexing = **Class 1**. Everything
 else in scope = **Class 2** with knobs as named above (per-block param reads; PhaserCore's
 block-boundary LFO sampling with lerped alpha; bus-side per-block config application; block-counted

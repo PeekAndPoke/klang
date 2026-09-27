@@ -7,14 +7,28 @@ package io.peekandpoke.klang.audio_be.master
 
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
  * The master chain of one [io.peekandpoke.klang.audio_be.PlaybackEngine], and the crossfade that
  * swaps it without clicks.
+ *
+ * **The output runs a [KatalystChain]** (phase 3 step 12 C3): the same chain and the same stages an
+ * orbit runs, built by [KatalystChainBuilder] from the [KatalystDsl] that [MasterDslShim] makes of
+ * the wire's [MasterDsl] (the shim goes in C5, when the wire carries the Katalyst itself). Two things
+ * make it the OUTPUT host rather than an orbit, and both are this class's, not the chain's:
+ *  - **nothing fills the chain's `Param` slots** (decision (b), 2026-09-27): every chain is
+ *    configured with `applyParams(null)` before it processes, so a slot is its authored default;
+ *  - **it never deactivates or resets on silence** (plan risk R5): a cylinder resets its chain when
+ *    its orbit goes quiet, the output does not, so a limiter envelope or a room carries across a gap
+ *    exactly as the old master chain did. The only resets are the swap rule below.
  *
  * A master swap is requested by the scheduler when it consumes a `master(…)` event
  * ([requestSwap]) and takes effect in [process].
@@ -28,13 +42,26 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * **per engine, not per voice**. Precedent: `KatalystFilterSwap` (the body/vowel live-change fix).
  *
  * **The outgoing chain is CUT at the end of the fade**, tail and all. The orbit bus drains its
- * outgoing chain instead (`Cylinder`, Katalyst step 3b): the orbit's send effects own a Draining
- * state the master's chain-level shells do not, and the master's v1 cut was accepted by the
- * maintainer with "if audible, extend the old chain's life" noted. Still open for this host.
+ * outgoing chain instead (`ChainSwap`); the master's v1 cut was accepted by the maintainer with "if
+ * audible, extend the old chain's life" noted, and step 12 C4 moves this host onto the orbit's swap
+ * (decision (f)).
  *
  * **Chains are built once, at registration.** Building allocates (Freeverb buffers, delay rings), so
  * it must not happen per swap: swaps are applied from `promoteScheduled`, inside the render
- * callback. [register] pre-builds and caches, so applying a swap is normally a map lookup.
+ * callback. [register] pre-builds and caches, so applying a swap is normally a map lookup. A
+ * Katalyst stage rents its unit at its first configure, so the build configures the chain at once
+ * ([buildChain]): the rent happens where the old master chain's did, at registration (plan risk R1,
+ * the unit rent order the corpus render pins).
+ *
+ * **A refused unit degrades and recovers, the orbit's rule** (maintainer, 2026-09-27). When the
+ * shelf cannot serve a reverb unit or a delay ring and the allocation fails, the stage stays in the
+ * chain, Off and dry, so the bus stays active and declares its tail. While the refusal is latched the
+ * stage re-asks the shelf on every block, WITHOUT allocating, and takes a unit an orbit or another
+ * engine hands back from that block on, starting from an empty unit (the shelf zeroes it), so
+ * nothing stale is replayed; the wet enters unramped, as an orbit's first configure does (a delay's
+ * first echo can land as a step on sustained material). A [KatalystChain.reset] clears the latch:
+ * the first adoption and every fade into a chain that was not just audible reset their chain, so
+ * the next block retries WITH allocation, on the render thread, as an orbit's stage does. Each new latch counts once in the chain's `deniedRents` (telemetry only).
  *
  * Two known exceptions, both bounded and documented rather than hidden: a master registered on a
  * *parent* registry (the offline renderer does this, where allocation is harmless), and returning to
@@ -86,21 +113,16 @@ class MasterBus(
     private val fade: Crossfade = Crossfade(sampleRate)
 
     /** Built chains by (lowercased) name — allocation happens here, never on the swap path. */
-    private val chains = mutableMapOf<String, MasterChain>()
+    private val chains = mutableMapOf<String, KatalystChain>()
 
-    private val unity: MasterChain = MasterChain.build(
-        dsl = MasterDsl.default,
-        sampleRate = sampleRate,
-        blockFrames = blockFrames,
-        rings = rings,
-        reverbs = reverbs,
-    )
+    /** The empty chain: no stage, so [isActive] is false and the engine keeps its fast path. */
+    private val unity: KatalystChain = buildChain(MasterDsl.default)
 
     /** The active chain. Unity until a `master(…)` event says otherwise. */
-    private var current: MasterChain = unity
+    private var current: KatalystChain = unity
 
     /** The outgoing chain during a crossfade; null when no fade is running. */
-    private var previous: MasterChain? = null
+    private var previous: KatalystChain? = null
 
     /** Name of the currently active master — a repeat request for the same name is a no-op. */
     private var currentName: String? = null
@@ -129,8 +151,14 @@ class MasterBus(
     /** At most one queued swap: a request arriving mid-fade waits instead of cutting the fade. */
     private var pendingName: String? = null
 
-    /** Scratch for the parallel chain during a crossfade; allocated on first swap. */
-    private var scratch: StereoBuffer? = null
+    /** Scratch for the parallel chain during a crossfade, and its context; allocated on first swap. */
+    private var scratch: KatalystContext? = null
+
+    /**
+     * The context the chains run on over the engine's bus. The engine hands the same buffer every
+     * block, so this is built once; a caller that hands another buffer (a spec) gets a new wrapper.
+     */
+    private var busContext: KatalystContext? = null
 
     /** Last computed answer for [isRinging] — refreshed by [updateTailState], not per read. */
     private var ringing: Boolean = false
@@ -142,7 +170,7 @@ class MasterBus(
      * True when this bus does anything at all. The engine uses it to keep the untouched fast path
      * (voices → cylinders → straight into the shared mix) for playbacks without a master.
      */
-    val isActive: Boolean get() = current.isActive || previous != null
+    val isActive: Boolean get() = current.pipeline.isNotEmpty() || previous != null
 
     /**
      * True while a reverb/delay in the master chain may still be ringing.
@@ -152,8 +180,10 @@ class MasterBus(
      */
     val isRinging: Boolean get() = ringing && hasTailUnits()
 
-    /** True when either live chain owns a reverb/delay at all — cheap, no buffer scan. */
-    private fun hasTailUnits(): Boolean = current.hasTail || previous?.hasTail == true
+    /** True when either live chain declares a reverb/delay at all: cheap, no buffer scan. */
+    private fun hasTailUnits(): Boolean = current.declaresTail() || previous?.declaresTail() == true
+
+    private fun KatalystChain.declaresTail(): Boolean = reverb != null || delay != null
 
     /** Number of built chains held by this bus — for tests asserting the cache stays bounded. */
     internal val cachedChainCount: Int get() = chains.size
@@ -174,8 +204,21 @@ class MasterBus(
         }
 
         evictIfNeeded()
-        chains[key] = MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs)
+        chains[key] = buildChain(dsl)
     }
+
+    /**
+     * Builds the chain for [dsl] and configures it at once (see the class KDoc: the first configure
+     * is where a stage rents its unit, so it has to happen here and not in the first [process]).
+     * The configure writes the chain's own numbers; [process] writes them again every block.
+     */
+    private fun buildChain(dsl: MasterDsl): KatalystChain = KatalystChainBuilder.build(
+        dsl = MasterDslShim.toKatalyst(dsl),
+        sampleRate = sampleRate,
+        blockFrames = blockFrames,
+        rings = rings,
+        reverbs = reverbs,
+    ).also { it.applyParams(null) }
 
     /**
      * Returns every cached chain's units to the warehouse and drops the cache — the owning engine
@@ -183,7 +226,7 @@ class MasterBus(
      */
     fun releaseAll() {
         for (chain in chains.values) {
-            chain.releaseUnits(rings, reverbs)
+            chain.retire()
         }
         chains.clear()
         current = unity
@@ -211,7 +254,7 @@ class MasterBus(
             chains.remove(victimName)
             // The chain is out of play (not current, not outgoing, not queued): its rings go back
             // to the shelf, where the next master delay of that class finds them without allocating.
-            victimChain.releaseUnits(rings, reverbs)
+            victimChain.retire()
         }
     }
 
@@ -286,14 +329,14 @@ class MasterBus(
      * Normally a cache hit ([register] pre-builds). The lazy branch covers a master registered
      * directly on a parent registry — the offline renderer does that, where allocation is harmless.
      */
-    private fun chainFor(key: String): MasterChain? {
+    private fun chainFor(key: String): KatalystChain? {
         chains[key]?.let { return it }
 
         val dsl = registry.find(key) ?: return null
 
         evictIfNeeded()
 
-        return MasterChain.build(dsl, sampleRate, blockFrames, rings, reverbs).also { chains[key] = it }
+        return buildChain(dsl).also { chains[key] = it }
     }
 
     /**
@@ -305,7 +348,7 @@ class MasterBus(
      * verbatim delay echoes — into the bus. It is therefore reset, EXCEPT when it is the chain that
      * was just audible: an A→B→A inside one fade window should carry A's tail through, not wipe it.
      */
-    private fun beginFade(name: String, chain: MasterChain, outgoing: MasterChain?) {
+    private fun beginFade(name: String, chain: KatalystChain, outgoing: KatalystChain?) {
         if (chain !== current && chain !== outgoing) {
             chain.reset()
         }
@@ -318,27 +361,35 @@ class MasterBus(
         fade.restart(incomingDelayFrames = 0, outgoingInputDelayFrames = 0)
 
         if (scratch == null) {
-            scratch = StereoBuffer(blockFrames)
+            scratch = KatalystContext(blockFrames, StereoBuffer(blockFrames))
         }
     }
 
-    /** Applies the master chain to [bus] in place, running a crossfade if one is pending. */
+    /**
+     * Applies the master chain to [bus] in place, running a crossfade if one is pending.
+     *
+     * [frames] MUST equal [blockFrames], which is what the engine passes. The chain's stages run a
+     * whole block of their context ([blockFrames]), while the fade copies and blends [frames]: with a
+     * shorter [frames] the incoming chain would process scratch frames the copy never wrote.
+     */
     fun process(bus: StereoBuffer, frames: Int) {
         val outgoing = previous
+        val onBus = contextOver(bus)
 
         if (outgoing == null) {
-            current.process(bus, frames)
+            run(current, onBus)
             updateTailState(bus, frames)
             return
         }
 
         // Crossfade: both chains must see the SAME input, so snapshot the dry bus first.
-        val wet = scratch ?: StereoBuffer(blockFrames).also { scratch = it }
+        val incoming = scratch ?: KatalystContext(blockFrames, StereoBuffer(blockFrames)).also { scratch = it }
+        val wet = incoming.mixBuffer
         bus.left.copyInto(wet.left, 0, 0, frames)
         bus.right.copyInto(wet.right, 0, 0, frames)
 
-        outgoing.process(bus, frames)   // bus  = outgoing output
-        current.process(wet, frames)    // wet  = incoming output
+        run(outgoing, onBus)        // bus  = outgoing output
+        run(current, incoming)      // wet  = incoming output
 
         fade.blend(target = bus, incoming = wet, outgoing = bus, frames = frames)
         updateTailState(bus, frames)
@@ -356,12 +407,35 @@ class MasterBus(
     }
 
     /**
+     * One block of [chain] on [ctx]. Nothing fills a slot at the output (decision (b)): the chain is
+     * configured from no param state, so a `Param` is its authored default. After the first block the
+     * resolve is gated off and this writes numbers already in hand.
+     */
+    private fun run(chain: KatalystChain, ctx: KatalystContext) {
+        chain.applyParams(null)
+        chain.process(ctx)
+    }
+
+    /** The context over [bus]: the one built for it, or a new wrapper when a caller hands another buffer. */
+    private fun contextOver(bus: StereoBuffer): KatalystContext {
+        val known = busContext
+
+        if (known != null && known.mixBuffer === bus) {
+            return known
+        }
+
+        return KatalystContext(blockFrames, bus).also { busContext = it }
+    }
+
+    /**
      * Refreshes [isRinging] — cheaply on most blocks, thoroughly now and then.
      *
      * A chain without time-based units can never ring. While the output is audible the answer is
      * trivially yes. Only after a run of silent blocks is the *expensive* question asked (does the
      * reverb/delay still hold energy?), because a delay's output is silent between echoes and an
-     * output-only test would cut the rest of them.
+     * output-only test would cut the rest of them. That question is [KatalystChain.hasTail], so it
+     * also counts a compressor's lookahead ring (at most 50 ms of audio not yet heard) in a chain
+     * that has a reverb or a delay; a limiter-only chain still never rings. Nothing is cut either way.
      */
     private fun updateTailState(bus: StereoBuffer, frames: Int) {
         if (!hasTailUnits()) {
@@ -380,7 +454,7 @@ class MasterBus(
 
         if (silentBlocks >= TAIL_CHECK_INTERVAL_BLOCKS) {
             silentBlocks = 0
-            ringing = current.hasActiveTail() || previous?.hasActiveTail() == true
+            ringing = current.hasTail() || previous?.hasTail() == true
         }
     }
 
