@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * deep-copies only the non-null groups; setters lazily create a group on first write and then mutate it in
  * place (zero-copy), preserving the single-owner mutation model.
  *
- * These are sprudel-internal mutable mirrors — the immutable wire-format equivalents live in `audio_bridge`
- * (`AdsrDef`, `FilterDefs`/`FilterDef`/`FilterEnvDef`); [SprudelVoiceData.toVoiceData] maps across.
+ * These are sprudel-internal mutable mirrors. On the wire the voice doors' groups travel as the instruments' slot
+ * keys (`classic()`'s `<door>.<param>`, phase 3 step 8): [SprudelVoiceData.toVoiceData] maps across.
  *
  * `copy()` (the generated data-class copy) is the per-group deep clone — every field is an immutable scalar,
  * so a shallow `copy()` fully detaches the clone. Each group has a `mergeSvd*` helper (field-wise `over`-wins,
@@ -33,7 +33,7 @@ data class SvdAdsr(
     var attackCurve: AdsrCurve? = null,
     var decayCurve: AdsrCurve? = null,
     var releaseCurve: AdsrCurve? = null,
-    /** Whether the VCA stage shapes this voice at all; `null` = unset, the pipeline's `Vca` decides. */
+    /** Whether the voice envelope shapes this voice at all (`classic()`'s `adsr.on`); `null` = unset, it stays on. */
     var on: Boolean? = null,
 )
 

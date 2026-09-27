@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -63,7 +64,7 @@ class SchedulerStartupSpec : StringSpec({
             sound = "sine",
             freqHz = 440.0,
             adsr = AdsrDef.Std(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01),
-        ),
+        ).withClassicSlots(),
         // A start the frontend declared in the PAST — the ordinary case: by the time the message
         // lands, wall time has moved on. The epoch must snap forward, never backward.
         playbackStartTime = 0.0,

@@ -96,7 +96,12 @@ hot loop (the June work: twenty allocations per note down to one). The slot map 
 event in `toVoiceData()`, at the boundary that already allocates a `VoiceData` today, so a small
 map of the slots a note actually set replaces a hundred-and-fifty-field object. If a measurement
 ever shows the string-keyed map hurting on the worklet, the registered instrument's param list is
-known at registration and the slots can travel as an array in that order. Not before a number.
+known at registration and the slots can travel as an array in that order. Not before a number. (Confirmed
+2026-09-27 by the maintainer for phase 3 step 8: the doors stay typed, `toVoiceData()` builds the slot map.) The number,
+measured in step 8 (interleaved against the tree before it): on Kotlin/JS the main-thread `toVoiceData` of a voiced
+event went from about 0.87 to 1.9 microseconds (the string-keyed map: about 12 hashed puts), while the audio thread
+got cheaper per note-on (`makeVoice` about 10.3 to 7.4 microseconds; the worklet decode about +0.8); on the JVM every
+case got faster. Not worth the array form yet; revisit if a dense pattern's query time shows it.
 
 **The wire voice is the interchange format.** Nothing a pattern kind knows about an event may live
 only in its private event type if another kind should be able to modify or forward it (§8).
@@ -190,7 +195,8 @@ Osc.register("supersaw", Osc.supersaw().classic())
 - **The step list, the measured cost of the gate, the three stages that are NOT bit-identical today
   and the five decisions this phase needs from the maintainer are in
   `../tasks/builtin-instruments.md`** (the spike of 2026-09-20).
-- Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
+- (Reshaped 2026-09-27, phase 3 step 8: the doors stay typed; `toVoiceData()` writes the slot keys, section 4.)
+  Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
   `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
   vocabulary from the instrument definitions.
 
@@ -385,7 +391,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    migration is checked per event (old product against new wire gain, relative 1e-12) by a
    one-off fixture that is deleted with the step.
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
-   the node-level gate with the build-cache key covering it, the voice doors as `oscp` aliases,
+   the node-level gate with the build-cache key covering it, the voice doors reaching their slots (as `oscp` aliases in the first sketch; through `toVoiceData()` since step 8),
    `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
    songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
    editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.

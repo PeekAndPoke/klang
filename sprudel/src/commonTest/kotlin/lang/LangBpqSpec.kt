@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangBpqSpec : StringSpec({
 
@@ -29,7 +30,7 @@ class LangBpqSpec : StringSpec({
 
         // Verify conversion to VoiceData
         val voiceData = events[0].data.toVoiceData()
-        (voiceData.filters[0] as FilterDef.BandPass).q shouldBe 1.5
+        (voiceData.wireFilters()[0] as FilterDef.BandPass).q shouldBe 1.5
     }
 
     "bpf(q = ...) works as pattern extension" {

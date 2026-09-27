@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -52,7 +53,7 @@ class RealtimeVoiceSpec : StringSpec({
         sound = "sine",
         freqHz = 440.0,
         adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01),
-    )
+    ).withClassicSlots()
 
     fun hasAudio(out: ShortArray): Boolean = out.any { abs(it.toInt()) > 200 }
 
@@ -123,7 +124,7 @@ class RealtimeVoiceSpec : StringSpec({
 
     "a control-only realtime event never sounds" {
         val heard = renderAround(
-            voice = RealtimeVoice(liveId = 4, data = sustained.copy(control = true), gateDurSec = 0.5),
+            voice = RealtimeVoice(liveId = 4, data = sustained.copy(control = true).withClassicSlots(), gateDurSec = 0.5),
             blocksAfter = 10,
         )
         heard.any { it }.shouldBeFalse()
@@ -175,7 +176,7 @@ class RealtimeVoiceSpec : StringSpec({
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1)
-        start(d, liveId = 2, data = sustained.copy(freqHz = 660.0))
+        start(d, liveId = 2, data = sustained.copy(freqHz = 660.0).withClassicSlots())
         renderBlocks(d, 4.0 * blockFrames, 10)
 
         stop(d, liveId = 1)
@@ -284,7 +285,7 @@ class RealtimeVoiceSpec : StringSpec({
         // held level, and fall monotonically block-over-block.
         val longRelease = sustained.copy(
             adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.2),
-        )
+        ).withClassicSlots()
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = longRelease)
@@ -327,7 +328,7 @@ class RealtimeVoiceSpec : StringSpec({
                 attack = 0.04, decay = 0.01, sustain = 1.0, release = 0.01,
                 attackCurve = AdsrCurve.Linear,
             ),
-        )
+        ).withClassicSlots()
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = slowAttack)
@@ -348,7 +349,7 @@ class RealtimeVoiceSpec : StringSpec({
                 attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01,
                 releaseCurve = AdsrCurve.Linear,
             ),
-        )
+        ).withClassicSlots()
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = linRelease)
@@ -398,7 +399,7 @@ class RealtimeVoiceSpec : StringSpec({
         d.handle(KlangCommLink.Cmd.StartRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null)))
         d.handle(
             KlangCommLink.Cmd.StartRealtimeVoice(
-                "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
+                "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots(), gateDurSec = null),
             )
         )
         renderBlocks(d, 4.0 * blockFrames, 10)
@@ -433,7 +434,7 @@ class RealtimeVoiceSpec : StringSpec({
         renderDirect(4)
         engine.scheduler.startRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null))
         engine.scheduler.startRealtimeVoice(
-            "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
+            "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots(), gateDurSec = null),
         )
         renderDirect(4)
         engine.scheduler.getActiveVoiceCount() shouldBe 2
@@ -503,7 +504,7 @@ class RealtimeVoiceSpec : StringSpec({
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1)
-        start(d, liveId = 1, data = sustained.copy(freqHz = 660.0))
+        start(d, liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots())
         renderBlocks(d, 4.0 * blockFrames, 10)
 
         stop(d, liveId = 1)
@@ -515,7 +516,7 @@ class RealtimeVoiceSpec : StringSpec({
         // release-0 case and must still stop (a `<=` guard would hold the voice to the horizon).
         val relZero = sustained.copy(
             adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.0),
-        )
+        ).withClassicSlots()
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = relZero)

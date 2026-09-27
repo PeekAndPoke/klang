@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
  * The four filter curves doors, `lpfCurves`, `hpfCurves`, `bpfCurves` and `notchCurves(attack, decay, release)`
@@ -129,12 +130,12 @@ class LangFilterCurvesSpec : StringSpec({
             val events = door.pattern(seq("5 7"), null, null, null).queryArc(0.0, 1.0)
 
             events.map { door.curves(it.data) } shouldBe listOf(Triple(null, null, null), Triple(null, null, null))
-            events.map { it.data.toVoiceData().filters.filters } shouldBe listOf(emptyList(), emptyList())
+            events.map { it.data.toVoiceData().wireFilters().filters } shouldBe listOf(emptyList(), emptyList())
         }
 
         "$n: the curves reach the wire's FilterEnvDef when the filter has an envelope" {
             val p = SprudelPattern.compile("""note("c").${door.filter}(freq = 800, env = 12, decay = 0.2).$n("linear", "scurve", "square")""")!!
-            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().filters.filters)
+            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters().filters)
 
             assertSoftly {
                 env?.attackCurve shouldBe AdsrCurve.Linear
@@ -146,7 +147,7 @@ class LangFilterCurvesSpec : StringSpec({
 
         "$n: a curve alone switches no envelope on" {
             val p = SprudelPattern.compile("""note("c").${door.filter}(800).$n("linear", "linear", "linear")""")!!
-            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().filters.filters)
+            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters().filters)
 
             withClue("the filter is built, its envelope is not") { env shouldBe null }
         }

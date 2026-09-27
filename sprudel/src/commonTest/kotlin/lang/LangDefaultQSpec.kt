@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
  * C1 parity pin (docs/plans/filter-unification.md): ONE default q = 0.707 for every filter
@@ -25,9 +26,27 @@ class LangDefaultQSpec : StringSpec({
 
     val q = 0.707
 
+    // Since phase 3 step 8 a bare filter sends no `q`: the instrument's `classic()` slot default builds it. So the
+    // q a bare filter BUILDS is the wire's, or else that slot's default; both halves are asserted below.
+    val slotQ = IgnitorDsl.Slots.let { s -> listOf(s.lpf.q, s.hpf.q, s.bpf.q, s.notch.q) }
+        .map { (it as IgnitorDsl.Param).default }
+
     fun firstFilter(p: SprudelPattern?): FilterDef {
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        return events.first().data.toVoiceData().filters[0]
+        val wire = events.first().data.toVoiceData().wireFilters()[0]
+
+        return when (wire) {
+            is FilterDef.LowPass -> wire.copy(q = wire.q ?: slotQ[0])
+            is FilterDef.HighPass -> wire.copy(q = wire.q ?: slotQ[1])
+            is FilterDef.BandPass -> wire.copy(q = wire.q ?: slotQ[2])
+            is FilterDef.Notch -> wire.copy(q = wire.q ?: slotQ[3])
+            is FilterDef.Formant, is FilterDef.Body -> wire
+        }
+    }
+
+    "a bare filter sends no q: the classic() slot default builds it" {
+        note("c").lpf(800).queryArc(0.0, 1.0).first().data.toVoiceData().oscParams?.containsKey("lpf.q") shouldBe false
+        slotQ shouldBe listOf(q, q, q, q)
     }
 
     "sprudel Kotlin door: bare filters build q = 0.707" {

@@ -25,7 +25,7 @@
   voice's `SampleIgnitor`, handed to the build as `buildExciter(sampleSource = ...)` and carried on
   `IgnitorBuildCache.sampleSource`; without one the leaf builds as silence. `VoiceFactory` still resolves the
   sample and builds the playhead from the typed playback fields (begin, end, speed, loop; `cut` and `n` stay
-  voice-level); those become slots in step 8.
+  voice-level); begin, end, speed and loop became slots in step 8 (`n` and `cut` stay wire fields).
 - **The sample's meta envelope is per-sample slot defaults** (`_sample_envelope_defaults.kt`): every `adsr.*`
   slot without a finite value takes the meta value, the `mergeWith` layering (pattern, meta, `VOICE_ADSR_*`).
   Plain wavs carry none (no copy); a SoundFont zone carries attack 0, decay 0, sustain 1, release 0.05. No
@@ -59,11 +59,13 @@
   the tree's own. The voice runs ignite plus, only when the build reports `endsInEnvelope = false` (the tree's
   `adsrOff`), `TeardownFadeRenderer`, the strip's `adsrOff` fade extracted unchanged (one law, two hosts).
   Authored instruments keep the strip until step 9 (samples left it in step 7, the entry above).
-- **The typed fields reach the slots through `_classic_slot_bag.kt`** (scaffolding: removed in step 8 when the
-  sprudel doors write the slot keys). Only set, finite fields are written, so the filter envelope's slot-layer
+- **The typed fields reached the slots through `_classic_slot_bag.kt`** (scaffolding, gone since step 8, 2026-09-27:
+  the same rules now live in sprudel's `_classic_slot_params.kt`, called by `toVoiceData()`; the backend reads slot
+  keys only). Only set, finite fields are written, so the filter envelope's slot-layer
   fill decides as the strip's `depth ?: 7`, with one accepted difference: an envelope whose only set stage is
   non-finite switches nothing on here, where the strip built one at depth 7. A typed door WINS over a raw
-  `oscp` of the same slot. No wire change.
+  `oscp` of the same slot. (Step 6 changed no wire; step 8 did: the slot keys travel in `oscParams`, the typed
+  door fields go out null.)
 - **A built-in's lifetime is the tree's alone** (`releaseTailSec`, which a switched-off envelope still reports),
   floored at 0: a raw negative release is a zero-length release stage and the voice still plays to its gate
   (review round 1's MAJOR: without the floor it ended 0.1 s early from the sustain level). With the typed

@@ -162,7 +162,7 @@ class BlockFramingInvarianceSpec : StringSpec({
                     freqHz = 220.0,
                     sound = "framingsample",
                     adsr = AdsrDef.Std(release = relSec, on = false),
-                ),
+                ).withClassicSlots(),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,

@@ -8,9 +8,7 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -375,15 +373,13 @@ class KlangBenchmark(
             playbackStartTime = 0.0,
             data = VoiceData.empty.copy(
                 sound = "supersaw",
-                oscParams = mapOf("voices" to 8.0),
+                // A lowpass to make it realistic load, as `classic()`'s slots (phase 3 step 8: a built-in reads
+                // slots only); the envelope runs at its defaults, the voice envelope's (`AdsrDef.defaultSynth`).
+                oscParams = IgnitorDsl.Slots.lpf.let { lpf ->
+                    mapOf("voices" to 8.0) + listOf(lpf.freq to 1000.0, lpf.q to 1.0)
+                        .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
+                },
                 freqHz = 220.0 + (id * 2),
-                // Add a filter to make it realistic load
-                filters = FilterDefs(
-                    listOf(
-                        FilterDef.LowPass(freq = 1000.0, q = 1.0)
-                    )
-                ),
-                adsr = AdsrDef.defaultSynth,
                 // Enable the orbit reverb. Its stage reads the SLOTS, the amount included
                 // (Katalyst step 5b-2), and the wire has no reverb fields since 5b-3.
                 katalystParams = mapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),

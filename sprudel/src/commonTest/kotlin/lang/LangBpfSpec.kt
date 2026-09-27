@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef.BandPass
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangBpfSpec : StringSpec({
 
@@ -75,7 +76,7 @@ class LangBpfSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.bandf shouldBe 1000.0
-        events[0].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe 1000.0
+        events[0].data.toVoiceData().wireFilters().getByType<BandPass>()?.freq shouldBe 1000.0
     }
 
     "bpf() works as string extension" {
@@ -106,10 +107,10 @@ class LangBpfSpec : StringSpec({
         events[3].data.bandf shouldBe (0.0 plusOrMinus EPSILON)
 
         // Also check converted VoiceData
-        events[0].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.toVoiceData().filters.getByType<BandPass>()?.freq shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].data.toVoiceData().wireFilters().getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.toVoiceData().wireFilters().getByType<BandPass>()?.freq shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.toVoiceData().wireFilters().getByType<BandPass>()?.freq shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].data.toVoiceData().wireFilters().getByType<BandPass>()?.freq shouldBe (0.0 plusOrMinus EPSILON)
     }
 
 

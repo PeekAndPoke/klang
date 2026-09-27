@@ -30,6 +30,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
@@ -112,13 +113,12 @@ class VoiceFactory(
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
-        // Create filters, for the voice STRIP (an instrument that does not end in `classic()`). The strip bakes
-        // the chain in the EXACT order received from `data.filters`; VoiceFactory never reorders it. The
-        // chain-order decision (highpass-first / lowpass-last for clean nonlinear behaviour) is made
-        // upstream by the language layer (see SprudelVoiceData.toVoiceData), which keeps the engine a
-        // faithful consumer and leaves explicit routing open. A tree that ends in `classic()` and a SAMPLE have
-        // no strip: their filters are `classic()`'s, in `classic()`'s fixed order, and the typed filters reach
-        // their slots one slot per kind (`classicSlotBag`).
+        // Create filters, for the voice STRIP (an instrument that does not end in `classic()`): the typed
+        // `data.filters` a producer still sends, baked in the EXACT order received; VoiceFactory never reorders
+        // them. Sprudel sends none since phase 3 step 8 (its filters travel as `classic()`'s slots), so an
+        // instrument that does not end in `classic()` gets no pattern filter until the strip retires (step 9).
+        // A tree that ends in `classic()` and a SAMPLE have no strip: their filters are `classic()`'s, in
+        // `classic()`'s fixed order, read from the slots in the voice's bag.
         //
         // THE one place the factory reads `analog` off the bag, guarded here rather than at each
         // use. A non-finite override reads as UNSET, the same rule the `Param` leaf applies to every
@@ -285,7 +285,11 @@ class VoiceFactory(
 
         return when {
             isOsci -> {
-                val resolvedAdsr = data.adsr.resolve(AdsrDef.defaultSynth)
+                // The typed envelope is the STRIP's (an instrument that does not end in `classic()`). A tree voice
+                // reads its envelope from the `adsr.*` slots, and its lifetime from the tree's own tail, which a
+                // `classic()` root always reports (its release is a slot); this resolved form is only the lifetime's
+                // fallback there, so a tree voice resolves it from the defaults alone, never from a typed field.
+                val resolvedAdsr = (if (endsInClassic) AdsrDef.empty else data.adsr).resolve(AdsrDef.defaultSynth)
 
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
                 // Build FIRST: the ignitor's release tail is a finding of the build, not a separate
@@ -296,8 +300,6 @@ class VoiceFactory(
                     random = voiceRandom,
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
-                    // A tree that ends in `classic()` reads the typed fields as its slots (scaffolding until step 8).
-                    oscParams = if (endsInClassic) classicSlotBag(data) else data.oscParams,
                     treeEndsInClassic = endsInClassic,
                 ) ?: return null
                 val signal = built.ignitor
@@ -336,28 +338,36 @@ class VoiceFactory(
                 val sample = entry.sample
                 if (sample.pcm.size <= 1) return null
 
-                // The envelope the sample voice would have had: the pattern's fields, then the sample's own meta
-                // envelope, then the voice default. The tree reads the same layering from its `adsr.*` slots
-                // (`withSampleEnvelopeDefaults` below); this resolved form is the lifetime's fallback when the
-                // build has no static tail, as on the built-in path.
-                val resolvedAdsr = data.adsr
-                    .mergeWith(sample.meta.adsr)
-                    .resolve(AdsrDef.defaultSynth)
+                // The sample's own meta envelope, then the voice default: the lifetime's fallback when the build has
+                // no static tail, as on the built-in path (the tree reads the pattern's `adsr.*` slots, the meta
+                // envelope filling the ones left unset, `withSampleEnvelopeDefaults` below).
+                val resolvedAdsr = (sample.meta.adsr ?: AdsrDef.empty).resolve(AdsrDef.defaultSynth)
+
+                // The sample's playback slots (`IgnitorDsl.Slots.sample`, phase 3 step 8): read off the voice's slot bag
+                // where the playhead is built, before any tree. A non-finite value reads as UNSET, the rule of every
+                // slot, and UNSET matters here beyond its default: an unset `begin` and `end` let the sample's own
+                // loop apply, and only a set `begin` moves the start.
+                val sampleBag = data.oscParams
+                val sampleBegin = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.begin)
+                val sampleEnd = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.end)
+                val sampleSpeed = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.speed)
+                val sampleLoop = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.loop)
 
                 val baseSamplePitchHz = entry.pitchHz
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
                 val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
-                val loopSpeed = data.speed ?: 1.0
+                val loopSpeed = sampleSpeed
                 val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * loopSpeed
                 val pcmSize = sample.pcm.size.toDouble()
 
-                val loopBeginRatio = data.begin ?: 0.0
+                val loopBeginRatio = sampleBegin ?: 0.0
                 val startSample = loopBeginRatio * pcmSize
-                val loopEndRatio = data.end ?: 1.0
+                val loopEndRatio = sampleEnd ?: 1.0
                 val endSample = loopEndRatio * pcmSize
 
-                val explicitLoop = data.loop == true
-                val useMetaLoop = !explicitLoop && data.begin == null && data.end == null
+                // A flag: any finite value but 0.0 is on (the house flag rule, as the envelope's `on`).
+                val explicitLoop = sampleLoop != 0.0
+                val useMetaLoop = !explicitLoop && sampleBegin == null && sampleEnd == null
                 val sampleMetaLoop = sample.meta.loop
 
                 val loopStart: Double
@@ -388,7 +398,7 @@ class VoiceFactory(
                 // measured against the decoded audio, `anchor` is the position of the loudest sample
                 // (argmax |x|), a normalisation artefact of the converter. For the nylon guitar that
                 // skipped the pluck. See docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md.
-                val playhead0 = if (data.begin != null) startSample else 0.0
+                val playhead0 = if (sampleBegin != null) startSample else 0.0
 
                 // Sample-accurate onset, same as the oscillator branch: `Voice.render` clips the
                 // voice into the block itself (offset = startFrame - blockStart), so a sample that
@@ -424,12 +434,12 @@ class VoiceFactory(
                 )
 
                 // The SAMPLE INSTRUMENT (phase 3 step 7): the built-in shape over this playhead, the voice strip off.
-                // The playhead is built FIRST, above, so its drift lane draws before the tree's filters do. The typed
-                // fields reach the `classic()` slots as on a built-in (scaffolding until step 8); the sample's own
+                // The playhead is built FIRST, above, so its drift lane draws before the tree's filters do. The
+                // voice's slots reach the `classic()` stages as on a built-in; the sample's own
                 // meta envelope fills the `adsr.*` slots the pattern left unset. The instrument has no variants
                 // (`n` already chose the sample), so the build takes no sound index.
                 val built = IgnitorRegistry.SAMPLE_INSTRUMENT.buildExciter(
-                    oscParams = withSampleEnvelopeDefaults(classicSlotBag(data), sample.meta.adsr),
+                    oscParams = withSampleEnvelopeDefaults(sampleBag, sample.meta.adsr),
                     phasePools = playbackCtx.phasePools,
                     orbit = cylinder,
                     random = voiceRandom,
@@ -699,3 +709,11 @@ class VoiceFactory(
         )
     }
 }
+
+/** The finite value this bag holds for [slot] (an `IgnitorDsl.Param` of `IgnitorDsl.Slots`), or null: unset or non-finite. */
+private fun Map<String, Double>?.finiteSlot(slot: IgnitorDsl): Double? =
+    this?.get((slot as IgnitorDsl.Param).name)?.takeIf { it.isFinite() } // NaN-guard: non-finite reads as unset
+
+/** [finiteSlot], or the slot's own default when unset: the default has one home, the `Param`. */
+private fun Map<String, Double>?.finiteSlotOrDefault(slot: IgnitorDsl): Double =
+    finiteSlot(slot) ?: (slot as IgnitorDsl.Param).default

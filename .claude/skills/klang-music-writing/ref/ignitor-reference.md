@@ -24,16 +24,19 @@ import * from "sprudel"
 let myPluck = Osc.saw()
     .lowpass(Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
     .adsr(0.005, 0.3, 0.0, 0.05)
+    .classic()
 
 note("c3 e3 g3 c4").sound(myPluck).adsrOff().gain(0.5)
 ```
 
-> ⚠️ **`.adsrOff()` is not decoration.** An `.adsr(...)` inside an ignitor shapes amplitude, and the
-> VOICE applies its own amplitude envelope on top — the two multiply, so every curve comes out with
-> twice the dB slope and the note dies faster and quieter than the numbers say. Add `.adsrOff()` on
-> the pattern whenever the instrument carries its own `.adsr(...)`, and the instrument owns
-> amplitude alone. Leave it off (i.e. keep the voice envelope) when the ignitor's `.adsr(...)` is
-> only modulating something, e.g. a filter cutoff.
+> ⚠️ **End every instrument in `.classic()`, and mind `.adsrOff()`.** `.classic()` (the last call) gives the
+> instrument the pattern's voice doors (`.lpf(...)`, `.adsr(...)`, `.crush(...)`) and ONE amplitude envelope.
+> An instrument that does not END in it gets the pattern's voice doors only where its own tree reads the slots
+> (phase 3 step 8). When the instrument carries
+> its own amplitude `.adsr(...)`, add `.adsrOff()` on the pattern: it switches `classic()`'s envelope off, so the
+> two do not multiply (twice the dB slope, the note dying faster and quieter than the numbers say), and the
+> voice ends on a short teardown fade. Leave it off (keep `classic()`'s envelope) when the instrument's
+> `.adsr(...)` only modulates something, e.g. a filter cutoff.
 >
 > The examples below all follow this rule.
 
@@ -44,6 +47,7 @@ let pad = Osc.supersaw()
     .analog(0.3)
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
+    .classic()
 
 chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).reverb(wet = 0.3, size = 6)
 ```
@@ -54,6 +58,7 @@ chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).reverb(wet = 0.3, s
 let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
+    .classic()
 
 note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).reverb(wet = 0.2, size = 4)
 ```
@@ -523,7 +528,7 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
 authored instrument whose tree ENDS in `.classic()` (step 10) are whole voices: the pattern doors (`.lpf(...)`,
 `.adsr(...)`, `.crush(...)`) reach their slots, and the old voice strip does not run. An authored instrument
 WITHOUT `.classic()` still gets the old strip after it (its own envelope, then the strip's) until step 9 retires
-the strip; a door beats an `oscp` on the same slot until step 8. If your instrument has a long own tail
+the strip; a door beats an `oscp` on the same slot (sprudel's `toVoiceData()` writes the door's value last). If your instrument has a long own tail
 (a pad's release), write the pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over
 its own slot (0.05 s by default), where the old strip stretched to the instrument's tail.
 

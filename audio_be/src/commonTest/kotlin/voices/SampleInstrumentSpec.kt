@@ -41,7 +41,7 @@ import kotlin.random.Random
  *  - BUILT-IN: `sound("sine")`, the built-in shape over the sine (`IgnitorRegistry.builtInVoice`);
  *  - SAMPLE: an unregistered name whose sample is that PCM, i.e. the sample instrument,
  *
- * with the same typed fields, and compares the left mix bus in raw bits, at 48 kHz and 44.1 kHz, with a
+ * with the same settings (stated as typed fields, sent as slots through `withClassicSlots`), and compares the left mix bus in raw bits, at 48 kHz and 44.1 kHz, with a
  * mid-block onset and the gate inside the render. Every row also checks it is ENGAGED (the setting changes
  * the sound), so no row compares two renders of nothing. If a sample still ran the voice strip, every stage
  * would apply twice and every row but the adsrOff rows would part (with the envelope off, the strip's
@@ -107,7 +107,8 @@ class SampleInstrumentSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data,
+                // Every voice here is a tree (the sample instrument, a built-in): its settings travel as slots (step 8).
+                data = data.withClassicSlots(),
                 startTime = start,
                 gateEndTime = start + gate,
                 playbackStartTime = 0.0,

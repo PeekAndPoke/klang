@@ -7,10 +7,8 @@ package io.peekandpoke.klang.sprudel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
@@ -77,8 +75,13 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             solo = 1.0; pipeline = PipelineValue.Named("custom"); cull = 0.2
         }.toVoiceData()
 
-        // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → Body → LP).
-        data.filters.size shouldBe 6
+        // Sanity: the vowel and the body ride `filters`; the four voice filters and every voice door travel as
+        // `classic()` slot keys in `oscParams` (phase 3 step 8), so the map carries them through the codec too.
+        data.filters.size shouldBe 2
+        data.oscParams?.get("lpf.passes") shouldBe 2.0
+        data.oscParams?.get("notch.env") shouldBe 0.4
+        data.oscParams?.get("adsr.on") shouldBe 0.0
+        data.oscParams?.get("loop") shouldBe 1.0
 
         val original = scheduled(data)
         val decoded = roundTrip(original)
@@ -104,16 +107,22 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             "formant" to { vowel = "o"; vowelFloor = 0.1 },
             "body" to { body = "glass"; bodyMix = 0.5; bodyFloor = 0.3 },
         )
-        for ((_, cfg) in cases) {
+        // Each voice filter's envelope depth as written above, the literal the decoded slot must carry.
+        val envDepth = mapOf("lpf" to 1.0, "hpf" to 0.6, "bpf" to 0.5, "notch" to 0.4)
+
+        for ((name, cfg) in cases) {
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()
             val decoded = roundTrip(scheduled(data))
             decoded shouldBe scheduled(data)
-            // and the decoded filter chain is intact
-            decoded.data.filters.size shouldBe 1
+            // and the decoded filter is intact: a voice filter as its slots, the vowel and body in `filters`
+            when (name) {
+                "formant", "body" -> decoded.data.filters.size shouldBe 1
+                else -> decoded.data.oscParams?.get("$name.env") shouldBe envDepth.getValue(name)
+            }
         }
     }
 
-    "decoded VoiceData reconstructs grouped sub-objects (AdsrDef + FilterDef.LowPass envelope)" {
+    "decoded VoiceData carries the envelope and the lowpass with its envelope as slots" {
         val data = createSprudelVoiceData {
             note = "c4"; sound = SoundValue.Named("saw")
             attack = 0.01; release = 0.3
@@ -122,14 +131,12 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
 
         val decoded = roundTrip(scheduled(data)).data
 
-        val adsr = decoded.adsr.shouldBeInstanceOf<AdsrDef.Std>()
-        adsr.attack shouldBe 0.01
-        adsr.release shouldBe 0.3
-
-        val lpf = decoded.filters[0].shouldBeInstanceOf<FilterDef.LowPass>()
-        lpf.freq shouldBe 1000.0
-        lpf.q shouldBe 1.5
-        lpf.envelope?.attack shouldBe 0.02
-        lpf.envelope?.depth shouldBe 0.9
+        val slots = decoded.oscParams.shouldNotBeNull()
+        slots["adsr.attack"] shouldBe 0.01
+        slots["adsr.release"] shouldBe 0.3
+        slots["lpf.freq"] shouldBe 1000.0
+        slots["lpf.q"] shouldBe 1.5
+        slots["lpf.attack"] shouldBe 0.02
+        slots["lpf.env"] shouldBe 0.9
     }
 })

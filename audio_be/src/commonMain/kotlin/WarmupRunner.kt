@@ -7,6 +7,9 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -99,6 +102,22 @@ class WarmupRunner(
             listOf("sine", "saw", "supersaw", "square", "triangle", WARMUP_SAMPLE_NAME) + WarmupVocabulary.sounds.map { it.first }
 
         /**
+         * The warmed voices' envelope and lowpass as `classic()`'s slots: attack 1 ms, decay 50 ms to 0, release
+         * 50 ms, a lowpass at 2 kHz, q 0.3. [WARMUP_STRIP_LOWPASS] and the typed envelope are the same for the
+         * voices on the strip.
+         */
+        private val WARMUP_CLASSIC_SLOTS: Map<String, Double> = IgnitorDsl.Slots.let { s ->
+            listOf(
+                s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
+                s.lpf.freq to 2000.0, s.lpf.q to 0.3,
+            )
+                .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
+        }
+
+        /** The warmed lowpass for the voices on the strip (the vocabulary graphs), until step 9 retires it. */
+        private val WARMUP_STRIP_LOWPASS: FilterDefs = FilterDefs(listOf(FilterDef.LowPass(freq = 2000.0, q = 0.3)))
+
+        /**
          * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
          * their constructors and first blocks run here and not in a song's first frame: a phaser,
          * a compressor, a body resonator, a vowel bank (review round 3). Ducking is left out — it
@@ -174,9 +193,12 @@ class WarmupRunner(
                         sound = WARMUP_SOUNDS[orbit % WARMUP_SOUNDS.size],
                         freqHz = 220.0 + 20.0 * orbit,
                         cylinder = orbit,
+                        // The envelope and the lowpass twice, one per path: as `classic()`'s slots for the built-ins and
+                        // the sample (phase 3 step 8: a tree voice reads slots only), and typed for the vocabulary graphs,
+                        // which do not end in `classic()` and run the voice strip until step 9 retires it.
+                        oscParams = WARMUP_CLASSIC_SLOTS,
                         adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
-                        cutoff = 2000.0,
-                        resonance = 0.3,
+                        filters = WARMUP_STRIP_LOWPASS,
                         katalystParams = mapOf(
                             "delay.wet" to 0.5,
                             "delay.time" to 0.3,

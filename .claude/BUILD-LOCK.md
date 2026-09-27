@@ -15,7 +15,7 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 ---
 
 **HOLDER: (none)**
-**SINCE: 2026-09-26**
+**SINCE: 2026-09-27**
 **STATE: FREE**
 
 ## Uncommitted in this tree
@@ -26,6 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
+| phase 3, steps 8 to 9 window (2b9d5146) | the whole branch `engine-redesign` | STEP 8 IS COMMITTED: do NOT merge or deploy this branch until step 9 (the strip retires) AND step 11 (the editor's diagnostic for an instrument that does not end in `classic()`) have landed (maintainer's condition, 2026-09-27; `docs/tasks/builtin-instruments.md`, "Step 8's decisions") |
 
 ## The two layers
 

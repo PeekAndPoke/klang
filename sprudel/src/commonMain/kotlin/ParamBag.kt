@@ -40,9 +40,8 @@ package io.peekandpoke.klang.sprudel
  * the constant that call's own fill wrote, so `compressor(ratio = 8).katp("compressor.threshold",
  * -40).compressor(knee = 3)` would stamp -20 over the author's -40 (round 1 of step 5a-3's review).
  * The `value` parameter therefore has no non-null caller in production today and is exercised by
- * `ParamBagSpec` alone; it stays because it is the shape of the rule, and because the voice-side
- * doors hand their call arguments straight in when phase 3 of the signal-flow plan retires the
- * fields.
+ * `ParamBagSpec` alone; it stays because it is the shape of the rule. (The voice-side doors keep their
+ * typed fields, decided 2026-09-27: they reach the wire's slots in `toVoiceData`, not through this method.)
  */
 class ParamBag {
 
@@ -111,6 +110,13 @@ class ParamBag {
      * orbit's settings with nothing to notice it.
      */
     fun toMap(): Map<String, Double> = values.toMap()
+
+    /**
+     * The wire boundary's writable twin of [toMap]: a fresh COPY a caller may add to (`classicSlotParams`), sized
+     * for [extraCapacity] more names so the caller's writes do not grow it.
+     */
+    internal fun toMutableMap(extraCapacity: Int): MutableMap<String, Double> =
+        LinkedHashMap<String, Double>(values.size + extraCapacity).also { it.putAll(values) }
 
     override fun equals(other: Any?): Boolean = this === other || (other is ParamBag && values == other.values)
 

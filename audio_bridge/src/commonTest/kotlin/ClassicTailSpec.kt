@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
  *
  * The order is the strip's (`docs/tasks/builtin-instruments.md` section 4) behind the pattern's onepole
  * (its first stage since step 10): onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
- * tremolo, adsr. The slot table below is the contract step 8 builds
- * on (the sprudel doors become `oscp` aliases and write exactly these keys), so a renamed key or a moved
+ * tremolo, adsr. The slot table below is the contract step 8 built
+ * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved
  * default is a red row here before it is a silent door anywhere else. What the tail RENDERS is pinned in
  * `audio_be` (`ClassicStripParitySpec`, `ClassicTailRenderSpec`).
  */

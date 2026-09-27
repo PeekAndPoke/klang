@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
@@ -21,7 +20,6 @@ import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
-import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -906,9 +904,10 @@ data class SprudelVoiceData(
     /**
      * Converts this Sprudel-specific voice data to audio engine [VoiceData].
      *
-     * Maps flat fields to complex objects:
-     * - attack, decay, sustain, release → AdsrDef
-     * - cutoff/resonance, hcutoff/hresonance, bandf/bandq, notchf/nresonance → FilterDefs
+     * The voice doors' typed fields (the envelope, the four filters, crush, coarse, distort, tremolo and the
+     * sample's begin, end, speed and loop) travel as SLOT KEYS in `oscParams`, the names the instruments read
+     * ([classicSlotParams], phase 3 step 8); their typed wire fields stay null. The vowel and body still ride
+     * `filters`.
      *
      * For inline ignitors ([SoundValue.Osc]) the wire-level `sound` name is resolved via
      * the process-wide [uniqueId] map — playbacks are expected to pre-register inline
@@ -946,115 +945,9 @@ data class SprudelVoiceData(
             is KatalystValue.Dsl -> k.name
         }
 
-        // Build filter list from flat fields, each with its own resonance
+        // The four voice filters travel as `classic()` slots (`classicSlotParams`); the vowel and body resonators
+        // still ride `filters` (orbit stages, no voice reader; they leave the wire in phase 3 step 9).
         val filters = buildList {
-            cutoff?.let { cutoffValue ->
-                // Build envelope if any lpattack/lpdecay/lpsustain/lprelease/lpenv fields are present
-                val envelope =
-                    if (lpattack != null || lpdecay != null || lpsustain != null || lprelease != null || lpenv != null) {
-                        FilterEnvDef(
-                            attack = lpattack,
-                            decay = lpdecay,
-                            sustain = lpsustain,
-                            release = lprelease,
-                            depth = lpenv,
-                            attackCurve = lpAttackCurve,
-                            decayCurve = lpDecayCurve,
-                            releaseCurve = lpReleaseCurve,
-                        )
-                    } else {
-                        null
-                    }
-
-                add(
-                    FilterDef.LowPass(
-                        freq = cutoffValue,
-                        q = resonance ?: 0.707,
-                        envelope = envelope,
-                        passes = coercePasses(lpPasses ?: 1.0),
-                    )
-                )
-            }
-            hcutoff?.let { hcutoffValue ->
-                // Build envelope if any hpattack/hpdecay/hpsustain/hprelease/hpenv fields are present
-                val envelope =
-                    if (hpattack != null || hpdecay != null || hpsustain != null || hprelease != null || hpenv != null) {
-                        FilterEnvDef(
-                            attack = hpattack,
-                            decay = hpdecay,
-                            sustain = hpsustain,
-                            release = hprelease,
-                            depth = hpenv,
-                            attackCurve = hpAttackCurve,
-                            decayCurve = hpDecayCurve,
-                            releaseCurve = hpReleaseCurve,
-                        )
-                    } else {
-                        null
-                    }
-
-                add(
-                    FilterDef.HighPass(
-                        freq = hcutoffValue,
-                        q = hresonance ?: 0.707,
-                        envelope = envelope,
-                        passes = coercePasses(hpPasses ?: 1.0),
-                    )
-                )
-            }
-            bandf?.let { bandfValue ->
-                // Build envelope if any bpattack/bpdecay/bpsustain/bprelease/bpenv fields are present
-                val envelope =
-                    if (bpattack != null || bpdecay != null || bpsustain != null || bprelease != null || bpenv != null) {
-                        FilterEnvDef(
-                            attack = bpattack,
-                            decay = bpdecay,
-                            sustain = bpsustain,
-                            release = bprelease,
-                            depth = bpenv,
-                            attackCurve = bpAttackCurve,
-                            decayCurve = bpDecayCurve,
-                            releaseCurve = bpReleaseCurve,
-                        )
-                    } else {
-                        null
-                    }
-
-                add(
-                    FilterDef.BandPass(
-                        freq = bandfValue,
-                        q = bandq ?: 0.707,
-                        envelope = envelope
-                    )
-                )
-            }
-            notchf?.let { notchfValue ->
-                // Build envelope if any nfattack/nfdecay/nfsustain/nfrelease/nfenv fields are present
-                val envelope =
-                    if (nfattack != null || nfdecay != null || nfsustain != null || nfrelease != null || nfenv != null) {
-                        FilterEnvDef(
-                            attack = nfattack,
-                            decay = nfdecay,
-                            sustain = nfsustain,
-                            release = nfrelease,
-                            depth = nfenv,
-                            attackCurve = nfAttackCurve,
-                            decayCurve = nfDecayCurve,
-                            releaseCurve = nfReleaseCurve,
-                        )
-                    } else {
-                        null
-                    }
-
-                add(
-                    FilterDef.Notch(
-                        freq = notchfValue,
-                        q = nresonance ?: 0.707,
-                        envelope = envelope
-                    )
-                )
-            }
-
             // Vowel formant filter — blended over the dry source (source-filter model), like body.
             vowel?.let { vowelValue ->
                 val formantBands = VowelBands.bandsFor(vowelValue)
@@ -1075,28 +968,6 @@ data class SprudelVoiceData(
             }
         }
 
-        // Canonical filter chain order: HIGHPASS → BANDPASS → NOTCH → FORMANT → LOWPASS.
-        // Chain order is audible once the filters are nonlinear (analog>0 enables the
-        // analog-style state-dependent saturation, which does NOT commute): the highpass strips
-        // bass before the lowpass's saturator sees it, and the lowpass sits LAST to tame
-        // harmonics generated upstream — the "lowpass after distortion" rule, matching
-        // the MS-20 / Juno / Diva convention. sprudel's flat fields carry no order of
-        // their own, so we impose the canonical order here; the engine (VoiceFactory)
-        // bakes whatever order it is handed. At analog=0 the filters are linear and
-        // commute, so this ordering is spectrally a no-op.
-        val orderedFilters = filters.sortedBy { def ->
-            when (def) {
-                is FilterDef.HighPass -> 0
-                is FilterDef.BandPass -> 1
-                is FilterDef.Notch -> 2
-                is FilterDef.Formant -> 3
-                // Body sits before the lowpass so the resonator sees full-spectrum input and
-                // the lowpass tames whatever the body emphasizes (same "lowpass last" logic).
-                is FilterDef.Body -> 4
-                is FilterDef.LowPass -> 5
-            }
-        }
-
         return VoiceData(
             note = note,
             freqHz = freqHz,
@@ -1112,19 +983,13 @@ data class SprudelVoiceData(
             // would change an orbit's settings invisibly. `oscParams` follows the same rule, one
             // contract for both (`ParamBag.toMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
-            oscParams = oscParams?.toMap(),
+            // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8), not as the
+            // typed wire fields below, which stay null for them until step 9 cuts the fields.
+            oscParams = classicSlotParams(),
             katalystParams = katalystParams?.toMap(),
-            filters = FilterDefs(orderedFilters),
-            adsr = AdsrDef.Std(
-                attack = attack,
-                decay = decay,
-                sustain = sustain,
-                release = release,
-                attackCurve = attackCurve,
-                decayCurve = decayCurve,
-                releaseCurve = releaseCurve,
-                on = adsrOn,
-            ),
+            // The vowel and the body, in their canonical order (formant, then body: the order they are built in above).
+            filters = FilterDefs(filters),
+            adsr = AdsrDef.empty,
             accelerate = accelerate,
             vibrato = vibrato,
             vibratoMod = vibratoMod,
@@ -1141,33 +1006,34 @@ data class SprudelVoiceData(
             fmDecay = fmDecay,
             fmSustain = fmSustain,
             fmEnv = fmEnv,
-            distort = distort,
-            distortShape = distortShape,
-            distortOversample = distortOversample,
-            coarse = coarse,
-            coarseOversample = coarseOversample,
-            crush = crush,
-            crushOversample = crushOversample,
+            // Sent as slots (see `oscParams` above): every typed field of those doors is null here.
+            distort = null,
+            distortShape = null,
+            distortOversample = null,
+            coarse = null,
+            coarseOversample = null,
+            crush = null,
+            crushOversample = null,
+            tremoloSync = null,
+            tremoloDepth = null,
+            tremoloSkew = null,
+            tremoloPhase = null,
+            tremoloShape = null,
+            cutoff = null,
+            hcutoff = null,
+            bandf = null,
+            resonance = null,
+            begin = null,
+            end = null,
+            speed = null,
+            loop = null,
             phaser = phaserRate,
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
             phaserSweep = phaserSweep,
             phaserFloor = phaserFloor,
-            tremoloSync = tremoloSync,
-            tremoloDepth = tremoloDepth,
-            tremoloSkew = tremoloSkew,
-            tremoloPhase = tremoloPhase,
-            tremoloShape = tremoloShape,
-            cutoff = cutoff,
-            hcutoff = hcutoff,
-            bandf = bandf,
-            resonance = resonance, // For backward compatibility, use LPF resonance as default
             cylinder = cylinder,
             pan = pan,
-            begin = begin,
-            end = end,
-            speed = speed,
-            loop = loop,
             cut = cut,
             loopBegin = loopBegin,
             loopEnd = loopEnd,

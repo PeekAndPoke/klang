@@ -72,7 +72,7 @@ class VoiceFactoryVcaOffSpec : StringSpec({
             sound = sound,
             // release 0.05 (defaultSynth) so the voice has a real teardown window
             adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 1.0, release = 0.05, on = on),
-        )
+        ).let { if (sound == "stripsaw") it else it.withClassicSlots() } // a built-in reads the envelope as slots (step 8)
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "t", data = data,

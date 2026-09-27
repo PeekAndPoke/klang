@@ -15,6 +15,7 @@ import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangBpeSpec : StringSpec({
 
@@ -49,7 +50,7 @@ class LangBpeSpec : StringSpec({
             bpenv = 0.5
         }
         val voiceData = data.toVoiceData()
-        val bpf = voiceData.filters[0] as FilterDef.BandPass
+        val bpf = voiceData.wireFilters()[0] as FilterDef.BandPass
 
         bpf.envelope shouldNotBe null
         bpf.envelope?.depth shouldBe 0.5

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.voices.forPath
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -49,14 +50,13 @@ import kotlin.random.Random
  * four times through the real `VoiceFactory`,
  *
  *  - STRIP: the saw's SOURCE registered as an AUTHORED instrument (`stripsaw`, the strip still runs after
- *    it), the row's settings on the typed `VoiceData` fields sprudel writes today, through the `modern`
+ *    it), the row's settings on the typed `VoiceData` fields the strip reads, through the `modern`
  *    pipeline (crush, coarse, distort, the filters, tremolo, the VCA): what `sound("saw")` was before step 6;
  *  - TYPED: the BUILT-IN `saw` (`source.pregain().classic()`, `IgnitorRegistry.builtInVoice`, the strip off),
- *    the SAME typed fields,
- *    which reach its slots through the factory's translation (`classicSlotBag`): the path every song
- *    takes until step 8;
- *  - BAG: the built-in `saw` with the same settings written as SLOTS in the bag and no typed field: the
- *    path the doors take from step 8,
+ *    the SAME typed settings sent as slots (`withClassicSlots`, the translation sprudel's `toVoiceData` makes
+ *    since step 8; the engine reads slots only);
+ *  - BAG: the built-in `saw` with the same settings written as SLOTS by hand, no typed field: the row's own
+ *    statement of the keys,
  *  - AUTHORED: the same tree registered by an AUTHOR (`authoredsaw`, plain `register`, step 10): an
  *    instrument whose last call is `.classic()` is the whole voice, the strip off, so it must render
  *    bit for bit what TYPED renders, on EVERY row, the divergent ones included,
@@ -210,7 +210,7 @@ class ClassicStripParitySpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data,
+                data = data.forPath(registry),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,

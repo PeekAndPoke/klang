@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -238,7 +239,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                     data = VoiceData.empty.copy(
                         freqHz = 220.0, sound = "sine", adsr = AdsrDef.Std(on = false),
                         fmh = 1.0, fmEnv = 100.0, fmAttack = attack, fmDecay = decay, fmSustain = sustain,
-                    ),
+                    ).withClassicSlots(),
                     startTime = 0.0,
                     gateEndTime = 1.0,
                     playbackStartTime = 0.0,
@@ -310,7 +311,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                         freqHz = 220.0, sound = "sine", adsr = AdsrDef.Std(on = false),
                         pEnv = 12.0, pAttack = sec(a), pDecay = sec(d), pSustain = s, pRelease = sec(r),
                         pAttackCurve = named, pDecayCurve = named, pReleaseCurve = named,
-                    ),
+                    ).withClassicSlots(),
                     startTime = 0.0,
                     gateEndTime = sec(gate.toDouble()),
                     playbackStartTime = 0.0,

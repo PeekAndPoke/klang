@@ -114,7 +114,7 @@ class AuthoredClassicSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data,
+                data = data.forPath(registry),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,

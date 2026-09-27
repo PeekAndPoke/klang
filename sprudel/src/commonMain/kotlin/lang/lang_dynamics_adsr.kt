@@ -370,8 +370,9 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * Switches the voice's own amplitude envelope (the VCA) ON or OFF.
  *
  * Use [adsrOff] when the instrument already carries its own envelope: an ignitor built with
- * `.adsr(...)` shapes amplitude itself, and without this the voice envelope applies on top, so the
- * two multiply and every curve comes out twice as steep in dB.
+ * `.adsr(...)` and ending in `.classic()` shapes amplitude itself, and without this `classic()`'s envelope
+ * applies on top, so the two multiply and every curve comes out twice as steep in dB. The switch is
+ * `classic()`'s slot `adsr.on`: an instrument that does not end in `.classic()` has no voice envelope to switch.
  *
  * Switching it off does NOT throw the numbers away: `.adsr(0.005, 1.0, 1.0, 0.05).adsrOff()` keeps
  * them, so you can flip back with [adsrOn] and compare. Note lifetime is unaffected either way, the
@@ -379,7 +380,7 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * modulated, which has no single static value: there the voice's own `release` still governs and is
  * worth setting even with the envelope off.
  *
- * When unset, the engine's `Vca` stage decides (the built-in engines leave it on).
+ * When unset, the voice envelope is on.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").adsrOn()   // shape the note here, whatever the engine defaults to
@@ -423,7 +424,7 @@ fun PatternMapperFn.adsrOn(flag: PatternLike = true, callInfo: CallInfo? = null)
  * 4 ms the engine's teardown guard, not the instrument, owns the note-off.
  *
  * ```KlangScript(Playable)
- * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08)
+ * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08).classic()
  * note("c3 e3 g3 c4").sound(pluck).adsrOff().gain(0.4)
  * ```
  *

@@ -10,6 +10,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
  * The long filter names (`lowpass`, `highpass`, `bandpass`) and the short ones (`lpf`, `hpf`,
@@ -19,7 +20,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 class LangCanonicalFilterNamesSpec : StringSpec({
 
     fun filters(code: String): List<FilterDef> =
-        SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().filters.filters
+        SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().wireFilters().filters
 
     // canonical spelling -> short spelling, as full call snippets
     val equivalent = listOf(

@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 // The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks/builtin-instruments.md`.
 // The SLOTS below are grouped per stage and named `<door>.<param>`, which is sprudel's own reader
 // vocabulary (`lpf.freq`, `adsr.attack`, ...) and the `<stage>.<knob>` rule of the Katalyst's classic
-// chain. Each slot's KDoc names the sprudel reader it mirrors, so the step that turns the sprudel
-// doors into `oscp` aliases writes exactly these keys. Every default is the value the voice strip
+// chain. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
+// these keys (`classicSlotParams`, phase 3 step 8). Every default is the value the voice strip
 // uses when the pattern writes nothing, read from the same constant the strip reads.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -178,6 +178,24 @@ class FilterCurvesSlots internal constructor(door: String) {
     val attack: IgnitorDsl = slot(door, "attack", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
     val decay: IgnitorDsl = slot(door, "decay", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
     val release: IgnitorDsl = slot(door, "release", AdsrCurves.indexOf(MOD_ENV_CURVE), description)
+}
+
+/**
+ * The playback slots of the SAMPLE instrument (`Slots.sample`), the four sample doors of sprudel: `begin(pos)`,
+ * `end(pos)`, `speed(rate)` and `loop(flag)` (phase 3 step 8). Flat names, like `onepole`: each door has one knob,
+ * and the key is the door's own name. Not `classic()` slots: the engine reads them where it builds the sample's
+ * playhead, before any tree, and there an UNSET `begin` or `end` differs from any number (it decides whether the
+ * sample's own loop applies), so [begin] and [end] default to unset. [speed] defaults to 1.0, [loop] to 0.0 (off).
+ */
+class SampleSlots internal constructor() {
+    val begin: IgnitorDsl = IgnitorDsl.Param(name = "begin", default = SLOT_UNSET, description = "Mirrors sprudel's reader `begin`")
+    val end: IgnitorDsl = IgnitorDsl.Param(name = "end", default = SLOT_UNSET, description = "Mirrors sprudel's reader `end`")
+    val speed: IgnitorDsl = IgnitorDsl.Param(name = "speed", default = 1.0, description = "Mirrors sprudel's reader `speed`")
+    val loop: IgnitorDsl = IgnitorDsl.Param(
+        name = "loop",
+        default = 0.0,
+        description = "The sample's loop switch, 0 is off; what sprudel's `loop(flag)` writes",
+    )
 }
 
 /**

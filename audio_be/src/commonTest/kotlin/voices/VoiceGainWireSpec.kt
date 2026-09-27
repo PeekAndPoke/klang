@@ -147,7 +147,7 @@ class VoiceGainWireSpec : StringSpec({
             gain = gain,
             adsr = AdsrDef.Std(attack = 0.0, decay = 0.0005, sustain = 0.0, release = 0.05),
             cull = 0.0,
-        ),
+        ).withClassicSlots(),
         gateEndTime = 0.02,
     )
 

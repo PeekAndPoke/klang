@@ -51,7 +51,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
             tremoloSync = if (tremoloDepth != null) 4.0 else null,
             tremoloDepth = tremoloDepth,
             tremoloShape = if (tremoloDepth != null) "square" else null,
-        ),
+        ).withClassicSlots(),
         playbackStartTime = 0.0,
     )
 
@@ -195,7 +195,7 @@ class VoiceSchedulerCullingSpec : StringSpec({
             adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
             oscParams = mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
             cull = cull,
-        ),
+        ).withClassicSlots(),
         playbackStartTime = 0.0,
     )
 

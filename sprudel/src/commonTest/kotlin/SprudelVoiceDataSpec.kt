@@ -185,7 +185,10 @@ class SprudelVoiceDataSpec : StringSpec({
         data.gain shouldBe 0.8
     }
 
-    "toVoiceData() converts flat ADSR fields to AdsrDef" {
+    // The voice doors cross the wire as `classic()` slot keys (phase 3 step 8); the rules of the translation
+    // are pinned in `ClassicSlotParamsSpec`. These rows keep the per-door shape of the old typed rows.
+
+    "toVoiceData() sends the ADSR fields as the adsr.* slots, and no typed envelope" {
         val data = createSprudelVoiceData {
             attack = 0.01
             decay = 0.1
@@ -195,14 +198,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        val adsr = voiceData.adsr as AdsrDef.Std
-        adsr.attack shouldBe 0.01
-        adsr.decay shouldBe 0.1
-        adsr.sustain shouldBe 0.7
-        adsr.release shouldBe 0.3
+        voiceData.oscParams shouldBe mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
+        voiceData.adsr shouldBe AdsrDef.empty
     }
 
-    "toVoiceData() converts LPF flat fields to FilterDef.LowPass" {
+    "toVoiceData() sends the LPF fields as the lpf.* slots" {
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             resonance = 1.5
@@ -210,13 +210,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.freq shouldBe 1000.0
-        lpf.q shouldBe 1.5
+        voiceData.filters.size shouldBe 0
+        voiceData.oscParams shouldBe mapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
     }
 
-    "toVoiceData() converts HPF flat fields to FilterDef.HighPass" {
+    "toVoiceData() sends the HPF fields as the hpf.* slots" {
         val data = createSprudelVoiceData {
             hcutoff = 500.0
             hresonance = 2.0
@@ -224,13 +222,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.freq shouldBe 500.0
-        hpf.q shouldBe 2.0
+        voiceData.filters.size shouldBe 0
+        voiceData.oscParams shouldBe mapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
     }
 
-    "toVoiceData() converts BPF flat fields to FilterDef.BandPass" {
+    "toVoiceData() sends the BPF fields as the bpf.* slots (no passes)" {
         val data = createSprudelVoiceData {
             bandf = 750.0
             bandq = 1.2
@@ -238,13 +234,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        val bpf = voiceData.filters[0] as FilterDef.BandPass
-        bpf.freq shouldBe 750.0
-        bpf.q shouldBe 1.2
+        voiceData.filters.size shouldBe 0
+        voiceData.oscParams shouldBe mapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
     }
 
-    "toVoiceData() converts Notch flat fields to FilterDef.Notch" {
+    "toVoiceData() sends the Notch fields as the notch.* slots (no passes)" {
         val data = createSprudelVoiceData {
             notchf = 600.0
             nresonance = 0.8
@@ -252,13 +246,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        val notch = voiceData.filters[0] as FilterDef.Notch
-        notch.freq shouldBe 600.0
-        notch.q shouldBe 0.8
+        voiceData.filters.size shouldBe 0
+        voiceData.oscParams shouldBe mapOf("notch.freq" to 600.0, "notch.q" to 0.8)
     }
 
-    "toVoiceData() creates multiple filters with independent resonance" {
+    "toVoiceData() sends every filter kind under its own slots, each with its own resonance" {
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             resonance = 1.5
@@ -270,28 +262,17 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 3
-
-        // Canonical chain order: HighPass → BandPass → LowPass (lowpass LAST).
-        val hpf = voiceData.filters[0] as FilterDef.HighPass
-        hpf.freq shouldBe 500.0
-        hpf.q shouldBe 2.0
-
-        val bpf = voiceData.filters[1] as FilterDef.BandPass
-        bpf.freq shouldBe 750.0
-        bpf.q shouldBe 1.2
-
-        val lpf = voiceData.filters[2] as FilterDef.LowPass
-        lpf.freq shouldBe 1000.0
-        lpf.q shouldBe 1.5
+        voiceData.oscParams shouldBe mapOf(
+            "hpf.freq" to 500.0, "hpf.q" to 2.0,
+            "bpf.freq" to 750.0, "bpf.q" to 1.2,
+            "lpf.freq" to 1000.0, "lpf.q" to 1.5,
+        )
     }
 
-    "toVoiceData() orders the filter chain HighPass → BandPass → Notch → Formant → LowPass" {
-        // Flat fields are declared LowPass-first here on purpose; toVoiceData must
-        // re-order them into the canonical chain regardless of field assignment order.
+    "toVoiceData() keeps only the vowel in filters: the voice filters are slots, their order is classic()'s" {
         val data = createSprudelVoiceData {
-            cutoff = 1000.0   // LowPass  → must end up LAST
-            hcutoff = 500.0   // HighPass → must end up FIRST
+            cutoff = 1000.0
+            hcutoff = 500.0
             bandf = 750.0
             notchf = 600.0
             vowel = "a"       // Formant
@@ -299,25 +280,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 5
-        voiceData.filters[0].shouldBeInstanceOf<FilterDef.HighPass>()
-        voiceData.filters[1].shouldBeInstanceOf<FilterDef.BandPass>()
-        voiceData.filters[2].shouldBeInstanceOf<FilterDef.Notch>()
-        voiceData.filters[3].shouldBeInstanceOf<FilterDef.Formant>()
-        voiceData.filters[4].shouldBeInstanceOf<FilterDef.LowPass>()
+        voiceData.filters.size shouldBe 1
+        voiceData.filters[0].shouldBeInstanceOf<FilterDef.Formant>()
     }
 
-    "toVoiceData() puts LowPass last even when it is the only pair with HighPass" {
-        val data = createSprudelVoiceData { cutoff = 1000.0; hcutoff = 80.0 }
-
-        val voiceData = data.toVoiceData()
-
-        voiceData.filters.size shouldBe 2
-        voiceData.filters[0].shouldBeInstanceOf<FilterDef.HighPass>()
-        voiceData.filters[1].shouldBeInstanceOf<FilterDef.LowPass>()
-    }
-
-    "toVoiceData() handles null resonance gracefully" {
+    "toVoiceData() sends no resonance the pattern did not write: the slot's default (0.707) builds it" {
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             resonance = null // No resonance specified
@@ -325,10 +292,8 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        val lpf = voiceData.filters[0] as FilterDef.LowPass
-        lpf.freq shouldBe 1000.0
-        lpf.q shouldBe 0.707 // C1 (filter unification): ONE default q on every surface
+        voiceData.oscParams?.get("lpf.freq") shouldBe 1000.0
+        voiceData.oscParams?.containsKey("lpf.q") shouldBe false // the classic() slot default, 0.707 (LangDefaultQSpec)
     }
 
     "toVoiceData() maps all basic fields correctly" {
@@ -378,9 +343,12 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.accelerate shouldBe 0.05
         voiceData.vibrato shouldBe 0.2
         voiceData.vibratoMod shouldBe 0.4
-        voiceData.distort shouldBe 0.3
-        voiceData.coarse shouldBe 1.0
-        voiceData.crush shouldBe 4.0
+        voiceData.oscParams?.get("distort.amount") shouldBe 0.3
+        voiceData.oscParams?.get("coarse.amount") shouldBe 1.0
+        voiceData.oscParams?.get("crush.amount") shouldBe 4.0
+        voiceData.distort shouldBe null
+        voiceData.coarse shouldBe null
+        voiceData.crush shouldBe null
         voiceData.cylinder shouldBe 1
         voiceData.pan shouldBe 0.5
         voiceData.katalystParams?.get("delay.wet") shouldBe 0.3
@@ -388,10 +356,12 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.katalystParams?.get("delay.feedback") shouldBe 0.5
         voiceData.katalystParams?.get("reverb.wet") shouldBe 0.7
         voiceData.katalystParams?.get("reverb.size") shouldBe 5.0
-        voiceData.begin shouldBe 0.0
-        voiceData.end shouldBe 1.0
-        voiceData.speed shouldBe 1.0
-        voiceData.loop shouldBe true
+        voiceData.oscParams?.get("begin") shouldBe 0.0
+        voiceData.oscParams?.get("end") shouldBe 1.0
+        voiceData.oscParams?.get("speed") shouldBe 1.0
+        voiceData.oscParams?.get("loop") shouldBe 1.0
+        voiceData.begin shouldBe null
+        voiceData.speed shouldBe null
         voiceData.cut shouldBe 1
     }
 

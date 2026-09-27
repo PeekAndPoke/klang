@@ -43,7 +43,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
         sound = "supersaw",
         oscParams = mapOf("analog" to 3.0),
         filters = FilterDefs(listOf(FilterDef.LowPass(freq = 2000.0, q = 1.0))),
-    )
+    ).withClassicSlots()
 
     val sampleSound = "seedtest"
     val sampleReq = SampleRequest(bank = null, sound = sampleSound, index = null, note = null)

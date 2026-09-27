@@ -1,5 +1,19 @@
 # Sprudel — Memory
 
+## The classic slot keys are written in toVoiceData (phase 3 step 8, 2026-09-27)
+
+- The doors, readers and control merges stay TYPED (signal-flow plan section 4: the query hot loop keeps its one
+  allocation). `toVoiceData()` maps the voice-door fields onto the `classic()` slot keys in `_classic_slot_params.kt`
+  (the rules the backend's step 6 scaffold carried: only set, finite fields; a filter only with its cutoff, `q` and
+  `passes` always; the envelope only with one of its knobs; names as catalogue indexes, flags as 1.0 / 0.0; a typed
+  door written AFTER the bag copy, so it beats an `oscp` of the same key). Guard: `ClassicSlotParamsSpec`, the key
+  contract read from `IgnitorDsl.Slots`, never retyped.
+- The sample playback fields `begin`, `end`, `speed`, `loop` are flat slot keys; `n` and `cut` stay wire fields.
+- An authored instrument that does NOT end in `classic()` gets none of these doors on its strip from step 8 on (the
+  strip reads typed fields that are no longer sent; a `classic()` inside the tree, or a tree reading a slot itself,
+  now receives them there instead): accepted by the maintainer for the window up to step 9, on condition that the
+  branch does not merge between step 8 and step 9 and step 11's editor diagnostic lands before the merge.
+
 ## `phaser`, `body` and `vowel` are wet-first (2026-09-24, phase 3 step 3d(iii))
 
 - **The doors are `phaser(wet, rate, center, sweep, floor)`, `body(wet, material, floor)` and

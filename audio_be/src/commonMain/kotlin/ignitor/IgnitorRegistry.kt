@@ -179,9 +179,6 @@ class IgnitorRegistry(
          *  lane, whose time constants follow the rate it is stepped at. */
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
         blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
-        /** The slot bag the build reads. A voice whose tree ends in `classic()` hands the bag with its
-         *  typed fields translated into `classic()`'s slots (`classicSlotBag`); every other voice, its own. */
-        oscParams: Map<String, Double>? = data.oscParams,
         /** Whether the tree [name] renders ends in `classic()` ([endsInClassic]). `VoiceFactory` has asked
          *  already and hands its answer in, so a note-on asks once. */
         treeEndsInClassic: Boolean = endsInClassic(name),
@@ -210,8 +207,10 @@ class IgnitorRegistry(
         // strip had it ([endsInClassic]); wrapping it again here would put a second one after its envelope.
         val tree = if (treeEndsInClassic) dsl else IgnitorDsl.OnePoleLowpass(inner = dsl, freq = IgnitorDsl.Slots.onepole)
 
+        // The slot bag is the voice's own: a producer writes `classic()`'s slots there (sprudel's `toVoiceData`,
+        // phase 3 step 8).
         return tree.buildExciter(
-            oscParams,
+            data.oscParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
             orbit = data.cylinder ?: 0,

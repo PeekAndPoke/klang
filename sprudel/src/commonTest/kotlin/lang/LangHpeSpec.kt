@@ -15,6 +15,7 @@ import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangHpeSpec : StringSpec({
 
@@ -49,7 +50,7 @@ class LangHpeSpec : StringSpec({
             hpenv = 0.7
         }
         val voiceData = data.toVoiceData()
-        val hpf = voiceData.filters[0] as FilterDef.HighPass
+        val hpf = voiceData.wireFilters()[0] as FilterDef.HighPass
 
         hpf.envelope shouldNotBe null
         hpf.envelope?.depth shouldBe 0.7

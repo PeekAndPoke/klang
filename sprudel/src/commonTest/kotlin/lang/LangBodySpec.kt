@@ -136,12 +136,12 @@ class LangBodySpec : StringSpec({
         bodyFilter.floor shouldBe BODY_FLOOR
     }
 
-    "body sits before the lowpass in the canonical filter order" {
+    "the body stays in filters while the lowpass travels as its classic() slots (phase 3 step 8)" {
         val events = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)
-        val filters = events[0].data.toVoiceData().filters.filters
+        val voiceData = events[0].data.toVoiceData()
 
-        filters.size shouldBe 2
-        (filters[0] is FilterDef.Body) shouldBe true
-        (filters[1] is FilterDef.LowPass) shouldBe true
+        voiceData.filters.filters.size shouldBe 1
+        (voiceData.filters.filters[0] is FilterDef.Body) shouldBe true
+        voiceData.oscParams?.get("lpf.freq") shouldBe 800.0
     }
 })

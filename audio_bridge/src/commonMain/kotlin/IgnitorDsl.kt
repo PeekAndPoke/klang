@@ -288,6 +288,9 @@ sealed interface IgnitorDsl {
 
         /** The lowpass envelope's curves: `lpfCurves.attack`, `lpfCurves.decay`, `lpfCurves.release`. */
         val lpfCurves: FilterCurvesSlots = FilterCurvesSlots("lpfCurves")
+
+        /** The sample instrument's playback: `begin`, `end`, `speed`, `loop` (flat names, one knob per door). */
+        val sample: SampleSlots = SampleSlots()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

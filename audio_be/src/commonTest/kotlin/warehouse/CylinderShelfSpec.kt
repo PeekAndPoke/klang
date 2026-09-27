@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -87,7 +88,7 @@ class CylinderShelfSpec : StringSpec({
                 "phaser.rate" to 0.5, "phaser.wet" to 0.6,
                 "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
             ),
-        ),
+        ).withClassicSlots(),
         playbackStartTime = 0.0,
     )
 
@@ -161,7 +162,7 @@ class CylinderShelfSpec : StringSpec({
                         "phaser.rate" to 0.9, "phaser.wet" to 0.9,
                         "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
                     ),
-                ),
+                ).withClassicSlots(),
                 playbackStartTime = 0.0,
             )
         }

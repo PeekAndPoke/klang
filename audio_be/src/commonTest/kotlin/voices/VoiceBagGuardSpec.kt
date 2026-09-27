@@ -183,7 +183,7 @@ class VoiceBagGuardSpec : StringSpec({
             sound = sound,
             filters = FilterDefs(listOf(FilterDef.LowPass(freq = lowpassHz, q = 1.0))),
             oscParams = analog?.let { mapOf("analog" to it) },
-        )
+        ).let { if (sound.startsWith("strip")) it else it.withClassicSlots() } // a built-in reads its filter as slots (step 8)
 
     fun peakOf(buf: DoubleArray): Double = buf.maxOf { abs(it) }
 

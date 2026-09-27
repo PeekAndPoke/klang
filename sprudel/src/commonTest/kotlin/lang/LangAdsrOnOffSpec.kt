@@ -15,15 +15,26 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * The sprudel door for `.adsrOn()` / `.adsrOff()`: switching the voice's own amplitude envelope
  * (the VCA) on or off, so an ignitor that carries its own envelope does not compound with it.
  *
- * Covers the door through to the wire (`AdsrDef.Std.on`). The value-side merge is in
+ * Covers the door through to the wire (the `adsr.on` slot, 1.0 or 0.0, phase 3 step 8). The value-side merge is in
  * `AdsrOnFlagSpec` (audio_bridge) and the render end in `VcaOnFlagRenderSpec` (audio_be).
  *
  * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
 class LangAdsrOnOffSpec : StringSpec({
 
-    fun wireAdsr(code: String): AdsrDef.Std =
-        SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().adsr as AdsrDef.Std
+    // The envelope crosses the wire as the `adsr.*` slots (phase 3 step 8); read back here into an `AdsrDef.Std`
+    // view so each row states the knob it is about.
+    fun wireAdsr(code: String): AdsrDef.Std {
+        val slots = SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().oscParams
+
+        return AdsrDef.Std(
+            attack = slots?.get("adsr.attack"),
+            decay = slots?.get("adsr.decay"),
+            sustain = slots?.get("adsr.sustain"),
+            release = slots?.get("adsr.release"),
+            on = slots?.get("adsr.on")?.let { it != 0.0 },
+        )
+    }
 
     // ── Nothing said means nothing on the wire ────────────────────────────────
 

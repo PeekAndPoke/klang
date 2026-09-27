@@ -95,7 +95,7 @@ class BuiltInStripOffSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data,
+                data = data.forPath(registry),
                 startTime = 0.0,
                 gateEndTime = gateSec,
                 playbackStartTime = 0.0,
@@ -131,7 +131,7 @@ class BuiltInStripOffSpec : StringSpec({
     val lpf = FilterDefs(listOf(FilterDef.LowPass(300.0, 0.707)))
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
-    "a SAMPLE voice runs the sample instrument: its typed lowpass and its envelope apply" {
+    "a SAMPLE voice runs the sample instrument: its lowpass and its envelope apply (as slots)" {
         val plain = render(base.copy(sound = "probe"))
         val filtered = render(base.copy(sound = "probe", filters = lpf))
         val slowAttack = render(base.copy(sound = "probe", adsr = AdsrDef.Std(attack = 0.1)))
@@ -147,7 +147,7 @@ class BuiltInStripOffSpec : StringSpec({
         filtered.toList() shouldNotBe plain.toList()
     }
 
-    "an AUTHORED instrument that ends in classic() runs no strip: its voice's pipeline is inert, and a typed door reaches its slot" {
+    "an AUTHORED instrument that ends in classic() runs no strip: its voice's pipeline is inert, and a door reaches its slot" {
         val doors = base.copy(sound = "authoredsaw", filters = lpf, adsr = AdsrDef.Std(attack = 0.05))
         val onModern = render(doors)
         val onBare = render(doors.copy(pipeline = "bare"))
@@ -155,7 +155,7 @@ class BuiltInStripOffSpec : StringSpec({
         withClue("the default pipeline against the empty one: no strip stage runs, first mismatch") {
             (onModern.indices.firstOrNull { onModern[it].toRawBits() != onBare[it].toRawBits() } ?: -1) shouldBe -1
         }
-        withClue("engaged: the typed lowpass reaches classic()'s slot") {
+        withClue("engaged: the lowpass reaches classic()'s slot") {
             render(base.copy(sound = "authoredsaw", adsr = AdsrDef.Std(attack = 0.05))).toList() shouldNotBe onModern.toList()
         }
         withClue("anti-vacuous: for an instrument that runs the strip the two pipelines differ") {
@@ -214,14 +214,6 @@ class BuiltInStripOffSpec : StringSpec({
             builtIn[lastFrame] shouldBe 0.0
             builtIn[lastFrame - 400] shouldNotBe 0.0
         }
-    }
-    "a typed door WINS over a raw oscp of the same classic slot on one event (until step 8 makes it pattern order)" {
-        val door = render(base.copy(sound = "saw", filters = lpf))
-        val both = render(base.copy(sound = "saw", filters = lpf, oscParams = mapOf("lpf.freq" to 5000.0)))
-        val slotOnly = render(base.copy(sound = "saw", oscParams = mapOf("lpf.freq" to 5000.0)))
-
-        withClue("the door's 300 Hz, not the slot's 5 kHz") { both.toList() shouldBe door.toList() }
-        withClue("engaged: the slot alone is a different filter") { slotOnly.toList() shouldNotBe door.toList() }
     }
     "a built-in with a NEGATIVE release plays to its gate: the lifetime is floored at 0 (the raw release is a zero-length stage)" {
         // `adsr(0.01, 0.1, 1, -0.1)`: the envelope reads the raw -0.1 (a zero-length release), but the voice

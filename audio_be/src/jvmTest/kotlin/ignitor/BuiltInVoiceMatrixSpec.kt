@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.voices.forPath
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -29,7 +30,7 @@ import kotlin.random.Random
  * step 6). Each built-in name renders the same note twice through the real `VoiceFactory`:
  *
  *  - BUILT-IN: the name as `registerDefaults` registers it (`IgnitorRegistry.builtInVoice`'s shape, which
- *    ends in `classic()`, the voice strip off), the row's settings on the typed `VoiceData` fields the sprudel doors write today;
+ *    ends in `classic()`, the voice strip off), the row's settings sent as `classic()`'s slots (`forPath`);
  *  - STRIP: the SAME source (`builtInSources()`) registered as an authored instrument, so the voice strip
  *    runs after it, with the same fields: what that name was before step 6.
  *
@@ -79,7 +80,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data,
+                data = data.forPath(registry),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,
