@@ -57,7 +57,7 @@ Doc rot, mostly from renames, and in one case from a documented alias that was n
   the querying gate saw it. Now `x => x.transpose(-2).accelerate(0.5)`.
 - `jux(rev)` (3, on `pickF`) was missing a call: `rev` has defaulted parameters, so a bare `rev`
   is a function value, not a transform. Now `jux(rev())`. The unhelpful error it produced is
-  parked in `future/native-interop-function-values.md`.
+  parked in `future/bugfix-native-interop-function-values.md`.
 
 ### Examples that were not a whole pattern (12)
 

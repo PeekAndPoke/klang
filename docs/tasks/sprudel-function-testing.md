@@ -23,7 +23,7 @@ not. `rev` is `fun rev(n: PatternLike = 1): PatternMapperFn`, so a bare `rev` is
 All three `pickF` examples are back in the KDoc, spelled `jux(rev())`, and pass the gate.
 
 What is left is a papercut, parked in
-[`future/native-interop-function-values.md`](future/native-interop-function-values.md): the
+[`future/bugfix-native-interop-function-values.md`](future/bugfix-native-interop-function-values.md): the
 spelling that fails is the point-free one every Tidal and Strudel user reaches for first, and it
 fails with an internal cast error rather than a "did you mean `rev()`?" diagnostic. The affected
 surface (every function taking a `PatternMapperFn`) is listed there.
