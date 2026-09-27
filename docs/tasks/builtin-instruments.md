@@ -682,7 +682,8 @@ maintainer decides about merging `engine-redesign` when step 9 is done, with the
 
 **Step 9's decisions (2026-09-27, coordinator following the record):** an authored instrument that does not end in
 `classic()` plays as the BARE tree (signal-flow section 5: no auto-wrap), keeping the 0.05 s lifetime fallback and
-the teardown fade (no onset guard); the parity specs FREEZE their strip side as a hashed baseline before the strip
+the teardown fade (no onset guard; CONFIRMED by the maintainer 2026-09-27 after step 9: no fade-in for a bare tree, it
+plays exactly as authored); the parity specs FREEZE their strip side as a hashed baseline before the strip
 goes (signal-flow section 12); the doors `loopBegin`/`loopEnd` go (no engine reader ever existed: a knob nothing
 reads is removed); `VoiceData` keeps section 4's fields plus the voice-side pitch row and, each with a named reason,
 `note`, `bank`, `soundIndex`, `legato`, `cut`, `solo`, `sourceId`, `cull`, `tags` (`scale` goes); the strip-only
