@@ -680,7 +680,8 @@ Greensleeves' inert limiter stay as they are. Steps 6 and 7 are ear-confirmed, w
 order of steps 9 and 10 was decided the same day (below): 10, then 8, then 9.
 
 **DECIDED 2026-09-26 (maintainer): step 10 first, then step 9.** **Merge gate, revised 2026-09-27 (maintainer):** step 11 is deferred, and the merge gate below is dropped: the
-maintainer decides about merging `engine-redesign` when step 9 is done, with the release-note list at hand.
+maintainer decides about merging `engine-redesign` when step 9 is done, with the release-note list at hand. **Revised again 2026-09-27 (maintainer, after step 9):** "I will merge once we have all steps done": the
+branch continues through step 12 (C4 to C6) and the test consolidation, then the maintainer merges.
 
 **Step 9's decisions (2026-09-27, coordinator following the record):** an authored instrument that does not end in
 `classic()` plays as the BARE tree (signal-flow section 5: no auto-wrap), keeping the 0.05 s lifetime fallback and
