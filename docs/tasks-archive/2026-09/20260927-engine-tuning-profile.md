@@ -1,5 +1,9 @@
 # Engine tuning profile — Phase 3 + the Phase 2 wrapper/drift leftovers
 
+> **Closed 2026-09-27, archived:** the engines this profile was to tune (`PipelineDsl`, its presets and
+> `StageDsl.Filter`) retired with the voice strip in phase 3 step 9 (`docs/tasks/builtin-instruments.md` row 9);
+> every voice is an Ignitor tree now. Kept as history.
+
 > **This doc supersedes the now-archived `engine-dsl.md` design record**
 > (`docs/tasks-archive/2026-06/20260630-engine-dsl-design-record.md`) and is the **authoritative tracker**
 > for the remaining EngineDsl/PipelineDsl work.
@@ -65,7 +69,7 @@ pattern as the shipped osc subtypes: typed `IgnitorDsl` subtype → `IgnitorDslR
    Part B `EngineTuning` object — same shape, same home, so it is a down payment rather than a detour. The τ params stay
    out: 06-17 established the slow layer's audibility is depth, not timescale.
 
-   ⚠️ **Before flipping any default in Part B, read `docs/tasks/pipeline-dsl-coefficient-exposure.md` S5.**
+   ⚠️ **Before flipping any default in Part B, read `docs/tasks-archive/2026-09/20260927-pipeline-dsl-coefficient-exposure.md` S5.**
    The Phase 2 osc knobs already on `IgnitorDsl` carry **duplicated literals**, not references to their
    `OscillatorTuning` constants (`spreadPower = 1.2` next to `SUPERSAW_SPREAD_POWER = 1.2`, ~30 of them;
    `Slots.expK` is the only one wired to its constant). Part B's cascade is *instance → engine profile → field default*,

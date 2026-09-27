@@ -94,6 +94,10 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   left a third in the rule's own home, found one round later. Repo-wide includes `.claude/skills/` (the references agents write patches from):
   a brief that splits the grep between implementer (code) and coordinator (docs) names the skills in the
   coordinator's half (step 5b (b), 2026-09-25: the music-writing reference still taught the old default).
+  A rule stated in many places in different words is not closed by grepping one phrasing (step 9 (c),
+  2026-09-27: the teardown-fade rule took six rounds, each finding another paraphrase that was wrong in its
+  own way): grep its mechanism words (the field, the flag, the door), name ONE home for the full statement,
+  and make every other copy a pointer to it or one short sentence verified once and reused verbatim.
 - **An audibility claim that reaches the maintainer is measured on the isolated voice and verified first**
   (2026-09-26, twice in one day: step 7's "about 10 cents per hit" was sub-cent, step 10's "vibrato 15 to 30 cents,
   up to 7 cents per note" was about 1 cent): a detune, level or onset figure measured on the full mix (cross-correlation,

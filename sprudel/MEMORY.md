@@ -1,5 +1,17 @@
 # Sprudel — Memory
 
+## The typed voice fields left the wire (phase 3 step 9, 2026-09-27)
+
+- `toVoiceData()` no longer writes the 30 typed door fields `VoiceData` lost (the filters, `adsr`, crush,
+  coarse, distort, phaser, tremolo, begin, end, speed, loop, scale, ...): the voice doors travel only as
+  slot keys in `oscParams` (`classic()`'s, and the sample's flat `begin`/`end`/`speed`/`loop`), the orbit stages only as `katalystParams` slots. The step 8 window
+  below is closed: the strip is gone, and an authored instrument without `classic()` plays as its bare tree.
+- The doors `loopBegin`/`loopb` and `loopEnd`/`loope` and their accessors are removed (they never reached the
+  engine). A loop region is `loop().begin(x).end(y)`.
+- `crush(oversample = ...)` and `coarse(oversample = ...)` still travel (`crush.oversample`,
+  `coarse.oversample`) but nothing reads them: `classic()`'s crush and coarse have no oversampler
+  (`docs/tasks/oversampling-regions.md`). `distort.oversample` is a `classic()` slot, read at voice build.
+
 ## The classic slot keys are written in toVoiceData (phase 3 step 8, 2026-09-27)
 
 - The doors, readers and control merges stay TYPED (signal-flow plan section 4: the query hot loop keeps its one
@@ -138,7 +150,8 @@
   read: children only, one rule for every compound. `adsrCurves` is an object with the setter
   only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
   Filter curve objects landed 2026-09-25 (phase 3 step 5b c2): `lpfCurves`, `hpfCurves`, `bpfCurves`,
-  `notchCurves(attack, decay, release)`, setters like `adsrCurves`, on `FilterEnvDef`'s curve fields.
+  `notchCurves(attack, decay, release)`, setters like `adsrCurves`, on `FilterEnvDef`'s curve fields
+  (since phase 3 step 9 they reach the engine only as the `<door>Curves.*` slots; the bridge `FilterEnvDef` is gone).
 
 - **Compound effects are objects with named slots (batch E).** `reverb(wet, size, lowpass)`,
   `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
@@ -506,7 +519,8 @@ return applyCat(patterns)
 ### Audio Effects — Waveshaping / Distortion
 
 - `distort(amount, shape, oversample)`, `crush(amount, oversample)`, `coarse(amount, oversample)`;
-  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E)
+  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E); the crush and
+  coarse `oversample` are carried but unread (phase 3 step 9)
 
 ### Audio Effects — Tremolo / AM
 

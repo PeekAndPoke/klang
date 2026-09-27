@@ -16,14 +16,16 @@ import kotlin.math.floor
  *
  * The voice's own teardown guard (phase 3 step 9: the voice strip, whose `adsrOff` path was its first host,
  * retired): appended after the ignite stage of every voice whose build reports that the tree does not end
- * in its own amplitude envelope (`BuiltIgnitor.endsInEnvelope`): a `classic()` voice with `adsrOff`, and an
- * instrument that does not end in `classic()` and has no built envelope with a static release at its root.
+ * in its own amplitude envelope (`BuiltIgnitor.endsInEnvelope`, the one home of the rule): a `classic()` voice
+ * with `adsrOff` unless its tree below the switched-off envelope ends in an authored static-release envelope with
+ * nothing built over it (a stage of the instrument's own after it, or a written `classic()` stage, hides it), and an instrument that does not end in `classic()`
+ * and has no built envelope with a static release at its root.
  * It runs exactly where the strip's VCA ran, so a `classic()` voice renders the bits the strip's `adsrOff`
  * rendered.
  *
  * Stateless (it reads the block context only), so one instance serves every voice.
  *
- * **Why the fade exists.** In a VCA-last pipeline (`modern`) the curve drove the fully
+ * **Why the fade exists.** In the strip's VCA-last pipeline (the retired `modern` preset) the curve drove the fully
  * amplified signal to zero before `Voice.render` dropped the voice. Switching the curve off
  * removes that, and the instrument's own envelope cannot replace it: it sits BEFORE the
  * instrument's amp stages, so a tail it has taken to ~1e-4 comes back out of a tube/drive stage

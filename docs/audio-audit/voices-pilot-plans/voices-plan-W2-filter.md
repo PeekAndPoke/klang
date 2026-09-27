@@ -1,3 +1,7 @@
+> **2026-09-27:** the voice strip this plan mutates (`voices/strip/filter/`, `EnvelopeRenderer`, `FilterPipelineBuilder`,
+> `AudioFilterRenderer`, the Pipeline DSL and its presets) retired in phase 3 step 9, so most file and line references
+> below point at deleted code. Kept as the record of the pilot; the current voice is `audio/ref/voice-synthesis.md`.
+
 > ⚠ STALE CODE QUOTES (2026-08-24): C3 of the filter unification changed FilterModRenderer's
 > envelope law to `base * 2^(depth/12 * env)` (semitones). The quoted `(1.0 + depth * env)`
 > snippets and their mutant lines below predate that; refresh line refs before executing.

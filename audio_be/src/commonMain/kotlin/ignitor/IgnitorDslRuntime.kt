@@ -1284,7 +1284,8 @@ private fun IgnitorDsl.buildRaw(
         // voice now appends), and step 6's identity depended on the node doing the same. So the signal skips the stage
         // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). The
         // teardown fade is the VOICE's: it reads `BuiltIgnitor.endsInEnvelope`, which this switched-off
-        // node hands on from its inner (`passThrough`), so a `classic()` tree reports false here.
+        // node hands on from its inner (`passThrough`): false over a bare source or a built stage, true over an
+        // authored static-release envelope with nothing built over it.
         is IgnitorDsl.Adsr -> if (on.switchedOff(oscParams, cache)) {
             val signal = inner.passThrough()
             spineTail = maxTail(spineTail, releaseSec.offEnvelopeTail(oscParams, cache))

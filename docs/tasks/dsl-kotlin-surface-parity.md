@@ -35,7 +35,7 @@ in the same deliverable.
   - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
     smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
     Kotlin extensions vs script-only).
-- **Master DSL / Pipeline DSL / (future) Katalyst DSL**: audit alongside.
+- **Master DSL / Katalyst DSL**: audit alongside (the Pipeline DSL retired in phase 3 step 9, 2026-09-27).
 
 ## Work
 

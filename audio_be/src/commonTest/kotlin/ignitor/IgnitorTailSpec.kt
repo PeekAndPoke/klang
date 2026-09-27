@@ -196,13 +196,18 @@ class IgnitorTailSpec : StringSpec({
     }
     // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
 
-    "endsInEnvelope: classic()'s envelope when it is on; not when switched off, not for a bare source, not under a later stage" {
+    "endsInEnvelope: classic()'s envelope when it is on; switched off it hands on what is below it; not for a bare source, not under a later stage" {
         fun ends(dsl: IgnitorDsl, oscParams: Map<String, Double>? = null): Boolean =
             dsl.buildExciter(oscParams, freqHz = 440.0).endsInEnvelope
 
         ends(IgnitorDsl.Sine().classic()) shouldBe true
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 1.0, "lpf.freq" to 800.0)) shouldBe true
+        // switched off, classic()'s envelope hands on what sits below it: an authored static-release envelope ends
+        // the voice, unless a written classic() stage (here the lowpass) is built over it
+        val authored = IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).classic()
+        ends(authored, mapOf("adsr.on" to 0.0)) shouldBe true
+        ends(authored, mapOf("adsr.on" to 0.0, "lpf.freq" to 800.0)) shouldBe false
         ends(IgnitorDsl.Sine()) shouldBe false
         ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2)) shouldBe true
         ends(IgnitorDsl.Sine().adsr(0.01, 0.1, 0.5, 0.2).lowpass(800.0)) shouldBe false

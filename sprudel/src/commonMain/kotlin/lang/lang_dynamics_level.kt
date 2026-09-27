@@ -177,7 +177,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * "down" to mean "softer".
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3 g3 e3").sound(amp).pregain("1 0.6 1 0.4").gain(0.3)   // touch: harder notes dirtier
  * ```
  *
@@ -216,12 +216,12 @@ fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * argument applies to the slot, and on an event that has none it does nothing, so set one first.
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3").sound(amp).pregain(1).pregain(mul("1 0.5")).gain(0.3)   // the second note softer in
  * ```
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3").sound(amp).pregain("1 0.5").gain(pregain.mul(0.3))      // and quieter out with it
  * ```
  *

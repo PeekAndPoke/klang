@@ -10,7 +10,7 @@ mark files created/modified by the per-playback-engine work (D1 + D2 — see
 ```
 Cmd → PlaybackEngineDispatcher.handle
     → per-pid PlaybackEngine { VoiceScheduler → VoiceFactory builds Voice
-        → Voice render strip (Pitch → Ignite → Filter → Send) → Cylinder mix }
+        → Voice render (Pitch → Ignite → (teardown fade) → Send) → Cylinder mix }
     → Cylinders.processAndMix (Katalyst FX: Delay → Reverb → Phaser → Compressor)
     → accumulate into the shared mix
     → MasterStage (DC block → limiter[5 ms lookahead] → clip + interleave)
@@ -46,18 +46,19 @@ Cmd → PlaybackEngineDispatcher.handle
 - `WarmupRunner.kt` **[changed]** — JIT/cache priming; emits `BackendReady`.
 - `AudioBackend.kt` — the `AudioBackend` interface + `Config`.
 
-## Voices — scheduling + per-voice render strip
+## Voices: scheduling + per-voice render
 
 - `voices/VoiceScheduler.kt` **[changed]** — scheduled heap, active voices, solo/mute, epoch, promote loop, diagnostics
   emit.
-- `voices/VoiceFactory.kt` **[changed]** — builds a `Voice` (strip pipeline) from `VoiceData`.
+- `voices/VoiceFactory.kt` **[changed]**: builds a `Voice` (the instrument's Ignitor tree, the pitch stage, the
+  stages after the tree) from `VoiceData`.
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
 - `voices/PlaybackCtx.kt` — per-pid context inside a scheduler (epoch + ignitor fork).
-- `voices/strip/BlockContext.kt`, `BlockRenderer.kt`, `EnvelopeCalc.kt` — strip framework.
+- `voices/strip/BlockContext.kt`, `BlockRenderer.kt`, `EnvelopeCalc.kt`: the per-block stage framework (the
+  package keeps its name; the filter/VCA strip retired in phase 3 step 9, 2026-09-27).
+- `voices/TeardownFadeRenderer.kt`: the fade after a tree for which `BuiltIgnitor.endsInEnvelope` is false.
 - `voices/strip/pitch/` — `PitchPipelineBuilder`, `Vibrato`, `Accelerate`, `Fm`, `PitchEnvelope`.
 - `voices/strip/ignite/IgniteRenderer.kt` — runs the Ignitor into the buffer.
-- `voices/strip/filter/` — `FilterPipelineBuilder` + `Crush`, `Coarse`, `Distortion`, `Tremolo`, `StripPhaser`,
-  `FilterMod`, `Envelope`, `AudioFilter` renderers.
 - `voices/strip/send/SendRenderer.kt` — pans + sums the voice into its cylinder (the `getOrInit` routing seam).
 
 ## Cylinders — orbits / buses + per-orbit FX
@@ -73,8 +74,8 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Filters
 
-- `filters/` — `AudioFilter`, `LowPassHighPassFilters` (SVF/one-pole/DcBlocker), `Formant`, `Body`, `ParallelMixFilter`,
-  `Chain`/`NoOp`, `SvfCoeffSweep` (the per-block coefficient glide both filter hosts share).
+- `filters/`: `AudioFilter`, `LowPassHighPassFilters` (`BaseSvf`/`SvfBPF`, one-pole, DcBlocker, `createFormant`/`createBody`),
+  `ResonatorBank`, `ParallelMixFilter`, `EqCore`, `WetDryMix`, `SvfCoeffSweep` (the per-block coefficient glide of `Ignitor.svf`, also `BaseSvf`'s constructor snap).
 
 ## Ignitors (oscillators / exciters)
 
@@ -86,7 +87,6 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Engines / primitives / math
 
-- `engines/AudioEngine.kt`, `engines/EngineRegistry.kt` — `modern`/`pedal` engine (pipeline) registry.
 - `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`, `LfoShape.kt`,
   `DspUtil.kt`, `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
 

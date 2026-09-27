@@ -64,9 +64,10 @@ doors write those slots (a door and its `katp` slot are the same knob), the chai
 when the map instance changes, and the voice's bus fields are not a knob source any more (the
 delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership is the
 `VoiceLease`'s **first-writer-wins**, so all voices on an orbit SHARE these; put voices on different
-orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` + envelopes,
-`distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`,
-`unison`/`spread`, `analog`) is **per-voice** in the voice strip.
+orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
+envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
+Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; `vibrato`, `fm`, pitch env in the
+voice's pitch stage; `gain`/`pan` in its send stage.
 
 | Katalyst effect            | Class           | Applied when                                                     |
 |----------------------------|-----------------|------------------------------------------------------------------|
@@ -135,28 +136,35 @@ Freeverb-style algorithmic reverb (no impulse-response path).
 
 All-pass cascade with LFO modulation.
 
-| Parameter | Meaning                                |
-|-----------|----------------------------------------|
-| `depth`   | Modulation depth of the all-pass stage |
-| `center`  | Center frequency of the notch          |
-| `sweep`   | LFO sweep range                        |
+| Slot             | Meaning                                |
+|------------------|----------------------------------------|
+| `phaser.wet`     | Wet amount (the door's first knob)     |
+| `phaser.rate`    | LFO rate in Hz                         |
+| `phaser.center`  | Center frequency of the notch          |
+| `phaser.sweep`   | LFO sweep range                        |
+| `phaser.floor`   | Dry floor                              |
 
-Phaser can be applied per-voice (from `VoiceData.phaser`) or per-cylinder (cylinder-level).
+The phaser runs on the cylinder only (`KatalystPhaserEffect`); the per-voice phaser of a custom pipeline
+retired with the Pipeline DSL in phase 3 step 9. An Ignitor tree can hold its own `.phaser(...)` node.
 
 ## Filters
 
 `audio_be/src/commonMain/kotlin/filters/`
 
-All implement `AudioFilter` interface with `process(buffer: FloatArray)`.
+The class-form resonators implement `AudioFilter` (`process(buffer, offset, length)`); `DcBlocker` and
+`EqCore` have their own shapes.
 
-| Class            | Type                      |
-|------------------|---------------------------|
-| `LowPassFilter`  | 2-pole Biquad             |
-| `HighPassFilter` | 2-pole Biquad             |
-| `BandPassFilter` | 2-pole Biquad             |
-| `ResonatorBank`  | Parallel SVF bandpass bank (body, vowel) |
+| Class                                     | Type                                              |
+|-------------------------------------------|---------------------------------------------------|
+| `BaseSvf`, `SvfBPF`                       | SVF kernels (the resonators' bandpass)            |
+| `OnePoleLPF`, `OnePoleHPF`, `DcBlocker`   | one-pole filters                                  |
+| `ResonatorBank` + `ParallelMixFilter`     | parallel SVF bandpass bank (body, vowel), blended |
+| `EqCore`                                  | the equalizer's fused sections                    |
 
-Constructed from `FilterDef` sealed types. Cutoff can be modulated by `FilterEnvelope` via `FilterModulator`.
+The per-voice filters are not class-form any more: `lpf`/`hpf`/`bpf`/`notch` are `classic()` stages, each the
+`Ignitor.svf` node (`ignitor/IgnitorFilters.kt`) with its cutoff envelope, filled from the `<door>.<param>` slots.
+The strip's `SvfLPF`/`SvfHPF`/`SvfNotch`, `FilterDef.LowPass` ... `Notch` and `FilterModulator` retired in phase 3
+step 9.
 
 ## StereoBuffer
 

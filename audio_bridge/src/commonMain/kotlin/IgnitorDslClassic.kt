@@ -219,7 +219,8 @@ class SampleSlots internal constructor() {
  * touch enters (section 5 of the plan).
  *
  * Every voice is its tree (the voice strip retired in phase 3 step 9): the engine adds nothing around it but the
- * pitch pipeline, the teardown fade when the root is not an envelope, and the channel. Every built-in sound is
+ * pitch pipeline, the teardown fade unless the root is a built envelope with a static release
+ * (`BuiltIgnitor.endsInEnvelope`), and the channel. Every built-in sound is
  * `source.pregain().classic()` (since step 6); an authored instrument gets the voice chain by appending
  * `.classic()` as its LAST call ([endsInClassic]). An instrument without it is played as its bare tree, and a
  * tree with `classic()` below its root (`a.classic().plus(b.classic())`) gets the doors per branch.

@@ -1,5 +1,9 @@
 # Block-framing invariance — every voice must sound the same wherever the blocks fall
 
+> **2026-09-27:** the voice strip (its VCA `EnvelopeRenderer`, `FilterModRenderer`, `StripPhaserRenderer` and the other
+> strip renderers) retired in phase 3 step 9; rows and phases below that name them are the record of that code. The
+> strip's pitch stage (`voices/strip/pitch/`, the FM door of E11 included) is still live.
+
 > **Status (2026-08-28): PLAN, not started. Scope settled with the maintainer.** Opened after the
 > SECOND instance of the same bug class in three weeks (`IgniteRenderer.kt:36` 2026-08-27, surfaced by
 > `.adsrOff()`; sample-voice onset quantisation 2026-08-07). An audit workstream, deliberately

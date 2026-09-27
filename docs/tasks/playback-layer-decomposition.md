@@ -17,7 +17,7 @@ from `CodeSongPage` down to `KlangCommLink`. Nothing implemented. Companion of
 | klang | `ContinuousPlayback` / `OneShotPlayback` | delegation shims over the controller | ~90% duplicate; real diff = pattern clipping + prefetch override + auto-stop |
 | klang | `KlangRealtimeVoicePlayback` | send `StartRealtimeVoice`/`StopRealtimeVoice`, mint liveIds | leanest type in the layer; **no registries → inline DSLs silently unsupported** |
 | klang | `KlangPatternScheduler` | 8 distinct clusters (below) | the god object |
-| klang | `IgnitorRegistry` / `PipelineRegistry` / `MasterRegistry` | announce-once dedup + wire send | **near-verbatim triplets**; `clear()` is dead code |
+| klang | `IgnitorRegistry` / `PipelineRegistry` / `MasterRegistry` | announce-once dedup + wire send | **near-verbatim triplets**; `clear()` is dead code (2026-09-27: `PipelineRegistry` retired in phase 3 step 9) |
 | audio_bridge | `*DslIdentity` ×3 | process-global `uniqueId()` maps | **same template again — 6 copies total** |
 | klang | `SamplePreloader` | load dedup, send-cache, ack bookkeeping, UI signals, wire send | 5 concerns, but cohesive; genuinely global — must stay shared |
 | klang | `BackendClockSync` | FE↔BE offset EMA | cleanest type in the layer, single responsibility |

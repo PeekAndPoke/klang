@@ -27,8 +27,8 @@ import kotlin.math.abs
 
 /**
  * Guards the teardown fade (`TeardownFadeRenderer`): the voice's last frames when its tree does not end in a
- * built envelope, a `classic()` voice with `.adsrOff()` or an instrument without `classic()` (the bare tree of
- * phase 3 step 9). Until step 9 the rows below drove the voice strip's VCA with `on = false`, whose gate path
+ * built envelope with a static release (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), as for a bare
+ * source under `classic()` with `.adsrOff()` or an instrument without `classic()` (the bare tree of phase 3 step 9). Until step 9 the rows below drove the voice strip's VCA with `on = false`, whose gate path
  * was exactly this fade; they now drive the fade itself, and one row plays the guitar through the real factory.
  *
  * **The bug this exists for.** Found by ear on Der Schmetterling's guitars, 2026-08-27, right after

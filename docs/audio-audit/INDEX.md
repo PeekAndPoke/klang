@@ -1,5 +1,8 @@
 # Audio backend audit — ledger
 
+> **2026-09-27:** the `voices/` pilot audited the voice strip, which retired in phase 3 step 9 (every voice is its
+> Ignitor tree now). Its rows are the record of that code; see `audio/ref/voice-synthesis.md` for the current voice.
+
 Campaign brief and method: [`20260927-audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md)
 (**closed 2026-09-27**; what stayed open is [`audit-audio-backend-leftovers.md`](../tasks/audit-audio-backend-leftovers.md)). Standing findings
 list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together.**

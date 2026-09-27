@@ -523,7 +523,8 @@ complexity outranks the duplication.
   was a no-op), and a bare `reverb()` with a null value leaves the slot readable. No built-in
   song, frozen piece or tutorial uses an accessor or mapper of these doors, nor `duck` at all.
   Left for phase 3: body and vowel `FilterDef`s still ride `filters` with no backend reader, and
-  `Voice.Compressor`/`Voice.Ducking` live under `Voice` though only the chain uses them.
+  `Voice.Compressor`/`Voice.Ducking` live under `Voice` though only the chain uses them. (2026-09-27:
+  `filters` left the wire in phase 3 step 9; `Voice.Compressor`/`Voice.Ducking` are still there.)
   **Step 5b is run in three parts (2026-09-19):** 5b-1, the born-with chain becomes slot-driven
   and the voice-driven writers retire; 5b-2, the sends become inserts (the per-voice send amounts
   in `SendRenderer` go), with a listening checkpoint; 5b-3, the bus fields leave the wire and
@@ -582,7 +583,7 @@ complexity outranks the duplication.
   move where they belong (filters, crush, coarse, distort, tremolo and the VCA to the instrument's
   `.classic()`; the phaser is a bus effect and is already the Katalyst's). So 5b-3 leaves the
   phaser fields on the wire for the custom pipeline's stage, and they leave with the pipeline in
-  phase 3. **For the 5b-2 plan (event-stream survey over 256 cycles, sample
+  phase 3 (done 2026-09-27, step 9). **For the 5b-2 plan (event-stream survey over 256 cycles, sample
   voices included, 2026-09-19):** NO built-in song and no frozen piece carries two distinct send
   amounts on one orbit in one cycle, so the per-voice send becoming the owner's insert amount
   changes no song in the repo. 5 of 953 playable doc examples do, four of them the "as much X as
@@ -1189,7 +1190,7 @@ complexity outranks the duplication.
   `KlangScriptMaster.kt`, `sprudel/.../lang/lang_master.kt`, `klang/.../InlineDslRegistrar.kt`, `audio_be/.../master/MasterBus.kt`.
 - The EQ core and its snap-only contract: `audio_be/.../filters/EqCore.kt`, `docs/plans/unified-eq.md` (D4 ramp note).
 - Prior design (Phase 4 Katalyzer): archived `../tasks-archive/2026-06/20260630-engine-dsl-design-record.md`.
-- Counterpart DSL work: `engine-tuning-profile.md` (Pipeline DSL finish).
+- Counterpart DSL work: `../tasks-archive/2026-09/20260927-engine-tuning-profile.md` (Pipeline DSL finish; closed 2026-09-27, the Pipeline DSL retired in phase 3 step 9).
 - Master stage: `../tasks-archive/2026-09/20260904-per-playback-engine.md` §H / D6, **and the now-SHIPPED Master
   DSL ([archived](../tasks-archive/2026-08/20260803-master-dsl.md)) is the pattern to follow**: it
   sets both the application path (in-pattern, registration + id-on-voice)

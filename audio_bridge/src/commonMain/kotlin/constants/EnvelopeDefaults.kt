@@ -85,8 +85,9 @@ const val VOICE_ADSR_DECAY_SEC: Double = 0.1
 const val VOICE_ADSR_SUSTAIN_LEVEL: Double = 1.0
 
 /**
- * Voice envelope release in seconds. Also the lifetime of an `adsrOff` `classic()` voice past its gate (the
- * off envelope still reports this release as its tail), and the lifetime fallback of a tree voice whose
+ * Voice envelope release in seconds. Also the floor of an `adsrOff` `classic()` voice's lifetime past its gate
+ * when the pattern writes no release (the off envelope reports its release slot as its tail; a longer static
+ * tail below it extends it), and the lifetime fallback of a tree voice whose
  * build reports no static release tail (`VoiceFactory`, phase 3 step 9).
  */
 const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
@@ -112,8 +113,8 @@ const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
 const val ENV_DECLICK_SECONDS: Double = 0.001
 
 /**
- * Teardown fade for a tree voice whose root is not a built envelope with a static release (a `classic()`
- * voice with sprudel's `.adsrOff()`, or an instrument that does not end in `classic()`), in seconds. The gate ramps linearly to zero over this window, ending
+ * Teardown fade for a tree voice whose root is not a built envelope with a static release
+ * (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), in seconds. The gate ramps linearly to zero over this window, ending
  * exactly on the last frame the voice renders (`floor(endFrame) - 1`).
  *
  * Scope: it runs last on the voice, after the whole tree (`TeardownFadeRenderer`), so it guarantees

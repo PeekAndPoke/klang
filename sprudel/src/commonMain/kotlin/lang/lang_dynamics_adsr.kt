@@ -420,8 +420,11 @@ fun PatternMapperFn.adsrOn(flag: PatternLike = true, callInfo: CallInfo? = null)
  * amplitude. The counterpart of [adsrOn]; see there for the full story.
  *
  * With the voice envelope off, the voice's `release` window becomes a full-level HOLD rather than
- * a decay, so the instrument really does have to shape its own tail. And with a release under about
- * 4 ms the engine's teardown guard, not the instrument, owns the note-off.
+ * a decay, so the instrument really does have to shape its own tail. The voice ends on the instrument's
+ * own envelope when its `.adsr(...)` (with a fixed release) is the last thing built before `.classic()`;
+ * anything built after it, a stage of the instrument's own or a filter or other stage the pattern writes,
+ * hands the note-off to a short teardown fade. Either way the note ends cleanly (the one home of the
+ * rule: `BuiltIgnitor.endsInEnvelope`).
  *
  * ```KlangScript(Playable)
  * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08).classic()

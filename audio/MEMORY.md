@@ -1,5 +1,34 @@
 # Klang Audio — Memory
 
+## The voice strip and the Pipeline DSL retire; every voice is its tree (phase 3 step 9, 2026-09-27)
+
+- **`Voice` runs Pitch → Ignite → (teardown fade) → Send.** The Ignitor tree is the whole instrument. Every
+  built-in sound and every sample voice is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`
+  (samples over `IgnitorDsl.Sample`); an authored instrument gets the voice doors by ending in `.classic()`.
+  A tree without `classic()` plays as its bare tree: no doors, no default envelope, the `VOICE_ADSR_RELEASE_SEC`
+  (0.05 s) lifetime fallback when the tree has no static tail, then the teardown fade unless its root envelope
+  ends it. `createExciter` hangs nothing around a registered tree (the registry's `onepole` wrap and
+  `IgnitorRegistry.endsInClassic(name)` are gone; the `IgnitorDsl.endsInClassic()` tag stays).
+- **Gone (commit a):** the strip's VCA and filter, crush, coarse, distort, tremolo and phaser renderers
+  (`EnvelopeRenderer`, `FilterModRenderer`, `AudioFilterRenderer`, `FilterPipelineBuilder`, ...),
+  `Voice.Phaser`/`Tremolo`/`Distort`/`Crush`/`Coarse`/`FilterModulator`, `Voice.Envelope.of`, and the Pipeline DSL
+  with `PipelineRegistry` and `Cmd.RegisterPipeline`. `Voice.Envelope` stays (FM and the pitch envelope). The
+  shared cores (`EnvelopeCore`, `CrushCore`, `DistortionCore`, `TremoloCore`, `PhaserCore`, `Oversampler`) stay.
+  The strip's sound is frozen as `ClassicVoiceBaselineSpec` and the built-in matrix baseline.
+- **Gone (commit a2):** the strip-only SVF classes (`SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`,
+  `createLPF`/`HPF`/`BPF`/`Notch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()`,
+  `AudioFilter.Tunable`). `BaseSvf`, `SvfBPF`, the OnePoles and `butterworthQLadder` stay; the voice's filter
+  is the `Ignitor.svf` node (laws in `SvfNodeLawSpec`).
+- **Gone (commit b):** 30 `VoiceData` fields (the filters, `adsr`, crush, coarse, distort, phaser, tremolo,
+  `cutoff`/`hcutoff`/`bandf`/`resonance`, begin/end/speed/loop, `loopBegin`/`loopEnd`, `scale`), `FilterDefs`,
+  `FilterDef.LowPass`/`HighPass`/`BandPass`/`Notch`, the bridge `FilterEnvDef`, `AdsrDef.on` and the AdsrDef
+  merge/resolve API with `defaultSynth` (the voice defaults are `VOICE_ADSR_*`). A voice door is a `classic()`
+  slot in `oscParams`; an orbit stage a `katalystParams` slot. `FilterDef.Formant`/`Body` stay as the orbit's
+  band carriers; `AdsrDef` stays for a sample's own envelope.
+- **Reading the entries below:** they are the record of how we got here, and many name the strip, its
+  renderers or the removed fields as they were at the time. The current shape is this entry,
+  `ref/voice-synthesis.md` and `ref/data-model.md`.
+
 ## Authored instruments ending in classic() leave the strip (phase 3 step 10, commit 1, 2026-09-26)
 
 - **The strip-off tag is structural**: `IgnitorDsl.endsInClassic()` is true when the root is an `Adsr` whose `on`
@@ -71,7 +100,8 @@
   (review round 1's MAJOR: without the floor it ended 0.1 s early from the sustain level). With the typed
   release still on the wire it equals the strip's; it also removes the 0.05 s floor for a release written
   only as a slot.
-- **`BuiltIgnitor.endsInEnvelope`** is a ROOT property: set by the `Adsr` arm when it builds, never absorbed
+- **`BuiltIgnitor.endsInEnvelope`** is a ROOT property: set by the `Adsr` arm when it builds with a STATIC release (phase 3 step 10: a
+  modulated release leaves the fade), never absorbed
   from a child of a BUILT stage (an envelope under a later stage does not end the voice). A node that IS its
   inner hands the answer through (`passThrough`): every gate arm that did not build (the filters, onepole,
   distort, drive, crush, coarse, tremolo, a switched-off `Adsr`), the three unity-`mul` folds (both `Times`
@@ -2459,7 +2489,8 @@ body/analog per superimposed copy.
   literal defaults (`Sine.isPlainSine()`), partials at Nyquist are silent. Plan and decisions:
   `docs/plans/sine-partial-banks.md`; guard: `SinePartialBankSpec` (golden test against the hand-rolled
   Der Schmetterling stack).
-- Effects: delay, reverb, phaser, compressor, ducking, distortion, bit-crush, tremolo
+- Effects: delay, reverb, phaser, compressor, ducking, body, vowel, EQ on the orbit (Katalyst); per voice,
+  `classic()`'s crush, coarse, distort, four filters, tremolo and envelope as Ignitor stages
 
 ## One drift-lane container: `DriftLanes` (2026-09-10)
 
@@ -2611,16 +2642,16 @@ re-promoting already-played voices (duplicate burst). Open follow-up:
 
 - **Block-based processing**: fixed-size blocks (128–256 frames). No per-sample allocation in hot paths.
 - **Ring-buffer IPC**: `KlangCommLink` uses two `KlangRingBuffer`s — no locking between threads.
-- **Voice pipeline**: `Voice` interface + `VoiceImpl` runs a **Pitch → Excite → Filter** pipeline.
-  Filter stage is a composable `List<BlockRenderer>` built by `buildFilterPipeline()`.
-  Pitch stage is still inline (pending extraction). Excite delegates to `Ignitor`.
+- **Voice pipeline**: `Voice` runs a composable `List<BlockRenderer>`: **Pitch → Ignite → (teardown fade) →
+  Send**. The Ignite stage renders the instrument's Ignitor tree, envelope and filters included (the voice
+  strip after it retired in phase 3 step 9).
 - **Cylinders = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, **5 ms lookahead + 5 ms gain-smoothing**, 100 ms release — always
   last in chain, on the summed mix. The lookahead delays the whole output by 5 ms (uniform, so nothing desyncs). The
   *authored* `limiter` stage (`Master(m => m.limiter(...))`) differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 - **Every DSL is immutable at construction time (maintainer principle, 2026-09-05)**: nodes,
-  builders, `MasterDsl`, `PipelineDsl`, patterns. A "mutating" call returns a new instance; never
+  builders, `MasterDsl`, `KatalystDsl`, patterns. A "mutating" call returns a new instance; never
   a `var`, never a mutable builder, never a `MutableList` escaping a DSL type. Why: it removes an
   entire bug class (shared-state mutation at a distance) and therefore an entire chapter of
   explaining; composition falls out of it. Runtime data may be mutable for performance
@@ -2632,7 +2663,8 @@ re-promoting already-played voices (duplicate burst). Open follow-up:
   `Osc*Builder`/`EqBuilder`/`Master*Builder`/`Pipeline*Builder` classes in `klangscript-libs`,
   annotated for KlangScript directly in `klangscript-libs` (module split 2026-09-06). `MasterFx`, `Stage`,
   `Master.of`, `Pipeline.of` and all 17 sub-type extension objects are DELETED, no back-compat.
-  Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
+  Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`. (The `Pipeline*Builder` classes
+  retired with the Pipeline DSL, phase 3 step 9.)
 
 ## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)
 
@@ -2798,6 +2830,7 @@ Key changes:
 ## BlockRenderer Pipeline Architecture (2026-03-23)
 
 Voice rendering refactored into **Pitch → Excite → Filter** pipeline using composable `BlockRenderer` stages.
+(2026-09-27: the Filter stage and `voices/strip/filter/` retired in phase 3 step 9; see the top entry.)
 
 Key files:
 
@@ -2904,7 +2937,6 @@ Canonical scale + variant syntax: `seq("0 2 4 4:1 5:1").scale("c4:minor")`
 - `KlangTime.internalMsNow()` is monotonic, NOT wall-clock — use only for relative timing.
 - JS target requires ES2015 classes for AudioWorkletProcessor inheritance (KMP default is ES5 — override needed).
 - `MonoSamplePcm` is always mono; stereo is handled at the `Cylinders` pan/mix level.
-- `FilterDefs.addOrReplace()` is additive — calling it twice with the same filter type replaces, not duplicates.
 - `VoiceData` fields are nullable with defaults — omitting a field means "use engine default".
 - The `duck.orbit` slot in `VoiceData.katalystParams` names the orbit whose voices duck this one (the `duckCylinder` field left in step 5b-3); ducking is cross-cylinder sidechain.
 - `VoiceData.soundIndex: Int?` is the universal variant channel — consumed by `SampleRequest` for sample-bank picking

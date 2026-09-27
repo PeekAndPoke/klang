@@ -193,8 +193,8 @@ class Voice(
         blockCtx.gateEndFrame = gateEndFrame
         blockCtx.endFrame = endFrame
 
-        // The ignitor door reads the gate voice-relative (Int) — move it too, or vca(on = false)
-        // instruments would sustain through the tail and hit the teardown fade (amendment A1).
+        // The ignitor door reads the gate voice-relative (Int): move it too, or adsrOff instruments
+        // would sustain through the tail and hit the teardown fade (amendment A1).
         blockCtx.signalCtx.gateEndFrame = (atFrame - startFrame).toInt()
     }
 

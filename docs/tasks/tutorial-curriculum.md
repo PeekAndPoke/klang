@@ -13,8 +13,8 @@
 > - Master: `master(Master(m => m.reverb(0.05).gain(2.5).limiter()))` (`reverb(wet, size, lowpass)` and
 >   `limiter(threshold, ratio, knee, attack, lookahead, release)` flat since 2026-09-24), `master(Master())`
 >   for unity. `Master.of` and `MasterFx` are gone.
-> - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,
->   `Pipeline.modern(p => p.tuneVca(v => v.expK(2.5)))`. `Pipeline.of` and `Stage` are gone.
+> - Pipeline: retired with the voice strip in phase 3 step 9 (2026-09-27). An authored instrument gets the
+>   pattern's voice doors by ending in `.classic()`: `Osc.saw().distort(0.4, "tube").classic()`.
 > The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
 > the `Master(m => ...)` form.
 
@@ -72,7 +72,7 @@ Ground truth from the 14 built-in songs (full tally in session analysis, key fac
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
 - Ignitor building is opt-in (6/14 songs) with a natural teaching ladder:
   Sandsturm → IrishLament → Sakura → ATruthWorthLyingFor (DialogueWithTheStars left the built-in songs 2026-09-25).
-- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"` (the `pedal` preset was REMOVED 2026-09-25, and the Pipeline DSL retires in phase 3).
+- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"` (the `pedal` preset was REMOVED 2026-09-25, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27).
 - Two arrangement idioms both in real use: `arrange([bars, section], ...)` vs. one big `stack` + `filterWhen(t => ...)`.
 
 ## Principles (the anti-slop rules)
@@ -193,7 +193,7 @@ stages must not carry it.
 | C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
 | C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
 | C6 | The Master bus | `master(Master(m => m.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
-| C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed and the Pipeline DSL retires in phase 3; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
+| C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
 | C10 | Capstone: a song from zero | everything | — | Build a Sandsturm-lite start to finish — the "worked song". |
@@ -340,8 +340,8 @@ stages must not carry it.
   - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
     never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
     dust grain rate, not a unison knob; `duck(attack)` is the recovery time (the duck-down is
-    instant); `penv(curve)` is gone (step 5b c1: `penvCurves`); `loopBegin`/`loopEnd` are not read by
-    `VoiceFactory`; negative `speed` is silence, not reverse.
+    instant); `penv(curve)` is gone (step 5b c1: `penvCurves`); `loopBegin`/`loopEnd` are gone (phase 3
+    step 9: a loop region is `loop().begin(x).end(y)`); negative `speed` is silence, not reverse.
   - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
     example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the
     lesson is written; it goes in `Tut` (`TutorialModel.kt`) either way.

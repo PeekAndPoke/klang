@@ -1,5 +1,9 @@
 # Audio backend audit — findings
 
+> **2026-09-27:** the voice strip (its filter, VCA, crush, coarse, distort, tremolo and phaser renderers), the Pipeline
+> DSL, `FilterDefs` and the typed voice-door fields retired in phase 3 step 9. Findings that cite them are the record of
+> the code at the time; the current voice is `audio/ref/voice-synthesis.md`.
+
 **Analysis only. Nothing here has been repaired.** We triage this list together, then decide what to fix. Each finding
 carries the evidence that produced it — a mutation that was actually run, or a reference trace — so triage does not have
 to re-derive it.

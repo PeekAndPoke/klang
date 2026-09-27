@@ -3,6 +3,19 @@
 Status: **scheduled, once the current plan (`../plans/signal-flow-redesign.md`, phase 3 included) is
 fully complete** (maintainer, 2026-09-23). Not started.
 
+> **2026-09-27, phase 3 step 9: what changed for the oversample knobs.** The voice strip retired, and with it
+> `CrushRenderer`, `CoarseRenderer` and `DistortionRenderer` (sections 3, 4 and 7 below name them as they were).
+> The typed `VoiceData` fields `distortOversample`, `crushOversample` and `coarseOversample` are gone; the knobs
+> travel as `oscParams` slot keys written by sprudel's `toVoiceData()` (`_classic_slot_params.kt`):
+> - `distort.oversample` is a `classic()` slot (the D7 stopgap), read once at voice build into the fused
+>   `Distort` node's oversampler (`DistortionCore`).
+> - `crush.oversample` and `coarse.oversample` are carried but READ BY NOTHING: `classic()`'s crush and coarse
+>   have no oversampler and place no such slot, so `crush(oversample = ...)` and `coarse(oversample = ...)` do
+>   nothing today, on every voice. The value travels so it is not lost before this task decides (section 9,
+>   point 2).
+> - The oversamplers left in the engine: `DistortionCore` (the fused `Distort` node) and `ShapeIgnitor` (the
+>   Ignitor `shape` and `distort` doors).
+
 Rewritten 2026-09-23 from the future draft of 2026-07-04 (`future/pipeline-oversampling-regions.md`,
 kept in git history). That draft was written for the Pipeline DSL, which phase 3 retires, and used an
 open/close marker form the maintainer has since rejected; what it got right is carried in section 6.

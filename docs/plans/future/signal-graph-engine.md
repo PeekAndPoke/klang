@@ -34,7 +34,7 @@ general mechanism, and a frontend chooses a routing.
   tree, every stage gated on its slot, slots named `<door>.<param>`. This IS `.sprudel()` under
   another name; the rename is a small decision for when this plan starts.
 - Step 6 re-registers the built-ins on `classic()` and switches the strip off for them; step 9 cuts
-  `VoiceData` and retires the Pipeline DSL. After that the voice strip is gone and every voice is an
+  `VoiceData` and retires the Pipeline DSL (both done 2026-09-27). The voice strip is gone and every voice is an
   Ignitor tree, so part 1 of the idea needs only the auto-attach and the tag.
 - One law per effect, shared by every host (`TremoloCore`, `CrushCore`, `DistortionCore`,
   `EnvelopeCore`, `SvfCoeffSweep`): a Katalyst stage and a master stage can already run the same code.

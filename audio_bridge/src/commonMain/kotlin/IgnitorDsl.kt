@@ -1786,8 +1786,11 @@ sealed interface IgnitorDsl {
          * What OFF does today: the stage is not built, so the inner signal passes unchanged, and its
          * knob subtrees are not built either (a drawing source there takes no draws, the gate's
          * usual consequence). The voice's LIFETIME is kept: the node still reports the release tail
-         * the envelope would have had, as the voice strip's `adsrOff` kept it, and the voice ends on
-         * the teardown fade (`TeardownFadeRenderer`, since phase 3 step 6).
+         * the envelope would have had, as the voice strip's `adsrOff` kept it. The switched-off node
+         * hands on its inner's `BuiltIgnitor.endsInEnvelope` (the one home of the rule): when its inner is an
+         * authored static-release envelope with nothing built over it (no stage of the instrument's own after
+         * it, no written `classic()` stage), that envelope ends the voice; otherwise the voice ends on the teardown fade
+         * (`TeardownFadeRenderer`, since phase 3 step 6).
          */
         val on: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {

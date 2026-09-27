@@ -753,6 +753,10 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
 
 ### D9 — Sprudel voice-filter baking → EqCore (maintainer-added 2026-08-20, LAST in order)
 
+> **2026-09-27: D9's premise is gone.** The per-voice `FilterDef` list, `ChainAudioFilter` and the strip's
+> class-form filters retired in phase 3 step 9; a sprudel filter is now a `classic()` stage, an `Ignitor.svf`
+> node in the voice's tree. Fusing those would be an optimizer pass over the tree, a new design.
+
 > **NOT IN V1 — decided 2026-08-31 (maintainer).** Sprudel gets no `band`/`tap` in V1, so D9 is
 > no longer gating anything on the surface: `docs/tasks-archive/2026-09/20260927-filter-unification.md` §C6 ships canonical
 > NAMES only and no longer waits for D9's static tier. What remains here is **pure internal perf**

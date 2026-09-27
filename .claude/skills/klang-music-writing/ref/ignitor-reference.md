@@ -34,8 +34,10 @@ note("c3 e3 g3 c4").sound(myPluck).adsrOff().gain(0.5)
 > An instrument that does not END in it gets the pattern's voice doors only where its own tree reads the slots
 > (phase 3 step 8). When the instrument carries
 > its own amplitude `.adsr(...)`, add `.adsrOff()` on the pattern: it switches `classic()`'s envelope off, so the
-> two do not multiply (twice the dB slope, the note dying faster and quieter than the numbers say), and the
-> voice ends on a short teardown fade. Leave it off (keep `classic()`'s envelope) when the instrument's
+> two do not multiply (twice the dB slope, the note dying faster and quieter than the numbers say), and
+> the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
+> built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
+> pattern writes, hands the note-off to a short teardown fade. Either way the note ends cleanly. Leave it off (keep `classic()`'s envelope) when the instrument's
 > `.adsr(...)` only modulates something, e.g. a filter cutoff.
 >
 > The examples below all follow this rule.
@@ -234,10 +236,10 @@ defaults to child 0.
 let open  = Osc.saw().lowpass(2200).adsr(0.005, 0.3, 0.4, 0.4)
 let muted = Osc.saw().lowpass(1800).distort(0.7, "tube", 4)
                      .adsr(0.002, 0.08, 0.0, 0.04)
-let guitar = Osc.variants(open, muted)
+let guitar = Osc.variants(open, muted).classic()
 
 // Inline: c4 and d4 ring out, e4 and f4 chug
-seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).gain(0.3)
+seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).adsrOff().gain(0.3)
 ```
 
 **Composition tips:**
@@ -465,9 +467,10 @@ one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"
 let bass = Osc.saw()
     .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
     .adsr(0.005, 0.2, 0.0, 0.05)
+    .classic()
 
 // Override param in pattern:
-note("c2").sound(bass).oscParam("cutoff", 1200)
+note("c2").sound(bass).adsrOff().oscp("cutoff", 1200)
 ```
 
 ### `Osc.constant(value)` — Fixed, not overridable
@@ -492,8 +495,12 @@ Osc.sine(5)  // fixed 5 Hz (for LFO use)
 
 `.classic()` wraps a sound in the classic synth voice: onepole, crush, coarse, distort, highpass, bandpass,
 notch, lowpass, tremolo and the amplitude envelope, in that order. Make it the LAST call: an instrument whose
-tree ends in `.classic()` is a whole voice, and the old voice strip does not run for it (phase 3 step 10). A stage
-after it (`.classic().mul(0.5)`) undoes that: the strip runs again and the `onepole` runs twice. An `.optimizer(...)`
+tree ends in `.classic()` is a whole voice that ends on its own envelope. `adsrOff()` switches that envelope off, and
+the voice ends on the instrument's own envelope when its `.adsr(...)` (with a fixed release) is the last thing
+built before `.classic()`; anything built after it, a stage of the instrument's own or a filter or other stage the
+pattern writes, hands the note-off to a short teardown fade. Either way the note ends cleanly. A stage after it (`.classic().mul(0.5)`)
+still gets the doors, but the root is no longer the envelope, so the voice adds its short teardown fade after the
+tree and `endsInClassic()` is false for it. An `.optimizer(...)`
 hint after it is fine; it is not a stage. Every stage is a slot the pattern's
 doors fill, and a stage the note does not write is not built, so an untouched `.classic()` costs one
 envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
@@ -502,7 +509,7 @@ envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
 let guitar = Osc.saw().distort(0.4, "tube").classic()
 // the pattern's doors reach classic()'s slots: .lpf(1800) writes lpf.freq, .adsr(release = 0.2) the envelope.
 // Do NOT add .adsrOff() here: it switches classic()'s OWN envelope off (use it only when the instrument
-// brings its own envelope and should end on the voice's short teardown fade instead).
+// brings its own amplitude envelope, which then shapes the note instead).
 note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 ```
 
@@ -521,16 +528,16 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
 - `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
 - `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
   output, while `.classic()` uses the one distort node that switches drive AND shape off together and
-  renders the voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
+  renders the retired voice strip's exact law (no cap, so a hot shape can go past 1.0; the drive inside the
   oversampler). A slot on the door's distort would shape every note, written or not.
 
-**Transitional (phase 3):** the BUILT-IN sounds (`sound("saw")`, step 6), the SAMPLES (step 7) and every
-authored instrument whose tree ENDS in `.classic()` (step 10) are whole voices: the pattern doors (`.lpf(...)`,
-`.adsr(...)`, `.crush(...)`) reach their slots, and the old voice strip does not run. An authored instrument
-WITHOUT `.classic()` still gets the old strip after it (its own envelope, then the strip's) until step 9 retires
-the strip; a door beats an `oscp` on the same slot (sprudel's `toVoiceData()` writes the door's value last). If your instrument has a long own tail
-(a pad's release), write the pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over
-its own slot (0.05 s by default), where the old strip stretched to the instrument's tail.
+**Every voice is its tree (phase 3 step 9, 2026-09-27).** The BUILT-IN sounds (`sound("saw")`) and the
+SAMPLES are `.classic()` voices, and so is every authored instrument whose tree ENDS in `.classic()`: the pattern
+doors (`.lpf(...)`, `.adsr(...)`, `.crush(...)`) reach their slots. An authored instrument WITHOUT `.classic()`
+plays as its bare tree: the voice doors reach it only where its own tree reads the slots, it has no default envelope, and it ends on the short
+teardown fade unless its own root envelope ends it. A door beats an `oscp` on the same slot (sprudel's
+`toVoiceData()` writes the door's value last). If your instrument has a long own tail (a pad's release), write the
+pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over its own slot (0.05 s by default).
 
 ### Audio-rate Modulation
 
@@ -583,6 +590,10 @@ Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 
 ## Instrument Recipes
 
+Every recipe ends in `.classic()`, so the pattern's doors reach it (see the `.classic()` section). A recipe
+whose last call before `.classic()` is its own amplitude `.adsr(...)` is played with `.adsrOff()` on the
+pattern, so the two envelopes do not multiply; the others keep `classic()`'s envelope.
+
 ### Woodwinds
 
 **Flute** — Sine + triangle + breath noise + vibrato
@@ -595,7 +606,7 @@ let flute = Osc.sine()
         .lowpass(3000).highpass(400)
         .analog(0.15).vibrato(4.5, 0.012)
         .pitchEnvelope(1.5, x => x.adsr(0.01, 0.06, 0, 0))
-        .adsr(0.06, 0.15, 0.75, 0.2)
+        .adsr(0.06, 0.15, 0.75, 0.2).classic()
 ```
 
 **Clarinet** — Triangle (odd harmonics) + light square + breath
@@ -609,7 +620,7 @@ let clarinet = Osc.triangle().mul(0.7)
         .lowpass(2800).highpass(150).onepole(4000)
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, x => x.adsr(0.01, 0.06, 0, 0))
-        .adsr(0.04, 0.08, 0.9, 0.1)
+        .adsr(0.04, 0.08, 0.9, 0.1).classic()
 ```
 
 **Alto Saxophone** — Square + saw (reed buzz + conical bore)
@@ -623,7 +634,7 @@ let alto = Osc.square().mul(0.6)
         .lowpass(3500).highpass(200)
         .vibrato(4.5, 0.015)
         .pitchEnvelope(-2, x => x.adsr(0.01, 0.12, 0, 0))
-        .adsr(0.03, 0.1, 0.85, 0.12)
+        .adsr(0.03, 0.1, 0.85, 0.12).classic()
 ```
 
 ### Guitars
@@ -631,7 +642,7 @@ let alto = Osc.square().mul(0.6)
 **Acoustic Guitar** — Karplus-Strong with natural filtering
 
 ```javascript
-let acoustic = Osc.pluck().highpass(80).lowpass(4000)
+let acoustic = Osc.pluck().highpass(80).lowpass(4000).classic()
 ```
 
 **Steel String** — Brighter attack with filter envelope
@@ -639,7 +650,7 @@ let acoustic = Osc.pluck().highpass(80).lowpass(4000)
 ```javascript
 let steel = Osc.pluck()
         .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)))
-        .highpass(100)
+        .highpass(100).classic()
 ```
 
 **12-String** — Unison pluck for chorus effect
@@ -647,13 +658,13 @@ let steel = Osc.pluck()
 ```javascript
 let twelve = Osc.superpluck()
         .lowpass(Osc.constant(4000).plus(Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)))
-        .highpass(100)
+        .highpass(100).classic()
 ```
 
 **Electric Distorted**
 
 ```javascript
-let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150)
+let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150).classic()
 ```
 
 ### Synth Pads
@@ -664,7 +675,7 @@ let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150)
 let fatpad = Osc.supersaw()
         .analog(0.3)
         .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
-        .adsr(0.2, 0.5, 0.7, 1.0)
+        .adsr(0.2, 0.5, 0.7, 1.0).classic()
 ```
 
 ### Synth Bass
@@ -674,7 +685,7 @@ let fatpad = Osc.supersaw()
 ```javascript
 let bass = Osc.saw()
         .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
-        .adsr(0.005, 0.2, 0.0, 0.05)
+        .adsr(0.005, 0.2, 0.0, 0.05).classic()
 ```
 
 ### Synth Leads
@@ -682,7 +693,7 @@ let bass = Osc.saw()
 **Bitcrushed Lead**
 
 ```javascript
-let crunchlead = Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3)
+let crunchlead = Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3).classic()
 ```
 
 ### Bells & Mallet Percussion
@@ -696,14 +707,14 @@ let glock = Osc.sine().mul(0.5)
         .plus(Osc.sine().detune(31.02).mul(0.1))
         .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
         .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
-        .adsr(0.001, 1.5, 0.0, 0.3)
+        .adsr(0.001, 1.5, 0.0, 0.3).classic()
 ```
 
 **FM Bell** — Inharmonic FM for metallic character
 
 ```javascript
 let bell = Osc.sine().fm(Osc.sine(), 2.3, 400)
-        .adsr(0.001, 1.5, 0.0, 0.5)
+        .adsr(0.001, 1.5, 0.0, 0.5).classic()
 ```
 
 **Marimba** — Sine with fast-decaying overtones + wood attack
@@ -715,7 +726,7 @@ let marimba = Osc.sine().mul(0.7)
         .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
         .lowpass(2500).onepole(3000)
         .pitchEnvelope(1, x => x.adsr(0.001, 0.04, 0, 0))
-        .adsr(0.005, 0.5, 0.0, 0.08)
+        .adsr(0.005, 0.5, 0.0, 0.08).classic()
 ```
 
 **Vibraphone** — Detuned sines with tremolo
@@ -727,7 +738,7 @@ let vibes = Osc.sine().mul(0.5)
         .plus(Osc.whitenoise().highpass(4000).mul(0.06).adsr(0.001, 0.02, 0.0, 0.005))
         .lowpass(6000)
         .tremolo(5.5, 0.3)
-        .adsr(0.003, 2.0, 0.0, 0.5)
+        .adsr(0.003, 2.0, 0.0, 0.5).classic()
 ```
 
 **Music Box** — Bright octave-stacked sines
@@ -738,7 +749,7 @@ let musicbox = Osc.sine().mul(0.6)
         .plus(Osc.sine().detune(24).mul(0.1))
         .plus(Osc.whitenoise().highpass(10000).mul(0.1).adsr(0.001, 0.01, 0.0, 0.005))
         .lowpass(6000)
-        .adsr(0.001, 0.6, 0.0, 0.1)
+        .adsr(0.001, 0.6, 0.0, 0.1).classic()
 ```
 
 ### Synth Percussion
@@ -748,7 +759,7 @@ let musicbox = Osc.sine().mul(0.6)
 ```javascript
 let kick = Osc.sine()
         .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
-        .adsr(0.001, 0.2, 0.0, 0.02)
+        .adsr(0.001, 0.2, 0.0, 0.02).classic()
 ```
 
 **Hi-Hat** — Filtered white noise
@@ -756,7 +767,7 @@ let kick = Osc.sine()
 ```javascript
 let hat = Osc.whitenoise()
         .highpass(8000)
-        .adsr(0.001, 0.05, 0.0, 0.01)
+        .adsr(0.001, 0.05, 0.0, 0.01).classic()
 ```
 
 **Rim** — Sine + noise transient
@@ -765,7 +776,7 @@ let hat = Osc.whitenoise()
 let rim = Osc.sine(800)
         .plus(Osc.whitenoise().highpass(4000).mul(0.3))
         .lowpass(3000)
-        .adsr(0.001, 0.03, 0.0, 0.005)
+        .adsr(0.001, 0.03, 0.0, 0.005).classic()
 ```
 
 **Vinyl crackle** — old-record texture from primitives (no dedicated generator; the Motor stays raw)
@@ -780,7 +791,7 @@ do the heavy lifting: `bipolar` gives natural ±pops, and a high `tail` makes po
 let vinyl = Osc.dust(0.08, /* tail */ 6, /* bipolar */ 1).bandpass(2500, 4)
         .plus(Osc.dust(0.02, /* tail */ 3, /* bipolar */ 1).bandpass(1500).mul(0.6))
         .plus(Osc.pinknoise().highpass(3000).mul(0.03))   // hiss bed
-        .plus(Osc.brownnoise(0.005).lowpass(120).mul(0.04)) // optional deep rumble
+        .plus(Osc.brownnoise(0.005).lowpass(120).mul(0.04)).classic() // optional deep rumble
 ```
 
 For a busier, more "broken-groove" crackle, swap in `Osc.crackle(1.7)` (the chaotic generator) as the
@@ -871,18 +882,18 @@ import * from "sprudel"
 let koto = Osc.pluck()
     .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
     .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
-    .highpass(200)
+    .highpass(200).classic()
 
 let pad = Osc.supersine(x => x.analog(0.3))
     .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
-    .adsr(0.8, 0.5, 0.9, 2.0)
+    .adsr(0.8, 0.5, 0.9, 2.0).classic()
 
 let kick = Osc.sine()
     .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
-    .adsr(0.001, 0.2, 0.0, 0.02)
+    .adsr(0.001, 0.2, 0.0, 0.02).classic()
 
 let sub = Osc.sine().lowpass(200)
-    .adsr(0.005, 0.3, 0.0, 0.05)
+    .adsr(0.005, 0.3, 0.0, 0.05).classic()
 
 // Composition
 stack(
@@ -892,13 +903,13 @@ stack(
     .superimpose(fast(2).gain(0.075).pan(0.0), fast(2).gain(0.075).pan(1.0)),
 
   // Pad chords
-  note("a2 d2 a2 f2").sound(pad).slow(4).legato(1.5).gain(0.25),
+  note("a2 d2 a2 f2").sound(pad).adsrOff().slow(4).legato(1.5).gain(0.25),
 
   // Bass
-  note("a1 d2 a1 f1").sound(sub).slow(4).legato(1.5).gain(0.75),
+  note("a1 d2 a1 f1").sound(sub).adsrOff().slow(4).legato(1.5).gain(0.75),
 
   // Drums
-  note("a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8),
+  note("a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).adsrOff().gain(0.8),
   sound("~ ~ ~ ~ cp ~ ~ ~").gain(0.4),
   sound("hh*8").gain(0.3)
 ).reverb(wet = 0.2, size = 5).delay(wet = 0.15, time = pure(1/8).div(cps))

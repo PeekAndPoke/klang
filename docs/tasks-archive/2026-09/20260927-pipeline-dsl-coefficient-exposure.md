@@ -1,5 +1,9 @@
 # Pipeline DSL — give every engine coefficient a home
 
+> **Closed 2026-09-27, archived:** the Pipeline DSL this tracker targeted retired with the voice strip in phase 3
+> step 9 (`docs/tasks/builtin-instruments.md` row 9); the survey below is kept as history, and a coefficient that
+> still wants a DSL home is a new task on the Ignitor or Katalyst surface.
+
 **Status:** planned (inventory done 2026-08-11) · **Precursor:** ✅ `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`
 
 **Goal (user, 2026-08-11):**
@@ -77,7 +81,7 @@ already constrain the answer. Listed here so the tracker is complete.
 
 The oscillator is **not** a pipeline stage, so there is no existing slot: this sub-task creates the
 `EngineTuning` object on `PipelineDsl`, which is the first real slice of
-`docs/tasks/engine-tuning-profile.md` Part B. Everything else in this tracker hangs off stages that already exist.
+`docs/tasks-archive/2026-09/20260927-engine-tuning-profile.md` Part B. Everything else in this tracker hangs off stages that already exist.
 
 **Parity check:** `analog` (the *amount*) is already at parity — sprudel `analog()`, `IgnitorDsl`
 `Slots.analog`, `StageDsl.Filter.driftRelToOsc` scaled by it. The depths have no counterpart on any surface, so this
@@ -260,7 +264,7 @@ resonator coefficient with no authoring path at all, and its KDoc says it is tun
 
 - `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` — the precursor (§6 = what was still missing; this doc is the answer)
 - `docs/tasks/by-ear/analog-drift-ratio-tuning.md` — owns S1 in detail
-- `docs/tasks/engine-tuning-profile.md` — Part B `EngineTuning`, which S1 starts and S5 unblocks
+- `docs/tasks-archive/2026-09/20260927-engine-tuning-profile.md`: Part B `EngineTuning`, which S1 starts and S5 unblocks
 - `docs/tasks/sprudel-sound-function-surface.md` — the compound-param blocker S6 would hit
 - `docs/tasks/katalyst-dsl.md` — where S7 lives
 - `docs/tasks/master-dsl-followups.md` §1 — the cross-surface parity audit brief

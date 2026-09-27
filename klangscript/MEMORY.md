@@ -59,6 +59,7 @@
 - **Pipeline builders, S6 (2026-09-06)**: `Pipeline(p => p.filterMod().vca(v => v.expK(2)).distort())`,
   presets `Pipeline.modern(p => p.tuneVca(...))`; stage knobs append, `tuneVca`/`tuneFilter` configure
   existing stages (error when none). `Pipeline.of`, `Stage` and the stage knob objects deleted.
+  (All of it retired 2026-09-27 with the Pipeline DSL, phase 3 step 9: an instrument ends in `.classic()`.)
 
 - **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
   `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/

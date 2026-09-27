@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * modulation (the `analog`, `voices`, `spread`, ... knobs on the oscillator builders).
  *
  * ```KlangScript(Executable)
- * let pad = Osc.sine(x => x.analog(OscSlot.analog)).lowpass(2000)
+ * let pad = Osc.sine(x => x.analog(OscSlot.analog)).lowpass(2000).classic()
  * note("c").sound(pad)
  * ```
  *

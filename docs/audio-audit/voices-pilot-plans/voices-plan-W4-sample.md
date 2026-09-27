@@ -1,3 +1,7 @@
+> **2026-09-27:** the sample voice this plan covers (`SampleVoice`, `SynthVoice` and their specs) was replaced by
+> the Ignitor tree (`SAMPLE_INSTRUMENT`, `SampleIgnitor`), and the voice strip retired in phase 3 step 9, so most file
+> and line references below point at deleted code. Kept as the record of the pilot; the current voice is `audio/ref/voice-synthesis.md`.
+
 # Mutation-Check Plan — voices W4 (sample/synth voice specs)
 
 Scope: `SampleVoiceSpecificTest.kt`, `SampleVoiceRenderTest.kt`, `SynthVoiceTest.kt`. 30 test cases total. No build/test

@@ -1,5 +1,10 @@
 # Analog drift: is the pitch/filter ratio inverted?
 
+> **2026-09-27:** the listening question stands, but the Pipeline DSL and `StageDsl.Filter` named below retired in
+> phase 3 step 9. The filter drift, frozen offset and drive per `analog` are the constants in
+> `audio_bridge/.../constants/FilterHumanizationDefaults.kt`, read by the Ignitor filter nodes; the "where it lives"
+> options below that name `PipelineDsl` need a new home.
+
 **Status:** planned · **Opened:** 2026-08-11 · **Precursor:** ✅ `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`
 
 **The question (user, 2026-08-11):**
@@ -37,7 +42,7 @@ amount of movement as well as the ratio, so the two variables are confounded.
 
 ## 3. Why the existing task doesn't unblock it
 
-`docs/tasks/engine-tuning-profile.md` Part A.3 owns this, and its call is right: drift depth is **per-engine
+`docs/tasks-archive/2026-09/20260927-engine-tuning-profile.md` (archived 2026-09-27 with the Pipeline DSL) Part A.3 owns this, and its call is right: drift depth is **per-engine
 character**, not per-oscillator, so it belongs in the Phase 3 `EngineTuning` profile rather than as standalone
 `IgnitorDsl` fields. Do not re-litigate that.
 
@@ -110,11 +115,11 @@ record, not a regression alarm. Move the bound *with* the value and say why; do 
 
 ## 7. Links
 
-- `docs/tasks/pipeline-dsl-coefficient-exposure.md` — the full survey of engine coefficients that still lack a DSL home,
+- `docs/tasks-archive/2026-09/20260927-pipeline-dsl-coefficient-exposure.md` (archived 2026-09-27): the full survey of engine coefficients that still lack a DSL home,
   scoped into sub-tasks. **This task is its S1** — the one sub-task that blocks a by-ear question, and the one that
   creates the `EngineTuning` slot the others hang off. That doc also flags `ANALOG_MEAN_REVERSION_RATIO` (0.5), a drift
   character knob neither doc had listed: decide in or out when §4's scope is finalised.
-- `docs/tasks/engine-tuning-profile.md` — Part A.3 owns the long-term home; keep these in sync.
+- `docs/tasks-archive/2026-09/20260927-engine-tuning-profile.md`: Part A.3 owns the long-term home; keep these in sync.
 - `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §6 — the precursor, and why the filter side is already live.
 - `docs/tasks-archive/2026-06/20260617-analog-drift-coefficient-tuning.md` — where 0.2/0.8 came from (answer: they were
   never tuned; listed under "Deferred (intentional)").

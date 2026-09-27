@@ -395,6 +395,9 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
    songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
    editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
+   (2026-09-27: step 9 done; the voice strip, the Pipeline DSL and the typed door fields are retired and
+   every voice is its tree. The diagnostic, step 11, is deferred. Progress: `../tasks/builtin-instruments.md`
+   section 9.)
 4. **Interoperability lift**: when the second pattern kind exists, not before.
 5. **The announcements, last.** Everything that describes a retired surface is re-read and
    rewritten once the surfaces are gone: the whitepaper (`docs/whitepaper/klang-whitepaper.html`,

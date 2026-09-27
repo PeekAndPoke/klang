@@ -4,6 +4,11 @@
 > step 5c). Performance first, readability a close second: the model must cost what the flags cost
 > today and read as a state machine.
 
+> **Status 2026-09-27:** every per-effect row of section 3 is done (converted, done without state classes, or
+> retired). Open: the `Cylinder` chain swap's `SwapState` (still five fields), then the master bus chain swap. Both
+> are scheduled into phase 3 step 12 (`../tasks/builtin-instruments.md`), where the master becomes the Katalyst at
+> the output position and the two swaps become one mechanism, converted once.
+
 ## 1. The shape
 
 Every effect that has a lifecycle (off, active, draining, fading out, crossfading) owns ONE
@@ -204,7 +209,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 | `ResonatorBank` | RETIRED 2026-09-20 with the morph it was written for. 5c-10 gave the bank a morph and no state; the maintainer listened and rejected it (travelling resonances are an audible sweep), so `morphTo`, the capacity preallocation, `BaseSvf.retune` and `resetState` are gone and the bank is a plain parallel bank again. The output crossfade carries every material change | nothing: the bank has no lifecycle of its own |
 | `KatalystPhaserEffect`, `KatalystDuckEffect` | DONE 2026-09-20 (Katalyst 5c-9) WITHOUT state classes: the phaser's situations are `KnobGlide`'s snap flag, countdown and rest plus `Phaser`'s own `engaged` latch next to the cascade it guards; the duck's Off is `ducking` being null, the field `Cylinders` already reads through `duckCylinderId`. The four questions are answered in each KDoc, each pinned by a row | had no fades of their own |
 | `Cylinder` chain swap | Idle, Pending, Fading, Draining | five fields (`outgoing`, `draining`, `duckingOut`, `duckFadingIn`, `pendingKey`) |
-| voice strips (phase 3 of the signal-flow plan) | per strip, same shape | build-time gate plus per-block guards |
+| voice strips (phase 3 of the signal-flow plan; the strip retired 2026-09-27, every voice is its Ignitor tree) | void since the strip retired (2026-09-27); a tree node's lifecycle is its own design question, not decided here | build-time gate plus per-block guards |
 
 The master bus chain swap already shares `Crossfade` with the cylinder and follows when the
 cylinder's `SwapState` proves out.

@@ -26,8 +26,9 @@
 The release-defining set, regardless of when they're sequenced:
 
 - ✅ **Master / loudness stage** (Act 1) — **DONE 2026-08-03.** The point of the whole backend rework.
-- **Pipeline DSL finish** (Act 1) — nail the engine's authoring surface.
-- **Katalyst DSL** — per-orbit effect authoring, counterpart to the Ignitor/Pipeline DSLs.
+- ~~**Pipeline DSL finish** (Act 1)~~: closed 2026-09-27: the Pipeline DSL retired in phase 3 step 9; an instrument's
+  voice chain is `.classic()` on the Ignitor DSL.
+- **Katalyst DSL**: per-orbit effect authoring, counterpart to the Ignitor DSL.
   ⚠️ Q3 sequences Katalyzers in the *lower* track, but it's flagged **must-have** — it likely belongs
   up with the Act-1 engine-authoring DSLs. **Ordering to confirm.**
 - **Fix the current tutorial set + through-line** (Act 2) — the core of the tutorial quarter.
@@ -47,12 +48,13 @@ The release-defining set, regardless of when they're sequenced:
    fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
    `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md); loose ends in [
    `master-dsl-followups.md`](master-dsl-followups.md).
-2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🟡
+2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
+   (every voice is an Ignitor tree); archived as [`20260927-engine-tuning-profile.md`](../tasks-archive/2026-09/20260927-engine-tuning-profile.md). Was:
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
 3. **MUST** · **Katalyst DSL** — [`katalyst-dsl.md`](katalyst-dsl.md) 🔴 *(effects shipped; authoring surface not)*
-   Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
+   Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
    engine-authoring item. → wants its own task doc.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full

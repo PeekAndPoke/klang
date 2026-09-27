@@ -64,6 +64,12 @@ authored value visible in the DSL.
 
 ## 3. An `.adsrOff()` voice can refuse to end
 
+> **2026-09-27:** the `Vca` stage and the strip below retired in phase 3 step 9. `.adsrOff()` now switches
+> `classic()`'s envelope off (the slot `adsr.on`); the off envelope still reports its release as the voice's tail,
+> and for a tree with no envelope of its own the teardown fade (`VCA_OFF_TEARDOWN_FADE_SECONDS`) ends the voice
+> (the full rule: `BuiltIgnitor.endsInEnvelope`). The finding holds; the sketched
+> knob needs a new home (the `Vca` stage and `PipelineDsl.kt` named below are gone).
+
 `Vca(on = false)` renders a unity gate, so amplitude is entirely the ignitor's business. That is the
 point, and for anything with its own envelope or physics it ends on its own. **A plain sine or a
 self-oscillating filter never falls silent**, and nothing upstream will stop it: voice lifetime is

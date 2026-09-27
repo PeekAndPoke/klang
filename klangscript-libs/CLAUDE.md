@@ -1,7 +1,7 @@
 # KlangScript Libs — Dispatcher
 
 The KlangScript **standard library**: everything a script sees under `import * from "stdlib"`.
-`Osc`, `Master`, `Pipeline`, `Stage`, `OscSlot`, `Math`, `Object`, `console`, and the
+`Osc`, `Master`, `Katalyst`, `OscSlot`, `Math`, `Object`, `console`, and the
 String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
@@ -21,8 +21,8 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangScriptOscSlot.kt` / `KlangScriptClassicSlots.kt` | `OscSlot` and its slot groups (`OscSlot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
 | `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt` | `Master(m => ...)` (`invoke`), `Master.build`, `Master.default`               |
 | `src/commonMain/kotlin/stdlib/MasterBuilders.kt` | `MasterBuilder` (gain, limiter, reverb, delay) and the one stage builder (`MasterDelayBuilder`, `cap`) |
-| `src/commonMain/kotlin/stdlib/KlangScriptPipeline.kt` | `Pipeline(p => ...)` (`invoke`), `Pipeline.build`, `Pipeline.modern` |
-| `src/commonMain/kotlin/stdlib/PipelineBuilders.kt` | `PipelineBuilder` (stage knobs append; `tuneVca`/`tuneFilter` configure existing stages) and the two stage builders |
+| `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (`invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param` |
+| `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one orbit stage, in written order) and its stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
 | `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape, skew, phase) |

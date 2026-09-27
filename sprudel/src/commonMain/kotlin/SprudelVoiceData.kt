@@ -65,7 +65,8 @@ data class SprudelVoiceData(
     var soundIndex: Int?,
 
     /**
-     * Oscillator parameters (generic slots: "density", "voices", "spread", "panSpread", "onepole" [Hz]).
+     * Voice slots: `classic()`'s door slots (with the flat "onepole" [Hz]), the sample's "begin"/"end"/"speed"/"loop",
+     * the oscillators' own ("density", "voices", "spread") and raw `oscp()` writes. "panSpread" is written, unread.
      *
      * **Mutable and single-owner, like the `Svd*` groups**, not immutable-replace: a door writes one
      * name in place ([putOscParam]) instead of allocating a fresh bag per slot, which is what keeps a

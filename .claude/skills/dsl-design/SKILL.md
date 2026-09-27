@@ -5,8 +5,8 @@ description: Use when someone asks to design a DSL surface, add a DSL door or kn
 
 ## What This Skill Does
 
-Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), MasterDsl, PipelineDsl,
-sprudel patterns, the future Katalyst DSL, and any DSL still to come. Apply these rules whenever
+Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), MasterDsl, KatalystDsl,
+sprudel patterns, and any DSL still to come. Apply these rules whenever
 you add, change, or review a DSL surface, on either door (KlangScript stdlib or Kotlin).
 
 This is a reference skill. It changes how you judge a design; it does not run a workflow.
@@ -19,7 +19,7 @@ Companion skills: `/klangaudio-knowhow` (the engine the DSLs drive), `/klangscri
 ## 1. Everything is immutable at construction time
 
 Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders, `MasterDsl`,
-`PipelineDsl`, patterns. A "mutating" operation returns a NEW instance with the updated values and
+`KatalystDsl`, patterns. A "mutating" operation returns a NEW instance with the updated values and
 leaves the receiver untouched.
 
 ```javascript
@@ -95,10 +95,10 @@ master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size
 - `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
   lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
   `eq()` with no bands is a transparent stage, not an error). The one historical exception,
-  `tuneVca(configure)` on a pipeline preset, retires with the Pipeline DSL in phase 3.
+  `tuneVca(configure)` on a pipeline preset, retired with the Pipeline DSL (phase 3 step 9, 2026-09-27).
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
-- Callable objects (`Master(...)`, `Pipeline(...)`) go through the `invoke` operator
+- Callable objects (`Master(...)`, `Katalyst(...)`) go through the `invoke` operator
   (`docs/tasks/klangscript-native-object-operators.md`), aliased to a method form
   (`Master.build(...)`, `Master()` == `Master.default()`) so both can be tested against each other.
 - No sub-type methods on the node types. The pre-2026-09 "config first, base wrappers last" chain
@@ -217,8 +217,8 @@ the bug.
 ## 5. One word per concept, end to end
 
 A concept carries ONE name across the KlangScript object, the `*Dsl` type, the sprudel carrier,
-the wire, and the backend registry/runtime. The Pipeline rename is the model:
-`Pipeline` object, `PipelineDsl`, `.pipeline()`, `PipelineRegistry`, no split.
+the wire, and the backend registry/runtime. The Katalyst is the model:
+`Katalyst` object, `KatalystDsl`, `.katalyst()`, `KatalystRegistry`, no split.
 
 Known debt, capture-only, not scheduled: the script object is `Osc` but the type is `IgnitorDsl`
 and the runtime is the Ignitor. When unifying, pick one word and carry it everywhere.
@@ -255,7 +255,7 @@ New wire-visible distinctions start as sealed `@WireName` hierarchies, not enums
 
 **Why:** variants carry exactly their own params; name-addressed variants have no ordinal
 append-only hazard (the KSP schema hash does not cover enum entries); exhaustive `when` over the
-sealed type makes every consumer arm compiler-checked. Precedents: `FilterDefs`, `MasterStageDsl`,
+sealed type makes every consumer arm compiler-checked. Precedents: `AdsrDef`, `MasterStageDsl`,
 `EqSection`. An enum is acceptable only for a genuinely closed, param-less set (`AdsrCurve`).
 
 ---

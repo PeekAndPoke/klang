@@ -17,8 +17,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * and passed directly to `.sound()`:
  *
  * ```
- * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)
- * note("c3 e3 g3").sound(pad)
+ * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5).classic()
+ * note("c3 e3 g3").sound(pad).adsrOff()
  * ```
  *
  * The playback denormalizes inline ignitor references at the wire boundary via the
@@ -463,7 +463,7 @@ object KlangScriptOsc {
      * axis can drive correlated changes throughout the tree.
      *
      * ```
-     * let combined = Osc.variants(Osc.sine(), Osc.saw())
+     * let combined = Osc.variants(Osc.sine(), Osc.saw()).classic()
      * note("a b c:1 d:1").sound(combined)   // a/b → sine, c:1/d:1 → saw
      * ```
      *

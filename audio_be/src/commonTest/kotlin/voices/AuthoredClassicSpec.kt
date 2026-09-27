@@ -32,8 +32,10 @@ import kotlin.random.Random
  * **An AUTHORED instrument on `classic()`** (phase 3 step 10, `docs/tasks/builtin-instruments.md`), on trees a bare
  * saw cannot stand for (an instrument with its OWN envelope):
  *
- *  - the doors reach it, and `adsrOff` ends it on the teardown fade (also for an own root envelope whose release
- *    is modulated, which cannot promise to reach zero by the voice's end);
+ *  - the doors reach it, and with `adsrOff` the switched-off envelope hands on its inner's answer: an own
+ *    static-release envelope with nothing built over it (no own stage after it, no written `classic()` stage) ends
+ *    the voice, anything else gets the teardown fade (also an own envelope whose release is modulated, which cannot
+ *    promise to reach zero by the voice's end); the one home of the rule is `BuiltIgnitor.endsInEnvelope`;
  *  - `classic()`'s envelope releases over its own slot, so an instrument's longer own tail is CUT there, while the
  *    voice still LIVES as long as the tree's tail. The strip stretched its release to the tail (the envelope
  *    ownership fix of 2026-08-27); the maintainer's decision (2026-09-26, F1): no engine stretch, a song writes

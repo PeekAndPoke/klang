@@ -56,15 +56,17 @@ let koto = Osc.pluck()
   .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
   .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
   .highpass(200)
+  .classic()
 
 let kick = Osc.sine()
   .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
   .adsr(0.001, 0.2, 0.0, 0.02)
+  .classic()
 
 stack(
   note("a4 b4 c5 b4 a4 [b4 a4] f4@2").sound(koto)
     .legato(0.8).slow(4),
-  note("a1 ~ ~ ~").sound(kick).gain(0.8),
+  note("a1 ~ ~ ~").sound(kick).adsrOff().gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
 ).reverb(wet = 0.2, size = 5)
@@ -187,7 +189,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
+> | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; there is no per-voice phaser), `compressor`, ducking |
 > | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
 > | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Master(m => m...))` with the stage doors `gain(gain)` (make-up level), `limiter(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, each appending a stage |
 
@@ -373,8 +375,8 @@ at the cutoff). Same third slot on the ignitor door.
 | `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).reverb(size = delay.time.mul(20))`     |
 | `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
 | `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
-| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor; readers `crush.amount`, `crush.oversample`                                                                                   | `s("hh").crush(8)`                                           |
-| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor; readers `coarse.amount`, `coarse.oversample`                                                                    | `note("c3").s("saw").coarse(3)`                              |
+| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `crush.amount`, `crush.oversample` | `s("hh").crush(8)`                                           |
+| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.amount`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
 | `phaser(wet, rate, center, sweep, floor)`                                   |          | Phaser: wet FIRST (additive by default), then the LFO rate in Hz, center Hz, sweep range Hz, floor. A bare `phaser()` reads the pattern's values as `wet` | `note("c3").phaser(wet = 0.5, rate = 1, center = 1000)`      |
 | `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
 | `tremolo(depth, sync, shape, skew, phase)`                                  |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name, skew, phase                                                                               | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |

@@ -36,7 +36,7 @@ AUDIO BACKEND (audio thread)
   │
   └─ Every block (128–256 frames):
        VoiceScheduler.processBlock()
-         ├─ Activate due voices → SynthVoice or SampleVoice
+         ├─ Activate due voices → a Voice running its Ignitor tree
          │    (requests MonoSamplePcm from audio_fe if needed)
          ├─ Call voice.render(ctx) for each active voice
          │    └─ Voice writes into ctx.voiceBuffer (FloatArray)
@@ -64,12 +64,13 @@ Each `PlaybackEngine` owns its **entire render state**:
 
 - its own `VoiceScheduler` (the scheduled min-heap + the active-voice list),
 - its own `Cylinders` (the 16 orbits and their effects),
-- its own ignitor / pipeline **forks** — custom `Osc`/`pipeline` registered for that playback live
-  here, not on the shared parent, so they die with the engine.
+- its own **forks** of the ignitor, Katalyst and Master registries: the inline instruments and chains
+  registered for that playback live there, not on the shared parents, so they die with the engine (the
+  pipeline fork retired with the Pipeline DSL, phase 3 step 9).
 
 **Shared across engines** (not per-playback): the `SampleStore`, the backend clock
-(`AudioBackendContext` / `BackendClock`), and the ignitor/pipeline **parent** registries (forks
-inherit the built-ins from these).
+(`AudioBackendContext` / `BackendClock`), and the ignitor, Katalyst and Master **parent**
+registries (the forks inherit the built-ins from them).
 
 **Why**: with a single global cylinder pool, two playbacks using the same orbit id would collide
 (last-writer-wins). Per-engine isolation fixes that — two playbacks on orbit 0 get independent

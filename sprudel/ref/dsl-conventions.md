@@ -55,8 +55,8 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   (outer join with a custom combiner). **`_innerJoin` support is mandatory for any function
   accepting control patterns** — static values work without it, control patterns silently break.
 - **Literal (non-patternable) arguments must NOT go through the lift helpers** — those parse
-  strings as mini-notation. Use `reinterpretVoice { }` instead (precedents: `pipeline(dsl)` in
-  `lang_pipeline.kt`, `tag(name)` in `lang_structural_tag.kt`).
+  strings as mini-notation. Use `reinterpretVoice { }` instead (precedents: `master(dsl)` in
+  `lang_master.kt`, `tag(name)` in `lang_structural_tag.kt`).
 
 ## Field accessors and mapper arguments (2026-09-06, pilot: `freq`)
 
