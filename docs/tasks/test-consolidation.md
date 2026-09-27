@@ -1,8 +1,8 @@
 # Test consolidation after the engine redesign
 
 Status: **open, audited 2026-09-27.** A sub-task of phase 3 (`builtin-instruments.md`, row "test
-consolidation"). The audit is done; the cuts wait for the maintainer's go and the decisions in
-section 4. Evidence, row by row: `test-consolidation-audit-A-effects.md`,
+consolidation"). The audit is done; the maintainer's decisions are in section 4; the cuts start
+after phase 3 step 12 C3. Evidence, row by row: `test-consolidation-audit-A-effects.md`,
 `test-consolidation-audit-B-voices.md`, `test-consolidation-audit-C-hosts-doors.md`.
 
 ## 1. The principle (maintainer, 2026-09-27)
@@ -79,20 +79,24 @@ no sound change), a second role only where production code moves.
    network, an oracle for the doors' drive and shape distortion (three songs' guitars), a core for
    coarse, a direct `DcBlocker` spec. Until they exist, the host rows that are the only guard stay.
 
-## 4. Decisions for the maintainer
+## 4. Decisions (maintainer, 2026-09-27)
 
-- **`GuitarClickHuntTest`**: the lane A audit proposes deleting it (7 rows, 707 lines, no assertion);
-  the parked decision in `docs/tasks/future/audit-parked-decisions.md` section 1 keeps it as the
-  standing click harness but takes it out of the default run (it is 78 % of the audio_be suite's
-  runtime). Delete, or tag it out of the default run.
-- **`MutableVoiceDataGoldenSpec`** and its 2.7 MB golden: built for a refactor archived in June,
-  regenerated in 18 commits since, its KDoc points at a deleted path; it still guards aliasing. Rebrand
-  it as the wire regression guard, or replace it with targeted rows.
-- **The baselines**: trim now and retire at the phase 3 end checkpoint (recommended), or keep them whole
-  until then.
-- **Test-only production code**: `OnePoleLPF` / `OnePoleHPF` (KDoc: test and benchmark only since
-  2026-08-24; the benchmark uses them) and the live `onePoleHighpass` Ignitor (no door, no caller, no
-  test). Retire them with their rows, or keep.
+- **`GuitarClickHuntTest`: tagged out of the default run.** It stays as the standing click-hunt harness
+  (the parked decision in `docs/tasks/future/audit-parked-decisions.md` section 1), behind a Kotest tag
+  or a dedicated task, so every suite run and mutation campaign drops its 5.4 s.
+- **`MutableVoiceDataGoldenSpec`: replaced by targeted rows.** A few focused rows for what it really
+  guards (no aliasing between events, the wire mapping of each field group); the 2.7 MB golden goes.
+- **The baselines: trimmed now, retired or regenerated at the phase 3 end listening checkpoint.**
+  `BuiltInVoiceMatrixSpec` to `untouched` plus one configured variant per name,
+  `ClassicVoiceBaselineSpec` 61 to 28 configs.
+- **The one-poles.** `OnePoleLPF` and `OnePoleHPF` in `filters/LowPassHighPassFilters.kt` are a second
+  copy of the math the live Ignitor nodes carry (`OnePoleLowpassIgnitor`, `OnePoleHighpassIgnitor` in
+  `ignitor/IgnitorFilters.kt`, same coefficients and topology): they go, with their rows, and the
+  benchmark measures the live nodes instead. No capability is lost. The live `onePoleHighpass` node
+  STAYS: it is a real primitive (6 dB/oct) that nothing else expresses (the SVF highpass is 12 dB/oct
+  per pass; `x - onepole(x)` needs the source twice, which breaks for noise and analog drift, and has the
+  Nyquist droop the canonical topology was chosen to avoid). What it lacks is a door: follow-up task
+  `docs/tasks/future/onepole-highpass-door.md`.
 
 ## 5. Guards that stay, whatever the cut
 
