@@ -3,8 +3,8 @@
 > **RETIRED 2026-09-27 (maintainer).** Where each topic went:
 > 1. Bus-level configuration: covered by `docs/tasks/katalyst-dsl.md` and `docs/plans/signal-flow-redesign.md`.
 > 2. Master configuration: the master surface shipped (`../2026-08/20260803-master-dsl.md`, follow-ups in
->    `docs/tasks/master-dsl-followups.md`). The analog saturation half was not carried; its plan stays in
->    `../2026-03/20260323-klang-audio-master-configuration.md`.
+>    `docs/tasks/master-dsl-followups.md`). The analog saturation half is `docs/tasks/future/idea-master-saturation.md` (2026-09-27); its March plan
+>    stays in `../2026-03/20260323-klang-audio-master-configuration.md`.
 > 3. New oscillators: `docs/tasks/future/new-oscillators.md`.
 > 4. Flanger and chorus: `docs/tasks/future/flanger-chorus.md`.
 > 5. Oversampler quality: folded into `docs/tasks/oversampling-regions.md` §6.
