@@ -88,6 +88,10 @@ no sound change), a second role only where production code moves.
   or a dedicated task, so every suite run and mutation campaign drops its 5.4 s.
 - **`MutableVoiceDataGoldenSpec`: replaced by targeted rows.** A few focused rows for what it really
   guards (no aliasing between events, the wire mapping of each field group); the 2.7 MB golden goes.
+  Done 2026-09-28: `VoiceDataAliasingSpec` (by identity, no two events of a query share data, an `Svd*` group or a
+  bag, over the leaf emitters, the fan-outs and both merge paths) and ownership plus wire rows in
+  `SprudelVoiceDataSpec` (fm, solo, sourceId, the per-call sourceId stamp). Of 15 aliasing and wire mutants the new
+  rows kill all 15; the golden killed 5 (it never saw a merge helper, a clone that shares a group, fm or solo).
 - **The baselines: trimmed now, retired or regenerated at the phase 3 end listening checkpoint.**
   `BuiltInVoiceMatrixSpec` to `untouched` plus one configured variant per name,
   `ClassicVoiceBaselineSpec` 61 to 28 configs.
@@ -223,6 +227,38 @@ Format: spec and row; what it asserts; what might cover it; why unclear.
    rows to a subset). `CatalogueIndexSpec` pins the index table but not the band count or the formants beyond one
    anchor, so the rows became ONE loop row (the index the door writes, and 5 bands per bank) instead of going.
    Unclear whether a band-count check per name is worth a loop at all.
+
+**From commit 4** (all kept):
+
+Format: spec and row; what it asserts; what might cover it; why unclear.
+
+1. `cylinders/katalyst/KatalystGainEffectSpec` "the glide bounds the step at the change, where a one-block ramp and a
+   snap would not" and "a new target mid-glide turns from where the fader stands, never from where the old glide was
+   going" (audit A 2.11: cut).
+   - Assert: the fader's step at a change is bounded by the LEVEL glide; a retarget mid-glide starts from the current value.
+   - Might be covered by: `KnobGlideSpec` "LEVEL: ramps per sample along the straight line" and "a new target
+     mid-glide restarts from the current value", plus the kept full-range row (the fader uses the LEVEL mode).
+   - Unclear because: `audio/MEMORY.md` names both as mutation-checked guards of the fader ("the step bound, a retarget
+     mid-glide turning from where the fader stands"); section 5 keeps named guards. The maintainer decides whether the
+     MEMORY guard line moves to KnobGlideSpec and the rows go.
+
+2. `cylinders/katalyst/KatalystCompressorLookaheadSpec` "the lookahead is what holds the ceiling on a transient, on an
+   orbit" (audit A 2.7: cut, moderate confidence).
+   - Asserts: an authored limiter stage with a 5 ms lookahead lets no sample of a +12 dB kick past 1.0; without the
+     lookahead some do (the control).
+   - Might be covered by: `master/LimiterLookaheadSpec` "the limiter holds the ceiling on a transient" plus this spec's
+     "the limiter stage is the Compressor its constructor builds from the same numbers, bit for bit".
+   - Unclear because: LimiterLookaheadSpec runs the HOUSE limiter (`HOUSE_LIMITER_ATTACK_SECONDS`, the house lookahead),
+     this row the AUTHORED limiter (`AUTHORED_LIMITER_ATTACK_SECONDS`, 5 ms): the ceiling is not proven for this
+     configuration anywhere else. Written in step 12 C2, the day before.
+
+3. `ignitor/IgnitorCombinatorsSpec` "crush(amount) - output is quantized (fewer unique values than input)" (audit A 2.3:
+   cut, weak list).
+   - Asserts: `Ignitor.crush(3.0)` has fewer unique values than its input.
+   - Might be covered by: `StripLawCoresSpec` FLOOR oracle rows (through `crush(Ignitor)`).
+   - Unclear because: the same case as 4b item 3 (commit 1): this row is the only test caller of the runtime
+     `Ignitor.crush(Double)` convenience overload, which has its own `amount < 1.0` short-circuit (the only other test
+     use, `SharedScratchSpec`, calls the DSL `IgnitorDsl.crush`). Belongs with item 3's decision.
 
 ## 5. Guards that stay, whatever the cut
 

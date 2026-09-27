@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.beLessThanOrEqualTo
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -56,7 +57,7 @@ class ShapingFuncsBoundsSpec : StringSpec({
         Shape("softCap", 1e-12) { ShapingFuncs.softCap(it) },
     )
 
-    "every shape is finite and bounded by 1.0 for finite input" {
+    "every shape is finite and bounded by 1.0 for finite input, and every distortion shape by its rail" {
         for (shape in shapes) {
             for (x in allInputs) {
                 val y = shape.fn(x)
@@ -64,6 +65,21 @@ class ShapingFuncsBoundsSpec : StringSpec({
                 withClue("${shape.name} x=$x -> y=$y") {
                     y.isFinite() shouldBe true
                     abs(y) should beLessThanOrEqualTo(1.0 + 1e-9)
+                }
+            }
+        }
+
+        // ...and so is every shape a distortion NAME selects, as the distort node applies it: the enum maps to
+        // a bounded function (gentle is softClip doubled, so its rail is 2).
+        for (shape in DistortionShape.entries) {
+            val bound = if (shape == DistortionShape.GENTLE) 2.0 else 1.0
+
+            for (x in allInputs) {
+                val y = applyDistortionShape(shape, x)
+
+                withClue("DistortionShape.$shape x=$x -> y=$y") {
+                    y.isFinite() shouldBe true
+                    abs(y) should beLessThanOrEqualTo(bound + 1e-9)
                 }
             }
         }
@@ -124,7 +140,7 @@ class ShapingFuncsBoundsSpec : StringSpec({
         }
     }
 
-    "fixed points and identity regions" {
+    "fixed points, identity regions and landmark values" {
         // linearFold is the identity in [-1, 1], softCap below its 0.95 threshold.
         for (x in listOf(-1.0, -0.95, -0.5, -0.1, 0.0, 0.1, 0.5, 0.95, 1.0)) {
             withClue("linearFold @ x=$x") { ShapingFuncs.linearFold(x) shouldBe (x plusOrMinus 1e-12) }
@@ -145,6 +161,21 @@ class ShapingFuncsBoundsSpec : StringSpec({
         // stompBox is continuous at zero, from both sides.
         withClue("stompBox(-1e-9)") { ShapingFuncs.stompBox(-1e-9) shouldBe (0.0 plusOrMinus 1e-7) }
         withClue("stompBox(+1e-9)") { ShapingFuncs.stompBox(1e-9) shouldBe (0.0 plusOrMinus 1e-7) }
+
+        // Landmarks of the distortion shapers: the bounds rows above cannot tell a shaper that reaches its rail
+        // from one that stops short of it, or an identity region from a gentle curve.
+        withClue("fastTanh(0)") { ShapingFuncs.fastTanh(0.0) shouldBe 0.0 }
+        withClue("fastTanh saturates at +1") { ShapingFuncs.fastTanh(100.0) shouldBe (1.0 plusOrMinus 0.01) }
+        withClue("fastTanh saturates at -1") { ShapingFuncs.fastTanh(-100.0) shouldBe (-1.0 plusOrMinus 0.01) }
+        withClue("hardClip is the identity in range") { ShapingFuncs.hardClip(0.5) shouldBe 0.5 }
+        withClue("hardClip(2) is the rail") { ShapingFuncs.hardClip(2.0) shouldBe 1.0 }
+        withClue("hardClip(-2) is the rail") { ShapingFuncs.hardClip(-2.0) shouldBe -1.0 }
+        withClue("cubicClip(0)") { ShapingFuncs.cubicClip(0.0) shouldBe 0.0 }
+        withClue("cubicClip keeps the sign") { (ShapingFuncs.cubicClip(0.5) > 0.0) shouldBe true }
+        withClue("diodeClip passes the positive side") { (ShapingFuncs.diodeClip(1.0) > 0.0) shouldBe true }
+        withClue("sineFold(0)") { ShapingFuncs.sineFold(0.0) shouldBe (0.0 plusOrMinus 0.001) }
+        withClue("sineFold(pi/2) is the peak") { ShapingFuncs.sineFold(PI / 2.0) shouldBe (1.0 plusOrMinus 0.001) }
+        withClue("sineFold(pi) folds back to 0") { ShapingFuncs.sineFold(PI) shouldBe (0.0 plusOrMinus 0.001) }
     }
 
     "softCap is value- and slope-continuous at its threshold" {

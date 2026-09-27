@@ -82,31 +82,21 @@ class PassesCascadeSpec : StringSpec({
         butterworthQLadder(1_000_000, 0.707).size shouldBe FILTER_MAX_PASSES
     }
 
-    "ignitor door: the runtime folds passes into a cascade — one octave up loses ~12 dB more" {
-        // Authored tree straight through toExciter (no optimizer): sine at 2 kHz through a
-        // 1 kHz lowpass; passes = 2 must attenuate ~12 dB more than passes = 1. Kills a
-        // dropped cascade fold in IgnitorDslRuntime.
-        db(rmsIgnitorLp(2, 2000.0) / rmsIgnitorLp(1, 2000.0)) shouldBe (-11.8 plusOrMinus 1.5)
-    }
-
-    "ignitor door, AT fc: the STAGGER survives — passes = 2 is the same -3 dB as passes = 1" {
-        // The discriminating row for the C5 decision, on the door that had none: at fc a
-        // staggered pair multiplies to 0.5412*1.3065 = 0.707 (-3.01 dB), a plain q-per-stage
-        // pair to 0.707^2 = 0.5 (-6.02 dB). Dropping `.scaledBy(rel[k])` in IgnitorDslRuntime
-        // reads -3.0 here; the octave-above rows above cannot tell the two apart.
-        db(rmsIgnitorLp(2, 1000.0) / rmsIgnitorLp(1, 1000.0)) shouldBe (0.0 plusOrMinus 0.4)
-    }
-
-    "ignitor door, HIGHPASS: cascade slope one octave below fc, and the stagger AT fc" {
-        db(rmsIgnitorHp(2, 500.0) / rmsIgnitorHp(1, 500.0)) shouldBe (-11.8 plusOrMinus 1.5)
-        db(rmsIgnitorHp(2, 1000.0) / rmsIgnitorHp(1, 1000.0)) shouldBe (0.0 plusOrMinus 0.4)
-    }
-
     // The absolute C5 laws, on the tree's door (phase 3 step 9, commit a2: the strip's cascade class that held them
-    // retired). The dry sine through the same harness is the reference.
+    // retired). The dry sine through the same harness is the reference. The absolute rows also pin what the
+    // relative ones (passes = 2 against passes = 1) used to: a dropped cascade fold reads -12 where -24 is due.
 
-    "STAGGERED q on the ignitor door: the passes = 2 cascade is still ~-3 dB AT the cutoff (the C5 decision)" {
-        db(rmsIgnitorLp(2, 1000.0) / rmsIgnitor(IgnitorDsl.Sine(), 1000.0)) shouldBe (-3.0 plusOrMinus 0.5)
+    "STAGGERED q on the ignitor door: passes = 1 and the passes = 2 cascade are both ~-3 dB AT the cutoff, lowpass and highpass (the C5 decision)" {
+        // The discriminating row for the C5 decision: at fc a staggered pair multiplies to
+        // 0.5412 * 1.3065 = 0.707 (-3.01 dB), a plain q-per-stage pair to 0.707^2 = 0.5 (-6.02 dB).
+        // Dropping `.scaledBy(rel[k])` in IgnitorDslRuntime reads -6 here; the lowpass and the
+        // highpass arm each have their own cascade fold, so both are pinned.
+        val dry = rmsIgnitor(IgnitorDsl.Sine(), 1000.0)
+
+        db(rmsIgnitorLp(1, 1000.0) / dry) shouldBe (-3.0 plusOrMinus 0.5)
+        db(rmsIgnitorLp(2, 1000.0) / dry) shouldBe (-3.0 plusOrMinus 0.5)
+        db(rmsIgnitorHp(1, 1000.0) / dry) shouldBe (-3.0 plusOrMinus 0.5)
+        db(rmsIgnitorHp(2, 1000.0) / dry) shouldBe (-3.0 plusOrMinus 0.5)
     }
 
     "slope on the ignitor door: passes = 2 measures ~-24 dB one octave above fc, passes = 1 ~-12 (lowpass)" {

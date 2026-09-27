@@ -8,18 +8,15 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.parseDistortionShape
-import io.peekandpoke.klang.audio_bridge.DistortionShapes
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.shape
 import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * Modulation/waveshaper class guards (block-framing ledger W1-W3, W5): the coarse hold grid is
- * note-anchored and survives window boundaries and amount crossings; the tremolo LFO is a
- * clock; the fused Distort node (classic()'s distort stage, the strip's law since step 4) renders
- * the runtime `fusedDistort` (`DistortionCore`), not the doors' Drive+Shape chain.
+ * Modulation class guards (block-framing ledger W1-W3): the coarse hold grid is note-anchored and
+ * survives window boundaries and amount crossings; the tremolo LFO is a clock. W5's row (the fused
+ * Distort node renders the runtime `fusedDistort`, not the doors' Drive+Shape chain) is
+ * `WaveshaperKnobsSpec`'s "the Distort node reads its shape and factor ..." row; W5's hazard is
+ * `StripLawCoresSpec`'s continuity row.
  */
 class ModulationClockSpec : StringSpec({
 
@@ -229,37 +226,6 @@ class ModulationClockSpec : StringSpec({
             }
         }
         varies shouldBe true
-    }
-
-    "W5 superseded by D2: the Distort node is the strip's law, no longer the Drive+Shape chain" {
-        // CHANGED in phase 3 step 4. This row used to be W5's MAPPING guard: the node built as the
-        // doors' `Drive` + `Shape` chain, bit-exactly, and re-fusing it "with the gain inside the
-        // oversampled loop" was the mutation it caught. Decision D2 (option A, 2026-09-25) asks for
-        // exactly that re-fusion: the node renders the voice strip's loop (DistortionCore). So the row
-        // now pins the DSL node against the runtime `fusedDistort` bit for bit (it was the strip's
-        // `DistortionRenderer` until the strip retired in step 9; the law's oracle is
-        // `StripLawCoresSpec`'s), and against the chain as DIFFERENT (the soft cap and the drive's place
-        // relative to the oversampler). W5's hazard (a per-block bypass) is `StripLawCoresSpec`'s
-        // continuity row.
-        val source = IgnitorDsl.Sine().buildExciter(random = Random(3), freqHz = 220.0).ignitor
-
-        fun render(dsl: IgnitorDsl): DoubleArray {
-            val ignitor = dsl.buildExciter(random = Random(3), freqHz = 220.0).ignitor
-            return renderSegments(ignitor, List(4) { blockFrames })
-        }
-
-        val fused = render(
-            IgnitorDsl.Distort(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5), shape = IgnitorDsl.Constant(DistortionShapes.indexOf("soft")), oversample = IgnitorDsl.Constant(2.0))
-        )
-        val modern = render(
-            IgnitorDsl.Drive(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5)).shape("soft", oversample = 2)
-        )
-
-        val runtime = renderSegments(source.fusedDistort(ConstantIgnitor(0.5), parseDistortionShape("soft"), 1), List(4) { blockFrames })
-
-        fused.any { it != 0.0 } shouldBe true
-        fused.map { it.toRawBits() } shouldBe runtime.map { it.toRawBits() }
-        (maxDiff(fused, modern) > 0.0) shouldBe true
     }
 })
 

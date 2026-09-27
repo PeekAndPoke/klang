@@ -373,23 +373,6 @@ class KatalystEqEffectSpec : StringSpec({
         }
     }
 
-    "a bell at 0 dB is bit-transparent, through the core's explicit passthrough" {
-        val data = noise(4 * blockFrames)
-        val chain = chainOf(
-            KatalystStageDsl.Eq(sections = listOf(IgnitorDsl.EqSection.Bell(freq = c(300.0), q = c(0.8), db = c(0.0))))
-        )
-
-        val out = throughOrbit(chain, data)
-
-        for (i in data.indices) {
-            withClue("frame $i") {
-                // Raw bits: the explicit branch is what keeps a -0.0 sample negative, where the
-                // algebraic `v0 + 0 * v1` would flip it.
-                out[i].toRawBits() shouldBe data[i].toRawBits()
-            }
-        }
-    }
-
     // ── A curve change does not click ────────────────────────────────────────────────────────────
 
     "a re-resolve that moves a coefficient crossfades: no step anywhere in the window" {

@@ -334,24 +334,6 @@ class EqIgnitorSpec : StringSpec({
         }
     }
 
-    "guitar serial tail: chained DSL is bit-equal to the fused Eq DSL" {
-        val chained = IgnitorDsl.Sawtooth()
-            .notch(210.0, 2.5)
-            .highpass(440.0, 0.707)
-            .lowpass(5300.0, 0.707)
-            .lowpass(5300.0, 0.707)
-        val fused = IgnitorDsl.Eq(
-            inner = IgnitorDsl.Sawtooth(),
-            sections = listOf(
-                EqSection.Notch(c(210.0), c(2.5)),
-                EqSection.Highpass(c(440.0), c(0.707)),
-                EqSection.Lowpass(c(5300.0), c(0.707)),
-                EqSection.Lowpass(c(5300.0), c(0.707)),
-            ),
-        )
-        assertDslParity(chained, fused)
-    }
-
     "tracking highpass: Freq-backed cutoff stays bit-equal ACROSS voice frequencies" {
         // The reason EqIgnitor exists as the ignitor-surface adapter: a `Freq`-backed param
         // must re-resolve per voice frequency (and per block) — the static-cache predicate

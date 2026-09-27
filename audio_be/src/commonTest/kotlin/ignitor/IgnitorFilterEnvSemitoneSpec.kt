@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
-import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.random.Random
@@ -19,7 +18,9 @@ import kotlin.random.Random
  * rows in `FilterEnvSemitoneSpec` until the voice strip retired, phase 3 step 9.)
  *
  * Method: with attack 0 / sustain 1 the envelope is exactly 1.0, so an env-modulated filter
- * must produce the SAME output as a static filter at `base * 2^(depth/12)`.
+ * must produce the SAME output as a static filter at `base * 2^(depth/12)`. +7 carries the law (a
+ * fractional exponent), -12 the sign; the formula itself is `SvfCoeffSweepSpec`'s, and depth 0 as
+ * the switch is `IgnitorFilterKnobsSpec`'s "env = 0 written EXPLICITLY" row.
  */
 class IgnitorFilterEnvSemitoneSpec : StringSpec({
 
@@ -80,16 +81,8 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         maxDiff shouldBeLessThan 1e-12
     }
 
-    "ignitor path: +12 semitones equals a static filter at 2x base" {
-        envEqualsStatic(+12.0, 2.0)
-    }
-
     "ignitor path: -12 semitones equals a static filter at 0.5x base" {
         envEqualsStatic(-12.0, 0.5)
-    }
-
-    "ignitor path: depth 0 equals the unmodulated filter" {
-        envEqualsStatic(0.0, 1.0)
     }
 
     "ignitor path: +7 semitones equals a static filter at 2^(7/12)x (fractional exponent)" {

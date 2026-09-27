@@ -18,7 +18,7 @@ Since `IgniteRenderer` gained `+ ctx.offset` (2026-08-27), a voice's first block
 mid-block-onset rows, and most say in a comment that this is the production shape:
 
 - `audio_be/src/commonTest/kotlin/filters/EqCoreSpec.kt:544`
-- `audio_be/src/commonTest/kotlin/ignitor/EqIgnitorSpec.kt:645-646`
+- `audio_be/src/commonTest/kotlin/ignitor/EqIgnitorSpec.kt:627-628`
 - `audio_be/src/commonTest/kotlin/ignitor/ConstantFoldParitySpec.kt:73-74`
 - `audio_be/src/commonTest/kotlin/ignitor/IgnitorDslOptimizerRenderSpec.kt:80`
 - `audio_be/src/commonTest/kotlin/ignitor/SinePartialBankSpec.kt:303` (new since the audit named

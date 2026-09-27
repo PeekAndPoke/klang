@@ -54,6 +54,9 @@ class ParallelMixFilterSpec : StringSpec({
         for (i in 0 until blockFrames) buf[i] shouldBe original[i]
     }
 
+    // The C4 law row pins the wiring: p = 2 on both coefficients (p = 1 would read 0.707 on each side)
+    // and the floor reaching the dry side. The law itself (the p = 2 amplitude invariant, the floor, the
+    // clamp of the knob to [0, 1], so an amount past 1 is exactly 1) is `WetDryMixSpec`'s.
     "ParallelMixFilter - C4 law: out = dryCoeff*dry + wetCoeff*wet (floor path)" {
         val buf = sine(440.0, blockFrames)
         val dry = AudioBuffer(blockFrames) { buf[it] }
@@ -64,32 +67,6 @@ class ParallelMixFilterSpec : StringSpec({
 
         for (i in 0 until blockFrames) {
             buf[i] shouldBe (dry[i] * 0.6 + (2.0 * dry[i]) * 0.5 plusOrMinus 1e-12)
-        }
-    }
-
-    "ParallelMixFilter - floor=0 is an amplitude-complementary crossfade (p = 2)" {
-        val buf = sine(440.0, blockFrames)
-        val dry = AudioBuffer(blockFrames) { buf[it] }
-
-        // p = 2: cos^2 + sin^2 = 1 for every w — constant amplitude for the correlated wet.
-        // At amount 0.5 both coefficients are exactly 0.5.
-        ParallelMixFilter(doubler, amount = 0.5, floor = 0.0).process(buf, 0, buf.size)
-
-        for (i in 0 until blockFrames) {
-            buf[i] shouldBe (dry[i] * 0.5 + (2.0 * dry[i]) * 0.5 plusOrMinus 1e-12)
-        }
-    }
-
-    "ParallelMixFilter - amount clamps to 1 (the raw > 1 extension is a DELETED capability)" {
-        // C4 (plan: Helper domain): the shared law lives on w in [0, 1]; past 1 the cos/sin
-        // curves would fold back, so > 1 now behaves as exactly 1. Decided in the plan, not
-        // by accident - no song ever used > 1.
-        val buf3 = sine(440.0, blockFrames)
-        val buf1 = sine(440.0, blockFrames)
-        ParallelMixFilter(doubler, amount = 3.0, floor = 0.4).process(buf3, 0, buf3.size)
-        ParallelMixFilter(doubler, amount = 1.0, floor = 0.4).process(buf1, 0, buf1.size)
-        for (i in 0 until blockFrames) {
-            buf3[i] shouldBe (buf1[i] plusOrMinus 1e-12)
         }
     }
 

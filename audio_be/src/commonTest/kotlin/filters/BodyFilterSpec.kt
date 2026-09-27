@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -51,25 +50,8 @@ class BodyFilterSpec : StringSpec({
     // The body bank is WET-ONLY (same API as lpf/formant). The dry/wet blend lives in
     // ParallelMixFilter, see ParallelMixFilterSpec. The SVF bandpass is unity-peak (its own
     // `k * v1` tap, since C2), so the body gain is the plain dB factor and `db` is the actual peak
-    // emphasis, independent of Q.
-
-    "body bank - 1/Q normalization: a db=0 mode peaks at ~unity regardless of Q" {
-        val freq = 1000.0
-        val input = sine(freq, blockFrames)
-        val inRms = rms(input)
-
-        val lowQ = AudioBuffer(blockFrames) { input[it] }
-        val highQ = AudioBuffer(blockFrames) { input[it] }
-        bodyBank(listOf(mode(freq, 0.0, 5.0))).process(lowQ, 0, lowQ.size)
-        bodyBank(listOf(mode(freq, 0.0, 50.0))).process(highQ, 0, highQ.size)
-
-        // Without 1/Q normalization a Q=50 mode would peak ~50× the input. Normalized, BOTH the
-        // Q=5 and Q=50 modes land near unity (db=0) — that's the whole point of the /Q fix.
-        rms(lowQ) shouldBeGreaterThan (inRms * 0.4)
-        rms(lowQ) shouldBeLessThan (inRms * 2.0)
-        rms(highQ) shouldBeGreaterThan (inRms * 0.4)
-        rms(highQ) shouldBeLessThan (inRms * 2.0)
-    }
+    // emphasis, independent of Q: `ResonatorBankSpec` pins the bank as the bare SvfBPF times the dB
+    // factor, `FilterNormalizationSpec` the SvfBPF's unity peak at any q.
 
     "body bank - wet-only: rejects a tone far from every mode" {
         val offBand = sine(12000.0, blockFrames) // far above every wood mode

@@ -14,9 +14,9 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 
 ---
 
-**HOLDER: none**
+**HOLDER: test consolidation, the golden replacement (implementer, sprudel)**
 **SINCE: 2026-09-28**
-**STATE: FREE**
+**STATE: HELD**
 
 ## Uncommitted in this tree
 
@@ -26,6 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
+| test consolidation, the golden replacement (implementer; coordinator commits) | `sprudel/src/jvmTest/kotlin/golden/` and `sprudel/src/jvmTest/resources/golden/` (deleted on purpose), `sprudel/src/commonTest/kotlin/SprudelVoiceDataSpec.kt`, new `sprudel/src/commonTest/kotlin/VoiceDataAliasingSpec.kt`, pointer lines in `sprudel/MEMORY.md`, `sprudel/ref/testing.md`, `docs/tasks/test-consolidation*.md` | Mutation checks touch `sprudel/src/commonMain/kotlin/SprudelVoiceData.kt`, `SvdGroups.kt`, `pattern/Atomic*Pattern.kt` briefly under the flock (backups in the scratchpad `tcg/`, restored with cp + cmp); no production change |
 
 ## The two layers
 

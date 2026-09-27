@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.round
 import kotlin.math.sin
 
@@ -165,42 +164,6 @@ class KatalystCompressorEffectSpec : StringSpec({
 
         ctx.mixBuffer.left[0] shouldBe 0.5
         ctx.mixBuffer.right[0] shouldBe 0.5
-    }
-
-    "compresses loud signal when compressor is configured" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
-        effect.configure(settings(thresholdDb = -20.0, ratio = 4.0, kneeDb = 0.0, attackSeconds = 0.0001, releaseSeconds = 0.1))
-
-        val ctx = createCtx()
-        val loudSignal = 0.9
-
-        // Process enough blocks for envelope to converge
-        repeat(20) {
-            ctx.mixBuffer.left.fill(loudSignal)
-            ctx.mixBuffer.right.fill(loudSignal)
-            effect.process(ctx)
-        }
-
-        // Last sample should be compressed (quieter than input)
-        val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (outputLevel < loudSignal) shouldBe true
-    }
-
-    "quiet signal passes through uncompressed" {
-        val effect = KatalystCompressorEffect(sampleRate, blockFrames)
-        effect.configure(settings(thresholdDb = -6.0, ratio = 4.0, kneeDb = 0.0, attackSeconds = 0.001, releaseSeconds = 0.1))
-
-        val ctx = createCtx()
-        // Very quiet signal, well below threshold
-        val quietSignal = 0.01
-        ctx.mixBuffer.left.fill(quietSignal)
-        ctx.mixBuffer.right.fill(quietSignal)
-
-        effect.process(ctx)
-
-        // Should pass through essentially unchanged
-        val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (abs(outputLevel - quietSignal) < 0.001) shouldBe true
     }
 
     "compressor can be switched off before anything sounded, at once" {

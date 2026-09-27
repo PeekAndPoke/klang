@@ -713,14 +713,4 @@ class KatalystDuckEffectSpec : StringSpec({
 
         abs(context.mixBuffer.left[frames - 1] - context.mixBuffer.right[frames - 1]) shouldBeLessThanOrEqual 1e-12
     }
-
-    "no ducking when the sidechain is silent" {
-        val blocks = 100
-        val src = mix(blocks)
-        val side = DoubleArray(blocks * frames)
-
-        val got = run(src, side) { settings(orbit = 0, depth = 1.0, attack = 0.001) }
-
-        abs(got[src.size - 1] - 0.5) shouldBeLessThanOrEqual 0.01
-    }
 })

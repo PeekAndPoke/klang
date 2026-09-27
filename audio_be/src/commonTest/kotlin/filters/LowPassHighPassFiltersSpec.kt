@@ -38,20 +38,9 @@ class LowPassHighPassFiltersSpec : StringSpec({
     // SvfBPF (the orbit resonators' bandpass, on BaseSvf). The strip's SvfLPF, SvfHPF
     // and SvfNotch retired in phase 3 step 9; their laws that survive on the tree's
     // SVF node are in `ignitor/SvfNodeLawSpec`, and the coefficient guards shared by
-    // every BaseSvf are pinned here on the class that is left.
+    // every BaseSvf are pinned here on the class that is left. Its unity peak at the
+    // centre is `FilterNormalizationSpec`'s.
     // -----------------------------------------------------------------------
-
-    "SvfBPF - passes signal near center frequency" {
-        val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = 1000.0, q = 1.0, sampleRate = sampleRate)
-        val buf = sine(freq = 1000.0, length = blockFrames)
-        val inputRms = rms(buf)
-
-        filter.process(buf, 0, buf.size)
-        val outputRms = rms(buf)
-
-        // Signal at center frequency should pass with reasonable level
-        outputRms shouldBeGreaterThan (inputRms * 0.3)
-    }
 
     "SvfBPF - attenuates signal far below center" {
         val filter = LowPassHighPassFilters.SvfBPF(cutoffHz = 5000.0, q = 2.0, sampleRate = sampleRate)
