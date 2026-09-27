@@ -1,7 +1,7 @@
 # Warehouse stats feed: one entry point, incrementally maintained, sent with Diagnostics
 
 **Status:** ✅ SHIPPED 2026-09-04 (v1). Maintainer's idea the same day; built as the warehouse's
-"reporting half" (`docs/plans/resource-warehouse.md`).
+"reporting half" (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`).
 
 ## What shipped
 

@@ -1,9 +1,16 @@
 # Filter and effect unification — one thing, one way, everywhere
 
+> **ARCHIVED 2026-09-27 (maintainer).** Complete since 2026-08-31 (all chunks shipped). Moved out of `docs/plans/`; the code KDocs and specs that cite it point here.
+
 **Status: ✅ COMPLETE — all chunks shipped (C6a → C0 → C1+C2 → C3 → C4 → C5 → C6), closed
 2026-08-31.** Kept in `docs/plans/` rather than archived on purpose: seventeen files point here,
 most of them spec KDocs citing this plan as the reason their guard exists. Moving it would turn
 every one of those into a dangling reference.
+
+> **2026-09-27:** the strip filter path this plan names (`FilterModRenderer`, `SvfLPF`/`SvfHPF`/`SvfNotch`,
+> `createLPF`/`createHPF`/`createBPF`/`createNotch`, `FilterDefs` and the bridge `FilterEnvDef`) retired in phase 3
+> step 9. The voice's filter is the `Ignitor.svf` node, filled by `classic()`'s slots; the laws this plan settled
+> hold there.
 
 **What shipped, in order:** 50 alias names deleted (C6a); the null-q topology swap removed, so an
 absent `q` means the default `q` and never a different filter (C0); ONE default `q = 0.707` on

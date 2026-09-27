@@ -36,7 +36,7 @@ data class KlangUiToolContext(
 
 ## Whole-call editing (C0.3 MultiParam tier)
 
-Since the per-param DSL migration (docs/plans/filter-unification.md, C0), compound tools
+Since the per-param DSL migration (docs/tasks-archive/2026-09/20260927-filter-unification.md, C0), compound tools
 edit ALL parameters of the host call instead of one colon-string argument:
 
 ```kotlin

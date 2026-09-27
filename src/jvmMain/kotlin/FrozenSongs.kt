@@ -29,7 +29,7 @@ package io.peekandpoke.klang
  * `traffic`, `KiB`, `ns/smp/pass`) now count `classic()`'s stages in the graph, which they never counted on
  * the strip: rows from before and after this date are not comparable in those columns.
  *
- * EXCEPTION (maintainer decision, 2026-08-23, docs/plans/filter-unification.md):
+ * EXCEPTION (maintainer decision, 2026-08-23, docs/tasks-archive/2026-09/20260927-filter-unification.md):
  * SYNTAX-ONLY migrations are permitted when the DSL itself changes shape (renames,
  * colon-compound -> per-param), because a frozen song that no longer parses guards
  * nothing. Values must never change; each such migration keeps the sound identical (two exceptions, both named

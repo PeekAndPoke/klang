@@ -1,12 +1,14 @@
 # DSL doc examples that do not compile
 
+> **ARCHIVED 2026-09-27 (maintainer).** Done: 46 found, 42 fixed, 4 removed, the baseline is empty. The four examples that documented things that do not work are tracked in `docs/tasks/sprudel-function-testing.md`.
+
 > Status 2026-08-31: **46 found, 42 fixed, 4 removed.** The baseline is now EMPTY.
 >
 > The first pass compiled the examples and found 42. Strengthening the gate to also **query one
 > cycle** (compiling stores a lambda argument without running it) found 4 more, in `filter` and
 > `tweaks`. Four were not doc rot at all: they documented things that do not work, so those
 > examples were deleted and the gaps are tracked in
-> [`sprudel-function-testing.md`](sprudel-function-testing.md).
+> [`sprudel-function-testing.md`](../../tasks/sprudel-function-testing.md).
 
 `DslDocExamplesSpec` compiles every ```` ```KlangScript ```` example the sprudel KDoc carries.
 These are not decorative snippets: `klangscript-ksp`'s KDocParser lifts each fence into
@@ -77,7 +79,7 @@ Valid script that evaluates to a mapper or a value, so the play button had nothi
 
 These were correct as written, or documented something that does not exist, so rewriting them
 would have hidden a real gap. The examples are gone from the KDoc; the gaps are tracked in
-[`sprudel-function-testing.md`](sprudel-function-testing.md).
+[`sprudel-function-testing.md`](../../tasks/sprudel-function-testing.md).
 
 ### 1. `filter` has no usable KlangScript surface (3 examples)
 

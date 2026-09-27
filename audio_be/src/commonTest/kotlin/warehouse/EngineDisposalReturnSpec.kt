@@ -31,7 +31,7 @@ import kotlin.math.abs
  * and reverb network a playback rented became garbage when its engine was disposed, and the next
  * playback allocated the same things again inside render. Now `PlaybackEngine.dispose()` hands
  * them back to the backend's one warehouse, and the next playback's first delay or reverb of that
- * class is a shelf hit. `docs/plans/resource-warehouse.md`.
+ * class is a shelf hit. `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
  *
  * Through the real dispatcher: schedule, render, `Cleanup`, drain, observe the shelf.
  */

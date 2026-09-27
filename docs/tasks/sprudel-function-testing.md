@@ -1,6 +1,6 @@
 # Sprudel functions that nothing exercises
 
-> Opened 2026-08-31, from the doc-example compile sweep (`docs/tasks/bugfix-dsl-doc-example-rot.md`).
+> Opened 2026-08-31, from the doc-example compile sweep (`docs/tasks-archive/2026-09/20260927-dsl-doc-example-rot.md`).
 > `DslDocExamplesSpec` compiled the 1425 playable examples in sprudel's own KDoc and found 42
 > broken, and querying a cycle found 4 more. Most were doc rot and were fixed. The rest were
 > **call forms and properties no test has ever run**, which is why nobody noticed the docs

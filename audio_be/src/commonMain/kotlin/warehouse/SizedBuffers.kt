@@ -8,7 +8,7 @@ package io.peekandpoke.klang.audio_be.warehouse
 import io.peekandpoke.klang.audio_be.StereoBuffer
 
 /**
- * The shelf for large stereo buffers — delay rings today, reverb units next (`docs/plans/resource-warehouse.md`).
+ * The shelf for large stereo buffers — delay rings today, reverb units next (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`).
  *
  * Three rules, and they are the whole design:
  *

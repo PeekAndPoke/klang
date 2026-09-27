@@ -20,7 +20,7 @@ Der Schmetterling on the Fairphone, three measurements on 2026-09-04:
    warmup's own 100 % gauge spike before the song, paid in silence (maintainer: fine). This task
    is therefore no longer urgent; it stays as the place to profile if a first-run artefact returns.
 
-So the resource side is closed (`docs/plans/resource-warehouse.md`), the node-kind JIT theory
+So the resource side is closed (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`), the node-kind JIT theory
 helped a little, and something else dominates. "Second run clean" still says: first-time work,
 per session, not per playback.
 

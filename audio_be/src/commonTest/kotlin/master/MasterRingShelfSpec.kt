@@ -24,7 +24,7 @@ import kotlin.math.ceil
 /**
  * Resource warehouse step 2e: the master bus rents its delay rings from the backend's shelf, sized
  * by the SAME rule as the per-orbit delay, with no ceiling on either — and an evicted chain returns
- * its rings. `docs/plans/resource-warehouse.md`.
+ * its rings. `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
  *
  * The headline is parity. Between 2b and 2e the orbit delay had lost its 10 s ceiling while the
  * master kept `MAX_DELAY_SECONDS = 10.0`: `delay(20)` was a real 20 s echo on an orbit and a

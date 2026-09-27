@@ -1,5 +1,7 @@
 # Resource warehouse — right-size first, then shelve what comes back
 
+> **ARCHIVED 2026-09-27 (maintainer).** Done 2026-09-04 (steps 1 to 2g; `_v1-scope.md` item 7: nothing open). Moved out of `docs/plans/`; the code KDocs and specs that cite it point here.
+
 **Decided 2026-09-03 with the maintainer.** V1 Layer-1 items #7 (pool) and #8 (D4 eviction).
 Supersedes the 2026-07-04 stub, whose central design (pre-warm a shelf of 10-second rings) is
 replaced below. The old text's still-valid observations are folded in.

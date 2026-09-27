@@ -88,7 +88,7 @@ class LangLpfSpec : StringSpec({
         events[0].data.cutoff shouldBe 1000.0
     }
 
-    // ---- C0 guard: per-param flow (docs/plans/filter-unification.md, C0) ----
+    // ---- C0 guard: per-param flow (docs/tasks-archive/2026-09/20260927-filter-unification.md, C0) ----
 
     "lpf(freq-sequence, q) gives per-event freq and constant q" {
         val p = note("c e").lpf("200 800", 1.5)

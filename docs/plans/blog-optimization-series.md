@@ -295,7 +295,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   (`docs/plans/unified-eq.md` opens with "Der Schmetterling runs on an older Fairphone 4 again";
   the D0 baseline `316cc8d8` is 2026-08-19).
 - **Artifacts.** `docs/plans/unified-eq.md` (goal, the on-device notes of 2026-08-19 and 2026-08-20),
-  `docs/plans/resource-warehouse.md` (the four Fairphone measurements of 2026-09-03/04),
+  `docs/tasks-archive/2026-09/20260927-resource-warehouse.md` (the four Fairphone measurements of 2026-09-03/04),
   `docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md` ("can barely
   run", 2026-09-15), `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md` (the first
   song analysis), `audio_benchmark/README.md`, `src/jvmMain/kotlin/SongBenchmark*.kt`,
@@ -458,7 +458,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   pool, and the warmup vocabulary that pre-builds and JITs every node kind before the first note.
   Four Fairphone measurements in two days, each moving the stall somewhere else until it was
   gone.
-- **Artifacts.** `docs/plans/resource-warehouse.md` (the whole plan is a diary of the two days
+- **Artifacts.** `docs/tasks-archive/2026-09/20260927-resource-warehouse.md` (the whole plan is a diary of the two days
   with the four device notes), `audio/MEMORY.md`, `docs/tasks/future/first-run-spike-v2.md`
   (what remains), commits `111c7355` .. `d3fb76ba`.
 - **Mechanics.** (haiku) the byte arithmetic (7.68 MB, 8 orbits, 63 MB) and the size-class

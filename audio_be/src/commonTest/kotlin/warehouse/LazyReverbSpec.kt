@@ -28,7 +28,7 @@ import kotlin.math.abs
  * Resource warehouse step 2d: a reverb network exists only once an owner asks for `reverb`, rented
  * from the backend's one unit shelf, and refused gracefully. A Freeverb unit is ~200 KB; every
  * `Cylinder` used to build one in its constructor, eight of them per playback before any note.
- * `docs/plans/resource-warehouse.md`.
+ * `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
  */
 class LazyReverbSpec : StringSpec({
 

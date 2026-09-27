@@ -208,7 +208,7 @@ Template per decision:
   [M15]; cylinders join warehouse.
 - Iterations: steps 2b, 2d, 2e (`ef33ccd4`, `bcf48e84`, `7ea90627`); 5 review rounds to clean (`08f0be8c`);
   first-run spike v2 parked (`docs/tasks/future/first-run-spike-v2.md`).
-- Evidence: `docs/plans/resource-warehouse.md`; blog `2026-09-04-seven-megabytes-of-silence`.
+- Evidence: `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`; blog `2026-09-04-seven-megabytes-of-silence`.
 - Status: settled; v2 open.
 
 ### 3.6 Nothing allocates without cleanup

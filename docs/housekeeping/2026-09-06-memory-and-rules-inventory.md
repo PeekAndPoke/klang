@@ -68,7 +68,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_filter_freq_naming               | 2     | `docs/tasks-archive/2026-08/` (decided, unstarted)                                           |
 | project_filter_review                    | 2     | OnePole HPF bias documented in code; register (guardrail)                                    |
 | project_filter_saturation_dead_end       | 2     | `audio/MEMORY.md` section                                                                    |
-| project_filter_unification               | 2     | `docs/plans/filter-unification.md`                                                           |
+| project_filter_unification               | 2     | `docs/tasks-archive/2026-09/20260927-filter-unification.md`                                                           |
 | project_fractional_pitch_closed          | 2     | `docs/tasks-archive/2026-08/20260824-fractional-pitch-input.md`                              |
 | project_gradle_no_concurrent_builds      | 2     | `/agent-fleet`, `/review-loop` Gotchas (watcher line added)                                  |
 | project_ignitor_envelope_ownership       | 1     | archived task, `docs/tasks/future/envelope-shape-followups.md`                               |
@@ -77,7 +77,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_klangblocks_removed              | 2     | register (retired list)                                                                      |
 | project_klangmotor_rename                | 2     | archived motor-branding task; register (stone, naming)                                       |
 | project_latency_hint_topic               | 0     | superseded by later commits ("js backend back to playback"); ownership expired               |
-| project_licensing                        | 2     | `LICENSE`, `AUTHORS.MD`, `tones/LICENSE`, `docs/tasks/copyright-audit-00-overview.md`; register (stone) |
+| project_licensing                        | 2     | `LICENSE`, `AUTHORS.MD`, `tones/LICENSE`, `docs/tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`; register (stone) |
 | project_live_update_double_voice         | 2     | `VoiceScheduler.isDuplicate` and its spec                                                    |
 | project_midi_note_off_review             | 1     | archived task                                                                                |
 | project_midi_playground                  | 1     | `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`, `realtime-playback-controller.md`; KeyLab map committed |

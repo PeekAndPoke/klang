@@ -49,7 +49,7 @@ class AudioBackendContext(
     /**
      * Where the backend's expensive buffers come from — one per backend, shared across playbacks and
      * kept from the warmup engine rather than disposed with it. Owned here, not a Kotlin `object`,
-     * so specs and the offline renderer get their own. See `docs/plans/resource-warehouse.md`.
+     * so specs and the offline renderer get their own. See `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
      */
     val warehouse: ResourceWarehouse = ResourceWarehouse(
         sampleRate = sampleRate,

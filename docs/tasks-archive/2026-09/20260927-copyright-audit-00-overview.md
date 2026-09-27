@@ -1,5 +1,7 @@
 # Copyright Audit — Strudel/Tidal derivation cleanup (overview & tracker)
 
+> **ARCHIVED 2026-09-27 (maintainer).** The tracker is done except item 07, which stays open and blocked on external IP counsel: `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`. Items 01 to 06 and 08 are archived under `docs/tasks-archive/2026-06/`. The licensing rule in `CLAUDE.md` cites both files.
+
 ## Why this exists
 
 Klang is currently **AGPL v3** — the same license as Strudel — so **none of the items below are an
@@ -36,14 +38,14 @@ comments, and the vendored Strudel JS bundle used as a JVM test oracle.
 
 | #  | Task                                                                                                                                         | Bucket       | Priority  | Type             |
 |----|----------------------------------------------------------------------------------------------------------------------------------------------|--------------|-----------|------------------|
-| 01 | [Rewrite `EuclideanMorphPattern.calculateMorphedArcs`](../tasks-archive/2026-06/20260624-copyright-audit-01-euclidean-morph-rewrite.md)      | B (high)     | ✅ done    | code             |
-| 02 | [De-port Euclidean generation (Bjorklund + rotate)](../tasks-archive/2026-06/20260624-copyright-audit-02-euclidean-generation-deport.md)     | B (high)     | ✅ done    | code             |
-| 03 | [Reimplement the `degrade` family](../tasks-archive/2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                              | B/C (med)    | ✅ done    | code             |
-| 04 | [`strudel-bundle.mjs` — notice + release exclusion](../tasks-archive/2026-06/20260624-copyright-audit-04-strudel-bundle-notice-exclusion.md) | B (verbatim) | ✅ done    | compliance/build |
-| 05 | [Provenance comment & doc-string sweep](../tasks-archive/2026-06/20260624-copyright-audit-05-comment-docstring-sweep.md)                     | C (low)      | ✅ done    | hygiene          |
-| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](../tasks-archive/2026-06/20260624-copyright-audit-06-attribution-touchups.md)  | A            | ✅ done    | docs             |
-| 07 | [Control-vocabulary legal review](copyright-audit-07-control-vocabulary-legal-review.md)                                                     | C            | 🟡 lawyer | decision         |
-| 08 | [Tidal (GPL) comparison follow-up](../tasks-archive/2026-06/20260624-copyright-audit-08-tidal-comparison-followup.md)                        | A (clean)    | ✅ done    | audit            |
+| 01 | [Rewrite `EuclideanMorphPattern.calculateMorphedArcs`](../2026-06/20260624-copyright-audit-01-euclidean-morph-rewrite.md)      | B (high)     | ✅ done    | code             |
+| 02 | [De-port Euclidean generation (Bjorklund + rotate)](../2026-06/20260624-copyright-audit-02-euclidean-generation-deport.md)     | B (high)     | ✅ done    | code             |
+| 03 | [Reimplement the `degrade` family](../2026-06/20260624-copyright-audit-03-degrade-reimplement.md)                              | B/C (med)    | ✅ done    | code             |
+| 04 | [`strudel-bundle.mjs` — notice + release exclusion](../2026-06/20260624-copyright-audit-04-strudel-bundle-notice-exclusion.md) | B (verbatim) | ✅ done    | compliance/build |
+| 05 | [Provenance comment & doc-string sweep](../2026-06/20260624-copyright-audit-05-comment-docstring-sweep.md)                     | C (low)      | ✅ done    | hygiene          |
+| 06 | [Attribution touch-ups (chord-voicings, fast_tanh, PolyBLEP)](../2026-06/20260624-copyright-audit-06-attribution-touchups.md)  | A            | ✅ done    | docs             |
+| 07 | [Control-vocabulary legal review](../../tasks/copyright-audit-07-control-vocabulary-legal-review.md)                                                     | C            | 🟡 lawyer | decision         |
+| 08 | [Tidal (GPL) comparison follow-up](../2026-06/20260624-copyright-audit-08-tidal-comparison-followup.md)                        | A (clean)    | ✅ done    | audit            |
 
 ## What is CONFIRMED CLEAN (no task needed)
 

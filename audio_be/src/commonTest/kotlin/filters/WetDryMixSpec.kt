@@ -13,7 +13,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * C4 guard (docs/plans/filter-unification.md): THE wet/dry law. Two exponents, two
+ * C4 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): THE wet/dry law. Two exponents, two
  * statistics — the rows pin each law's defining invariant, the floor's pinning region,
  * and the domain coercions.
  */

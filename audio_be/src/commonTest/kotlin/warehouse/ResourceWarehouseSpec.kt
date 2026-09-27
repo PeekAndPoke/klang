@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
- * The warehouse in isolation — step 1 of `docs/plans/resource-warehouse.md`. No DSP anywhere in
+ * The warehouse in isolation — step 1 of `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`. No DSP anywhere in
  * here; the rules are the subject. Every row names the rule it pins, and every rule has a mutation
  * that turns its row red.
  *

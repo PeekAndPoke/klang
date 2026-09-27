@@ -45,7 +45,7 @@ data class KlangUiToolContext(
 
 /**
  * Whole-call view for tools that edit several parameters of the SAME call at once
- * (the MultiParam tier of the two-tool-tier design, see docs/plans/filter-unification.md C0).
+ * (the MultiParam tier of the two-tool-tier design, see docs/tasks-archive/2026-09/20260927-filter-unification.md C0).
  *
  * Present on [KlangUiToolContext.call] when the editor could resolve the host call's full
  * argument list. Scalar tools ignore it; compound tools (filter, adsr, compressor, ...) read

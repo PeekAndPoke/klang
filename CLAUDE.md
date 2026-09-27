@@ -36,7 +36,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Every DSL value is immutable at construction time; runtime mutability is engine-internal (sprudel voice data is the deliberate exception).             | 2026-09-05 | `/dsl-design` §1                          |
 | No boxed types anywhere: no `Long`/`ULong`/`Byte`/`Short`/`Char`; `Int` or `Double`.                                                                    | 2026-04    | `/code-style` §5                          |
 | The Motor stays raw: no safety clamp on an audio parameter without asking. Coerce user-reachable inputs, never `require()` them.                       | 2026-05    | `/dsl-design` §6, `/code-style` §21       |
-| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, `docs/tasks/copyright-audit-00-overview.md` |
+| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`, `docs/tasks-archive/2026-09/20260927-copyright-audit-00-overview.md` |
 | Naming: "Klangmotor" / "Motor" with a plain o (the umlaut was retired 2026-08-25, "too much ego"); historic diary and strategist records keep whatever they say; Motörhead keeps its umlaut. | 2026-08-25 | `/code-style` §17 (header)                |
 
 ### Rule

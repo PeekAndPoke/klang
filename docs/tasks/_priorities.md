@@ -142,7 +142,7 @@ The release-defining set, regardless of when they're sequenced:
 ## Blocked / off-plan / parked
 
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
-  `copyright-audit-00-overview.md`](copyright-audit-00-overview.md) + [
+  `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
   Code work done & archived; the one open item awaits external IP counsel. Gates a non-AGPL license, not Q3.
 - **DONE 2026-09-07** — **Sprudel field accessors** — [`20260907-sprudel-field-accessors.md`](../tasks-archive/2026-09/20260907-sprudel-field-accessors.md) —

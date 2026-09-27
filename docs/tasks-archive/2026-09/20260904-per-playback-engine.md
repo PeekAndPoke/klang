@@ -33,7 +33,7 @@ bug and is **behaviour-identical** for today's single-playback case.
 
 Everything this plan set out to do is shipped: D1–D3, D5 (Q2 2026), D6 master-in-pattern
 (2026-08-03), and **D4 cylinder eviction — done 2026-09-04 as engine disposal inside the resource
-warehouse** (`docs/plans/resource-warehouse.md`, steps 2f + 3: `PlaybackEngine.dispose()` returns
+warehouse** (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`, steps 2f + 3: `PlaybackEngine.dispose()` returns
 every orbit's ring, network and the cylinder itself to the warehouse's shelves; idle cylinders inside
 a live engine stay, settled by the maintainer). The status below is the record as it stood at the
 end of Q2.

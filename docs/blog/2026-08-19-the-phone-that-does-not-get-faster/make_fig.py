@@ -9,8 +9,8 @@ INK, GRAY, CRIM, VERDE, GOLD = "#14202B", "#8D9BA3", "#B23A32", "#2F7A4F", "#A87
 plt.rcParams.update({"font.family": "monospace", "font.size": 9})
 
 # ---------------------------------------------------------------------------------------------
-# Fig 2 of the post: the phone's timeline. Sources: docs/plans/unified-eq.md:225,808; docs/plans/
-# resource-warehouse.md:214,321,417; docs/tasks-archive/2026-09/20260916-ignitor-optimizer-
+# Fig 2 of the post: the phone's timeline. Sources: docs/plans/unified-eq.md:225,808;
+# docs/tasks-archive/2026-09/20260927-resource-warehouse.md:214,321,417; docs/tasks-archive/2026-09/20260916-ignitor-optimizer-
 # arithmetic-folds.md:40; audio/MEMORY.md (drift per block, 2026-09-15).
 # ---------------------------------------------------------------------------------------------
 events = [

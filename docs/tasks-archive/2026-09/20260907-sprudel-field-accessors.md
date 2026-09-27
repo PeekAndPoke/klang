@@ -80,7 +80,7 @@ Rewritten 2026-09-06 after a design session; the previous draft (context-key bin
   `spread` were left alone by the migration (lambda-chain heuristic, 30 sites skipped on purpose).
   With this the compound sweep is complete except the `snd*` family (separate discussion).
   `vowel` moved from category `tonal` to `effects`, next to `body` and `room` (deliberate). Archived
-  plans (`docs/plans/filter-unification.md`, `block-framing-invariance.md`, `future/phoneme-singing.md`)
+  plans (`docs/tasks-archive/2026-09/20260927-filter-unification.md`, `block-framing-invariance.md`, `future/phoneme-singing.md`)
   keep the spellings of their day; the migration was reverted there.
   Lesson: the batch G names are English words; the script's bare-word read rewrite hit prose in 215
   places (Lexikon, tutorials, KDoc tags, a Kotlin function name) and was repaired by restoring the

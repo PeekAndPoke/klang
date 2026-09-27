@@ -12,7 +12,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
- * Where the backend's expensive buffers come from (`docs/plans/resource-warehouse.md`).
+ * Where the backend's expensive buffers come from (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md`).
  *
  * **One per backend, owned by `AudioBackendContext`** — a singleton in effect, so scratch depth and
  * shelved rings are shared across playbacks (and kept from the warmup engine rather than disposed

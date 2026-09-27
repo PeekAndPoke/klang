@@ -14,7 +14,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * C2 guard (docs/plans/filter-unification.md): the bandpass FAMILY is normalised to unity
+ * C2 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): the bandpass FAMILY is normalised to unity
  * peak at fc — q is a pure WIDTH control, never a level control.
  *
  * For each normalised implementation the rows drive a sine AT fc through the filter at two

@@ -754,7 +754,7 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
 ### D9 — Sprudel voice-filter baking → EqCore (maintainer-added 2026-08-20, LAST in order)
 
 > **NOT IN V1 — decided 2026-08-31 (maintainer).** Sprudel gets no `band`/`tap` in V1, so D9 is
-> no longer gating anything on the surface: `docs/plans/filter-unification.md` §C6 ships canonical
+> no longer gating anything on the surface: `docs/tasks-archive/2026-09/20260927-filter-unification.md` §C6 ships canonical
 > NAMES only and no longer waits for D9's static tier. What remains here is **pure internal perf**
 > (fusing per-voice FilterDefs into one EqCore pass), which changes no authored surface and no
 > tuned sound, so it can run underneath the frontend/tutorial phase rather than blocking it.

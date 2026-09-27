@@ -3,7 +3,7 @@
 **Status: SHIPPED 2026-09-07, commit `6d4056f9` (C1 to C4, two review rounds, 14 mutation
 checks red). Archive record with the closing notes:
 `docs/tasks-archive/2026-09/20260907-sine-partial-banks.md`.** Kept in `docs/plans/` rather
-than archived, the `filter-unification.md` precedent:
+than archived (the precedent was `filter-unification.md`, itself archived 2026-09-27):
 eight files cite this path (KDocs on the wire node, the engine, the builders, the spec, both
 module memories). The three open points of section 7 were decided on 2026-09-07: band-limit at
 Nyquist (maintainer's explicit yes), raw sum, `analogSpread` default 1. Still open for the

@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.random.Random
 
 /**
- * C4 guard (docs/plans/filter-unification.md): `wet == 0` IS bypass, bit-identically, on
+ * C4 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): `wet == 0` IS bypass, bit-identically, on
  * every routed additive effect. The helper cannot early-return per sample (`dry*1 + wet*0`
  * flips -0.0 and poisons on a NaN wet), so each CALLER carries an explicit early return;
  * these rows are the tripwires for removing one.

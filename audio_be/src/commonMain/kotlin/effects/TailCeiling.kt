@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * comb (`DelayLine.hasTail`, `Reverb.hasTail`) to decide whether an orbit may deactivate. That is
  * O(unit) on the audio thread, and since the resource warehouse removed the ring ceiling it is
  * O(whatever the user asked for): a 20 s master ring is a two-million-sample read inside one block
- * (review rounds 2–4 of `docs/plans/resource-warehouse.md`). A first attempt replaced the scan
+ * (review rounds 2–4 of `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`). A first attempt replaced the scan
  * with one bounded read at each silence onset (`tapWindowPeakAbs`); review found that this fires
  * once per note gap and is still O(delay), a net loss on sparse material with long delays.
  *

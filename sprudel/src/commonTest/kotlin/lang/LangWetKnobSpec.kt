@@ -17,7 +17,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 /**
- * C4.2 guard (docs/plans/filter-unification.md): the shared wet knob has ONE name per door —
+ * C4.2 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): the shared wet knob has ONE name per door —
  * prefixed `xxxWet`/`xxxFloor` on sprudel (fields on one unordered voice); on the ignitor `wet`
  * is the FIRST door parameter and `floor` a builder knob (phase 3 step 3d(i)). These rows pin
  * that every renamed surface still writes the

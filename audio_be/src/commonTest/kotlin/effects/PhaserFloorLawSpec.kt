@@ -15,7 +15,7 @@ import kotlin.math.cos
 import kotlin.random.Random
 
 /**
- * C4.2 guard (docs/plans/filter-unification.md): the phaser's `floor` knob follows the shared
+ * C4.2 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): the phaser's `floor` knob follows the shared
  * wet/dry law, `dry = max(floor, cos²(w·π/2))`, on the cylinder-bus [Phaser]. (The voice strip's
  * per-voice phaser, the law's second path, retired with the Pipeline DSL in phase 3 step 9.)
  *

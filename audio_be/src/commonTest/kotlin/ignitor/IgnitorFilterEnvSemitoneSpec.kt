@@ -14,7 +14,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * C3 guard, IGNITOR path (docs/plans/filter-unification.md): envelope depth is SEMITONES
+ * C3 guard, IGNITOR path (docs/tasks-archive/2026-09/20260927-filter-unification.md): envelope depth is SEMITONES
  * in the svf kernel: `cutoff = base * 2^(depth/12 * env)`. (The strip-pipeline path had its own
  * rows in `FilterEnvSemitoneSpec` until the voice strip retired, phase 3 step 9.)
  *
