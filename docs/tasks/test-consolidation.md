@@ -98,6 +98,14 @@ no sound change), a second role only where production code moves.
   Nyquist droop the canonical topology was chosen to avoid). What it lacks is a door: follow-up task
   `docs/tasks/future/onepole-highpass-door.md`.
 
+## 4b. Unsure: for the maintainer, in one go (maintainer, 2026-09-27)
+
+A row or spec where it is not clear whether it should go is KEPT for now and listed here, so the work does
+not block; the maintainer decides the whole list later. Each entry: the spec and row, what it asserts, the
+spec that might cover it, and why it is unclear.
+
+(none yet)
+
 ## 5. Guards that stay, whatever the cut
 
 Everything named in root `CLAUDE.md` (guardrails), `.claude/skills/review-loop/escape-ledger.md`,
