@@ -678,7 +678,7 @@ This is the standing click-diagnostic harness; it prints and guards nothing, by 
 ## F16 — The master limiter did not limit transients; the hard clip did ✅ FIXED
 
 **HIGH — user-reported symptom ("knock"), root-caused 2026-08-04, FIXED 2026-08-06** (`53834ba9` + follow-up) under [
-`docs/tasks/master-limiter-lookahead.md`](../tasks/master-limiter-lookahead.md). By-ear confirmed.
+`20260927-master-limiter-lookahead.md`](../tasks-archive/2026-09/20260927-master-limiter-lookahead.md). By-ear confirmed.
 
 > **Everything below describes the DEFECT as it was**, kept because it is the evidence and the
 > measurement baseline. After the fix, the same +12 dB kick exits at **−0.37 dBFS with zero samples

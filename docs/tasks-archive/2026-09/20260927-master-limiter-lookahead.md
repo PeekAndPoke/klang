@@ -1,5 +1,12 @@
 # Master limiter: lookahead — fixing the transient "knock"
 
+> **ARCHIVED 2026-09-27 (maintainer).** Done: the lookahead limiter (the knock fix, 2026-08-06), latency
+> reporting, the dual program-dependent release, the Luff/Signalsmith credit on both surfaces, the comb warning
+> in the `.lookahead()` KDoc, and the §7 doc debts except one line (fixed the same day). Still open, carried to
+> `docs/tasks/bugfix-master-limiter-surge.md`: the surge at deep reduction ("REOPENED 2026-08-18" below) and
+> the three harness measurements listed with it. The status notes below are as they stood; this file is the
+> limiter's design record, cited from `Compressor.kt`, `MasterStage.kt` and `LimiterLookaheadSpec`.
+
 > **Phases 0-3 SHIPPED 2026-08-06** (`53834ba9` + follow-up). The knock is fixed: a +12 dB kick went
 > from +11.67 dBFS with 5.22 ms of hard clipping to **-0.37 dBFS, zero samples clipped**. By-ear
 > confirmed. `audio_be` 953 green on JVM + JS; no CPU cost (`runSongBenchmark` medRTF 0.0838 with
@@ -11,12 +18,12 @@
 > **Still open — one decision, measured and costed:** the pump is real at realistic levels (at +1…+3
 > dB drive the mix is still 1.25 dB down 100 ms after each kick and 0.44 dB at 200 ms, so the bed
 > swells continuously between hits). A **dual program-dependent release** wins on all four axes at
-> once — see §Phase 4 — and needs a go/no-go. [F17](../audio-audit/FINDINGS.md#f17) is **refuted**;
+> once — see §Phase 4 — and needs a go/no-go. [F17](../../audio-audit/FINDINGS.md#f17) is **refuted**;
 > the real cause of the by-ear "shocks" is that a slower `attackSeconds` silently lowers the
 > detector's reading, i.e. weakens the compressor as well as slowing it.
 >
 > Fixes audit finding
-> [F16](../audio-audit/FINDINGS.md#f16) — the user-reported "knock". Priority: **SHOULD**, and it is
+> [F16](../../audio-audit/FINDINGS.md#f16) — the user-reported "knock". Priority: **SHOULD**, and it is
 > a *sound* fix, so it outranks the rest of the audit backlog ("sound first").
 >
 > **Five decisions are taken** (user, 2026-08-04) and the plan is built on them:
@@ -299,7 +306,7 @@ A lookahead limiter delays the signal it protects. On the master that is harmles
 "my drums feel loose", and it is the kind of thing that is very hard to diagnose after the fact.
 
 **Consequence to accept knowingly:** this breaks the standing parameter-parity rule ([
-`feedback_parameter_parity`](master-dsl-followups.md#1-parameter-parity-audit--the-principle-applied-everywhere))
+`feedback_parameter_parity`](../../tasks/master-dsl-followups.md#1-parameter-parity-audit--the-principle-applied-everywhere))
 — `lookahead` will exist on the master limiter and nowhere else. That is a justified exception, **and it must be
 documented as one** in the parity audit, or the next person will "fix" it.
 
@@ -424,7 +431,7 @@ purely additive**: `HOUSE_LIMITER_ATTACK_SECONDS` also changes meaning (§Phase 
 **Do NOT unify the tuning files.** Subsystem grouping is the useful axis — you tune analog drift by opening
 `AnalogDriftCoeffs.kt`. A single 60-constant file would be worse.
 
-**But there IS a real constants problem, and it is [F1](../audio-audit/FINDINGS.md#f1), not fragmentation.** Five engine
+**But there IS a real constants problem, and it is [F1](../../audio-audit/FINDINGS.md#f1), not fragmentation.** Five engine
 constants are duplicated as bare literals in
 `audio_bridge/PipelineDsl.kt:98,99,100,106,107`, each with a comment naming its twin, and **nothing guards them** —
 three of the five are read by no production code at all, so tuning the documented constant does nothing. The master pair
@@ -600,7 +607,7 @@ the authored one (per-playback, lookahead off). `MasterDefaultsSyncSpec.kt:37`
 currently asserts `Limiter().attackSeconds shouldBe MasterStage.HOUSE_LIMITER_ATTACK_SECONDS`, which would simply
 break — and
 "document the asymmetry" is prose, while `shouldNotBe` is exactly the toothless guard
-class [F1](../audio-audit/FINDINGS.md#f1) exists to eliminate.
+class [F1](../../audio-audit/FINDINGS.md#f1) exists to eliminate.
 
 **Give the authored side its own named constants**, so every number has exactly one home and the asymmetry is
 assertable:
@@ -651,7 +658,7 @@ sibling param already gets (`finite()` at `:170-171`, `MAX_DELAY_SECONDS` at `:1
 
 **Option (a): keep both `lookahead` and `attack`.** Rejected alternative: deriving `B = lookahead/2`
 and dropping `attack` — that would make `attack` a **silent no-op** on the master limiter, which is exactly
-the [F1](../audio-audit/FINDINGS.md#f1) defect class this audit exists to remove. Every knob on the surface must do
+the [F1](../../audio-audit/FINDINGS.md#f1) defect class this audit exists to remove. Every knob on the surface must do
 something.
 
 The contract, which the KDoc must state plainly:
@@ -1013,8 +1020,8 @@ house constant.
 
 ## 9. Links
 
-- Finding: [`../audio-audit/FINDINGS.md`](../audio-audit/FINDINGS.md) §F16
+- Finding: [`../audio-audit/FINDINGS.md`](../../audio-audit/FINDINGS.md) §F16
 - Precedent for the whole DSL-surface playbook:
-  [`../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
-- Parity rule + the exception this creates: [`master-dsl-followups.md`](master-dsl-followups.md) §1
-- Method: [`.claude/skills/review-loop`](../../.claude/skills/review-loop/SKILL.md)
+  [`../tasks-archive/2026-08/20260803-master-dsl.md`](../2026-08/20260803-master-dsl.md)
+- Parity rule + the exception this creates: [`master-dsl-followups.md`](../../tasks/master-dsl-followups.md) §1
+- Method: [`.claude/skills/review-loop`](../../../.claude/skills/review-loop/SKILL.md)

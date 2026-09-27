@@ -46,7 +46,7 @@ class MasterStage(
          * delay shifts everything together and nothing can desync. That is why lookahead lives here
          * and not on a per-orbit or per-playback compressor.
          *
-         * See `docs/tasks/master-limiter-lookahead.md`.
+         * See `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`.
          */
         const val HOUSE_LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
 
@@ -67,7 +67,7 @@ class MasterStage(
      * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
      * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
      * clock), so anything aligning visuals to audio has to add it explicitly. See
-     * `docs/tasks/master-limiter-lookahead.md` Phase 5.
+     * `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` Phase 5.
      */
     val latencyFrames: Int get() = limiter.latencyFrames
 

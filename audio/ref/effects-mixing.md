@@ -87,7 +87,7 @@ All in `audio_be/src/commonMain/kotlin/effects/`.
 
 ### Compressor
 
-RMS-based compressor. Applied per-cylinder or per-voice.
+Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the orbit's `compressor` stage).
 
 | Parameter   | Meaning                                 |
 |-------------|-----------------------------------------|

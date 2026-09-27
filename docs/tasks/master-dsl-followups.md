@@ -40,7 +40,7 @@ silent timing bug that reads as "my drums feel loose". Same reasoning one level 
 the authored `limiter` stage at
 `lookaheadSeconds = 0` while the house limiter runs at 5 ms: the house one is global and post-sum, the authored one is
 per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the divergence. See
-`master-limiter-lookahead.md` §3 and §4.
+`../tasks-archive/2026-09/20260927-master-limiter-lookahead.md` §3 and §4.
 
 Wants its own task doc once someone starts it; this is the brief.
 
