@@ -143,7 +143,7 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   decisions (raw Motor no-clamping, reverb's `ANTI_DENORMAL` exception, the linear SVF, documented HPF bias). A reviewer
   without that list files findings that would make the engine worse. Paste the relevant constraint list into the
   prompt — `/review-loop` has templates, and
-  `docs/tasks/audio-backend-audit.md` §7 has the audio-backend list.
+  `.claude/skills/review-loop/audio-constraints.md` has the audio-backend list.
 
 ## Every brief opens with the bar: world-class, not average (maintainer, 2026-09-18, under observation)
 

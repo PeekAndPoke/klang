@@ -1,5 +1,18 @@
 # Audio backend audit — verified nets, then verified code
 
+> **CLOSED 2026-09-27 (maintainer).** The `voices/` pilot ran to completion (triaged 2026-08-31, ledger in
+> `docs/audio-audit/`); `KatalystFilterSwap` was verified; the other subsystems were never started. The engine
+> redesign (`docs/plans/signal-flow-redesign.md`) rewrites most of what the campaign would have audited, and every
+> test written since 2026-08-02 is mutation-checked under `/review-loop` Standard 2, so the campaign as planned is
+> superseded. What was still concrete moved to
+> [`audit-audio-backend-leftovers.md`](../../tasks/audit-audio-backend-leftovers.md); the three parked
+> maintainer calls stay in [`audit-parked-decisions.md`](../../tasks/future/audit-parked-decisions.md); the §7
+> constraints list moved to `.claude/skills/review-loop/audio-constraints.md`. The brief below is the record as it
+> stood.
+
+> **2026-09-27:** the voice strip named in this brief (`strip/filter/` and its renderers, `EnvelopeRenderer`,
+> `DistortionRenderer`) retired in phase 3 step 9; what the brief says about it applies to code that no longer exists.
+
 > **Planned 2026-08-04, not started.** Priority: **SHOULD**, rising to MUST before any launch —
 > `audio_be` is the foundation everything else stands on ("sound first"). Multi-session campaign;
 > designed to survive interruption. **Entry point: the `voices/` pilot (§5), then re-decide.**
@@ -56,7 +69,7 @@ tests in other modules, but not in the audio backend. This is THE foundation of 
 - `audio_jsworklet` — 180 lines, **this is the JS audio thread**, zero tests
 
 **OUT** — `audio_bridge`, `audio_fe`, `sprudel`, `klang`. Cross-surface parameter parity is already owned by [
-`master-dsl-followups.md`](master-dsl-followups.md) §1.
+`master-dsl-followups.md`](../../tasks/master-dsl-followups.md) §1.
 
 **Delete on sight:** `audio_be/src/wasmJsMain/AudioProcessingWasm.kt` — 59 lines of self-declared *"pseudo-code logic"*
 (`return 0`, `return true`, module-level `var phase`), wired to nothing and not even compiled (the `wasmJs` block in
@@ -160,7 +173,7 @@ the set — start there, big specs with few tests are where padding hides.
   `choke` returns nothing, yet `VoiceScheduler.process` computes solo gain and runs a `soloMuteRamp`, and
   `promoteScheduled` implements cut-group hard-kill.
 - **Four specs pin a context production can no longer produce** (added 2026-08-31, from
-  [`../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md`](../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md)).
+  [`../tasks-archive/2026-08/20260831-voice-elapsed-frames-offset-mismatch.md`](../2026-08/20260831-voice-elapsed-frames-offset-mismatch.md)).
   `IgnitorDslOptimizerRenderSpec.kt:64`, `ConstantFoldParitySpec.kt:64`, `EqCoreSpec.kt:546` and
   `EqIgnitorSpec.kt:648` set `voiceElapsedFrames = -offset` for their mid-block-onset rows, and the
   first three state in a comment that this is the production shape. It was, until `IgniteRenderer`
@@ -377,14 +390,14 @@ Full list: `audio/MEMORY.md` + `docs/tasks-archive/`.
 
 ## 9. Links
 
-- Method: [`.claude/skills/review-loop/SKILL.md`](../../.claude/skills/review-loop/SKILL.md)
+- Method: [`.claude/skills/review-loop/SKILL.md`](../../../.claude/skills/review-loop/SKILL.md)
 - Worked example of the loop paying off:
-  [`../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
-- Overlapping open work: [`master-dsl-followups.md`](master-dsl-followups.md) (§2 shared orbit+master tail hole), [
-  `../plans/resource-warehouse.md`](../plans/resource-warehouse.md) (audio-thread allocation),
-  [`audio-pipeline-open-topics.md`](audio-pipeline-open-topics.md), [`voice-culling.md`](../tasks-archive/2026-09/20260915-voice-culling.md) (done 2026-09-15)
+  [`../tasks-archive/2026-08/20260803-master-dsl.md`](../2026-08/20260803-master-dsl.md)
+- Overlapping open work: [`master-dsl-followups.md`](../../tasks/master-dsl-followups.md) (§2 shared orbit+master tail hole), [
+  `../plans/resource-warehouse.md`](../../plans/resource-warehouse.md) (audio-thread allocation),
+  [`audio-pipeline-open-topics.md`](../../tasks/audio-pipeline-open-topics.md), [`voice-culling.md`](20260915-voice-culling.md) (done 2026-09-15)
 - Orientation for a fresh reviewer — signal flow + file-by-file map:
-  [`../audio-backend-file-map.md`](../audio-backend-file-map.md)
+  [`../audio-backend-file-map.md`](../../audio-backend-file-map.md)
 - Engine knowledge: `audio/MEMORY.md`, `audio/ref/performance.md`, `audio/ref/numerical-safety.md`
 - Memory: `feedback_review_loop`, `feedback_parameter_parity`, `feedback_raw_motor`,
   `feedback_kotest_test_filter`, `project_gradle_no_concurrent_builds`

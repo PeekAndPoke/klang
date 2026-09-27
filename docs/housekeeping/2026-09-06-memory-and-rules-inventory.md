@@ -54,7 +54,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | pipeline_stage_design                    | 2     | `docs/plans/unified-eq.md`, whitepaper (double-VCA sandwich)                                 |
 | project_analog_drift_tuning              | 2     | `AnalogDriftSpec`, `audio/MEMORY.md`                                                         |
 | project_arrange_boundary_drop            | 2     | `StructuralCycleSelectionSpec`; register (guardrail)                                         |
-| project_audio_backend_audit              | 2     | `docs/tasks/audio-backend-audit.md`, `docs/tasks/future/audit-parked-decisions.md`           |
+| project_audio_backend_audit              | 2     | `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, `docs/tasks/future/audit-parked-decisions.md`           |
 | project_block_framing_invariance         | 2     | `docs/plans/block-framing-invariance.md`, `docs/tasks/by-ear/`                               |
 | project_block_size_parity                | 2     | `DelayLine` KDoc; register (guardrail)                                                       |
 | project_bluetooth_latency                | 2     | `docs/tasks/future/midi-latency-optimizations.md`                                            |

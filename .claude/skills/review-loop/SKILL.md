@@ -163,6 +163,10 @@ Audio-engineer reviewer:
 > needs (a glide is a safety net against clicks, not a loudness keeper). Return findings as severity + `file:line` + failure scenario.
 > "NO FINDINGS" is a valid answer; do not pad.
 
+Paste [`audio-constraints.md`](audio-constraints.md) (the engine's deliberate decisions) into every
+audio-engineer prompt and into any audio brief; a reviewer without it files findings that would make
+the engine worse.
+
 ---
 
 ## Standard 2 — Mutation-check every new test
@@ -299,6 +303,9 @@ reader.
   matches your own shell's command line.
 
 ## Changelog
+
+- **2026-09-27**: the audio backend constraints list moved here as `audio-constraints.md`, from the
+  audio backend audit brief (§7), which closed that day.
 
 - **2026-09-20**: Standard 3's ledger moved to `escape-ledger.md`, the sibling of this file
   (maintainer: reading the standard should not carry the whole record). The method, the five

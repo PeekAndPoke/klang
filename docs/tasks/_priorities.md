@@ -66,7 +66,7 @@ The release-defining set, regardless of when they're sequenced:
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
    quality — arguably a MUST; parked-last by Q3.)
 6. **SHOULD** (→ MUST before launch) · **Audio backend audit** — [
-   `audio-backend-audit.md`](audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started)*
+   `audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started; closed 2026-09-27)*
    Every `audio_be` test was written **without a mutation check** and every file was built with a **single review
    round** — the Master DSL then needed 5 rounds, each finding defects in the previous round's fixes, and turned up 3
    toothless guards. So the green suite is an *unmeasured* net. Verify-the-net → map-the-holes → `/review-loop` →

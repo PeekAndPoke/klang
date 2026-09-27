@@ -1,6 +1,7 @@
 # Audio backend audit — ledger
 
-Campaign brief and method: [`../tasks/audio-backend-audit.md`](../tasks/audio-backend-audit.md). Standing findings
+Campaign brief and method: [`20260927-audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md)
+(**closed 2026-09-27**; what stayed open is [`audit-audio-backend-leftovers.md`](../tasks/audit-audio-backend-leftovers.md)). Standing findings
 list: [`FINDINGS.md`](FINDINGS.md) — **this is the list we go through together.**
 
 > **Working rule for this campaign (user, 2026-08-04): ANALYSIS ONLY — do not repair anything.**
