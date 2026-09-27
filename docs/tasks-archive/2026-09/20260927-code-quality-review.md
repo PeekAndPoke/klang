@@ -1,5 +1,10 @@
 # Project-Wide Code Quality Review — Open Items
 
+> **CLOSED 2026-09-27 (maintainer).** `audio_be` and `audio_bridge` are under heavy rework, and their quality
+> checks run with it (`/review-loop`); the other modules will get independent code quality reviews of their
+> own. The open items below (M9, M10, L3, L4, L6: sprudel query allocations and sorting, boxed types, DSL
+> boilerplate, `Char` in `tones`) were not carried; a future review starts fresh and may find them again.
+
 Remaining items from the quality review (2026-03-31). Completed items archived below.
 
 ---

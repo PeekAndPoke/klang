@@ -104,7 +104,7 @@ Not in scope for immediate implementation. Design notes:
 | `klangscript-native-object-operators.md` | KlangScript interpreter, not mini-notation |
 | `klangscript-intellisense.md`            | Diagnostics/completion, different system   |
 | `completion-member-access-bug.md`        | Code editor bug, unrelated                 |
-| `code-quality-review.md`                 | General quality items                      |
+| `code-quality-review.md` (archived 2026-09-27) | General quality items                      |
 | `20260903-soundfont-looping-investigation.md` (archived) | Audio playback bug                         |
 | `audio-pipeline-open-topics.md` (archived 2026-09-27) | Future audio features                      |
 | `ignitor-dsl-open-items.md`              | Synthesis DSL features                     |
