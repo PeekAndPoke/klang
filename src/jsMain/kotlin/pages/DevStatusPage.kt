@@ -12,10 +12,10 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.browser.window
 import kotlinx.css.Align
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -36,8 +36,8 @@ import kotlinx.css.rem
 import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
-import kotlinx.html.a
 import kotlinx.html.img
+import kotlinx.html.span
 import kotlinx.html.title
 
 @Suppress("FunctionName")
@@ -93,12 +93,6 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Absolute on purpose: the router treats a relative href as an SPA route and navigates in place,
-     * whatever the target says. Only a URL with a protocol reaches the browser, and the new tab.
-     */
-    private fun urlOf(entry: Entry): String = "${window.location.origin}${entry.path}"
-
     override fun VDom.render() {
         ui.fluid.container {
             key = "dev-status-page"
@@ -119,9 +113,22 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    /**
+     * The whole card is one link to the page, in a new tab.
+     *
+     * The click must not reach the router: it listens on `window`, takes every href it does not
+     * recognise as external (a relative path, and `http://localhost:port/...` too, since its URL
+     * regex wants a top-level domain) and navigates in place, whatever `target` says. Stopping the
+     * propagation here, without preventing the default, leaves the click to the browser, which
+     * honours `target = "_blank"`.
+     */
     private fun FlowContent.renderCard(entry: Entry) {
-        ui.card {
+        ui.card.A {
             key = "dev-status-${entry.title}"
+            href = entry.path
+            target = "_blank"
+            title = "Open ${entry.title} in a new tab"
+            onClick { evt -> evt.stopPropagation() }
 
             css { backgroundColor = Color(laf.cardBackground) }
 
@@ -131,16 +138,12 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
                     put("overflow", "hidden")
                 }
 
-                a(href = urlOf(entry), target = "_blank") {
-                    title = "Open ${entry.title} in a new tab"
-
-                    img(src = entry.image, alt = "${entry.title}, preview") {
-                        css {
-                            width = 100.pct
-                            height = 100.pct
-                            display = Display.block
-                            put("object-fit", "cover")
-                        }
+                img(src = entry.image, alt = "${entry.title}, preview") {
+                    css {
+                        width = 100.pct
+                        height = 100.pct
+                        display = Display.block
+                        put("object-fit", "cover")
                     }
                 }
             }
@@ -182,11 +185,10 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
                     alignItems = Align.center
                 }
 
-                a(href = urlOf(entry), target = "_blank") {
+                span {
                     css {
-                        // Never gold: the global `a` rule carries !important, so this one has to as well
                         marginLeft = LinearDimension.auto
-                        put("color", "${laf.textPrimary} !important")
+                        color = Color(laf.textPrimary)
                     }
                     icon.external_alternate()
                     +"Open in a new tab"

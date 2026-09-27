@@ -22,9 +22,9 @@ When a page changed its look, refresh the card previews too (needs Chrome and Im
 Then commit the pages and `src/jsMain/resources/images/dev-status/`. The pages sit in the SPA's
 static resources, so the dev server serves them and `console/deploy-finzo.sh` uploads them to the
 site root with the rest of that folder. The SPA shows them as cards on the Dev status page
-(`/dev-status`, `DevStatusPage.kt`, in the sidebar after Credits). Its links are absolute on
-purpose: the router handles every relative href itself and ignores `target`, so only a URL with
-a protocol opens the new tab.
+(`/dev-status`, `DevStatusPage.kt`, in the sidebar after Credits). Each card is one link that
+stops its click from reaching the router: the router listens on `window`, handles every href it
+does not take for external (relative paths, and localhost URLs) and ignores `target`.
 
 ## What is data and what is judgement
 
