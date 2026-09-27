@@ -6,132 +6,9 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDuckingSpec : StringSpec({
-
-    "duckorbit dsl interface" {
-        val pat = "0 1"
-        val ctrl = "1 2"
-
-        dslInterfaceTests(
-            "pattern.duck(ctrl)" to
-                    seq(pat).duck(ctrl),
-            "script pattern.duck(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duck("$ctrl")"""),
-            "string.duck(ctrl)" to
-                    pat.duck(ctrl),
-            "script string.duck(ctrl)" to
-                    SprudelPattern.compile(""""$pat".duck("$ctrl")"""),
-            "duck(ctrl)" to
-                    seq(pat).apply(duck(ctrl)),
-            "script duck(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
-            events[1].data.katalystParams?.get("duck.orbit") shouldBe 2.0
-        }
-    }
-
-    "duckattack dsl interface" {
-        val pat = "0 1"
-        val ctrl = "0.1 0.5"
-
-        dslInterfaceTests(
-            "pattern.duck(attack = ctrl)" to
-                    seq(pat).duck(attack = ctrl),
-            "script pattern.duck(attack = ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duck(attack = "$ctrl")"""),
-            "string.duck(attack = ctrl)" to
-                    pat.duck(attack = ctrl),
-            "script string.duck(attack = ctrl)" to
-                    SprudelPattern.compile(""""$pat".duck(attack = "$ctrl")"""),
-            "duck(attack = ctrl)" to
-                    seq(pat).apply(duck(attack = ctrl)),
-            "script duck(attack = ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duck(attack = "$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
-            events[1].data.katalystParams?.get("duck.attack") shouldBe 0.5
-        }
-    }
-
-    "duckdepth dsl interface" {
-        val pat = "0 1"
-        val ctrl = "0.1 0.5"
-
-        dslInterfaceTests(
-            "pattern.duck(depth = ctrl)" to
-                    seq(pat).duck(depth = ctrl),
-            "script pattern.duck(depth = ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").duck(depth = "$ctrl")"""),
-            "string.duck(depth = ctrl)" to
-                    pat.duck(depth = ctrl),
-            "script string.duck(depth = ctrl)" to
-                    SprudelPattern.compile(""""$pat".duck(depth = "$ctrl")"""),
-            "duck(depth = ctrl)" to
-                    seq(pat).apply(duck(depth = ctrl)),
-            "script duck(depth = ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(duck(depth = "$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.katalystParams?.get("duck.depth") shouldBe 0.1
-            events[1].data.katalystParams?.get("duck.depth") shouldBe 0.5
-        }
-    }
-
-    "duck() sets the duck.orbit slot" {
-        val p = note("c3").duck(1)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
-    }
-
-    "duck() can be used as PatternMapper" {
-        val p = note("c3").apply(duck(1))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.orbit") shouldBe 1.0
-    }
-
-    "duck(attack = ...) sets the duck.attack slot" {
-        val p = note("c3").duck(attack = 0.15)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.15
-    }
-
-    "duck(attack = ...) can be used as PatternMapper" {
-        val p = note("c3").apply(duck(attack = 0.25))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.25
-    }
-
-    "duck(depth = ...) sets the duck.depth slot" {
-        val p = note("c3").duck(depth = 0.7)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.7
-    }
-
-    "duck(depth = ...) can be used as PatternMapper" {
-        val p = note("c3").apply(duck(depth = 0.9))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.9
-    }
 
     "ducking parameters merge correctly" {
         val p = note("c3")
@@ -159,18 +36,5 @@ class LangDuckingSpec : StringSpec({
         voiceData.katalystParams?.get("duck.orbit") shouldBe 0.0
         voiceData.katalystParams?.get("duck.attack") shouldBe 0.15
         voiceData.katalystParams?.get("duck.depth") shouldBe 0.6
-    }
-
-    "ducking parameters work with pattern control" {
-        val p = note("c3 d3")
-            .duck(2)
-            .duck(attack = 0.1)
-            .duck(depth = 0.5)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events[0].data.katalystParams?.get("duck.orbit") shouldBe 2.0
-        events[0].data.katalystParams?.get("duck.attack") shouldBe 0.1
-        events[0].data.katalystParams?.get("duck.depth") shouldBe 0.5
     }
 })

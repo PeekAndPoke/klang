@@ -7,46 +7,17 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
-import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBodySpec : StringSpec({
-
-    "body dsl interface" {
-        val pat = "c3"
-        val material = "wood"
-
-        // Positional: wet FIRST, then the material (step 3d(iii), 2026-09-24).
-        dslInterfaceTests(
-            "pattern.body(w, m)" to note(pat).body(0.7, material),
-            "script pattern.body(w, m)" to SprudelPattern.compile("""note("$pat").body(0.7, "$material")"""),
-            "string.body(w, m)" to pat.body(0.7, material),
-            "script string.body(w, m)" to SprudelPattern.compile(""""$pat".body(0.7, "$material")"""),
-            "body(w, m)" to note(pat).apply(body(0.7, material)),
-            "script body(w, m)" to SprudelPattern.compile("""note("$pat").apply(body(0.7, "$material"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.body shouldBe "wood"
-            events[0].data.bodyMix shouldBe 0.7
-        }
-    }
 
     "body() sets the body property case-insensitively" {
         val events = note("c3").body(material = "Wood").queryArc(0.0, 1.0)
         events[0].data.body shouldBe "wood"
-    }
-
-    "body() works across a sequence" {
-        val events = note("c3 e3").body(material = "wood tube").queryArc(0.0, 1.0)
-        events.size shouldBe 2
-        events[0].data.body shouldBe "wood"
-        events[1].data.body shouldBe "tube"
     }
 
     // The orbit's body stage reads its SLOTS (`body.material`, `body.wet`, `body.floor` in `katalystParams`, Katalyst
@@ -56,13 +27,6 @@ class LangBodySpec : StringSpec({
         pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
 
     fun modes(slots: Map<String, Double>) = BodyMaterials.modesAt(slots["body.material"] ?: Double.NaN)
-
-    "body() writes the orbit's body slots: the material's index (an 8-mode body) and the default wet" {
-        val slots = slots(note("c3").body(material = "wood"))
-
-        modes(slots)?.size shouldBe 8
-        slots["body.wet"] shouldBe BODY_WET
-    }
 
     "every catalogue material resolves to an 8-mode body (except 'none')" {
         BodyMaterials.names.filter { it != "none" }.forEach { material ->
@@ -77,20 +41,10 @@ class LangBodySpec : StringSpec({
         modes(slots) shouldBe null
     }
 
-    "body(wet = ...) overrides the dry/wet mix" {
-        slots(note("c3").body(material = "tube", wet = 0.6))["body.wet"] shouldBe 0.6
-    }
-
     "body(wet = ...) passes raw values to the wire (the [0, 1] coercion is the ENGINE's, since C4)" {
         listOf(1.5, 5.0, 100.0).forEach { mix ->
             slots(note("c3").body(material = "brass", wet = mix))["body.wet"] shouldBe mix
         }
-    }
-
-    "body(floor = ...) takes the shared constant when the call leaves it out, and is settable" {
-        // Since Katalyst step 5a-3 the DOOR writes the floor when a call names the material: one place decides it.
-        slots(note("c3").body(material = "wood"))["body.floor"] shouldBe BODY_FLOOR
-        slots(note("c3").body(material = "wood", floor = 0.2))["body.floor"] shouldBe 0.2
     }
 
     "body params survive the grouped merge (material + wet + floor)" {

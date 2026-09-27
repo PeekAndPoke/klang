@@ -6,11 +6,8 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.paramBagOf
 
@@ -24,26 +21,6 @@ import io.peekandpoke.klang.sprudel.paramBagOf
  * `Master(m => m.delay(configure = d => d.cap(3.0)))`.
  */
 class LangFeedbackCapSpec : StringSpec({
-
-    "delay(cap = ...) dsl interface" {
-        val pat = "c3"
-        val value = "3.0"
-
-        dslInterfaceTests(
-            "pattern.delay(cap = v)" to note(pat).delay(cap = value),
-            "script pattern.delay(cap = v)" to SprudelPattern.compile("""note("$pat").delay(cap = "$value")"""),
-            "string.delay(cap = v)" to pat.delay(cap = value),
-            "script string.delay(cap = v)" to SprudelPattern.compile(""""$pat".delay(cap = "$value")"""),
-            "delay(cap = v)" to note(pat).apply(delay(cap = value)),
-            "script delay(cap = v)" to SprudelPattern.compile("""note("$pat").apply(delay(cap = "$value"))"""),
-            "chained delay(cap = v)" to note(pat).apply(delay(cap = value).delay(cap = value)),
-            "script chained delay(cap = v)" to
-                    SprudelPattern.compile("""note("$pat").apply(delay(cap = "$value").delay(cap = "$value"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.katalystParams?.get("delay.cap") shouldBe 3.0
-        }
-    }
 
     "the cap reaches the wire and defaults to absent" {
         val withCaps = note("c3").delay(cap = 3.0).queryArc(0.0, 1.0)[0].data.toVoiceData()

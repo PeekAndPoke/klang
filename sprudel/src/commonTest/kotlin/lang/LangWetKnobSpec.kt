@@ -30,24 +30,6 @@ class LangWetKnobSpec : StringSpec({
     fun firstData(p: SprudelPattern?): SprudelVoiceData =
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data
 
-    "sprudel Kotlin door: wet knobs write the (unchanged) wire fields" {
-        firstData(note("c").reverb(0.4)).katalystParams?.get("reverb.wet") shouldBe 0.4
-        firstData(note("c").delay(0.3)).katalystParams?.get("delay.wet") shouldBe 0.3
-        firstData(note("c").phaser(wet = 0.8)).phaserDepth shouldBe 0.8
-        firstData(note("c").phaser(floor = 0.3)).phaserFloor shouldBe 0.3
-        firstData(note("c").body(wet = 0.5)).bodyMix shouldBe 0.5
-        firstData(note("c").vowel(wet = 0.6)).vowelMix shouldBe 0.6
-    }
-
-    "sprudel script door: wet knobs dispatch and write the same fields" {
-        firstData(SprudelPattern.compile("""note("c").reverb(0.4)""")).katalystParams?.get("reverb.wet") shouldBe 0.4
-        firstData(SprudelPattern.compile("""note("c").delay(0.3)""")).katalystParams?.get("delay.wet") shouldBe 0.3
-        firstData(SprudelPattern.compile("""note("c").phaser(wet = 0.8)""")).phaserDepth shouldBe 0.8
-        firstData(SprudelPattern.compile("""note("c").phaser(floor = 0.3)""")).phaserFloor shouldBe 0.3
-        firstData(SprudelPattern.compile("""note("c").body(wet = 0.5)""")).bodyMix shouldBe 0.5
-        firstData(SprudelPattern.compile("""note("c").vowel(wet = 0.6)""")).vowelMix shouldBe 0.6
-    }
-
     "compound heads: wet is the FIRST positional slot of every door that has one (step 3d(iii))" {
         val reverb = firstData(note("c").reverb(0.4, 5.0))
         reverb.katalystParams?.get("reverb.wet") shouldBe 0.4
@@ -69,14 +51,6 @@ class LangWetKnobSpec : StringSpec({
         val vowel = firstData(note("c").vowel(0.6, "a"))
         vowel.vowelMix shouldBe 0.6
         vowel.vowel shouldBe "a"
-    }
-
-    "phaserFloor takes the engine's additive default 1.0 unless set" {
-        // It used to stay null and the engine substituted PHASER_FLOOR; since Katalyst step 5a-3
-        // the door writes the same constant when any phaser knob names the stage, so the additive
-        // law still rules and one place decides it. A value the author gave is untouched.
-        firstData(note("c").phaser(wet = 0.5)).phaserFloor shouldBe PHASER_FLOOR
-        firstData(note("c").phaser(wet = 0.5, floor = 0.25)).phaserFloor shouldBe 0.25
     }
 
     "the phaser floor crosses the WIRE boundary (toVoiceData) as its orbit slot: set passes through, unnamed takes PHASER_FLOOR" {

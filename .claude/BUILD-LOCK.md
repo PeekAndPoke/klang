@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| test consolidation commit 2 (implementer done; coordinator commits) | `sprudel/src/commonTest/kotlin/lang/`: new `LangDoorFormsSpec`, 45 door specs deleted (unstaged), form rows trimmed in 24 kept door specs (`LangLpfSpec` rewritten as the four-filter table); `sprudel/ref/testing.md`, `docs/tasks/sprudel-test-coverage-and-review.md` (pointers) | Rows deleted on purpose, ledger in the implementer's scratchpad `tc2/removed.md`, kept-but-unsure in `tc2/unsure.md`; no production code; round 1 fixes in; suites green (JVM 3529, JS 2994 without commit 3's edits; 3428 / 2893 with them in the tree) |
 
 ## The two layers
 

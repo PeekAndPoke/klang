@@ -9,113 +9,16 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
-import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelaySpec : StringSpec({
 
-    "delay() sets the delay.wet slot" {
-        val p = note("a b").apply(delay("0.5 0.8"))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.katalystParams?.get("delay.wet") } shouldBe listOf(0.5, 0.8)
-    }
-
-    "delay() works as pattern extension" {
-        val p = note("c").delay("0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("delay.wet") shouldBe 0.5
-    }
-
-    "delay() works as string extension" {
-        val p = "c".delay("0.5")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("delay.wet") shouldBe 0.5
-    }
-
-    "delay() works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delay("0.5")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.katalystParams?.get("delay.wet") shouldBe 0.5
-    }
-
-    "delay() with continuous pattern sets delay correctly" {
-        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").delay(sine)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
-        events[0].data.katalystParams?.get("delay.wet") shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
-        events[1].data.katalystParams?.get("delay.wet") shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
-        events[2].data.katalystParams?.get("delay.wet") shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
-        events[3].data.katalystParams?.get("delay.wet") shouldBe (0.0 plusOrMinus EPSILON)
-    }
-
     // -- per-param (amount, time, feedback) --------------------------------------------
-
-    "delay() per-param sets all three slots" {
-        val p = note("c").delay(0.5, 0.25, 0.6)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        with(events[0].data) {
-            katalystParams?.get("delay.wet") shouldBe 0.5
-            katalystParams?.get("delay.time") shouldBe 0.25
-            katalystParams?.get("delay.feedback") shouldBe 0.6
-        }
-    }
-
-    "delay() per-param with partial params sets the given fields, the rest take their defaults" {
-        val p = note("c").delay(0.8, 0.125)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        with(events[0].data) {
-            katalystParams?.get("delay.wet") shouldBe 0.8
-            katalystParams?.get("delay.time") shouldBe 0.125
-            katalystParams?.get("delay.feedback") shouldBe DELAY_FEEDBACK
-            katalystParams?.get("delay.cap") shouldBe DELAY_CAP
-        }
-    }
-
-    "delay() per-param works as string extension" {
-        val p = "c".delay(0.5, 0.25, 0.6)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        with(events[0].data) {
-            katalystParams?.get("delay.wet") shouldBe 0.5
-            katalystParams?.get("delay.time") shouldBe 0.25
-            katalystParams?.get("delay.feedback") shouldBe 0.6
-        }
-    }
-
-    "delay() per-param works in compiled code" {
-        val p = SprudelPattern.compile("""note("c").delay(0.5, 0.25, 0.6)""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        with(events[0].data) {
-            katalystParams?.get("delay.wet") shouldBe 0.5
-            katalystParams?.get("delay.time") shouldBe 0.25
-            katalystParams?.get("delay.feedback") shouldBe 0.6
-        }
-    }
 
     "delay() per-param mini-notation patterns" {
         val p = note("c3 e3").delay("<0.3 0.6>", "<0.125 0.25>", "<~ 0.8>")
@@ -132,19 +35,6 @@ class LangDelaySpec : StringSpec({
             cycle1[0].data.katalystParams?.get("delay.wet") shouldBe 0.6
             cycle1[0].data.katalystParams?.get("delay.time") shouldBe 0.25
             cycle1[0].data.katalystParams?.get("delay.feedback") shouldBe 0.8
-        }
-    }
-
-    "delay() per-param works chained with other effects" {
-        val p = note("c").apply(gain(0.8).delay(0.5, 0.25, 0.6))
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        with(events[0].data) {
-            gain shouldBe 0.8
-            katalystParams?.get("delay.wet") shouldBe 0.5
-            katalystParams?.get("delay.time") shouldBe 0.25
-            katalystParams?.get("delay.feedback") shouldBe 0.6
         }
     }
 

@@ -37,15 +37,6 @@ class LangCanonicalFilterNamesSpec : StringSpec({
         }
     }
 
-    "the canonical names are reachable on all four surface forms" {
-        // member, string-receiver, standalone mapper, chained mapper — the shape every
-        // sprudel function ships. A name registered on only some of them is half a name.
-        filters("""note("c").lowpass(800)""").size shouldBe 1
-        filters(""""c".lowpass(800).note()""").size shouldBe 1
-        filters("""note("c").apply(lowpass(800))""").size shouldBe 1
-        filters("""note("c").apply(gain(0.8).lowpass(800))""").size shouldBe 1
-    }
-
     "the short forms are the same objects as the long ones" {
         (filters("""note("c").lpf(800)""")[0] as WireFilter.LowPass).freq shouldBe 800.0
         (filters("""note("c").hpf(200)""")[0] as WireFilter.HighPass).freq shouldBe 200.0

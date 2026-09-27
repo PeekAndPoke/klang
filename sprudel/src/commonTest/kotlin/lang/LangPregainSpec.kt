@@ -7,10 +7,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
  * The `pregain` door: how hard an event is played INTO its instrument (the signal-flow plan,
@@ -23,30 +20,6 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
  * `VoicePregainWireSpec`); nothing here can hear anything.
  */
 class LangPregainSpec : StringSpec({
-
-    "pregain dsl interface" {
-        val pat = "0 1"
-        val ctrl = "1 0.7"
-
-        dslInterfaceTests(
-            "pattern.pregain(ctrl)" to
-                    seq(pat).pregain(ctrl),
-            "script pattern.pregain(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").pregain("$ctrl")"""),
-            "string.pregain(ctrl)" to
-                    pat.pregain(ctrl),
-            "script string.pregain(ctrl)" to
-                    SprudelPattern.compile(""""$pat".pregain("$ctrl")"""),
-            "pregain(ctrl)" to
-                    seq(pat).apply(pregain(ctrl)),
-            "script pregain(ctrl)" to
-                    SprudelPattern.compile("""seq("$pat").apply(pregain("$ctrl"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.oscParams?.get("pregain") shouldBe 1.0
-            events[1].data.oscParams?.get("pregain") shouldBe 0.7
-        }
-    }
 
     "the chained mapper form applies after the previous mapper" {
         val p = seq("0 1").apply(gain(0.4).pregain("1 0.7"))

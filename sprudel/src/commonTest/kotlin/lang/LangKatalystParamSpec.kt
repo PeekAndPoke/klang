@@ -23,18 +23,12 @@ import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.sprudel.ParamBag
@@ -46,7 +40,6 @@ import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.putKatalystParam
 import io.peekandpoke.klang.sprudel.putOscParam
-
 
 /**
  * The orbit chain's param state on the pattern side (Katalyst step 5a): the `.katp` door, the bus
@@ -119,41 +112,6 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     // ── The bus doors as aliases ─────────────────────────────────────────────────────────────────
-
-    "reverb(...) writes its slots, and the call fills the companions it left unset" {
-        val full = note("c3").reverb(wet = 0.5, size = 6, lowpass = 1500)
-
-        slot(full, "reverb.wet") shouldBe 0.5
-        slot(full, "reverb.size") shouldBe 6.0
-        slot(full, "reverb.lowpass") shouldBe 1500.0
-
-        // A tail-only call fills the wet it did not name, exactly as it fills the voice field.
-        val tail = note("c3").reverb(size = 4)
-
-        slot(tail, "reverb.size") shouldBe 4.0
-        slot(tail, "reverb.wet") shouldBe REVERB_WET
-        withClue("lowpass has no default, so it stays unset") {
-            slots(tail).first()?.containsKey("reverb.lowpass") shouldBe false
-        }
-
-        // ...and the other way round: a wet-only call fills the size, which is what makes a
-        // declared chain's room audible at all (the engine gates the reverb on its SIZE).
-        val wetOnly = note("c3").reverb(0.3)
-
-        slot(wetOnly, "reverb.wet") shouldBe 0.3
-        slot(wetOnly, "reverb.size") shouldBe REVERB_SIZE
-    }
-
-    "delay(...) writes its four slots with the same fill" {
-        val tail = note("c3").delay(time = 0.5)
-
-        slot(tail, "delay.time") shouldBe 0.5
-        slot(tail, "delay.wet") shouldBe DELAY_WET
-        slot(tail, "delay.feedback") shouldBe DELAY_FEEDBACK
-        slot(tail, "delay.cap") shouldBe DELAY_CAP
-
-        slot(note("c3").delay(0.4), "delay.time") shouldBe DELAY_TIME_SECONDS
-    }
 
     "compressor(...) fills the other four, whichever of the five the call named" {
         // The compressor has no NAME KNOB, so ANY of the five names it (Katalyst step 5a-3). The
