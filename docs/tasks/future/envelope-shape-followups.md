@@ -89,3 +89,20 @@ invites the second ADSR back in through the safety door.
 
 A cap never shapes anything. If it starts to, it has become an envelope and the parent task's whole
 argument has been undone.
+
+## 4. The FM index envelope has no `curves` (maintainer, 2026-09-23; shape updated 2026-09-25)
+
+Added 2026-09-27 from `ignitor-dsl-open-items.md` (archived as
+`docs/tasks-archive/2026-09/20260927-ignitor-dsl-open-items.md`); not one of the three measured findings
+above, but the same subject.
+
+The door-shape walk of 2026-09-23 (`builtin-instruments.md` section 3b) gave `fm` a builder with
+`adsr(attackSec, decaySec, sustainLevel, releaseSec)`, but NOT `adsrCurves`, because the FM index envelope
+has no curve support and a knob that does nothing is not offered. The maintainer wants it later, so `fm`
+speaks the same envelope vocabulary as the chain, the four filters and the pitch envelope.
+
+Needs: curve fields on `IgnitorDsl.Fm`, the curve law in `FmModIgnitor`'s envelope (today it runs
+`MOD_ENV_CURVE` on every stage, `PitchModFactories.kt`), and the envelope's own builder on the fm `adsr`,
+`adsr(a, d, s, r, e => e.curves(attack, decay, release))`, the shape every other envelope has since step
+3c, on both doors. Default: `MOD_ENV_CURVE` (decision D3, exponential; since step 5b (b) the FM envelope
+already reads it, so `sgbell` does not change).

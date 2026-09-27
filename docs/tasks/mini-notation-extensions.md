@@ -107,7 +107,7 @@ Not in scope for immediate implementation. Design notes:
 | `code-quality-review.md` (archived 2026-09-27) | General quality items                      |
 | `20260903-soundfont-looping-investigation.md` (archived) | Audio playback bug                         |
 | `audio-pipeline-open-topics.md` (archived 2026-09-27) | Future audio features                      |
-| `ignitor-dsl-open-items.md`              | Synthesis DSL features                     |
+| `ignitor-dsl-open-items.md` (archived 2026-09-27) | Synthesis DSL features                     |
 
 ### Loosely related (shared code areas but no blocking dependency)
 

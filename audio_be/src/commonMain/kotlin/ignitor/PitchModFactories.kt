@@ -432,7 +432,7 @@ private class FmModIgnitor(
             // prepared once per block and read per sample.
             //
             // `MOD_ENV_CURVE` on every stage, the default of every modulation envelope (decision D3):
-            // the FM index envelope has no curve surface yet (`ignitor-dsl-open-items.md`), so the
+            // the FM index envelope has no curve surface yet (`future/envelope-shape-followups.md` §4), so the
             // default is all it gets.
             envCore.prepareModEnvelope(
                 ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,

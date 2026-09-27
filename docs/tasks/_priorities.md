@@ -151,8 +151,8 @@ The release-defining set, regardless of when they're sequenced:
 - **NICE** — **Native-object operators** — [
   `klangscript-native-object-operators.md`](klangscript-native-object-operators.md) — prerequisite for field accessors;
   readability win.
-- **NICE** — **Ignitor DSL backlog** — [`ignitor-dsl-open-items.md`](ignitor-dsl-open-items.md) — attributes /
-  splitAndJoin / convolution (convolution = long-term guitar/body realism).
+- **NICE** — **Ignitor DSL backlog** — [`ignitor-dsl-open-items.md`](../tasks-archive/2026-09/20260927-ignitor-dsl-open-items.md) — attributes /
+  splitAndJoin / convolution (convolution = long-term guitar/body realism). *(Retired 2026-09-27; see its banner.)*
 - **NICE · ⚪ parked** — **IR → modal-table extraction** — [
   `future/ir-to-modal-table-extraction.md`](future/ir-to-modal-table-extraction.md) — real `body()` materials from
   recorded IRs.

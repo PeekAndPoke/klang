@@ -1,5 +1,18 @@
 # IgnitorDsl — Open Items
 
+> **RETIRED 2026-09-27 (maintainer).** Where each item went:
+> - **Non-finite pitch amount:** still open, now `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`
+>   (the re-check found vibrato and accelerate with the same shape).
+> - **FM index envelope `curves`:** still wanted, now `docs/tasks/future/envelope-shape-followups.md` §4.
+> - **Per-playback attributes (`Osc.cps()`), `splitAndJoin`, the KSP nested-alias note:** dropped. The first
+>   was postponed since 2026-04 with no application (`oscp()` covers it), the second is `(a + b + c).div(3)`
+>   by hand, the third is latent.
+> - **Impulse response convolution:** dropped; a future convolution reverb designs its own door (the
+>   `iresponse` retirement in `CLAUDE.md`). The related idea is `docs/tasks/future/ir-to-modal-table-extraction.md`;
+>   the design and the IR resource list below stay here as the record.
+> - **Filter dry/wet and a cab filter:** superseded by the `Eq` node (bell and tap sections), the `passes`
+>   slot on `lpf`/`hpf`, and the Katalyst `eq` stage.
+
 > **Completed work** is archived in
 `docs/tasks-archive/2026-03/20260329-exciter-dsl-klangscript-stabilization.md`.
 > Everything below is NOT YET IMPLEMENTED — these are future features and designs.
