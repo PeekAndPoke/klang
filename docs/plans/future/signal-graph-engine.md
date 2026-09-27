@@ -68,7 +68,12 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
 - two POSITION-bound features a merged "effect chain" type must keep expressible (maintainer and coordinator,
   2026-09-27: Katalyst and Master are the same thing, a shared chain, named only for where it sits): the master
   limiter's lookahead (a final safety stage, master-only by design; in a graph, a property of the node before the
-  output) and ducking (a side-chain edge from another bus, not a chain property).
+  output) and ducking (a side-chain edge from another bus, not a chain property);
+- the duck machinery, to be replaced by a bus reference plus a follower (section 5): the `duck` stage with its
+  own DSP (`Ducking`, `KatalystDuckEffect`), the second pass in `Cylinders.processAndMix` that runs it after every
+  orbit, `duckCylinderId`, the envelope handover `takeOver`, `ChainSwap`'s duck events (`processDuck`,
+  `ownerClaimed`, the duck data on Fading: the first thing to remove once ducking is composition), and the
+  rule that `duck` is inert at the output position (phase 3 step 12).
 
 ## 3. Open questions (to settle when this plan starts, not now)
 
@@ -102,6 +107,42 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   are the three levels of today's FIXED graph (voice instrument, orbit chain, master chain) spelled out as
   named properties. "OK-ish for now"; a configurable graph revises them, e.g. into one generic list of
   inline graph-node references per event, announced the same way.
+
+## 5. Bus references: ducking as composition (maintainer, 2026-09-27)
+
+Recorded only; nothing is built for it before this plan starts.
+
+**The idea.** One bus can reference another bus's output, and a node reads it. A gain modulator that reads the
+level of another bus IS ducking; it needs no duck feature. Three general parts:
+- a **reference**: a signal source "the output of bus X", an edge of the graph;
+- a **follower**: an envelope detector turning audio into a control signal (peak or RMS, attack, release). Today
+  it is hidden inside `Ducking`: instant attack, exponential release, sidechain sensitivity 2.0;
+- a **knob that accepts a signal**: a bus stage's knob is already an `IgnitorDsl` expression.
+
+Ducking becomes roughly `gain(1 - depth * follow(bus(1), release = 0.2))`, and the same parts give sidechain
+compression (a compressor's detector reads another bus), a filter that opens with the drums, a reverb that ducks
+its wet under the vocal, and the whole playback pumping under the kick at the output position.
+
+**The maintainer's instinct: a reference reads the referenced bus's PREVIOUS output block.** What that settles:
+- **Order:** none is needed. Every bus runs in any order, because what it reads is already complete. Today's duck
+  pass runs in map order, so two orbits ducking each other read one already-ducked output; that known limitation
+  of the fixed engine is left as it is, and this is its fix.
+- **Cycles:** defined without a special case, one block of delay per loop. Feedback gain in a loop is the
+  author's (the Motor stays raw).
+- **Position:** any node at any position reads any bus, the output included; the inert duck at the output goes.
+- **Rate:** the ordering half collapses. The reference still delivers a full block of samples, so the follower
+  runs per sample. The READING side still needs knobs that take a per-sample signal (a bus stage's knob is resolved
+  from the slots when the chain instance changes, and a knob change glides; no knob follows a signal), so that half
+  remains an engine feature to build.
+- **Latency:** fixed and small, one block of 128 frames (2.67 ms at 48 kHz, 2.9 ms at 44.1 kHz; the block size is
+  pinned). A duck reacts one block after its trigger, inside the attack of a typical sidechain compressor, where
+  today's instant-attack duck reacts on the trigger's own sample. No built-in song or frozen piece calls `.duck(` (grep,
+  2026-09-27; only `KatalystDoorFillRenderSpec` does), so the change moves no corpus row. Should aligned ducking
+  ever be wanted, delaying the ducked bus by one block restores it, the same trade as a lookahead (phase 3 step 12
+  C2). A referenced bus with a lookahead adds its own latency to the edge.
+
+**Open when the plan starts:** the tap point (before or after the referenced bus's own chain; today after, so a
+kick's reverb tail also holds the duck), the follower's shape and defaults, the names.
 
 ## Links
 
