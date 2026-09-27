@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Builds the dev-status pages into src/www: the topic map and the mission log.
+"""Builds the dev-status pages into src/jsMain/resources: the topic map and the mission log.
 
     python3 console/dev-status/build.py
 
 Reads every Markdown file in docs/tasks, docs/plans and docs/tasks-archive (title, status line,
 length, last commit, the links between them), joins it with the judgement in curation.py, and
 renders the two templates with the shared hud.css. The pages are flat HTML; d3 comes from cdnjs,
-the fonts from Google Fonts. Deployed by console/deploy-finzo.sh with the rest of src/www.
+the fonts from Google Fonts. They ship with the SPA's static resources: the dev server serves them,
+and console/deploy-finzo.sh uploads them to the site root with the rest of that folder.
 """
 import datetime as dt
 import glob
@@ -19,7 +20,7 @@ from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
-OUT = os.path.join(ROOT, 'src', 'www')
+OUT = os.path.join(ROOT, 'src', 'jsMain', 'resources')
 C = runpy.run_path(os.path.join(HERE, 'curation.py'))
 TODAY = dt.date.today()
 
@@ -184,7 +185,7 @@ def render(template, data, target):
     html = html.replace('/*__HUD_CSS__*/', css).replace('__DATA__', json.dumps(data, ensure_ascii=False))
     with open(os.path.join(OUT, target), 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f'wrote src/www/{target} ({len(html) // 1024} KB)')
+    print(f'wrote src/jsMain/resources/{target} ({len(html) // 1024} KB)')
 
 
 def main():

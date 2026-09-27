@@ -67,7 +67,7 @@ main way this task could go wrong.
    - tutorials under `src/commonMain/kotlin/pages/docs/tutorials/`;
    - the lexikon entries;
    - `.claude/skills/klang-music-writing/ref/ignitor-reference.md`;
-   - `src/www/klang-whitepaper.html`.
+   - `src/jsMain/resources/klang-whitepaper.html`.
 
 ## Keep the WORD "cutoff" in prose
 

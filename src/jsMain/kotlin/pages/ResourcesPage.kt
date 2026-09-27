@@ -89,7 +89,7 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
         const val PARAM_TAGS = "tags"
 
         /**
-         * The dev status pages: flat HTML in `src/www`, deployed to the site root next to the SPA.
+         * The dev status pages: flat HTML in `src/jsMain/resources`, served at the site root next to the SPA.
          * Built by `console/dev-status/build.py` (the topic map and the mission log).
          */
         private val devStatusPages: List<DevStatusPage> = listOf(

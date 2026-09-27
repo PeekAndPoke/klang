@@ -357,7 +357,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   best paragraph: a hand-written `fastCopy` via `Object.assign` was 22x SLOWER on V8 than the
   constructor-based `copy()`.
 - **Artifacts.** `docs/tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md`,
-  `sprudel/MEMORY.md`, `src/www/klang-whitepaper.html` (the 17x line), commits
+  `sprudel/MEMORY.md`, `src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
   `e9fa560c` .. `c303c333`.
 - **Mechanics.** (opus) run `VoiceDataCopyBenchmark` today on JVM and node
   (`:audio_benchmark:jvmRun`, `:jsNodeProductionRun`); it prints before the captured section.

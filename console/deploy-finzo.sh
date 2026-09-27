@@ -15,5 +15,3 @@ scp -r ./build/dist/js/productionExecutable/* finzo:/www/htdocs/w0057ac0/finzo/k
 echo "Uploading resources"
 scp -r ./src/jsMain/resources/* finzo:/www/htdocs/w0057ac0/finzo/klang.finzo.de/
 
-echo "Uploading static pages (src/www: white paper, dev status pages)"
-scp -r ./src/www/* finzo:/www/htdocs/w0057ac0/finzo/klang.finzo.de/

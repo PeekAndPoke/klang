@@ -400,7 +400,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    section 9.)
 4. **Interoperability lift**: when the second pattern kind exists, not before.
 5. **The announcements, last.** Everything that describes a retired surface is re-read and
-   rewritten once the surfaces are gone: the whitepaper (`src/www/klang-whitepaper.html`,
+   rewritten once the surfaces are gone: the whitepaper (`src/jsMain/resources/klang-whitepaper.html`,
    which explains the voice pipeline, `postgain`, the per-voice effect fields and the Strudel
    lineage), the tutorials and the Lexikon (doors described as fields become slot aliases, the
    Pipeline DSL and `pedal` disappear, `Katalyst` and `pregain` appear), the sprudel and ignitor
