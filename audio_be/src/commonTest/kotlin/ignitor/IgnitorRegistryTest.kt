@@ -228,31 +228,6 @@ class IgnitorRegistryTest : StringSpec({
         (sig1 !== sig2) shouldBe true
     }
 
-    "registerDefaults compositions produce non-zero output" {
-        val registry = IgnitorRegistry()
-        registry.registerDefaults()
-
-        val blockFrames = 128
-        val ctx = IgniteContext(
-            sampleRate = 44100,
-            voiceDurationFrames = 44100,
-            gateEndFrame = 44100,
-            releaseFrames = 4410,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply {
-            updateOffsetAndLength(0, blockFrames)
-            voiceElapsedFrames = 0
-        }
-
-        for (name in listOf("sgpad", "sgbell", "sgbuzz")) {
-            val dsl = registry.get(name)!!
-            val sig = dsl.toExciter()
-            val buffer = AudioBuffer(blockFrames)
-            sig.generate(buffer, 440.0, ctx)
-            buffer.any { it != 0.0 } shouldBe true
-        }
-    }
-
     "createExciter dispatches Variants by VoiceData.soundIndex" {
         val registry = IgnitorRegistry()
         val variants = IgnitorDsl.Variants(

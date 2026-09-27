@@ -7,17 +7,23 @@ package io.peekandpoke.klang.audio_be.cylinders
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
-import kotlin.math.abs
 
+/**
+ * The orbit compressor's SWITCHING on the cylinder: an untouched orbit has none, and a takeover by
+ * a voice that names none clears it at once or glides it out on a sounding orbit.
+ *
+ * What the slots resolve to is `KatalystSlotResolverSpec`'s, the host wiring of all five knobs is
+ * `OrbitBusPipelineSpec`'s one updateFromVoice row, who may write them (the lease) is
+ * `CylinderKatalystParamsSpec`'s, and the reused instance with its envelope is
+ * `KatalystCompressorEffectSpec`'s knob rows (a bare-compressor oracle run across the change).
+ */
 class OrbitCompressorSpec : StringSpec({
 
     val sampleRate = 44100
@@ -25,96 +31,26 @@ class OrbitCompressorSpec : StringSpec({
 
     fun createOrbit() = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
 
-    fun voiceWithCompressor(
-        thresholdDb: Double = -20.0,
-        ratio: Double = 4.0,
-        kneeDb: Double = 6.0,
-        attackSeconds: Double = 0.003,
-        releaseSeconds: Double = 0.1,
-    ) = VoiceTestHelpers.createSynthVoice(
+    fun voiceWithCompressor() = VoiceTestHelpers.createSynthVoice(
         // The bus compressor reads the orbit's SLOT state since Katalyst step 5b-1; every knob is
         // named here, which is what a `compressor(...)` call writes through the door's fill rule.
         katalystParams = mapOf(
-            "compressor.threshold" to thresholdDb,
-            "compressor.ratio" to ratio,
-            "compressor.knee" to kneeDb,
-            "compressor.attack" to attackSeconds,
-            "compressor.release" to releaseSeconds,
+            "compressor.threshold" to -20.0,
+            "compressor.ratio" to 4.0,
+            "compressor.knee" to 6.0,
+            "compressor.attack" to 0.003,
+            "compressor.release" to 0.1,
         )
     )
 
-    "cylinder has no compressor by default" {
+    "an untouched orbit has no compressor, before any voice and after a voice that names none" {
         val cylinder = createOrbit()
 
         cylinder.compressor!!.compressor shouldBe null
-    }
 
-    "compressor is created when first voice has compressor settings" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0.0)
-
-        cylinder.compressor!!.compressor shouldNotBe null
-    }
-
-    "compressor parameters are set correctly on first voice" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(
-            voiceWithCompressor(
-                thresholdDb = -15.0,
-                ratio = 3.0,
-                kneeDb = 4.0,
-                attackSeconds = 0.005,
-                releaseSeconds = 0.2
-            ),
-            blockStart = 0.0,
-        )
-
-        val c = cylinder.compressor!!.compressor!!
-        c.thresholdDb shouldBe -15.0
-        c.ratio shouldBe 3.0
-        c.kneeDb shouldBe 4.0
-        c.attackSeconds shouldBe 0.005
-        c.releaseSeconds shouldBe 0.2
-    }
-
-    "no compressor when voice has no compressor settings" {
-        val cylinder = createOrbit()
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = 0.0)
 
         cylinder.compressor!!.compressor shouldBe null
-    }
-
-    "compressor instance is reused on subsequent voices (not recreated)" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0.0)
-        val firstInstance = cylinder.compressor!!.compressor
-
-        cylinder.updateFromVoice(voiceWithCompressor(), blockStart = 0.0)
-
-        cylinder.compressor!!.compressor shouldBe firstInstance  // same reference, not a new object
-    }
-
-    "a second voice does NOT change the owner's compressor while the owner is alive (first-writer-wins)" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0, ratio = 4.0), blockStart = 0.0)
-        val firstInstance = cylinder.compressor!!.compressor!!
-
-        // Different voice, same block → denied by the single orbit lease.
-        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -10.0, ratio = 8.0), blockStart = 0.0)
-
-        cylinder.compressor!!.compressor shouldBe firstInstance  // same instance, untouched
-        firstInstance.thresholdDb shouldBe -20.0               // owner's params, NOT the second voice's
-        firstInstance.ratio shouldBe 4.0
-    }
-
-    "when the compressor owner ends, a later voice takes over and its compressor params apply" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0), blockStart = 0.0)
-        cylinder.compressor!!.compressor!!.thresholdDb shouldBe -20.0
-
-        // Owner stops checking in; a new compressor voice claims after the one-block grace.
-        cylinder.updateFromVoice(voiceWithCompressor(thresholdDb = -8.0), blockStart = 2.0 * blockFrames)
-        cylinder.compressor!!.compressor!!.thresholdDb shouldBe -8.0 // new owner's params (instance reused)
     }
 
     "when a non-compressor voice takes over the orbit before anything sounded, the compressor is cleared at once" {
@@ -162,53 +98,5 @@ class OrbitCompressorSpec : StringSpec({
         withClue("the gain reduction has landed on 0 dB: the stage is off") {
             cylinder.compressor!!.compressor shouldBe null
         }
-    }
-
-    "envelope state is preserved across voice updates (not reset)" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(
-            voiceWithCompressor(
-                thresholdDb = -20.0,
-                ratio = 4.0,
-                kneeDb = 0.0,
-                attackSeconds = 0.001,
-                releaseSeconds = 0.1
-            ),
-            blockStart = 0.0,
-        )
-        val compressor = cylinder.compressor!!.compressor!!
-
-        // Warm up the envelope follower with many blocks of loud signal (~-6 dB, well above threshold)
-        repeat(50) {
-            val l = AudioBuffer(blockFrames) { 0.5 }
-            val r = AudioBuffer(blockFrames) { 0.5 }
-            compressor.process(l, r, blockFrames)
-        }
-
-        // Measure steady-state compression level
-        val steadyLeft = AudioBuffer(blockFrames) { 0.5 }
-        val steadyRight = AudioBuffer(blockFrames) { 0.5 }
-        compressor.process(steadyLeft, steadyRight, blockFrames)
-        val steadyLevel = steadyLeft.map { abs(it) }.average()
-
-        // Simulate next note — same settings, envelope must NOT be reset
-        cylinder.updateFromVoice(
-            voiceWithCompressor(
-                thresholdDb = -20.0,
-                ratio = 4.0,
-                kneeDb = 0.0,
-                attackSeconds = 0.001,
-                releaseSeconds = 0.1
-            ),
-            blockStart = 0.0,
-        )
-
-        // Process immediately after — should be at roughly the same compression level
-        val afterLeft = AudioBuffer(blockFrames) { 0.5 }
-        val afterRight = AudioBuffer(blockFrames) { 0.5 }
-        cylinder.compressor!!.compressor!!.process(afterLeft, afterRight, blockFrames)
-        val afterLevel = afterLeft.map { abs(it) }.average()
-
-        afterLevel shouldBe (steadyLevel plusOrMinus 0.02)
     }
 })

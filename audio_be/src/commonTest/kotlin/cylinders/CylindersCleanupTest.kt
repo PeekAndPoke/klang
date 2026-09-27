@@ -35,30 +35,33 @@ class OrbitsCleanupTest : StringSpec({
         )
     }
 
-    "inactive cylinders are skipped during mixing" {
+    "an orbit the cleanup has deactivated is not mixed, whatever its buffer holds; an active one is" {
         val cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val fusionMix = StereoBuffer(blockFrames)
 
-        // Create cylinder 0 and make it inactive
-        val voice0 = createTestVoice(cylinderId = 0)
-        val orbit0 = cylinders.getOrInit(0, voice0, blockStart = 0.0)
-        orbit0.mixBuffer.clear()
-        orbit0.tryDeactivate(afterLastVoice)
-        orbit0.isActive shouldBe false
+        // Orbit 0 silent, orbit 1 sounding. The first block's cleanup visits orbit 0 and frees it.
+        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
+        val orbit1 = cylinders.getOrInit(1, createTestVoice(1), blockStart = 0.0)
 
-        // Create cylinder 1 with signal
-        val voice1 = createTestVoice(cylinderId = 1)
-        val orbit1 = cylinders.getOrInit(1, voice1, blockStart = 0.0)
+        orbit0.mixBuffer.clear()
         orbit1.mixBuffer.left[0] = 0.5
         orbit1.mixBuffer.right[0] = 0.5
 
-        // Clear fusion mix
-        fusionMix.clear()
-
-        // Process and mix
         cylinders.processAndMix(fusionMix, afterLastVoice)
 
-        // Master should only have cylinder 1's signal (cylinder 0 was skipped)
+        orbit0.isActive shouldBe false
+        orbit1.isActive shouldBe true
+
+        // Signal written into the freed orbit AFTER deactivation must not reach the mix; the
+        // sounding orbit's must, so a mix that skipped every orbit would go red here too.
+        orbit0.mixBuffer.left[0] = 1.0
+        orbit0.mixBuffer.right[0] = 1.0
+        orbit1.mixBuffer.left[0] = 0.5
+        orbit1.mixBuffer.right[0] = 0.5
+        fusionMix.clear()
+
+        cylinders.processAndMix(fusionMix, afterLastVoice)
+
         fusionMix.left[0] shouldBe 0.5
         fusionMix.right[0] shouldBe 0.5
     }
@@ -149,31 +152,6 @@ class OrbitsCleanupTest : StringSpec({
         fusionMix.right[0] shouldBe 0.0
     }
 
-    "inactive cylinder with signal is not mixed" {
-        val cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
-        val fusionMix = StereoBuffer(blockFrames)
-
-        // Create cylinder and deactivate it
-        val voice = createTestVoice(cylinderId = 0)
-        val cylinder = cylinders.getOrInit(0, voice, blockStart = 0.0)
-        cylinder.mixBuffer.clear()
-        cylinder.tryDeactivate(afterLastVoice)
-
-        // Add signal AFTER deactivation
-        cylinder.mixBuffer.left[0] = 1.0
-        cylinder.mixBuffer.right[0] = 1.0
-
-        // Clear fusion
-        fusionMix.clear()
-
-        // Process and mix
-        cylinders.processAndMix(fusionMix, afterLastVoice)
-
-        // Master should be silent (inactive cylinder was skipped)
-        fusionMix.left[0] shouldBe 0.0
-        fusionMix.right[0] shouldBe 0.0
-    }
-
     "cleanup only checks existing cylinders" {
         val cylinders = Cylinders(maxCylinders = 8, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val fusionMix = StereoBuffer(blockFrames)
@@ -217,29 +195,5 @@ class OrbitsCleanupTest : StringSpec({
         // All three should be summed
         fusionMix.left[0] shouldBe (0.6 plusOrMinus 0.0001)
         fusionMix.right[0] shouldBe (0.6 plusOrMinus 0.0001)
-    }
-
-    "cylinder deactivated by cleanup is not mixed on next block" {
-        val cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
-        val fusionMix = StereoBuffer(blockFrames)
-
-        // Create silent cylinder
-        val orbit0 = cylinders.getOrInit(0, createTestVoice(0), blockStart = 0.0)
-        orbit0.mixBuffer.clear()
-
-        // First block: cleanup deactivates cylinder 0
-        cylinders.processAndMix(fusionMix, afterLastVoice)
-        orbit0.isActive shouldBe false
-
-        // Add signal to the now-inactive cylinder
-        orbit0.mixBuffer.left[0] = 1.0
-        orbit0.mixBuffer.right[0] = 1.0
-
-        fusionMix.clear()
-
-        // Second block: should NOT mix the inactive cylinder
-        cylinders.processAndMix(fusionMix, afterLastVoice)
-        fusionMix.left[0] shouldBe 0.0
-        fusionMix.right[0] shouldBe 0.0
     }
 })

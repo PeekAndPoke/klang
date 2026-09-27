@@ -18,6 +18,9 @@ import kotlin.math.abs
 /**
  * Integration tests for the bus effect pipeline.
  * Verifies that effects chain correctly: Delay → Reverb → Phaser → Compressor.
+ *
+ * What each stage does on its own is its stage spec's (`KatalystDelayEffectSpec`,
+ * `KatalystReverbEffectSpec`, `KatalystCompressorEffectSpec`); these rows are about the chain.
  */
 class BusPipelineSpec : StringSpec({
 
@@ -77,59 +80,6 @@ class BusPipelineSpec : StringSpec({
 
         ctx.mixBuffer.left[0] shouldBe (0.5 plusOrMinus 1e-6)
         ctx.mixBuffer.right[0] shouldBe (0.3 plusOrMinus 1e-6)
-    }
-
-    "delay-only pipeline adds delayed signal to mix" {
-        val pipeline = createPipeline(delayTime = 0.05)
-        val ctx = createCtx()
-
-        // Feed signal through multiple blocks
-        repeat(50) {
-            ctx.mixBuffer.fill(0.5)
-
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        // After enough blocks, delayed signal should appear on top of the 0.5 dry
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.5 }
-        hasSignal shouldBe true
-    }
-
-    "reverb-only pipeline adds reverb signal to mix" {
-        val pipeline = createPipeline(reverbRoom = 0.5)
-        val ctx = createCtx()
-
-        // Reverb comb filters need time to build up signal
-        repeat(20) {
-            ctx.mixBuffer.fill(0.5)
-
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        val hasSignal = ctx.mixBuffer.left.any { abs(it - 0.5) > 1e-6 }
-        hasSignal shouldBe true
-    }
-
-    "compressor reduces loud signal at end of chain" {
-        val pipeline = createPipeline(compressorThreshold = -20.0)
-        val ctx = createCtx()
-
-        // Process enough blocks for the compressor envelope to converge
-        repeat(20) {
-            ctx.mixBuffer.left.fill(0.9)
-            ctx.mixBuffer.right.fill(0.9)
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        // Signal should be compressed
-        val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (outputLevel < 0.9) shouldBe true
     }
 
     "full pipeline chains all effects: delay + reverb + phaser + compressor" {

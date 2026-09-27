@@ -675,6 +675,11 @@ limiter songs).
 
 ### Risks
 
+- R0 (found in test consolidation commit 5, 2026-09-28): the house `MasterStage` clip (both clamp branches, the
+  `-1.0 -> -32767` boundary) is exercised by no spec through `MasterStage.process`; `KlangAudioRendererSpec`'s clip
+  table tests a copy. Give it a real row in this step (a production seam for the clip, or a `MasterStage` row that
+  drives the clip past the limiter).
+
 - R1 rent order (7.3): the one identity risk for the corpus; the C3 render answers it.
 - R2 the fast path (7.3): live multi-playback last-bit summation only.
 - R3 the tail flag (7.3): live disposal timing only.

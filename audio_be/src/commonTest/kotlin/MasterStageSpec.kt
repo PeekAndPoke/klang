@@ -13,7 +13,9 @@ import io.kotest.matchers.shouldBe
 /**
  * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1). D2·b will call
  * [MasterStage.process] directly on the summed mix, so the wiring (limiter → DC → clip + interleave)
- * is covered here in isolation. (Clip-bounds + limiter math are also covered by KlangAudioRendererSpec.)
+ * is covered here in isolation. The clip itself (both clamp branches, the -1.0 boundary) is NOT exercised through
+ * [MasterStage.process] by any spec: `KlangAudioRendererSpec`'s clip table tests a copy of it (test consolidation
+ * commit 5; a gap parked for phase 3 step 12).
  */
 class MasterStageSpec : StringSpec({
 

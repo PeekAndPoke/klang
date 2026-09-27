@@ -260,6 +260,27 @@ Format: spec and row; what it asserts; what might cover it; why unclear.
      `Ignitor.crush(Double)` convenience overload, which has its own `amount < 1.0` short-circuit (the only other test
      use, `SharedScratchSpec`, calls the DSL `IgnitorDsl.crush`). Belongs with item 3's decision.
 
+**From commit 5** (kept; item 1's clip gap is parked as risk R0 in the step 12 plan):
+
+1. `KlangAudioRendererSpec` "clip: ..." table and the two "interleave" rows.
+   - Assert: a test-local COPY of the clip + interleave loop in `MasterStage.process` (the helpers `clipSample` /
+     `clipAndInterleave` at the bottom of the file) maps samples as expected.
+   - Might be covered by: nothing in production terms. No mutation of `MasterStage.process` can turn these rows red;
+     only a mutation of the copy does (M10). `MasterStageSpec` covers silence, channel routing, DC order and latency,
+     not the clip bounds, and its KDoc wrongly says "Clip-bounds ... are also covered by KlangAudioRendererSpec".
+   - Unclear because: the audit asked for tables (done, no coverage change), but a table of a copy guards nothing.
+     Real teeth need either a production seam (the clip as a function MasterStage calls, which is a production
+     change) or a row through `MasterStage.process`, whose limiter and DC blocker sit in front of the clip; both are
+     master work (step 12). Options: keep, delete as toothless, or move to a MasterStage clip row in step 12 and fix
+     that KDoc there.
+
+2. `KatalystPipelineSpec` "full pipeline chains all effects" and "pipeline effects are independent" (kept, as the audit said).
+   - Assert: any sample of the mix differs from 0.5 after the chain.
+   - Might be covered by: the stage specs' own "processes when above threshold" rows.
+   - Unclear because: "any difference" is the weak-teeth shape, but these are the only rows that run the four stages
+     as one list; the audit kept them and nothing else pins the chain order at this level (the classic chain order is
+     `KatalystClassicPipelineOrderSpec`).
+
 ## 5. Guards that stay, whatever the cut
 
 Everything named in root `CLAUDE.md` (guardrails), `.claude/skills/review-loop/escape-ledger.md`,

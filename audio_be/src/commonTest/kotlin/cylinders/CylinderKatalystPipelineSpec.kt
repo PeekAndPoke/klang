@@ -5,9 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystBodyEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystFormantEffect
@@ -91,56 +92,6 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = woodBody), blockStart = 0.0) // A owns
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice(), blockStart = bf.toDouble())               // B within grace → denied
         bodyActiveOn(cylinder) shouldBe true // still A's body
-    }
-
-    "one lease owns ALL bus effects: a second voice cannot change reverb/delay while the owner is alive" {
-        val cylinder = createOrbit()
-        cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf(
-                    "reverb.wet" to 0.5, "reverb.size" to 7.0,
-                    "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.4,
-                ),
-            ),
-            blockStart = 0.0,
-        )
-        cylinder.reverb!!.reverb!!.size shouldBe 0.7
-        cylinder.delay!!.delayLine!!.time shouldBe 0.3
-
-        // Different voice, same block → denied → owner's settings persist.
-        cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf(
-                    "reverb.wet" to 0.5, "reverb.size" to 2.0,
-                    "delay.wet" to 0.5, "delay.time" to 0.9, "delay.feedback" to 0.1,
-                ),
-            ),
-            blockStart = 0.0,
-        )
-        cylinder.reverb!!.reverb!!.size shouldBe 0.7
-        cylinder.delay!!.delayLine!!.time shouldBe 0.3
-    }
-
-    "when the orbit owner ends, a new voice takes over and its bus settings apply" {
-        val cylinder = createOrbit()
-        val bf = blockFrames
-        cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 7.0),
-            ),
-            blockStart = 0.0,
-        )
-        cylinder.reverb!!.reverb!!.size shouldBe 0.7
-
-        // This row guards the LEASE, who applies. In production a later owner's size GLIDES in
-        // over 50 ms (`KatalystReverbGlideSpec`).
-        cylinder.updateFromVoice(
-            VoiceTestHelpers.createSynthVoice(
-                katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 2.0),
-            ),
-            blockStart = 2.0 * bf,
-        )
-        cylinder.reverb!!.reverb!!.size shouldBe 0.2 // new owner's
     }
 
     "switching reverb off starts the drain: the orbit rings out, stays alive, then deactivates clean" {
@@ -431,87 +382,80 @@ class OrbitBusPipelineSpec : StringSpec({
         cylinder.phaser!!.phaser.center shouldBe 1200.0
     }
 
-    "updateFromVoice configures delay parameters" {
+    "updateFromVoice: the owner's slots reach every stage of the orbit's chain" {
+        // The HOST wiring, once for every stage, with values that differ from every stage's
+        // constant, so a knob that is dropped on the way reads as its default and goes red. What a
+        // slot resolves to is `KatalystSlotResolverSpec`'s subject; who may write it (the one
+        // lease for every stage) is `CylinderKatalystParamsSpec`'s.
         val cylinder = createOrbit()
-        val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf("delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.3),
+        val phaser = mapOf(
+            "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0, "phaser.sweep" to 600.0,
         )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
-
-        cylinder.delay!!.delayLine!!.time shouldBe 0.5
-        cylinder.delay!!.delayLine!!.feedback shouldBe 0.3
-    }
-
-    "updateFromVoice configures reverb parameters" {
-        val cylinder = createOrbit()
         val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf("reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0),
-        )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
-
-        cylinder.reverb!!.reverb!!.size shouldBe 0.7
-        cylinder.reverb!!.reverb!!.lowpass shouldBe 5000.0
-    }
-
-    "updateFromVoice configures phaser parameters" {
-        val cylinder = createOrbit()
-        val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf(
-                "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0,
-                "phaser.sweep" to 600.0, "phaser.floor" to 0.25,
+            katalystParams = phaser + mapOf(
+                "phaser.floor" to 0.25,
+                "delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.45,
+                "reverb.wet" to 0.5, "reverb.size" to 7.0, "reverb.lowpass" to 5000.0,
+                "duck.orbit" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8,
+                "compressor.threshold" to -15.0, "compressor.ratio" to 3.0, "compressor.knee" to 4.0,
+                "compressor.attack" to 0.005, "compressor.release" to 0.2,
             ),
         )
+
         cylinder.updateFromVoice(voice, blockStart = 0.0)
 
-        cylinder.phaser!!.phaser.rate shouldBe 2.0
-        cylinder.phaser!!.phaser.depth shouldBe 0.5
-        cylinder.phaser!!.phaser.center shouldBe 800.0
-        cylinder.phaser!!.phaser.sweep shouldBe 600.0
-        // C4.2: the floor must be FORWARDED (a dropped line falls back to additive 1.0
-        // and phaser(floor = ...) becomes a silent no-op on the bus path)
-        cylinder.phaser!!.phaser.floor shouldBe 0.25
-    }
+        withClue("delay") {
+            val line = cylinder.delay!!.delayLine.shouldNotBeNull()
 
-    "updateFromVoice: an absent phaser floor arrives as the additive default 1.0" {
-        val cylinder = createOrbit()
-        val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf(
-                "phaser.rate" to 2.0, "phaser.wet" to 0.5, "phaser.center" to 800.0,
-                "phaser.sweep" to 600.0,
-            ),
-        )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
-        cylinder.phaser!!.phaser.floor shouldBe 1.0
-    }
+            line.time shouldBe 0.5
+            line.feedback shouldBe 0.45
+        }
 
-    "updateFromVoice configures ducking" {
-        val cylinder = createOrbit()
-        val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf("duck.orbit" to 2.0, "duck.attack" to 0.05, "duck.depth" to 0.8),
-        )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        withClue("reverb: the authored size is normalized") {
+            val room = cylinder.reverb!!.reverb.shouldNotBeNull()
 
-        cylinder.duck!!.duckCylinderId shouldBe 2
-        cylinder.duck!!.ducking shouldNotBe null
-        cylinder.duck!!.ducking!!.depth shouldBe 0.8
-    }
+            room.size shouldBe 0.7
+            room.lowpass shouldBe 5000.0
+        }
 
-    "updateFromVoice configures compressor" {
-        val cylinder = createOrbit()
-        val voice = VoiceTestHelpers.createSynthVoice(
-            katalystParams = mapOf(
-                "compressor.threshold" to -15.0,
-                "compressor.ratio" to 3.0,
-                "compressor.knee" to 4.0,
-                "compressor.attack" to 0.005,
-                "compressor.release" to 0.2,
-            ),
-        )
-        cylinder.updateFromVoice(voice, blockStart = 0.0)
+        withClue("phaser") {
+            val p = cylinder.phaser!!.phaser
 
-        val c = cylinder.compressor!!.compressor!!
-        c.thresholdDb shouldBe -15.0
-        c.ratio shouldBe 3.0
+            p.rate shouldBe 2.0
+            p.depth shouldBe 0.5
+            p.center shouldBe 800.0
+            p.sweep shouldBe 600.0
+            // C4.2: the floor must be FORWARDED (a dropped line falls back to additive 1.0
+            // and phaser(floor = ...) becomes a silent no-op on the bus path)
+            p.floor shouldBe 0.25
+        }
+
+        withClue("duck") {
+            cylinder.duck!!.duckCylinderId shouldBe 2
+
+            val ducking = cylinder.duck!!.ducking.shouldNotBeNull()
+
+            ducking.depth shouldBe 0.8
+            ducking.attackSeconds shouldBe 0.05
+        }
+
+        withClue("compressor, all five knobs") {
+            val c = cylinder.compressor!!.compressor.shouldNotBeNull()
+
+            c.thresholdDb shouldBe -15.0
+            c.ratio shouldBe 3.0
+            c.kneeDb shouldBe 4.0
+            c.attackSeconds shouldBe 0.005
+            c.releaseSeconds shouldBe 0.2
+        }
+
+        withClue("a phaser floor nobody writes arrives as the additive default 1.0") {
+            val unfloored = createOrbit()
+
+            unfloored.updateFromVoice(VoiceTestHelpers.createSynthVoice(katalystParams = phaser), blockStart = 0.0)
+
+            unfloored.phaser!!.phaser.floor shouldBe 1.0
+        }
     }
 
     "clear resets all buffers" {

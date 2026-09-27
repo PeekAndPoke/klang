@@ -5,9 +5,14 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
 
@@ -41,99 +46,80 @@ class KlangAudioRendererSpec : StringSpec({
         renderer.clockForTest.cursorFrame shouldBe blockFrames.toDouble()
     }
 
-    "renderBlock with no voices produces all-zero output" {
+    "with no voices every block is written with exact zeros, and one voice is heard" {
+        // Every slot of the 2 * blockFrames interleave is pre-filled with a non-zero, so a block
+        // that leaves any of `out` unwritten goes red, on consecutive blocks and after cursor jumps.
         val renderer = createRenderer()
         val out = ShortArray(blockFrames * 2)
+        val cursors = List(10) { it * blockFrames } + listOf(44100, 1_000_000)
 
-        renderer.renderBlock(cursorFrame = 0.0, out = out)
+        for (cursor in cursors) {
+            out.fill(999.toShort())
+            renderer.renderBlock(cursorFrame = cursor.toDouble(), out = out)
 
-        for (i in out.indices) {
-            out[i] shouldBe 0.toShort()
-        }
-    }
-
-    "renderBlock produces correct output size (2x blockFrames for stereo interleave)" {
-        val renderer = createRenderer()
-        val out = ShortArray(blockFrames * 2)
-
-        renderer.renderBlock(cursorFrame = 0.0, out = out)
-
-        out.size shouldBe blockFrames * 2
-    }
-
-    "multiple silent renderBlock calls all produce zeros" {
-        val renderer = createRenderer()
-        val out = ShortArray(blockFrames * 2)
-
-        repeat(10) { block ->
-            renderer.renderBlock(cursorFrame = (block * blockFrames).toDouble(), out = out)
-
-            for (i in out.indices) {
-                out[i] shouldBe 0.toShort()
+            withClue("cursor $cursor") {
+                out.all { it == 0.toShort() } shouldBe true
             }
         }
+
+        // The engagement: a renderer that always writes zeros passes everything above. One sine
+        // voice, scheduled before the first render as the offline renderer does, must come out
+        // within the master limiter's lookahead plus a few blocks.
+        val playing = createRenderer()
+
+        playing.setBackendStartTime(0.0)
+        playing.voices.scheduleVoice(
+            ScheduledVoice(
+                playbackId = "p",
+                startTime = 0.0,
+                gateEndTime = 1.0,
+                data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0).withClassicSlots(
+                    DoorFields(adsr = DoorAdsr(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01))
+                ),
+                playbackStartTime = 0.0,
+            )
+        )
+
+        var heard = false
+
+        repeat(8) { block ->
+            playing.renderBlock(cursorFrame = (block * blockFrames).toDouble(), out = out)
+            heard = heard || out.any { it != 0.toShort() }
+        }
+
+        withClue("a scheduled voice reaches the PCM") { heard shouldBe true }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Clipping boundaries (unit-level: replicates renderer post-processing logic)
+    // Clipping boundaries (unit-level: a COPY of MasterStage.process's clip, see the helpers below)
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "clip: sample at 0.0 maps to Short 0" {
-        clipSample(0.0) shouldBe 0.toShort()
-    }
+    "clip: in [-1, 1] scales by Short.MAX_VALUE and truncates, above clamps to MAX, below to MIN" {
+        // The boundaries are entries: -1.0 is INSIDE the scaling branch, so it lands on
+        // -Short.MAX_VALUE, not on Short.MIN_VALUE.
+        val max = Short.MAX_VALUE.toInt()
+        val min = Short.MIN_VALUE.toInt()
+        val table = listOf(
+            0.0 to 0,
+            1.0 to max,
+            -1.0 to -max,
+            0.5 to (0.5 * max).toInt(),
+            -0.5 to (-0.5 * max).toInt(),
+            0.999 to (0.999 * max).toInt(),
+            -0.999 to (-0.999 * max).toInt(),
+            1.0001 to max,
+            1.5 to max,
+            2.0 to max,
+            100.0 to max,
+            -1.0001 to min,
+            -1.5 to min,
+            -2.0 to min,
+            -100.0 to min,
+        )
 
-    "clip: sample at 1.0 maps to Short.MAX_VALUE" {
-        clipSample(1.0) shouldBe Short.MAX_VALUE
-    }
-
-    "clip: sample at -1.0 maps to -Short.MAX_VALUE (not Short.MIN_VALUE)" {
-        // -1.0 * 32767 = -32767, which is within [-1.0, 1.0] branch
-        val result = clipSample(-1.0)
-        result shouldBe (-Short.MAX_VALUE.toInt()).toShort()
-    }
-
-    "clip: sample at 0.5 maps to half of Short.MAX_VALUE" {
-        val result = clipSample(0.5)
-        val expected = (0.5 * Short.MAX_VALUE).toInt().toShort()
-        result shouldBe expected
-    }
-
-    "clip: sample at -0.5 maps to negative half of Short.MAX_VALUE" {
-        val result = clipSample(-0.5)
-        val expected = (-0.5 * Short.MAX_VALUE).toInt().toShort()
-        result shouldBe expected
-    }
-
-    "clip: sample > 1.0 clamps to Short.MAX_VALUE" {
-        clipSample(1.5) shouldBe Short.MAX_VALUE
-        clipSample(2.0) shouldBe Short.MAX_VALUE
-        clipSample(100.0) shouldBe Short.MAX_VALUE
-    }
-
-    "clip: sample < -1.0 clamps to Short.MIN_VALUE" {
-        clipSample(-1.5) shouldBe Short.MIN_VALUE
-        clipSample(-2.0) shouldBe Short.MIN_VALUE
-        clipSample(-100.0) shouldBe Short.MIN_VALUE
-    }
-
-    "clip: sample just inside bounds are scaled, not clamped" {
-        val justBelow1 = 0.999
-        val result = clipSample(justBelow1)
-        val expected = (justBelow1 * Short.MAX_VALUE).toInt().toShort()
-        result shouldBe expected
-
-        val justAboveMinus1 = -0.999
-        val resultNeg = clipSample(justAboveMinus1)
-        val expectedNeg = (justAboveMinus1 * Short.MAX_VALUE).toInt().toShort()
-        resultNeg shouldBe expectedNeg
-    }
-
-    "clip: sample just outside bounds are clamped" {
-        val justAbove1 = 1.0001
-        clipSample(justAbove1) shouldBe Short.MAX_VALUE
-
-        val justBelowMinus1 = -1.0001
-        clipSample(justBelowMinus1) shouldBe Short.MIN_VALUE
+        for ((sample, expected) in table) {
+            withClue("sample $sample") { clipSample(sample).toInt() shouldBe expected }
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -155,34 +141,6 @@ class KlangAudioRendererSpec : StringSpec({
             val expectedR = (right[i] * maxShort).toInt().toShort()
             out[i * 2] shouldBe expectedL
             out[i * 2 + 1] shouldBe expectedR
-        }
-    }
-
-    "interleave: left-only signal has zeros at odd indices" {
-        val frames = 4
-        val left = doubleArrayOf(0.5, 0.5, 0.5, 0.5)
-        val right = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
-        val out = ShortArray(frames * 2)
-
-        clipAndInterleave(left, right, frames, out)
-
-        for (i in 0 until frames) {
-            out[i * 2].toInt() shouldBeGreaterThan 0  // left has signal
-            out[i * 2 + 1] shouldBe 0.toShort()       // right is silent
-        }
-    }
-
-    "interleave: right-only signal has zeros at even indices" {
-        val frames = 4
-        val left = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
-        val right = doubleArrayOf(0.5, 0.5, 0.5, 0.5)
-        val out = ShortArray(frames * 2)
-
-        clipAndInterleave(left, right, frames, out)
-
-        for (i in 0 until frames) {
-            out[i * 2] shouldBe 0.toShort()            // left is silent
-            out[i * 2 + 1].toInt() shouldBeGreaterThan 0  // right has signal
         }
     }
 
@@ -322,26 +280,6 @@ class KlangAudioRendererSpec : StringSpec({
             diff shouldBeLessThan 0.01  // negligible change
         }
     }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Edge cases
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "renderBlock at various cursor positions produces consistent silent output" {
-        val renderer = createRenderer()
-        val out = ShortArray(blockFrames * 2)
-
-        val cursorPositions = listOf(0, 128, 44100, 1_000_000)
-
-        for (cursor in cursorPositions) {
-            out.fill(999.toShort()) // fill with non-zero to verify it gets overwritten
-            renderer.renderBlock(cursorFrame = cursor.toDouble(), out = out)
-
-            for (i in out.indices) {
-                out[i] shouldBe 0.toShort()
-            }
-        }
-    }
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -349,8 +287,8 @@ class KlangAudioRendererSpec : StringSpec({
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
- * Replicates the renderer's clip logic for a single float sample.
- * This matches the exact branching in KlangAudioRenderer.renderBlock.
+ * A copy of the clip in [MasterStage.process] (the renderer's output stage), for a single sample.
+ * A copy, not a call: a change to the production clip does not reach these rows.
  */
 private fun clipSample(sample: AudioSample): Short {
     val maxShort = Short.MAX_VALUE
@@ -367,8 +305,7 @@ private fun clipSample(sample: AudioSample): Short {
 }
 
 /**
- * Replicates the renderer's clip + interleave logic.
- * This matches the exact loop in KlangAudioRenderer.renderBlock (step 5).
+ * A copy of the clip + interleave loop in [MasterStage.process], with the same caveat as [clipSample].
  */
 private fun clipAndInterleave(left: AudioBuffer, right: AudioBuffer, blockFrames: Int, out: ShortArray) {
     val maxShort = Short.MAX_VALUE
