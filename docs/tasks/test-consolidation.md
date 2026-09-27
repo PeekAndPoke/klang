@@ -61,8 +61,8 @@ no sound change), a second role only where production code moves.
 2. **The sprudel door forms** (lane C top cuts 1 and 2): one `LangDoorFormsSpec` over every knob and
    calling form, checking the VALUE; the 45 per-knob and pre-compound files go, their few unique rows
    move into the parent door spec; `LangKatalystParamSpec` stays the one home of the fill rule.
-3. **Tables for tables' sake**: `LangVowelComprehensiveSpec` (105 rows to 3; `CatalogueIndexSpec`
-   pins the whole vowel table), the KlangScript oscillator builder clones (7 files to 2 table specs),
+3. **Tables for tables' sake**: `LangVowelComprehensiveSpec` (105 rows to 4; `CatalogueIndexSpec`
+   pins the vowel INDEX table, not the bands, so the 88 "5 bands" rows became one loop row), the KlangScript oscillator builder clones (7 files to 2 table specs),
    `ShapingFuncsBoundsSpec`.
 4. **The effect layers** (lane A top cuts): the qualitative rows in `IgnitorCombinatorsSpec` and
    `IgnitorsTest` covered by law specs with oracles, `DistortionSpec` and `CrushLawSpec` into
@@ -78,7 +78,8 @@ no sound change), a second role only where production code moves.
 7. **The gaps, which ADD tests** (lane A): a law spec for `PhaserCore` (today every phaser row is
    relative, so a change inside the core moves all hosts together), an output oracle for the reverb
    network, an oracle for the doors' drive and shape distortion (three songs' guitars), a core for
-   coarse, a direct `DcBlocker` spec. Until they exist, the host rows that are the only guard stay.
+   coarse, a direct `DcBlocker` spec, and a bounds row for `ShapingFuncs.softCapTo` (the delay-line feedback
+   saturation, covered by no spec before or after commit 3). Until they exist, the host rows that are the only guard stay.
 
 ## 4. Decisions (maintainer, 2026-09-27)
 
@@ -159,6 +160,69 @@ spec that might cover it, and why it is unclear.
    corrected" and `docs/tasks/future/ignitor-optimizer-open-items.md:90`. The retired `OnePoleHPF` class and the live
    `OnePoleHighpassIgnitor` both use the canonical bilinear topology with a true -3 dB at the cutoff; no bias is
    documented in code. The guardrail may date from the old topology. Keep, correct or retire it?
+
+**From commit 2** (all kept):
+
+Format: spec and row; what it asserts; what might cover it; why unclear.
+
+1. `LangAdsrOnOffSpec` "the string door works", "the chained mapper door works", "the standalone mapper door works"
+   (audit: 3 door-form rows to the table).
+   - Asserts: `adsrOff()` / `adsrOn()` / `adsrOn(0)` through the string, chained-mapper and standalone-mapper forms put
+     the flag on the wire (`adsr.on`).
+   - Might be covered by: `LangDoorFormsSpec` T1 now has an `adsrOn` entry (flag "1 0", every form, the field).
+   - Unclear because: `adsrOff` takes no argument, so it has no table shape; these rows are its only form coverage, and
+     they read the WIRE slot where the table reads the field.
+
+2. `LangPitchEnvelopeSpec` the four "tail-only: penv(<stage> = ...) leaves the amount untouched on a numeric receiver"
+   (audit: 4 rows to 1 table row).
+   - Asserts: each tail term of penv's head guard, on a numeric receiver.
+   - Might be covered by: one table row over the four stages.
+   - Unclear because: escape-ledger row 61 says "a guard built from OR/AND terms gets one row per term", and the
+     section cites it. A table row with a clue per term may or may not satisfy that; not folded.
+
+3. `LangPitchEnvelopeSpec` "every penv and pamt form forwards sustain and release to their own slots, by name and
+   positionally".
+   - Asserts: all five penv/pamt values in every form, named and positional.
+   - Might be covered by: `LangDoorFormsSpec` T4 (penv and pamt positional, all eight forms) and T1 (penv named tails).
+   - Unclear because: the NAMED `pamt(sustain = ..., release = ...)` path is only here (T1 has pamt as a head only), and
+     a signature that swaps the two names while forwarding by position would pass T4. The same gap holds for every alias
+     tail (`comp`, `uni`, `vib`, `lowpass`/`highpass`/`bandpass` named tails): never tested by name, before or after.
+     Adding the alias tails to T1 is ~30 entries; not done in this commit.
+
+4. `LangVowelSpec` "reinterpret voice data as wet | seq(\"0.2 0.5 0.8\").vowel()".
+   - Asserts: the bare call writes the wet and leaves the vowel name unset.
+   - Might be covered by: T2 (vowel.wet) and `LangFieldAccessorsSpec` "batch G: a bare call reinterprets the pattern's
+     values as the head slot, in both doors" (asserts the vowel stays null).
+   - Unclear because: `sprudel/MEMORY.md` names `LangVowelSpec` among the step 3d(iii) bare-call guards.
+
+5. `LangPregainSpec` "the chained mapper form applies after the previous mapper", "pregain() with no argument reinterprets
+   the pattern's own value".
+   - Asserts: the chained form after a gain prefix; the bare reinterpret.
+   - Might be covered by: T1 chained form (pregain after a pan prefix and a decoy), T2 (pregain).
+   - Unclear because: `sprudel/MEMORY.md` names the whole spec as the pregain door's guard; only its dsl-interface row was cut.
+
+6. `LangCompressorSpec` "params are independently patternable", "alternation form selects per cycle"; `LangDelaySpec`
+   and `LangPhaserSpec` "per-param mini-notation patterns"; `LangOnepoleSpec` "onepole() can be applied to different
+   oscillators".
+   - Assert: per-event / per-cycle control values across two knobs of one call (delay and phaser also: a REST in a TAIL
+     control leaves the constant the head's fill wrote).
+   - Might be covered by: T1 (per event), `LangFieldAccessorsSpec` gap rows (per cycle, heads only).
+   - Unclear because: the tail-rest-after-fill relation has no other home; the rest are form-ish but cheap.
+
+7. `LangBodySpec` "every catalogue material resolves to an 8-mode body (except 'none')" (audit: duplicate of
+   `CatalogueIndexSpec`).
+   - Not a door-form row: the table-for-its-own-sake kind that commit 3 handles (`LangVowelComprehensiveSpec`'s twin).
+
+8. `LangWetKnobSpec` the three Ignitor rows, and `LangKatalystSpec` "fold 2 replace rows" (audit).
+   - Not sprudel door forms: the Ignitor rows belong in `IgnitorDslSpec` / `KlangScriptEffectBuilderSpec`
+     (klangscript-libs, not touched here), the Katalyst replace rows are the chain door's own rule. Left for a later commit.
+
+**From commit 3** (kept):
+
+1. **`LangVowelComprehensiveSpec`, the loop row over every catalogue name** (the audit proposed cutting the 88 "5 bands"
+   rows to a subset). `CatalogueIndexSpec` pins the index table but not the band count or the formants beyond one
+   anchor, so the rows became ONE loop row (the index the door writes, and 5 bands per bank) instead of going.
+   Unclear whether a band-count check per name is worth a loop at all.
 
 ## 5. Guards that stay, whatever the cut
 

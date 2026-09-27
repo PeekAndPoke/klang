@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.beGreaterThanOrEqualTo
 import io.kotest.matchers.doubles.beLessThanOrEqualTo
@@ -15,14 +16,13 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * Property-style bounds tests for every shape in [ShapingFuncs].
+ * Property-style bounds tests for every shape in [ShapingFuncs], as tables over the shapes.
  *
- * For each function: assert output is finite, bounded by a per-shape constant,
- * and (for symmetric shapes) that f(-x) ≈ -f(x). Inputs are a deterministic
- * mix of edge values and PRNG samples with a fixed seed for reproducibility.
+ * For each function: output is finite and bounded by 1.0; a symmetric shape is odd, f(-x) = -f(x); an asymmetric
+ * one leans the documented way. Inputs are a deterministic mix of edge values and PRNG samples with a fixed seed
+ * for reproducibility.
  *
- * NaN/Inf inputs are deliberately NOT exercised here — those are caller
- * responsibility per the file-level KDoc.
+ * NaN/Inf inputs are deliberately NOT exercised here: those are caller responsibility per the file-level KDoc.
  */
 class ShapingFuncsBoundsSpec : StringSpec({
 
@@ -34,249 +34,135 @@ class ShapingFuncsBoundsSpec : StringSpec({
     val randomInputs = List(64) { rng.nextDouble(-50.0, 50.0) }
     val allInputs = edgeInputs + randomInputs
 
-    fun assertFiniteAndBounded(fnName: String, inputs: List<Double>, bound: Double, fn: (Double) -> Double) {
-        for (x in inputs) {
-            val y = fn(x)
-            withClue(fnName, x, y) { y.isFinite() shouldBe true }
-            withClue(fnName, x, y) { abs(y) should beLessThanOrEqualTo(bound + 1e-9) }
-        }
-    }
+    /** Every shape, with the tolerance of its odd symmetry, or null for a shape that is asymmetric by design. */
+    val shapes = listOf(
+        Shape("fastTanh", 1e-12) { ShapingFuncs.fastTanh(it) },
+        Shape("hardClip", 1e-9) { ShapingFuncs.hardClip(it) },
+        Shape("softClip", 1e-9) { ShapingFuncs.softClip(it) },
+        Shape("cubicClip", 1e-9) { ShapingFuncs.cubicClip(it) },
+        Shape("sineFold", 1e-12) { ShapingFuncs.sineFold(it) },
+        Shape("nativeTanh", 1e-12) { ShapingFuncs.nativeTanh(it) },
+        Shape("diodeClip", null) { ShapingFuncs.diodeClip(it) },
+        Shape("chebyshevT3", 1e-9) { ShapingFuncs.chebyshevT3(it) },
+        Shape("rectify", null) { ShapingFuncs.rectify(it) },
+        Shape("expClip", 1e-12) { ShapingFuncs.expClip(it) },
+        Shape("softSat", 1e-12) { ShapingFuncs.softSat(it) },
+        Shape("tube", null) { ShapingFuncs.tube(it) },
+        Shape("linearFold", 1e-9) { ShapingFuncs.linearFold(it) },
+        Shape("zeroSquare", 1e-12) { ShapingFuncs.zeroSquare(it) },
+        Shape("sineShaper", 1e-12) { ShapingFuncs.sineShaper(it) },
+        Shape("asym", null) { ShapingFuncs.asym(it) },
+        Shape("stompBox", null) { ShapingFuncs.stompBox(it) },
+        Shape("softCap", 1e-12) { ShapingFuncs.softCap(it) },
+    )
 
-    fun assertSymmetric(fnName: String, inputs: List<Double>, tol: Double = 1e-9, fn: (Double) -> Double) {
-        for (x in inputs) {
-            if (x == 0.0) continue
-            val yp = fn(x)
-            val yn = fn(-x)
-            withClue("$fnName symmetry @ x=$x: f(x)=$yp, f(-x)=$yn") {
-                yn shouldBe (-yp plusOrMinus tol)
+    "every shape is finite and bounded by 1.0 for finite input" {
+        for (shape in shapes) {
+            for (x in allInputs) {
+                val y = shape.fn(x)
+
+                withClue("${shape.name} x=$x -> y=$y") {
+                    y.isFinite() shouldBe true
+                    abs(y) should beLessThanOrEqualTo(1.0 + 1e-9)
+                }
             }
         }
     }
 
-    "fastTanh is finite and bounded by 1.0" {
-        assertFiniteAndBounded("fastTanh", allInputs, 1.0) { ShapingFuncs.fastTanh(it) }
-    }
-    "fastTanh is odd-symmetric" {
-        assertSymmetric("fastTanh", allInputs, tol = 1e-12) { ShapingFuncs.fastTanh(it) }
-    }
+    "every symmetric shape is odd-symmetric" {
+        for (shape in shapes) {
+            val tol = shape.oddTol ?: continue
 
-    "hardClip is finite and bounded by 1.0" {
-        assertFiniteAndBounded("hardClip", allInputs, 1.0) { ShapingFuncs.hardClip(it) }
-    }
-    "hardClip is odd-symmetric" {
-        assertSymmetric("hardClip", allInputs) { ShapingFuncs.hardClip(it) }
-    }
+            for (x in allInputs) {
+                if (x == 0.0) {
+                    continue
+                }
 
-    "softClip is finite and bounded by 1.0 for finite input" {
-        assertFiniteAndBounded("softClip", allInputs, 1.0) { ShapingFuncs.softClip(it) }
-    }
-    "softClip is odd-symmetric" {
-        assertSymmetric("softClip", allInputs) { ShapingFuncs.softClip(it) }
-    }
+                val yp = shape.fn(x)
+                val yn = shape.fn(-x)
 
-    "cubicClip is finite and bounded by 1.0" {
-        assertFiniteAndBounded("cubicClip", allInputs, 1.0) { ShapingFuncs.cubicClip(it) }
-    }
-    "cubicClip is odd-symmetric" {
-        assertSymmetric("cubicClip", allInputs) { ShapingFuncs.cubicClip(it) }
-    }
-
-    "sineFold is finite and bounded by 1.0" {
-        assertFiniteAndBounded("sineFold", allInputs, 1.0) { ShapingFuncs.sineFold(it) }
-    }
-    "sineFold is odd-symmetric" {
-        assertSymmetric("sineFold", allInputs, tol = 1e-12) { ShapingFuncs.sineFold(it) }
-    }
-
-    "nativeTanh is finite and bounded by 1.0" {
-        assertFiniteAndBounded("nativeTanh", allInputs, 1.0) { ShapingFuncs.nativeTanh(it) }
-    }
-    "nativeTanh is odd-symmetric" {
-        assertSymmetric("nativeTanh", allInputs, tol = 1e-12) { ShapingFuncs.nativeTanh(it) }
-    }
-
-    "diodeClip is finite and bounded by 1.0" {
-        // diodeClip is asymmetric — only finiteness + bound, no symmetry check.
-        assertFiniteAndBounded("diodeClip", allInputs, 1.0) { ShapingFuncs.diodeClip(it) }
-    }
-    "diodeClip is asymmetric in the right direction (negative side attenuated)" {
-        // For |x| ∈ (0, 3], the positive branch is fastTanh(x) and the negative
-        // branch is fastTanh(x · 0.75) — so |diodeClip(-x)| should be < |diodeClip(x)|.
-        for (x in listOf(0.5, 1.0, 1.5, 2.0)) {
-            val pos = abs(ShapingFuncs.diodeClip(x))
-            val neg = abs(ShapingFuncs.diodeClip(-x))
-            withClue("diodeClip asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
-                (pos > neg) shouldBe true
+                withClue("${shape.name} symmetry @ x=$x: f(x)=$yp, f(-x)=$yn") {
+                    yn shouldBe (-yp plusOrMinus tol)
+                }
             }
         }
     }
 
-    "chebyshevT3 is finite and bounded by 1.0" {
-        assertFiniteAndBounded("chebyshevT3", allInputs, 1.0) { ShapingFuncs.chebyshevT3(it) }
-    }
-    "chebyshevT3 is odd-symmetric" {
-        assertSymmetric("chebyshevT3", allInputs) { ShapingFuncs.chebyshevT3(it) }
-    }
+    "every asymmetric shape leans the documented way" {
+        // (shape, probe inputs, true when the NEGATIVE side reaches deeper)
+        val leans = listOf(
+            // positive branch fastTanh(x), negative fastTanh(0.75 x): the negative side is attenuated
+            Triple("diodeClip", listOf(0.5, 1.0, 1.5, 2.0), false),
+            // bias 0.5, normalized so the negative rail hits -1 and the positive saturates near +0.37
+            Triple("tube", listOf(0.5, 1.0, 1.5, 2.0, 5.0), true),
+            // sqrt knee on the negative side: |asym(-0.25)| = 0.5 against |asym(0.25)| near 0.367
+            Triple("asym", listOf(0.1, 0.25, 0.5), true),
+            // the negative anti-parallel pair has gain 3.0, the positive 1.5
+            Triple("stompBox", listOf(0.3, 0.5, 1.0, 2.0), true),
+        )
 
-    "rectify is finite and bounded by 1.0" {
-        assertFiniteAndBounded("rectify", allInputs, 1.0) { ShapingFuncs.rectify(it) }
-    }
-    "rectify output is always non-negative" {
+        // The two tables together cover every asymmetric shape: rectify has its own one-sided rule below.
+        leans.map { it.first }.toSet() + "rectify" shouldBe shapes.filter { it.oddTol == null }.map { it.name }.toSet()
+
+        for ((name, xs, negativeDeeper) in leans) {
+            val fn = shapes.single { it.name == name }.fn
+
+            for (x in xs) {
+                val pos = abs(fn(x))
+                val neg = abs(fn(-x))
+
+                withClue("$name asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
+                    (if (negativeDeeper) neg > pos else pos > neg) shouldBe true
+                }
+            }
+        }
+
         for (x in allInputs) {
             val y = ShapingFuncs.rectify(x)
-            withClue("rectify @ x=$x: y=$y") { y should beGreaterThanOrEqualTo(0.0) }
+
+            withClue("rectify output is always non-negative @ x=$x: y=$y") { y should beGreaterThanOrEqualTo(0.0) }
         }
     }
 
-    "expClip is finite and bounded by 1.0" {
-        assertFiniteAndBounded("expClip", allInputs, 1.0) { ShapingFuncs.expClip(it) }
-    }
-    "expClip is odd-symmetric" {
-        assertSymmetric("expClip", allInputs, tol = 1e-12) { ShapingFuncs.expClip(it) }
-    }
-
-    // ── new shapes (2026-05-21) ────────────────────────────────────────────
-
-    "softSat is finite and bounded by 1.0 for finite input" {
-        assertFiniteAndBounded("softSat", allInputs, 1.0) { ShapingFuncs.softSat(it) }
-    }
-    "softSat is odd-symmetric" {
-        assertSymmetric("softSat", allInputs, tol = 1e-12) { ShapingFuncs.softSat(it) }
-    }
-
-    "tube is finite and bounded by 1.0" {
-        assertFiniteAndBounded("tube", allInputs, 1.0) { ShapingFuncs.tube(it) }
-    }
-    "tube is asymmetric (negative side reaches deeper)" {
-        // bias=0.5 → normalized so negative rail hits -1, positive saturates ~+0.37.
-        for (x in listOf(0.5, 1.0, 1.5, 2.0, 5.0)) {
-            val pos = abs(ShapingFuncs.tube(x))
-            val neg = abs(ShapingFuncs.tube(-x))
-            withClue("tube asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
-                (neg > pos) shouldBe true
-            }
-        }
-    }
-    "tube has zero output at zero input (DC blocker can do its job downstream)" {
-        ShapingFuncs.tube(0.0) shouldBe (0.0 plusOrMinus 1e-12)
-    }
-
-    "linearFold is finite and bounded by 1.0" {
-        assertFiniteAndBounded("linearFold", allInputs, 1.0) { ShapingFuncs.linearFold(it) }
-    }
-    "linearFold is odd-symmetric" {
-        assertSymmetric("linearFold", allInputs, tol = 1e-9) { ShapingFuncs.linearFold(it) }
-    }
-    "linearFold is identity in [-1, 1]" {
+    "fixed points and identity regions" {
+        // linearFold is the identity in [-1, 1], softCap below its 0.95 threshold.
         for (x in listOf(-1.0, -0.95, -0.5, -0.1, 0.0, 0.1, 0.5, 0.95, 1.0)) {
-            ShapingFuncs.linearFold(x) shouldBe (x plusOrMinus 1e-12)
-        }
-    }
+            withClue("linearFold @ x=$x") { ShapingFuncs.linearFold(x) shouldBe (x plusOrMinus 1e-12) }
 
-    "zeroSquare is finite and bounded by 1.0" {
-        assertFiniteAndBounded("zeroSquare", allInputs, 1.0) { ShapingFuncs.zeroSquare(it) }
-    }
-    "zeroSquare is odd-symmetric" {
-        assertSymmetric("zeroSquare", allInputs, tol = 1e-12) { ShapingFuncs.zeroSquare(it) }
-    }
-
-    "sineShaper is finite and bounded by 1.0" {
-        assertFiniteAndBounded("sineShaper", allInputs, 1.0) { ShapingFuncs.sineShaper(it) }
-    }
-    "sineShaper is odd-symmetric" {
-        assertSymmetric("sineShaper", allInputs, tol = 1e-12) { ShapingFuncs.sineShaper(it) }
-    }
-    "sineShaper peaks at ±1 for x = ±1" {
-        ShapingFuncs.sineShaper(1.0) shouldBe (1.0 plusOrMinus 1e-12)
-        ShapingFuncs.sineShaper(-1.0) shouldBe (-1.0 plusOrMinus 1e-12)
-    }
-
-    "asym is finite and bounded by 1.0" {
-        assertFiniteAndBounded("asym", allInputs, 1.0) { ShapingFuncs.asym(it) }
-    }
-    "asym is asymmetric (negative reaches saturation faster)" {
-        // sqrt knee on negative side: |asym(-0.25)| = 0.5 ≫ |asym(0.25)| ≈ 0.367.
-        for (x in listOf(0.1, 0.25, 0.5)) {
-            val pos = abs(ShapingFuncs.asym(x))
-            val neg = abs(ShapingFuncs.asym(-x))
-            withClue("asym asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
-                (neg > pos) shouldBe true
+            // softCap's identity region is the smaller one.
+            if (abs(x) <= 0.95) {
+                withClue("softCap @ x=$x") { ShapingFuncs.softCap(x) shouldBe (x plusOrMinus 1e-12) }
             }
         }
-    }
-    "asym has zero output at zero input" {
-        ShapingFuncs.asym(0.0) shouldBe (0.0 plusOrMinus 1e-12)
+
+        withClue("sineShaper peaks at +1 for x = +1") { ShapingFuncs.sineShaper(1.0) shouldBe (1.0 plusOrMinus 1e-12) }
+        withClue("sineShaper peaks at -1 for x = -1") { ShapingFuncs.sineShaper(-1.0) shouldBe (-1.0 plusOrMinus 1e-12) }
+
+        // Zero in, zero out, so the DC blocker downstream can do its job.
+        withClue("tube(0)") { ShapingFuncs.tube(0.0) shouldBe (0.0 plusOrMinus 1e-12) }
+        withClue("asym(0)") { ShapingFuncs.asym(0.0) shouldBe (0.0 plusOrMinus 1e-12) }
+
+        // stompBox is continuous at zero, from both sides.
+        withClue("stompBox(-1e-9)") { ShapingFuncs.stompBox(-1e-9) shouldBe (0.0 plusOrMinus 1e-7) }
+        withClue("stompBox(+1e-9)") { ShapingFuncs.stompBox(1e-9) shouldBe (0.0 plusOrMinus 1e-7) }
     }
 
-    "stompBox is finite and bounded by 1.0" {
-        assertFiniteAndBounded("stompBox", allInputs, 1.0) { ShapingFuncs.stompBox(it) }
-    }
-    "stompBox is asymmetric (negative anti-parallel pair saturates harder)" {
-        // Negative branch uses gain 3.0, positive uses 1.5 — neg should saturate harder.
-        for (x in listOf(0.3, 0.5, 1.0, 2.0)) {
-            val pos = abs(ShapingFuncs.stompBox(x))
-            val neg = abs(ShapingFuncs.stompBox(-x))
-            withClue("stompBox asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
-                (neg > pos) shouldBe true
-            }
-        }
-    }
-    "stompBox is continuous at zero" {
+    "softCap is value- and slope-continuous at its threshold" {
+        // Value: both sides within about 2 eps of 0.95.
         val eps = 1e-9
-        val below = ShapingFuncs.stompBox(-eps)
-        val above = ShapingFuncs.stompBox(eps)
-        below shouldBe (0.0 plusOrMinus 1e-7)
-        above shouldBe (0.0 plusOrMinus 1e-7)
-    }
 
-    // ── softCap ────────────────────────────────────────────────────────────
+        withClue("value below") { ShapingFuncs.softCap(0.95 - eps) shouldBe (0.95 plusOrMinus 2e-9) }
+        withClue("value above") { ShapingFuncs.softCap(0.95 + eps) shouldBe (0.95 plusOrMinus 2e-9) }
 
-    "softCap is identity for |x| <= 0.95" {
-        for (x in listOf(-0.95, -0.5, -0.1, 0.0, 0.1, 0.5, 0.95)) {
-            ShapingFuncs.softCap(x) shouldBe (x plusOrMinus 1e-12)
-        }
-    }
+        // Slope, numerically: the identity's slope is 1, and so is tanh'(0).
+        val h = 1e-6
+        val slopeBelow = (ShapingFuncs.softCap(0.95) - ShapingFuncs.softCap(0.95 - h)) / h
+        val slopeAbove = (ShapingFuncs.softCap(0.95 + h) - ShapingFuncs.softCap(0.95)) / h
 
-    "softCap is finite and bounded by 1.0 for any finite input" {
-        assertFiniteAndBounded("softCap", allInputs, 1.0) { ShapingFuncs.softCap(it) }
-    }
-
-    "softCap is odd-symmetric" {
-        assertSymmetric("softCap", allInputs, tol = 1e-12) { ShapingFuncs.softCap(it) }
-    }
-
-    "softCap value-continuity at the threshold" {
-        val eps = 1e-9
-        val below = ShapingFuncs.softCap(0.95 - eps)
-        val above = ShapingFuncs.softCap(0.95 + eps)
-        // Both should be very close to 0.95 — within ~2·eps.
-        below shouldBe (0.95 plusOrMinus 2e-9)
-        above shouldBe (0.95 plusOrMinus 2e-9)
-    }
-
-    "softCap slope-continuity at the threshold (numerical derivative)" {
-        val eps = 1e-6
-        val slopeBelow = (ShapingFuncs.softCap(0.95) - ShapingFuncs.softCap(0.95 - eps)) / eps
-        val slopeAbove = (ShapingFuncs.softCap(0.95 + eps) - ShapingFuncs.softCap(0.95)) / eps
-        // Identity slope = 1; tanh'(0) = 1. Both should be near 1.
-        slopeBelow shouldBe (1.0 plusOrMinus 1e-3)
-        slopeAbove shouldBe (1.0 plusOrMinus 1e-3)
+        withClue("slope below") { slopeBelow shouldBe (1.0 plusOrMinus 1e-3) }
+        withClue("slope above") { slopeAbove shouldBe (1.0 plusOrMinus 1e-3) }
     }
 })
 
-// Tiny helper so failure messages include the offending input.
-private inline fun withClue(fnName: String, x: Double, y: Double, block: () -> Unit) {
-    try {
-        block()
-    } catch (t: Throwable) {
-        throw AssertionError("[$fnName] x=$x → y=$y :: ${t.message}", t)
-    }
-}
-
-private inline fun withClue(clue: String, block: () -> Unit) {
-    try {
-        block()
-    } catch (t: Throwable) {
-        throw AssertionError("[$clue] ${t.message}", t)
-    }
-}
+/** One shaping function, with the tolerance of its odd symmetry, or null for a shape asymmetric by design. */
+private class Shape(val name: String, val oddTol: Double?, val fn: (Double) -> Double)

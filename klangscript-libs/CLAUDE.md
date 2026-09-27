@@ -36,9 +36,10 @@ script registration). Split out of `:klangscript` on 2026-09-06
   land HERE, next to their doors; this module is the Kotlin door for them as well.
 - Script-door parameter defaults are safe literals (number, string, boolean, null); KSP refuses a
   door that invites a trailing lambda but carries a non-literal optional default.
-- Tests come in two shapes: script-vs-Kotlin equivalence specs (`KlangScriptSuperSawSpec` is the
-  template) and door-parity specs (`KlangScriptFilterDoorParitySpec`). Analyzer tests that need
-  the real stdlib registry (`generatedStdlibDocs`) live here too (`src/jvmTest/kotlin/intel/`).
+- Tests come in two shapes: script-vs-Kotlin equivalence specs (`KlangScriptSineSpec` is the
+  template for one door, `KlangScriptSuperOscSpec` for a family of builders with the same knobs)
+  and door-parity specs (`KlangScriptFilterDoorParitySpec`). Analyzer tests that need the real
+  stdlib registry (`generatedStdlibDocs`) live here too (`src/jvmTest/kotlin/intel/`).
 - Memory and language references stay in `klangscript/` (`MEMORY.md`, `ref/`); this module has no
   separate memory file.
 
