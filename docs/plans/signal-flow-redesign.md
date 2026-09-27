@@ -494,7 +494,7 @@ that only says "different", and the pace drops. Three kinds, three lifetimes:
 | kind | examples | lifetime |
 |---|---|---|
 | **contract** | door parity specs, the defaults-sync specs, catalogue index specs, `ParamBagSpec`, the wire codec round trip | permanent; they state what the surface promises |
-| **baseline** | the wire golden (`voicedata_golden.txt`), the frozen minimal corpus of phase 3 (one hash per row of raw doubles) | valid from one ear-confirmed checkpoint to the next; REGENERATED at the checkpoint, never hand-edited, never defended against a change the maintainer approved by ear |
+| **baseline** | the wire golden (`voicedata_golden.txt`, retired 2026-09-28 for targeted rows, test consolidation), the frozen minimal corpus of phase 3 (one hash per row of raw doubles) | valid from one ear-confirmed checkpoint to the next; REGENERATED at the checkpoint, never hand-edited, never defended against a change the maintainer approved by ear |
 | **migration fixture** | old-path against new-path comparisons (`Katalyst…MatchesUntouchedVoice`, the declared-against-born-with render rows, `*MigrationSpec`, `*ParitySpec` whose two sides are an old and a new implementation) | removed in the change that finishes the migration (the scaffolding guideline); the oracle it carried is frozen into the baseline first if it is still wanted |
 
 **No full songs as tests.** A song renders slowly, exercises only the doors it happens to call

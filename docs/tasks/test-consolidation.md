@@ -281,6 +281,33 @@ Format: spec and row; what it asserts; what might cover it; why unclear.
      as one list; the audit kept them and nothing else pins the chain order at this level (the classic chain order is
      `KatalystClassicPipelineOrderSpec`).
 
+**From the golden replacement** (item 3 is a behaviour question, not a row):
+
+Format: what the golden covered; where it lands now; why it is (or is not) unclear.
+
+1. **The whole-song wire dump of the pinned "Der Schmetterling" (24 cycles, 2,819 events).**
+   - Covered: the door-to-wire values of one real song end to end (seeded `|` choices, `shuffle`, `struct`,
+     `scale` journeys, `mute` alternations, `superimpose` lambdas, `unison`, `analog`, `distort`, `coarse`,
+     `adsrCurves`, `compressor`, `reverb`), plus tick-exact timing.
+   - Lands in: the per-door specs (`LangDoorFormsSpec`, `ClassicSlotParamsSpec` full literal map), the per-construct
+     timing specs (`LangPlySpec` incl. patterned `ply("2 3")`, `LangEchoSpec`, `LangJuxSpec`, `LangSuperimposeSpec`,
+     `LangShuffleSpec`, `LangSeedSpec`, `LangStructSpec`), `JsCompatTests` against Strudel.
+   - Not kept as a row: the maintainer's decision (section 4) replaces the golden, and signal-flow plan section 12
+     says "no full songs as tests". Listed only because no spec now pins a whole song's wire output; a combination
+     bug between two doors that each pass alone would no longer be seen.
+
+2. **A doc question, not a row: `docs/tasks/by-ear/c3-depth-migration-flags.md` line 24.** The flag asked why the
+   corpus lead's signal-valued `lpf(env = berlin.range(24.0, 24.0))` never surfaced in the golden. Answer, read from
+   the corpus: the lead carries `.mute("<1!32 0!256>")`, so it is muted for cycles 0 to 31, and the golden captured
+   cycles 0 to 23. The golden never saw the lead at all (no phaser, no `penv`, no lead filter envelope in the dump).
+   Nothing is wrong with the signal-valued depth. The flag doc is a dated record and was not edited.
+
+3. **Echo layer gain: replaces vs multiplies the source gain, pending the maintainer.** `lang_structural_echo.kt:30`
+   does `source.late(delay * i).gain(decay^i)`, which REPLACES the source gain (the golden showed 0.9, 0.6, 0.36 for
+   `gain(0.9).echo(3, 0.125, 0.6)`); the KDoc's "gain reduced by decay ^ copy_number" reads as a multiply
+   (0.9, 0.54, 0.324). The new `LangEchoSpec` row pins the layer offsets and the original layer's own gain, not the
+   echo layers' gain; that row gets added once the maintainer decides.
+
 ## 5. Guards that stay, whatever the cut
 
 Everything named in root `CLAUDE.md` (guardrails), `.claude/skills/review-loop/escape-ledger.md`,

@@ -113,7 +113,9 @@ as optional. Otherwise C is the cleaner variant of the same native win.
 ## Honest costs / challenges (all paths that reimplement the engine)
 
 1. **Reimplement all of `audio_be` in the native/Wasm language** — oscillators, filters, effects, cylinders, the
-   voice pipeline. The big one. Silver lining: the golden tests + the song benchmark (`runSongBenchmark`,
+   voice pipeline. The big one. Silver lining: the golden tests (the sprudel wire golden was retired 2026-09-28;
+   its successors are the door specs and `VoiceDataAliasingSpec`, and the render baselines are
+   `ClassicVoiceBaselineSpec` and `BuiltInVoiceMatrixSpec`) + the song benchmark (`runSongBenchmark`,
    `SongBenchmark*.kt`) become a **cross-engine conformance harness** (same events on Kotlin vs native, compare
    output). Keep Kotlin `audio_be` as the offline/reference/test engine; native becomes canonical for realtime.
 2. **(B only) Ship + auto-update a daemon**, plus the localhost-WS security work above (`https` page →

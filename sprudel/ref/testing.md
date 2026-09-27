@@ -13,6 +13,8 @@
 - **Test across ≥12 cycles** — timing bugs compound and only surface after several cycles
 - **Always verify both `part` and `whole`** explicitly
 - **Filter by `isOnset`** when testing playback behavior; `queryArc()` returns all events
+- **A new leaf emitter or fan-out construct joins `VoiceDataAliasingSpec`'s construct table**: every event must
+  own its `SprudelVoiceData`, its `Svd*` groups and its param bags (the doors write them in place)
 
 ## Test Structure
 

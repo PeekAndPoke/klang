@@ -38,22 +38,69 @@ class SprudelVoiceDataSpec : StringSpec({
         (cloned === populated) shouldBe false
     }
 
-    "clone() gives the clone its OWN param maps (they are mutable and single-owner)" {
+    "clone() gives the clone its OWN copy of every group and both param maps: a write through the clone never reaches the source" {
+        // The doors write in place into the group or bag the event owns, so a clone that shared one would let one
+        // event's write land on another's: the aliasing bug class of `VoiceDataAliasingSpec`, per instance here.
+        // `cloned shouldBe populated` above cannot see a shared group, the data-class equality is by value.
         val populated = populatedVoiceData(0)
 
         val cloned = populated.clone()
 
-        // Sharing the reference was the old contract (immutable-replace). Now a door writes ONE key
-        // into the map the event owns, so a shared map would let one event's slot write land on
-        // another's: the aliasing bug the whole golden exists to catch, in one field.
-        cloned.oscParams shouldNotBeSameInstanceAs populated.oscParams
-        cloned.katalystParams shouldNotBeSameInstanceAs populated.katalystParams
+        cloned.mutableParts().zip(populated.mutableParts()).forEach { (c, p) ->
+            withClue(c.first) {
+                p.second shouldNotBe null
+                c.second shouldNotBeSameInstanceAs p.second
+            }
+        }
 
-        cloned.putOscParam("k0", 999.0)
-        cloned.putKatalystParam("reverb.size", 999.0)
+        cloned.writeEveryPart()
 
-        populated.oscParams?.get("k0") shouldBe 7.0
-        populated.katalystParams?.get("reverb.size") shouldBe 7.5
+        populated shouldBe populatedVoiceData(0)
+    }
+
+    "merge() and mergeFrom() hand out no group or param map of either operand, on every branch of the merge helpers" {
+        // The three branches of each `mergeSvd*` helper and of the two param-bag merges: base null (the over side is
+        // copied), over null (the base side is copied), both set (a fresh group). Returning the operand's own
+        // instance on either of the first two is the aliasing a `_liftData` control event spreads over every
+        // source event it covers.
+        fun empty() = createSprudelVoiceData { }
+        fun full0() = populatedVoiceData(0)
+        fun full1() = populatedVoiceData(1000)
+
+        val cases = listOf(
+            Triple("left empty (base null)", ::empty, ::full1),
+            Triple("right empty (over null)", ::full0, ::empty),
+            Triple("both set", ::full0, ::full1),
+        )
+
+        for ((name, left, right) in cases) {
+            withClue("merge(), $name") {
+                val l = left()
+                val r = right()
+                val merged = l.merge(r)
+
+                merged.shouldOwnNothingOf(l)
+                merged.shouldOwnNothingOf(r)
+
+                merged.writeEveryPart()
+
+                l shouldBe left()
+                r shouldBe right()
+            }
+
+            withClue("mergeFrom(), $name") {
+                val target = left()
+                val r = right()
+
+                target.mergeFrom(r)
+
+                target.shouldOwnNothingOf(r)
+
+                target.writeEveryPart()
+
+                r shouldBe right()
+            }
+        }
     }
 
     "mergeFrom() matches merge() (guards the in-place merge against the copy-based merge)" {
@@ -350,6 +397,42 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.cut shouldBe 1
     }
 
+    "toVoiceData() carries the fm group, solo and the pattern id (as sourceId): the wire fields no door spec reads" {
+        val wire = createSprudelVoiceData {
+            fmh = 2.1; fmAttack = 0.011; fmDecay = 0.012; fmSustain = 0.51; fmEnv = 3.3
+            solo = 0.7; patternId = "pid-1"
+        }.toVoiceData()
+
+        wire.fmh shouldBe 2.1
+        wire.fmAttack shouldBe 0.011
+        wire.fmDecay shouldBe 0.012
+        wire.fmSustain shouldBe 0.51
+        wire.fmEnv shouldBe 3.3
+        wire.solo shouldBe 0.7
+        wire.sourceId shouldBe "pid-1"
+    }
+
+    "a script call stamps all its events with one sourceId, from its location: one per call, the same on every compile" {
+        // The backend's solo and cut logic groups voices by this id (`VoiceSchedulerSoloCutSpec`), so it must not
+        // move when the same code is compiled again, and two calls must not share one.
+        val code = """stack(note("c3 e3"), sound("bd hh"))"""
+
+        fun idsByCall(): Pair<Set<String?>, Set<String?>> {
+            val events = SprudelPattern.compile(code)!!.queryArc(0.0, 1.0)
+            val (notes, sounds) = events.partition { it.data.note != null }
+
+            return notes.map { it.data.toVoiceData().sourceId }.toSet() to sounds.map { it.data.toVoiceData().sourceId }.toSet()
+        }
+
+        val (noteIds, soundIds) = idsByCall()
+
+        noteIds.size shouldBe 1
+        soundIds.size shouldBe 1
+        noteIds.single() shouldNotBe null
+        noteIds shouldNotBe soundIds
+        idsByCall() shouldBe (noteIds to soundIds)
+    }
+
     "copy() creates new instance with updated fields" {
         val original = createSprudelVoiceData {
             note = "c4"
@@ -376,7 +459,8 @@ class SprudelVoiceDataSpec : StringSpec({
 /**
  * Builds a [SprudelVoiceData] with EVERY field set to a distinct non-null value, offset by [seed] so
  * two instances can be made fully distinct. Used to guard `clone()` and `mergeFrom()` completeness:
- * every field is exercised, so a dropped or swapped field fails data-class equality.
+ * every field is exercised, so a dropped or swapped field fails data-class equality. Every group and
+ * both param maps exist, so the aliasing rows have an instance of each to check.
  */
 private fun populatedVoiceData(seed: Int): SprudelVoiceData {
     val b = seed.toDouble()
@@ -422,11 +506,21 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         nfReleaseCurve = AdsrCurve.entries[(seed + 8) % 6]
         cylinder = seed + 71; pan = b + 72
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
-        vowel = "v$seed"
+        vowel = "v$seed"; vowelMix = b + 85; vowelFloor = b + 85.5
+        body = "bo$seed"; bodyMix = b + 86; bodyFloor = b + 86.5
         solo = b + 88; patternId = "pid$seed"
         value = SprudelVoiceValue.Num(b + 87)
         tags = setOf("t$seed")
         tweaks = listOf("tw$seed")
         cull = b + 94
+    }
+}
+
+/** No group or param map of [other] is one of this instance's own: compared part by part, by identity. */
+private fun SprudelVoiceData.shouldOwnNothingOf(other: SprudelVoiceData) {
+    mutableParts().zip(other.mutableParts()).forEach { (mine, theirs) ->
+        if (mine.second != null) {
+            withClue(mine.first) { mine.second shouldNotBeSameInstanceAs theirs.second }
+        }
     }
 }

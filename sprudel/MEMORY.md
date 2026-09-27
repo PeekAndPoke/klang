@@ -243,7 +243,8 @@
   `VoiceData`. The bag also carries the fill rule's one method, `setOrDefault` (below); the rule
   itself lives in `/dsl-design` §4.
   Guards: `ParamBagSpec`, `LangKatalystParamSpec` ("a bus door call on an already-cloned voice
-  allocates no map", "toVoiceData hands the wire a COPY of both maps"), the golden, mutation-checked.
+  allocates no map", "toVoiceData hands the wire a COPY of both maps"), `VoiceDataAliasingSpec` and the
+  clone/merge ownership rows of `SprudelVoiceDataSpec`, mutation-checked.
 
 - **A compound door fills per param, at the door (2026-09-16 for the sends, 2026-09-18 for the rest,
   Katalyst step 5a-3).** The rule and its two kinds of stage live in `/dsl-design` §4, its one home;
@@ -360,6 +361,13 @@ sits in. Every DSL file now lives in `lang/` as `lang_<group>_<subgroup>.kt`, no
 pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
 `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
 `SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
+Guard (2026-09-28, replacing the 2.7 MB wire golden `MutableVoiceDataGoldenSpec`): `VoiceDataAliasingSpec`
+asserts by identity that no two events of a query share their data, an `Svd*` group or a `ParamBag`, over
+the constructs in its table. A dropped clone turns the leaf atom, ply, arithmetic, `adsrOff()`/`loop()` alone and
+MergePattern rows red today; stack, superimpose, jux, echo, `_liftData` behind a door chain and bare `reverb()` pin
+a future cache (its KDoc has the mutant per row). `SprudelVoiceDataSpec` pins the same ownership per instance
+for `clone()`, `merge()`, `mergeFrom()` and every branch of the `mergeSvd*` helpers. A new group joins
+`mutableParts()` and `writeEveryPart()` (in `VoiceDataAliasingSpec.kt`).
 
 **`.scale()` applies exactly once per chain** (decided 2026-08-20 on Der Schmetterling):
 `resolveNote()` (`lang/lang_tonal_note.kt`) consumes the note index on first resolution (writes

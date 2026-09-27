@@ -26,7 +26,7 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| test consolidation, the golden replacement (implementer; coordinator commits) | `sprudel/src/jvmTest/kotlin/golden/` and `sprudel/src/jvmTest/resources/golden/` (deleted on purpose), `sprudel/src/commonTest/kotlin/SprudelVoiceDataSpec.kt`, new `sprudel/src/commonTest/kotlin/VoiceDataAliasingSpec.kt`, pointer lines in `sprudel/MEMORY.md`, `sprudel/ref/testing.md`, `docs/tasks/test-consolidation.md`, `docs/tasks/future/optimize-constant-control-fast-path.md`, `docs/tasks/reduce-js-bundle-size.md`, `docs/plans/signal-flow-redesign.md` | Round 1 fixes done, uncommitted (echo row in `sprudel/src/commonTest/kotlin/lang/LangEchoSpec.kt`, aliasing spec rework); golden files deleted on purpose; no production change (mutants restored, cmp-verified); sprudel JVM 3434 and JS 2900 green; unsure list in the implementer scratchpad `tcg/unsure.md` |
+| test consolidation commit 6, the baselines (implementer; coordinator commits) | `audio_be/src/jvmTest/kotlin/ignitor/BuiltInVoiceMatrixSpec.kt`, `audio_be/src/jvmTest/kotlin/ignitor/ClassicVoiceBaselineSpec.kt`, `audio_be/src/commonTest/kotlin/ignitor/ClassicVoiceRig.kt` | Baseline entries deleted on purpose (kept fingerprints untouched); no production change (mutants restored, cmp-verified); scratchpad `tc6/` |
 
 ## The two layers
 

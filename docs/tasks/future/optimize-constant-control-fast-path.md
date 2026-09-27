@@ -53,22 +53,25 @@ in place. Sites (`SprudelPattern.kt`): `_liftNumericField`, `_liftOrReinterpretN
 ## Subtleties
 
 - **Reuse the mapped control** across all events — relies on the `VoiceMergerFn` contract (combine *mutates `src`,
-  only reads `ctrl`*). All Part-2/3 combiners obey it; the golden catches a violation (a combiner that mutated the
-  shared `ctrl` would corrupt later events → byte diff).
+  only reads `ctrl`*). All Part-2/3 combiners obey it. A combiner that mutated the shared `ctrl`, or handed one of
+  its groups to `src`, would corrupt later events; `VoiceDataAliasingSpec` (no two events share data, a group or a
+  bag) catches the sharing half; for the writing half, check when this lands that a door spec with a constant
+  control over several events turns red on a combiner that writes `ctrl`. Add a constant-control row to its table.
 - **`sourceLocations`** — the sampling path does `.prependLocations(ctrl.sourceLocations)` per event for live
   highlighting. Use the event-level `reinterpret { … }` (not `reinterpretVoice`) so the constant atom's
-  `sourceLocations` are preserved. `sourceLocations` is `@Transient`, so the golden won't catch a regression here —
+  `sourceLocations` are preserved. They live on the event, not in the voice data, so no wire check sees them:
   verify highlighting by eye.
 - Detection must be conservative — only fast-path provably-constant atoms; anything time-varying
   (`"<0.2 0.5>"`, `"0.2 0.5"`, `saw`, `.fast(2)`) is NOT an `AtomicPattern`, so it falls through to sampling untouched.
 
 ## Verification
 
-- Golden byte-identical:
-  `./gradlew :sprudel:jvmTest --tests io.peekandpoke.klang.sprudel.golden.MutableVoiceDataGoldenSpec`
-  (constant applied directly == constant sampled per event → identical output).
+- The wire output is unchanged (constant applied directly == constant sampled per event): the door specs
+  (`LangDoorFormsSpec`, `ClassicSlotParamsSpec`) and `VoiceDataAliasingSpec`. The byte-identical wire golden
+  that used to answer this was retired on 2026-09-28 (test consolidation); for a whole-song check, diff
+  `toVoiceData()` of a song before and after by hand.
 - Full `:sprudel:jvmTest`; browser-profile Der Schmetterling before/after to confirm the (modest) allocation drop.
 
 ## Effort
 
-Small: ~1 interface default method + 1 `AtomicPattern` override + ~5 lift-helper sites. Golden-guarded throughout.
+Small: ~1 interface default method + 1 `AtomicPattern` override + ~5 lift-helper sites.
