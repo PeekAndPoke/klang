@@ -134,6 +134,14 @@ class KatalystChain internal constructor(
 
     val compressor: KatalystCompressorEffect? = serial.filterIsInstance<KatalystCompressorEffect>().lastOrNull()
 
+    /**
+     * Frames this chain delays the orbit by: the sum of its compressor stages' lookaheads (phase 3
+     * step 12 C2), since every stage runs in series on the one mix. 0 for a chain without a
+     * lookahead. A chain swap delays its ramps by the later of the two chains' latencies
+     * (`ChainSwap.begin`).
+     */
+    val latencyFrames: Int = serial.filterIsInstance<KatalystCompressorEffect>().sumOf { it.latencyFrames }
+
     /** Rents the warehouse refused any stage of this chain, for the diagnostics feedback. */
     val deniedRents: Int
         get() {

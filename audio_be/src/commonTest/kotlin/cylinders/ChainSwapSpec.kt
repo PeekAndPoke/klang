@@ -84,7 +84,7 @@ class ChainSwapSpec : StringSpec({
         val leaving = a.swap.leaving.shouldNotBeNull()
         val shelved = a.reverbs.idleCount
 
-        a.swap.begin(leaving = a.offeredRoom(), duckingOut = null, duckFadingIn = false)
+        a.swap.begin(leaving = a.offeredRoom(), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
 
         withClue("the refused begin kept the one leaving chain") {
             a.swap.isFading shouldBe true
@@ -113,7 +113,7 @@ class ChainSwapSpec : StringSpec({
         val leaving = a.swap.leaving.shouldNotBeNull()
         val shelved = a.reverbs.idleCount
 
-        a.swap.begin(leaving = a.offeredRoom(), duckingOut = null, duckFadingIn = false)
+        a.swap.begin(leaving = a.offeredRoom(), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
 
         withClue("the refused begin kept the draining chain") {
             a.swap.isDraining shouldBe true

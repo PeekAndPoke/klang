@@ -904,19 +904,19 @@ class Cylinder(
 
         // A duck with no envelope yet has nothing in force and nothing to carry.
         if (leavingDuck?.ducking == null) {
-            swap.begin(leaving = from, duckingOut = null, duckFadingIn = arrivingDucks)
+            swap.begin(leaving = from, arrivingLatencyFrames = to.latencyFrames, duckingOut = null, duckFadingIn = arrivingDucks)
 
             return
         }
 
         if (arrivingDucks) {
             to.duck?.takeOver(leavingDuck)
-            swap.begin(leaving = from, duckingOut = null, duckFadingIn = false)
+            swap.begin(leaving = from, arrivingLatencyFrames = to.latencyFrames, duckingOut = null, duckFadingIn = false)
 
             return
         }
 
-        swap.begin(leaving = from, duckingOut = leavingDuck, duckFadingIn = false)
+        swap.begin(leaving = from, arrivingLatencyFrames = to.latencyFrames, duckingOut = leavingDuck, duckFadingIn = false)
     }
 
     /**

@@ -313,7 +313,9 @@ class MasterBus(
         previous = current
         current = chain
         currentName = name
-        fade.restart()
+        // The master blends the two chains' OUTPUTS, so the arriving chain's latency does not
+        // delay this ramp; an authored lookahead limiter here keeps the comb its KDoc records.
+        fade.restart(incomingDelayFrames = 0, outgoingInputDelayFrames = 0)
 
         if (scratch == null) {
             scratch = StereoBuffer(blockFrames)

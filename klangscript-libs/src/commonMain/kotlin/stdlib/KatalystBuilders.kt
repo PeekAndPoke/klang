@@ -12,6 +12,12 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -39,15 +45,16 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * Every knob takes a number OR an `Osc.param(...)` slot (`IgnitorDslLike`, the same door the
  * oscillator knobs use). The chain reads its knobs once per block, so a signal-rate node on one is
- * coerced, never rejected.
+ * coerced, never rejected. The one exception is the compressor's and the limiter's `lookahead`, a
+ * plain number fixed when the chain is built (it sizes a delay ring).
  */
 
 // ── The chain ────────────────────────────────────────────────────────────────
 
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
- * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `duck`, `eq`, `gain`,
- * each appending a stage.
+ * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`,
+ * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers).
  */
 data class KatalystBuilder(val node: KatalystDsl) {
     internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
@@ -301,6 +308,11 @@ fun KatalystBuilder.phaser(
  *   `compressor(attack = ...)`.
  * @param release how fast the gain opens again, in seconds (default 0.1). Orbit twin:
  *   `compressor(release = ...)`.
+ * @param lookahead how far ahead it sees, in seconds (default 0, off). The gain starts closing
+ *   BEFORE a transient arrives, and `attack` becomes the gain-smoothing length (widen both
+ *   together). The cost is latency: this orbit runs late by `floor(lookahead * sampleRate)`
+ *   frames (none below 8 frames, about 0.2 ms), and nothing compensates. A plain number fixed with
+ *   the chain, at most 0.05. No orbit twin: declare it here.
  */
 @KlangScript.Function
 fun KatalystBuilder.compressor(
@@ -309,6 +321,7 @@ fun KatalystBuilder.compressor(
     knee: IgnitorDslLike? = null,
     attack: IgnitorDslLike? = null,
     release: IgnitorDslLike? = null,
+    lookahead: Double? = null,
 ): KatalystBuilder {
     val bare = KatalystStageDsl.Compressor()
 
@@ -319,9 +332,60 @@ fun KatalystBuilder.compressor(
             knee = knee?.toIgnitorDsl() ?: bare.knee,
             attack = attack?.toIgnitorDsl() ?: bare.attack,
             release = release?.toIgnitorDsl() ?: bare.release,
+            lookahead = lookahead ?: bare.lookahead,
         )
     )
 }
+
+/**
+ * Appends a limiter: the compressor stage with limiter numbers, a ceiling rather than a squeeze.
+ * Flat, like every dynamics stage, and in the compressor's parameter order. It is a preset, not a
+ * stage of its own: what it appends IS a `compressor`, so a limiter and a compressor are one DSP
+ * and one wire word.
+ *
+ * The limiter numbers live on the DOOR, and the stage does not know it was a limiter: a knob the
+ * engine cannot read (a signal-rate node, or a slot whose value is unset or non-finite) falls back to the
+ * COMPRESSOR's shared constant (threshold -20, ratio 4, knee 6, attack 0.003, release 0.1), not to
+ * the limiter's. Write a slot's default as the number you want.
+ *
+ * ```
+ * katalyst(Katalyst(k => k.gain(1.5).limiter(lookahead = 0.005)))
+ * ```
+ *
+ * @param threshold ceiling in dBFS (default -1). Orbit twin: `compressor(threshold = ...)`.
+ * @param ratio compression ratio (default 20, about a brick wall). Orbit twin:
+ *   `compressor(ratio = ...)`.
+ * @param knee soft-knee width in dB (default 2). A hard corner injects harmonics on every crossing.
+ *   Orbit twin: `compressor(knee = ...)`.
+ * @param attack how fast the gain closes, in seconds (default 0.001). With no lookahead a one-pole
+ *   attack: short keeps transient punch. With a lookahead the gain-smoothing length; widen both
+ *   together. Orbit twin: `compressor(attack = ...)`.
+ * @param release how fast the gain opens again, in seconds (default 0.1). Orbit twin:
+ *   `compressor(release = ...)`.
+ * @param lookahead how far ahead it sees, in seconds (default 0, off). Lets the limiter close the
+ *   gain before a transient arrives instead of chasing it, which is what stops loud hits punching
+ *   through. The cost is latency: this orbit runs late by `floor(lookahead * sampleRate)` frames
+ *   (none below 8 frames, about 0.2 ms), and nothing compensates. A plain number fixed with the
+ *   chain, at most 0.05. No orbit twin: declare it here.
+ */
+@KlangScript.Function
+fun KatalystBuilder.limiter(
+    threshold: IgnitorDslLike? = null,
+    ratio: IgnitorDslLike? = null,
+    knee: IgnitorDslLike? = null,
+    attack: IgnitorDslLike? = null,
+    release: IgnitorDslLike? = null,
+    lookahead: Double? = null,
+): KatalystBuilder = plus(
+    KatalystStageDsl.Compressor(
+        threshold = threshold?.toIgnitorDsl() ?: IgnitorDsl.Constant(LIMITER_THRESHOLD_DB),
+        ratio = ratio?.toIgnitorDsl() ?: IgnitorDsl.Constant(LIMITER_RATIO),
+        knee = knee?.toIgnitorDsl() ?: IgnitorDsl.Constant(LIMITER_KNEE_DB),
+        attack = attack?.toIgnitorDsl() ?: IgnitorDsl.Constant(AUTHORED_LIMITER_ATTACK_SECONDS),
+        release = release?.toIgnitorDsl() ?: IgnitorDsl.Constant(LIMITER_RELEASE_SECONDS),
+        lookahead = lookahead ?: AUTHORED_LIMITER_LOOKAHEAD_SECONDS,
+    )
+)
 
 /**
  * Appends a sidechain duck: this orbit is pulled down whenever the orbit it listens to sounds.

@@ -7,7 +7,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Limiter defaults shared by the house safety limiter (`audio_be/MasterStage`)
-// and the opt-in authored stage (`MasterStageDsl.Limiter`).
+// and the opt-in authored limiters (`MasterStageDsl.Limiter`, and the Katalyst builder's
+// `limiter(...)`, which appends a compressor stage with these numbers).
 //
 // Only the values that are genuinely wire defaults live here. The house
 // limiter's own TIMING — `MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS` and
@@ -33,14 +34,15 @@ const val LIMITER_KNEE_DB: Double = 2.0
 /** Envelope release, shared by both limiters. */
 const val LIMITER_RELEASE_SECONDS: Double = 0.1
 
-// ── Authored-limiter defaults (the opt-in authored `limiter` stage, `Master(m => m.limiter(...))`) ────────────────
+// ── Authored-limiter defaults (every authored `limiter(...)`: `Master(m => m.limiter(...))` and the
+// Katalyst builder's `Katalyst(k => k.limiter(...))`) ────────────────
 // These deliberately DIFFER from the house timing in `MasterStage`, and the difference is
-// the point: that stage is per-playback, upstream of the summed mix.
+// the point: an authored limiter sits upstream of the summed mix, on one playback or one orbit.
 
 /**
- * **0, on purpose.** An authored master limiter lives on one playback's `MasterBus`, so any
- * lookahead there would delay that playback against every other one — the same desync that
- * keeps lookahead off per-orbit compressors. Latency is opt-in per author, never a default.
+ * **0, on purpose.** An authored limiter lives upstream of the summed mix (one playback's
+ * `MasterBus`, or one orbit's chain), so any lookahead there delays that playback or that orbit
+ * against everything else. Latency is opt-in per author (`lookahead = ...`), never a default.
  */
 const val AUTHORED_LIMITER_LOOKAHEAD_SECONDS: Double = 0.0
 

@@ -17,7 +17,11 @@ gone is removed when someone notices, not kept for history.
   reverted; the `analog`/`bpFb` infrastructure is kept for a future re-introduction. Warmth comes
   from upstream.
 - **The OnePole HPF cutoff bias is documented, not corrected.**
-- **The master limiter lookahead is master-only.**
+- **The house limiter's lookahead is the only one that is always on** (5 ms, `MasterStage`, not authorable). An
+  authored lookahead (the Katalyst `compressor(..., lookahead)` and `limiter(..., lookahead)`, phase 3 step 12 C2,
+  maintainer 2026-09-27) is the author's choice and runs anywhere: the orbit or playback it sits on runs late by it,
+  and nothing compensates. Do not add compensation, and do not forbid it on an orbit. It is fixed per chain (it
+  sizes a ring), bounded by `Compressor.MAX_LOOKAHEAD_SECONDS`, and it is never a sprudel slot.
 - **The reverb `size` bounded to normalized 0..1 (authored 0..10) is deliberate** (maintainer,
   2026-09-16). Normalized 1.0 is comb feedback 0.98; unity sits at about 1.071, and past it the comb
   network has no steady state. The soft-cap alternative was measured (DC rail, AC-RMS 0.0) and

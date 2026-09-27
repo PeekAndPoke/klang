@@ -114,10 +114,11 @@ class WireCodecRoundTripSpec : StringSpec({
                     center = IgnitorDsl.Constant(800.0), sweep = IgnitorDsl.Constant(1200.0),
                     floor = IgnitorDsl.Constant(0.2),
                 ),
+                // ...with a lookahead, the one plain-Double knob of the Katalyst (step 12 C2)
                 KatalystStageDsl.Compressor(
                     threshold = IgnitorDsl.Constant(-21.0), ratio = IgnitorDsl.Constant(3.0),
                     knee = IgnitorDsl.Constant(6.0), attack = IgnitorDsl.Constant(0.005),
-                    release = IgnitorDsl.Constant(0.12),
+                    release = IgnitorDsl.Constant(0.12), lookahead = 0.004,
                 ),
                 KatalystStageDsl.Duck(
                     orbit = IgnitorDsl.Constant(2.0), depth = IgnitorDsl.Constant(0.8),

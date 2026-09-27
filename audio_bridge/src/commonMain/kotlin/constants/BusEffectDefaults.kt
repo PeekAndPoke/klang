@@ -88,6 +88,12 @@ const val COMPRESSOR_ATTACK_SECONDS: Double = 0.003
 /** How fast the compressor's gain opens again, in seconds. */
 const val COMPRESSOR_RELEASE_SECONDS: Double = 0.1
 
+/**
+ * The compressor's lookahead in seconds: 0, no lookahead and no latency. A lookahead delays whatever
+ * runs through the stage by that much, so it is the author's opt-in, never a default.
+ */
+const val COMPRESSOR_LOOKAHEAD_SECONDS: Double = 0.0
+
 // ── Duck ─────────────────────────────────────────────────────────────────────
 
 /** How far the ducked orbit is pulled down, 0..1. 0 = no ducking. */

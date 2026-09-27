@@ -655,7 +655,9 @@ Each commit reviewed to a clean round; new tests mutation-checked (mandatory tie
    `InlineDslRegistrar.masters`, `masterRegistry` on context and renderer go); `MasterDsl`, `MasterStageDsl`,
    `MasterValue`, `MasterDslIdentity`, `KlangScriptMaster`, `MasterBuilders`, the C3 shim and their specs go
    (a replaced surface is removed, not deprecated); the 6 songs and the 2 frozen texts migrate syntax-only
-   (`Master(m => m.` to `Katalyst(k => k.`); the codec regenerates; `WireCodecRoundTripSpec` updated. Prediction:
+   (`Master(m => m.` to `Katalyst(k => k.`); a `limiter` call is mapped BY NAME, because the two doors' positional
+   orders differ (Master: `..., attack, lookahead, release`; Katalyst since C2: `..., attack, release, lookahead`; no
+   song passes five or more positional arguments today, C2 round 1); the codec regenerates; `WireCodecRoundTripSpec` updated. Prediction:
    corpus identical (the chain content is the same numbers, now as `Constant`s). If too large to review, split the
    backend registry move (5a) from the doors and songs (5b), each identity.
 6. **C6, the docs sweep.** Section 4's doc list, the retired list in root `CLAUDE.md`, the guardrail row per decision

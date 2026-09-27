@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_LOOKAHEAD_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
@@ -224,6 +225,9 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * already uses. A knob that somehow carries a signal-rate node is to be COERCED, never rejected:
  * the step-2 resolver reads it once per block and falls back to the knob's default when it cannot.
  * The Motor stays raw, so a knob is never clamped beyond what the underlying DSP already does.
+ * **The one exception is [Compressor.lookahead]**, a plain `Double` fixed per chain (phase 3 step
+ * 12 C2): it sizes a delay ring when the chain is built, so a slot there could never move, and the
+ * type says so.
  *
  * **Every knob keeps the name and the scale of its sprudel door**, so a number means the same
  * thing whether it is written on a pattern or in a chain. A BARE stage means "I reached for this
@@ -363,6 +367,9 @@ sealed interface KatalystStageDsl {
      * The knobs follow sprudel (`threshold`, `knee`, `attack`), and so does the master limiter
      * since phase 3 step 3d (2026-09-24), which renamed its `thresholdDb` / `kneeDb`.
      *
+     * A LIMITER is this stage with limiter numbers, not a stage of its own: the `limiter(...)` door on
+     * the Katalyst builder appends one (phase 3 step 12 C2), so one DSP has one wire word.
+     *
      * @param threshold ceiling in dBFS where gain reduction starts. Orbit twin:
      *   `compressor(threshold = ...)`.
      * @param ratio compression ratio above the threshold (4.0 = 4:1). Orbit twin:
@@ -372,6 +379,14 @@ sealed interface KatalystStageDsl {
      * @param attack how fast the gain closes, in seconds. Orbit twin: `compressor(attack = ...)`.
      * @param release how fast the gain opens again, in seconds. Orbit twin:
      *   `compressor(release = ...)`.
+     * @param lookahead how far ahead the compressor sees, in seconds, and by how much it delays
+     *   whatever runs through it. 0 (the default) is no lookahead and no latency. From 8 samples on (about 0.2 ms)
+     *   the gain starts closing BEFORE a transient arrives, and [attack] becomes the gain-smoothing
+     *   length rather than a one-pole time (widen both together). The cost is latency: on an orbit
+     *   THAT orbit runs late by it, and nothing compensates. A plain number fixed when the chain is
+     *   built, never a slot (it sizes a delay ring); bounded to 0.05 s, and a negative or non-finite
+     *   value is 0. No orbit twin: a sprudel door writes slots on the running chain, and a slot
+     *   cannot size a ring, so declare it with `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`.
      */
     @WireName("compressor")
     data class Compressor(
@@ -380,6 +395,7 @@ sealed interface KatalystStageDsl {
         val knee: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_KNEE_DB),
         val attack: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_ATTACK_SECONDS),
         val release: IgnitorDsl = IgnitorDsl.Constant(COMPRESSOR_RELEASE_SECONDS),
+        val lookahead: Double = COMPRESSOR_LOOKAHEAD_SECONDS,
     ) : KatalystStageDsl
 
     /**

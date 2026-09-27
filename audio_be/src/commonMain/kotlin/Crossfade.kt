@@ -55,6 +55,21 @@ import kotlin.math.abs
  *    (`Cylinder.processDuck`). Whether a new chain's duck should pump the previous chain's ring-out
  *    is a taste call, not an oversight; it is recorded here rather than decided.
  *
+ * **Late chains: the two weights meet at the OUTPUT** (phase 3 step 12 C2). A chain with a
+ * lookahead compressor delays its output by `KatalystChain.latencyFrames`. The leaving chain's
+ * weight goes in at its INPUT ([rampDown]) and reaches the output its latency D_L later; the
+ * arriving chain's weight is applied at its output ([rampUpAndAdd]). For the two to stay
+ * complementary where they are heard, both must be the same ramp at the output, delayed by
+ * `M = max(D_A, D_L)`: the leaving input ramp is delayed by [outgoingInputDelayFrames] `= M - D_L`,
+ * the incoming weight by [incomingDelayFrames] `= M`, and the fade completes M after the ramp
+ * itself. At the output the leaving chain is weighted `1 - r(t - M)` and the arriving one
+ * `r(t - M)`, which sum to exactly one: below any threshold the swap is an ordinary linear
+ * crossfade from `x(t - D_L)` to `x(t - D_A)`, and the jump in time between two latencies happens
+ * under it (with the usual comb of two copies mid-fade when the latencies differ). Before step 12
+ * C2's round 2 the leaving ramp stayed undelayed and a dry-to-late swap dipped to 1/6 of the level
+ * for 10 ms, a late-to-dry one swelled by 5.3 dB. At no latency on either side both delays are 0
+ * and every weight is what it always was. [blend] (the master's output blend) runs at 0 and 0.
+ *
  * **What is NOT here: the retarget queue.** Both hosts keep at most one queued request and let the
  * last intent win, but the two queues are not one object: the master queues a registered master's
  * name, while a cylinder's queue also holds a name whose registration has not arrived yet and is
@@ -70,14 +85,26 @@ internal class Crossfade(sampleRate: Int) {
     private var pos: Int = 0
 
     /**
+     * How many frames late the INCOMING weight starts, set by [restart]: `max(D_A, D_L)`, the
+     * later of the two chains' latencies (the class KDoc). 0 when neither chain has a lookahead.
+     */
+    private var incomingDelayFrames: Int = 0
+
+    /**
+     * How many frames late the OUTGOING chain's input ramp ([rampDown]) starts, set by [restart]:
+     * `max(D_A, D_L) - D_L`, so its fade-out reaches the output together with the incoming ramp.
+     */
+    private var outgoingInputDelayFrames: Int = 0
+
+    /**
      * Where [pos] stood when the current block's [rampUpAndAdd] started, so a SECOND per-sample
      * pass over the same block can use the SAME weights ([blendHeld]). The duck runs after the
      * orbit's mix is formed, in another pass, and its weights have to line up with the mix's.
      */
     private var blockFrom: Int = 0
 
-    /** True once the incoming chain has reached full weight. */
-    val isComplete: Boolean get() = pos >= totalFrames
+    /** True once the incoming chain has reached full weight, [incomingDelayFrames] after the ramp itself. */
+    val isComplete: Boolean get() = pos >= totalFrames + incomingDelayFrames
 
     /**
      * True while the ramp has not moved yet: the block the swap was decided in, where the two
@@ -86,11 +113,26 @@ internal class Crossfade(sampleRate: Int) {
      */
     val isAtStart: Boolean get() = pos == 0
 
-    /** Starts (or restarts) the ramp at weight 0 for the incoming chain. */
-    fun restart() {
+    /**
+     * Starts (or restarts) the ramp at weight 0 for the incoming chain. [incomingDelayFrames] and
+     * [outgoingInputDelayFrames] place the two weights for chains with latency (the class KDoc);
+     * both are coerced to at least 0, and both are 0 for chains without a lookahead and for the
+     * master's [blend].
+     */
+    fun restart(incomingDelayFrames: Int, outgoingInputDelayFrames: Int) {
         pos = 0
         blockFrom = 0
+        this.incomingDelayFrames = incomingDelayFrames.coerceAtLeast(0)
+        this.outgoingInputDelayFrames = outgoingInputDelayFrames.coerceAtLeast(0)
     }
+
+    /**
+     * The ramp at [d] frames into it: 0 before it starts, exactly 1 from its end, `d / total` in
+     * between. At a delay of 0 this is the weight every fade had before step 12 C2.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun rampAt(d: Int, total: Double): Double =
+        if (d >= totalFrames) 1.0 else if (d <= 0) 0.0 else d / total
 
     /**
      * Blends [frames] of [outgoing] and [incoming] into [target] and advances the ramp.
@@ -137,7 +179,7 @@ internal class Crossfade(sampleRate: Int) {
         var at = from
 
         for (i in 0 until frames) {
-            val t = if (at >= totalFrames) 1.0 else at / total
+            val t = rampAt(at - incomingDelayFrames, total)
             val u = 1.0 - t
 
             // Sterilised taps: at the fade's endpoints one weight is exactly 0.0, and
@@ -176,7 +218,7 @@ internal class Crossfade(sampleRate: Int) {
         var at = pos
 
         for (i in 0 until frames) {
-            val t = if (at >= totalFrames) 1.0 else at / total
+            val t = rampAt(at - outgoingInputDelayFrames, total)
             val u = 1.0 - t
 
             // Sterilised tap, the reason [blend] gives: `Inf * 0.0` is NaN. Not a NaN shield for the
@@ -211,7 +253,7 @@ internal class Crossfade(sampleRate: Int) {
         blockFrom = pos
 
         for (i in 0 until frames) {
-            val t = if (at >= totalFrames) 1.0 else at / total
+            val t = rampAt(at - incomingDelayFrames, total)
 
             val inL = targetLeft[i]
             val inR = targetRight[i]

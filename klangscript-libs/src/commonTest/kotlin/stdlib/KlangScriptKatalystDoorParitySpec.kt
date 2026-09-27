@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -143,6 +144,40 @@ private val doors: List<StageDoor> = listOf(
         },
         kotlin = { k, a ->
             k.compressor(
+                threshold = a["threshold"], ratio = a["ratio"], knee = a["knee"],
+                attack = a["attack"], release = a["release"],
+            )
+        },
+    ),
+    // The limiter is a preset over the compressor stage: its bare stage is the compressor with the
+    // limiter numbers, written out here from literals, never from the door's constants.
+    StageDoor(
+        stage = "limiter",
+        bare = KatalystStageDsl.Compressor(
+            threshold = IgnitorDsl.Constant(-1.0),
+            ratio = IgnitorDsl.Constant(20.0),
+            knee = IgnitorDsl.Constant(2.0),
+            attack = IgnitorDsl.Constant(0.001),
+            release = IgnitorDsl.Constant(0.1),
+            lookahead = 0.0,
+        ),
+        params = listOf(
+            DoorParam("threshold", -3.0), DoorParam("ratio", 12.0), DoorParam("knee", 1.0),
+            DoorParam("attack", 0.004), DoorParam("release", 0.2),
+        ),
+        set = { s, n, v ->
+            val c = s as KatalystStageDsl.Compressor
+            when (n) {
+                "threshold" -> c.copy(threshold = v)
+                "ratio" -> c.copy(ratio = v)
+                "knee" -> c.copy(knee = v)
+                "attack" -> c.copy(attack = v)
+                "release" -> c.copy(release = v)
+                else -> unknown("limiter", n)
+            }
+        },
+        kotlin = { k, a ->
+            k.limiter(
                 threshold = a["threshold"], ratio = a["ratio"], knee = a["knee"],
                 attack = a["attack"], release = a["release"],
             )
@@ -301,6 +336,51 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                     KatalystStageDsl.Eq(),
                     KatalystStageDsl.Gain(),
                 )
+    }
+
+    "lookahead reaches the compressor stage from both dynamics doors, last and named, on both doors" {
+        // A plain number fixed with the chain (phase 3 step 12 C2), so it is not in the [doors]
+        // family, whose every parameter also takes a slot. Positionally it is the SIXTH parameter
+        // on both doors, after the compressor's five.
+        val compressor = KatalystStageDsl.Compressor(
+            threshold = c(-21.0), ratio = c(3.0), knee = c(5.0), attack = c(0.005), release = c(0.12),
+            lookahead = 0.004,
+        )
+        val limiter = KatalystStageDsl.Compressor(
+            threshold = c(-3.0), ratio = c(12.0), knee = c(1.0), attack = c(0.004), release = c(0.2),
+            lookahead = 0.004,
+        )
+
+        ks("Katalyst(k => k.compressor(-21, 3, 5, 0.005, 0.12, 0.004))") shouldBe KatalystDsl.of(compressor)
+        ks("Katalyst(k => k.limiter(-3, 12, 1, 0.004, 0.2, 0.004))") shouldBe KatalystDsl.of(limiter)
+
+        ks("Katalyst(k => k.compressor(lookahead = 0.004))") shouldBe
+                KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.004))
+        KlangScriptKatalyst.build { it.compressor(lookahead = 0.004) } shouldBe
+                KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.004))
+
+        val bareLimiter = doors.single { it.stage == "limiter" }.bare as KatalystStageDsl.Compressor
+
+        ks("Katalyst(k => k.limiter(lookahead = 0.004))") shouldBe KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
+        KlangScriptKatalyst.build { it.limiter(lookahead = 0.004) } shouldBe
+                KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
+    }
+
+    "the limiter's numbers are the Master DSL limiter's, until that DSL retires" {
+        // One limiter, two doors until step 12 C5: the Katalyst preset must append exactly the
+        // numbers `Master(m => m.limiter())` runs, or the songs' migration would change their sound.
+        val master = MasterStageDsl.Limiter()
+
+        ks("Katalyst(k => k.limiter())") shouldBe KatalystDsl.of(
+            KatalystStageDsl.Compressor(
+                threshold = c(master.threshold),
+                ratio = c(master.ratio),
+                knee = c(master.knee),
+                attack = c(master.attackSeconds),
+                release = c(master.releaseSeconds),
+                lookahead = master.lookaheadSeconds,
+            )
+        )
     }
 
     "the eq and the gain keep their shapes" {

@@ -208,8 +208,10 @@ the bug.
   the FOUR stage knobs is written. An authored depth default, 0 included, is the author's value and is
   never filled; a `Constant` depth (a door fill) is never the question.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
-- Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
-  on the master only because a per-orbit lookahead would shift that orbit late). See
+- Deliberate asymmetries are RECORDED with their reason (the compressor's `lookahead` exists on the
+  Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
+  fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
+  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`). See
   `docs/tasks/master-dsl-followups.md` for the audit brief.
 
 ---

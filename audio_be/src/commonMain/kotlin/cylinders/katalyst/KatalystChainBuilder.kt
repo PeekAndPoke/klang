@@ -202,7 +202,13 @@ object KatalystChainBuilder {
                 }
 
                 is KatalystStageDsl.Compressor -> {
-                    val fx = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames)
+                    // The lookahead is fixed per chain: it sizes the instance's ring here, at build
+                    // time, and the effect coerces it (bounded, non-finite is none).
+                    val fx = KatalystCompressorEffect(
+                        sampleRate = sampleRate,
+                        blockFrames = blockFrames,
+                        lookaheadSeconds = stage.lookahead,
+                    )
                     pipeline.add(fx)
 
                     statics.add(

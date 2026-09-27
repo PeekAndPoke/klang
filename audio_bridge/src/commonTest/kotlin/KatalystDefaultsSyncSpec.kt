@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_LOOKAHEAD_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
@@ -403,6 +404,14 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
         rebuilt shouldBe KatalystDsl.classic
         rebuilt.uniqueId() shouldBe KatalystDsl.classic.uniqueId()
+    }
+
+    "the compressor's lookahead is 0 bare and on the classic chain: no stage is late unless asked" {
+        // Phase 3 step 12 C2. A lookahead delays whatever runs through the stage, so it is the
+        // author's opt-in and never a default; the born-with orbit must not run late.
+        COMPRESSOR_LOOKAHEAD_SECONDS shouldBe 0.0
+        KatalystStageDsl.Compressor().lookahead shouldBe COMPRESSOR_LOOKAHEAD_SECONDS
+        KatalystDsl.classic.stages.filterIsInstance<KatalystStageDsl.Compressor>().single().lookahead shouldBe 0.0
     }
 
     "the unset marker is non-finite, so a consumer must test isFinite and never compare" {

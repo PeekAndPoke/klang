@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
+import kotlin.math.max
 
 /**
  * The swap of a whole effect chain under live audio: the chain leaving service fades out through
@@ -97,7 +98,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
         /** The leaving chain's duck while its effect is ramped out; null outside a fade. */
         abstract val duckingOut: KatalystDuckEffect?
 
-        abstract fun begin(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean)
+        abstract fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean)
 
         abstract fun process(chain: KatalystChain, ctx: KatalystContext)
 
@@ -120,8 +121,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
         override val duckingOut: KatalystDuckEffect? get() = null
 
-        override fun begin(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
-            fading.enter(leaving, duckingOut, duckFadingIn)
+        override fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+            fading.enter(leaving, arrivingLatencyFrames, duckingOut, duckFadingIn)
         }
 
         override fun process(chain: KatalystChain, ctx: KatalystContext) {
@@ -142,7 +143,9 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     /**
      * The ramp runs: the leaving chain is handed a shrinking copy of the mix, the arriving chain's
      * own output is ramped up, and the leaving chain's output is added at full weight (it was
-     * already attenuated through its input). The leaving reference and the duck handover data die
+     * already attenuated through its input). With latency on either side both weights are placed
+     * so they meet at the output, and the fade ends the later latency after the ramp ([begin],
+     * [Crossfade]); at no latency, the ramp as it always was. The leaving reference and the duck handover data die
      * with this state, so they live here, and [enter] is their only initialiser.
      */
     private inner class Fading : State() {
@@ -158,11 +161,16 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
          */
         private var duckFadingIn: Boolean = false
 
-        fun enter(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+        fun enter(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
             this.leaving = leaving
             this.duckingOut = duckingOut
             this.duckFadingIn = duckFadingIn
-            fade.restart()
+            // The two weights must meet at the OUTPUT (the [Crossfade] class KDoc): the later of the
+            // two latencies delays the incoming weight, and the leaving INPUT ramp waits the
+            // difference, so its fade-out comes out of its own latency at the same sample.
+            val later = max(arrivingLatencyFrames, leaving.latencyFrames)
+
+            fade.restart(incomingDelayFrames = later, outgoingInputDelayFrames = later - leaving.latencyFrames)
             state = this
         }
 
@@ -171,7 +179,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
          * offered chain is retired rather than dropped, so a host that forgot to ask [settled]
          * strands no rent: it leaves service here, having never entered it.
          */
-        override fun begin(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+        override fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
             retire(leaving)
         }
 
@@ -310,7 +318,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
          * REFUSED: the one leaving slot is taken until the ring-out ends (decision (g), kept). The
          * offered chain is retired rather than dropped, for the reason [Fading.begin] gives.
          */
-        override fun begin(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+        override fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
             retire(leaving)
         }
 
@@ -394,9 +402,23 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
      * the chain the host now passes to [process]. REFUSED unless [settled], and a refused [leaving]
      * is retired, never silently dropped (the host is expected to ask [settled] first). [duckingOut] and
      * [duckFadingIn] are the duck handover the host decided (see the class KDoc).
+     *
+     * [arrivingLatencyFrames] is the ARRIVING chain's `KatalystChain.latencyFrames`; the leaving
+     * chain's is read from [leaving]. Both weights are delayed so they are complementary at the
+     * OUTPUT, by the later of the two latencies ([Crossfade], phase 3 step 12 C2); 0 and 0 is the
+     * ramp as it always was. The duck handover blends with the same delayed weights.
+     *
+     * The incoming weight is exactly 0 until its delayed start, on the chains and on the duck
+     * handover alike, so what the arriving chain emits there is dropped by the law. When the
+     * arriving chain is the LATER one that is its own ring, silent because the host hands in a chain
+     * that is fresh or was reset when it retired (`Cylinder.chainFor`, `KatalystChain.retire`); a
+     * host that handed in a used chain would drop stale audio there, not play it. When it is the
+     * EARLIER one it is its first frames, dropped on purpose so the two copies meet under the
+     * crossfade. For the duck the partner is the live mix, and the 0 keeps the leaving duck fully in
+     * force, or the arriving one fully out, until the delayed start.
      */
-    fun begin(leaving: KatalystChain, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
-        state.begin(leaving, duckingOut, duckFadingIn)
+    fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+        state.begin(leaving, arrivingLatencyFrames, duckingOut, duckFadingIn)
     }
 
     /** One block of the host's mix (`ctx.mixBuffer`), through [chain] and whatever is leaving. */

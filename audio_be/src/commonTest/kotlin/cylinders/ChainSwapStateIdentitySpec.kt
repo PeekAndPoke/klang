@@ -78,7 +78,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
         fading shouldNotBeSameInstanceAs idle
 
         // Fading + begin: REFUSED, a self-edge.
-        swap.begin(leaving = rig.buildChain(dryChain(0.5)), duckingOut = null, duckFadingIn = false)
+        swap.begin(leaving = rig.buildChain(dryChain(0.5)), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
         withClue("a begin while fading is refused") {
             swap.currentState shouldBeSameInstanceAs fading
         }
@@ -98,7 +98,7 @@ class ChainSwapStateIdentitySpec : StringSpec({
         }
 
         // Draining + begin: REFUSED; Draining + a block: self-edge.
-        swap.begin(leaving = rig.buildChain(dryChain(0.5)), duckingOut = null, duckFadingIn = false)
+        swap.begin(leaving = rig.buildChain(dryChain(0.5)), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
         rig.block(level = 0.0)
         withClue("a begin while draining is refused, and a drain block is a self-edge") {
             swap.currentState shouldBeSameInstanceAs draining
