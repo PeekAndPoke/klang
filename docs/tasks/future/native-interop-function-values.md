@@ -1,23 +1,27 @@
 # Bare function references as function-typed arguments
 
-Status: **future / papercut.** Found 2026-08-31 while compiling the sprudel DSL's own KDoc
-examples (`docs/tasks/dsl-doc-example-rot.md`). Not a correctness bug in the engine: the
-workaround is one pair of parentheses. It is on this list because the failure mode is an
-internal cast error rather than a diagnostic, and because the spelling that fails is the one
-every Tidal and Strudel user will reach for first.
+Status: **future, correctness.** Found 2026-08-31 while compiling the sprudel DSL's own KDoc
+examples (`docs/tasks/dsl-doc-example-rot.md`). The workaround is one pair of parentheses, but
+the spelling that fails is the one every Tidal and Strudel user will reach for first. Re-checked
+2026-09-27 and raised from "papercut": since the interop learned to wrap a native function in the
+arity of the slot it lands in, two of the three spellings no longer crash. They play the wrong
+thing without saying so, which is worse than an error.
 
 ## What happens
 
-```
-s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])
-```
+As of 2026-09-27 (probed on the JVM, `s("bd rim hh")` over two cycles):
 
-```
-Internal error in native function 'jux(p1=[native function rev])':
-NativeInteropKt$$Lambda cannot be cast to kotlin.jvm.functions.Function1
-```
+| Script | Result |
+|---|---|
+| `jux(rev())` | correct |
+| `jux(rev)` | crashes: `Internal error in native function 'ReinterpretPattern.jux(p1=[native function rev])': Lang_tempo_reverseKt$$Lambda cannot be cast to SprudelPattern` |
+| `every(2, rev())` | correct, cycle 0 reversed |
+| `every(2, rev)` | **no error, nothing reversed** |
+| `pickF("<0 1 2>", [rev(), fast(2), jux(rev())])` | correct, cycle 0 reversed, cycle 1 fast |
+| `pickF("<0 1 2>", [rev, fast(2), jux(rev)])` | **no error, the wrong transforms play** |
 
-`jux(rev())` works. `jux(rev)` does not.
+On 2026-08-31 the `jux(rev)` error read `NativeInteropKt$$Lambda cannot be cast to
+kotlin.jvm.functions.Function1`; the arity fix moved the failure one step further in.
 
 ## Why, precisely
 
@@ -30,12 +34,16 @@ Two different things in sprudel both read as "a transform", and only one of them
 | `rev` | `fun rev(n: PatternLike = 1): PatternMapperFn` | **fails** |
 
 `rev` has every parameter defaulted, so a bare `rev` looks like a ready-made transform, but in
-KlangScript it is a native *function* value. The interop hands it to a parameter typed
-`PatternMapperFn` (a Kotlin `Function1`) and the cast blows up inside the callee.
+KlangScript it is a native *function* value (it was not converted to a callable object with
+`@KlangScript.Invoke`). The interop (`NativeInterop.kt`, the `NativeFunctionValue` branch of
+`convertToKotlin`) wraps it as a `Function1` for the `PatternMapperFn` slot, so the callee's
+`mapper(pattern)` runs `rev(n = pattern)`. A pattern is a valid `PatternLike`, so that call
+succeeds and returns a *transform* where a *pattern* was expected. What happens next depends on
+the callee: `jux` casts the result and crashes, `every` and `pickF` swallow it and play the wrong
+thing.
 
-Note that `rev` sitting in the array literal in the same line is fine. Only the function-typed
-**argument** position is affected, because that is the only place a Kotlin function type is
-demanded.
+The array literal is not safe either (the 2026-08-31 version of this file said it was): the
+`pickF` row shows a bare `rev` in the list misbehaving the same way.
 
 ## Two ways to close it
 
@@ -45,12 +53,13 @@ demanded.
    needs care: only do it when the arities cannot be confused, and never silently for a function
    that has required parameters.
 2. **Diagnose.** If auto-applying is too clever, refuse it in the interop with a real message
-   ("`rev` is a function, did you mean `rev()`?") instead of letting a `ClassCastException`
-   surface as "Internal error in native function". The parser already produces good
-   did-you-mean text elsewhere, so this would match the house standard.
+   ("`rev` is a function, did you mean `rev()`?") instead of wrapping it and letting the callee
+   crash or misplay. The parser already produces good did-you-mean text elsewhere, so this would
+   match the house standard.
 
-Either way it should get a test, because nothing exercised this path until the doc-example gate
-did.
+Either way the fix has to cover the list position too (a native function converted to `Any`
+inside an array), and it needs tests for all three rows of the table above: the crash, and the
+two silent cases, which are the ones a user cannot find on their own.
 
 ## Affected surface
 
@@ -61,7 +70,8 @@ naturally write a bare transform name. Any of these paired with a bare `rev`, `b
 `almostAlways`, `almostNever`, `always`, `apply`, `applyN`, `chunkBack`, `chunkBackInto`,
 `chunkInto`, `echoWith`, `every`, `fastChunk`, `firstOf`, `inside`, `jux`, `juxBy`, `lastOf`,
 `layer`, `never`, `off`, `often`, `outside`, `plyWith`, `rarely`, `someCycles`, `someCyclesBy`,
-`sometimes`, `sometimesBy`, `stutWith`, `superimpose` (plus their lowercase aliases).
+`sometimes`, `sometimesBy`, `stutWith`, `superimpose` (plus their lowercase aliases), and every
+function that takes a list of transforms, `pickF` first among them.
 
 ## Status of the docs
 
