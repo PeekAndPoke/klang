@@ -157,15 +157,22 @@ object ClassicVoiceRig {
 
     val rates = listOf(48000, 44100)
 
-    val untouched: Map<Int, DoubleArray> by lazy { rates.associateWith { classic(emptyMap(), it) } }
-
+    /**
+     * The baseline's rows, trimmed by the test consolidation (2026-09-28) to one row per stage and mode: every stage
+     * kind, the filter envelope's shapes on `lpf` and `hpf`, the analog lane and its draw order, the envelope and
+     * lifetime rows (the 44.1 kHz fractional frame counts among them), and the combinations. Each stage LAW is its
+     * own oracle spec's where one exists. Coarse, the waveshaper curves (test consolidation gap 7) and the SVF node's
+     * per-sample cutoff sweep have none yet: each mode's loop in `Ignitor.svf` carries its own copy of the sweep, and
+     * no other spec pins that sweep in exact bits (the static linear taps have `SvfNodeLawSpec`, the swept linear
+     * lowpass `EnvelopeLawSpec` at 1e-9). So their rows here are their only exact-bits guard:
+     * `coarse 7.5` (the fractional amount), one row per distort shape, and one swept row per SVF loop (`lpf`, `hpf`,
+     * `bpf`, `notch`, and the saturated `lpf` and `hpf`). These rows pin the exact bits of the whole voice.
+     */
     val rows = listOf(
         ClassicRow("untouched: the envelope alone, at the voice envelope's defaults", emptyMap()),
 
         // ── crush (D1, floor, CrushCore) ──
         ClassicRow("crush 4", mapOf("crush.amount" to 4.0)),
-        ClassicRow("crush 8", mapOf("crush.amount" to 8.0)),
-        ClassicRow("crush 1 (the quantizer runs)", mapOf("crush.amount" to 1.0)),
 
         // ── coarse ──
         ClassicRow("coarse 3", mapOf("coarse.amount" to 3.0)),
@@ -173,9 +180,8 @@ object ClassicVoiceRig {
 
         // ── distort (D2 option A, DistortionCore) ──
         *listOf(
-            Triple(0.3, "soft", 0), Triple(0.5, "soft", 0), Triple(1.0, "soft", 0), Triple(2.0, "soft", 0),
-            Triple(0.5, "tube", 0), Triple(0.5, "gentle", 0), Triple(1.0, "hard", 0), Triple(1.0, "fold", 0),
-            Triple(0.5, "rectify", 0), Triple(0.5, "soft", 2), Triple(0.5, "tube", 4),
+            Triple(0.5, "soft", 0), Triple(0.5, "gentle", 0), Triple(1.0, "hard", 0), Triple(1.0, "fold", 0),
+            Triple(0.5, "rectify", 0), Triple(0.5, "tube", 4),
         ).map { (amount, shape, os) ->
             ClassicRow(
                 "distort $amount $shape x$os",
@@ -184,46 +190,30 @@ object ClassicVoiceRig {
         }.toTypedArray(),
 
         // ── the four filters, static ──
-        ClassicRow("hpf 400", mapOf("hpf.freq" to 400.0)),
         ClassicRow("hpf 400 q 3 passes 2", mapOf("hpf.freq" to 400.0, "hpf.q" to 3.0, "hpf.passes" to 2.0)),
         ClassicRow("bpf 1000 q 2", mapOf("bpf.freq" to 1000.0, "bpf.q" to 2.0)),
         ClassicRow("notch 1000 q 4", mapOf("notch.freq" to 1000.0, "notch.q" to 4.0)),
-        ClassicRow("lpf 1200", mapOf("lpf.freq" to 1200.0)),
         ClassicRow("lpf 1200 q 3 passes 3", mapOf("lpf.freq" to 1200.0, "lpf.q" to 3.0, "lpf.passes" to 3.0)),
-        ClassicRow(
-            "all four filters",
-            mapOf("hpf.freq" to 200.0, "bpf.freq" to 900.0, "bpf.q" to 0.5, "notch.freq" to 3000.0, "lpf.freq" to 5000.0, "lpf.q" to 1.5),
-        ),
 
         // ── the cutoff envelope, D3 ──
-        ClassicRow("lpf env 24: one default curve since D3 (b)", mapOf("lpf.freq" to 600.0, "lpf.env" to 24.0)),
-        ClassicRow("lpf attack only (the fill itself is proven by the door-sweep row)", mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)),
+        ClassicRow("lpf attack only: the slot-layer fill (its law is FilterSlotLayerFillSpec's)", mapOf("lpf.freq" to 600.0, "lpf.attack" to 0.05)),
         ClassicRow(
             "lpf pluck env 24 decay 0.2 sustain 0.1",
             mapOf("lpf.freq" to 500.0, "lpf.env" to 24.0, "lpf.attack" to 0.002, "lpf.decay" to 0.2, "lpf.sustain" to 0.1, "lpf.release" to 0.1),
         ),
-        ClassicRow("lpf explicit env 0 with a decay: static on both", mapOf("lpf.freq" to 600.0, "lpf.env" to 0.0, "lpf.decay" to 0.3)),
         ClassicRow("hpf env -12 decay 0.2 sustain 0.3", mapOf("hpf.freq" to 800.0, "hpf.env" to -12.0, "hpf.decay" to 0.2, "hpf.sustain" to 0.3)),
         ClassicRow("bpf env 12", mapOf("bpf.freq" to 700.0, "bpf.env" to 12.0)),
         ClassicRow("notch env 12", mapOf("notch.freq" to 700.0, "notch.env" to 12.0)),
-        *curveFilters.map { (f, freq) ->
-            ClassicRow(
-                "${f}Curves linear, scurve, invsquare (env 24, every stage curved)",
-                mapOf(
-                    "$f.freq" to freq, "$f.env" to 24.0, "$f.attack" to 0.01, "$f.decay" to 0.15, "$f.sustain" to 0.3,
-                    "$f.release" to 0.1,
-                    "${f}Curves.attack" to AdsrCurves.indexOf(namedCurves.first),
-                    "${f}Curves.decay" to AdsrCurves.indexOf(namedCurves.second),
-                    "${f}Curves.release" to AdsrCurves.indexOf(namedCurves.third),
-                ),
-            )
-        }.toTypedArray(),
-        *listOf("lpf" to 600.0, "hpf" to 900.0, "bpf" to 800.0, "notch" to 800.0).map { (f, freq) ->
-            ClassicRow(
-                "$f env 24, a step envelope (attack 0, decay 0, sustain 0.4, release 0): the sampling alone",
-                mapOf("$f.freq" to freq, "$f.env" to 24.0, "$f.attack" to 0.0, "$f.decay" to 0.0, "$f.sustain" to 0.4, "$f.release" to 0.0),
-            )
-        }.toTypedArray(),
+        ClassicRow(
+            "lpfCurves linear, scurve, invsquare (env 24, every stage curved)",
+            mapOf(
+                "lpf.freq" to 600.0, "lpf.env" to 24.0, "lpf.attack" to 0.01, "lpf.decay" to 0.15, "lpf.sustain" to 0.3,
+                "lpf.release" to 0.1,
+                "lpfCurves.attack" to AdsrCurves.indexOf(namedCurves.first),
+                "lpfCurves.decay" to AdsrCurves.indexOf(namedCurves.second),
+                "lpfCurves.release" to AdsrCurves.indexOf(namedCurves.third),
+            ),
+        ),
         ClassicRow(
             "lpf env 24 q 3 passes 3, a step envelope: the sweep forwarded to every stage of the cascade",
             mapOf(
@@ -243,12 +233,10 @@ object ClassicVoiceRig {
 
         // ── analog: the humanize lane ──
         ClassicRow("analog 2, no filter: the oscillator drift alone", mapOf("analog" to 2.0)),
-        ClassicRow("analog 2, lpf 1200: one filter, the drift lane (one sampling since D3 a2)", mapOf("analog" to 2.0, "lpf.freq" to 1200.0)),
         ClassicRow("analog 2, hpf and lpf: the draw order (section 8)", mapOf("analog" to 2.0, "hpf.freq" to 300.0, "lpf.freq" to 1200.0)),
 
         // ── tremolo ──
         ClassicRow("tremolo depth 0.5 sync 4", mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0)),
-        ClassicRow("tremolo depth only: rate 0, a static gain", mapOf("tremolo.depth" to 0.5)),
         ClassicRow(
             "tremolo square, skew 0.3, phase 0.25",
             mapOf(
@@ -265,10 +253,6 @@ object ClassicVoiceRig {
         ClassicRow(
             "adsr at fractional frame counts (one envelope law: fractional attack and decay on both hosts)",
             mapOf("adsr.attack" to 0.00501, "adsr.decay" to 0.20001, "adsr.sustain" to 0.5, "adsr.release" to 0.20001),
-        ),
-        ClassicRow(
-            "adsr release 0.02: a built-in lives as long as its tree says, no floor from the voice envelope's 0.05 (step 6)",
-            mapOf("adsr.release" to 0.02),
         ),
         ClassicRow(
             "adsrCurves linear, scurve, square",
@@ -288,16 +272,6 @@ object ClassicVoiceRig {
 
         // ── the onepole: `classic()`'s first stage, in front of every other ──
         ClassicRow("onepole 900 with crush 5: in front of the quantizer", mapOf("onepole" to 900.0, "crush.amount" to 5.0)),
-        ClassicRow("onepole 900 with distort 0.8: in front of the shaper", mapOf("onepole" to 900.0, "distort.amount" to 0.8)),
-
-        // ── names the catalogues do not know: they fall back through `indexOf` ──
-        ClassicRow(
-            "unknown tremolo and distort shape names",
-            mapOf(
-                "tremolo.depth" to 0.6, "tremolo.sync" to 3.0, "tremolo.shape" to LfoShapes.indexOf("wobble"),
-                "distort.amount" to 0.5, "distort.shape" to DistortionShapes.indexOf("nope"),
-            ),
-        ),
 
         // ── the voice's pitch pipeline under a filtered built-in: it stays on the voice ──
         ClassicRow(

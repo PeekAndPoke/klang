@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| test consolidation commit 6, the baselines (implementer; coordinator commits) | `audio_be/src/jvmTest/kotlin/ignitor/BuiltInVoiceMatrixSpec.kt`, `audio_be/src/jvmTest/kotlin/ignitor/ClassicVoiceBaselineSpec.kt`, `audio_be/src/commonTest/kotlin/ignitor/ClassicVoiceRig.kt` | Baseline entries deleted on purpose (kept fingerprints untouched); no production change (mutants restored, cmp-verified); scratchpad `tc6/` |
 
 ## The two layers
 

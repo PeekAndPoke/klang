@@ -78,8 +78,10 @@ no sound change), a second role only where production code moves.
 7. **The gaps, which ADD tests** (lane A): a law spec for `PhaserCore` (today every phaser row is
    relative, so a change inside the core moves all hosts together), an output oracle for the reverb
    network, an oracle for the doors' drive and shape distortion (three songs' guitars), a core for
-   coarse, a direct `DcBlocker` spec, and a bounds row for `ShapingFuncs.softCapTo` (the delay-line feedback
-   saturation, covered by no spec before or after commit 3). Until they exist, the host rows that are the only guard stay.
+   coarse, a direct `DcBlocker` spec, a bounds row for `ShapingFuncs.softCapTo` (the delay-line feedback
+   saturation, covered by no spec before or after commit 3), and a swept-cutoff law for the SVF's bandpass, notch and
+   saturated-highpass loops (each carries its own copy of the per-sample step; commit 6 found only the baselines pin
+   them), and a bit-exact value table per distortion shape (only the baseline's x0 rows pin the curves today). Until they exist, the host rows that are the only guard stay.
 
 ## 4. Decisions (maintainer, 2026-09-27)
 
@@ -307,6 +309,26 @@ Format: what the golden covered; where it lands now; why it is (or is not) uncle
    `gain(0.9).echo(3, 0.125, 0.6)`); the KDoc's "gain reduced by decay ^ copy_number" reads as a multiply
    (0.9, 0.54, 0.324). The new `LangEchoSpec` row pins the layer offsets and the original layer's own gain, not the
    echo layers' gain; that row gets added once the maintainer decides.
+
+**From commit 6** (kept):
+
+1. **`ClassicVoiceBaselineSpec` / `ClassicVoiceRig` row "lpf attack only"** (renamed to
+   "lpf attack only: the slot-layer fill (its law is FilterSlotLayerFillSpec's)", fingerprints unchanged:
+   48000 `9889d9bc43516d59`, 44100 `be6dd0596a715486`).
+   - Asserts: the whole-voice bits of `saw` with `lpf.freq 600, lpf.attack 0.05` and no depth written, so the
+     slot-layer fill supplies the shared depth through `classic()`.
+   - Audit B listed it among the 33 cuts (which gives 28); the brief asked to rename it, so it is kept (29).
+   - Unclear because: `FilterSlotLayerFillSpec` proves the fill rule against a hand-built slotted lowpass "as
+     `classic()` places them", not through `classic()` itself; this is the only kept baseline row where the
+     fill runs through the real `classic()` (a change of `classic()`'s depth default from unset to 0 would
+     leave the law spec green). Whether `ClassicSlotParamsSpec` or `KatalystDefaultsSyncSpec` already pins that
+     default was not checked; if one does, the row can go.
+
+**A lesson from commit 6 (2026-09-28), for any later trim of a baseline or a table of whole-voice rows:** enumerate
+the CODE BRANCHES the rows drive (mode arms, saturated vs linear, swept vs static, oversampled vs plain, each loop
+that carries its own copy of a step) and name the kept row or independent oracle for each BEFORE cutting. Sampling
+removed rows found one more over-cut per review round (a fractional coarse amount, four distortion shapes, three SVF
+sweep loops); the branch table closed the class in one round.
 
 ## 5. Guards that stay, whatever the cut
 
