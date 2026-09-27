@@ -43,6 +43,6 @@ fix-first pass lands.
 ## Links
 
 - `tutorial-master-plan.md` — the expansion backlog (the "then expand" half).
-- `mini-notation-extensions.md` — the Phase-2 attribute-blocks tutorial slots into the spine.
+- ~~`mini-notation-extensions.md` — the Phase-2 attribute-blocks tutorial slots into the spine.~~ Moot: the attribute block was removed 2026-08-30 and the file archived 2026-09-27.
 - Q3 plan: `../history/2026-Q3.md` (Act 2).
 - Registry `TutorialRegistry.kt`; build log `GENERATION_LOG.md`.

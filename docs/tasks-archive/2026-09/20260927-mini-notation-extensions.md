@@ -1,5 +1,11 @@
 # Mini-Notation Extensions: Attribute Blocks and MIDI Recording
 
+> **ARCHIVED 2026-09-27 (maintainer).** Mini-notation will get a new revision at some point. The one
+> question carried forward is how to express legato concisely in mini-notation (the `_` idea):
+> `docs/tasks/future/mini-notation-legato.md`. `{legato=2}` and the whole `{key=value}` block are dropped for
+> good; the braces carry tweak names. The MIDI recording notes (Phase 3) and the tutorial plan below are
+> not carried.
+
 > **Status (2026-08-30): Phase 1 is SUPERSEDED and REMOVED.** The `{key=value}` attribute block
 > shipped 2026-04-13 (commit `b609e6af`) and was deleted again on 2026-08-30 with zero recorded
 > usage in songs, tutorials or `sprudel/ref`. The `{…}` braces now carry bare **tweak names**:

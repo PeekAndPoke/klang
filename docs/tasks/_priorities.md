@@ -90,7 +90,7 @@ The release-defining set, regardless of when they're sequenced:
    basics → crafted-sound path isn't coherent. Lean on the music-writing/recording skills + tutorial
    factory (sound first). → wants its own task doc.
 9. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — [
-   `mini-notation-extensions.md`](mini-notation-extensions.md) 🟡
+   `mini-notation-extensions.md`](../tasks-archive/2026-09/20260927-mini-notation-extensions.md) 🟡 *(archived 2026-09-27; the attribute block was removed 2026-08-30)*
    Phase 1 (`{key=value}` engine feature) shipped, so this tutorial is a clean, high-value fit. Phase 3
    (MIDI → mini-notation recording) stays future/NICE.
 10. **NICE** · **Tutorial expansion backlog** — [`tutorial-master-plan.md`](tutorial-master-plan.md) 🟡
