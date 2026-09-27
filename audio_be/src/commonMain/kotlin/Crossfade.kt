@@ -12,7 +12,8 @@ import kotlin.math.abs
  * same input.
  *
  * Owned by the two hosts that swap a whole chain under live audio, the master bus
- * (`MasterBus`) and every orbit bus (`Cylinder`). One instance per host, created once. Katalyst
+ * (`MasterBus`) and every orbit bus (`Cylinder`, through its [ChainSwap] since phase 3 step 12
+ * C1). One instance per host, created once. Katalyst
  * step 3b, 2026-09-17 (`docs/tasks/katalyst-dsl.md` §D3) extracted it from `MasterBus`, which had
  * carried it alone since the master DSL shipped; the extraction is byte-identical, measured on a
  * master swap rendered before and after.
@@ -111,8 +112,8 @@ internal class Crossfade(sampleRate: Int) {
      * chains were blended with, not the next block's.
      *
      * Valid ONLY inside the block [rampUpAndAdd] ran: afterwards it replays that block's weights,
-     * so a host that stops calling it has to stop for good (`Cylinder.beginDrain` clears both duck
-     * states for exactly that reason).
+     * so a host that stops calling it has to stop for good (the fade's exit edge in `ChainSwap`
+     * drops the duck handover for exactly that reason).
      */
     fun blendHeld(target: StereoBuffer, incoming: StereoBuffer, outgoing: StereoBuffer, frames: Int) {
         blendFrom(target, incoming, outgoing, frames, blockFrom)

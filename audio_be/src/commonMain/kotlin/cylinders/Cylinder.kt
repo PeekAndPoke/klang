@@ -5,12 +5,12 @@
 
 package io.peekandpoke.klang.audio_be.cylinders
 
+import io.peekandpoke.klang.audio_be.ChainSwap
 import io.peekandpoke.klang.audio_be.Crossfade
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
-import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDuckEffect
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.VoiceLease
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -130,7 +130,7 @@ class Cylinder(
     /**
      * A requested chain that could not be installed yet, as its registry KEY (normalized once, at
      * request time): the `RegisterKatalyst` command had not arrived, or a fade or drain still held
-     * the one [outgoing] slot. Retried per block by [pollPendingChain] and on the next request,
+     * the [swap]'s one leaving slot. Retried per block by [pollPendingChain] and on the next request,
      * never resolved to the classic chain instead (the master's rule: an unknown name must not
      * silently pin an orbit to the wrong chain).
      *
@@ -164,60 +164,31 @@ class Cylinder(
     internal val cachedChainCount: Int get() = chains.size
 
     /**
-     * The chain that is LEAVING service, fading out and then draining; null when neither runs.
+     * The chain swap of a SOUNDING orbit (phase 3 step 12 C1): the chain LEAVING service, fading
+     * out over [Crossfade] and then draining, and the duck handover of the fade (see [ChainSwap],
+     * whose table is authoritative for the edges). Its one leaving slot is why a request arriving
+     * while it is taken waits in [pendingKey]: this host asks [ChainSwap.settled] before it begins
+     * a swap and parks the key otherwise, which is the master's retarget policy (a) and what keeps
+     * [chain] and the leaving chain from ever being the same object (see [requestChain]). The
+     * swap's own refusal of a second begin (it retires the offered chain) is the leak-safe
+     * backstop, never reached from here.
      *
-     * One slot, so a request arriving while it is taken waits in [pendingKey] instead: the
-     * master's retarget policy (a), and the invariant that keeps [chain] and this from ever being
-     * the same object (see [requestChain]).
+     * It also carries the rents the warehouse refused the chains this cylinder has swapped AWAY
+     * from ([ChainSwap.retire]), because a stage zeroes its own count when it retires.
      */
-    private var outgoing: KatalystChain? = null
-
-    /**
-     * True once the crossfade has completed and [outgoing] is only ringing out: it processes
-     * SILENT input and its output is added to the mix at FULL weight until it has no tail left
-     * (see [processEffects]).
-     */
-    private var draining: Boolean = false
-
-    /**
-     * The leaving chain's duck, kept in service for the length of a fade because the chain fading
-     * IN will not duck: dropping it at the swap would step the orbit's gain by the whole reduction
-     * in force, so its EFFECT is crossfaded out instead (see [processDuck]). Null in every other
-     * case, including the one where the arriving chain ducks too and simply
-     * [KatalystDuckEffect.takeOver]s the envelope.
-     */
-    private var duckingOut: KatalystDuckEffect? = null
-
-    /**
-     * True while the chain fading IN carries a duck and nothing was ducking the orbit before the
-     * swap: its effect is ramped in over the fade, the mirror of [duckingOut] (see [processDuck]).
-     * False when the envelope was simply carried across ([KatalystDuckEffect.takeOver]), where the
-     * reduction is already in force and must not be ramped away and back.
-     */
-    private var duckFadingIn: Boolean = false
-
-
-    /** The ramp the two chains are blended over. One per cylinder, created once. */
-    private val fade: Crossfade = Crossfade(sampleRate)
+    private val swap = ChainSwap(sampleRate, blockFrames)
 
     /**
      * Test seams: which phase of a swap this cylinder is in. The audio shows the blend, but a spec
      * about the LIFECYCLE (what [tryDeactivate] refuses, when a queued name lands, when the rented
      * units go back) has to be able to name the phase.
      */
-    internal val isFading: Boolean get() = outgoing != null && !draining
+    internal val isFading: Boolean get() = swap.isFading
 
-    internal val isDraining: Boolean get() = outgoing != null && draining
+    internal val isDraining: Boolean get() = swap.isDraining
 
-    /**
-     * Rents the warehouse refused chains this cylinder has already swapped AWAY from, summed for
-     * this cylinder's life.
-     *
-     * A stage zeroes its own count when it retires (the count is per unit life, see
-     * `KatalystDelayEffect.release`), so without this the diagnostics number would drop back to
-     * zero on every chain edit and a shelf that is refusing rents would look healthy again.
-     */
-    private var retiredDeniedRents: Int = 0
+    /** Test seam: the swap itself, for the specs that inspect its states and references. */
+    internal val chainSwap: ChainSwap get() = swap
 
     // The chain's stages by name. Null when the chain declares no such stage, which
     // `KatalystDsl.classic` never does, so every one of them is present on every cylinder that
@@ -246,7 +217,7 @@ class Cylinder(
      * cylinder, so `chain.duck` non-null says nothing about whether it ducks) - a
      * `duckCylinderId` of null is exactly how `Cylinders` skips the pass for such a stage.
      */
-    val duck get() = duckingOut ?: chain.duck
+    val duck get() = swap.duckingOut ?: chain.duck
 
     /**
      * The bus effect pipeline, in the order this orbit's chain declares its stages.
@@ -258,12 +229,13 @@ class Cylinder(
 
     /**
      * Rents the warehouse refused this orbit, for the diagnostics feedback: the current chain's
-     * count plus what the chains before it were refused ([retiredDeniedRents]).
+     * count plus what the chain leaving now and the chains before it were refused
+     * ([ChainSwap.deniedRents]).
      *
      * Per cylinder LIFE, like every other counter on this path: [retire] and [adopt] zero it, so
      * a shelved cylinder never carries a previous engine's number into the next one.
      */
-    val deniedRents get() = retiredDeniedRents + chain.deniedRents + (outgoing?.deniedRents ?: 0)
+    val deniedRents get() = swap.deniedRents + chain.deniedRents
 
     // ════════════════════════════════════════════════════════════════════════════
     // Buffers and context
@@ -273,40 +245,12 @@ class Cylinder(
     val mixBuffer = StereoBuffer(blockFrames)
 
     /**
-     * Scratch mix for the chain that is leaving service: the mix scaled by the outgoing weight
-     * during the crossfade, silence during the drain. Allocated once here, never per block: a swap
-     * is applied from the render callback, and a cylinder comes off a shelf where nothing may
-     * allocate.
-     *
-     * It is ALL the leaving chain is fed, its delay and reverb included: they take their feed from
-     * the mix at their position (Katalyst step 5b-2), so their wet fades with the dry through this
-     * one ramp. At the ramp's end the DRY input is zero, but what a stage adds is not: the delay's
-     * echoes keep reaching the reverb after it. That is why the ring-out keeps the leaving chain
-     * ACTIVE on this cleared buffer instead of switching its stages to their own silent drain
-     * input, which would cut the room's feed of echoes in one sample (see [processEffects]).
+     * Shared context for all bus effects. The chain leaving service runs in the [swap]'s own
+     * context, so the live mix stays untouched for the chain that is arriving.
      */
-    private val fadeBuffer = StereoBuffer(blockFrames)
-
-    /**
-     * The orbit's mix as it was BEFORE a duck that is leaving service ducked it, so the duck's
-     * effect can be crossfaded out per sample (see [processDuck]). Only written while a fade is
-     * taking a duck out; the same size and the same "allocated once" rule as the others.
-     */
-    private val duckFadeBuffer = StereoBuffer(blockFrames)
-
-    /** Shared context for all bus effects */
     val katalystContext = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = mixBuffer,
-    )
-
-    /**
-     * The context the leaving chain runs in: its own mix buffer, so the whole ramp is in its input
-     * and the live mix stays untouched for the chain that is arriving.
-     */
-    private val fadeContext = KatalystContext(
-        blockFrames = blockFrames,
-        mixBuffer = fadeBuffer,
     )
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -388,9 +332,9 @@ class Cylinder(
 
             // A ducking owner whose FIRST claim lands in the swap's own block. The swap was decided
             // at promotion, before this voice offered itself, so [handOverDuck] saw no owner and
-            // chose the ramp-out path. Correct it here, before the writers run: otherwise the orbit
-            // ramps the old reduction out while this voice's fresh envelope sits unprocessed behind
-            // it, and drops by the whole depth the moment the ramp ends.
+            // chose the ramp-out path. Corrected here ([ChainSwap.ownerClaimed]), before the writers
+            // run: otherwise the orbit ramps the old reduction out while this voice's fresh envelope
+            // sits unprocessed behind it, and drops by the whole depth the moment the ramp ends.
             //
             // ONLY in that block ([Crossfade.isAtStart]). Once the ramp has moved, the orbit's gain
             // is already `g * (1 - t) + t` and handing the envelope over would jump it back to `g`
@@ -398,18 +342,14 @@ class Cylinder(
             // ramping out, and the arriving chain's own fresh envelope makes its duck-down on the
             // first block past the ramp: the ducker's documented behaviour for a new owner, not a
             // step the swap put there.
-            val lateDuck = duckingOut
-
+            //
             // NOT gated on the voice's own duck settings (dropped in review round 3; the voice
             // has none since step 5b-3): a duck named through `.katp("duck.orbit", n)` alone left
             // the voice's then `duckCylinder` field null, so the correction skipped it
             // and the arriving chain's fresh envelope then pulled the orbit down by the full depth
             // one block past the ramp. What the arriving chain will do is `ducksWith`'s answer, and
             // the resolve above is what makes it current.
-            if (lateDuck != null && fade.isAtStart && chain.ducksWith()) {
-                chain.duck?.takeOver(lateDuck)
-                duckingOut = null
-            }
+            swap.ownerClaimed(chain)
 
             // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
             // included (step 5b-1): one way for a bus knob to reach a stage (the voice's bus
@@ -428,9 +368,7 @@ class Cylinder(
             // on the settings the chain had when it left service, and a new owner's settings (a
             // different time or room, or an off-config that would cut the room's feed of echoes)
             // are the arriving chain's business.
-            if (!draining) {
-                outgoing?.applyParams(voice.katalystParams)
-            }
+            swap.configureLeaving(voice.katalystParams)
         }
     }
 
@@ -495,8 +433,9 @@ class Cylinder(
             return
         }
 
-        if (isActive && outgoing != null) {
-            // The one outgoing slot is taken by a running fade or drain: wait, never cut.
+        if (isActive && !swap.settled) {
+            // The one leaving slot is taken by a running fade or drain: wait, never cut. The swap
+            // would refuse the begin; parking the key is the host's half of that refusal.
             pendingKey = key
 
             return
@@ -556,7 +495,7 @@ class Cylinder(
      * crossfade on the orbit bus):
      *
      *  - **Fading.** Both chains see the same mix, the outgoing one through its own ramped copy
-     *    ([fadeBuffer]) and the incoming one through the live buffer. The ramp is applied to the
+     *    (the [swap]'s leaving mix) and the incoming one through the live buffer. The ramp is applied to the
      *    outgoing chain's INPUT (its delay and reverb take their feed from it too) and to the
      *    incoming chain's OUTPUT, per sample
      *    ([Crossfade.rampDown], [Crossfade.rampUpAndAdd]), which is what makes the handover to the
@@ -593,95 +532,9 @@ class Cylinder(
             }
         }
 
-        val fading = outgoing
-
-        if (fading != null && !draining && fade.isComplete) {
-            // The ramp ran out on the PREVIOUS block and the duck pass that follows it has had its
-            // last turn, so the chain leaves service now rather than in the middle of the block
-            // that finished the ramp (see [processDuck]: the duck runs in a later pass than this
-            // one, and a chain retired here would take the orbit's gain envelope with it).
-            beginDrain(fading)
-        }
-
-        // Re-read: the chain may have retired on its way out of the line above.
-        val leaving = outgoing
-
-        if (leaving == null) {
-            chain.process(katalystContext)
-
-            return
-        }
-
-        if (draining) {
-            fadeBuffer.clear()
-            leaving.process(fadeContext)
-            chain.process(katalystContext)
-            addFadeBufferToMix()
-
-            if (!leaving.hasTail()) {
-                retireOutgoing(leaving)
-            }
-
-            return
-        }
-
-        // The two halves of one block's ramp, with both chains processed in between: the outgoing
-        // chain is handed a shrinking mix, the incoming chain's own output is ramped up, and the mix
-        // buffer is what the rest of the engine reads. `rampDown` does not advance the ramp,
-        // `rampUpAndAdd` does.
-        fade.rampDown(target = fadeBuffer, source = mixBuffer, frames = blockFrames)
-        leaving.process(fadeContext)
-        chain.process(katalystContext)
-        fade.rampUpAndAdd(target = mixBuffer, outgoing = fadeBuffer, frames = blockFrames)
-    }
-
-    /** The draining chain's ring-out, at full weight: it is the orbit's own tail, not a second mix. */
-    private fun addFadeBufferToMix() {
-        val mixLeft = mixBuffer.left
-        val mixRight = mixBuffer.right
-        val fadeLeft = fadeBuffer.left
-        val fadeRight = fadeBuffer.right
-
-        for (i in 0 until blockFrames) {
-            mixLeft[i] = mixLeft[i] + fadeLeft[i]
-            mixRight[i] = mixRight[i] + fadeRight[i]
-        }
-    }
-
-    /**
-     * The crossfade has finished: the outgoing chain leaves service and rings out, still Active on
-     * silent input (see [processEffects]), or retires on the spot when it holds nothing that can
-     * ring (no delay and no reverb, or ones whose tail ceilings are already empty).
-     */
-    private fun beginDrain(leaving: KatalystChain) {
-        // The ramp is over, so no further block may blend with it: [processDuck] normally clears
-        // these on the ramp's last block, but an orbit whose sidechain has meanwhile disappeared
-        // never runs that pass, and `Crossfade.blendHeld` would then replay that block's weights.
-        duckingOut = null
-        duckFadingIn = false
-
-        if (leaving.hasTail()) {
-            draining = true
-
-            return
-        }
-
-        retireOutgoing(leaving)
-    }
-
-    /** The outgoing chain is done: its rented units go back to the shelves and the slot frees. */
-    private fun retireOutgoing(leaving: KatalystChain) {
-        // Carried BEFORE the retire, which zeroes the stage's own count: the orbit's diagnostics
-        // number is about this cylinder's life, not about its current chain.
-        retiredDeniedRents += leaving.deniedRents
-        leaving.retire()
-        outgoing = null
-        draining = false
-        duckFadingIn = false
-        // The backstop for the duck being faded out: [processDuck] drops it on the ramp's last
-        // block, but an orbit whose sidechain orbit has meanwhile disappeared never runs that pass
-        // at all, and a duck belonging to a retired chain must not outlive it.
-        duckingOut = null
+        // Idle, Fading or Draining: the [swap]'s table. The fade-to-drain edge fires at the start
+        // of the block after the ramp's last one, inside this call (see [ChainSwap]).
+        swap.process(chain, katalystContext)
     }
 
     /**
@@ -695,64 +548,10 @@ class Cylinder(
 
         katalystContext.sidechainBuffer = sidechainMixBuffer
 
-        val leavingDuck = duckingOut
-
-        if (duckFadingIn) {
-            // The mirror of the branch below: the arriving chain's duck runs as it always does,
-            // and the UN-ducked mix is blended back in with the weights reversed, so the orbit's
-            // gain travels from "not ducked" to "ducked" across the fade instead of dropping by
-            // the whole reduction on the first sample the trigger is seen.
-            mixBuffer.left.copyInto(duckFadeBuffer.left, 0, 0, blockFrames)
-            mixBuffer.right.copyInto(duckFadeBuffer.right, 0, 0, blockFrames)
-            chain.processDuck(katalystContext)
-            fade.blendHeld(
-                target = mixBuffer,
-                incoming = mixBuffer,
-                outgoing = duckFadeBuffer,
-                frames = blockFrames,
-            )
-
-            if (fade.isComplete) {
-                duckFadingIn = false
-            }
-
-            katalystContext.sidechainBuffer = null
-
-            return
-        }
-
-        if (leavingDuck != null) {
-            // The chain fading in declares no duck, so the orbit's gain has to travel from
-            // "ducked" to "not ducked" across the fade, per sample like every other weight in the
-            // swap. The duck runs on the mix as it always does, and the UN-DUCKED mix is then
-            // blended back in with the weights this block's chains were blended with.
-            //
-            // NOT by ramping the duck's depth: that knob can only be written per block, and a
-            // per-block step in a gain that multiplies the whole orbit is a zipper (measured at
-            // 0.038 on a 0.5 probe with depth 0.8, and the envelope's own release cannot be forced
-            // to reach 1.0 inside the fade window, so the residue steps again when the duck goes).
-            mixBuffer.left.copyInto(duckFadeBuffer.left, 0, 0, blockFrames)
-            mixBuffer.right.copyInto(duckFadeBuffer.right, 0, 0, blockFrames)
-            leavingDuck.process(katalystContext)
-            fade.blendHeld(
-                target = mixBuffer,
-                incoming = duckFadeBuffer,
-                outgoing = mixBuffer,
-                frames = blockFrames,
-            )
-
-            if (fade.isComplete) {
-                // This block's last sample was fully un-ducked, so the duck is inaudible now and
-                // this is where it goes. Here and not in [beginDrain], which runs one pass EARLIER
-                // in the same block: dropping it there would leave this block un-ducked and step
-                // the orbit by the weight the ramp had not covered yet. The tail the chain is
-                // about to ring out is not ducked either way (it is added to the mix after the
-                // incoming chain's inserts, see [Crossfade]).
-                duckingOut = null
-            }
-        } else {
-            chain.processDuck(katalystContext)
-        }
+        // While a fade carries a duck, its effect is ramped in or out with the weights this
+        // block's chains were blended with; otherwise the chain in service ducks as it always does
+        // (see [ChainSwap.processDuck]).
+        swap.processDuck(chain, katalystContext)
 
         katalystContext.sidechainBuffer = null
     }
@@ -801,29 +600,23 @@ class Cylinder(
         chain.retire()
         classicChain.retire()
         // Any fade or drain ends here, at whatever weight it had reached: this cylinder is not
-        // going to render again for the orbit it was fading FOR. The chain is normally the classic
-        // one or a cache entry (eviction never takes it), so the retires around this line already
-        // cover it; the call is stated anyway, because retire is idempotent and a stranded ring is
-        // the one mistake this method exists to make impossible.
-        outgoing?.retire()
-        outgoing = null
-        draining = false
-        duckingOut = null
-        duckFadingIn = false
+        // going to render again for the orbit it was fading FOR. The leaving chain is normally the
+        // classic one or a cache entry (eviction never takes it), so the retires around this line
+        // already cover it; the hard cut retires it anyway, because retire is idempotent and a
+        // stranded ring is the one mistake this method exists to make impossible. It also starts
+        // the denied-rents count of the new life over.
+        swap.hardCut()
 
         for (cached in chains.values) {
             cached.retire()
         }
 
         chains.clear()
-        retiredDeniedRents = 0
         selectClassicChain()
         lease.reset()
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
         mixBuffer.clear()
-        fadeBuffer.clear()
-        duckFadeBuffer.clear()
         isActive = false
         silentBlockCount = 0
     }
@@ -875,11 +668,11 @@ class Cylinder(
         // the orbit stays alive until the countdown's terminal reset — the old param-gated scan
         // hid a still-charged network the moment a no-reverb owner zeroed size.
         //
-        // The outgoing chain counts too, and the slot itself is the test (step 3b): while a FADE
+        // The outgoing chain counts too, and the swap's state is the test (step 3b): while a FADE
         // runs the orbit must keep rendering until the ramp completes, whatever either chain
-        // holds, and while the outgoing chain DRAINS it has a tail by construction:
-        // [processEffects] frees the slot on the first block it does not.
-        if (chain.hasTail() || outgoing != null) {
+        // holds, and while the outgoing chain DRAINS it has a tail by construction: the swap
+        // returns to Idle on the first block it does not.
+        if (chain.hasTail() || !swap.settled) {
             silentBlockCount = 0
             return
         }
@@ -949,9 +742,9 @@ class Cylinder(
     private fun installPending(): Boolean {
         val key = pendingKey ?: return false
 
-        if (isActive && outgoing != null) {
-            // Still behind a fade or a drain, and the registry is not even asked: the one slot is
-            // what this name waits for.
+        if (isActive && !swap.settled) {
+            // Still behind a fade or a drain, and the registry is not even asked: the one leaving
+            // slot is what this name waits for.
             return false
         }
 
@@ -1014,10 +807,9 @@ class Cylinder(
 
         chain = next
 
-        // Carried BEFORE the retire, which zeroes the stage's own count: the orbit's diagnostics
-        // number is about this cylinder's life, not about its current chain.
-        retiredDeniedRents += leaving.deniedRents
-        leaving.retire()
+        // The denied rents are carried BEFORE the retire, which zeroes the stage's own count: the
+        // orbit's diagnostics number is about this cylinder's life, not about its current chain.
+        swap.retire(leaving)
         // The next voice on this orbit becomes the owner cleanly and writes the new chain's
         // stages, instead of the incoming chain waiting for the previous owner to die.
         lease.reset()
@@ -1064,10 +856,6 @@ class Cylinder(
 
         chain = next
 
-        outgoing = leaving
-        draining = false
-        fade.restart()
-
         // The arriving chain reads the orbit's live param state FIRST, without writing anything:
         // `handOverDuck` below asks whether it will duck, and a duck whose orbit or depth comes
         // from `.katp` answers that question only once the state has been read (review round 1).
@@ -1076,6 +864,10 @@ class Cylinder(
         // BEFORE the writers, not after: a carried envelope has to be updated IN PLACE by the
         // arriving chain's own writer (`KatalystDuckEffect.configure`'s reuse branch), or the swap would
         // leave the orbit ducking off the leaving chain's orbit at the leaving chain's depth.
+        //
+        // THIS CALL STARTS THE SWAP: `handOverDuck` ends in [ChainSwap.begin] (one call per duck
+        // direction), which puts `leaving` on its way out and restarts the ramp. Both callers of
+        // this function asked [ChainSwap.settled] first, so the swap does not refuse it.
         handOverDuck(from = leaving, to = next)
 
         // The arriving chain reads the orbit's slot state here, because nothing else would run its
@@ -1098,6 +890,9 @@ class Cylinder(
      * in one sample. Only the arriving chain ducks: its effect is crossfaded IN over the same ramp,
      * because `Ducking`'s duck-down is instantaneous by design and would otherwise pull the whole
      * orbit down in one sample when the trigger is already sounding.
+     *
+     * The decision is the host's (the master has no duck pass); the data it decides is the
+     * [swap]'s Fading state's, handed over in [ChainSwap.begin], which is where the fade starts.
      */
     private fun handOverDuck(from: KatalystChain, to: KatalystChain) {
         // Whether the ARRIVING chain will duck, not whether it declares a stage: a chain built from
@@ -1109,18 +904,19 @@ class Cylinder(
 
         // A duck with no envelope yet has nothing in force and nothing to carry.
         if (leavingDuck?.ducking == null) {
-            duckFadingIn = arrivingDucks
+            swap.begin(leaving = from, duckingOut = null, duckFadingIn = arrivingDucks)
 
             return
         }
 
         if (arrivingDucks) {
             to.duck?.takeOver(leavingDuck)
+            swap.begin(leaving = from, duckingOut = null, duckFadingIn = false)
 
             return
         }
 
-        duckingOut = leavingDuck
+        swap.begin(leaving = from, duckingOut = leavingDuck, duckFadingIn = false)
     }
 
     /**
@@ -1159,7 +955,7 @@ class Cylinder(
 
     /**
      * Drops cached chains until there is room for one more, keeping the cache bounded. The chain
-     * in play is never evicted, and neither is one that is fading or draining ([outgoing]):
+     * in play is never evicted, and neither is one that is fading or draining ([ChainSwap.leaving]):
      * retiring a chain that is still audible would hand its ring and network to another orbit
      * mid-tail. An evicted chain is retired, which is a no-op for its rents (it had none) and the
      * clean slate for its shells.
@@ -1169,7 +965,7 @@ class Cylinder(
             // Insertion order (the map's own): the oldest declaration a live-coding session has
             // moved past is the one least likely to come back.
             val victim = chains.entries.firstOrNull { (_, cached) ->
-                cached !== chain && cached !== outgoing
+                cached !== chain && cached !== swap.leaving
             } ?: return
 
             // Copy the entry out BEFORE the removal: Kotlin/JS refuses to read a map entry once
