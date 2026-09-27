@@ -6,7 +6,7 @@ Scaffolding only. No prose. Every sentence of the final text is written by the m
 - Targets: NLnet (Open Internet Stack calls: Restack or open call), deadline 2026-11-03. Prototype Fund
   (software infrastructure, data security), window 2026-10-01 to 2026-11-30.
 - Markers: `[ME]` only the maintainer can fill. `[VERIFY]` unsure or conflicting, check before use.
-  `[Qn]` = verbatim quote in `evidence/maintainer-quotes.md`. `WP §n` = `docs/whitepaper/klang-whitepaper.html`
+  `[Qn]` = verbatim quote in `evidence/maintainer-quotes.md`. `WP §n` = `src/www/klang-whitepaper.html`
   section n. `FED` = `docs/tasks/future/federated-song-sharing.md`.
 - Numbers come from `evidence/git-numbers.txt` (script: `scripts/git-counts.sh`) unless another source is named.
 - Scope warning for the whole application: the node / federation is **unbuilt**. WP Part II header: "Nearly

@@ -4,73 +4,41 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Klangmotor — A White Paper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
 </head>
 <body>
 <style>
     /* ---------------------------------------------------------------
-       TOKENS — light palette on bare :root (the un-stamped default)
+       TOKENS — the Klang UI palette (klangui/.../feel/KlangLookAndFeel.kt), dark only,
+       shared with the dev-status pages (console/dev-status/hud.css)
        --------------------------------------------------------------- */
     :root {
-        --paper: #EDEEEA;
-        --surface: #F6F7F4;
-        --surface-2: #E3E5DF;
-        --ink: #15181B;
-        --muted: #5B6167;
-        --faint: #868C90;
-        --rule: #C7CAC3;
-        --rule-soft: #D9DBD5;
-        --spark: #C0430F; /* ignition — the engine layer */
-        --spark-bg: #F3E3DA;
-        --signal: #1B637E; /* wire — the language layer */
-        --signal-bg: #DCE6EA;
-        --code-bg: #E7E9E3;
-        --code-str: #2F6B3E;
-        --code-cm: #878D8A;
+        color-scheme: dark;
+        --paper: #191C22;     /* appBackground */
+        --surface: #21252B;   /* panelBackground */
+        --surface-2: #2C313A; /* cardBackground */
+        --ink: #D7DADF;       /* textPrimary */
+        --muted: #ABB2BF;     /* textSecondary */
+        --faint: #5C6370;     /* textTertiary */
+        --rule: #353A42;      /* overlayBackground */
+        --rule-soft: #2C313A;
+        --spark: #D19A66;     /* warning: ignition, the engine layer */
+        --spark-bg: #362820;  /* bronze */
+        --signal: #56B6C2;    /* excellent: the wire, the language layer */
+        --signal-bg: #1A2A30; /* popupBackground */
+        --gold: #E8B84B;
+        --code-bg: #12131C;   /* menuBackground */
+        --code-str: #98C379;  /* good */
+        --code-cm: #5C6370;
 
-        --f-display: "Helvetica Neue", Helvetica, "Arial Nova", Arial, sans-serif;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
         --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-        --f-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
         --measure: 44rem;
         --rail: 7.5rem;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-            --paper: #0F1214;
-            --surface: #161A1D;
-            --surface-2: #1D2226;
-            --ink: #E1E3DE;
-            --muted: #99A0A4;
-            --faint: #757C80;
-            --rule: #2B3135;
-            --rule-soft: #232830;
-            --spark: #FF8047;
-            --spark-bg: #2B1B13;
-            --signal: #6FB8D6;
-            --signal-bg: #14252C;
-            --code-bg: #171B1E;
-            --code-str: #8FC79C;
-            --code-cm: #6E7674;
-        }
-    }
-
-    :root[data-theme="dark"] {
-        --paper: #0F1214;
-        --surface: #161A1D;
-        --surface-2: #1D2226;
-        --ink: #E1E3DE;
-        --muted: #99A0A4;
-        --faint: #757C80;
-        --rule: #2B3135;
-        --rule-soft: #232830;
-        --spark: #FF8047;
-        --spark-bg: #2B1B13;
-        --signal: #6FB8D6;
-        --signal-bg: #14252C;
-        --code-bg: #171B1E;
-        --code-str: #8FC79C;
-        --code-cm: #6E7674;
     }
 
     /* ---------------------------------------------------------------
@@ -112,16 +80,16 @@
     .masthead {
         /* The metal plate is always dark, in both themes — the masthead carries
            its own fixed light-on-dark palette instead of the theme tokens. */
-        --mh-ink: #E7E9E4;
-        --mh-muted: #A9AFB4;
-        --mh-spark: #FF7A3D;
-        --mh-signal: #6FB8D6;
+        --mh-ink: #D7DADF;
+        --mh-muted: #ABB2BF;
+        --mh-spark: #E8B84B;
+        --mh-signal: #56B6C2;
         position: relative;
         overflow: hidden;
         width: 100vw;
         margin-left: calc(50% - 50vw);
         padding: 0;
-        background: #14171C; /* fallback while WebGL boots, or without it */
+        background: #12131C; /* fallback while WebGL boots, or without it */
         border-bottom: 2px solid var(--ink);
     }
 
@@ -160,7 +128,7 @@
 
     h1 {
         font-family: var(--f-display);
-        font-weight: 800;
+        font-weight: 700;
         font-size: clamp(2.6rem, 7vw, 4.4rem);
         line-height: 0.98;
         letter-spacing: -0.035em;
@@ -231,7 +199,7 @@
 
     .part h2 {
         font-family: var(--f-display);
-        font-weight: 800;
+        font-weight: 700;
         font-size: clamp(1.5rem, 3.4vw, 2.1rem);
         letter-spacing: -0.025em;
         line-height: 1.1;
@@ -359,10 +327,11 @@
 
     code {
         font-family: var(--f-mono);
-        font-size: 0.83em;
-        background: var(--code-bg);
-        padding: 0.1em 0.34em;
-        border-radius: 2px;
+        font-size: 0.86em;
+        background: var(--surface-2);
+        border: 1px solid var(--rule);
+        padding: 0.05em 0.34em;
+        border-radius: 0;
         word-break: break-word;
     }
 
@@ -374,16 +343,37 @@
     }
 
     .code {
-        background: var(--code-bg);
+        background:
+            repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+            linear-gradient(180deg, #161822, var(--code-bg));
+        border: 1px solid var(--rule);
         border-left: 2px solid var(--signal);
+        box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
         overflow-x: auto;
-        padding: 1rem 1.15rem;
+        padding: 1.15rem 1.15rem 1.05rem;
         margin: 0;
         position: relative;
+        color: var(--ink);
+    }
+
+    .code::before {
+        content: "";
+        position: absolute;
+        left: -2px;
+        top: -1px;
+        width: 2.2rem;
+        border-top: 2px solid var(--signal);
+        pointer-events: none;
+    }
+
+    .code.engine::before {
+        border-top-color: var(--spark);
     }
 
     .code.engine {
         border-left-color: var(--spark);
+        box-shadow: inset 3px 0 12px -6px rgba(209, 154, 102, .55);
     }
 
     .code[data-lang]::after {
@@ -397,10 +387,11 @@
         letter-spacing: 0.13em;
         text-transform: uppercase;
         color: var(--signal);
-        background: var(--paper);
+        background: var(--surface-2);
         border-left: 1px solid var(--rule);
         border-bottom: 1px solid var(--rule);
-        padding: 0.2rem 0.55rem 0.24rem;
+        letter-spacing: 0.18em;
+        padding: 0.2rem 0.6rem 0.24rem;
         pointer-events: none;
     }
 
@@ -427,6 +418,7 @@
 
     .kw {
         color: var(--spark);
+        text-shadow: 0 0 8px rgba(209, 154, 102, .25);
     }
 
     figcaption {
@@ -494,6 +486,7 @@
 
     td code {
         background: none;
+        border: 0;
         padding: 0;
         font-size: 0.86em;
     }

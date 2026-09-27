@@ -342,7 +342,7 @@ table is the record of what was found:
 | `audio_be/src/commonTest` (`PhasePoolDslSeamSpec`, `LimiterLookaheadSpec`, `MasterDefaultsSyncSpec`, `MasterStageSpec`) | 16 | Mostly Kotlin-door node construction; switch `MasterDsl.of` to `MasterBuilder` |
 | `sprudel/src` (`lang_master.kt`, `lang_effects.kt` KDoc; `LangMasterSpec`, `LangFeedbackCapSpec`, `LangDeletedWetNamesSpec`) | few | KDoc examples feed the popup |
 | `.claude/skills/klang-music-writing/ref/*` | 49 | LLM-facing; also fix the stale `.oscParam` casing while there |
-| `docs/instrument-prototypes.md`, `docs/whitepaper/klang-whitepaper.html` (canonical HTML only) | few | |
+| `docs/instrument-prototypes.md`, `src/www/klang-whitepaper.html` (canonical HTML only) | few | |
 | Live task docs: `master-dsl-followups.md`, `engine-tuning-profile.md`, `pipeline-dsl-coefficient-exposure.md`, `katalyst-dsl.md`, `ignitor-dsl-open-items.md` | examples | Blog posts, plans, archive, diary: history, do NOT touch |
 | Tutorials | 0 | Directory currently empty (rework owned by a separate session). Hand that session the builder form BEFORE it writes Ignitor/Master/Pipeline tutorials |
 

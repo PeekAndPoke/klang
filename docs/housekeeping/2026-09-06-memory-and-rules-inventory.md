@@ -112,7 +112,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_version_info                     | 2     | `docs/tasks-archive/2026-06/20260624-build-version-info.md`                                  |
 | project_voice_takeover                   | 2     | `docs/tasks/voice-takeover.md`                                                               |
 | project_warehouse_stats_feed             | 1     | archived task                                                                                |
-| project_whitepaper                       | 2     | `docs/whitepaper/klang-whitepaper.html`; the "old artifact preview" note was session-only    |
+| project_whitepaper                       | 2     | `src/www/klang-whitepaper.html`; the "old artifact preview" note was session-only    |
 | project_worklet_clock_divergence         | 3     | `docs/tasks/future/worklet-clock-divergence.md`                                              |
 | project_worklet_serialization            | 2     | archived task (ProtoBuf rejection recorded there)                                            |
 | sprudel_dsl_test_coverage                | 2     | `docs/tasks/sprudel-test-coverage-and-review.md`                                             |
