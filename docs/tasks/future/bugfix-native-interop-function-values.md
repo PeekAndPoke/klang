@@ -1,7 +1,7 @@
 # Bare function references as function-typed arguments
 
 Status: **future, correctness.** Found 2026-08-31 while compiling the sprudel DSL's own KDoc
-examples (`docs/tasks/dsl-doc-example-rot.md`). The workaround is one pair of parentheses, but
+examples (`docs/tasks/bugfix-dsl-doc-example-rot.md`). The workaround is one pair of parentheses, but
 the spelling that fails is the one every Tidal and Strudel user will reach for first. Re-checked
 2026-09-27 and raised from "papercut": since the interop learned to wrap a native function in the
 arity of the slot it lands in, two of the three spellings no longer crash. They play the wrong
