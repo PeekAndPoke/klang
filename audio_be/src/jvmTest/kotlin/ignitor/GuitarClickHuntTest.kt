@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.core.Tag
 import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
@@ -37,8 +38,16 @@ import kotlin.math.tanh
  * - peakDelta     — max |x[ n ]-x[n-1]| over the whole render
  * - p99Delta      — 99th percentile |delta| (excludes the periodic-saw-edge baseline)
  * - ratio         — peakDelta / p99Delta. Periodic harshness ≈ 1; real click >> 1.
+ *
+ * **Out of the default run** (maintainer, 2026-09-27, `docs/tasks/test-consolidation.md` section 4): it asserts
+ * nothing and was most of the suite's runtime, so it carries the tag [ClickHunt], which `audio_be`'s `jvmTest`
+ * excludes unless asked (JVM only, so the JS suite never builds it). Run it:
+ *
+ *     ./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest
  */
 class GuitarClickHuntTest : StringSpec({
+
+    tags(ClickHunt)
 
     val sampleRate = 44100
     val blockFrames = 256
@@ -705,3 +714,6 @@ private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
 /** Mirrors `Osc.distort(amount, "chebyshev", 8)` — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
     IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).shape("chebyshev", oversample = 8)
+
+/** The tag of the click-hunt harness: excluded from `audio_be`'s default `jvmTest` run, see [GuitarClickHuntTest]. */
+object ClickHunt : Tag()

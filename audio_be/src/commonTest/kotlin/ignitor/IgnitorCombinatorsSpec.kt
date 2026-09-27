@@ -204,22 +204,8 @@ class ExciterCombinatorsSpec : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: lowpass
+    // Filters: lowpass and highpass under drive (their linear law is SvfNodeLawSpec's, a bit-exact TPT oracle)
     // ═════════════════════════════════════════════════════════════════════════════
-
-    "lowpass(cutoff) - attenuates high-frequency sine" {
-        val highFreq = 8000.0
-        val cutoff = 1000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = highFreq)
-        val wet = generate(Ignitors.sine().lowpass(cutoff), freqHz = highFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        // High-frequency signal should be significantly attenuated by lowpass
-        wetRms shouldBeLessThan (dryRms * 0.3)
-    }
 
     "lowpass(cutoff, analog>0) - resonance peak compressed under hot drive" {
         // Analog-style state-dependent damping makes `kEff` grow with state; under hot drive at the
@@ -264,41 +250,6 @@ class ExciterCombinatorsSpec : StringSpec({
         val dry = generate(Ignitors.sine(), freqHz = lowFreq)
         val wet = generate(Ignitors.sine().highpass(cutoff, 1.0, analog = 3.0), freqHz = lowFreq)
         wet.rms() shouldBeLessThan (dry.rms() * 0.3)
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: highpass
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "highpass(cutoff) - attenuates low-frequency sine" {
-        val lowFreq = 100.0
-        val cutoff = 2000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = lowFreq)
-        val wet = generate(Ignitors.sine().highpass(cutoff), freqHz = lowFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        // Low-frequency signal should be significantly attenuated by highpass
-        wetRms shouldBeLessThan (dryRms * 0.3)
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: svf LOWPASS
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "svf(LOWPASS, cutoff, q) - attenuates above cutoff" {
-        val highFreq = 8000.0
-        val cutoff = 1000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = highFreq)
-        val wet = generate(Ignitors.sine().svf(SvfMode.LOWPASS, cutoff, 0.707), freqHz = highFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        wetRms shouldBeLessThan (dryRms * 0.3)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

@@ -6,7 +6,7 @@ closed (brief: `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, led
 new tests are mutation-checked under `/review-loop` Standard 2. What the rewrite does not fix on its
 own is listed here, each item re-checked against the tree on 2026-09-27.
 
-The three maintainer calls the audit parked (the `GuitarClickHuntTest` runtime, the two meanings of
+The three maintainer calls the audit parked (the `GuitarClickHuntTest` runtime, decided 2026-09-27 and done; the two meanings of
 `attackSeconds`, `VoiceTestHelpers` bypassing `VoiceFactory`) are not repeated here; they live in
 [`future/audit-parked-decisions.md`](future/audit-parked-decisions.md). The `cut(0)` question (F19)
 lives in [`future/cut-group-semantics.md`](future/cut-group-semantics.md).

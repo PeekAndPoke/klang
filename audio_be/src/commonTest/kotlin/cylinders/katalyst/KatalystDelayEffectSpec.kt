@@ -66,16 +66,6 @@ class KatalystDelayEffectSpec : StringSpec({
         hasSignalR shouldBe true
     }
 
-    "delay line parameters are accessible and writable" {
-        val effect = createEffect(delayTime = 0.5, feedback = 0.3)
-
-        effect.delayLine!!.time shouldBe 0.5
-        effect.delayLine!!.feedback shouldBe 0.3
-
-        effect.delayLine!!.time = 1.0
-        effect.delayLine!!.time shouldBe 1.0
-    }
-
     // ── The drain lifecycle (block-framing ledger D3) ─────────────────────────
 
     "an off-config drains the tail on schedule — identical to staying active with silent sends" {

@@ -31,21 +31,19 @@ import kotlin.random.Random
 /**
  * **Every modulation envelope defaults to the house EXPONENTIAL curve** (decision D3 (b), 2026-09-25): an
  * envelope whose author writes no curve bends every stage by `g(x) = (e^(3x) - 1) / (e^3 - 1)`, the curve
- * of the chain `adsr` and the strip VCA, on every host that has one: the Ignitor pitch, FM and filter
- * envelopes and the voice strip's FM, filter and pitch envelopes (the strip pitch envelope, sprudel's
- * `penv`, since phase 3 step 5b (c1)).
+ * of the chain `adsr`, on every host that has one. This spec holds the pitch envelopes (the Ignitor node and
+ * the voice's own, sprudel's `penv`) and the voice's FM envelope. The Ignitor FM index envelope and the four
+ * Ignitor filter envelopes are pinned elsewhere (2026-09-27): their unwritten curve against a written-out
+ * Exponential oracle, stage by stage, in `EnvelopeLawSpec` (the FM and filter host rows), and the filter nodes'
+ * constructor defaults in `EnvelopeCurveKnobSpec`.
  *
  * The oracles are written out HERE, never read from `MOD_ENV_CURVE` or from the curve code: `g` below is
  * plain arithmetic, and the DSL rows compare against the curve NAMED as the enum literal. A default that
  * moved back to linear, or a host that stopped reading the default, is red in its own row.
  *
- * Where the level is observable it is compared frame by frame (the pitch node's ratio is `2^level` at 12
- * semitones, the FM node's is `1 + level` with a constant modulator and `depth == freq`, the strip FM's
+ * The level is compared frame by frame: the pitch node's ratio is `2^level` at 12 semitones, the strip FM's
  * multiplier is read off the voice's frequency-modulation buffer against a flat reference, and the strip
- * pitch envelope's ratio is `2^level` at 12 semitones, read off the same buffer). The filters'
- * level is not observable on their output, so their rows pin the unwritten curve against the same node
- * with the curve named Exponential; the exponential law itself through the filter is pinned against a
- * written-out oracle in `EnvelopeLawSpec` (the filter host row).
+ * pitch envelope's ratio is `2^level` at 12 semitones, read off the same buffer.
  */
 class ModEnvelopeDefaultCurveSpec : StringSpec({
 
@@ -142,74 +140,6 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
         withClue("anti-vacuous: linear sounds different here") {
             renderDsl(bare) shouldNotBe renderDsl(bare.copy(attackCurve = linKnob, decayCurve = linKnob, releaseCurve = linKnob))
         }
-    }
-
-    "the Ignitor FM index envelope (no curve knob at all): every stage on the exponential curve" {
-        // A constant modulator of 1.0 with depth == freq makes the ratio exactly 1 + level.
-        val out = renderRuntime(
-            fmModIgnitor(
-                modulator = ParamIgnitor("m", 1.0),
-                ratio = ParamIgnitor("ratio", 1.0),
-                depth = ParamIgnitor("depth", 100.0),
-                envAttackSec = ParamIgnitor("a", sec(a)),
-                envDecaySec = ParamIgnitor("d", sec(d)),
-                envSustainLevel = ParamIgnitor("s", s),
-                envReleaseSec = ParamIgnitor("r", sec(r)),
-                freq = FreqIgnitor,
-            ),
-            freqHz = 100.0,
-        )
-
-        for (pos in 0 until total) {
-            withClue("frame $pos") { out[pos] - 1.0 shouldBe (oracleLevel(pos) plusOrMinus 1e-9) }
-        }
-    }
-
-    "the Ignitor filter envelopes: an unwritten curve renders the curve named Exponential, on all four" {
-        val cutoff = IgnitorDsl.Constant(400.0)
-        val sweep = IgnitorDsl.Constant(24.0)
-        val att = IgnitorDsl.Constant(sec(a))
-        val dec = IgnitorDsl.Constant(sec(d))
-        val sus = IgnitorDsl.Constant(s)
-        val rel = IgnitorDsl.Constant(sec(r))
-
-        // Each: the bare node, and the node with the three curves named.
-        val kinds: List<Pair<String, (IgnitorDsl?) -> IgnitorDsl>> = listOf(
-            "lowpass" to { k ->
-                val n = IgnitorDsl.Lowpass(saw, cutoff, env = sweep, attackSec = att, decaySec = dec, sustainLevel = sus, releaseSec = rel)
-                if (k == null) n else n.copy(attackCurve = k, decayCurve = k, releaseCurve = k)
-            },
-            "highpass" to { k ->
-                val n = IgnitorDsl.Highpass(saw, cutoff, env = sweep, attackSec = att, decaySec = dec, sustainLevel = sus, releaseSec = rel)
-                if (k == null) n else n.copy(attackCurve = k, decayCurve = k, releaseCurve = k)
-            },
-            "bandpass" to { k ->
-                val n = IgnitorDsl.Bandpass(saw, cutoff, env = sweep, attackSec = att, decaySec = dec, sustainLevel = sus, releaseSec = rel)
-                if (k == null) n else n.copy(attackCurve = k, decayCurve = k, releaseCurve = k)
-            },
-            "notch" to { k ->
-                val n = IgnitorDsl.Notch(saw, cutoff, env = sweep, attackSec = att, decaySec = dec, sustainLevel = sus, releaseSec = rel)
-                if (k == null) n else n.copy(attackCurve = k, decayCurve = k, releaseCurve = k)
-            },
-        )
-
-        for ((name, node) in kinds) {
-            val unwritten = renderDsl(node(null))
-
-            withClue("$name: the unwritten curve is Exponential") { unwritten shouldBe renderDsl(node(expKnob)) }
-            withClue("$name: anti-vacuous, linear sounds different here") { unwritten shouldNotBe renderDsl(node(linKnob)) }
-        }
-
-        // The resolved struct the runtime reads: a shape that names no curve runs the node's default.
-        val resolved = FilterEnvDef(depth = 24.0, attackSec = sec(a), decaySec = sec(d), sustainLevel = s, releaseSec = sec(r))
-        val named = resolved.copy(
-            attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential,
-        )
-
-        fun raw(env: FilterEnvDef): List<Long> =
-            renderRuntime(Ignitors.sawtooth().lowpass(ParamIgnitor("f", 400.0), ParamIgnitor("q", 0.707), env), 220.0).map { it.toRawBits() }
-
-        withClue("FilterEnvDef: an unnamed curve is Exponential") { raw(resolved) shouldBe raw(named) }
     }
 
     "the strip's FM envelope: an unwritten curve (the wire has none) is the exponential curve" {

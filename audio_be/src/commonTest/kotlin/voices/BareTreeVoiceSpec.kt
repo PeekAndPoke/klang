@@ -52,6 +52,8 @@ class BareTreeVoiceSpec : StringSpec({
         register("bare", dc)
         // Its own envelope at the ROOT, a static release of 0.2 s, linear stages so the release is arithmetic.
         register("enveloped", dc.adsr(0.0, 0.0, 1.0, 0.2, linear, linear, linear))
+        // The same with an exponential release of a FRACTIONAL frame count: 0.00501 s is 240.48 frames.
+        register("envelopedexp", dc.adsr(0.0, 0.0, 1.0, 0.00501, AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential))
         // classic() below the root: each branch has the voice chain, the root is a sum.
         register("branches", dc.classic().plus(dc.classic()))
     }
@@ -159,6 +161,19 @@ class BareTreeVoiceSpec : StringSpec({
             withClue("the release, $k frames before the end, is the envelope's alone") {
                 out[lastFrame - k] shouldBe (l * k / (releaseFrames - 1).toDouble() plusOrMinus 1e-12)
             }
+        }
+
+        // An exponential release of 240.48 frames counts 240 and lands on the same exact 0.0 on the voice's last
+        // rendered frame (folded here from `ReleaseEndsAtZeroSpec`, 2026-09-27: a release whose endpoint fell one
+        // frame past the voice's end once left an audible residual, stepped to zero by the teardown). 240 frames
+        // divide by 239, where a hoisted reciprocal is not exact (`AdsrCurveMath`, the note on the divide).
+        val exp = render(base.copy(sound = "envelopedexp"))
+        val expLast = gateFrame + 240 - 1
+
+        withClue("exponential, fractional N: still sounding one frame before the end") { (exp[expLast - 1] > 0.0) shouldBe true }
+        withClue("exponential, fractional N: the last rendered frame is an exact zero") { exp[expLast] shouldBe 0.0 }
+        withClue("exponential, fractional N: the voice is gone after it") {
+            (expLast + 1 until expLast + 2000).all { exp[it] == 0.0 } shouldBe true
         }
     }
 

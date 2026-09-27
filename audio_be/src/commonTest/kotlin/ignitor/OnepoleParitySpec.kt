@@ -114,8 +114,8 @@ class OnepoleParitySpec : StringSpec({
     }
 
     "live path frequency response: |H| at the nominal cutoff is pinned (~0.437, all-pole)" {
-        // The absolute-response guard for the LIVE one-pole (OnePoleLowpassIgnitor). The
-        // legacy OnePoleLPF spec rows now guard a test-only class; without this row a
+        // The absolute-response guard for the LIVE one-pole (OnePoleLowpassIgnitor), the only
+        // one-pole lowpass since its class twin retired (2026-09-27); without this row a
         // mutant that stops calling onePoleLpfCoeff (e.g. fc/sampleRate) keeps every other
         // row green while retuning all onepole() sites.
         //

@@ -54,7 +54,7 @@ no sound change), a second role only where production code moves.
 
 1. **Scaffolding and weak rows** (lane B top cuts 2 to 4): the old voice-pipeline specs
    (`SampleVoiceSpecificTest`, `SampleVoiceRenderTest`, `VoicePipelineTest`, `PitchModulationTest`
-   16 to 3, `FmSynthesisTest` 14 to 2), the envelope duplicates (`EnvelopeShapeTest`,
+   16 to 4 (commit 1 kept "vibrato and accelerate combine", the only guard of accelerate's multiply-in), `FmSynthesisTest` 14 to 2), the envelope duplicates (`EnvelopeShapeTest`,
    `FilterEnvelopeTest`, `ReleaseEndsAtZeroSpec`), `ClassicVoiceContractSpec`'s loop, and the weak
    rows each audit lists. Pointer updates: `docs/plans/block-framing-invariance.md` (the `Guard:`
    lines for `IgniteOnsetOffsetSpec` and `SampleVoiceOnsetSpec`), `audio/MEMORY.md` (`EnvelopeShapeTest`).
@@ -70,7 +70,8 @@ no sound change), a second role only where production code moves.
    folds each audit lists.
 5. **Host de-duplication** (lane C top cut 5): the cylinder compressor spec against
    `KatalystSlotResolverSpec`, the per-stage `updateFromVoice` rows, the clip and interleave tables.
-6. **The baselines** (lane B top cuts 1 and 5): `BuiltInVoiceMatrixSpec` down to `untouched` plus one
+6. **The baselines** (lane B top cuts 1 and 5; also the `ClassicVoiceRig` row title and baseline keys that name the
+   "door-sweep row" commit 1 removed, now covered by `FilterSlotLayerFillSpec`, and the rig's dead `untouched`): `BuiltInVoiceMatrixSpec` down to `untouched` plus one
    configured variant per name (474 to 87 instances), `ClassicVoiceBaselineSpec` 61 to 28 configs;
    retired or regenerated at the phase 3 end listening checkpoint (signal-flow plan section 12 keeps a
    baseline until then).
@@ -104,7 +105,60 @@ A row or spec where it is not clear whether it should go is KEPT for now and lis
 not block; the maintainer decides the whole list later. Each entry: the spec and row, what it asserts, the
 spec that might cover it, and why it is unclear.
 
-(none yet)
+**From commit 1** (all kept):
+
+1. **`ignitor/FilterEnvelopeCurvesSpec` "an UNSET curve is MOD_ENV_CURVE, exponential: bit for bit the explicit
+   Exponential and the resolved envelope without curves"** (audit B: cut).
+   - Asserts: on all four filter kinds, the Kotlin door helper `saw.lowpass(..., attackCurve = null, ...)` renders bit
+     for bit like the same call with the three curves named Exponential, and like the runtime door with an unnamed
+     `FilterEnvDef`.
+   - Might be covered by: `EnvelopeCurveKnobSpec` "every modulation node's CONSTRUCTOR default curve is
+     MOD_ENV_CURVE" (the data classes) and `EnvelopeLawSpec` "host: the Ignitor filter envelope" (an unnamed
+     `FilterEnvDef` against the Exponential oracle).
+   - Unclear because: the row goes through the door HELPERS in `audio_bridge/IgnitorDsl.kt`, whose `?: modEnvCurveKnob()`
+     null mapping nothing else in audio_be exercises; an audio_bridge spec may pin it (not checked in this commit).
+
+2. **`voices/VoiceLifecycleTest` "voice with startFrame > endFrame handles edge case"** (weak list: render-returns-true).
+   - Asserts: an inverted window (start 100, end 50) renders without throwing and returns true.
+   - Might be covered by: nothing; the window rows (`VoiceLifecycleTest`, `ZeroLengthWindowSpec`) never invert it.
+   - Unclear because: its own comment says the case is unguarded and "the result depends"; it pins undefined behaviour,
+     so it is either a no-crash characterization worth one row or noise.
+
+3. **The Double convenience overloads of four effects**: `IgnitorCombinatorsSpec` "tremolo(rate, depth) - output
+   amplitude varies", "phaser(rate, wet) - output differs from dry signal", "coarse(amount) - output has
+   sample-and-hold staircase pattern", and `IgnitorsTest` "clip fold produces non-zero output" (audit A top cut 5: cut).
+   - Assert: the effect is audible through `tremolo(Double, Double)`, `phaser(wet, rate, ...)`, `coarse(Double)`,
+     `shape("fold")`.
+   - Might be covered by: `TremoloLawSpec` "a plain rate modulates", `PhaserFloorLawSpec` / `IgnitorDryFloorSpec`
+     sanity rows, `ModulationClockSpec` "W1: the first hold is `amount` samples", `ShapeCatalogueSpec` ("fold" parses to
+     FOLD) with `ShapingFuncsBoundsSpec` (the fold function).
+   - Unclear because: those law specs build the nodes through the Ignitor-argument overloads; these rows are the only
+     callers of the Double overloads, each with its own bypass branch (`depth <= 0`, `wet <= 0`, `amount <= 1`), and of
+     `shape("fold")` through the string. The overloads' one production caller is `WarmupVocabulary` (JIT warmup, not
+     sound), so a guard may not be worth a row.
+
+4. **The any-difference slot rows**: `AdsrIgnitorKnobsSpec` "oscParam override reaches the declickSeconds slot" and the
+   `IgnitorDefaultsTest` "responds to oscParam X" rows (audit B weak list; its per-spec verdict: keep).
+   - Assert: writing the slot through the voice's bag changes the render (any difference).
+   - Might be covered by: `EnvelopeDeclickSpec` (what the de-click does, but with the constructor argument, not the
+     slot); the door parity specs for the oscillator knobs.
+   - Unclear because: they look like the only coverage of the slot wiring; a value oracle would replace them, not a cut.
+
+5. **`ignitor/PitchModFactoriesSpec` "vibratoMod: output is centered near 1.0 (ratio space)"** (audit B weak list).
+   - Asserts: the vibrato ratio averages within 0.01 of 1.0 over a second at 10 Hz.
+   - Might be covered by: `ModulatorPhaseWrapSpec` "the vibrato ignitor stays within its depth" (the bound, both ends).
+   - Unclear because: the bound row does not assert symmetry about 1.0; this one does, loosely.
+6. **`ignitor/AdsrIgnitorKnobsSpec` "declickSeconds>0 rounds the attack to decay corner"** (audit B: cut; RESTORED in
+   commit 1's review because `audio/MEMORY.md` names it as a guard, and section 5 keeps named guards).
+   - Asserts: with `declickSeconds = 0.001` the second difference at the attack-to-decay join is lower than without.
+   - Might be covered by: `EnvelopeDeclickSpec` (what the de-click does, its exponential row fails without it) plus the
+     kept "oscParam override reaches the declickSeconds slot" row (the wiring).
+   - Unclear because: the coverage holds by the review, but the row is a named guard; the maintainer decides whether
+     the MEMORY guard line moves to `EnvelopeDeclickSpec` and the row goes.
+7. **A doc question, not a row**: the root `CLAUDE.md` guardrail "OnePole HPF cutoff bias is documented, not
+   corrected" and `docs/tasks/future/ignitor-optimizer-open-items.md:90`. The retired `OnePoleHPF` class and the live
+   `OnePoleHighpassIgnitor` both use the canonical bilinear topology with a true -3 dB at the cutoff; no bias is
+   documented in code. The guardrail may date from the old topology. Keep, correct or retire it?
 
 ## 5. Guards that stay, whatever the cut
 

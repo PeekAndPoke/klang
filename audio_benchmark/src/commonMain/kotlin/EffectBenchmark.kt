@@ -25,6 +25,8 @@ import io.peekandpoke.klang.audio_be.ignitor.highpass
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.mul
 import io.peekandpoke.klang.audio_be.ignitor.notch
+import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
+import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
@@ -199,7 +201,7 @@ class EffectBenchmark(
             step
         }
 
-        // ── Ignitor combinators (sine source → svf filter, freshly built per iteration) ──
+        // ── Ignitor nodes (sine source → a filter node, freshly built per iteration) ──
 
         private fun svfIgnitorCase(
             name: String,
@@ -266,8 +268,10 @@ class EffectBenchmark(
 
         fun defaultCases(): List<Case> = listOf(
             // Filters
-            monoFilterCase("OnePoleLPF (1k)") { sr -> LowPassHighPassFilters.OnePoleLPF(1000.0, sr) },
-            monoFilterCase("OnePoleHPF (1k)") { sr -> LowPassHighPassFilters.OnePoleHPF(1000.0, sr) },
+            // The one-poles are Ignitor nodes (their class twins retired 2026-09-27): the step also runs the sine
+            // source, so subtract "Ignitor sine (bare source baseline)" below for the filter alone.
+            svfIgnitorCase("Ignitor onePoleLowpass (1k)") { Ignitors.sine().onePoleLowpass(1000.0) },
+            svfIgnitorCase("Ignitor onePoleHighpass (1k)") { Ignitors.sine().onePoleHighpass(1000.0) },
             // The class-form SVF left is the resonators' bandpass; the strip's lowpass, highpass and notch
             // classes retired in phase 3 step 9 (the tree's SVF is the `Ignitor.svf` cases below).
             monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },

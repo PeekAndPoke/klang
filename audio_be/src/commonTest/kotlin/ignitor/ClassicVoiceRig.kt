@@ -25,9 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
-import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
-import io.peekandpoke.klang.audio_bridge.pregain
 import kotlin.random.Random
 
 /** One row of the `classic()` voice table: its slots, and the voice-level fields it carries ([voice]: the pitch pipeline, not a `classic()` stage). */
@@ -39,9 +37,9 @@ class ClassicRow(
 
 /**
  * TEST ONLY. The built-in `saw` on `classic()`, one voice per slot row, through the real `VoiceFactory`: the rig
- * `ClassicVoiceContractSpec` (both platforms) and `ClassicVoiceBaselineSpec` (the JVM fingerprints) share, so both
- * read the same rows. The render: the onset mid-block (frame 37), the gate a quarter second, so the release and the
- * voice's lifetime are inside the render; the left mix bus of its orbit.
+ * `ClassicVoiceContractSpec` (both platforms, the hand-built oracles) and `ClassicVoiceBaselineSpec` (the JVM
+ * fingerprints of the rows) share. The render: the onset mid-block (frame 37), the gate a quarter second, so the
+ * release and the voice's lifetime are inside the render; the left mix bus of its orbit.
  */
 object ClassicVoiceRig {
 
@@ -49,23 +47,6 @@ object ClassicVoiceRig {
     val blocks = 220
     val frames = blocks * blockFrames
     val gateSec = 0.25
-
-    /**
-     * The D3 fill row's oracle: the DOOR's filter with the same one stage named (its compound fill supplies the
-     * depth), in front of the envelope `classic()` builds when nothing else is written.
-     */
-    val doorFilledLowpass: IgnitorDsl = IgnitorDsl.Sawtooth()
-        .lowpass(IgnitorDsl.Constant(600.0), analog = IgnitorDsl.Slots.analog, attackSec = IgnitorDsl.Constant(0.05), humanize = true)
-        .adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
-
-    /** The default-curve row's oracle: the door's lowpass with `env = 24` and its three curves NAMED. */
-    fun namedCurveLowpass(curve: AdsrCurve): IgnitorDsl = IgnitorDsl.Sawtooth()
-        .lowpass(
-            IgnitorDsl.Constant(600.0), analog = IgnitorDsl.Slots.analog, env = IgnitorDsl.Constant(24.0),
-            attackCurve = AdsrCurves.knob(curve), decayCurve = AdsrCurves.knob(curve), releaseCurve = AdsrCurves.knob(curve),
-            humanize = true,
-        )
-        .adsr(VOICE_ADSR_ATTACK_SEC, VOICE_ADSR_DECAY_SEC, VOICE_ADSR_SUSTAIN_LEVEL, VOICE_ADSR_RELEASE_SEC, declickSeconds = ENV_DECLICK_SECONDS)
 
     /** The named curves the curve rows use: every stage its own, so a swapped stage shows. */
     val namedCurves = Triple(AdsrCurve.Linear, AdsrCurve.SCurve, AdsrCurve.InvSquare)
@@ -111,17 +92,11 @@ object ClassicVoiceRig {
         val source = builtInSources().getValue("saw")
         val registry = IgnitorRegistry().apply {
             registerDefaults()
-            // The built-in saw's own tree, registered by an AUTHOR: it ends in `classic()`, so it is the whole voice
-            // exactly like the built-in.
-            register("authoredsaw", source.pregain().classic())
             // The pregain oracles, written here: the same source played exactly 2 or 1.7 times as hard, then `classic()`.
             register("saw2x", source.mul(IgnitorDsl.Constant(2.0)).classic())
             register("saw1p7x", source.mul(IgnitorDsl.Constant(1.7)).classic())
             // The other order, for the 1.7 row's anti-vacuous side: the source, a onepole, THEN the gain.
             register("onepolethen1p7x", IgnitorDsl.OnePoleLowpass(source, IgnitorDsl.Constant(900.0)).mul(IgnitorDsl.Constant(1.7)).classic())
-            register("doorfill", doorFilledLowpass)
-            register("expfilter", namedCurveLowpass(AdsrCurve.Exponential))
-            register("linfilter", namedCurveLowpass(AdsrCurve.Linear))
 
             for ((door, freq) in curveFilters) {
                 register("curved$door", namedCurveNode(door, freq))

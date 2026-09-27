@@ -22,8 +22,10 @@ import kotlin.math.tan
 // IIR filters and shared coefficient helpers.
 //
 // First-order:
-//   • OnePoleLPF — bilinear-prewarped lowpass (parameterized by cutoffHz)
-//   • OnePoleHPF — bilinear-prewarped highpass (parameterized by cutoffHz, true −3 dB at fc)
+//   • the one-pole coefficients [bilinearK] and [onePoleLpfCoeff], shared with the one-pole Ignitor nodes
+//     (`OnePoleLowpassIgnitor` behind `onepole(freq)`, `OnePoleHighpassIgnitor` in `ignitor/IgnitorFilters.kt`),
+//     which carry the one-pole lowpass and highpass. Their class twins `OnePoleLPF` / `OnePoleHPF` served only the
+//     benchmark and their own spec since 2026-08-24 and retired 2026-09-27 (test consolidation).
 //   • DcBlocker — degenerate raw-pole HPF (parameterized by raw IIR pole; cheaper)
 //
 // Second-order (TPT/Vadim Zavalishin SVF, "The Art of VA Filter Design", canonical Cytomic form):
@@ -31,7 +33,8 @@ import kotlin.math.tan
 //     highpass and notch subclasses were the voice strip's and retired with it (phase 3 step 9);
 //     the tree's SVF is `Ignitor.svf` in `ignitor/IgnitorFilters.kt`.
 //
-// **OnePoleLPF / OnePoleHPF history (do not re-litigate):**
+// **One-pole history (do not re-litigate):** written for the classes, it holds for the Ignitor nodes, which
+// run the same coefficients and topology.
 //
 // Before 2026-04-29 the coefficients used the matched-Z mapping `α = 1 − exp(−2π·fc/fs)`
 // (LPF) and `a = exp(−2π·fc/fs)` (HPF). The HPF additionally used the topology
@@ -51,7 +54,7 @@ import kotlin.math.tan
 // **DcBlocker history (added 2026-04-29):**
 //
 // `DcBlocker` is a degenerate first-order HPF: `y[n] = x[n] − x[n-1] + a·y[n-1]`
-// (no input-scaling `b0`). Cheaper than `OnePoleHPF` by 1 mul/sample, parameterized
+// (no input-scaling `b0`). Cheaper than the one-pole HPF by 1 mul/sample, parameterized
 // by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
 // the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
 // of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.shape()`, and
@@ -418,90 +421,9 @@ object LowPassHighPassFilters {
     // --- Implementations ---
 
     /**
-     * First-order bilinear-prewarped LPF: `K = tan(π·fc/fs); α = K/(1+K)`,
-     * `y[ n ] = α·x[ n ] + (1−α)·y[n-1]`. DC gain = 1, monotonic, stable.
-     * Cutoff is accurate (−3 dB at `fc`) up to ~fs/4 — beyond that all bilinear
-     * designs warp. See file header for review history.
-     *
-     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 (the null-q secret swap was removed): no
-     * production path constructs this — the live one-pole is `OnePoleLowpassIgnitor`
-     * behind `onepole(freq)`. Kept for the benchmark and as reference DSP; do not "fix"
-     * behaviours documented on these classes — deliberate history on dormant code.
-     */
-    class OnePoleLPF(
-        cutoffHz: Double,
-        private val sampleRate: Double,
-        private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter {
-        private var y = 0.0
-        private var a: Double = 0.0
-
-        init {
-            setCutoff(cutoffHz)
-        }
-
-        fun setCutoff(cutoffHz: Double) {
-            a = onePoleLpfCoeff(cutoffHz * cutoffOffsetMul, sampleRate)
-        }
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            for (i in offset until end) {
-                val x = buffer[i]
-                y += a * (x - y)
-                y = y.flushState()
-                buffer[i] = y
-            }
-        }
-    }
-
-    /**
-     * First-order canonical bilinear HPF: `K = tan(π·fc/fs); b0 = 1/(1+K); a1 = (1−K)/(1+K)`,
-     * `y[ n ] = b0·(x[ n ] − x[n-1]) + a1·y[n-1]`. `H(z) = b0·(1 − z⁻¹)/(1 − a1·z⁻¹)`.
-     * DC gain = 0, Nyquist gain = 1, true −3 dB at `fc`, stable. See file header for
-     * the review history (replaced the old `y = a·(y + x − xPrev)` topology in 2026-04
-     * because that one had Nyquist droop at high cutoffs).
-     *
-     * ⚠ TEST/BENCHMARK-ONLY since 2026-08-24 — see [OnePoleLPF]; no one-pole highpass
-     * door exists.
-     */
-    class OnePoleHPF(
-        cutoffHz: Double,
-        private val sampleRate: Double,
-        private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter {
-        private var y = 0.0
-        private var xPrev = 0.0
-        private var b0: Double = 0.0
-        private var a1: Double = 0.0
-
-        init {
-            setCutoff(cutoffHz)
-        }
-
-        fun setCutoff(cutoffHz: Double) {
-            val k = bilinearK(cutoffHz * cutoffOffsetMul, sampleRate)
-            val invOnePlusK = 1.0 / (1.0 + k)
-            b0 = invOnePlusK
-            a1 = (1.0 - k) * invOnePlusK
-        }
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            for (i in offset until end) {
-                val x = buffer[i]
-                y = b0 * (x - xPrev) + a1 * y
-                y = y.flushState()
-                xPrev = x
-                buffer[i] = y
-            }
-        }
-    }
-
-    /**
      * Lightweight DC blocker — degenerate first-order HPF with raw pole and
      * no input scaling: `y[ n ] = x[ n ] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
-     * [OnePoleHPF]. Produces a ~2× edge transient on rail-to-rail input — call sites
+     * the one-pole HPF (`OnePoleHighpassIgnitor`). Produces a ~2× edge transient on rail-to-rail input; call sites
      * post-distort/post-clip pair this with `ShapingFuncs.softCap()` to bound output to ±1.
      *
      * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`

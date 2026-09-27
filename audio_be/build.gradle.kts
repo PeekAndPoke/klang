@@ -73,5 +73,9 @@ kotlin {
 }
 
 tasks {
-    configureJvmTests()
+    configureJvmTests {
+        // The click-hunt harness (GuitarClickHuntTest, tag ClickHunt) asserts nothing and is out of the default run
+        // (test consolidation, 2026-09-27). Run it with -Pkotest.tags=ClickHunt; any other tag expression also works.
+        systemProperty("kotest.tags", project.findProperty("kotest.tags")?.toString() ?: "!ClickHunt")
+    }
 }

@@ -1251,17 +1251,4 @@ class ExcitersTest : StringSpec({
         val buf = generate(Ignitors.sine().shape("fold"), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
     }
-
-    "bandpass passes center frequency" {
-        val buf = generate(Ignitors.sine().bandpass(440.0, 1.0), freqHz = 440.0)
-        buf.any { it != 0.0 } shouldBe true
-        buf.peakAmplitude() shouldBeGreaterThan 0.3
-    }
-
-    "notch attenuates center frequency" {
-        val dry = generate(Ignitors.sine(), freqHz = 440.0)
-        val notched = generate(Ignitors.sine().notch(440.0, 10.0), freqHz = 440.0)
-        // Notch at exactly the signal frequency should reduce amplitude
-        notched.peakAmplitude() shouldBeLessThan dry.peakAmplitude()
-    }
 })

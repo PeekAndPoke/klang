@@ -498,8 +498,8 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Filte
  * Gentler slope than the SVF (6 dB/oct vs 12 dB/oct). Good for subtle tone shaping.
  * Cutoff is read once per block (control rate).
  *
- * Same matched-Z one-pole leaky integrator as `LowPassHighPassFilters.OnePoleLPF` —
- * coefficient math is shared via `onePoleLpfCoeff`. See that file for review notes.
+ * The bilinear-prewarped one-pole leaky integrator, `y += a·(x − y)` with `a = K/(1+K)`: the coefficient
+ * math is `onePoleLpfCoeff` in `filters/LowPassHighPassFilters.kt`, whose header holds the review notes.
  *
  * Class form (not SAM lambda) so the integrator state lives in a class field rather
  * than a closure-captured `var` (Kotlin/JS ObjectRef). Hot loop snapshots state into
@@ -550,8 +550,8 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
  * Gentler slope than the SVF (6 dB/oct). Good for removing low-end rumble.
  * Cutoff is read once per block (control rate).
  *
- * Same canonical bilinear topology as `LowPassHighPassFilters.OnePoleHPF` — see that
- * file's header for the review history and topology rationale. Class form (not SAM
+ * The canonical bilinear topology `y = b0·(x − xPrev) + a1·y`: see the header of
+ * `filters/LowPassHighPassFilters.kt` for the review history and topology rationale. Class form (not SAM
  * lambda) so state stays in class fields, snapshotted into locals for the hot loop.
  *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].

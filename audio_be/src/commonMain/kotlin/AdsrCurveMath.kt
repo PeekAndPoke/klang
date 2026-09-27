@@ -90,8 +90,9 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
 // It MUST stay a divide. Hoisting a reciprocal and multiplying looks free but is not
 // exact: 239 * (1.0/239.0) is 0.9999999999999999, so `omp` comes out 1.1e-16 instead
 // of 0 and the endpoint is missed all over again by a hair. Division of equal values
-// is exact. `ReleaseEndsAtZeroSpec` asserts `shouldBe 0.0` with no tolerance, and it
-// caught precisely this.
+// is exact. `ReleaseEndsAtZeroSpec` asserted `shouldBe 0.0` with no tolerance and caught precisely
+// this; its rows live on in `EnvelopeLawSpec` (the core, every curve) and `BareTreeVoiceSpec` (a
+// 240-frame exponential release through a voice, the 239 above) since 2026-09-27.
 //
 // The degenerate N<=1 case (a release too short to ramp) is folded into the pair as
 // offset=1, denom=1, making p=1 on its single frame instead of leaving the gain at full.

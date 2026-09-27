@@ -157,7 +157,7 @@ The class-form resonators implement `AudioFilter` (`process(buffer, offset, leng
 | Class                                     | Type                                              |
 |-------------------------------------------|---------------------------------------------------|
 | `BaseSvf`, `SvfBPF`                       | SVF kernels (the resonators' bandpass)            |
-| `OnePoleLPF`, `OnePoleHPF`, `DcBlocker`   | one-pole filters                                  |
+| `DcBlocker`                               | raw-pole DC blocker (the one-pole lowpass and highpass are Ignitor nodes, `ignitor/IgnitorFilters.kt`) |
 | `ResonatorBank` + `ParallelMixFilter`     | parallel SVF bandpass bank (body, vowel), blended |
 | `EqCore`                                  | the equalizer's fused sections                    |
 

@@ -114,7 +114,11 @@ class ModulatorPhaseWrapSpec : StringSpec({
         // A bright ratio (2 : 1 at 440 Hz gives 0.115 rad per sample, 14.7 rad per block, well
         // past the fold): without a per-sample wrap the polynomial would leave its fold inside
         // the first block. The reference is the old formula with kotlin.math.sin.
-        val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
+        //
+        // The envelope decays from 1 to a sustain of 0.4 over the first 40 blocks, so the row also pins that the
+        // envelope's level, read at each block's start, scales the depth (the FM envelope rows of
+        // `FmSynthesisTest`, which only asked "more or less than", moved here as this exact oracle, 2026-09-27).
+        val fm = Voice.Fm(ratio = 2.0, depth = 200.0, envelope = Voice.Envelope(0.0, 40.0 * blockFrames, 0.4, 0.0))
         val renderer = FmRenderer(fm, freqHz, sampleRate, startFrame = 0.0)
         val blocks = 200
         val out = renderStrip(blocks) { renderer.render(it) }

@@ -73,13 +73,6 @@ class KatalystReverbEffectSpec : StringSpec({
         hasSignal shouldBe true
     }
 
-    "reverb parameters are accessible" {
-        val effect = createEffect(size = 0.7)
-
-        effect.reverb!!.size shouldBe 0.7
-        effect.reverb!!.sampleRate shouldBe sampleRate
-    }
-
     // ── The drain lifecycle (block-framing ledger D3, adopted for the reverb) ─────────────────
 
     "an off-config drains the tail on schedule — identical to staying active with silent sends" {

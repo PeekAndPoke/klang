@@ -2585,7 +2585,8 @@ reads as a "plop" (2nd-difference corner/floor ratio ~525x at 40Hz vs ~4x at
 - Guard: `EnvelopeDeclickSpec` (renders through the real renderer, asserts gain
   per-sample slew < 0.1). `EnvelopeTest` rewritten to assert phase *behaviour*
   (monotonic direction, settled endpoints, the de-click fade) since mid-ramp
-  values now lag; exact raw-curve shape stays in `EnvelopeShapeTest` (generator).
+  values now lag; exact raw-curve shape stays in `EnvelopeLawSpec` (the envelope law's one home;
+  `EnvelopeShapeTest` folded into it 2026-09-27).
 
 ## Ignitor ADSR knobs — declick + expK as Slots (2026-07-04)
 
@@ -2608,7 +2609,8 @@ Both are `IgnitorDsl` fields read per-block via `readParam` in `AdsrIgnitor` (de
 derived once per block — NOT ctor-precomputed, since they can now be modulated). KlangScript
 `.declickSeconds(x)` / `.expK(x)` take `IgnitorDslLike` (copy-onto-`Adsr` or wrap, same idiom as
 `adsrCurves`). Guards: `AdsrIgnitorKnobsSpec` (defaults identical, declick rounds the attack→decay
-corner, larger expK steepens the exp decay, + oscParam override reaches both slots), `StdLibOscTest`
+corner, every exponential stage bends at `ADSR_EXP_K` (expK retired in phase 3 step 3c), the old expK oscParam is
+an unread key, the oscParam override reaches the declickSeconds slot), `StdLibOscTest`
 (dual-language build), `IgnitorDslWireCodecSpec` (round-trip). First of the `engine-tuning-profile`
 Part-A wrapper knobs; filter feel knobs + analog-drift carriers still open.
 
@@ -2770,8 +2772,9 @@ inside each `distort()`/`clip()` stage at oversampled rate, and identity for
   IgniteRenderer-wrapped test (asserts `< 1.05`, the in-engine invariant).
 
 - **Regression harness — grow it over time**:
-  `audio_be/src/commonTest/kotlin/ignitor/GuitarClickHuntTest.kt` is the
-  click-hunt harness. **Standing intent: keep adding setups to it whenever a
+  `audio_be/src/jvmTest/kotlin/ignitor/GuitarClickHuntTest.kt` is the
+  click-hunt harness (tagged `ClickHunt` since 2026-09-27, out of the default run; run it with
+  `./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest`). **Standing intent: keep adding setups to it whenever a
   new click symptom is reported or a new ignitor archetype is introduced.** It
   is the safety net for any future change to `distort`/`clip`/`IgniteRenderer`
   / DC-blocker / oversampler.

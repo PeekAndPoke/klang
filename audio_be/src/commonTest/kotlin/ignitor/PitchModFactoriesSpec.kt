@@ -40,9 +40,6 @@ class PitchModFactoriesSpec : StringSpec({
     }
 
     fun AudioBuffer.mean(): Double = sumOf { it } / size
-    fun AudioBuffer.rms(): Double {
-        var s = 0.0; for (x in this) s += x * x; return sqrt(s / size)
-    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Vibrato mod
@@ -61,12 +58,6 @@ class PitchModFactoriesSpec : StringSpec({
         val out = render(mod, ctx = ctx)
         // Mean should be near 1.0 (symmetric LFO over complete cycles, ratio space)
         abs(out.mean() - 1.0) shouldBeLessThan 0.01
-    }
-
-    "vibratoMod: output has RMS > 1.0 (actual modulation above unity)" {
-        val mod = vibratoModIgnitor(rate = 5.0, semitones = 1.0)
-        val out = render(mod)
-        out.rms() shouldBeGreaterThan 0.9
     }
 
     "vibratoMod: larger depth produces larger deviation from 1.0" {
@@ -120,16 +111,6 @@ class PitchModFactoriesSpec : StringSpec({
         )
         val out = render(mod)
         for (s in out) s shouldBe 1.0
-    }
-
-    "pitchEnvelopeMod: produces non-zero deviation when amount is non-zero" {
-        val mod = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", 0.01),
-            decaySec = ParamIgnitor("d", 0.05),
-            semitones = ParamIgnitor("amount", 12.0), // one octave
-        )
-        val out = render(mod)
-        out.rms() shouldBeGreaterThan 0.01
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

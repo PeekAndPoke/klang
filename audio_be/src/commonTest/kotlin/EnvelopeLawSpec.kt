@@ -256,6 +256,8 @@ class EnvelopeLawSpec : StringSpec({
         val gated = renderNode(fm(100.0, 100.0, 0.2, 11.0), 80, gate = 50)
 
         gated[50] - 1.0 shouldBe (expCurve(0.5) plusOrMinus 1e-9)
+        // halfway through the release (5 of its 10 steps): the release is Exponential too
+        gated[55] - 1.0 shouldBe (expCurve(0.5) * expCurve(0.5) plusOrMinus 1e-9)
         gated[60] shouldBe 1.0
 
         // The sustain is raw: -0.5 over a 10-frame decay is -0.5 + 1.5 g(0.8) at frame 2 (a clamped sustain
