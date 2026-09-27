@@ -18,6 +18,11 @@ Two things called "master" exist and must not be confused:
 
 ## 0. The decisions (maintainer, 2026-09-27; the options are in section 8)
 
+**Unification changes are accepted (maintainer, 2026-09-27, after decision (h)):** a behaviour change that
+follows only from a master-only special case disappearing, so the master now does what the Katalyst already
+does, is accepted for step 12 without a separate decision (less surface, less logic). It is named in the commit
+and in this plan. Only a change a listener meets in normal use still goes to the maintainer first.
+
 | # | Decision | Decided |
 |---|---|---|
 | (a) | The authored limiter's lookahead | **A user can build a lookahead limiter, and it runs anywhere.** `lookahead` is a knob of the Katalyst `compressor` stage (the `Compressor` DSP already has it); at the output the playback is late by it, on an orbit THAT orbit is late by it (the user's choice and ear; no compensation). The guardrail "the master limiter lookahead is master-only" narrows to the house limiter when this lands (C2). Not a3 (retire) and not a1 (output only), both proposed below. |
