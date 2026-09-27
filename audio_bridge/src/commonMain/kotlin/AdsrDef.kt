@@ -5,12 +5,6 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
-
-
 /**
  * Per-stage envelope shape applied to attack / decay / release.
  *
@@ -38,24 +32,25 @@ enum class AdsrCurve {
         /** THE default curve of every AMPLITUDE envelope stage on every door (maintainer decision,
          *  2026-08-24): unset means [Exponential]. Every amplitude-envelope fallback site
          *  references THIS value; flip it here, it flips everywhere. The MODULATION envelopes
-         *  (the Ignitor filter, pitch and FM envelopes, and the strip's filter and FM envelopes)
+         *  (the Ignitor filter, pitch and FM envelopes, and the voice's own pitch and FM envelopes)
          *  fall back to `MOD_ENV_CURVE` instead (`constants/EnvelopeDefaults.kt`), a decision of
          *  its own (D3), exponential too. */
         val Default = Exponential
     }
 }
 
+/**
+ * An envelope carried as DATA, not as a slot: a sample's own envelope in its metadata (`SampleMetadata.adsr`, a
+ * SoundFont zone's transparent one). Its one reader fills the sample instrument's `adsr.*` slots the pattern left
+ * unset with these values (`withSampleEnvelopeDefaults` in audio_be). A voice's envelope travels as `classic()`'s
+ * `adsr.*` slots; the merge, resolve and default-envelope API this type carried for the retired voice strip left
+ * with the typed `VoiceData.adsr` field (phase 3 step 9).
+ */
 sealed interface AdsrDef {
-
-    /** Merges this envelope with a fallback. Values in `this` take precedence over `other`. */
-    fun mergeWith(other: AdsrDef?): AdsrDef
-
-    /** Resolves to non-nullable values using provided defaults as final fallback. */
-    fun resolve(defaults: AdsrDef = Std.defaultSynth): Resolved
 
     /**
      * Standard 4-stage ADSR envelope (attack / decay / sustain / release)
-     * with per-stage shape curves.
+     * with per-stage shape curves. A null stage or curve is unset.
      */
     @WireName("std")
     data class Std(
@@ -66,83 +61,5 @@ sealed interface AdsrDef {
         val attackCurve: AdsrCurve? = null,
         val decayCurve: AdsrCurve? = null,
         val releaseCurve: AdsrCurve? = null,
-        /**
-         * Whether the voice strip's VCA shaped this voice. Nothing has read it since the strip retired
-         * (phase 3 step 9); it leaves with the `VoiceData` cut. The switch a pattern writes is `classic()`'s
-         * `adsr.on` slot.
-         */
-        val on: Boolean? = null,
-    ) : AdsrDef {
-
-        override fun mergeWith(other: AdsrDef?): AdsrDef = when (other) {
-            null -> this
-            is Std -> Std(
-                attack = attack ?: other.attack,
-                decay = decay ?: other.decay,
-                sustain = sustain ?: other.sustain,
-                release = release ?: other.release,
-                attackCurve = attackCurve ?: other.attackCurve,
-                decayCurve = decayCurve ?: other.decayCurve,
-                releaseCurve = releaseCurve ?: other.releaseCurve,
-                on = on ?: other.on,
-            )
-        }
-
-        override fun resolve(defaults: AdsrDef): Resolved {
-            val d = defaults as? Std ?: defaultSynth
-            return Resolved(
-                attack = attack ?: d.attack ?: 0.01,
-                decay = decay ?: d.decay ?: 0.1,
-                sustain = sustain ?: d.sustain ?: 1.0,
-                release = release ?: d.release ?: 0.1,
-                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Default,
-                decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Default,
-                releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Default,
-                // No `?: true` here on purpose — see [Resolved.on].
-                on = on ?: d.on,
-            )
-        }
-
-        companion object {
-            val empty = Std()
-
-            /**
-             * Standard Synth defaults (Organ-like): the voice envelope every voice gets when the
-             * pattern writes nothing. The numbers live in `constants/EnvelopeDefaults.kt`, the one
-             * home `classic()`'s envelope slots read as well.
-             */
-            val defaultSynth = Std(
-                attack = VOICE_ADSR_ATTACK_SEC,
-                decay = VOICE_ADSR_DECAY_SEC,
-                sustain = VOICE_ADSR_SUSTAIN_LEVEL,
-                release = VOICE_ADSR_RELEASE_SEC,
-                attackCurve = AdsrCurve.Default,
-                decayCurve = AdsrCurve.Default,
-                releaseCurve = AdsrCurve.Default,
-            )
-        }
-    }
-
-    /**
-     * Resolved ADSR — all values non-null, ready for the audio engine.
-     */
-    data class Resolved(
-        val attack: Double,
-        val decay: Double,
-        val sustain: Double,
-        val release: Double,
-        val attackCurve: AdsrCurve,
-        val decayCurve: AdsrCurve,
-        val releaseCurve: AdsrCurve,
-        /** See [Std.on]: unread since the voice strip retired (phase 3 step 9). */
-        val on: Boolean? = null,
-    )
-
-    companion object {
-        /** Empty envelope (all nulls). */
-        val empty: AdsrDef = Std.empty
-
-        /** Standard Synth defaults (Organ-like). */
-        val defaultSynth: AdsrDef = Std.defaultSynth
-    }
+    ) : AdsrDef
 }

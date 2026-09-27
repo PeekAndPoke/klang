@@ -134,7 +134,7 @@ private class SprudelFilterAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelFi
     private val parsedDecay
         get() = parseNum(call?.args?.getOrNull(1), 0.1)
 
-    // Display fallbacks for missing args mirror the engine defaults (FilterEnvDef.resolve).
+    // Display fallbacks for missing args mirror the engine defaults (`constants/FilterEnvelopeDefaults.kt`).
     private val parsedSustain
         get() = parseNum(call?.args?.getOrNull(2), 1.0)
 

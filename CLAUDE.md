@@ -125,7 +125,16 @@ and `Envelope.declick` (`Voice.Envelope` itself stays: FM and the pitch envelope
 the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` (the `IgnitorDsl.endsInClassic()` tag
 stays); and the strip-only filter classes `SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`, `createLPF` / `createHPF`
 / `createBPF` / `createNotch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()` and `AudioFilter.Tunable`
-(the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The spelling
+(the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The typed `VoiceData` fields
+that no reader was left for (gone 2026-09-27, phase 3 step 9 (b): a voice door is a `classic()` slot in `oscParams`, an
+orbit stage a `katalystParams` slot): `scale`, `filters`, `adsr`, `distort`, `distortShape`, `distortOversample`,
+`coarse`, `coarseOversample`, `crush`, `crushOversample`, `phaser`, `phaserDepth`, `phaserCenter`, `phaserSweep`,
+`phaserFloor`, `tremoloSync`, `tremoloDepth`, `tremoloSkew`, `tremoloPhase`, `tremoloShape`, `cutoff`, `hcutoff`, `bandf`,
+`resonance`, `begin`, `end`, `speed`, `loop`, `loopBegin`, `loopEnd`; with them `FilterDefs`, `FilterDef.LowPass` /
+`HighPass` / `BandPass` / `Notch`, the bridge `FilterEnvDef`, `AdsrDef.on` and the `AdsrDef` merge and resolve API (`mergeWith`, `resolve`,
+`Resolved`, `empty`, `defaultSynth`; the voice envelope defaults are `VOICE_ADSR_*`) (`FilterDef.Formant` / `Body` stay as the
+orbit's band carriers, `AdsrDef` for sample metadata), and the sprudel doors `loopBegin` / `loopb` / `loopEnd` / `loope`
+(they never reached the engine; a loop region is `loop().begin(x).end(y)`). The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,

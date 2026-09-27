@@ -73,7 +73,7 @@ class LangVibratoSpec : StringSpec({
         events.map { it.data.vibrato } shouldBe listOf(5.0, 10.0)
     }
 
-    "vibrato() sets VoiceData.vibrato rate" {
+    "vibrato() sets SprudelVoiceData.vibrato rate" {
         val p = note("a b").vibrato("5.0 10.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -81,7 +81,7 @@ class LangVibratoSpec : StringSpec({
         events.map { it.data.vibrato } shouldBe listOf(5.0, 10.0)
     }
 
-    "vib() alias sets VoiceData.vibrato rate" {
+    "vib() alias sets SprudelVoiceData.vibrato rate" {
         val p = note("a b").vib("5.0 10.0")
         val events = p.queryArc(0.0, 1.0)
 

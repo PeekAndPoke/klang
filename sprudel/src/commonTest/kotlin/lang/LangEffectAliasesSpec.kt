@@ -13,7 +13,7 @@ class LangEffectAliasesSpec : StringSpec({
 
     // -- orbit alias ------------------------------------------------------------------------------------------------------
 
-    "orbit() alias 'o' sets VoiceData.orbit correctly" {
+    "orbit() alias 'o' sets SprudelVoiceData.orbit correctly" {
         val p = note("c3").o("1")
         val events = p.queryArc(0.0, 1.0)
 

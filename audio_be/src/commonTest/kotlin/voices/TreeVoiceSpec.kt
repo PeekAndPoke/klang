@@ -16,9 +16,6 @@ import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.builtInSources
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -64,7 +61,13 @@ class TreeVoiceSpec : StringSpec({
      * Renders one voice through the real [VoiceFactory] for [blocks] blocks; [noteOffAtFrame] releases
      * the gate NOW at that frame, the realtime path (`Voice.releaseGate`).
      */
-    fun render(data: VoiceData, blocks: Int = 120, gateSec: Double = 0.25, noteOffAtFrame: Double? = null): DoubleArray {
+    fun render(
+        data: VoiceData,
+        doors: DoorFields = DoorFields(),
+        blocks: Int = 120,
+        gateSec: Double = 0.25,
+        noteOffAtFrame: Double? = null,
+    ): DoubleArray {
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             sampleRateDouble = sampleRate.toDouble(),
@@ -78,7 +81,7 @@ class TreeVoiceSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data.withClassicSlots(),
+                data = data.withClassicSlots(doors),
                 startTime = 0.0,
                 gateEndTime = gateSec,
                 playbackStartTime = 0.0,
@@ -111,13 +114,13 @@ class TreeVoiceSpec : StringSpec({
         return out
     }
 
-    val lpf = FilterDefs(listOf(FilterDef.LowPass(300.0, 0.707)))
+    val lpf = DoorFields(filters = listOf(DoorFilter.LowPass(300.0, 0.707)))
     val base = VoiceData.empty.copy(freqHz = 220.0)
 
     "a SAMPLE voice runs the sample instrument: its lowpass and its envelope apply (as slots)" {
         val plain = render(base.copy(sound = "probe"))
-        val filtered = render(base.copy(sound = "probe", filters = lpf))
-        val slowAttack = render(base.copy(sound = "probe", adsr = AdsrDef.Std(attack = 0.1)))
+        val filtered = render(base.copy(sound = "probe"), lpf)
+        val slowAttack = render(base.copy(sound = "probe"), DoorFields(adsr = DoorAdsr(attack = 0.1)))
 
         withClue("the lowpass applies") { filtered.toList() shouldNotBe plain.toList() }
         withClue("the envelope applies") { slowAttack.toList() shouldNotBe plain.toList() }
@@ -126,14 +129,14 @@ class TreeVoiceSpec : StringSpec({
     "an AUTHORED instrument that ends in classic(): the doors reach its slots" {
         val plain = render(base.copy(sound = "authoredsaw"))
 
-        withClue("the lowpass") { render(base.copy(sound = "authoredsaw", filters = lpf)).toList() shouldNotBe plain.toList() }
-        withClue("the envelope") { render(base.copy(sound = "authoredsaw", adsr = AdsrDef.Std(attack = 0.05))).toList() shouldNotBe plain.toList() }
+        withClue("the lowpass") { render(base.copy(sound = "authoredsaw"), lpf).toList() shouldNotBe plain.toList() }
+        withClue("the envelope") { render(base.copy(sound = "authoredsaw"), DoorFields(adsr = DoorAdsr(attack = 0.05))).toList() shouldNotBe plain.toList() }
     }
 
     "an AUTHORED classic() tree with the optimizer hint last (the by-ear A/B) renders what the tree renders optimized" {
-        val doors = base.copy(filters = lpf, adsr = AdsrDef.Std(attack = 0.05))
-        val ab = render(doors.copy(sound = "authoredsawab"))
-        val optimized = render(doors.copy(sound = "authoredsaw"))
+        val doors = lpf.copy(adsr = DoorAdsr(attack = 0.05))
+        val ab = render(base.copy(sound = "authoredsawab"), doors)
+        val optimized = render(base.copy(sound = "authoredsaw"), doors)
 
         withClue("the optimizer off renders the same voice as the optimizer on, first mismatch") {
             (ab.indices.firstOrNull { ab[it].toRawBits() != optimized[it].toRawBits() } ?: -1) shouldBe -1
@@ -144,9 +147,9 @@ class TreeVoiceSpec : StringSpec({
         // The gate is scheduled far away; the note-off moves it to frame 7000, and the voice then ends
         // one release (0.05 s) later, through the voice's teardown stage. (Until step 9 this row also
         // pinned it bit for bit to the strip's `adsrOff` path, the fade's first host.)
-        val off = base.copy(adsr = AdsrDef.Std(on = false))
+        val off = DoorFields(adsr = DoorAdsr(on = false))
         val noteOff = 7000.0
-        val builtIn = render(off.copy(sound = "saw"), gateSec = 10.0, noteOffAtFrame = noteOff)
+        val builtIn = render(base.copy(sound = "saw"), off, gateSec = 10.0, noteOffAtFrame = noteOff)
         val lastFrame = (noteOff + 0.05 * sampleRate).toInt() - 1
 
         withClue("the voice is gone after the moved end") {
@@ -161,9 +164,9 @@ class TreeVoiceSpec : StringSpec({
         // `adsr(0.01, 0.1, 1, -0.1)`: the envelope reads the raw -0.1 (a zero-length release), but the voice
         // must not end 0.1 s before its gate, cut from the sustain level, as it would if the tree's negative
         // tail set the lifetime.
-        val negative = base.copy(sound = "saw", adsr = AdsrDef.Std(attack = 0.01, decay = 0.1, sustain = 1.0, release = -0.1))
+        val negative = DoorFields(adsr = DoorAdsr(attack = 0.01, decay = 0.1, sustain = 1.0, release = -0.1))
         val gateFrame = (0.25 * sampleRate).toInt()
-        val out = render(negative)
+        val out = render(base.copy(sound = "saw"), negative)
 
         withClue("the frames just before the gate still sound") {
             (gateFrame - 64 until gateFrame).any { out[it] != 0.0 } shouldBe true
@@ -174,8 +177,8 @@ class TreeVoiceSpec : StringSpec({
     }
 
     "a built-in with a NEGATIVE release and a gate SHORTER than it still renders its note" {
-        val negative = base.copy(sound = "saw", adsr = AdsrDef.Std(attack = 0.005, decay = 0.1, sustain = 1.0, release = -0.1))
-        val out = render(negative, gateSec = 0.05)
+        val negative = DoorFields(adsr = DoorAdsr(attack = 0.005, decay = 0.1, sustain = 1.0, release = -0.1))
+        val out = render(base.copy(sound = "saw"), negative, gateSec = 0.05)
 
         out.any { it != 0.0 } shouldBe true
     }

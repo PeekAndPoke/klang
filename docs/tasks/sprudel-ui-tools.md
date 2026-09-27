@@ -75,7 +75,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 |----|----------------------------------------|------------------------------|-------------------------------------|
 | 34 | `degrade()` / `degradeBy()`            | `SprudelDegradeEditorTool`   | probability slider (0–100%)         |
 | 35 | `vowel()`                              | `SprudelVowelEditorTool`     | vowel picker (a, e, i, o, u)        |
-| 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`      | toggle + range bar                  |
+| 36 | `loop()` with `begin()` / `end()`      | `SprudelLoopEditorTool`      | toggle + range bar                  |
 | 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
 | 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
 | 39 | `unison(pan = ...)` (was `panSpread()`, before that `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |

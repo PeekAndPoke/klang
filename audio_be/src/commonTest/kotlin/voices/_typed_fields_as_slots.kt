@@ -7,27 +7,80 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.FilterCurvesSlots
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
- * TEST ONLY. This voice with its typed voice-door fields MOVED into the slot bag, the form a producer sends since
- * phase 3 step 8 (sprudel's `toVoiceData` writes the slot keys, `classicSlotParams`; the engine reads only those).
- * A spec that states its settings as typed fields renders a built-in, a sample or an authored `classic()`
- * instrument through this. Scaffolding: it goes with the typed fields (the `VoiceData` cut, phase 3 step 9).
- *
- * The same rules as sprudel's translation: only a set and finite field is written; the typed value wins over a
- * bag entry of the same key; a filter kind writes its `freq`, `q` and (low/high) `passes`, and its envelope keys
- * only when it has one; names travel as their catalogue index, flags as 1.0 or 0.0. The moved fields are nulled.
+ * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until
+ * phase 3 step 9 cut them (a voice door travels as `classic()` slot keys in `oscParams` since step 8). Specs that
+ * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
+ * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
+ * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
+ * where sprudel writes it only when set, it writes the filter envelope curves whenever a [DoorFilterEnv] is present
+ * (curves alone never trigger the depth fill), and it omits the `crush.oversample` / `coarse.oversample` keys, which
+ * nothing reads.
  */
-fun VoiceData.withClassicSlots(): VoiceData {
+data class DoorFields(
+    val filters: List<DoorFilter> = emptyList(),
+    val adsr: DoorAdsr? = null,
+    val crush: Double? = null,
+    val coarse: Double? = null,
+    val distort: Double? = null,
+    val distortShape: String? = null,
+    val distortOversample: Int? = null,
+    val tremoloDepth: Double? = null,
+    val tremoloSync: Double? = null,
+    val tremoloShape: String? = null,
+    val tremoloSkew: Double? = null,
+    val tremoloPhase: Double? = null,
+    val begin: Double? = null,
+    val end: Double? = null,
+    val speed: Double? = null,
+    val loop: Boolean? = null,
+)
+
+/** TEST ONLY. The voice envelope of a [DoorFields]: the four stages, their curves, and the `adsr.on` switch. */
+data class DoorAdsr(
+    val attack: Double? = null,
+    val decay: Double? = null,
+    val sustain: Double? = null,
+    val release: Double? = null,
+    val attackCurve: AdsrCurve? = null,
+    val decayCurve: AdsrCurve? = null,
+    val releaseCurve: AdsrCurve? = null,
+    val on: Boolean? = null,
+)
+
+/** TEST ONLY. A filter's cutoff envelope in a [DoorFilter]: the depth in semitones, the four stages, the curves. */
+data class DoorFilterEnv(
+    val attack: Double? = null,
+    val decay: Double? = null,
+    val sustain: Double? = null,
+    val release: Double? = null,
+    val depth: Double? = null,
+    val attackCurve: AdsrCurve? = null,
+    val decayCurve: AdsrCurve? = null,
+    val releaseCurve: AdsrCurve? = null,
+)
+
+/** TEST ONLY. One of `classic()`'s four voice filters, stated in typed form. */
+sealed interface DoorFilter {
+    data class LowPass(val freq: Double, val q: Double?, val envelope: DoorFilterEnv? = null, val passes: Int = 1) : DoorFilter
+    data class HighPass(val freq: Double, val q: Double?, val envelope: DoorFilterEnv? = null, val passes: Int = 1) : DoorFilter
+    data class BandPass(val freq: Double, val q: Double?, val envelope: DoorFilterEnv? = null) : DoorFilter
+    data class Notch(val freq: Double, val q: Double?, val envelope: DoorFilterEnv? = null) : DoorFilter
+}
+
+/**
+ * TEST ONLY. This voice with [doors] written into its slot bag as `classic()` slot keys. Only a set and finite value
+ * is written; a door value wins over a bag entry of the same key (so set the voice's own `oscParams` BEFORE this
+ * call); a filter writes its `freq`, `q` and (low/high) `passes`, and its envelope keys only when it has one; names
+ * travel as their catalogue index, flags as 1.0 or 0.0.
+ */
+fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     val out = oscParams?.toMutableMap() ?: mutableMapOf()
     val s = IgnitorDsl.Slots
 
@@ -39,7 +92,7 @@ fun VoiceData.withClassicSlots(): VoiceData {
 
     fun putCurve(slot: IgnitorDsl, curve: AdsrCurve?) = put(slot, curve?.let { AdsrCurves.indexOf(it) })
 
-    fun putEnv(env: FilterEnvDef?, depth: IgnitorDsl, a: IgnitorDsl, d: IgnitorDsl, su: IgnitorDsl, r: IgnitorDsl, c: FilterCurvesSlots) {
+    fun putEnv(env: DoorFilterEnv?, depth: IgnitorDsl, a: IgnitorDsl, d: IgnitorDsl, su: IgnitorDsl, r: IgnitorDsl, c: FilterCurvesSlots) {
         if (env == null) {
             return
         }
@@ -54,87 +107,63 @@ fun VoiceData.withClassicSlots(): VoiceData {
         putCurve(c.release, env.releaseCurve)
     }
 
-    put(s.crush.amount, crush)
-    put(s.coarse.amount, coarse)
-    put(s.distort.amount, distort)
-    put(s.distort.shape, distortShape?.let { DistortionShapes.indexOf(it) })
-    put(s.distort.oversample, distortOversample?.toDouble())
+    put(s.crush.amount, doors.crush)
+    put(s.coarse.amount, doors.coarse)
+    put(s.distort.amount, doors.distort)
+    put(s.distort.shape, doors.distortShape?.let { DistortionShapes.indexOf(it) })
+    put(s.distort.oversample, doors.distortOversample?.toDouble())
 
-    for (def in filters.filters) {
+    for (def in doors.filters) {
         when (def) {
-            is FilterDef.HighPass -> {
+            is DoorFilter.HighPass -> {
                 put(s.hpf.freq, def.freq)
                 put(s.hpf.q, def.q)
                 put(s.hpf.passes, def.passes.toDouble())
                 putEnv(def.envelope, s.hpf.env, s.hpf.attack, s.hpf.decay, s.hpf.sustain, s.hpf.release, s.hpfCurves)
             }
 
-            is FilterDef.BandPass -> {
+            is DoorFilter.BandPass -> {
                 put(s.bpf.freq, def.freq)
                 put(s.bpf.q, def.q)
                 putEnv(def.envelope, s.bpf.env, s.bpf.attack, s.bpf.decay, s.bpf.sustain, s.bpf.release, s.bpfCurves)
             }
 
-            is FilterDef.Notch -> {
+            is DoorFilter.Notch -> {
                 put(s.notch.freq, def.freq)
                 put(s.notch.q, def.q)
                 putEnv(def.envelope, s.notch.env, s.notch.attack, s.notch.decay, s.notch.sustain, s.notch.release, s.notchCurves)
             }
 
-            is FilterDef.LowPass -> {
+            is DoorFilter.LowPass -> {
                 put(s.lpf.freq, def.freq)
                 put(s.lpf.q, def.q)
                 put(s.lpf.passes, def.passes.toDouble())
                 putEnv(def.envelope, s.lpf.env, s.lpf.attack, s.lpf.decay, s.lpf.sustain, s.lpf.release, s.lpfCurves)
             }
-
-            is FilterDef.Formant, is FilterDef.Body -> Unit
         }
     }
 
-    put(s.tremolo.depth, tremoloDepth)
-    put(s.tremolo.sync, tremoloSync)
-    put(s.tremolo.shape, tremoloShape?.let { LfoShapes.indexOf(it) })
-    put(s.tremolo.skew, tremoloSkew)
-    put(s.tremolo.phase, tremoloPhase)
+    put(s.tremolo.depth, doors.tremoloDepth)
+    put(s.tremolo.sync, doors.tremoloSync)
+    put(s.tremolo.shape, doors.tremoloShape?.let { LfoShapes.indexOf(it) })
+    put(s.tremolo.skew, doors.tremoloSkew)
+    put(s.tremolo.phase, doors.tremoloPhase)
 
-    when (val adsr = adsr) {
-        is AdsrDef.Std -> {
-            put(s.adsr.attack, adsr.attack)
-            put(s.adsr.decay, adsr.decay)
-            put(s.adsr.sustain, adsr.sustain)
-            put(s.adsr.release, adsr.release)
-            putCurve(s.adsrCurves.attack, adsr.attackCurve)
-            putCurve(s.adsrCurves.decay, adsr.decayCurve)
-            putCurve(s.adsrCurves.release, adsr.releaseCurve)
-            put(s.adsr.on, adsr.on?.let { if (it) 1.0 else 0.0 })
-        }
+    doors.adsr?.let { adsr ->
+        put(s.adsr.attack, adsr.attack)
+        put(s.adsr.decay, adsr.decay)
+        put(s.adsr.sustain, adsr.sustain)
+        put(s.adsr.release, adsr.release)
+        putCurve(s.adsrCurves.attack, adsr.attackCurve)
+        putCurve(s.adsrCurves.decay, adsr.decayCurve)
+        putCurve(s.adsrCurves.release, adsr.releaseCurve)
+        put(s.adsr.on, adsr.on?.let { if (it) 1.0 else 0.0 })
     }
 
-    put(s.sample.begin, begin)
-    put(s.sample.end, end)
-    put(s.sample.speed, speed)
-    put(s.sample.loop, loop?.let { if (it) 1.0 else 0.0 })
+    put(s.sample.begin, doors.begin)
+    put(s.sample.end, doors.end)
+    put(s.sample.speed, doors.speed)
+    put(s.sample.loop, doors.loop?.let { if (it) 1.0 else 0.0 })
 
-    return copy(
-        oscParams = out.takeIf { it.isNotEmpty() },
-        filters = FilterDefs(filters.filters.filter { it is FilterDef.Formant || it is FilterDef.Body }),
-        adsr = AdsrDef.empty,
-        crush = null,
-        crushOversample = null,
-        coarse = null,
-        coarseOversample = null,
-        distort = null,
-        distortShape = null,
-        distortOversample = null,
-        tremoloDepth = null,
-        tremoloSync = null,
-        tremoloShape = null,
-        tremoloSkew = null,
-        tremoloPhase = null,
-        begin = null,
-        end = null,
-        speed = null,
-        loop = null,
-    )
+    return copy(oscParams = out.takeIf { it.isNotEmpty() })
 }

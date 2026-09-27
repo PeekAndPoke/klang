@@ -49,7 +49,7 @@ class LangFmattackSpec : StringSpec({
         }
     }
 
-    "top-level fm(attack = ...) sets VoiceData.fmAttack correctly" {
+    "top-level fm(attack = ...) sets SprudelVoiceData.fmAttack correctly" {
         val p = s("hh hh").apply(fm(attack = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -57,7 +57,7 @@ class LangFmattackSpec : StringSpec({
         events.map { it.data.fmAttack } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fm(attack = ...) sets VoiceData.fmAttack on existing pattern" {
+    "control pattern fm(attack = ...) sets SprudelVoiceData.fmAttack on existing pattern" {
         val base = note("c3 e3")
         val p = base.fm(attack = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

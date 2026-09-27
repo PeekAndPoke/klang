@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -23,23 +22,18 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * (The SPRUDEL door deliberately differs on those two: a bare control call is a no-op and
  * a bad name keeps the prior curve — per-event control-pattern semantics, pinned by
  * `LangAdsrCurvesSpec`; only the UNSET default is shared across doors.) The ignitor door
- * used to default attack/release to Square while the strip wire resolved Exponential —
- * one knob, two sounds. This spec is the tripwire.
+ * used to default attack/release to Square while the strip wire resolved Exponential (one
+ * knob, two sounds). This spec is the tripwire.
  */
 class LangAdsrCurveDefaultSpec : StringSpec({
 
-    "sprudel wire: unset curves resolve to Exponential on every stage" {
-        val resolved = AdsrDef.Std().resolve()
-        resolved.attackCurve shouldBe AdsrCurve.Exponential
-        resolved.decayCurve shouldBe AdsrCurve.Exponential
-        resolved.releaseCurve shouldBe AdsrCurve.Exponential
+    "sprudel wire: an unset curve is the classic() curve slot's default, Exponential, on every stage" {
+        // A pattern that writes no curve sends no `adsrCurves.*` key (next row), so the slot's default rules.
+        val exp = AdsrCurves.indexOf(AdsrCurve.Exponential)
 
-        // and with EMPTY defaults too — this reaches the literal `?: AdsrCurve.Default`
-        // fallbacks (defaultSynth carries its own curves, shadowing them otherwise)
-        val bare = AdsrDef.Std().resolve(defaults = AdsrDef.Std())
-        bare.attackCurve shouldBe AdsrCurve.Exponential
-        bare.decayCurve shouldBe AdsrCurve.Exponential
-        bare.releaseCurve shouldBe AdsrCurve.Exponential
+        (IgnitorDsl.Slots.adsrCurves.attack as IgnitorDsl.Param).default shouldBe exp
+        (IgnitorDsl.Slots.adsrCurves.decay as IgnitorDsl.Param).default shouldBe exp
+        (IgnitorDsl.Slots.adsrCurves.release as IgnitorDsl.Param).default shouldBe exp
     }
 
     "sprudel door: a pattern without curve calls carries NO curve on the wire (engine default rules)" {

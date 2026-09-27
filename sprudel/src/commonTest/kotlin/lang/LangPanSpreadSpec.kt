@@ -39,7 +39,7 @@ class LangPanSpreadSpec : StringSpec({
         }
     }
 
-    "unison(pan = ...) sets VoiceData.panSpread" {
+    "unison(pan = ...) sets SprudelVoiceData.panSpread" {
         val p = "0 1".apply(unison(pan = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 

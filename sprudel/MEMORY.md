@@ -540,7 +540,6 @@ return applyCat(patterns)
 ### Sample Manipulation
 
 - `begin()`, `end()`, `speed()`, `loop()`
-- `loopBegin()` / `loopb`, `loopEnd()` / `loope`
 - `loopAt()`, `loopAtCps()`
 - `cut()`, `slice()`, `splice()`
 

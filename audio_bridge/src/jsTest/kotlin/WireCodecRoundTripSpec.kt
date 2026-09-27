@@ -164,31 +164,17 @@ class WireCodecRoundTripSpec : StringSpec({
         ).forEach { decode_SampleRequest(encode_SampleRequest(it)) shouldBe it }
     }
 
-    "ScheduledVoice round-trips a populated VoiceData (adsr + all filter kinds + enum + map)" {
+    "ScheduledVoice round-trips a populated VoiceData (both slot maps, the pitch-curve enums, a false Boolean?)" {
         val data = VoiceData.empty.copy(
             note = "c3", freqHz = 130.81, gain = 0.7, soundIndex = 2, cull = 0.2,
-            oscParams = mapOf("voices" to 7.0, "spread" to 0.3),
+            oscParams = mapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
             // The second string-keyed map, the orbit's slot state: same shape, different host, and
             // a key with a dot in it (the `<stage>.<knob>` spelling every classic slot carries).
             katalystParams = mapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),
-            adsr = AdsrDef.Std(
-                attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,
-                attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
-                // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is
-                // exactly the shape where `false` and `undefined` can be confused.
-                on = false,
-            ),
-            filters = FilterDefs(
-                listOf(
-                    FilterDef.HighPass(freq = 500.0, q = 2.0, envelope = null, passes = 3),
-                    FilterDef.LowPass(
-                        freq = 1000.0, q = 1.5,
-                        envelope = FilterEnvDef(attack = 0.01, decay = 0.1, sustain = 0.5, release = 0.2, depth = 0.9),
-                        passes = 2,
-                    ),
-                    FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 5.0)), mix = 0.5),
-                )
-            ),
+            pEnv = 12.0, pAttackCurve = AdsrCurve.Linear, pDecayCurve = AdsrCurve.Square, pReleaseCurve = AdsrCurve.Cube,
+            // Non-default on purpose (default is null): `Boolean?` through a `dynamic` codec is exactly the
+            // shape where `false` and `undefined` can be confused.
+            control = false,
         )
         val sv = ScheduledVoice("pb-1", data, startTime = 1.25, gateEndTime = 2.5, playbackStartTime = 0.5)
 
@@ -198,7 +184,7 @@ class WireCodecRoundTripSpec : StringSpec({
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
         val sv = ScheduledVoice(
             "pb-2",
-            VoiceData.empty.copy(note = "a4", freqHz = 440.0, adsr = AdsrDef.Std.empty),
+            VoiceData.empty.copy(note = "a4", freqHz = 440.0),
             0.0, 1.0, 0.0,
         )
         decode_ScheduledVoice(encode_ScheduledVoice(sv)) shouldBe sv
@@ -236,7 +222,7 @@ class WireCodecRoundTripSpec : StringSpec({
     }
 
     "Cmd round-trips (flattened sealed, ScheduledVoice list, recursive IgnitorDsl tree)" {
-        val voice = ScheduledVoice("pb", VoiceData.empty.copy(note = "c3", adsr = AdsrDef.Std.empty), 0.0, 1.0, 0.0)
+        val voice = ScheduledVoice("pb", VoiceData.empty.copy(note = "c3"), 0.0, 1.0, 0.0)
         val dsl = IgnitorDsl.Variants(
             listOf(
                 IgnitorDsl.Sine(freq = IgnitorDsl.Freq),
@@ -307,5 +293,24 @@ class WireCodecRoundTripSpec : StringSpec({
         dec.totalSize shouldBe 3; dec.isLastChunk shouldBe true; dec.chunkOffset shouldBe 0
         dec.meta shouldBe chunk.meta
         dec.data.toList() shouldBe chunk.data.toList()
+    }
+
+    "a sample's meta envelope round-trips inside Cmd.Sample.Chunk (AdsrDef's one wire host since VoiceData.adsr left)" {
+        val meta = SampleMetadata(
+            anchor = 0.01,
+            loop = SampleMetadata.LoopRange(startSec = 0.1, endSec = 0.4),
+            adsr = AdsrDef.Std(
+                attack = 0.005, decay = 0.2, sustain = 0.6, release = 0.05,
+                attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
+            ),
+        )
+        val chunk = KlangCommLink.Cmd.Sample.Chunk(
+            req = SampleRequest("b", "s", null, "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
+            meta = meta, totalSize = 1, isLastChunk = true, chunkOffset = 0,
+            data = doubleArrayOf(0.5),
+        )
+        val dec = decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(chunk)) as KlangCommLink.Cmd.Sample.Chunk
+
+        dec.meta shouldBe meta
     }
 })

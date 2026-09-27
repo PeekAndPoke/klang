@@ -11,10 +11,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.WireFilter
+import io.peekandpoke.klang.sprudel.WireFilterEnv
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.wireFilters
 
@@ -34,7 +34,7 @@ class LangFilterCurvesSpec : StringSpec({
         val mapper: (String?, String?, String?) -> PatternMapperFn,
         val chained: (PatternMapperFn, String?, String?, String?) -> PatternMapperFn,
         val curves: (SprudelVoiceData) -> Triple<AdsrCurve?, AdsrCurve?, AdsrCurve?>,
-        val wire: (List<FilterDef>) -> FilterEnvDef?,
+        val wire: (List<WireFilter>) -> WireFilterEnv?,
     )
 
     val doors = listOf(
@@ -43,28 +43,28 @@ class LangFilterCurvesSpec : StringSpec({
             { p, a, d, r -> p.lpfCurves(a, d, r) }, { s, a, d, r -> s.lpfCurves(a, d, r) },
             { a, d, r -> lpfCurves(a, d, r) }, { m, a, d, r -> m.lpfCurves(a, d, r) },
             { Triple(it.lpAttackCurve, it.lpDecayCurve, it.lpReleaseCurve) },
-            { fs -> fs.filterIsInstance<FilterDef.LowPass>().single().envelope },
+            { fs -> fs.filterIsInstance<WireFilter.LowPass>().single().envelope },
         ),
         Door(
             "hpfCurves", "hpf",
             { p, a, d, r -> p.hpfCurves(a, d, r) }, { s, a, d, r -> s.hpfCurves(a, d, r) },
             { a, d, r -> hpfCurves(a, d, r) }, { m, a, d, r -> m.hpfCurves(a, d, r) },
             { Triple(it.hpAttackCurve, it.hpDecayCurve, it.hpReleaseCurve) },
-            { fs -> fs.filterIsInstance<FilterDef.HighPass>().single().envelope },
+            { fs -> fs.filterIsInstance<WireFilter.HighPass>().single().envelope },
         ),
         Door(
             "bpfCurves", "bpf",
             { p, a, d, r -> p.bpfCurves(a, d, r) }, { s, a, d, r -> s.bpfCurves(a, d, r) },
             { a, d, r -> bpfCurves(a, d, r) }, { m, a, d, r -> m.bpfCurves(a, d, r) },
             { Triple(it.bpAttackCurve, it.bpDecayCurve, it.bpReleaseCurve) },
-            { fs -> fs.filterIsInstance<FilterDef.BandPass>().single().envelope },
+            { fs -> fs.filterIsInstance<WireFilter.BandPass>().single().envelope },
         ),
         Door(
             "notchCurves", "notch",
             { p, a, d, r -> p.notchCurves(a, d, r) }, { s, a, d, r -> s.notchCurves(a, d, r) },
             { a, d, r -> notchCurves(a, d, r) }, { m, a, d, r -> m.notchCurves(a, d, r) },
             { Triple(it.nfAttackCurve, it.nfDecayCurve, it.nfReleaseCurve) },
-            { fs -> fs.filterIsInstance<FilterDef.Notch>().single().envelope },
+            { fs -> fs.filterIsInstance<WireFilter.Notch>().single().envelope },
         ),
     )
 
@@ -130,12 +130,12 @@ class LangFilterCurvesSpec : StringSpec({
             val events = door.pattern(seq("5 7"), null, null, null).queryArc(0.0, 1.0)
 
             events.map { door.curves(it.data) } shouldBe listOf(Triple(null, null, null), Triple(null, null, null))
-            events.map { it.data.toVoiceData().wireFilters().filters } shouldBe listOf(emptyList(), emptyList())
+            events.map { it.data.toVoiceData().wireFilters() } shouldBe listOf(emptyList(), emptyList())
         }
 
-        "$n: the curves reach the wire's FilterEnvDef when the filter has an envelope" {
+        "$n: the curves reach the wire's WireFilterEnv when the filter has an envelope" {
             val p = SprudelPattern.compile("""note("c").${door.filter}(freq = 800, env = 12, decay = 0.2).$n("linear", "scurve", "square")""")!!
-            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters().filters)
+            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters())
 
             assertSoftly {
                 env?.attackCurve shouldBe AdsrCurve.Linear
@@ -147,7 +147,7 @@ class LangFilterCurvesSpec : StringSpec({
 
         "$n: a curve alone switches no envelope on" {
             val p = SprudelPattern.compile("""note("c").${door.filter}(800).$n("linear", "linear", "linear")""")!!
-            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters().filters)
+            val env = door.wire(p.queryArc(0.0, 1.0)[0].data.toVoiceData().wireFilters())
 
             withClue("the filter is built, its envelope is not") { env shouldBe null }
         }

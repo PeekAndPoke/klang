@@ -29,14 +29,11 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the rule; this is only what THIS door
  * does). Called from the MATERIAL setter alone, because the material is this stage's name knob.
  *
- * Fills the voice FIELDS with the same two constants. The wire still carries them (as a
- * `FilterDef.Body` in `filters`), but since step 5b-1 the orbit's resonator reads the SLOTS and
- * nothing else, and since step 5b-3 no backend code reads that filter at all.
- *
- * Byte-identical to what the engine did with an unset field: `toVoiceData` reads a null `bodyMix`
- * as [BODY_WET], and a null floor means [BODY_FLOOR] to `FilterDef.Body`; the chain takes the same
- * two through `KatalystSlots.bodyDef`. What the fill buys is that one place decides them instead
- * of two engine fallbacks that could drift.
+ * Fills the voice FIELDS with the same two constants, so the field accessors (`body.wet`) read what
+ * the slots hold. The wire does not carry the fields: since step 5b-1 the orbit's resonator reads the
+ * SLOTS and nothing else, and the `filters` field that once carried a `FilterDef.Body` left
+ * `VoiceData` in phase 3 step 9. The chain resolves the same two constants through
+ * `KatalystSlots.bodyDef`; what the fill buys is that one place decides them.
  */
 private fun SprudelVoiceData.fillBodyDefaults() {
     val slots = katalystParamsOrNew()

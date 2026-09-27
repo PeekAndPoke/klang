@@ -44,7 +44,7 @@ class LangLoopSpec : StringSpec({
         events[0].data.loop shouldBe true
     }
 
-    "loop() sets VoiceData.loop correctly" {
+    "loop() sets SprudelVoiceData.loop correctly" {
         val p = sound("hh hh").apply(loop("1 0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2

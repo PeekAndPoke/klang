@@ -173,12 +173,10 @@ class ClassicTailSpec : StringSpec({
     }
 
     "the defaults are the voice envelope's, not the adsr node's (sustain 1.0 against 0.7, release 0.05 against 0.3)" {
-        val adsr = AdsrDef.Std.defaultSynth
-
-        (IgnitorDsl.Slots.adsr.attack as IgnitorDsl.Param).default shouldBe adsr.attack
-        (IgnitorDsl.Slots.adsr.decay as IgnitorDsl.Param).default shouldBe adsr.decay
-        (IgnitorDsl.Slots.adsr.sustain as IgnitorDsl.Param).default shouldBe adsr.sustain
-        (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).default shouldBe adsr.release
+        (IgnitorDsl.Slots.adsr.attack as IgnitorDsl.Param).default shouldBe 0.01
+        (IgnitorDsl.Slots.adsr.decay as IgnitorDsl.Param).default shouldBe 0.1
+        (IgnitorDsl.Slots.adsr.sustain as IgnitorDsl.Param).default shouldBe 1.0
+        (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).default shouldBe 0.05
     }
 
     // ── endsInClassic(): the tag (phase 3 step 10) ──

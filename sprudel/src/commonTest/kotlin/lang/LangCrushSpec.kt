@@ -63,7 +63,7 @@ class LangCrushSpec : StringSpec({
         }
     }
 
-    "crush() sets VoiceData.crush" {
+    "crush() sets SprudelVoiceData.crush" {
         val p = note("a b").crush("4 8")
         val events = p.queryArc(0.0, 1.0)
 

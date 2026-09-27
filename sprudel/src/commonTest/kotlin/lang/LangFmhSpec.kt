@@ -31,7 +31,7 @@ class LangFmhSpec : StringSpec({
         }
     }
 
-    "top-level fm(h = ...) sets VoiceData.fmh correctly" {
+    "top-level fm(h = ...) sets SprudelVoiceData.fmh correctly" {
         val p = s("hh hh").apply(fm(h = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -39,7 +39,7 @@ class LangFmhSpec : StringSpec({
         events.map { it.data.fmh } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fm(h = ...) sets VoiceData.fmh on existing pattern" {
+    "control pattern fm(h = ...) sets SprudelVoiceData.fmh on existing pattern" {
         val base = note("c3 e3")
         val p = base.fm(h = "0.5 1.0")
         val events = p.queryArc(0.0, 2.0)

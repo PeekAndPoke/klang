@@ -61,14 +61,14 @@ class LangEndSpec : StringSpec({
         }
     }
 
-    "end() sets VoiceData.end correctly" {
+    "end() sets SprudelVoiceData.end correctly" {
         val p = sound("hh hh").apply(end("0.25 0.5"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.end } shouldBe listOf(0.25, 0.5)
     }
 
-    "control pattern end() sets VoiceData.end on existing pattern" {
+    "control pattern end() sets SprudelVoiceData.end on existing pattern" {
         val base = note("c3 e3")
         val p = base.end("0.6 0.8")
         val events = p.queryArc(0.0, 2.0)

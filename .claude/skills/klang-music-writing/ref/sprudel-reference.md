@@ -409,10 +409,8 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 | `end(pos)`       |         | End position (0-1)        | `s("breaks").end(0.5)`             |
 | `speed(factor)`  |         | Playback speed            | `s("breaks").speed(0.5)`           |
 | `cut(group)`     |         | Choke group               | `s("hh*4").cut(1)`                 |
-| `loop(flag)`     |         | Enable looping            | `s("pad").loop(1)`                 |
+| `loop(flag)`     |         | Loop the begin..end region | `s("pad").loop(1).begin(0.25).end(0.75)` |
 | `loopAt(cycles)` |         | Fit sample to n cycles    | `s("breaks").loopAt(1)`            |
-| `loopBegin(pos)` | `loopb` | Loop start (0-1)          | `s("pad").loop(1).loopBegin(0.25)` |
-| `loopEnd(pos)`   | `loope` | Loop end (0-1)            | `s("pad").loop(1).loopEnd(0.75)`   |
 | `slice(n, pat)`  |         | Slice sample into n parts | `s("breaks").slice(8, "0 3 5 2")`  |
 | `splice(n, pat)` |         | Slice + pitch-adjust      | `s("breaks").splice(8, "0 3 5 2")` |
 

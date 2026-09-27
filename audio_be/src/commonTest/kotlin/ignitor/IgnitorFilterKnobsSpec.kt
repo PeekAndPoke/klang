@@ -11,7 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef as WireFilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_CUTOFF_OFFSET_PER_ANALOG
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_ATTACK_SEC
@@ -173,14 +172,6 @@ class IgnitorFilterKnobsSpec : StringSpec({
         lp.sustainLevel shouldBe IgnitorDsl.Constant(FILTER_ENV_SUSTAIN_LEVEL)
         lp.releaseSec shouldBe IgnitorDsl.Constant(FILTER_ENV_RELEASE_SEC)
         lp.humanize shouldBe false
-
-        // The strip resolves the same five from the same constants (`FilterEnvDef.resolve`),
-        // which is what "defaults live in ONE place" buys. The depth is the one deliberate
-        // difference and it is in the KDoc: on a node, `env = 0` IS "no envelope".
-        WireFilterEnvDef().resolve().attack shouldBe FILTER_ENV_ATTACK_SEC
-        WireFilterEnvDef().resolve().decay shouldBe FILTER_ENV_DECAY_SEC
-        WireFilterEnvDef().resolve().sustain shouldBe FILTER_ENV_SUSTAIN_LEVEL
-        WireFilterEnvDef().resolve().release shouldBe FILTER_ENV_RELEASE_SEC
     }
 
     "a filter with the default envelope renders bit for bit what a filter without the knobs rendered" {

@@ -7,8 +7,9 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
+import io.peekandpoke.klang.sprudel.getByType
 import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangFiltersSpec : StringSpec({
@@ -24,7 +25,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(500.0, 1000.0, 500.0, 1000.0)
         events.map { it.data.cutoff } shouldBe expected
-        events.map { (it.data.toVoiceData().wireFilters()[0] as FilterDef.LowPass).freq } shouldBe expected
+        events.map { (it.data.toVoiceData().wireFilters()[0] as WireFilter.LowPass).freq } shouldBe expected
     }
 
     // hpf()
@@ -38,7 +39,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(300.0, 600.0, 300.0, 600.0)
         events.map { it.data.hcutoff } shouldBe expected
-        events.map { (it.data.toVoiceData().wireFilters()[0] as FilterDef.HighPass).freq } shouldBe expected
+        events.map { (it.data.toVoiceData().wireFilters()[0] as WireFilter.HighPass).freq } shouldBe expected
     }
 
     // notch()
@@ -50,7 +51,7 @@ class LangFiltersSpec : StringSpec({
         events.size shouldBe 2
 
         events.map { it.data.notchf } shouldBe listOf(400.0, 500.0)
-        events.map { (it.data.toVoiceData().wireFilters()[0] as FilterDef.Notch).freq } shouldBe listOf(400.0, 500.0)
+        events.map { (it.data.toVoiceData().wireFilters()[0] as WireFilter.Notch).freq } shouldBe listOf(400.0, 500.0)
     }
 
     "control pattern notch() applies Notch per event" {
@@ -62,7 +63,7 @@ class LangFiltersSpec : StringSpec({
 
         val expected = listOf(600.0, 700.0, 600.0, 700.0)
         events.map { it.data.notchf } shouldBe expected
-        events.map { (it.data.toVoiceData().wireFilters()[0] as FilterDef.Notch).freq } shouldBe expected
+        events.map { (it.data.toVoiceData().wireFilters()[0] as WireFilter.Notch).freq } shouldBe expected
     }
 
     "lpf() works within compiled code as top-level function" {
@@ -131,7 +132,7 @@ class LangFiltersSpec : StringSpec({
         events[0].data.nresonance shouldBe 0.8
 
         val voiceData = events[0].data.toVoiceData()
-        (voiceData.wireFilters()[0] as FilterDef.Notch).q shouldBe 0.8
+        (voiceData.wireFilters()[0] as WireFilter.Notch).q shouldBe 0.8
     }
 
     "each filter can have independent resonance values" {
@@ -150,8 +151,8 @@ class LangFiltersSpec : StringSpec({
         // Check converted VoiceData carries each filter's resonance independently.
         // toVoiceData() imposes the canonical HPF->...->LPF chain order, so look up by type, not index.
         val voiceData = events[0].data.toVoiceData()
-        voiceData.wireFilters().getByType<FilterDef.LowPass>()?.q shouldBe 0.7
-        voiceData.wireFilters().getByType<FilterDef.HighPass>()?.q shouldBe 1.3
+        voiceData.wireFilters().getByType<WireFilter.LowPass>()?.q shouldBe 0.7
+        voiceData.wireFilters().getByType<WireFilter.HighPass>()?.q shouldBe 1.3
     }
 
     // Compiled code tests for resonance functions

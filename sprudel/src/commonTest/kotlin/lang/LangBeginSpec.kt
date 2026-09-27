@@ -61,14 +61,14 @@ class LangBeginSpec : StringSpec({
         }
     }
 
-    "begin() sets VoiceData.begin correctly" {
+    "begin() sets SprudelVoiceData.begin correctly" {
         val p = sound("hh hh").apply(begin("0.25 0.5"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.begin } shouldBe listOf(0.25, 0.5)
     }
 
-    "control pattern begin() sets VoiceData.begin on existing pattern" {
+    "control pattern begin() sets SprudelVoiceData.begin on existing pattern" {
         val base = note("c3 e3")
         val p = base.begin("0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

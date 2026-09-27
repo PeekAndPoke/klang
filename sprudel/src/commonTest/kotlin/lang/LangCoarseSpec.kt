@@ -63,7 +63,7 @@ class LangCoarseSpec : StringSpec({
         }
     }
 
-    "coarse() sets VoiceData.coarse" {
+    "coarse() sets SprudelVoiceData.coarse" {
         val p = note("a b").coarse("2 4")
         val events = p.queryArc(0.0, 1.0)
 

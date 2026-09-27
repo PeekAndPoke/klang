@@ -89,7 +89,7 @@ class LangVelocitySpec : StringSpec({
         }
     }
 
-    "top-level velocity() sets VoiceData.velocity correctly" {
+    "top-level velocity() sets SprudelVoiceData.velocity correctly" {
         // Given a simple sequence of velocity values within one cycle
         val p = "1 0".apply(velocity("0.5 1.0"))
 
@@ -101,7 +101,7 @@ class LangVelocitySpec : StringSpec({
         events.map { it.data.velocity } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern velocity() sets VoiceData.velocity on existing pattern" {
+    "control pattern velocity() sets SprudelVoiceData.velocity on existing pattern" {
         // Given a base note pattern producing two events per cycle
         val base = note("c3 e3")
 

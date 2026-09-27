@@ -115,7 +115,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-three accessor is an object with a call form and the first-step operators" {
-        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "legato", "accelerate").forEach { name ->
+        listOf("begin", "end", "speed", "cut", "legato", "accelerate").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -135,7 +135,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
-        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "loopb" to "loopBegin", "loope" to "loopEnd", "vel" to "velocity").forEach { (alias, canonical) ->
+        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "vel" to "velocity").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.

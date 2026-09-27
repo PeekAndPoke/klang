@@ -49,7 +49,7 @@ class LangFmdecaySpec : StringSpec({
         }
     }
 
-    "top-level fm(decay = ...) sets VoiceData.fmDecay correctly" {
+    "top-level fm(decay = ...) sets SprudelVoiceData.fmDecay correctly" {
         val p = s("hh hh").apply(fm(decay = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -57,7 +57,7 @@ class LangFmdecaySpec : StringSpec({
         events.map { it.data.fmDecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fm(decay = ...) sets VoiceData.fmDecay on existing pattern" {
+    "control pattern fm(decay = ...) sets SprudelVoiceData.fmDecay on existing pattern" {
         val base = note("c3 e3")
         val p = base.fm(decay = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

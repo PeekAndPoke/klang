@@ -30,14 +30,14 @@ class LangUnitSpec : StringSpec({
         }
     }
 
-    "unit() sets VoiceData.unit correctly" {
+    "unit() sets SprudelVoiceData.unit correctly" {
         val p = sound("hh hh").apply(unit("c s"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.unit } shouldBe listOf("c", "s")
     }
 
-    "control pattern unit() sets VoiceData.unit on existing pattern" {
+    "control pattern unit() sets SprudelVoiceData.unit on existing pattern" {
         val base = note("c3 e3")
         val p = base.unit("c s")
         val events = p.queryArc(0.0, 2.0)

@@ -67,8 +67,8 @@ const val ADSR_SUSTAIN_LEVEL: Double = 0.7
 
 // ── The VOICE envelope: what every voice gets when the pattern writes nothing ──
 //
-// The envelope slots of `classic()` (`IgnitorDsl.Slots.adsr`) and `AdsrDef.Std.defaultSynth` (a sample's
-// envelope fallback) read these four; they are the voice envelope the retired voice strip applied, so the
+// The envelope slots of `classic()` (`IgnitorDsl.Slots.adsr`) read these four (and `VoiceFactory`'s lifetime
+// fallback reads the release); they are the voice envelope the retired voice strip applied, so the
 // classic tail's unwritten envelope is that envelope by construction. They are NOT the Ignitor `adsr(...)` node's own
 // defaults (sustain [ADSR_SUSTAIN_LEVEL], release 0.3): see [ADSR_SUSTAIN_LEVEL] for why the two
 // differ and must not be unified without deciding which sound moves.

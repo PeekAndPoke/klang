@@ -7,31 +7,35 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 
 /**
  * Comprehensive test coverage for vowel formant synthesis.
  *
- * Tests all combinations of voice types and vowels to ensure formant filters are correctly created.
+ * Tests all combinations of voice types and vowels to ensure the door writes a vowel index the orbit's formant
+ * bank resolves. The orbit reads the `vowel.*` slots in `katalystParams`; the `FilterDef.Formant` the voice once
+ * carried in `filters` left the wire in phase 3 step 9, so these rows resolve the slot through the orbit's table.
  */
 class LangVowelComprehensiveSpec : StringSpec({
 
-    // Helper to verify formant filter creation
+    /** The formant bands the orbit resolves from this wire voice's `vowel.vowel` slot, or null (no vowel). */
+    fun bandsOf(voiceData: VoiceData): List<FilterDef.Formant.Band>? =
+        VowelBands.bandsAt(voiceData.katalystParams?.get("vowel.vowel") ?: Double.NaN)
+
+    // Helper to verify that the vowel resolves to a formant bank
     fun verifyFormantFilter(vowelSpec: String, shouldCreateFilter: Boolean = true) {
         val p = note("c3").vowel(vowel = vowelSpec)
         val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
+        val bands = bandsOf(events[0].data.toVoiceData())
 
         if (shouldCreateFilter) {
-            voiceData.filters.filters.size shouldBe 1
-            val formant = voiceData.filters.filters[0]
-            formant.shouldBeInstanceOf<FilterDef.Formant>()
-            formant.bands.size shouldBe 5
+            bands.shouldNotBeNull().size shouldBe 5
         } else {
-            voiceData.filters.filters.size shouldBe 0
+            bands shouldBe null
         }
     }
 
@@ -470,54 +474,50 @@ class LangVowelComprehensiveSpec : StringSpec({
     "soprano:a has correct formant frequencies" {
         val p = note("c3").vowel(vowel = "soprano:a")
         val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-        val formant = voiceData.filters.filters[0] as FilterDef.Formant
+        val bands = bandsOf(events[0].data.toVoiceData()).shouldNotBeNull()
 
-        formant.bands[0].freq shouldBe 800.0
-        formant.bands[1].freq shouldBe 1150.0
-        formant.bands[2].freq shouldBe 2900.0
-        formant.bands[3].freq shouldBe 3900.0
-        formant.bands[4].freq shouldBe 4950.0
+        bands[0].freq shouldBe 800.0
+        bands[1].freq shouldBe 1150.0
+        bands[2].freq shouldBe 2900.0
+        bands[3].freq shouldBe 3900.0
+        bands[4].freq shouldBe 4950.0
     }
 
     "bass:e has correct formant frequencies" {
         val p = note("c3").vowel(vowel = "bass:e")
         val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-        val formant = voiceData.filters.filters[0] as FilterDef.Formant
+        val bands = bandsOf(events[0].data.toVoiceData()).shouldNotBeNull()
 
-        formant.bands[0].freq shouldBe 400.0
-        formant.bands[1].freq shouldBe 1620.0
-        formant.bands[2].freq shouldBe 2400.0
-        formant.bands[3].freq shouldBe 2800.0
-        formant.bands[4].freq shouldBe 3100.0
+        bands[0].freq shouldBe 400.0
+        bands[1].freq shouldBe 1620.0
+        bands[2].freq shouldBe 2400.0
+        bands[3].freq shouldBe 2800.0
+        bands[4].freq shouldBe 3100.0
     }
 
     "tenor:ü (umlaut) has correct formant frequencies" {
         val p = note("c3").vowel(vowel = "tenor:ü")
         val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-        val formant = voiceData.filters.filters[0] as FilterDef.Formant
+        val bands = bandsOf(events[0].data.toVoiceData()).shouldNotBeNull()
 
-        formant.bands[0].freq shouldBe 290.0
-        formant.bands[1].freq shouldBe 1500.0
-        formant.bands[2].freq shouldBe 2300.0
-        formant.bands[3].freq shouldBe 3250.0
-        formant.bands[4].freq shouldBe 3540.0
+        bands[0].freq shouldBe 290.0
+        bands[1].freq shouldBe 1500.0
+        bands[2].freq shouldBe 2300.0
+        bands[3].freq shouldBe 3250.0
+        bands[4].freq shouldBe 3540.0
     }
 
     "alto:au (diphthong nucleus) has correct formant frequencies" {
         val p = note("c3").vowel(vowel = "alto:au")
         val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-        val formant = voiceData.filters.filters[0] as FilterDef.Formant
+        val bands = bandsOf(events[0].data.toVoiceData()).shouldNotBeNull()
 
         // 'au' maps to 'a' formants
-        formant.bands[0].freq shouldBe 660.0
-        formant.bands[1].freq shouldBe 1120.0
-        formant.bands[2].freq shouldBe 2750.0
-        formant.bands[3].freq shouldBe 3000.0
-        formant.bands[4].freq shouldBe 3350.0
+        bands[0].freq shouldBe 660.0
+        bands[1].freq shouldBe 1120.0
+        bands[2].freq shouldBe 2750.0
+        bands[3].freq shouldBe 3000.0
+        bands[4].freq shouldBe 3350.0
     }
 
     // =================================================================================================================
@@ -530,11 +530,9 @@ class LangVowelComprehensiveSpec : StringSpec({
 
         events.size shouldBe 4
 
-        // Verify all create formant filters
+        // Every one resolves to a formant bank
         events.forEach { event ->
-            val voiceData = event.data.toVoiceData()
-            voiceData.filters.filters.size shouldBe 1
-            voiceData.filters.filters[0].shouldBeInstanceOf<FilterDef.Formant>()
+            bandsOf(event.data.toVoiceData()).shouldNotBeNull()
         }
     }
 
@@ -543,27 +541,26 @@ class LangVowelComprehensiveSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         // First event: 'a' - should have formant filter
-        events[0].data.toVoiceData().filters.filters.size shouldBe 1
+        bandsOf(events[0].data.toVoiceData()).shouldNotBeNull()
 
         // Second event: 'x' - should not have formant filter
-        events[1].data.toVoiceData().filters.filters.size shouldBe 0
+        bandsOf(events[1].data.toVoiceData()) shouldBe null
 
         // Third event: 'bass:e' - should have formant filter
-        events[2].data.toVoiceData().filters.filters.size shouldBe 1
+        bandsOf(events[2].data.toVoiceData()).shouldNotBeNull()
     }
 
     "the voice path resolves through the shared VowelBands table (Katalyst step 3c parity)" {
-        // The voice half of the parity `KatalystSlotResolverSpec` holds the other half of: a
+        // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a
         // declared Katalyst chain's `vowel` stage reads the SAME table through `KatalystSlots`.
         // `audio_be` does not depend on `sprudel`, so the landmark band is pinned on both sides.
-        // Both paths now write the floor out: the door fills it when a call names the vowel
-        // (Katalyst step 5a-3), and a declared stage resolves the same constant from its slot.
-        val formant = note("c3").vowel(vowel = "a", wet = 0.3).queryArc(0.0, 1.0)[0]
-            .data.toVoiceData().filters.filters[0] as FilterDef.Formant
+        // The door fills the floor when a call names the vowel (Katalyst step 5a-3).
+        val voiceData = note("c3").vowel(vowel = "a", wet = 0.3).queryArc(0.0, 1.0)[0].data.toVoiceData()
+        val bands = bandsOf(voiceData).shouldNotBeNull()
 
-        formant.bands shouldBe VowelBands.bandsFor("soprano:a")
-        formant.bands[0] shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
-        formant.mix shouldBe 0.3
-        formant.floor shouldBe VOWEL_FLOOR
+        bands shouldBe VowelBands.bandsFor("soprano:a")
+        bands[0] shouldBe FilterDef.Formant.Band(freq = 800.0, db = 0.0, q = 80.0)
+        voiceData.katalystParams?.get("vowel.wet") shouldBe 0.3
+        voiceData.katalystParams?.get("vowel.floor") shouldBe VOWEL_FLOOR
     }
 })

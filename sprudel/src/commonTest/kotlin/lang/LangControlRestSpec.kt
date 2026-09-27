@@ -112,10 +112,6 @@ class LangControlRestSpec : StringSpec({
         listOf(
             single("begin", "pos", "0.1", "0.2"),
             single("end", "pos", "0.8", "0.9"),
-            single("loopBegin", "pos", "0.1", "0.2"),
-            single("loopb", "pos", "0.1", "0.2"),
-            single("loopEnd", "pos", "0.8", "0.9"),
-            single("loope", "pos", "0.8", "0.9"),
             single("cut", "group", "1", "2"),
             single("speed", "rate", "1.5", "2"),
         ),

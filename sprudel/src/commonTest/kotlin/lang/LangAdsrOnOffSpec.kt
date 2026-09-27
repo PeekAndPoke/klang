@@ -8,26 +8,28 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
  * The sprudel door for `.adsrOn()` / `.adsrOff()`: switching the voice's own amplitude envelope
  * (the VCA) on or off, so an ignitor that carries its own envelope does not compound with it.
  *
- * Covers the door through to the wire (the `adsr.on` slot, 1.0 or 0.0, phase 3 step 8). The value-side merge is in
- * `AdsrOnFlagSpec` (audio_bridge) and the render end in `ClassicTailRenderSpec` (audio_be, `adsr.on`).
+ * Covers the door through to the wire (the `adsr.on` slot, 1.0 or 0.0, phase 3 step 8). The render end is in
+ * `ClassicTailRenderSpec` (audio_be, `adsr.on`).
  *
  * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
 class LangAdsrOnOffSpec : StringSpec({
 
-    // The envelope crosses the wire as the `adsr.*` slots (phase 3 step 8); read back here into an `AdsrDef.Std`
-    // view so each row states the knob it is about.
-    fun wireAdsr(code: String): AdsrDef.Std {
+    /** The envelope as it crosses the wire, the `adsr.*` slots, read back into one view per note. */
+    data class WireAdsr(val attack: Double?, val decay: Double?, val sustain: Double?, val release: Double?, val on: Boolean?)
+
+    // The envelope crosses the wire as the `adsr.*` slots (phase 3 step 8); read back here into a [WireAdsr] so each
+    // row states the knob it is about.
+    fun wireAdsr(code: String): WireAdsr {
         val slots = SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().oscParams
 
-        return AdsrDef.Std(
+        return WireAdsr(
             attack = slots?.get("adsr.attack"),
             decay = slots?.get("adsr.decay"),
             sustain = slots?.get("adsr.sustain"),
@@ -39,8 +41,7 @@ class LangAdsrOnOffSpec : StringSpec({
     // ── Nothing said means nothing on the wire ────────────────────────────────
 
     "a pattern with no adsrOn/adsrOff carries NO claim on the wire" {
-        // The engine's Vca stage must be free to answer. If this ever became `true`, the pipeline
-        // layer would be dead and Vca(on = false) unreachable.
+        // The slot's default must be free to answer (on): a pattern that says nothing writes no `adsr.on`.
         wireAdsr("""note("c")""").on.shouldBeNull()
         wireAdsr("""note("c").adsr(0.01, 0.1, 0.7, 0.3)""").on.shouldBeNull()
     }
@@ -63,7 +64,7 @@ class LangAdsrOnOffSpec : StringSpec({
     // ── Flag, not variant: the numbers survive ────────────────────────────────
 
     "adsrOff keeps the envelope numbers, so it can be flipped back" {
-        // This is the property that chose a flag over an AdsrDef.None variant: in a live-coding
+        // This is the property that chose a flag over a "no envelope" variant: in a live-coding
         // language you switch it off, listen, and switch it back on.
         val off = wireAdsr("""note("c").adsr(0.005, 1.0, 1.0, 0.05).adsrOff()""")
         off.on shouldBe false

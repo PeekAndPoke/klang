@@ -83,36 +83,6 @@ class MutableVoiceDataGoldenSpec : StringSpec() {
                 "${e.part.begin.ticks}|${e.part.end.ticks}|${e.isOnset}|${vd.golden()}"
     }
 
-    /**
-     * Compact, deterministic structural dump of a [VoiceData] — replaces the old kotlinx `encodeToString`
-     * (the wire types are no longer `@Serializable`; the worklet uses the KSP codec). Only non-null leaves
-     * are emitted (matching the old `explicitNulls=false`), keys are sorted, so a corruption that sets a
-     * null field adds a key and one that nulls a set field drops a key — both show as a byte diff. Pure
-     * reflection over the data classes, no serialization.
-     */
-    private fun VoiceData.golden(): String {
-        val out = sortedMapOf<String, String>()
-        flattenNonNull(this, "", out)
-        return out.entries.joinToString(",") { "${it.key}=${it.value}" }
-    }
-
-    private fun flattenNonNull(value: Any?, path: String, out: MutableMap<String, String>) {
-        fun child(seg: String) = if (path.isEmpty()) seg else "$path.$seg"
-        when (value) {
-            null -> {} // omit
-            is Number, is Boolean, is CharSequence, is Char -> out[path] = value.toString()
-            is Enum<*> -> out[path] = value.name
-            is List<*> -> value.forEachIndexed { i, v -> flattenNonNull(v, child("$i"), out) }
-            is Map<*, *> -> value.forEach { (k, v) -> flattenNonNull(v, child("$k"), out) }
-            else -> value.javaClass.declaredFields
-                .filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) && '$' !in it.name }
-                .forEach { f ->
-                    f.isAccessible = true
-                    flattenNonNull(f.get(value), child(f.name), out)
-                }
-        }
-    }
-
     private fun buildMismatchMessage(expected: String, actual: String): String {
         val exp = expected.lines()
         val act = actual.lines()
@@ -134,7 +104,39 @@ class MutableVoiceDataGoldenSpec : StringSpec() {
             { it.part.begin.ticks },
             { it.whole.end.ticks },
             { it.part.end.ticks },
-            { it.data.toVoiceData().toString() },
+            // The last tiebreak between events at the same tick is the dump itself: sorted keys, non-null leaves, so the
+            // order is decided by content and not by `VoiceData.toString()`, whose shape moves with every field change.
+            { it.data.toVoiceData().golden() },
         )
+
+        /**
+         * Compact, deterministic structural dump of a [VoiceData], replacing the old kotlinx `encodeToString`
+         * (the wire types are no longer `@Serializable`; the worklet uses the KSP codec). Only non-null leaves
+         * are emitted (matching the old `explicitNulls=false`), keys are sorted, so a corruption that sets a
+         * null field adds a key and one that nulls a set field drops a key; both show as a byte diff. Pure
+         * reflection over the data classes, no serialization.
+         */
+        private fun VoiceData.golden(): String {
+            val out = sortedMapOf<String, String>()
+            flattenNonNull(this, "", out)
+            return out.entries.joinToString(",") { "${it.key}=${it.value}" }
+        }
+
+        private fun flattenNonNull(value: Any?, path: String, out: MutableMap<String, String>) {
+            fun child(seg: String) = if (path.isEmpty()) seg else "$path.$seg"
+            when (value) {
+                null -> {} // omit
+                is Number, is Boolean, is CharSequence, is Char -> out[path] = value.toString()
+                is Enum<*> -> out[path] = value.name
+                is List<*> -> value.forEachIndexed { i, v -> flattenNonNull(v, child("$i"), out) }
+                is Map<*, *> -> value.forEach { (k, v) -> flattenNonNull(v, child("$k"), out) }
+                else -> value.javaClass.declaredFields
+                    .filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) && '$' !in it.name }
+                    .forEach { f ->
+                        f.isAccessible = true
+                        flattenNonNull(f.get(value), child(f.name), out)
+                    }
+            }
+        }
     }
 }

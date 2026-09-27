@@ -88,7 +88,7 @@ class LangUnisonSpec : StringSpec({
         }
     }
 
-    "unison() sets VoiceData.voices" {
+    "unison() sets SprudelVoiceData.voices" {
         val p = "1 0".apply(unison("4 8"))
         val events = p.queryArc(0.0, 1.0)
 

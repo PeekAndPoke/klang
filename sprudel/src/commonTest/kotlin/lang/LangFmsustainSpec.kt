@@ -49,7 +49,7 @@ class LangFmsustainSpec : StringSpec({
         }
     }
 
-    "top-level fm(sustain = ...) sets VoiceData.fmSustain correctly" {
+    "top-level fm(sustain = ...) sets SprudelVoiceData.fmSustain correctly" {
         val p = s("hh hh").apply(fm(sustain = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -57,7 +57,7 @@ class LangFmsustainSpec : StringSpec({
         events.map { it.data.fmSustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern fm(sustain = ...) sets VoiceData.fmSustain on existing pattern" {
+    "control pattern fm(sustain = ...) sets SprudelVoiceData.fmSustain on existing pattern" {
         val base = note("c3 e3")
         val p = base.fm(sustain = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

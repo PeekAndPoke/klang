@@ -13,7 +13,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- tremolo(sync = ...) ----------------------------------------------------------------------------------------------------
 
-    "tremolo(sync = ...) sets VoiceData.tremoloSync correctly" {
+    "tremolo(sync = ...) sets SprudelVoiceData.tremoloSync correctly" {
         val p = note("c3").tremolo(sync = "4.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -40,7 +40,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- tremolo(depth = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremolo(depth = ...) sets VoiceData.tremoloDepth correctly" {
+    "tremolo(depth = ...) sets SprudelVoiceData.tremoloDepth correctly" {
         val p = note("c3").tremolo(depth = "0.5")
         val events = p.queryArc(0.0, 1.0)
 
@@ -59,7 +59,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- tremolo(skew = ...) ----------------------------------------------------------------------------------------------------
 
-    "tremolo(skew = ...) sets VoiceData.tremoloSkew correctly" {
+    "tremolo(skew = ...) sets SprudelVoiceData.tremoloSkew correctly" {
         val p = note("c3").tremolo(skew = "0.6")
         val events = p.queryArc(0.0, 1.0)
 
@@ -78,7 +78,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- tremolo(phase = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremolo(phase = ...) sets VoiceData.tremoloPhase correctly" {
+    "tremolo(phase = ...) sets SprudelVoiceData.tremoloPhase correctly" {
         val p = note("c3").tremolo(phase = "0.25")
         val events = p.queryArc(0.0, 1.0)
 
@@ -97,7 +97,7 @@ class LangTremoloSpec : StringSpec({
 
     // -- tremolo(shape = ...) ---------------------------------------------------------------------------------------------------
 
-    "tremolo(shape = ...) sets VoiceData.tremoloShape correctly" {
+    "tremolo(shape = ...) sets SprudelVoiceData.tremoloShape correctly" {
         val p = note("c3").tremolo(shape = "sine")
         val events = p.queryArc(0.0, 1.0)
 

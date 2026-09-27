@@ -79,12 +79,12 @@ class LangWetKnobSpec : StringSpec({
         firstData(note("c").phaser(wet = 0.5, floor = 0.25)).phaserFloor shouldBe 0.25
     }
 
-    "phaserFloor crosses the WIRE boundary (toVoiceData): set passes through, unnamed takes PHASER_FLOOR" {
-        // The sprudel accessor rows above stop BEFORE the wire; a dropped mapping line in
-        // toVoiceData() would make phaser(floor = ...) a silent no-op in real playback while
-        // every accessor row stays green.
-        firstData(note("c").phaser(floor = 0.25)).toVoiceData().phaserFloor shouldBe 0.25
-        firstData(note("c").phaser(wet = 0.5)).toVoiceData().phaserFloor shouldBe PHASER_FLOOR
+    "the phaser floor crosses the WIRE boundary (toVoiceData) as its orbit slot: set passes through, unnamed takes PHASER_FLOOR" {
+        // The sprudel accessor rows above stop BEFORE the wire. The orbit reads `phaser.floor` from `katalystParams`
+        // (the typed wire field left in phase 3 step 9), so a door that stopped writing the slot would make
+        // phaser(floor = ...) a silent no-op in real playback while every accessor row stays green.
+        firstData(note("c").phaser(floor = 0.25)).toVoiceData().katalystParams?.get("phaser.floor") shouldBe 0.25
+        firstData(note("c").phaser(wet = 0.5)).toVoiceData().katalystParams?.get("phaser.floor") shouldBe PHASER_FLOOR
     }
 
     "ignitor Kotlin door: wet is the first door parameter, floor a field of the node" {

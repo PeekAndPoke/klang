@@ -12,7 +12,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangPsustainSpec : StringSpec({
 
-    "penv(sustain = ...) sets VoiceData.pSustain correctly" {
+    "penv(sustain = ...) sets SprudelVoiceData.pSustain correctly" {
         val p = note("a b").penv(sustain = "0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -20,7 +20,7 @@ class LangPsustainSpec : StringSpec({
         events.map { it.data.pSustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern penv(sustain = ...) sets VoiceData.pSustain on existing pattern" {
+    "control pattern penv(sustain = ...) sets SprudelVoiceData.pSustain on existing pattern" {
         val base = note("c3 e3")
         val p = base.penv(sustain = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

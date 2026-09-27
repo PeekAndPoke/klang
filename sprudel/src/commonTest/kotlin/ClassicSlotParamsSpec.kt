@@ -8,7 +8,6 @@ package io.peekandpoke.klang.sprudel
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.sprudel.lang.adsr
@@ -110,23 +109,6 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").crush(4, 2)) shouldBe mapOf("crush.amount" to 4.0, "crush.oversample" to 2.0)
         slots(note("c").coarse(3, 2)) shouldBe mapOf("coarse.amount" to 3.0, "coarse.oversample" to 2.0)
         slots(note("c").distort(0.5, oversample = 4))["distort.oversample"] shouldBe 4.0
-    }
-
-    "the typed wire fields of these doors stay empty" {
-        val data = wire(
-            note("c").lpf(800, env = 12).hpf(100).bpf(900).notch(1500).adsr(0.01, 0.1, 0.5, 0.2).adsrOff()
-                .crush(4, 2).coarse(3, 2).distort(0.3, "tube", 2).tremolo(0.5, 4)
-                .begin(0.1).end(0.9).speed(2).loop()
-        )
-
-        data.filters.filters shouldBe emptyList()
-        data.adsr shouldBe AdsrDef.empty
-        listOf(
-            data.crush, data.coarse, data.distort, data.tremoloDepth, data.tremoloSync, data.cutoff, data.hcutoff,
-            data.bandf, data.resonance, data.begin, data.end, data.speed,
-        ).all { it == null } shouldBe true
-        listOf(data.distortShape, data.tremoloShape, data.loop, data.distortOversample, data.crushOversample, data.coarseOversample)
-            .all { it == null } shouldBe true
     }
 
     "every door writes every knob under its own key, with its own value: the full literal map, and every key a slot an instrument places" {

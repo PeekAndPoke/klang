@@ -27,7 +27,7 @@ worth keeping at all, to `build-lock-log.md`.
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
 | phase 3, steps 8 to 9 window (2b9d5146) | the whole branch `engine-redesign` | step 8 is committed and step 9 (the strip retires) is IN PROGRESS: an authored instrument that does not end in `classic()` gets no voice doors in between. Merging is the maintainer's decision when step 9 is done (revised 2026-09-27; step 11 deferred) |
-| phase 3 step 9 commit (a2) (2b9d5146) | audio_be `filters/` and its specs, audio_benchmark `EffectBenchmark`, a few KDocs in audio_bridge and klangscript-libs (the strip-only SVF classes go) | commits (a) and (a2) are COMMITTED; (b) the `VoiceData` cut and (c) the docs follow |
+| phase 3 step 9 commit (b) (2b9d5146) | audio_bridge `VoiceData` and the filter/adsr bridge types, sprudel `toVoiceData` and the `loopBegin`/`loopEnd` doors, the specs and benchmarks that build `VoiceData`, the wire codec (regenerated) | commits (a) and (a2) are COMMITTED; (b) the `VoiceData` cut is COMMITTED; (c) the docs sweep follows; scratch in the session's `scratchpad/p9b/` |
 
 ## The two layers
 

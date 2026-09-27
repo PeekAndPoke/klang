@@ -10,11 +10,10 @@ package io.peekandpoke.klang.audio_bridge
  * Defines a voice
  */
 data class VoiceData(
-    // note, scale, freq
+    // note, freq
     // TODO: note can also be numbers -> Midi and detune, f.e. 50.3
     val note: String?,
     val freqHz: Double?,
-    val scale: String?,
 
     // Gain / Dynamics
     /**
@@ -60,16 +59,10 @@ data class VoiceData(
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
      * declares, the chain a cylinder is born with included (Katalyst step 5b-1). It is the one
      * source of an orbit stage's knobs: the delay, reverb, compressor and duck fields left the wire
-     * in step 5b-3. The phaser fields below have had no reader since the voice strip and its per-voice
-     * phaser retired (phase 3 step 9); they leave the wire with the rest of the voice door fields.
+     * in step 5b-3, the phaser fields and the `filters` list that carried the vowel and the body in
+     * phase 3 step 9.
      */
     val katalystParams: Map<String, Double>? = null,
-
-    // Filters
-    val filters: FilterDefs = FilterDefs.empty,
-
-    // ADSR
-    val adsr: AdsrDef,
 
     // Pitch / Glisando
     /**
@@ -102,58 +95,14 @@ data class VoiceData(
     val fmSustain: Double?,
     val fmEnv: Double?,
 
-    // Effects
-    val distort: Double?,
-    /** Distortion shape: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify */
-    val distortShape: String?,
-    /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val distortOversample: Int? = null,
-    val coarse: Double?,
-    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val coarseOversample: Int? = null,
-    val crush: Double?,
-    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
-    val crushOversample: Int? = null,
-
-    // Phaser
-    val phaser: Double?,
-    val phaserDepth: Double?,
-    val phaserCenter: Double?,
-    val phaserSweep: Double?,
-    /** Minimum dry coefficient of the phaser wet/dry law; null = engine default 1.0 (purely additive). */
-    val phaserFloor: Double? = null,
-
-    // Tremolo
-    val tremoloSync: Double?,
-    val tremoloDepth: Double?,
-    val tremoloSkew: Double?,
-    val tremoloPhase: Double?,
-    val tremoloShape: String?,
-
-    // HPF / LPF
-    /** Low pass filter cutoff frequency */
-    val cutoff: Double?,
-    /** High pass filter cutoff frequency */
-    val hcutoff: Double?,
-    /** Band pass filter cutoff frequency */
-    val bandf: Double?,
-    /** Resonance amount for filters */
-    val resonance: Double?,
-
     // Routing
     val cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     val pan: Double?,
 
-    // Sample manipulation
-    val begin: Double?,
-    val end: Double?,
-    val speed: Double?,
-    val loop: Boolean?,
+    // Choke group: a new voice in the same cut group ends the ones still sounding.
     val cut: Int?,
-    val loopBegin: Double?,
-    val loopEnd: Double?,
 
     // Solo
     /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
@@ -224,7 +173,6 @@ data class VoiceData(
         val empty = VoiceData(
             note = null,
             freqHz = null,
-            scale = null,
             gain = null,
             legato = null,
             bank = null,
@@ -232,8 +180,6 @@ data class VoiceData(
             soundIndex = null,
             oscParams = null,
             katalystParams = null,
-            filters = FilterDefs.empty,
-            adsr = AdsrDef.empty,
             accelerate = null,
             vibrato = null,
             vibratoMod = null,
@@ -247,33 +193,9 @@ data class VoiceData(
             fmDecay = null,
             fmSustain = null,
             fmEnv = null,
-            distort = null,
-            distortShape = null,
-            coarse = null,
-            crush = null,
-            phaser = null,
-            phaserDepth = null,
-            phaserCenter = null,
-            phaserSweep = null,
-            phaserFloor = null,
-            tremoloSync = null,
-            tremoloDepth = null,
-            tremoloSkew = null,
-            tremoloPhase = null,
-            tremoloShape = null,
-            cutoff = null,
-            hcutoff = null,
-            bandf = null,
-            resonance = null,
             cylinder = null,
             pan = null,
-            begin = null,
-            end = null,
-            speed = null,
-            loop = null,
             cut = null,
-            loopBegin = null,
-            loopEnd = null,
             solo = null,
             sourceId = null,
         )

@@ -259,22 +259,6 @@ class CallInfoTest : StringSpec({
         assertReceiverLocationsSurvive("""s("bd").loop(1)""")
     }
 
-    "loopBegin passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopBegin("0.25")""")
-    }
-
-    "loopb passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopb("0.25")""")
-    }
-
-    "loopEnd passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loopEnd("0.75")""")
-    }
-
-    "loope passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""s("bd").loope("0.75")""")
-    }
-
     "loopAt keeps the receiver's locations" {
         assertReceiverLocationsSurvive("""s("bd").loopAt("1")""")
     }
@@ -519,8 +503,7 @@ class CallInfoTest : StringSpec({
  *   `loopAtCps`/`loopatcps` take their argument as a structure parameter (a factor, a step count,
  *   an inner join) and never prepend its location;
  * - `unit` and `loop` lift through `_liftData`, whose merge copies the control's DATA but not its
- *   `sourceLocations`: that merge is where the gap would be fixed. (`loopBegin`/`loopb`,
- *   `loopEnd`/`loope` are not in this group; they carry their locations and stay strict.)
+ *   `sourceLocations`: that merge is where the gap would be fixed.
  * - the no-argument doors (the `snd*` sounds, `rev`, `revv`, `palindrome`, `brak`) have no
  *   argument to locate.
  * Whether the first two groups SHOULD carry argument locations is a separate question; this helper

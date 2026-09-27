@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.math.PI
@@ -143,9 +142,8 @@ class VoiceGainWireSpec : StringSpec({
             freqHz = 440.0,
             sound = "triangle",
             gain = gain,
-            adsr = AdsrDef.Std(attack = 0.0, decay = 0.0005, sustain = 0.0, release = 0.05),
             cull = 0.0,
-        ).withClassicSlots(),
+        ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.0, decay = 0.0005, sustain = 0.0, release = 0.05))),
         gateEndTime = 0.02,
     )
 

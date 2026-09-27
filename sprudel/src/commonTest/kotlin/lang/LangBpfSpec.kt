@@ -10,10 +10,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef.BandPass
+import io.peekandpoke.klang.sprudel.WireFilter.BandPass
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.getByType
 import io.peekandpoke.klang.sprudel.wireFilters
 
 class LangBpfSpec : StringSpec({

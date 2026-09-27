@@ -7,7 +7,9 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -86,67 +88,49 @@ class LangVowelSpec : StringSpec({
         events[0].data.vowel shouldBe "a"
     }
 
-    "vowel() converts to FilterDef.Formant in toVoiceData()" {
-        val p = note("c3").vowel(vowel = "a")
+    // The orbit's vowel stage reads its SLOTS (`vowel.vowel`, `vowel.wet`, `vowel.floor` in `katalystParams`); the
+    // `FilterDef.Formant` the voice once carried in `filters` left the wire in phase 3 step 9. These rows read the
+    // slots the door writes and resolve the vowel index through the table the orbit uses.
+    fun slots(pattern: SprudelPattern): Map<String, Double> =
+        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
 
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
+    fun bands(slots: Map<String, Double>) = VowelBands.bandsAt(slots["vowel.vowel"] ?: Double.NaN)
 
-        voiceData.filters.filters.size shouldBe 1
-        val formant = voiceData.filters.filters[0] as io.peekandpoke.klang.audio_bridge.FilterDef.Formant
+    "vowel() writes the orbit's vowel slots: the vowel's index (a 5-band formant bank) and the default wet" {
+        val slots = slots(note("c3").vowel(vowel = "a"))
 
-        // Verify vowel 'a' formant bands
-        formant.bands.size shouldBe 5
+        bands(slots)?.size shouldBe 5
         // Default dry/wet amount (blended over the dry source, not wet-only).
-        formant.mix shouldBe 0.5
+        slots["vowel.wet"] shouldBe 0.5
     }
 
     "vowel(wet = ...) overrides the formant dry/wet amount" {
-        val p = note("c3").vowel(vowel = "a", wet = 0.3)
-
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        val formant = voiceData.filters.filters[0] as io.peekandpoke.klang.audio_bridge.FilterDef.Formant
-        formant.mix shouldBe 0.3
+        slots(note("c3").vowel(vowel = "a", wet = 0.3))["vowel.wet"] shouldBe 0.3
     }
 
     "vowel() works with all vowels (a, e, i, o, u)" {
-        val vowels = listOf("a", "e", "i", "o", "u")
-
-        vowels.forEach { v ->
+        listOf("a", "e", "i", "o", "u").forEach { v ->
             val p = note("c3").vowel(vowel = v)
 
-            val events = p.queryArc(0.0, 1.0)
-            events[0].data.vowel shouldBe v
-
-            // Verify vowel creates a formant filter
-            val voiceData = events[0].data.toVoiceData()
-            voiceData.filters.filters.size shouldBe 1
-
-            // Type check for formant filter
-            val filter = voiceData.filters.filters[0]
-            (filter is io.peekandpoke.klang.audio_bridge.FilterDef.Formant) shouldBe true
+            p.queryArc(0.0, 1.0)[0].data.vowel shouldBe v
+            // Every one resolves to a formant bank.
+            bands(slots(p)).shouldNotBeNull().shouldNotBeEmpty()
         }
     }
 
-    "vowel() with unknown vowel is ignored" {
-        val p = note("c3").vowel(vowel = "x")
+    "vowel() with unknown vowel is ignored: its index is none, and no formant bank resolves" {
+        val slots = slots(note("c3").vowel(vowel = "x"))
 
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        // Should not create a formant filter for unknown vowel
-        voiceData.filters.filters.size shouldBe 0
+        slots["vowel.vowel"] shouldBe 0.0
+        bands(slots) shouldBe null
     }
 
     "vowel(vowel = \"none\") is the off switch: it clears a previously set vowel" {
-        val p = note("c3").vowel(vowel = "a").vowel(vowel = "none")
+        // "none" is the explicit reset: no formant bank, even after an earlier vowel(vowel = "a").
+        val slots = slots(note("c3").vowel(vowel = "a").vowel(vowel = "none"))
 
-        val voiceData = p.queryArc(0.0, 1.0)[0].data.toVoiceData()
-
-        // "none" is the explicit reset: no formant filter, even after an earlier vowel(vowel = "a").
-        voiceData.filters.filters.size shouldBe 0
+        slots["vowel.vowel"] shouldBe 0.0
+        bands(slots) shouldBe null
     }
 
     "vowel() as string extension" {

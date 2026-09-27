@@ -9,9 +9,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.wireFilters
 
@@ -30,7 +30,7 @@ class LangBpqSpec : StringSpec({
 
         // Verify conversion to VoiceData
         val voiceData = events[0].data.toVoiceData()
-        (voiceData.wireFilters()[0] as FilterDef.BandPass).q shouldBe 1.5
+        (voiceData.wireFilters()[0] as WireFilter.BandPass).q shouldBe 1.5
     }
 
     "bpf(q = ...) works as pattern extension" {

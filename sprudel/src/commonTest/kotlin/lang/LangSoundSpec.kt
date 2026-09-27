@@ -16,7 +16,7 @@ import io.peekandpoke.klang.sprudel.soundName
 
 class LangSoundSpec : StringSpec({
 
-    "sound() sets VoiceData.sound" {
+    "sound() sets SprudelVoiceData.sound" {
         val p = sound("bd sd")
         val events = p.queryArc(0.0, 1.0)
 

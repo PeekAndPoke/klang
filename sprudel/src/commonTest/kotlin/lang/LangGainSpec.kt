@@ -76,7 +76,7 @@ class LangGainSpec : StringSpec({
         }
     }
 
-    "top-level gain() sets VoiceData.gain correctly" {
+    "top-level gain() sets SprudelVoiceData.gain correctly" {
         // Given a simple sequence of gain values within one cycle
         val p = sound("hh hh").apply(gain("0.5 1.0"))
 
@@ -88,7 +88,7 @@ class LangGainSpec : StringSpec({
         events.map { it.data.gain } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern gain() sets VoiceData.gain on existing pattern" {
+    "control pattern gain() sets SprudelVoiceData.gain on existing pattern" {
         // Given a base note pattern producing two events per cycle
         val base = note("c3 e3")
 

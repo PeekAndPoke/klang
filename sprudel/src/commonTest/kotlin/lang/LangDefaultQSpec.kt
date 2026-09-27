@@ -7,7 +7,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.eq
@@ -15,6 +14,7 @@ import io.peekandpoke.klang.audio_bridge.tap
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
 import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
@@ -31,16 +31,15 @@ class LangDefaultQSpec : StringSpec({
     val slotQ = IgnitorDsl.Slots.let { s -> listOf(s.lpf.q, s.hpf.q, s.bpf.q, s.notch.q) }
         .map { (it as IgnitorDsl.Param).default }
 
-    fun firstFilter(p: SprudelPattern?): FilterDef {
+    fun firstFilter(p: SprudelPattern?): WireFilter {
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         val wire = events.first().data.toVoiceData().wireFilters()[0]
 
         return when (wire) {
-            is FilterDef.LowPass -> wire.copy(q = wire.q ?: slotQ[0])
-            is FilterDef.HighPass -> wire.copy(q = wire.q ?: slotQ[1])
-            is FilterDef.BandPass -> wire.copy(q = wire.q ?: slotQ[2])
-            is FilterDef.Notch -> wire.copy(q = wire.q ?: slotQ[3])
-            is FilterDef.Formant, is FilterDef.Body -> wire
+            is WireFilter.LowPass -> wire.copy(q = wire.q ?: slotQ[0])
+            is WireFilter.HighPass -> wire.copy(q = wire.q ?: slotQ[1])
+            is WireFilter.BandPass -> wire.copy(q = wire.q ?: slotQ[2])
+            is WireFilter.Notch -> wire.copy(q = wire.q ?: slotQ[3])
         }
     }
 
@@ -50,17 +49,17 @@ class LangDefaultQSpec : StringSpec({
     }
 
     "sprudel Kotlin door: bare filters build q = 0.707" {
-        (firstFilter(note("c").lpf(800)) as FilterDef.LowPass).q shouldBe q
-        (firstFilter(note("c").hpf(200)) as FilterDef.HighPass).q shouldBe q
-        (firstFilter(note("c").bpf(1000)) as FilterDef.BandPass).q shouldBe q
-        (firstFilter(note("c").notch(1000)) as FilterDef.Notch).q shouldBe q
+        (firstFilter(note("c").lpf(800)) as WireFilter.LowPass).q shouldBe q
+        (firstFilter(note("c").hpf(200)) as WireFilter.HighPass).q shouldBe q
+        (firstFilter(note("c").bpf(1000)) as WireFilter.BandPass).q shouldBe q
+        (firstFilter(note("c").notch(1000)) as WireFilter.Notch).q shouldBe q
     }
 
     "sprudel script door: bare filters build q = 0.707" {
-        (firstFilter(SprudelPattern.compile("""note("c").lpf(800)""")) as FilterDef.LowPass).q shouldBe q
-        (firstFilter(SprudelPattern.compile("""note("c").hpf(200)""")) as FilterDef.HighPass).q shouldBe q
-        (firstFilter(SprudelPattern.compile("""note("c").bpf(1000)""")) as FilterDef.BandPass).q shouldBe q
-        (firstFilter(SprudelPattern.compile("""note("c").notch(1000)""")) as FilterDef.Notch).q shouldBe q
+        (firstFilter(SprudelPattern.compile("""note("c").lpf(800)""")) as WireFilter.LowPass).q shouldBe q
+        (firstFilter(SprudelPattern.compile("""note("c").hpf(200)""")) as WireFilter.HighPass).q shouldBe q
+        (firstFilter(SprudelPattern.compile("""note("c").bpf(1000)""")) as WireFilter.BandPass).q shouldBe q
+        (firstFilter(SprudelPattern.compile("""note("c").notch(1000)""")) as WireFilter.Notch).q shouldBe q
     }
 
     "ignitor DSL door: every filter/eq default is Constant(0.707)" {

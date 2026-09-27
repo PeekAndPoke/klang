@@ -58,7 +58,7 @@ class LangScaleSpec : StringSpec({
         events[1].data.scale shouldBe "major"
     }
 
-    "scale() sets VoiceData.scale correctly" {
+    "scale() sets SprudelVoiceData.scale correctly" {
         val p = n("0").scale("C4:major")
         val events = p.queryArc(0.0, 1.0)
 

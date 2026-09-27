@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -47,12 +46,15 @@ class VoiceSchedulerCullingSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 1.0),
             cull = cull,
-            tremoloSync = if (tremoloDepth != null) 4.0 else null,
-            tremoloDepth = tremoloDepth,
-            tremoloShape = if (tremoloDepth != null) "square" else null,
-        ).withClassicSlots(),
+        ).withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(attack = 0.001, decay = 0.05, sustain = 0.0, release = 1.0),
+                tremoloSync = if (tremoloDepth != null) 4.0 else null,
+                tremoloDepth = tremoloDepth,
+                tremoloShape = if (tremoloDepth != null) "square" else null,
+            ),
+        ),
         playbackStartTime = 0.0,
     )
 
@@ -194,10 +196,9 @@ class VoiceSchedulerCullingSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
             oscParams = mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
             cull = cull,
-        ).withClassicSlots(),
+        ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0))),
         playbackStartTime = 0.0,
     )
 

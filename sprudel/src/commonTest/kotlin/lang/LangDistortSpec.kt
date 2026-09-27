@@ -63,7 +63,7 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort() sets VoiceData.distort" {
+    "distort() sets SprudelVoiceData.distort" {
         val p = note("a b").distort("0.5 10.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -213,7 +213,7 @@ class LangDistortSpec : StringSpec({
         }
     }
 
-    "distort(shape = ...) sets VoiceData.distortShape" {
+    "distort(shape = ...) sets SprudelVoiceData.distortShape" {
         val p = note("c").distort(shape = "fold")
         val events = p.queryArc(0.0, 1.0)
 

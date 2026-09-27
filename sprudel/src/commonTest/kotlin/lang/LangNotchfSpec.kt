@@ -66,7 +66,7 @@ class LangNotchfSpec : StringSpec({
         }
     }
 
-    "notch() sets VoiceData.notchf" {
+    "notch() sets SprudelVoiceData.notchf" {
         val p = note("a b").apply(notch("1000 500"))
         val events = p.queryArc(0.0, 1.0)
 

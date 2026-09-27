@@ -422,8 +422,8 @@ class IgnitorGateSpec : StringSpec({
     }
 
     "an envelope is NOT gated on unset: the classic tail's ADSR is built by default" {
-        // Inverted from the plan's sketch, and the spike is why: today the voice strip's VCA runs
-        // on EVERY voice with `AdsrDef.defaultSynth` when the pattern sets nothing. What switches
+        // Inverted from the plan's sketch, and the spike is why: the voice strip's VCA ran (until it retired)
+        // on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the pattern set nothing. What switches
         // the tail's envelope off is an explicit `adsrOff`, which `classic()` writes into `on`.
         val unsetAttack = IgnitorDsl.Adsr(inner = saw, attackSec = IgnitorDsl.Constant(SLOT_UNSET))
 

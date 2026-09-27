@@ -12,14 +12,14 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 class LangEffectsRoutingSpec : StringSpec({
 
     // distort
-    "top-level distort() sets VoiceData.distort correctly" {
+    "top-level distort() sets SprudelVoiceData.distort correctly" {
         val p = note("a b").apply(distort("0.0 2.5"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.distort } shouldBe listOf(0.0, 2.5)
     }
 
-    "control pattern distort() sets VoiceData.distort on existing pattern" {
+    "control pattern distort() sets SprudelVoiceData.distort on existing pattern" {
         val base = note("c3 e3")
         val p = base.distort("1.0 3.0")
         val events = p.queryArc(0.0, 2.0)
@@ -28,14 +28,14 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // crush
-    "top-level crush() sets VoiceData.crush correctly" {
+    "top-level crush() sets SprudelVoiceData.crush correctly" {
         val p = note("a b").apply(crush("8 4"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.crush } shouldBe listOf(8.0, 4.0)
     }
 
-    "control pattern crush() sets VoiceData.crush on existing pattern" {
+    "control pattern crush() sets SprudelVoiceData.crush on existing pattern" {
         val base = note("c3 e3")
         val p = base.crush("12 6")
         val events = p.queryArc(0.0, 2.0)
@@ -44,14 +44,14 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // coarse
-    "top-level coarse() sets VoiceData.coarse correctly" {
+    "top-level coarse() sets SprudelVoiceData.coarse correctly" {
         val p = note("a b").apply(coarse("1 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
     }
 
-    "control pattern coarse() sets VoiceData.coarse on existing pattern" {
+    "control pattern coarse() sets SprudelVoiceData.coarse on existing pattern" {
         val base = note("c3 e3")
         val p = base.coarse("3 4")
         val events = p.queryArc(0.0, 2.0)
@@ -140,14 +140,14 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     // orbit
-    "top-level orbit() sets VoiceData.orbit correctly" {
+    "top-level orbit() sets SprudelVoiceData.orbit correctly" {
         val p = note("a b").apply(orbit("0 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.cylinder } shouldBe listOf(0, 2)
     }
 
-    "control pattern orbit() sets VoiceData.orbit on existing pattern" {
+    "control pattern orbit() sets SprudelVoiceData.orbit on existing pattern" {
         val base = note("c3 e3")
         val p = base.orbit("1 3")
         val events = p.queryArc(0.0, 2.0)

@@ -32,7 +32,7 @@ class LangVibratoModSpec : StringSpec({
         }
     }
 
-    "vibrato(depth = ...) sets VoiceData.vibratoMod depth" {
+    "vibrato(depth = ...) sets SprudelVoiceData.vibratoMod depth" {
         val p = note("a b").vibrato(depth = "0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 

@@ -2321,11 +2321,10 @@ data class FilterEnvelopeKnobs(
  * is a companion like the rest, which is what makes `lowpass(800, decaySec = 0.3,
  * sustainLevel = 0.2)` an audible pluck instead of a silent no-op.
  *
- * It exists because sprudel already behaved that way and the two surfaces have to agree:
- * `SprudelVoiceData` builds a `FilterDef` envelope when ANY of `lpattack` / `lpdecay` /
- * `lpsustain` / `lprelease` / `lpenv` is present, and `FilterEnvDef.resolve()` then fills the
- * missing depth with [FILTER_ENV_DEPTH_SEMITONES]. `lpf(800, decay = 0.3, sustain = 0.2)` is a
- * pluck, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be a pluck too, with the
+ * It exists because the sprudel door behaves that way and the two surfaces have to agree: a
+ * pattern that writes ANY of the `lpf.*` envelope stage slots but no depth gets
+ * [FILTER_ENV_DEPTH_SEMITONES] from the runtime's slot-layer depth fill (`slotLayerDepth` in
+ * `audio_be/.../IgnitorDslRuntime.kt`). `lpf(800, decay = 0.3, sustain = 0.2)` is a pluck, so `lowpass(800, decaySec = 0.3, sustainLevel = 0.2)` has to be a pluck too, with the
  * same depth and the same stage times, and (decision D3) the same default curve through them,
  * `MOD_ENV_CURVE`; see [IgnitorDsl.Lowpass.env].
  *

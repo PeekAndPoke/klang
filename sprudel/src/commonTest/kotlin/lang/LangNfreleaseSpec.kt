@@ -15,7 +15,7 @@ class LangNfreleaseSpec : StringSpec({
 
     // ---- nfrelease ----
 
-    "notch(release = ...) sets VoiceData.nfrelease" {
+    "notch(release = ...) sets SprudelVoiceData.nfrelease" {
         val p = note("a b").apply(notch(release = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -23,7 +23,7 @@ class LangNfreleaseSpec : StringSpec({
         events.map { it.data.nfrelease } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern notch(release = ...) sets VoiceData.nfrelease on existing pattern" {
+    "control pattern notch(release = ...) sets SprudelVoiceData.nfrelease on existing pattern" {
         val base = note("c3 e3")
         val p = base.notch(release = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

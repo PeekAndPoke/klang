@@ -20,8 +20,6 @@ import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -176,9 +174,8 @@ class VoiceBagGuardSpec : StringSpec({
         VoiceData.empty.copy(
             freqHz = 220.0,
             sound = sound,
-            filters = FilterDefs(listOf(FilterDef.LowPass(freq = lowpassHz, q = 1.0))),
             oscParams = analog?.let { mapOf("analog" to it) },
-        ).withClassicSlots() // a built-in reads its filter as slots (step 8)
+        ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = lowpassHz, q = 1.0)))) // a built-in reads its filter as slots (step 8)
 
     fun peakOf(buf: DoubleArray): Double = buf.maxOf { abs(it) }
 

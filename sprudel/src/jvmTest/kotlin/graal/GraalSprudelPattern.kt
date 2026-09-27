@@ -429,8 +429,6 @@ class GraalSprudelPattern(
                 it.unit = sampleUnit
                 it.loop = sampleLoop
                 it.cut = sampleCut
-                it.loopBegin = null
-                it.loopEnd = null
                 // Voice / Singing
                 it.vowel = vowel
                 // Dynamics / Compression (JS oracle emits the legacy compound string; split it,

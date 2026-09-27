@@ -391,11 +391,6 @@ object JsCompatTestData {
         Example("Sample LoopAt 8", """s("bd").loopAt(8)"""),
         Example("Sample Slice", """s("bd").slice(4, 1)"""),
         Example("Sample Splice", """s("bd").splice(4, 1)""", skip = true),
-        Example("Sample Loop Begin", """s("bd").loopBegin(0.25)""", skip = true),
-        Example("Sample Loop Begin alias", """s("bd").loopb(0.25)""", skip = true),
-        Example("Sample Loop End", """s("bd").loopEnd(0.75)""", skip = true),
-        Example("Sample Loop End alias", """s("bd").loope(0.75)""", skip = true),
-        Example("Sample Loop Begin and End", """s("bd").loopBegin(0.25).loopEnd(0.75)""", skip = true),
 
         *listOf(
             // Continuous patterns Steady

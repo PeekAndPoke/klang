@@ -76,7 +76,7 @@ class LangPanSpec : StringSpec({
         }
     }
 
-    "top-level pan() sets VoiceData.pan correctly" {
+    "top-level pan() sets SprudelVoiceData.pan correctly" {
         val p = "0 1".apply(pan("0.5 -0.5"))
         val events = p.queryArc(0.0, 1.0)
 

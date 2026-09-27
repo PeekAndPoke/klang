@@ -19,14 +19,6 @@ class LangNewFeaturesIntegrationSpec : StringSpec({
         events[0].data.pEnv shouldBe 12.0
     }
 
-    "All new loop control functions compile and work" {
-        val p = SprudelPattern.compile("""sound("bd").loopBegin("0.25").loopEnd("0.75")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.loopBegin shouldBe 0.25
-        events[0].data.loopEnd shouldBe 0.75
-    }
-
     "Splice function compiles and works" {
         val p = SprudelPattern.compile("""sound("bd").splice(4, 1)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()

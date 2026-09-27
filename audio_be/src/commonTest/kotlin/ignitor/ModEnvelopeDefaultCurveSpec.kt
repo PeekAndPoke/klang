@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -13,12 +12,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -234,9 +235,9 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                 scheduled = ScheduledVoice(
                     playbackId = "fm",
                     data = VoiceData.empty.copy(
-                        freqHz = 220.0, sound = "sine", adsr = AdsrDef.Std(on = false),
+                        freqHz = 220.0, sound = "sine",
                         fmh = 1.0, fmEnv = 100.0, fmAttack = attack, fmDecay = decay, fmSustain = sustain,
-                    ).withClassicSlots(),
+                    ).withClassicSlots(DoorFields(adsr = DoorAdsr(on = false))),
                     startTime = 0.0,
                     gateEndTime = 1.0,
                     playbackStartTime = 0.0,
@@ -304,10 +305,10 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                 scheduled = ScheduledVoice(
                     playbackId = "penv",
                     data = VoiceData.empty.copy(
-                        freqHz = 220.0, sound = "sine", adsr = AdsrDef.Std(on = false),
+                        freqHz = 220.0, sound = "sine",
                         pEnv = 12.0, pAttack = sec(a), pDecay = sec(d), pSustain = s, pRelease = sec(r),
                         pAttackCurve = named, pDecayCurve = named, pReleaseCurve = named,
-                    ).withClassicSlots(),
+                    ).withClassicSlots(DoorFields(adsr = DoorAdsr(on = false))),
                     startTime = 0.0,
                     gateEndTime = sec(gate.toDouble()),
                     playbackStartTime = 0.0,

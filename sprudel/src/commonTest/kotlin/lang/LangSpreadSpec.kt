@@ -39,7 +39,7 @@ class LangSpreadSpec : StringSpec({
         }
     }
 
-    "unison(spread = ...) sets VoiceData.spread" {
+    "unison(spread = ...) sets SprudelVoiceData.spread" {
         val p = "0 1".apply(unison(spread = "0.1 0.2"))
         val events = p.queryArc(0.0, 1.0)
 

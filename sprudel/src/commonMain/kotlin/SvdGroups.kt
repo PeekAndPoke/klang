@@ -140,8 +140,6 @@ data class SvdSample(
     var unit: String? = null,
     var loop: Boolean? = null,
     var cut: Int? = null,
-    var loopBegin: Double? = null,
-    var loopEnd: Double? = null,
 )
 
 // --- Field-wise merge helpers: `over` wins per field; always return a fresh, single-owner group. ----------
@@ -264,8 +262,6 @@ fun mergeSvdSample(base: SvdSample?, over: SvdSample?): SvdSample? {
         unit = over.unit ?: base.unit,
         loop = over.loop ?: base.loop,
         cut = over.cut ?: base.cut,
-        loopBegin = over.loopBegin ?: base.loopBegin,
-        loopEnd = over.loopEnd ?: base.loopEnd,
     )
 }
 

@@ -131,8 +131,8 @@ class TremoloSlots internal constructor() {
  * `adsrOn(flag)` and `adsrOff()` write (two doors, one knob, so it is named for the stage and not for
  * either door; no sprudel reader).
  *
- * The four stage defaults are the voice envelope's (`VOICE_ADSR_*`, the numbers of
- * `AdsrDef.Std.defaultSynth`), NOT the Ignitor `adsr` node's own: sustain 1.0 against 0.7, release
+ * The four stage defaults are the voice envelope's (`VOICE_ADSR_*` in `constants/EnvelopeDefaults.kt`), NOT the
+ * Ignitor `adsr` node's own: sustain 1.0 against 0.7, release
  * 0.05 against 0.3. The release matters beyond the envelope's shape: an OFF envelope still reports it
  * as the voice's tail, so an `adsrOff` voice lives exactly as long as it did on the strip. `adsr.on` defaults
  * to 1.0 (on) and must never default to 0.0, which is OFF (the envelope row of the gate).
@@ -169,8 +169,8 @@ class AdsrCurvesSlots internal constructor() {
  * `Slots.notchCurves`), mirroring sprudel's `lpfCurves(attack, decay, release)` and its three siblings
  * (phase 3 step 5b (c2)): `<door>Curves.attack|decay|release`, each an INDEX into [AdsrCurves] (sprudel
  * writes names, and the curves objects have no readers), default the index of `MOD_ENV_CURVE`, the curve
- * every modulation envelope has when nothing is written (decision D3), which is what the strip's
- * `FilterEnvDef.resolve` fills an unset curve with.
+ * every modulation envelope has when nothing is written (decision D3; the defaults' one home is
+ * `constants/EnvelopeDefaults.kt`).
  */
 class FilterCurvesSlots internal constructor(door: String) {
     private val description = curveSlotDescription(door)

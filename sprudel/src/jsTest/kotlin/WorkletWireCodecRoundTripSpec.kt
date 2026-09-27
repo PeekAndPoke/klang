@@ -37,8 +37,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         playbackStartTime = 0.5,
     )
 
-    "fully-populated voice (every cluster + all filter types) survives the worklet round-trip" {
-        // Touch every Svd* group so toVoiceData() emits adsr + all 5 filters + every scalar effect field.
+    "fully-populated voice (every cluster, every voice door as its slots) survives the worklet round-trip" {
+        // Touch every Svd* group, so toVoiceData() writes every slot key the doors translate to and every field left.
         val data = createSprudelVoiceData {
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
@@ -70,13 +70,13 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
             cylinder = 1; pan = 0.3
-            begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
+            begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1
             solo = 1.0; cull = 0.2
         }.toVoiceData()
 
-        // Sanity: the vowel and the body ride `filters`; the four voice filters and every voice door travel as
-        // `classic()` slot keys in `oscParams` (phase 3 step 8), so the map carries them through the codec too.
-        data.filters.size shouldBe 2
+        // Sanity: the four voice filters and every voice door travel as `classic()` slot keys in `oscParams` (phase 3
+        // step 8), so the map carries them through the codec too. The vowel and body fields set above cross nothing:
+        // the orbit stages travel as `katalystParams` slots (the doors write them; this voice sets the fields directly).
         data.oscParams?.get("lpf.passes") shouldBe 2.0
         data.oscParams?.get("notch.env") shouldBe 0.4
         data.oscParams?.get("adsr.on") shouldBe 0.0
@@ -103,8 +103,6 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             "hpf" to { hcutoff = 500.0; hresonance = 2.0; hpdecay = 0.1; hpenv = 0.6 },
             "bpf" to { bandf = 750.0; bandq = 1.2; bpsustain = 0.5; bpenv = 0.5 },
             "notch" to { notchf = 600.0; nresonance = 0.8; nfrelease = 0.2; nfenv = 0.4 },
-            "formant" to { vowel = "o"; vowelFloor = 0.1 },
-            "body" to { body = "glass"; bodyMix = 0.5; bodyFloor = 0.3 },
         )
         // Each voice filter's envelope depth as written above, the literal the decoded slot must carry.
         val envDepth = mapOf("lpf" to 1.0, "hpf" to 0.6, "bpf" to 0.5, "notch" to 0.4)
@@ -113,11 +111,8 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()
             val decoded = roundTrip(scheduled(data))
             decoded shouldBe scheduled(data)
-            // and the decoded filter is intact: a voice filter as its slots, the vowel and body in `filters`
-            when (name) {
-                "formant", "body" -> decoded.data.filters.size shouldBe 1
-                else -> decoded.data.oscParams?.get("$name.env") shouldBe envDepth.getValue(name)
-            }
+            // and the decoded filter is intact, as its slots
+            decoded.data.oscParams?.get("$name.env") shouldBe envDepth.getValue(name)
         }
     }
 

@@ -11,7 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 
@@ -25,7 +24,7 @@ class SampleVoiceRenderTest : StringSpec({
             pcm = pcm,
             meta = SampleMetadata(
                 loop = null,
-                adsr = AdsrDef.empty,
+                adsr = null,
                 anchor = 0.0,
             )
         )

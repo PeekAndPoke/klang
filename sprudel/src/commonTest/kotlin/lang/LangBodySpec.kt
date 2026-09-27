@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
@@ -48,100 +49,85 @@ class LangBodySpec : StringSpec({
         events[1].data.body shouldBe "tube"
     }
 
-    "body() converts to FilterDef.Body in toVoiceData() with default mix" {
-        val events = note("c3").body(material = "wood").queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
+    // The orbit's body stage reads its SLOTS (`body.material`, `body.wet`, `body.floor` in `katalystParams`, Katalyst
+    // step 5b-1); the `FilterDef.Body` the voice once carried in `filters` left the wire in phase 3 step 9. So these
+    // rows read the slots the door writes, and resolve the material index through the table the orbit uses.
+    fun slots(pattern: SprudelPattern): Map<String, Double> =
+        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
 
-        voiceData.filters.filters.size shouldBe 1
-        val bodyFilter = voiceData.filters.filters[0] as FilterDef.Body
-        bodyFilter.bands.size shouldBe 8
-        bodyFilter.mix shouldBe 0.5
+    fun modes(slots: Map<String, Double>) = BodyMaterials.modesAt(slots["body.material"] ?: Double.NaN)
+
+    "body() writes the orbit's body slots: the material's index (an 8-mode body) and the default wet" {
+        val slots = slots(note("c3").body(material = "wood"))
+
+        modes(slots)?.size shouldBe 8
+        slots["body.wet"] shouldBe BODY_WET
     }
 
     "every catalogue material resolves to an 8-mode body (except 'none')" {
         BodyMaterials.names.filter { it != "none" }.forEach { material ->
-            val voiceData = note("c3").body(material = material).queryArc(0.0, 1.0)[0].data.toVoiceData()
-
-            withClue(material) {
-                voiceData.filters.filters.size shouldBe 1
-                (voiceData.filters.filters[0] as FilterDef.Body).bands.size shouldBe 8
-            }
+            withClue(material) { modes(slots(note("c3").body(material = material)))?.size shouldBe 8 }
         }
     }
 
     "body(material = \"none\") is the off switch: it clears a previously set body" {
-        val voiceData = note("c3").body(material = "wood").body(material = "none").queryArc(0.0, 1.0)[0].data.toVoiceData()
-        voiceData.filters.filters.size shouldBe 0
+        val slots = slots(note("c3").body(material = "wood").body(material = "none"))
+
+        slots["body.material"] shouldBe 0.0
+        modes(slots) shouldBe null
     }
 
     "body(wet = ...) overrides the dry/wet mix" {
-        val events = note("c3").body(material = "tube", wet = 0.6).queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        val bodyFilter = voiceData.filters.filters[0] as FilterDef.Body
-        bodyFilter.mix shouldBe 0.6
+        slots(note("c3").body(material = "tube", wet = 0.6))["body.wet"] shouldBe 0.6
     }
 
     "body(wet = ...) passes raw values to the wire (the [0, 1] coercion is the ENGINE's, since C4)" {
         listOf(1.5, 5.0, 100.0).forEach { mix ->
-            val events = note("c3").body(material = "brass", wet = mix).queryArc(0.0, 1.0)
-            val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
-            bodyFilter.mix shouldBe mix
+            slots(note("c3").body(material = "brass", wet = mix))["body.wet"] shouldBe mix
         }
     }
 
     "body(floor = ...) takes the shared constant when the call leaves it out, and is settable" {
-        // Since Katalyst step 5a-3 the DOOR writes the floor when a call names the material, which
-        // is the same number the engine substituted for a null (`floor ?: BODY_FLOOR`), so nothing
-        // sounds different: one place decides it now instead of two.
-        val defaulted = note("c3").body(material = "wood").queryArc(0.0, 1.0)[0]
-            .data.toVoiceData().filters.filters[0] as FilterDef.Body
-        defaulted.floor shouldBe BODY_FLOOR
-
-        val overridden = note("c3").body(material = "wood", floor = 0.2).queryArc(0.0, 1.0)[0]
-            .data.toVoiceData().filters.filters[0] as FilterDef.Body
-        overridden.floor shouldBe 0.2
+        // Since Katalyst step 5a-3 the DOOR writes the floor when a call names the material: one place decides it.
+        slots(note("c3").body(material = "wood"))["body.floor"] shouldBe BODY_FLOOR
+        slots(note("c3").body(material = "wood", floor = 0.2))["body.floor"] shouldBe 0.2
     }
 
     "body params survive the grouped merge (material + wet + floor)" {
-        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's
-        // (ParallelMixFilter, C4) — the surface knob is documented as [0, 1].
+        // The wire carries the raw value; the [0, 1] coercion is the ENGINE's (ParallelMixFilter, C4).
         val events = note("c3").body(material = "brass", wet = 0.8, floor = 0.15).queryArc(0.0, 1.0)
-        val bodyFilter = events[0].data.toVoiceData().filters.filters[0] as FilterDef.Body
+        val slots = events[0].data.toVoiceData().katalystParams ?: emptyMap()
+
         events[0].data.body shouldBe "brass"
-        bodyFilter.mix shouldBe 0.8
-        bodyFilter.floor shouldBe 0.15
+        slots["body.material"] shouldBe BodyMaterials.indexOf("brass")
+        slots["body.wet"] shouldBe 0.8
+        slots["body.floor"] shouldBe 0.15
     }
 
-    "body() with unknown material is ignored" {
-        val events = note("c3").body(material = "unobtainium").queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
+    "body() with unknown material is ignored: its index is none, and no body resolves" {
+        val slots = slots(note("c3").body(material = "unobtainium"))
 
-        // No body filter is created for an unknown material — fail soft.
-        voiceData.filters.filters.size shouldBe 0
+        slots["body.material"] shouldBe 0.0
+        modes(slots) shouldBe null
     }
 
-    "the voice path resolves through the shared BodyMaterials table (Katalyst step 3c parity)" {
-        // The voice half of the parity `KatalystSlotResolverSpec` holds the other half of: a
-        // declared Katalyst chain's `body` stage reads the SAME table through `KatalystSlots`.
-        // `audio_be` does not depend on `sprudel`, so the landmark mode is pinned on both sides.
-        // Both paths now write the floor out: the door fills it when a call names the material
-        // (Katalyst step 5a-3), and a declared stage resolves the same constant from its slot.
-        val bodyFilter = note("c3").body(material = "wood", wet = 0.3).queryArc(0.0, 1.0)[0]
-            .data.toVoiceData().filters.filters[0] as FilterDef.Body
+    "the door resolves through the shared BodyMaterials table (Katalyst step 3c parity)" {
+        // The door half of the parity `KatalystSlotResolverSpec` holds the other half of: a declared Katalyst
+        // chain's `body` stage reads the SAME table through `KatalystSlots`. `audio_be` does not depend on
+        // `sprudel`, so the landmark mode is pinned on both sides.
+        val slots = slots(note("c3").body(material = "wood", wet = 0.3))
 
-        bodyFilter.bands shouldBe BodyMaterials.modesFor("wood")
-        bodyFilter.bands[0] shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
-        bodyFilter.mix shouldBe 0.3
-        bodyFilter.floor shouldBe BODY_FLOOR
+        modes(slots) shouldBe BodyMaterials.modesFor("wood")
+        modes(slots)?.get(0) shouldBe FilterDef.Body.Mode(freq = 100.0, db = 3.0, q = 12.0)
+        slots["body.wet"] shouldBe 0.3
+        slots["body.floor"] shouldBe BODY_FLOOR
     }
 
-    "the body stays in filters while the lowpass travels as its classic() slots (phase 3 step 8)" {
-        val events = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
+    "the body travels as orbit slots and the lowpass as its classic() slots, each in its own map" {
+        val voiceData = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)[0].data.toVoiceData()
 
-        voiceData.filters.filters.size shouldBe 1
-        (voiceData.filters.filters[0] is FilterDef.Body) shouldBe true
+        voiceData.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")
         voiceData.oscParams?.get("lpf.freq") shouldBe 800.0
+        voiceData.oscParams?.keys?.any { it.startsWith("body.") } shouldBe false
     }
 })

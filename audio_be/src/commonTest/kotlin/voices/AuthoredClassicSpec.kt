@@ -17,10 +17,6 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -91,7 +87,7 @@ class AuthoredClassicSpec : StringSpec({
 
     class Rendered(val out: DoubleArray, val endFrame: Double)
 
-    fun render(data: VoiceData): Rendered {
+    fun render(data: VoiceData, doors: DoorFields = DoorFields()): Rendered {
         val onsetSec = onsetFrame.toDouble() / sampleRate
         val factory = VoiceFactory(
             sampleRate = sampleRate,
@@ -107,7 +103,7 @@ class AuthoredClassicSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data.withClassicSlots(),
+                data = data.withClassicSlots(doors),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,
@@ -160,7 +156,7 @@ class AuthoredClassicSpec : StringSpec({
     }
 
     "the F1 remedy: with adsr(release = 0.5) written, the instrument's own tail sounds" {
-        val classic = render(base.copy(sound = "longclassic", adsr = AdsrDef.Std(release = 0.5)))
+        val classic = render(base.copy(sound = "longclassic"), DoorFields(adsr = DoorAdsr(release = 0.5)))
         val from = gateFrame + (0.1 * sampleRate).toInt()
         val until = gateFrame + (0.3 * sampleRate).toInt()
 
@@ -169,19 +165,17 @@ class AuthoredClassicSpec : StringSpec({
     }
 
     "the doors reach an authored classic() tree: filters, filter envelope, crush, tremolo and envelope" {
-        val doors = base.copy(
-            filters = FilterDefs(
-                listOf(
-                    FilterDef.HighPass(150.0, 0.707),
-                    FilterDef.LowPass(2400.0, 1.5, envelope = FilterEnvDef(depth = 12.0, decay = 0.2)),
-                ),
+        val doors = DoorFields(
+            filters = listOf(
+                DoorFilter.HighPass(150.0, 0.707),
+                DoorFilter.LowPass(2400.0, 1.5, envelope = DoorFilterEnv(depth = 12.0, decay = 0.2)),
             ),
             crush = 6.0,
             tremoloDepth = 0.4,
             tremoloSync = 5.0,
-            adsr = AdsrDef.Std(attack = 0.01, decay = 0.2, sustain = 0.6, release = 0.1),
+            adsr = DoorAdsr(attack = 0.01, decay = 0.2, sustain = 0.6, release = 0.1),
         )
-        val classic = render(doors.copy(sound = "shortclassic"))
+        val classic = render(base.copy(sound = "shortclassic"), doors)
 
         withClue("engaged: the doors change the voice") {
             firstMismatch(render(base.copy(sound = "shortclassic")).out, classic.out) shouldNotBe -1
@@ -189,8 +183,8 @@ class AuthoredClassicSpec : StringSpec({
     }
 
     "adsrOff on an authored classic() tree whose root is not an envelope ends the voice on the teardown fade" {
-        val off = base.copy(adsr = AdsrDef.Std(on = false))
-        val classic = render(off.copy(sound = "levelclassic"))
+        val off = DoorFields(adsr = DoorAdsr(on = false))
+        val classic = render(base.copy(sound = "levelclassic"), off)
 
         withClue("the fade is inside the render: the voice sounds just before its end and is an exact zero at its last frame") {
             val last = classic.endFrame.toInt() - 1
@@ -206,8 +200,8 @@ class AuthoredClassicSpec : StringSpec({
     "adsrOff on an authored classic() tree whose own root envelope has a MODULATED release still gets the teardown fade" {
         // Such an envelope has no static length, so it cannot promise to reach zero by the voice's end: the voice
         // fades it, as the strip always faded an `adsrOff` voice. Without the fade the voice ends on a hard cut.
-        val off = base.copy(adsr = AdsrDef.Std(on = false))
-        val classic = render(off.copy(sound = "modrelclassic"))
+        val off = DoorFields(adsr = DoorAdsr(on = false))
+        val classic = render(base.copy(sound = "modrelclassic"), off)
         val last = classic.endFrame.toInt() - 1
 
         withClue("the voice sounds just before its end, inside its own release") {

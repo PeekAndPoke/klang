@@ -6,10 +6,6 @@
 package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
@@ -17,16 +13,13 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.VowelBands
-import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
-import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.audio_bridge.uniqueId
 
 /**
  * Sprudel-specific voice data with flat fields.
  *
  * This is the intermediate representation used within the Sprudel pattern system.
- * It uses flat fields (no complex objects like AdsrDef or FilterDefs) to match
+ * It uses flat fields (no complex objects such as an envelope or a filter list) to match
  * the flat value model of cyclic-pattern languages.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
@@ -715,16 +708,6 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || sample != null) sampleOrNew().cut = v
         }
-    var loopBegin: Double?
-        get() = sample?.loopBegin
-        set(v) {
-            if (v != null || sample != null) sampleOrNew().loopBegin = v
-        }
-    var loopEnd: Double?
-        get() = sample?.loopEnd
-        set(v) {
-            if (v != null || sample != null) sampleOrNew().loopEnd = v
-        }
     // --------------------------------------------------------------------------------------------------
 
     /**
@@ -895,8 +878,8 @@ data class SprudelVoiceData(
      *
      * The voice doors' typed fields (the envelope, the four filters, crush, coarse, distort, tremolo and the
      * sample's begin, end, speed and loop) travel as SLOT KEYS in `oscParams`, the names the instruments read
-     * ([classicSlotParams], phase 3 step 8); their typed wire fields stay null. The vowel and body still ride
-     * `filters`.
+     * ([classicSlotParams], phase 3 step 8). The orbit stages (vowel, body, phaser and the rest) travel as
+     * `katalystParams` slots. The typed wire fields of all of them left `VoiceData` in phase 3 step 9.
      *
      * For inline ignitors ([SoundValue.Osc]) the wire-level `sound` name is resolved via
      * the process-wide [uniqueId] map — playbacks are expected to pre-register inline
@@ -926,33 +909,9 @@ data class SprudelVoiceData(
             is KatalystValue.Dsl -> k.name
         }
 
-        // The four voice filters travel as `classic()` slots (`classicSlotParams`); the vowel and body resonators
-        // still ride `filters` (orbit stages, no voice reader; they leave the wire in phase 3 step 9).
-        val filters = buildList {
-            // Vowel formant filter — blended over the dry source (source-filter model), like body.
-            vowel?.let { vowelValue ->
-                val formantBands = VowelBands.bandsFor(vowelValue)
-
-                formantBands?.let { bands ->
-                    add(FilterDef.Formant(bands = bands, mix = vowelMix ?: VOWEL_WET, floor = vowelFloor))
-                }
-            }
-
-            // Body resonator — fixed modal resonances blended over the dry source.
-            body?.let { material ->
-                BodyMaterials.modesFor(material)?.let { modes ->
-                    // Default body amount when the user didn't set bodyMix — a moderate, audible
-                    // amount (0..1; the blend keeps a broadband floor, so it never thins).
-                    // floor = null → engine default (BODY_FLOOR); bodyFloor() overrides it.
-                    add(FilterDef.Body(bands = modes, mix = bodyMix ?: BODY_WET, floor = bodyFloor))
-                }
-            }
-        }
-
         return VoiceData(
             note = note,
             freqHz = freqHz,
-            scale = scale,
             gain = foldedGain(),
             legato = legato,
             bank = bank,
@@ -964,13 +923,10 @@ data class SprudelVoiceData(
             // would change an orbit's settings invisibly. `oscParams` follows the same rule, one
             // contract for both (`ParamBag.toMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
-            // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8), not as the
-            // typed wire fields below, which stay null for them until step 9 cuts the fields.
+            // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
+            // wire fields left in phase 3 step 9.
             oscParams = classicSlotParams(),
             katalystParams = katalystParams?.toMap(),
-            // The vowel and the body, in their canonical order (formant, then body: the order they are built in above).
-            filters = FilterDefs(filters),
-            adsr = AdsrDef.empty,
             accelerate = accelerate,
             vibrato = vibrato,
             vibratoMod = vibratoMod,
@@ -987,37 +943,9 @@ data class SprudelVoiceData(
             fmDecay = fmDecay,
             fmSustain = fmSustain,
             fmEnv = fmEnv,
-            // Sent as slots (see `oscParams` above): every typed field of those doors is null here.
-            distort = null,
-            distortShape = null,
-            distortOversample = null,
-            coarse = null,
-            coarseOversample = null,
-            crush = null,
-            crushOversample = null,
-            tremoloSync = null,
-            tremoloDepth = null,
-            tremoloSkew = null,
-            tremoloPhase = null,
-            tremoloShape = null,
-            cutoff = null,
-            hcutoff = null,
-            bandf = null,
-            resonance = null,
-            begin = null,
-            end = null,
-            speed = null,
-            loop = null,
-            phaser = phaserRate,
-            phaserDepth = phaserDepth,
-            phaserCenter = phaserCenter,
-            phaserSweep = phaserSweep,
-            phaserFloor = phaserFloor,
             cylinder = cylinder,
             pan = pan,
             cut = cut,
-            loopBegin = loopBegin,
-            loopEnd = loopEnd,
             solo = solo,
             sourceId = patternId,
             master = masterName,

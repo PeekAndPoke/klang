@@ -136,8 +136,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("begin", """s("bd sd").begin(0.25).begin(mul(2))""", { it.begin }, 0.5, s("bd sd").begin(0.25).begin(mul(2))),
         row("end", """s("bd sd").end(0.5).end(mul(2))""", { it.end }, 1.0, s("bd sd").end(0.5).end(mul(2))),
         row("speed", """s("bd sd").speed(1).speed(mul(2))""", { it.speed }, 2.0, s("bd sd").speed(1).speed(mul(2))),
-        row("loopBegin", """s("bd sd").loopBegin(0.2).loopBegin(add(0.1))""", { it.loopBegin }, 0.3, s("bd sd").loopBegin(0.2).loopBegin(add(0.1))),
-        row("loopEnd", """s("bd sd").loopEnd(0.5).loopEnd(mul(2))""", { it.loopEnd }, 1.0, s("bd sd").loopEnd(0.5).loopEnd(mul(2))),
         row("cut", """s("bd sd").cut(1).cut(add(1))""", { it.cut?.toDouble() }, 2.0, s("bd sd").cut(1).cut(add(1))),
         row("fmh", """s("bd sd").fm(h = 2).fm(h = mul(2))""", { it.fmh }, 4.0, s("bd sd").fm(h = 2).fm(h = mul(2))),
         row("fmattack", """s("bd sd").fm(attack = 0.1).fm(attack = mul(2))""", { it.fmAttack }, 0.2, s("bd sd").fm(attack = 0.1).fm(attack = mul(2))),
@@ -186,8 +184,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("begin", """s("bd sd").begin(0.25).pan(begin)""", { it.pan }, 0.25, s("bd sd").begin(0.25).pan(begin)),
         row("end", """s("bd sd").end(0.5).pan(end)""", { it.pan }, 0.5, s("bd sd").end(0.5).pan(end)),
         row("speed", """s("bd sd").speed(1).pan(speed)""", { it.pan }, 1.0, s("bd sd").speed(1).pan(speed)),
-        row("loopBegin", """s("bd sd").loopBegin(0.2).pan(loopBegin)""", { it.pan }, 0.2, s("bd sd").loopBegin(0.2).pan(loopBegin)),
-        row("loopEnd", """s("bd sd").loopEnd(0.5).pan(loopEnd)""", { it.pan }, 0.5, s("bd sd").loopEnd(0.5).pan(loopEnd)),
         row("cut", """s("bd sd").cut(1).pan(cut)""", { it.pan }, 1.0, s("bd sd").cut(1).pan(cut)),
         row("fmh", """s("bd sd").fm(h = 2).pan(fm.h)""", { it.pan }, 2.0, s("bd sd").fm(h = 2).pan(fm.h)),
         row("fmattack", """s("bd sd").fm(attack = 0.1).pan(fm.attack)""", { it.pan }, 0.1, s("bd sd").fm(attack = 0.1).pan(fm.attack)),
@@ -236,16 +232,12 @@ class LangFieldAccessorsSpec : StringSpec({
         row("clip", """s("bd sd").apply(clip(2))""", { it.legato }, 2.0, s("bd sd").apply(clip(2))),
         row("vib", """s("bd sd").apply(vib(2))""", { it.vibrato }, 2.0, s("bd sd").apply(vib(2))),
         row("pamt", """s("bd sd").apply(pamt(2))""", { it.pEnv }, 2.0, s("bd sd").apply(pamt(2))),
-        row("loopb", """s("bd sd").apply(loopb(2))""", { it.loopBegin }, 2.0, s("bd sd").apply(loopb(2))),
-        row("loope", """s("bd sd").apply(loope(2))""", { it.loopEnd }, 2.0, s("bd sd").apply(loope(2))),
     )
 
     val aliasReadsBatchThree = listOf(
         row("clip", """s("bd sd").legato(2).pan(clip)""", { it.pan }, 2.0, s("bd sd").legato(2).pan(clip)),
         row("vib", """s("bd sd").vib(2).pan(vib.rate)""", { it.pan }, 2.0, s("bd sd").vib(2).pan(vib.rate)),
         row("pamt", """s("bd sd").pamt(2).pan(pamt.amount)""", { it.pan }, 2.0, s("bd sd").pamt(2).pan(pamt.amount)),
-        row("loopb", """s("bd sd").loopBegin(2).pan(loopb)""", { it.pan }, 2.0, s("bd sd").loopBegin(2).pan(loopb)),
-        row("loope", """s("bd sd").loopEnd(2).pan(loope)""", { it.pan }, 2.0, s("bd sd").loopEnd(2).pan(loope)),
     )
 
     // Batch four: the dynamics leftovers, the routing fields, the compressor threshold and fmenv.

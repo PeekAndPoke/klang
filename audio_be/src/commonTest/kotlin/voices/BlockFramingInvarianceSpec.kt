@@ -20,7 +20,6 @@ import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.coarse
@@ -98,9 +97,8 @@ class BlockFramingInvarianceSpec : StringSpec({
                     VoiceData.empty.copy(
                         freqHz = 220.0,
                         sound = "probe",
-                        adsr = AdsrDef.Std(release = relSec, on = false),
                     )
-                ).withClassicSlots(),
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = relSec, on = false))),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,
@@ -161,8 +159,7 @@ class BlockFramingInvarianceSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = 220.0,
                     sound = "framingsample",
-                    adsr = AdsrDef.Std(release = relSec, on = false),
-                ).withClassicSlots(),
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = relSec, on = false))),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,

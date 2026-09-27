@@ -15,7 +15,7 @@ class LangNfdecaySpec : StringSpec({
 
     // ---- nfdecay ----
 
-    "notch(decay = ...) sets VoiceData.nfdecay" {
+    "notch(decay = ...) sets SprudelVoiceData.nfdecay" {
         val p = note("a b").apply(notch(decay = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -23,7 +23,7 @@ class LangNfdecaySpec : StringSpec({
         events.map { it.data.nfdecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern notch(decay = ...) sets VoiceData.nfdecay on existing pattern" {
+    "control pattern notch(decay = ...) sets SprudelVoiceData.nfdecay on existing pattern" {
         val base = note("c3 e3")
         val p = base.notch(decay = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

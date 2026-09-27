@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
@@ -54,9 +53,9 @@ class KatalystBodyNonFiniteWetSpec : StringSpec({
 
         events.isNotEmpty() shouldBe true
 
-        val body = events.first().toVoiceData().filters.getByType<FilterDef.Body>().shouldNotBeNull()
+        val wet = events.first().toVoiceData().katalystParams?.get("body.wet").shouldNotBeNull()
 
-        withClue("the mix the wire carries, before any chain substitutes for it") { body.mix.isFinite() shouldBe false }
+        withClue("the wet slot the wire carries, before any chain substitutes for it") { wet.isFinite() shouldBe false }
     }
 
     "a non-finite body wet renders exactly like the material-only call" {

@@ -1274,7 +1274,7 @@ private fun IgnitorDsl.buildRaw(
 
         // GATE ROW `the envelope`: OFF only at an explicit `on` of exactly 0.0; UNSET IS ON. Inverted
         // from the plan's sketch on purpose (the spike corrected it, `docs/tasks/builtin-instruments.md`
-        // section 5): the voice strip's VCA ran on EVERY voice with `AdsrDef.defaultSynth` when the
+        // section 5): the voice strip's VCA ran on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the
         // pattern set nothing, and since step 6 a built-in's classic ADSR is that VCA, so it has to be
         // built BY DEFAULT, and only an explicit `adsrOff` (filled into `on` by `classic()`) switches it
         // off. See `switchedOff`.

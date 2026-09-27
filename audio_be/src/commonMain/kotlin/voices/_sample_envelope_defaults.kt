@@ -40,7 +40,6 @@ internal fun withSampleEnvelopeDefaults(bag: Map<String, Double>?, meta: AdsrDef
             defaults.fillCurve(s.adsrCurves.attack, meta.attackCurve)
             defaults.fillCurve(s.adsrCurves.decay, meta.decayCurve)
             defaults.fillCurve(s.adsrCurves.release, meta.releaseCurve)
-            defaults.fill(s.adsr.on, meta.on?.let { if (it) 1.0 else 0.0 })
         }
     }
 

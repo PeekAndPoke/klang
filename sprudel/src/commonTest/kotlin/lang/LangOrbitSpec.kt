@@ -51,7 +51,7 @@ class LangOrbitSpec : StringSpec({
         }
     }
 
-    "orbit() sets VoiceData.orbit" {
+    "orbit() sets SprudelVoiceData.orbit" {
         val p = note("a b c").apply(orbit("0 1 2"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -61,7 +61,7 @@ class LangOrbitSpec : StringSpec({
         events[2].data.cylinder shouldBe 2
     }
 
-    "o() alias sets VoiceData.orbit" {
+    "o() alias sets SprudelVoiceData.orbit" {
         val p = note("a b c").apply(o("0 1 2"))
         val events = p.queryArc(0.0, 1.0)
 

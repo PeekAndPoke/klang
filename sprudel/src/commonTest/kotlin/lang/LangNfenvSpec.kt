@@ -15,7 +15,7 @@ class LangNfenvSpec : StringSpec({
 
     // ---- nfenv ----
 
-    "notch(env = ...) sets VoiceData.nfenv" {
+    "notch(env = ...) sets SprudelVoiceData.nfenv" {
         val p = note("a b").apply(notch(env = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -23,7 +23,7 @@ class LangNfenvSpec : StringSpec({
         events.map { it.data.nfenv } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern notch(env = ...) sets VoiceData.nfenv on existing pattern" {
+    "control pattern notch(env = ...) sets SprudelVoiceData.nfenv on existing pattern" {
         val base = note("c3 e3")
         val p = base.notch(env = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

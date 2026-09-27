@@ -11,7 +11,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangPenvSpec : StringSpec({
 
-    "penv() sets VoiceData.pEnv correctly" {
+    "penv() sets SprudelVoiceData.pEnv correctly" {
         val p = note("a b").penv("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -19,7 +19,7 @@ class LangPenvSpec : StringSpec({
         events.map { it.data.pEnv } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern penv() sets VoiceData.pEnv on existing pattern" {
+    "control pattern penv() sets SprudelVoiceData.pEnv on existing pattern" {
         val base = note("c3 e3")
         val p = base.penv("0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

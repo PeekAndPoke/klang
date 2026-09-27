@@ -374,7 +374,7 @@ class KlangBenchmark(
             data = VoiceData.empty.copy(
                 sound = "supersaw",
                 // A lowpass to make it realistic load, as `classic()`'s slots (phase 3 step 8: a built-in reads
-                // slots only); the envelope runs at its defaults, the voice envelope's (`AdsrDef.defaultSynth`).
+                // slots only); the envelope runs at its defaults, the voice envelope's (`VOICE_ADSR_*`).
                 oscParams = IgnitorDsl.Slots.lpf.let { lpf ->
                     mapOf("voices" to 8.0) + listOf(lpf.freq to 1000.0, lpf.q to 1.0)
                         .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }

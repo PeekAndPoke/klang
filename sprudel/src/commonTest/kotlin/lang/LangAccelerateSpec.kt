@@ -40,7 +40,7 @@ class LangAccelerateSpec : StringSpec({
         events.map { it.data.accelerate } shouldBe listOf(-0.5, 0.75)
     }
 
-    "accelerate() sets VoiceData.accelerate correctly" {
+    "accelerate() sets SprudelVoiceData.accelerate correctly" {
         val p = note("a b").accelerate("-0.5 0.75")
         val events = p.queryArc(0.0, 1.0)
 
@@ -48,7 +48,7 @@ class LangAccelerateSpec : StringSpec({
         events.map { it.data.accelerate } shouldBe listOf(-0.5, 0.75)
     }
 
-    "control pattern accelerate() sets VoiceData.accelerate on existing pattern" {
+    "control pattern accelerate() sets SprudelVoiceData.accelerate on existing pattern" {
         val base = note("c3 e3")
         val p = base.accelerate("0.1 -0.2")
 

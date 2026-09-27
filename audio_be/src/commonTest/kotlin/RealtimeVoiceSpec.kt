@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
 import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -19,7 +21,6 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -51,8 +52,7 @@ class RealtimeVoiceSpec : StringSpec({
     val sustained = VoiceData.empty.copy(
         sound = "sine",
         freqHz = 440.0,
-        adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01),
-    ).withClassicSlots()
+    ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01)))
 
     fun hasAudio(out: ShortArray): Boolean = out.any { abs(it.toInt()) > 200 }
 
@@ -123,7 +123,7 @@ class RealtimeVoiceSpec : StringSpec({
 
     "a control-only realtime event never sounds" {
         val heard = renderAround(
-            voice = RealtimeVoice(liveId = 4, data = sustained.copy(control = true).withClassicSlots(), gateDurSec = 0.5),
+            voice = RealtimeVoice(liveId = 4, data = sustained.copy(control = true), gateDurSec = 0.5),
             blocksAfter = 10,
         )
         heard.any { it }.shouldBeFalse()
@@ -175,7 +175,7 @@ class RealtimeVoiceSpec : StringSpec({
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1)
-        start(d, liveId = 2, data = sustained.copy(freqHz = 660.0).withClassicSlots())
+        start(d, liveId = 2, data = sustained.copy(freqHz = 660.0))
         renderBlocks(d, 4.0 * blockFrames, 10)
 
         stop(d, liveId = 1)
@@ -282,9 +282,11 @@ class RealtimeVoiceSpec : StringSpec({
         // The feature's headline behavior (audit R2): a hard-cut mutation (endFrame = atFrame,
         // span dropped) must fail here — the tail must be audible past the pipe delay, below the
         // held level, and fall monotonically block-over-block.
-        val longRelease = sustained.copy(
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.2),
-        ).withClassicSlots()
+        val longRelease = sustained.withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.2),
+            ),
+        )
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = longRelease)
@@ -322,12 +324,14 @@ class RealtimeVoiceSpec : StringSpec({
         // AND seeds the de-click smoother mid-ramp: the same block comes out ~15x hotter
         // (measured 116 vs 1736 against steady 23178). The 3%-of-steady bar sits between with
         // wide margins both ways.
-        val slowAttack = sustained.copy(
-            adsr = AdsrDef.Std(
-                attack = 0.04, decay = 0.01, sustain = 1.0, release = 0.01,
-                attackCurve = AdsrCurve.Linear,
+        val slowAttack = sustained.withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(
+                    attack = 0.04, decay = 0.01, sustain = 1.0, release = 0.01,
+                    attackCurve = AdsrCurve.Linear,
+                ),
             ),
-        ).withClassicSlots()
+        )
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = slowAttack)
@@ -343,12 +347,14 @@ class RealtimeVoiceSpec : StringSpec({
         // (2*128 - 220 = 36) carries release positions 36..163 — level 0.92..0.63 of held under
         // the correct stamp. A stamp one block late enters the curve 128 frames in: the same
         // block carries positions 164..291 — level 0.63..0.34. Threshold 0.8 sits between.
-        val linRelease = sustained.copy(
-            adsr = AdsrDef.Std(
-                attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01,
-                releaseCurve = AdsrCurve.Linear,
+        val linRelease = sustained.withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(
+                    attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.01,
+                    releaseCurve = AdsrCurve.Linear,
+                ),
             ),
-        ).withClassicSlots()
+        )
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = linRelease)
@@ -360,7 +366,7 @@ class RealtimeVoiceSpec : StringSpec({
         (maxAbs(post[2]) > heldPeak * 8 / 10).shouldBeTrue()
     }
 
-    "vca-off: the teardown fade follows a realtime note-off (no full-amplitude step)" {
+    "a bare tree (no classic()): the teardown fade follows a realtime note-off (no full-amplitude step)" {
         // Guards the blockCtx.endFrame mirror in releaseGate: without it, renderGate's fade
         // window stays at the held horizon while the voice still dies at the moved end — a
         // full-amplitude cut mid-waveform. Bare sine (NO ignitor envelope), vca off: only the
@@ -370,7 +376,6 @@ class RealtimeVoiceSpec : StringSpec({
         val bare = VoiceData.empty.copy(
             sound = "baresine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.01, on = false),
         )
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = bare)
@@ -398,7 +403,7 @@ class RealtimeVoiceSpec : StringSpec({
         d.handle(KlangCommLink.Cmd.StartRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null)))
         d.handle(
             KlangCommLink.Cmd.StartRealtimeVoice(
-                "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots(), gateDurSec = null),
+                "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
             )
         )
         renderBlocks(d, 4.0 * blockFrames, 10)
@@ -433,7 +438,7 @@ class RealtimeVoiceSpec : StringSpec({
         renderDirect(4)
         engine.scheduler.startRealtimeVoice("rtA", RealtimeVoice(liveId = 1, data = sustained, gateDurSec = null))
         engine.scheduler.startRealtimeVoice(
-            "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots(), gateDurSec = null),
+            "rtB", RealtimeVoice(liveId = 1, data = sustained.copy(freqHz = 660.0), gateDurSec = null),
         )
         renderDirect(4)
         engine.scheduler.getActiveVoiceCount() shouldBe 2
@@ -503,7 +508,7 @@ class RealtimeVoiceSpec : StringSpec({
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1)
-        start(d, liveId = 1, data = sustained.copy(freqHz = 660.0).withClassicSlots())
+        start(d, liveId = 1, data = sustained.copy(freqHz = 660.0))
         renderBlocks(d, 4.0 * blockFrames, 10)
 
         stop(d, liveId = 1)
@@ -513,9 +518,11 @@ class RealtimeVoiceSpec : StringSpec({
     "note-off on a release-0 voice stops it, not ignores it" {
         // Guards the STRICT one-shot guard in Voice.releaseGate: endFrame == gateEndFrame is the
         // release-0 case and must still stop (a `<=` guard would hold the voice to the horizon).
-        val relZero = sustained.copy(
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.0),
-        ).withClassicSlots()
+        val relZero = sustained.withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 0.0),
+            ),
+        )
         val d = newDispatcher()
         renderBlocks(d, 0.0, 4)
         start(d, liveId = 1, data = relZero)
@@ -573,7 +580,7 @@ class RealtimeVoiceSpec : StringSpec({
         ctx.freqModBuffer.all { it == 1.0 }.shouldBeTrue() // released: depth collapses to 0
     }
 
-    "vca-off: note-off ramps the ignitor envelope down, not sustain-then-cliff (amendment A1)" {
+    "a bare tree with its own envelope: note-off ramps that envelope down, not sustain-then-cliff (amendment A1)" {
         // MUTATION CHECK (manual): revert the signalCtx update in Voice.releaseGate — the mid-tail
         // assertion goes red (the ignitor keeps sustaining until the teardown fade at the end).
         val d = newDispatcher()
@@ -592,7 +599,6 @@ class RealtimeVoiceSpec : StringSpec({
         val organ = VoiceData.empty.copy(
             sound = "heldorgan",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.06, on = false),
         )
 
         renderBlocks(d, 0.0, 4)

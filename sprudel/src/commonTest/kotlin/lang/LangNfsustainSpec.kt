@@ -15,7 +15,7 @@ class LangNfsustainSpec : StringSpec({
 
     // ---- nfsustain ----
 
-    "notch(sustain = ...) sets VoiceData.nfsustain" {
+    "notch(sustain = ...) sets SprudelVoiceData.nfsustain" {
         val p = note("a b").apply(notch(sustain = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -23,7 +23,7 @@ class LangNfsustainSpec : StringSpec({
         events.map { it.data.nfsustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern notch(sustain = ...) sets VoiceData.nfsustain on existing pattern" {
+    "control pattern notch(sustain = ...) sets SprudelVoiceData.nfsustain on existing pattern" {
         val base = note("c3 e3")
         val p = base.notch(sustain = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

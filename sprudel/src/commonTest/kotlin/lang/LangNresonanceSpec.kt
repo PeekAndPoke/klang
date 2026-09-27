@@ -15,7 +15,7 @@ class LangNresonanceSpec : StringSpec({
 
     // ---- nresonance ----
 
-    "notch(q = ...) sets VoiceData.nresonance" {
+    "notch(q = ...) sets SprudelVoiceData.nresonance" {
         val p = note("a b").apply(notch(q = "0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -23,7 +23,7 @@ class LangNresonanceSpec : StringSpec({
         events.map { it.data.nresonance } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern notch(q = ...) sets VoiceData.nresonance on existing pattern" {
+    "control pattern notch(q = ...) sets SprudelVoiceData.nresonance on existing pattern" {
         val base = note("c3 e3")
         val p = base.notch(q = "0.1 0.2")
         val events = p.queryArc(0.0, 2.0)

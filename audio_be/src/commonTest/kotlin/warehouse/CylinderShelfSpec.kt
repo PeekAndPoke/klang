@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.warehouse
 
-import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -75,7 +74,6 @@ class CylinderShelfSpec : StringSpec({
         playbackId = pid, startTime = start, gateEndTime = start + 0.05,
         data = VoiceData.empty.copy(
             sound = sound, freqHz = 330.0, cylinder = cylinder,
-            cutoff = 1500.0, resonance = 0.2,
             // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included
             // since step 5b-2.
             katalystParams = mapOf(
@@ -87,7 +85,7 @@ class CylinderShelfSpec : StringSpec({
                 "phaser.rate" to 0.5, "phaser.wet" to 0.6,
                 "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
             ),
-        ).withClassicSlots(),
+        ),
         playbackStartTime = 0.0,
     )
 
@@ -153,7 +151,6 @@ class CylinderShelfSpec : StringSpec({
                 playbackId = "a", startTime = 0.0, gateEndTime = 0.2,
                 data = VoiceData.empty.copy(
                     sound = "supersaw", freqHz = 110.0 + 50.0 * orbit, cylinder = orbit, gain = 2.0,
-                    cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
                     katalystParams = mapOf(
                         "delay.wet" to 0.9, "delay.time" to 0.05 + 0.1 * orbit,
                         "delay.feedback" to 0.8, "delay.cap" to 1.0,
@@ -161,7 +158,7 @@ class CylinderShelfSpec : StringSpec({
                         "phaser.rate" to 0.9, "phaser.wet" to 0.9,
                         "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
                     ),
-                ).withClassicSlots(),
+                ),
                 playbackStartTime = 0.0,
             )
         }

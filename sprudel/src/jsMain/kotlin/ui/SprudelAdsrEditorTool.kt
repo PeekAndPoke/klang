@@ -93,7 +93,7 @@ private class SprudelAdsrEditorComp(ctx: Ctx<Props>) : Component<SprudelAdsrEdit
     private val parsedDecay
         get() = parseNum(call?.args?.getOrNull(1), 0.1)
 
-    // Display fallbacks for missing args mirror the engine defaults (AdsrDef Std.defaultSynth).
+    // Display fallbacks for missing args mirror the engine defaults (`VOICE_ADSR_*` in `constants/EnvelopeDefaults.kt`).
     private val parsedSustain
         get() = parseNum(call?.args?.getOrNull(2), 1.0)
 

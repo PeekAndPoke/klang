@@ -39,7 +39,7 @@ class LangPhaserSpec : StringSpec({
         }
     }
 
-    "phaser(rate = ...) sets VoiceData.phaserRate correctly" {
+    "phaser(rate = ...) sets SprudelVoiceData.phaserRate correctly" {
         val p = note("c3").phaser(rate = "2.0")
         val events = p.queryArc(0.0, 1.0)
 
@@ -66,7 +66,7 @@ class LangPhaserSpec : StringSpec({
 
     // -- phaser(wet = ...) ----------------------------------------------------------------------------------------------------
 
-    "phaser(wet = ...) sets VoiceData.phaserDepth correctly" {
+    "phaser(wet = ...) sets SprudelVoiceData.phaserDepth correctly" {
         val p = note("c3").phaser(wet = "0.8")
         val events = p.queryArc(0.0, 1.0)
 
@@ -85,7 +85,7 @@ class LangPhaserSpec : StringSpec({
 
     // -- phaser(center = ...) ---------------------------------------------------------------------------------------------------
 
-    "phaser(center = ...) sets VoiceData.phaserCenter correctly" {
+    "phaser(center = ...) sets SprudelVoiceData.phaserCenter correctly" {
         val p = note("c3").phaser(center = "500")
         val events = p.queryArc(0.0, 1.0)
 
@@ -104,7 +104,7 @@ class LangPhaserSpec : StringSpec({
 
     // -- phaser(sweep = ...) ----------------------------------------------------------------------------------------------------
 
-    "phaser(sweep = ...) sets VoiceData.phaserSweep correctly" {
+    "phaser(sweep = ...) sets SprudelVoiceData.phaserSweep correctly" {
         val p = note("c3").phaser(sweep = "1000")
         val events = p.queryArc(0.0, 1.0)
 

@@ -14,7 +14,6 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -64,11 +63,8 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "p",
-                data = VoiceData.empty.copy(
-                    freqHz = 220.0, sound = "probe",
-                    // VCA off, so what we see is the INSTRUMENT's envelope alone
-                    adsr = AdsrDef.Std(on = false),
-                ),
+                // A bare tree (no `classic()`): what we see is the INSTRUMENT's envelope alone.
+                data = VoiceData.empty.copy(freqHz = 220.0, sound = "probe"),
                 startTime = startTime, gateEndTime = startTime + 0.2, playbackStartTime = 0.0,
             ),
             backendStartTimeSec = 0.0,

@@ -10,10 +10,11 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
+import io.peekandpoke.klang.sprudel.WireFilterEnv
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.wireFilters
 
@@ -44,13 +45,13 @@ class LangBpeSpec : StringSpec({
         events[0].data.bpenv shouldBe 0.5
     }
 
-    "bpf(env = ...) creates FilterEnvDef in FilterDef" {
+    "bpf(env = ...) writes the envelope slots (read back as WireFilterEnv)" {
         val data = createSprudelVoiceData {
             bandf = 1000.0
             bpenv = 0.5
         }
         val voiceData = data.toVoiceData()
-        val bpf = voiceData.wireFilters()[0] as FilterDef.BandPass
+        val bpf = voiceData.wireFilters()[0] as WireFilter.BandPass
 
         bpf.envelope shouldNotBe null
         bpf.envelope?.depth shouldBe 0.5

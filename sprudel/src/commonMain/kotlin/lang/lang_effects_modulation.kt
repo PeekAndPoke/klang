@@ -47,9 +47,9 @@ import io.peekandpoke.klang.sprudel.putKatalystParam
  * being 0.0: the engine gates the sweep on the depth, so a `phaser(rate = 2)` fills a wet of zero
  * and stays inaudible. The fill is about the companions being right the moment the depth arrives.
  *
- * Fills the voice FIELDS with the same five constants, and it is byte-identical to do so:
- * `VoiceFactory` substituted exactly these for a null `phaser` / `phaserDepth` / `phaserCenter` /
- * `phaserSweep` / `phaserFloor`.
+ * Fills the voice FIELDS with the same five constants, so the field accessors (`phaser.wet`) read
+ * what the slots hold. The fields no longer cross the wire (the per-voice phaser that read them
+ * retired in phase 3 step 9, the wire fields with it); the orbit reads the slots.
  *
  * One consequence worth knowing, and it holds for every filled door (`duck` included since step
  * 5b-3, when its accessors moved onto the slots its fill writes): a filled knob becomes

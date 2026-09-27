@@ -8,8 +8,8 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
 import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
@@ -19,8 +19,8 @@ import io.peekandpoke.klang.sprudel.wireFilters
  */
 class LangCanonicalFilterNamesSpec : StringSpec({
 
-    fun filters(code: String): List<FilterDef> =
-        SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().wireFilters().filters
+    fun filters(code: String): List<WireFilter> =
+        SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().wireFilters()
 
     // canonical spelling -> short spelling, as full call snippets
     val equivalent = listOf(
@@ -47,9 +47,9 @@ class LangCanonicalFilterNamesSpec : StringSpec({
     }
 
     "the short forms are the same objects as the long ones" {
-        (filters("""note("c").lpf(800)""")[0] as FilterDef.LowPass).freq shouldBe 800.0
-        (filters("""note("c").hpf(200)""")[0] as FilterDef.HighPass).freq shouldBe 200.0
-        (filters("""note("c").bpf(1000)""")[0] as FilterDef.BandPass).freq shouldBe 1000.0
-        (filters("""note("c").notch(1500)""")[0] as FilterDef.Notch).freq shouldBe 1500.0
+        (filters("""note("c").lpf(800)""")[0] as WireFilter.LowPass).freq shouldBe 800.0
+        (filters("""note("c").hpf(200)""")[0] as WireFilter.HighPass).freq shouldBe 200.0
+        (filters("""note("c").bpf(1000)""")[0] as WireFilter.BandPass).freq shouldBe 1000.0
+        (filters("""note("c").notch(1500)""")[0] as WireFilter.Notch).freq shouldBe 1500.0
     }
 })

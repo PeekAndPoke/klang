@@ -5,14 +5,15 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -63,8 +64,7 @@ class SchedulerStartupSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01),
-        ).withClassicSlots(),
+        ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01))),
         // A start the frontend declared in the PAST — the ordinary case: by the time the message
         // lands, wall time has moved on. The epoch must snap forward, never backward.
         playbackStartTime = 0.0,

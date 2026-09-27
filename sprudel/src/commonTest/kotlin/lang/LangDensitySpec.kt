@@ -89,7 +89,7 @@ class LangDensitySpec : StringSpec({
         }
     }
 
-    "density() sets VoiceData.density" {
+    "density() sets SprudelVoiceData.density" {
         val p = "0 1".apply(density("0.2 0.8"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -97,7 +97,7 @@ class LangDensitySpec : StringSpec({
         events.map { it.data.oscParams?.get("density") } shouldBe listOf(0.2, 0.8)
     }
 
-    "d() alias sets VoiceData.density" {
+    "d() alias sets SprudelVoiceData.density" {
         val p = "0 1".apply(d("0.2 0.8"))
         val events = p.queryArc(0.0, 1.0)
 

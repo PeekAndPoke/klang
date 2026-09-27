@@ -72,7 +72,7 @@ class LangNoteSpec : StringSpec({
         }
     }
 
-    "top-level note() sets VoiceData.note correctly" {
+    "top-level note() sets SprudelVoiceData.note correctly" {
         val p = note("c3 g3")
         val events = p.queryArc(0.0, 1.0)
 

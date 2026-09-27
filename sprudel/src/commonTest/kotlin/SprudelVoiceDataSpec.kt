@@ -9,11 +9,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
 
 class SprudelVoiceDataSpec : StringSpec({
@@ -198,7 +195,6 @@ class SprudelVoiceDataSpec : StringSpec({
         val voiceData = data.toVoiceData()
 
         voiceData.oscParams shouldBe mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
-        voiceData.adsr shouldBe AdsrDef.empty
     }
 
     "toVoiceData() sends the LPF fields as the lpf.* slots" {
@@ -209,7 +205,6 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 0
         voiceData.oscParams shouldBe mapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
     }
 
@@ -221,7 +216,6 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 0
         voiceData.oscParams shouldBe mapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
     }
 
@@ -233,7 +227,6 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 0
         voiceData.oscParams shouldBe mapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
     }
 
@@ -245,7 +238,6 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 0
         voiceData.oscParams shouldBe mapOf("notch.freq" to 600.0, "notch.q" to 0.8)
     }
 
@@ -268,19 +260,19 @@ class SprudelVoiceDataSpec : StringSpec({
         )
     }
 
-    "toVoiceData() keeps only the vowel in filters: the voice filters are slots, their order is classic()'s" {
+    "toVoiceData() sends the four voice filters as slots and the vowel field as nothing (the vowel door writes its slot)" {
         val data = createSprudelVoiceData {
             cutoff = 1000.0
             hcutoff = 500.0
             bandf = 750.0
             notchf = 600.0
-            vowel = "a"       // Formant
+            vowel = "a"
         }
 
         val voiceData = data.toVoiceData()
 
-        voiceData.filters.size shouldBe 1
-        voiceData.filters[0].shouldBeInstanceOf<FilterDef.Formant>()
+        voiceData.oscParams shouldBe mapOf("lpf.freq" to 1000.0, "hpf.freq" to 500.0, "bpf.freq" to 750.0, "notch.freq" to 600.0)
+        voiceData.katalystParams shouldBe null
     }
 
     "toVoiceData() sends no resonance the pattern did not write: the slot's default (0.707) builds it" {
@@ -329,7 +321,6 @@ class SprudelVoiceDataSpec : StringSpec({
 
         voiceData.note shouldBe "c4"
         voiceData.freqHz shouldBe 440.0
-        voiceData.scale shouldBe "major"
         voiceData.gain shouldBe 0.8
         voiceData.legato shouldBe 0.9
         voiceData.bank shouldBe "MPC60"
@@ -345,9 +336,6 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.oscParams?.get("distort.amount") shouldBe 0.3
         voiceData.oscParams?.get("coarse.amount") shouldBe 1.0
         voiceData.oscParams?.get("crush.amount") shouldBe 4.0
-        voiceData.distort shouldBe null
-        voiceData.coarse shouldBe null
-        voiceData.crush shouldBe null
         voiceData.cylinder shouldBe 1
         voiceData.pan shouldBe 0.5
         voiceData.katalystParams?.get("delay.wet") shouldBe 0.3
@@ -359,8 +347,6 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.oscParams?.get("end") shouldBe 1.0
         voiceData.oscParams?.get("speed") shouldBe 1.0
         voiceData.oscParams?.get("loop") shouldBe 1.0
-        voiceData.begin shouldBe null
-        voiceData.speed shouldBe null
         voiceData.cut shouldBe 1
     }
 
@@ -436,7 +422,6 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         nfReleaseCurve = AdsrCurve.entries[(seed + 8) % 6]
         cylinder = seed + 71; pan = b + 72
         begin = b + 81; end = b + 82; speed = b + 83; unit = "u$seed"; loop = true; cut = seed + 84
-        loopBegin = b + 85; loopEnd = b + 86
         vowel = "v$seed"
         solo = b + 88; patternId = "pid$seed"
         value = SprudelVoiceValue.Num(b + 87)

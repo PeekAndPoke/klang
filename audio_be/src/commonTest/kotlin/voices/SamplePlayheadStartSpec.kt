@@ -16,7 +16,6 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -77,10 +76,8 @@ class SamplePlayheadStartSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = freqHz, // pitchHz below is 220, so freqHz / 220 is the playback rate
                     sound = "playheadprobe", // unregistered => the sample branch
-                    adsr = AdsrDef.Std(release = 0.01, on = false), // VCA off: raw sample values
-                    begin = begin,
                     oscParams = slots,
-                ).withClassicSlots(),
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = 0.01, on = false), begin = begin)), // envelope off: raw sample values
                 startTime = 0.0,
                 gateEndTime = 0.5,
                 playbackStartTime = 0.0,
@@ -115,7 +112,7 @@ class SamplePlayheadStartSpec : StringSpec({
             startSec = loopStartFrame.toDouble() / sampleRate,
             endSec = loopEndFrame.toDouble() / sampleRate,
         ),
-        adsr = AdsrDef.empty,
+        adsr = null,
         anchor = 0.0,
     )
 
@@ -152,7 +149,7 @@ class SamplePlayheadStartSpec : StringSpec({
                 startSec = loopStartFrame.toDouble() / sampleRate,
                 endSec = tinyLoopEnd.toDouble() / sampleRate,
             ),
-            adsr = AdsrDef.empty,
+            adsr = null,
             anchor = 0.0,
         )
         val out = render(meta)
@@ -177,7 +174,7 @@ class SamplePlayheadStartSpec : StringSpec({
                 startSec = loopStartFrame.toDouble() / sampleRate,
                 endSec = tinyLoopEnd.toDouble() / sampleRate,
             ),
-            adsr = AdsrDef.empty,
+            adsr = null,
             anchor = 0.0,
         )
         val out = render(meta, freqHz = 275.0)
@@ -195,7 +192,7 @@ class SamplePlayheadStartSpec : StringSpec({
     }
 
     "a non-looped sample starts at frame 0 even when anchor says otherwise" {
-        val meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.05) // 2205 frames in
+        val meta = SampleMetadata(loop = null, adsr = null, anchor = 0.05) // 2205 frames in
         val out = render(meta)
 
         // anchor is the loudest sample's position, not a start offset. The old code began here at

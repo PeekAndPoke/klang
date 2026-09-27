@@ -5,6 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.DoorFilter
+import io.peekandpoke.klang.audio_be.voices.DoorFilterEnv
 import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
@@ -15,10 +19,6 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -53,7 +53,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
 
     val registry = IgnitorRegistry().apply { registerDefaults() }
 
-    fun render(data: VoiceData): DoubleArray {
+    fun render(data: VoiceData, doors: DoorFields = DoorFields()): DoubleArray {
         val onsetSec = 37.0 / sampleRate
         val factory = VoiceFactory(
             sampleRate = sampleRate,
@@ -69,7 +69,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data.withClassicSlots(),
+                data = data.withClassicSlots(doors),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,
@@ -96,27 +96,21 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         return out
     }
 
-    fun filters(vararg defs: FilterDef): FilterDefs = FilterDefs(defs.toList())
-
-    /** A row: a title, the voice's own bag (not `classic()` slots), and the typed fields. */
-    class Row(val title: String, val own: Map<String, Double>?, val settings: VoiceData.() -> VoiceData)
+    /** A row: a title, the voice's own bag (not `classic()` slots), and the typed door settings. */
+    class Row(val title: String, val own: Map<String, Double>?, val doors: DoorFields = DoorFields())
 
     val rows = listOf(
-        Row("untouched", null) { this },
-        Row("lpf 900 with an envelope", null) {
-            copy(filters = filters(FilterDef.LowPass(900.0, 1.5, envelope = FilterEnvDef(decay = 0.1, depth = 18.0))))
-        },
-        Row("hpf 300 and lpf 3000", null) {
-            copy(filters = filters(FilterDef.HighPass(300.0, 0.707), FilterDef.LowPass(3000.0, 0.707)))
-        },
-        Row("adsr 0.02 / 0.1 / 0.4 / 0.1", null) { copy(adsr = AdsrDef.Std(attack = 0.02, decay = 0.1, sustain = 0.4, release = 0.1)) },
-        Row("adsrOff", null) { copy(adsr = AdsrDef.Std(on = false)) },
-        Row("tremolo square", null) { copy(tremoloDepth = 0.8, tremoloSync = 6.0, tremoloShape = "square") },
-        Row("distort 0.6 tube x2", null) { copy(distort = 0.6, distortShape = "tube", distortOversample = 2) },
-        Row("crush 5", null) { copy(crush = 5.0) },
-        Row("coarse 3", null) { copy(coarse = 3.0) },
-        Row("onepole 1500", mapOf("onepole" to 1500.0)) { this },
-        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0)) { copy(filters = filters(FilterDef.LowPass(1200.0, 0.707))) },
+        Row("untouched", null),
+        Row("lpf 900 with an envelope", null, DoorFields(filters = listOf(DoorFilter.LowPass(900.0, 1.5, envelope = DoorFilterEnv(decay = 0.1, depth = 18.0))))),
+        Row("hpf 300 and lpf 3000", null, DoorFields(filters = listOf(DoorFilter.HighPass(300.0, 0.707), DoorFilter.LowPass(3000.0, 0.707)))),
+        Row("adsr 0.02 / 0.1 / 0.4 / 0.1", null, DoorFields(adsr = DoorAdsr(attack = 0.02, decay = 0.1, sustain = 0.4, release = 0.1))),
+        Row("adsrOff", null, DoorFields(adsr = DoorAdsr(on = false))),
+        Row("tremolo square", null, DoorFields(tremoloDepth = 0.8, tremoloSync = 6.0, tremoloShape = "square")),
+        Row("distort 0.6 tube x2", null, DoorFields(distort = 0.6, distortShape = "tube", distortOversample = 2)),
+        Row("crush 5", null, DoorFields(crush = 5.0)),
+        Row("coarse 3", null, DoorFields(coarse = 3.0)),
+        Row("onepole 1500", mapOf("onepole" to 1500.0)),
+        Row("analog 2, lpf 1200: one filter", mapOf("analog" to 2.0), DoorFields(filters = listOf(DoorFilter.LowPass(1200.0, 0.707)))),
     )
 
     /**
@@ -135,7 +129,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
         for (row in rows) {
             "$name: ${row.title}" {
                 val base = VoiceData.empty.copy(freqHz = 220.0, oscParams = row.own)
-                val builtIn = render(base.copy(sound = name).(row.settings)())
+                val builtIn = render(base.copy(sound = name), row.doors)
                 val hash = builtIn.rawBitsHash()
 
                 println("MATRIX-BASELINE | \"$name | ${row.title}\" to \"$hash\",")

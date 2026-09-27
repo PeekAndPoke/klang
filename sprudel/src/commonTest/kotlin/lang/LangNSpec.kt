@@ -12,7 +12,7 @@ import io.peekandpoke.klang.sprudel.soundName
 
 class LangNSpec : StringSpec({
 
-    "top-level n() sets VoiceData.soundIndex correctly" {
+    "top-level n() sets SprudelVoiceData.soundIndex correctly" {
         val p = n("0 1")
         val events = p.queryArc(0.0, 1.0)
 
