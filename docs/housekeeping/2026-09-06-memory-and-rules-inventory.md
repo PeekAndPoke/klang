@@ -84,7 +84,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_mini_notation_tweaks             | 1     | archived task, `docs/tasks/future/mini-notation-tweaks-followups.md`                         |
 | project_motor_naming                     | 2     | README, whitepaper vocabulary (Cylinder, Injection, Ignitor, Katalyst)                       |
 | project_motor_slogans                    | 2     | strategist agent memory                                                                      |
-| project_mutable_voicedata                | 2     | `sprudel/MEMORY.md` Lessons, `docs/tasks/constant-control-fast-path.md`                      |
+| project_mutable_voicedata                | 2     | `sprudel/MEMORY.md` Lessons, `docs/tasks/future/optimize-constant-control-fast-path.md`                      |
 | project_n_add_noop                       | 2     | `docs/tasks/future/n-pattern-add-noop.md`                                                    |
 | project_noise_generator_knobs            | 1     | archived task                                                                                |
 | project_notstrom_demo                    | 2     | strategist agent memory, song sources                                                        |

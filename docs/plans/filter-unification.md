@@ -493,7 +493,7 @@ for the doomed. C6a removes the doomed; C0 then reshapes what remains.
 - **Perf note (C0.1 review):** per-param chaining builds one control layer per provided param
   (`adsr` went 1 -> 4 outer joins at ~111 sites). Pattern-build/query cost only, not the audio
   thread — but it is exactly the shape the designed-not-built constant-control fast-path
-  (docs/tasks/constant-control-fast-path.md) collapses; that item should land before the
+  (docs/tasks/future/optimize-constant-control-fast-path.md) collapses; that item should land before the
   Fairphone perf push.
 - **Execution order (2026-08-23):** C0.1 lang layer per-param + full call-site migration
   (everything except compressor); C0.2 compressor wire sub-step (VoiceData fields, audio_be
