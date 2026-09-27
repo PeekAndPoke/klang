@@ -2819,7 +2819,7 @@ top entry of this file).
 `VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
 Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by
 BlockRenderer implementations. ~426 tests across 35 files.
-See `docs/agent-tasks/audio-pipeline-open-topics.md` for remaining open topics.
+See `docs/tasks-archive/2026-09/20260927-audio-pipeline-open-topics.md` for where the remaining open topics went (retired 2026-09-27).
 
 ## Distortion Shape Catalog Extension (2026-05-21)
 

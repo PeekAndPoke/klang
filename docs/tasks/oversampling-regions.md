@@ -124,6 +124,12 @@ more than one place per effect, the factoring is not done.
   audible: by arithmetic, not measured, the interpolator alone costs about 1 dB at 10 kHz and 3 dB at
   15 kHz at 48 kHz. `classic()` must keep today's kernel for identity; a better kernel is its own
   decision, and could be what a higher quality setting buys.
+  The known gaps, from the distortion-oversampling review (`../tasks-archive/2026-04/20260409-distortion-oversampling.md`,
+  findings A1, A2, A5; folded in 2026-09-27 from `audio-pipeline-open-topics.md` §5): the 15-tap half-band rejects
+  about 20 dB where 50 to 60 dB is the target (A1); the linear-interpolation images, only about 11 dB down at
+  20 kHz, intermodulate through a nonlinearity into in-band products the decimator cannot remove (A2); and
+  nothing filters between the upsampler and the nonlinearity (A5). The recommended kernel: zero-stuffing plus
+  a half-band FIR on BOTH sides, 31 to 43 taps. That is an input to open decision 3 (section 9).
 - **Latency coherence.** Layers at different factors have different group delays, and summed they comb.
   Compensate, or fix one latency budget.
 - **Everything inside a region runs at N times the rate.** A region over-scoped around a clean filter is

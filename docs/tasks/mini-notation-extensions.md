@@ -106,7 +106,7 @@ Not in scope for immediate implementation. Design notes:
 | `completion-member-access-bug.md`        | Code editor bug, unrelated                 |
 | `code-quality-review.md`                 | General quality items                      |
 | `20260903-soundfont-looping-investigation.md` (archived) | Audio playback bug                         |
-| `audio-pipeline-open-topics.md`          | Future audio features                      |
+| `audio-pipeline-open-topics.md` (archived 2026-09-27) | Future audio features                      |
 | `ignitor-dsl-open-items.md`              | Synthesis DSL features                     |
 
 ### Loosely related (shared code areas but no blocking dependency)
