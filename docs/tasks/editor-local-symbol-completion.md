@@ -76,4 +76,4 @@ and are a separate topic (`future/federated-song-sharing.md`).
 
 - Analyzer architecture: `klangscript/ref/intel-analyzer.md`.
 - The intellisense plan this sits next to: `klangscript-intellisense.md`.
-- The other editor-tools item: `editor-tools-named-arguments.md`.
+- The other editor-tools item: `editor-tools-named-arguments.md` (done 2026-09-26, archived; the tool leftovers are in `sprudel-ui-tools.md`).

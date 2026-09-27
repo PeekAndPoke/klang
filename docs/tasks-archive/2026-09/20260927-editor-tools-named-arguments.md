@@ -1,5 +1,13 @@
 # Editor tools: named arguments resolve the wrong slot
 
+> **DONE 2026-09-26, archived 2026-09-27.** Commit `ffa490e4` ("editor: param tools show again, once per
+> argument, on the right variant") fixed the finding along the sketch below: `CallExpressionAtResult.argName`,
+> one resolver in `klangscript/.../intel/ArgumentBinding.kt` (`bindArgument`), `ArgFinder` using it in both
+> paths with the text fallback editing only the value after `name =`; guarded by `ParamForArgumentTest` and
+> `AstCallFinderTest`. The delay editor has its `cap` control since. The rest of "Also open on the tools" (the
+> unbound filter whole-envelope and notch editors, the phaser `floor` control, the tremolo `sync` unit) moved
+> to the Open list at the top of `docs/tasks/sprudel-ui-tools.md`.
+
 Opened 2026-09-07 during the field-accessor batch E review (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`).
 Maintainer decision the same day: record here, do not mix into batch E; the editor tools get a
 rework of their own.
@@ -51,7 +59,7 @@ path uses the cursor node range (the value only), so only the fallback has this 
 
 - The delay editor has no control for the `cap` slot; the phaser editor has no control for
   `floor` (`docs/tasks/sprudel-ui-tools.md` table).
-- The tremolo `sync` slot is an LFO rate in Hz (`TremoloRenderer.kt`, `lang_effects_modulation.kt`
+- The tremolo `sync` slot is an LFO rate in Hz (`TremoloCore.kt`, `lang_effects_modulation.kt`
   `@param sync`); any tool or doc that presents it as cycles per cycle is wrong.
 - Compound slots carry no aliases any more; the alias columns in `sprudel-ui-tools.md` were
   collapsed accordingly.

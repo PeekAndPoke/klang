@@ -49,4 +49,4 @@ spread, pan)` and `analog`, `duty`, `onepole` write today.
 ## Not before
 
 The `/dsl-design` rules apply (two doors, parity, one word per concept, coerce not require). The
-editor-tools rework (`editor-tools-named-arguments.md`) is independent.
+editor-tools rework (`sprudel-ui-tools.md`, Open list) is independent.

@@ -42,7 +42,7 @@ import kotlinx.html.div
  * lpadsr/hpadsr/bpadsr/nfadsr(attack, decay, sustain, release). Since 2026-09-07 the envelope
  * stages are the `attack, decay, sustain, release` slots of lpf/hpf/bpf/notch, at positions 4..7
  * (3..6 for bpf/notch); this tool still edits argument slots 0..3 of its host call, so it is bound
- * to no door until the tools rework (`docs/tasks/editor-tools-named-arguments.md`).
+ * to no door until the tools rework (`docs/tasks/sprudel-ui-tools.md`, Open list).
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits argument slots 0..3 of
