@@ -9,11 +9,11 @@ import kotlin.math.floor
 import kotlin.math.pow
 
 /**
- * THE crush law, one copy for both hosts (phase 3 step 4, decision D1, 2026-09-25: FLOOR everywhere):
- * the voice strip's `CrushRenderer` and the Ignitor's `Crush` node are thin hosts that only adapt their
- * block contract (the strip reads its amount once per note, the node once per block). Before this the
- * node carried its own symmetric `round` quantizer; now both render the strip's quantizer, which is
- * what `classic()` needs to rebuild the strip crush bit for bit (`ClassicStripParitySpec`).
+ * THE crush law (phase 3 step 4, decision D1, 2026-09-25: FLOOR everywhere), hosted by the Ignitor's
+ * `Crush` node, which adapts only its block contract (it reads its amount once per block). It was one
+ * copy for two hosts until the voice strip's `CrushRenderer` retired with the strip (phase 3 step 9).
+ * Before step 4 the node carried its own symmetric `round` quantizer; since then it renders the strip's
+ * quantizer, which is what `classic()` needed to rebuild the strip crush bit for bit.
  *
  * **The quantizer** is `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`. Floor biases every
  * sample DOWN to the next grid step, so a symmetric input comes out with a DC offset of roughly
@@ -48,7 +48,7 @@ internal object CrushCore {
 
     /**
      * Quantizes `input[i]` into `output[i]` for `i` in `[from, to)`. [input] and [output] may be the
-     * same buffer (the strip renders in place). The caller has checked that [halfLevels] is not
+     * same buffer. The caller has checked that [halfLevels] is not
      * [BYPASS].
      */
     fun quantize(input: AudioBuffer, output: AudioBuffer, from: Int, to: Int, halfLevels: Double) {

@@ -304,37 +304,24 @@ class IgnitorRegistryTest : StringSpec({
             negative[i] shouldBe sawRef[i]
         }
     }
-    // ── The whole voice: a tree that ends in classic() (phase 3 steps 6 and 10) ──────────────────
+    // ── The tag: a tree that ends in classic() (phase 3 step 10). The engine no longer asks (every voice is its tree
+    //    since step 9); the tag stays for the editor and the future auto-attach. ──────────────────────────────────
 
-    "endsInClassic: a name whose tree ends in classic(), registered by any caller; not a plain tree, a stage after classic(), an unknown name, a sample name" {
-        val registry = IgnitorRegistry()
-        registry.register("Saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()))
-        registry.register("guitar", IgnitorDsl.Sawtooth().classic())
-        registry.register("plain", IgnitorDsl.Sawtooth())
-        registry.register("after", IgnitorDsl.Sawtooth().classic().mul(IgnitorDsl.Constant(0.5)))
-
-        registry.endsInClassic("saw") shouldBe true
-        registry.endsInClassic("SAW") shouldBe true
-        registry.endsInClassic("guitar") shouldBe true
-        registry.endsInClassic("plain") shouldBe false
-        registry.endsInClassic("after") shouldBe false
-        registry.endsInClassic("bd") shouldBe false
+    "the tag: a tree that ends in classic(), whoever built it; not a plain tree, not a stage after classic()" {
+        IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()).endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().classic().endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().endsInClassic() shouldBe false
+        IgnitorDsl.Sawtooth().classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
     }
 
-    "endsInClassic: an optimizer hint on a classic() tree (the by-ear A/B) keeps the name on the whole-voice path" {
-        val registry = IgnitorRegistry().apply {
-            register("ab0", IgnitorDsl.Sawtooth().classic().optimizer(0))
-            register("ab1", IgnitorDsl.Sawtooth().classic().optimizer(1))
-        }
-
-        registry.endsInClassic("ab0") shouldBe true
-        registry.endsInClassic("ab1") shouldBe true
+    "the tag: an optimizer hint on a classic() tree (the by-ear A/B) still ends in classic()" {
+        IgnitorDsl.Sawtooth().classic().optimizer(0).endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().classic().optimizer(1).endsInClassic() shouldBe true
     }
 
     "the tag reads the same on the authored and the optimized tree: no optimizer rewrite makes or hides it" {
-        // Why `endsInClassic(name)` may ask the AUTHORED tree (`get`) and not the one that renders: the optimizer
-        // rewrites no `Adsr` root, and an `on != 0` hint at the root dissolves, which the tag looks through. A
-        // future pass that rewrote the classic root would turn this row red before it changed a voice's path.
+        // The optimizer rewrites no `Adsr` root, and an `on != 0` hint at the root dissolves, which the tag looks
+        // through. A future pass that rewrote the classic root would turn this row red.
         val saw = IgnitorDsl.Sawtooth()
         val trees = listOf(
             saw.classic(),
@@ -352,44 +339,11 @@ class IgnitorRegistryTest : StringSpec({
         }
     }
 
-    "registerDefaults: every name ends in classic(), and so does the default sound" {
+    "registerDefaults: every built-in tree ends in classic(), and so does the default sound's" {
         val registry = IgnitorRegistry().apply { registerDefaults() }
 
-        registry.names().all { registry.endsInClassic(it) } shouldBe true
-        registry.endsInClassic(null) shouldBe true
-    }
-
-    "a fork inherits the answer, and a fork's own register of that name answers by its own tree, in both directions" {
-        // Live coding may register a tree under a name its parent already has, on the playback's fork: that name
-        // is then the author's instrument there, and the parent's elsewhere. A plain tree over a built-in keeps the
-        // strip; a classic() tree over a plain one is the whole voice.
-        val root = IgnitorRegistry().apply {
-            register("saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()))
-            register("pad", IgnitorDsl.Sine())
-        }
-        val inheriting = root.fork()
-        val shadowing = root.fork().apply {
-            register("saw", IgnitorDsl.Sine())
-            register("pad", IgnitorDsl.Sine().classic())
-        }
-
-        inheriting.endsInClassic("saw") shouldBe true
-        inheriting.endsInClassic("pad") shouldBe false
-        shadowing.endsInClassic("saw") shouldBe false
-        shadowing.endsInClassic("pad") shouldBe true
-        root.endsInClassic("saw") shouldBe true
-        root.endsInClassic("pad") shouldBe false
-    }
-
-    "a name re-registered in the SAME registry answers by its new tree, in both directions" {
-        val registry = IgnitorRegistry().apply { register("saw", IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth())) }
-        registry.register("saw", IgnitorDsl.Sawtooth())
-
-        registry.endsInClassic("saw") shouldBe false
-
-        registry.register("saw", IgnitorDsl.Sawtooth().classic())
-
-        registry.endsInClassic("saw") shouldBe true
+        registry.names().all { registry.get(it)?.endsInClassic() == true } shouldBe true
+        registry.get(IgnitorRegistry.DEFAULT_SOUND)?.endsInClassic() shouldBe true
     }
 
     "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole on the pregained source" {

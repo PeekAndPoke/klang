@@ -28,7 +28,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * `Master()` with no lambda is the unity chain (the same as [default]); `Master(m => ...)` is the
  * same as [build]. The method forms exist so the callable form can be tested against them.
  *
- * Sibling of `Pipeline` (per-voice signal path) and `Osc` (per-voice exciter): same shape,
+ * Sibling of `Katalyst` (per orbit) and `Osc` (the per-voice instrument): same shape,
  * different host.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)

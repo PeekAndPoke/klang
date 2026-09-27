@@ -117,8 +117,7 @@ class Oversampler(stages: Int) {
     /**
      * Clears all internal filter state — every [HalfBandState] delay line and
      * the upsampler's `lastSample`. NO callers today, and that is fine: every
-     * instance is per-voice (fresh per note-on on both the ignitor and strip
-     * doors), so there is no reuse path and no stale tail to clear. Kept for
+     * instance is per-voice (fresh per note-on in the Ignitor tree), so there is no reuse path and no stale tail to clear. Kept for
      * the planned warehouse-pool world, where pooled instances WILL need it
      * (ledger W11 — the old KDoc claimed a cleanup/retrigger lifecycle that
      * never existed).

@@ -27,7 +27,6 @@ import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
-import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.exp
@@ -39,9 +38,9 @@ import kotlin.math.sin
 
 /**
  * THE envelope law ([EnvelopeCore], phase 3 decision D3), pinned against ORACLES written out in this
- * file, on the core and then on every host that can show its level: the Ignitor chain `adsr`, the strip
- * VCA, the Ignitor FM index envelope, the Ignitor pitch envelope, the strip's pitch envelope and the strip's
- * control-rate envelope.
+ * file, on the core and then on every host that can show its level: the Ignitor chain `adsr`, the Ignitor FM
+ * index envelope, the Ignitor pitch envelope, the voice's own pitch envelope and its control-rate (FM)
+ * envelope. (The voice strip's VCA and filter envelope were hosts too until the strip retired, phase 3 step 9.)
  *
  * Why oracles and not a parity spec: the hosts share one core, so a mutation INSIDE it moves every host
  * together and a host-against-host comparison stays green (step 4's lesson, `StripLawCoresSpec`). Each
@@ -235,51 +234,6 @@ class EnvelopeLawSpec : StringSpec({
 
         renderNode(dc().adsr(0.0, sec(10.0), 1.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = far / 2)[20] shouldBe 1.5
         renderNode(dc().adsr(0.0, sec(10.0), -0.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = far / 2)[20] shouldBe 0.0
-    }
-
-    /** Renders a constant 1.0 through the strip VCA without its de-click. */
-    fun renderVca(env: Voice.Envelope, total: Int, gate: Int): AudioBuffer {
-        val buf = AudioBuffer(total)
-
-        for (i in 0 until total) {
-            buf[i] = 1.0
-        }
-
-        val ctx = BlockContext(
-            audioBuffer = buf,
-            freqModBuffer = DoubleArray(total),
-            scratchBuffers = ScratchBuffers(total),
-            sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = far.toDouble(),
-            gateEndFrame = gate.toDouble(),
-            freqHz = 100.0,
-            signal = Ignitors.silence(),
-            signalCtx = IgniteContext(
-                sampleRate = sampleRate, voiceDurationFrames = gate, gateEndFrame = gate,
-                releaseFrames = 0, scratchBuffers = ScratchBuffers(total),
-            ),
-            cylinders = Cylinders(blockFrames = total, sampleRate = sampleRate),
-        ).apply { updateOffsetAndLength(0, total); blockStart = 0.0 }
-
-        EnvelopeRenderer(env, startFrame = 0.0, declickSeconds = 0.0).render(ctx)
-
-        return buf
-    }
-
-    "host: the strip VCA (fractional attack, stateless release, a NaN sustain reads as unset 1.0)" {
-        val lin = AdsrCurve.Linear
-
-        renderVca(Voice.Envelope(240.5, 100.0, 0.5, 12.0, lin, lin, lin), 400, gate = far)[240] shouldBe
-            (240.0 / 240.5 plusOrMinus 1e-12)
-
-        val gated = renderVca(Voice.Envelope(100.0, 100.0, 0.2, 11.0, lin, lin, lin), 80, gate = 50)
-
-        gated[50] shouldBe (0.5 plusOrMinus 1e-12)
-        gated[60] shouldBe 0.0
-
-        renderVca(Voice.Envelope(0.0, 10.0, Double.NaN, 12.0, lin, lin, lin), 40, gate = far)[20] shouldBe
-            (1.0 plusOrMinus 1e-12)
     }
 
     "host: the Ignitor FM index envelope (fractional attack, raw sustain, the depth clamped to [0, 1])" {
@@ -621,7 +575,6 @@ class EnvelopeLawSpec : StringSpec({
         val hosts: List<Pair<String, (Double) -> List<Double>>> = listOf(
             "core" to { t -> EnvelopeCore().apply { prepare(t, t, 0.5, 12.0, 20, lin, lin, lin) }.let { c -> (0 until 40).map { c.at(it) } } },
             "chain adsr" to { t -> renderNode(dc().adsr(t, t, 0.5, sec(12.0), lin, lin, lin, 0.0), 40, gate = 20).toList() },
-            "strip VCA" to { t -> renderVca(Voice.Envelope(t, t, 0.5, 12.0, lin, lin, lin), 40, gate = 20).toList() },
             "strip control-rate envelope" to { t ->
                 (0 until 40).map { calculateControlRateEnvelope(Voice.Envelope(t, t, 0.5, 12.0), it.toDouble(), 0.0, 20.0, EnvelopeCore()) }
             },

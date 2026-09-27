@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -15,8 +14,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterValue
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -32,8 +29,8 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  * all.
  *
  * Shared by **composition, not inheritance**: the offline renderer needs exactly this too and is
- * not a `KlangPlayback`, so a base class could never cover it. Swap [ignitors]/[pipelines]/
- * [masters]/[katalysts]' sinks (see [AnnounceOnceRegistry]) and the same object serves an
+ * not a `KlangPlayback`, so a base class could never cover it. Swap [ignitors]/[masters]/
+ * [katalysts]' sinks (see [AnnounceOnceRegistry]) and the same object serves an
  * in-process renderer.
  *
  * The synthetic names come from the process-wide `uniqueId()` maps in `audio_bridge`; this class
@@ -42,7 +39,6 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  */
 internal class InlineDslRegistrar(
     val ignitors: AnnounceOnceRegistry<IgnitorDsl>,
-    val pipelines: AnnounceOnceRegistry<PipelineDsl>,
     val masters: AnnounceOnceRegistry<MasterDsl>,
     val katalysts: AnnounceOnceRegistry<KatalystValue.Dsl>,
 ) {
@@ -59,12 +55,6 @@ internal class InlineDslRegistrar(
                 uniqueId = { it.uniqueId() },
                 announce = { name, dsl ->
                     sendControl(KlangCommLink.Cmd.RegisterIgnitor(playbackId = playbackId, name = name, dsl = dsl))
-                },
-            ),
-            pipelines = AnnounceOnceRegistry(
-                uniqueId = { it.uniqueId() },
-                announce = { name, dsl ->
-                    sendControl(KlangCommLink.Cmd.RegisterPipeline(playbackId = playbackId, name = name, dsl = dsl))
                 },
             ),
             masters = AnnounceOnceRegistry(
@@ -99,7 +89,6 @@ internal class InlineDslRegistrar(
          */
         fun intoRegistries(
             ignitors: IgnitorRegistry,
-            pipelines: PipelineRegistry,
             masters: MasterRegistry,
             katalysts: KatalystRegistry,
         ): InlineDslRegistrar = InlineDslRegistrar(
@@ -110,10 +99,6 @@ internal class InlineDslRegistrar(
                         ignitors.register(name, dsl)
                     }
                 },
-            ),
-            pipelines = AnnounceOnceRegistry(
-                uniqueId = { it.uniqueId() },
-                announce = { name, dsl -> pipelines.register(name, dsl) },
             ),
             masters = AnnounceOnceRegistry(
                 uniqueId = { it.uniqueId() },
@@ -144,11 +129,6 @@ internal class InlineDslRegistrar(
             .map { it.sound }
             .filterIsInstance<SoundValue.Osc>()
             .forEach { ignitors.registerOrLookup(it.osc) }
-
-        events.asSequence()
-            .map { it.pipeline }
-            .filterIsInstance<PipelineValue.Dsl>()
-            .forEach { pipelines.registerOrLookup(it.pipeline) }
 
         events.asSequence()
             .map { it.master }

@@ -26,12 +26,10 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * - `onepole` is a one-pole lowpass in Hz, deliberately NOT `lpf` (which is the resonant
  *   SVF). It was renamed from `warmth(0..1)` in the 2026-08-24 pitch/unit unification,
  *   so the unit is Hz now. §5 teaches the difference in intent only: no slopes, no dB/oct.
- *   It is also an OSC PARAM read inside the ignitor (IgnitorRegistry reads
- *   `oscParams["onepole"]`), NOT a post-effect. It therefore darkens what the distortion is
- *   fed. The first draft of §5 claimed "the distortion is untouched; what leaves is the
- *   harshness sitting on top of it" — plausible and FALSE. §5 now teaches the true version:
- *   drive and tone are one decision. This holds whatever pipeline is selected, because
- *   onepole is inside the voice and the pipeline runs on the voice's output.
+ *   It is also a SLOT of the instrument (`classic()`'s FIRST stage, `onepole`), NOT a post-effect.
+ *   It therefore darkens what the distortion is fed. The first draft of §5 claimed "the
+ *   distortion is untouched; what leaves is the harshness sitting on top of it", plausible and
+ *   FALSE. §5 now teaches the true version: drive and tone are one decision.
  * - `gain` is the ONE level word (signal-flow plan section 6, 2026-09-19): the channel fader,
  *   applied with pan at the voice output (`SendRenderer`: `* gainL/gainR` from
  *   `voice.gain * gainMultiplier`). It does NOT drive the distortion. The first draft of §6
@@ -46,10 +44,10 @@ package io.peekandpoke.klang.pages.docs.tutorials
  *   `delay(time = 0.25)` lands each echo exactly one step later. B1 licensed the "at 30 RPM"
  *   caveat; §3 restates it rather than assuming it.
  *
- * ⚠️ NO ORDER A/B HERE, by plan ruling. The per-voice chain order comes from the
- * PipelineDsl preset (FilterPipelineBuilder iterates the preset's stages), so sprudel CALL
- * order does NOT reorder the chain. The order-matters demo belongs to the Pipeline lesson
- * (C7) via `.pipeline()`. §4 forward-references it by topic, since C7 has no name yet.
+ * ⚠️ NO ORDER A/B HERE, by plan ruling. The per-voice chain order comes from the instrument
+ * (`classic()`'s fixed stage order on every built-in sound), so sprudel CALL order does NOT
+ * reorder the chain. An order-matters demo needs an authored instrument (lesson C7 was retired
+ * with the Pipeline DSL). §4 forward-references it by topic.
  *
  * One of the biggest `teaches` lists in the corpus (4). The plan assigns all of it to this one slot,
  * and it is one theme in three moves: dress it, dirty it, lift it. If a review panel finds

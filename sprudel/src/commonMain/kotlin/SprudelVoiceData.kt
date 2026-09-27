@@ -15,8 +15,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterValue
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VowelBands
@@ -147,13 +145,6 @@ data class SprudelVoiceData(
 
     /** Unique pattern ID for tracking solo state across pattern changes */
     var patternId: String?,
-
-    /**
-     * The voice pipeline this voice references. Either a [PipelineValue.Named] (the built-in
-     * `"modern"`, or a pre-registered custom) or a [PipelineValue.Dsl] inlining a [PipelineDsl]
-     * stage chain — the latter gets denormalized to a synthetic name in [toVoiceData]. Unknown/null → modern.
-     */
-    var pipeline: PipelineValue?,
 
     /**
      * The master chain this event switches the playback's bus to, from its start time onward.
@@ -795,7 +786,6 @@ data class SprudelVoiceData(
             bodyFx = mergeSvdBody(bodyFx, other.bodyFx),
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
-            pipeline = other.pipeline ?: pipeline,
             master = other.master ?: master,
             katalyst = other.katalyst ?: katalyst,
             // control is NOT merged (like patternId): it says "this event makes no sound", which is
@@ -846,7 +836,6 @@ data class SprudelVoiceData(
         bodyFx = mergeSvdBody(bodyFx, other.bodyFx)
         solo = other.solo ?: solo
         // patternId intentionally preserved (never taken from other) — matches merge()
-        pipeline = other.pipeline ?: pipeline
         master = other.master ?: master
         katalyst = other.katalyst ?: katalyst
         // control intentionally NOT merged — see merge()
@@ -919,14 +908,6 @@ data class SprudelVoiceData(
             null -> null
             is SoundValue.Named -> s.name
             is SoundValue.Osc -> s.osc.uniqueId()
-        }
-
-        // Inline pipelines ([PipelineValue.Dsl]) resolve to their stable synthetic name (uniqueId);
-        // names pass through. Mirrors the sound resolution above.
-        val pipelineName: String? = when (val p = pipeline) {
-            null -> null
-            is PipelineValue.Named -> p.name
-            is PipelineValue.Dsl -> p.pipeline.uniqueId()
         }
 
         // Same denormalization for the master chain reference.
@@ -1039,7 +1020,6 @@ data class SprudelVoiceData(
             loopEnd = loopEnd,
             solo = solo,
             sourceId = patternId,
-            pipeline = pipelineName,
             master = masterName,
             katalyst = katalystName,
             control = control,
@@ -1087,7 +1067,6 @@ internal val blueprint = SprudelVoiceData(
     bodyFx = null,
     solo = null,
     patternId = null,
-    pipeline = null,
     master = null,
     katalyst = null,
     control = null,

@@ -9,7 +9,7 @@ import io.peekandpoke.klang.common.infra.KlangSnapshotMap
 
 /**
  * Process-wide identity map for [MasterDsl] chains — the master-side mirror of
- * [PipelineDsl.uniqueId] / [IgnitorDsl.uniqueId].
+ * [IgnitorDsl.uniqueId].
  *
  * Identity = structural equality on the [MasterDsl] data class. Two structurally-equal masters
  * collapse to one entry and share one synthetic name like `"master-3"`. The counter is monotonic

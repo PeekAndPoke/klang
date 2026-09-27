@@ -12,7 +12,6 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -53,7 +52,6 @@ class MasterOrbitReverbParitySpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),

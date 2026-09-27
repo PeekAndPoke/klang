@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.MasterDsl
@@ -52,7 +51,6 @@ class EngineDisposalReturnSpec : StringSpec({
             blockFrames = blockFrames,
             commLink = commLink,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
-            pipelineRegistry = PipelineRegistry(),
             masterRegistry = MasterRegistry(),
             katalystRegistry = KatalystRegistry(),
             clock = clock,

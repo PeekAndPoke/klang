@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.prepareControlRateEnvelope
 
 /**
- * The voice strip's pitch envelope (sprudel's `penv`): an ADSR on the pitch ratio, a thin host of
+ * The voice's pitch envelope (sprudel's `penv`): an ADSR on the pitch ratio, a thin host of
  * [EnvelopeCore], the engine's one envelope law (phase 3 step 5b (c1), decision D3).
  *
  * The level rises from 0 to 1 over the attack, falls to the sustain over the decay, holds, and from the
@@ -23,7 +23,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.prepareControlRateEnvelope
  * render the same numbers on both hosts.
  *
  * Per sample, from the voice-relative frame `blockStart + offset - startFrame` (block-framing Class 1).
- * The gate is read from the [BlockContext] on every call, as the strip's filter and FM envelopes read
+ * The gate is read from the [BlockContext] on every call, as the voice's FM envelope reads
  * it, so a realtime note-off moves the release. The first pitch stage of a block WRITES the frequency
  * modulation buffer, a later one multiplies into it.
  */

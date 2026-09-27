@@ -6,16 +6,12 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.EnvelopeDeclick
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
@@ -31,7 +27,9 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 /**
  * A voice in the audio engine.
  *
- * Runs a composable [BlockRenderer] pipeline: **Pitch → Ignite → Filter → Send**
+ * Runs a composable [BlockRenderer] pipeline: **Pitch → Ignite → (teardown fade) → Send**. The Ignitor tree the
+ * ignite stage renders IS the instrument, envelope and filters included; the voice strip that used to run after
+ * it retired in phase 3 step 9.
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -58,13 +56,8 @@ class Voice(
     // voice carries no bus settings of its own since step 5b-3. Who reads what, exactly:
     //
     //   gain, pan     SendRenderer, every block of every voice.
-    //   phaser        nobody on the voice: `VoiceFactory` hands the same object to
-    //                 `buildFilterPipeline`, whose PER-VOICE phaser serves a custom pipeline that
-    //                 declares `StageDsl.Phaser` (no built-in preset does, `PipelineDsl`, maintainer
-    //                 2026-08-24: the phaser is a bus effect). It leaves with the Pipeline DSL.
     val gain: Double,
     val pan: Double,
-    val phaser: Phaser,
 
     /**
      * The orbit chain slots this voice writes (`VoiceData.katalystParams`), carried by REFERENCE:
@@ -91,17 +84,12 @@ class Voice(
     cull: Double? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Strip pipeline: Pitch → Ignite → Filter (Send is appended in init)
+    // Pipeline: Pitch → Ignite → (teardown fade) (Send is appended in init)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     pipeline: List<BlockRenderer>,
 
     // Pre-built BlockContext (created by VoiceFactory, mutated per block)
     private val blockCtx: BlockContext,
-
-    // The baked main filter chain (LP/HP/BP/Notch/Formant), in the exact order received.
-    // Exposed for tests that assert filter-bake ordering; not used during rendering
-    // (the pipeline drives audio). Null when the voice has no main filter.
-    internal val mainFilter: AudioFilter? = null,
 ) {
     /**
      * Voice death frame (gate end + release tail). Rewritten by a realtime note-off
@@ -114,19 +102,19 @@ class Voice(
     /** Frame where release begins. Moves earlier on a realtime note-off ([releaseGate]). */
     private var gateEndFrame: Double = gateEndFrame
 
-    // Full pipeline: Pitch → Ignite → Filter → Send
+    // Full pipeline: Pitch → Ignite → (teardown fade) → Send
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
 
     /**
      * True once this voice's release has stayed under [VOICE_CULL_FLOOR] for the whole cull window.
-     * From then on [render] runs no strip: the voice is a ZOMBIE that only renews its orbit lease
+     * From then on [render] runs no stage: the voice is a ZOMBIE that only renews its orbit lease
      * and keeps its slot in the scheduler's active list until its scheduled [endFrame], where it
      * expires like any other voice. Staying in the list is the point: the orbit lease passes to
      * whichever voice renders FIRST after an owner dies, and that order is the active list, so an
      * early removal would reorder it and hand orbits to different successors (measured 2026-09-15
      * on Der Schmetterling: a culled hat changed which of guitar 3 and the bass owned orbit 3, at
      * -32 dBFS). The zombie's per-block cost is the lease renewal, and as the owner the bus config
-     * re-application that comes with it, exactly what a sounding tail paid; the strip it skips is
+     * re-application that comes with it, exactly what a sounding tail paid; the stages it skips are
      * the win.
      */
     var culled: Boolean = false
@@ -213,7 +201,7 @@ class Voice(
     /**
      * Renders the voice into the context's buffers.
      *
-     * Runs the composable BlockRenderer pipeline: Pitch → Ignite → Filter → Send.
+     * Runs the composable BlockRenderer pipeline: Pitch → Ignite → (teardown fade) → Send.
      *
      * @return true if the voice is still active, false if it has finished
      */
@@ -250,7 +238,7 @@ class Voice(
         blockCtx.measurePeak = measure
         blockCtx.voiceOutputPeak = 0.0 // never a stale read from the previous block
 
-        // ── Pitch → Ignite → Filter → Send ────────────────────────────────────────
+        // ── Pitch → Ignite → (teardown fade) → Send ───────────────────────────────
 
         for (renderer in pipeline) {
             renderer.render(blockCtx)
@@ -325,7 +313,7 @@ class Voice(
     )
 
     /**
-     * The strip's pitch envelope (sprudel's `penv`): [semitones] = pitch shift at the envelope's peak, in
+     * The voice's pitch envelope (sprudel's `penv`): [semitones] = pitch shift at the envelope's peak, in
      * SEMITONES (`2^(semitones * level / 12)`), and [envelope] its stages and curves, the level law of
      * `EnvelopeCore`, the Ignitor pitch envelope's (phase 3 step 5b (c1)). The [Fm] shape.
      */
@@ -334,6 +322,7 @@ class Voice(
         val envelope: Envelope,
     )
 
+    /** A modulation envelope of the voice's pitch pipeline (FM index, pitch envelope), in frames. */
     class Envelope(
         val attackFrames: Double,
         val decayFrames: Double,
@@ -342,25 +331,7 @@ class Voice(
         val attackCurve: AdsrCurve = AdsrCurve.Default,
         val decayCurve: AdsrCurve = AdsrCurve.Default,
         val releaseCurve: AdsrCurve = AdsrCurve.Default,
-    ) {
-        /**
-         * The VCA gain's de-click smoother state (see [EnvelopeDeclick]). It lives here, on the envelope,
-         * because every Vca stage of a pipeline shares this instance.
-         */
-        internal val declick: EnvelopeDeclick = EnvelopeDeclick()
-
-        companion object {
-            fun of(adsr: AdsrDef.Resolved, sampleRate: Int) = Envelope(
-                attackFrames = adsr.attack * sampleRate,
-                decayFrames = adsr.decay * sampleRate,
-                sustainLevel = adsr.sustain,
-                releaseFrames = adsr.release * sampleRate,
-                attackCurve = adsr.attackCurve,
-                decayCurve = adsr.decayCurve,
-                releaseCurve = adsr.releaseCurve,
-            )
-        }
-    }
+    )
 
     class Compressor(
         val thresholdDb: Double,
@@ -401,36 +372,6 @@ class Voice(
         val cylinderId: Int,
         val attackSeconds: Double,
         val depth: Double,
-    )
-
-    class FilterModulator(
-        val filter: AudioFilter.Tunable,
-        val envelope: Envelope,
-        val depth: Double,
-        val baseCutoff: Double,
-        /**
-         * Per-voice slow cutoff drift (OU process). When non-null, `FilterModRenderer`
-         * advances the drift once per block and multiplies its output into the
-         * envelope-derived cutoff. Set when the patch has `analog > 0`. See
-         * [io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC].
-         */
-        val drift: AnalogDrift? = null,
-    )
-
-    class Distort(val amount: Double, val shape: String = "soft", val oversample: Int = 0)
-    class Crush(val amount: Double, val oversample: Int = 0)
-    class Coarse(val amount: Double, val oversample: Int = 0)
-    /** [floor] = minimum dry coefficient of the C4 wet/dry law; 1.0 (default) = purely additive. */
-    class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double, val floor: Double = 1.0)
-    /**
-     * Per-voice tremolo, carried RAW: [rate] in Hz, [phase] as an authored cycle offset
-     * (`0..1`), [skew] in `-1..+1` with 0 symmetric, [shape] a house waveform name (null =
-     * sine). The unit conversions and the unknown-name fallback live in one place,
-     * `TremoloRenderer`.
-     */
-    class Tremolo(
-        val rate: Double, val depth: Double, val skew: Double, val phase: Double,
-        val shape: String?,
     )
 
     companion object {

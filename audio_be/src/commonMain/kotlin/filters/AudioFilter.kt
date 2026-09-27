@@ -21,7 +21,8 @@ interface AudioFilter {
     }
 
     /**
-     * A filter whose cutoff a control-rate modulator moves (the voice strip's `FilterModRenderer`).
+     * A filter whose cutoff a control-rate modulator can move. Its one mover, the voice strip's filter modulator,
+     * retired with the strip (phase 3 step 9); the strip's filter classes follow in their own commit.
      */
     interface Tunable {
         /**

@@ -14,7 +14,8 @@ import io.peekandpoke.klang.audio_bridge.LfoShapes
 /**
  * The two shape catalogues (`DistortionShapes`, `LfoShapes` in `audio_bridge`) against the backend's
  * enums (phase 3 step 3b, 2026-09-25). Since 3b a shape NAME no longer reaches the enum directly:
- * `parseDistortionShape` and `parseLfoShape` go through the catalogue's index, and the Ignitor nodes
+ * `parseDistortionShape` and `parseLfoShape` (a test helper since phase 3 step 9) go through the
+ * catalogue's index, and the Ignitor nodes
  * carry that index as a knob. Two things can therefore go silently wrong, and each has its rows:
  *
  *  - **the NAME TABLE moved**: a name or alias now reaches a different shape than it did before 3b.

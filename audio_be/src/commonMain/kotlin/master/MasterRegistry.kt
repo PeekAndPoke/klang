@@ -11,8 +11,7 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * Backend registry: master name → [MasterDsl].
  *
  * Custom masters arrive at runtime via `KlangCommLink.Cmd.RegisterMaster` and land on the
- * **per-playback fork** (so they die with that playback's engine). Mirror of
- * [io.peekandpoke.klang.audio_be.engines.PipelineRegistry], minus the presets — there is no
+ * **per-playback fork** (so they die with that playback's engine). There is no
  * built-in master chain to seed: an unknown or absent name resolves to [MasterDsl.default] (unity),
  * which is what keeps a song without `master(…)` byte-identical to the pre-MasterDsl engine.
  */

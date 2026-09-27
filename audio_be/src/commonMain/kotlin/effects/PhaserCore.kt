@@ -14,9 +14,8 @@ import kotlin.math.tan
 
 /**
  * Single per-channel phaser kernel — `stages`-count first-order allpass cascade with
- * sine-LFO-modulated breakpoint and feedback. Used by all three Phaser surfaces:
+ * sine-LFO-modulated breakpoint and feedback. Used by both Phaser surfaces:
  *   - [Phaser]                                          — cylinder bus, 2× PhaserCore for stereo
- *   - `voices/strip/filter/StripPhaserRenderer.kt`      — per-voice mono `BlockRenderer`
  *   - `ignitor/IgnitorEffects.kt::PhaserIgnitor`        — Ignitor DSL, mono, lazy-init from `ctx.sampleRate`
  *
  * **Topology** — bilinear 1st-order allpass per stage:

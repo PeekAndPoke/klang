@@ -24,11 +24,10 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  * A master is an ordered list of [MasterStageDsl] stages applied to a playback's summed bus,
  * *after* its orbits (Katalyst) and *before* the engines are mixed together.
  *
- * Mirrors [PipelineDsl] (per-voice) and [IgnitorDsl] (per-voice exciter): a `@WireFormat` root,
- * registered by name, referenced from `VoiceData.master`. One concept, one word, three hosts —
- * exciter / voice pipeline / master bus.
+ * Mirrors [IgnitorDsl] (the per-voice instrument) and [KatalystDsl] (per orbit): a `@WireFormat` root,
+ * registered by name, referenced from `VoiceData.master`.
  *
- * Unlike the pipeline, a master rides *events*: `master(...)` stamps the reference onto a pattern
+ * A master rides *events*: `master(...)` stamps the reference onto a pattern
  * event, so the chain can change over musical time (fades, endings, per-section loudness).
  */
 @WireFormat

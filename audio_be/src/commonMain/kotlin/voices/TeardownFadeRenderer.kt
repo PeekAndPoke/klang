@@ -14,13 +14,12 @@ import kotlin.math.floor
 /**
  * The teardown fade: a unity gate with a short linear fade to EXACT zero over the voice's last frames.
  *
- * The one copy of this law, with two hosts (it lives next to [Voice], not in the strip, because it
- * outlives the strip: from step 9 it is the voice's own teardown guard):
- *  - the strip's `adsrOff` path (`EnvelopeRenderer` with `on = false`), as always;
- *  - a voice whose Ignitor tree IS the whole voice (a built-in on `classic()` since phase 3 step 6)
- *    and whose build reports that the tree does not end in its own amplitude envelope
- *    (`BuiltIgnitor.endsInEnvelope`), which is the tree's `adsrOff`. Appended after the ignite stage,
- *    it runs exactly where the strip's VCA ran, so both hosts render the same bits.
+ * The voice's own teardown guard (phase 3 step 9: the voice strip, whose `adsrOff` path was its first host,
+ * retired): appended after the ignite stage of every voice whose build reports that the tree does not end
+ * in its own amplitude envelope (`BuiltIgnitor.endsInEnvelope`): a `classic()` voice with `adsrOff`, and an
+ * instrument that does not end in `classic()` and has no built envelope with a static release at its root.
+ * It runs exactly where the strip's VCA ran, so a `classic()` voice renders the bits the strip's `adsrOff`
+ * rendered.
  *
  * Stateless (it reads the block context only), so one instance serves every voice.
  *
@@ -31,14 +30,9 @@ import kotlin.math.floor
  * 20 dB louder, and teardown steps that straight to zero. See [VCA_OFF_TEARDOWN_FADE_SECONDS]
  * for the measurements and `VcaOffTeardownSpec` for the guard.
  *
- * **Known limit: this guarantees silence at THIS stage's output, not the voice's.** A custom
- * pipeline may place the VCA ahead of Crush / Coarse / Distort / Filter / Tremolo, and those carry
- * state (IIR memory, sample-and-hold) that keeps emitting from a zero input. On such a pipeline
- * the fade removes the gate's own step but not the downstream tail. Closing that properly means
- * a guard at the END of the strip, which would also change the `on = true` path, so it is left
- * as a deliberate follow-up rather than smuggled in here.
+ * It runs after the whole tree, so it guarantees silence at the voice's output (only the send stage follows).
  *
- * Note also that the `on = true` path is NOT click-free either: the de-click one-pole lags and
+ * Note that an envelope that ends the voice is NOT click-free either: the de-click one-pole lags and
  * leaves ~3.3e-3 on the last frame at a 50 ms release. See the scope note in `AdsrCurveMath`.
  */
 object TeardownFadeRenderer : BlockRenderer {
@@ -52,7 +46,7 @@ object TeardownFadeRenderer : BlockRenderer {
         // PRECONDITION: startFrame and blockStart are integral Doubles (VoiceFactory floors the
         // former, the worklet advances cursorFrame by whole blocks). That is what makes
         // `offset + length - 1 == floor(endFrame) - blockStart - 1` hold even when a voice starts
-        // and ends inside one block, and hence what makes the endpoint exact. `VoiceFactoryVcaOffSpec`
+        // and ends inside one block, and hence what makes the endpoint exact. `BareTreeVoiceSpec`
         // renders a REAL Voice to pin the coupling; if sub-sample onsets ever arrive, revisit here.
         val lastFrame = floor(ctx.endFrame) - 1.0
         val fadeFrames = VCA_OFF_TEARDOWN_FADE_SECONDS * ctx.sampleRateD

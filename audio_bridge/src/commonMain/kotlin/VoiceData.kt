@@ -60,9 +60,8 @@ data class VoiceData(
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
      * declares, the chain a cylinder is born with included (Katalyst step 5b-1). It is the one
      * source of an orbit stage's knobs: the delay, reverb, compressor and duck fields left the wire
-     * in step 5b-3. The phaser fields below stay for one reader only, the per-voice phaser of a
-     * custom pipeline that declares `StageDsl.Phaser`; they leave with the Pipeline DSL
-     * (signal-flow plan phase 3).
+     * in step 5b-3. The phaser fields below have had no reader since the voice strip and its per-voice
+     * phaser retired (phase 3 step 9); they leave the wire with the rest of the voice door fields.
      */
     val katalystParams: Map<String, Double>? = null,
 
@@ -162,15 +161,6 @@ data class VoiceData(
 
     /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */
     val sourceId: String?,
-
-    /**
-     * Voice pipeline name — selects the topology of the Filter stage.
-     *
-     * Known values (case-insensitive): `"modern"` (the default and only built-in, ADSR last: classic
-     * subtractive VCF, then VCA), or the synthetic name of a registered custom pipeline.
-     * Unknown or null values fall back to modern.
-     */
-    val pipeline: String? = null,
 
     /**
      * Master-chain name — selects the [MasterDsl] applied to this playback's bus from this event's

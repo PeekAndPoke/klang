@@ -11,9 +11,9 @@ import kotlin.math.pow
 /**
  * One block of a swept TPT SVF: the coefficients at the block's first frame ([start]) and the per-sample
  * steps that carry each of them linearly to the coefficients at the block's end. THE interpolation of the
- * engine's modulated SVFs (decision D3, the sampling), shared by both hosts: the Ignitor filter node's
- * cutoff envelope (`SvfIgnitor`) and the voice strip's filter (`BaseSvf.sweepCutoff`, driven by
- * `FilterModRenderer`). A host copies [start] into its running coefficients, uses them for the block's
+ * engine's modulated SVFs (decision D3, the sampling): the Ignitor filter node's cutoff envelope
+ * (`SvfIgnitor`), and `BaseSvf.sweepCutoff`, which snaps a fixed filter's coefficients through it at
+ * construction (the voice strip's filter modulator that swept it per block retired in phase 3 step 9). A host copies [start] into its running coefficients, uses them for the block's
  * first sample and adds each step AFTER every sample, so the coefficients arrive at the end values when
  * the next block begins.
  *

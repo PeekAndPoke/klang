@@ -422,3 +422,14 @@ data class ShimmerBuilder(val node: IgnitorDsl.Shimmer)
 /** Minimum dry coefficient of the shimmer (default 0); see `PhaserBuilder.floor`. */
 @KlangScript.Function
 fun ShimmerBuilder.floor(floor: IgnitorDslLike): ShimmerBuilder = copy(node = node.copy(floor = floor.toIgnitorDsl()))
+
+/**
+ * The runtime hands numeric literals through as `Double`, so a `Boolean` parameter would throw a
+ * raw ClassCastException on `humanize(1)`, and numeric flags are the established idiom on the sprudel
+ * side (`adsrOn(0)`). Coerce rather than throw, per the project's user-facing-param rule.
+ */
+internal fun coerceFlag(flag: Any): Boolean = when (flag) {
+    is Boolean -> flag
+    is Number -> flag.toDouble() != 0.0
+    else -> true
+}

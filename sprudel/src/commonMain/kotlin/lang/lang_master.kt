@@ -22,7 +22,7 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
  * Stamps a master reference onto every event of [source].
  *
  * The reference rides the event stream: the backend swaps this playback's master chain when it
- * consumes the event, at its start time. Mirrors the inline-pipeline path in `lang_pipeline`.
+ * consumes the event, at its start time. Mirrors the inline-instrument path of `sound(...)`.
  */
 private fun applyMaster(source: SprudelPattern, master: MasterDsl): SprudelPattern =
     source.reinterpretVoice { vd -> vd.copy(master = MasterValue.Dsl(master)) }

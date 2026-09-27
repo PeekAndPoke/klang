@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -56,7 +55,7 @@ class IgniteOnsetOffsetSpec : StringSpec({
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate, sampleRateDouble = sampleRate.toDouble(), blockFrames = blockFrames,
-            ignitorRegistry = registry, pipelineRegistry = PipelineRegistry(),
+            ignitorRegistry = registry,
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = voiceBuffer, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),

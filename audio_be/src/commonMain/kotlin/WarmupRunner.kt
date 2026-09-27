@@ -5,10 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -103,8 +100,8 @@ class WarmupRunner(
 
         /**
          * The warmed voices' envelope and lowpass as `classic()`'s slots: attack 1 ms, decay 50 ms to 0, release
-         * 50 ms, a lowpass at 2 kHz, q 0.3. [WARMUP_STRIP_LOWPASS] and the typed envelope are the same for the
-         * voices on the strip.
+         * 50 ms, a lowpass at 2 kHz, q 0.3. The vocabulary graphs do not end in `classic()`, so they play as their
+         * bare trees and ignore these.
          */
         private val WARMUP_CLASSIC_SLOTS: Map<String, Double> = IgnitorDsl.Slots.let { s ->
             listOf(
@@ -113,9 +110,6 @@ class WarmupRunner(
             )
                 .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
         }
-
-        /** The warmed lowpass for the voices on the strip (the vocabulary graphs), until step 9 retires it. */
-        private val WARMUP_STRIP_LOWPASS: FilterDefs = FilterDefs(listOf(FilterDef.LowPass(freq = 2000.0, q = 0.3)))
 
         /**
          * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
@@ -181,7 +175,7 @@ class WarmupRunner(
                     val start = (orbit + 0.5) * blockSec
                     // The orbit chain reads its knobs from `katalystParams` alone (Katalyst step
                     // 5b-1; the bus fields left the wire in 5b-3), so the warmup writes SLOTS:
-                    // without them this warmup would warm the voice strip and leave every orbit
+                    // without them this warmup would warm the voices alone and leave every orbit
                     // stage cold, and no ring and no reverb network would be rented in the warmup
                     // window, which is most of what it is for.
                     //
@@ -193,12 +187,8 @@ class WarmupRunner(
                         sound = WARMUP_SOUNDS[orbit % WARMUP_SOUNDS.size],
                         freqHz = 220.0 + 20.0 * orbit,
                         cylinder = orbit,
-                        // The envelope and the lowpass twice, one per path: as `classic()`'s slots for the built-ins and
-                        // the sample (phase 3 step 8: a tree voice reads slots only), and typed for the vocabulary graphs,
-                        // which do not end in `classic()` and run the voice strip until step 9 retires it.
+                        // The envelope and the lowpass as `classic()`'s slots, for the built-ins and the sample.
                         oscParams = WARMUP_CLASSIC_SLOTS,
-                        adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
-                        filters = WARMUP_STRIP_LOWPASS,
                         katalystParams = mapOf(
                             "delay.wet" to 0.5,
                             "delay.time" to 0.3,

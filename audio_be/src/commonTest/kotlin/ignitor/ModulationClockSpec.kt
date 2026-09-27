@@ -8,8 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
+import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.shape
@@ -20,7 +19,7 @@ import kotlin.random.Random
  * Modulation/waveshaper class guards (block-framing ledger W1-W3, W5): the coarse hold grid is
  * note-anchored and survives window boundaries and amount crossings; the tremolo LFO is a
  * clock; the fused Distort node (classic()'s distort stage, the strip's law since step 4) renders
- * the strip's `DistortionRenderer`, not the doors' Drive+Shape chain.
+ * the runtime `fusedDistort` (`DistortionCore`), not the doors' Drive+Shape chain.
  */
 class ModulationClockSpec : StringSpec({
 
@@ -237,9 +236,11 @@ class ModulationClockSpec : StringSpec({
         // doors' `Drive` + `Shape` chain, bit-exactly, and re-fusing it "with the gain inside the
         // oversampled loop" was the mutation it caught. Decision D2 (option A, 2026-09-25) asks for
         // exactly that re-fusion: the node renders the voice strip's loop (DistortionCore). So the row
-        // now pins the node against the strip's `DistortionRenderer` bit for bit, and against the
-        // chain as DIFFERENT (the soft cap and the drive's place relative to the oversampler).
-        // W5's hazard (a per-block bypass) is `StripLawCoresSpec`'s continuity row.
+        // now pins the DSL node against the runtime `fusedDistort` bit for bit (it was the strip's
+        // `DistortionRenderer` until the strip retired in step 9; the law's oracle is
+        // `StripLawCoresSpec`'s), and against the chain as DIFFERENT (the soft cap and the drive's place
+        // relative to the oversampler). W5's hazard (a per-block bypass) is `StripLawCoresSpec`'s
+        // continuity row.
         val source = IgnitorDsl.Sine().buildExciter(random = Random(3), freqHz = 220.0).ignitor
 
         fun render(dsl: IgnitorDsl): DoubleArray {
@@ -254,18 +255,10 @@ class ModulationClockSpec : StringSpec({
             IgnitorDsl.Drive(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5)).shape("soft", oversample = 2)
         )
 
-        val strip = renderSegments(source, List(4) { blockFrames })
-        val renderer = DistortionRenderer(0.5, "soft", oversampleStages = 1)
-
-        for (b in 0 until 4) {
-            val block = strip.copyOfRange(b * blockFrames, (b + 1) * blockFrames)
-
-            renderer.renderInPlace(block)
-            block.copyInto(strip, b * blockFrames)
-        }
+        val runtime = renderSegments(source.fusedDistort(ConstantIgnitor(0.5), parseDistortionShape("soft"), 1), List(4) { blockFrames })
 
         fused.any { it != 0.0 } shouldBe true
-        fused.map { it.toRawBits() } shouldBe strip.map { it.toRawBits() }
+        fused.map { it.toRawBits() } shouldBe runtime.map { it.toRawBits() }
         (maxDiff(fused, modern) > 0.0) shouldBe true
     }
 })

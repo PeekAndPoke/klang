@@ -55,7 +55,7 @@ import kotlin.math.tan
 // by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
 // the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
 // of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.shape()`, and
-// `voices/strip/filter/DistortionRenderer` with a single source of truth.
+// the voice strip's distort (now `DistortionCore`) with a single source of truth.
 //
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
@@ -680,9 +680,10 @@ object LowPassHighPassFilters {
      * **The cutoff sweep** (decision D3, the sampling): [sweepCutoff] snaps the coefficients to the
      * block's start cutoff and hands the subclass's per-sample loop the steps of [SvfCoeffSweep], the
      * interpolation the Ignitor filter node runs too: each coefficient takes its step AFTER every
-     * sample, for [sweepFrames] samples, and then holds. `FilterModRenderer` calls it once per block
-     * with the block's length, so the coefficients arrive at the block's end cutoff as the next block
-     * begins. Construction snaps to the constructor's cutoff and steps nothing.
+     * sample, for [sweepFrames] samples, and then holds. The voice strip's filter modulator called it once
+     * per block with the block's length, so the coefficients arrived at the block's end cutoff as the next
+     * block began; it retired with the strip (phase 3 step 9). Construction snaps to the constructor's
+     * cutoff and steps nothing.
      *
      * **Nonlinear character**: SvfLPF/SvfHPF have an active `analog`-gated
      * saturated branch that uses analog-style state-dependent damping

@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.AdsrDef
@@ -22,8 +21,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * TEST ONLY. This voice with its typed voice-door fields MOVED into the slot bag, the form a producer sends since
  * phase 3 step 8 (sprudel's `toVoiceData` writes the slot keys, `classicSlotParams`; the engine reads only those).
  * A spec that states its settings as typed fields renders a built-in, a sample or an authored `classic()`
- * instrument through this; the strip side of an old-path/new-path fixture keeps the typed fields, which only the
- * voice strip reads, until step 9 retires both.
+ * instrument through this. Scaffolding: it goes with the typed fields (the `VoiceData` cut, phase 3 step 9).
  *
  * The same rules as sprudel's translation: only a set and finite field is written; the typed value wins over a
  * bag entry of the same key; a filter kind writes its `freq`, `q` and (low/high) `passes`, and its envelope keys
@@ -140,12 +138,3 @@ fun VoiceData.withClassicSlots(): VoiceData {
         loop = null,
     )
 }
-
-/**
- * TEST ONLY. This voice as a producer sends it to the path [registry] picks for its sound: a TREE voice (a
- * built-in, an authored instrument that ends in `classic()`, a sample) reads its settings as slots
- * ([withClassicSlots]); a voice on the strip (an authored instrument without `classic()`) keeps the typed
- * fields, the old path's oracle in the strip-against-tree fixtures, until step 9 retires the strip.
- */
-fun VoiceData.forPath(registry: IgnitorRegistry): VoiceData =
-    if (registry.contains(sound) && !registry.endsInClassic(sound)) this else withClassicSlots()

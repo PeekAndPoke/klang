@@ -10,10 +10,10 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import kotlin.math.pow
 
 /**
- * THE voice strip's distort law, one copy for two hosts (phase 3 step 4, decision D2 option A,
- * 2026-09-25): the strip's `DistortionRenderer` and the Ignitor's fused `Distort` node (the one
- * `classic()` builds) are thin hosts that only adapt their block contract. `ClassicStripParitySpec`
- * proves the two bit-identical.
+ * THE voice strip's distort law (phase 3 step 4, decision D2 option A, 2026-09-25), hosted by the
+ * Ignitor's fused `Distort` node (the one `classic()` builds), which adapts only its block contract. It
+ * was one copy for two hosts until the strip's `DistortionRenderer` retired with the strip (phase 3
+ * step 9); `StripLawCoresSpec` pins the law against an oracle written in the test.
  *
  * The law, per block:
  *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded. With
@@ -22,13 +22,12 @@ import kotlin.math.pow
  *     bits: linear interpolation does not round the same way);
  *  2. the DC blocker, on every shape, not only the asymmetric ones: at extreme drive any input
  *     asymmetry rail-locks a symmetric shaper toward +-1 and leaves a DC bias;
- *  3. NO soft cap. The strip has its own downstream bounding stages, and `classic()` rebuilds the
+ *  3. NO soft cap. The strip had its own downstream bounding stages, and `classic()` rebuilds the
  *     strip. The Ignitor `distort`/`shape` doors are a DIFFERENT law on purpose (D2 kept both): they
  *     build `Shape(Drive(...))`, drive at the base rate and cap their output. Whether the cap belongs
  *     here too is `docs/tasks/oversampling-regions.md`'s question, not this class's.
  *
- * The bypass (an amount at or below 0) belongs to the hosts, not here: the strip skips the stage for
- * the note, the fused node is not built for a leaf amount at or below 0 and runs at unity drive for a
+ * The bypass (an amount at or below 0) belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at unity drive for a
  * modulated one.
  *
  * @param shape the waveshaper, resolved by the host (a name through `parseDistortionShape`, an index

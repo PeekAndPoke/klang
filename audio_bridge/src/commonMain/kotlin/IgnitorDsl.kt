@@ -1359,8 +1359,8 @@ sealed interface IgnitorDsl {
          * the plain `0`.
          *
          * The four stage knobs below are read ONCE per voice, at build, from a [Param] or
-         * [Constant] leaf (which is what a slot is). That matches the strip, whose
-         * `FilterDef.envelope` is resolved at note-on too. **A non-leaf EXPRESSION here is not
+         * [Constant] leaf (which is what a slot is). That matched the retired strip, whose
+         * `FilterDef.envelope` was resolved at note-on too. **A non-leaf EXPRESSION here is not
          * "modulated", it is UNREADABLE at build**, and the consequence differs per knob: a stage
          * knob falls back to its constant, but this DEPTH falls back to `0`, which switches the
          * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
@@ -1368,9 +1368,9 @@ sealed interface IgnitorDsl {
          *
          * **Which envelope this is (decision D3).** The law is the engine's one envelope law, and an
          * unshaped stage (curve knob at its default) takes `MOD_ENV_CURVE`, the house Exponential
-         * curve (K = 3), which the voice strip's filter envelope takes too when sprudel's `lpfCurves`
-         * names none (`FilterEnvDef.resolve`). The
-         * sampling is the same on both: the envelope is computed at block START and block END and
+         * curve (K = 3), as the retired voice strip's filter envelope did when sprudel's `lpfCurves`
+         * named none. The
+         * sampling was the same on both: the envelope is computed at block START and block END and
          * the SVF coefficients are interpolated across the block. So the same stage times, depth and
          * curve give the same sweep on both surfaces.
          */
@@ -1403,18 +1403,15 @@ sealed interface IgnitorDsl {
          * structural flag and not a knob: no number a pattern writes can carry a draw.
          *
          * `false` (the default) draws nothing and changes nothing. `true` draws only when
-         * [analog] resolves above 0, and then exactly as the voice strip does: one
+         * [analog] resolves above 0, and then exactly as the voice strip did: one
          * `nextDouble()` for the tolerance, then the drift lane's three
          * (`buildFilterHumanization` in `audio_be` owns the order). [analog] is read at build from
          * a [Param] or [Constant] LEAF, like the envelope knobs: a non-leaf expression there is
          * unreadable at build, so the lane silently does not exist and this flag does nothing. The
-         * strip has no such case to match, its `analog` being one number off the voice's bag.
+         * strip had no such case to match, its `analog` being one number off the voice's bag.
          *
          * It is what the built-in instruments of phase 3 switch on so `analog(3)` keeps meaning
-         * what it means today. Scales come from `constants/FilterHumanizationDefaults.kt`; the
-         * per-engine `StageDsl.Filter` overrides do NOT reach a tree filter, because a tree has
-         * no pipeline stage to carry them (the same asymmetry `FILTER_DRIVE_PER_ANALOG` already
-         * has in `IgnitorFilters`).
+         * what it means today. Scales come from `constants/FilterHumanizationDefaults.kt`.
          */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1484,9 +1481,9 @@ sealed interface IgnitorDsl {
         val q: IgnitorDsl = Constant(0.707),
         /**
          * The analog SATURATION is not implemented for this tap and the value does not reach it
-         * (same pattern as the voice-strip `SvfBPF`); see [Lowpass.analog] for the semantics when
+         * (as the retired voice strip's bandpass had none); see [Lowpass.analog] for the semantics when
          * it is. The value is NOT inert, though: it scales [humanize]'s per-voice cutoff tolerance
-         * and its drift lane, exactly as it does on the strip, so `analog` on a bandpass is a
+         * and its drift lane, exactly as it did on the strip, so `analog` on a bandpass is a
          * humanization amount today and a saturation amount as well later.
          */
         val analog: IgnitorDsl = Constant(0.0),
@@ -1508,8 +1505,8 @@ sealed interface IgnitorDsl {
         val releaseCurve: IgnitorDsl = Constant(AdsrCurves.indexOf(MOD_ENV_CURVE)),
         /**
          * Per-voice cutoff tolerance and drift lane; see [Lowpass.humanize]. The TOLERANCE and
-         * the DRIFT reach this tap even though [analog]'s saturation does not: the strip's
-         * `SvfBPF` takes the same `cutoffOffsetMul` and the same `FilterModRenderer` drift.
+         * the DRIFT reach this tap even though [analog]'s saturation does not, as they reached the
+         * retired strip's bandpass.
          */
         val humanize: Boolean = false,
     ) : IgnitorDsl {
@@ -1789,9 +1786,8 @@ sealed interface IgnitorDsl {
          * What OFF does today: the stage is not built, so the inner signal passes unchanged, and its
          * knob subtrees are not built either (a drawing source there takes no draws, the gate's
          * usual consequence). The voice's LIFETIME is kept: the node still reports the release tail
-         * the envelope would have had, as the voice strip's `adsrOff` keeps it. There is no
-         * teardown fade yet, so the voice ends on whatever its last frame carries; step 6's
-         * teardown fade (section 6 of that plan) fills those last frames.
+         * the envelope would have had, as the voice strip's `adsrOff` kept it, and the voice ends on
+         * the teardown fade (`TeardownFadeRenderer`, since phase 3 step 6).
          */
         val on: IgnitorDsl = Constant(1.0),
     ) : IgnitorDsl {
@@ -1907,10 +1903,10 @@ sealed interface IgnitorDsl {
      * which a slotted tail needs.
      *
      * **Its law is the VOICE STRIP's, not the doors'** (phase 3 step 4, decision D2 option A,
-     * 2026-09-25): the backend renders it through the same loop as the strip's `DistortionRenderer`
+     * 2026-09-25): the backend renders it through the loop the strip's distort ran
      * (`DistortionCore`): `shape(x * 10^(amount * 1.2))` with the drive applied INSIDE the oversampler,
      * then a DC blocker, and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`.
-     * `ClassicStripParitySpec` proves it bit-identical to the strip. The `distort`/`shape` doors keep
+     * It was proven bit-identical to the strip before the strip retired (phase 3 step 9). The `distort`/`shape` doors keep
      * their capped `Shape(Drive(...))` law (drive at the base rate, `softCap` last), unchanged, because
      * songs depend on it.
      *
@@ -1998,9 +1994,9 @@ sealed interface IgnitorDsl {
     /**
      * Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change.
      *
-     * The LFO law is the voice strip's, ONE copy both use (`TremoloCore` in the backend): at every
-     * [shape], [skew] and [phase] this node renders what the strip's tremolo renders, bit for bit, which
-     * is what lets `classic()` rebuild it (phase 3 step 3b, 2026-09-25).
+     * The LFO law is the voice strip's (`TremoloCore` in the backend): at every [shape], [skew] and
+     * [phase] this node rendered what the strip's tremolo rendered, bit for bit, which is what let
+     * `classic()` rebuild it (phase 3 step 3b, 2026-09-25).
      *
      * @param rate LFO rate in Hz, read once per block. Default 5.0.
      * @param depth modulation depth, 0 to 1, read once per block; at or below 0 the tremolo passes the

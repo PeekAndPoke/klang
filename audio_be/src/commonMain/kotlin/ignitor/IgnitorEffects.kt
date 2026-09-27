@@ -199,8 +199,8 @@ private class ShapeIgnitor(
 
 /**
  * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds: drive and
- * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the same loop the strip's
- * `DistortionRenderer` runs (phase 3 step 4, decision D2 option A, 2026-09-25): the drive INSIDE the
+ * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the loop the strip's
+ * distort ran (phase 3 step 4, decision D2 option A, 2026-09-25): the drive INSIDE the
  * oversampler, the DC blocker, NO soft cap. The doors keep their own law (`distort` above).
  *
  * **D2 supersedes ledger W5's "delete it"** (maintainer, 2026-08-30), which removed an earlier fused
@@ -208,7 +208,7 @@ private class ShapeIgnitor(
  * MODULATED amount crossing 0 left the oversampler and the DC blocker holding stale state and popped
  * at every crossing. Here there is one bypass policy, and it is the build's:
  *  - a LEAF amount at or below 0 (or unset) is the build gate (`IgnitorDslRuntime`): the node is not
- *    built, which is exactly the strip skipping its stage for the note;
+ *    built, which is exactly what the strip did: it skipped its stage for the note;
  *  - a MODULATED (non-leaf) amount at or below 0 is NOT a bypass: the core keeps running at UNITY drive
  *    (what the `Drive` node does there), so its state stays contiguous through the crossing. A NaN
  *    amount drives with NaN: the core's NaN guard writes 0 for every shaped sample of that block, and
@@ -255,7 +255,7 @@ private class FusedDistortIgnitor(
 /**
  * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
  *
- * The law is [CrushCore], the ONE copy the voice strip's `CrushRenderer` renders through too (phase 3
+ * The law is [CrushCore], the voice strip's crush law (phase 3
  * step 4, decision D1, 2026-09-25: FLOOR everywhere): an asymmetric `floor` quantizer,
  * `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`, with a DC offset of about
  * `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated amount: the classic crunch. A
@@ -365,7 +365,7 @@ private class CoarseIgnitor(
 
             for (i in ctx.offset until end) {
                 if (counter >= 1.0) {
-                    // nanGuard mirrors the strip door: a NaN input must not latch into the
+                    // nanGuard mirrors the retired strip's coarse: a NaN input must not latch into the
                     // held value for `amount` frames.
                     lastValue = work[i].nanGuard()
                     counter -= 1.0
@@ -554,7 +554,7 @@ fun Ignitor.tremolo(
 ): Ignitor = TremoloIgnitor(this, rate, depth, skew = null, shape = LfoShape.SINE, startPhase = 0.0)
 
 /**
- * The tremolo with every knob of the voice strip's (phase 3 step 3b, 2026-09-25), the form the DSL
+ * The tremolo with every knob the voice strip's had (phase 3 step 3b, 2026-09-25), the form the DSL
  * runtime builds. [shape] and [startPhase] (in cycles) are resolved once, at build; [skew] is read
  * once per block like [rate] and [depth], and `null` means a constant 0 without the read.
  */
@@ -567,8 +567,8 @@ internal fun Ignitor.tremolo(
 ): Ignitor = TremoloIgnitor(this, rate, depth, skew, shape, startPhase)
 
 /**
- * The Ignitor host of [TremoloCore], the one tremolo law the voice strip's `TremoloRenderer` renders
- * through too: this class only adapts the node's contract (rate, depth and skew read once per block,
+ * The Ignitor host of [TremoloCore], the one tremolo law (the voice strip's, which retired in phase 3
+ * step 9): this class only adapts the node's contract (rate, depth and skew read once per block,
  * the clock kept running through a bypassed block).
  */
 private class TremoloIgnitor(

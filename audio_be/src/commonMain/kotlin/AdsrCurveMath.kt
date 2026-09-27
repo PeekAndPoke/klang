@@ -10,14 +10,13 @@ import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the strip pitch envelope
-// included since phase 3 step 5b (c1)):
+// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the voice's pitch
+// envelope included since phase 3 step 5b (c1)):
 // the stage shapes, the release time base, and the de-click coefficient.
 //
 // The tunable values themselves (ADSR_EXP_K, ENV_DECLICK_SECONDS) live in
-// `audio_bridge/constants/EnvelopeDefaults.kt` — they are the defaults of
-// `StageDsl.Vca` fields, so both sides must read one declaration. Only the math
-// lives here.
+// `audio_bridge/constants/EnvelopeDefaults.kt`, which the authoring side reads too, so both sides read one
+// declaration. Only the math lives here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -38,7 +37,7 @@ internal val ADSR_EXP_NORM: Double = adsrExpNorm(ADSR_EXP_K)
  * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]` at curvature [k], with
  * the precomputed [norm] = [adsrExpNorm]\(k\); `g(0)=0`, `g(1)=1`. Convex (like `Square` but
  * longer-tailed). For decay / release the caller passes `omp = 1−p`, giving the natural "fast drop,
- * long tail". Every envelope passes [ADSR_EXP_K] except the strip VCA, whose engine may carry its own.
+ * long tail". Every envelope passes [ADSR_EXP_K].
  *
  * NOTE: one [fastExp] per call (since 2026-09-15; it was a library `exp`, one transcendental
  * per sample in every renderer, the rest of the curve family being multiply-only). The next
@@ -79,8 +78,8 @@ internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm:
 //
 // Scope, measured: on the ignitor envelope (AdsrIgnitor, where declickSeconds defaults
 // to 0 = off) the rendered gain reaches 0.0 too, and that is the path Der Schmetterling's
-// guitars clicked on. On the strip VCA the de-click one-pole sits DOWNSTREAM of the curve
-// and is on by default, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
+// guitars clicked on. With the de-click one-pole on (`classic()`'s envelope, as on the retired strip VCA)
+// it sits DOWNSTREAM of the curve, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
 // frame only moves 3.38e-3 -> 3.31e-3 at a 50 ms release: the curve residual was never the
 // dominant term there. Fixing THAT is a separate question (it changes every song's note-off)
 // and is deliberately not attempted here.

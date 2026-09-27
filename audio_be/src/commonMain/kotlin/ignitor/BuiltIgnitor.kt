@@ -44,8 +44,8 @@ data class BuiltIgnitor(
      * not remove). A square tremolo at full depth is exact silence for half a cycle, a skewed one
      * for longer, and the silence culler, which ends a voice whose release stays under the floor for
      * `VOICE_CULL_SECONDS`, would kill the voice at its first off-half. The voice factory ORs this
-     * into its cull-never decision, the rule the strip's tremolo has always had (`VoiceFactory`:
-     * depth above 0, whatever the shape).
+     * into its cull-never decision, the rule the strip's tremolo always had (depth above 0, whatever
+     * the shape).
      *
      * Section 6 of `docs/tasks/builtin-instruments.md` ("the build must report 'this tree gates its
      * own output'"), landed in phase 3 step 3b (2026-09-25), when the square and skewed shapes made
@@ -74,9 +74,8 @@ data class BuiltIgnitor(
      * the node it is. Pitch-mod wrappers and optimizer hints pass their inner's answer through (they
      * do not touch the amplitude).
      *
-     * The voice factory reads it for a voice whose tree is the whole voice (a built-in on `classic()`,
-     * phase 3 step 6): when it is false, the voice appends the teardown fade the strip's `adsrOff`
-     * always had (`TeardownFadeRenderer`, section 6 of `docs/tasks/builtin-instruments.md`). When it is
+     * The voice factory reads it for every voice (every voice is its tree since phase 3 step 9): when it
+     * is false, the voice appends the teardown fade the strip's `adsrOff` always had (`TeardownFadeRenderer`, section 6 of `docs/tasks/builtin-instruments.md`). When it is
      * true, the envelope ends the voice and a fade on top would change its last frames.
      */
     val endsInEnvelope: Boolean = false,

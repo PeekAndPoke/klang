@@ -30,12 +30,10 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * and the delay/reverb returns included (bus order: body/vowel -> delay -> reverb -> phaser;
  * first-writer-wins owns the knobs, route to another orbit for different bus settings).
  *
- * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): the built-in pipeline presets
- * carry no per-voice phaser stage, so this bus pass is the ONE application of the knobs —
- * the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is an
- * exact crossfade here. Only a CUSTOM pipeline that adds `StageDsl.Phaser` gets per-voice
- * phasing on top (then the same knobs drive both passes and a floor below 1 floors the dry
- * twice — the [voices.strip.filter.StripPhaserRenderer] KDoc carries that warning).
+ * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): this bus pass is the ONE application
+ * of the knobs, the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is
+ * an exact crossfade here. (The per-voice phaser a custom voice pipeline could add retired with the
+ * Pipeline DSL, phase 3 step 9.)
  *
  * The Ignitor-DSL phaser ([io.peekandpoke.klang.audio_be.ignitor.PhaserIgnitor]) is the
  * same law at `floor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for

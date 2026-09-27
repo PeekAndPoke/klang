@@ -16,7 +16,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  * (the VCA) on or off, so an ignitor that carries its own envelope does not compound with it.
  *
  * Covers the door through to the wire (the `adsr.on` slot, 1.0 or 0.0, phase 3 step 8). The value-side merge is in
- * `AdsrOnFlagSpec` (audio_bridge) and the render end in `VcaOnFlagRenderSpec` (audio_be).
+ * `AdsrOnFlagSpec` (audio_bridge) and the render end in `ClassicTailRenderSpec` (audio_be, `adsr.on`).
  *
  * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */

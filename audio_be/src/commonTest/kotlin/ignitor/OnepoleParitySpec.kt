@@ -65,17 +65,18 @@ class OnepoleParitySpec : StringSpec({
         return out
     }
 
-    "IgnitorRegistry's oscParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
+    "the `onepole` slot's oscParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
         // The one row that pins BOTH the wiring and the UNIT: build the same "sine" exciter
-        // twice — once through the oscParam key ("onepole" in Hz), once plain plus a manual
-        // .onePoleLowpass(800.0). A dropped registry line, a changed key, a halved value, or
-        // a reinstated coefficient interpretation (the old warmth semantics) all go red.
+        // twice, once through the oscParam key ("onepole" in Hz), once plain plus a manual
+        // .onePoleLowpass(800.0). A changed key, a halved value, or a reinstated coefficient
+        // interpretation (the old warmth semantics) all go red.
         //
-        // The sound is an AUTHORED sine: the registry wraps an authored instrument at note-on, which is
-        // the route this row pins. A built-in carries the slot on its source instead (the row below).
+        // The sound is an AUTHORED sine that places the slot itself (`OscSlot.onepole`): the registry's wrap
+        // of every authored instrument retired with the voice strip (phase 3 step 9). A built-in carries the
+        // slot as `classic()`'s first stage (the row below).
         val registry = IgnitorRegistry().apply {
             registerDefaults()
-            register("rawsine", IgnitorDsl.Sine())
+            register("rawsine", IgnitorDsl.OnePoleLowpass(IgnitorDsl.Sine(), IgnitorDsl.Slots.onepole))
         }
         fun exciter(params: Map<String, Double>?): Ignitor {
             val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", oscParams = params)

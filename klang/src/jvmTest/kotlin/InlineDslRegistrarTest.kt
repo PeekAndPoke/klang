@@ -15,10 +15,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.MasterDsl
 import io.peekandpoke.klang.audio_bridge.MasterValue
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
-import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -56,7 +53,6 @@ class InlineDslRegistrarTest : StringSpec({
     /** Minimal event carrying only what the sweep reads. */
     class FakeEvent(
         override val sound: SoundValue? = null,
-        override val pipeline: PipelineValue? = null,
         override val master: MasterValue? = null,
         override val katalyst: KatalystValue? = null,
     ) : KlangPatternEvent {
@@ -155,25 +151,21 @@ class InlineDslRegistrarTest : StringSpec({
         sentB.size shouldBe 1
     }
 
-    // ── the generic really is shared: pipelines and masters behave identically ──
+    // ── the generic really is shared: masters and katalysts behave identically ──
 
     "each DSL kind announces once and lands as its own Cmd type" {
         val (reg, sent) = newRegistrar()
-        val pipeline = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter()))
         val master = MasterDsl.of()
         val katalyst = KatalystDsl.of(KatalystStageDsl.Reverb())
 
-        reg.pipelines.registerOrLookup(pipeline)
-        reg.pipelines.registerOrLookup(pipeline)
         reg.masters.registerOrLookup(master)
         reg.masters.registerOrLookup(master)
         reg.katalysts.registerOrLookup(KatalystValue.Dsl(katalyst))
         reg.katalysts.registerOrLookup(KatalystValue.Dsl(katalyst))
 
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterPipeline>().size shouldBe 1
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterMaster>().size shouldBe 1
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().size shouldBe 1
-        sent.size shouldBe 3
+        sent.size shouldBe 2
     }
 
     // ── the shared sweep (was hand-written at every call site) ───────────────
@@ -181,21 +173,18 @@ class InlineDslRegistrarTest : StringSpec({
     "announceAll registers every inline DSL kind found in the events" {
         val (reg, sent) = newRegistrar()
         val osc = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Constant(123.45))
-        val pipeline = PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter()))
         val master = MasterDsl.of()
         val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
 
         reg.announceAll(
             listOf(
                 FakeEvent(sound = SoundValue.Osc(osc)),
-                FakeEvent(pipeline = PipelineValue.Dsl(pipeline)),
                 FakeEvent(master = MasterValue.Dsl(master)),
                 FakeEvent(katalyst = KatalystValue.Dsl(katalyst)),
             )
         )
 
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterIgnitor>().single().dsl shouldBe osc
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterPipeline>().single().dsl shouldBe pipeline
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterMaster>().single().dsl shouldBe master
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().single().dsl shouldBe katalyst
     }

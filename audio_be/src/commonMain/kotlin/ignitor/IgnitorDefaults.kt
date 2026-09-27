@@ -15,8 +15,8 @@ import io.peekandpoke.klang.audio_bridge.plus
 
 /**
  * Registers every built-in sound: its source from [builtInSources] in the built-in voice shape
- * ([IgnitorRegistry.builtInVoice], `source.pregain().classic()`). The tree ends in `classic()`, so the voice
- * strip is off for it (phase 3 steps 6 and 10, [IgnitorRegistry.endsInClassic]).
+ * ([IgnitorRegistry.builtInVoice], `source.pregain().classic()`). The tree ends in `classic()`, so the pattern's voice
+ * doors reach it.
  */
 fun IgnitorRegistry.registerDefaults() {
     for ((name, source) in builtInSources()) {

@@ -15,7 +15,7 @@ package io.peekandpoke.klang.audio_bridge
  * context allocates one via `registerKatalyst`), so the wire-level [VoiceData] still carries
  * `katalyst: String?`.
  *
- * Mirror of [MasterValue] / [PipelineValue] / [SoundValue]. NOT a wire type (no `@WireFormat`, no
+ * Mirror of [MasterValue] / [SoundValue]. NOT a wire type (no `@WireFormat`, no
  * `@WireName`): it never crosses the worklet boundary, it is denormalized to `katalyst: String?`
  * first. Authoring-layer only.
  */

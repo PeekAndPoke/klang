@@ -6,13 +6,11 @@
 package io.peekandpoke.klang.audio_be
 
 /**
- * THE tremolo law, one copy for both hosts (phase 3 step 3b, 2026-09-25): the voice strip's
- * `TremoloRenderer` and the Ignitor's `Tremolo` node are thin wrappers that only adapt their host's
- * block contract (the strip reads its knobs once per note, the node once per block). Before this
- * the node carried its own sine-only loop, bit-identical to the strip's only at the neutral
- * settings; now it renders what the strip renders at every shape, skew and start phase, which is
- * what `classic()` needs to rebuild the strip tremolo (step 6). `TremoloNodeStripParitySpec` proves
- * it in raw bits.
+ * THE tremolo law (phase 3 step 3b, 2026-09-25), hosted by the Ignitor's `Tremolo` node, which adapts
+ * only its block contract (it reads its knobs once per block). It was one copy for two hosts until the
+ * voice strip's `TremoloRenderer` retired with the strip (phase 3 step 9); the node rendered what the
+ * strip rendered at every shape, skew and start phase, which is what let `classic()` rebuild the strip
+ * tremolo. `TremoloLawSpec` pins the law against an oracle written in the test.
  *
  * The per-sample loop in [apply] is the strip's loop, moved verbatim: the phase advances every
  * sample through `wrapPhase` (ledger W2), the level is [lfoNorm] (whose unskewed-sine fast path IS
@@ -21,8 +19,8 @@ package io.peekandpoke.klang.audio_be
  * Unit conversions live here, once: a rate in Hz becomes a radian increment in [increment], a start
  * phase in cycles becomes radians at construction.
  *
- * @param shape the LFO waveform, resolved by the host (a name through `parseLfoShape`, an index knob
- *   through `lfoShapeAt`).
+ * @param shape the LFO waveform, resolved by the host (the Ignitor `Tremolo` node's index knob through
+ *   `lfoShapeAt`).
  * @param startPhase where the LFO starts in its own cycle, in CYCLES (`0..1` is one cycle). Folded
  *   by `wrapPhase`, which also turns a non-finite seed into 0.0, so a hostile value cannot poison
  *   the accumulator.
@@ -72,7 +70,7 @@ internal class TremoloCore(
 
     /**
      * Renders `output[i] = input[i] * gain(i)` for `i` in `[from, to)`, advancing the clock one sample
-     * each. [input] and [output] may be the same buffer (the strip renders in place).
+     * each. [input] and [output] may be the same buffer.
      */
     fun apply(input: AudioBuffer, output: AudioBuffer, from: Int, to: Int, increment: Double, depth: Double) {
         // Everything the LFO needs is loop-invariant except the phase: hoisted into locals, because

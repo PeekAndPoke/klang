@@ -18,14 +18,14 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
-// `classic()`: today's voice strip as a tail of slotted Ignitor stages (phase 3 step 5)
+// `classic()`: the voice strip's chain as a tail of slotted Ignitor stages (phase 3 step 5; the strip retired in step 9)
 //
 // The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks/builtin-instruments.md`.
 // The SLOTS below are grouped per stage and named `<door>.<param>`, which is sprudel's own reader
 // vocabulary (`lpf.freq`, `adsr.attack`, ...) and the `<stage>.<knob>` rule of the Katalyst's classic
 // chain. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
 // these keys (`classicSlotParams`, phase 3 step 8). Every default is the value the voice strip
-// uses when the pattern writes nothing, read from the same constant the strip reads.
+// used when the pattern wrote nothing, read from the same constant the strip read.
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -46,7 +46,7 @@ private fun slot(door: String, param: String, default: Double, description: Stri
  * (`hpf` the same).
  *
  * @property freq cutoff in Hz; mirrors `<door>.freq`. Default UNSET: an unwritten cutoff is no
- *   filter at all (the gate's filter row), as a pattern without `lpf` has none on the strip.
+ *   filter at all (the gate's filter row), as a pattern without `lpf` had none on the strip.
  * @property q resonance; mirrors `<door>.q`. Default 0.707, the strip's `?: 0.707`.
  * @property passes cascade count, read once at voice build; mirrors `<door>.passes`. Default 1.
  * @property env cutoff-envelope depth in semitones; mirrors `<door>.env`. Default UNSET: the strip's
@@ -134,7 +134,7 @@ class TremoloSlots internal constructor() {
  * The four stage defaults are the voice envelope's (`VOICE_ADSR_*`, the numbers of
  * `AdsrDef.Std.defaultSynth`), NOT the Ignitor `adsr` node's own: sustain 1.0 against 0.7, release
  * 0.05 against 0.3. The release matters beyond the envelope's shape: an OFF envelope still reports it
- * as the voice's tail, so an `adsrOff` voice lives exactly as long as on the strip. `adsr.on` defaults
+ * as the voice's tail, so an `adsrOff` voice lives exactly as long as it did on the strip. `adsr.on` defaults
  * to 1.0 (on) and must never default to 0.0, which is OFF (the envelope row of the gate).
  */
 class AdsrSlots internal constructor() {
@@ -199,7 +199,7 @@ class SampleSlots internal constructor() {
 }
 
 /**
- * Wraps this signal in today's voice strip, stage for stage: the subtractive synth voice that
+ * Wraps this signal in the voice chain the old voice strip ran, stage for stage: the subtractive synth voice that
  * `sound("saw")` has always been, as a plain function over the node type (`docs/plans/signal-flow-redesign.md`
  * section 5). The script door is `x.classic()`, and it calls this function: THIS is the one place the
  * order is written.
@@ -208,7 +208,7 @@ class SampleSlots internal constructor() {
  * onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
  * ```
  *
- * That is the strip's order (`PipelineDsl.modern`) with the canonical filter sub-order of
+ * That is the retired strip's order with the canonical filter sub-order of
  * `SprudelVoiceData.toVoiceData`, behind the pattern's `onepole`, which sat on the source in front of the
  * strip. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
  * pattern FILLS it and never adds structure, and every unwritten stage is NOT BUILT: its slot's default
@@ -218,30 +218,27 @@ class SampleSlots internal constructor() {
  * What it deliberately does NOT contain: `pregain`. An instrument places `.pregain()` where the player's
  * touch enters (section 5 of the plan).
  *
- * A tree that ENDS in `classic()` ([endsInClassic]) is the whole voice: the voice strip does not run after
- * it and the registry adds nothing around it (phase 3 step 10). Every built-in sound is
- * `source.pregain().classic()` (since step 6), and so is an authored instrument that appends `.classic()` as
- * its LAST call. An instrument that does not end in it keeps the voice strip, and the registry wraps the
- * pattern's `onepole` around it at note-on, until the strip retires. So a stage after `classic()` (or a tree that
- * only contains it, `a.classic().plus(b.classic())`) keeps the strip AND gets the `onepole` twice, the registry's
- * and `classic()`'s own on the same slot: `classic()` goes last.
+ * Every voice is its tree (the voice strip retired in phase 3 step 9): the engine adds nothing around it but the
+ * pitch pipeline, the teardown fade when the root is not an envelope, and the channel. Every built-in sound is
+ * `source.pregain().classic()` (since step 6); an authored instrument gets the voice chain by appending
+ * `.classic()` as its LAST call ([endsInClassic]). An instrument without it is played as its bare tree, and a
+ * tree with `classic()` below its root (`a.classic().plus(b.classic())`) gets the doors per branch.
  *
- * Per stage, what each node is and where it still differs from the strip (the measured table lives in
- * `ClassicStripParitySpec`):
- *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4):
- *    bit-identical at a crush `oversample` of 1 or less only. The strip's crush has an oversampler and
- *    the node has none, so a pattern that writes `crush(oversample = 2)` or more still differs (tracked
- *    in `docs/tasks/oversampling-regions.md`);
+ * Per stage, what each node is and how it relates to the retired strip (proven bit-identical row by row
+ * before the strip was deleted; the frozen fingerprints live in `ClassicVoiceBaselineSpec`):
+ *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4).
+ *    It has no oversampler, so `crush(oversample = ...)` does nothing (tracked in
+ *    `docs/tasks/oversampling-regions.md`);
  *  - the distort is the fused [IgnitorDsl.Distort] node, the one that switches drive AND shape off as a
  *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (option A, landed in
  *    step 4): the node renders the strip's loop (no soft cap, the drive inside the oversampler), so it
  *    is bit-identical, while the `distort`/`shape` doors keep their capped law;
- *  - the four filters humanize from the voice's `analog` slot, as the strip does, but draw per filter
- *    where the strip draws every tolerance first (the section 8 migration cost); their cutoff
+ *  - the four filters humanize from the voice's `analog` slot, as the strip did, but draw per filter
+ *    where the strip drew every tolerance first (the section 8 migration cost); their cutoff
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve
  *    `MOD_ENV_CURVE` on both), and their curves are the `<door>Curves` slots since step 5b (c2);
- *  - the envelope evaluates the strip's law (one envelope law on both hosts since phase 3 D3), and its
- *    de-click is the strip's constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the strip's
+ *  - the envelope evaluates the one envelope law (`EnvelopeCore`, shared with the old strip VCA since
+ *    phase 3 D3), and its de-click is the constant `ENV_DECLICK_SECONDS`, not a slot: no door writes the
  *    de-click per note.
  *
  * No arguments and no configure lambda: an author who wants another order writes their own tail from
@@ -349,17 +346,16 @@ fun IgnitorDsl.classic(): IgnitorDsl {
  * `adsr.on`. `classic()` is the one place that slot is placed (no door has the switch), so the root's switch IS
  * the tag, and no marker node or wire field is needed (phase 3 step 10, `docs/tasks/builtin-instruments.md`).
  *
- * Such a tree is the whole voice: the voice strip does not run after it, and the registry adds no `onepole`
- * around it (`IgnitorRegistry.endsInClassic`). Every built-in sound is one, and so is an authored instrument
- * whose LAST call is `.classic()`.
+ * Such a tree carries the voice chain, so the voice doors reach it. Every built-in sound is one, and so is an
+ * authored instrument whose LAST call is `.classic()`. The engine no longer asks (every voice is its tree since
+ * phase 3 step 9); the tag stays for the editor and the future auto-attach below.
  *
  * It compares the switch by NAME: a registered tree reaches the engine through the wire codec, which builds new
  * `Param` instances.
  *
- * It reads the ROOT only, so `classic()` must be the last call: `x.classic().mul(0.5)` does not end in it and
- * keeps the voice strip. An optimizer hint is not a stage, so it looks through one at the root:
+ * It reads the ROOT only, so `classic()` must be the last call: `x.classic().mul(0.5)` does not end in it. An optimizer hint is not a stage, so it looks through one at the root:
  * `x.classic().optimizer(0)` (the by-ear A/B, which its KDoc says to put last on a sound) ends in `classic()`,
- * and switching the optimizer off does not switch the voice path. This is the tag the `.sprudel()` auto-attach
+ * and switching the optimizer off does not change the answer. This is the tag the `.sprudel()` auto-attach
  * of `docs/plans/future/signal-graph-engine.md` asks for: "does this instrument carry the voice chain yet?".
  */
 fun IgnitorDsl.endsInClassic(): Boolean {

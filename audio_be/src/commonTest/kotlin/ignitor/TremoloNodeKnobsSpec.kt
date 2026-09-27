@@ -10,14 +10,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.lfoDutyOf
 import io.peekandpoke.klang.audio_be.lfoNorm
 import io.peekandpoke.klang.audio_be.lfoScaleFirst
 import io.peekandpoke.klang.audio_be.lfoScaleSecond
 import io.peekandpoke.klang.audio_be.lfoShapeAt
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.TremoloRenderer
+import io.peekandpoke.klang.audio_be.parseLfoShape
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
@@ -25,23 +23,20 @@ import io.peekandpoke.klang.audio_bridge.tremolo
 import kotlin.random.Random
 
 /**
- * The Ignitor `Tremolo` node renders what the voice strip's `TremoloRenderer` renders, BIT FOR BIT, at
- * every shape, skew and start phase (phase 3 step 3b, 2026-09-25). This is the proof `classic()` needs
- * to rebuild the strip tremolo in step 6; before 3b the two agreed only at the neutral settings.
- *
- * Both hosts render through ONE law (`TremoloCore`), so what these rows hold to account is everything
- * that is NOT shared: the node's knob plumbing (the shape index read at build, the skew read per
- * block, the start phase read at build, the rate turned into an increment), the strip's name parsing,
- * and each host's block contract. A mutation of the shared law moves both sides and is `TremoloRendererSpec`'s
- * to catch; a mutation of one side's handling is these rows'.
+ * The Ignitor DSL's `Tremolo` node renders what the runtime tremolo renders at the same knobs, BIT FOR BIT, at
+ * every shape, skew and start phase: the node's KNOB PLUMBING (the shape index read at build, the skew read per
+ * block, the start phase read at build, the rate turned into an increment) and the name-to-index catalogue.
+ * Until phase 3 step 9 the reference was the voice strip's `TremoloRenderer`, which proved the node the strip's
+ * tremolo (phase 3 step 3b); the strip retired, and the LAW both rendered through (`TremoloCore`) is pinned by
+ * `TremoloLawSpec` against values computed in the test. A mutation inside the core moves both sides here.
  *
  * The windows are a voice's: the first block starts mid-block (offset 37), the rest are full, and the
- * last is short. The input is a sawtooth, rendered once alone and fed to the strip, so both hosts
+ * last is short. The input is a sawtooth, rendered once alone and fed to the reference, so both sides
  * multiply the same samples. Rates are fractional on purpose (the increment's rounding is part of the
  * law), and at 48 kHz over 5 000 frames they cover four to twenty-two LFO cycles, so every segment of
  * every shape, skewed or not, is crossed.
  */
-class TremoloNodeStripParitySpec : StringSpec({
+class TremoloNodeKnobsSpec : StringSpec({
 
     val sampleRate = 48000
     val blockFrames = 128
@@ -89,44 +84,31 @@ class TremoloNodeStripParitySpec : StringSpec({
     /** The [source] alone over the windows: what both hosts multiply. */
     val dry: DoubleArray by lazy { renderNode(source) }
 
-    /** The strip renderer over the same windows, fed the [source]'s own samples. */
-    fun renderStrip(rate: Double, depth: Double, skew: Double, startPhase: Double, shape: String?): DoubleArray {
-        val renderer = TremoloRenderer(
-            rate = rate, depth = depth, skew = skew, startPhase = startPhase, shape = shape, sampleRate = sampleRate,
+    /**
+     * The runtime tremolo (`Ignitor.tremolo`, the host of `TremoloCore`) over the same windows, fed the [source]'s own
+     * samples, its shape named through the catalogue (`parseLfoShape`).
+     */
+    fun renderRuntime(rate: Double, depth: Double, skew: Double, startPhase: Double, shape: String?): DoubleArray {
+        val ignitor = ArrayIgnitor(dry).tremolo(
+            rate = ConstantIgnitor(rate), depth = ConstantIgnitor(depth), skew = ConstantIgnitor(skew),
+            shape = parseLfoShape(shape), startPhase = startPhase,
         )
+        val ctx = igniteCtx()
         val buffer = AudioBuffer(blockFrames)
-        val ctx = BlockContext(
-            audioBuffer = buffer,
-            freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = ScratchBuffers(blockFrames),
-            sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = (blockFrames * windows.size).toDouble(),
-            gateEndFrame = (blockFrames * windows.size).toDouble(),
-            freqHz = freqHz,
-            signal = source.buildExciter(random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor,
-            signalCtx = igniteCtx(),
-            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
-        )
-        val out = DoubleArray(dry.size)
-        var cursor = 0
+        val out = ArrayList<Double>()
 
         for ((offset, length) in windows) {
-            for (i in 0 until length) {
-                buffer[offset + i] = dry[cursor + i]
-            }
-
             ctx.updateOffsetAndLength(offset, length)
-            renderer.render(ctx)
+            ignitor.generate(buffer, freqHz, ctx)
 
-            for (i in 0 until length) {
-                out[cursor + i] = buffer[offset + i]
+            for (i in offset until offset + length) {
+                out.add(buffer[i])
             }
 
-            cursor += length
+            ctx.voiceElapsedFrames += length
         }
 
-        return out
+        return out.toDoubleArray()
     }
 
     /** The first sample whose raw bits differ, or -1. Raw bits: the claim is identity, not closeness. */
@@ -157,10 +139,10 @@ class TremoloNodeStripParitySpec : StringSpec({
                 for (skew in skews) {
                     for (phase in phases) {
                         val node = renderNode(source.tremolo(rate, depth, shape = shapeName, skew = skew, phase = phase))
-                        val strip = renderStrip(rate, depth, skew, phase, shapeName)
+                        val runtime = renderRuntime(rate, depth, skew, phase, shapeName)
 
                         withClue("shape=$shapeName rate=$rate depth=$depth skew=$skew phase=$phase") {
-                            firstMismatch(node, strip) shouldBe -1
+                            firstMismatch(node, runtime) shouldBe -1
                         }
 
                         if (firstMismatch(node, dry) != -1) {
@@ -177,28 +159,28 @@ class TremoloNodeStripParitySpec : StringSpec({
 
     // One row per canonical shape, so a node-side mishandling of ONE shape names itself.
     for (name in LfoShapes.names) {
-        "the node renders the strip's $name tremolo bit for bit across the grid of skews, start phases, rates and depths" {
+        "the node renders the runtime's $name tremolo bit for bit across the grid of skews, start phases, rates and depths" {
             checkGrid(name)
         }
     }
 
-    "every alias, an unknown name and the default spell the same tremolo on both hosts" {
-        // The strip parses the name, the node carries the index the door converted: the catalogue
+    "every alias, an unknown name and the default spell the same tremolo on the node and through the catalogue" {
+        // The reference parses the name, the node carries the index the door converted: the catalogue
         // is shared, and these rows pin that the two spellings reach it the same way.
         val spellings = LfoShapes.aliases.keys + listOf("SQUARE", "Tri", "rampup", "")
 
         for (spelling in spellings) {
             val node = renderNode(source.tremolo(37.3, 0.8, shape = spelling, skew = 0.3, phase = 0.25))
-            val strip = renderStrip(37.3, 0.8, 0.3, 0.25, spelling)
+            val runtime = renderRuntime(37.3, 0.8, 0.3, 0.25, spelling)
 
-            withClue(spelling) { firstMismatch(node, strip) shouldBe -1 }
+            withClue(spelling) { firstMismatch(node, runtime) shouldBe -1 }
         }
 
-        // The Kotlin door's default and the strip's `null` shape are both the sine.
-        firstMismatch(renderNode(source.tremolo(37.3, 0.8)), renderStrip(37.3, 0.8, 0.0, 0.0, null)) shouldBe -1
+        // The Kotlin door's default and the catalogue's `null` shape are both the sine.
+        firstMismatch(renderNode(source.tremolo(37.3, 0.8)), renderRuntime(37.3, 0.8, 0.0, 0.0, null)) shouldBe -1
     }
 
-    "SLOTS: a shape, skew and phase written through the bag render what the strip renders for those values" {
+    "SLOTS: a shape, skew and phase written through the bag render what the runtime renders for those values" {
         // The path `classic()` will take: every knob a `Param` whose value arrives per note.
         val slotted = IgnitorDsl.Tremolo(
             inner = source,
@@ -216,15 +198,14 @@ class TremoloNodeStripParitySpec : StringSpec({
             "tremolo.phase" to 0.7,
         )
 
-        firstMismatch(renderNode(slotted, bag), renderStrip(37.3, 0.9, -0.6, 0.7, "ramp")) shouldBe -1
+        firstMismatch(renderNode(slotted, bag), renderRuntime(37.3, 0.9, -0.6, 0.7, "ramp")) shouldBe -1
     }
 
     "a MOVING skew is held per block: the node renders the law with each block's start value, per sample" {
         // The per-block contract of `Tremolo.skew`, pinned against a reference written from the
         // definition (the LfoShape primitives, not TremoloCore): the skew is the signal's value at the
         // block's first sample, held for the block, and the phase accumulator is never remapped (the
-        // W2 beat lock), so the gain steps at each block edge. The strip has no moving skew, so this is
-        // node against definition, not node against strip.
+        // W2 beat lock), so the gain steps at each block edge. Node against definition.
         val skewSignal = IgnitorDsl.Times(IgnitorDsl.Sine(freq = IgnitorDsl.Constant(7.0)), IgnitorDsl.Constant(0.9))
         val rate = 37.3
         val depth = 0.8

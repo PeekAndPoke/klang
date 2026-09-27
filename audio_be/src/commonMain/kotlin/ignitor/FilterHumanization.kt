@@ -17,10 +17,10 @@ import kotlin.random.Random
  * cents); about +/- 0.06 % at `analog = 3` (about +/- 1 cent); about +/- 0.2 % at `analog = 10`
  * (about +/- 3.5 cents).
  *
- * **One implementation, two callers, because it is a DRAW.** `VoiceFactory` calls it for the
- * voice strip's filters and [buildFilterHumanization] for the Ignitor DSL's; a second copy of
- * the expression would be a second rng consumer that could drift from this one silently, which
- * is the hazard step 1 of phase 3 found in this very function.
+ * **One implementation, because it is a DRAW.** [buildFilterHumanization] calls it for the Ignitor
+ * DSL's filters (`VoiceFactory` called it for the voice strip's until the strip retired, phase 3 step 9);
+ * a second copy of the expression would be a second rng consumer that could drift from this one
+ * silently, which is the hazard step 1 of phase 3 found in this very function.
  */
 internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double, rng: Random): Double {
     if (analog <= 0.0) {
@@ -38,8 +38,8 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  * DRAWS, and no number a pattern writes can carry a draw. The node's side of that is the
  * structural `humanize` flag (`IgnitorDsl.Lowpass.humanize`).
  *
- * **Why the cascade shares ONE of these.** `passes = N` chains N `SvfIgnitor`s, and the voice
- * strip's equivalent is ONE `AudioFilter` whose `sweepCutoff` fans out to its N stages: one
+ * **Why the cascade shares ONE of these.** `passes = N` chains N `SvfIgnitor`s, and the retired voice
+ * strip's equivalent was ONE `AudioFilter` whose `sweepCutoff` fanned out to its N stages: one
  * tolerance, one drift lane, one multiplier per block for the whole cascade. So the build hands
  * the same instance to every stage of a cascade, and [blockDriftMultiplier] steps the lane only
  * when the block moved on, keyed on `IgniteContext.voiceElapsedFrames`.
@@ -53,9 +53,9 @@ internal fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Doub
  * never two blocks. A block of zero length does not advance the counter, so it does not step the
  * lane; it also writes no samples, so there is nothing for the lane to have moved for.
  *
- * **The drift is held across the block, not ramped, which is the strip's law too**
- * (`FilterModRenderer` takes one `nextMultiplier()` per block and does not ramp it; the
- * oscillator lanes are the ones that ramp). Both surfaces also switch it the same way at the block
+ * **The drift is held across the block, not ramped, which was the strip's law too**
+ * (its filter modulator took one `nextMultiplier()` per block and did not ramp it; the
+ * oscillator lanes are the ones that ramp). Both surfaces also switched it the same way at the block
  * boundary (decision D3, the sampling): the coefficients snap to the new value there (or, with an
  * envelope, the block's sweep starts from it). The drift has no LAW half, unlike the envelope: both
  * surfaces step the same `AnalogDrift`, so the multiplier sequence itself is the same process.
@@ -91,24 +91,22 @@ class FilterHumanization(
  * Builds one filter's humanization, **and owns the DRAW ORDER**, which is the whole point of
  * this function having a name.
  *
- * The voice strip's order, per filter, is: `perVoiceCutoffOffsetMul` takes one `nextDouble()`,
+ * The retired voice strip's order, per filter, was: `perVoiceCutoffOffsetMul` takes one `nextDouble()`,
  * then `AnalogDrift`'s init takes three (two `nextDouble()` for its Box-Muller seed, one
  * `nextInt()` for the xorshift state). At `analog` at or below 0 neither draws at all and the
  * lane is absent. Reproduced here exactly, because a tree that drew a different NUMBER of times
  * would shift every later noise source and every supersaw jitter on the same voice, silently.
  * `IgnitorFilterKnobsSpec` pins the sequence against a literal `Random` replay.
  *
- * Two differences from `VoiceFactory` that a tree cannot avoid and that are NOT this function's
- * to hide (they land with phase 3 step 6, where the strip's filters go away):
+ * Two differences from the strip that a tree could not avoid (they landed with phase 3 step 6, the
+ * analog draw order the task record's section 8 names):
  *
- *  - the factory draws every filter's TOLERANCE first and every filter's DRIFT afterwards, in
+ *  - the strip drew every filter's TOLERANCE first and every filter's DRIFT afterwards, in
  *    two passes over the filter list; a tree builds one filter at a time, so the two interleave
  *    once a voice has more than one filter;
- *  - the factory draws before the exciter is built, a tree during it.
+ *  - the strip drew before the exciter was built, a tree during it.
  *
- * The scales are the shared constants, not a `StageDsl.Filter`: a tree filter has no pipeline
- * stage to carry per-engine overrides, the same asymmetry `FILTER_DRIVE_PER_ANALOG` already has
- * in [svf]. `PipelineDsl` retires in phase 3 step 9 and takes the question with it.
+ * The scales are the shared constants in `constants/FilterHumanizationDefaults.kt`.
  *
  * @param analog the filter's resolved analog amount; at or below 0 (or non-finite, which reads
  *   as unset) nothing is drawn and the result is null.
@@ -129,8 +127,8 @@ internal fun buildFilterHumanization(
     // DRAWS 2, 3 and 4: the lane's Box-Muller seed and its xorshift state, inside the init.
     val drift = AnalogDrift(analog * FILTER_DRIFT_RELATIVE_TO_OSC, analogDriftStepRate(sampleRate, blockFrames), rng)
 
-    // `takeIf { it.active }` is alignment with the strip, which tests `drift.active` before every
-    // `nextMultiplier()` (`FilterModRenderer`), not a live case: `analog > 0` here, and
+    // `takeIf { it.active }` is alignment with the retired strip, which tested `drift.active` before every
+    // `nextMultiplier()`, not a live case: `analog > 0` here, and
     // `AnalogDrift.active` is `analog * FILTER_DRIFT_RELATIVE_TO_OSC > 0`, which only a
     // denormal-scale `analog` could underflow to zero. The draws above have already happened
     // either way, so this cannot move the stream.

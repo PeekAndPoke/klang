@@ -57,7 +57,6 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     fun sweep(renderer: KlangAudioRenderer, events: List<KlangPatternEvent>) {
         InlineDslRegistrar.intoRegistries(
             ignitors = renderer.ignitorRegistry,
-            pipelines = renderer.pipelineRegistry,
             masters = renderer.masterRegistry,
             katalysts = renderer.katalystRegistry,
         ).announceAll(events)

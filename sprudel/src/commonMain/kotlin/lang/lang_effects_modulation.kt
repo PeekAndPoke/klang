@@ -109,9 +109,8 @@ private fun applyPhaserWet(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * The orbit phaser: depth, rate, centre, sweep and dry floor.
  *
  * One sweep over the summed [orbit bus](/manuals/lexikon/orbit-bus), the DAW-insert model, so every
- * knob belongs to the orbit's owning voice: with the built-in pipelines, a voice that sets phaser
- * knobs without owning its orbit is not phased at all. Route it to its own orbit to give it its own
- * phaser. (A custom pipeline that adds a phaser stage does get a per-voice pass from its own knobs.)
+ * knob belongs to the orbit's owning voice: a voice that sets phaser knobs without owning its orbit
+ * is not phased at all. Route it to its own orbit to give it its own phaser.
  *
  * The dry signal stays untouched by default (`floor` is 1), so `wet` ADDS the swept notch on top
  * rather than crossfading into it. Lower `floor` to turn `wet` back into a crossfade.

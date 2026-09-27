@@ -1156,14 +1156,6 @@ let a = placeholder("aa", Osc.sine())"""
                 "Master(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl"
     }
 
-    "real stdlib: Pipeline(p => p.vca(v => v.expK(2))) resolves through invoke; p and v are typed" {
-        val code = "Pipeline(p => p.vca(v => v.expK(2)).distort())"
-        val a = analyze(code)
-        a.typeOf(a.topExpr())?.simpleName shouldBe "PipelineDsl"
-        a.receiverTypeBeforeDot(code.indexOf("p.vca") + 1)?.simpleName shouldBe "PipelineBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("v.expK") + 1)?.simpleName shouldBe "PipelineVcaBuilder"
-    }
-
     "function type renders structurally in the callable signature" {
         val supersaw = builderRegistry().getCallable("supersaw", KlangType("Osc", fqcn = "test.Osc"))
         supersaw.shouldNotBeNull()

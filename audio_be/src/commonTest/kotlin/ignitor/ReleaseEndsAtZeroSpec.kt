@@ -11,10 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 
@@ -36,12 +32,12 @@ import kotlin.math.abs
  * past the end, where the `coerceAtMost(1.0)` masks the off-by-one. That case now samples `N-1`.
  *
  * Every envelope evaluates one law (`EnvelopeCore`, pinned against its oracles in `EnvelopeLawSpec`);
- * the two amplitude hosts are pinned here end to end: the ignitor envelope (`AdsrIgnitor`) and the
- * strip VCA (`EnvelopeRenderer`).
+ * the amplitude host is pinned here end to end: the ignitor envelope (`AdsrIgnitor`). (The voice strip's
+ * VCA was the second until the strip retired, phase 3 step 9.)
  *
- * These cases set `declickSeconds = 0` so they measure the CURVE. On the strip VCA the shipped
- * default runs a de-click one-pole downstream of it, which lags and dominates the residual; see
- * the scope note in `AdsrCurveMath`.
+ * These cases set `declickSeconds = 0` so they measure the CURVE. With the de-click on (`classic()`'s
+ * envelope) a one-pole downstream of it lags and dominates the residual; see the scope note in
+ * `AdsrCurveMath`.
  */
 class ReleaseEndsAtZeroSpec : StringSpec({
 
@@ -98,97 +94,6 @@ class ReleaseEndsAtZeroSpec : StringSpec({
                 lastRenderedEnv(0.050, curve) shouldBe 0.0
             }
         }
-    }
-
-    // ── The strip VCA, the third evaluator sharing the same time base ─────────
-
-    "the strip VCA's release also ends at exactly 0.0 on the last rendered frame" {
-        // The amp VCA is the one that matters most and was the only evaluator not directly pinned.
-        // declickSeconds = 0 makes the smoother an exact pass-through, so this measures the CURVE
-        // rather than the smoother's lag.
-        val gateFrames = 100
-        val relFrames = 240
-        val total = gateFrames + relFrames
-
-        for (curve in AdsrCurve.entries) {
-            val buf = AudioBuffer(total)
-            for (i in 0 until total) buf[i] = 1.0
-
-            val renderer = EnvelopeRenderer(
-                Voice.Envelope(
-                    attackFrames = 1.0,
-                    decayFrames = 1.0,
-                    sustainLevel = 1.0,
-                    releaseFrames = relFrames.toDouble(),
-                    releaseCurve = curve,
-                ),
-                startFrame = 0.0,
-                declickSeconds = 0.0,
-            )
-            val ctx = BlockContext(
-                audioBuffer = buf,
-                freqModBuffer = DoubleArray(total),
-                scratchBuffers = ScratchBuffers(total),
-                sampleRate = sampleRate,
-                startFrame = 0.0,
-                endFrame = total.toDouble(),
-                gateEndFrame = gateFrames.toDouble(),
-                freqHz = 100.0,
-                signal = Ignitors.silence(),
-                signalCtx = IgniteContext(
-                    sampleRate = sampleRate, voiceDurationFrames = gateFrames,
-                    gateEndFrame = gateFrames, releaseFrames = relFrames,  
-                    scratchBuffers = ScratchBuffers(total),
-                ),
-                cylinders = Cylinders(blockFrames = total, sampleRate = sampleRate),
-            ).apply { updateOffsetAndLength(0, total); blockStart = 0.0 }
-
-            renderer.render(ctx)
-
-            withClue("VCA curve=$curve on the last rendered frame") {
-                abs(buf[total - 1]) shouldBe 0.0
-            }
-        }
-    }
-
-    "the strip VCA ends at 0.0 for a FRACTIONAL releaseFrames too" {
-        // Voice.Envelope.releaseFrames is a raw Double (release * sampleRate) and is fractional at
-        // most sample rates, but the voice renders floor(N) frames. Without the floor() the last
-        // rendered frame lands short of p = 1.0. Integral-frame cases cannot see this.
-        val gateFrames = 100
-        val relFrames = 240.5
-        val rendered = gateFrames + 240
-        val buf = AudioBuffer(rendered)
-        for (i in 0 until rendered) buf[i] = 1.0
-
-        val renderer = EnvelopeRenderer(
-            Voice.Envelope(
-                attackFrames = 1.0, decayFrames = 1.0, sustainLevel = 1.0,
-                releaseFrames = relFrames, releaseCurve = AdsrCurve.Exponential,
-            ),
-            startFrame = 0.0,
-            declickSeconds = 0.0,
-        )
-        val ctx = BlockContext(
-            audioBuffer = buf,
-            freqModBuffer = DoubleArray(rendered),
-            scratchBuffers = ScratchBuffers(rendered),
-            sampleRate = sampleRate,
-            startFrame = 0.0,
-            endFrame = gateFrames + relFrames,
-            gateEndFrame = gateFrames.toDouble(),
-            freqHz = 100.0,
-            signal = Ignitors.silence(),
-            signalCtx = IgniteContext(
-                sampleRate = sampleRate, voiceDurationFrames = gateFrames,
-                gateEndFrame = gateFrames, releaseFrames = 240,  
-                scratchBuffers = ScratchBuffers(rendered),
-            ),
-            cylinders = Cylinders(blockFrames = rendered, sampleRate = sampleRate),
-        ).apply { updateOffsetAndLength(0, rendered); blockStart = 0.0 }
-
-        renderer.render(ctx)
-        abs(buf[rendered - 1]) shouldBe 0.0
     }
 
     "a release too short to ramp is silent on its single frame, not held at full" {

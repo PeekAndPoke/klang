@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
@@ -14,32 +13,28 @@ import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_be.voices.strip.filter.FilterModRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import kotlin.math.sqrt
 
 /**
  * Block-framing **P4**, the control-rate half: a voice that starts MID-BLOCK must read its
  * control-rate envelopes at its own onset, not at the block's first frame.
  *
- * Four strip renderers derive their position as `ctx.blockStart + ctx.offset`. Two do not —
- * [FilterModRenderer] and [FmRenderer] hand `controlRatePos` the raw `ctx.blockStart`.
- * That is **correct, but only by construction elsewhere**, and the coupling is invisible from either
- * end:
+ * The voice's stages derive their position as `ctx.blockStart + ctx.offset`. [FmRenderer] does not:
+ * it hands `controlRatePos` the raw `ctx.blockStart` (so did the voice strip's filter modulator until the
+ * strip retired in phase 3 step 9). That is **correct, but only by construction elsewhere**, and the
+ * coupling is invisible from either end:
  *
  * - `Voice.render` derives `offset = maxOf(blockStart, startFrame) - blockStart`
  * - `controlRatePos` (`EnvelopeCalc`) is `maxOf(blockStart, startFrame) - startFrame`
  *
- * which are the same expression, so the callee's clamp *is* these two callers' offset compensation.
+ * which are the same expression, so the callee's clamp *is* the caller's offset compensation.
  *
  * **This also settles the open question in audit finding F3** — *"the clamp may be genuinely
  * redundant with the trailing `coerceIn`"*. It is not. The two disagree whenever `attackFrames == 0`,
  * because a negative `absPos` then satisfies `absPos < attackFrames` and takes the **attack** branch
  * (coercing to 0.0), while the clamped `absPos = 0` falls through to **sustain**. Zero attack is the
  * common case for a filter or FM envelope, and F3's mutation survived the whole 1373-test suite, so
- * nothing anywhere held this. These two rows do.
+ * nothing anywhere held this. This row does.
  */
 class MidBlockOnsetControlRateSpec : StringSpec({
 
@@ -82,52 +77,6 @@ class MidBlockOnsetControlRateSpec : StringSpec({
         sustainLevel = 1.0,
         releaseFrames = 0.0,
     )
-
-    "FilterModRenderer reads the envelope at the voice's onset, not the block's first frame" {
-        val filter = VoiceTestHelpers.TunableSpyFilter()
-        val mod = Voice.FilterModulator(
-            filter = filter,
-            envelope = flatEnvelope(),
-            depth = 12.0,
-            baseCutoff = 800.0,
-            drift = null,
-        )
-
-        FilterModRenderer(modulators = listOf(mod), startFrame = startFrame).render(ctx())
-
-        // envValue = 1.0 (sustain) => 800 * 2^(12/12 * 1.0) = 1600.
-        // Reading at blockStart instead would give absPos = -64, which with attackFrames = 0 lands
-        // in the attack branch and coerces to 0.0 => 800 * 2^0 = 800, the unmodulated cutoff.
-        filter.currentCutoff shouldBe 1600.0
-    }
-
-    "FilterModRenderer reads the sweep's end at the onset plus the rendered length, not at the onset" {
-        val filter = VoiceTestHelpers.TunableSpyFilter()
-        val mod = Voice.FilterModulator(
-            filter = filter,
-            // A linear 128-frame attack: 0.0 at the voice's onset, 0.5 at the frame after this block's
-            // last (the onset plus the 64 rendered frames).
-            envelope = Voice.Envelope(
-                attackFrames = 128.0,
-                decayFrames = 0.0,
-                sustainLevel = 1.0,
-                releaseFrames = 0.0,
-                attackCurve = AdsrCurve.Linear,
-                decayCurve = AdsrCurve.Linear,
-                releaseCurve = AdsrCurve.Linear,
-            ),
-            depth = 12.0,
-            baseCutoff = 800.0,
-            drift = null,
-        )
-
-        FilterModRenderer(modulators = listOf(mod), startFrame = startFrame).render(ctx())
-
-        // Start: 800 * 2^0 = 800. End: 800 * 2^(12/12 * 0.5) = 800 * sqrt(2). An end read at the onset
-        // would be 800 again, a sweep that never moves.
-        filter.cutoffHistory.single() shouldBe (800.0 plusOrMinus 1e-9)
-        filter.endHistory.single() shouldBe (800.0 * sqrt(2.0) plusOrMinus 1e-9)
-    }
 
     "FmRenderer reads its depth envelope at the voice's onset, not the block's first frame" {
         val fm = Voice.Fm(ratio = 1.0, depth = 50.0, envelope = flatEnvelope())

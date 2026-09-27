@@ -36,7 +36,7 @@ interface RenderClock {
      * cheaper than what it replaces.
      *
      * ⚠️ **Absolute frames are `Double`; per-sample offsets stay `Int`.** The conversion happens once
-     * per block per voice (e.g. `EnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
+     * per block per voice (e.g. `PitchEnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
      * and everything inside the sample loop is `Int`. Do not widen the loop variables.
      *
      * **Between renders, this is the NEXT block to be rendered** (block-framing B1, 2026-09-03).

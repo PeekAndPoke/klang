@@ -37,9 +37,9 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  * so where a stage sits in the list is what it means: an `eq` before `reverb` shapes the dry mix,
  * the same `eq` after it shapes dry and tail together.
  *
- * Mirrors [MasterDsl] (per playback), [PipelineDsl] (per voice) and [IgnitorDsl] (per voice
- * exciter): a `@WireFormat` root, registered by name, referenced from `VoiceData.katalyst`. One
- * concept, one word, four hosts: exciter / voice pipeline / orbit chain / master bus.
+ * Mirrors [MasterDsl] (per playback) and [IgnitorDsl] (the per-voice instrument): a `@WireFormat` root,
+ * registered by name, referenced from `VoiceData.katalyst`. Three hosts: instrument / orbit chain /
+ * master bus.
  *
  * Like the master, a Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern
  * event, so an orbit's chain can change over musical time. And like the master, `.katalyst(dsl)`

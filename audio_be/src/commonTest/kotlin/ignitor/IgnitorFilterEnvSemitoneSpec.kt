@@ -15,9 +15,8 @@ import kotlin.random.Random
 
 /**
  * C3 guard, IGNITOR path (docs/plans/filter-unification.md): envelope depth is SEMITONES
- * in the svf kernel too — `cutoff = base * 2^(depth/12 * env)`. The strip-pipeline path has
- * its own rows in `FilterEnvSemitoneSpec`; both exist because the law is applied in two
- * independent places (the `drivePerAnalog` lesson).
+ * in the svf kernel: `cutoff = base * 2^(depth/12 * env)`. (The strip-pipeline path had its own
+ * rows in `FilterEnvSemitoneSpec` until the voice strip retired, phase 3 step 9.)
  *
  * Method: with attack 0 / sustain 1 the envelope is exactly 1.0, so an env-modulated filter
  * must produce the SAME output as a static filter at `base * 2^(depth/12)`.

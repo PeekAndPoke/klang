@@ -27,8 +27,7 @@ internal enum class DistortionShape {
  * Case-insensitive.
  *
  * The names and aliases live in ONE table, `DistortionShapes` in `audio_bridge` (phase 3 step 3b,
- * 2026-09-25), and this goes through its INDEX, so the strip (which reads a name off the voice)
- * and the Ignitor `Shape`/`Distort` nodes (which carry the index as a knob) cannot disagree.
+ * 2026-09-25), and this goes through its INDEX, so a name read here and the Ignitor `Shape`/`Distort` nodes (which carry the index as a knob) cannot disagree.
  */
 internal fun parseDistortionShape(shape: String): DistortionShape = distortionShapeAt(DistortionShapes.indexOf(shape))
 

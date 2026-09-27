@@ -13,7 +13,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
@@ -45,8 +44,7 @@ import kotlin.random.Random
  * pitch envelope's ratio is `2^level` at 12 semitones, read off the same buffer). The filters'
  * level is not observable on their output, so their rows pin the unwritten curve against the same node
  * with the curve named Exponential; the exponential law itself through the filter is pinned against a
- * written-out oracle in `EnvelopeLawSpec` (the filter host row), and the strip's filter against the node
- * in `ClassicStripParitySpec`.
+ * written-out oracle in `EnvelopeLawSpec` (the filter host row).
  */
 class ModEnvelopeDefaultCurveSpec : StringSpec({
 
@@ -227,7 +225,6 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                 sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
                 ignitorRegistry = registry,
-                pipelineRegistry = PipelineRegistry(),
                 cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,
@@ -298,7 +295,6 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
                 sampleRateDouble = sampleRate.toDouble(),
                 blockFrames = blockFrames,
                 ignitorRegistry = registry,
-                pipelineRegistry = PipelineRegistry(),
                 cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
                 voiceBuffer = voiceBuffer,
                 freqModBuffer = freqModBuffer,

@@ -11,7 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -20,15 +19,11 @@ import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
-import io.peekandpoke.klang.audio_bridge.mul
-import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.pregain
 import kotlin.math.PI
@@ -36,38 +31,27 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * **Who runs the voice strip in phase 3 (steps 6, 7 and 10).** A BUILT-IN sound is one Ignitor tree and runs
- * no strip; since step 7 a SAMPLE runs the sample instrument, the same shape over its PCM, and no strip either;
- * since step 10 an AUTHORED instrument whose last call is `.classic()` is the same case as a built-in; any other
- * authored instrument keeps the strip, and the registry's `onepole` wrap, until the strip retires (step 9).
- * The paths coexist per voice, decided by the name's registry entry (`IgnitorRegistry.endsInClassic`, and a
- * name no registry defines is a sample).
+ * **Every voice is one Ignitor tree** (phase 3 step 9 retired the voice strip): a built-in sound, a sample (the
+ * sample instrument over its PCM), an authored instrument. This spec pins the doors on a sample and on an authored
+ * `classic()` tree, the by-ear A/B on such a tree, the one path `BuiltInVoiceMatrixSpec` and `SampleInstrumentSpec`
+ * cannot reach (a realtime note-off on a built-in whose envelope is switched off, where the teardown fade has to
+ * follow the moved end), and the negative-release lifetime. An instrument WITHOUT `classic()` is
+ * `BareTreeVoiceSpec`'s.
  *
- * The built-in side is pinned wide by `BuiltInVoiceMatrixSpec` and deep by `ClassicStripParitySpec`, the
- * sample side bit for bit by `SampleInstrumentSpec`; this spec pins the doors on a sample and the strip where
- * it must still run (an authored instrument), and the one path the first two cannot reach,
- * a realtime note-off on a built-in whose envelope is switched off, where the teardown fade has to follow
- * the moved end.
+ * Until step 9 this was `BuiltInStripOffSpec`, which also pinned who still ran the strip.
  */
-class BuiltInStripOffSpec : StringSpec({
+class TreeVoiceSpec : StringSpec({
 
     val sampleRate = 48000
     val blockFrames = 128
 
     val registry = IgnitorRegistry().apply {
         registerDefaults()
-        register("stripsaw", builtInSources().getValue("saw"))
-        // Step 10: an author's instrument that ends in `classic()` (the built-in saw's own tree), one with a stage
-        // AFTER `classic()` (not the tag), and a plain one with its own onepole (the registry wrap's oracle).
+        // An author's instrument that ends in `classic()` (the built-in saw's own tree).
         register("authoredsaw", builtInSources().getValue("saw").pregain().classic())
-        register("afterclassic", builtInSources().getValue("saw").pregain().classic().mul(IgnitorDsl.Constant(0.5)))
-        register("stripsawop", builtInSources().getValue("saw").onepole(900.0))
         // The by-ear A/B on an authored classic() tree: the optimizer hint LAST, as its KDoc says to put it.
         register("authoredsawab", builtInSources().getValue("saw").pregain().classic().optimizer(0))
     }
-
-    /** `bare`: a pipeline with no stage at all, so a voice that runs the strip renders its tree alone through it. */
-    val pipelines = PipelineRegistry().apply { register("bare", PipelineDsl(emptyList())) }
 
     /** A 220 Hz sine as sample PCM: 0.5 s at the render rate, so the playback rate is exactly 1.0. */
     val pcm = MonoSamplePcm(
@@ -86,7 +70,6 @@ class BuiltInStripOffSpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = pipelines,
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
@@ -95,7 +78,7 @@ class BuiltInStripOffSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data.forPath(registry),
+                data = data.withClassicSlots(),
                 startTime = 0.0,
                 gateEndTime = gateSec,
                 playbackStartTime = 0.0,
@@ -140,75 +123,34 @@ class BuiltInStripOffSpec : StringSpec({
         withClue("the envelope applies") { slowAttack.toList() shouldNotBe plain.toList() }
     }
 
-    "an AUTHORED instrument still runs the voice strip: its typed lowpass applies" {
-        val plain = render(base.copy(sound = "stripsaw"))
-        val filtered = render(base.copy(sound = "stripsaw", filters = lpf))
+    "an AUTHORED instrument that ends in classic(): the doors reach its slots" {
+        val plain = render(base.copy(sound = "authoredsaw"))
 
-        filtered.toList() shouldNotBe plain.toList()
+        withClue("the lowpass") { render(base.copy(sound = "authoredsaw", filters = lpf)).toList() shouldNotBe plain.toList() }
+        withClue("the envelope") { render(base.copy(sound = "authoredsaw", adsr = AdsrDef.Std(attack = 0.05))).toList() shouldNotBe plain.toList() }
     }
 
-    "an AUTHORED instrument that ends in classic() runs no strip: its voice's pipeline is inert, and a door reaches its slot" {
-        val doors = base.copy(sound = "authoredsaw", filters = lpf, adsr = AdsrDef.Std(attack = 0.05))
-        val onModern = render(doors)
-        val onBare = render(doors.copy(pipeline = "bare"))
-
-        withClue("the default pipeline against the empty one: no strip stage runs, first mismatch") {
-            (onModern.indices.firstOrNull { onModern[it].toRawBits() != onBare[it].toRawBits() } ?: -1) shouldBe -1
-        }
-        withClue("engaged: the lowpass reaches classic()'s slot") {
-            render(base.copy(sound = "authoredsaw", adsr = AdsrDef.Std(attack = 0.05))).toList() shouldNotBe onModern.toList()
-        }
-        withClue("anti-vacuous: for an instrument that runs the strip the two pipelines differ") {
-            val strip = base.copy(sound = "stripsaw", filters = lpf, adsr = AdsrDef.Std(attack = 0.05))
-
-            render(strip).toList() shouldNotBe render(strip.copy(pipeline = "bare")).toList()
-        }
-    }
-
-    "an AUTHORED classic() tree with the optimizer hint last (the by-ear A/B) still runs no strip, and renders what the tree renders optimized" {
+    "an AUTHORED classic() tree with the optimizer hint last (the by-ear A/B) renders what the tree renders optimized" {
         val doors = base.copy(filters = lpf, adsr = AdsrDef.Std(attack = 0.05))
         val ab = render(doors.copy(sound = "authoredsawab"))
-        val abBare = render(doors.copy(sound = "authoredsawab", pipeline = "bare"))
         val optimized = render(doors.copy(sound = "authoredsaw"))
 
-        withClue("the default pipeline against the empty one: no strip stage runs, first mismatch") {
-            (ab.indices.firstOrNull { ab[it].toRawBits() != abBare[it].toRawBits() } ?: -1) shouldBe -1
-        }
         withClue("the optimizer off renders the same voice as the optimizer on, first mismatch") {
             (ab.indices.firstOrNull { ab[it].toRawBits() != optimized[it].toRawBits() } ?: -1) shouldBe -1
         }
     }
 
-    "a stage AFTER classic() is not the tag: that instrument keeps the strip" {
-        val data = base.copy(sound = "afterclassic", adsr = AdsrDef.Std(attack = 0.05))
-
-        render(data).toList() shouldNotBe render(data.copy(pipeline = "bare")).toList()
-    }
-
-    "an AUTHORED instrument without classic() keeps the registry's onepole wrap: `onepole` renders its own onepole through the strip" {
-        val viaWrap = render(base.copy(sound = "stripsaw", oscParams = mapOf("onepole" to 900.0)))
-        val own = render(base.copy(sound = "stripsawop"))
-
-        withClue("the wrapped door against the instrument's own onepole(900), first mismatch") {
-            (own.indices.firstOrNull { own[it].toRawBits() != viaWrap[it].toRawBits() } ?: -1) shouldBe -1
-        }
-        withClue("engaged: the door changes the sound") {
-            render(base.copy(sound = "stripsaw")).toList() shouldNotBe viaWrap.toList()
-        }
-    }
-
-    "a realtime note-off on a built-in with adsrOff fades over the MOVED end, bit for bit the strip's fade" {
+    "a realtime note-off on a built-in with adsrOff fades over the MOVED end" {
         // The gate is scheduled far away; the note-off moves it to frame 7000, and the voice then ends
-        // one release (0.05 s) later. Both sides fade over the new end: the built-in through the voice's
-        // teardown stage, the strip saw through its VCA's `adsrOff` path.
+        // one release (0.05 s) later, through the voice's teardown stage. (Until step 9 this row also
+        // pinned it bit for bit to the strip's `adsrOff` path, the fade's first host.)
         val off = base.copy(adsr = AdsrDef.Std(on = false))
         val noteOff = 7000.0
         val builtIn = render(off.copy(sound = "saw"), gateSec = 10.0, noteOffAtFrame = noteOff)
-        val strip = render(off.copy(sound = "stripsaw"), gateSec = 10.0, noteOffAtFrame = noteOff)
         val lastFrame = (noteOff + 0.05 * sampleRate).toInt() - 1
 
-        withClue("first mismatching frame") {
-            (strip.indices.firstOrNull { strip[it].toRawBits() != builtIn[it].toRawBits() } ?: -1) shouldBe -1
+        withClue("the voice is gone after the moved end") {
+            (lastFrame + 1 until lastFrame + 1000).all { builtIn[it] == 0.0 } shouldBe true
         }
         withClue("engaged: the moved end is faded to an exact zero, and the body before it is not") {
             builtIn[lastFrame] shouldBe 0.0

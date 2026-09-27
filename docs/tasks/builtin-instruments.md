@@ -49,6 +49,13 @@ section 4.
 > adjusted." Bit-identity is still the PROOF METHOD for steps that mean to change nothing; it is no longer a
 > reason to keep two laws, two defaults or two vocabularies. A step that changes sound on purpose renders
 > before/after pairs for the maintainer's ear instead.
+>
+> **The horizon, stated by the maintainer (2026-09-27): the flexible graph.** "We follow through with the current
+> plan, but keep the big goal of the flexible graph in mind on the horizon. So whenever we can already prepare
+> things we should do, while keeping the fixed structure in place for now." In practice: extract DSP into shared
+> cores usable in any context, prefer one type where the fixed layout has two (the Katalyst and the Master are one
+> shared chain at two positions), and keep the fixed layout working. The graph work itself starts after this
+> workstream (`docs/plans/future/signal-graph-engine.md`, its fixed-layout inventory first).
 
 ## 3. Decisions the maintainer owes before the ear-checkpoint steps
 
@@ -375,6 +382,11 @@ with an error; SILENT means it now means something else or nothing.
 | 8 | `oscp("begin" / "end" / "speed" / "loop", x)` on a sample, or an authored instrument declaring a param of that name | now reaches it (the slot names mirror the doors); the door still wins on the same event | SILENT (a new reach) |
 | 8 | `oscp("lpf.q", x)` or `oscp("lpf.passes", x)` together with a door that does not name them | kept (the door no longer writes the defaults over them) | SILENT |
 | 8 | a non-sprudel producer setting typed `VoiceData` door fields for a built-in, a sample or a `classic()` instrument | ignored; write the slot keys (the typed fields are cut in step 9) | SILENT |
+| 9 | sprudel `.pipeline(name)` and the `pipeline(...)` mapper; script `Pipeline(...)`, `Pipeline.modern(...)`, `Pipeline.build(...)` | removed (the Pipeline DSL retired with the voice strip) | loud |
+| 9 | a custom pipeline's per-voice phaser, VCA curve (`expK`, `declickSeconds`, `on`) and filter-feel scales | gone with the Pipeline DSL; the phaser lives on the orbit (`phaser(...)`), the envelope's curves on `adsrCurves` | loud |
+| 9 | an authored instrument that does NOT end in `classic()`, even with no door | plays as its bare tree: no voice envelope (no 10 ms attack, no 50 ms release ramp), the gate plus 0.05 s at full level (or its own static tail), then a 4 ms fade, unless its own root envelope ends it; pattern doors, `onepole(x)` and `adsrOn`/`adsrOff` do nothing on it. Append `.classic()` | SILENT |
+| 9 | `classic()` below an instrument's root (`a.classic().plus(b.classic())`) | no outer envelope and no engine onepole wrap any more (the step 10 "onepole twice" row is moot) | SILENT |
+| 9 | Kotlin `VoiceData.pipeline`, `KlangCommLink.Cmd.RegisterPipeline`, `KlangPatternEvent.pipeline` | removed (a compile error) | loud |
 | D4 | a song's `pipeline("pedal")` | the preset is gone; the name resolves like any unknown name to `modern` (envelope last), silently | SILENT |
 | D4 | a script's `Pipeline.pedal(...)` | removed | loud |
 | 4 (D2) | a user's Kotlin-built `IgnitorDsl.Distort` node (no authoring door emits it; `classic()`, new in step 5 and unreleased, does) | the strip's law: no soft cap, the drive inside the oversampler | SILENT |
@@ -635,9 +647,10 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 6 | The built-ins re-registered, the strip off for them | THE step: minimal renders per built-in per door, plus the whole-corpus render | the teardown fade and the cull rule must land here or the corpus clicks and drops tremolo voices (step 6 found neither bites the corpus: no built-in uses `adsrOff`, and the tree cull landed in 3b; both are spec-proven). Re-run the benchmark against 9290 ns. IN PROGRESS: commit 1 (the switch) DONE 2026-09-26 (9 songs moved by the analog draw order, -50 to -82 dB, proven the only cause); commit 2 (`pregain` at the source, folded at unity, no song moved) DONE 2026-09-26; commit 3 (the benchmark, within noise on both platforms) DONE 2026-09-26. STEP 6 DONE, the listening checkpoint waits for the maintainer |
 | 7 | The sample instrument | the corpus render DOES load samples (the CLI's `Samples.create` over the repo-root `./cache`; corrected 2026-09-26, only the `:jvmTest` `renderSong` helper has none), and specs register in-memory PCM through `makeVoice(getSample = ...)`; every render checks its sample-load count against the baseline | its own safety net. DONE 2026-09-26 (7 songs moved by the analog draw order, a sub-cent detune per hit, proven the only cause; expected inaudible, the listening checkpoint waits for the maintainer): one generic sample instrument `builtInVoice(IgnitorDsl.Sample)` (not reachable by name; no `Osc.sample()` script door yet, a recorded two-door asymmetry), the sample's own ADSR as per-sample defaults of the `adsr.*` slots, the playback fields (begin, end, speed, loop, cut, n) typed until they become slots in step 8; 7 songs predicted to move by the analog draw order |
 | 8 | The doors become `oscp` aliases (about 50 to 60 functions). DONE 2026-09-27 (the mapping in sprudel's `toVoiceData()`, the backend scaffold gone, 17/17 identical). RESHAPED 2026-09-27 (maintainer): the doors, readers and merges stay typed (signal-flow plan section 4, the query hot loop's one allocation); the backend's `_classic_slot_bag.kt` translation MOVES into sprudel's `toVoiceData()`, which writes the classic slot keys onto the wire | door-parity specs, the wire golden regenerated | mechanical but wide; one door group at a time. Also: the sample playback fields begin, end, speed and loop become slots (from step 7; `n` and `cut` stay wire fields). Comes after step 10 (decided 2026-09-26: 10, then 8, then 9): the authored instruments still on the strip read the typed fields until step 10 moves them. Note for the benchmark: the authored voices in `SongBenchmarkCases` (`voices()`, `ladders()`, `experiments()`) stay on the strip, so step 8 changes their workload; a benchmark delta there is not an engine cost |
-| 9 | `VoiceData` cut, `PipelineDsl` retired | compile-time, the golden regenerated | irreversible: only after 6 and 7 are ear-confirmed |
+| 9 | `VoiceData` cut, `PipelineDsl` retired | compile-time, the golden regenerated | irreversible: only after 6 and 7 are ear-confirmed. IN PROGRESS 2026-09-27: (a) the voice strip and the Pipeline DSL retired, DONE (17/17 identical; the strip's sound frozen as a baseline first); then (a2) the strip-only SVF classes, (b) the `VoiceData` cut, (c) the docs |
 | 10 | The songs migrated with `.classic()` | per-song render against HEAD | D5 (decided: controls, then edit). DONE 2026-09-26 (the frozen texts too: `.classic()` appended, the two Der Schmetterling snapshots moved by the draw order only, -58 and -60 dB; the ledger's census columns step at this date), three commits: the engine (the tag, `onepole` into `classic()`, identity; DONE 2026-09-26, 17/17 identical), the songs (DONE 2026-09-26: 25 authored instruments end in `classic()`, the release tails written; 3 songs moved by the draw order, 14 identical), the frozen texts |
-| 11 | The editor's unknown-slot diagnostic | UI, no audio | none |
+| 11 | The editor's unknown-slot diagnostic | UI, no audio | none. DEFERRED 2026-09-27 (maintainer): "no warnings yet; diagnostics tools come later once the design is fully settled". The step 11 plan (a `classic()` warning at evaluation time, and the per-slot check as 11b) is kept in the session scratchpad only |
+| 12 | `.master()` accepts a Katalyst; the Master DSL retires (maintainer, 2026-09-27: the Master is the Katalyst at the output position, a verbatim copy today) | an inventory first (both DSLs' stage sets side by side, their DSP classes, how parameters reach each, every place that knows "master" as a type), then the render identity | three decisions before building: the limiter's lookahead (master-only by a guardrail: allowed only at the output position, or a separate final stage), what fills a chain's `Param` slots at the output (nothing, or a master-level parameter channel), and each stage that exists on one side only (`duck` needs a side-chain orbit; `body`/`vowel` at the output). After step 9 |
 
 **Step 6, the plan's decisions (coordinator, 2026-09-26, following the record):** built-ins register as
 `source.onepole(slot).classic()` and are flagged; an authored instrument keeps the strip until it retires (step 9, or with step 10, see the
@@ -656,7 +669,19 @@ and (c2) `lpfCurves`, step 6 (the built-ins on `classic()`) and step 7 (the samp
 Greensleeves' inert limiter stay as they are. Steps 6 and 7 are ear-confirmed, which is step 9's precondition; the
 order of steps 9 and 10 was decided the same day (below): 10, then 8, then 9.
 
-**DECIDED 2026-09-26 (maintainer): step 10 first, then step 9.** **Step 8's decisions (maintainer, 2026-09-27):** the mapping moves to `toVoiceData()` (row 8); an authored
+**DECIDED 2026-09-26 (maintainer): step 10 first, then step 9.** **Merge gate, revised 2026-09-27 (maintainer):** step 11 is deferred, and the merge gate below is dropped: the
+maintainer decides about merging `engine-redesign` when step 9 is done, with the release-note list at hand.
+
+**Step 9's decisions (2026-09-27, coordinator following the record):** an authored instrument that does not end in
+`classic()` plays as the BARE tree (signal-flow section 5: no auto-wrap), keeping the 0.05 s lifetime fallback and
+the teardown fade (no onset guard); the parity specs FREEZE their strip side as a hashed baseline before the strip
+goes (signal-flow section 12); the doors `loopBegin`/`loopEnd` go (no engine reader ever existed: a knob nothing
+reads is removed); `VoiceData` keeps section 4's fields plus the voice-side pitch row and, each with a named reason,
+`note`, `bank`, `soundIndex`, `legato`, `cut`, `solo`, `sourceId`, `cull`, `tags` (`scale` goes); the strip-only
+filter classes go in their own commit (the orbit's body/vowel resonators share their base class); the
+`voices/strip/` package keeps its name for now.
+
+**Step 8's decisions (maintainer, 2026-09-27):** the mapping moves to `toVoiceData()` (row 8); an authored
 instrument WITHOUT `classic()` loses its doors between step 8 and step 9 (the strip reads typed fields no longer
 sent), accepted with one release note for steps 8 and 9 on TWO CONDITIONS: the branch is not merged or deployed
 between step 8 and step 9, and step 11 (the editor's diagnostic for an instrument that does not end in `classic()`)

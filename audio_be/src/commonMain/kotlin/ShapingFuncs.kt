@@ -18,7 +18,7 @@ import kotlin.math.sin
  * **NaN / Inf policy:** these are raw math primitives. NaN/Inf input is **not**
  * sterilised here — callers in IIR contexts (e.g. anything feeding a DcBlocker or
  * the Oversampler FIR delay line) must guard before invocation. See the `// NaN-guard`
- * idiom used by [Oversampler.process] and the strip-filter direct paths. This
+ * idiom used by [Oversampler.process] and the waveshaper cores' direct paths. This
  * convention matches the engine's "raw Motor" philosophy: don't pay the cost of
  * defensive checks in the inner math; defend at the integration points.
  */

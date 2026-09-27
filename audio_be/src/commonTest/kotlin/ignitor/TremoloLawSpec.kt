@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.audio_be.effects
+package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -11,53 +11,56 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.FAST_SIN_MAX_ERROR
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.filters.NoOpAudioFilter
-import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_be.voices.strip.filter.TremoloRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
-import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
+import io.peekandpoke.klang.audio_be.parseLfoShape
 import io.peekandpoke.klang.audio_be.wrapPhase
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.StageDsl
 import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * The strip tremolo: ledger W2 (the phase wrap survives hostile rates) and ledger W10 (skew,
- * phase and shape reach the LFO at all — for their whole life they were dropped at
- * `FilterPipelineBuilder`).
+ * THE tremolo law (`TremoloCore`), pinned on its host, the Ignitor `Tremolo` node, against values computed in this
+ * file: ledger W2 (the phase wrap survives hostile rates) and ledger W10 (skew, phase and shape reach the LFO).
+ * Until phase 3 step 9 these rows ran on the voice strip's `TremoloRenderer`, the law's second host; with it gone
+ * this spec is the law's oracle (a parity spec between two hosts could not see a change inside the shared core).
  *
  * The shape rows run at sampleRate 1000 / rate 1 Hz, so one LFO cycle is exactly 1000 samples
- * and sample `i` sits at cycle position `(i + 1) / 1000` — the renderer advances before it
+ * and sample `i` sits at cycle position `(i + 1) / 1000`: the core advances before it
  * evaluates. With `depth = 1.0` on a buffer of 1.0 the output IS the LFO level, so the
  * expected values below are the waveform itself, computed independently of the code.
  */
-class TremoloRendererSpec : StringSpec({
+class TremoloLawSpec : StringSpec({
 
     /** One LFO cycle = 1000 samples. */
     val lfoRate = 1000
 
-    fun renderer(
+    /** The tremolo node over [input], its knobs constant, its shape named through the catalogue. */
+    fun tremoloOver(
+        input: DoubleArray,
+        rate: Double = 1.0,
+        depth: Double = 1.0,
+        skew: Double = 0.0,
+        startPhase: Double = 0.0,
+        shape: String? = null,
+    ): Ignitor = ArrayIgnitor(input).tremolo(
+        rate = ConstantIgnitor(rate), depth = ConstantIgnitor(depth), skew = ConstantIgnitor(skew),
+        shape = parseLfoShape(shape), startPhase = startPhase,
+    )
+
+    /** [input] through the tremolo node, one window at [sampleRate]. */
+    fun render(
+        input: DoubleArray,
         rate: Double = 1.0,
         depth: Double = 1.0,
         skew: Double = 0.0,
         startPhase: Double = 0.0,
         shape: String? = null,
         sampleRate: Int = lfoRate,
-    ) = TremoloRenderer(
-        rate = rate, depth = depth, skew = skew, startPhase = startPhase,
-        shape = shape, sampleRate = sampleRate,
-    )
+    ): DoubleArray = renderNodeWindows(tremoloOver(input, rate, depth, skew, startPhase, shape), listOf(input.size), sampleRate)
 
     fun renderCycle(
         skew: Double = 0.0,
         startPhase: Double = 0.0,
         shape: String? = null,
-    ): AudioBuffer {
-        val buffer = AudioBuffer(1000) { 1.0 }
-        renderer(skew = skew, startPhase = startPhase, shape = shape).renderInPlace(buffer, lfoRate)
-        return buffer
-    }
+    ): AudioBuffer = render(AudioBuffer(1000) { 1.0 }, skew = skew, startPhase = startPhase, shape = shape)
 
     fun meanLevel(skew: Double, shape: String?): Double = renderCycle(skew = skew, shape = shape).average()
 
@@ -67,8 +70,7 @@ class TremoloRendererSpec : StringSpec({
         // Old code: phase += NaN once -> sin(NaN) -> NaN output for the voice's life. New:
         // the phase reads 0 every sample -> a steady gain of 1 - depth/2 (a level change, not
         // silence, not NaN — the reading recorded in the ledger).
-        val buffer = AudioBuffer(256) { 0.8 }
-        renderer(rate = Double.NaN, depth = 0.5, sampleRate = 44100).renderInPlace(buffer)
+        val buffer = render(AudioBuffer(256) { 0.8 }, rate = Double.NaN, depth = 0.5, sampleRate = 44100)
 
         buffer.all { it == 0.8 * 0.75 } shouldBe true
     }
@@ -76,8 +78,7 @@ class TremoloRendererSpec : StringSpec({
     "a plain rate modulates: the wrap change is inert in range" {
         // 8820 samples = 1.6 LFO cycles at 8 Hz, so the gain genuinely sweeps its full
         // [1 - depth, 1] range (review round 1: a fifth of a cycle proved nothing).
-        val buffer = AudioBuffer(8820) { 0.8 }
-        renderer(rate = 8.0, depth = 0.33, sampleRate = 44100).renderInPlace(buffer)
+        val buffer = render(AudioBuffer(8820) { 0.8 }, rate = 8.0, depth = 0.33, sampleRate = 44100)
 
         (buffer.max() > 0.79) shouldBe true
         (buffer.min() < 0.8 * (1.0 - 0.33) + 0.01) shouldBe true
@@ -106,15 +107,12 @@ class TremoloRendererSpec : StringSpec({
         // null, the canonical name, its alias and a shouty spelling all resolve to the same
         // waveform — and all four must hit the same fast path, not the round trip: identical to
         // each other bit for bit, and to the library-sine reference within the bound.
-        val canonical = AudioBuffer(n) { 0.8 }
-        renderer(rate = 8.0, depth = 0.33, shape = null, sampleRate = 44100).renderInPlace(canonical)
+        val canonical = render(AudioBuffer(n) { 0.8 }, rate = 8.0, depth = 0.33, shape = null, sampleRate = 44100)
 
         (0 until n).all { abs(canonical[it] - expected[it]) < FAST_SIN_MAX_ERROR } shouldBe true
 
         for (name in listOf("sine", "SINE", "sin")) {
-            val buffer = AudioBuffer(n) { 0.8 }
-            renderer(rate = 8.0, depth = 0.33, shape = name, sampleRate = 44100)
-                .renderInPlace(buffer)
+            val buffer = render(AudioBuffer(n) { 0.8 }, rate = 8.0, depth = 0.33, shape = name, sampleRate = 44100)
 
             (0 until n).all { buffer[it] == canonical[it] } shouldBe true
         }
@@ -125,8 +123,7 @@ class TremoloRendererSpec : StringSpec({
     "the authored phase seeds the LFO, in cycles" {
         // A quarter-cycle seed puts sample 0 one increment past the sine's quarter point.
         // If the seed were read as RADIANS the level here would be 0.627 instead of ~1.0.
-        val buffer = AudioBuffer(4) { 1.0 }
-        renderer(startPhase = 0.25).renderInPlace(buffer, lfoRate)
+        val buffer = render(AudioBuffer(4) { 1.0 }, startPhase = 0.25)
 
         val seeded = 0.25 * TWO_PI + TWO_PI / lfoRate
         abs(buffer[0] - (sin(seeded) + 1.0) * 0.5) shouldBeLessThan FAST_SIN_MAX_ERROR
@@ -288,63 +285,13 @@ class TremoloRendererSpec : StringSpec({
         // The LFO is a clock: it must not restart, skip or double-advance at a window edge,
         // for ANY shape (the skewed ones exercise the warp branch too).
         for (shape in listOf(null, "triangle", "square", "sawtooth", "ramp")) {
-            val whole = AudioBuffer(1000) { (it % 17) * 0.05 + 0.1 }
-            renderer(skew = 0.4, shape = shape).renderInPlace(whole, lfoRate)
+            val input = AudioBuffer(1000) { (it % 17) * 0.05 + 0.1 }
+            val whole = render(input, skew = 0.4, shape = shape)
+            val split = renderNodeWindows(tremoloOver(input, skew = 0.4, shape = shape), listOf(128, 1, 371, 500), lfoRate)
 
-            val split = renderer(skew = 0.4, shape = shape)
-            var at = 0
-            for (len in listOf(128, 1, 371, 500)) {
-                val chunk = AudioBuffer(len) { ((at + it) % 17) * 0.05 + 0.1 }
-                split.renderInPlace(chunk, lfoRate)
-
-                for (i in 0 until len) {
-                    chunk[i] shouldBe whole[at + i]
-                }
-                at += len
+            for (i in 0 until 1000) {
+                split[i] shouldBe whole[i]
             }
         }
-    }
-
-    // ── The seam W10 actually lived in ───────────────────────────────────────────────────
-
-    "buildFilterPipeline forwards skew, phase and shape into the strip renderer" {
-        // W10 was never a renderer bug: the values reached Voice.Tremolo and the ONE call site
-        // dropped them. Nothing above this row crosses that seam, so transposing
-        // `skew = tremolo.phase, startPhase = tremolo.skew` there would compile and pass.
-        // The parameters are deliberately asymmetric (skew 0.6 vs phase 0.25, a shape that is
-        // neither the default nor symmetric) so a swap or a drop cannot look identical.
-        val dry = AudioBuffer(1000) { (it % 23) * 0.04 + 0.05 }
-
-        val renderers = buildFilterPipeline(
-            pipeline = PipelineDsl(stages = listOf(StageDsl.Tremolo)),
-            modulators = emptyList(),
-            startFrame = 0.0,
-            crush = Voice.Crush(amount = 0.0),
-            coarse = Voice.Coarse(amount = 0.0),
-            mainFilter = NoOpAudioFilter,
-            envelope = Voice.Envelope(
-                attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0,
-            ),
-            distort = Voice.Distort(amount = 0.0),
-            tremolo = Voice.Tremolo(
-                rate = 1.0, depth = 0.5, skew = 0.6, phase = 0.25, shape = "sawtooth",
-            ),
-            phaser = Voice.Phaser(rate = 0.0, depth = 0.0, center = 1000.0, sweep = 1000.0),
-            sampleRate = lfoRate,
-        )
-        renderers.size shouldBe 1
-
-        val built = AudioBuffer(1000) { dry[it] }
-        renderers[0].renderInPlace(built, lfoRate)
-
-        val direct = AudioBuffer(1000) { dry[it] }
-        renderer(
-            rate = 1.0, depth = 0.5, skew = 0.6, startPhase = 0.25, shape = "sawtooth",
-        ).renderInPlace(direct, lfoRate)
-
-        (0 until 1000).all { built[it] == direct[it] } shouldBe true
-
-        // and it is not vacuously true: the tremolo really did something to the dry signal.
-        (0 until 1000).any { abs(built[it] - dry[it]) > 1e-3 } shouldBe true
     }
 })

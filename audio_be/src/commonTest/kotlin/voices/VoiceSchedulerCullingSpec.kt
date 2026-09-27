@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.tremolo
 
 /**
@@ -138,7 +139,6 @@ class VoiceSchedulerCullingSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "tremsine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0),
             cull = cull,
         ),
         playbackStartTime = 0.0,
@@ -149,7 +149,9 @@ class VoiceSchedulerCullingSpec : StringSpec({
             KlangCommLink.Cmd.RegisterIgnitor(
                 playbackId = pid,
                 name = "tremsine",
-                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square"),
+                // The envelope is the instrument's own (a bare tree since phase 3 step 9 has no voice envelope): its
+                // 1 s release keeps the voice in its release through the tremolo's off-half.
+                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square").adsr(0.001, 0.01, 1.0, 1.0),
             )
         )
     }

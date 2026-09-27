@@ -13,9 +13,9 @@ import kotlin.math.floor
  * THE envelope law of the engine, one copy for every host (phase 3, decision D3, 2026-09-25). Every
  * ADSR-shaped envelope is a thin host of it: the Ignitor chain `adsr` (`AdsrIgnitor`), the Ignitor filter
  * cutoff envelope (`SvfIgnitor`), the Ignitor FM index envelope (`FmModIgnitor`), the Ignitor pitch
- * envelope (`PitchEnvelopeModIgnitor`), the voice strip's VCA (`EnvelopeRenderer`), the strip's filter
- * envelope (`FilterModRenderer`) and FM envelope (`calculateControlRateEnvelope`), and the strip's pitch
- * envelope (`PitchEnvelopeRenderer`, sprudel's `penv`, since phase 3 step 5b (c1)). A host adapts only its block contract (per sample, or
+ * envelope (`PitchEnvelopeModIgnitor`), and the voice's own FM envelope (`calculateControlRateEnvelope`)
+ * and pitch envelope (`PitchEnvelopeRenderer`, sprudel's `penv`, since phase 3 step 5b (c1)). The voice
+ * strip's VCA and filter envelope were hosts too until the strip retired (phase 3 step 9). A host adapts only its block contract (per sample, or
  * at a block's two ends) and maps the level onto its destination; the level itself is computed here.
  *
  * **The shape.** Its entry points are [prepare], once per block, and [at], per sample: the "per-block
@@ -44,11 +44,10 @@ import kotlin.math.floor
  *    "0 means 0"). A gate at or before the onset (frame 0 or earlier, e.g. a negative `legato`) releases
  *    from 0: the envelope is 0 on every frame (an amplitude envelope silences the voice, as before this
  *    law; the modulation envelopes used to release from the attack curve evaluated at the gate).
- *  - **The sustain is RAW** (the Motor stays raw): no clamp here. The chain `adsr`, the strip VCA, the
- *    FM node, the pitch node and the strip pitch envelope (`VoiceFactory`) substitute their own default for
- *    a non-finite sustain before [prepare] (the filter node's knobs are finite by construction); the strip's
- *    control-rate envelopes
- *    (`prepareControlRateEnvelope`, the filter's and the FM's) do not. Each host maps the level onto its destination: an
+ *  - **The sustain is RAW** (the Motor stays raw): no clamp here. The chain `adsr`, the
+ *    FM node, the pitch node and the voice's pitch envelope (`VoiceFactory`) substitute their own default for
+ *    a non-finite sustain before [prepare] (the filter node's knobs are finite by construction); the voice's
+ *    control-rate FM envelope (`prepareControlRateEnvelope`) does not. Each host maps the level onto its destination: an
  *    amplitude floors at 0, a filter or FM depth is clamped to [0, 1], a pitch passes raw.
  */
 internal class EnvelopeCore {
@@ -73,7 +72,7 @@ internal class EnvelopeCore {
     /**
      * Resolves one block's envelope. Frame counts are voice-relative and may be fractional; [gateEndPos]
      * is the gate's voice-relative frame. [k] and [norm] are the Exponential curvature and its
-     * [adsrExpNorm]; every host but the strip VCA (whose engine may carry its own) passes the defaults.
+     * [adsrExpNorm]; every host passes the defaults.
      */
     fun prepare(
         attackFrames: Double,
@@ -153,8 +152,8 @@ internal class EnvelopeCore {
 
 /**
  * The one-pole de-click smoother on an AMPLITUDE envelope's gain, primed to the first level it sees so a
- * voice that starts mid-note or at full level is not faded in. The strip VCA runs it always (at
- * `ENV_DECLICK_SECONDS`), the Ignitor `adsr` when its `declick` knob is above 0. The modulation envelopes
+ * voice that starts mid-note or at full level is not faded in. `classic()`'s envelope runs it always (its
+ * `declick` is the constant `ENV_DECLICK_SECONDS`), any other Ignitor `adsr` when its `declick` knob is above 0. The modulation envelopes
  * have none. See [envDeclickCoeff].
  */
 internal class EnvelopeDeclick {

@@ -10,7 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.StageDsl
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_CUTOFF_OFFSET_PER_ANALOG
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIFT_RELATIVE_TO_OSC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import kotlin.math.abs
 import kotlin.math.log2
@@ -179,13 +180,10 @@ class AnalogDriftSpec : StringSpec({
     "analog cents budget stays tamed at analog=3 (Der Schmetterling)" {
         val analog = 3.0
         val oscPeak = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * analog
-        // Read through StageDsl.Filter(), NOT the bare constants. The constants are the DEFAULTS;
-        // what the engine consumes is the stage field (VoiceFactory.kt:371,430). Reading the
-        // constant directly is how this guard went blind in the first place (audit F2) — it would
-        // stay green if someone replaced a DSL default with a literal.
-        val stage = StageDsl.Filter()
-        val filterOffsetPeak = cents(1.0 + stage.cutoffOffsetPerAnalog * analog)
-        val filterDriftPeak = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * analog * stage.driftRelToOsc
+        // The constants ARE what the engine consumes since the Pipeline DSL's filter stage retired (phase 3
+        // step 9): the Ignitor filters' humanization (`FilterHumanization`) reads them directly.
+        val filterOffsetPeak = cents(1.0 + FILTER_CUTOFF_OFFSET_PER_ANALOG * analog)
+        val filterDriftPeak = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * analog * FILTER_DRIFT_RELATIVE_TO_OSC
 
         // Post-tuning ceilings, deliberately close to the shipped values.
         //
@@ -206,12 +204,8 @@ class AnalogDriftSpec : StringSpec({
         // reacts upward — and not until drive ≈ 1.5. So a modest crank, 0.25 -> 0.5, was caught
         // by nothing at all. This is the constant whose divergence caused the whole
         // de-duplication, and it is the live-tuning target.
-        // BOTH paths, because they are separately reachable. `stage.drivePerAnalog` is what the
-        // pipeline filter consumes; `FILTER_DRIVE_PER_ANALOG` is what IgnitorFilters.kt:119 reads
-        // directly — it never sees a StageDsl.Filter. Asserting only the stage would pass while a
-        // literal in PipelineDsl.Filter plus a retuned constant silently reinstated the very
-        // ignitor-vs-pipeline split this de-duplication was opened to fix (§1.2).
-        stage.drivePerAnalog shouldBe 0.25
+        // One path since the Pipeline DSL's filter stage retired (phase 3 step 9): `IgnitorFilters` reads
+        // the constant directly.
         FILTER_DRIVE_PER_ANALOG shouldBe 0.25
 
         oscPeak shouldBeLessThan 3.5             // ±3 cents pitch (unchanged since 06-17)
@@ -221,8 +215,8 @@ class AnalogDriftSpec : StringSpec({
         // Eyeball table across the range people actually use (analog 1–8).
         for (a in listOf(1.0, 2.0, 3.0, 5.0, 8.0)) {
             val osc = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * a
-            val off = cents(1.0 + stage.cutoffOffsetPerAnalog * a)
-            val drf = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * a * stage.driftRelToOsc
+            val off = cents(1.0 + FILTER_CUTOFF_OFFSET_PER_ANALOG * a)
+            val drf = (ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS) * a * FILTER_DRIFT_RELATIVE_TO_OSC
             println("analog=$a  oscPitch=±${osc}c  filterOffset=±${off}c  filterDrift=±${drf}c")
         }
     }

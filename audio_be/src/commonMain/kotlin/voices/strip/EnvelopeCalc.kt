@@ -9,13 +9,13 @@ import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
- * The voice strip's control-rate FM envelope: one value per block, 0.0 to 1.0, from [EnvelopeCore], the
+ * The voice's control-rate FM envelope: one value per block, 0.0 to 1.0, from [EnvelopeCore], the
  * engine's one envelope law. [core] is the calling renderer's own evaluator (prepared here).
  *
  * The value is taken at the block's first rendered frame (the voice's onset on its first block) and
- * HELD for the block: the strip FM holds its depth flat (block-framing ledger E11, recorded and
- * deliberately not fixed piecemeal). The strip filter prepares its envelope the same way
- * ([prepareControlRateEnvelope]) and reads it at the block's two ends instead (`FilterModRenderer`).
+ * HELD for the block: the voice FM holds its depth flat (block-framing ledger E11, recorded and
+ * deliberately not fixed piecemeal). The voice's pitch envelope prepares its envelope the same way
+ * ([prepareControlRateEnvelope]).
  *
  * All arithmetic uses Int/Double, no Long boxing on Kotlin/JS.
  */

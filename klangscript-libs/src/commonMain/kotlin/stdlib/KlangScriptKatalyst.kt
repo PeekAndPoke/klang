@@ -30,8 +30,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * `Katalyst()` with no lambda is the empty chain; `Katalyst(k => ...)` is the same as [build]. The
  * method forms exist so the callable form can be tested against them.
  *
- * Sibling of `Master` (per playback), `Pipeline` (per-voice signal path) and `Osc` (per-voice
- * exciter): same shape, different host.
+ * Sibling of `Master` (per playback) and `Osc` (the per-voice instrument): same shape, different
+ * host.
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start

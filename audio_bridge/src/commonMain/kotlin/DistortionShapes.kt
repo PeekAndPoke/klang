@@ -15,7 +15,7 @@ import kotlin.math.round
  *
  * Lives in `audio_bridge` so that every reader of a shape NAME reaches the same table: both Ignitor
  * doors (the Kotlin door here, the script door in `klangscript-libs`), and the backend, whose
- * `parseDistortionShape` (the voice strip) and node build (the Ignitor) both resolve through
+ * `parseDistortionShape` and node build (the Ignitor) both resolve through
  * [indexOf] and [indexAt]. The DSP of each shape lives in the backend (`DistortionShape`,
  * `applyDistortionShape`); this file knows names and positions only.
  *

@@ -90,17 +90,16 @@ data class FilterEnvDef(
  * read at block start AND at block end (`filterEnvCutoff`), and the coefficients are linearly
  * interpolated per sample between the two (`SvfCoeffSweep`), which avoids the 375 Hz block-rate
  * stair-stepping (128 frames at 48 kHz) that a per-block-only recompute would produce. The level is
- * clamped to [0, 1] before it scales the depth. The voice strip's filter envelope runs the same two
- * helpers (`FilterModRenderer`, `BaseSvf.sweepCutoff`; decision D3, the sampling).
+ * clamped to [0, 1] before it scales the depth. The retired voice strip's filter envelope ran the
+ * same two helpers (decision D3, the sampling).
  *
- * **The default curve** is the voice strip's too (decision D3 of `docs/tasks/builtin-instruments.md`):
- * an unshaped stage takes `MOD_ENV_CURVE`, exponential, which the wire's `FilterEnvDef.resolve`
- * (audio_bridge) hands the strip's filter envelope as well; `curves` can shape each stage here, sprudel's `lpfCurves` (and its three
- * siblings) on the strip.
+ * **The default curve** was the voice strip's too (decision D3 of `docs/tasks/builtin-instruments.md`):
+ * an unshaped stage takes `MOD_ENV_CURVE`, exponential; `curves` can shape each stage, and sprudel's
+ * `lpfCurves` (and its three siblings) reach it through `classic()`'s curve slots.
  *
  * A node with `env.depth == 0.0` never enters this path at all.
  *
- * Optional [humanize] is the per-voice analog character the voice strip gets from
+ * Optional [humanize] is the per-voice analog character the voice strip got from
  * `VoiceFactory`: a fixed cutoff tolerance and a slow drift lane, both drawn once per voice.
  * `null` is no humanization and renders bit-for-bit what this filter rendered without the
  * feature. See [FilterHumanization].
@@ -163,8 +162,8 @@ private class SvfIgnitor(
             // Per-voice analog humanization, both 1.0 when the node has none, and `x * 1.0` is
             // exactly `x` for every double, so a node without it renders bit-for-bit what it
             // rendered before these two lines existed. The ORDER of the two multiplies is the
-            // voice strip's: `FilterModRenderer` multiplies the envelope's cutoff by the block's
-            // drift and `BaseSvf.sweepCutoff` then multiplies both ends by the fixed tolerance.
+            // retired voice strip's: it multiplied the envelope's cutoff by the block's drift and then
+            // both ends by the fixed tolerance.
             val driftMul = humanize?.blockDriftMultiplier(ctx) ?: 1.0
             val offsetMul = humanize?.cutoffOffsetMul ?: 1.0
             val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)

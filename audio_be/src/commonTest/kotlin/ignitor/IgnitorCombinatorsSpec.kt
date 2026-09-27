@@ -246,8 +246,8 @@ class ExciterCombinatorsSpec : StringSpec({
         // It is a ONE-SIDED guard: `satMax < linMax * 0.9` fails only when the drive is LOWERED
         // (below ≈ 0.125 — margin at the shipped 0.25 is ratio 0.842 against the 0.9 bound).
         // Raising the drive makes this test greener, so it cannot catch an upward crank. The upper
-        // side is pinned in AnalogDriftSpec instead, on BOTH paths — `FILTER_DRIVE_PER_ANALOG`
-        // (what this test's path reads) and `StageDsl.Filter().drivePerAnalog` (the pipeline's).
+        // side is pinned in AnalogDriftSpec instead: `FILTER_DRIVE_PER_ANALOG`, what this test's path
+        // reads (the Pipeline DSL's filter stage, the second path, retired in phase 3 step 9).
         //
         // If a by-ear retune goes below ≈ 0.125, that is NOT a topology regression — widen the
         // bound and note the new value here.

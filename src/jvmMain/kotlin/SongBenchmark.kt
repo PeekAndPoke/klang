@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_be.ignitor.GraphCensus
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -186,22 +185,18 @@ class SongBenchmark(
             performanceTimeMs = { klangTime.internalMsNow() },
         )
         val ignitorRegistry = renderer.ignitorRegistry
-        val pipelineRegistry = renderer.pipelineRegistry
         val voiceScheduler = renderer.voices
         renderer.setBackendStartTime(0.0)
 
         val rawEvents = pattern.queryEvents(fromCycles = 0.0, toCycles = case.cycles.toDouble(), cps = cps)
 
-        // Register inline oscillators + pipelines (same as KlangOfflineRenderer).
+        // Register inline oscillators (same as KlangOfflineRenderer).
         rawEvents.asSequence()
             .mapNotNull { it.sound as? SoundValue.Osc }
             .forEach { sv ->
                 val name = sv.osc.uniqueId()
                 if (!ignitorRegistry.contains(name)) ignitorRegistry.register(name, sv.osc)
             }
-        rawEvents.asSequence()
-            .mapNotNull { it.pipeline as? PipelineValue.Dsl }
-            .forEach { pipelineRegistry.register(it.pipeline.uniqueId(), it.pipeline) }
 
         data class Ev(val start: Double, val dur: Double, val data: VoiceData)
 

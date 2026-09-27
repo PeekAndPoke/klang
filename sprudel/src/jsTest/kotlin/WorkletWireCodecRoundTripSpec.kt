@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -72,7 +71,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
             cylinder = 1; pan = 0.3
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
-            solo = 1.0; pipeline = PipelineValue.Named("custom"); cull = 0.2
+            solo = 1.0; cull = 0.2
         }.toVoiceData()
 
         // Sanity: the vowel and the body ride `filters`; the four voice filters and every voice door travel as

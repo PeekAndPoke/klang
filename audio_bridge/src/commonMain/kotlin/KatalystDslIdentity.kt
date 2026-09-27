@@ -9,7 +9,7 @@ import io.peekandpoke.klang.common.infra.KlangSnapshotMap
 
 /**
  * Process-wide identity map for [KatalystDsl] chains, the orbit-side mirror of
- * [MasterDsl.uniqueId] / [PipelineDsl.uniqueId] / [IgnitorDsl.uniqueId].
+ * [MasterDsl.uniqueId] / [IgnitorDsl.uniqueId].
  *
  * Identity = structural equality on the [KatalystDsl] data class. Two structurally-equal chains
  * collapse to one entry and share one synthetic name like `"katalyst-3"`. The counter is monotonic

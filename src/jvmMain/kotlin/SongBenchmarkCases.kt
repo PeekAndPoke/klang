@@ -162,7 +162,10 @@ object SongBenchmarkCases {
             .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
             .distort(0.35, "hard", 4)
 
-          return RETURN_EXPR
+          // `.classic()` last (phase 3 step 10's song edit): the pattern's `adsr` and other voice doors reach the
+          // guitar, as they reached it through the voice strip before step 9 retired the strip.
+          let tone = RETURN_EXPR
+          return tone.classic()
         })()
         PATTERN_EXPR
     """.trimIndent()

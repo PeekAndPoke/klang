@@ -9,11 +9,11 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -33,22 +33,20 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * **An AUTHORED instrument on `classic()` against the same instrument on the voice strip** (phase 3 step 10,
- * `docs/tasks/builtin-instruments.md`). The songs move their instruments from the strip onto `.classic()`, so
- * this spec pins, on trees a bare saw cannot stand for (an instrument with its OWN envelope), what that move
- * keeps and the one thing it does not:
+ * **An AUTHORED instrument on `classic()`** (phase 3 step 10, `docs/tasks/builtin-instruments.md`), on trees a bare
+ * saw cannot stand for (an instrument with its OWN envelope):
  *
- *  - the doors, the envelope and `adsrOff`'s teardown fade are the strip's, bit for bit;
- *  - the strip STRETCHED its envelope's release to the instrument's own release tail (the envelope ownership
- *    fix of 2026-08-27: the voice release becomes the tail when the tail is longer). `classic()`'s envelope
- *    releases over its own slot, so the instrument's tail is cut there. The voice still LIVES as long (the
- *    lifetime is the tree's tail). The maintainer's decision (2026-09-26, F1): no engine stretch; a song writes
- *    `adsr(release = <tail>)`, which renders the strip's voice bit for bit (the row after it);
+ *  - the doors reach it, and `adsrOff` ends it on the teardown fade (also for an own root envelope whose release
+ *    is modulated, which cannot promise to reach zero by the voice's end);
+ *  - `classic()`'s envelope releases over its own slot, so an instrument's longer own tail is CUT there, while the
+ *    voice still LIVES as long as the tree's tail. The strip stretched its release to the tail (the envelope
+ *    ownership fix of 2026-08-27); the maintainer's decision (2026-09-26, F1): no engine stretch, a song writes
+ *    `adsr(release = <tail>)`;
  *  - `classic()` places no `pregain`: an authored tree that does not place the slot ignores `pregain(x)`.
  *
- * Each row renders two voices of one note through the real [VoiceFactory]: STRIP, the tree registered as it
- * is (the strip runs after it), and CLASSIC, the same tree with `.classic()` appended. Mid-block onset
- * (frame 37), the gate at a quarter second, the whole release inside the render.
+ * Until the voice strip retired (phase 3 step 9) every row also rendered the tree without `classic()` on the
+ * strip and pinned the two bit for bit. Mid-block onset (frame 37), the gate at a quarter second, the whole
+ * release inside the render.
  */
 class AuthoredClassicSpec : StringSpec({
 
@@ -85,13 +83,9 @@ class AuthoredClassicSpec : StringSpec({
     )
 
     val registry = IgnitorRegistry().apply {
-        register("long", longTail)
         register("longclassic", longTail.classic())
-        register("short", shortTail)
         register("shortclassic", shortTail.classic())
-        register("level", sustainedLevel)
         register("levelclassic", sustainedLevel.classic())
-        register("modrel", modulatedRelease)
         register("modrelclassic", modulatedRelease.classic())
     }
 
@@ -104,7 +98,6 @@ class AuthoredClassicSpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
@@ -114,7 +107,7 @@ class AuthoredClassicSpec : StringSpec({
         val voice = factory.makeVoice(
             scheduled = ScheduledVoice(
                 playbackId = "test",
-                data = data.forPath(registry),
+                data = data.withClassicSlots(),
                 startTime = onsetSec,
                 gateEndTime = onsetSec + gateSec,
                 playbackStartTime = 0.0,
@@ -150,41 +143,32 @@ class AuthoredClassicSpec : StringSpec({
     val base = VoiceData.empty.copy(freqHz = 220.0)
     val gateFrame = onsetFrame + (gateSec * sampleRate).toInt()
 
-    "DIVERGENT, the F1 law: the strip stretched its release to the instrument's 0.5 s tail, classic() releases over its own 0.05 and cuts the tail" {
-        val strip = render(base.copy(sound = "long"))
+    "the F1 law: classic() releases over its own 0.05 s and cuts the instrument's 0.5 s tail, and the voice lives the tail" {
         val classic = render(base.copy(sound = "longclassic"))
-        // 0.1 s after the gate: classic()'s release (0.05) and its 1 ms de-click are long over, the strip's 0.5 s
-        // release is at its start; the window ends before the strip's release does.
+        // 0.1 s after the gate: classic()'s release (0.05) and its 1 ms de-click are long over, the instrument's
+        // own 0.5 s release is at its start.
         val from = gateFrame + (0.1 * sampleRate).toInt()
         val until = gateFrame + (0.3 * sampleRate).toInt()
 
-        withClue("up to the gate the two voices are one voice, first mismatch") {
-            firstMismatch(strip.out, classic.out, until = gateFrame) shouldBe -1
-        }
-        withClue("the strip's voice still sounds 0.1 to 0.3 s after the gate: its release is the instrument's tail") {
-            maxAbs(strip.out, from, until) shouldBeGreaterThan 0.05
-        }
-        withClue("classic()'s voice is silent there: its release is its own slot, the tail is cut") {
+        withClue("the voice sounds up to the gate") { maxAbs(classic.out, gateFrame - 600, gateFrame) shouldBeGreaterThan 0.05 }
+        withClue("silent 0.1 to 0.3 s after the gate: its release is its own slot, the tail is cut") {
             maxAbs(classic.out, from, until) shouldBeLessThan 1e-9
         }
-        withClue("...but the voice LIVES as long: the lifetime is the tree's tail on both paths") {
-            classic.endFrame shouldBe strip.endFrame
+        withClue("...but the voice LIVES as long as the tree's 0.5 s tail") {
+            classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate plusOrMinus 1.0)
         }
     }
 
-    "IDENTICAL, the F1 remedy: with adsr(release = 0.5) written, the classic() voice IS the strip's voice" {
-        val written = base.copy(adsr = AdsrDef.Std(release = 0.5))
-        val strip = render(written.copy(sound = "long"))
-        val classic = render(written.copy(sound = "longclassic"))
+    "the F1 remedy: with adsr(release = 0.5) written, the instrument's own tail sounds" {
+        val classic = render(base.copy(sound = "longclassic", adsr = AdsrDef.Std(release = 0.5)))
+        val from = gateFrame + (0.1 * sampleRate).toInt()
+        val until = gateFrame + (0.3 * sampleRate).toInt()
 
-        withClue("first mismatching frame over the whole release") { firstMismatch(strip.out, classic.out) shouldBe -1 }
-        withClue("and the lifetime") { classic.endFrame shouldBe strip.endFrame }
-        withClue("engaged: without the written release the classic() voice is a different one") {
-            firstMismatch(render(base.copy(sound = "longclassic")).out, classic.out) shouldNotBe -1
-        }
+        withClue("the tail sounds 0.1 to 0.3 s after the gate") { maxAbs(classic.out, from, until) shouldBeGreaterThan 0.05 }
+        withClue("and the lifetime is the tail's") { classic.endFrame shouldBe (gateFrame + 0.5 * sampleRate plusOrMinus 1.0) }
     }
 
-    "IDENTICAL: the doors on an authored classic() tree are the strip's, filters, filter envelope, crush, tremolo and envelope" {
+    "the doors reach an authored classic() tree: filters, filter envelope, crush, tremolo and envelope" {
         val doors = base.copy(
             filters = FilterDefs(
                 listOf(
@@ -197,21 +181,17 @@ class AuthoredClassicSpec : StringSpec({
             tremoloSync = 5.0,
             adsr = AdsrDef.Std(attack = 0.01, decay = 0.2, sustain = 0.6, release = 0.1),
         )
-        val strip = render(doors.copy(sound = "short"))
         val classic = render(doors.copy(sound = "shortclassic"))
 
-        withClue("first mismatching frame") { firstMismatch(strip.out, classic.out) shouldBe -1 }
         withClue("engaged: the doors change the voice") {
             firstMismatch(render(base.copy(sound = "shortclassic")).out, classic.out) shouldNotBe -1
         }
     }
 
-    "IDENTICAL: adsrOff on an authored classic() tree whose root is not an envelope fades the voice as the strip did" {
+    "adsrOff on an authored classic() tree whose root is not an envelope ends the voice on the teardown fade" {
         val off = base.copy(adsr = AdsrDef.Std(on = false))
-        val strip = render(off.copy(sound = "level"))
         val classic = render(off.copy(sound = "levelclassic"))
 
-        withClue("first mismatching frame, the teardown fade included") { firstMismatch(strip.out, classic.out) shouldBe -1 }
         withClue("the fade is inside the render: the voice sounds just before its end and is an exact zero at its last frame") {
             val last = classic.endFrame.toInt() - 1
 
@@ -223,29 +203,24 @@ class AuthoredClassicSpec : StringSpec({
         }
     }
 
-    "IDENTICAL: adsrOff on an authored classic() tree whose own root envelope has a MODULATED release still gets the teardown fade" {
+    "adsrOff on an authored classic() tree whose own root envelope has a MODULATED release still gets the teardown fade" {
         // Such an envelope has no static length, so it cannot promise to reach zero by the voice's end: the voice
         // fades it, as the strip always faded an `adsrOff` voice. Without the fade the voice ends on a hard cut.
         val off = base.copy(adsr = AdsrDef.Std(on = false))
-        val strip = render(off.copy(sound = "modrel"))
         val classic = render(off.copy(sound = "modrelclassic"))
         val last = classic.endFrame.toInt() - 1
 
-        withClue("first mismatching frame against the strip, the fade included") { firstMismatch(strip.out, classic.out) shouldBe -1 }
         withClue("the voice sounds just before its end, inside its own release") {
             maxAbs(classic.out, last - 600, last - 300) shouldBeGreaterThan 0.1
         }
         withClue("and ends on an exact zero: the fade ran") { classic.out[last] shouldBe 0.0 }
     }
 
-    "classic() places no pregain: an authored tree that does not place the slot ignores pregain(2), on both paths" {
+    "classic() places no pregain: an authored tree that does not place the slot ignores pregain(2)" {
         val plain = render(base.copy(sound = "shortclassic"))
         val pushed = render(base.copy(sound = "shortclassic", oscParams = mapOf("pregain" to 2.0)))
 
         withClue("classic(), first mismatch") { firstMismatch(plain.out, pushed.out) shouldBe -1 }
-        withClue("the strip, first mismatch") {
-            firstMismatch(render(base.copy(sound = "short")).out, render(base.copy(sound = "short", oscParams = mapOf("pregain" to 2.0))).out) shouldBe -1
-        }
         withClue("the harness hears the voice") { maxAbs(plain.out, onsetFrame, gateFrame) shouldBeGreaterThan 0.1 }
     }
 })

@@ -13,7 +13,6 @@ import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -48,10 +47,9 @@ class VoiceScheduler(
     private val masterBus = options.masterBus
     private val cylinders = options.cylinders
 
-    // Per-engine registry forks — custom oscs/engines for THIS playback live here and die with the
+    // Per-engine registry fork: custom oscs for THIS playback live here and die with the
     // engine; the shared parent ([context]) keeps only the built-ins. See docs/tasks-archive/2026-09/20260904-per-playback-engine.md (#2).
     private val ignitorFork = context.ignitorRegistry.fork()
-    private val pipelineFork = context.pipelineRegistry.fork()
 
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
@@ -177,7 +175,6 @@ class VoiceScheduler(
         sampleRateDouble = context.sampleRateDouble,
         blockFrames = context.blockFrames,
         ignitorRegistry = ignitorFork,
-        pipelineRegistry = pipelineFork,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
@@ -209,7 +206,7 @@ class VoiceScheduler(
     fun culledVoicesTotal(): Int = culledVoices
 
     /**
-     * The voice data of the timeline voices that still run their strip (zombies excluded), one
+     * The voice data of the timeline voices that still render (zombies excluded), one
      * entry per voice. A diagnostic for the song benchmark's work columns: it allocates, so it is
      * never called on the render path. A live (non-timeline) voice has no scheduled data and is
      * left out.
@@ -230,7 +227,7 @@ class VoiceScheduler(
         return out
     }
 
-    /** Active voices that still run their strip: [getActiveVoiceCount] minus the zombies. */
+    /** Active voices that still render: [getActiveVoiceCount] minus the zombies. */
     fun renderingVoiceCount(): Int {
         var count = 0
 
@@ -262,12 +259,7 @@ class VoiceScheduler(
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
     fun registerIgnitor(name: String, dsl: IgnitorDsl) = ignitorFork.register(name, dsl)
 
-    /** Register a custom engine for THIS playback — per-engine fork (mirror of [registerIgnitor]). */
-    fun registerPipeline(name: String, dsl: PipelineDsl) = pipelineFork.register(name, dsl)
-
     internal fun containsIgnitor(name: String): Boolean = ignitorFork.contains(name)
-
-    internal fun resolvePipeline(name: String?): PipelineDsl = pipelineFork.get(name)
 
     fun cleanup(playbackId: String) {
         // HELD realtime voices would otherwise ring at full sustain to the held-gate horizon —

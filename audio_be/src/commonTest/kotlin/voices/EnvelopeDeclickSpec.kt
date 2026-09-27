@@ -9,11 +9,15 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 import kotlin.math.abs
 
 /**
- * Regression guard for the VCA gain de-click smoother (ENV_DECLICK_SECONDS).
+ * Regression guard for the envelope gain de-click smoother (ENV_DECLICK_SECONDS), the one `classic()`'s envelope
+ * runs (the chain `adsr` with `declickSeconds`; it was the voice strip's VCA until the strip retired in phase 3
+ * step 9).
  *
  * The ADSR shape curves are value-continuous but not slope-continuous: at a
  * segment join (attack→decay peak, gate-off, instant cutoff) the gain changes
@@ -22,7 +26,7 @@ import kotlin.math.abs
  *
  * Manual 2nd-difference analysis (corner/floor metric) showed the smoother cuts
  * the 40Hz attack→decay corner ~25x at 0.5ms (ratio 525→21). This guard locks in
- * the directly observable consequence through the *real* EnvelopeRenderer: the
+ * the directly observable consequence through a real voice: the
  * per-sample gain slew is bounded — no single-sample jumps. Renders a DC carrier
  * (constant=1.0) so the output buffer equals the envelope gain.
  */
@@ -47,15 +51,10 @@ class EnvelopeDeclickSpec : StringSpec({
             endFrame = 512.0,
             gateEndFrame = 100.0,
             blockFrames = 512,
-            signal = TestIgnitors.constant,
-            envelope = Voice.Envelope(
-                attackFrames = 0.0,
-                decayFrames = 0.0,
-                sustainLevel = 1.0,
-                releaseFrames = 0.0,
-                attackCurve = AdsrCurve.Linear,
-                decayCurve = AdsrCurve.Linear,
-                releaseCurve = AdsrCurve.Linear,
+            signal = TestIgnitors.constant.adsr(
+                attackSec = 0.0, decaySec = 0.0, sustainLevel = 1.0, releaseSec = 0.0,
+                attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Linear, releaseCurve = AdsrCurve.Linear,
+                declickSeconds = ENV_DECLICK_SECONDS,
             ),
         )
 
@@ -76,15 +75,10 @@ class EnvelopeDeclickSpec : StringSpec({
             endFrame = 600.0,
             gateEndFrame = 400.0,
             blockFrames = 600,
-            signal = TestIgnitors.constant,
-            envelope = Voice.Envelope(
-                attackFrames = 20.0,
-                decayFrames = 200.0,
-                sustainLevel = 0.5,
-                releaseFrames = 200.0,
-                attackCurve = AdsrCurve.Exponential,
-                decayCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.Exponential,
+            signal = TestIgnitors.constant.adsr(
+                attackSec = 20.0 / 44100, decaySec = 200.0 / 44100, sustainLevel = 0.5, releaseSec = 200.0 / 44100,
+                attackCurve = AdsrCurve.Exponential, decayCurve = AdsrCurve.Exponential, releaseCurve = AdsrCurve.Exponential,
+                declickSeconds = ENV_DECLICK_SECONDS,
             ),
         )
 

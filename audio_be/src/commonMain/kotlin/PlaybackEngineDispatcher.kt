@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -39,7 +38,6 @@ class PlaybackEngineDispatcher(
     private var avgHeadroom = 1.0
 
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
-    val pipelineRegistry: PipelineRegistry get() = context.pipelineRegistry
     val sampleStore: SampleStore get() = context.sampleStore
 
     /**
@@ -88,9 +86,6 @@ class PlaybackEngineDispatcher(
 
         is KlangCommLink.Cmd.RegisterIgnitor ->
             engineFor(cmd.playbackId).scheduler.registerIgnitor(cmd.name, cmd.dsl)
-
-        is KlangCommLink.Cmd.RegisterPipeline ->
-            engineFor(cmd.playbackId).scheduler.registerPipeline(cmd.name, cmd.dsl)
 
         is KlangCommLink.Cmd.RegisterMaster ->
             engineFor(cmd.playbackId).registerMaster(cmd.name, cmd.dsl)

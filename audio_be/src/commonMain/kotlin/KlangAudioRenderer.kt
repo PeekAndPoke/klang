@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -32,9 +31,6 @@ class KlangAudioRenderer private constructor(
 
     /** Parent ignitor registry — callers register custom oscillators here. */
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
-
-    /** Parent pipeline registry — callers register custom voice pipelines here. */
-    val pipelineRegistry: PipelineRegistry get() = context.pipelineRegistry
 
     /** Parent master registry — callers register custom master chains here. */
     val masterRegistry: MasterRegistry get() = context.masterRegistry

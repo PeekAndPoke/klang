@@ -15,7 +15,7 @@ package io.peekandpoke.klang.audio_bridge
  * context allocates one via `registerMaster` — so the wire-level [VoiceData] still carries
  * `master: String?`.
  *
- * Mirror of [PipelineValue] / [SoundValue]. NOT a wire type (no `@WireFormat`, no `@WireName`): it
+ * Mirror of [SoundValue]. NOT a wire type (no `@WireFormat`, no `@WireName`): it
  * never crosses the worklet boundary — it is denormalized to `master: String?` first.
  * Authoring-layer only.
  */

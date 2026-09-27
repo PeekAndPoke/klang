@@ -67,18 +67,9 @@ sealed interface AdsrDef {
         val decayCurve: AdsrCurve? = null,
         val releaseCurve: AdsrCurve? = null,
         /**
-         * Whether the VCA stage shapes this voice at all. `null` = unset, so the pipeline's
-         * [StageDsl.Vca][io.peekandpoke.klang.audio_bridge.StageDsl.Vca] answers instead.
-         *
-         * A FLAG rather than an `AdsrDef.None` variant, deliberately: `.adsr(0.005, 1.0, 1.0, 0.05)`
-         * followed by `.adsrOff()` keeps the numbers, so it can be flipped back for an A/B. A variant
-         * throws them away, and in a live-coding language that is the deciding property. The cost is
-         * that `Std(attack = 0.5, on = false)` is representable nonsense: mild, the values simply lie
-         * dormant, the same way `decay` already does when `sustain = 1.0`.
-         *
-         * **Must default to `null`, never `true`.** A non-null default would make every inherit-shaped
-         * `Std` carry an explicit `true`, so `on ?: other.on` could never reach a pipeline-level
-         * `Vca(on = false)` and that whole layer would be dead. `AdsrOnFlagSpec` guards this.
+         * Whether the voice strip's VCA shaped this voice. Nothing has read it since the strip retired
+         * (phase 3 step 9); it leaves with the `VoiceData` cut. The switch a pattern writes is `classic()`'s
+         * `adsr.on` slot.
          */
         val on: Boolean? = null,
     ) : AdsrDef {
@@ -143,12 +134,7 @@ sealed interface AdsrDef {
         val attackCurve: AdsrCurve,
         val decayCurve: AdsrCurve,
         val releaseCurve: AdsrCurve,
-        /**
-         * THE ONE NULLABLE FIELD HERE, and not an oversight: `on` has one more layer to fall
-         * through. Voice-level resolution (sprudel over the defaults) happens here; `null` means
-         * neither said anything, so the pipeline's `Vca` stage answers, and only then does the hard
-         * `true` apply. Filling it with `true` at this point would make `Vca(on = false)` unreachable.
-         */
+        /** See [Std.on]: unread since the voice strip retired (phase 3 step 9). */
         val on: Boolean? = null,
     )
 

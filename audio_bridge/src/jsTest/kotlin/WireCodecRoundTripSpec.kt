@@ -14,14 +14,12 @@ import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.decode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_MasterDsl
-import io.peekandpoke.klang.audio_bridge.wire.decode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_MasterDsl
-import io.peekandpoke.klang.audio_bridge.wire.encode_PipelineDsl
 import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 
@@ -33,23 +31,6 @@ import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
  * dispatch, nested types, `List`, and `Map` (the `ScheduledVoice`/`VoiceData` + `Feedback` subgraphs).
  */
 class WireCodecRoundTripSpec : StringSpec({
-
-    "PipelineDsl round-trips (sealed StageDsl: data-object markers + Filter/Vca config)" {
-        listOf(
-            PipelineDsl.modern,
-            // VCA first: a stage order other than modern's, so an order-losing codec cannot pass.
-            PipelineDsl(listOf(StageDsl.Vca(), StageDsl.Distort, StageDsl.Filter(), StageDsl.Tremolo)),
-            PipelineDsl(
-                listOf(
-                    StageDsl.FilterMod,
-                    StageDsl.Filter(cutoffOffsetPerAnalog = 0.01, drivePerAnalog = 0.7, driftRelToOsc = 4.0),
-                    // on = false, not the default true: with the default, this case passes even
-                    // if the codec drops the field entirely.
-                    StageDsl.Vca(expK = 2.5, declickSeconds = 0.002, on = false),
-                )
-            ),
-        ).forEach { decode_PipelineDsl(encode_PipelineDsl(it)) shouldBe it }
-    }
 
     "a non-finite Param default survives the trip: SLOT_UNSET is how the wire says 'never set'" {
         // `KatalystDsl.classic` puts SLOT_UNSET (NaN) on ELEVEN slots (all five compressor knobs,

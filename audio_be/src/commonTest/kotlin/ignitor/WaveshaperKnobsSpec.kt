@@ -11,8 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
+import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
@@ -22,7 +21,7 @@ import kotlin.random.Random
 
 /**
  * The knobs phase 3 step 3b (2026-09-25) put on the waveshaper and the tremolo, and how the runtime
- * reads them. The tremolo's LAW is `TremoloNodeStripParitySpec`'s; the catalogues are
+ * reads them. The tremolo's LAW is `TremoloLawSpec`'s; the catalogues are
  * `ShapeCatalogueSpec`'s. This file is the plumbing between a knob on a node and the stage it builds:
  *
  *  - the `Shape` and `Distort` nodes' `shape` INDEX and `oversample` FACTOR, read once at voice build
@@ -96,23 +95,15 @@ class WaveshaperKnobsSpec : StringSpec({
     }
 
     /**
-     * The same source through the voice STRIP's distort, `DistortionRenderer`, block by block: the law
-     * the fused `Distort` node renders since phase 3 step 4 (decision D2).
+     * The same source through the runtime `fusedDistort` built by hand (the shape by name, the stage count): the
+     * law (`DistortionCore`) the fused `Distort` node renders since phase 3 step 4 (decision D2), the voice
+     * strip's distort until the strip retired (step 9). The law's oracle is `StripLawCoresSpec`'s.
      */
-    fun renderStrip(shapeName: String, stages: Int, amount: Double): DoubleArray {
+    fun renderRuntime(shapeName: String, stages: Int, amount: Double): DoubleArray {
         val rng = seed()
-        val source = renderBuilt(saw.buildExciter(random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor, rng)
-        val strip = DistortionRenderer(amount, shapeName, stages)
-        val out = DoubleArray(source.size)
+        val source = saw.buildExciter(random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
 
-        for (b in 0 until blocks) {
-            val block = source.copyOfRange(b * blockFrames, (b + 1) * blockFrames)
-
-            strip.renderInPlace(block)
-            block.copyInto(out, b * blockFrames)
-        }
-
-        return out
+        return renderBuilt(source.fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName), stages), rng)
     }
 
     fun DoubleArray.bits(): List<Long> = map { it.toRawBits() }
@@ -212,7 +203,7 @@ class WaveshaperKnobsSpec : StringSpec({
         // CHANGED in phase 3 step 4 (decision D2, option A): this row used to pin the node as
         // `drive(amount).shape(...)`, the doors' capped chain. The node now renders the voice strip's
         // loop (DistortionCore: the drive inside the oversampler, no soft cap), so the reference is
-        // the strip's own `DistortionRenderer` at the same shape and stage count. The knob plumbing
+        // the runtime `fusedDistort` at the same shape and stage count. The knob plumbing
         // this row is about (index and factor read at build, NaN is soft and off) is unchanged.
         val distort = IgnitorDsl.Distort(
             inner = saw,
@@ -222,9 +213,9 @@ class WaveshaperKnobsSpec : StringSpec({
         )
         val bag = mapOf("d.shape" to DistortionShapes.indexOf("asym"), "d.os" to 4.0)
 
-        render(distort, bag).bits() shouldBe renderStrip("asym", 2, amount = 0.4).bits()
-        render(distort).bits() shouldBe renderStrip("soft", 0, amount = 0.4).bits()
-        render(distort, mapOf("d.shape" to Double.NaN, "d.os" to Double.NaN)).bits() shouldBe renderStrip("soft", 0, amount = 0.4).bits()
+        render(distort, bag).bits() shouldBe renderRuntime("asym", 2, amount = 0.4).bits()
+        render(distort).bits() shouldBe renderRuntime("soft", 0, amount = 0.4).bits()
+        render(distort, mapOf("d.shape" to Double.NaN, "d.os" to Double.NaN)).bits() shouldBe renderRuntime("soft", 0, amount = 0.4).bits()
 
         // Not the doors' law any more: the loud saw drives the shaper past the doors' soft cap.
         render(distort).bits() shouldNotBe renderHand("soft", 0, drive = 0.4).bits()

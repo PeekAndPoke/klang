@@ -113,7 +113,17 @@ stages as slots, `bpf` and `notch` the same without `passes`); the singular `ads
 `vowelWet`, `vowelFloor`, `bodyWet`, `bodyFloor` (gone 2026-09-07: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`,
 `vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). The `penv` slots `curve` and
 `anchor` with the wire fields `pCurve` and `pAnchor` (gone 2026-09-25, phase 3 step 5b c1: `penv(amount, attack,
-decay, sustain, release)` has a real release, `penvCurves(attack, decay, release)` shapes it, `pSustain` is the wire word). The spelling
+decay, sustain, release)` has a real release, `penvCurves(attack, decay, release)` shapes it, `pSustain` is the wire word). The Pipeline DSL and the voice strip (gone 2026-09-27, phase 3 step 9: every voice
+is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`, `PipelineDsl.modern`, the script
+`Pipeline(...)` / `Pipeline.modern(...)` / `Pipeline.build(...)` with `PipelineBuilder`, `PipelineVcaBuilder`,
+`PipelineFilterBuilder`, `tuneVca`, `tuneFilter`, sprudel `.pipeline()` and the `pipeline(...)` mapper, `PipelineValue`,
+`PipelineRegistry`, `PipelinePreset`, `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
+`KlangPatternEvent.pipeline`, the strip's `FilterPipelineBuilder`, `EnvelopeRenderer` (the strip VCA),
+`FilterModRenderer`, `AudioFilterRenderer`, `CrushRenderer`, `CoarseRenderer`, `DistortionRenderer`, `TremoloRenderer`,
+`StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`
+and `Envelope.declick` (`Voice.Envelope` itself stays: FM and the pitch envelope use it), and
+the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` (the `IgnitorDsl.endsInClassic()` tag
+stays). The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,

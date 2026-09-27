@@ -8,8 +8,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Envelope character defaults — wire defaults for `StageDsl.Vca` and the
-// ignitor `adsr(...)` surface.
+// Envelope character defaults: wire defaults for the ignitor `adsr(...)`
+// surface and `classic()`'s envelope.
 //
 // The shape math that consumes them (`adsrExpShape`, `envDeclickCoeff`) stays
 // in `audio_be/AdsrCurveMath.kt`; only the tunable values live here, so the
@@ -21,8 +21,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * Larger = steeper initial change (faster decay drop / sharper attack finish).
  * Tunable by ear; `3.0` ≈ a moderate analog decay, steeper-tailed than `Square`.
  *
- * Consumers: `StageDsl.Vca.expK` (amp VCA, per-engine, until the Pipeline DSL retires) and the
- * envelope law `EnvelopeCore`, where it is the ONE bend of every other envelope's exponential stages:
+ * Consumer: the envelope law `EnvelopeCore`, where it is the ONE bend of every envelope's exponential stages:
  * the Ignitor `adsr`'s per-envelope `expK` knob was removed in phase 3 step 3c (maintainer,
  * 2026-09-25; a per-curve bend is a later design).
  */
@@ -33,11 +32,9 @@ const val ADSR_EXP_K: Double = 3.0
  * `curves` (`x => x.adsr(a, d, s, r, e => e.curves(...))`): the Ignitor filter nodes' cutoff
  * envelope (`IgnitorDsl.Lowpass` and its three siblings), the Ignitor pitch envelope
  * (`IgnitorDsl.PitchEnvelope`) and the Ignitor FM index envelope (`IgnitorDsl.Fm`, which has no
- * curve knob yet), and on the voice strip the filter, FM and pitch envelopes. On the strip a curve
- * the pattern named wins: the filter envelopes' from sprudel's `lpfCurves`, `hpfCurves`, `bpfCurves`
- * and `notchCurves` (an unset one is filled with this curve in `FilterEnvDef.resolve`), the pitch
- * envelope's from `penvCurves` (filled in `VoiceFactory`); the strip FM envelope has no curve door and
- * always takes this one. The Ignitor curve knobs default to this curve's `AdsrCurves` index, and so
+ * curve knob yet), and the voice's own FM and pitch envelopes (sprudel's `fm` and `penv`). On the voice
+ * a curve the pattern named wins: the pitch envelope's from `penvCurves` (filled in `VoiceFactory`); the
+ * voice FM envelope has no curve door and always takes this one. The Ignitor curve knobs default to this curve's `AdsrCurves` index, and so
  * do `classic()`'s filter curve slots (`FilterCurvesSlots`); a knob that cannot be read at build,
  * or reads as a bad index, falls back to it too.
  *
@@ -54,12 +51,10 @@ val MOD_ENV_CURVE: AdsrCurve = AdsrCurve.Exponential
  * Sustain level of the IGNITOR `adsr(...)` surface, and what `AdsrIgnitor` substitutes for a
  * NON-FINITE one.
  *
- * Scope: the substitution is the IGNITOR envelope's. The voice STRIP's VCA substitutes its own
- * default for a non-finite sustain, [VOICE_ADSR_SUSTAIN_LEVEL]; the strip's filter and FM envelopes
- * have no non-finite guard.
+ * Scope: the substitution is the IGNITOR envelope's. The voice's FM envelope has no non-finite guard.
  *
- * Deliberately NOT the same number as `AdsrDef.defaultSynth.sustain` (1.0), which is the voice
- * STRIP's VCA default: the strip's envelope is an amp applied to a finished voice and holds it at
+ * Deliberately NOT the same number as [VOICE_ADSR_SUSTAIN_LEVEL] (1.0), the default of `classic()`'s
+ * envelope (the voice envelope the old voice strip applied): an amp applied to a finished voice holds it at
  * full level when nothing is written, while an ignitor's own envelope is a shape inside the
  * instrument and 0.7 is what the door has always meant by "a sustained note". Do not unify them
  * without deciding which sound moves.
@@ -72,9 +67,9 @@ const val ADSR_SUSTAIN_LEVEL: Double = 0.7
 
 // ── The VOICE envelope: what every voice gets when the pattern writes nothing ──
 //
-// `AdsrDef.Std.defaultSynth` (the voice strip's VCA) and the envelope slots of `classic()`
-// (`IgnitorDsl.Slots.adsr`) both read these four, so the classic tail's unwritten envelope is the
-// strip's unwritten envelope by construction. They are NOT the Ignitor `adsr(...)` node's own
+// The envelope slots of `classic()` (`IgnitorDsl.Slots.adsr`) and `AdsrDef.Std.defaultSynth` (a sample's
+// envelope fallback) read these four; they are the voice envelope the retired voice strip applied, so the
+// classic tail's unwritten envelope is that envelope by construction. They are NOT the Ignitor `adsr(...)` node's own
 // defaults (sustain [ADSR_SUSTAIN_LEVEL], release 0.3): see [ADSR_SUSTAIN_LEVEL] for why the two
 // differ and must not be unified without deciding which sound moves.
 
@@ -85,14 +80,14 @@ const val VOICE_ADSR_ATTACK_SEC: Double = 0.01
 const val VOICE_ADSR_DECAY_SEC: Double = 0.1
 
 /**
- * Voice envelope sustain level, 0 to 1: the voice holds at full level when nothing is written. Also what
- * the strip VCA reads a non-finite sustain as.
+ * Voice envelope sustain level, 0 to 1: the voice holds at full level when nothing is written.
  */
 const val VOICE_ADSR_SUSTAIN_LEVEL: Double = 1.0
 
 /**
- * Voice envelope release in seconds. Also the lifetime of an `adsrOff` voice past its gate, on the
- * strip and on `classic()` alike (the off envelope still reports this release as its tail).
+ * Voice envelope release in seconds. Also the lifetime of an `adsrOff` `classic()` voice past its gate (the
+ * off envelope still reports this release as its tail), and the lifetime fallback of a tree voice whose
+ * build reports no static release tail (`VoiceFactory`, phase 3 step 9).
  */
 const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
 
@@ -111,24 +106,22 @@ const val VOICE_ADSR_RELEASE_SEC: Double = 0.05
  * the figures are kept as the provenance of the value, not as a live reference.)
  * Tunable by ear, like [ADSR_EXP_K].
  *
- * Consumer: `StageDsl.Vca.declickSeconds` → `EnvelopeRenderer`.
+ * Consumer: `classic()`'s envelope, as a constant, not a slot. The Ignitor `adsr`'s own `declick` knob is
+ * `Slots.declickSeconds`, a slot that defaults to 0.0 (off); it does not read this value.
  */
 const val ENV_DECLICK_SECONDS: Double = 0.001
 
 /**
- * Teardown fade for a voice whose VCA is switched OFF (`StageDsl.Vca.on = false` /
- * sprudel `.adsrOff()`), in seconds. The gate ramps linearly to zero over this window, ending
+ * Teardown fade for a tree voice whose root is not a built envelope with a static release (a `classic()`
+ * voice with sprudel's `.adsrOff()`, or an instrument that does not end in `classic()`), in seconds. The gate ramps linearly to zero over this window, ending
  * exactly on the last frame the voice renders (`floor(endFrame) - 1`).
  *
- * Scope: this guarantees silence at the VCA stage's OUTPUT. In a VCA-last pipeline (`modern`) that
- * is the voice's output; a custom pipeline that puts the VCA ahead of stateful stages leaves them
- * ringing from a zero input. See `EnvelopeRenderer.renderGate`.
+ * Scope: it runs last on the voice, after the whole tree (`TeardownFadeRenderer`), so it guarantees
+ * silence at the voice's output.
  *
- * **Why an envelope-less voice needs this and an ADSR one does not.** The VCA runs after the
- * exciter and its amp (last in `modern`; see the scope note above for custom orders). With a curve it
- * drove the fully amplified signal to zero before teardown, so `Voice.render` could drop the voice
- * on a silent sample. With `on = false`
- * nothing guarantees that: an ignitor's own envelope sits BEFORE its amp stages, so a tail the
+ * **Why an envelope-less voice needs this and an ADSR one does not.** An envelope at the root of the tree
+ * drives the fully amplified signal to zero before teardown, so `Voice.render` can drop the voice on a
+ * silent sample. Without one nothing guarantees that: an ignitor's own envelope sits BEFORE its amp stages, so a tail the
  * envelope has taken to ~1e-4 comes back out of a tube/drive stage 20 dB louder. Measured on Der
  * Schmetterling's guitar topology (`adsr → distort("tube") → highpass`): the last sample before
  * teardown was 0.015, a step straight to zero, against 0.00002 for the same patch with the
@@ -142,6 +135,6 @@ const val ENV_DECLICK_SECONDS: Double = 0.001
  * Tunable by ear, like [ENV_DECLICK_SECONDS]. Long enough to turn the step into a ramp at low
  * notes, short enough to be inaudible against a release measured in tens of ms.
  *
- * Consumer: `EnvelopeRenderer.renderGate`.
+ * Consumer: `TeardownFadeRenderer`.
  */
 const val VCA_OFF_TEARDOWN_FADE_SECONDS: Double = 0.004

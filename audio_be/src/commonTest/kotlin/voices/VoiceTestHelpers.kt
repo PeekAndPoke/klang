@@ -8,14 +8,12 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.AudioBuffer
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelinePreset
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.adsr
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrDef
@@ -74,18 +72,12 @@ object VoiceTestHelpers {
         // Dynamics
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0), // Always on
-
-        // Filters & Modulation
-        filter: AudioFilter = NoOpFilter,
-        filterModulators: List<Voice.FilterModulator> = emptyList(),
-
-        // Raw Effect Data
-        phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
-        tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-        distort: Voice.Distort = Voice.Distort(0.0),
-        crush: Voice.Crush = Voice.Crush(0.0),
-        coarse: Voice.Coarse = Voice.Coarse(0.0),
+        /**
+         * The test instrument's own amplitude envelope, in frames, or null for none. It is put IN THE TREE
+         * (the chain `adsr` over [signal], no de-click), because since phase 3 step 9 a voice has no envelope
+         * of its own: the voice strip and its VCA retired, and the instrument's tree owns its amplitude.
+         */
+        envelope: Voice.Envelope? = null,
 
         // Cut group
         cut: Int? = null,
@@ -108,7 +100,23 @@ object VoiceTestHelpers {
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
-        // Build strip pipeline: Pitch → Ignite → Filter
+        val instrument = if (envelope == null) {
+            signal
+        } else {
+            val sr = sampleRate.toDouble()
+
+            signal.adsr(
+                attackSec = envelope.attackFrames / sr,
+                decaySec = envelope.decayFrames / sr,
+                sustainLevel = envelope.sustainLevel,
+                releaseSec = envelope.releaseFrames / sr,
+                attackCurve = envelope.attackCurve,
+                decayCurve = envelope.decayCurve,
+                releaseCurve = envelope.releaseCurve,
+            )
+        }
+
+        // The voice's stages: Pitch → Ignite (the Send stage is appended by the voice)
         val pipeline = buildPitchPipeline(
             vibrato = vibrato,
             accelerate = accelerate,
@@ -119,22 +127,10 @@ object VoiceTestHelpers {
             startFrame = startFrame,
             endFrame = endFrame,
         ) + IgniteRenderer(
-            signal = signal,
+            signal = instrument,
             signalCtx = signalCtx,
             freqHz = freqHz,
             startFrame = startFrame,
-        ) + buildFilterPipeline(
-            pipeline = PipelinePreset.Modern.dsl,
-            modulators = filterModulators,
-            startFrame = startFrame,
-            crush = crush,
-            coarse = coarse,
-            mainFilter = filter,
-            envelope = envelope,
-            distort = distort,
-            tremolo = tremolo,
-            phaser = phaser,
-            sampleRate = sampleRate,
         )
 
         val blockCtx = BlockContext(
@@ -146,7 +142,7 @@ object VoiceTestHelpers {
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
             freqHz = freqHz,
-            signal = signal,
+            signal = instrument,
             signalCtx = signalCtx,
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
@@ -158,7 +154,6 @@ object VoiceTestHelpers {
             cylinderId = cylinderId,
             gain = gain,
             pan = pan,
-            phaser = phaser,
             katalystParams = katalystParams,
             cut = cut,
             cull = cull,
@@ -183,23 +178,14 @@ object VoiceTestHelpers {
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
-        filter: AudioFilter = NoOpFilter,
-        filterModulators: List<Voice.FilterModulator> = emptyList(),
-        phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
-        tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-        distort: Voice.Distort = Voice.Distort(0.0),
-        crush: Voice.Crush = Voice.Crush(0.0),
-        coarse: Voice.Coarse = Voice.Coarse(0.0),
+        envelope: Voice.Envelope? = null,
         katalystParams: Map<String, Double>? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
-        envelope = envelope, filter = filter, filterModulators = filterModulators,
-        phaser = phaser, tremolo = tremolo,
-        distort = distort, crush = crush, coarse = coarse,
+        envelope = envelope,
         katalystParams = katalystParams,
     )
 
@@ -225,14 +211,7 @@ object VoiceTestHelpers {
         pitchEnvelope: Voice.PitchEnvelope? = null,
         gain: Double = 1.0,
         pan: Double = 0.5,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
-        filter: AudioFilter = NoOpFilter,
-        filterModulators: List<Voice.FilterModulator> = emptyList(),
-        phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
-        tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-        distort: Voice.Distort = Voice.Distort(0.0),
-        crush: Voice.Crush = Voice.Crush(0.0),
-        coarse: Voice.Coarse = Voice.Coarse(0.0),
+        envelope: Voice.Envelope? = null,
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
@@ -249,86 +228,8 @@ object VoiceTestHelpers {
         ),
         fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
-        envelope = envelope, filter = filter, filterModulators = filterModulators,
-        phaser = phaser, tremolo = tremolo,
-        distort = distort, crush = crush, coarse = coarse,
+        envelope = envelope,
     )
-
-    /**
-     * No-op filter that does nothing.
-     * Useful as default when you don't care about filtering.
-     */
-    object NoOpFilter : AudioFilter {
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            // Do nothing
-        }
-    }
-
-    /**
-     * Spy filter that tracks all process() calls.
-     * Useful for verifying execution order and parameters.
-     */
-    open class SpyFilter(val name: String = "spy") : AudioFilter {
-        data class ProcessCall(val offset: Int, val length: Int, val callIndex: Int)
-
-        val processCalls = mutableListOf<ProcessCall>()
-
-        /**
-         * The first sample this filter was HANDED, per call. A counting spy can only say that a
-         * stage ran; recording what it saw is what makes stage ORDER observable, because a stage
-         * that runs after the VCA sees an enveloped signal and one that runs before sees the raw
-         * exciter. `VoicePipelineTest` had no way to check its own ordering claims without this
-         * (audit finding F13).
-         */
-        val seenAtProcess = mutableListOf<Double>()
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            processCalls.add(ProcessCall(offset, length, processCalls.size))
-            seenAtProcess.add(if (length > 0) buffer[offset] else 0.0)
-        }
-
-        open fun reset() {
-            processCalls.clear()
-            seenAtProcess.clear()
-        }
-    }
-
-    /**
-     * Tunable spy filter that also tracks sweepCutoff() calls: [cutoffHistory] and [currentCutoff]
-     * record each sweep's START cutoff (the block's first frame), [endHistory] its end cutoff.
-     * Useful for testing filter modulation.
-     */
-    class TunableSpyFilter(name: String = "tunableSpy") : SpyFilter(name), AudioFilter.Tunable {
-        val cutoffHistory = mutableListOf<Double>()
-        val endHistory = mutableListOf<Double>()
-        var currentCutoff = 0.0
-
-        /**
-         * How many `sweepCutoff` calls had already landed when each `process` began. This is the only
-         * way to check "modulation updates the cutoff BEFORE the filter processes" — comparing two
-         * independent counters after the fact cannot distinguish the two orders.
-         */
-        val cutoffCountAtProcess = mutableListOf<Int>()
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            cutoffCountAtProcess.add(cutoffHistory.size)
-            super.process(buffer, offset, length)
-        }
-
-        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
-            currentCutoff = startHz
-            cutoffHistory.add(startHz)
-            endHistory.add(endHz)
-        }
-
-        override fun reset() {
-            super.reset()
-            cutoffHistory.clear()
-            endHistory.clear()
-            cutoffCountAtProcess.clear()
-            currentCutoff = 0.0
-        }
-    }
 }
 
 /**

@@ -395,7 +395,7 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  * A knob that is not a build-time constant (an LFO on the amount) stays unconditional, because it
  * can move within a note and no single build-time answer is correct for the whole note.
  *
- * Why it exists: a slotted tail (phase 3's `classic()`) declares every stage of today's voice
+ * Why it exists: a slotted tail (phase 3's `classic()`) declares every stage of the retired voice
  * strip, and a pattern writes two of them. Without the gate the other seven each pay a scratch
  * render and a buffer copy per block per voice at their off value, and a nine-stage tail with
  * nothing written costs more than ten times a bare saw. With the gate a plain `sound("saw")` IS a
@@ -563,9 +563,9 @@ private fun IgnitorDsl.gatedOffWhenUnset(oscParams: Map<String, Double>?, cache:
  * The five cutoff-envelope knobs of a filter node, resolved at BUILD into the runtime's
  * [FilterEnvDef].
  *
- * **Why build time and not per block.** The runtime's envelope is a per-voice constant on the
- * strip too (`FilterDef.envelope` is resolved once, at note-on, in `VoiceFactory.toModulator`),
- * so a per-block read would be a new capability, not parity. It is also what lets the depth stay
+ * **Why build time and not per block.** The retired voice strip also resolved its filter envelope
+ * once per voice, at note-on, and the tree kept that contract, so a per-block read would be a new
+ * capability. It is also what lets the depth stay
  * the envelope's SWITCH: `SvfIgnitor` decides `hasEnv` at construction and a whole branch of its
  * block loop with it.
  *
@@ -574,7 +574,7 @@ private fun IgnitorDsl.gatedOffWhenUnset(oscParams: Map<String, Double>?, cache:
  * moves no draw. Anything else has no build-time answer and the knob's own default stands, which
  * is the same answer the house gives a non-finite value (`/dsl-design` section 4: a non-finite
  * wire number reads as unset). The fallbacks are the shared constants, the same ones the door
- * fills with and the same ones `FilterEnvDef.resolve()` uses on the strip.
+ * fills with and the same ones the voice strip's filter envelope used.
  *
  * **The DEPTH's fallback is 0, and that is a sharper edge than the other four.** A stage knob
  * that cannot be read falls back to a usable time; a depth that cannot be read falls back to the
@@ -632,12 +632,12 @@ private fun filterEnvDef(
  * against the note's bag: when the depth knob is an UNSET slot (a [IgnitorDsl.Param] whose DEFAULT is
  * non-finite, the `SLOT_UNSET` sentinel `classic()` places, and which the bag did NOT write) and ANY of
  * the four stage knobs is a `Param` the bag DID write, the depth is [FILTER_ENV_DEPTH_SEMITONES]
- * instead of "no envelope". That is the strip's `FilterEnvDef.resolve`, `depth ?: 7`, reached from a
+ * instead of "no envelope". It carries over the retired strip's `depth ?: 7`, reached from a
  * pattern that writes only `lpf.attack`.
  *
  * What does NOT switch it on, each pinned by a row of `FilterSlotLayerFillSpec`:
  *  - a WRITTEN depth, an explicit 0 included: an explicit value is never overwritten by a fill (the
- *    strip keeps `lpf(env = 0)` static too);
+ *    retired strip kept `lpf(env = 0)` static too);
  *  - an AUTHORED depth default, 0 included: `Osc.param("e", 0)` is the author saying "no sweep", and an
  *    authored default is never filled (round 1 of step 5's review found the first cut filling it);
  *  - an authored stage default alone: a stage `Param` whose default is a real number but that the bag
@@ -713,7 +713,7 @@ private fun IgnitorDsl.oversampleStagesKnob(oscParams: Map<String, Double>?, cac
 /**
  * The cascade count a filter's `passes` knob asks for (phase 3 step 5, the `lpf.passes` / `hpf.passes`
  * slots of `classic()`): through [coercePasses], the one coercion, so it ROUNDS, bounds to
- * 1..`FILTER_MAX_PASSES` and reads a non-finite value as one pass, exactly as the strip reads sprudel's
+ * 1..`FILTER_MAX_PASSES` and reads a non-finite value as one pass, exactly as the retired strip read sprudel's
  * `lpf(passes = ...)`. A non-leaf has no build-time answer and is one pass.
  */
 private fun IgnitorDsl.passesKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
@@ -758,7 +758,7 @@ private fun IgnitorDsl.switchedOff(oscParams: Map<String, Double>?, cache: Ignit
 
 /**
  * The release tail a switched-OFF envelope still reports, so the voice keeps the lifetime the
- * envelope would have given it (as the strip's `adsrOff` does).
+ * envelope would have given it (as the strip's `adsrOff` did).
  *
  * Leaf-only, the build-time knobs' rule, and it differs from the ON path in one case on purpose.
  * The ON path asks the BUILT release (`controlRateValueOrNull`), which also folds a pointwise
@@ -778,8 +778,8 @@ private fun IgnitorDsl.offEnvelopeTail(oscParams: Map<String, Double>?, cache: I
  * The DRAW ORDER lives in [buildFilterHumanization]; this function only resolves the `analog`
  * amount that decides whether anything is drawn at all, and it resolves it the same leaf-only
  * way [filterEnvDef] resolves its knobs, so asking the question moves no draw either. A
- * modulated `analog` therefore humanizes nothing: there is no build-time answer, and the strip
- * has no such case to match (its `analog` is one number off the voice's bag).
+ * modulated `analog` therefore humanizes nothing: there is no build-time answer, and the retired strip
+ * had no such case to match (its `analog` was one number off the voice's bag).
  *
  * A GATED-OFF filter never reaches here, which is the rule "the stage does not exist" applied to
  * its draws as well: the gate's arm returns the inner before this runs.
@@ -1166,7 +1166,7 @@ private fun IgnitorDsl.buildRaw(
             // convention, every other arm does it), then the envelope knobs, which are leaves and
             // draw nothing, then the humanization's four draws, then freq / q / analog exactly
             // where they were. A CASCADE draws ONCE: every stage shares the one tolerance and the
-            // one drift lane, the way the strip's single `AudioFilter` with N stages does.
+            // one drift lane, the way the retired strip's single `AudioFilter` with N stages did.
             // `q.noMod()` deliberately stays INSIDE the loop: the build cache counts consumers,
             // and hoisting it would change the memo's shape for the whole voice.
             val built = inner.withMod()
@@ -1280,8 +1280,8 @@ private fun IgnitorDsl.buildRaw(
         // off. See `switchedOff`.
         //
         // OFF keeps the voice's LIFETIME: the envelope would have released over `releaseSec`, the
-        // strip's `adsrOff` keeps that lifetime (its `renderGate` fades over the last frames of it),
-        // and step 6's identity depends on the node doing the same. So the signal skips the stage
+        // strip's `adsrOff` kept that lifetime (fading over the last frames of it, the teardown fade the
+        // voice now appends), and step 6's identity depended on the node doing the same. So the signal skips the stage
         // but the tail is still reported, read the build-time way (see `offEnvelopeTail`). The
         // teardown fade is the VOICE's: it reads `BuiltIgnitor.endsInEnvelope`, which this switched-off
         // node hands on from its inner (`passThrough`), so a `classic()` tree reports false here.
@@ -1308,9 +1308,8 @@ private fun IgnitorDsl.buildRaw(
             // A NON-FINITE release is the same "no static answer", and it has to say so HERE.
             // `maxTail` is `if (a >= b) a else b`, and a NaN loses every comparison, so it wins
             // only as the SECOND argument: `maxTail(NaN, 2.0)` discards the NaN and returns 2.0,
-            // while `maxTail(2.0, NaN)` returns the NaN. `VoiceFactory` then tests
-            // `ignitorTailSec > resolvedAdsr.release`, which is false for a NaN, so the voice is
-            // cut to the strip's release. The two shapes that reach it, both with the non-finite
+            // while `maxTail(2.0, NaN)` returns the NaN, and `VoiceFactory`'s lifetime (`treeLifetime`,
+            // a `maxOf`) would carry the NaN into the voice's end frame. The two shapes that reach it, both with the non-finite
             // release on the RIGHT of the accumulation:
             //   `s.adsr(release = 2.0) + s.adsr(release = NaN)`, because `buildRaw` accumulates
             //   the left operand first; and the commoner one, a CHAIN such as
@@ -1330,8 +1329,7 @@ private fun IgnitorDsl.buildRaw(
             innerIgnitor.adsr(
                 attack, decay, sustain, release,
                 // Unset curve = "exp" on every stage of every AMPLITUDE envelope, on every door
-                // (maintainer decision, 2026-08-24); the strip path's AdsrDef.Resolved already
-                // defaults Exponential. The modulation envelopes (filter cutoff, pitch) fall back to
+                // (maintainer decision, 2026-08-24), as the strip's VCA did. The modulation envelopes (filter cutoff, pitch) fall back to
                 // `MOD_ENV_CURVE` instead, which decision D3 sets.
                 attackCurve.adsrCurveKnob(oscParams, cache, AdsrCurve.Default),
                 decayCurve.adsrCurveKnob(oscParams, cache, AdsrCurve.Default),
@@ -1347,11 +1345,11 @@ private fun IgnitorDsl.buildRaw(
         // script one at `KlangScriptOscExtensions`); `classic()` does (its distort stage, phase 3
         // step 5, the one node that switches drive AND shape off as a unit), and `WarmupVocabulary`
         // at 0.3. Gating it aligns that node with the `Drive` row below and with the strip, which
-        // adds no distort stage for an amount at or below 0.
+        // added no distort stage for an amount at or below 0.
         //
         // Since phase 3 step 4 (decision D2, option A) the node renders the VOICE STRIP's law through
         // `DistortionCore` (`fusedDistort`): the drive inside the oversampler, the DC blocker, no soft
-        // cap; `ClassicStripParitySpec` proves it bit-identical to the strip. The gate is its ONLY
+        // cap; it was proven bit-identical to the strip before the strip retired (phase 3 step 9). The gate is its ONLY
         // bypass: a modulated amount at or below 0 is not a leaf, is never gated, and runs at unity
         // drive with its state contiguous (ledger W5's hazard, see `fusedDistort`).
         //
@@ -1359,7 +1357,7 @@ private fun IgnitorDsl.buildRaw(
         // shape-dependent: the node was then `drive(amount).shape(shape)` and only the DRIVE half
         // bypassed at 0, so the tree's chosen shaper stayed on the signal at unity gain (modelled on a
         // 220 Hz sine: "soft" -1.77 dB, "tube" -6.24 dB, "zerosquare" up to +16.83 dB, "rectify" an
-        // octave up). Now it does nothing, as on the strip.
+        // octave up). Now it does nothing, as it did on the strip.
         //
         // The shape and the oversampling factor are knobs read once, here (see `distortionShapeKnob`).
         is IgnitorDsl.Distort -> if (amount.gatedOff(oscParams, cache) { it <= 0.0 }) {
@@ -1410,7 +1408,7 @@ private fun IgnitorDsl.buildRaw(
         }
 
         // GATE ROW `coarse`: at or below 1.0, or unset. Both paths already agree on that value
-        // (`Ignitor.coarse(Double)` returns the inner, `FilterPipelineBuilder` adds no stage).
+        // (`Ignitor.coarse(Double)` returns the inner, and the strip added no stage).
         // At or below 0 and at a non-finite amount the render already takes a bit-exact bypass, so
         // there the gate folds a bypass. In (0, 1] the engaged loop takes every sample (ledger W3)
         // but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as
@@ -1422,8 +1420,8 @@ private fun IgnitorDsl.buildRaw(
             inner.withMod().coarse(amount.noMod())
         }
 
-        // NOT gated: no per-voice phaser is reachable from a built-in tail today, the stage
-        // retires with `PipelineDsl`, and the wet/dry law makes its off value a second question
+        // NOT gated: no per-voice phaser is reachable from a built-in tail (the strip's per-voice
+        // phaser retired with the Pipeline DSL, phase 3 step 9), and the wet/dry law makes its off value a second question
         // (`floor`) that no caller needs answered yet.
         // Named, in the historical order: each `noMod()` BUILDS, and build order is rng draw order.
         is IgnitorDsl.Phaser -> inner.withMod().phaser(

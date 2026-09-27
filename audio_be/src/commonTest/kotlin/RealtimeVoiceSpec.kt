@@ -17,7 +17,6 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.FilterModRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.FmRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
@@ -553,28 +552,6 @@ class RealtimeVoiceSpec : StringSpec({
     ).apply {
         updateOffsetAndLength(0, blockFrames)
         blockStart = 0.0
-    }
-
-    "FilterModRenderer follows a gate moved between blocks (ctx read, not a baked copy)" {
-        val filter = VoiceTestHelpers.TunableSpyFilter()
-        val mod = Voice.FilterModulator(
-            filter = filter,
-            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0),
-            depth = 12.0,
-            baseCutoff = 800.0,
-            drift = null,
-        )
-        val renderer = FilterModRenderer(modulators = listOf(mod), startFrame = 0.0)
-        val ctx = stripCtx(gateEndFrame = 100_000.0)
-
-        renderer.render(ctx)
-        filter.currentCutoff shouldBe 1600.0 // sustain: 800 * 2^(12/12 * 1.0)
-
-        // The realtime note-off moves the gate BETWEEN blocks — the renderer must see it.
-        ctx.gateEndFrame = 64.0 // inside the first block, after the onset (a gate AT the onset has its own rule)
-        ctx.blockStart = blockFrames.toDouble()
-        renderer.render(ctx)
-        filter.currentCutoff shouldBe 800.0 // released (release 0): envelope 0 -> base cutoff
     }
 
     "FmRenderer follows a gate moved between blocks (ctx read, not a baked copy)" {

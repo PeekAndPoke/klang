@@ -12,7 +12,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
@@ -66,7 +65,6 @@ class StripPitchEnvelopeParitySpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = DoubleArray(blockFrames),
             freqModBuffer = freqModBuffer,

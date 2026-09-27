@@ -8,9 +8,9 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 
 /**
- * LFO waveforms for modulation sources. Internal-only enum: the DSL surface names a shape and
- * the Ignitor `Tremolo` node carries its index in `LfoShapes`; both map here via [parseLfoShape]
- * and [lfoShapeAt]. **The entry order is the catalogue's**, append only.
+ * LFO waveforms for modulation sources. Internal-only enum: the DSL surface names a shape, and
+ * the Ignitor `Tremolo` node carries its index in `LfoShapes` and maps it here via [lfoShapeAt].
+ * **The entry order is the catalogue's**, append only.
  *
  * The vocabulary is deliberately the OSCILLATOR vocabulary: every accepted name is one the
  * user already knows from `s(...)` and the ignitor registry, aliases included. There are no
@@ -25,17 +25,6 @@ import io.peekandpoke.klang.audio_bridge.LfoShapes
 internal enum class LfoShape {
     SINE, TRIANGLE, SQUARE, SAWTOOTH, RAMP,
 }
-
-/**
- * Maps a DSL shape name to the enum. Unknown / null → [LfoShape.SINE]: an unrecognised name
- * degrades to the shipped waveform, never to silence and never to a throw (it arrives from a
- * user pattern value). Case-insensitive; the aliases mirror the ignitor registry's.
- *
- * The names and aliases live in ONE table, `LfoShapes` in `audio_bridge` (phase 3 step 3b,
- * 2026-09-25), and this goes through its INDEX, so the strip (which reads a name off the voice)
- * and the Ignitor `Tremolo` node (which carries the index as a knob) cannot disagree.
- */
-internal fun parseLfoShape(shape: String?): LfoShape = lfoShapeAt(LfoShapes.indexOf(shape))
 
 /**
  * The shape an index knob selects: `LfoShapes.indexAt`'s rule (nearest position; non-finite,

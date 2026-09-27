@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
@@ -33,7 +32,6 @@ class AudioBackendContext(
     val commLink: KlangCommLink.BackendEndpoint,
     /** Parent ignitor registry — each engine's scheduler forks it per playback. */
     val ignitorRegistry: IgnitorRegistry,
-    val pipelineRegistry: PipelineRegistry,
     /** Parent master registry — each engine's [MasterBus] forks it per playback. */
     val masterRegistry: MasterRegistry,
     /** Parent Katalyst registry; each engine forks it per playback. */
@@ -71,10 +69,10 @@ class AudioBackendContext(
          * This is NOT a latency/throughput knob — it is a *tone* parameter, because several parts
          * of the engine update once per block and therefore derive their rate from it:
          *
-         *  - `VoiceFactory.driftUpdateRate` = `sampleRate / blockFrames` — the analog-drift time
+         *  - `analogDriftStepRate` = `sampleRate / blockFrames`: the filter analog-drift time
          *    constants (`AnalogDriftCoeffs`) are derived from it, so a different block size gives
          *    audibly different drift.
-         *  - SVF cutoff smoothing / `FilterModRenderer` — per-block recompute granularity.
+         *  - the SVF cutoff envelope (`SvfIgnitor`): per-block recompute granularity.
          *  - `VoiceScheduler`'s startup epoch and admission both resolve to a BLOCK boundary (a
          *    playback's zero point is the next block to be rendered; anything starting before the
          *    block being promoted for is dropped, block-framing B1/B2).
@@ -105,7 +103,6 @@ class AudioBackendContext(
             commLink = commLink,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             phasePoolSeed = phasePoolSeed,
-            pipelineRegistry = PipelineRegistry(),
             masterRegistry = MasterRegistry(),
             katalystRegistry = KatalystRegistry(),
             clock = clock,

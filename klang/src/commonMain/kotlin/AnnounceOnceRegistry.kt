@@ -12,8 +12,8 @@ import io.peekandpoke.klang.common.infra.withLock
  * Announces each structurally-unique [T] to a sink **exactly once**, and hands back the synthetic
  * name it is known by.
  *
- * One generic replacement for what used to be three byte-identical classes (`IgnitorRegistry`,
- * `PipelineRegistry`, `MasterRegistry`) — they differed only in the DSL type and which
+ * One generic replacement for what used to be three byte-identical classes (an ignitor, a pipeline
+ * and a master registry); they differed only in the DSL type and which
  * `Cmd.Register*` they built. See [InlineDslRegistrar], which owns one instance per DSL kind.
  *
  * **Why announce-once matters:** a top-level `master(…)` re-emits its control event every single

@@ -44,6 +44,32 @@ general mechanism, and a frontend chooses a routing.
 - The signal-flow plan section 7 made the Katalyst chain an instrument-like list whose reverb and
   delay are insert stages; the master's `MasterStageDsl` has the same model.
 
+## 3. The first step when this plan starts: the fixed-layout inventory (maintainer, 2026-09-27)
+
+Before any design: identify EVERYTHING that assumes today's fixed layout, then think deeply about how to make
+it configurable and how it still fits a language like sprudel, which will always assume a fixed layout. The
+maintainer has ideas for that; they are not written here yet.
+
+The framing so far: there are two kinds of processing. PER-VOICE (the Ignitor tree: it knows the note's
+frequency, gate and lifetime, built at note start, gone with the note) and SHARED (processing a summed signal,
+no per-note context, living as long as the playback). "Katalyst" (the orbit chain) and "Master" are not two
+kinds: they are two positions in the fixed graph. The long-run shape is NAMED nodes that events can configure;
+sprudel's bus doors writing `katp` slots that an orbit's chain reads by name are an early, orbit-bound form of it.
+
+Seed list of fixed-layout assumptions (known so far; the inventory completes it):
+- `KlangPatternEvent`'s `sound`, `master` and `katalyst` properties and `InlineDslRegistrar.announceAll`
+  (section 3 below; a candidate shape: the event announces its own inline DSLs into one generic sink over a
+  sealed `InlineDsl` wire type, the maintainer's visitor idea, name to be decided);
+- the orbit concept: voices summed per orbit, the cylinder per orbit, sends, ducking and the compressor by orbit;
+- the Katalyst (per orbit) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds;
+- `katp` and the orbit parameter state; the sprudel doors that write it (`reverb`, `delay`, `compressor`,
+  `duck`, `phaser`, `body`, `vowel`) and `orbit(...)`, `katalyst(...)`, `master(...)`;
+- the per-voice `classic()` chain itself (sprudel's fixed voice layout, attached as a tag since phase 3 step 10).
+- two POSITION-bound features a merged "effect chain" type must keep expressible (maintainer and coordinator,
+  2026-09-27: Katalyst and Master are the same thing, a shared chain, named only for where it sits): the master
+  limiter's lookahead (a final safety stage, master-only by design; in a graph, a property of the node before the
+  output) and ducking (a side-chain edge from another bus, not a chain property).
+
 ## 3. Open questions (to settle when this plan starts, not now)
 
 - **Where `.sprudel()` lives.** The maintainer's first thought: a KlangScript extension function on
@@ -70,6 +96,12 @@ general mechanism, and a frontend chooses a routing.
   block budget on Node.js, the shipping target.
 - **The wire.** Only seconds cross it, never cycles (stone); a graph declaration is a new wire value
   (a sealed `@WireName` hierarchy, not an enum).
+- **The event's inline DSL properties** (noted by the maintainer, 2026-09-27). `KlangPatternEvent` exposes
+  `sound`, `master` and `katalyst`: the inline DSL values a playback announces once to the backend
+  (`InlineDslRegistrar.announceAll`, one `Cmd.Register*` per value, then the voice carries only a name). They
+  are the three levels of today's FIXED graph (voice instrument, orbit chain, master chain) spelled out as
+  named properties. "OK-ish for now"; a configurable graph revises them, e.g. into one generic list of
+  inline graph-node references per event, announced the same way.
 
 ## Links
 

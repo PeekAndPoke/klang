@@ -69,7 +69,6 @@ class KlangOfflineRenderer(
             phasePoolSeed = 1,
         )
         val ignitorRegistry = renderer.ignitorRegistry
-        val pipelineRegistry = renderer.pipelineRegistry
         val masterRegistry = renderer.masterRegistry
         val katalystRegistry = renderer.katalystRegistry
         val voiceScheduler = renderer.voices
@@ -103,7 +102,6 @@ class KlangOfflineRenderer(
         // wire, which is what `InlineDslRegistrar` exists for.
         InlineDslRegistrar.intoRegistries(
             ignitors = ignitorRegistry,
-            pipelines = pipelineRegistry,
             masters = masterRegistry,
             katalysts = katalystRegistry,
         ).announceAll(rawEvents)

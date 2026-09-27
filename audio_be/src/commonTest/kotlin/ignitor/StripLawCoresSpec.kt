@@ -14,10 +14,6 @@ import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.parseDistortionShape
-import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.CrushRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
-import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.floor
@@ -27,18 +23,17 @@ import kotlin.math.sin
 
 /**
  * The LAWS of the two cores phase 3 step 4 made shared (`CrushCore`, decision D1; `DistortionCore`,
- * decision D2 option A), pinned against ORACLES written out in this file, on BOTH hosts: the voice
- * strip's renderer and the Ignitor node.
+ * decision D2 option A), pinned against ORACLES written out in this file, on the Ignitor node, their one
+ * host since the voice strip (their other host) retired in phase 3 step 9.
  *
- * Why oracles and not the parity spec: `ClassicStripParitySpec` compares the two hosts with each
- * other, so a change INSIDE a shared core moves both sides together and that spec stays green. Only a
- * copy of the law that lives outside the core can see it. Each oracle below is the law as the step-4
+ * Why oracles: a comparison of two hosts cannot see a change INSIDE a shared core, because both sides
+ * move together. Only a copy of the law that lives outside the core can see it. Each oracle below is the law as the step-4
  * brief states it, written the plain way:
  *
  *  - crush: `floor(x * hl) / hl`, clamped to `[-1, 1]`, a NaN out as 0, `hl = 2^amount / 2`;
  *  - distort: `shape(x * 10^(1.2 * amount))` with the drive INSIDE the oversampler, NaN out as 0, then
- *    the DC blocker, and no soft cap; the strip bypasses at an amount at or below 0, the node runs a
- *    MODULATED amount at or below 0 at unity drive, contiguously (ledger W5's hazard designed out).
+ *    the DC blocker, and no soft cap; the node runs a MODULATED amount at or below 0 at unity drive,
+ *    contiguously (ledger W5's hazard designed out).
  */
 class StripLawCoresSpec : StringSpec({
 
@@ -95,20 +90,6 @@ class StripLawCoresSpec : StringSpec({
         return out
     }
 
-    /** The strip's contract: one renderer for the note, every block rendered in place. */
-    fun renderStrip(renderer: BlockRenderer, input: DoubleArray): DoubleArray {
-        val out = input.copyOf()
-
-        for (b in 0 until input.size / blockFrames) {
-            val block = out.copyOfRange(b * blockFrames, (b + 1) * blockFrames)
-
-            renderer.renderInPlace(block, sampleRate)
-            block.copyInto(out, b * blockFrames)
-        }
-
-        return out
-    }
-
     fun DoubleArray.bits(): List<Long> = map { it.toRawBits() }
 
     // ── The oracles ──────────────────────────────────────────────────────────────────────────────
@@ -123,30 +104,11 @@ class StripLawCoresSpec : StringSpec({
 
     fun oracleRound(x: Double, hl: Double): Double = clampNan(round(x * hl) / hl)
 
-    /** The crush law over blocks, with the strip's optional oversampler around the quantizer. */
-    fun oracleCrush(input: DoubleArray, amount: Double, stages: Int): DoubleArray {
+    /** The crush law over blocks (the node has no oversampler). */
+    fun oracleCrush(input: DoubleArray, amount: Double): DoubleArray {
         val hl = 2.0.pow(amount) / 2.0
-        val out = input.copyOf()
-        val os = if (stages > 0) Oversampler(stages) else null
-        val scratch = ScratchBuffers(blockFrames)
 
-        for (b in 0 until input.size / blockFrames) {
-            val from = b * blockFrames
-
-            if (os != null) {
-                os.process(out, from, blockFrames, scratch) { work, count ->
-                    for (i in 0 until count) {
-                        work[i] = oracleFloor(work[i], hl)
-                    }
-                }
-            } else {
-                for (i in from until from + blockFrames) {
-                    out[i] = oracleFloor(out[i], hl)
-                }
-            }
-        }
-
-        return out
+        return DoubleArray(input.size) { oracleFloor(input[it], hl) }
     }
 
     /**
@@ -196,33 +158,19 @@ class StripLawCoresSpec : StringSpec({
 
     // ── crush (D1) ───────────────────────────────────────────────────────────────────────────────
 
-    "crush: both hosts quantize with FLOOR, the oracle's law, not round (D1)" {
+    "crush: the node quantizes with FLOOR, the oracle's law, not round (D1)" {
         val blocks = 4
         val input = sine(blocks, 0.95, 440.0)
 
         for (amount in listOf(1.0, 2.5, 4.0, 8.0)) {
             val hl = 2.0.pow(amount) / 2.0
-            val expected = oracleCrush(input, amount, stages = 0)
+            val expected = oracleCrush(input, amount)
 
             withClue("amount $amount: not vacuous, floor and round disagree on this input") {
                 expected.bits() shouldNotBe input.map { oracleRound(it, hl) }.toDoubleArray().bits()
             }
-            withClue("amount $amount: the strip") {
-                renderStrip(CrushRenderer(amount), input).bits() shouldBe expected.bits()
-            }
             withClue("amount $amount: the Ignitor node") {
                 renderNode(ArraySource(input).crush(ConstantIgnitor(amount)), blocks).bits() shouldBe expected.bits()
-            }
-        }
-    }
-
-    "crush: the strip's oversampled path runs the same quantizer inside the oversampler" {
-        // Also the row for the transform built once per note (was a closure per block): same bits.
-        val input = sine(4, 0.95, 440.0)
-
-        for (stages in listOf(1, 2)) {
-            withClue("stages $stages") {
-                renderStrip(CrushRenderer(4.0, stages), input).bits() shouldBe oracleCrush(input, 4.0, stages).bits()
             }
         }
     }
@@ -232,7 +180,6 @@ class StripLawCoresSpec : StringSpec({
         val input = sine(blocks, 0.8, 440.0).also { it[5] = Double.NaN; it[130] = Double.NaN }
 
         for ((host, render) in listOf<Pair<String, (Double) -> DoubleArray>>(
-            "strip" to { a -> renderStrip(CrushRenderer(a), input) },
             "node" to { a -> renderNode(ArraySource(input).crush(ConstantIgnitor(a)), blocks) },
         )) {
             withClue("$host: a NaN sample comes out as 0.0") {
@@ -257,7 +204,7 @@ class StripLawCoresSpec : StringSpec({
 
     // ── distort (D2) ─────────────────────────────────────────────────────────────────────────────
 
-    "distort: both hosts render the strip's law, the drive INSIDE the oversampler and no cap (D2)" {
+    "distort: the fused node renders the strip's law, the drive INSIDE the oversampler and no cap (D2)" {
         val blocks = 6
         val input = sine(blocks, 0.9, 220.0)
 
@@ -268,9 +215,6 @@ class StripLawCoresSpec : StringSpec({
                     val expected = oracleDistort(input, drives, shapeName, stages)
                     val clue = "$shapeName x$stages amount $amount"
 
-                    withClue("$clue: the strip") {
-                        renderStrip(DistortionRenderer(amount, shapeName, stages), input).bits() shouldBe expected.bits()
-                    }
                     withClue("$clue: the fused node") {
                         val node = ArraySource(input).fusedDistort(ConstantIgnitor(amount), parseDistortionShape(shapeName), stages)
 
@@ -285,20 +229,9 @@ class StripLawCoresSpec : StringSpec({
             }
         }
 
-        withClue("no cap: gentle (doubled) at amount 1.0 leaves [-1, 1] on both hosts") {
-            (renderStrip(DistortionRenderer(1.0, "gentle", 1), input).maxOf { abs(it) } > 1.0) shouldBe true
+        withClue("no cap: gentle (doubled) at amount 1.0 leaves [-1, 1]") {
             val node = ArraySource(input).fusedDistort(ConstantIgnitor(1.0), parseDistortionShape("gentle"), 1)
             (renderNode(node, blocks).maxOf { abs(it) } > 1.0) shouldBe true
-        }
-    }
-
-    "distort: the strip stage at an amount at or below 0 is the identity (the strip's bypass)" {
-        val input = sine(2, 0.9, 220.0)
-
-        for (amount in listOf(0.0, -0.5)) {
-            withClue("amount $amount") {
-                renderStrip(DistortionRenderer(amount, "soft", 1), input).bits() shouldBe input.bits()
-            }
         }
     }
 

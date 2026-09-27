@@ -12,9 +12,9 @@ import io.kotest.matchers.shouldBe
 /**
  * Guards [AdsrDef.Std.on], the flag that says whether the VCA stage shapes a voice at all.
  *
- * Three layers answer it, in order: the voice (sprudel), then the pipeline's `Vca` stage, then a
- * hard `true`. This spec covers the first layer and the hand-off to the second. The engine end of
- * the chain is in `VcaOnFlagRenderSpec` (audio_be).
+ * Nothing has read it since the voice strip retired (phase 3 step 9); this spec covers its merge until the
+ * field leaves with the `VoiceData` cut. The switch a pattern writes is `classic()`'s `adsr.on` slot
+ * (`ClassicTailRenderSpec`, audio_be).
  *
  * See `docs/tasks-archive/2026-08/20260831-ignitor-envelope-ownership.md` Phase 3.
  */
@@ -79,20 +79,5 @@ class AdsrOnFlagSpec : StringSpec({
         off.release shouldBe 0.05
 
         off.copy(on = true) shouldBe tuned.copy(on = true)
-    }
-
-    // ── The pipeline's end of the hand-off ────────────────────────────────────
-
-    "the Vca stage default is on, so existing songs are unaffected" {
-        StageDsl.Vca().on shouldBe true
-    }
-
-    "the built-in engine leaves the VCA on" {
-        // Flipping it would change how every existing song sounds. Vca(on = false) is for
-        // engines built around ignitors that carry their own envelope.
-        val vcas = PipelineDsl.modern.stages.filterIsInstance<StageDsl.Vca>()
-
-        vcas.size shouldBe 1
-        vcas.forEach { it.on shouldBe true }
     }
 })

@@ -865,7 +865,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
     // The cutoff sweep (decision D3, the sampling)
     //
     // sweepCutoff snaps to the start cutoff and interpolates the coefficients to the end
-    // cutoff over `frames` samples (the exact law is pinned in StripFilterSweepSpec).
+    // cutoff over `frames` samples (the node's sweep law is pinned in EnvelopeLawSpec's filter host row).
     // Construction snaps directly (no sweep on note-on).
     // -----------------------------------------------------------------------
 

@@ -14,7 +14,7 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 
 ---
 
-**HOLDER: (none)**
+**HOLDER: none**
 **SINCE: 2026-09-27**
 **STATE: FREE**
 
@@ -26,7 +26,8 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| phase 3, steps 8 to 9 window (2b9d5146) | the whole branch `engine-redesign` | STEP 8 IS COMMITTED: do NOT merge or deploy this branch until step 9 (the strip retires) AND step 11 (the editor's diagnostic for an instrument that does not end in `classic()`) have landed (maintainer's condition, 2026-09-27; `docs/tasks/builtin-instruments.md`, "Step 8's decisions") |
+| phase 3, steps 8 to 9 window (2b9d5146) | the whole branch `engine-redesign` | step 8 is committed and step 9 (the strip retires) is IN PROGRESS: an authored instrument that does not end in `classic()` gets no voice doors in between. Merging is the maintainer's decision when step 9 is done (revised 2026-09-27; step 11 deferred) |
+| phase 3 step 9 commit (a) (2b9d5146) | audio_be, audio_bridge, klangscript-libs, sprudel, klang, src, audio_benchmark (the strip and the Pipeline DSL go) | commit (a) (the strip and the Pipeline DSL retired) is COMMITTED; (a2) the strip-only SVF classes, (b) the `VoiceData` cut and (c) the docs follow |
 
 ## The two layers
 
