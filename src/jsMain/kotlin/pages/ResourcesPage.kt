@@ -22,7 +22,6 @@ import io.peekandpoke.ultra.common.toggle
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
-import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
@@ -88,44 +87,12 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
         const val PARAM_SEARCH = "search"
         const val PARAM_TAGS = "tags"
 
-        /**
-         * The dev status pages: flat HTML in `src/jsMain/resources`, served at the site root next to the SPA.
-         * Built by `console/dev-status/build.py` (the topic map and the mission log).
-         */
-        private val devStatusPages: List<DevStatusPage> = listOf(
-            DevStatusPage(
-                href = "/klang-topic-map.html",
-                label = "Topic map",
-                hint = "Every open task and plan, grouped by area, with the links between them",
-                iconFn = { project_diagram },
-            ),
-            DevStatusPage(
-                href = "/klang-mission-log.html",
-                label = "Mission log",
-                hint = "Everything built so far on a timeline, and a rough guess at what comes when",
-                iconFn = { chart_line },
-            ),
-            DevStatusPage(
-                href = "/klang-whitepaper.html",
-                label = "White paper",
-                hint = "How Klangmotor works: the language, the engine and the wire between them",
-                iconFn = { file_alternate },
-            ),
-        )
-
         /** Unknown names are dropped, so a stale link never selects a tag that no longer exists. */
         fun tagsFromParam(param: String?): Set<ResourceTag> = param.orEmpty()
             .split(",")
             .mapNotNull { name -> ResourceTag.entries.find { it.name.equals(name.trim(), ignoreCase = true) } }
             .toSet()
     }
-
-    private data class DevStatusPage(
-        val href: String,
-        val label: String,
-        val hint: String,
-        val iconFn: SemanticIconFn,
-    )
 
     /** Search and tags live in the URL, so a filtered shelf can be shared and survives a reload. */
     private var searchText: String by urlParam(name = PARAM_SEARCH, default = "")
@@ -167,8 +134,6 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.sub.header { +"Videos worth watching, tools worth trying, pages worth reading. Everything here is other people's work, credited and linked." }
             }
 
-            renderDevStatus()
-
             ui.segment {
                 ui.form {
                     UiInputField(value = searchText, onChange = { searchText = it }) {
@@ -209,30 +174,6 @@ class ResourcesPage(ctx: NoProps) : PureComponent(ctx) {
             } else {
                 ui.three.stackable.cards {
                     resources.forEach { renderResourceCard(it) }
-                }
-            }
-        }
-    }
-
-    /** Our own pages about where Klang stands, apart from the shelf of other people's work. */
-    private fun FlowContent.renderDevStatus() {
-        ui.segment {
-            key = "dev-status"
-
-            ui.small.header {
-                +"Dev status"
-                ui.sub.header { +"Where Klang stands: the open work, what was built so far, and how it all fits together." }
-            }
-
-            ui.three.item.stackable.menu {
-                devStatusPages.forEach { page ->
-                    ui.item.A {
-                        href = page.href
-                        target = "_blank"
-                        title = page.hint
-                        icon.(page.iconFn)()
-                        +page.label
-                    }
                 }
             }
         }

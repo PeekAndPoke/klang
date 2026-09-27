@@ -15,9 +15,16 @@ and faces but is edited by hand.
 
     python3 console/dev-status/build.py
 
-Then commit the two pages. They sit in the SPA's static resources, so the dev server serves them
-and `console/deploy-finzo.sh` uploads them to the site root with the rest of that folder; the
-Resources page links the three pages under "Dev status".
+When a page changed its look, refresh the card previews too (needs Chrome and ImageMagick):
+
+    console/dev-status/previews.sh
+
+Then commit the pages and `src/jsMain/resources/images/dev-status/`. The pages sit in the SPA's
+static resources, so the dev server serves them and `console/deploy-finzo.sh` uploads them to the
+site root with the rest of that folder. The SPA shows them as cards on the Dev status page
+(`/dev-status`, `DevStatusPage.kt`, in the sidebar after Credits). Its links are absolute on
+purpose: the router handles every relative href itself and ignores `target`, so only a URL with
+a protocol opens the new tab.
 
 ## What is data and what is judgement
 
