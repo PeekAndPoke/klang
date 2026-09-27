@@ -220,8 +220,8 @@ fun FilterBuilder.adsr(
 
 /**
  * The analog SATURATION is not implemented for this tap and the value does not reach it. The value
- * is NOT inert, though: it scales [humanize]'s per-voice tolerance and drift lane, exactly as on the
- * voice strip's `SvfBPF`, so `analog = 0` on a humanized band filter switches the lane off and stops
+ * is NOT inert, though: it scales [humanize]'s per-voice tolerance and drift lane (as it did on the
+ * retired voice strip's band filter), so `analog = 0` on a humanized band filter switches the lane off and stops
  * its four build-time rng draws, which shifts every later noise source on that voice.
  */
 @KlangScript.Function

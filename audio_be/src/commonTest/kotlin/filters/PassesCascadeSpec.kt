@@ -8,7 +8,6 @@ package io.peekandpoke.klang.audio_be.filters
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -17,9 +16,7 @@ import io.peekandpoke.klang.audio_bridge.FILTER_MAX_PASSES
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
-import kotlin.math.PI
 import kotlin.math.log10
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -31,29 +28,6 @@ class PassesCascadeSpec : StringSpec({
 
     val sr = 48000.0
     val frames = 48000
-
-    /** RMS of a [freq] sine pushed through [filter], steady-state half only. */
-    fun rmsThrough(filter: AudioFilter, freq: Double): Double {
-        val block = 128
-        val buf = AudioBuffer(block)
-        var sum = 0.0
-        var n = 0
-        var t = 0
-        while (t < frames) {
-            for (i in 0 until block) {
-                buf[i] = sin(2.0 * PI * freq * (t + i) / sr)
-            }
-            filter.process(buf, 0, block)
-            if (t >= frames / 2) {
-                for (i in 0 until block) {
-                    sum += buf[i] * buf[i]
-                    n++
-                }
-            }
-            t += block
-        }
-        return sqrt(sum / n)
-    }
 
     fun db(x: Double): Double = 20.0 * log10(x)
 
@@ -106,42 +80,6 @@ class PassesCascadeSpec : StringSpec({
         // ...and the resource ceiling holds: a live-typed `lpf(passes = 1e9)` must not allocate a
         // billion stages inside a note-on. FILTER_MAX_PASSES is the ONE bound (coercePasses).
         butterworthQLadder(1_000_000, 0.707).size shouldBe FILTER_MAX_PASSES
-        LowPassHighPassFilters.createLPF(cutoffHz = 800.0, q = 0.707, sampleRate = sr, passes = 1_000_000)
-            .shouldBeInstanceOf<LowPassHighPassFilters.PassCascadeFilter>()
-    }
-
-    "passes = 1 builds the plain SvfLPF — no wrapper, bit-identical path" {
-        LowPassHighPassFilters.createLPF(cutoffHz = 800.0, q = 0.707, sampleRate = sr)
-            .shouldBeInstanceOf<LowPassHighPassFilters.SvfLPF>()
-        LowPassHighPassFilters.createLPF(cutoffHz = 800.0, q = 0.707, sampleRate = sr, passes = 2)
-            .shouldBeInstanceOf<LowPassHighPassFilters.PassCascadeFilter>()
-    }
-
-    "STAGGERED q: the passes = 2 cascade is still ~-3 dB AT the cutoff (the C5 decision)" {
-        val fc = 1000.0
-        val cascade = LowPassHighPassFilters.createLPF(cutoffHz = fc, q = 0.707, sampleRate = sr, passes = 2)
-        val atFc = rmsThrough(cascade, fc) / rmsThrough(NoOpAudioFilter, fc)
-        db(atFc) shouldBe (-3.0 plusOrMinus 0.5)
-    }
-
-    "slope: passes = 2 measures ~-24 dB one octave above fc, passes = 1 ~-12 (lowpass)" {
-        val fc = 1000.0
-        fun attAt2Fc(passes: Int): Double {
-            val f = LowPassHighPassFilters.createLPF(cutoffHz = fc, q = 0.707, sampleRate = sr, passes = passes)
-            return db(rmsThrough(f, 2.0 * fc) / rmsThrough(NoOpAudioFilter, 2.0 * fc))
-        }
-        attAt2Fc(1) shouldBe (-12.3 plusOrMinus 1.0)
-        attAt2Fc(2) shouldBe (-24.1 plusOrMinus 1.5)
-    }
-
-    "slope mirror: highpass passes = 2 measures ~-24 dB one octave BELOW fc" {
-        val fc = 1000.0
-        fun attAtHalfFc(passes: Int): Double {
-            val f = LowPassHighPassFilters.createHPF(cutoffHz = fc, q = 0.707, sampleRate = sr, passes = passes)
-            return db(rmsThrough(f, fc / 2.0) / rmsThrough(NoOpAudioFilter, fc / 2.0))
-        }
-        attAtHalfFc(1) shouldBe (-12.3 plusOrMinus 1.0)
-        attAtHalfFc(2) shouldBe (-24.1 plusOrMinus 1.5)
     }
 
     "ignitor door: the runtime folds passes into a cascade — one octave up loses ~12 dB more" {
@@ -164,13 +102,22 @@ class PassesCascadeSpec : StringSpec({
         db(rmsIgnitorHp(2, 1000.0) / rmsIgnitorHp(1, 1000.0)) shouldBe (0.0 plusOrMinus 0.4)
     }
 
-    "Tunable: sweepCutoff retunes EVERY stage of the cascade" {
-        val fc = 500.0
-        val cascade = LowPassHighPassFilters.createLPF(cutoffHz = 8000.0, q = 0.707, sampleRate = sr, passes = 2)
-        (cascade as AudioFilter.Tunable).sweepCutoff(fc, fc, 128)
-        // after retuning to 500 Hz, a 1 kHz sine (one octave above) must see the full
-        // -24 dB/oct cascade attenuation — a single-stage-forwarding mutant reads ~-12
-        val att = db(rmsThrough(cascade, 2.0 * fc) / rmsThrough(NoOpAudioFilter, 2.0 * fc))
-        att shouldBe (-24.1 plusOrMinus 1.5)
+    // The absolute C5 laws, on the tree's door (phase 3 step 9, commit a2: the strip's cascade class that held them
+    // retired). The dry sine through the same harness is the reference.
+
+    "STAGGERED q on the ignitor door: the passes = 2 cascade is still ~-3 dB AT the cutoff (the C5 decision)" {
+        db(rmsIgnitorLp(2, 1000.0) / rmsIgnitor(IgnitorDsl.Sine(), 1000.0)) shouldBe (-3.0 plusOrMinus 0.5)
+    }
+
+    "slope on the ignitor door: passes = 2 measures ~-24 dB one octave above fc, passes = 1 ~-12 (lowpass)" {
+        val dry = rmsIgnitor(IgnitorDsl.Sine(), 2000.0)
+        db(rmsIgnitorLp(1, 2000.0) / dry) shouldBe (-12.3 plusOrMinus 1.0)
+        db(rmsIgnitorLp(2, 2000.0) / dry) shouldBe (-24.1 plusOrMinus 1.5)
+    }
+
+    "slope mirror on the ignitor door: highpass passes = 2 measures ~-24 dB one octave BELOW fc" {
+        val dry = rmsIgnitor(IgnitorDsl.Sine(), 500.0)
+        db(rmsIgnitorHp(1, 500.0) / dry) shouldBe (-12.3 plusOrMinus 1.0)
+        db(rmsIgnitorHp(2, 500.0) / dry) shouldBe (-24.1 plusOrMinus 1.5)
     }
 })

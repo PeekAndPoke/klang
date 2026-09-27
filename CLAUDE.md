@@ -123,7 +123,9 @@ is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`
 `StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`
 and `Envelope.declick` (`Voice.Envelope` itself stays: FM and the pitch envelope use it), and
 the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` (the `IgnitorDsl.endsInClassic()` tag
-stays). The spelling
+stays); and the strip-only filter classes `SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`, `createLPF` / `createHPF`
+/ `createBPF` / `createNotch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()` and `AudioFilter.Tunable`
+(the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,

@@ -32,7 +32,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 /**
  * Per-voice cutoff offset scale, per unit `analog`. Each filter instance gets a
  * uniform random multiplier in `1 ± FILTER_CUTOFF_OFFSET_PER_ANALOG × analog`
- * applied at construction and to both ends of every runtime `sweepCutoff` call.
+ * applied to both ends of the filter node's cutoff every block (`FilterHumanization.cutoffOffsetMul`).
  *
  * At `analog=1` ≈ ±0.35 cents per voice; at `analog=3` ≈ ±1 cent; at `analog=10`
  * ≈ ±3.5 cents. Tuned by ear — larger values smear the filter's character
@@ -64,7 +64,8 @@ const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.0002
  * state), so a single adjective per `analog` value cannot be honest. See
  * `docs/tasks/audio-bridge-constants.md` §6.2 for the measured table.
  *
- * Consumers: `IgnitorFilters`, and the `SvfLPF` / `SvfHPF` classes' default.
+ * Consumer: `IgnitorFilters` (`Ignitor.svf`'s saturated branches). The strip's `SvfLPF` / `SvfHPF`
+ * classes that also read it retired in phase 3 step 9.
  */
 const val FILTER_DRIVE_PER_ANALOG: Double = 0.25
 

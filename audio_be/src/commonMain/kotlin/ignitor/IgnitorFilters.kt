@@ -220,6 +220,17 @@ private class SvfIgnitor(
             // not per sample. LOWPASS/HIGHPASS additionally branch on `saturate` (analog>0)
             // to switch between the linear closed-form math and the analog-style state-dependent
             // damping path (per-sample diode-pair polynomial + explicit-feedback solve).
+            //
+            // The saturated branch, in its own words (moved here from the retired strip `SvfLPF`,
+            // phase 3 step 9):
+            //  - Convention conversion, why the factor of 2: the OB-X-style filter parameterises
+            //    resonance with `R`, where `2R` corresponds to our `k` (damping vs. inverse quality
+            //    factor). A feedback term `2 * (R + tCfb)` therefore maps onto our `k + 2 * tCfb`,
+            //    hence `kEff = k + 2 * driveScale * tCfb`.
+            //  - Why it works where tanh failed: the signal stays linear and only the DAMPING grows
+            //    with the state, so the resonance compresses and the filter stays bounded. A tanh
+            //    capping the feedback signal does the opposite (less damping, runaway). The failed
+            //    attempts are recorded in `audio/MEMORY.md`, "Filter Saturation Dead-End".
             when (mode) {
                 SvfMode.LOWPASS -> {
                     if (saturate) {
@@ -363,10 +374,9 @@ fun Ignitor.svf(
  *
  * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its
  * wrappers) would be a third, but no production caller does that today: `scaledBy` has exactly two
- * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`, and a voice's
- * `FilterDef` q never comes near here at all (it becomes an `AudioFilter` through
- * `LowPassHighPassFilters.createLPF`/`createHPF`; the ignitor package does not reference
- * `FilterDef`). An earlier version of this KDoc claimed that `FilterDef` route and was wrong.
+ * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`. A voice's filter q
+ * reaches the tree as a slot (`classic()`), never as a `FilterDef`; the ignitor package does not
+ * reference `FilterDef`.
  */
 internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
     factor == 1.0 -> this

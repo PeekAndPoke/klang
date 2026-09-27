@@ -313,8 +313,8 @@ private fun expandPasses(
 /**
  * Maps a chained filter node to the equivalent EQ section list, or null when it must NOT fuse.
  *
- * Refuses when `analog` is anything but a literal zero: a non-zero analog switches SvfLPF/SvfHPF
- * to their state-dependent saturating branch, which is deliberate nonlinear character that
+ * Refuses when `analog` is anything but a literal zero: a non-zero analog switches the lowpass and
+ * highpass taps of `Ignitor.svf` to their state-dependent saturating branch, which is deliberate nonlinear character that
  * `EqCore` does not implement. A Param-backed analog is refused too, because an osc-param could
  * turn saturation on per note and the decision is made here, once, at registration.
  *

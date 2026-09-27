@@ -2667,8 +2667,9 @@ cutoff offset (`FILTER_CUTOFF_OFFSET_PER_ANALOG`), and the coefficient ramp
 to be nonlinear.
 
 **Files touched**: `audio_be/.../filters/LowPassHighPassFilters.kt` (kdoc on
-`SvfLPF`/`SvfHPF` documents the dead-end inline so future attempts know to
-either change topology or change saturator), `docs/agent-tasks/plastic-pipe-hunt.md`.
+`SvfLPF`/`SvfHPF` documented the dead-end inline so future attempts know to
+either change topology or change saturator; both classes retired in phase 3 step 9 (a2), 2026-09-27, and the
+note now lives on `Ignitor.svf`'s saturated branch in `ignitor/IgnitorFilters.kt`), `docs/agent-tasks/plastic-pipe-hunt.md`.
 
 ## Numerical Safety Contract + Distort DC-Lock Fix (2026-04-27)
 

@@ -221,25 +221,13 @@ class ExciterCombinatorsSpec : StringSpec({
         wetRms shouldBeLessThan (dryRms * 0.3)
     }
 
-    "lowpass(cutoff, analog=0) - bit-identical to default linear" {
-        // Default `analog=0.0` must keep the linear closed-form path. Explicit `analog=0.0`
-        // should produce byte-for-byte equal output as the default — guards against
-        // accidental branch into the saturated path when analog is unset.
-        val lin = generate(Ignitors.sine().lowpass(800.0, 2.0), freqHz = 800.0)
-        val ana0 = generate(Ignitors.sine().lowpass(800.0, 2.0, analog = 0.0), freqHz = 800.0)
-
-        for (i in 0 until minOf(lin.size, ana0.size)) {
-            ana0[i] shouldBe lin[i]
-        }
-    }
-
     "lowpass(cutoff, analog>0) - resonance peak compressed under hot drive" {
         // Analog-style state-dependent damping makes `kEff` grow with state; under hot drive at the
         // resonance frequency the saturated path must produce a meaningfully smaller peak
         // than the linear path.
         //
-        // ⚠️ Unlike the SvfLPF/SvfHPF twins in LowPassHighPassFiltersSpec, this one CANNOT pin the
-        // drive: IgnitorFilters.kt:119 reads FILTER_DRIVE_PER_ANALOG directly — the ignitor filter
+        // ⚠️ Unlike the retired strip's SvfLPF/SvfHPF twins (phase 3 step 9), this one CANNOT pin the
+        // drive: `SvfIgnitor.generate` (IgnitorFilters.kt) reads FILTER_DRIVE_PER_ANALOG directly: the ignitor filter
         // path has no pipeline stage to carry the value (docs/tasks/audio-bridge-constants.md
         // §6.1). So this test rides the shipped default.
         //
@@ -269,7 +257,7 @@ class ExciterCombinatorsSpec : StringSpec({
     }
 
     "highpass(cutoff, analog>0) - lows still cut (no complementarity bug)" {
-        // Regression guard mirroring the voice-strip HPF test: a low-frequency sine fed
+        // Regression guard mirroring the retired voice-strip HPF test: a low-frequency sine fed
         // through a high-cutoff HPF must remain heavily attenuated even with saturation on.
         val cutoff = 2500.0
         val lowFreq = 200.0

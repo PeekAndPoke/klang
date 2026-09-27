@@ -99,7 +99,8 @@ Lowest-risk item on the list: the stage exists, is wired, and has KlangScript ex
 
 Notes that matter:
 
-- `SAT_STATE_SCALE` is read by **both** `SvfLPF`/`SvfHPF` and `IgnitorFilters.kt:182,211` — the exact S0 shape. Do not
+- (Retired 2026-09-27 with the strip filter classes, phase 3 step 9 (a2); `SAT_STATE_SCALE` is read by `Ignitor.svf`
+  alone now; kept as history.) `SAT_STATE_SCALE` is read by **both** `SvfLPF`/`SvfHPF` and `IgnitorFilters.kt:182,211`: the exact S0 shape. Do not
   expose it on the stage without deciding what the ignitor path reads.
 - (Retired 2026-09-25 with the ramp, phase 3 step 5b (a2); kept as history.) `FILTER_SMOOTH_SAMPLES` is an `Int` and `FILTER_INV_SMOOTH_SAMPLES` is derived from it: expose the one, keep deriving
   the other. Its KDoc already documents the "drop to 8 or 16" tuning direction and the click test that must accompany

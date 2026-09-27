@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_be.safeOut
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
-import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import kotlin.math.PI
 import kotlin.math.cos
@@ -28,8 +27,9 @@ import kotlin.math.tan
 //   • DcBlocker — degenerate raw-pole HPF (parameterized by raw IIR pole; cheaper)
 //
 // Second-order (TPT/Vadim Zavalishin SVF, "The Art of VA Filter Design", canonical Cytomic form):
-//   • BaseSvf + SvfLPF / SvfHPF / SvfBPF / SvfNotch — 4 specialized subclasses sharing
-//     the state-update math; differ only in the output tap selection.
+//   • BaseSvf + SvfBPF, the bandpass the orbit's resonators (`ResonatorBank`) run. The lowpass,
+//     highpass and notch subclasses were the voice strip's and retired with it (phase 3 step 9);
+//     the tree's SVF is `Ignitor.svf` in `ignitor/IgnitorFilters.kt`.
 //
 // **OnePoleLPF / OnePoleHPF history (do not re-litigate):**
 //
@@ -76,7 +76,7 @@ import kotlin.math.tan
 //
 // **SVF history (review notes added 2026-04-29):**
 //
-// The TPT-SVF (`BaseSvf` + 4 subclasses, plus the `Ignitor.svf` combinator in
+// The TPT-SVF (`BaseSvf` + `SvfBPF`, plus the `Ignitor.svf` combinator in
 // `ignitor/IgnitorFilters.kt`) implements the canonical Vadim Zavalishin / Cytomic
 // trapezoidal-integrator SVF. Math verified against "The Art of VA Filter Design"
 // eq. 5.18 — trapezoidal integrators are unconditionally stable for any finite g, k.
@@ -93,12 +93,13 @@ import kotlin.math.tan
 // Per-sample tan would have been ~30 ns × 48k × N voices — far too expensive.
 //
 // **What was reviewed / decided (do not re-litigate):**
-// - Kept the 4 specialized SVF subclasses rather than collapsing — JIT specialization
-//   wins over the 5-line dup, and an abstract `tap()` lambda would defeat inlining.
+// - Kept the specialized SVF subclasses rather than collapsing: JIT specialization
+//   wins over the 5-line dup, and an abstract `tap()` lambda would defeat inlining. (Only
+//   `SvfBPF` is left since phase 3 step 9; the decision stands for any tap added back.)
 // - Kept the per-sample `when(mode)` in `Ignitor.svf` — hoisting it to 4 inner loops
 //   would re-duplicate the state-update math we just deduped via `computeSvfCoeffs`.
 // - `BaseSvf.q` stays construction-time immutable; `Ignitor.svf` supports audio-rate
-//   `q: Ignitor`. Different surfaces, intentional. The strip pipeline only modulates
+//   `q: Ignitor`. Different surfaces, intentional. The retired strip pipeline only modulated
 //   cutoff, never Q.
 // - BPF tap is UNITY-peak since C2 of the filter unification (`k·v1`): q is a pure
 //   width control. `bandpass(q=10)` gets narrower, not louder — see `IgnitorFilters.kt`.
@@ -168,7 +169,7 @@ internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Doubl
  * The idea of steering resonance damping from a diode-pair model is inspired by the
  * analog-filter saturation in 2DaT's Obxd (github.com/2DaT/Obxd, by Vadim Filatov);
  * the SVF topology here and the way the term is folded into the coefficients
- * (see [LowPassHighPassFilters.SvfLPF]) are our own.
+ * (see the saturated branches of `Ignitor.svf` in `ignitor/IgnitorFilters.kt`) are our own.
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun diodePairResistanceApprox(x: Double): Double {
@@ -221,7 +222,7 @@ internal class SvfCoeffs {
      * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Same value used internally
      * by `computeSvfCoeffs` to derive a1/a2/a3 — exposed here for the
      * analog-style nonlinear (saturated) SVF branches in
-     * [LowPassHighPassFilters.SvfLPF]/[LowPassHighPassFilters.SvfHPF], which
+     * `Ignitor.svf` (its lowpass and highpass taps), which
      * use `kEff + g` for the per-sample closed-form solve.
      */
     var g: Double = 0.0
@@ -339,110 +340,6 @@ internal fun butterworthQLadder(passes: Int, userQ: Double): DoubleArray {
 }
 
 object LowPassHighPassFilters {
-
-    /**
-     * A `passes`-deep serial cascade of identical-cutoff stages (C5). Not [ChainAudioFilter]:
-     * that one is a plain chain of arbitrary filters and deliberately NOT [AudioFilter.Tunable]
-     * — making it tunable would silently hand filter-envelope sweeps to every baked voice chain.
-     * This cascade forwards the cutoff sweep to every stage, which is exactly what a cascade of ONE
-     * filter split into N sections must do (each stage sweeps at its own ladder q).
-     */
-    internal class PassCascadeFilter(private val stages: List<AudioFilter>) : AudioFilter, AudioFilter.Tunable {
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            for (i in stages.indices) {
-                stages[i].process(buffer, offset, length)
-            }
-        }
-
-        override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
-            for (i in stages.indices) {
-                val stage = stages[i]
-                if (stage is AudioFilter.Tunable) {
-                    stage.sweepCutoff(startHz, endHz, frames)
-                }
-            }
-        }
-    }
-
-    fun createLPF(
-        cutoffHz: Double,
-        q: Double?,
-        sampleRate: Double,
-        analog: Double = 0.0,
-        cutoffOffsetMul: Double = 1.0,
-        // Convenience default for tests/benchmarks only — production ALWAYS passes
-        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
-        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
-        //
-        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
-        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
-        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
-        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
-        // zeroing it "since production always passes the stage value" — are silent.
-        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-        passes: Int = 1,
-    ): AudioFilter {
-        // No secret effect swap (maintainer decision, 2026-08-24): an absent q means the
-        // DEFAULT q, not a different filter topology. The one-pole is its own named thing
-        // (`onepole(freq)`), never what `lpf` quietly becomes.
-        val userQ = q ?: 0.707
-        // The default path allocates nothing extra: no ladder array, no wrapper.
-        if (coercePasses(passes) == 1) {
-            return SvfLPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-        }
-        val ladder = butterworthQLadder(passes, userQ)
-        return PassCascadeFilter(
-            List(ladder.size) { k ->
-                SvfLPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-            }
-        )
-    }
-
-    fun createHPF(
-        cutoffHz: Double,
-        q: Double?,
-        sampleRate: Double,
-        analog: Double = 0.0,
-        cutoffOffsetMul: Double = 1.0,
-        // Convenience default for tests/benchmarks only — production ALWAYS passes
-        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
-        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
-        //
-        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
-        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
-        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
-        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
-        // zeroing it "since production always passes the stage value" — are silent.
-        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-        passes: Int = 1,
-    ): AudioFilter {
-        // Same rule as createLPF: absent q = default q, never a topology swap.
-        val userQ = q ?: 0.707
-        // See createLPF: the passes = 1 path allocates nothing extra.
-        if (coercePasses(passes) == 1) {
-            return SvfHPF(cutoffHz, userQ, sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-        }
-        val ladder = butterworthQLadder(passes, userQ)
-        return PassCascadeFilter(
-            List(ladder.size) { k ->
-                SvfHPF(cutoffHz, ladder[k], sampleRate, analog, cutoffOffsetMul, drivePerAnalog)
-            }
-        )
-    }
-
-    fun createBPF(
-        cutoffHz: Double,
-        q: Double?,
-        sampleRate: Double,
-        cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfBPF(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
-
-    fun createNotch(
-        cutoffHz: Double,
-        q: Double?,
-        sampleRate: Double,
-        cutoffOffsetMul: Double = 1.0,
-    ): AudioFilter = SvfNotch(cutoffHz, q ?: 0.707, sampleRate, cutoffOffsetMul)
 
     /**
      * The whole vowel stage in one call: a [ResonatorBank] inside the dry/wet blend. The one way
@@ -664,12 +561,12 @@ object LowPassHighPassFilters {
     }
 
     /**
-     * State Variable Filter base — TPT/Zavalishin canonical Cytomic form. Subclasses
-     * specialize `process()` to select the output tap (LP/HP/BP/Notch). The state-update
-     * math is identical across all 4 subclasses; only the per-sample tap differs.
+     * State Variable Filter base, TPT/Zavalishin canonical Cytomic form. A subclass
+     * specializes `process()` to select the output tap; the one left is [SvfBPF] (the orbit's
+     * resonators). The lowpass, highpass and notch taps were the voice strip's and retired with it
+     * in phase 3 step 9, together with the `AudioFilter.Tunable` interface this class implemented.
      *
-     * The voice-strip pipeline only modulates cutoff (`AudioFilter.Tunable.sweepCutoff`), which
-     * leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. NOTHING moves `q` after
+     * [sweepCutoff] moves only the cutoff, which leaves `q` alone; audio-rate Q lives on `Ignitor.svf`'s side. NOTHING moves `q` after
      * construction: the one control-rate mover, added for the resonator morph of Katalyst 5c-10,
      * went with that morph in 5c-11, and `q` is a `val` again.
      *
@@ -685,10 +582,9 @@ object LowPassHighPassFilters {
      * block began; it retired with the strip (phase 3 step 9). Construction snaps to the constructor's
      * cutoff and steps nothing.
      *
-     * **Nonlinear character**: SvfLPF/SvfHPF have an active `analog`-gated
-     * saturated branch that uses analog-style state-dependent damping
-     * (polynomial diode-pair approximation of the resonance feedback gain;
-     * see [diodePairResistanceApprox] and the kdoc on [SvfLPF]).
+     * **Nonlinear character**: none on this side. The `analog`-gated saturated branch (a polynomial
+     * diode-pair approximation of the resonance feedback gain, see [diodePairResistanceApprox]) lives
+     * on the tree's `Ignitor.svf`; the strip's SvfLPF/SvfHPF that also had it retired in phase 3 step 9.
      */
     abstract class BaseSvf(
         cutoffHz: Double,
@@ -700,7 +596,7 @@ object LowPassHighPassFilters {
         private val q: Double,
         private val sampleRate: Double,
         private val cutoffOffsetMul: Double = 1.0,
-    ) : AudioFilter, AudioFilter.Tunable {
+    ) : AudioFilter {
         protected var ic1eq = 0.0
         protected var ic2eq = 0.0
         protected var a1: Double = 0.0
@@ -709,10 +605,10 @@ object LowPassHighPassFilters {
         protected var k: Double = 0.0
 
         /**
-         * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Used by the saturated
-         * branches of [SvfLPF]/[SvfHPF] for the closed-form solve with
-         * state-dependent damping (`kEff + g` etc.). Linear branches use only
-         * a1/a2/a3/k.
+         * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Read by the saturated branches of
+         * the retired strip's SvfLPF/SvfHPF (the closed-form solve with state-dependent
+         * damping); [SvfBPF] only steps it with the rest of the set and reads a1/a2/a3/k.
+         * Kept so the one remaining loop stays byte-for-byte.
          */
         protected var g: Double = 0.0
 
@@ -734,8 +630,10 @@ object LowPassHighPassFilters {
         /**
          * Starts a sweep: the coefficients snap to [startHz] and step linearly toward [endHz] over
          * the next [frames] samples, then hold. Both ends get this filter's cutoff tolerance.
+         * Its one production caller is the constructor's snap (0 frames); the strip's per-block
+         * sweep that used the frames retired in phase 3 step 9.
          */
-        final override fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
+        fun sweepCutoff(startHz: Double, endHz: Double, frames: Int) {
             sweep.prepare(startHz * cutoffOffsetMul, endHz * cutoffOffsetMul, q, sampleRate, frames)
 
             val c = sweep.start
@@ -751,190 +649,6 @@ object LowPassHighPassFilters {
             kStep = sweep.kStep
             gStep = sweep.gStep
             sweepFrames = frames
-        }
-    }
-
-    /**
-     * Lowpass tap of the TPT SVF with optional analog-style state-dependent damping.
-     *
-     * When `analog > 0`, the saturated branch adapts the diode-pair feedback idea
-     * (popularized by 2DaT's Obxd) to our SVF: a polynomial approximation of a
-     * diode-pair's I-V curve ([diodePairResistanceApprox]) is evaluated at the
-     * current BP integrator state `ic1eq * SAT_STATE_SCALE` and used to *increase*
-     * the resonance damping coefficient `k → kEff = k + 2·drv·tCfb` for the current
-     * sample. The filter solves the closed-form TPT SVF equation with `kEff` in
-     * place of `k` — one divide per sample, no iteration, no oversampling.
-     *
-     * **Why this works** (where prior tanh attempts failed): the signal stays
-     * linear; only the *damping gain* is modulated. As `|state|` grows, damping
-     * grows monotonically → resonance peak compresses → stable by construction.
-     * The inverse of a hard-capping `tanh` placed directly in the feedback signal
-     * (which would *reduce* damping and run away — the Phase 7 trap).
-     *
-     * **Convention conversion** (why the factor of 2): the OB-X-style filter
-     * parameterises resonance with `R` where `2R` corresponds to our `k` (damping
-     * vs. quality-factor-inverse conventions). A feedback term of the form
-     * `2·(R + tCfb)` therefore maps onto our `k + 2·tCfb` — hence the
-     * `kEff = k + 2·driveScale·tCfb` formula we use in the saturated branch.
-     *
-     * Linear branch (`analog == 0`) is bit-identical to the pre-saturation
-     * code path. Per-voice cutoff offset and the cutoff sweep (`sweepCutoff`)
-     * are still active via the [BaseSvf] machinery.
-     *
-     * References:
-     * - "The Art of VA Filter Design" (Vadim Zavalishin) — the TPT/ZDF SVF this builds on
-     * - 2DaT's Obxd, github.com/2DaT/Obxd — inspiration for the diode-pair saturation idea
-     * - `audio/MEMORY.md` "Filter Saturation Dead-End" — history of the failed
-     *   attempts that led to this approach
-     */
-    class SvfLPF(
-        cutoffHz: Double,
-        q: Double,
-        sampleRate: Double,
-        analog: Double = 0.0,
-        cutoffOffsetMul: Double = 1.0,
-        // Convenience default for tests/benchmarks only — production ALWAYS passes
-        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
-        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
-        //
-        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
-        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
-        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
-        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
-        // zeroing it "since production always passes the stage value" — are silent.
-        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
-        private val saturate: Boolean = analog > 0.0
-
-        /** Humanization amount: `analog × drivePerAnalog`. Scales the diode-pair tCfb term. */
-        private val driveScale: Double = analog * drivePerAnalog
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            var left = sweepFrames
-
-            if (saturate) {
-                // ── Analog-style state-dependent damping (nonlinear ZDF SVF) ────────
-                // Per-sample `kEff = k + 2·driveScale·tCfb` where `tCfb` grows monotonically
-                // with `|ic1eq|`. As resonance heats up, damping rises and compresses the
-                // peak. Closed-form single-step solve (no iteration). Convention factor of
-                // 2 because the OB-X-style `R` corresponds to our k/2.
-                val drv = driveScale
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                    val kEff = k + 2.0 * drv * tCfb
-                    // Explicit closed-form HP intermediate with kEff. One divide per sample.
-                    val kPlusG = kEff + g
-                    val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
-                    val vBp = g * vHp + ic1eq
-                    val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushState()
-                    ic2eq = (2.0 * vLp - ic2eq).flushState()
-                    // OB-X-style filters output a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
-                    // With `mm = 0` (pure LP) this collapses to `vLp`.
-                    buffer[i] = vLp
-
-                    if (left > 0) {
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        left--
-                    }
-                }
-            } else {
-                // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val v3 = v0 - ic2eq
-                    val v1 = a1 * ic1eq + a2 * v3
-                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushState()
-                    ic2eq = (2.0 * v2 - ic2eq).flushState()
-                    buffer[i] = v2
-
-                    if (left > 0) {
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        left--
-                    }
-                }
-            }
-
-            sweepFrames = left
-        }
-    }
-
-    /**
-     * Highpass tap of the TPT SVF. Same analog-style state-dependent damping as
-     * [SvfLPF] in the saturated branch; output is the HP tap of the explicit-
-     * feedback form (`vHp` from the closed-form solve), preserving LP+kBP+HP=v0
-     * complementarity at every sample (with `k → kEff`).
-     */
-    class SvfHPF(
-        cutoffHz: Double,
-        q: Double,
-        sampleRate: Double,
-        analog: Double = 0.0,
-        cutoffOffsetMul: Double = 1.0,
-        // Convenience default for tests/benchmarks only — production ALWAYS passes
-        // stage.drivePerAnalog (VoiceFactory.kt:373,380), so mutating this default
-        // changes no shipped sound. It is NOT a tuning knob; retune the constant.
-        //
-        // Specs DO ride it (LowPassHighPassFiltersSpec:682,718,753,800-801), but only ONE
-        // reacts and only upward: :718's DC-purity bound, crossing at drive ≈ 1.5 — 6x the
-        // shipped value. Measured, every spec stays green at 0.5 (the old value), at 0.1,
-        // and at 0.0. So the two most plausible edits — reverting this default to 0.5, or
-        // zeroing it "since production always passes the stage value" — are silent.
-        drivePerAnalog: Double = FILTER_DRIVE_PER_ANALOG,
-    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
-        private val saturate: Boolean = analog > 0.0
-
-        /** Humanization amount: `analog × drivePerAnalog`. See [SvfLPF] for math. */
-        private val driveScale: Double = analog * drivePerAnalog
-
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            var left = sweepFrames
-
-            if (saturate) {
-                // Same analog-style state-dependent damping as [SvfLPF]; output the HP tap directly
-                // from the explicit-feedback form (no need for `v0 − k·v1 − v2` algebra since
-                // `vHp` is computed in the closed-form solve already).
-                val drv = driveScale
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                    val kEff = k + 2.0 * drv * tCfb
-                    val kPlusG = kEff + g
-                    val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
-                    val vBp = g * vHp + ic1eq
-                    val vLp = g * vBp + ic2eq
-                    ic1eq = (2.0 * vBp - ic1eq).flushState()
-                    ic2eq = (2.0 * vLp - ic2eq).flushState()
-                    buffer[i] = vHp
-
-                    if (left > 0) {
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        left--
-                    }
-                }
-            } else {
-                // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val v3 = v0 - ic2eq
-                    val v1 = a1 * ic1eq + a2 * v3
-                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushState()
-                    ic2eq = (2.0 * v2 - ic2eq).flushState()
-                    buffer[i] = (v0 - k * v1 - v2)
-
-                    if (left > 0) {
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        left--
-                    }
-                }
-            }
-
-            sweepFrames = left
         }
     }
 
@@ -961,34 +675,6 @@ object LowPassHighPassFilters {
                 // not a move. It was NOT 0 while the resonator morph could retune a band's q
                 // (Katalyst 5c-10, gone in 5c-11).
                 buffer[i] = k * v1
-
-                if (left > 0) {
-                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                    left--
-                }
-            }
-
-            sweepFrames = left
-        }
-    }
-
-    class SvfNotch(
-        cutoffHz: Double,
-        q: Double,
-        sampleRate: Double,
-        cutoffOffsetMul: Double = 1.0,
-    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
-        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            val end = offset + length
-            var left = sweepFrames
-            for (i in offset until end) {
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushState()
-                ic2eq = (2.0 * v2 - ic2eq).flushState()
-                buffer[i] = (v0 - k * v1)
 
                 if (left > 0) {
                     a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
