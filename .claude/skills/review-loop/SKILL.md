@@ -258,6 +258,14 @@ reader.
 
 ## Gotchas
 
+- **Kotlin/JS browser tests: one TeamCity line per module, 1 MB max** (2026-09-27). Kotlin's Karma reporter
+  wrote every service message with no newline, so a module's whole run was ONE line of about 250 bytes per test; over
+  1 MB the plugin drops it ("too long teamcity service message") and one test's result is lost (an empty failure).
+  Printed output does not count, only the test count and name lengths; the line length also swings about 15 KB with the
+  random `flowId`, so it fails intermittently near the limit. Fixed by `karma.config.d/one-teamcity-message-per-line.js`
+  in `sprudel` and `audio_be` (the file says why); a module growing toward about 4000 JS tests gets the same file.
+- **`:<module>:jsBrowserTest --tests X` runs the WHOLE JS suite**; read the result XML for the spec you want, and a
+  spec's printed output lands in the aggregate `TEST-Kotest.xml`, not in its own XML.
 - **A scripted rename must know what a word is.** A door name that is also an English word (`voices`,
   `spread`, `vibrato`, `compressor`, `body`) rewritten by a bare regex lands in KDoc prose, Lexikon
   strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
