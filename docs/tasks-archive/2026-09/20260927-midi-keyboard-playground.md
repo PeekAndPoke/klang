@@ -1,5 +1,9 @@
 # MIDI Keyboard Playground
 
+> **ARCHIVED 2026-09-27 (maintainer): done.** v0 and v2 shipped (2026-08-29). The items still listed as open
+> or next below (v1, the ignitor editor pane, and the rest) are not carried from here; each will get its own
+> future task when it is picked up. The status notes below are as they stood.
+
 **Status: v0 + v2 SHIPPED** (2026-08-29, uncommitted pending the maintainer's commit go).
 **NEXT: v1 — the ignitor editor pane.**
 

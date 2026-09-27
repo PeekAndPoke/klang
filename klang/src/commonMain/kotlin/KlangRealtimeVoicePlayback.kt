@@ -16,7 +16,7 @@ import io.peekandpoke.ultra.streams.StreamSource
 /**
  * An always-on playback that plays voices "now" — the realtime counterpart of
  * [KlangCyclicPlayback] for sources without a timeline (MIDI keyboard, UI-triggered sound
- * effects; see docs/tasks/midi-keyboard-playground.md).
+ * effects; see docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md).
  *
  * There is nothing to start and nothing schedules cleanup: the backend engine materializes on
  * the first command and lives until [stop] sends the explicit `Cleanup`. Create via

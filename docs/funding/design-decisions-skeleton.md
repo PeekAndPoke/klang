@@ -199,7 +199,7 @@ Template per decision:
 - Options: nullable `startTime` (own first idea) / sealed voice hierarchy / separate wire command.
 - Decision: separate command on the wire [M8]; no nullable special case [M9]; autoCleanup deferred
   (`ANS 2026-08-28T20:50`).
-- Evidence: DEV-DIARY 2026-08-29; `docs/tasks/midi-keyboard-playground.md`; latency: two backend channels [M27].
+- Evidence: DEV-DIARY 2026-08-29; `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`; latency: two backend channels [M27].
 - Status: MVP settled; playback / interactive split `[VERIFY]` status.
 
 ### 3.5 Resource warehouse

@@ -220,7 +220,7 @@ class KlangPlayer(
 
     /**
      * Gets or creates the realtime voice playback for [name] — an always-on playback that plays
-     * voices "now" (MIDI keyboard & friends; see docs/tasks/midi-keyboard-playground.md).
+     * voices "now" (MIDI keyboard & friends; see docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md).
      *
      * The id is mangled to `"custom-$name"` so caller-supplied names can never collide with the
      * generated `"playback-N"` ids. Idempotent per name: a page remount reuses the existing

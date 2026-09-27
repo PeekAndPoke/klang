@@ -80,7 +80,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_licensing                        | 2     | `LICENSE`, `AUTHORS.MD`, `tones/LICENSE`, `docs/tasks/copyright-audit-00-overview.md`; register (stone) |
 | project_live_update_double_voice         | 2     | `VoiceScheduler.isDuplicate` and its spec                                                    |
 | project_midi_note_off_review             | 1     | archived task                                                                                |
-| project_midi_playground                  | 1     | `docs/tasks/midi-keyboard-playground.md`, `realtime-playback-controller.md`; KeyLab map committed |
+| project_midi_playground                  | 1     | `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`, `realtime-playback-controller.md`; KeyLab map committed |
 | project_mini_notation_tweaks             | 1     | archived task, `docs/tasks/future/mini-notation-tweaks-followups.md`                         |
 | project_motor_naming                     | 2     | README, whitepaper vocabulary (Cylinder, Injection, Ignitor, Katalyst)                       |
 | project_motor_slogans                    | 2     | strategist agent memory                                                                      |

@@ -33,7 +33,7 @@ import kotlin.math.abs
  *
  * Realtime voices (MIDI keyboard & friends) carry no start time on the wire — the backend stamps
  * "now" at receipt and the voice must sound in the very next rendered block, without touching the
- * scheduled heap or the epoch machinery of the timeline path (see docs/tasks/midi-keyboard-playground.md).
+ * scheduled heap or the epoch machinery of the timeline path (see docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md).
  */
 class RealtimeVoiceSpec : StringSpec({
 
