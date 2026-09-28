@@ -120,18 +120,17 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   plain `java` on a classpath captured by one locked Gradle run and snapshotted, several at a time,
   never one Gradle run per row. A new render tool proves itself first: the same sha as the serial
   render on the same tree.
-- **The effort ladder: every round that is not clean escalates one level, up to max**
-  (maintainer, 2026-09-18). The Agent tool has no per-call effort dial, so the levels are agent
+- **The effort ladder: every round that is not clean escalates one level, up to xhigh**
+  (maintainer, 2026-09-18; capped at xhigh 2026-09-28, no `max` anywhere). The Agent tool has no per-call effort dial, so the levels are agent
   definitions in `.claude/agents/` with model and effort pinned:
 
   | round | reviewers | how to spawn |
   |---|---|---|
   | 1 (blind) | `opus`, session effort | `subagent_type: general-purpose`, `model: opus` |
   | 2 | `opus`, high | `subagent_type: reviewer-high` |
-  | 3 | strongest tier, xhigh | `subagent_type: reviewer-xhigh` (the 2026-09-05 "round 3 on the strongest tier" rule, now with the effort) |
-  | 4 and later | strongest tier, max | `subagent_type: reviewer-max` (the safety valve has already fired; the maintainer is in the loop) |
+  | 3 and later | `fable`, xhigh | `subagent_type: reviewer-xhigh` (the 2026-09-05 "round 3 on the strongest tier" rule, now with the effort; from round 4 the safety valve has already fired and the maintainer is in the loop) |
 
-  Why a ladder and not max from the start: a round that is not clean means the previous tier
+  Why a ladder and not xhigh from the start: a round that is not clean means the previous tier
   missed something or the fix delta introduced something, and both call for more scrutiny of a
   SMALLER target (the delta), so the extra effort is spent where it pays. Round 1 is the wide
   net at the ordinary tier. The implementer of a fix round stays at the session effort unless the
@@ -307,6 +306,9 @@ reader.
   matches your own shell's command line.
 
 ## Changelog
+
+- **2026-09-28**: the ladder stops at xhigh (maintainer: "rounds 3+ on fable with xhigh, no max
+  anywhere"). `reviewer-max` is deleted; `reviewer-xhigh` serves round 3 and every later round.
 
 - **2026-09-27**: the audio backend constraints list moved here as `audio-constraints.md`, from the
   audio backend audit brief (§7), which closed that day.

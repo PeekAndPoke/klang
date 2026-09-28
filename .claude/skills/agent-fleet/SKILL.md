@@ -48,14 +48,14 @@ judges numerical stability, per-sample cost and click risk; run it at `opus` or 
 | Mechanical / bulk stages      | `low`                         |
 | Standard work                 | omit (inherit session effort) |
 | Hardest verify / judge stages | `high` or `xhigh`             |
-| Review rounds 2, 3, 4+        | `high`, `xhigh`, `max` via the `reviewer-*` agent definitions (`/review-loop`, the effort ladder) |
+| Review rounds 2, 3+           | `high`, `xhigh` via the `reviewer-*` agent definitions (`/review-loop`, the effort ladder); never `max` (maintainer, 2026-09-28) |
 
 ## Where the dials live
 
 - **Agent tool**: set the `model` parameter per call. There is no per-call effort override — effort comes from the agent
   definition. `fork`-type agents always inherit the parent model; don't set
-  `model` on them. Klang pins effort through `.claude/agents/reviewer-high.md`, `reviewer-xhigh.md`
-  and `reviewer-max.md` (added 2026-09-18 for the review ladder).
+  `model` on them. Klang pins effort through `.claude/agents/reviewer-high.md` and `reviewer-xhigh.md`
+  (added 2026-09-18 for the review ladder; `reviewer-max.md` deleted 2026-09-28, the ladder stops at xhigh).
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
   never varies. Klang currently has one: `music-platform-strategist`

@@ -1,6 +1,6 @@
 ---
 name: reviewer-xhigh
-description: Review-loop reviewer for round 3 of a /review-loop, pinned to model fable at effort xhigh. The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
+description: Review-loop reviewer for round 3 and every later round of a /review-loop, pinned to model fable at effort xhigh. The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
 model: fable
 effort: xhigh
 ---

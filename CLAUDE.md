@@ -72,7 +72,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | "What we built": credit the collaboration in reports and docs.                                                            | 2026-07    | this line                                  |
 | Tutorial craft (per-orbit effects, `chord().voicing()`, pan 0 to 1, lpf harsh waves, sculptor comments, series across levels, maintainer writes the jingle). | 2026-07 | `docs/tasks/tutorial-curriculum.md` appendix |
 | Klang UI conventions: `.with()` for custom classes, `.render()` on stored icon functions, RoundGauge proportions.          | 2026-05    | `/kraft-knowhow`                           |
-| Review rounds 3 and later run on the strongest model tier.                                                                 | 2026-09-05 | `/agent-fleet`                             |
+| Review rounds 3 and later run on the strongest model tier (`fable`) at effort xhigh, never max.                            | 2026-09-05, capped 2026-09-28 | `/agent-fleet`                             |
 | Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
 | Scaffolding goes when its job is done: a migration guard, a one-off script or a comparison fixture is removed in the change that finishes the migration, so no future reader wonders why it exists. | 2026-09-06 | this line |
 
