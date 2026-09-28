@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.6, db = 2.0)          // thump: closed-back box resonance
+    .band(freq =  120, q = 1.6, db = 5.0)          // thump: closed-back box resonance
     .band(freq =  420, q = 0.6, db = 7.0)          // roar: low mids
     .band(freq = 2700, q = 2.0, db = 3.5)          // bark: the upper-mid speaker peak
   )
@@ -247,7 +247,7 @@ let marimba = (() => {
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(2.0)                     // yarn head: a thump, not a click
   let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(8.0)                        // the resonator tube
  
-  return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(0.6, "softsat")
+  return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(0.8, "softsat")
     .adsr(0.010, 1.0, 0.0, 0.4).mul(0.2)
     .classic()
 })()
@@ -259,7 +259,7 @@ export lead_shape = x => x.sound(marimba).adsrOff()
   .clip(1.0)
 
 export lead_arrange = x => x.orbit(0)  // .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").gain("<1.00!48 0.50!16 1.00!48 1.50!16>").gain(mul(0.20))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").gain("<1.00!48 0.50!16 1.00!48 1.50!16>").gain(mul(0.18))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!48 0!48>")
@@ -359,11 +359,11 @@ export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] 
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4)
-  .hpf(50).lpf("3300".add(sine.range(-800, 800).slow(16).early(8)))
+  .hpf(50).lpf("3300".add(sine.range(-400, 400).slow(16).early(8).pow(0.5)))
   .pan(sine.range(0.1, 0.9).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.12)
+  .scale("e2:minor").gain(0.14)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
