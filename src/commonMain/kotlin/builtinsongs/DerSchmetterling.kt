@@ -94,7 +94,7 @@ let preampCrunch = x => x
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
-  .distort(0.35, "tube", 4).highpass(100)
+  .distort(0.45, "tube", 4).highpass(100)
   .distort(0.60, "softsat", 4).highpass(100)
   .distort(0.50, "hard", 4)
   .lowpass(6500)                                   // the fizz
@@ -123,9 +123,9 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =   80, q = 1.6, db = 6.0)          // thump: closed-back box resonance
-    .band(freq =  360, q = 0.6, db = 7.5)          // roar: low mids
-    .band(freq = 2700, q = 2.0, db = 4.0)          // bark: the upper-mid speaker peak
+    .band(freq =  120, q = 1.6, db = 2.0)          // thump: closed-back box resonance
+    .band(freq =  420, q = 0.6, db = 7.0)          // roar: low mids
+    .band(freq = 2700, q = 2.0, db = 3.5)          // bark: the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))           // the wall: 36 dB/oct, the fizz is gone
 
@@ -188,7 +188,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.17)
+    .mul(0.15)
     .classic()
 }
 
@@ -229,7 +229,7 @@ let bass = (() => {
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
 export guitarClip = "<0.92!31 0.84 0.92!31 0.83 0.92!30 0.75 0.80>".sub(perlin.range(0.0, 0.02))
   .mul("<0.985!32 [1.1 0.99!7]!32 0.975!32 [1.1 0.99!7]!32>")
-export guitarDecay = "<0.425!16 0.500!16 0.425!16 0.510!16>"
+export guitarDecay = "<0.425!16 0.475!16 0.425!16 0.490!16>"
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
@@ -245,16 +245,16 @@ let marimba = (() => {
   let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Osc.sine(Osc.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.20)
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(2.0)                     // yarn head: a thump, not a click
-  let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(5.0)                        // the resonator tube
+  let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(8.0)                        // the resonator tube
  
-  return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(2.0, "softsat")
-    .adsr(0.010, 1.0, 0.0, 0.4).mul(0.175)
+  return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(0.6, "softsat")
+    .adsr(0.010, 1.0, 0.0, 0.4).mul(0.2)
     .classic()
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4)
-  .hpf(600, 0.7).lpf(4800, 2.25)
+  .hpf(600, 0.7).lpf(8000, 2.25)
   .pan(perlin.range(0.15, 0.3)).superimpose(pan(perlin.range(0.85, 0.7))) // . solo()
   .clip(1.0)
 
@@ -321,7 +321,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.48) // . mute()
-    .oscp("sub", 0.90).oscp("harmonics", 1.00)  // . solo()
+    .oscp("sub", 0.95).oscp("harmonics", 1.00)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -339,7 +339,7 @@ let granCassa = (() => {
  
   let ring = Osc.constant(150).div(Osc.freq()).mul(0.85)   // seconds: 2.2 s at 70 Hz
  
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
+  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Osc.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(0.5))
@@ -359,11 +359,11 @@ export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] 
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4)
-  .hpf(50).lpf("3300".add(sine.range(-800, 800).slow(12).early(6)))
-  .pan(sine.range(0.1, 0.9).slow(12))
+  .hpf(50).lpf("3300".add(sine.range(-800, 800).slow(16).early(8)))
+  .pan(sine.range(0.1, 0.9).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.14)
+  .scale("e2:minor").gain(0.12)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
@@ -373,14 +373,14 @@ export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.n(0).gain(0.26).velocity("0.98 0.94 0.96 0.94").pan(0.5)
   .hpf(freq = 40).lpf(12000).adsr(0.001, 0.030, 0.30, 0.25).distort(0.02)
-  .superimpose(x => x.bpf(freq = "80", q = 1.0).vel(0.75))
+  .superimpose(x => x.bpf(freq = "120", q = 1.0).vel(0.75))
 export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  //. solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[~ sd] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.n(5).gain(0.27).pan(0.65)
-  .hpf(160).lpf(freq = 13500, q = 0.6).adsr(0.001, 0.10, 0.60, 0.50) //c. mute()
-  .superimpose(x => x.bpf(freq = pure(snareHz).add(berlin.mul(10).slow(4)), q = 3.0).vel(0.75))
+  .hpf(160).lpf(freq = 13500, q = 0.7).adsr(0.001, 0.10, 0.60, 0.50) //c. mute()
+  .superimpose(x => x.bpf(freq = pure(snareHz).add(berlin.mul(10).slow(4)), q = 3.0).vel(0.85))
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") //.solo()
 
@@ -427,7 +427,7 @@ export song_body = stack(
     , // Bass
     bass.apply(bass_arrange).compressor(-15, 3, 6, 0.005, 0.12) // .solo() // .mute()
     , // Orchestertrommel
-    trommel.apply(trommel_arrange).reverb(wet = 0.40, size = 7.0).compressor(-21, 3, 6, 0.005, 0.12) // .solo() .mute()
+    trommel.apply(trommel_arrange).reverb(wet = 0.20, size = 9.0).compressor(-21, 3, 6, 0.005, 0.12) // .solo() .mute()
   ).analog(feel).transpose(transposition)
   , // Drums
   stack(
