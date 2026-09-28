@@ -24,13 +24,13 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
  * The chain swap of a cylinder is a state machine whose transitions are POINTER SWAPS between the
- * three objects [ChainSwap] creates with itself (Idle, Fading, Draining). A transition runs on the
+ * four objects [ChainSwap] creates with itself (Idle, Fading, Draining, Releasing). A transition runs on the
  * audio thread, where nothing may allocate.
  *
  * What this spec guards is "the state machine adds no allocation" and only that
  * (`docs/plans/effect-state-machines.md`, the identity-spec bullet): it drives the cells of the
  * table on [ChainSwap] through the HOST, a real [Cylinder], and asserts after each that the state is
- * one of the three instances seen first. Every state x event cell is driven, with one arm left out:
+ * one of the four instances seen first. Every state x event cell is driven, with one arm left out:
  * the late duck TAKEOVER of Fading x `ownerClaimed`, a data arm with no transition (its own rows are
  * `CylinderChainCrossfadeSpec`'s "first claim lands in the swap block"); the arm that declines is
  * driven on every owned fade block. Behaviour (the refusal, the re-entry, the record of a finished life) is
@@ -39,7 +39,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  */
 class ChainSwapStateIdentitySpec : StringSpec({
 
-    "every driven cell of the table points at the three states created with the swap" {
+    "every driven cell of the table points at the four states created with the swap" {
         val rig = CylinderSwapRig()
         val swap = rig.swap
 
@@ -47,16 +47,14 @@ class ChainSwapStateIdentitySpec : StringSpec({
         rig.registry.register("dry2", dryChain(1.1))
         rig.registry.register("room", roomChain(4.0))
         rig.registry.register("ducked", duckedRoomChain())
-        rig.registry.register(
-            "ducker",
-            KatalystDsl.of(
-                KatalystStageDsl.Duck(
-                    orbit = IgnitorDsl.Constant(0.0),
-                    depth = IgnitorDsl.Constant(0.6),
-                    attack = IgnitorDsl.Constant(0.05),
-                )
-            ),
+        val ducker = KatalystDsl.of(
+            KatalystStageDsl.Duck(
+                orbit = IgnitorDsl.Constant(0.0),
+                depth = IgnitorDsl.Constant(0.6),
+                attack = IgnitorDsl.Constant(0.05),
+            )
         )
+        rig.registry.register("ducker", ducker)
         rig.voice = VoiceTestHelpers.createSynthVoice(katalystParams = roomState)
 
         // Everything here compares with `===` (`shouldBeSameInstanceAs`): a state written one day as
@@ -173,6 +171,71 @@ class ChainSwapStateIdentitySpec : StringSpec({
         swap.currentState shouldBeSameInstanceAs draining
         rig.cylinder.adopt(id = 1, silentBlocksBeforeTailCheck = 0, katalysts = registry)
         withClue("the hard cut from mid-drain lands in the ONE Idle instance") {
+            swap.currentState shouldBeSameInstanceAs idle
+        }
+
+        // Draining -> Releasing: a chain that sustains itself (a delay at feedback 1) outlives the
+        // drain's cap (step 12 decision (i)). The arriving chain ducks, so Releasing x processDuck
+        // runs; every owned block drives Releasing x ownerClaimed and x configureLeaving.
+        registry.register(
+            "loop",
+            KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = IgnitorDsl.Constant(0.5),
+                    time = IgnitorDsl.Constant(0.1),
+                    feedback = IgnitorDsl.Constant(1.0),
+                )
+            ),
+        )
+        registry.register("ducker", ducker)
+
+        fun releaseFrom(arriving: String) {
+            rig.cylinder.requestChain("loop")
+            rig.render(blocks = rig.fadeBlocks, level = 0.5)
+            rig.drainOut(level = 0.5)
+            rig.render(blocks = 40, level = 0.5)
+            rig.cylinder.requestChain(arriving)
+
+            var guard = 0
+            while (!swap.isReleasing && guard < 8000) {
+                rig.block(level = 0.0, sidechainLevel = 0.5)
+                guard++
+            }
+        }
+
+        releaseFrom("ducker")
+        val releasing = swap.currentState
+        withClue("Releasing is its own state") {
+            swap.isReleasing shouldBe true
+            listOf(idle, fading, draining).none { it === releasing } shouldBe true
+        }
+
+        // Releasing + begin: REFUSED; Releasing + a block (with the duck pass): self-edge.
+        swap.begin(leaving = rig.buildChain(dryChain(0.5)), arrivingLatencyFrames = 0, duckingOut = null, duckFadingIn = false)
+        rig.block(level = 0.0, sidechainLevel = 0.5)
+        withClue("a begin while releasing is refused, and a release block is a self-edge") {
+            swap.currentState shouldBeSameInstanceAs releasing
+            rig.cylinder.duck?.duckCylinderId.shouldNotBeNull()
+        }
+
+        // Releasing -> Idle: the release fell under its floor, [CapLaw.releaseBlocks] after it began.
+        val releaseBlocks = CapLaw(rig.sampleRate, rig.blockFrames).releaseBlocks
+        var guard = 0
+        while (!swap.settled && guard < releaseBlocks) {
+            rig.block(level = 0.0, sidechainLevel = 0.5)
+            guard++
+        }
+        withClue("the release lands in the ONE Idle instance") {
+            swap.currentState shouldBeSameInstanceAs idle
+        }
+
+        // Releasing -> Idle through the hard cut (retire), and a second release reuses the ONE instance.
+        releaseFrom("dry")
+        withClue("a second release reuses the ONE Releasing instance") {
+            swap.currentState shouldBeSameInstanceAs releasing
+        }
+        rig.cylinder.retire()
+        withClue("the hard cut from mid-release lands in the ONE Idle instance") {
             swap.currentState shouldBeSameInstanceAs idle
         }
     }

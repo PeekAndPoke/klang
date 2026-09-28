@@ -201,6 +201,16 @@ class Cylinder(
 
     val delay get() = chain.delay
 
+    /**
+     * True while this orbit rings with a tail that can never end on its own, in the chain in
+     * service or the one leaving it while it fades or drains ([KatalystChain.sustainsItself];
+     * phase 3 step 12 decision (j)). NOT the leaving chain once its swap RELEASES it: that one ends
+     * within the release by construction, and counting it would make a stopped engine release
+     * its whole output, finite tails on other orbits included, for a tail already on its way out.
+     */
+    fun sustainsItself(): Boolean =
+        isActive && (chain.sustainsItself() || (!swap.isReleasing && swap.leaving?.sustainsItself() == true))
+
     val reverb get() = chain.reverb
 
     val phaser get() = chain.phaser
@@ -508,9 +518,12 @@ class Cylinder(
      *    scheduled ring out on their own timeline instead of being cut mid-tail, and the room keeps
      *    hearing the delay's ring-out (a stage switched off would read its own silent input and cut
      *    that feed in one sample, measured in step 5b-2). The stages' tail ceilings bound it
-     *    (`KatalystDelayEffect`, `KatalystReverbEffect`; a self-oscillating delay pins, as it does
-     *    when drained), and the chain retires (units back to the shelves) on the first block
-     *    [KatalystChain.hasTail] is false. No owner configures it any more (see [updateFromVoice]).
+     *    (`KatalystDelayEffect`, `KatalystReverbEffect`), and the chain retires (units back to the
+     *    shelves) on the first block [KatalystChain.hasTail] is false. A drain still reporting a
+     *    tail after [ChainSwap.MAX_DRAIN_SECONDS] (a self-oscillating delay never stops) has its
+     *    output released exponentially and retires about 4.5 s later (step 12 decision (i)), so a
+     *    request queued behind a drain waits about 24.5 s at most. No owner configures it any more
+     *    (see [updateFromVoice]).
      *
      *    The orbit drained from the start (decided 2026-09-17: its delay and reverb already own the
      *    drain; nothing here invents a decay); the master bus cut its leaving chain until step 12
@@ -670,7 +683,7 @@ class Cylinder(
         // The outgoing chain counts too, and the swap's state is the test (step 3b): while a FADE
         // runs the orbit must keep rendering until the ramp completes, whatever either chain
         // holds, and while the outgoing chain DRAINS it has a tail by construction: the swap
-        // returns to Idle on the first block it does not.
+        // returns to Idle on the first block it does not, or when the release at the drain's cap ends.
         if (chain.hasTail() || !swap.settled) {
             silentBlockCount = 0
             return

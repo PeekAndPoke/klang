@@ -29,6 +29,11 @@ class PlaybackEngineDispatcher(
     // playbackIds told to stop (Cmd.Cleanup); disposed once their engine has fully drained.
     private val draining = mutableSetOf<String>()
 
+    // Stopped engines whose release was running when their playbackId was scheduled again: a
+    // release has no way back (it would step up), so the engine is detached from its id, finishes
+    // its release here, and the id gets a fresh engine. Disposed like any drained engine.
+    private val detached = mutableListOf<PlaybackEngine>()
+
     private val mix = StereoBuffer(context.blockFrames)
     private val master = MasterStage(sampleRate = context.sampleRate, blockFrames = context.blockFrames)
 
@@ -50,7 +55,17 @@ class PlaybackEngineDispatcher(
 
     private fun engineFor(playbackId: String): PlaybackEngine {
         // Re-scheduling to a draining playback cancels the pending disposal (e.g. resume after pause).
-        draining.remove(playbackId)
+        if (draining.remove(playbackId)) {
+            val stopped = engines[playbackId]
+
+            if (stopped != null && stopped.isReleasing) {
+                engines.remove(playbackId)
+                detached.add(stopped)
+            } else {
+                stopped?.resume()
+            }
+        }
+
         return engines.getOrPut(playbackId) { PlaybackEngine.create(context) }
     }
 
@@ -105,7 +120,10 @@ class PlaybackEngineDispatcher(
 
     /** Stop scheduling for a playback and let it ring out; disposed once drained (see [renderBlock]). */
     private fun cleanup(playbackId: String) {
-        engines[playbackId]?.scheduler?.cleanup(playbackId)
+        engines[playbackId]?.let { engine ->
+            engine.scheduler.cleanup(playbackId)
+            engine.stop()
+        }
         draining.add(playbackId)
     }
 
@@ -158,6 +176,10 @@ class PlaybackEngineDispatcher(
             engine.renderInto(mix, cursorFrame)
         }
 
+        for (i in 0 until detached.size) {
+            detached[i].renderInto(mix, cursorFrame)
+        }
+
         master.process(mix, out)
 
         disposeDrainedEngines()
@@ -186,7 +208,7 @@ class PlaybackEngineDispatcher(
         var droppedVoices = 0
         var deniedRents = 0
         val cylinderStates = mutableListOf<KlangCommLink.Feedback.Diagnostics.CylinderState>()
-        for (engine in engines.values) {
+        fun count(engine: PlaybackEngine) {
             // The gauge is "voices rendering audio": a culled zombie keeps its slot but runs no DSP.
             voiceCount += engine.scheduler.renderingVoiceCount()
             droppedVoices += engine.scheduler.droppedVoicesTotal()
@@ -196,6 +218,15 @@ class PlaybackEngineDispatcher(
                 )
                 deniedRents += cylinder.deniedRents
             }
+        }
+
+        for (engine in engines.values) {
+            count(engine)
+        }
+
+        // A detached engine still renders its release, so it still counts.
+        for (i in 0 until detached.size) {
+            count(detached[i])
         }
 
         context.commLink.feedback.send(
@@ -214,6 +245,15 @@ class PlaybackEngineDispatcher(
 
     /** Dispose engines that were told to stop and have now fully gone quiet. No auto-GC of live engines. */
     private fun disposeDrainedEngines() {
+        for (i in detached.size - 1 downTo 0) {
+            val engine = detached[i]
+
+            if (engine.isIdle()) {
+                detached.removeAt(i)
+                engine.dispose()
+            }
+        }
+
         if (draining.isEmpty()) {
             return
         }
@@ -239,6 +279,9 @@ class PlaybackEngineDispatcher(
 
     // ── Test / diagnostics inspection ────────────────────────────────────────────
     internal val activePlaybackIds: Set<String> get() = engines.keys
+
+    /** Stopped engines detached from their id mid-release (see [detached]), still rendering. */
+    internal val detachedCountForTest: Int get() = detached.size
 
     /** The render clock, for specs that must observe the between-renders convention (block-framing B1). */
     internal val clockForTest: RenderClock get() = clock

@@ -26,10 +26,9 @@ import kotlin.math.sin
  * (`ChainSwapStateIdentitySpec`, `ChainSwapSpec`). The input is a sine, so two rigs given the same
  * script produce the same bits, and a row can compare them sample for sample.
  */
-internal class CylinderSwapRig {
+internal class CylinderSwapRig(val sampleRate: Int = 44100) {
 
     val blockFrames = 128
-    val sampleRate = 44100
 
     /** Blocks the ramp spans, plus one for the block it completes in and one for the edge after it. */
     val fadeBlocks = (Crossfade.XFADE_SECONDS * sampleRate / blockFrames).toInt() + 2
@@ -109,7 +108,11 @@ internal class CylinderSwapRig {
         }
     }
 
-    /** Blocks until the leaving chain has rung out, bounded; returns how many it took. */
+    /**
+     * Blocks while the swap is DRAINING, bounded; returns how many it took. It stops when the drain
+     * ends, on its own (the swap settles) or at the cap (the swap then RELEASES, which this does not
+     * wait for: a caller that needs the swap settled loops on `swap.settled`).
+     */
     fun drainOut(level: Double): Int {
         var count = 0
 

@@ -26,7 +26,6 @@ worth keeping at all, to `build-lock-log.md`.
 
 | Owner (session) | Paths it owns | Half-done / would surprise you |
 |-----------------|---------------|--------------------------------|
-| capped-drain implementer (2026-09-28) | `audio_be/src/commonMain/kotlin/ChainSwap.kt`, `Crossfade.kt`, KDoc in `cylinders/Cylinder.kt` and `master/MasterBus.kt`; `audio_be/src/commonTest/kotlin/cylinders/ChainSwapCapSpec.kt` (new), `ChainSwapStateIdentitySpec.kt`, `master/MasterBusTest.kt`; the swap row of `docs/plans/effect-state-machines.md` | step 12 decision (i): a drain older than its cap fades out and retires; coordinator commits |
 
 ## The two layers
 

@@ -51,7 +51,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  *    the engine has rendered its first block is adopted at full weight, no fade (master round M1,
  *    plan risk R4; [hasRendered] is the predicate);
  *  - **the parked request** ([pendingKey], latest wins): a request while the swap is busy (a fade or
- *    a drain, decision (g): it waits for the whole ring-out) or for a name not registered yet.
+ *    a drain, decision (g): it waits for the ring-out, at most the drain's cap plus its release,
+ *    about 24.5 s, decision (i)) or for a name not registered yet.
  *    [pollPendingSwap] offers it again every block;
  *  - **no duck**: a duck stage is inert at the output (decision (c)), so this host raises none of the
  *    swap's duck events.
@@ -207,6 +208,17 @@ class MasterBus(
      */
     val isRinging: Boolean get() = ringing && hasTailUnits()
 
+    /** True while nothing is leaving the bus: no fade, drain or release of a chain swapped away runs. */
+    val isSettled: Boolean get() = swap.settled
+
+    /**
+     * True while the chain in service holds a tail that can never end on its own
+     * ([KatalystChain.sustainsItself]; phase 3 step 12 decision (j)). The leaving chain is not
+     * asked: the engine asks only once this bus [isSettled], when nothing is leaving (a leaving
+     * chain's endless tail is the swap's to end, [ChainSwap] caps and releases it).
+     */
+    fun sustainsItself(): Boolean = current.sustainsItself()
+
     /** True when a chain in play declares a reverb/delay at all: cheap, no buffer scan. */
     private fun hasTailUnits(): Boolean = current.declaresTail() || swap.leaving?.declaresTail() == true
 
@@ -285,7 +297,9 @@ class MasterBus(
      *    was dropped): parked and retried every block ([pollPendingSwap]), never a silent fall back
      *    to unity. A later re-emission of the event lands it too.
      *  - **A fade or drain is running**: parked (latest wins) and landed once the swap is settled,
-     *    after the leaving chain's whole ring-out (decision (g), kept for step 12). Cutting a fade
+     *    after the leaving chain's ring-out (decision (g), kept for step 12), which the swap caps at
+     *    [ChainSwap.MAX_DRAIN_SECONDS] and then releases exponentially (decision (i)): about 24.5 s
+     *    at worst. Cutting a fade
      *    short would drop its leaving chain at full weight, the click the swap exists to prevent. A
      *    request for the chain leaving service parks like any other and comes back empty.
      *  - **Otherwise** it lands now ([land]).

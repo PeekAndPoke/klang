@@ -53,8 +53,22 @@ class Cylinders(
     /** True if any cylinder is currently active. Alloc-free (no lambda) — safe to poll on the audio thread. */
     fun anyActive(): Boolean {
         for (cylinder in id2cylinder.values) {
-            if (cylinder.isActive) return true
+            if (cylinder.isActive) {
+                return true
+            }
         }
+
+        return false
+    }
+
+    /** True while any orbit rings with a tail that can never end on its own ([Cylinder.sustainsItself]). */
+    fun anySustainsItself(): Boolean {
+        for (cylinder in id2cylinder.values) {
+            if (cylinder.sustainsItself()) {
+                return true
+            }
+        }
+
         return false
     }
 

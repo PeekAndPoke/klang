@@ -17,6 +17,18 @@ import kotlin.math.max
  * (`docs/plans/phase3-step12-master-as-katalyst.md` section 6) moved it out of `Cylinder`, where it
  * was five fields, into three states (`docs/plans/effect-state-machines.md`, the delay's shape).
  *
+ * **The capped drain** (step 12 decision (i), maintainer 2026-09-28). A drain has a maximum age,
+ * [MAX_DRAIN_SECONDS] counted in frames from the fade's end. A chain that still reports a tail
+ * then (a delay at feedback >= 1 never stops; any room is inaudible by then, see the constant) is
+ * released by a fourth state, [Releasing]: its OUTPUT dies away EXPONENTIALLY, per sample, from
+ * exactly 1 ([TailRelease], 60 dB every 3 s), so a long echo still audible at the cap sounds as if
+ * it decayed on its own (maintainer's option A, 2026-09-28), and the chain retires once the gain is
+ * under the release's floor (-90 dB, 4.5 s). The parked request of the host lands then, and the orbit or the
+ * engine can go idle. The longest a request can wait behind a drain is therefore the cap plus the
+ * release: 20 s + 4.5 s, about 24.5 s. Without the cap a self-sustaining chain swapped away held
+ * the one leaving slot for ever, and every later request waited for ever (decision (g): a request
+ * waits for the drain).
+ *
  * **What the host keeps.** The chain in service (it is handed to every event as `chain`), the
  * cache, the rule for when a request installs at once instead of fading (the orbit is idle; at the
  * output, the engine has never rendered), and the PARKED request: a key the host holds, latest
@@ -33,20 +45,24 @@ import kotlin.math.max
  * |---|---|---|---|---|---|---|
  * | **Idle** | **Fading** | the chain alone | the chain's duck | nothing | nothing | nothing |
  * | **Fading** | REFUSED, the offered chain retired | ramp not complete: both chains, the ramp; complete: the leaving chain has a tail ? **Draining** : retired, **Idle**, and the entered state's block runs | the duck ramped in, ramped out, or the chain's own | the late duck takeover, only in the ramp's first block | the leaving chain is configured too | leaving chain retired, **Idle** |
- * | **Draining** | REFUSED, the offered chain retired | both chains, the leaving one on silence, added at full weight; no tail left: retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
+ * | **Draining** | REFUSED, the offered chain retired | both chains, the leaving one on silence, added at full weight; no tail left: retired, **Idle**; a tail left and the drain [MAX_DRAIN_SECONDS] old: **Releasing** (from the next block) | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
+ * | **Releasing** | REFUSED, the offered chain retired | both chains, the leaving one on silence, its output added under the exponential release; the gain under the floor (inside this block): retired, **Idle** | the chain's duck | nothing | nothing | leaving chain retired, **Idle** |
  *
  * **The four questions of the plan, answered for the swap:**
- * 1. *What outlives its states:* the [Crossfade], the leaving chain's mix and context, the duck
- *    scratch, [retiredDeniedRents]; and on the host, the chain in service, the cache and the parked
- *    key. Only [Fading.enter] touches one of them, restarting the ramp.
+ * 1. *What outlives its states:* the [Crossfade] and the [TailRelease], the leaving chain's mix and
+ *    context, the duck scratch, [retiredDeniedRents]; and on the host, the chain in service, the
+ *    cache and the parked key. Only [Fading.enter] restarts the ramp and only [Releasing.enter]
+ *    restarts the release.
  * 2. *The record of a finished life:* the leaving reference (dropped by the edge that leaves
- *    [Fading] or [Draining], and by [hardCut]) and the duck handover data (dropped when the fade
- *    ends, in either pass). [retire] carries a chain's denied rents BEFORE the chain's own retire
- *    zeroes them.
- * 3. *The Idle precondition:* the leaving chain reports no tail, or the host guarantees silence
- *    ([hardCut], the cylinder's new life).
- * 4. *References and who drops them:* the leaving chain ([Fading], [Draining]) and the duck being
- *    faded out ([Fading]). The edges and [hardCut] drop them, so [hardCut] DISPATCHES.
+ *    [Fading], [Draining] or [Releasing], and by [hardCut]), the drain's age (initialised by
+ *    [Draining.enter] only, so a drain never inherits a previous one's) and the duck handover data
+ *    (dropped when the fade ends, in either pass). [retire] carries a chain's denied rents BEFORE
+ *    the chain's own retire zeroes them.
+ * 3. *The Idle precondition:* the leaving chain reports no tail, or its release gain is under the
+ *    release's floor ([Releasing]), or the host guarantees silence ([hardCut], the cylinder's new
+ *    life).
+ * 4. *References and who drops them:* the leaving chain ([Fading], [Draining], [Releasing]) and the
+ *    duck being faded out ([Fading]). The edges and [hardCut] drop them, so [hardCut] DISPATCHES.
  *
  * **Timing identity depends on.** The fade-to-drain edge fires at the START of the block after the
  * ramp's last block, not inside it: the duck pass of the ramp's last block still blends with that
@@ -59,6 +75,9 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
     /** The ramp the two chains are blended over. One per host, created once; it outlives every state. */
     private val fade: Crossfade = Crossfade(sampleRate)
+
+    /** The release at the drain's cap ([Releasing]). One per host, created once; it outlives every state. */
+    private val release: TailRelease = TailRelease(sampleRate, blockFrames)
 
     /**
      * What the leaving chain is fed: the host's mix scaled by the outgoing weight during the fade,
@@ -92,7 +111,7 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
     /** One class per state; the table on [ChainSwap] is authoritative for the edges. */
     private sealed class State {
-        /** The chain leaving service, fading or draining; null in Idle. */
+        /** The chain leaving service, fading, draining or releasing; null in Idle. */
         abstract val leaving: KatalystChain?
 
         /** The leaving chain's duck while its effect is ramped out; null outside a fade. */
@@ -299,16 +318,21 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
 
     /**
      * The ramp is over and the leaving chain rings out: still Active, on SILENT input, its output
-     * added at FULL weight until it reports no tail. Nobody configures it any more: the ring-out
-     * runs on the settings the chain had when it left service. The leaving reference dies with this
-     * state, so it lives here.
+     * added at FULL weight until it reports no tail, or until the drain is [MAX_DRAIN_SECONDS] old
+     * and [Releasing] releases it. Nobody configures it any more: the ring-out runs on the settings
+     * the chain had when it left service. The leaving reference and the age die with this state, so
+     * they live here.
      */
     private inner class Draining : State() {
         override var leaving: KatalystChain? = null
             private set
 
+        /** Frames drained so far. Counted, not timed, so an offline render releases at the same sample. */
+        private var ageFrames: Int = 0
+
         fun enter(leaving: KatalystChain) {
             this.leaving = leaving
+            this.ageFrames = 0
             state = this
         }
 
@@ -331,7 +355,76 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             chain.process(ctx)
             addLeavingMix(ctx.mixBuffer)
 
+            // The tail is asked FIRST: a drain that ends on its own in the block that reaches the
+            // cap is an ordinary drain, not released.
             if (!out.hasTail()) {
+                leaving = null
+                retire(out)
+                idle.enter()
+
+                return
+            }
+
+            val age = ageFrames + blockFrames
+            ageFrames = age
+
+            if (age >= maxDrainFrames) {
+                // This block was added at full weight; the release gain is exactly 1 on the next
+                // block's first sample.
+                leaving = null
+                releasing.enter(out)
+            }
+        }
+
+        override fun processDuck(chain: KatalystChain, ctx: KatalystContext) {
+            chain.processDuck(ctx)
+        }
+
+        override fun ownerClaimed(chain: KatalystChain) {}
+
+        override fun configureLeaving(params: Map<String, Double>?) {}
+
+        override fun hardCut() {
+            leaving?.retire()
+            leaving = null
+            idle.enter()
+        }
+    }
+
+    /**
+     * The drain outlived [MAX_DRAIN_SECONDS] with a tail still reported: the leaving chain keeps
+     * running on SILENT input, as in [Draining], and its OUTPUT is added under the [TailRelease]
+     * gain, restarted at exactly 1 by [enter], so the cap's block and the release's first sample
+     * meet without a step. The block the gain falls under the release's floor retires the chain.
+     * The input cannot be the handle here: it is already silent, and the tail does not fall with
+     * it. The leaving reference dies with this state, so it lives here.
+     */
+    private inner class Releasing : State() {
+        override var leaving: KatalystChain? = null
+            private set
+
+        fun enter(leaving: KatalystChain) {
+            this.leaving = leaving
+            release.restart()
+            state = this
+        }
+
+        override val duckingOut: KatalystDuckEffect? get() = null
+
+        /** REFUSED until the chain has retired, for the reason [Draining.begin] gives. */
+        override fun begin(leaving: KatalystChain, arrivingLatencyFrames: Int, duckingOut: KatalystDuckEffect?, duckFadingIn: Boolean) {
+            retire(leaving)
+        }
+
+        override fun process(chain: KatalystChain, ctx: KatalystContext) {
+            // Never null in this state; the check only narrows the type.
+            val out = leaving ?: return
+
+            leavingMix.clear()
+            out.process(leavingContext)
+            chain.process(ctx)
+
+            if (release.addReleased(target = ctx.mixBuffer, source = leavingMix)) {
                 leaving = null
                 retire(out)
                 idle.enter()
@@ -353,20 +446,25 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
         }
     }
 
+    /** [MAX_DRAIN_SECONDS] in frames, at least one. */
+    private val maxDrainFrames: Int = (MAX_DRAIN_SECONDS * sampleRate).toInt().coerceAtLeast(1)
+
+
     private val idle = Idle()
     private val fading = Fading()
     private val draining = Draining()
+    private val releasing = Releasing()
 
     /**
-     * The current state: one of the three instances above, never a fresh one. This initializer is
+     * The current state: one of the four instances above, never a fresh one. This initializer is
      * the one entry into Idle that does not run [Idle.enter], which is benign: Idle owns nothing.
      */
     private var state: State = idle
 
-    /** Whether a [begin] can act now: nothing is fading or draining. The host asks this BEFORE it parks. */
+    /** Whether a [begin] can act now: nothing is fading, draining or releasing. The host asks this BEFORE it parks. */
     val settled: Boolean get() = state === idle
 
-    /** The chain leaving service, fading or draining; null when [settled]. */
+    /** The chain leaving service, fading, draining or releasing; null when [settled]. */
     val leaving: KatalystChain? get() = state.leaving
 
     /**
@@ -384,6 +482,13 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
     /** Test seam: the leaving chain rings out. */
     internal val isDraining: Boolean get() = state === draining
 
+    /**
+     * The drain outlived its cap and the leaving chain's output is released: that chain ends within
+     * the release, so a host asking whether it holds an endless tail ignores it now
+     * (`Cylinder.sustainsItself`). Also a test seam.
+     */
+    internal val isReleasing: Boolean get() = state === releasing
+
     /** Test seam: the current state OBJECT, for `ChainSwapStateIdentitySpec`. Production never reads it. */
     internal val currentState: Any get() = state
 
@@ -392,7 +497,8 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
      * finished one. `ChainSwapSpec` asks it to see that a finished life leaves no record, which
      * the audio cannot show.
      */
-    internal fun holds(chain: KatalystChain): Boolean = fading.leaving === chain || draining.leaving === chain
+    internal fun holds(chain: KatalystChain): Boolean =
+        fading.leaving === chain || draining.leaving === chain || releasing.leaving === chain
 
     /** Test seam: [holds] for the duck handover data, which only [Fading] carries. */
     internal fun holdsDuck(duck: KatalystDuckEffect): Boolean = fading.duckingOut === duck
@@ -475,5 +581,24 @@ internal class ChainSwap(sampleRate: Int, private val blockFrames: Int) {
             mixLeft[i] = mixLeft[i] + outLeft[i]
             mixRight[i] = mixRight[i] + outRight[i]
         }
+    }
+
+    companion object {
+        /**
+         * The longest a drain may run before its output is released ([Releasing], step 12 decision
+         * (i)). Counted in frames from the end of the fade.
+         *
+         * 20 s, the hold the engine gives a stopped playback's endless tails
+         * (`PlaybackEngine.MAX_TAIL_HOLD_SECONDS`), for the same reason: the longest room a user can
+         * author (size 10, the `Reverb` ceiling) has an RT60 of about 12.5 s and is about 94 dB down
+         * after 20 s (on its slowest mode), so no room is cut audibly, while a delay at feedback
+         * >= 1 never ends on silence. Size 9 drains on its own in about 10 s. Size 10's tail
+         * CEILING, which is conservative, can outlast the cap: measured on a 0.5 charge, the release
+         * then differs from the room's own ring-out by under 1e-6, under half a 16-bit step
+         * (`ChainSwapCapSpec`). A delay at a high but finite feedback CAN still be audible here
+         * (0.95 at 0.5 s is about 18 dB down after 20 s): that is what the exponential release is
+         * for. A request parked behind a drain waits at most this plus the release, about 24.5 s.
+         */
+        const val MAX_DRAIN_SECONDS: Double = 20.0
     }
 }

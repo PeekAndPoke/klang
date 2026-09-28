@@ -56,10 +56,11 @@ import kotlin.math.min
  *   sample-counted closed-form countdown ([DelayLine.drainSamplesUntilSilent]) says when the tail
  *   is provably inaudible. `|feedback| >= 1.0` self-oscillates and deliberately never auto-drains
  *   (raw engine — the drone IS the authored sound; the escape is a new owner with a tame delay.
- *   A CHARGED self-osc ring keeps the orbit alive indefinitely by design — that also means a
- *   stopped playback with such a ring is never reclaimed, which is PRE-EXISTING behavior, not
- *   introduced by the drain; whether orbits deserve a post-stop tail bound like the master's
- *   `MAX_MASTER_TAIL_HOLD_SECONDS` is an open maintainer question).
+ *   A CHARGED self-osc ring keeps the orbit alive indefinitely by design while the playback
+ *   runs. Once it is STOPPED, the engine holds its tails for `PlaybackEngine.MAX_TAIL_HOLD_SECONDS`
+ *   after its notes ended and then releases its whole output, this ring included, exponentially
+ *   (`TailRelease`), never with a hard cut (phase 3 step 12 decision (j), maintainer 2026-09-28;
+ *   before it such an orbit kept a stopped playback's engine for ever).
  * - **Off** — countdown done: one [DelayLine.reset] (the ring is now literally zero, including the
  *   pre-drain regions a future LONGER delay time could otherwise tap into), then a true
  *   short-circuit until an owner re-enables. That zero-ring guarantee is for THIS path only: a new
@@ -275,6 +276,9 @@ class KatalystDelayEffect(
         /** This state's answer to [KatalystDelayEffect.hasTail], where the reasoning lives. */
         abstract fun hasTail(): Boolean
 
+        /** This state's answer to [KatalystDelayEffect.sustainsItself]. */
+        abstract fun sustainsItself(): Boolean
+
         /**
          * The owner's off-config arrived. [line] is the effect's ring, which [configure] has
          * already proven non-null. A state that has nothing to do with it ignores it.
@@ -310,6 +314,8 @@ class KatalystDelayEffect(
         override fun process(ctx: KatalystContext) {}
 
         override fun hasTail(): Boolean = false
+
+        override fun sustainsItself(): Boolean = false
 
         /** Already off: an owner that says off again says nothing. */
         override fun deactivate(line: DelayLine) {}
@@ -349,6 +355,13 @@ class KatalystDelayEffect(
 
         /** A ceiling, not a scan: [process] maintains it from the feed. */
         override fun hasTail(): Boolean = delayLine != null && activeTail.hasTail
+
+        /** A charged ring recirculating at |feedback| >= 1 never decays. */
+        override fun sustainsItself(): Boolean {
+            val line = delayLine ?: return false
+
+            return activeTail.hasTail && abs(line.feedback) >= 1.0
+        }
 
         override fun deactivate(line: DelayLine) {
             // One O(delayInt) scan at the transition: the countdown starts from what the TAP can
@@ -448,6 +461,9 @@ class KatalystDelayEffect(
         /** Tailed BY CONSTRUCTION, never by scan: see [KatalystDelayEffect.hasTail]. */
         override fun hasTail(): Boolean = true
 
+        /** The countdown is infinite exactly when the drain's feedback is >= 1 in magnitude. */
+        override fun sustainsItself(): Boolean = remaining == Double.POSITIVE_INFINITY
+
         /**
          * Already draining: the countdown keeps running on the parameters it started with. A
          * second off-config must NOT restart it, or an owner re-applied every block would hold
@@ -538,10 +554,18 @@ class KatalystDelayEffect(
      * outlive the ring's last audible sample by up to one delay period (review round 5: at high
      * fb the countdown can even outlast a full ring revolution, so a whole-ring scan COULD answer
      * false near the end; this arm never cuts audio, it only holds the orbit a bounded moment
-     * longer). (A CHARGED self-osc ring pins its orbit by design; that half is pre-existing and
-     * open, see the class KDoc.)
+     * longer). (A CHARGED self-osc ring pins its orbit by design while the playback runs; a
+     * stopped one is released by its engine, see the class KDoc.)
      */
     override fun hasTail(): Boolean = state.hasTail()
+
+    /**
+     * True while this delay holds a tail that can NEVER end on its own: a charged ring at
+     * |feedback| >= 1, Active or Draining (its countdown is then infinite). What a stopped engine
+     * releases after its hold (phase 3 step 12 decision (j), maintainer 2026-09-28); every other
+     * tail rings out. The one stage that can: see `KatalystChain.sustainsItself`.
+     */
+    fun sustainsItself(): Boolean = state.sustainsItself()
 
     /**
      * The return path (resource warehouse, 2f): hands the ring back to the shelf and forgets it.

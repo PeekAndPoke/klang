@@ -341,4 +341,25 @@ class KatalystChain internal constructor(
 
         return false
     }
+
+    /**
+     * True while a stage holds a tail that can NEVER end on its own, which a stopped engine
+     * releases after its hold instead of waiting for (phase 3 step 12 decision (j)). Only a delay
+     * can: at |feedback| >= 1 it recirculates without loss ([KatalystDelayEffect.sustainsItself]).
+     * Every other stage's tail ends: the reverb's comb feedback is at most 0.98 (its size is
+     * bounded to 0..1 before it reaches the unit, `Reverb.normalizeSize`), the phaser's feedback is clamped at 0.95
+     * (`PhaserCore.MAX_FEEDBACK`), the body and vowel resonators are stable filters, and the
+     * compressor's lookahead holds at most its own latency. The gain, eq and duck hold nothing.
+     */
+    fun sustainsItself(): Boolean {
+        for (i in stages.indices) {
+            val stage = stages[i]
+
+            if (stage is KatalystDelayEffect && stage.sustainsItself()) {
+                return true
+            }
+        }
+
+        return false
+    }
 }

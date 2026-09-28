@@ -16,6 +16,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.CapLaw
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
@@ -664,7 +665,7 @@ class MasterBusTest : StringSpec({
         peak shouldBeGreaterThan 0.25
     }
 
-    "a self-sustaining master delay cannot hold a drained engine open forever" {
+    "a self-sustaining master delay cannot hold a STOPPED engine open forever: it is released, then disposed" {
         val d = newDispatcher()
         d.handle(
             KlangCommLink.Cmd.RegisterKatalyst(
@@ -696,14 +697,26 @@ class MasterBusTest : StringSpec({
         // Still echoing at full level — correctly held open.
         d.engine("song")?.isIdle() shouldBe false
 
+        // Stopped: the tail is held for the hold bound, then RELEASED (decision (j), 2026-09-28:
+        // after a stop, no hard cut, ever), and the engine goes once the release has run out,
+        // rather than rendering forever. The release's law is `EngineStopReleaseSpec`'s.
+        d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+
         for (b in 500 until 8000) {
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
-        // Past the hold bound the engine is released rather than rendering forever.
-        d.engine("song")?.isIdle() shouldBe true
+        // Past the hold bound (about 6890 blocks after the note) it is being released, not gone.
+        d.activePlaybackIds.contains("song") shouldBe true
+        d.engine("song")?.isReleasing shouldBe true
+
+        for (b in 8000 until 9000) {
+            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
+        }
+        // The release (4.5 s, about 1550 blocks from about block 6900) has run out: disposed.
+        d.activePlaybackIds.contains("song") shouldBe false
     }
 
-    "a long song still keeps its master tail — the hold is measured from silence, not uptime" {
+    "a long song stopped after its last note still keeps its master tail: a finite room rings out, whatever the uptime" {
         val d = newDispatcher()
         d.handle(
             KlangCommLink.Cmd.RegisterKatalyst(
@@ -728,15 +741,21 @@ class MasterBusTest : StringSpec({
         )
 
         val out = ShortArray(blockFrames * 2)
-        // Render past the note (25.2 s ≈ block 8680) and a little beyond.
+        // Render past the note (25.2 s ≈ block 8680), stop the playback there, and a little beyond.
         for (b in 0 until 8800) {
+            if (b == 8700) {
+                d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+            }
+
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
         }
 
-        // The reverb is decaying right now. A bound counted from engine start (rather than from the
-        // moment the engine fell quiet) would have expired ~20 s ago and chopped this tail.
+        // The reverb is decaying right now. A bound counted from engine start would have expired
+        // ~20 s ago and taken this tail; and a finite tail is never released after a stop at all
+        // (decision (j), 2026-09-28): it rings out, however long.
         d.engine("song")?.scheduler?.getActiveVoiceCount() shouldBe 0
         d.engine("song")?.isIdle() shouldBe false
+        d.engine("song")?.isReleasing shouldBe false
     }
 
     "switching to an inaudible master holds the engine for the old room's ring-out, then releases it" {
@@ -744,8 +763,8 @@ class MasterBusTest : StringSpec({
         // back on the engine's fast path once nothing is leaving it, and a chain whose one stage is
         // dry, which keeps the bus running with nothing in it that rings. Since step 12 C4 the room
         // swapped away drains instead of being cut, so the engine is held for that ring-out (the
-        // empty chain must keep the bus processing until it ends) and released when it is over,
-        // long before the 20 s hold bound would release it anyway.
+        // empty chain must keep the bus processing until it ends) and idle when it is over. A room
+        // is a finite tail, so no hold bound would ever end it early (decision (j)).
         listOf(
             "the empty chain" to KatalystDsl(emptyList()),
             "a dry room" to KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.0))),
@@ -784,9 +803,9 @@ class MasterBusTest : StringSpec({
                 engine.masterBusForTest.chainSwap.isDraining shouldBe true
                 engine.isIdle() shouldBe false
 
-                // Released once the ring-out is over, well inside the hold bound (20 s from the
-                // moment the engine went quiet, about 0.5 s in): a cached "still ringing" answer
-                // that froze when the bus stopped being processed would hold it until then.
+                // Idle once the ring-out is over: a cached "still ringing" answer that froze when
+                // the bus stopped being processed would hold it for ever (nothing releases a finite
+                // tail, and this playback was never stopped).
                 var b = 1000
                 while (!engine.isIdle() && b < 5000) {
                     d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
@@ -1078,6 +1097,94 @@ class MasterBusTest : StringSpec({
         var ring = 0.0
         repeat(20) { ring += rig.block(0.0).sumOf { abs(it) } }
         ring shouldBeGreaterThan 1.0
+    }
+
+    "a self-sustaining master swapped away is released at the drain's cap: exp(-k / tau) from exactly 1, then 0, the parked request lands" {
+        // Step 12 decision (i), the master half (the orbit's is `ChainSwapCapSpec`). The oracle is a
+        // control bus that keeps the loop in service on the same silent input: the swapped bus must
+        // be its ring times the decided weight, `CapLaw` (1 through the fade and the drain, the
+        // exponential release from the cap, 0 under its floor), computed from the constants.
+        val loop = KatalystDsl.of(KatalystStageDsl.Delay(wet = c(0.5), time = c(0.1), feedback = c(1.0)))
+
+        fun rig() = Rig().apply {
+            registry.register("room", room(wet = 0.6, size = 3.0))
+            registry.register("loop", loop)
+            registry.register("dry", gain(0.5))
+            registry.register("late", gain(2.0))
+            // A room drains first, so the loop's drain is not the swap's first: a drain that
+            // inherited this one's age would be cut early.
+            bus.requestSwap("room")
+            repeat(40) { block(0.4) }
+            bus.requestSwap("loop")
+            var guard = 0
+            while (!bus.chainSwap.settled && guard < 6000) {
+                block(0.4)
+                guard++
+            }
+            bus.chainSwap.settled shouldBe true
+            repeat(40) { block(0.4) }
+        }
+
+        val swapped = rig()
+        val control = rig()
+        val law = CapLaw(sampleRate, blockFrames)
+        val releaseAt = law.releaseStart
+        val releaseBlocks = law.releaseBlocks
+        val swap = swapped.bus.chainSwap
+
+        swapped.bus.requestSwap("dry")
+
+        var ring = 0.0
+
+        for (b in 0 until releaseAt + releaseBlocks + 30) {
+            if (b == 100) {
+                swapped.bus.requestSwap("late")
+            }
+
+            val got = swapped.block(0.0)
+            val want = control.block(0.0)
+
+            for (i in 0 until blockFrames) {
+                val weight = law.weight(b, i)
+
+                if (got[i] != want[i] * weight) {
+                    withClue("block $b sample $i (release starts at block $releaseAt): got ${got[i]}, want ${want[i]} x $weight") {
+                        got[i] shouldBe want[i] * weight
+                    }
+                }
+            }
+
+            if (b in releaseAt until releaseAt + releaseBlocks) {
+                ring = maxOf(ring, maxAbs(want))
+            }
+
+            // The state after block b: the release starts on the block after the drain reaches the cap.
+            when {
+                b == 100 -> withClue("the request was parked behind the drain") {
+                    swap.isDraining shouldBe true
+                }
+
+                b in releaseAt - 1 until releaseAt + releaseBlocks - 1 -> withClue("block $b: the release runs, the engine is held") {
+                    swap.isReleasing shouldBe true
+                    swapped.bus.isActive shouldBe true
+                    swapped.bus.isRinging shouldBe true
+                }
+
+                b == releaseAt + releaseBlocks - 1 -> withClue("block $b: the release's last block retired the loop, nothing rings") {
+                    swap.settled shouldBe true
+                    swapped.bus.isRinging shouldBe false
+                }
+
+                b == releaseAt + releaseBlocks -> withClue("block $b: the parked request landed on the next block's poll") {
+                    swap.isFading shouldBe true
+                }
+            }
+        }
+
+        withClue("positive control: the loop rang at full level through the release, and rings on in the control") {
+            ring shouldBeGreaterThan 0.05
+            maxAbs(control.block(0.0)) shouldBeGreaterThan 0.05
+        }
     }
 
     "the cache never evicts the master in service, even when it is the OLDEST entry" {
