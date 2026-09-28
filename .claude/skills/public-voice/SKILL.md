@@ -56,6 +56,9 @@ House rules that apply on top: no em- or en-dashes (`/code-style` §22); America
 ## Before and after (real edits, dated)
 
 Each pair is an edit that happened (some between drafts of the 2026-09-28 rewrite, so not every "was" is in git).
+**Keep the warmth too.** A sweep can over-correct: the 2026-09-28 review restored vivid lines a writer had
+flattened ("off the instrument, lying on the bench", "grows at conversation speed", "the network shrugs"). A
+concrete, friendly image is the voice; only hype and promises go.
 Add one whenever the maintainer corrects a public text.
 
 | was | became | why | date |
@@ -70,6 +73,11 @@ Add one whenever the maintainer corrects a public text.
 | Music-as-code is not a hypothesis … it is a working scene ... | Music-as-code is a working scene ... | insight theatre | 2026-09-28 |
 | today it is one frontend of the engine below it, the first of several. | today it is one possible frontend of the engine below it. | overstating: only one exists | 2026-09-28 |
 | `// A chain slot: the knob a pattern moves with katp(), gliding, never stepping` | `// A chain slot: the knob a pattern moves with katp(); it glides to a new value over 50 ms` | a flat "never", and not literally true (the first configure snaps) | 2026-09-28 |
+| And there's a subtler version of the problem that most systems don't even attempt. | And there is a subtler version of the problem. | comparative at others' expense (blog sweep) | 2026-09-28 |
+| Culling is not a discount on the engine; it is a refund on silence, and the refund is exactly as large as the silence a song carries. | Culling is a refund on silence, and the refund is as large as the silence a song carries. | insight theatre ("not X; it is Y") | 2026-09-28 |
+| Maintain those five by hand and they *will* diverge … not might, will. | Maintain those five by hand and they drift apart. | insight theatre | 2026-09-28 |
+| running a stranger's song must never be able to touch the filesystem or the network. | a stranger's song should not be able to reach the filesystem or the network on its own: a script can only call what is explicitly registered from Kotlin. | a flat security promise; state the intent and the mechanism | 2026-09-28 |
+| The song will keep getting heavier, because that is what songs do when the instrument works. | The song will probably keep getting heavier; that is what songs do when the instrument works. | a forecast told as a hope | 2026-09-28 |
 
 ## Grep list for reviewers
 

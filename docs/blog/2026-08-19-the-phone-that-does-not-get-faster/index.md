@@ -127,7 +127,7 @@ And the marimba's three runs span forty percent, because one of them caught a pa
 - The harness itself is suspect. On September 7 we found the ignitor benchmark had been rendering every voice twice per block, so every absolute microsecond it printed before that day is double the truth. Ratios within one run survived; absolutes did not. The posts say which side of that day their numbers come from.
 - Bit-identical is the default claim for an optimization. Where a change is only within a margin, or only by ear, the post says so, and says what guarded it.
 
-What the phone cannot tell us in numbers, it tells us in the only currency that matters here: whether the song plays. The rest of the series is about how many times we had to earn that again.
+What the phone cannot tell us in numbers, it tells us in the currency that counts here: whether the song plays. The rest of the series is about how many times we had to earn that again.
 
 ## References
 

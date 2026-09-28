@@ -119,7 +119,7 @@ The hot loops were untouched; only the once-per-block parameter read got cheaper
 
 ## What transferred
 
-Consolidation is the optimization that makes the others cheap. Every later change to the stacks in this series, the drift lanes, the per-block drift, the polynomial sine, the phase-wrap guards, landed once, in one engine, for five oscillators, and each of those posts would have been five posts otherwise. The control-rate member is the seed of the whole optimizer line: it is the first time the engine could ask a node whether it varies within a block and act on the answer, and everything from the constant folds to [the Affine node](../2026-09-15-the-promise-is-a-margin/index.md) is that question asked in more places. And a sound change declared as one, with the old output pinned where it was kept and the tuning constants seeded to the known sound, is how a consolidation gets through by ear.
+Consolidation is the optimization that makes the others cheap. Every later change to the stacks in this series, the drift lanes, the per-block drift, the polynomial sine, the phase-wrap guards, landed once, in one engine, for five oscillators, and each of those posts would have been five posts otherwise. The control-rate member is the seed of the optimizer line: it is the first time the engine could ask a node whether it varies within a block and act on the answer, and everything from the constant folds to [the Affine node](../2026-09-15-the-promise-is-a-margin/index.md) is that question asked in more places. And a sound change declared as one, with the old output pinned where it was kept and the tuning constants seeded to the known sound, is how a consolidation gets through by ear.
 
 ## References
 

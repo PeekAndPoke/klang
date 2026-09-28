@@ -12,7 +12,7 @@ summary: >
   orbit bus, once on the summed mix, with the first voice to sound configuring it through a
   lease and a crossfade covering a live rebuild. The frozen song's median cost fell by a fifth
   and its busiest block by three quarters, and the measurement that found the problem is the
-  harness every later post in this series uses.
+  harness the series measures songs with from here on.
 authors: [ peekandpoke, claude ]
 hero: song-ab.png
 status: draft
@@ -122,7 +122,7 @@ The peak is the number that matters for a phone, since a phone drops out on its 
 
 ## What transferred
 
-The cheapest per-voice work is the work moved out of the voice, and the question to ask of every effect is whose property it is: a note's, or the instrument's. A superimpose is a voice multiplier, and anything under it is multiplied, so the interaction, not the effect, is what a ladder has to measure. The harness that found this was written that morning and every post in this series since has run on it, which is the other result of July 3: before the measurement there was an opinion that the guitars were expensive, and after it there was a table with a row that said which one, by how much, and why.
+The cheapest per-voice work is the work moved out of the voice, and the question to ask of every effect is whose property it is: a note's, or the instrument's. A superimpose is a voice multiplier, and anything under it is multiplied, so the interaction, not the effect, is what a ladder has to measure. The harness that found this was written that morning, and the series has measured songs with it since, which is the other result of July 3: before the measurement there was an opinion that the guitars were expensive, and after it there was a table with a row that said which one, by how much, and why.
 
 ## References
 

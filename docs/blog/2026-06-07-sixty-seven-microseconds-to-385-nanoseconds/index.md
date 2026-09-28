@@ -29,7 +29,7 @@ references:
 
 *The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.*
 
-In the browser, Klangmotor's engine runs inside an audio worklet [[1]](#w3c-webaudio), on the thread that has to hand the sound card a 128-frame block every few milliseconds, under three at any common sample rate, and must never wait. It is the same thread [the rest of this series](../2026-08-19-the-phone-that-does-not-get-faster/index.md) measures on the phone, and the engine it feeds had just been [consolidated](../2026-06-05-one-engine-for-five-waves/index.md) two days earlier. Everything the engine is told, a voice to schedule, an instrument to register, a sample's chunks, arrives on that thread through a message port as a JavaScript object, and until June 7 the first thing the worklet did with a scheduled voice was decode it:
+In the browser, Klangmotor's engine runs inside an audio worklet [[1]](#w3c-webaudio), on the thread that has to hand the sound card a 128-frame block every few milliseconds, under three at any common sample rate, and cannot afford to wait. It is the same thread [the rest of this series](../2026-08-19-the-phone-that-does-not-get-faster/index.md) measures on the phone, and the engine it feeds had just been [consolidated](../2026-06-05-one-engine-for-five-waves/index.md) two days earlier. Everything the engine is told, a voice to schedule, an instrument to register, a sample's chunks, arrives on that thread through a message port as a JavaScript object, and until June 7 the first thing the worklet did with a scheduled voice was decode it:
 
 ```kotlin
     private fun decodeScheduledVoice(obj: dynamic): ScheduledVoice {
@@ -121,7 +121,7 @@ Nanoseconds per scheduled voice on node. The decode fell by a factor of 174 on t
 
 ## What transferred
 
-A generic serializer pays for generality the same way a library sine does, and the project owns both ends of this wire, so the generality bought nothing. Generating the specific code is what made trusting the input affordable at the size of this protocol, and it is the same move [an annotation and a processor](../2026-08-12-one-annotation-six-artifacts/index.md) make elsewhere in the project. A version guard that a human must bump is a guard that will one day not be bumped; a hash folded from the schema by the same processor that emits the codec cannot be forgotten. And the collision between the type tag and a field named `t` is the reminder that a trusting codec trusts its own keys too, so the keys it reserves must be ones no field can have.
+A generic serializer pays for generality the same way a library sine does, and the project owns both ends of this wire, so the generality was not buying anything here. Generating the specific code is what made trusting the input affordable at the size of this protocol, and it is the same move [an annotation and a processor](../2026-08-12-one-annotation-six-artifacts/index.md) make elsewhere in the project. A version guard that a human must bump is a guard that will one day not be bumped; a hash folded from the schema by the same processor that emits the codec needs no one to remember it. And the collision between the type tag and a field named `t` is the reminder that a trusting codec trusts its own keys too, so the keys it reserves must be ones no field can have.
 
 ## References
 
