@@ -409,7 +409,7 @@ sealed interface KatalystStageDsl {
      *
      * When a chain declares more than one duck stage the LAST one wins, because the cylinder runs
      * exactly one ducking effect; the earlier ones are silently ignored rather than summed
-     * (decided with the maintainer, 2026-09-17, recorded in `docs/tasks/katalyst-dsl.md`).
+     * (decided with the maintainer, 2026-09-17, recorded in `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`).
      *
      * @param orbit the orbit to listen to, as a number the runtime coerces to an Int. The default
      *   is [SLOT_UNSET]: no source named, no ducking. A consumer tests `isFinite()` and never

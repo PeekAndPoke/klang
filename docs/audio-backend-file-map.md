@@ -10,8 +10,9 @@ mark files created/modified by the per-playback-engine work (D1 + D2 — see
 ```
 Cmd → PlaybackEngineDispatcher.handle
     → per-pid PlaybackEngine { VoiceScheduler → VoiceFactory builds Voice
-        → Voice render (Pitch → Ignite → (teardown fade) → Send) → Cylinder mix }
-    → Cylinders.processAndMix (Katalyst FX: Delay → Reverb → Phaser → Compressor)
+        → Voice render (Pitch → Ignite → (teardown fade) → Send) → Cylinder mix
+    → Cylinders.processAndMix (per orbit: its Katalyst chain, swapped through ChainSwap)
+    → MasterBus.process (the Katalyst chain at the output; skipped while it is off) }
     → accumulate into the shared mix
     → MasterStage (DC block → limiter[5 ms lookahead] → clip + interleave)
     → ShortArray out
@@ -61,11 +62,20 @@ Cmd → PlaybackEngineDispatcher.handle
 - `voices/strip/ignite/IgniteRenderer.kt` — runs the Ignitor into the buffer.
 - `voices/strip/send/SendRenderer.kt` — pans + sums the voice into its cylinder (the `getOrInit` routing seam).
 
-## Cylinders — orbits / buses + per-orbit FX
+## Cylinders and the master: the Katalyst hosts
 
 - `cylinders/Cylinders.kt` **[changed]** — `Map<orbitId, Cylinder>`, additive `processAndMix`, round-robin cleanup.
-- `cylinders/Cylinder.kt` — one orbit: Delay→Reverb→Phaser→Compressor + `tryDeactivate` (tail check).
-- `cylinders/katalyst/` — `KatalystEffect` + Delay/Reverb/Phaser/Compressor/Ducking wrappers + `KatalystContext`.
+- `cylinders/Cylinder.kt`: one orbit: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
+  the owner `VoiceLease`, the chain cache and the swap, `tryDeactivate` (tail check).
+- `cylinders/katalyst/`: `KatalystChain` + `KatalystChainBuilder` (the wire `KatalystDsl` to stages), one effect per
+  stage (`Eq`, `Gain`, `Delay`, `Reverb`, `Phaser`, `Compressor`, `Body`, `Formant` for the vowel, `Duck`),
+  `KatalystFilterSwap` (the body and vowel bank crossfade), `KatalystSlots` + `KatalystSlotWriters` (`katp`),
+  `KatalystRegistry` (one fork per playback, serving orbits and the output), `KatalystContext`, `VoiceLease`.
+- `master/MasterBus.kt`: the same `KatalystChain` at the output position (phase 3 step 12); `master(Katalyst())`
+  switches it off.
+- `ChainSwap.kt` (the swap law both hosts share: fade the leaving chain's input, drain its tail, release it after
+  `MAX_DRAIN_SECONDS`), `Crossfade.kt`, `TailRelease.kt` (the one home of the release law), `KnobGlide.kt`
+  (orbit knobs glide over `KNOB_GLIDE_SECONDS`).
 
 ## Effects (DSP building blocks)
 
@@ -100,7 +110,7 @@ Cmd → PlaybackEngineDispatcher.handle
 
 - `infra/KlangCommLink.kt` — the protocol: `Cmd` (in) + `Feedback` (out, incl. `Diagnostics`).
 - `ScheduledVoice.kt`, `VoiceData.kt`, `KlangPattern.kt`/`KlangPatternEvent.kt`, `SampleRequest.kt`/`MonoSamplePcm.kt`/
-  `SampleMetadata.kt`, `EngineDsl.kt`, `IgnitorDsl.kt`, `KlangTime.kt`, `WireFormat`/`WireName`.
+  `SampleMetadata.kt`, `IgnitorDsl.kt` + `IgnitorDslClassic.kt`, `KatalystDsl.kt`, `KlangTime.kt`, `WireFormat`/`WireName`.
 
 ## Tests (`audio_be/src/commonTest`)
 

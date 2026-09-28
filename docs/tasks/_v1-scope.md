@@ -26,7 +26,7 @@ even when they are valuable.
 
 ---
 
-## Layer 1: harden the engine (1 open, 8 done)
+## Layer 1: harden the engine (1 open, 9 done; reviewed 2026-09-28)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -36,15 +36,16 @@ even when they are valuable.
 | ~~4~~ | ~~Track **B1**: scheduler startup protocol~~ | same | ✅ **DONE 2026-09-03.** Not a start command: a clock convention (between renders the clock is the NEXT block). The race was exactly one block, every playback, every time |
 | ~~5~~ | ~~Track **B2**: hard-drop admission + per-playback dropped-voice counter~~ | same | ✅ **DONE 2026-09-03**, same change as B1. `oldestAllowedSec` gone; late voices dropped and counted. **The scheduler now delivers the guarantee the DSP was verified against.** Counter not yet surfaced to the FE |
 | ~~6~~ | ~~**Audio backend audit**~~ — `voices/` pilot **COMPLETE 2026-08-31** (21 findings: 12 fixed, 5 withdrawn, 2 parked, 3 awaiting a call); 1 of 11 katalyst files done; 5 subsystems never started | [`20260927-audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md) | ✅ **CLOSED 2026-09-27** (maintainer): superseded by the engine redesign and Standard 2 mutation checks. Leftovers: [`audit-audio-backend-leftovers.md`](audit-audio-backend-leftovers.md); parked calls: [`future/audit-parked-decisions.md`](future/audit-parked-decisions.md) |
-| ~~7~~ | ~~**Resource warehouse**~~ | [`plans/resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) | ✅ **DONE 2026-09-04** (steps 1–2g, cylinders in the warehouse, bucketed 16-orbit warmup, the warmup vocabulary; 5 review rounds, the last clean on code). Rings, reverb networks and cylinders are lazy, shelved by return, zeroed by deferred housekeeping; OOM caught at one site per resource. **Fairphone: the resource stutter is gone; a cold-code spike on the first run was the last symptom, answered by the vocabulary (`da002b73`), measurement pending.** Reporting half ✅ shipped 2026-09-04 too (the warehouse stats feed, `Diagnostics.warehouse`, shown on a click on KLANGMOTOR); closed-form tail (`TailCeiling`) shipped the same day. Nothing open |
+| ~~7~~ | ~~**Resource warehouse**~~ | [`plans/resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) | ✅ **DONE 2026-09-04** (steps 1–2g, cylinders in the warehouse, bucketed 16-orbit warmup, the warmup vocabulary; 5 review rounds, the last clean on code). Rings, reverb networks and cylinders are lazy, shelved by return, zeroed by deferred housekeeping; OOM caught at one site per resource. **Fairphone: the resource stutter is gone; a cold-code spike on the first run was the last symptom, answered by the vocabulary (`da002b73`); measured on the Fairphone the same day, the first run plays (why first-time work is that large stays open: [`future/first-run-spike-v2.md`](future/first-run-spike-v2.md)).** Reporting half ✅ shipped 2026-09-04 too (the warehouse stats feed, `Diagnostics.warehouse`, shown on a click on KLANGMOTOR); closed-form tail (`TailCeiling`) shipped the same day. Nothing open |
 | ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
+| 9a | Master limiter surge after deep limiting | [`bugfix-master-limiter-surge.md`](bugfix-master-limiter-surge.md) | **Added 2026-09-28.** Changes how songs sound (the maintainer heard it in Der Schmetterling). Re-measure first on today's gain staging; it may already be gone |
 
-## Layer 2: widen and harden the interface (8 open of which 1 blocked on a decision, 6 done; reviewed 2026-09-09)
+## Layer 2: widen and harden the interface (7 open: 1 blocked on a design decision, 2 maintainer calls; the rest done or closed; reviewed 2026-09-28)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
-| 10 | **Katalyst DSL** | [`katalyst-dsl.md`](katalyst-dsl.md) | Maintainer call. The last missing authoring surface; tutorials cannot teach per-orbit chains without it. **Still a stub, needs a design round before it can be sized** |
+| ~~10~~ | ~~**Katalyst DSL**~~ | [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md) | ✅ **DONE 2026-09-20** (designed 2026-09-17, steps 1 to 5c-11: the chain on the wire, `katp` slots, `eq` and `gain`, insert-style sends, every orbit stage a state machine that glides). Since 2026-09-28 (phase 3 step 12) the master is the same chain at the output, `master(Katalyst(k => ...))`. Open items moved to their own files, listed at the top of the archived record |
 | ~~11~~ | ~~**Filter unification C6** (canonical NAMES only)~~ | [`plans/filter-unification.md`](../tasks-archive/2026-09/20260927-filter-unification.md) | ✅ **DONE 2026-08-31.** The whole plan is COMPLETE (C6a → C0 → C1+C2 → C3 → C4 → C5 → C6); 50 alias names deleted. The filter vocabulary tutorials are written against is now settled |
 | 12 | `snd*` sound-function surface redesign | [`sprudel-sound-function-surface.md`](sprudel-sound-function-surface.md), [`sprudel-sound-doors-compound.md`](sprudel-sound-doors-compound.md) | Real DSL debt (per-param patternable sound selection). Shape change. **Review 2026-09-07:** the general "compound colon-string vs named" question this doc asked is ANSWERED by the field-accessor rollout — every compound door is now an object with named slots (archived `20260907-sprudel-field-accessors.md`, `-compound-slots.md`). What remains is the `snd*` family itself (19 per-sound functions, the last surface not on objects): the follow-up doc; maintainer "not fully sure" → a design word, then a batch like the others |
 | ~~13~~ | ~~Pipeline DSL coefficient exposure~~ | [`20260927-pipeline-dsl-coefficient-exposure.md`](../tasks-archive/2026-09/20260927-pipeline-dsl-coefficient-exposure.md) | CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9. Was: "widen the interface", ~35 engine coefficients with no DSL home |
@@ -62,12 +63,13 @@ even when they are valuable.
 | ~~23~~ | ~~**Sprudel arithmetic: a continuous control is evaluated once per query arc**~~ | [`../tasks-archive/2026-09/20260908-sprudel-arithmetic-continuous-controls.md`](../tasks-archive/2026-09/20260908-sprudel-arithmetic-continuous-controls.md) | ✅ **DONE 2026-09-08, review loop closed after 3 rounds (round 3 clean).** Not option 1: onset sampling reversed two song accent maps (Schmetterling `guitarClip`, Stranger Things velocity), so arithmetic now joins through a new `_appLeft` (Strudel's `appLeft`: source wholes, fragments carry the control value, point queries find the covering fragment). Exposed and fixed a second handoff bug: `segment(n)` answered every point query with the FIRST slice, so every `.seg()` control in every setter was inert within the cycle. By-ear §7 lists the songs whose written intent now plays for the first time |
 | — | ~~Editor tools: named arguments resolve the wrong slot~~ | [`20260927-editor-tools-named-arguments.md`](../tasks-archive/2026-09/20260927-editor-tools-named-arguments.md) | ✅ **DONE 2026-09-26** (`ffa490e4`); the leftovers are the Open list of [`sprudel-ui-tools.md`](sprudel-ui-tools.md). **Added 2026-09-07.** Not the shape, not the sound — a UI bug — but it is what a tutorial reader touches first. Maintainer: "the editor tools get a rework of their own"; listed here so it is not lost, sorted as **maintainer call** |
 | — | Editor: code completion for local symbols (`let`, `const`, `export`, lambda params) | [`editor-local-symbol-completion.md`](editor-local-symbol-completion.md) | **Added 2026-09-14.** Completion knows library symbols only; a song with twenty rig presets offers none of them. The analyzer already tracks locals (`TypeScope`, `bindingMap`, hover), missing is `localsAt(pos)` plus the editor wiring. Half-typed lines complete from the last successful analysis (already the stale-AST policy). Sorted with the editor-tools rework, **maintainer call** |
+| — | Rename `Osc` / `oscp` to the Ignitor's own words | [`../plans/signal-flow-redesign.md`](../plans/signal-flow-redesign.md) §11 | **Added 2026-09-28.** A shape change (every instrument a tutorial teaches spells them), held back "until the slot vocabulary has settled", which it has since phase 3. The names are a **maintainer call** |
 
 **Applied as a gate, not as its own item:** [`dsl-kotlin-surface-parity.md`](dsl-kotlin-surface-parity.md).
 Every surface addition above lands on **both doors** (script stdlib + Kotlin extensions) in the same
 deliverable. Nothing ships one-door.
 
-## Layer 2.5: lock the sound before tutorials (6)
+## Layer 2.5: lock the sound before tutorials (9)
 
 All in [`by-ear/`](by-ear/). These are non-delegable and they gate the tutorial phase, because a
 tutorial ear-checked against a sound that later gets retuned has to be redone.
@@ -80,6 +82,9 @@ tutorial ear-checked against a sound that later gets retuned has to be redone.
 | 25 | [`by-ear/c3-depth-migration-flags.md`](by-ear/c3-depth-migration-flags.md) | 5 ranked song sites |
 | 26 | Body resonator material tables | [`by-ear/README.md`](by-ear/README.md) §3 |
 | 27 | Der Schmetterling re-voicing | [`by-ear/README.md`](by-ear/README.md) §4. Uncommitted; chosen before the master-opening fix landed |
+| 28 | [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) | Added 2026-09-28. One listen at the end of phase 3, then retire or regenerate the two voice baselines |
+| 29 | [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md) | Added 2026-09-28. Phase 3 step 12 decision (g): a second chain edit waits for the old chain's ring-out |
+| 30 | [`by-ear/duck-orbit-switch-click.md`](by-ear/duck-orbit-switch-click.md) | Added 2026-09-28. Katalyst step 5c, measured: moving a ducker's sidechain to a sounding orbit steps the reduction. Leave, blend, or dip |
 
 ---
 
@@ -115,6 +120,8 @@ which is a V2 promise).
 
 ## Estimate
 
+> Written 2026-08-31 and kept as the record of that forecast; not recomputed since.
+
 **25 items open, roughly 45 working days, about 6 to 7 weeks** at the pace August sustained.
 (Opened at 27; W13 and filter-unification C6 both shipped on 2026-08-31, the day this was written.)
 
@@ -134,9 +141,8 @@ The non-delegable share (decisions, review gates, by-ear verdicts, commit inspec
 
 Tracked in the order they bite. See the conversation record for the reasoning.
 
-1. **Katalyst design round** (blocks #10 and the estimate's credibility). Now the top one: it is
-   the only V1 item that is a stub with no design.
-2. **Engine tuning Part B**: the `Double`-vs-node resolution path (blocks #14).
+~~1. **Katalyst design round**~~: designed 2026-09-17, built by 2026-09-20 (#10).
+~~2. **Engine tuning Part B**~~: closed 2026-09-27 with the Pipeline DSL (#14).
 ~~3. **Track B1**~~ — done 2026-09-03 as a clock convention, no design pass needed.
 4. **`snd*` as compound objects** (#12's remainder, `sprudel-sound-doors-compound.md`): a design word.
 ~~5. **`^` as the power operator**~~ — settled 2026-09-08, won't implement. See below. Number

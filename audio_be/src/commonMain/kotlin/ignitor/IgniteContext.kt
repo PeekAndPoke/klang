@@ -66,7 +66,7 @@ class IgniteContext(
      * Per-sample phase-increment multipliers (1.0 = no change), or null.
      * MUST be at least (offset + length) elements long when non-null.
      *
-     * **Set by IgniteRenderer only** (strip-level pipeline bridge from [BlockContext.freqModBuffer]).
+     * **Set by IgniteRenderer only** (the voice's pitch pipeline bridged from [BlockContext.freqModBuffer]).
      * Ignitor DSL-level pitch mods (vibrato, accelerate, pitchEnvelope, FM) are resolved at
      * build time via [ModApplyingIgnitor] and do NOT use this field.
      */

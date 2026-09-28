@@ -158,5 +158,5 @@ kick's reverb tail also holds the duck), the follower's shape and defaults, the 
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
 - `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (phase 3, archived 2026-09-28: `classic()`, the door shapes, the shared cores).
-- `docs/tasks/katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
+- `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
 - `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` (the master became a Katalyst at the output).

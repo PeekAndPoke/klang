@@ -33,7 +33,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
  * carried moved here, to a pair whose two sides are two different paths through the DOOR: the FILL
  * (what a call leaves out) against the explicit spelling.
  *
- * The confound those rows were built for is recorded in `docs/tasks/katalyst-dsl.md` §9: before
+ * The confound those rows were built for is recorded in `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9: before
  * `body.material` became a catalogue INDEX a declared chain owned its material, so declaring
  * DROPPED the body, worth +1.5 dB at 254 and 508 Hz on the frozen song.
  *

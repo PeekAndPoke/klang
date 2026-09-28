@@ -755,7 +755,7 @@ lives in that file's `gatedOff` KDoc; the off VALUES are one table, in
 
 Katalyst step 5c-10, a SOUND CHANGE under the 5c listening checkpoint, and the only one of the
 5c steps whose law is still the MAINTAINER'S to choose: both paths are live and the choice is by
-ear, per stage (`docs/tasks/katalyst-dsl.md`, "Morph or output crossfade is chosen per effect BY
+ear, per stage (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`, "Morph or output crossfade is chosen per effect BY
 EAR"). Until 5c-6 a new body or vowel was a second bank crossfading over the old one; now the bank
 IN SERVICE travels its bands to the new material's, which for a vowel sweeps like a mouth.
 
@@ -1158,7 +1158,7 @@ on a dry orbit, and every fader move (decided with the maintainer, signal-flow p
 ## The orbit compressor switches and changes by gliding (2026-09-19)
 
 Katalyst step 5c-7, a SOUND CHANGE under the 5c listening checkpoint (decided with the maintainer,
-`docs/tasks/katalyst-dsl.md` step 5c: "the compressor switches by gliding its gain reduction to 0 dB
+`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c: "the compressor switches by gliding its gain reduction to 0 dB
 over the same 50 ms"). No identity-only commit before it (complexity rule of
 `docs/plans/effect-state-machines.md` section 2): the states and the glides arrived together.
 
@@ -1274,7 +1274,7 @@ over the same 50 ms"). No identity-only commit before it (complexity rule of
 ## Body, vowel and the orbit EQ switch by fading from what sounds now (2026-09-19)
 
 Katalyst step 5c-6, the filter swap's SECOND commit, a SOUND CHANGE under the 5c listening
-checkpoint (decided with the maintainer, `docs/tasks/katalyst-dsl.md` step 5c, "how every orbit
+checkpoint (decided with the maintainer, `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c, "how every orbit
 stage switches" and "rapid changes").
 
 - **The law.** Every edge of `KatalystFilterSwap` is a linear crossfade over `KNOB_GLIDE_SECONDS`
@@ -2897,7 +2897,7 @@ Bus pipeline: composable `KatalystEffect` pipeline (`cylinders/katalyst/`); sinc
 step 2) the cylinder builds its chain from `KatalystDsl.classic` through `KatalystChainBuilder` into a
 `KatalystChain` (stage order from the DSL, duck outside the list). Declared chains apply from step 3, and
 since step 5b-1 (2026-09-19) EVERY chain takes its knobs from the orbit's param state, the born-with one
-included: the voice's bus fields are not a knob source any more (`docs/tasks/katalyst-dsl.md`, and the
+included: the voice's bus fields are not a knob source any more (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`, and the
 top entry of this file).
 `VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
 Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by

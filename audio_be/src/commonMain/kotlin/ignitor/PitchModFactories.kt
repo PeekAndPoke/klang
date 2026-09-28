@@ -163,7 +163,7 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  * **The law** is [EnvelopeCore], the engine's one envelope law (fractional attack and decay frames,
  * the release on `floor(N)` frames, the release starting from the level AT the gate frame, the
  * sustain raw). The level becomes a ratio in [renderPitchEnvelopeRatios], the ONE mapping this node
- * and the voice strip's pitch envelope (sprudel's `penv`, `PitchEnvelopeRenderer`) share, so the two
+ * and the voice's own pitch envelope (sprudel's `penv`, `PitchEnvelopeRenderer`) share, so the two
  * render the same numbers by construction.
  *
  * Output is passed through [safeOut] — extreme `amount` values cannot produce
@@ -240,7 +240,7 @@ private class PitchEnvelopeModIgnitor(
 
 /**
  * THE pitch envelope's level-to-ratio mapping, one copy for both hosts (phase 3 step 5b (c1)): the
- * Ignitor node ([pitchEnvelopeModIgnitor], which writes) and the voice strip's pitch envelope
+ * Ignitor node ([pitchEnvelopeModIgnitor], which writes) and the voice's own pitch envelope
  * (`PitchEnvelopeRenderer`, which writes, or multiplies into a buffer an earlier pitch stage wrote).
  *
  * Fills `buffer[from until to]` with `safeOut(2^(amount * level / 12))`, where `level` is [core]'s

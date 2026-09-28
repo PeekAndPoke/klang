@@ -271,24 +271,22 @@ object KlangScriptOscExtensions {
      * `OscSlot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
      * `classic()` costs one envelope and nothing else.
      *
-     * Make it the LAST call (an `.optimizer(...)` hint after it is fine, it is not a stage). An instrument
-     * that ends in `classic()` is the whole voice: the voice doors
-     * (`onepole(...)`, `lpf(...)`, `adsr(...)`, ...) reach its slots, and nothing runs after it. Every
-     * built-in sound (`sound("saw")`) IS a source with this tail. An instrument that does not end in it
-     * (no `classic()`, or a stage after it) still gets the old voice strip after it, until the strip
-     * retires. A stage after `classic()` therefore also gets the `onepole` twice (the engine's around the
-     * whole instrument and `classic()`'s own, on the same slot): put `classic()` last. A pattern also
-     * reaches the slots by name: `oscp("lpf.freq", 1800)`.
+     * Make it the LAST call (an `.optimizer(...)` hint after it is fine, it is not a stage). An instrument that ends
+     * in `classic()` is the whole voice: the voice doors (`onepole(...)`, `lpf(...)`, `adsr(...)`, ...) reach its
+     * slots, and nothing runs after it but the channel (`gain`, `pan`). Every built-in sound (`sound("saw")`) IS a
+     * source with this tail. Every instrument is played as its tree. Around it the engine adds only the pitch doors
+     * in front (`vibrato`, `accelerate`, `penv`, `fm`), the teardown fade when the tree does not end in its own
+     * envelope (`BuiltIgnitor.endsInEnvelope`), and the channel after (`gain`, `pan`); so without `classic()` the
+     * doors of `classic()` reach only the slots the tree places itself. A pattern also reaches the slots by name:
+     * `oscp("lpf.freq", 1800)`.
      *
-     * Want another order? Write your own tail from the same `OscSlot` slots, as far as a door takes
-     * them: every filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's
-     * knobs and the envelope's stages and curves. Leave the `onepole` out: an instrument that does not
-     * end in `classic()` already gets the pattern's `onepole` from the engine, around the whole
-     * instrument, and a second one on the same slot would filter twice. Three groups only `classic()` can
-     * place: `lpf.passes` / `hpf.passes` (the filter builder's `passes(n)` takes a number), `adsr.on` (no door
-     * has the switch) and `distort.*` (the `distort` door builds a drive into a shaper that always runs
-     * and caps its output; `classic()` uses the one distort node that switches off as a whole, so a
-     * slot on the door's distort would shape every note, written or not).
+     * Want another order? Write your own tail from the same `OscSlot` slots, as far as a door takes them: every
+     * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs and the envelope's
+     * stages and curves. The pattern's `onepole` is a slot too (`OscSlot.onepole`): the engine no longer hangs one
+     * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
+     * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
+     * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
+     * switches off as a whole, so a slot on the door's distort would shape every note, written or not).
      *
      * ```KlangScript
      * let guitar = Osc.saw().distort(0.4).classic()

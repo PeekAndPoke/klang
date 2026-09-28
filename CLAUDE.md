@@ -120,7 +120,7 @@ decay, sustain, release)` has a real release, `penvCurves(attack, decay, release
 is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`, `PipelineDsl.modern`, the script
 `Pipeline(...)` / `Pipeline.modern(...)` / `Pipeline.build(...)` with `PipelineBuilder`, `PipelineVcaBuilder`,
 `PipelineFilterBuilder`, `tuneVca`, `tuneFilter`, sprudel `.pipeline()` and the `pipeline(...)` mapper, `PipelineValue`,
-`PipelineRegistry`, `PipelinePreset`, `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
+`PipelineRegistry`, `PipelinePreset` (the `pedal` preset went first, 2026-09-25, with `Pipeline.pedal(...)`), `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
 `KlangPatternEvent.pipeline`, the strip's `FilterPipelineBuilder`, `EnvelopeRenderer` (the strip VCA),
 `FilterModRenderer`, `AudioFilterRenderer`, `CrushRenderer`, `CoarseRenderer`, `DistortionRenderer`, `TremoloRenderer`,
 `StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`

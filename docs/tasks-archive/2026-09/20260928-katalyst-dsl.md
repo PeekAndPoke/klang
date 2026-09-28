@@ -1,5 +1,22 @@
 # Katalyst DSL: author per-orbit effect chains
 
+> **ARCHIVED 2026-09-28, DONE.** Designed 2026-09-17, built in steps 1 to 5c-11 by 2026-09-20 (the chain on the wire,
+> the per-cylinder swap, `katp` slots and the bus doors as aliases, `eq` and `gain`, insert-style sends, every orbit
+> stage a state machine that glides). Phase 3 step 12 (2026-09-28) then made the master the same chain at the output.
+> The header note below and every "master" comparison in the body describe the world before that.
+> Links below into `../tasks/...` and `../plans/...` were written from `docs/tasks/` and are not repointed here.
+>
+> Where the open items went:
+> - The delay's tail ceiling on a changing owner (the lengthened tap, the `CEILING_MAX` hold):
+>   [`../../tasks/future/delay-ceiling-edges.md`](../../tasks/future/delay-ceiling-edges.md).
+> - The `duck.orbit` switch click and the recorded duck handover corners:
+>   [`../../tasks/by-ear/duck-orbit-switch-click.md`](../../tasks/by-ear/duck-orbit-switch-click.md).
+> - The swap request during a drain: [`../../tasks/by-ear/chain-swap-request-during-drain.md`](../../tasks/by-ear/chain-swap-request-during-drain.md).
+> - The `Osc` / `oscp` rename noted at §D1: `../../plans/signal-flow-redesign.md` section 11, and a V1 row in
+>   [`../../tasks/_v1-scope.md`](../../tasks/_v1-scope.md).
+> - The eq's per-sample ramps (`EqCore` is snap-only at both positions): `../../plans/unified-eq.md`.
+> - The pattern door that takes a configure lambda: [`../../tasks/katalyst-master-configure-doors.md`](../../tasks/katalyst-master-configure-doors.md).
+
 > **Designed 2026-09-17, not started.** Priority: **MUST** (see `_priorities.md`). This is the
 > authoring surface for the Katalyst layer; the effects themselves already shipped. The design below
 > follows the shipped Master DSL step for step and adds two stages the songs need, `eq` and `mics`.

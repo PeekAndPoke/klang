@@ -21,7 +21,7 @@ import kotlin.math.abs
 
 /**
  * The contract of [KatalystDuckEffect] (Katalyst 5c-9, `docs/plans/knob-glide.md` and
- * `docs/tasks/katalyst-dsl.md` step 5c).
+ * `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c).
  *
  * Every oracle is written out from the decided law: the switch rides a WEIGHT from where it stands
  * to its target over `KNOB_GLIDE_SECONDS` rounded to whole blocks (17 at 44.1 kHz and 128 frames),

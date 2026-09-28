@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * Output bounding is the responsibility of the per-stage soft cap inside
  * `Ignitor.distort()` and `Ignitor.shape()` — see those for the C¹ piecewise
  * saturator that bounds each stage's output to ±1. This wrapper does not
- * apply any additional clipping; downstream voice-strip stages get the
- * ignitor output as-produced.
+ * apply any additional clipping; the stages after it (the teardown fade,
+ * the send) get the ignitor output as-produced.
  */
 class IgniteRenderer(
     private val signal: Ignitor,

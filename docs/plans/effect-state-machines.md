@@ -1,6 +1,6 @@
 # Effect lifecycles as state machines
 
-> Decided with the maintainer 2026-09-18, during the Katalyst work (`../tasks/katalyst-dsl.md`,
+> Decided with the maintainer 2026-09-18, during the Katalyst work (`../tasks-archive/2026-09/20260928-katalyst-dsl.md`,
 > step 5c). Performance first, readability a close second: the model must cost what the flags cost
 > today and read as a state machine.
 
@@ -142,7 +142,7 @@ of the four (review ledger, 2026-09-19).
 
 A template states REQUIREMENTS per effect. A MECHANISM waits for that effect's own step, written
 with every host file open, and where it changes what a listener hears it is decided with the
-maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed.
+maintainer and recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` BEFORE the step is briefed.
 
 - **Copy the shape, not the condition.** Each effect's predicates are its own. The reverb's
   OFF-ARM test ("already silent", now its `Active.deactivate`) carries `|| !remaining.isFinite()`: a non-finite countdown there means a
@@ -184,7 +184,7 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 - **The filter swap and the compressor convert in TWO commits each.** First the lifecycle they
   have TODAY as states (identity, accepted on the full list below); then the switch-on and
   switch-off glides as a SOUND CHANGE under the 5c listening checkpoint. What those glides do
-  was decided with the maintainer on 2026-09-19 and is recorded in `../tasks/katalyst-dsl.md`
+  was decided with the maintainer on 2026-09-19 and is recorded in `../tasks-archive/2026-09/20260928-katalyst-dsl.md`
   ("how every orbit stage switches and changes"): always glide from the current state to the
   target, the first initialisation instant; body and vowel first merge into one resonator bank.
   Whatever the law, the oracle is an identity computed from a reference and the decided law,

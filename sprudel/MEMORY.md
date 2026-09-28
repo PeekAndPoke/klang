@@ -194,7 +194,7 @@
   are the same knob and a `katp("reverb.size", 8)` needs no declaration first. The fields still
   carry the per-voice send AMOUNTS (`delay`, `reverb`) until step 5b-2 and are inert for everything
   else. The rule's one home is the `katp` door's KDoc. Guard: `LangKatalystParamSpec`,
-  mutation-checked (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
+  mutation-checked (one deletion per door family). `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9, step 5a.
   **Since step 5b-3 (2026-09-19) the delay, reverb, compressor and duck doors write the SLOTS
   only**: their voice fields (`SvdDelay`, `SvdReverb`, `SvdDuck`, the five `compressor*`) are gone
   from `SprudelVoiceData` and the wire, and their accessors and mappers read the slots
@@ -227,7 +227,7 @@
   `LangKatalystParamSpec` body/vowel index rows, `KatalystClassicMatchesUntouchedVoiceSpec` (what the
   chain installs against what the wire carries, both spellings) and `KatalystDoorFillRenderSpec`
   (the render, byte-identical).
-  `docs/tasks/katalyst-dsl.md` §9, step 5a-2.
+  `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9, step 5a-2.
 
 - **`oscParams` and `katalystParams` are one class, `ParamBag`, mutable and single-owner
   (2026-09-18).** They were immutable-replace (`map + (k to v)` per write, a fresh map per slot);
@@ -259,7 +259,7 @@
   unset field (`VoiceFactory`, `Voice.Compressor.fromParams`, `FilterDef.Body`/`Formant`'s null
   floor); the engine keeps them as the NaN rule for a raw `katp` write, not as a second fill. Guards:
   `ParamBagSpec`, `LangKatalystParamSpec`, the per-door lang specs, `KatalystDoorFillRenderSpec`
-  (renders: body, compressor, duck). `docs/tasks/katalyst-dsl.md` §9 step 5a-3.
+  (renders: body, compressor, duck). `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §9 step 5a-3.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in

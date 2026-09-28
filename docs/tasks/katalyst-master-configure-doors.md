@@ -95,7 +95,7 @@ signal-flow plan's phase 5 picks the lambda form for new text.
 ## Links
 
 - [`klangscript-union-types.md`](klangscript-union-types.md), the dependency.
-- [`katalyst-dsl.md`](katalyst-dsl.md) §6 (the application path, replace semantics),
+- [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md) §6 (the application path, replace semantics),
   [`master-dsl-followups.md`](master-dsl-followups.md).
 - `/dsl-design` §2 (door shape: construction inputs on the door, `configure` last) and §3 (two
   doors, one DSL).

@@ -1,8 +1,10 @@
 # Signal flow redesign: three owners, one setter each
 
-> **Status: designed 2026-09-17 with the maintainer, not started.** Umbrella for
-> [`../tasks/katalyst-dsl.md`](../tasks/katalyst-dsl.md) (its first phase) and two tasks still to
-> be opened (pregain, built-in instruments). Every phase leaves every existing song byte-identical
+> **Status 2026-09-28: phases 1 to 3 DONE, phase 4 waits for a second pattern kind, phase 5 (the
+> announcements) in progress.** Section 11 keeps the open points.
+> Designed 2026-09-17 with the maintainer. Umbrella for
+> [`../tasks-archive/2026-09/20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md) (its first phase), pregain
+> (phase 2) and the built-in instruments (phase 3, `../tasks-archive/2026-09/20260928-builtin-instruments.md`). Every phase leaves every existing song byte-identical
 > unless the phase says otherwise, with the frozen-song render as the guard.
 
 ## 1. Why
@@ -302,7 +304,7 @@ already that for a whole orbit).
 
 ## 7. The Katalyst under this plan
 
-The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisions resolved here:
+The design in `../tasks-archive/2026-09/20260928-katalyst-dsl.md` stands, with three of its parked decisions resolved here:
 
 - **D4:** the chain is the instrument. The bus doors (`reverb`, `delay`, `compressor`, `duck`,
   `phaser`, `body`, `vowel`) stop being voice fields and become `katp` aliases on the orbit's
@@ -372,7 +374,7 @@ one language's types (the pipeline reference leaves, a Katalyst reference joins)
 
 Each phase is its own task, review loop and commit; each ends with the guards green.
 
-1. **Katalyst DSL** (`../tasks/katalyst-dsl.md`, its phases 0 and 1): the chain on the wire,
+1. **Katalyst DSL** (`../tasks-archive/2026-09/20260928-katalyst-dsl.md`, its phases 0 and 1): the chain on the wire,
    the per-cylinder swap, `eq` and `gain`, the bus doors becoming `katp` aliases, insert-style
    sends. Byte-identical except where one orbit carried different per-voice send amounts, which
    the frozen songs do not.
@@ -421,7 +423,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 - `Osc` and `oscp` are misnomers for the Ignitor concept (the known debt in `/dsl-design` §5) and get
   renamed in their own item, after phase 3, once the slot vocabulary has settled.
 - Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
-  engine; phase 5 re-reads them once the surfaces are gone.
+  engine; phase 5 re-reads them once the surfaces are gone. (2026-09-28: the whitepaper is re-read; the Lexikon had
+  no stale entry; the tutorials belong to their own session.)
 - Sample voices: `sound("bd")` as the sample instrument with its playback slots, in phase 3.
 - **Parked for the maintainer, by ear (found in review 2026-09-19, NOT rendered): the group
   fader patterned through exactly 0 on a dry orbit.** `katp("gain.gain", "<0 1>")`, default ADSR,
@@ -530,7 +533,7 @@ is due at the 5b checkpoint; candidates seen on 2026-09-18 without reading them:
 
 ## Links
 
-- `../tasks/katalyst-dsl.md`, the first phase, with the measurement that started this.
+- `../tasks-archive/2026-09/20260928-katalyst-dsl.md`, the first phase, with the measurement that started this.
 - `../tasks-archive/2026-08/20260803-master-dsl.md`, the pattern every chain follows.
 - `../tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md`, why `SprudelVoiceData` stays typed.
 - `../tasks/dsl-kotlin-surface-parity.md`, both doors, every phase.

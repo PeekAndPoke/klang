@@ -300,7 +300,7 @@ class EnvelopeLawSpec : StringSpec({
     }
 
     /**
-     * Renders the voice STRIP's pitch envelope ([PitchEnvelopeRenderer], sprudel's `penv`) for [total]
+     * Renders the voice's own pitch envelope ([PitchEnvelopeRenderer], sprudel's `penv`) for [total]
      * frames in blocks, [semitones] deep, the gate at [gate]; the output is the frequency ratio it writes.
      * [moveGateTo] moves the gate after the first block, the way a realtime note-off does.
      */

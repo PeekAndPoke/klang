@@ -2123,7 +2123,7 @@ sealed interface IgnitorDsl {
      *
      * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
      * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
-     * The voice strip's pitch envelope (sprudel's `penv`) is a host of the same law with the same
+     * The voice's own pitch envelope (sprudel's `penv`) is a host of the same law with the same
      * defaults (`constants/PitchEnvelopeDefaults.kt`), so the two sweep alike.
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):

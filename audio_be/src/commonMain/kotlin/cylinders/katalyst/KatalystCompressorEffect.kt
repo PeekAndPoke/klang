@@ -17,7 +17,7 @@ import kotlin.math.min
 /**
  * The orbit compressor, an insert: it processes the orbit mix in place.
  *
- * **How it switches** (decided with the maintainer 2026-09-19, `docs/tasks/katalyst-dsl.md` step 5c;
+ * **How it switches** (decided with the maintainer 2026-09-19, `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c;
  * built in Katalyst 5c-7). Every edge fades over [KNOB_GLIDE_SECONDS], linearly, between the
  * compressed mix and the DRY mix, the law of [KatalystFilterSwap] with the dry signal as the fade
  * partner: `out = dry + w * (compressed - dry)`, so the gain reduction in force is scaled towards 0

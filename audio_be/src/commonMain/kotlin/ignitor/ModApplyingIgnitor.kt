@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * Wraps a source [Ignitor] with a pre-computed pitch modulation signal.
  *
  * At runtime, generates the [mod] Ignitor (which outputs ratio-space values, 1.0 = no change),
- * combines with any existing strip-level `ctx.phaseMod`, and calls [inner] with the combined
+ * combines with any existing voice-level `ctx.phaseMod` (the pitch pipeline's), and calls [inner] with the combined
  * modulation set on the context.
  *
  * This class is designed to sit **inside** a [MemoizingIgnitor] boundary. On cache hit, neither
