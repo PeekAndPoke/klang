@@ -308,7 +308,7 @@ Format: what the golden covered; where it lands now; why it is (or is not) uncle
    cycles 0 to 23. The golden never saw the lead at all (no phaser, no `penv`, no lead filter envelope in the dump).
    Nothing is wrong with the signal-valued depth. The flag doc is a dated record and was not edited.
 
-3. **Echo layer gain: replaces vs multiplies the source gain, pending the maintainer.** `lang_structural_echo.kt:30`
+3. **Echo layer gain: replaces vs multiplies the source gain, DECIDED 2026-09-28 (maintainer): multiply, fixed with a `LangEchoSpec` gain row.** (Was: pending the maintainer.) `lang_structural_echo.kt:30`
    does `source.late(delay * i).gain(decay^i)`, which REPLACES the source gain (the golden showed 0.9, 0.6, 0.36 for
    `gain(0.9).echo(3, 0.125, 0.6)`); the KDoc's "gain reduced by decay ^ copy_number" reads as a multiply
    (0.9, 0.54, 0.324). The new `LangEchoSpec` row pins the layer offsets and the original layer's own gain, not the

@@ -400,6 +400,7 @@ with an error; SILENT means it now means something else or nothing.
 | 12 | a master reverb or delay whose unit is refused (out of memory) | recovers when a unit comes back, like an orbit's (was: dropped for the chain's life) | SILENT |
 | 12 | a non-finite master knob (only reachable by computing one in script) | a non-finite reverb/delay wet, size or time switches that stage off (was: the constant); a non-finite limiter knob takes the compressor's fallback, not the limiter's | SILENT |
 | 12 | a live master at song start | built inside the song's first render callback (was: just before it), like an orbit's first chain; `gain(1.0)` or a dry send at the output keeps the bus path (the last bit of a multi-playback sum only) | SILENT |
+| 12 | sprudel `echo(times, delay, decay)` / `stut` with a source gain | each echo layer now MULTIPLIES the source gain by `decay^i` (was: replaced it with `decay^i`, so a quiet part's echoes could be louder than the part); a source without a gain echoes as before (maintainer, 2026-09-28) | SILENT |
 | D4 | a song's `pipeline("pedal")` | the preset is gone; the name resolves like any unknown name to `modern` (envelope last), silently | SILENT |
 | D4 | a script's `Pipeline.pedal(...)` | removed | loud |
 | 4 (D2) | a user's Kotlin-built `IgnitorDsl.Distort` node (no authoring door emits it; `classic()`, new in step 5 and unreleased, does) | the strip's law: no soft cap, the drive inside the oversampler | SILENT |
