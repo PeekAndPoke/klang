@@ -99,7 +99,7 @@ pattern semantics change. Independence didn't mean burning the bridge; it meant 
 ## 5. What it bought, in hindsight
 
 Every quarter since has cashed checks this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
-because the interpreter is ours. Sound definitions, oscillators, and eventually whole engine pipelines became *language
+because the interpreter is ours. Sound definitions, oscillators, and eventually whole instruments became *language
 objects* because the language could be extended freely. The browser dropped its last dependency on Strudel-JS. And the
 verification habit (do not trust a reimplementation without an executable oracle, grade the diff, make time exact)
 became the house style for every risky migration after.

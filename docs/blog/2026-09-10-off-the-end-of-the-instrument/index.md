@@ -118,6 +118,8 @@ E = 149,721
 
 The SLIM productivity index tops out around 30,000 for the best-instrumented environments. The project does not score on the scale at all: the implied value sits about five times past its end. The needle is not in the red; it is off the instrument, lying on the bench.
 
+![the Putnam productivity index scale, with the measured value past its end](productivity-index-scale.png)
+
 *Fig. 1: the Putnam productivity index, printed to its real range, with the measured value where it falls.*
 
 ## What the models cannot see
@@ -133,7 +135,7 @@ git log --numstat -M -C --format='%H' -- '*.kt'
 
 **Two lines were written for every line that survives. 49% of all Kotlin ever committed to this repository has since been deleted.**
 
-That is not sloppiness, it is policy. The project's own rules require it: *a replaced surface is removed, not deprecated*, and *one word per concept end to end*. The register in `CLAUDE.md` carries a "Retired, do not restore or cite" section that is, read a certain way, a catalogue of deliberate discard: `klangblocks`, the per-knob effect doors, the filter doors, the single envelope doors. A company shipping the same features would more likely have deprecated than removed, and ended up with a larger codebase.
+That is not sloppiness, it is policy. The project's own rules require it: *a replaced surface is removed, not deprecated*, and *one word per concept end to end*. The register in `CLAUDE.md` carries a "Retired, do not restore or cite" section that is, read a certain way, a catalogue of deliberate discard: whole modules, families of doors, a DSL or two, most with the date it went. A company shipping the same features would more likely have deprecated than removed, and ended up with a larger codebase.
 
 ### Charging for it, without double-charging
 

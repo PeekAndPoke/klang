@@ -40,9 +40,17 @@ brochure ("no Hochglanz-rubbish"). Factual, but not cold.
   theoretical tidiness", "carries the whole design"). State the fact.
 - **Not comparative at others' expense.** Say what other tools do well; do not position Klang against them.
   "Klang is not here to replace any of it" holds everywhere.
+- **No record of retired surfaces** (maintainer, 2026-09-28: "remove these mentions fully, no need to keep record in
+  non published posts or the white-paper"). The whitepaper and every unpublished draft describe today's engine: no
+  retired door, class or spelling (the list is the "Retired" section of `CLAUDE.md`), no "since then" or "no X any
+  more" notes, and code only in current, verified syntax. A post keeps its story and tells it in words that are true
+  today. A published post is the one exception: it keeps what it said at its date.
 - **Not stale.** A status claim ("shipped", "still open", "measured") is checked in its primary record under
   `docs/`, not in a summary table: both MAJORs of the 2026-09-28 whitepaper review were stale status lines
   copied from a summary.
+- **Not "corrected" on a hunch.** A writer's doubt about a number is a question, not an edit: verify it at the
+  source before the text changes. On 2026-09-28 two right numbers were turned wrong that way ("fourteen
+  optimizations" counted as thirteen; "72 fields to 82" softened to 79), and review had to restore both.
 
 ## Where it applies
 

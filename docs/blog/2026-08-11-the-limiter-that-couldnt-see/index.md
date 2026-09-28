@@ -137,12 +137,13 @@ bug). The invariance sweep now guards the suite alongside the dual-release test 
 mutation-checked: collapsing the dual release back to a single branch turns the suite red. The other two remain
 development-harness measurements for now, with the gain-trajectory probe first on the wishlist.
 
-One asymmetry is deliberate and spec-pinned: **only the house limiter has lookahead by default.** An authored,
-per-playback limiter with latency would delay its playback against every other one, so the authored
-`MasterFx.limiter()` *defaults* to zero lookahead, and a test asserts the divergence so nobody "fixes" it. It is a
-default, not a wall: the knobs are there (`MasterFx.limiter().lookahead(seconds).attack(seconds)`) for anyone who
-wants the clean catches on an authored chain and accepts the latency that comes with them (capped at 50 ms, since
-lookahead is the one parameter that sizes a buffer on the audio thread).
+One asymmetry is deliberate and spec-pinned: **only the house limiter has lookahead by default.** An authored limiter
+with latency would delay its orbit or its playback against every other one, so the authored `limiter()` stage of a
+Katalyst chain (the effect chain a song declares for a bus) *defaults* to zero lookahead, and a test asserts the
+divergence as a relation, authored less than house, so nobody "fixes" it. It is a default, not a wall: the knobs are
+there (`master(Katalyst(k => k.limiter(lookahead = 0.005, attack = 0.005)))`, both in seconds) for anyone who wants
+the clean catches on an authored chain and accepts the latency that comes with them (capped at 50 ms, since lookahead
+is the one parameter that sizes a buffer on the audio thread).
 
 The limiter can see now. What it watches over is the same song, one decibel more of it.
 

@@ -204,7 +204,7 @@ The house review loop puts two fresh reviewers on every engine change, and both 
 | pluck, distortion at 4x | 13.4 | 10.1 | -25% |
 | the rhythm guitar rig | 53.2 | 44.3 | -17% |
 
-The guitar's oversampling share went from 22 µs to 12. Every oversampled stage in the engine took the change: the shaper on the voice doors, and the shaper, the crusher and the rate reducer on the strip. None of them sounds different, because none of them computes anything different.
+The guitar's oversampling share went from 22 µs to 12. Every oversampled stage in the engine took the change, the shaper an instrument places in its own tree and the shaper behind the pattern's per-note doors alike, since all of them run through the one `Oversampler`. None of them sounds different, because none of them computes anything different.
 
 Sound cost: none. The output is bit-identical to the ring's for every block length, and the specification holds the old implementation as its witness.
 

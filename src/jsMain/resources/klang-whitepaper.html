@@ -1500,8 +1500,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().oscparam(<span c
                 <code>.classic()</code> out and the tree keeps the pitch doors in front of it
                 (<code>vibrato</code>, <code>penv</code>, <code>fm</code>, <code>accelerate</code>) and the
                 channel after it, but the tail's doors reach only the slots the tree places itself, and there
-                is no default envelope. There is no fixed voice strip behind the instrument any more, and no
-                second DSL to reorder one: the tree is the voice, and the order is whatever you composed.
+                is no default envelope. The tree is the voice, and the order is whatever you composed.
                 <code>Osc.variants(a, b, …)</code> still bundles several flavours of one
                 instrument into a single sound, selected per event with the same <code>:index</code> suffix
                 that picks sample-bank variants, so <code>seq("0 1 2:1 3:1")</code> can have two notes ring
@@ -1520,8 +1519,8 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().oscparam(<span c
                 meets its first nonlinearity, and it changes timbre. The built-in sounds place that slot in
                 front of their tail (<code>Osc.saw().pregain().classic()</code>); an authored instrument
                 places it where its own drive is, or not at all. In desk terms: pregain is the guitar's
-                volume knob and the player's touch, gain is the channel fader with pan after it, and there
-                is no postgain in a desk, so there is none here.
+                volume knob and the player's touch, and gain is the channel fader with pan after it. A channel on a
+                desk has one fader, and so does the channel here.
             </p>
 
             <figure>

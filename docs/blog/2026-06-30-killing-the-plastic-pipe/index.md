@@ -63,7 +63,7 @@ instability has (at least) two distinct characters, so the generator layers two 
   lazy, breathing wander that makes a sustained note feel alive.
 
 Both are white noise pushed through one-pole dynamics, closer to the physics of component noise than a lattice field.
-The hot loop, verbatim:
+The step, verbatim:
 
 ```kotlin
 fun nextMultiplier(): Double {
@@ -87,9 +87,10 @@ fun nextMultiplier(): Double {
 Three details worth the ink:
 
 **The RNG is inlined on purpose.** That xorshift32 is three shifts and three xors: no `Random.nextDouble()` dispatch,
-no allocation, no permutation tables. Total per-sample cost: those six bit ops plus six multiplies and seven adds, about
-20 ops, zero calls. This runs per voice
-per sample on the browser's audio thread; anything fancier would be paying rent it does not need to.
+no allocation, no permutation tables. Total cost per step: those six bit ops plus six multiplies and seven adds, about
+20 ops, zero calls. A lane steps once per 128-frame block and the oscillator ramps the multiplier across the block's
+samples, one add per sample on the browser's audio thread (how it got there is
+[its own post](../2026-09-15-drift-for-free/index.md)); anything fancier would be paying rent it does not need to.
 
 **One noise source feeds both layers.** The same uniform draw drives the fast one-pole and the slow OU update: two
 filters, two personalities, one stream.
@@ -142,7 +143,7 @@ modal peaks stay within about 3 dB while the valleys and rolloff carve away far 
 
 ![Measured body response](body-response.png)
 
-*Fig. 2: measured from the engine: white noise through `body("spruce")`
+*Fig. 2: measured from the engine: white noise through `body(material = "spruce")`
 versus dry, spectrum ratio. Eight modal peaks between 100 Hz and 2.2 kHz, none more than about 3 dB above unity, valleys
 carved between them, and a high-frequency rolloff. Peaks modest, valleys deep: far more carved than added.*
 

@@ -5,10 +5,10 @@ date: 2026-09-15
 slug: zombies
 tags: [ series-fairphone, engine, voices, culling, scheduler, klang ]
 summary: >
-  Every voice in Klangmotor rendered its full strip, oscillator, filters, envelope, sends, until
+  Every voice in Klangmotor rendered its full chain, oscillator, filters, envelope, sends, until
   its scheduled lifetime ran out, long after it had decayed to nothing. The sample hats of Der
   Schmetterling, with a two-second release, were silent for 85 percent of their life. Silence
-  culling measures the voice's own output and stops the strip once a release has stayed under
+  culling measures the voice's own output and stops the rendering once a release has stayed under
   -100 dBFS for 50 ms. The first build removed the voice from the scheduler at that moment, and
   a null-diff render of the song came back 28 dB off, because the orbit's owner changed hands
   in a different order. The fix is the zombie: the voice renders nothing and keeps its slot.
@@ -26,7 +26,7 @@ references:
 
 *A voice that has decayed to silence keeps rendering its whole chain until its scheduled end; stopping it early moved the mix by 28 dB.*
 
-A note in Klangmotor is scheduled with a start frame and an end frame, the gate plus the release, and until September 15 it was rendered for every frame between them. The end frame was the only thing that ended a voice. For a sustained pad that is right. For a sampled hi-hat with a two-second release it means the sample has played out, the envelope has closed, the output has been zero for most of two seconds, and the voice strip is still running per block: pitch, ignition, filters, envelope, sends, all of it producing nothing. On the day of the change the hats of Der Schmetterling were silent for 85 percent of their own life, and every voice the song culled that day was a drum. This post is about the change that stopped it, and about the afternoon the first version of that change was found to alter the mix.
+A note in Klangmotor is scheduled with a start frame and an end frame, the gate plus the release, and until September 15 it was rendered for every frame between them. The end frame was the only thing that ended a voice. For a sustained pad that is right. For a sampled hi-hat with a two-second release it means the sample has played out, the envelope has closed, the output has been zero for most of two seconds, and the voice's render chain is still running per block: pitch, ignition, filters, envelope, sends, all of it producing nothing. On the day of the change the hats of Der Schmetterling were silent for 85 percent of their own life, and every voice the song culled that day was a drum. This post is about the change that stopped it, and about the afternoon the first version of that change was found to alter the mix.
 
 ## The July design and what survived of it
 
@@ -46,7 +46,7 @@ That constant is 1e-5, which is -100 dBFS, and the default window is 50 ms.
 
 ## The decision
 
-The measurement is one extra pass over the voice's output in the send stage, run only on the blocks that will read it: before the voice has been heard, and then in its release. It takes the block's peak magnitude, multiplies by the voice's gain and post-gain and by the larger of one and its send amounts, and stops before the solo and mute multiplier, so a voice that is merely faded out by a solo is not taken for a dead one. The decision sits in the voice's render method, after the strip has run:
+The measurement is one extra pass over the voice's output in the send stage, run only on the blocks that will read it: before the voice has been heard, and then in its release. It takes the block's peak magnitude, multiplies by the voice's gain, and stops before the solo and mute multiplier, so a voice that is merely faded out by a solo is not taken for a dead one. The decision sits in the voice's render method, after the chain has rendered:
 
 ```kotlin
         if (measure) {
@@ -89,7 +89,7 @@ fun SprudelPattern.noCull(callInfo: CallInfo? = null): SprudelPattern = this.cul
 
 ![one voice's life under culling](voice-timeline.png)
 
-*Fig. 1: A diagram, not a render: one voice with a stylized envelope and the engine's constants. The gate is not culled. Once the release has stayed under -100 dBFS for 50 ms the strip stops. What happens after that is the subject of the next section.*
+*Fig. 1: A diagram, not a render: one voice with a stylized envelope and the engine's constants. The gate is not culled. Once the release has stayed under -100 dBFS for 50 ms the rendering stops. What happens after that is the subject of the next section.*
 
 ## The afternoon the mix moved
 
@@ -102,14 +102,14 @@ So a culled voice is a zombie. It renders nothing, and it keeps its slot in the 
 ```kotlin
     /**
      * True once this voice's release has stayed under [VOICE_CULL_FLOOR] for the whole cull window.
-     * From then on [render] runs no strip: the voice is a ZOMBIE that only renews its orbit lease
+     * From then on [render] runs no stage: the voice is a ZOMBIE that only renews its orbit lease
      * and keeps its slot in the scheduler's active list until its scheduled [endFrame], where it
      * expires like any other voice. Staying in the list is the point: the orbit lease passes to
      * whichever voice renders FIRST after an owner dies, and that order is the active list, so an
      * early removal would reorder it and hand orbits to different successors (measured 2026-09-15
      * on Der Schmetterling: a culled hat changed which of guitar 3 and the bass owned orbit 3, at
      * -32 dBFS). The zombie's per-block cost is the lease renewal, and as the owner the bus config
-     * re-application that comes with it, exactly what a sounding tail paid; the strip it skips is
+     * re-application that comes with it, exactly what a sounding tail paid; the stages it skips are
      * the win.
      */
     var culled: Boolean = false
@@ -125,9 +125,9 @@ So a culled voice is a zombie. It renders nothing, and it keeps its slot in the 
         }
 ```
 
-*[Voice.kt at v0.3.13](https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/voices/Voice.kt#L103-L116), [and the early return](https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/voices/Voice.kt#L205-L210)*
+*[Voice.kt at v0.4.0](https://github.com/PeekAndPoke/klang/blob/v0.4.0/audio_be/src/commonMain/kotlin/voices/Voice.kt#L108-L121), [and the early return](https://github.com/PeekAndPoke/klang/blob/v0.4.0/audio_be/src/commonMain/kotlin/voices/Voice.kt#L214-L219)*
 
-With the zombie the null-diff sits at a peak of -90 dBFS and an RMS of -124 dBFS, with 99.96 percent of the samples identical. The per-block cost of a zombie is the lease renewal, which a sounding tail paid too; the strip it skips is the whole win.
+With the zombie the null-diff sits at a peak of -90 dBFS and an RMS of -124 dBFS, with 99.96 percent of the samples identical. The per-block cost of a zombie is the lease renewal, which a sounding tail paid too; the stages it skips are the whole win.
 
 ## Results
 

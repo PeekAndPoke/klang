@@ -158,13 +158,13 @@ The full mechanism, as shipped:
 5. **Off by default.** `phasePool` ships disabled; the engine without it consumes the RNG stream identically to before,
    pinned by a golden spec.
 
-The DSL surface is one call:
+The DSL surface is one call on the oscillator's builder:
 
 ```javascript
-Osc.supersaw(freq = Osc.freq(), voices = 11, spread = 0.07)
-    .phasePool()                          // on, family defaults
-    // or, tuned:
-    .phasePool(kMin = 0.30, kMax = 0.55, drawTries = 5, refreshEvery = 10)
+Osc.supersaw(x => x.voices(11).spread(0.07).phasePool())        // on, family defaults
+// or, tuned:
+Osc.supersaw(x => x.voices(11).spread(0.07)
+    .phasePool(kMin = 0.30, kMax = 0.55, drawTries = 5, refreshEvery = 10))
 ```
 
 One implementation in the shared unison engine covers the whole family: supersaw, supersquare, superpulse, supertri,

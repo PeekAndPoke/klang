@@ -134,7 +134,7 @@ per-frame paint) turned out to be what the *visual* thread needed too.
 
 Provenance also runs in reverse. `AstIndex` maps an editor position to the
 AST node at that position, the infrastructure behind hover documentation,
-context menus, and the visual parameter tools. Click on `body("wood")` and
+context menus, and the visual parameter tools. Click on `body(0.7, "wood")` and
 the editor knows which call you are in and which argument you are touching;
 the [same generated metadata](../2026-08-12-one-annotation-six-artifacts/index.md)
 that registered the function supplies the docs and the editing widget.

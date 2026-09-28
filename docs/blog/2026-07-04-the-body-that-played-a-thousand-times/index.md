@@ -35,17 +35,17 @@ Until July 3 the engine had been measured one effect at a time, on hand-made voi
 | LEAD, superramp, unison 5 | 192 | 0.0182 | 0.052 | about 18% |
 | bass, drums, hats, pink noise | 16 to 68 each | under 0.003 | | about 2% each |
 
-The three super-synth voices were the song's cost, and one of them was half of it. GTR2 had a superimpose inside a superimpose, and each superimpose copies the voice, so every note scheduled eight voices, 1,088 across the benchmark's eight cycles, and every copy re-ran the whole per-voice chain. Here is the instrument as it was written, the nested copy on the second-to-last line and the body on the last:
+The three super-synth voices were the song's cost, and one of them was half of it. GTR2 had a superimpose inside a superimpose, and each superimpose copies the voice, so every note scheduled eight voices, 1,088 across the benchmark's eight cycles, and every copy re-ran the whole per-voice chain. Here is the tail of the instrument, in today's spelling (the pedal left out), the nested copy on the second-to-last line and the body on the last:
 
 ```javascript
-    .coarse(2).coarseos(4).pan(0.3).superimpose(
+    .coarse(2).pan(0.3).superimpose(
       x => x.pan(0.7),
-      x => x.postgain(0.09).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
+      x => x.gain(0.0675).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")
            .pan(0.2).superimpose(pan(0.8))
-    ).superimpose(hpf(3500).lpf(6200).postgain(0.02)).mute("<0!128 1!16 0!16>").pipeline("pedal").body("wood").bodyMix(0.30)
+    ).superimpose(hpf(3500).lpf(6200).gain(0.015)).mute("<0!128 1!16 0!16>").body(wet = 0.30, material = "wood")
 ```
 
-*[DerSchmetterling.kt at ba7fab68](https://github.com/PeekAndPoke/klang/blob/ba7fab68/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt#L47-L58), the last edit of the song on July 3*
+*Adapted from [DerSchmetterling.kt at ba7fab68](https://github.com/PeekAndPoke/klang/blob/ba7fab68/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt#L47-L58), the last edit of the song on July 3*
 
 ## What the body cost, and where
 
@@ -70,17 +70,7 @@ The decision, the maintainer's, was that body and vowel are timbre resonators, p
 
 *Fig. 1: Before, every voice on the orbit carried its own body, so a nested superimpose ran hundreds of them; after, the orbit bus runs one on the mix, and the voice that sounded first configures it.*
 
-The voice factory pulls the two definitions out of the chain before it bakes the filters and routes them to the orbit through the voice:
-
-```kotlin
-        // Body / vowel are orbit-level Katalyst effects now — pull them out of the per-voice filter
-        // chain (they're routed to the Cylinder via the Voice). Everything else stays per-voice.
-        val bodyDef = data.filters.getByType<FilterDef.Body>()
-        val vowelDef = data.filters.getByType<FilterDef.Formant>()
-        val voiceFilterDefs = data.filters.filters.filter { it !is FilterDef.Body && it !is FilterDef.Formant }
-```
-
-*[VoiceFactory.kt at v0.1.2](https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L93-L112)*
+The voice factory of that day pulled the two definitions out of the voice's filter list before it baked the filters, and routed them to the orbit through the voice ([VoiceFactory.kt at v0.1.2](https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L93-L112)); everything else stayed per voice.
 
 Two things had to be invented for the orbit to own an effect. The first is who configures it. All the voices on an orbit share one set of bus effects, and without arbitration the configuration would flip to whichever voice rendered last every block, which in the worst case rebuilds a filter bank on the audio thread every block. The answer is a lease:
 

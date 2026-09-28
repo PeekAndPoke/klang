@@ -43,7 +43,7 @@ val voiceValueModifier = voiceModifier {
 
 *[lang_helpers.kt at ea4c2d4b](https://github.com/PeekAndPoke/klang/blob/ea4c2d4b0480832fc3b8cbbd99917710d688505c/sprudel/src/commonMain/kotlin/lang/lang_helpers.kt#L91-L96), the one modifier the sweep deliberately left copy-based, because it only ever runs on a fresh instance*
 
-A voice in Der Schmetterling passes through gain, note, scale, sound, unison, envelope, filters, distortion, pan and a room on its way out, and each of those was an allocation of a hundred-and-five-field object, on the order of twenty per voice, for every event of every cycle, on the page's main thread, in JavaScript, with the garbage collector keeping the score.
+A voice in Der Schmetterling passes through gain, note, scale, sound, unison, envelope, filters, distortion, pan and a reverb on its way out, and each of those was an allocation of a hundred-and-five-field object, on the order of twenty per voice, for every event of every cycle, on the page's main thread, in JavaScript, with the garbage collector keeping the score.
 
 ![the chain before and after](copy-chain.png)
 

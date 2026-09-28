@@ -77,27 +77,38 @@ Here is a real registered function, exactly as it lives in the tree: the
 
 ````kotlin
 /**
- * Adds a resonating body to the voice — a bank of fixed resonances mixed on
- * top of the dry source so it sounds like a physical instrument instead of
- * a synthetic/plastic tube.
+ * The resonant body: the material, its mix and its dry floor.
+ *
+ * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
+ * through it. One body per [orbit bus](/manuals/lexikon/orbit-bus), so ALL of it, `material`
+ * included, is set once for everyone by the orbit's owning voice.
  * ...
  * ```KlangScript(Playable)
- * note("c3 e3 g3").body("wood")              // warm wooden body
+ * note("c3 e3").s("saw").body(0.7, "wood")                                 // a wooden box around the tone
  * ```
+ * ...
+ * @param wet How much of the orbit runs through the body, 0 to 1.
+ * @param material Material name. See the list above.
+ * @param floor Minimum dry share kept in the mix, 0 to 1.
+ * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
  *
- * @param material The body material — one of `wood`, `cedar`, `tube`, ...
- * @param-tool material SprudelBodySequenceEditor
+ * @scope orbit
  * @category effects
- * @tags body, resonator, modal, formant, material, wood, cedar, ...
+ * @tags body, wet, material, floor
  */
 @KlangScript.Function
-fun SprudelPattern.body(material: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.body(
+    wet: PatternLike? = null,
+    material: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
 ...
 ````
 
 One function, one comment. (That trailing `callInfo: CallInfo?` never reaches the script, by the way: the processor
-recognizes the type and injects call-site information itself, so the script-facing signature is just `body(material)`.
-Even the parameter list is curated in translation.)
+recognizes the type and injects call-site information itself, so the script-facing signature is just
+`body(wet, material, floor)`. Even the parameter list is curated in translation.)
 
 The processor (`klangscript-ksp`) walks every symbol carrying `@Library`, `@Object`, `@TypeExtensions`, `@Function`,
 `@Method`, `@Property` or `@Constant`, parses the KDoc (description,
@@ -107,16 +118,17 @@ comes out:
 1. **Runtime registration.** Typed dispatch code, including arity-overload resolution and named-argument support, so
    the interpreter calls the function without reflection. Default parameter values are extracted and baked in as
    literals.
-2. **Type signatures.** Fed to the expression type inferrer, which is what makes *chained* completion work: after
-   `Osc.supersaw(...)` the analyzer knows it holds a `SuperSaw`, offers `.spreadPower()` and `.phasePool()`, and still
-   resolves base methods like `.lowpass()` through a static supertype walk. (The type map has one intentional hole:
+2. **Type signatures.** Fed to the expression type inferrer, which is what makes *chained* completion work: inside
+   the configure lambda of `Osc.supersaw(x => ...)` the analyzer knows `x` is the supersaw's builder and offers
+   `.spreadPower()` and `.phasePool()` on it, and the call itself is an oscillator, so `.lowpass()` resolves on it as
+   on any other. (The type map has one intentional hole:
    `Long` is excluded, because it boxes on Kotlin/JS. Even the codegen bows to the audio thread.)
 3. **Completion data.** Names, parameters, defaults, `@category` for grouping, `@tags` for search, `@alias` for
    alternative names.
 4. **Hover documentation** in the editor: the KDoc description and per-param docs, at the call site.
 5. **Visual editor bindings.** `@param-tool material
-   SprudelBodySequenceEditor` binds that parameter to a specific visual editing tool in the studio UI; the doc comment
-   wires the GUI.
+   SprudelBodyEditor, SprudelBodySequenceEditor` binds that parameter to its visual editing tools in the studio UI; the
+   doc comment wires the GUI.
 6. **Documentation pages with playable examples.** Fenced blocks tagged `KlangScript(Playable)` in the KDoc are
    extracted as typed samples and rendered in the docs UI with **play/stop controls**, and blocks tagged
    `KlangScript(Executable)` get a run button and an output panel. The examples in the manual are not screenshots of
@@ -138,7 +150,7 @@ properties that matter here specifically:
 ## 5. The payoff, felt
 
 The practical effect is that klang's DSL grows at conversation speed. When the unison phase pool shipped, its combined `.phasePool(on, kMin, kMax,
-drawTries, ...)` call appeared in autocomplete with named parameters, typed against the `SuperSaw` subtype, documented
+drawTries, ...)` call appeared in autocomplete with named parameters, typed against the supersaw, documented
 on hover, the day the function was written, because there was nothing else to write. One function, one comment; the
 language surface follows.
 

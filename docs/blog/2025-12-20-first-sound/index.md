@@ -70,7 +70,7 @@ audio thread pays rent), and the same wire would later be rebuilt end-to-end for
 callback per sample to produce a sine or a saw. It was *suuuuper* slow, and no micro-optimization inside the callback
 could save it: the cost was the call itself, times 48,000, times every voice. The rewrite made **block-based processing
 the rule**: every generator and filter fills a buffer per call, and the hot path has stayed block-based since.
-Of the three scars this one cut deepest architecturally: the Ignitor interface, the voice pipeline, the worklet
+Of the three scars this one cut deepest architecturally: the Ignitor interface, the voice's render chain, the worklet
 contract, the whole engine is shaped like a chain of buffer-fillers because of that first slow sine. And it paid a
 dividend nobody planned: once every sound-maker was a self-contained fill-this-buffer unit, sound-makers became
 *composable*: plus, times, filters, envelopes as combinators over buffer-fillers. The Ignitor DSL, the way klang
@@ -92,5 +92,5 @@ differential-testing oracle, the part/whole refactor, and a rename that amounted
 ## 5. What survived
 
 Looking back from mid-2026, a good deal of that first quarter is still in place: the commonMain engine
-boundary, the orbit concept, the sample-bank pipeline, the worklet contract (rebuilt, same shape), and all three scars
+boundary, the orbit concept, the sample banks, the worklet contract (rebuilt, same shape), and all three scars
 as principles. The bet held. The brain, though: the brain had to go.
