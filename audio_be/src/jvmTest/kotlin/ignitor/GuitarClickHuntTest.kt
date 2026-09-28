@@ -39,7 +39,7 @@ import kotlin.math.tanh
  * - p99Delta      — 99th percentile |delta| (excludes the periodic-saw-edge baseline)
  * - ratio         — peakDelta / p99Delta. Periodic harshness ≈ 1; real click >> 1.
  *
- * **Out of the default run** (maintainer, 2026-09-27, `docs/tasks/test-consolidation.md` section 4): it asserts
+ * **Out of the default run** (maintainer, 2026-09-27, `docs/tasks-archive/2026-09/20260928-test-consolidation.md` section 4): it asserts
  * nothing and was most of the suite's runtime, so it carries the tag [ClickHunt], which `audio_be`'s `jvmTest`
  * excludes unless asked (JVM only, so the JS suite never builds it). Run it:
  *

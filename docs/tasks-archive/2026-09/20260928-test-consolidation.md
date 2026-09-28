@@ -1,9 +1,12 @@
 # Test consolidation after the engine redesign
 
-Status: **open, audited 2026-09-27.** A sub-task of phase 3 (`builtin-instruments.md`, row "test
+Status: **DONE 2026-09-28, archived.** Commits 1 to 7 and the golden replacement landed; the maintainer decided the
+whole unsure list in one go (section 4b): **keep every entry** ("a few overlaps are ok and safe"); the two doc
+questions in it stay as they are. Echo's gain (golden-replacement item 3): **multiply** (maintainer, 2026-09-28),
+fixed in its own commit. Originally: open, audited 2026-09-27. A sub-task of phase 3 (`builtin-instruments.md`, row "test
 consolidation"). The audit is done; the maintainer's decisions are in section 4; the cuts start
-after phase 3 step 12 C3. Evidence, row by row: `test-consolidation-audit-A-effects.md`,
-`test-consolidation-audit-B-voices.md`, `test-consolidation-audit-C-hosts-doors.md`.
+after phase 3 step 12 C3. Evidence, row by row: `20260928-test-consolidation-audit-A-effects.md`,
+`20260928-test-consolidation-audit-B-voices.md`, `20260928-test-consolidation-audit-C-hosts-doors.md`.
 
 ## 1. The principle (maintainer, 2026-09-27)
 
