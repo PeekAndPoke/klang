@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.6, db = 5.0)          // thump: closed-back box resonance
+    .band(freq =  120, q = 1.6, db = 3.0)          // thump: closed-back box resonance
     .band(freq =  420, q = 0.6, db = 7.0)          // roar: low mids
     .band(freq = 2700, q = 2.0, db = 3.5)          // bark: the upper-mid speaker peak
   )
@@ -339,13 +339,13 @@ let granCassa = (() => {
  
   let ring = Osc.constant(150).div(Osc.freq()).mul(0.85)   // seconds: 2.2 s at 70 Hz
  
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
+  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.35)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Osc.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(0.5))
+  let harms = Osc.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
     .pitchEnvelope(9, x => x.adsr(0.001, 0.20, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
  
-  let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
+  let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.55)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
   let beater = Osc.whitenoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(8.00)     // wood core: a crack, the force of the hit
  
@@ -359,7 +359,7 @@ export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] 
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4)
-  .hpf(50).lpf("3300".add(sine.range(-400, 400).slow(16).early(8).pow(0.5)))
+  .hpf(50).lpf("3300".add(sine.range(-400, 400).slow(16).early(8)))
   .pan(sine.range(0.1, 0.9).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
@@ -372,8 +372,8 @@ export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.n(0).gain(0.26).velocity("0.98 0.94 0.96 0.94").pan(0.5)
-  .hpf(freq = 40).lpf(12000).adsr(0.001, 0.030, 0.30, 0.25).distort(0.02)
-  .superimpose(x => x.bpf(freq = "120", q = 1.0).vel(0.75))
+  .hpf(freq = 50).lpf(12000).adsr(0.001, 0.030, 0.30, 0.25).distort(0.02)
+  .superimpose(x => x.bpf(freq = "150", q = 1.0).vel(0.75))
 export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  //. solo()
 
