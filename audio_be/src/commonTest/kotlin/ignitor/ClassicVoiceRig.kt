@@ -161,12 +161,12 @@ object ClassicVoiceRig {
      * The baseline's rows, trimmed by the test consolidation (2026-09-28) to one row per stage and mode: every stage
      * kind, the filter envelope's shapes on `lpf` and `hpf`, the analog lane and its draw order, the envelope and
      * lifetime rows (the 44.1 kHz fractional frame counts among them), and the combinations. Each stage LAW is its
-     * own oracle spec's where one exists. Coarse, the waveshaper curves (test consolidation gap 7) and the SVF node's
-     * per-sample cutoff sweep have none yet: each mode's loop in `Ignitor.svf` carries its own copy of the sweep, and
-     * no other spec pins that sweep in exact bits (the static linear taps have `SvfNodeLawSpec`, the swept linear
-     * lowpass `EnvelopeLawSpec` at 1e-9). So their rows here are their only exact-bits guard:
-     * `coarse 7.5` (the fractional amount), one row per distort shape, and one swept row per SVF loop (`lpf`, `hpf`,
-     * `bpf`, `notch`, and the saturated `lpf` and `hpf`). These rows pin the exact bits of the whole voice.
+     * own oracle spec's: since test consolidation commit 7 (2026-09-28) that includes coarse (`CoarseLawSpec`, the
+     * fractional amount among them), the waveshaper curves (`DoorDistortionLawSpec`, every shape) and the SVF node's
+     * per-sample cutoff sweep in each of its six loops (`SvfNodeLawSpec`, against a swept oracle; the saturated loops'
+     * diode curve at literal values and their state scale and drive as literals in the oracle). The rows
+     * `coarse 7.5`, one per distort shape and one swept row per SVF loop stay until the phase 3 end checkpoint retires
+     * or regenerates the baseline. These rows pin the exact bits of the whole voice.
      */
     val rows = listOf(
         ClassicRow("untouched: the envelope alone, at the voice envelope's defaults", emptyMap()),

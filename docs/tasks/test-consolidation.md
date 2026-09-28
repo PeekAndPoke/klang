@@ -75,7 +75,8 @@ no sound change), a second role only where production code moves.
    configured variant per name (474 to 87 instances), `ClassicVoiceBaselineSpec` 61 to 28 configs;
    retired or regenerated at the phase 3 end listening checkpoint (signal-flow plan section 12 keeps a
    baseline until then).
-7. **The gaps, which ADD tests** (lane A): a law spec for `PhaserCore` (today every phaser row is
+7. **The gaps, which ADD tests** (lane A; DONE 2026-09-28 in commit 7, except that coarse got a law spec for its node's
+   loop (`CoarseLawSpec`) instead of a separate `CoarseCore`, and the DcBlocker's KDoc was corrected to the code's clamp): a law spec for `PhaserCore` (today every phaser row is
    relative, so a change inside the core moves all hosts together), an output oracle for the reverb
    network, an oracle for the doors' drive and shape distortion (three songs' guitars), a core for
    coarse, a direct `DcBlocker` spec, a bounds row for `ShapingFuncs.softCapTo` (the delay-line feedback

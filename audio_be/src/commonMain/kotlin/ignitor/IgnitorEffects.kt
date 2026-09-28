@@ -863,7 +863,8 @@ fun Ignitor.shimmer(
  * Implementation delegates to [LowPassHighPassFilters.DcBlocker]; see that class for
  * the dedup history (this used to be one of 9 inline copies before 2026-04-29).
  *
- * @param coefficient Raw IIR pole. NaN/Inf or out-of-range values fall back to 0.995. Default: 0.995.
+ * @param coefficient Raw IIR pole. A finite value is clamped to [0, 0.99999]; NaN/Inf falls back to 0.995.
+ *   Default: 0.995.
  */
 fun Ignitor.dcBlock(coefficient: Double = DEFAULT_DC_BLOCK_COEFF): Ignitor =
     DcBlockIgnitor(this, coefficient)

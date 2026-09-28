@@ -193,6 +193,61 @@ class ShapingFuncsBoundsSpec : StringSpec({
         withClue("slope below") { slopeBelow shouldBe (1.0 plusOrMinus 1e-3) }
         withClue("slope above") { slopeAbove shouldBe (1.0 plusOrMinus 1e-3) }
     }
+
+    "softCapTo: bounded by its cap, the identity below 0.95 cap, the scaled soft cap above, continuous at the knee" {
+        // The delay-line feedback saturation (test consolidation gap, 2026-09-28). The documented curve:
+        // `cap * softCap(x / cap)`, so identity to 0.95 cap, then `cap (0.95 + 0.05 tanh((|x| / cap - 0.95) / 0.05))`
+        // on the Padé tanh `t (27 + t²) / (27 + 9 t²)` (the rail past t = 3), asymptote ±cap. Measured distances: at
+        // most 5.6e-17 (the `x / cap * cap` round trip), 0 above the knee (JVM, 2026-09-28).
+        fun pade(t: Double): Double = if (t > 3.0) 1.0 else t * (27.0 + t * t) / (27.0 + 9.0 * t * t)
+
+        for (cap in listOf(0.25, 0.5, 2.0, 4.0)) {
+            val knee = 0.95 * cap
+
+            for (x in allInputs) {
+                val y = ShapingFuncs.softCapTo(x, cap)
+
+                withClue("softCapTo($x, $cap) = $y") {
+                    y.isFinite() shouldBe true
+                    abs(y) should beLessThanOrEqualTo(cap)
+
+                    if (abs(x) <= knee) {
+                        y shouldBe (x plusOrMinus 1e-15 * cap)
+                    } else {
+                        val above = cap * (0.95 + 0.05 * pade((abs(x) / cap - 0.95) / 0.05))
+
+                        y shouldBe ((if (x < 0.0) -above else above) plusOrMinus 1e-14 * cap)
+                    }
+                }
+            }
+
+            val eps = 1e-9 * cap
+            val h = 1e-6 * cap
+
+            withClue("cap $cap: value at the knee, both sides") {
+                ShapingFuncs.softCapTo(knee - eps, cap) shouldBe (knee plusOrMinus 2.0 * eps)
+                ShapingFuncs.softCapTo(knee + eps, cap) shouldBe (knee plusOrMinus 2.0 * eps)
+            }
+            withClue("cap $cap: slope 1 on both sides of the knee") {
+                ((ShapingFuncs.softCapTo(knee, cap) - ShapingFuncs.softCapTo(knee - h, cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
+                ((ShapingFuncs.softCapTo(knee + h, cap) - ShapingFuncs.softCapTo(knee, cap)) / h) shouldBe (1.0 plusOrMinus 1e-3)
+            }
+            withClue("cap $cap: a hot input reaches the cap") { ShapingFuncs.softCapTo(1e6, cap) shouldBe (cap plusOrMinus 1e-12 * cap) }
+        }
+
+        // The guards: a unity cap IS softCap, a non-finite cap falls back to it, a cap at or below 0 is silence.
+        for (x in allInputs) {
+            withClue("cap 1 @ x=$x") { ShapingFuncs.softCapTo(x, 1.0).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
+
+            for (cap in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x, cap).toRawBits() shouldBe ShapingFuncs.softCap(x).toRawBits() }
+            }
+
+            for (cap in listOf(0.0, -0.5, -2.0)) {
+                withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x, cap) shouldBe 0.0 }
+            }
+        }
+    }
 })
 
 /** One shaping function, with the tolerance of its odd symmetry, or null for a shape asymmetric by design. */

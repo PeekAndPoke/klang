@@ -427,8 +427,8 @@ object LowPassHighPassFilters {
      * post-distort/post-clip pair this with `ShapingFuncs.softCap()` to bound output to ±1.
      *
      * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`
-     * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. NaN/Inf and out-of-range values
-     * are guarded — non-finite or `a ∉ [0, 1)` falls back to [DEFAULT_DC_BLOCK_COEFF].
+     * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. A finite coefficient is clamped to
+     * `[0, 0.99999]`; a non-finite one falls back to [DEFAULT_DC_BLOCK_COEFF] (0.995).
      *
      * Block-based API matches the [AudioFilter] convention so JIT keeps state in
      * registers across the loop. See file header for the dedup history.
