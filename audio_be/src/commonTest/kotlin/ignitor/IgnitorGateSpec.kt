@@ -53,7 +53,7 @@ private val NAN_SAFE_ADSR_KNOBS: Set<String> = setOf(
  *
  * The rule, why it exists and why it is restricted to the `Param` and `Constant` leaves are all in
  * `IgnitorDslRuntime`'s `gatedOff` KDoc; the off VALUES are one table, in
- * `docs/tasks/builtin-instruments.md` section 5b. This spec is what holds both to their word.
+ * `audio/ref/off-values.md`. This spec is what holds both to their word.
  *
  * Every stage row is the same shape and says the same two things, because an optimisation that
  * only ever fires is as broken as one that never does:

@@ -53,9 +53,9 @@ three differently factored sets of effects, is the outcome this task exists to p
   compile-time only" and keeps its reason: the factor defines the timeline the region's signals are
   drawn on.
 - **Factor 1 builds no region.** Bit-identical and free; one more row in the off-value table
-  (`builtin-instruments.md` section 5b) when it lands.
+  (`../tasks-archive/2026-09/20260928-builtin-instruments.md` section 5b) when it lands.
 - **Ordering.** Once the current plan is fully complete. Phase 3 drops its oversampling sub-tasks
-  except one stopgap (`builtin-instruments.md` D7, decided (a)): distort's existing `oversample` becomes
+  except one stopgap (`../tasks-archive/2026-09/20260928-builtin-instruments.md` D7, decided (a)): distort's existing `oversample` becomes
   a knob read at voice build so `classic()` can fill it, which keeps phase 3's step 6 identity. This
   task retires that knob with the rest of the per-effect oversampling.
 

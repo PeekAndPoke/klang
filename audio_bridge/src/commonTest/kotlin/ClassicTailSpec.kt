@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_bridge.constants.ENV_DECLICK_SECONDS
 /**
  * `classic()`'s STRUCTURE and its SLOT VOCABULARY (phase 3 step 5), pinned where they are written.
  *
- * The order is the strip's (`docs/tasks/builtin-instruments.md` section 4) behind the pattern's onepole
+ * The order is the strip's (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4) behind the pattern's onepole
  * (its first stage since step 10): onepole, crush, coarse, distort, highpass, bandpass, notch, lowpass,
  * tremolo, adsr. The slot table below is the contract step 8 built
  * on (sprudel's `toVoiceData` writes exactly these keys, `classicSlotParams`), so a renamed key or a moved

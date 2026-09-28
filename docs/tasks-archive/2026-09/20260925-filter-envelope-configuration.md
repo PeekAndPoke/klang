@@ -1,6 +1,6 @@
 # Configurable filter envelopes (filter curves, and beyond)
 
-**DONE 2026-09-25, archived** (phase 3 step 5b c2, `docs/tasks/builtin-instruments.md` D3 (3)): the doors are
+**DONE 2026-09-25, archived** (phase 3 step 5b c2, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` D3 (3)): the doors are
 `lpfCurves`, `hpfCurves`, `bpfCurves` and `notchCurves(attack, decay, release)`, named after their filter doors
 (`<door>Curves`, like `adsrCurves` and `penvCurves`), superseding the `lpCurves` names below; `FilterEnvDef` carries
 `attackCurve`/`decayCurve`/`releaseCurve`, unset = `MOD_ENV_CURVE` (exponential); `classic()` has the matching

@@ -8,7 +8,7 @@
 > which resolves D2, D4 and D5 and retires the owner-voice override of §2 below (the voice fields
 > it overrode leave the wire in that plan; the bus doors become `katp` aliases).
 >
-> **Note 2026-09-28, phase 3 step 12** ([`../plans/phase3-step12-master-as-katalyst.md`](../plans/phase3-step12-master-as-katalyst.md)):
+> **Note 2026-09-28, phase 3 step 12** ([`../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`](../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)):
 > the Master DSL this design mirrored is gone. The output runs a Katalyst chain (`master(Katalyst(k => ...))`),
 > one `KatalystRegistry` and one `RegisterKatalyst` serve both positions, and the master swaps by the orbit's law
 > (`ChainSwap`: the leaving chain's input ramps down, then it drains; no output blend, no cut). Every comparison

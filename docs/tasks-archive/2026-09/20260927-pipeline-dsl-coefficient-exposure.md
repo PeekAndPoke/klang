@@ -1,7 +1,7 @@
 # Pipeline DSL — give every engine coefficient a home
 
 > **Closed 2026-09-27, archived:** the Pipeline DSL this tracker targeted retired with the voice strip in phase 3
-> step 9 (`docs/tasks/builtin-instruments.md` row 9); the survey below is kept as history, and a coefficient that
+> step 9 (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` row 9); the survey below is kept as history, and a coefficient that
 > still wants a DSL home is a new task on the Ignitor or Katalyst surface.
 
 **Status:** planned (inventory done 2026-08-11) · **Precursor:** ✅ `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md`

@@ -2,7 +2,7 @@
 
 ## The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12, 2026-09-28)
 
-Plan and decisions (a) to (j): `docs/plans/phase3-step12-master-as-katalyst.md`.
+Plan and decisions (a) to (j): `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` (archived 2026-09-28).
 
 - **One chain type, two positions.** `.master()` takes a `KatalystDsl` (`master(Katalyst(k => ...))`,
   `master(Katalyst())` switches it off). `MasterBus` runs a `KatalystChain` over the playback's summed orbits,
@@ -33,8 +33,11 @@ Plan and decisions (a) to (j): `docs/plans/phase3-step12-master-as-katalyst.md`.
   5 ms) stays always on and is not authorable.
 - **A refused master unit recovers like an orbit's** (decision (h)): the stage stays Off (dry) and re-asks the shelf
   every block without allocating.
-- **Open:** risk R0 (the house `MasterStage` clip is tested only through a copy); `MasterBus` and `Cylinder` both carry
-  chain-host plumbing (`docs/tasks/future/one-chain-host.md`).
+- **Closed 2026-09-28:** risk R0 (the house clip is `pcm16`/`interleavePcm16` in `MasterStage.kt`, tested for real by
+  `KlangAudioRendererSpec` and `MasterStageSpec`; a non-finite sample cannot reach it as a rail: the limiter's
+  lookahead ring stores it as 0). **Open:** `MasterBus` and `Cylinder` both carry
+  chain-host plumbing (`docs/tasks/future/one-chain-host.md`); decision (g), a request waits for the drain, is a
+  question for the maintainer's ear (`docs/tasks/by-ear/chain-swap-request-during-drain.md`).
 
 ## The voice strip and the Pipeline DSL retire; every voice is its tree (phase 3 step 9, 2026-09-27)
 
@@ -50,7 +53,8 @@ Plan and decisions (a) to (j): `docs/plans/phase3-step12-master-as-katalyst.md`.
   `Voice.Phaser`/`Tremolo`/`Distort`/`Crush`/`Coarse`/`FilterModulator`, `Voice.Envelope.of`, and the Pipeline DSL
   with `PipelineRegistry` and `Cmd.RegisterPipeline`. `Voice.Envelope` stays (FM and the pitch envelope). The
   shared cores (`EnvelopeCore`, `CrushCore`, `DistortionCore`, `TremoloCore`, `PhaserCore`, `Oversampler`) stay.
-  The strip's sound is frozen as `ClassicVoiceBaselineSpec` and the built-in matrix baseline.
+  The strip's sound is frozen as `ClassicVoiceBaselineSpec` and the built-in matrix baseline (retired or regenerated
+  at the phase 3 end checkpoint: `docs/tasks/by-ear/phase3-end-checkpoint.md`).
 - **Gone (commit a2):** the strip-only SVF classes (`SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`,
   `createLPF`/`HPF`/`BPF`/`Notch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()`,
   `AudioFilter.Tunable`). `BaseSvf`, `SvfBPF`, the OnePoles and `butterworthQLadder` stay; the voice's filter
@@ -224,7 +228,7 @@ Plan and decisions (a) to (j): `docs/plans/phase3-step12-master-as-katalyst.md`.
 
 ## `classic()`: the voice strip as a slotted tail, and the filter envelope's slot-layer fill (2026-09-25)
 
-Phase 3 step 5 (`docs/tasks/builtin-instruments.md` section 9), identity-preserving: no built-in is
+Phase 3 step 5 (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 9), identity-preserving: no built-in is
 re-registered (that is step 6), so no song can change.
 
 - **One function, one order.** `IgnitorDsl.classic()` (`audio_bridge/IgnitorDslClassic.kt`) wraps a
@@ -273,7 +277,7 @@ re-registered (that is step 6), so no song can change.
 
 ## The envelopes: one adsr shape, curve index knobs, an on switch, one exp bend (2026-09-25)
 
-Phase 3 step 3c (`docs/tasks/builtin-instruments.md` section 3b, the envelope sub-table), identity-preserving.
+Phase 3 step 3c (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3b, the envelope sub-table), identity-preserving.
 
 - **One `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` everywhere.** The chain's lambda
   gets an `AdsrBuilder` (`curves`, `declick`); the filter and pitch builders' `adsr` get a `ModAdsrBuilder`
@@ -314,7 +318,7 @@ Phase 3 step 3c (`docs/tasks/builtin-instruments.md` section 3b, the envelope su
 
 ## The waveshaper and tremolo knobs: one tremolo law, index shapes, a build-time factor (2026-09-25)
 
-Phase 3 step 3b (`docs/tasks/builtin-instruments.md`), identity-preserving.
+Phase 3 step 3b (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`), identity-preserving.
 
 - **One tremolo law, `TremoloCore`.** The strip's `TremoloRenderer` and the Ignitor `Tremolo` node are thin
   wrappers around it; the per-sample loop is the strip's, moved verbatim. The node gained `shape` (an index
@@ -524,7 +528,7 @@ Then the 10-bank pool went too, and the fade got its own constant.
 ## The filter nodes grew a cutoff envelope and a per-voice lane (2026-09-20)
 
 Phase 3 step 3a of `docs/plans/signal-flow-redesign.md` (the missing-knobs table is
-`docs/tasks/builtin-instruments.md` section 4, first two rows). The four SVF filter nodes
+`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4, first two rows). The four SVF filter nodes
 (`IgnitorDsl.Lowpass`, `Highpass`, `Bandpass`, `Notch`) now carry the cutoff ENVELOPE as five
 knobs (`env`, `attackSec`, `decaySec`, `sustainLevel`, `releaseSec`) and the per-voice analog
 character as ONE structural flag (`humanize`). Both doors, same names, same defaults.
@@ -561,7 +565,7 @@ character as ONE structural flag (`humanize`). Both doors, same names, same defa
   filter's tolerance first and every filter's drift afterwards, in two passes over the filter
   list, and it draws all of that BEFORE the exciter is built. A recursive per-node build
   interleaves them and draws during the exciter. So at `analog > 0` with more than one filter the
-  stream shifts, which is exactly what `docs/tasks/builtin-instruments.md` section 8 already says
+  stream shifts, which is exactly what `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 8 already says
   identity cannot survive. Nothing in step 3a is reached by it (no built-in sets `humanize`).
 - **Fusion refuses both.** `IgnitorDslOptimizer.asFusibleSections` now also refuses a filter whose
   `env` is anything but a literal zero, and any filter with `humanize`: an `EqSection` carries
@@ -605,7 +609,7 @@ Phase 3 step 2 of `docs/plans/signal-flow-redesign.md`. At voice build, a stage 
 is a `Param` or `Constant` LEAF and resolves to the unset sentinel or to that stage's OFF value is
 not built: the arm in `IgnitorDslRuntime.buildRaw` returns the inner. Everything about the rule
 lives in that file's `gatedOff` KDoc; the off VALUES are one table, in
-`docs/tasks/builtin-instruments.md` section 5b; `IgnitorGateSpec` holds both to their word.
+`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 5b; `IgnitorGateSpec` holds both to their word.
 
 - **It is the optimisation phase 3 stands on.** One voice, 128-frame blocks, JVM, min..max of
   3 x 200k blocks, base commit against the tree: a nine-stage slotted tail with nothing written
@@ -2233,7 +2237,9 @@ Second half of the signal-flow plan's phase 2 (spots A and C). The first half is
   note asks of the engine from its OPTIMIZED tree: passes over the block, block-buffer reads plus
   writes per sample, bytes of held state, with a weight per node kind read off the runtime
   lowering (shared nodes once plus a memo read per extra consumer, scalar-only arithmetic
-  nothing, the first variant only). `GraphCensusSpec` pins hand-counted graphs. The song
+  nothing, the first variant only). It does NOT model the build gate: every `classic()` stage of a built-in
+  counts as built, set or not (phase 3 record section 2), so read the `work` column of a built-in with that in
+  mind. `GraphCensusSpec` pins hand-counted graphs. The song
   benchmark sums it over the rendering voices after each measured block
   (`VoiceScheduler.renderingVoiceSounds()`, zombies excluded) and reports `voices`, `work`,
   `traffic`, `KiB`, `ns/smp/voice` and `ns/smp/pass`, the last being the engine's cost per unit

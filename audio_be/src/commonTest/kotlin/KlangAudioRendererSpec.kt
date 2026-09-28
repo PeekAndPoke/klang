@@ -91,7 +91,7 @@ class KlangAudioRendererSpec : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Clipping boundaries (unit-level: a COPY of MasterStage.process's clip, see the helpers below)
+    // Clipping boundaries (unit-level: the real pcm16 that MasterStage.process runs per sample)
     // ═════════════════════════════════════════════════════════════════════════════
 
     "clip: in [-1, 1] scales by Short.MAX_VALUE and truncates, above clamps to MAX, below to MIN" {
@@ -118,12 +118,22 @@ class KlangAudioRendererSpec : StringSpec({
         )
 
         for ((sample, expected) in table) {
-            withClue("sample $sample") { clipSample(sample).toInt() shouldBe expected }
+            withClue("sample $sample") { pcm16(sample).toInt() shouldBe expected }
         }
     }
 
+    "clip: non-finite samples, today's behaviour pinned (NaN is a full-scale negative click)" {
+        // NaN fails both `in [-1, 1]` and `> 1`, so it takes the last branch: Short.MIN_VALUE. That
+        // is a click, and it is pinned here as it is, not endorsed: through MasterStage.process no
+        // NaN reaches the clip, because the house limiter's ring stores non-finite samples as 0.0
+        // (MasterStageSpec guards that end to end). Changing the NaN branch is a sound decision.
+        pcm16(Double.NaN) shouldBe Short.MIN_VALUE
+        pcm16(Double.POSITIVE_INFINITY) shouldBe Short.MAX_VALUE
+        pcm16(Double.NEGATIVE_INFINITY) shouldBe Short.MIN_VALUE
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
-    // Stereo interleaving
+    // Stereo interleaving (the real interleavePcm16 that MasterStage.process runs per block)
     // ═════════════════════════════════════════════════════════════════════════════
 
     "interleave: output is [L0, R0, L1, R1, ...]" {
@@ -132,7 +142,7 @@ class KlangAudioRendererSpec : StringSpec({
         val right = doubleArrayOf(0.5, 0.6, 0.7, 0.8)
         val out = ShortArray(frames * 2)
 
-        clipAndInterleave(left, right, frames, out)
+        interleavePcm16(left, right, frames, out)
 
         val maxShort = Short.MAX_VALUE
 
@@ -150,7 +160,7 @@ class KlangAudioRendererSpec : StringSpec({
         val right = doubleArrayOf(-1.5, -0.5, 1.5, 0.5)
         val out = ShortArray(frames * 2)
 
-        clipAndInterleave(left, right, frames, out)
+        interleavePcm16(left, right, frames, out)
 
         val maxShort = Short.MAX_VALUE
 
@@ -281,60 +291,6 @@ class KlangAudioRendererSpec : StringSpec({
         }
     }
 })
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Helper functions replicating the renderer's post-processing logic
-// ═════════════════════════════════════════════════════════════════════════════
-
-/**
- * A copy of the clip in [MasterStage.process] (the renderer's output stage), for a single sample.
- * A copy, not a call: a change to the production clip does not reach these rows.
- */
-private fun clipSample(sample: AudioSample): Short {
-    val maxShort = Short.MAX_VALUE
-
-    val out = if (sample >= -1.0 && sample <= 1.0) {
-        (sample * maxShort).toInt()
-    } else if (sample > 1.0) {
-        Short.MAX_VALUE.toInt()
-    } else {
-        Short.MIN_VALUE.toInt()
-    }
-
-    return out.toShort()
-}
-
-/**
- * A copy of the clip + interleave loop in [MasterStage.process], with the same caveat as [clipSample].
- */
-private fun clipAndInterleave(left: AudioBuffer, right: AudioBuffer, blockFrames: Int, out: ShortArray) {
-    val maxShort = Short.MAX_VALUE
-
-    for (i in 0 until blockFrames) {
-        val lSample = left[i]
-        val rSample = right[i]
-
-        val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
-            (lSample * maxShort).toInt()
-        } else if (lSample > 1.0) {
-            Short.MAX_VALUE.toInt()
-        } else {
-            Short.MIN_VALUE.toInt()
-        }
-
-        val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
-            (rSample * maxShort).toInt()
-        } else if (rSample > 1.0) {
-            Short.MAX_VALUE.toInt()
-        } else {
-            Short.MIN_VALUE.toInt()
-        }
-
-        val idx = i * 2
-        out[idx] = lOut.toShort()
-        out[idx + 1] = rOut.toShort()
-    }
-}
 
 private infix fun Double.shouldBeLessThan(other: Double) {
     if (this >= other) {

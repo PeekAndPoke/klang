@@ -39,7 +39,7 @@ const val ADSR_EXP_K: Double = 3.0
  * or reads as a bad index, falls back to it too.
  *
  * It is [AdsrCurve.Exponential], the house curve every other envelope already had
- * ([AdsrCurve.Default], bending at [ADSR_EXP_K]): decision D3 of `docs/tasks/builtin-instruments.md`
+ * ([AdsrCurve.Default], bending at [ADSR_EXP_K]): decision D3 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`
  * (maintainer, 2026-09-25), which moved the Ignitor filter, pitch and FM envelopes off the LINEAR
  * law they had before, a deliberate sound change. It stays a constant of its own, and not a
  * reference to [AdsrCurve.Default], because the maintainer recorded the modulation envelopes'

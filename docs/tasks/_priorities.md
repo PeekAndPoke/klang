@@ -141,6 +141,23 @@ The release-defining set, regardless of when they're sequenced:
     (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
     silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;
     measure the win via `runSongBenchmark`.
+22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
+    [`20260928-builtin-instruments.md`](../tasks-archive/2026-09/20260928-builtin-instruments.md)):
+    - **By ear, owed:** [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) (retire or regenerate
+      the two voice baselines) and [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)
+      (step 12 decision (g)).
+    - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
+      (step 11: warn on doors an instrument does not hear, a string in a wet slot).
+    - **NICE, a naming decision:** [`future/tremolo-rate-naming-parity.md`](future/tremolo-rate-naming-parity.md)
+      (sprudel's `sync` against the Ignitor's `rate`).
+    - **NICE, parked:** [`future/svf-resonator-class-collapse.md`](future/svf-resonator-class-collapse.md) (dead
+      sweep code in `BaseSvf`/`SvfBPF`), [`future/pitch-pipeline-into-the-tree.md`](future/pitch-pipeline-into-the-tree.md)
+      (vibrato, accelerate, `penv`, `fm` still outside the tree).
+    - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
+      curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
+      [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),
+      [`oversampling-regions.md`](oversampling-regions.md) (the D7 stopgap, crush and coarse oversampling, the
+      distort cap), [`future/stored-lambda-type-inference.md`](future/stored-lambda-type-inference.md).
 
 ## Blocked / off-plan / parked
 

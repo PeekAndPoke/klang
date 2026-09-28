@@ -454,8 +454,7 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  * runs per block. The ON path's build cost is not measured by any benchmark here.
  *
  * @param isOff the stage's own off test, applied to a FINITE value only. The off values are one
- *   table and it lives in `docs/tasks/builtin-instruments.md`, section 5b; each call site below
- *   carries its row.
+ *   table and it lives in `audio/ref/off-values.md`; each call site below carries its row.
  */
 private inline fun IgnitorDsl.gatedOff(
     oscParams: Map<String, Double>?,
@@ -624,7 +623,7 @@ private fun filterEnvDef(
 
 /**
  * **The compound fill for the filter envelope, answered at the SLOT layer** (phase 3 step 5; decided by
- * the maintainer 2026-09-25, `docs/tasks/builtin-instruments.md` section 5b's neighbourhood). The rule's
+ * the maintainer 2026-09-25, `audio/ref/off-values.md`'s neighbourhood). The rule's
  * text has one home, `/dsl-design` section 4; this is what a SLOTTED filter does under it.
  *
  * A slotted filter (`classic()`'s) never calls the door per note, so the door's fill, which reads
@@ -1273,7 +1272,7 @@ private fun IgnitorDsl.buildRaw(
         // ── Envelope: pass mod through ──
 
         // GATE ROW `the envelope`: OFF only at an explicit `on` of exactly 0.0; UNSET IS ON. Inverted
-        // from the plan's sketch on purpose (the spike corrected it, `docs/tasks/builtin-instruments.md`
+        // from the plan's sketch on purpose (the spike corrected it, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`
         // section 5): the voice strip's VCA ran on EVERY voice with the voice envelope (`VOICE_ADSR_*`) when the
         // pattern set nothing, and since step 6 a built-in's classic ADSR is that VCA, so it has to be
         // built BY DEFAULT, and only an explicit `adsrOff` (filled into `on` by `classic()`) switches it

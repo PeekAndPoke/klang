@@ -30,7 +30,7 @@ import kotlin.random.Random
  *
  * Until step 9 this spec rendered each row a second time with the name's SOURCE registered as an authored
  * instrument, so the voice strip ran after it, and compared the two (phase 3 step 6): every row bit-identical,
- * except the recorded cost of section 8 of `docs/tasks/builtin-instruments.md` (`perlin`, `berlin` and `crackle`
+ * except the recorded cost of section 8 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (`perlin`, `berlin` and `crackle`
  * draw from the voice's stream when CONSTRUCTED, so with `analog > 0` and one filter the tree's filter draw comes
  * after theirs). Before the strip was deleted, every row's built-in render was fingerprinted on the tree that still
  * had it ([rawBitsHash]); those fingerprints are pinned here, regenerated at a listening checkpoint when a change

@@ -24,13 +24,15 @@
 - An authored instrument that does NOT end in `classic()` gets none of these doors on its strip from step 8 on (the
   strip reads typed fields that are no longer sent; a `classic()` inside the tree, or a tree reading a slot itself,
   now receives them there instead): accepted by the maintainer for the window up to step 9, on condition that the
-  branch does not merge between step 8 and step 9 and step 11's editor diagnostic lands before the merge.
+  branch does not merge between step 8 and step 9 and step 11's editor diagnostic lands before the merge. (The
+  second condition was dropped when the maintainer deferred step 11, 2026-09-27; the diagnostic's home is
+  `docs/tasks/future/editor-voice-door-diagnostics.md`.)
 
 ## `phaser`, `body` and `vowel` are wet-first (2026-09-24, phase 3 step 3d(iii))
 
 - **The doors are `phaser(wet, rate, center, sweep, floor)`, `body(wet, material, floor)` and
-  `vowel(wet, vowel, floor)`**: the maintainer's wet rule (`docs/tasks/builtin-instruments.md`
-  section 3b, `/dsl-design` §2), the same order the Ignitor and Katalyst doors took in 3d(i) and
+  `vowel(wet, vowel, floor)`**: the maintainer's wet rule (`.claude/skills/dsl-design/door-shapes.md`
+  (the record's section 3b), `/dsl-design` §2), the same order the Ignitor and Katalyst doors took in 3d(i) and
   3d(ii). Still flat: sprudel has no builder layer. The entries below that name the old order
   (batch E, batch G) are the history of those steps.
 - **A bare call reinterprets the pattern's values as the WET** on all three

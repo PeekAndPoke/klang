@@ -378,7 +378,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 )
     }
 
-    // ── The door shapes (phase 3 step 3d(ii), `docs/tasks/builtin-instruments.md` section 3b) ──
+    // ── The door shapes (phase 3 step 3d(ii), `.claude/skills/dsl-design/door-shapes.md`) ──
     //
     // Every row below LOOPS over [doors], the whole family, and compares THREE forms: the script
     // door, the Kotlin door (the same builder function called from Kotlin) and the stage data class

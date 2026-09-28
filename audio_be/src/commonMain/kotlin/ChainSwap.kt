@@ -14,7 +14,7 @@ import kotlin.math.max
  * The swap of a whole effect chain under live audio: the chain leaving service fades out through
  * its INPUT while the arriving chain's output fades in over [Crossfade], and then the leaving chain
  * rings out (drains) on silent input at full weight until it has no tail left. Phase 3 step 12 C1
- * (`docs/plans/phase3-step12-master-as-katalyst.md` section 6) moved it out of `Cylinder`, where it
+ * (`docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` section 6) moved it out of `Cylinder`, where it
  * was five fields, into three states (`docs/plans/effect-state-machines.md`, the delay's shape).
  *
  * **The capped drain** (step 12 decision (i), maintainer 2026-09-28). A drain has a maximum age,

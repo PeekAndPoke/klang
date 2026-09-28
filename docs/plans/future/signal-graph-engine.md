@@ -1,7 +1,7 @@
 # The engine as a signal graph; sprudel's layout as one built-in graph
 
 Status: FUTURE, a long-term vision (maintainer, 2026-09-25). Tackled after the current engine
-redesign workstream (`docs/tasks/builtin-instruments.md` phase 3 and the signal-flow plan) is fully
+redesign workstream (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` phase 3 and the signal-flow plan) is fully
 finished: "finishing the current workstream fully does not hurt. It lays a lot of foundations."
 
 ## 1. The idea, in the maintainer's words
@@ -40,8 +40,8 @@ general mechanism, and a frontend chooses a routing.
   `EnvelopeCore`, `SvfCoeffSweep`): a Katalyst stage and a master stage can already run the same code (since
   phase 3 step 12 they ARE the same stage: the output runs a `KatalystChain`).
   Part 2 needs exactly this.
-- The door shapes are one shape per concept across the Ignitor and Katalyst DSLs (section 3b
-  of the phase 3 record; the Master DSL merged into the Katalyst in phase 3 step 12): the surfaces are already
+- The door shapes are one shape per concept across the Ignitor and Katalyst DSLs (`.claude/skills/dsl-design/door-shapes.md`,
+  once section 3b of the phase 3 record; the Master DSL merged into the Katalyst in phase 3 step 12): the surfaces are already
   nearly the same.
 - The signal-flow plan section 7 made the Katalyst chain an instrument-like list whose reverb and
   delay are insert stages; since phase 3 step 12 the master is that same chain at the output position
@@ -65,7 +65,7 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   sealed `InlineDsl` wire type, the maintainer's visitor idea, name to be decided);
 - the orbit concept: voices summed per orbit, the cylinder per orbit, sends, ducking and the compressor by orbit;
 - ~~the Katalyst (per orbit) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds~~
-  DONE 2026-09-28 (phase 3 step 12, `docs/plans/phase3-step12-master-as-katalyst.md`): one chain type
+  DONE 2026-09-28 (phase 3 step 12, `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`): one chain type
   (`KatalystDsl`, `KatalystChain`), one registry fork per playback, one `Cmd.RegisterKatalyst`, one swap law
   (`ChainSwap`). What is left of it is two HOSTS of that chain, `Cylinder` and `MasterBus`, with duplicated plumbing:
   `docs/tasks/future/one-chain-host.md`;
@@ -157,6 +157,6 @@ kick's reverb tail also holds the duck), the follower's shape and defaults, the 
 ## Links
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
-- `docs/tasks/builtin-instruments.md` (phase 3: `classic()`, the door shapes, the shared cores).
+- `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (phase 3, archived 2026-09-28: `classic()`, the door shapes, the shared cores).
 - `docs/tasks/katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
-- `docs/plans/phase3-step12-master-as-katalyst.md` (the master became a Katalyst at the output).
+- `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` (the master became a Katalyst at the output).

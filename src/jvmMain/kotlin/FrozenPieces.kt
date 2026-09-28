@@ -17,7 +17,7 @@ package io.peekandpoke.klang
  * one stays so its rows remain comparable.
  *
  * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
- * `docs/tasks/builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
  * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
  * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
  * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,

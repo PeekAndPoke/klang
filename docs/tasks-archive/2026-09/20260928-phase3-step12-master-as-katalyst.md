@@ -6,11 +6,17 @@
 > the shim retired; C4 the master on the shared `ChainSwap` (the old chain drains, listening pair accepted); the
 > capped drain (decision (i), `ChainSwap` Releasing, `TailRelease`) and no hard cut after stop (decision (j): only an
 > endless tail triggers the release, of the engine's whole output; the rule's home is the `PlaybackEngine.isIdle` KDoc); C6 the docs sweep. Decisions (a) to (j) are section 0. The inventory below is the
-> planner's snapshot of 2026-09-27 and names code that is gone now. **Stays open:** risk R0 (the house
-> `MasterStage` clip is exercised only through a copy in `KlangAudioRendererSpec`, no row through
-> `MasterStage.process`); decision (g) (a request waits for the drain) as a question for the maintainer's ear; the
+> planner's snapshot of 2026-09-27 and names code that is gone now. **Stays open:** decision (g) (a request waits for the drain) as a question for the maintainer's ear; the
 > duplicated chain-host plumbing of `MasterBus` and `Cylinder`, a possible follow-up
-> ([`../tasks/future/one-chain-host.md`](../tasks/future/one-chain-host.md)).
+> ([`../../tasks/future/one-chain-host.md`](../../tasks/future/one-chain-host.md)).
+>
+> **Archived 2026-09-28 with the phase 3 record** (`20260928-builtin-instruments.md`, beside this file): the plan is
+> finished. Decision (g) now lives in
+> [`../../tasks/by-ear/chain-swap-request-during-drain.md`](../../tasks/by-ear/chain-swap-request-during-drain.md), the
+> chain-host follow-up and the `cylinders/katalyst/` package name in `one-chain-host.md`; risk R0 was CLOSED
+> the same day (the clip extracted as `pcm16`/`interleavePcm16` and tested for real; see the R0 entry below). The risks R1 to R9 below are the plan's record: R1 was answered by C3's identity render, R4 and R5
+> are pinned (`MasterBusAdoptionSpec`, the `MasterBus` KDoc), R6 is decision (g), R8 is a release note, R2, R3, R7
+> and R9 were accepted as written.
 
 Planner's inventory, 2026-09-27, branch `engine-redesign` at `f848c86b`; the maintainer's decisions of the same day are section 0. Read-only: nothing in the repo was
 edited, no Gradle run. Every code claim carries `file:line` and was read; anything not read is marked
@@ -283,7 +289,7 @@ Root `CLAUDE.md` (retired list; guardrail row `:86` per decision a), `.claude/sk
 `docs/tasks/master-dsl-followups.md` (sections 1, 5, 7), `docs/tasks/katalyst-master-configure-doors.md`
 (`.master(m => ...)` becomes `.master(k => ...)`), `docs/plans/effect-state-machines.md` (status line and the
 section 3 row), `docs/plans/future/signal-graph-engine.md` section 3 seed list, `docs/tasks/builtin-instruments.md`
-row 12.
+row 12 (archived as `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`).
 
 ---
 
@@ -696,7 +702,11 @@ limiter songs).
 - R0 (found in test consolidation commit 5, 2026-09-28): the house `MasterStage` clip (both clamp branches, the
   `-1.0 -> -32767` boundary) is exercised by no spec through `MasterStage.process`; `KlangAudioRendererSpec`'s clip
   table tests a copy. Give it a real row in this step (a production seam for the clip, or a `MasterStage` row that
-  drives the clip past the limiter).
+  drives the clip past the limiter). **CLOSED 2026-09-28:** both: the clip is `pcm16` (top-level, inline) and
+  `interleavePcm16` (one call per block), bit-identical output, `KlangAudioRendererSpec` tests it directly (the copies deleted), `MasterStageSpec`
+  drives both rails through `process()` with a +60 dBFS sine. A non-finite sample cannot reach the clip: the limiter's
+  lookahead ring stores it as 0 (no rail click: a 2-sample dropout, and a small step the DC blocker's state reset leaves, decaying
+  over about 20 ms); a row pins that.
 
 - R1 rent order (7.3): the one identity risk for the corpus; the C3 render answers it.
 - R2 the fast path (7.3): live multi-playback last-bit summation only.

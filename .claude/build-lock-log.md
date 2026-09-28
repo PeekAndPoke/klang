@@ -680,4 +680,4 @@ count.
 Step 9 is committed in four parts: (a) the voice strip and the Pipeline DSL, (a2) the strip-only SVF classes, (b) the
 `VoiceData` cut, (c) the docs sweep. The "steps 8 to 9 window" row closed with it: every authored instrument that ends
 in `classic()` gets the doors again, one without it plays as its bare tree. Merging `engine-redesign` is the
-maintainer's decision, with the release-note list in `docs/tasks/builtin-instruments.md` at hand.
+maintainer's decision, with the release-note list in `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` at hand.

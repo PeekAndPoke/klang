@@ -122,35 +122,42 @@ class MasterStage(
         // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
         limiter.process(mix.left, mix.right, blockFrames)
 
-        // Transparent clip + interleave. Most samples are within [-1, 1]; we skip all math for
-        // them to preserve CPU and unity-gain transparency.
-        val left = mix.left
-        val right = mix.right
-        val maxShort = Short.MAX_VALUE
+        // Transparent clip + interleave into the platform's 16-bit PCM.
+        interleavePcm16(mix.left, mix.right, blockFrames, out)
+    }
+}
 
-        for (i in 0 until blockFrames) {
-            val lSample = left[i]
-            val rSample = right[i]
+/**
+ * The master's clip + stereo interleave: writes `[L0, R0, L1, R1, ...]` into [out] (which must hold
+ * `2 * frames` shorts), every sample through [pcm16]. [MasterStage.process] runs it once per block,
+ * after the limiter; it is its own function so the specs exercise the real loop, not a copy.
+ */
+internal fun interleavePcm16(left: AudioBuffer, right: AudioBuffer, frames: Int, out: ShortArray) {
+    for (i in 0 until frames) {
+        val idx = i * 2
+        out[idx] = pcm16(left[i])
+        out[idx + 1] = pcm16(right[i])
+    }
+}
 
-            val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
-                (lSample * maxShort).toInt()
-            } else if (lSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
-                (rSample * maxShort).toInt()
-            } else if (rSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            val idx = i * 2
-            out[idx] = lOut.toShort()
-            out[idx + 1] = rOut.toShort()
-        }
+/**
+ * One sample to 16-bit PCM: in `[-1, 1]` it scales by [Short.MAX_VALUE] and truncates (so -1.0 lands
+ * on `-Short.MAX_VALUE`, not on [Short.MIN_VALUE]); above 1 it is [Short.MAX_VALUE], anything else
+ * [Short.MIN_VALUE]. Most samples are in range, and they take the first branch with no clamp math.
+ *
+ * NaN fails both comparisons and lands on [Short.MIN_VALUE], a full-scale negative click. It cannot
+ * arrive through [MasterStage.process]: the house limiter's delay ring stores every non-finite
+ * sample as 0.0 (`Compressor.processLookahead`), so the clip only ever sees finite values.
+ *
+ * Inline so the hot loop in [interleavePcm16] stays one flat body on both platforms.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun pcm16(sample: AudioSample): Short {
+    return if (sample >= -1.0 && sample <= 1.0) {
+        (sample * Short.MAX_VALUE).toInt().toShort()
+    } else if (sample > 1.0) {
+        Short.MAX_VALUE
+    } else {
+        Short.MIN_VALUE
     }
 }

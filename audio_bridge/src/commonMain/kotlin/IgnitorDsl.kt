@@ -1777,7 +1777,7 @@ sealed interface IgnitorDsl {
          * The envelope's ON/OFF switch, read ONCE at voice build from a [Param] or [Constant] leaf.
          * OFF is exactly `0.0`; anything else is ON, and so is UNSET (a non-finite value) and a
          * non-leaf: the house flag rule (a non-zero number is on), and the envelope is built by
-         * default (`docs/tasks/builtin-instruments.md` section 5b, the envelope row).
+         * default (`audio/ref/off-values.md`, the envelope row).
          *
          * A NODE FIELD ONLY, deliberately: no Ignitor door writes it. `classic()` fills it from
          * sprudel's `adsrOn`/`adsrOff`; on the Ignitor doors, not writing `adsr()` already means no
@@ -1883,7 +1883,7 @@ sealed interface IgnitorDsl {
      *   1 or less is no oversampler, today's plain path). **Read ONCE, at voice build**, the same
      *   leaf-only way as [shape] (a non-leaf is 0, off), and truncated to a whole factor, as the
      *   pattern door's `asIntOrNull` does; a non-finite one is off. No upper clamp (the Motor stays
-     *   raw). A STOPGAP (decision D7, `docs/tasks/builtin-instruments.md` section 3): a knob so that
+     *   raw). A STOPGAP (decision D7, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3): a knob so that
      *   `classic()` can fill it from `distort.oversample`, and `docs/tasks/oversampling-regions.md`
      *   retires it for a region. Default: 0 (off).
      */
@@ -1900,7 +1900,7 @@ sealed interface IgnitorDsl {
 
     /**
      * Drive and shape as ONE unit, gated as a whole on [amount] (the `distort` row of the off-value
-     * table, `docs/tasks/builtin-instruments.md` section 5b). Neither authoring door builds it: both
+     * table, `audio/ref/off-values.md`). Neither authoring door builds it: both
      * spell `distort` as `Shape(Drive(...))`, whose `Shape` half has no amount and cannot be gated. It is
      * `classic()`'s distort stage (phase 3 step 5), the one node that switches a distort off completely,
      * which a slotted tail needs.

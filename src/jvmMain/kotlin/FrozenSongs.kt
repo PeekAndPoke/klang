@@ -14,7 +14,7 @@ package io.peekandpoke.klang
  * version of a song, add a NEW dated constant instead (e.g. derSchmetterling_2026_09),
  * keeping the old one for historical comparison.
  *
- * REPLACEMENT (maintainer decision, 2026-09-25, `docs/tasks/builtin-instruments.md` D4): the Der
+ * REPLACEMENT (maintainer decision, 2026-09-25, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` D4): the Der
  * Schmetterling snapshot of 2026-07-03 called the `pedal` pipeline preset three times, and that
  * preset was removed, which would have changed the snapshot's sound. The maintainer replaced it
  * with a fresh snapshot of the live song instead, `derSchmetterling_2026_09_25` (the text committed
@@ -22,7 +22,7 @@ package io.peekandpoke.klang
  * notes below describe Seltsamere Dinge and that retired text; the new snapshot has had one, below.
  *
  * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
- * `docs/tasks/builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
+ * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
  * `classic()`, so without it the pieces would have lost their filters and envelope. Nothing else changed. The
  * renders moved, by the analog draw order only (the bass and trommel filter dice, -58 to -60 dB against the
  * texts before), proven by a control with the humanization pinned. The ledger's census columns (`work`,

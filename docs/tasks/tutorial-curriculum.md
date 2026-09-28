@@ -7,7 +7,7 @@
 >   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
 > - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer take `wet` FIRST
 >   on the door, `floor` on the builder: `.phaser(0.3, 0.5, x => x.floor(0.2))` (wet, rate; since
->   2026-09-24, phase 3 step 3d, `docs/tasks/builtin-instruments.md` section 3b). Filters:
+>   2026-09-24, phase 3 step 3d, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3b). Filters:
 >   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
 >   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
 > - Master: `master(Katalyst(k => k.reverb(0.05).gain(2.5).limiter()))`, the same Katalyst chain an orbit runs

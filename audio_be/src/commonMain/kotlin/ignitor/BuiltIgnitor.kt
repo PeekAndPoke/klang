@@ -47,7 +47,7 @@ data class BuiltIgnitor(
      * into its cull-never decision, the rule the strip's tremolo always had (depth above 0, whatever
      * the shape).
      *
-     * Section 6 of `docs/tasks/builtin-instruments.md` ("the build must report 'this tree gates its
+     * Section 6 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` ("the build must report 'this tree gates its
      * own output'"), landed in phase 3 step 3b (2026-09-25), when the square and skewed shapes made
      * the hazard easy to reach from a script. It was reachable before, more rarely: the floor is
      * absolute (`VOICE_CULL_FLOOR`, 1e-5), so even the old sine-only tremolo at depth 1 held a voice
@@ -75,7 +75,7 @@ data class BuiltIgnitor(
      * do not touch the amplitude).
      *
      * The voice factory reads it for every voice (every voice is its tree since phase 3 step 9): when it
-     * is false, the voice appends the teardown fade the strip's `adsrOff` always had (`TeardownFadeRenderer`, section 6 of `docs/tasks/builtin-instruments.md`). When it is
+     * is false, the voice appends the teardown fade the strip's `adsrOff` always had (`TeardownFadeRenderer`, section 6 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`). When it is
      * true, the envelope ends the voice and a fade on top would change its last frames.
      */
     val endsInEnvelope: Boolean = false,

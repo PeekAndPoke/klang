@@ -7,7 +7,7 @@ A, B, A, B; the first run per tree and platform was a build and warm-up run and 
 
 ## The target
 
-`docs/tasks/builtin-instruments.md:27`: "Today's number phase 3 must not regress: 9290 ns per block for 8
+`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 2: "Today's number phase 3 must not regress: 9290 ns per block for 8
 sustained saws." Lines 17 to 21: measured on the JVM, "8 sustained voices through the real renderer", a plain
 `sound("saw")`, 1161 ns per block per voice. The spike's harness (`phase3-spike/`) is no longer on disk, so the
 case is rebuilt as `IgnitorBenchmark.Case("sawtooth_8v", voiceCount = 8, voice("sawtooth"))`: 8 sustained

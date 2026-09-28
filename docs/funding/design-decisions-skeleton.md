@@ -272,7 +272,7 @@ Template per decision:
   (`ANS 2026-09-23T11:01` to `11:22`; [D23]).
 - Iterations: 2026-09-05 first shape → 2026-09-23 function-by-function walk (commit `0f1b774f`) → 2026-09-24
   `floor` confirmed over agent's `dryFloor` reason; fm `freq` kept hidden (`ANS 2026-09-24T13:43`).
-- Evidence: CLAUDE.md rule (2026-09-05, refined 2026-09-23); `docs/tasks/builtin-instruments.md` §3b.
+- Evidence: CLAUDE.md rule (2026-09-05, refined 2026-09-23); `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` §3b.
 - Status: settled; implementation in progress.
 
 ### 4.5 Signal flow: gain, pregain, velocity, Katalyst ownership

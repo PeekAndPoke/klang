@@ -19,7 +19,7 @@
 
 ## FM index envelope: `curves` (maintainer, 2026-09-23; shape updated 2026-09-25)
 
-The door-shape walk of 2026-09-23 (`builtin-instruments.md` section 3b) gave `fm` a builder with
+The door-shape walk of 2026-09-23 (`20260928-builtin-instruments.md` section 3b) gave `fm` a builder with
 `adsr(attackSec, decaySec, sustainLevel, releaseSec)` and `freq(hz)`, but NOT `adsrCurves`, because the
 FM index envelope has no curve support and a knob that does nothing is not offered. The maintainer
 wants it later, so `fm` speaks the same envelope vocabulary as the chain, the four filters and the

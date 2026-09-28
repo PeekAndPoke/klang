@@ -6,7 +6,7 @@
 
 > **Status 2026-09-28: DONE.** Every row of section 3 is done (converted, done without state classes, or
 > retired). The chain swap, the last row, was converted once for both positions in phase 3 step 12
-> (`../tasks/builtin-instruments.md`, `phase3-step12-master-as-katalyst.md`): the `Cylinder` in C1, the master bus
+> (`../tasks-archive/2026-09/20260928-builtin-instruments.md`, `../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`): the `Cylinder` in C1, the master bus
 > in C4, one `ChainSwap` (Idle, Fading, Draining, Releasing); the master is the Katalyst at the output position.
 
 ## 1. The shape

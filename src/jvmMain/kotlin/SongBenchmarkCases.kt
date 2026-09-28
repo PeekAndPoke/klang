@@ -20,7 +20,7 @@ import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
  * The chains are transcribed verbatim from the 2026-07-03 frozen snapshot, only removing the section
  * gates. That snapshot was replaced on 2026-09-25 by a fresh one ([FrozenSongs]); the transcriptions
  * stay as they are, a fixed workload of their own, minus the `pipeline("pedal")` calls, which went
- * with the preset (`docs/tasks/builtin-instruments.md` D4).
+ * with the preset (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` D4).
  */
 object SongBenchmarkCases {
 

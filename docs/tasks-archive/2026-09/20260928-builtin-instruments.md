@@ -1,10 +1,45 @@
 # Built-in instruments, and the end of the Pipeline DSL (phase 3)
 
+> **Closed 2026-09-28, archived: phase 3 is done.** Steps 1 to 10 and 12, the step 12 cleanup and the test
+> consolidation landed (section 9); step 11 was deferred by the maintainer. The step 12 plan is archived beside this
+> file (`20260928-phase3-step12-master-as-katalyst.md`). The release-note table (section 3c) stays here as the
+> record of what the merge of `engine-redesign` changes for a user's own script. Sections 3b (the door shapes) and
+> 5b (the off-value table) moved to living homes: `.claude/skills/dsl-design/door-shapes.md` and
+> `audio/ref/off-values.md`; the rules register, `/dsl-design` and the code's KDoc point there.
+>
+> Where each open item now lives:
+>
+> | item | status | home |
+> |---|---|---|
+> | Step 11, the editor diagnostics (section 9; the wet-slot string and the silent rows of 3c) | deferred | `docs/tasks/future/editor-voice-door-diagnostics.md` (new) |
+> | The phase 3 end checkpoint: retire or regenerate `ClassicVoiceBaselineSpec` and `BuiltInVoiceMatrixSpec` | owed, by ear | `docs/tasks/by-ear/phase3-end-checkpoint.md` (new) |
+> | Step 12 decision (g), a request waits for the drain | open, by ear | `docs/tasks/by-ear/chain-swap-request-during-drain.md` (new) |
+> | Step 12 risk R0, the house `MasterStage` clip tested through a copy | CLOSED 2026-09-28 (the clip is `pcm16`/`interleavePcm16`, tested for real) | the step 12 plan, section "Risks" |
+> | The 9 follow-up, collapse `BaseSvf` and `SvfBPF` | parked | `docs/tasks/future/svf-resonator-class-collapse.md` (new) |
+> | The pitch pipeline into the tree (section 5), and the `voices/strip/` package name (step 9's decisions) | later | `docs/tasks/future/pitch-pipeline-into-the-tree.md` (new) |
+> | Sprudel's tremolo `sync` against the Ignitor's `rate` (section 3b) | a naming decision | `docs/tasks/future/tremolo-rate-naming-parity.md` (new) |
+> | FM envelope curves (section 3b, the `fm` row) | parked | `docs/tasks/future/envelope-shape-followups.md` section 4 |
+> | A per-curve bend, the retired `expK` (section 3b, envelopes) | later | `docs/tasks/future/envelope-shape-followups.md` section 5 (added) |
+> | A segment corner inside a block (D3, the sampling) | if wanted | `docs/tasks/future/envelope-shape-followups.md` section 6 (added) |
+> | The D7 stopgap, crush and coarse `oversample`, the distort soft cap (D2) | scheduled | `docs/tasks/oversampling-regions.md` |
+> | The duplicated chain-host plumbing, and the `cylinders/katalyst/` package name at the output | future | `docs/tasks/future/one-chain-host.md` |
+> | A door for the one-pole highpass | future | `docs/tasks/future/onepole-highpass-door.md` |
+> | Recorded two-door asymmetries, the missing `Osc.sample()` script door | audit | `docs/tasks/dsl-kotlin-surface-parity.md` (bullet added) |
+> | Bus references (ducking as composition), `.sprudel()` auto-attach | future | `docs/plans/future/signal-graph-engine.md` sections 1 and 5 |
+> | The slot map as an array if `toVoiceData` ever costs too much on JS | not before a number | `docs/plans/signal-flow-redesign.md` section 4 |
+> | `Osc` and `oscp` renamed after phase 3 | capture-only | `docs/plans/signal-flow-redesign.md` section 11, `/dsl-design` section 5 |
+> | Type inference for stored lambdas | future | `docs/tasks/future/stored-lambda-type-inference.md` |
+> | `GraphCensus` does not model the gate (section 2) | a caveat | `audio/MEMORY.md`, the `GraphCensus` entry (added) |
+>
+> Recorded and closed, no task: the gated stage that skips its knob subtrees' draws (section 5b, chosen
+> deliberately); `lowpass(freq = 0)` building a 5 Hz filter (section 5b, the onepole row); Sakura's kick level and
+> Greensleeves' inert limiter (kept by the maintainer, section 9).
+
 > **Status 2026-09-27:** step 9 is done: the voice strip, the Pipeline DSL and the typed `VoiceData` door fields
 > are retired, and every voice is its Ignitor tree. Where this record says "today" or describes the strip, it
 > means the engine at the time of writing; the current shape is `audio/ref/voice-synthesis.md`.
 
-Phase 3 of `../plans/signal-flow-redesign.md` (its section 5 states the goal and the rules). This
+Phase 3 of `docs/plans/signal-flow-redesign.md` (its section 5 states the goal and the rules). This
 file is the task record: what the spike of 2026-09-20 found, what the maintainer has to decide, and
 the step list. Written for a reader who has not read the code.
 
@@ -216,108 +251,7 @@ de-click may share the name `declickSeconds` with a slot whose default differs.
 
 ## 3b. The door shapes, function by function (D6, maintainer, 2026-09-23)
 
-Walked one function at a time. The rule applied: the stage's own musical inputs stay on the door (the
-phaser precedent), secondary knobs move to a builder behind `configure`, and a door whose only
-defaulted knob is temporary stays flat. A knob that nothing reads is removed, not moved.
-
-| Door | Door parameters | Builder knobs | Notes |
-|---|---|---|---|
-| `lowpass`, `highpass` | `freq, q = 0.707, configure` | `passes`, `analog`, `humanize`, `env(semitones)`, `adsr(attackSec, decaySec, sustainLevel, releaseSec, e => e.curves(attack, decay, release))` (nested since 3c) | the envelope is ONE `adsr` call, the pattern of the chain's own `adsr`; `env` and `adsr` each switch the cutoff envelope on and the other fills from the constants (the compound fill, now at the end of the lambda). The third positional argument becomes the lambda, which ends the `lowpass`/`lpf` positional trap |
-| `bandpass`, `notch` | `freq, q = 0.707, configure` | as above without `passes` | |
-| `drive` | `amount` | none | `driveType` is REMOVED everywhere (door, `IgnitorDsl.Drive`, the wire, `DriveIgnitor`): it had one value and nothing read it. `drive` is boost without shaping; every colour belongs to `shape` |
-| `shape` | `shape = "soft", oversample = 0` | none | flat: `oversample` is the D7 stopgap and leaves with `oversampling-regions.md` |
-| `distort` | `amount, shape = "soft", oversample = 0` | none | flat for the same reason; matches sprudel's `distort` position for position |
-| `pitchEnvelope` | `semitones, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec, e => e.curves(attack, decay, release))` (nested since 3c) | `releaseSec`, `curve` and `anchor` leave: release and curve were read and DISCARDED on both surfaces (the Ignitor runtime and the strip's `PitchEnvelopeRenderer`); the sustain replaces `anchor` and the release becomes real. An ADSR attacks from 0 where the old envelope attacked from the anchor; no song sets `anchor` or calls `penv`. The 12 call sites become `pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))` |
-| `tremolo` | `rate, depth, configure` | `shape(name)`, `skew(amount)`, `phase(cycles)` | the three knobs are 3b's additions (they exist on the strip only). Rate first, like every Ignitor LFO door (`phaser`, `vibrato`); sprudel's `tremolo(depth, sync, ...)` differs in order and calls the rate `sync`, recorded for the sprudel side |
-| `shimmer` | `wet, feedback = 0.5, tone = 4000, pitches, configure` | `floor` | the wet rule below; `dryFloor` becomes `floor` |
-| `fm` | `modulator, ratio, depth, configure` | `adsr(attackSec, decaySec, sustainLevel, releaseSec)` | `freq` stays HIDDEN: the walk first put `freq(hz)` on the builder, then the maintainer, shown the recorded decision of 2026-08-30 ("a hidden internal of the pitch machinery; the default IS the semantics"), kept it hidden (2026-09-24). The node always had the index envelope; the Kotlin door exposed it (the built-in `sgbell` uses it) and the script door did not, a two-doors gap this closes. No `adsrCurves` yet: the FM envelope has no curve support, and a knob that does nothing is not offered. The maintainer wants it LATER; follow-up in `future/envelope-shape-followups.md` §4 |
-| `phaser` (Ignitor AND Katalyst) | `wet, rate, center, sweep, configure` | `floor` | ONE shape on both hosts. On the Katalyst the door parameters are OPTIONAL, and an omitted one means exactly what an omitted builder knob meant before: the bare stage's fixed default, never the owner voice. Only a `Param` slot reads the orbit's `katp` state, whether `classic()` places it or an author writes it with `Katalyst.param`. The one home of what each bare stage carries is `KatalystStageDsl`'s KDoc in `KatalystDsl.kt`, with the data classes' constructor defaults. (Corrected 2026-09-24 by the 3d(ii) implementer and the round 1 reviewers, who read the code; the first wording was the coordinator's, written without it.) On the Ignitor `rate` stays required, so writing it means writing `wet` too. The PRINCIPLE, decided here for every bus effect: the effect's musical inputs on the door; secondary knobs on the builder |
-| `vibrato` | `rate, semitones` | none | no defaults, nothing to decide |
-| `eq` (Ignitor AND Katalyst) | `configure` | `band(freq, q = 0.707, db = 0)`, `tap(freq, q = 0.707, gain = 1)` | already one shape; the lambda stays optional like every `configure` (maintainer: all configure callbacks are optional), and an `eq()` with no bands is a transparent stage |
-| `reverb` (Katalyst AND Master) | `wet, size, lowpass` | none | all optional (an omitted one is the bare stage's fixed default on both hosts, see the phaser row; never the voice's slot). Flat because nothing is left for a builder. The songs' `m.reverb(r => r.wet(0.05).size(7))` becomes `m.reverb(0.05, 7)` (five songs and the frozen pieces) |
-| `delay` (Katalyst AND Master) | `wet, time, feedback, configure` | `cap(level)` | all door parameters optional; `cap` is secondary, like `floor`, so it sits on a builder even as its only knob. The prefix matches sprudel's `delay(wet, time, feedback, cap)`, which stays flat (sprudel has no builder layer) |
-| `gain` (Katalyst AND Master) | `gain = 1.0` | none | a single construction input, nothing to decide |
-| `compressor` (Katalyst) | `threshold, ratio, knee, attack, release` | none | FLAT, all optional, identical to sprudel's: every knob of a dynamics stage is a musical input |
-| `limiter` (Master) | `threshold, ratio, knee, attack, lookahead, release` | none | flat, as the compressor. `thresholdDb` and `kneeDb` are RENAMED `threshold` and `knee` (builder, node, wire): the compressor and sprudel already say so, and the dB unit lives in the KDoc |
-| `body` (Katalyst) | `wet, material, configure` | `floor` | the wet rule; `material` moves from the builder to the door, and the door parameter takes a name OR a number/`Katalyst.param` slot, because the builder knob was the only way to write a slot there and step 5a-2 decided the names are index slots (maintainer, 2026-09-18) |
-| `vowel` (Katalyst) | `wet, vowel, configure` | `floor` | as `body` |
-| `duck` (Katalyst) | `orbit, depth, attack` | none | flat and all optional, like the compressor (a dynamics stage); identical to sprudel's |
-
-Not walked, nothing to decide: `onepole`, `crush`, `coarse`, `detune`, `accelerate` (no defaults), the
-oscillators (already `(freq, configure)`).
-
-**The envelopes, walked 2026-09-25 for step 3c (maintainer):**
-
-| Door | Door parameters | Builder knobs | Notes |
-|---|---|---|---|
-| chain `adsr` | `attackSec, decaySec, sustainLevel, releaseSec, configure` | `curves(attack, decay, release)`, `declick(seconds)` | the reach-back chain methods `adsrCurves`, `declickSeconds` and `expK` RETIRE (they modified the preceding `adsr`, or wrapped a fresh default one). Inside a builder the prefix goes: `curves`, `declick` |
-| `adsr` inside the filter and pitch builders | the same | `curves(attack, decay, release)` | NESTED, one shape everywhere: `.lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves(...)))`. The 3d(i) builder knob `adsrCurves` on the filter and pitch builders moves into the envelope's builder as `curves`. No `declick`: those envelopes have no de-click stage, and a knob that does nothing is not offered |
-| `adsr` inside the fm builder | the same, without `configure` | none yet | FM's index envelope has no curve support (the filed follow-up); it gains `configure` with `curves` when that lands |
-| `expK` | REMOVED | | "maybe the user wants to set different k for each individual curve": a per-curve bend is its own later design. Until then every exp stage bends at `ADSR_EXP_K` = 3 |
-| the ADSR on/off switch | node field only, no Ignitor door | | `classic()` fills it from sprudel's `adsrOn`/`adsrOff` (a built-in's envelope is ON by default and only the slot turns it off); on the Ignitor door, not writing `adsr()` already means no envelope. A deliberate two-door asymmetry |
-
-
-**Consequences recorded with the decisions:**
-- **The default curve of a modulation envelope (filter and pitch) is ONE decision, and it is D3's.** Every
-  pitch sweep today is linear on both surfaces and the chain's `adsr` defaults to exp; the filter
-  envelope is linear on the node and exp on the strip. With `curves` on every envelope (nested inside `adsr` since 3c), D3 becomes
-  "which default", not "which law".
-  (Settled 2026-09-25, phase 3 step 5b (b): `MOD_ENV_CURVE = Exponential`, so every modulation envelope defaults to the house exponential on both hosts; the strip pitch envelope joins in (c).)
-- **The wet rule (maintainer, 2026-09-23): `wet` is the VERY FIRST parameter of every door that has
-  one, in all four DSLs, and `floor` lives on the builder.** Consistency over each door's local
-  logic. It applies to phaser, shimmer, reverb, delay, body and vowel. SPRUDEL MOVES TOO: its
-  `phaser(rate, wet, ...)`, `body(material, wet, floor)` and `vowel(vowel, wet, floor)` become
-  wet-first. Measured cost: 7 positional `body("...")` calls in built-in songs (StrangerThings, Sakura,
-  IrishLamentTechno, SoundOfTheSea) and 4 in the frozen songs, which become `body(material = "...")`,
-  bit-identical; no song calls `vowel` or `phaser` positionally. One semantic knock-on: sprudel's
-  "no argument reinterprets the pattern's values as the first parameter" now reinterprets them as
-  `wet`, so `seq("<0.2 0.5>").body()` patterns the wet (the first wording here said `n(...)`, which carries
-  no value to reinterpret; corrected by the 3d(iii) implementer). What it cost, mapped in 3d(iii)'s plan:
-  the bare `"<wood glass>".body()` / `"<a e>".vowel()` shortcut no longer names the stage (write
-  `body(material = "<wood glass>")`), and the bare call's CLEAR path for material and vowel is gone (the
-  off switch is `material = "none"` / `vowel = "none"`). No song, frozen piece or doc used either. The
-  Lexikon, the sprudel reference and the KDoc examples moved with it (`body(0.7, "wood")`, `body(material = "wood")`).
-  AND a positional `body("wood")` / `vowel("a")` in a user script outside the repo now SILENTLY does
-  nothing: `"wood"` is a valid mini-notation pattern, so it lands in `wet` as a non-number, and the wet head
-  writes nothing (the house raw rule forbids a `require`). `phaser(0.3)` becomes wet 0.3 at the default
-  rate. Release-note item; whether the editor should WARN on a string literal in a wet slot is open for
-  the maintainer.
-- **The dry floor is `floor` everywhere** (maintainer, 2026-09-23): the Ignitor's `dryFloor` on the phaser
-  and shimmer builders, their nodes and the wire is renamed; the Katalyst and sprudel already say `floor`.
-  Re-asked 2026-09-24 with the reason the Ignitor KDoc gave for `dryFloor` (`floor()` is the arithmetic
-  round-down, one word must not mean two things); the maintainer kept `floor` ON A CONDITION: "as long as
-  floor() is only on effect builders we can live with the duplication in naming". So `floor` is a knob on
-  effect builders (and a named parameter of sprudel's effect doors, which have no builder layer), never a
-  door parameter of an Ignitor effect and never a method on `IgnitorDsl`.
-- **Identity while D3 is open.** The curve knobs on the filter and pitch envelopes (`adsr(..., e => e.curves(...))` since 3c) must DEFAULT to
-  the law each envelope has today (linear on both nodes), or every filter sweep and every kick in the songs
-  changes in a door-shape step. D3 then decides the default for both at once, at its own ear checkpoint.
-  (Done: D3 decided exponential, landed in step 5b (b), 2026-09-25.)
-- **Wire changes** (the wire golden is regenerated, never hand-edited): `driveType` removed; `dryFloor`
-  becomes `floor`; the limiter's `thresholdDb`/`kneeDb` become `threshold`/`knee`; the pitch envelope loses
-  `releaseSec`, `curve` and `anchor` and gains the ADSR fields.
-- **Positional reinterpretation (step 3d(i), 2026-09-24).** Wet-first moves a positional meaning: `phaser(0.3,
-  800)` was rate 0.3 Hz and center 800, and is now wet 0.3 with an 800 Hz LFO; `shimmer(0.4)` was feedback 0.4
-  and is now wet 0.4, on both doors. No in-tree caller was affected (grepped), but a user script outside the
-  repo changes SILENTLY. The old positional filter and `pitchEnvelope` forms fail loudly instead. A release
-  note must say it.
-- **The limiter's positional order (step 3d(ii)).** `limiter(threshold, ratio, knee, attack, lookahead, release)`
-  puts `lookahead` FIFTH, where the compressor and sprudel put `release`: a compressor-shaped 5-argument call
-  `m.limiter(-3, 4, 2, 0.01, 0.2)` sets 200 ms of lookahead (bounded to 50 ms, i.e. latency), not a release. It
-  is the maintainer's table; the release note recommends named arguments for the limiter.
-- **Recorded two-door asymmetries (step 3b, 2026-09-25).** The Kotlin `tremolo` door stays FLAT
-  (`tremolo(rate, depth, shape = "sine", skew = 0.0, phase = 0.0)`) where the script door takes a builder, the
-  filter doors' precedent. The Kotlin `shape` and `distort` doors keep a `String` shape and an `Int` factor, while
-  the script doors also take a number or a slot; a Kotlin caller writes a slot through the node constructor, as
-  for `floor` and the pitch envelope.
-- **Recorded two-door asymmetries (step 3d(i)).** The Kotlin filter doors stay flat and name the four envelope
-  stages separately (audio_bridge cannot see the script builders; a superset of the builder). The Kotlin
-  `phaser`/`shimmer` set `floor` only by `.copy(floor = ...)`: `floor` exists only as an effect-builder knob
-  (the maintainer's condition), so the Kotlin node extensions `.wet()`/`.dryFloor()` were REMOVED, not renamed.
-  There is no Kotlin `pitchEnvelope` door (there was none before either); Kotlin builds the node.
-- **Sprudel's `penv` carries two dead slots**, `release` and `curve`, and an `anchor` whose meaning moves
-  to a sustain. Raised for the sprudel side, not decided here. (Decided in D3 (4), landed in step 5b c1,
-  2026-09-25: `penv(amount, attack, decay, sustain, release)`, a real release, `curve` and `anchor` removed.)
+> **Moved 2026-09-28** to its living home, `.claude/skills/dsl-design/door-shapes.md`.
 
 ## 3c. Release notes, collected (the one home; append per step)
 
@@ -450,85 +384,7 @@ song with both a highpass and a lowpass at `analog > 0` (at analog 0 the filters
 
 ## 5b. The off-value table (the one home; built in step 2, 2026-09-20)
 
-A stage is not built when its gating knob is a `Param` or `Constant` LEAF and resolves either to a
-non-finite value (the unset sentinel, `SLOT_UNSET`, is `Double.NaN`) or to the stage's off value
-below. A knob that can MOVE within a note is never gated. This is the one home of these values;
-code and memory point here and do not restate them.
-
-| stage | off value | why, and what is not a fold |
-|---|---|---|
-| coarse | unset, or `<= 1.0` | at or below 0 and at a non-finite amount the render already takes a bit-exact bypass, so there the gate folds a bypass. In `(0, 1]` the engaged loop takes every sample but latches it through `nanGuard()`, so a NON-FINITE UPSTREAM SAMPLE used to come out as 0.0 and now passes through |
-| crush | unset, or `< 1.0` | a fold: `levels = 2^amount`, and the renderer bypasses below two levels. At exactly 1.0 the quantizer RUNS (with the FLOOR law of D1, landed in step 4 as `CrushCore` (`quantize`; `halfLevels` decides when it engages), a saw becomes a two-level -1/0 pulse, +1 only at an exact +1; it was a three-level staircase under the old round), so 1.0 is ON |
-| distort (`IgnitorDsl.Distort`, the fused node) | unset, or `<= 0.0` | **SINCE STEP 4 (2026-09-25) the fused node runs the STRIP's law (`DistortionCore`: no cap, the drive inside the oversampler) and this gate is its ONLY bypass: a leaf `<= 0` is not built; a modulated amount `<= 0` runs at unity drive (W5's state hazard designed out). What follows describes the node before step 4.** **A BEHAVIOUR CHANGE, not a fold.** The node is `drive(amount).shape(shape)` and only the DRIVE half ever bypassed, so the tree's chosen shaper stayed on the signal at unity gain. Modelled on a 220 Hz sine through the real chain (shaper, DC blocker, `softCap`): soft -1.77 dB, tube -6.24 dB at 16.8 % THD, gentle +0.64 to +5.21 dB, zerosquare +1.55 to +16.83 dB at 37 % THD, and `rectify` removes the fundamental altogether (full wave, an octave up). Neither authoring door builds it (both spell `distort` as `Shape(Drive(...))`); since step 5 it is `classic()`'s distort stage (before that, the only production site was `WarmupVocabulary` at 0.3). Gating it aligns that node with the `drive` row and with `Ignitor.distort(Double)`, which always short-circuited at the same value. It does NOT reopen ledger W5's gate-flip pop: W5 is a MODULATED amount crossing 0, and a modulated amount is not a leaf, so it is never gated |
-| drive (`IgnitorDsl.Drive`, the row both doors reach) | unset, or `<= 0.0` | two things at once. At or below 0 a TRUE FOLD: `DriveIgnitor` already copies its input through unchanged. At a NON-FINITE amount it CLOSES A HOLE: `amt <= 0.0` is false for a NaN, so the gain was `10^(NaN * 1.2)` and every sample of the voice came out NaN with nothing between it and the orbit mix. Step 3 would have walked into it, because a `classic()` distort slot defaulting to `SLOT_UNSET` wires exactly this node. **`Shape` is not gated and cannot be**: it carries a transfer function and no amount knob, so there is nothing to read an off value from |
-| tremolo | unset, or depth `<= 0.0` | a fold. The RATE is not a gating knob, nor are `shape`, `skew` and `phase` (added in 3b). A BUILT tremolo on the signal path sets `BuiltIgnitor.gatesOutput`, so the voice is never culled (section 6, pulled into 3b) |
-| `mul` (`Times`, and the optimizer's `Affine(x, -0.0, k, -0.0)`) | exactly `1.0`. **Unset is NOT off** | the one asymmetry, forced by three existing specs: `TimesIgnitor` already sanitises a non-finite factor to an exact zero, and the node also sits in PARAMETER positions where that zero is the point. **Consequence: a `mul` slot must default to a safe literal, never `SLOT_UNSET`, or an unwritten one silences the voice** (guarded since step 2 by a row over `pregain()`, the one door that places a `mul` slot today). The `Affine` form is required because the optimizer rewrites a bare `x.mul(k)` and every registered tree renders optimized. The fold also takes only a SIGNAL survivor (`Ignitor.isBlockConstant`, structural and fixed at construction): what it drops is the multiply's `safeOut`, which on the audio spine fires only on a sample the survivor cannot produce, but in a PARAMETER position is what keeps a non-finite coefficient in range (`q = param("res", +Inf).mul(pregain)` resolved to `SAFE_MAX` and then the q ceiling; folded it would stay `+Inf` and land on the q fallback, a different filter). One qualification, audited in review round 3: on the audio spine every
-arithmetic and unary node carries its own scrub, but the KARPLUS family writes `filtered * decay`
-straight into its delay line with `decay` read raw, so an authored `decay > 1` diverges and the
-fractional read turns the first infinity into a NaN. That divergence is authored character, not a
-defect (the Motor stays raw), but it means the rule is "any NEW spine node that can emit a
-non-finite sample from finite input owes a substitution at its own read", not "none can" |
-| onepole | unset, or `<= 0.0` | NOT a fold on an authored tree: `onepole(0)` was a 5 Hz lowpass (the `clampSvfCutoff` floor), which is -33 dB at 110 Hz and -52 dB at 1 kHz, so a tree that used it as an accidental mute gets 30 to 50 dB louder. It is still right: `0` means off on every other door. Note the wart: `lowpass(freq = 0)` is still a 5 Hz filter, because a NUMBER is never off for the four SVFs |
-| the four SVF filters | only when the cutoff is UNSET | a lowpass at 20 kHz is not an off state, which is why the rule is "unset" and not a number. A non-finite AUTHORED cutoff used to build a 1 kHz filter (the `clampSvfCutoff` fallback) and now builds none: a behaviour change as well as a NaN fix |
-| the envelope | `on` at exactly 0.0 (either sign); unset is ON (since 3c) | inverted from the plan: the strip VCA ran on every voice (until step 9), so `classic()`'s ADSR is built BY DEFAULT and switches off only through the `adsrOn`/`adsrOff` slot of step 3. Its unset case was NOT safe, and step 2 had to make it safe: the unity-`mul` fold removed the `TimesIgnitor` scrub that used to turn a NaN into silence, so `sustainLevel` now substitutes its own default (`ADSR_SUSTAIN_LEVEL`) at the ADSR's read (`expK` did too until 3c removed it; every exp stage now bends at `ADSR_EXP_K`). SINCE 3c the envelope has its own switch: `Adsr.on` OFF at exactly 0.0 (either sign), unset ON (the second 'unset is not off' after `mul`), any other number and a non-leaf ON. OFF is not built, but it still reports the release tail from a LEAF release (a non-leaf release on an off envelope reports none, to avoid building it), because the strip's `adsrOff` keeps the voice's lifetime. Not a clamp: every finite value passes through untouched. The substitution runs BEFORE the existing coercion, so the infinities move too: a `+Inf` sustain used to hold at the 1.0 rail and a `-Inf` at 0.0, and both now read as unset and take the default, which is how every other knob reads a non-finite value. A non-finite `releaseSec` also stopped reporting a NaN release TAIL, which used to swallow a SIBLING's real one. The `adsrOff` slot itself landed in 3c as `Adsr.on`; `classic()` fills it in step 5 (see section 6's caveats). |
-| the phaser | NOT gated | the plan lists it; no per-voice phaser is in `classic()` and the stage retired with `PipelineDsl` (step 9), so the row would be dead code |
-
-**The compound fill does not survive SLOTTING, and step 5 must answer it again (3a review, round 2).**
-The filter doors adopted the rules register's compound-door fill in step 3a AT THE DOOR: any of the
-five envelope knobs names the stage, and a call that names one writes every companion it left out,
-`env` included. That reading happens at CALL time, on named-against-null. A slotted built-in does
-not call the door per note: `classic()` will hand `Lowpass(env = Param("lpenv", SLOT_UNSET),
-attackSec = Param("lpattack", SLOT_UNSET), ...)` once, and the per-note decision then happens in
-`filterEnvDef`, which has no notion of "named". A pattern that writes only `lpattack` leaves `env`
-unset, the depth resolves to 0, and the tree renders a STATIC filter where the same `lpf(attack =
-...)` through the strip builds a 7-semitone sweep. So the fill has to be answered a second time at
-the slot layer, in step 5, and the answer is a design question: what does "the stage is named" mean
-when the caller is a pattern writing slots?
-
-**A cheap shape for it, proposed in the 3a review and NOT built** (step 5 decides): ask the same
-question one layer down, against the bag instead of against `null`. A knob is "written" when it is a
-`Param` whose name resolves to a finite value in `oscParams`; in `filterEnvDef`, when the resolved
-depth is 0, if any of the five knobs is written, take `FILTER_ENV_DEPTH_SEMITONES` instead of
-returning `NONE`. It is the gate's existing move (the gate already reads the bag at build to decide
-whether a stage exists), it composes with the door fill rather than replacing it (a door-filled
-depth is a `Constant`, not a `Param`, so the question never arises), it costs five map lookups per
-filter per note-on and nothing per block, and an instrument that declares a real default
-(`env = Osc.param("lpenv", 24.0)`) is untouched. **The law to decide with it:** does "written" mean
-finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
-what sprudel's `!= null` means and is the recommendation. **DECIDED 2026-09-25 (maintainer): finite-in-the-bag only.** A
-knob is written when the note's bag holds a finite value for its slot; an authored default alone never
-switches the envelope on. **BUILT in step 5 (2026-09-25)** as `slotLayerDepth`/`writtenIn` in
-`IgnitorDslRuntime.filterEnvDef`, with the implementer's correction: a WRITTEN depth always stands (an explicit
-0 included, the strip's `depth ?: 7`); only an UNSET depth slot (a `Param` whose default is `SLOT_UNSET`, as
-`classic()` places it) takes `FILTER_ENV_DEPTH_SEMITONES`, when any of the FOUR stage knobs is written; an
-authored depth default, 0 included, is never filled (corrected in step 5's round 1); a `Constant` depth (a
-door fill) is never the question. The rule's text lives in `/dsl-design` section 4.
-
-**The distort question this leaves open, for D2.** `IgnitorDsl.Distort` WAS legacy by its own KDoc (step 3b
-corrected it: it is kept as the one node that gates drive and shape as a unit, and the only one that could
-drive inside the oversampler as the strip does; `Shape` itself is still not gated, its shape and factor are
-read at build) and no production site builds it; both doors emit `Shape(Drive(...))`. `Drive` is gated, `Shape` cannot
-be (it has no amount knob). So `classic()`'s distort stage is either the legacy `Distort` node, which
-gates as a unit, or `Drive` plus a `Shape` that runs at unity gain on every voice, which is D2's
-divergence made unconditional. Decide it with D2.
-
-**One consequence recorded rather than fixed.** A gated-off stage does not build its NON-gating
-param subtrees, so a `perlin`, `berlin` or `crackle` knob in a gated stage's rate or q position no
-longer takes its build-time draws and every later drawing source shifts. Chosen deliberately over
-the alternative (refusing to gate unless every param is a leaf), because that would refuse to gate a
-filter whose cutoff is unset whenever its `q` draws, and the filter would then build with a NaN
-cutoff that `bilinearK` silently substitutes with 1 kHz: the step-1 defect, on the very stage the
-gate exists for. Pinned by a row. A third option exists and was recorded as not taken: gate the
-stage but still build its knob subtrees in declaration order and discard them, which reproduces the
-stream exactly. It is not free, because a discarded subtree that also sits on the live spine is
-reached again through the build cache and flips that node's memo from pure delegation to a per-block
-cache plus a buffer copy, for every block of the voice. Worth revisiting in step 3, when every
-filter cutoff becomes an unset-default slot.
-
-**The gate is also the NaN guardrail.** `SLOT_UNSET` is NaN and the `Param` leaf hands back its
-DEFAULT for a non-finite override, so a slot whose default IS the sentinel resolves to NaN. For a
-gated stage the gate keeps it out of the DSP. For an UNGATED stage with a NaN knob there is no
-second line of defence: the envelope's `sustainLevel` is the live example (`expK` was the other until 3c removed it).
+> **Moved 2026-09-28** to its living home, `audio/ref/off-values.md` (the one home of the off values).
 
 ## 6. Two things the factory knows today that only the build can know tomorrow
 
@@ -667,7 +523,7 @@ unattended; steps 4, 6, 7 and 10 each need a listening checkpoint.
 | 10 | The songs migrated with `.classic()` | per-song render against HEAD | D5 (decided: controls, then edit). DONE 2026-09-26 (the frozen texts too: `.classic()` appended, the two Der Schmetterling snapshots moved by the draw order only, -58 and -60 dB; the ledger's census columns step at this date), three commits: the engine (the tag, `onepole` into `classic()`, identity; DONE 2026-09-26, 17/17 identical), the songs (DONE 2026-09-26: 25 authored instruments end in `classic()`, the release tails written; 3 songs moved by the draw order, 14 identical), the frozen texts |
 | 11 | The editor's unknown-slot diagnostic | UI, no audio | none. DEFERRED 2026-09-27 (maintainer): "no warnings yet; diagnostics tools come later once the design is fully settled". The step 11 plan (a `classic()` warning at evaluation time, and the per-slot check as 11b) is kept in the session scratchpad only |
 | 9 follow-up | Collapse `BaseSvf` and `SvfBPF` into one static-coefficient resonator class (the (a2) review, 2026-09-27: the sweep path, `sweepCutoff` with frames, the `*Step` fields, `g`/`gStep` and `cutoffOffsetMul`, is dead in production since the strip filters retired; only the constructor snap runs) | renders identical | none; parked |
-| 12 | `.master()` accepts a Katalyst; the Master DSL retires (maintainer, 2026-09-27: the Master is the Katalyst at the output position, a verbatim copy today) | an inventory first (both DSLs' stage sets side by side, their DSP classes, how parameters reach each, every place that knows "master" as a type, and the two chain swaps: the `Cylinder`'s five swap fields and the master's), then the render identity. The chain swap becomes ONE `SwapState` (Idle, Pending, Fading, Draining) serving both positions, the last open row of `docs/plans/effect-state-machines.md` section 3, converted once here instead of twice | decisions made 2026-09-27 (maintainer), the plan and inventory in `docs/plans/phase3-step12-master-as-katalyst.md`: a lookahead limiter can be built and runs anywhere (`lookahead` a knob of the compressor, `limiter(...)` a preset door; an orbit runs late by it), nothing fills a chain's `Param` slots at the output, duck is inert at the output and every other stage is allowed, the master adopts the orbit's swap law (drain, not cut). Six commits C1 to C6: C1 the cylinder's chain swap as `ChainSwap` (Idle, Fading, Draining), DONE (render identity: a raw-bits harness over 8 scenarios and 11085 blocks, 2 swap rows, the 19-row corpus); C2 the compressor's `lookahead` knob and the `limiter(...)` preset door, DONE (the corpus identical; a swap between chains of different latency crossfades with weights summing to one; 3 review rounds); C3 the output runs a `KatalystChain` behind the `MasterDslShim`, `MasterChain` gone, DONE (identity; the master's tests 8 specs and 75 rows to 7 and 43; decision (h), a refused unit recovers like an orbit's); C5 `.master()` takes a Katalyst, the Master DSL, its registry, `RegisterMaster`, the script `Master` object and the shim retired, DONE (identity, 19/19; songs migrated syntax-only); C4 the master on the shared `ChainSwap` (input ramp, then the leaving chain DRAINS instead of a cut), COMMITTED 2026-09-28 at the maintainer's request with review round 1 open: the maintainer's listening verdict on the pair, the drain-cap decision (a self-sustaining delay never finishes draining, so a later edit waits forever, on orbits too), and the round 1 MINORs (the cache guard made identical to the orbit's, two parked-request clears pinned); the listening pair ACCEPTED and the drain capped (decision (i), option A) with the post-stop rule (decision (j), refined: only endless tails are released), DONE 2026-09-28; C6 the docs sweep (skills, module memories and refs, active tasks and plans rewritten to the Katalyst master; `master-dsl-followups.md` sections 2 and 5 closed; the future task `docs/tasks/future/one-chain-host.md` opened), DONE 2026-09-28. DONE; open: risk R0 (the house `MasterStage` clip tested only through a copy) and the one-chain-host follow-up |
+| 12 | `.master()` accepts a Katalyst; the Master DSL retires (maintainer, 2026-09-27: the Master is the Katalyst at the output position, a verbatim copy today) | an inventory first (both DSLs' stage sets side by side, their DSP classes, how parameters reach each, every place that knows "master" as a type, and the two chain swaps: the `Cylinder`'s five swap fields and the master's), then the render identity. The chain swap becomes ONE `SwapState` (Idle, Pending, Fading, Draining) serving both positions, the last open row of `docs/plans/effect-state-machines.md` section 3, converted once here instead of twice | decisions made 2026-09-27 (maintainer), the plan and inventory in `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`: a lookahead limiter can be built and runs anywhere (`lookahead` a knob of the compressor, `limiter(...)` a preset door; an orbit runs late by it), nothing fills a chain's `Param` slots at the output, duck is inert at the output and every other stage is allowed, the master adopts the orbit's swap law (drain, not cut). Six commits C1 to C6: C1 the cylinder's chain swap as `ChainSwap` (Idle, Fading, Draining), DONE (render identity: a raw-bits harness over 8 scenarios and 11085 blocks, 2 swap rows, the 19-row corpus); C2 the compressor's `lookahead` knob and the `limiter(...)` preset door, DONE (the corpus identical; a swap between chains of different latency crossfades with weights summing to one; 3 review rounds); C3 the output runs a `KatalystChain` behind the `MasterDslShim`, `MasterChain` gone, DONE (identity; the master's tests 8 specs and 75 rows to 7 and 43; decision (h), a refused unit recovers like an orbit's); C5 `.master()` takes a Katalyst, the Master DSL, its registry, `RegisterMaster`, the script `Master` object and the shim retired, DONE (identity, 19/19; songs migrated syntax-only); C4 the master on the shared `ChainSwap` (input ramp, then the leaving chain DRAINS instead of a cut), COMMITTED 2026-09-28 at the maintainer's request with review round 1 open: the maintainer's listening verdict on the pair, the drain-cap decision (a self-sustaining delay never finishes draining, so a later edit waits forever, on orbits too), and the round 1 MINORs (the cache guard made identical to the orbit's, two parked-request clears pinned); the listening pair ACCEPTED and the drain capped (decision (i), option A) with the post-stop rule (decision (j), refined: only endless tails are released), DONE 2026-09-28; C6 the docs sweep (skills, module memories and refs, active tasks and plans rewritten to the Katalyst master; `master-dsl-followups.md` sections 2 and 5 closed; the future task `docs/tasks/future/one-chain-host.md` opened), DONE 2026-09-28. DONE; closed 2026-09-28: risk R0 (the house `MasterStage` clip tested only through a copy) and the one-chain-host follow-up |
 | 12 cleanup | The master's tests (maintainer, 2026-09-27): no master test repeats an effect test. What stays is the Katalyst and effect tests, plus a minimal set of MASTER-POSITION rows (adoption before the first block, no silence reset at the output, the swap law at the output, defaults-only Param slots, latency at the output, per-playback cleanup, and a Katalyst declared at the output running bit for bit like the same chain standalone). The rows that only duplicated DSP behaviour go in C3 (inventory `test-inventory.md` in the C3 scratch); the Master DSL surface tests (doors, builders, wire, registry) go with the DSL in C5 | the counts before and after, per spec and row; every removed row names the spec that covers it | none; in C3 and C5 |
 | test consolidation | The engine redesign's test surface (maintainer, 2026-09-27): most effects now have one DSP core that can be tested on its own; the Ignitor node and the Katalyst stage over it then need their WIRING tested plus a handful of integration rows per effect, not the DSP law again. AUDITED 2026-09-27: 305 to 245 spec files, 3,145 to 2,112 test rows (-33 %), 69,556 to 55,794 lines (-20 %) at roughly the same coverage, plus a few specs to ADD where a core has no law spec; the sub-task, its seven commits and four maintainer decisions: `docs/tasks-archive/2026-09/20260928-test-consolidation.md` | each cut names the spec that covers it; the guards stay | DONE 2026-09-28 (commits 1 to 7 and the golden replacement; about 12,600 lines removed net; the unsure list kept whole by the maintainer), archived |
 

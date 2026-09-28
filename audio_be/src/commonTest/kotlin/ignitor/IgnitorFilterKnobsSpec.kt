@@ -26,7 +26,7 @@ import kotlin.random.Random
 
 /**
  * Phase 3 step 3a: the CUTOFF ENVELOPE knobs and the per-voice HUMANIZE lane on the four filter
- * nodes (`docs/tasks/builtin-instruments.md` section 4, first two rows).
+ * nodes (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 4, first two rows).
  *
  * Every row here answers one of three questions, and a knob that cannot answer all three has no
  * business on the node:

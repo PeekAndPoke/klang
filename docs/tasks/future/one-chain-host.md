@@ -1,7 +1,7 @@
 # One chain host: `Cylinder` and `MasterBus` share their chain plumbing
 
 Status: **future, not planned.** Opened 2026-09-28 at the close of phase 3 step 12
-([`../../plans/phase3-step12-master-as-katalyst.md`](../../plans/phase3-step12-master-as-katalyst.md)), which made the
+([`../../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`](../../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)), which made the
 master a Katalyst chain at the output. One step toward the graph plan's "one effect chain type any node can host"
 ([`../../plans/future/signal-graph-engine.md`](../../plans/future/signal-graph-engine.md) section 3, seed list).
 
@@ -39,6 +39,10 @@ The orbit adds its own: the duck handover of `ChainSwap` (`Cylinder.handOverDuck
 A shared chain host (a class both own, not a base class) holding the cache, the raw-name path, the parked key, the
 lookup and the `ChainSwap`, with the position's rules passed in as plain values or small functions (when to
 install at once, whether silence resets). It removes the duplicate and is the shape a graph node would host.
+
+The same move answers a naming wart the step 12 plan left for later (its section 5, "The package name"): the chain
+lives in `audio_be/.../cylinders/katalyst/`, a name that is a little wrong at the output position. A package move
+is audio-inert; do it with the shared host, or with the graph plan.
 
 Not planned yet: the duplication is small, both copies are pinned by their specs, and the graph plan may reshape
 both hosts anyway. Stone rule: complexity is the enemy; do this only when a third host appears or the two copies

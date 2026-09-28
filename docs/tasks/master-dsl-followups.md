@@ -4,7 +4,7 @@
 > when that shipped (2026-08-03). Nothing here blocks anything; each item is small and independent.
 > Priority: **NICE**, except the parity audit, which the user raised to a standing principle.
 
-> **Status 2026-09-28, after phase 3 step 12** ([`../plans/phase3-step12-master-as-katalyst.md`](../plans/phase3-step12-master-as-katalyst.md)):
+> **Status 2026-09-28, after phase 3 step 12** ([`../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md`](../tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)):
 > the Master DSL is gone; the output runs the same Katalyst chain an orbit runs, written
 > `master(Katalyst(k => ...))`. Section 2 is DONE (decisions (i) and (j)), section 5 is DONE (every Katalyst stage,
 > `eq` included, works at the output). Sections 1, 3, 4, 6 and 7 stay open and are rewritten below to the current

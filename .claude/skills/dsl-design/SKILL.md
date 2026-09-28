@@ -69,7 +69,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
   the base type only. Calling the wrong function inside the lambda is not an error, it is not
   offered. This is what the editor shows, so the type split IS the documentation.
 - **Which parameter goes where** (refined 2026-09-23 by the maintainer, walking every door of the
-  Ignitor, Katalyst and Master DSLs, the last retired into the Katalyst on 2026-09-28; the per-door record is `docs/tasks/builtin-instruments.md` §3b):
+  Ignitor, Katalyst and Master DSLs, the last retired into the Katalyst on 2026-09-28; the per-door record is `.claude/skills/dsl-design/door-shapes.md`):
   - The effect's MUSICAL inputs stay on the door, defaulted or not: `freq` on oscillators
     (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
     `tremolo(rate, depth)`, `fm(modulator, ratio, depth)`. SECONDARY knobs go on the builder
@@ -91,7 +91,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
     `releaseSec` and `curve`).
   - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
     omitted one is the bare stage's fixed default, never the owner voice; only a `Param` slot reads
-    the orbit's `katp` state (per-door record: `docs/tasks/builtin-instruments.md` section 3b).
+    the orbit's `katp` state (per-door record: `.claude/skills/dsl-design/door-shapes.md`).
 - `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
   lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
   `eq()` with no bands is a transparent stage, not an error). The one historical exception,

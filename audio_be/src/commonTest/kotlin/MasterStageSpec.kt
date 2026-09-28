@@ -11,11 +11,11 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 
 /**
- * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1). D2·b will call
- * [MasterStage.process] directly on the summed mix, so the wiring (limiter → DC → clip + interleave)
- * is covered here in isolation. The clip itself (both clamp branches, the -1.0 boundary) is NOT exercised through
- * [MasterStage.process] by any spec: `KlangAudioRendererSpec`'s clip table tests a copy of it (test consolidation
- * commit 5; a gap parked for phase 3 step 12).
+ * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [MasterStage.process] runs on the
+ * summed mix, so the wiring (DC → limiter → clip + interleave) is covered here in isolation. The clip is the real
+ * one: [MasterStage.process] calls [interleavePcm16] and [pcm16], whose boundary table (both clamp branches, the
+ * -1.0 boundary, the non-finite rows) lives in `KlangAudioRendererSpec`; the rows below show the clamp firing
+ * through [MasterStage.process], and that no non-finite sample reaches it (phase 3 step 12, risk R0).
  */
 class MasterStageSpec : StringSpec({
 
@@ -127,5 +127,76 @@ class MasterStageSpec : StringSpec({
         }
 
         foundAt shouldBe master.latencyFrames
+    }
+
+    "a mix too loud for the limiter reaches both rails through the real clip" {
+        // The limiter is 20:1, not infinite: a sine at +60 dBFS leaves it near +2 dBFS, so the clip's
+        // two clamp branches fire through process(), on the settled part.
+        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val out = ShortArray(blockFrames * 2)
+        var sawMax = false
+        var sawMin = false
+
+        repeat(200) { block ->
+            val mix = StereoBuffer(blockFrames)
+
+            for (i in 0 until blockFrames) {
+                val t = (block * blockFrames + i).toDouble() / sampleRate
+                mix.left[i] = 1000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * t)
+            }
+
+            master.process(mix, out)
+
+            if (block >= 100) {
+                for (i in 0 until blockFrames) {
+                    sawMax = sawMax || out[i * 2] == Short.MAX_VALUE
+                    sawMin = sawMin || out[i * 2] == Short.MIN_VALUE
+                }
+            }
+        }
+
+        sawMax shouldBe true
+        sawMin shouldBe true
+    }
+
+    "a non-finite sample in the mix never reaches the clip, so it never clicks a rail" {
+        // pcm16 maps NaN to Short.MIN_VALUE (a full-scale negative click) and +/-Inf to the rails.
+        // None of that is heard: the DC blockers pass a non-finite sample on (and one more after
+        // it), but the house limiter's delay ring stores it as 0.0, so the clip sees only finite
+        // values. A quiet sine cannot reach a rail, so any rail sample here is a leaked non-finite.
+        val master = MasterStage(sampleRate = sampleRate, blockFrames = blockFrames)
+        val out = ShortArray(blockFrames * 2)
+        val poison = mapOf(3 to Double.NaN, 5 to Double.POSITIVE_INFINITY, 7 to Double.NEGATIVE_INFINITY)
+        var railHits = 0
+        var heard = false
+
+        repeat(20) { block ->
+            val mix = StereoBuffer(blockFrames)
+
+            for (i in 0 until blockFrames) {
+                val t = (block * blockFrames + i).toDouble() / sampleRate
+                val v = 0.5 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * t)
+                mix.left[i] = v
+                mix.right[i] = v
+            }
+
+            poison[block]?.let {
+                mix.left[10] = it
+                mix.right[20] = it
+            }
+
+            master.process(mix, out)
+
+            for (s in out) {
+                if (s == Short.MIN_VALUE || s == Short.MAX_VALUE) {
+                    railHits++
+                }
+
+                heard = heard || s != 0.toShort()
+            }
+        }
+
+        railHits shouldBe 0
+        heard shouldBe true
     }
 })

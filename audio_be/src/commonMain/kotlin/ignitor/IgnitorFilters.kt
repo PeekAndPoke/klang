@@ -93,7 +93,7 @@ data class FilterEnvDef(
  * clamped to [0, 1] before it scales the depth. The retired voice strip's filter envelope ran the
  * same two helpers (decision D3, the sampling).
  *
- * **The default curve** was the voice strip's too (decision D3 of `docs/tasks/builtin-instruments.md`):
+ * **The default curve** was the voice strip's too (decision D3 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`):
  * an unshaped stage takes `MOD_ENV_CURVE`, exponential; `curves` can shape each stage, and sprudel's
  * `lpfCurves` (and its three siblings) reach it through `classic()`'s curve slots.
  *

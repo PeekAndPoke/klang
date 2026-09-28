@@ -72,6 +72,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | VoiceData fields, the `oscParams` / `katalystParams` slots, AdsrDef, FilterDef, ScheduledVoice | `ref/data-model.md` |
 | Voice stages, `classic()`, the sample instrument, oscillators                      | `ref/voice-synthesis.md`   |
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
+| The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |
 | KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
 | Samples registry, audio decoders, URL caching (audio_fe)                           | `ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX`, framework precedents | `ref/numerical-safety.md`  |

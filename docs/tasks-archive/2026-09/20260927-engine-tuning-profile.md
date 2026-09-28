@@ -1,7 +1,7 @@
 # Engine tuning profile — Phase 3 + the Phase 2 wrapper/drift leftovers
 
 > **Closed 2026-09-27, archived:** the engines this profile was to tune (`PipelineDsl`, its presets and
-> `StageDsl.Filter`) retired with the voice strip in phase 3 step 9 (`docs/tasks/builtin-instruments.md` row 9);
+> `StageDsl.Filter`) retired with the voice strip in phase 3 step 9 (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` row 9);
 > every voice is an Ignitor tree now. Kept as history.
 
 > **This doc supersedes the now-archived `engine-dsl.md` design record**

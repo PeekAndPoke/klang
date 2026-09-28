@@ -29,7 +29,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * **An AUTHORED instrument on `classic()`** (phase 3 step 10, `docs/tasks/builtin-instruments.md`), on trees a bare
+ * **An AUTHORED instrument on `classic()`** (phase 3 step 10, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`), on trees a bare
  * saw cannot stand for (an instrument with its OWN envelope):
  *
  *  - the doors reach it, and with `adsrOff` the switched-off envelope hands on its inner's answer: an own

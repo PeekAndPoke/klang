@@ -179,13 +179,13 @@ Osc.register("supersaw", Osc.supersaw().classic())
   slot names on it. `sound(myGuitar).lpf(100)` on a guitar without an `lpf` slot does nothing.
 - `PipelineDsl`, the filter pipeline builder, `Cmd.RegisterPipeline`, `PipelineRegistry` and the
   `pedal` preset retire. (The preset is NOT unused: three corpus songs use it, DialogueWithTheStars,
-  FrozenDerSchmetterling and TetrisRemix, see `builtin-instruments.md` D4; `DialogueWithTheStars` calls
+  FrozenDerSchmetterling and TetrisRemix, see `../tasks-archive/2026-09/20260928-builtin-instruments.md` D4; `DialogueWithTheStars` calls
   `.pipeline("pedal")`, and a VCA-first tail has no `classic()` spelling. Decision D4 of
-  `../tasks/builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
+  `../tasks-archive/2026-09/20260928-builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
   writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
   fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pSustain` (`pAnchor` renamed in step 5b c1), `fmh` to `fmEnv`):
   section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
-  own later item. Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
+  own later item (`../tasks/future/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
   `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
   compose with it on every Der Schmetterling voice today.
 - **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
@@ -194,7 +194,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   highpass and a lowpass at `analog > 0` (at analog 0 the filters commute).
 - **The step list, the measured cost of the gate, the three stages that are NOT bit-identical today
   and the five decisions this phase needs from the maintainer are in
-  `../tasks/builtin-instruments.md`** (the spike of 2026-09-20).
+  `../tasks-archive/2026-09/20260928-builtin-instruments.md`** (the spike of 2026-09-20).
 - (Reshaped 2026-09-27, phase 3 step 8: the doors stay typed; `toVoiceData()` writes the slot keys, section 4.)
   Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
   `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
@@ -397,8 +397,9 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
    editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
    (2026-09-27: step 9 done; the voice strip, the Pipeline DSL and the typed door fields are retired and
-   every voice is its tree. The diagnostic, step 11, is deferred. Progress: `../tasks/builtin-instruments.md`
-   section 9.)
+   every voice is its tree. The diagnostic, step 11, is deferred: `../tasks/future/editor-voice-door-diagnostics.md`.
+   2026-09-28: phase 3 is done; the record, archived: `../tasks-archive/2026-09/20260928-builtin-instruments.md`
+   section 9, with its open items' new homes at the top.)
 4. **Interoperability lift**: when the second pattern kind exists, not before.
 5. **The announcements, last.** Everything that describes a retired surface is re-read and
    rewritten once the surfaces are gone: the whitepaper (`src/jsMain/resources/klang-whitepaper.html`,

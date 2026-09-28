@@ -20,7 +20,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 // `classic()`: the voice strip's chain as a tail of slotted Ignitor stages (phase 3 step 5; the strip retired in step 9)
 //
-// The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks/builtin-instruments.md`.
+// The plan is `docs/plans/signal-flow-redesign.md` section 5 and `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`.
 // The SLOTS below are grouped per stage and named `<door>.<param>`, which is sprudel's own reader
 // vocabulary (`lpf.freq`, `adsr.attack`, ...) and the `<stage>.<knob>` rule of the Katalyst's classic
 // chain. Each slot's KDoc names the sprudel reader it mirrors, and sprudel's `toVoiceData` writes exactly
@@ -212,7 +212,7 @@ class SampleSlots internal constructor() {
  * `SprudelVoiceData.toVoiceData`, behind the pattern's `onepole`, which sat on the source in front of the
  * strip. Every knob is a slot of [IgnitorDsl.Slots] (the groups above), so a
  * pattern FILLS it and never adds structure, and every unwritten stage is NOT BUILT: its slot's default
- * is the stage's off value in the gate's table (`docs/tasks/builtin-instruments.md` section 5b), so an
+ * is the stage's off value in the gate's table (`audio/ref/off-values.md`), so an
  * unwritten `classic()` builds exactly one stage, the envelope, at the voice envelope's defaults.
  *
  * What it deliberately does NOT contain: `pregain`. An instrument places `.pregain()` where the player's
@@ -345,7 +345,7 @@ fun IgnitorDsl.classic(): IgnitorDsl {
 /**
  * True when this tree ENDS in [classic]: its ROOT is `classic()`'s envelope, recognised by its switch, the slot
  * `adsr.on`. `classic()` is the one place that slot is placed (no door has the switch), so the root's switch IS
- * the tag, and no marker node or wire field is needed (phase 3 step 10, `docs/tasks/builtin-instruments.md`).
+ * the tag, and no marker node or wire field is needed (phase 3 step 10, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`).
  *
  * Such a tree carries the voice chain, so the voice doors reach it. Every built-in sound is one, and so is an
  * authored instrument whose LAST call is `.classic()`. The engine no longer asks (every voice is its tree since
