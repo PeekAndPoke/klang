@@ -649,7 +649,7 @@ class Interpreter(
             }
 
             // A native object is callable when its type registers an `invoke` method
-            // (`Master(m => ...)`). It runs through the SAME spec-aware path as a member call, so
+            // (`Katalyst(k => ...)`). It runs through the SAME spec-aware path as a member call, so
             // named arguments, default thunks and the trailing-lambda rule all apply.
             is NativeObjectValue<*> -> {
                 val invoke = engine.getExtensionMethod(callee, NativeOperatorNames.INVOKE)
@@ -662,7 +662,7 @@ class Interpreter(
                         astNode = call,
                         callStackTrace = getStackTrace(),
                     )
-                // calleeName already reads `Master.invoke` (see resolveCalleeName), so every error
+                // calleeName already reads `Katalyst.invoke` (see resolveCalleeName), so every error
                 // raised for this call site, mixed-style or unknown-parameter, names the same thing.
                 val fnName = calleeName
                 callStack.push(fnName, call.location)
@@ -703,7 +703,7 @@ class Interpreter(
             else -> "<anonymous function>"
         }
 
-        // A callable object: `Master(...)` dispatches to `Master.invoke`.
+        // A callable object: `Katalyst(...)` dispatches to `Katalyst.invoke`.
         is NativeObjectValue<*> -> when (calleeExpr) {
             is Identifier -> "${calleeExpr.name}.${NativeOperatorNames.INVOKE}"
             is MemberAccess -> "${calleeExpr.property}.${NativeOperatorNames.INVOKE}"

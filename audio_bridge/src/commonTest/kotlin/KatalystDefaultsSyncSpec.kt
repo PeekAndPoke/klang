@@ -222,7 +222,7 @@ class KatalystDefaultsSyncSpec : StringSpec({
         // own family because none of the other four fits and saying so is the point: it is not an
         // off value (a fader at 0 is silence, not transparency), not an absence (unity IS a
         // number the stage uses) and not a shared constant from `constants/` (an identity element
-        // is not a taste decision anybody retunes, which is why `MasterStageDsl.Gain` writes it
+        // is not a taste decision anybody retunes, which is why `KatalystChainBuilder` writes it
         // out too). Exactly 1.0, because the stage's bit-transparency is a `== 1.0` branch in
         // `KatalystGainEffect.process`: a 0.9999999999 here would multiply every orbit of every
         // song by something.

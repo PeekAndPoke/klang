@@ -35,14 +35,15 @@ interface KlangPatternEvent {
     val sound: SoundValue? get() = null
 
     /**
-     * The master chain this event references, if any. Default `null` for pattern types that don't
-     * carry [MasterValue]. Pattern languages that may carry an inline master (e.g. sprudel) override
-     * to expose the event's [MasterValue].
+     * The output chain (the playback's master) this event references, if any: a [KatalystValue],
+     * the same chain type an orbit runs. Default `null` for pattern types that don't carry one.
+     * Pattern languages that may carry an inline chain (e.g. sprudel) override to expose it.
      *
-     * Used by the playback's wire-emission step to pre-register inline masters with the backend before
-     * events that reference them are scheduled. Mirror of [sound].
+     * Used by the playback's wire-emission step to pre-register inline chains with the backend
+     * before events that reference them are scheduled, into the one Katalyst registry. Mirror of
+     * [sound].
      */
-    val master: MasterValue? get() = null
+    val master: KatalystValue? get() = null
 
     /**
      * The orbit chain this event references, if any. Default `null` for pattern types that don't

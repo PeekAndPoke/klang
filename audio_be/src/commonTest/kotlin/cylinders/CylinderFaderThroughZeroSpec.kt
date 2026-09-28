@@ -16,8 +16,9 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.TestIgnitors
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
@@ -200,7 +201,8 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         )
 
         if (withMaster) {
-            d.handle(KlangCommLink.Cmd.RegisterMaster(playbackId = "song", name = "loud", dsl = MasterDsl.of(MasterStageDsl.Gain(gain = 2.0))))
+            val loud = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(2.0)))
+            d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "loud", dsl = loud))
         }
 
         d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = if (withMaster) listOf(master, muted) else listOf(muted)))
@@ -210,6 +212,11 @@ class CylinderFaderThroughZeroSpec : StringSpec({
         return List(400) { b ->
             d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
             val engine = d.engine("song")!!
+
+            if (withMaster) {
+                // Positive control: the master really is in play, so this run takes the bus path.
+                engine.masterBusForTest.isActive shouldBe true
+            }
 
             (engine.scheduler.getActiveVoiceCount() > 0) to engine.cylinders.anyActive()
         }

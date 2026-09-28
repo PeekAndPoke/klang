@@ -6,18 +6,19 @@
 package io.peekandpoke.klang.audio_bridge
 
 /**
- * Authoring-layer representation of an orbit-chain reference.
+ * Authoring-layer representation of a chain reference, for either position: an orbit's chain
+ * (`katalyst(...)`) or the playback's output chain (`master(...)`).
  *
  * An event may select its Katalyst either by name (a pre-registered custom chain) or by inlining a
  * [KatalystDsl] chain directly.
  *
  * At the playback to wire boundary, [Dsl] is denormalized to a stable synthetic name (the playback
  * context allocates one via `registerKatalyst`), so the wire-level [VoiceData] still carries
- * `katalyst: String?`.
+ * `katalyst: String?` (or `master: String?` at the output).
  *
- * Mirror of [MasterValue] / [SoundValue]. NOT a wire type (no `@WireFormat`, no
+ * Mirror of [SoundValue]. NOT a wire type (no `@WireFormat`, no
  * `@WireName`): it never crosses the worklet boundary, it is denormalized to `katalyst: String?`
- * first. Authoring-layer only.
+ * (or `master: String?`) first. Authoring-layer only.
  */
 sealed interface KatalystValue {
 

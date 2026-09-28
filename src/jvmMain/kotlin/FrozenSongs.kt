@@ -47,7 +47,10 @@ package io.peekandpoke.klang
  * and the 2026-09-16 reverb unification (`room(...)` -> `reverb(...)`; `fade = f` -> `size = 10f`, which the engine
  * divides back to the same f, bit-exact for the values here; `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`),
  * and the 2026-09-24 wet-first doors (`body("glass")` -> `body(material = "glass")`, four calls in Seltsamere
- * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical).
+ * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical),
+ * and the 2026-09-28 Master DSL retirement (phase 3 step 12 C5: `master(Master(m => m.` ->
+ * `master(Katalyst(k => k.`, the output runs the same chain type as an orbit; same stages and values,
+ * the render bit-identical).
  *
  * 2026-09-19, the first migration whose renders are not bit-identical to older captures (the second is the
  * 2026-09-26 `.classic()` migration above):
@@ -497,8 +500,8 @@ export song = stack(
   , // Song body
   song_body.apply(song_arrange)
   , // Master
-  master(Master(m =>
-    m.reverb(0.2, 7, 3500).gain(3.3)
+  master(Katalyst(k =>
+    k.reverb(0.2, 7, 3500).gain(3.3)
   ))
 )
 

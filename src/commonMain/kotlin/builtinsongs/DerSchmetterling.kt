@@ -446,8 +446,8 @@ export song = stack(
   , // Song body
   song_body.apply(song_arrange)
   , // Master
-  master(Master(m =>
-    m.reverb(0.2, 7, 3500).gain(3.0)
+  master(Katalyst(k =>
+    k.reverb(0.2, 7, 3500).gain(3.0)
   ))
 )
 

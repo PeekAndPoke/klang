@@ -16,7 +16,7 @@ import io.peekandpoke.klang.script.klangScriptEngine
  * The `invoke` operator: a native OBJECT becomes callable when its type registers a method
  * named `invoke` (`docs/tasks/klangscript-native-object-operators.md`, revision 2026-09-05).
  * The call takes the spec-aware path of a member call, so named args, defaults and the
- * trailing-lambda rule apply. Consumers: `Master(...)`, `Katalyst(...)`, the field accessors.
+ * trailing-lambda rule apply. Consumers: `Katalyst(...)`, the field accessors.
  */
 /** A native object whose type registers `invoke`. */
 private object Doubler

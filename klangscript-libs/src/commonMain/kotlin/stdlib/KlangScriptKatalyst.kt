@@ -11,12 +11,14 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * `Katalyst` for KlangScript: builds [KatalystDsl] orbit chains.
+ * `Katalyst` for KlangScript: builds [KatalystDsl] chains, for an orbit or for the output.
  *
  * A Katalyst is the instrument an orbit plays through: the effects its summed voices run, in the
- * order written, before the playback's master bus. Author one by CALLING `Katalyst` with a
- * configure lambda and hand it to the `katalyst(...)` pattern door; the lambda receives a
- * [KatalystBuilder] whose knobs append stages in written order:
+ * order written, before the playback's master bus. The master bus runs one too: hand the same kind
+ * of chain to `master(...)` and everything the playback plays runs through it last (phase 3 step 12:
+ * one chain type, two positions). Author one by CALLING `Katalyst` with a configure lambda and hand
+ * it to the `katalyst(...)` or `master(...)` pattern door; the lambda receives a [KatalystBuilder]
+ * whose knobs append stages in written order:
  *
  * ```
  * let guitarBus = Katalyst(k => k
@@ -25,13 +27,16 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *   .compressor(threshold = -21, ratio = 3)
  * )
  * stack(guitar1, guitar2, guitar3).katalyst(guitarBus)
+ *
+ * master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))
  * ```
  *
  * `Katalyst()` with no lambda is the empty chain; `Katalyst(k => ...)` is the same as [build]. The
- * method forms exist so the callable form can be tested against them.
+ * method forms exist so the callable form can be tested against them. `master(Katalyst())` switches
+ * a master back off: a master reference means "change to this", so deleting a `master(...)` line
+ * while live coding leaves the last chain in place.
  *
- * Sibling of `Master` (per playback) and `Osc` (the per-voice instrument): same shape, different
- * host.
+ * Sibling of `Osc` (the per-voice instrument): same shape, different host.
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
@@ -44,7 +49,7 @@ object KlangScriptKatalyst {
     override fun toString(): String = "[Katalyst object]"
 
     /**
-     * Builds an orbit chain: the lambda receives a [KatalystBuilder] and appends stages in order
+     * Builds a chain (for an orbit or the output): the lambda receives a [KatalystBuilder] and appends stages in order
      * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`, `gain`, and
      * `classic` for the whole familiar block at once, at most once per builder). No lambda, or an
      * empty one, is the empty chain.

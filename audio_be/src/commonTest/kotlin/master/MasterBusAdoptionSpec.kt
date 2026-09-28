@@ -10,8 +10,10 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 
 /**
  * Master round M1, pinned at the bus itself rather than end to end: the FIRST master is adopted
@@ -28,8 +30,8 @@ class MasterBusAdoptionSpec : StringSpec({
     val blockFrames = 128
 
     fun newBus(): MasterBus {
-        val registry = MasterRegistry()
-        registry.register("loud", MasterDsl.of(MasterStageDsl.Gain(gain = 4.0)))
+        val registry = KatalystRegistry()
+        registry.register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(4.0))))
         return MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry)
     }
 

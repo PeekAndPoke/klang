@@ -10,20 +10,21 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.master.MasterBus.Companion.MAX_CACHED_CHAINS
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
  * The master chain of one [io.peekandpoke.klang.audio_be.PlaybackEngine], and the crossfade that
  * swaps it without clicks.
  *
- * **The output runs a [KatalystChain]** (phase 3 step 12 C3): the same chain and the same stages an
- * orbit runs, built by [KatalystChainBuilder] from the [KatalystDsl] that [MasterDslShim] makes of
- * the wire's [MasterDsl] (the shim goes in C5, when the wire carries the Katalyst itself). Two things
- * make it the OUTPUT host rather than an orbit, and both are this class's, not the chain's:
+ * **The output runs a [KatalystChain]** (phase 3 step 12): the same chain and the same stages an
+ * orbit runs, built by [KatalystChainBuilder] from the [KatalystDsl] a `master(…)` names, looked up
+ * in the engine's [KatalystRegistry] fork, the same fork its cylinders read (one registry, one
+ * namespace for both positions, since C5). Two things make it the OUTPUT host rather than an orbit,
+ * and both are this class's, not the chain's:
  *  - **nothing fills the chain's `Param` slots** (decision (b), 2026-09-27): every chain is
  *    configured with `applyParams(null)` before it processes, so a slot is its authored default;
  *  - **it never deactivates or resets on silence** (plan risk R5): a cylinder resets its chain when
@@ -46,12 +47,14 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * audible, extend the old chain's life" noted, and step 12 C4 moves this host onto the orbit's swap
  * (decision (f)).
  *
- * **Chains are built once, at registration.** Building allocates (Freeverb buffers, delay rings), so
- * it must not happen per swap: swaps are applied from `promoteScheduled`, inside the render
- * callback. [register] pre-builds and caches, so applying a swap is normally a map lookup. A
- * Katalyst stage rents its unit at its first configure, so the build configures the chain at once
- * ([buildChain]): the rent happens where the old master chain's did, at registration (plan risk R1,
- * the unit rent order the corpus render pins).
+ * **A chain is built once, on its first request, and cached.** Registration builds nothing: the one
+ * Katalyst registry serves both positions, so a registered chain may be an orbit's that never
+ * reaches the output. [requestSwap] builds on the first request for a name (inside
+ * `scheduler.process`, before any orbit of the block processes) and caches it, so a repeat or a
+ * swap back is a map lookup. A Katalyst stage rents its unit at its first configure, so the build
+ * configures the chain at once ([buildChain]): the rent happens at the request, where the offline
+ * renderer's master always rented (plan risk R1, the unit rent order the corpus render pins). Live,
+ * this moved from the retired `RegisterMaster` command to the request in C5 (both on the audio thread).
  *
  * **A refused unit degrades and recovers, the orbit's rule** (maintainer, 2026-09-27). When the
  * shelf cannot serve a reverb unit or a delay ring and the allocation fails, the stage stays in the
@@ -63,21 +66,19 @@ import io.peekandpoke.klang.audio_bridge.MasterDsl
  * the first adoption and every fade into a chain that was not just audible reset their chain, so
  * the next block retries WITH allocation, on the render thread, as an orbit's stage does. Each new latch counts once in the chain's `deniedRents` (telemetry only).
  *
- * Two known exceptions, both bounded and documented rather than hidden: a master registered on a
- * *parent* registry (the offline renderer does this, where allocation is harmless), and returning to
- * a master that has since been evicted from the bounded cache — going back to a chain last used more
- * than [MAX_CACHED_CHAINS] edits ago rebuilds it on the audio thread.
- *
- * Note that registration is *also* handled on the audio thread (both backends drain commands there),
- * so building still costs at that moment: Freeverb buffers always, and a delay ring only when the
- * backend's shelf has none of that class idle (resource-warehouse step 2e: master delays rent from
- * the same class-sized shelf as the orbits, and an evicted chain's rings go back to it). The first
- * master delay of a class on a backend still allocates in render, by decision (D2, 2026-09-04).
+ * Building therefore costs on the audio thread at the first request: Freeverb buffers when the
+ * shelf has no idle unit, and a delay ring only when the backend's shelf has none of that class idle
+ * (resource-warehouse step 2e: master delays rent from the same class-sized shelf as the orbits, and
+ * an evicted chain's rings go back to it). The first master delay of a class on a backend still
+ * allocates in render, by decision (D2, 2026-09-04), as an orbit's does. Returning to a chain that
+ * has since been evicted from the bounded cache (last used more than [MAX_CACHED_CHAINS] edits ago)
+ * rebuilds it the same way.
  */
 class MasterBus(
     private val sampleRate: Int,
     private val blockFrames: Int,
-    private val registry: MasterRegistry,
+    /** The engine's chain registry fork, the one its cylinders read too. */
+    private val registry: KatalystRegistry,
     /** The backend's ring shelf; master delays rent from it and evicted chains return to it. */
     private val rings: SizedBuffers = SizedBuffers.forRings(sampleRate),
     /** The backend's reverb-unit shelf, same contract. */
@@ -87,7 +88,7 @@ class MasterBus(
         /**
          * How many built chains one bus keeps.
          *
-         * Names are content-derived (`MasterDsl.uniqueId()`), so every *edit* of a master while live
+         * Names are content-derived (`KatalystDsl.uniqueId()`), so every *edit* of a master while live
          * coding mints a new one. Without a bound, each edit's Freeverb buffers and delay ring would
          * be retained for the life of the engine. The chains still in play (current / outgoing /
          * queued) are never evicted.
@@ -112,11 +113,11 @@ class MasterBus(
     /** The ramp both chains are blended over. One per bus, created once. */
     private val fade: Crossfade = Crossfade(sampleRate)
 
-    /** Built chains by (lowercased) name — allocation happens here, never on the swap path. */
+    /** Built chains by (lowercased) name: built on the first request, then a map lookup. */
     private val chains = mutableMapOf<String, KatalystChain>()
 
     /** The empty chain: no stage, so [isActive] is false and the engine keeps its fast path. */
-    private val unity: KatalystChain = buildChain(MasterDsl.default)
+    private val unity: KatalystChain = buildChain(KatalystDsl(emptyList()))
 
     /** The active chain. Unity until a `master(…)` event says otherwise. */
     private var current: KatalystChain = unity
@@ -189,31 +190,12 @@ class MasterBus(
     internal val cachedChainCount: Int get() = chains.size
 
     /**
-     * Registers a custom master chain for this playback **and builds it** (allocating), so applying
-     * it later is allocation-free.
-     */
-    fun register(name: String, dsl: MasterDsl) {
-        val key = name.lowercase()
-
-        registry.register(name, dsl)
-
-        // Names are content-derived (`MasterDsl.uniqueId()`), so a name we already hold is already
-        // the right chain: rebuilding would burn an allocation and orphan a live instance mid-fade.
-        if (chains.containsKey(key)) {
-            return
-        }
-
-        evictIfNeeded()
-        chains[key] = buildChain(dsl)
-    }
-
-    /**
      * Builds the chain for [dsl] and configures it at once (see the class KDoc: the first configure
      * is where a stage rents its unit, so it has to happen here and not in the first [process]).
      * The configure writes the chain's own numbers; [process] writes them again every block.
      */
-    private fun buildChain(dsl: MasterDsl): KatalystChain = KatalystChainBuilder.build(
-        dsl = MasterDslShim.toKatalyst(dsl),
+    private fun buildChain(dsl: KatalystDsl): KatalystChain = KatalystChainBuilder.build(
+        dsl = dsl,
         sampleRate = sampleRate,
         blockFrames = blockFrames,
         rings = rings,
@@ -265,14 +247,15 @@ class MasterBus(
      * makes a top-level `master(…)`, which re-emits its event every cycle, free after the first
      * application.
      *
-     * **An unknown name is NOT latched.** If the `RegisterMaster` command has not arrived yet, the
+     * **An unknown name is NOT latched.** If the `RegisterKatalyst` command has not arrived yet, the
      * request is simply dropped, so a later re-emission of the same event still applies it. Latching
      * here would silently pin the playback to unity for good.
      *
      * Note this does *not* rescue a **recreated engine**: the backend registry is a per-engine fork
      * that dies with the engine, while the frontend's send-once set is never cleared, so the
-     * registration is not re-sent. That gap is shared with the ignitor and pipeline registries and
-     * is tracked separately — it is not something this method can fix.
+     * registration is not re-sent. That gap is shared with the ignitor registry and the orbits' use
+     * of the same Katalyst registry, and is tracked separately: it is not something this method can
+     * fix.
      *
      * **A request arriving mid-fade is queued** (at most one, last writer wins) and starts when the
      * running fade completes. Cutting a fade short would drop the outgoing chain at full weight —
@@ -324,15 +307,16 @@ class MasterBus(
     }
 
     /**
-     * The built chain for [name], or null if no such master is known here.
+     * The built chain for [key] (already lowercased), or null if no such chain is registered here
+     * or on a parent registry.
      *
-     * Normally a cache hit ([register] pre-builds). The lazy branch covers a master registered
-     * directly on a parent registry — the offline renderer does that, where allocation is harmless.
+     * A cache hit after the first request; the first request builds (see the class KDoc). The
+     * lookup takes the key as it is ([KatalystRegistry.findByKey], no normalizing allocation).
      */
     private fun chainFor(key: String): KatalystChain? {
         chains[key]?.let { return it }
 
-        val dsl = registry.find(key) ?: return null
+        val dsl = registry.findByKey(key) ?: return null
 
         evictIfNeeded()
 

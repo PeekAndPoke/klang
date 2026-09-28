@@ -346,7 +346,7 @@ class KatalystGainEffectSpec : StringSpec({
     // ── Through the chain: the writer's one guard ────────────────────────────────────────────────
 
     "an unset gain slot is unity, not a NaN in the mix" {
-        // The writer's NaN guard, the same reading `MasterDslShim` gives the master's gain: a
+        // The writer's NaN guard: a
         // non-finite slot was never set, and an unset fader is the identity. Without it the whole
         // orbit would be NaN for good.
         val chain = KatalystChainBuilder.build(

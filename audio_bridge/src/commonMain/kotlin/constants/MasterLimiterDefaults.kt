@@ -7,8 +7,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Limiter defaults shared by the house safety limiter (`audio_be/MasterStage`)
-// and the opt-in authored limiters (`MasterStageDsl.Limiter`, and the Katalyst builder's
-// `limiter(...)`, which appends a compressor stage with these numbers).
+// and the opt-in authored limiter (the Katalyst builder's `limiter(...)`, which appends a
+// compressor stage with these numbers, at the output or on an orbit).
 //
 // Only the values that are genuinely wire defaults live here. The house
 // limiter's own TIMING — `MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS` and
@@ -34,8 +34,8 @@ const val LIMITER_KNEE_DB: Double = 2.0
 /** Envelope release, shared by both limiters. */
 const val LIMITER_RELEASE_SECONDS: Double = 0.1
 
-// ── Authored-limiter defaults (every authored `limiter(...)`: `Master(m => m.limiter(...))` and the
-// Katalyst builder's `Katalyst(k => k.limiter(...))`) ────────────────
+// ── Authored-limiter defaults (every authored `limiter(...)`: `Katalyst(k => k.limiter(...))`, at
+// the output through `master(...)` or on an orbit through `katalyst(...)`) ────────────────
 // These deliberately DIFFER from the house timing in `MasterStage`, and the difference is
 // the point: an authored limiter sits upstream of the summed mix, on one playback or one orbit.
 

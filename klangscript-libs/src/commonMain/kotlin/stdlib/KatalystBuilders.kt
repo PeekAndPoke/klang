@@ -22,7 +22,8 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /*
- * Builders for an orbit chain. `Katalyst(k => ...)` hands a [KatalystBuilder] to the lambda; every
+ * Builders for a chain, on an orbit (`katalyst(...)`) or at the output (`master(...)`), one chain
+ * type for both positions. `Katalyst(k => ...)` hands a [KatalystBuilder] to the lambda; every
  * knob appends ONE stage, in written order (the order IS the chain), and returns a new builder.
  * A stage's musical inputs are the parameters of its door, `wet` first wherever there is one; a
  * secondary knob (`floor`, `cap`) sits on the stage's own builder behind a `configure` lambda:
@@ -40,8 +41,9 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * fixed value of the chain, not a slot: only a slot (`Katalyst.param(...)`, or any `Param` such as
  * `Osc.param(...)`) listens to the orbit's `katp` state.
  *
- * Effects are the same DSP the master stages use; only the host differs, and the knobs use the
- * same names and scales as their sprudel twins, so a number means the same on either bus.
+ * The knobs use the same names and scales as their sprudel twins, so a number means the same on
+ * an orbit and at the output. At the output nothing fills a slot (it stays at its default) and a
+ * `duck` stage is inert.
  *
  * Every knob takes a number OR an `Osc.param(...)` slot (`IgnitorDslLike`, the same door the
  * oscillator knobs use). The chain reads its knobs once per block, so a signal-rate node on one is
@@ -310,9 +312,9 @@ fun KatalystBuilder.phaser(
  *   `compressor(release = ...)`.
  * @param lookahead how far ahead it sees, in seconds (default 0, off). The gain starts closing
  *   BEFORE a transient arrives, and `attack` becomes the gain-smoothing length (widen both
- *   together). The cost is latency: this orbit runs late by `floor(lookahead * sampleRate)`
- *   frames (none below 8 frames, about 0.2 ms), and nothing compensates. A plain number fixed with
- *   the chain, at most 0.05. No orbit twin: declare it here.
+ *   together). The cost is latency: this orbit (at the output, this whole playback) runs late
+ *   by `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
+ *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
  */
 @KlangScript.Function
 fun KatalystBuilder.compressor(
@@ -349,6 +351,7 @@ fun KatalystBuilder.compressor(
  * the limiter's. Write a slot's default as the number you want.
  *
  * ```
+ * master(Katalyst(k => k.gain(1.5).limiter()))
  * katalyst(Katalyst(k => k.gain(1.5).limiter(lookahead = 0.005)))
  * ```
  *
@@ -364,9 +367,9 @@ fun KatalystBuilder.compressor(
  *   `compressor(release = ...)`.
  * @param lookahead how far ahead it sees, in seconds (default 0, off). Lets the limiter close the
  *   gain before a transient arrives instead of chasing it, which is what stops loud hits punching
- *   through. The cost is latency: this orbit runs late by `floor(lookahead * sampleRate)` frames
- *   (none below 8 frames, about 0.2 ms), and nothing compensates. A plain number fixed with the
- *   chain, at most 0.05. No orbit twin: declare it here.
+ *   through. The cost is latency: this orbit (at the output, this whole playback) runs late by
+ *   `floor(lookahead * sampleRate)` frames (none below 8 frames, about 0.2 ms), and nothing
+ *   compensates. A plain number fixed with the chain, at most 0.05. No orbit twin: declare it here.
  */
 @KlangScript.Function
 fun KatalystBuilder.limiter(

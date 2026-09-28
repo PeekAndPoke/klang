@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.master.MasterBus
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
-import io.peekandpoke.klang.audio_bridge.MasterDsl
 
 /**
  * One per-`playbackId` DSP instance. Owns its **full** render state — its own [VoiceScheduler]
@@ -51,15 +50,14 @@ class PlaybackEngine(
     /** The master bus — exposed for tests asserting cache/tail behaviour. */
     internal val masterBusForTest: MasterBus get() = masterBus
 
-    /** Registers a custom master chain for this playback. */
-    fun registerMaster(name: String, dsl: MasterDsl) = masterBus.register(name, dsl)
-
     /**
-     * Registers a custom orbit chain for this playback.
+     * Registers a custom chain for this playback, for either position.
      *
      * The chain lands on this engine's fork, which is the registry every cylinder of this engine
-     * resolves a name against (Katalyst step 3a): a `katalyst(…)` reference on the voice stream
-     * then finds it, and the orbit installs it the next time it is idle.
+     * AND its [MasterBus] resolve a name against (Katalyst step 3a; the output since phase 3 step 12
+     * C5): a `katalyst(…)` reference on the voice stream then finds it, and the orbit installs it
+     * the next time it is idle; a `master(…)` reference finds it, and the bus builds it on that
+     * request. Registration builds nothing: a registered chain may never be played at the output.
      */
     fun registerKatalyst(name: String, dsl: KatalystDsl) = katalystRegistry.register(name, dsl)
 
@@ -76,7 +74,7 @@ class PlaybackEngine(
         quietBlocks = if (hasOwnSound()) 0 else quietBlocks + 1
 
         if (!masterBus.isActive) {
-            // Fast path — byte-identical to the pre-MasterDsl engine.
+            // Fast path: an empty output chain, byte-identical to the engine before authored masters.
             cylinders.processAndMix(target, cursorFrame)
             markMasterBusRendered()
             return
@@ -168,10 +166,10 @@ class PlaybackEngine(
 
         /** Builds an engine: its own [Cylinders] + a [VoiceScheduler] wired to the shared [context]. */
         fun create(context: AudioBackendContext): PlaybackEngine {
-            // ONE fork per engine, shared by the two things that need it: this engine registers
-            // its chains here, and every cylinder it rents resolves a `katalyst(…)` name against
-            // the same fork. It dies with the engine, so a chain cannot outlive the playback that
-            // declared it.
+            // ONE fork per engine, shared by everything that needs it: this engine registers its
+            // chains here, every cylinder it rents resolves a `katalyst(…)` name against it, and the
+            // master bus resolves a `master(…)` name against it. It dies with the engine, so a
+            // chain cannot outlive the playback that declared it.
             val katalystRegistry = context.katalystRegistry.fork()
             val cylinders = Cylinders(
                 blockFrames = context.blockFrames,
@@ -184,7 +182,7 @@ class PlaybackEngine(
             val masterBus = MasterBus(
                 sampleRate = context.sampleRate,
                 blockFrames = context.blockFrames,
-                registry = context.masterRegistry.fork(),
+                registry = katalystRegistry,
                 rings = context.warehouse.sized,
                 reverbs = context.warehouse.reverbs,
             )

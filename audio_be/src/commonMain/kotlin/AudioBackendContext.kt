@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.master.MasterBus
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
@@ -32,9 +31,10 @@ class AudioBackendContext(
     val commLink: KlangCommLink.BackendEndpoint,
     /** Parent ignitor registry — each engine's scheduler forks it per playback. */
     val ignitorRegistry: IgnitorRegistry,
-    /** Parent master registry — each engine's [MasterBus] forks it per playback. */
-    val masterRegistry: MasterRegistry,
-    /** Parent Katalyst registry; each engine forks it per playback. */
+    /**
+     * Parent Katalyst registry; each engine forks it per playback. The one chain registry for both
+     * positions: the engine's cylinders and its [MasterBus] resolve names against the same fork.
+     */
     val katalystRegistry: KatalystRegistry,
     /** The single audio timeline (read-only here; written by the main loop via [BackendClock]). */
     val clock: RenderClock,
@@ -103,7 +103,6 @@ class AudioBackendContext(
             commLink = commLink,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
             phasePoolSeed = phasePoolSeed,
-            masterRegistry = MasterRegistry(),
             katalystRegistry = KatalystRegistry(),
             clock = clock,
             performanceTimeMs = performanceTimeMs,

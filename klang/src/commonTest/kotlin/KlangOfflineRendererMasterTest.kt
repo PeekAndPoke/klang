@@ -7,11 +7,12 @@ package io.peekandpoke.klang.audio_engine
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
-import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.common.SourceLocationChain
@@ -21,14 +22,14 @@ import kotlin.math.abs
  * The master chain must apply to **offline renders** too, not just live playback — otherwise a
  * recorded WAV would not match what the song sounds like.
  *
- * The offline path differs from live in one way that matters: it registers masters directly on the
- * renderer's *parent* registry rather than sending `Cmd.RegisterMaster`, so the per-engine fork
- * resolves them through its parent and builds the chain lazily.
+ * The offline path differs from live in one way that matters: it registers chains directly on the
+ * renderer's *parent* Katalyst registry rather than sending `Cmd.RegisterKatalyst`, so the
+ * per-engine fork resolves them through its parent and the master bus builds the chain on request.
  */
 class KlangOfflineRendererMasterTest : StringSpec({
 
     /** A held note, optionally preceded by a control-only `master(…)` carrier event. */
-    fun pattern(master: MasterDsl?): KlangPattern = object : KlangPattern {
+    fun pattern(master: KatalystDsl?): KlangPattern = object : KlangPattern {
         override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
             val note = object : KlangPatternEvent {
                 override val startCycles = 0.0
@@ -47,7 +48,7 @@ class KlangOfflineRendererMasterTest : StringSpec({
                 override val startCycles = 0.0
                 override val durationCycles = 1.0
                 override val sourceLocations: SourceLocationChain? = null
-                override val master: MasterValue = MasterValue.Dsl(master)
+                override val master: KatalystValue = KatalystValue.Dsl(master)
                 override fun toVoiceData() = VoiceData.empty.copy(
                     master = master.uniqueId(), control = true,
                 )
@@ -57,7 +58,7 @@ class KlangOfflineRendererMasterTest : StringSpec({
         }
     }
 
-    suspend fun renderPeak(master: MasterDsl?): Double {
+    suspend fun renderPeak(master: KatalystDsl?): Double {
         var peak = 0.0
 
         KlangOfflineRenderer(sampleRate = 44100, blockFrames = 128).render(
@@ -79,7 +80,7 @@ class KlangOfflineRendererMasterTest : StringSpec({
 
     "an offline render applies the song's master chain" {
         val plain = renderPeak(master = null)
-        val boosted = renderPeak(master = MasterDsl.of(MasterStageDsl.Gain(gain = 4.0)))
+        val boosted = renderPeak(master = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(4.0))))
 
         plain shouldBeGreaterThan 0.0
         // Same note, same render — the only difference is the master, so the recording must be louder.

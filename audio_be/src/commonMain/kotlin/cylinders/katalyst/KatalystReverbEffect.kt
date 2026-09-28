@@ -17,8 +17,8 @@ import kotlin.math.min
  * The orbit reverb, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
  * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and adds its room into
  * that same mix, so the dry signal stays. In the classic order it sits after body, vowel and the
- * delay, so the room hears all three, the delay's echoes included. The master's
- * `MasterStageDsl.Reverb` model, on the orbit bus.
+ * delay, so the room hears all three, the delay's echoes included. The same effect runs at the
+ * output (`master(...)`), where the mix is the playback's bus.
  *
  * **The `wet` glides** per sample, a LEVEL knob ([KnobGlide.advanceScaled]) into the feed, with the
  * size glide's lifecycle below: the first configure out of Off snaps, [Off.enter] forgets it. Not

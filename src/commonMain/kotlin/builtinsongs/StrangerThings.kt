@@ -76,7 +76,7 @@ stack(
     .orbit(7).gain(0.11).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
-  master(Master(m => m
+  master(Katalyst(k => k
     .reverb(0.05, 9)
     .gain(2.5)
   ))

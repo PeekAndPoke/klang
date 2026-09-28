@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Defaults of the two send effects, delay and reverb, on EVERY surface: the
-// master stages (`MasterStageDsl.Delay` / `.Reverb` and their builders), a
+// Katalyst stages (`KatalystStageDsl.Delay` / `.Reverb` and their builders), a
 // sprudel `delay(...)` / `reverb(...)` call (the compound doors fill their
 // companions from here, see `/dsl-design` §4),
 // the fallback for a non-finite value on both buses, and the sprudel editor tools. One edit here

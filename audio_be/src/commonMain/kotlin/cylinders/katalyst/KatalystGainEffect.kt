@@ -17,8 +17,7 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * **Raw.** A negative factor (a polarity flip) and one far above unity are the author's business;
  * nothing here clamps. The two guards are reads of "unset" rather than clamps, and they answer it
  * differently on purpose: the WRITER reads a non-finite slot as unity and hands that on (see
- * [KatalystGainWriter], the same thing `MasterDslShim` does with this knob on the master
- * bus), while this stage's DOOR ignores the call entirely and leaves the current target standing
+ * [KatalystGainWriter]), while this stage's DOOR ignores the call entirely and leaves the current target standing
  * (see [configure], which spells out when the difference shows).
  *
  * **Unity is bit-transparent**: the multiply is skipped entirely, so a chain that declares
@@ -27,8 +26,9 @@ import io.peekandpoke.klang.audio_be.KnobGlide
  * returns `-0.0` for `-0.0` anyway; skipping it is a saving, not a different answer.
  *
  * **A change GLIDES, per sample, over `KNOB_GLIDE_SECONDS`** (`docs/plans/knob-glide.md`, the LEVEL
- * rule; Katalyst 5c-8). The master snaps its gain instead: its factor is resolved at chain build and
- * a new number is a new chain, so the 60 ms bus crossfade covers it. Here the factor is a slot, so
+ * rule; Katalyst 5c-8). At the output a written number is a constant (nothing fills a slot there,
+ * phase 3 step 12 decision (b)), so a new number is a new chain and the 60 ms bus crossfade covers
+ * it. On an orbit the factor can be a slot, so
  * `.katp("gain.gain", "<0.5 1.0>")` moves it while the stage stands. The glide is [KnobGlide]'s LEVEL
  * half: linear over whole blocks (17 at 44.1 kHz, 19 at 48 kHz), per sample within a block, written
  * from the block's END so it lands on the target bit for bit, and a new target mid-glide starts from

@@ -9,8 +9,6 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -141,11 +139,13 @@ data class SprudelVoiceData(
     var patternId: String?,
 
     /**
-     * The master chain this event switches the playback's bus to, from its start time onward.
-     * Either a [MasterValue.Named] (a pre-registered custom) or a [MasterValue.Dsl] inlining a
-     * [MasterDsl] — the latter is denormalized to a synthetic name in [toVoiceData]. Null = no change.
+     * The output chain (the master) this event switches the playback's bus to, from its start time
+     * onward. The same chain type an orbit runs: a [KatalystValue.Named] (a pre-registered custom)
+     * or a [KatalystValue.Dsl] inlining a [KatalystDsl]; the latter is denormalized to a synthetic
+     * name in [toVoiceData]. Null = no change. A separate field from [katalyst]: the two positions
+     * are set by different doors and merge independently.
      */
-    var master: MasterValue?,
+    var master: KatalystValue?,
 
     /**
      * The orbit chain this event switches its orbit to, from its start time onward. Either a
@@ -894,16 +894,15 @@ data class SprudelVoiceData(
             is SoundValue.Osc -> s.osc.uniqueId()
         }
 
-        // Same denormalization for the master chain reference.
+        // Same denormalization for the two chain references, the output's and the orbit's.
+        // `.name` is the memoized `uniqueId()` of the chain: one structural hash per value
+        // instance rather than one per event (see KatalystValue.Dsl.name).
         val masterName: String? = when (val m = master) {
             null -> null
-            is MasterValue.Named -> m.name
-            is MasterValue.Dsl -> m.master.uniqueId()
+            is KatalystValue.Named -> m.name
+            is KatalystValue.Dsl -> m.name
         }
 
-        // ...and for the orbit chain reference.
-        // `k.name` is the memoized `uniqueId()` of the chain: one structural hash per value
-        // instance rather than one per event (see KatalystValue.Dsl.name).
         val katalystName: String? = when (val k = katalyst) {
             null -> null
             is KatalystValue.Named -> k.name

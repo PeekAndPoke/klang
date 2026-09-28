@@ -22,7 +22,6 @@ import io.peekandpoke.klang.audio_be.WarmupVocabulary
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -62,7 +61,6 @@ class CylinderShelfSpec : StringSpec({
         val context = AudioBackendContext(
             sampleRate = sampleRate, blockFrames = blockFrames, commLink = commLink.backend,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
-            masterRegistry = MasterRegistry(),
             katalystRegistry = KatalystRegistry(),
             clock = clock, performanceTimeMs = { 0.0 }, warehouse = warehouse,
         )

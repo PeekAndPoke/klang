@@ -46,7 +46,7 @@ package io.peekandpoke.klang.audio_bridge.constants
  *
  * Not a new convention: `/dsl-design` §4 already says a NON-FINITE value reads as unset, and the
  * engine reads it that way everywhere a `Double?` cannot reach (the `KatalystSlots` resolvers,
- * `MasterDslShim.finite`, every shared DSP setter, `KatalystDelayEffect` and `KatalystReverbEffect`
+ * every shared DSP setter, `KatalystDelayEffect` and `KatalystReverbEffect`
  * off-configs). NaN is simply the non-finite value we WRITE, so an unset slot has one spelling.
  *
  * A consumer must test `isFinite()`, never `== SLOT_UNSET`: NaN is not equal to itself, and an

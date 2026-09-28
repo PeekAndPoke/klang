@@ -16,7 +16,6 @@ import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -364,23 +363,6 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         ks("Katalyst(k => k.limiter(lookahead = 0.004))") shouldBe KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
         KlangScriptKatalyst.build { it.limiter(lookahead = 0.004) } shouldBe
                 KatalystDsl.of(bareLimiter.copy(lookahead = 0.004))
-    }
-
-    "the limiter's numbers are the Master DSL limiter's, until that DSL retires" {
-        // One limiter, two doors until step 12 C5: the Katalyst preset must append exactly the
-        // numbers `Master(m => m.limiter())` runs, or the songs' migration would change their sound.
-        val master = MasterStageDsl.Limiter()
-
-        ks("Katalyst(k => k.limiter())") shouldBe KatalystDsl.of(
-            KatalystStageDsl.Compressor(
-                threshold = c(master.threshold),
-                ratio = c(master.ratio),
-                knee = c(master.knee),
-                attack = c(master.attackSeconds),
-                release = c(master.releaseSeconds),
-                lookahead = master.lookaheadSeconds,
-            )
-        )
     }
 
     "the eq and the gain keep their shapes" {

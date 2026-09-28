@@ -164,8 +164,8 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `n(pat)`                   | Play by scale index                                                                                              | `n("0 2 4 7").scale("C4:major")`                                               |
 | `chord(pat)`               | Play chord names                                                                                                 | `chord("<Am C F G>")`                                                          |
 | `stack(p1, p2, ...)`       | Layer simultaneously                                                                                             | `stack(s("bd sd"), s("hh*4"))`                                                 |
-| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master(m => m.gain(2.0).limiter())))` |
-| `master(Master.default())` | Switch the master back **off** — deleting the `master(...)` line does not, since a master means "change to this" | `master(Master.default())`                                                     |
+| `master(chain)`            | Set the song's master bus (silent control layer: put it in the `stack`)                                         | `stack(lead, bass, master(Katalyst(k => k.gain(2.0).limiter())))` |
+| `master(Katalyst())`       | Switch the master back **off** (an empty chain): deleting the `master(...)` line does not, since a master means "change to this" | `master(Katalyst())`                                                           |
 | `cat(p1, p2, ...)`         | Sequence across cycles                                                                                           | `cat(s("bd sd"), s("cp cp"))`                                                  |
 | `fastcat(p1, p2, ...)`     | Sequence within one cycle                                                                                        | `fastcat(s("bd"), s("sd"))`                                                    |
 | `arrange([n,p], ...)`      | Timed sections                                                                                                   | `arrange([4, melody], [2, silence])`                                           |
@@ -191,17 +191,18 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > |-------|---------|
 > | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; there is no per-voice phaser), `compressor`, ducking |
 > | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Master(m => m...))` with the stage doors `gain(gain)` (make-up level), `limiter(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, each appending a stage |
+> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Katalyst(k => k...))`: the same Katalyst chain an orbit runs (since phase 3 step 12), so every stage door works there (`gain(gain)` as make-up level, `limiter(...)`, `compressor(...)`, `eq(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, `phaser`, `body`, `vowel`), each appending a stage; `duck` is inert at the output and a `Katalyst.param(...)` stays at its default there |
 
-**Master limiter.** `m.limiter(threshold, ratio, knee, attack, lookahead, release)`, flat and every parameter optional
-(an omitted one keeps its default): `threshold` in dBFS (-1), `ratio` (20), `knee` in dB (2), `attack`, `lookahead` and
-`release` in seconds (0.001, 0, 0.1). Name them: `m.limiter(threshold = -3, ratio = 4)`.
+**The limiter.** `k.limiter(threshold, ratio, knee, attack, release, lookahead)`, flat and every parameter optional
+(an omitted one keeps its default): `threshold` in dBFS (-1), `ratio` (20), `knee` in dB (2), `attack`, `release` and
+`lookahead` in seconds (0.001, 0.1, 0). Name them: `k.limiter(threshold = -3, ratio = 4)`. It is a compressor stage
+with limiter defaults, so it works on an orbit too.
 
 - An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
   5 ms and peaks are already caught. An authored `limiter` stage is for *shaping*, not peak-catching.
-- **`.lookahead()` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack — three
-  limiters with lookahead are three delay lines, and the delay is per-playback, so it shifts this song against anything
-  else playing.
+- **`lookahead` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack: three
+  limiters with lookahead are three delay lines. At the master it shifts this song against anything else playing; on an
+  orbit it shifts that orbit against the song's other orbits (nothing compensates).
 - With lookahead **off**, `attack` is a one-pole time constant (short = keeps transient punch). With it **on**, `attack`
   is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
   low-frequency cleanliness tracks it.

@@ -113,12 +113,13 @@ data class VoiceData(
     val sourceId: String?,
 
     /**
-     * Master-chain name — selects the [MasterDsl] applied to this playback's bus from this event's
-     * start time onward (last writer wins per playback).
+     * Output-chain name: selects the [KatalystDsl] applied to this playback's bus (its master) from
+     * this event's start time onward (last writer wins per playback). The name lives in the one
+     * Katalyst namespace, the same registry an orbit's [katalyst] resolves against.
      *
-     * Resolved from the authoring-layer `MasterValue` at the wire boundary: an inline chain
-     * denormalizes to its `MasterDsl.uniqueId()`, a named reference passes through. Null means
-     * "no change" — the playback keeps whatever master it already had.
+     * Resolved from the authoring-layer `KatalystValue` at the wire boundary: an inline chain
+     * denormalizes to its `KatalystDsl.uniqueId()`, a named reference passes through. Null means
+     * "no change": the playback keeps whatever master it already had.
      *
      * A master reference rides *any* event, so `note("c3").master(…)` swaps the master at that
      * note's onset and still sounds the note. An event that carries *only* a master is marked

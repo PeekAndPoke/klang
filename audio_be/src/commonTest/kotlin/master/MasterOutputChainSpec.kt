@@ -13,6 +13,7 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChain
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
@@ -20,8 +21,6 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
@@ -52,14 +51,14 @@ class MasterOutputChainSpec : StringSpec({
     "a chain at the output runs bit for bit as the same Katalyst chain standalone, across a silent gap" {
         // Every stage kind the master has, with numbers unlike any default: gain drives the limiter
         // into real reduction, the delay's echoes and the room ring into the gap.
-        val registry = MasterRegistry()
+        val registry = KatalystRegistry()
         registry.register(
             "m",
-            MasterDsl.of(
-                MasterStageDsl.Delay(wet = 0.35, time = 0.07, feedback = 0.45, cap = 1.3),
-                MasterStageDsl.Reverb(wet = 0.3, size = 6.5, lowpass = 5200.0),
-                MasterStageDsl.Gain(gain = 1.8),
-                MasterStageDsl.Limiter(threshold = -2.0, ratio = 15.0, knee = 1.5, attackSeconds = 0.002, releaseSeconds = 0.15),
+            KatalystDsl.of(
+                KatalystStageDsl.Delay(wet = c(0.35), time = c(0.07), feedback = c(0.45), cap = c(1.3)),
+                KatalystStageDsl.Reverb(wet = c(0.3), size = c(6.5), lowpass = c(5200.0)),
+                KatalystStageDsl.Gain(gain = c(1.8)),
+                KatalystStageDsl.Compressor(threshold = c(-2.0), ratio = c(15.0), knee = c(1.5), attack = c(0.002), release = c(0.15)),
             ),
         )
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry)
@@ -134,8 +133,8 @@ class MasterOutputChainSpec : StringSpec({
     }
 
     /** A bus whose one master is [dsl], adopted before the first block as a top-level `master(...)` is. */
-    fun adopted(dsl: MasterDsl, rings: SizedBuffers, reverbs: ReverbUnits): MasterBus {
-        val registry = MasterRegistry().apply { register("m", dsl) }
+    fun adopted(dsl: KatalystDsl, rings: SizedBuffers, reverbs: ReverbUnits): MasterBus {
+        val registry = KatalystRegistry().apply { register("m", dsl) }
 
         return MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, rings = rings, reverbs = reverbs)
             .also { it.requestSwap("m") }
@@ -203,12 +202,12 @@ class MasterOutputChainSpec : StringSpec({
             asked++
             null
         })
-        val bus = adopted(MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 6.0)), SizedBuffers.forRings(sampleRate), units)
+        val bus = adopted(KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.4), size = c(6.0))), SizedBuffers.forRings(sampleRate), units)
         val onBus = StereoBuffer(blockFrames)
 
         runRefused(bus, onBus, blocks = 20)
-        // Asked at registration and once more after the adoption's reset re-armed the retry; the
-        // latched blocks only consult the shelf.
+        // Asked at the build (the first request) and once more after the adoption's reset re-armed
+        // the retry; the latched blocks only consult the shelf.
         asked shouldBe 2
 
         // An orbit hands its room back DIRTY, still charged: the shelf must zero it on the way out.
@@ -240,7 +239,7 @@ class MasterOutputChainSpec : StringSpec({
             asked++
             null
         })
-        val bus = adopted(MasterDsl.of(MasterStageDsl.Delay(wet = 0.5, time = 0.05, feedback = 0.4)), rings, ReverbUnits(sampleRate))
+        val bus = adopted(KatalystDsl.of(KatalystStageDsl.Delay(wet = c(0.5), time = c(0.05), feedback = c(0.4))), rings, ReverbUnits(sampleRate))
         val onBus = StereoBuffer(blockFrames)
 
         runRefused(bus, onBus, blocks = 20)
@@ -275,9 +274,9 @@ class MasterOutputChainSpec : StringSpec({
             asked++
             if (failing) null else Reverb(sr)
         })
-        val registry = MasterRegistry().apply {
-            register("room", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 6.0)))
-            register("loud", MasterDsl.of(MasterStageDsl.Gain(gain = 2.0)))
+        val registry = KatalystRegistry().apply {
+            register("room", KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.4), size = c(6.0))))
+            register("loud", KatalystDsl.of(KatalystStageDsl.Gain(gain = c(2.0))))
         }
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
         val onBus = StereoBuffer(blockFrames)
@@ -311,7 +310,11 @@ class MasterOutputChainSpec : StringSpec({
     }
 
     "a limiter-only master never holds the engine: it has nothing that rings" {
-        val bus = adopted(MasterDsl.of(MasterStageDsl.Limiter()), SizedBuffers.forRings(sampleRate), ReverbUnits(sampleRate))
+        // What `k.limiter()` appends: the compressor stage with the limiter's numbers.
+        val limiter = KatalystStageDsl.Compressor(
+            threshold = c(-1.0), ratio = c(20.0), knee = c(2.0), attack = c(0.001), release = c(0.1),
+        )
+        val bus = adopted(KatalystDsl.of(limiter), SizedBuffers.forRings(sampleRate), ReverbUnits(sampleRate))
         val onBus = StereoBuffer(blockFrames)
 
         for (b in 0 until 20) {

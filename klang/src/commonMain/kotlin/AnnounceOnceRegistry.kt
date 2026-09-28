@@ -17,7 +17,7 @@ import io.peekandpoke.klang.common.infra.withLock
  * `Cmd.Register*` they built. See [InlineDslRegistrar], which owns one instance per DSL kind.
  *
  * **Why announce-once matters:** a top-level `master(…)` re-emits its control event every single
- * cycle, all structurally equal. Without the gate that would be one `RegisterMaster` per cycle,
+ * cycle, all structurally equal. Without the gate that would be one `RegisterKatalyst` per cycle,
  * forever.
  *
  * Dedup is on the NAME, not on the DSL value. The name already IS structural identity: it comes

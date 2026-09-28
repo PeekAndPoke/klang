@@ -27,9 +27,9 @@ class MasterStage(
     /**
      * The house limiter's own TIMING: what runs on the summed mix, always.
      *
-     * The *character* it shares with `MasterStageDsl.Limiter` — threshold, ratio, knee, release —
-     * lives in `audio_bridge/constants/MasterLimiterDefaults.kt`, because those four are also that
-     * stage's wire defaults and must have exactly one declaration.
+     * The *character* it shares with the authored `limiter(...)` door of the Katalyst builder (threshold,
+     * ratio, knee, release) lives in `audio_bridge/constants/MasterLimiterDefaults.kt`, because those
+     * four are also that door's defaults and must have exactly one declaration.
      *
      * The two constants below are **house-only**: no DSL field carries them, because the house
      * limiter is not authorable. The opt-in stage has its own `AUTHORED_*` timing (also in the

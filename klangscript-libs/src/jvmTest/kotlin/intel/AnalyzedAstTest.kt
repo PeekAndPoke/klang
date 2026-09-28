@@ -1146,14 +1146,14 @@ let a = placeholder("aa", Osc.sine())"""
         stdlibRegistry().getCallable("voices", builder).shouldNotBeNull()
     }
 
-    "real stdlib: Master(m => m.gain(2)) resolves through invoke; m is the MasterBuilder" {
-        val code = "Master(m => m.delay(0.05, d => d.cap(2)).gain(2))"
+    "real stdlib: Katalyst(k => k.gain(2)) resolves through invoke; k is the KatalystBuilder" {
+        val code = "Katalyst(k => k.delay(0.05, d => d.cap(2)).gain(2))"
         val a = analyze(code)
-        a.typeOf(a.topExpr())?.simpleName shouldBe "MasterDsl"
-        a.receiverTypeBeforeDot(code.indexOf("m.delay") + 1)?.simpleName shouldBe "MasterBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("d.cap") + 1)?.simpleName shouldBe "MasterDelayBuilder"
-        stdlibRegistry().getCallable("invoke", KlangType("Master"))!!.signature shouldBe
-                "Master(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl"
+        a.typeOf(a.topExpr())?.simpleName shouldBe "KatalystDsl"
+        a.receiverTypeBeforeDot(code.indexOf("k.delay") + 1)?.simpleName shouldBe "KatalystBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("d.cap") + 1)?.simpleName shouldBe "KatalystDelayBuilder"
+        stdlibRegistry().getCallable("invoke", KlangType("Katalyst"))!!.signature shouldBe
+                "Katalyst(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl"
     }
 
     "function type renders structurally in the callable signature" {

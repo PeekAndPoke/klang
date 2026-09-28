@@ -31,19 +31,22 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 
 /**
- * Declarative, data-driven **orbit chain**: the effects one orbit (one cylinder) runs on its own
- * summed voices, before the playback's master bus.
+ * Declarative, data-driven **effect chain**: the effects one orbit (one cylinder) runs on its own
+ * summed voices, before the playback's master bus, and the chain that master bus itself runs.
  *
  * A Katalyst is an ordered list of [KatalystStageDsl] stages. The list order IS the signal order,
  * so where a stage sits in the list is what it means: an `eq` before `reverb` shapes the dry mix,
  * the same `eq` after it shapes dry and tail together.
  *
- * Mirrors [MasterDsl] (per playback) and [IgnitorDsl] (the per-voice instrument): a `@WireFormat` root,
- * registered by name, referenced from `VoiceData.katalyst`. Three hosts: instrument / orbit chain /
- * master bus.
+ * Mirrors [IgnitorDsl] (the per-voice instrument): a `@WireFormat` root, registered by name,
+ * referenced from `VoiceData.katalyst` (the orbit position) and `VoiceData.master` (the output
+ * position, one per playback). One chain type, two positions, one registry (phase 3 step 12,
+ * 2026-09-28): the Master DSL that the output used to run is retired. At the output nothing fills a
+ * [IgnitorDsl.Param] slot (it is its default) and a `duck` stage is inert.
  *
- * Like the master, a Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern
- * event, so an orbit's chain can change over musical time. And like the master, `.katalyst(dsl)`
+ * A Katalyst rides *events*: `katalyst(...)` stamps the reference onto a pattern event, so an
+ * orbit's chain can change over musical time, and `master(...)` does the same for the output.
+ * `.katalyst(dsl)`
  * REPLACES the chain the pattern already carries (decided 2026-09-18): the chain is one instrument,
  * written in one place, and the way to build on the familiar one is `k.classic()` inside the
  * builder rather than a second door.
@@ -107,7 +110,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
          *    `phaser.center`, `phaser.sweep`, `phaser.floor`, `duck.attack`;
          *  - unity, for the one knob whose untouched value is the IDENTITY of its stage rather
          *    than an off state or a tuned number: `gain.gain`. It is 1.0 written out here and in
-         *    `MasterStageDsl.Gain` rather than read from `constants/`, for the reason that KDoc
+         *    [KatalystStageDsl.Gain] rather than read from `constants/`, for the reason that KDoc
          *    gives: an identity element is not a taste decision anybody could retune.
          *
          * The compressor is the one stage whose gate is not a single knob. `Voice.Compressor
@@ -217,7 +220,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * `KatalystChainBuilder` is the one place that turns each one into the effect the engine runs.
  *
  * **The contract: a stage is a shell over the shared DSP classes in `audio_be/`** (the same
- * `Compressor` / `Reverb` / `DelayLine` the master stages use). No stage may introduce its own DSP
+ * `Compressor` / `Reverb` / `DelayLine` every host uses). No stage may introduce its own DSP
  * implementation, which is what keeps one effect one sound on every bus.
  *
  * **Every knob is an [IgnitorDsl], restricted to block-constant nodes** ([IgnitorDsl.Constant] and
@@ -300,7 +303,7 @@ sealed interface KatalystStageDsl {
 
     /**
      * Orbit delay, the shared `DelayLine` (audio_be). Same names, scales and defaults as the
-     * master's `MasterStageDsl.Delay` and the sprudel `delay(...)` door.
+     * sprudel `delay(...)` door; the same stage runs at the output (`master(...)`).
      *
      * @param wet how much of the orbit goes into the delay (0.0 = off). Orbit twin: `delay(wet = x)`.
      * @param time delay time in seconds. Orbit twin: `delay(time = ...)`.
@@ -319,7 +322,7 @@ sealed interface KatalystStageDsl {
 
     /**
      * Orbit reverb, the shared Freeverb `Reverb` (audio_be). Same names, scales and defaults as the
-     * master's `MasterStageDsl.Reverb` and the sprudel `reverb(...)` door.
+     * sprudel `reverb(...)` door; the same stage runs at the output (`master(...)`).
      *
      * @param wet how much of the orbit goes into the reverb (0.0 = off). Orbit twin: `reverb(wet = x)`.
      * @param size tail length on the authored 0 to 10 scale (the backend divides by 10, see
@@ -364,8 +367,7 @@ sealed interface KatalystStageDsl {
      * Orbit compressor: the group dynamics, after the EQ so the detector sees the corrected
      * spectrum and a low cut turns into headroom.
      *
-     * The knobs follow sprudel (`threshold`, `knee`, `attack`), and so does the master limiter
-     * since phase 3 step 3d (2026-09-24), which renamed its `thresholdDb` / `kneeDb`.
+     * The knobs follow sprudel (`threshold`, `knee`, `attack`).
      *
      * A LIMITER is this stage with limiter numbers, not a stage of its own: the `limiter(...)` door on
      * the Katalyst builder appends one (phase 3 step 12 C2), so one DSP has one wire word.
@@ -430,9 +432,9 @@ sealed interface KatalystStageDsl {
      * Reuses [IgnitorDsl.EqSection] verbatim, so a section means the same thing on a voice and on
      * an orbit.
      *
-     * There is no default position: a stage sits where it is written, and nothing reorders it. The
-     * master puts its EQ after the reverb and before the dynamics, so the room is shaped with the
-     * dry and the detector sees the result; write it there if you want the same. Note that
+     * There is no default position: a stage sits where it is written, and nothing reorders it. An EQ
+     * after the reverb and before the dynamics shapes the room with the dry and lets the detector
+     * see the result; write it there if you want that. Note that
      * `k.classic().eq(...)` does NOT land there: it appends, so the EQ ends up after the compressor
      * AND after classic's own group fader (the duck runs outside the list regardless, see [Duck]).
      * Write the stages out in order when the position matters.
@@ -480,7 +482,7 @@ sealed interface KatalystStageDsl {
      *
      * @param gain linear gain factor (1.0 = unity, 2.0 is about +6 dB). Unity is the identity
      *   element of the stage, not a tuned value, which is why it is written here rather than read
-     *   from `constants/`; the master's `MasterStageDsl.Gain` does the same.
+     *   from `constants/`.
      */
     @WireName("gain")
     data class Gain(

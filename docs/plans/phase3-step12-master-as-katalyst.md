@@ -545,6 +545,10 @@ each nameable and none forced by the merge itself except the first two if chosen
 2. an authored lookahead stops existing (decision a3): no row uses it;
 3. a master reverb or delay with wet in (0, 0.0001] now runs (inaudible);
 4. a NaN reverb size or delay time on the master is OFF instead of the constant (unreachable from finite songs);
+   as landed in C5 (2026-09-28, a named unification): also a non-finite reverb or delay WET switches the stage off
+   (the shim substituted `REVERB_WET`/`DELAY_WET`), and a non-finite limiter knob falls back to the COMPRESSOR
+   constants, not the limiter's (-20 dBFS, 4:1, 6 dB knee, 0.003 s attack), as it already did on an orbit. A song
+   reaches a non-finite knob only by computing one in script (`Math.sqrt(-1)`, `Math.log(0)`; `1/0` throws);
 5. an unknown master name is parked and lands at the next poll, not at the next re-emission (a race only).
 
 ---

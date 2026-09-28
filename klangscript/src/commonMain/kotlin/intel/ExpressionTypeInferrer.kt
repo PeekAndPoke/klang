@@ -100,7 +100,7 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
                 if (scope != null && scope.contains(callee.name)) {
                     return null
                 }
-                // A plain function, or a callable OBJECT (`Master(...)`): the object's type
+                // A plain function, or a callable OBJECT (`Katalyst(...)`): the object's type
                 // registers an `invoke` method, the same way the interpreter dispatches it.
                 registry.getCallable(callee.name, receiverType = null)
                     ?: inferIdentifier(callee, scope)?.let { registry.getCallable(INVOKE, it) }

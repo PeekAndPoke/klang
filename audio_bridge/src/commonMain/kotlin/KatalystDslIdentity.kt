@@ -8,14 +8,15 @@ package io.peekandpoke.klang.audio_bridge
 import io.peekandpoke.klang.common.infra.KlangSnapshotMap
 
 /**
- * Process-wide identity map for [KatalystDsl] chains, the orbit-side mirror of
- * [MasterDsl.uniqueId] / [IgnitorDsl.uniqueId].
+ * Process-wide identity map for [KatalystDsl] chains, the chain-side mirror of
+ * [IgnitorDsl.uniqueId]. One namespace for both positions: a chain used on an orbit and at the
+ * output is one registration under one name.
  *
  * Identity = structural equality on the [KatalystDsl] data class. Two structurally-equal chains
  * collapse to one entry and share one synthetic name like `"katalyst-3"`. The counter is monotonic
  * and never resets, so names stay stable across the lifetime of the process.
  *
- * This matters as much as it does for masters: a top-level `katalyst(...)` re-emits its event every
+ * This matters: a top-level `katalyst(...)` or `master(...)` re-emits its event every
  * cycle, and structural identity is what keeps that from allocating a new name each time.
  */
 private val globalKatalystNames = KlangSnapshotMap<KatalystDsl, String>()

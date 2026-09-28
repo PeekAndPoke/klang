@@ -87,9 +87,6 @@ class PlaybackEngineDispatcher(
         is KlangCommLink.Cmd.RegisterIgnitor ->
             engineFor(cmd.playbackId).scheduler.registerIgnitor(cmd.name, cmd.dsl)
 
-        is KlangCommLink.Cmd.RegisterMaster ->
-            engineFor(cmd.playbackId).registerMaster(cmd.name, cmd.dsl)
-
         is KlangCommLink.Cmd.RegisterKatalyst ->
             engineFor(cmd.playbackId).registerKatalyst(cmd.name, cmd.dsl)
     }

@@ -571,7 +571,7 @@ sealed class CallArgs {
  * `docs/tasks/klangscript-native-object-operators.md` are designed but not built.
  */
 object NativeOperatorNames {
-    /** `obj(a, b)`: a callable object, e.g. `Master(m => m.gain(2))`. */
+    /** `obj(a, b)`: a callable object, e.g. `Katalyst(k => k.gain(2))`. */
     const val INVOKE = KlangScript.Invoke.NAME
 }
 

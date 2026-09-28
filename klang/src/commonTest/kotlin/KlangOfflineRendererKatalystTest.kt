@@ -14,9 +14,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
-import io.peekandpoke.klang.audio_bridge.MasterValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -46,7 +43,7 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     /** An event carrying only the references the sweep reads. */
     class Event(
         override val katalyst: KatalystValue? = null,
-        override val master: MasterValue? = null,
+        override val master: KatalystValue? = null,
     ) : KlangPatternEvent {
         override val startCycles = 0.0
         override val durationCycles = 1.0
@@ -57,7 +54,6 @@ class KlangOfflineRendererKatalystTest : StringSpec({
     fun sweep(renderer: KlangAudioRenderer, events: List<KlangPatternEvent>) {
         InlineDslRegistrar.intoRegistries(
             ignitors = renderer.ignitorRegistry,
-            masters = renderer.masterRegistry,
             katalysts = renderer.katalystRegistry,
         ).announceAll(events)
     }
@@ -86,20 +82,21 @@ class KlangOfflineRendererKatalystTest : StringSpec({
         renderer.katalystRegistry.fork().find(chain.uniqueId()) shouldBe chain
     }
 
-    "the offline sweep is the shared one: a master and a chain on the same events both land" {
+    "the offline sweep is the shared one: a master and an orbit chain both land in the ONE registry" {
         // The point of routing the renderer through `InlineDslRegistrar` is that adding a DSL kind
         // is one edit. This is the row that fails if the offline path ever grows its own copy again
-        // and forgets one kind.
+        // and forgets one position: the output chain (`master(...)`) is a Katalyst too since
+        // phase 3 step 12 C5, and the master bus resolves it in the same registry the orbits read.
         val chain = KatalystDsl.of(KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.11)))
-        val master = MasterDsl.of(MasterStageDsl.Gain(gain = 1.9))
+        val master = KatalystDsl.of(KatalystStageDsl.Gain(gain = IgnitorDsl.Constant(1.9)))
         val renderer = renderer()
 
         sweep(
             renderer,
-            listOf(Event(katalyst = KatalystValue.Dsl(chain)), Event(master = MasterValue.Dsl(master))),
+            listOf(Event(katalyst = KatalystValue.Dsl(chain)), Event(master = KatalystValue.Dsl(master))),
         )
 
         renderer.katalystRegistry.find(chain.uniqueId()) shouldBe chain
-        renderer.masterRegistry.find(master.uniqueId()) shouldBe master
+        renderer.katalystRegistry.find(master.uniqueId()) shouldBe master
     }
 })

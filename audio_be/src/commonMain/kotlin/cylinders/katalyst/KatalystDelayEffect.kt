@@ -22,7 +22,7 @@ import kotlin.math.min
  * The orbit delay, an insert-style stage (Katalyst step 5b-2, 2026-09-19): it is fed from the orbit
  * mix AT ITS POSITION in the chain, scaled by the orbit owner's ONE `wet`, and it adds its echoes
  * into that same mix, so the dry signal stays and whatever follows in the chain (the reverb in the
- * classic order) hears the echoes. The master's `MasterStageDsl.Delay` model, on the orbit bus.
+ * classic order) hears the echoes. The same effect runs at the output (`master(...)`).
  *
  * **What glides** (`docs/plans/knob-glide.md`), each because its jump was measured audible first
  * (step 5b-2, a band-limited pad and a pluck, energy above 8 kHz against a hard cut of the return):

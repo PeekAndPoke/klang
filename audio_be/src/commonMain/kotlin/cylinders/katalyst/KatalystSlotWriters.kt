@@ -304,7 +304,7 @@ internal class KatalystGainWriter(
 
     /**
      * NaN-guard on a value the author can write: an unset fader is unity, the identity element of
-     * the stage and the master's own fallback for the same knob (`MasterDslShim`). NOT a
+     * the stage. NOT a
      * magnitude clamp: a negative factor and one above unity pass through untouched.
      */
     private fun guarded(): Double = if (gain.value.isFinite()) gain.value else 1.0

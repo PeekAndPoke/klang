@@ -15,12 +15,13 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
 
 /**
@@ -299,15 +300,19 @@ class LazyReverbSpec : StringSpec({
 
     "an evicted master chain returns its unit, and the next master reverb takes it without allocating" {
         val (units, alloc) = shelf()
-        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = MasterRegistry(), reverbs = units)
+        val registry = KatalystRegistry()
+        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
 
+        // A chain is built on its first request (one registry for both positions), so each is asked for.
         for (i in 0 until 8) {
-            bus.register("m$i", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 5.0 + i * 0.1)))
+            registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0 + i * 0.1))))
+            bus.requestSwap("m$i")
         }
         units.idleCount shouldBe 0
         val askedBefore = alloc.asked
 
-        bus.register("m8", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 6.0)))
+        registry.register("m8", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(6.0))))
+        bus.requestSwap("m8")
 
         units.hits shouldBe 1
         units.idleCount shouldBe 0

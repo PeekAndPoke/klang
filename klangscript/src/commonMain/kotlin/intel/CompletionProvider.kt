@@ -82,7 +82,7 @@ class CompletionProvider(private val registry: KlangDocsRegistry) {
             if (prefix.isNotEmpty() && !symbol.name.startsWith(prefix, ignoreCase = true)) {
                 continue
             }
-            // `invoke` is what makes `Master(...)` callable; nobody types `Master.invoke(...)`.
+            // `invoke` is what makes `Katalyst(...)` callable; nobody types `Katalyst.invoke(...)`.
             if (symbol.name == NativeOperatorNames.INVOKE) {
                 continue
             }

@@ -92,7 +92,10 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 ### Retired, do not restore or cite
 
 `klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
-chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the single
+chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the Master DSL (gone 2026-09-28, phase 3 step 12 C5: the master is the Katalyst at the
+output position, `master(Katalyst(k => ...))`): `MasterDsl`, `MasterStageDsl`, `MasterValue`, `MasterDslIdentity`,
+`MasterRegistry`, `Cmd.RegisterMaster` (`register-master`), the script `Master` object and `Master.default()`,
+`MasterBuilders`, `MasterChain` (gone in C3) and the C3 shim `MasterDslShim`; the single
 envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
 sets a slot and `adsr.attack` reads it); the per-knob effect doors and their aliases (`roomWet`,
 `roomsize`/`rsize`/`sz`/`size`, `roomfade`, `roomlp`, `roomdim`, `delayWet`, `delaytime`, `delayfeedback`/`delayfb`,

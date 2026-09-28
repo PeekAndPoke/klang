@@ -10,11 +10,13 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 /**
  * Backend registry: Katalyst name → [KatalystDsl].
  *
- * Custom orbit chains arrive at runtime via `KlangCommLink.Cmd.RegisterKatalyst` and land on the
- * **per-playback fork** (so they die with that playback's engine). Mirror of
- * [io.peekandpoke.klang.audio_be.master.MasterRegistry], minus the presets: there is no built-in
- * chain to seed here: a cylinder that was never handed a name runs its fixed historical chain,
- * which is what keeps a song without `katalyst(…)` byte-identical to the pre-Katalyst-DSL engine.
+ * Custom chains arrive at runtime via `KlangCommLink.Cmd.RegisterKatalyst` and land on the
+ * **per-playback fork** (so they die with that playback's engine). ONE registry for both positions
+ * (phase 3 step 12 C5): the engine's cylinders resolve a `katalyst(…)` name here, its master bus a
+ * `master(…)` name, against the same fork. There is no built-in chain to seed: a cylinder that was
+ * never handed a name runs its fixed historical chain, which is what keeps a song without
+ * `katalyst(…)` byte-identical to the pre-Katalyst-DSL engine, and a bus that was never handed one
+ * runs the empty chain.
  *
  * Katalyst step 1 (2026-09-17) registers chains and nothing reads them. Step 2 made the
  * cylinder build its chain from `KatalystDsl.classic` through `KatalystChainBuilder`, still

@@ -50,7 +50,7 @@ data class KlangCallable(
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
-            // A callable object's `invoke` renders as the call the user writes: `Master(...)`.
+            // A callable object's `invoke` renders as the call the user writes: `Katalyst(...)`.
             if (name == NativeOperatorNames.INVOKE && receiver != null) {
                 append(receiver.render())
             } else {

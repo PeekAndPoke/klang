@@ -256,7 +256,7 @@ object KatalystChainBuilder {
                     pipeline.add(fx)
 
                     // Unity is the identity element of the stage, not a tuned value, which is why
-                    // it is a literal here and in `MasterStageDsl.Gain` rather than a shared
+                    // it is a literal here and in `KatalystStageDsl.Gain` rather than a shared
                     // constant (the wire KDoc says so).
                     statics.add(KatalystGainWriter(fx = fx, gain = KatalystKnob(stage.gain, 1.0)))
                 }
