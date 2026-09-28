@@ -298,24 +298,27 @@ class LazyReverbSpec : StringSpec({
 
     // ── The master bus: same shelf, same return path ────────────────────────────────────────────
 
-    "an evicted master chain returns its unit, and the next master reverb takes it without allocating" {
+    "a master chain leaving service returns its unit, and the next master reverb takes it without allocating" {
         val (units, alloc) = shelf()
         val registry = KatalystRegistry()
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
 
-        // A chain is built on its first request (one registry for both positions), so each is asked for.
-        for (i in 0 until 8) {
+        // Before the engine's first block every request is adopted at once and the chain it
+        // replaces is retired there and then (eager retire, step 12 C4); a chain is built when its
+        // request lands.
+        for (i in 0 until 3) {
             registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0 + i * 0.1))))
-            bus.requestSwap("m$i")
         }
-        units.idleCount shouldBe 0
+
+        bus.requestSwap("m0")
+        bus.requestSwap("m1")
+        units.idleCount shouldBe 1
         val askedBefore = alloc.asked
 
-        registry.register("m8", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(6.0))))
-        bus.requestSwap("m8")
+        bus.requestSwap("m2")
 
         units.hits shouldBe 1
-        units.idleCount shouldBe 0
+        units.idleCount shouldBe 1
         alloc.asked shouldBe askedBefore
     }
 })

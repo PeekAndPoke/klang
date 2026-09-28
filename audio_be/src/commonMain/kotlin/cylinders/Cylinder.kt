@@ -499,10 +499,9 @@ class Cylinder(
      *    outgoing chain's INPUT (its delay and reverb take their feed from it too) and to the
      *    incoming chain's OUTPUT, per sample
      *    ([Crossfade.rampDown], [Crossfade.rampUpAndAdd]), which is what makes the handover to the
-     *    drain continuous. See [Crossfade] for why the master's output blend would step here. The
+     *    drain continuous. See [Crossfade] for why an output blend would step here. The
      *    incoming chain is warmed up on real audio for the whole fade: its compressor envelope and
-     *    its room have settled by the time it carries full weight, the same reason the master bus
-     *    runs both chains in parallel.
+     *    its room have settled by the time it carries full weight.
      *  - **Draining.** One block after the ramp runs out (see above) the outgoing chain leaves
      *    service, and it is NOT retired. It keeps processing, its stages still Active, on SILENT
      *    input with its output added at FULL weight, so the echoes and the room it had already
@@ -513,9 +512,9 @@ class Cylinder(
      *    when drained), and the chain retires (units back to the shelves) on the first block
      *    [KatalystChain.hasTail] is false. No owner configures it any more (see [updateFromVoice]).
      *
-     *    The master bus accepted the CUT for its v1 and noted "if audible, extend the old chain's
-     *    life" (decided 2026-09-17: the orbit extends it from the start, because its delay and reverb
-     *    already own the drain; nothing here invents a decay).
+     *    The orbit drained from the start (decided 2026-09-17: its delay and reverb already own the
+     *    drain; nothing here invents a decay); the master bus cut its leaving chain until step 12
+     *    C4 put it on the same [ChainSwap].
      */
     fun processEffects() {
         if (!isActive) return
@@ -827,8 +826,8 @@ class Cylinder(
      *
      * The incoming chain is RESET: a cached chain is retired when it leaves service, so it holds
      * no DSP state in practice, but it is coming back in over live audio, where a replayed tail
-     * would be audible, so the clean slate is asserted here rather than assumed (the lesson
-     * `MasterBus.beginFade` records).
+     * would be audible, so the clean slate is asserted here rather than assumed (`MasterBus.land`
+     * does the same).
      *
      * **The lease is NOT reset**, unlike [install]'s: the owner voice is alive and sounding, and
      * it is what configures BOTH chains for the length of the fade (see [updateFromVoice]).

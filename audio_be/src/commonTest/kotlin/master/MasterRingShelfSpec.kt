@@ -20,7 +20,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
  *
  * Since phase 3 step 12 C3 the output runs a `KatalystChain`, so the ring a master delay rents, its
  * size class and its refusal are the orbit delay's own and are pinned where that stage is
- * (`LazyRingSpec`). What stays here is the host's half: the cache returns what it drops.
+ * (`LazyRingSpec`). What stays here is the host's half: a chain leaving service returns what it
+ * rented at once (eager retire, step 12 C4), not when the cache evicts it.
  */
 class MasterRingShelfSpec : StringSpec({
 
@@ -41,27 +42,30 @@ class MasterRingShelfSpec : StringSpec({
         KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.5), time = IgnitorDsl.Constant(time), feedback = IgnitorDsl.Constant(0.3))
     )
 
-    "an evicted chain returns its ring to the shelf, and the next master delay of that class takes it" {
+    "a master leaving service returns its ring at once, and the next master delay of that class takes it" {
         val alloc = Recording()
         val rings = SizedBuffers.forRings(sampleRate, allocate = alloc.allocate)
         val registry = KatalystRegistry()
         val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, rings = rings)
 
-        // Fill the cache with distinct delay masters; the ninth REQUEST evicts the first. A chain
-        // is built on its first request, not at registration (one registry for both positions).
-        for (i in 0 until 8) {
-            registry.register("m$i", delayDsl(0.3 + i * 0.001))
-            bus.requestSwap("m$i")
-        }
+        // Before the engine's first block every request is adopted at once, and the chain it
+        // replaces leaves service there and then. A chain is built when its request lands.
+        registry.register("m0", delayDsl(0.3))
+        registry.register("m1", delayDsl(0.301))
+        registry.register("m2", delayDsl(0.302))
+
+        bus.requestSwap("m0")
         rings.shelfCount shouldBe 0
-        val allocatedBefore = alloc.asked.size
 
-        registry.register("m8", delayDsl(0.3))
-        bus.requestSwap("m8")
+        bus.requestSwap("m1")
+        // m1 had to allocate (m0 still held its ring while m1 was built), and m0's ring came back.
+        alloc.asked.size shouldBe 2
+        rings.shelfCount shouldBe 1
 
-        // One chain left the cache and its ring went back; the newcomer rented THAT ring.
+        bus.requestSwap("m2")
+        // The newcomer rented m0's ring, and m1's went back in its place: no third allocation.
         rings.hits shouldBe 1
-        rings.shelfCount shouldBe 0
-        alloc.asked.size shouldBe allocatedBefore // no allocation for the ninth
+        rings.shelfCount shouldBe 1
+        alloc.asked.size shouldBe 2
     }
 })

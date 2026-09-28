@@ -68,6 +68,10 @@ class PlaybackEngine(
     fun renderInto(target: StereoBuffer, cursorFrame: Double) {
         cylinders.clearAll()
         scheduler.process(cursorFrame)
+        // A master request that waited (a fade or drain was running, or its name was not
+        // registered yet) lands here, before the fast-path check, so it can land on an engine
+        // that has no master yet. One field read when nothing waits.
+        masterBus.pollPendingSwap()
 
         // Track how long this engine has had nothing of its own left — that, and not elapsed wall
         // time, is what a master tail is allowed to hold open (see [isIdle]).

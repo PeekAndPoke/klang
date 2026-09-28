@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.master
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeGreaterThan
@@ -15,8 +16,11 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystChainBuilder
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
+import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
@@ -371,10 +375,12 @@ class MasterBusTest : StringSpec({
 
     // ── Robustness ──────────────────────────────────────────────────────────────────────────
 
-    "an unknown master name is not latched — a later registration still applies" {
+    "an unknown master name is parked: a later registration lands it, no re-emission needed" {
         val d = newDispatcher()
         // The event references a master the backend has never heard of (a dropped or late
-        // RegisterKatalyst). It must NOT pin the playback to unity forever.
+        // RegisterKatalyst). It must NOT pin the playback to unity forever. Since step 12 C4 the
+        // name is parked (the orbit's rule) and the engine polls it every block, so the ONE event
+        // is enough: a one-shot `note(...).master(...)` never re-emits.
         d.handle(
             KlangCommLink.Cmd.ScheduleVoices(
                 playbackId = "song",
@@ -383,16 +389,10 @@ class MasterBusTest : StringSpec({
         )
         val beforeRegistration = blockPeaks(d, blocks = 200).last()
 
-        // Registration arrives, and the carrier re-emits (as the top-level master() does every cycle).
+        // Registration arrives; the carrier does NOT re-emit.
         d.handle(
             KlangCommLink.Cmd.RegisterKatalyst(
                 playbackId = "song", name = "late", dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(4.0))),
-            )
-        )
-        d.handle(
-            KlangCommLink.Cmd.ScheduleVoices(
-                playbackId = "song",
-                voices = listOf(masterEvent("late", startTime = 1.0)),
             )
         )
 
@@ -584,61 +584,6 @@ class MasterBusTest : StringSpec({
         d.engine("song")?.isIdle() shouldBe false
     }
 
-    "swapping back to a master does not replay its old tail" {
-        val d = newDispatcher()
-        d.handle(
-            KlangCommLink.Cmd.RegisterKatalyst(
-                playbackId = "song",
-                name = "hall",
-                dsl = KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.9), size = c(9.5), lowpass = c(19845.0))),
-            )
-        )
-        d.handle(
-            KlangCommLink.Cmd.RegisterKatalyst(
-                playbackId = "song", name = "dry", dsl = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(1.0001))),
-            )
-        )
-        val note = ScheduledVoice(
-            playbackId = "song",
-            startTime = 0.0,
-            gateEndTime = 0.2,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.6),
-            playbackStartTime = 0.0,
-        )
-        // Loud note into the hall, then away to dry, then back to hall — with no further notes.
-        d.handle(
-            KlangCommLink.Cmd.ScheduleVoices(
-                playbackId = "song",
-                voices = listOf(
-                    masterEvent("hall", startTime = 0.0),
-                    note,
-                    masterEvent("dry", startTime = 0.4),
-                    masterEvent("hall", startTime = 3.0),
-                ),
-            )
-        )
-
-        val out = ShortArray(blockFrames * 2)
-        for (b in 0 until 1030) {   // up to ~2.99 s — the bus is silent well before this
-            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-        }
-
-        var afterReturn = 0.0
-        for (b in 1030 until 1400) {   // across and past the swap back to "hall"
-            d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
-            for (i in out.indices step 2) {
-                val v = abs(out[i].toDouble() / Short.MAX_VALUE)
-                if (v > afterReturn) {
-                    afterReturn = v
-                }
-            }
-        }
-
-        // Nothing is playing, so returning to "hall" must be silent. A cached chain that kept its
-        // frozen comb buffers would dump seconds-old reverb here.
-        afterReturn shouldBeLessThan 0.01
-    }
-
     "a chain whose stages are all inaudible never holds the engine open" {
         val d = newDispatcher()
         d.handle(
@@ -719,63 +664,6 @@ class MasterBusTest : StringSpec({
         peak shouldBeGreaterThan 0.25
     }
 
-    "the cache never evicts the master in play, even when it is the OLDEST entry" {
-        // The chain in play is the first one built ("hall", with a room), so it is the first
-        // eviction candidate by insertion order: only "not the current chain" keeps it. It must be
-        // current while the cache overflows, without being the outgoing or the queued one. So: a
-        // fade to "x" and back queues "hall", and during the fade back (current = hall, previous =
-        // x) a burst of edits is built, each queued over the last; a final request for "hall"
-        // drops the queue.
-        val units = ReverbUnits(sampleRate)
-        val registry = KatalystRegistry().apply {
-            register("hall", KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.6), size = c(9.0))))
-            register("x", KatalystDsl.of(KatalystStageDsl.Gain(gain = c(0.9))))
-            for (i in 0 until 8) {
-                register("e$i", KatalystDsl.of(KatalystStageDsl.Gain(gain = c(1.1 + i * 0.01))))
-            }
-        }
-        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
-        val buf = StereoBuffer(blockFrames)
-        var n = 0
-
-        fun block(loud: Boolean): Double {
-            var energy = 0.0
-            for (i in 0 until blockFrames) {
-                val x = if (loud) 0.4 * sin(2.0 * PI * 330.0 * n / sampleRate) else 0.0
-                buf.left[i] = x
-                buf.right[i] = x
-                n++
-            }
-            bus.process(buf, blockFrames)
-            bus.markRendered()
-            for (i in 0 until blockFrames) {
-                energy += abs(buf.left[i])
-            }
-            return energy
-        }
-
-        bus.requestSwap("hall")
-        repeat(40) { block(loud = true) }        // charge the room
-
-        bus.requestSwap("x")                      // fade hall -> x ...
-        bus.requestSwap("hall")                   // ... and back, queued behind it
-        repeat(30) { block(loud = true) }        // past the 60 ms fade: now fading x -> hall
-
-        for (i in 0 until 8) {
-            bus.requestSwap("e$i")                // built, then queued over the previous one
-        }
-        bus.requestSwap("hall")                   // the playing chain again: the queue is dropped
-
-        // The overflow evicted edits, never the room in play: its unit was not handed back...
-        bus.cachedChainCount shouldBeLessThan 9
-        units.idleCount shouldBe 0
-
-        // ...and the room is still ringing on silence (a retired, re-rented unit would be empty).
-        var tail = 0.0
-        repeat(20) { tail += block(loud = false) }
-        tail shouldBeGreaterThan 1.0
-    }
-
     "a self-sustaining master delay cannot hold a drained engine open forever" {
         val d = newDispatcher()
         d.handle(
@@ -851,10 +739,13 @@ class MasterBusTest : StringSpec({
         d.engine("song")?.isIdle() shouldBe false
     }
 
-    "switching to an inaudible master releases the engine instead of pinning it" {
+    "switching to an inaudible master holds the engine for the old room's ring-out, then releases it" {
         // Two ways to say "master off": `master(Katalyst())`, the empty chain, which puts the bus
-        // back on the engine's fast path (the bus stops being processed at all), and a chain whose
-        // one stage is dry, which keeps the bus running with nothing in it that rings.
+        // back on the engine's fast path once nothing is leaving it, and a chain whose one stage is
+        // dry, which keeps the bus running with nothing in it that rings. Since step 12 C4 the room
+        // swapped away drains instead of being cut, so the engine is held for that ring-out (the
+        // empty chain must keep the bus processing until it ends) and released when it is over,
+        // long before the 20 s hold bound would release it anyway.
         listOf(
             "the empty chain" to KatalystDsl(emptyList()),
             "a dry room" to KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(0.0))),
@@ -884,15 +775,354 @@ class MasterBusTest : StringSpec({
                 )
 
                 val out = ShortArray(blockFrames * 2)
-                for (b in 0 until 2000) {
+                for (b in 0 until 1000) {
                     d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
                 }
 
-                // Once the master is inaudible there is nothing left that can ring. A cached "still
-                // ringing" answer would freeze here once the bus stops being processed, and leak
-                // the engine.
-                d.engine("song")?.isIdle() shouldBe true
+                // ~2.9 s: the room left service at ~1.06 s and is still ringing out, audibly.
+                val engine = d.engine("song").shouldNotBeNull()
+                engine.masterBusForTest.chainSwap.isDraining shouldBe true
+                engine.isIdle() shouldBe false
+
+                // Released once the ring-out is over, well inside the hold bound (20 s from the
+                // moment the engine went quiet, about 0.5 s in): a cached "still ringing" answer
+                // that froze when the bus stopped being processed would hold it until then.
+                var b = 1000
+                while (!engine.isIdle() && b < 5000) {
+                    d.renderBlock(cursorFrame = (b * blockFrames).toDouble(), out = out)
+                    b++
+                }
+
+                engine.isIdle() shouldBe true
+                b shouldBeLessThan 5000
+                engine.masterBusForTest.chainSwap.settled shouldBe true
             }
         }
+    }
+
+    // ── The swap law (phase 3 step 12 C4, decision (f)) ─────────────────────────────────────
+    //
+    // The master runs the orbit's `ChainSwap`: the leaving chain's INPUT ramps down while the
+    // arriving chain's output ramps up, then the leaving chain drains at full weight on silence.
+    // These rows drive a bus directly, in the engine's order per block: the request (the
+    // scheduler's), `pollPendingSwap`, `process`, `markRendered`.
+
+    /** A master bus fed a chosen input one block at a time, the engine's calls around it. */
+    class Rig(
+        val registry: KatalystRegistry = KatalystRegistry(),
+        val units: ReverbUnits = ReverbUnits(sampleRate),
+    ) {
+        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
+        val buf = StereoBuffer(blockFrames)
+        var n = 0
+
+        /** The probe the swap rows feed: a 330 Hz sine at [amp], continuous across blocks. */
+        fun x(amp: Double, i: Int): Double = amp * sin(2.0 * PI * 330.0 * (n + i) / sampleRate)
+
+        /** One block of the probe at [amp] (0.0 is silence); returns the left channel. */
+        fun block(amp: Double): DoubleArray {
+            for (i in 0 until blockFrames) {
+                val v = x(amp, i)
+                buf.left[i] = v
+                buf.right[i] = v
+            }
+            n += blockFrames
+            bus.pollPendingSwap()
+            bus.process(buf, blockFrames)
+            bus.markRendered()
+
+            return buf.left.copyOf()
+        }
+
+        /** One block of constant [level] on both channels; returns the left channel. */
+        fun dc(level: Double): DoubleArray {
+            for (i in 0 until blockFrames) {
+                buf.left[i] = level
+                buf.right[i] = level
+            }
+            n += blockFrames
+            bus.pollPendingSwap()
+            bus.process(buf, blockFrames)
+            bus.markRendered()
+
+            return buf.left.copyOf()
+        }
+    }
+
+    fun room(wet: Double, size: Double) = KatalystDsl.of(KatalystStageDsl.Reverb(wet = c(wet), size = c(size)))
+
+    fun gain(g: Double) = KatalystDsl.of(KatalystStageDsl.Gain(gain = c(g)))
+
+    fun maxAbs(xs: DoubleArray): Double = xs.maxOf { abs(it) }
+
+    "a master swapped mid-tail rings out: the leaving room drains at full weight instead of being cut" {
+        // Two buses with the same room, charged the same way. One swaps to a dry chain the moment
+        // the input stops; the other keeps the room. On silence the swap feeds the leaving room
+        // nothing and the arriving chain produces nothing, so under the drain law the swapped bus
+        // IS the room's own ring-out, sample for sample, through the fade and after it. Before C4
+        // the room's output was ramped down over the fade and cut at its end.
+        fun rig() = Rig().apply {
+            registry.register("hall", room(wet = 0.6, size = 4.0))
+            registry.register("dry", gain(0.5))
+            bus.requestSwap("hall")
+            repeat(40) { block(0.4) }
+        }
+
+        val swapped = rig()
+        val control = rig()
+
+        swapped.bus.requestSwap("dry")
+
+        var worst = 0.0
+        var drainBlocks = 0
+        var tailAfterFade = 0.0
+
+        for (b in 0 until 6000) {
+            val got = swapped.block(0.0)
+            val want = control.block(0.0)
+
+            for (i in 0 until blockFrames) {
+                worst = maxOf(worst, abs(got[i] - want[i]))
+            }
+
+            if (swapped.bus.chainSwap.isDraining) {
+                drainBlocks++
+            }
+
+            // Past the old cut: the 60 ms fade is 21 blocks at 44.1 kHz.
+            if (b in 30 until 60) {
+                tailAfterFade += got.sumOf { abs(it) }
+            }
+
+            if (swapped.bus.chainSwap.settled) {
+                break
+            }
+        }
+
+        worst shouldBe 0.0
+        // The room really rang after the fade's end (a cut would leave exactly nothing there)...
+        tailAfterFade shouldBeGreaterThan 1.0
+        drainBlocks shouldBeGreaterThan 100
+        // ...and it ended: the room left service and its unit went back to the shelf.
+        swapped.bus.chainSwap.settled shouldBe true
+        swapped.units.idleCount shouldBe 1
+        control.units.idleCount shouldBe 0
+    }
+
+    "the fade: the leaving master's INPUT ramps down and the arriving master's OUTPUT ramps up, per sample" {
+        // The oracle is the law written here, over the two chains built by hand and run standalone:
+        // the leaving room is fed x(1 - r), the arriving gain is fed x, and the bus is
+        // gainOut * r + roomOut, with r = m / T over the T = 60 ms frames after the swap block's
+        // start, 1 from there on. A room is the leaving chain because it is where the two laws part:
+        // fed the ramped input its ring-out after the fade is the echo of a quieter signal, fed the
+        // full input and faded at its output (the law before C4) it is not.
+        val roomDsl = room(wet = 0.5, size = 3.0)
+        val liftDsl = gain(2.0)
+
+        val rig = Rig().apply {
+            registry.register("room", roomDsl)
+            registry.register("lift", liftDsl)
+        }
+
+        fun standalone(dsl: KatalystDsl) = KatalystChainBuilder.build(
+            dsl = dsl,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = SizedBuffers.forRings(sampleRate),
+            reverbs = ReverbUnits(sampleRate),
+        ).also { it.applyParams(null) }
+
+        val roomAlone = standalone(roomDsl)
+        val liftAlone = standalone(liftDsl)
+        val roomCtx = KatalystContext(blockFrames, StereoBuffer(blockFrames))
+        val liftCtx = KatalystContext(blockFrames, StereoBuffer(blockFrames))
+        val fadeFrames = (0.06 * sampleRate).toInt()
+
+        rig.bus.requestSwap("room")
+
+        val swapBlock = 30
+        var m = 0
+        var worst = 0.0
+        var roomTailAfterFade = 0.0
+
+        for (b in 0 until 200) {
+            if (b == swapBlock) {
+                rig.bus.requestSwap("lift")
+            }
+
+            val amp = if (b < 80) 0.4 else 0.0
+
+            for (i in 0 until blockFrames) {
+                val x = rig.x(amp, i)
+                val t = if (b < swapBlock) 0.0 else if (m + i >= fadeFrames) 1.0 else (m + i) / fadeFrames.toDouble()
+
+                roomCtx.mixBuffer.left[i] = x * (1.0 - t)
+                roomCtx.mixBuffer.right[i] = x * (1.0 - t)
+                liftCtx.mixBuffer.left[i] = x
+                liftCtx.mixBuffer.right[i] = x
+            }
+
+            val got = rig.block(amp)
+            roomAlone.process(roomCtx)
+            liftAlone.process(liftCtx)
+
+            for (i in 0 until blockFrames) {
+                val t = if (b < swapBlock) 0.0 else if (m + i >= fadeFrames) 1.0 else (m + i) / fadeFrames.toDouble()
+                val want = if (b < swapBlock) roomCtx.mixBuffer.left[i] else liftCtx.mixBuffer.left[i] * t + roomCtx.mixBuffer.left[i]
+
+                worst = maxOf(worst, abs(got[i] - want))
+            }
+
+            if (b >= swapBlock) {
+                m += blockFrames
+            }
+
+            if (b >= 80) {
+                roomTailAfterFade += roomCtx.mixBuffer.left.sumOf { abs(it) }
+            }
+        }
+
+        worst shouldBe 0.0
+        // The room's echo of the ramped input is really in the sum (not an all-dry comparison).
+        roomTailAfterFade shouldBeGreaterThan 1.0
+    }
+
+    "the parked request at the master: latest wins, the chain in service drops it, an unknown name lands when registered" {
+        val rig = Rig().apply {
+            registry.register("a", gain(0.5))
+            registry.register("b", gain(2.0))
+            registry.register("c", gain(8.0))
+            registry.register("d", gain(4.0))
+            registry.register("e", gain(6.0))
+            registry.register("low", gain(1.0))
+        }
+        val level = 0.1
+
+        rig.bus.requestSwap("a")
+        repeat(4) { rig.dc(level) }
+
+        // Latest wins: b starts, c and d arrive while it fades, and only d may land. c at 8x would
+        // push the output past d's 0.4 on the way.
+        rig.bus.requestSwap("b")
+        rig.bus.requestSwap("c")
+        rig.bus.requestSwap("d")
+        var highest = 0.0
+        repeat(120) { highest = maxOf(highest, maxAbs(rig.dc(level))) }
+
+        highest shouldBeLessThan 0.4 + 1e-12
+        rig.dc(level)[0] shouldBe (0.4 plusOrMinus 1e-12)
+
+        // A request for the chain in service drops the parked one: e starts, low is parked behind
+        // it, then e is asked for again. low at 1x would pull the output under d's 0.4.
+        rig.bus.requestSwap("e")
+        rig.bus.requestSwap("low")
+        rig.bus.requestSwap("e")
+        var lowest = 1.0
+        repeat(120) { lowest = minOf(lowest, rig.dc(level).min()) }
+
+        lowest shouldBeGreaterThan 0.4 - 1e-12
+        rig.dc(level)[0] shouldBe (0.6 plusOrMinus 1e-12)
+
+        // An unknown name is parked, not dropped: its registration alone lands it, on the next
+        // block's poll, with no second request.
+        rig.bus.requestSwap("late")
+        repeat(10) { rig.dc(level) }
+        rig.dc(level)[0] shouldBe (0.6 plusOrMinus 1e-12)
+
+        rig.registry.register("late", gain(3.0))
+        repeat(40) { rig.dc(level) }
+        rig.dc(level)[0] shouldBe (0.3 plusOrMinus 1e-12)
+    }
+
+    "swapping back to a master that is still ringing out waits for the ring-out, then lands it empty" {
+        // Decision (g), kept: a request while the leaving chain drains waits for the whole
+        // ring-out. Here the request is for the very room that is draining, so it cannot be
+        // re-used mid-tail: it comes back retired and reset, holding nothing of its last life.
+        val rig = Rig().apply {
+            registry.register("hall", room(wet = 0.8, size = 3.0))
+            registry.register("dry", gain(0.9))
+        }
+        val swap = rig.bus.chainSwap
+
+        rig.bus.requestSwap("hall")
+        repeat(40) { rig.block(0.4) }
+        rig.bus.requestSwap("dry")
+        repeat(40) { rig.block(0.0) }
+
+        swap.isDraining shouldBe true
+        rig.bus.requestSwap("hall")
+
+        // The drain is not cut and nothing starts until it is over.
+        var drained = 0
+        while (swap.isDraining && drained < 6000) {
+            rig.block(0.0).also { drained++ }
+            swap.isFading shouldBe false
+        }
+
+        drained shouldBeGreaterThan 100
+        swap.isDraining shouldBe false
+
+        // The parked hall lands on the next block's poll, as a fade from dry.
+        rig.block(0.0)
+        swap.isFading shouldBe true
+
+        // It came back empty: on silence nothing comes out, through its fade and after. Not
+        // exactly 0: the reverb's anti-denormal offset (a deliberate engine exception) leaves a
+        // residue near 1e-18; a replayed room is many orders above the floor.
+        var replay = 0.0
+        repeat(200) { replay = maxOf(replay, maxAbs(rig.block(0.0))) }
+        replay shouldBeLessThan 1e-12
+
+        // And it came back working: a new note rings in the room after it stops.
+        repeat(20) { rig.block(0.4) }
+        var ring = 0.0
+        repeat(20) { ring += rig.block(0.0).sumOf { abs(it) } }
+        ring shouldBeGreaterThan 1.0
+    }
+
+    "the cache never evicts the master in service, even when it is the OLDEST entry" {
+        // "hall" is built first, so it is the first eviction candidate by insertion order: only
+        // "not the chain in service" keeps it. The cache is filled with 7 edits that each land and
+        // leave, then hall comes back into service (from the cache), is charged, and an eighth edit
+        // overflows the cache while hall is still the chain in service.
+        val rig = Rig().apply {
+            registry.register("hall", room(wet = 0.6, size = 3.0))
+            for (i in 0 until 8) {
+                registry.register("e$i", gain(1.1 + i * 0.01))
+            }
+        }
+
+        fun settle() {
+            var guard = 0
+            while (!rig.bus.chainSwap.settled && guard < 6000) {
+                rig.block(0.0)
+                guard++
+            }
+            rig.block(0.0)
+        }
+
+        rig.bus.requestSwap("hall")
+        rig.block(0.0)
+
+        for (i in 0 until 7) {
+            rig.bus.requestSwap("e$i")
+            settle()
+        }
+
+        rig.bus.requestSwap("hall")
+        settle()
+        repeat(40) { rig.block(0.4) }
+        rig.bus.cachedChainCount shouldBe 8
+
+        rig.bus.requestSwap("e7")
+
+        // The overflow evicted an edit, never the room in service: its unit was not handed back...
+        rig.bus.cachedChainCount shouldBe 8
+        rig.units.idleCount shouldBe 0
+
+        // ...and the room, leaving service now, rings out (a retired, re-rented unit would be empty).
+        var tail = 0.0
+        repeat(20) { tail += rig.block(0.0).sumOf { abs(it) } }
+        tail shouldBeGreaterThan 1.0
     }
 })

@@ -8,17 +8,15 @@ package io.peekandpoke.klang.audio_be
 import kotlin.math.abs
 
 /**
- * The dual-chain crossfade: the ramp two effect chains are blended over while both process the
- * same input.
+ * The dual-chain crossfade: the ramp two effect chains are blended over while both hear the same
+ * mix.
  *
- * Owned by the two hosts that swap a whole chain under live audio, the master bus
- * (`MasterBus`) and every orbit bus (`Cylinder`, through its [ChainSwap] since phase 3 step 12
- * C1). One instance per host, created once. Katalyst
- * step 3b, 2026-09-17 (`docs/tasks/katalyst-dsl.md` §D3) extracted it from `MasterBus`, which had
- * carried it alone since the master DSL shipped; the extraction is byte-identical, measured on a
- * master swap rendered before and after.
+ * Owned by [ChainSwap], the one swap both hosts of a whole chain run under live audio: every orbit
+ * bus (`Cylinder`, since phase 3 step 12 C1) and the master bus (`MasterBus`, since step 12 C4). One
+ * instance per swap, created once. Katalyst step 3b, 2026-09-17 (`docs/tasks/katalyst-dsl.md` §D3)
+ * extracted it from `MasterBus`, which had carried it alone since the master DSL shipped.
  *
- * **The blend is LINEAR, not equal-power.** Both chains process the *same* input, so their outputs
+ * **The blend is LINEAR, not equal-power.** Both chains process the *same* material, so their outputs
  * are highly correlated; amplitude-complementary weights sum correctly, while an equal-power
  * (sin/cos) law would push correlated material up to +3 dB mid-fade. Equal-power is for
  * *uncorrelated* sources.
@@ -28,23 +26,24 @@ import kotlin.math.abs
  * 48 kHz) because the shared DSP processes buffers from index 0. Inaudible against a 60 ms fade,
  * and it keeps the effect classes untouched.
  *
- * **Two shapes, one ramp.** The master blends the two chains' OUTPUTS ([blend]); a cylinder ramps
- * the outgoing chain's INPUT down instead and adds its output at full weight ([rampDown] +
- * [rampUpAndAdd]). The reason is the orbit's drain: a cylinder does not retire the outgoing chain
- * at the end of the fade, it lets the echoes and the room it had already scheduled ring out. A
- * chain whose OUTPUT has just been ramped to zero and is then re-added at full weight steps by the
- * whole level of that tail, measured at ~0.045 rms on a loud chord with a wet room, which is the
- * click the fade exists to prevent. Ramping the INPUT reaches zero input exactly where the drain
- * takes over, so the boundary is continuous by construction and the tail is never scaled. Decided
- * 2026-09-17 (step 3b); the master keeps the blend it shipped with, where the outgoing chain IS cut
- * and a ramped output is therefore the right shape.
+ * **One law: the outgoing chain's INPUT ramps down, the incoming chain's OUTPUT ramps up.** The
+ * outgoing chain is handed a shrinking copy of the mix ([rampDown]) and its output is added at full
+ * weight, the incoming chain's output scaled by the rising weight ([rampUpAndAdd]). The reason is
+ * the drain: the outgoing chain is not retired at the end of the fade, it lets the echoes and the
+ * room it had already scheduled ring out ([ChainSwap]). A chain whose OUTPUT has just been ramped
+ * to zero and is then re-added at full weight steps by the whole level of that tail, measured at
+ * ~0.045 rms on a loud chord with a wet room, which is the click the fade exists to prevent.
+ * Ramping the INPUT reaches zero input exactly where the drain takes over, so the boundary is
+ * continuous by construction and the tail is never scaled. Decided 2026-09-17 (step 3b) for the
+ * orbit; the master blended the two OUTPUTS and cut the outgoing chain at the fade's end until
+ * step 12 C4 (decision (f)) moved it onto this law.
  *
  * Three properties of that shape a reader should not have to rediscover:
  *  - The dry path crossfades linearly through both chains' inserts as long as those inserts are
  *    LINEAR. A compressor is not: fed a shrinking input it releases and holds its output up, so the
  *    sum can bulge mid-fade by up to the gain reduction it gives back. Bounded by the fade and by
- *    the compressor's own release, and the same class of inaccuracy the master's output blend has
- *    (there the outgoing compressor sees full input to the last sample and is then cut).
+ *    the compressor's own release. At the master this is a limiter giving its reduction back
+ *    across the fade.
  *  - A chain with no delay and no reverb retires one block after the ramp ends, so whatever its INSERTS
  *    still hold is dropped at that moment: a resonator's ring, a `KatalystFilterSwap` crossfade in
  *    flight. Silent input has just reached it, so the residue is small; if it is ever heard, the
@@ -68,13 +67,11 @@ import kotlin.math.abs
  * under it (with the usual comb of two copies mid-fade when the latencies differ). Before step 12
  * C2's round 2 the leaving ramp stayed undelayed and a dry-to-late swap dipped to 1/6 of the level
  * for 10 ms, a late-to-dry one swelled by 5.3 dB. At no latency on either side both delays are 0
- * and every weight is what it always was. [blend] (the master's output blend) runs at 0 and 0.
+ * and every weight is what it always was.
  *
- * **What is NOT here: the retarget queue.** Both hosts keep at most one queued request and let the
- * last intent win, but the two queues are not one object: the master queues a registered master's
- * name, while a cylinder's queue also holds a name whose registration has not arrived yet and is
- * polled on every idle block, and each host's eviction consults its own. Moving them here would
- * buy indirection, not sharing (decided 2026-09-17, step 3b).
+ * **What is NOT here: the parked request.** Each host parks at most one request as a registry key
+ * (a name not registered yet, or one waiting behind a fade or a drain), latest wins, and offers it
+ * again every block; it is the host's, not a state of [ChainSwap] (step 12 decision (e)).
  */
 internal class Crossfade(sampleRate: Int) {
 
@@ -116,8 +113,7 @@ internal class Crossfade(sampleRate: Int) {
     /**
      * Starts (or restarts) the ramp at weight 0 for the incoming chain. [incomingDelayFrames] and
      * [outgoingInputDelayFrames] place the two weights for chains with latency (the class KDoc);
-     * both are coerced to at least 0, and both are 0 for chains without a lookahead and for the
-     * master's [blend].
+     * both are coerced to at least 0, and both are 0 for chains without a lookahead.
      */
     fun restart(incomingDelayFrames: Int, outgoingInputDelayFrames: Int) {
         pos = 0
@@ -135,19 +131,10 @@ internal class Crossfade(sampleRate: Int) {
         if (d >= totalFrames) 1.0 else if (d <= 0) 0.0 else d / total
 
     /**
-     * Blends [frames] of [outgoing] and [incoming] into [target] and advances the ramp.
-     *
-     * [target] normally aliases one of the two sources, whichever buffer the host must end up
-     * with; both samples are read before either is written, so the aliasing is safe. The incoming
-     * weight rises from 0 to 1 across [totalFrames], the outgoing weight is its complement.
-     */
-    fun blend(target: StereoBuffer, incoming: StereoBuffer, outgoing: StereoBuffer, frames: Int) {
-        pos = blendFrom(target, incoming, outgoing, frames, pos)
-    }
-
-    /**
-     * [blend] with the weights of the block [rampUpAndAdd] has just written, and without advancing
-     * the ramp: a second per-sample pass over the same block.
+     * Blends [frames] of [outgoing] and [incoming] into [target] with the weights of the block
+     * [rampUpAndAdd] has just written (the incoming one rising, the outgoing one its complement),
+     * without advancing the ramp: a second per-sample pass over the same block. [target] may alias
+     * either source; both samples are read before either is written.
      *
      * What the duck pass needs (`Cylinder.processDuck`): a duck entering or leaving service has to
      * be crossfaded into or out of the orbit's gain, and its weights must be the ones the two
@@ -158,17 +145,6 @@ internal class Crossfade(sampleRate: Int) {
      * drops the duck handover for exactly that reason).
      */
     fun blendHeld(target: StereoBuffer, incoming: StereoBuffer, outgoing: StereoBuffer, frames: Int) {
-        blendFrom(target, incoming, outgoing, frames, blockFrom)
-    }
-
-    /** The blend loop, from ramp position [from]; returns where it ended. */
-    private fun blendFrom(
-        target: StereoBuffer,
-        incoming: StereoBuffer,
-        outgoing: StereoBuffer,
-        frames: Int,
-        from: Int,
-    ): Int {
         val targetLeft = target.left
         val targetRight = target.right
         val inLeft = incoming.left
@@ -176,7 +152,7 @@ internal class Crossfade(sampleRate: Int) {
         val outLeft = outgoing.left
         val outRight = outgoing.right
         val total = totalFrames.toDouble()
-        var at = from
+        var at = blockFrom
 
         for (i in 0 until frames) {
             val t = rampAt(at - incomingDelayFrames, total)
@@ -198,8 +174,6 @@ internal class Crossfade(sampleRate: Int) {
 
             at++
         }
-
-        return at
     }
 
     /**
@@ -221,7 +195,7 @@ internal class Crossfade(sampleRate: Int) {
             val t = rampAt(at - outgoingInputDelayFrames, total)
             val u = 1.0 - t
 
-            // Sterilised tap, the reason [blend] gives: `Inf * 0.0` is NaN. Not a NaN shield for the
+            // Sterilised tap, the reason [blendHeld] gives: `Inf * 0.0` is NaN. Not a NaN shield for the
             // chain, which reads the same sample unsterilised through the live mix; just this
             // multiplication not inventing one.
             val left = sourceLeft[i]

@@ -68,13 +68,12 @@ import kotlin.math.min
  * DELAYED dry mix, a fade blends against the delayed dry, and the instance's ring keeps running
  * through Off; switching on from Off re-seeds the detector from the ring under the new knobs
  * ([Compressor.reseedFromRing]). Nothing compensates: the orbit, and the duck it triggers elsewhere,
- * run late by it, by the author's choice. A chain swap places both chains' weights so they meet at
- * the output, delayed by the later of the two latencies (`ChainSwap`, `Crossfade`): two chains of
- * equal latency swap without a seam, and between two latencies the jump in time happens under an
- * ordinary linear crossfade of the two copies, weights summing to one (a comb mid-fade: two
- * time-offset copies lose level mid-fade, input-dependent). The master's output
- * blend does not delay its ramp (`MasterBus`, until step 12 C4): there a late arriving chain's
- * silent ring dips the start of the fade, and two latencies comb. The knob glides do not apply on
+ * run late by it, by the author's choice. A chain swap, on an orbit and at the output alike, places
+ * both chains' weights so they meet at the output, delayed by the later of the two latencies
+ * (`ChainSwap`, `Crossfade`): two chains of equal latency swap without a seam, and between two
+ * latencies the jump in time happens under an ordinary linear crossfade of the two copies, weights
+ * summing to one (a comb mid-fade: two time-offset copies lose level mid-fade, input-dependent).
+ * The knob glides do not apply on
  * this path: [Compressor.processGliding] runs [Compressor.process] on a lookahead instance, whose
  * hold, release and box smoother already keep a knob step off the output.
  * Without a lookahead (the default, and every chain before step 12) none of this paragraph applies
