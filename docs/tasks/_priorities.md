@@ -47,7 +47,8 @@ The release-defining set, regardless of when they're sequenced:
    `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
    fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
    `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md); loose ends in [
-   `master-dsl-followups.md`](master-dsl-followups.md).
+   `master-dsl-followups.md`](master-dsl-followups.md). (2026-09-28: the Master DSL retired in phase 3 step 12; the
+   master is a Katalyst at the output, `master(Katalyst(k => k.gain(2.5).limiter()))`, `master(Katalyst())` for off.)
 2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
    (every voice is an Ignitor tree); archived as [`20260927-engine-tuning-profile.md`](../tasks-archive/2026-09/20260927-engine-tuning-profile.md). Was:
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`

@@ -1,5 +1,41 @@
 # Klang Audio — Memory
 
+## The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12, 2026-09-28)
+
+Plan and decisions (a) to (j): `docs/plans/phase3-step12-master-as-katalyst.md`.
+
+- **One chain type, two positions.** `.master()` takes a `KatalystDsl` (`master(Katalyst(k => ...))`,
+  `master(Katalyst())` switches it off). `MasterBus` runs a `KatalystChain` over the playback's summed orbits,
+  resolved in the engine's ONE `KatalystRegistry` fork, the same one its cylinders read. Gone: `MasterDsl`,
+  `MasterStageDsl`, `MasterValue`, `MasterDslIdentity`, `MasterRegistry`, `Cmd.RegisterMaster`, `MasterChain`,
+  the script `Master` object and `MasterBuilders`, the C3 shim. Every Katalyst stage works at the output;
+  `duck` is built there but never runs, and a `Katalyst.param(...)` stays at its default (nothing fills slots at the
+  output: `applyParams(null)`).
+- **The output host keeps three rules of its own** (`MasterBus` KDoc): a chain that arrives before the engine's first
+  block is adopted at full weight (no 60 ms fade on the downbeat, `MasterBusAdoptionSpec`); it never resets on
+  silence (a limiter envelope or a room carries across a gap); its tail keeps the engine alive (`isRinging`).
+- **One swap law, `ChainSwap`** (`audio_be/.../ChainSwap.kt`): Idle, Fading, Draining, Releasing. The leaving chain's
+  INPUT ramps down over `Crossfade.XFADE_SECONDS` (0.06 s) while the arriving chain ramps up, then the leaving chain
+  DRAINS at full weight until it has no tail. A request during a fade or drain is parked by the host, latest wins.
+  Before C4 the master blended the two OUTPUTS and cut the leaving chain, tail and all.
+- **The capped drain** (decision (i)): a drain lasts at most `ChainSwap.MAX_DRAIN_SECONDS` (20 s); a chain still
+  ringing then is released by `TailRelease` (exponential, 60 dB per `RT60_SECONDS` = 3 s, retired under `FLOOR_DB`
+  = -90 dB, 4.5 s). Worst-case wait for a parked request: about 24.5 s.
+- **No hard cut after stop** (decision (j)): a stopped engine lets its tails ring out in full unless an endless
+  tail (`KatalystChain.sustainsItself`, a delay at `|feedback| >= 1`) is present: that one triggers the release, with
+  whatever rings beside it (the engine's whole output under `TailRelease`), `MAX_TAIL_HOLD_SECONDS` (20 s) after the
+  last note. The rule's home is the `PlaybackEngine.isIdle` KDoc. The engine also waits for a master swap to settle.
+- **Lookahead anywhere** (decision (a), C2): `lookahead` is a build-time knob of the Katalyst `compressor` and
+  `limiter` doors (`limiter` is a compressor preset with the `LIMITER_*` / `AUTHORED_LIMITER_*` defaults, lookahead 0),
+  bounded by `Compressor.MAX_LOOKAHEAD_SECONDS` (0.05 s). The orbit or playback it sits on runs late by it, nothing
+  compensates. A swap between chains of different latency places both weights so they meet at the output
+  (`KatalystChain.latencyFrames`, `Crossfade.restart`), still summing to one. The house limiter (`MasterStage`,
+  5 ms) stays always on and is not authorable.
+- **A refused master unit recovers like an orbit's** (decision (h)): the stage stays Off (dry) and re-asks the shelf
+  every block without allocating.
+- **Open:** risk R0 (the house `MasterStage` clip is tested only through a copy); `MasterBus` and `Cylinder` both carry
+  chain-host plumbing (`docs/tasks/future/one-chain-host.md`).
+
 ## The voice strip and the Pipeline DSL retire; every voice is its tree (phase 3 step 9, 2026-09-27)
 
 - **`Voice` runs Pitch → Ignite → (teardown fade) → Send.** The Ignitor tree is the whole instrument. Every
@@ -1899,7 +1935,9 @@ writers, the `voiceDriven` flag and the `KatalystOwnerApply` interface are delet
   constants, so a declared `k.reverb(0.0, 6)` that no pattern touches still rents
   nothing. That semantic change belongs to 5b-2, where `wet` becomes the insert amount and the
   maintainer listens.
-- **One parity asymmetry, recorded, not fixed**: a non-finite `delay.time` / `reverb.size` is the
+- **One parity asymmetry, recorded, not fixed** (RESOLVED 2026-09-28 by phase 3 step 12 C5: the output runs the
+  Katalyst chain, so a non-finite knob is the OFF state at both positions; `MasterDslShimSpec` retired with the
+  shim): a non-finite `delay.time` / `reverb.size` is the
   orbit's declared OFF state, while the MASTER's same knob substitutes the shared constant
   (the master translation `MasterDslShim`'s `finite(...)` since step 12 C3, until C5). It follows from the Katalyst slot rule ("non-finite
   is the declared off state", the reason the `Param` leaf guard was NOT extended to this map) and
@@ -2490,7 +2528,8 @@ body/analog per superimposed copy.
   literal defaults (`Sine.isPlainSine()`), partials at Nyquist are silent. Plan and decisions:
   `docs/plans/sine-partial-banks.md`; guard: `SinePartialBankSpec` (golden test against the hand-rolled
   Der Schmetterling stack).
-- Effects: delay, reverb, phaser, compressor, ducking, body, vowel, EQ on the orbit (Katalyst); per voice,
+- Effects: delay, reverb, phaser, compressor, ducking, body, vowel, EQ on the orbit (Katalyst), the same chain at the
+  output through `master(...)` (duck inert there); per voice,
   `classic()`'s crush, coarse, distort, four filters, tremolo and envelope as Ignitor stages
 
 ## One drift-lane container: `DriftLanes` (2026-09-10)
@@ -2651,10 +2690,11 @@ re-promoting already-played voices (duplicate burst). Open follow-up:
 - **Cylinders = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, **5 ms lookahead + 5 ms gain-smoothing**, 100 ms release — always
   last in chain, on the summed mix. The lookahead delays the whole output by 5 ms (uniform, so nothing desyncs). The
-  *authored* `limiter` stage (`Master(m => m.limiter(...))`) differs on purpose: no lookahead, 1 ms one-pole attack, because it is per-playback.
+  *authored* `limiter` (the Katalyst `k.limiter(...)`, at the output or on an orbit, since phase 3 step 12) differs on
+  purpose: lookahead 0 by default (opt-in, `lookahead = ...`, the author's latency), 1 ms one-pole attack.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 - **Every DSL is immutable at construction time (maintainer principle, 2026-09-05)**: nodes,
-  builders, `MasterDsl`, `KatalystDsl`, patterns. A "mutating" call returns a new instance; never
+  builders, `KatalystDsl`, patterns. A "mutating" call returns a new instance; never
   a `var`, never a mutable builder, never a `MutableList` escaping a DSL type. Why: it removes an
   entire bug class (shared-state mutation at a distance) and therefore an entire chapter of
   explaining; composition falls out of it. Runtime data may be mutable for performance
@@ -2667,7 +2707,7 @@ re-promoting already-played voices (duplicate burst). Open follow-up:
   annotated for KlangScript directly in `klangscript-libs` (module split 2026-09-06). `MasterFx`, `Stage`,
   `Master.of`, `Pipeline.of` and all 17 sub-type extension objects are DELETED, no back-compat.
   Plan: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`. (The `Pipeline*Builder` classes
-  retired with the Pipeline DSL, phase 3 step 9.)
+  retired with the Pipeline DSL, phase 3 step 9, and the `Master*Builder` classes with the Master DSL, step 12.)
 
 ## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)
 

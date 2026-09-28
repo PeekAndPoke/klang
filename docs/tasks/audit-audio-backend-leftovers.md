@@ -44,9 +44,12 @@ The audit's §6b fixed the dangerous one (`cursorFrame`, now `Double`, guarded b
 `LongRunningTimelineSpec`). The rest of the first scan was never checked. At 48 kHz an `Int` per-block
 counter is safe for years, a per-sample one overflows in 12.4 hours of uptime:
 
-- `PlaybackEngine.kt:38` `quietBlocks`, `master/MasterBus.kt:139` `silentBlocks`,
-  `cylinders/Cylinder.kt:325` `silentBlockCount`: reset when sound returns; check the never-audible
-  path, and whether each counts blocks or samples.
+- `PlaybackEngine.kt:46` `quietBlocks`, `master/MasterBus.kt:193` `silentBlocks`,
+  `cylinders/Cylinder.kt:279` `silentBlockCount`: reset when sound returns; check the never-audible
+  path, and whether each counts blocks or samples. (Line numbers refreshed 2026-09-28; `quietBlocks` now saturates at
+  the tail hold. Two per-sample counters arrived with phase 3 step 12 and are bounded by construction:
+  `ChainSwap`'s drain `ageFrames`, restarted by each drain and capped at 20 s, and `TailRelease.releasedFrames`,
+  which ends with its release, 4.5 s.)
 - `voices/Voice.kt:381` `idCounter`: 2^31 voices, low risk, still unbounded; check what a wrapped or
   negative id breaks.
 

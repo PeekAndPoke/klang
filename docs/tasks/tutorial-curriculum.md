@@ -10,13 +10,14 @@
 >   2026-09-24, phase 3 step 3d, `docs/tasks/builtin-instruments.md` section 3b). Filters:
 >   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
 >   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
-> - Master: `master(Master(m => m.reverb(0.05).gain(2.5).limiter()))` (`reverb(wet, size, lowpass)` and
->   `limiter(threshold, ratio, knee, attack, lookahead, release)` flat since 2026-09-24), `master(Master())`
->   for unity. `Master.of` and `MasterFx` are gone.
+> - Master: `master(Katalyst(k => k.reverb(0.05).gain(2.5).limiter()))`, the same Katalyst chain an orbit runs
+>   (phase 3 step 12, 2026-09-28: the `Master` object is gone); `reverb(wet, size, lowpass)` and
+>   `limiter(threshold, ratio, knee, attack, release, lookahead)` are flat. `master(Katalyst())` switches the
+>   master off (the empty chain). `Master.of`, `MasterFx` and `Master(m => ...)` are gone.
 > - Pipeline: retired with the voice strip in phase 3 step 9 (2026-09-27). An authored instrument gets the
 >   pattern's voice doors by ending in `.classic()`: `Osc.saw().distort(0.4, "tube").classic()`.
-> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
-> the `Master(m => ...)` form.
+> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the mastered songs now use
+> the `Katalyst(k => ...)` form (the `Master(m => ...)` form between 2026-09-06 and 2026-09-28).
 
 > **Second hand-off, from the sprudel field accessors, 2026-09-07**
 > (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
@@ -192,7 +193,7 @@ stages must not carry it.
 | C3 | Layered ignitors | additive `.plus()` stacks | — | IrishLament's flute/fingerpick/contrabass: many layers, flat wiring. *Listen for: the noise crackle that makes the pluck "wood".* |
 | C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
 | C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
-| C6 | The Master bus | `master(Master(m => m.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
+| C6 | The Master bus | `master(Katalyst(k => k.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
 | C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |

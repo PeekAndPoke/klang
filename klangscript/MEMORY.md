@@ -71,11 +71,14 @@
   .limiter(threshold = -3)`, reverb and limiter flat, delay keeps `configure` for `cap`) via the `invoke` operator, aliases `Master.build`/`Master.default`;
   `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
   float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
+  (The `Master` object and `MasterBuilders` retired 2026-09-28, phase 3 step 12 C5: `.master()` takes a Katalyst,
+  `master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))`; `limiter` is a Katalyst compressor preset.)
 
 - **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`
   extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`);
   `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`;
-  `KlangCallable.signature` renders it as `Master(...)`; member completion hides `invoke`.
+  `KlangCallable.signature` renders it as `Katalyst(...)` (`Master(...)` until the Master object retired, 2026-09-28);
+  member completion hides `invoke`.
   `NativeOperatorNames` holds the name. Arithmetic operators of the same plan: not built.
 
 - **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are

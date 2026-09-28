@@ -315,7 +315,7 @@ Scope: `PhaserIgnitor` + `ShimmerIgnitor` (`IgnitorEffects.kt`) with their DSL w
 (`IgnitorDslRuntime:515,517`), `StripPhaserRenderer`, `SendRenderer`, the shared cores
 (`DelayLine`, `PhaserCore`, `Phaser`), and the block-continuous consumers checked rather than
 assumed safe (`KatalystDelayEffect`, `KatalystPhaserEffect`, the `Cylinder` bus, `MasterChain`
-delay shells, `MasterBus` swap/tail). Inventory honesty: **no chorus and no flanger exist in
+delay shells (retired in phase 3 step 12 C3), `MasterBus` swap/tail). Inventory honesty: **no chorus and no flanger exist in
 audio_be** (both are aspirational words in `DelayLine.kt` KDoc only); the complete set of delay
 rings is `DelayLine` (orbit bus + master chain), the shimmer 96 000-sample grain ring, and the two
 Karplus-Strong string lines (audited in the oscillator round).
@@ -331,7 +331,7 @@ runtime Ignitors), per-voice instance isolation (fresh build cache per note-on),
 (**proven from every call site: katalyst effects never see a partial block** — voices write partial
 windows into full-size per-block-cleared buffers), the orbit delay tail while active (renders full
 blocks with zeroed send), `MasterChain`'s delay stage (advance unconditional, presence decided at
-build time), and the `MasterBus` crossfade (per-sample `fadePos`, ends at the exact sample —
+build time; retired in phase 3 step 12 C3, the output runs `KatalystChain`), and the `MasterBus` crossfade (per-sample `fadePos`, ends at the exact sample:
 I4-clean; swap-start block quantisation + A→B→A tail retention are documented in-file). No
 `buffer.size` / `0 until blockFrames` loop exists in any per-voice path in scope; I1/I3 hold
 class-wide.
@@ -388,7 +388,7 @@ roomFade AND roomSize 0..1 stability bounds now live INSIDE `configure` (one con
 caller; production bit-identical via VoiceFactory's normalize), and the MASTER door's
 `buildReverb` was incoherent on non-finite roomFade (gated on `isFinite` but wrote `coerceIn` —
 +Inf became the LONGEST room while the orbit door read it as unset): both doors now agree,
-non-finite fade = no override (parity row in `MasterOrbitReverbParitySpec`, retired in phase 3 step 12 C3; its non-finite rows live on in `KatalystSlotResolverSpec` and `MasterDslShimSpec`). Non-finite
+non-finite fade = no override (parity row in `MasterOrbitReverbParitySpec`, retired in phase 3 step 12 C3; its non-finite rows live on in `KatalystSlotResolverSpec`, and in `MasterDslShimSpec` until the shim retired in C5). Non-finite
 countdowns reset immediately (the heal the old gate's takeover path provided) — and round 2
 found the NaN half: `NaN > peak` is false, so a magnitude scan is BLIND to NaN cells and a
 finite peak beside them would start a finite drain that pumps NaN into the mix; `combPeakAbs`
@@ -413,7 +413,7 @@ pins, `OrbitCleanupTest`
 inaudibly-charged clean-slate row (kills the resetBusEffects wiring drop, a network-only-reset
 mutant AND an Active->true hasTail mutation; the delay sibling row gained the factory-param
 assert as a retrofit), `OrbitBusPipelineSpec` drain-through-cleanup rewrite of the old
-freeze-row, `MasterOrbitReverbParitySpec` non-finite-fade parity row (retired in phase 3 step 12 C3, see `KatalystSlotResolverSpec` and `MasterDslShimSpec`). The old fresh-off spec row
+freeze-row, `MasterOrbitReverbParitySpec` non-finite-fade parity row (retired in phase 3 step 12 C3, see `KatalystSlotResolverSpec`; `MasterDslShimSpec` retired with the shim in C5). The old fresh-off spec row
 was vacuous (single-block probe cannot see comb latency; delay sibling `KatalystDelayEffectSpec:35`
 shares the weakness — retrofit opportunistically when touched), and round 2 put audibility
 thresholds on the wet-presence rows (any-nonzero was satisfied by the ~1e-20 anti-denormal

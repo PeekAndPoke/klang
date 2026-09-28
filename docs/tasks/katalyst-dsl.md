@@ -8,6 +8,12 @@
 > which resolves D2, D4 and D5 and retires the owner-voice override of §2 below (the voice fields
 > it overrode leave the wire in that plan; the bus doors become `katp` aliases).
 >
+> **Note 2026-09-28, phase 3 step 12** ([`../plans/phase3-step12-master-as-katalyst.md`](../plans/phase3-step12-master-as-katalyst.md)):
+> the Master DSL this design mirrored is gone. The output runs a Katalyst chain (`master(Katalyst(k => ...))`),
+> one `KatalystRegistry` and one `RegisterKatalyst` serve both positions, and the master swaps by the orbit's law
+> (`ChainSwap`: the leaving chain's input ramps down, then it drains; no output blend, no cut). Every comparison
+> with "the master" below (§6's table, §D3, the swap notes) describes the master as it was before step 12.
+>
 > **The concrete need (measured 2026-09-17, klang-ai `sessions/20260917-der-schmetterling-measure/`):**
 > Der Schmetterling reads hollow because its guitar wall is 2 to 4 dB thin at 160 to 400 Hz relative to
 > its own mids while the drum bodies at 127 to 250 Hz sit 2 dB above the wall's loudest band. Both
@@ -461,7 +467,7 @@ complexity outranks the duplication.
   keeps its output blend because it cuts. The master could adopt the orbit's shape together with a
   drain later, as a by-ear sound item of its own, not here. A self-oscillating delay (`|feedback|`
   at or above 1) never drains, so it pins the orbit's next swap the way it already pins a live
-  orbit; the existing open question in `KatalystDelayEffect`'s KDoc covers both. One outgoing slot:
+  orbit (capped since phase 3 step 12 decision (i): after 20 s of draining it gets an exponential release); the existing open question in `KatalystDelayEffect`'s KDoc covers both. One outgoing slot:
   a swap queued during a drain waits for the full ring-out (bounded by the closed-form ceiling, seconds
   for a room); the master's bounded tail hold is the escape if live editing on a wet orbit needs it,
   open item 2026-09-18. The duck envelope is orbit state that survives a swap (decided 2026-09-18 in

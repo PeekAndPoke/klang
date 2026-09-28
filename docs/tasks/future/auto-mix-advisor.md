@@ -1,16 +1,16 @@
 # Auto-mix advisor — attribution, suggestions, and a deliberately weak auto-master
 
-> **Umbrella plan (2026-09-08):** [`docs/plans/realtime-analysis.md`](../plans/realtime-analysis.md) consolidates this
+> **Umbrella plan (2026-09-08):** [`docs/plans/realtime-analysis.md`](../../plans/realtime-analysis.md) consolidates this
 > doc with its two siblings, defines "crowded" as distinct from "loud", and gates every UI phase on the UI rework.
 
 > **Status: 🔴 proposed 2026-08-11 (user idea, same-day sketch), not started. Not slotted in
-> [`_priorities.md`](_priorities.md).** Priority proposal: **NICE** — but with an unusual upside, see
+> [`_priorities.md`](../_priorities.md).** Priority proposal: **NICE**, but with an unusual upside, see
 > the framing below.
 >
-> **Depends on:** [`realtime-analytics-meters.md`](realtime-analytics-meters.md) §3 (capture ring +
+> **Depends on:** [`realtime-analytics-meters.md`](../realtime-analytics-meters.md) §3 (capture ring +
 > worker, windowed balance distribution — the measurement substrate) · stem export (§4 here, new) ·
-> the master `eq` stage ([`master-dsl-followups.md`](master-dsl-followups.md), new item) for the
-> closed-loop phase only.
+> the master `eq` stage ([`master-dsl-followups.md`](../master-dsl-followups.md) §5; available since 2026-09-28 as the
+> Katalyst `eq` at the output, `master(Katalyst(k => k.eq(...)))`) for the closed-loop phase only.
 >
 > **The framing that makes this interesting:** every commercial auto-master tool (LANDR, Ozone…)
 > receives a stereo sum and can only EQ symptoms. **Klang is the mixer.** The engine owns every

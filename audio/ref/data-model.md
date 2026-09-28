@@ -111,7 +111,7 @@ phase 3 step 9. The one rule of which chain reads which slot lives in the `katp`
 
 ### Control and metadata
 
-`master` and `katalyst` (chain names, last writer wins), `control` (a control-only event, never
+`master` and `katalyst` (chain names in the one Katalyst namespace since phase 3 step 12, last writer wins), `control` (a control-only event, never
 synthesized), `tags` (UI only), `sourceId`.
 
 ## AdsrDef

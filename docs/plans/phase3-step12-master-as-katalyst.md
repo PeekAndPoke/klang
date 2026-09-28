@@ -1,5 +1,17 @@
 # Phase 3 step 12: plan and inventory for "`.master()` accepts a Katalyst, the Master DSL retires"
 
+> **Status 2026-09-28: DONE, C1 to C6.** C1 `ChainSwap` for the cylinder; C2 the compressor's `lookahead` knob and
+> the `limiter(...)` preset door; C3 the output runs a `KatalystChain` (`MasterChain` gone); C5 `.master()` takes a
+> Katalyst, the Master DSL, `MasterRegistry`, `Cmd.RegisterMaster`, the script `Master` object, `MasterBuilders` and
+> the shim retired; C4 the master on the shared `ChainSwap` (the old chain drains, listening pair accepted); the
+> capped drain (decision (i), `ChainSwap` Releasing, `TailRelease`) and no hard cut after stop (decision (j): only an
+> endless tail triggers the release, of the engine's whole output; the rule's home is the `PlaybackEngine.isIdle` KDoc); C6 the docs sweep. Decisions (a) to (j) are section 0. The inventory below is the
+> planner's snapshot of 2026-09-27 and names code that is gone now. **Stays open:** risk R0 (the house
+> `MasterStage` clip is exercised only through a copy in `KlangAudioRendererSpec`, no row through
+> `MasterStage.process`); decision (g) (a request waits for the drain) as a question for the maintainer's ear; the
+> duplicated chain-host plumbing of `MasterBus` and `Cylinder`, a possible follow-up
+> ([`../tasks/future/one-chain-host.md`](../tasks/future/one-chain-host.md)).
+
 Planner's inventory, 2026-09-27, branch `engine-redesign` at `f848c86b`; the maintainer's decisions of the same day are section 0. Read-only: nothing in the repo was
 edited, no Gradle run. Every code claim carries `file:line` and was read; anything not read is marked
 UNVERIFIED. Paths are repo-relative to `/opt/dev/peekandpoke/klang`.

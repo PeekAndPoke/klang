@@ -24,9 +24,11 @@ approximation `x (27 + x^2) / (27 + 9 x^2)`, clamped at |x| > 3.
 
 ## What exists today
 
-- The Master DSL (`audio_bridge/.../MasterDsl.kt`) has `gain`, `limiter`, `reverb` and `delay`
-  stages. No compressor stage, no saturator. Follow-ups: `docs/tasks/master-dsl-followups.md`, which
-  also holds the master `eq` stage idea (§5).
+- The master is a Katalyst chain at the output (phase 3 step 12, 2026-09-28; the Master DSL is gone):
+  `master(Katalyst(k => ...))` takes every Katalyst stage, `gain`, `limiter`, `compressor`, `eq`, `reverb`,
+  `delay`, `phaser`, `body`, `vowel` (`duck` is inert there). No saturator stage. Follow-ups:
+  `docs/tasks/master-dsl-followups.md`. A saturator would be a new Katalyst stage, so it would work on an
+  orbit too.
 - The engine has the parts: `effects/Compressor.kt` (the orbit compressor and the master limiter
   share it) and the waveshapers in `ShapingFuncs.kt` / `DistortionCore.kt`, several of them
   asymmetric already (`DistortionShape`).

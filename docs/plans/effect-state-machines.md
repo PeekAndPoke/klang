@@ -4,10 +4,10 @@
 > step 5c). Performance first, readability a close second: the model must cost what the flags cost
 > today and read as a state machine.
 
-> **Status 2026-09-27:** every per-effect row of section 3 is done (converted, done without state classes, or
-> retired). Both halves CONVERTED: the `Cylinder` in step 12 C1, the master bus in C4 (one `ChainSwap` for both positions). Both halves
-> are scheduled into phase 3 step 12 (`../tasks/builtin-instruments.md`), where the master becomes the Katalyst at
-> the output position and the two swaps become one mechanism, converted once.
+> **Status 2026-09-28: DONE.** Every row of section 3 is done (converted, done without state classes, or
+> retired). The chain swap, the last row, was converted once for both positions in phase 3 step 12
+> (`../tasks/builtin-instruments.md`, `phase3-step12-master-as-katalyst.md`): the `Cylinder` in C1, the master bus
+> in C4, one `ChainSwap` (Idle, Fading, Draining, Releasing); the master is the Katalyst at the output position.
 
 ## 1. The shape
 
@@ -208,11 +208,11 @@ maintainer and recorded in `../tasks/katalyst-dsl.md` BEFORE the step is briefed
 | `KatalystGainEffect` | DONE 2026-09-19 (Katalyst 5c-8) WITHOUT state classes: fresh, ramping and settled are exactly `KnobGlide`'s snap flag, countdown and rest, and the gain has no Off and no switch-off, so states would copy the helper (the complexity rule above); the four questions are answered in its KDoc | a `KnobGlide` plus the unity skip |
 | `ResonatorBank` | RETIRED 2026-09-20 with the morph it was written for. 5c-10 gave the bank a morph and no state; the maintainer listened and rejected it (travelling resonances are an audible sweep), so `morphTo`, the capacity preallocation, `BaseSvf.retune` and `resetState` are gone and the bank is a plain parallel bank again. The output crossfade carries every material change | nothing: the bank has no lifecycle of its own |
 | `KatalystPhaserEffect`, `KatalystDuckEffect` | DONE 2026-09-20 (Katalyst 5c-9) WITHOUT state classes: the phaser's situations are `KnobGlide`'s snap flag, countdown and rest plus `Phaser`'s own `engaged` latch next to the cascade it guards; the duck's Off is `ducking` being null, the field `Cylinders` already reads through `duckCylinderId`. The four questions are answered in each KDoc, each pinned by a row | had no fades of their own |
-| `Cylinder` chain swap | Idle, Fading, Draining, and since step 12 decision (i) (2026-09-28) Releasing: a drain still reporting a tail after `ChainSwap.MAX_DRAIN_SECONDS` (20 s) has its OUTPUT released by `TailRelease` (exponential per sample, 60 dB per 3 s, retired under -90 dB, 4.5 s later; the same law releases a stopped engine's tails, decision (j)) (phase 3 step 12 decision (e): Pending is not a state; the host keeps `pendingKey` as its parked key, latest wins, as `KatalystFilterSwap` does since 5c-11) | CONVERTED 2026-09-27 (phase 3 step 12 C1) into `ChainSwap` (`audio_be/.../ChainSwap.kt`), next to `Crossfade`; the duck handover lives on Fading; the master position adopted the same class in C4 (2026-09-28) |
+| chain swap (`Cylinder` and, since C4, `MasterBus`) | Idle, Fading, Draining, and since step 12 decision (i) (2026-09-28) Releasing: a drain still reporting a tail after `ChainSwap.MAX_DRAIN_SECONDS` (20 s) has its OUTPUT released by `TailRelease` (exponential per sample, 60 dB per 3 s, retired under -90 dB, 4.5 s later; the same law releases a stopped engine's tails, decision (j)) (phase 3 step 12 decision (e): Pending is not a state; the host keeps `pendingKey` as its parked key, latest wins, as `KatalystFilterSwap` does since 5c-11) | CONVERTED 2026-09-27 (phase 3 step 12 C1) into `ChainSwap` (`audio_be/.../ChainSwap.kt`), next to `Crossfade`; the duck handover lives on Fading; the master position adopted the same class in C4 (2026-09-28) |
 | voice strips (phase 3 of the signal-flow plan; the strip retired 2026-09-27, every voice is its Ignitor tree) | void since the strip retired (2026-09-27); a tree node's lifecycle is its own design question, not decided here | build-time gate plus per-block guards |
 
-The master bus chain swap already shares `Crossfade` with the cylinder and follows when the
-cylinder's `SwapState` proves out.
+The master bus chain swap followed in step 12 C4 (2026-09-28): `MasterBus` runs the same `ChainSwap`, without the
+duck events (a duck is inert at the output).
 
 ## 4. Sequencing and acceptance
 

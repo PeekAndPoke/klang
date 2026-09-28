@@ -37,12 +37,15 @@ general mechanism, and a frontend chooses a routing.
   `VoiceData` and retires the Pipeline DSL (both done 2026-09-27). The voice strip is gone and every voice is an
   Ignitor tree, so part 1 of the idea needs only the auto-attach and the tag.
 - One law per effect, shared by every host (`TremoloCore`, `CrushCore`, `DistortionCore`,
-  `EnvelopeCore`, `SvfCoeffSweep`): a Katalyst stage and a master stage can already run the same code.
+  `EnvelopeCore`, `SvfCoeffSweep`): a Katalyst stage and a master stage can already run the same code (since
+  phase 3 step 12 they ARE the same stage: the output runs a `KatalystChain`).
   Part 2 needs exactly this.
-- The door shapes are one shape per concept across the Ignitor, Katalyst and Master DSLs (section 3b
-  of the phase 3 record): the surfaces are already nearly the same.
+- The door shapes are one shape per concept across the Ignitor and Katalyst DSLs (section 3b
+  of the phase 3 record; the Master DSL merged into the Katalyst in phase 3 step 12): the surfaces are already
+  nearly the same.
 - The signal-flow plan section 7 made the Katalyst chain an instrument-like list whose reverb and
-  delay are insert stages; the master's `MasterStageDsl` has the same model.
+  delay are insert stages; since phase 3 step 12 the master is that same chain at the output position
+  (`master(Katalyst(k => ...))`).
 
 ## 3. The first step when this plan starts: the fixed-layout inventory (maintainer, 2026-09-27)
 
@@ -61,14 +64,20 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   (section 3 below; a candidate shape: the event announces its own inline DSLs into one generic sink over a
   sealed `InlineDsl` wire type, the maintainer's visitor idea, name to be decided);
 - the orbit concept: voices summed per orbit, the cylinder per orbit, sends, ducking and the compressor by orbit;
-- the Katalyst (per orbit) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds;
+- ~~the Katalyst (per orbit) and Master (one) chains as separate types, DSLs, registries and `Cmd.Register*` kinds~~
+  DONE 2026-09-28 (phase 3 step 12, `docs/plans/phase3-step12-master-as-katalyst.md`): one chain type
+  (`KatalystDsl`, `KatalystChain`), one registry fork per playback, one `Cmd.RegisterKatalyst`, one swap law
+  (`ChainSwap`). What is left of it is two HOSTS of that chain, `Cylinder` and `MasterBus`, with duplicated plumbing:
+  `docs/tasks/future/one-chain-host.md`;
 - `katp` and the orbit parameter state; the sprudel doors that write it (`reverb`, `delay`, `compressor`,
   `duck`, `phaser`, `body`, `vowel`) and `orbit(...)`, `katalyst(...)`, `master(...)`;
 - the per-voice `classic()` chain itself (sprudel's fixed voice layout, attached as a tag since phase 3 step 10).
 - two POSITION-bound features a merged "effect chain" type must keep expressible (maintainer and coordinator,
   2026-09-27: Katalyst and Master are the same thing, a shared chain, named only for where it sits): the master
-  limiter's lookahead (a final safety stage, master-only by design; in a graph, a property of the node before the
-  output) and ducking (a side-chain edge from another bus, not a chain property);
+  limiter's lookahead (a final safety stage, and until phase 3 step 12 C2 master-only; in a graph, a property of the node before the
+  output; since step 12 decision (a) only the house limiter's 5 ms in `MasterStage` is fixed, an authored
+  `lookahead` runs at any position and makes that node late) and ducking (a side-chain edge from another bus, not
+  a chain property);
 - the duck machinery, to be replaced by a bus reference plus a follower (section 5): the `duck` stage with its
   own DSP (`Ducking`, `KatalystDuckEffect`), the second pass in `Cylinders.processAndMix` that runs it after every
   orbit, `duckCylinderId`, the envelope handover `takeOver`, `ChainSwap`'s duck events (`processDuck`,
@@ -94,8 +103,9 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   addresses a bus (today: `orbit`), how a graph is declared and replaced at runtime, and what the
   sprudel default graph looks like written in that DSL.
 - **One effect chain type.** The Katalyst and the master chain merged into one chain type that any
-  graph node can host; the master limiter's lookahead stays master-only today (a deliberate
-  exception in the guardrails) and needs a rule in a general graph.
+  graph node can host. DONE for the type in phase 3 step 12 (2026-09-28); the lookahead rule is settled there too
+  (decision (a): the house limiter's lookahead is the only fixed one, an authored one runs anywhere, nothing
+  compensates). Open: one HOST type for the chain (`docs/tasks/future/one-chain-host.md`).
 - **Cost.** Today's fixed routing is cheap. A general graph must stay allocation-free per block, keep
   the per-playback cleanup rule ("nothing allocates without a way to clean it up"), and stay inside the
   block budget on Node.js, the shipping target.
@@ -148,4 +158,5 @@ kick's reverb tail also holds the duck), the follower's shape and defaults, the 
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
 - `docs/tasks/builtin-instruments.md` (phase 3: `classic()`, the door shapes, the shared cores).
-- `docs/tasks/katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`.
+- `docs/tasks/katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
+- `docs/plans/phase3-step12-master-as-katalyst.md` (the master became a Katalyst at the output).

@@ -18,7 +18,8 @@ Standing rules, whatever the brief says:
   (CRITICAL, MAJOR, MINOR, NIT). Only CRITICAL and MAJOR force another round, so severity is a
   claim you must be able to defend.
 - Never "fix" a deliberate engine exception: reverb's ANTI_DENORMAL, the documented OnePole HPF
-  cutoff bias, the linear BPF, the master-only limiter lookahead, the 128-frame block size, the
+  cutoff bias, the linear BPF, the house limiter's always-on 5 ms lookahead (an authored lookahead runs
+  anywhere and nothing compensates it), the 128-frame block size, the
   raw Motor (no safety clamp on an audio parameter).
 - A test that derives its expected value from the code under test is a finding, not a pass.
 - No em-dashes in your report.

@@ -54,7 +54,8 @@ hard clip does the work, which is the documented "knock") for one player's feel.
 
 Two traps when it happens:
 - `MasterDefaultsSyncSpec` asserts `AUTHORED_LIMITER_LOOKAHEAD_SECONDS < HOUSE_…` and
-  `HOUSE_ATTACK == HOUSE_LOOKAHEAD`. 1 ms is fine; 0 breaks the first assertion.
+  `HOUSE_ATTACK == HOUSE_LOOKAHEAD`. 1 ms is fine; 0 breaks the first assertion. (Still true 2026-09-28; the
+  authored limiter is the Katalyst `limiter(...)` door since phase 3 step 12, its lookahead 0 by default.)
 - `JsAudioBackend` hardcodes the constant into the reported `outputLatencyMs`. If the value becomes
   per-path, that read has to move with it or every audio-aligned visual starts lying.
 

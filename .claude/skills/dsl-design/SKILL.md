@@ -5,8 +5,8 @@ description: Use when someone asks to design a DSL surface, add a DSL door or kn
 
 ## What This Skill Does
 
-Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), MasterDsl, KatalystDsl,
-sprudel patterns, and any DSL still to come. Apply these rules whenever
+Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), KatalystDsl (on an orbit and,
+since phase 3 step 12, at the output through `master(...)`), sprudel patterns, and any DSL still to come. Apply these rules whenever
 you add, change, or review a DSL surface, on either door (KlangScript stdlib or Kotlin).
 
 This is a reference skill. It changes how you judge a design; it does not run a workflow.
@@ -18,7 +18,7 @@ Companion skills: `/klangaudio-knowhow` (the engine the DSLs drive), `/klangscri
 
 ## 1. Everything is immutable at construction time
 
-Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders, `MasterDsl`,
+Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders,
 `KatalystDsl`, patterns. A "mutating" operation returns a NEW instance with the updated values and
 leaves the receiver untouched.
 
@@ -60,7 +60,7 @@ door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```javascript
 Osc.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
-master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size): flat since 2026-09-24
+master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size): flat since 2026-09-24
 ```
 
 **Rules:**
@@ -69,7 +69,7 @@ master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size
   the base type only. Calling the wrong function inside the lambda is not an error, it is not
   offered. This is what the editor shows, so the type split IS the documentation.
 - **Which parameter goes where** (refined 2026-09-23 by the maintainer, walking every door of the
-  Ignitor, Katalyst and Master DSLs; the per-door record is `docs/tasks/builtin-instruments.md` §3b):
+  Ignitor, Katalyst and Master DSLs, the last retired into the Katalyst on 2026-09-28; the per-door record is `docs/tasks/builtin-instruments.md` §3b):
   - The effect's MUSICAL inputs stay on the door, defaulted or not: `freq` on oscillators
     (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
     `tremolo(rate, depth)`, `fm(modulator, ratio, depth)`. SECONDARY knobs go on the builder
@@ -77,8 +77,8 @@ master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size
   - **`wet` is the very FIRST parameter** of every door that has one, in all four DSLs, sprudel
     included: `phaser(wet, rate, center, sweep)`, `body(wet, material)`, `reverb(wet, size, lowpass)`.
     `floor` is always on the builder.
-  - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor`, `limiter`,
-    `duck`, each identical to sprudel's.
+  - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor` and `duck`,
+    each identical to sprudel's, and `limiter`, the Katalyst's compressor preset (no sprudel twin).
   - An envelope is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` call, never four
     stage knobs, with the SAME shape wherever it appears: on the chain and nested inside a filter's or the
     pitch envelope's builder (`x => x.adsr(a, d, s, r, e => e.curves(...))`). Inside a builder a knob drops
@@ -98,9 +98,10 @@ master(Master(m => m.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size
   `tuneVca(configure)` on a pipeline preset, retired with the Pipeline DSL (phase 3 step 9, 2026-09-27).
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
-- Callable objects (`Master(...)`, `Katalyst(...)`) go through the `invoke` operator
+- Callable objects (`Katalyst(...)`) go through the `invoke` operator
   (`docs/tasks/klangscript-native-object-operators.md`), aliased to a method form
-  (`Master.build(...)`, `Master()` == `Master.default()`) so both can be tested against each other.
+  (`Katalyst.build(...)`; `Katalyst()` == `Katalyst.build()`, the empty chain) so both can be tested
+  against each other.
 - No sub-type methods on the node types. The pre-2026-09 "config first, base wrappers last" chain
   form is gone; do not reintroduce it.
 - Sprudel patterns have no builder layer: every method returns a `SprudelPattern`, there is no
@@ -147,7 +148,7 @@ the bug.
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
   wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
-  master stage, a sprudel call (it sets every slot it leaves unset at write time), the engine's
+  Katalyst stage (on an orbit or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
   wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
 - **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
@@ -212,7 +213,7 @@ the bug.
   Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
   fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
   running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`). See
-  `docs/tasks/master-dsl-followups.md` for the audit brief.
+  `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
 
 ---
 
@@ -226,7 +227,7 @@ Known debt, capture-only, not scheduled: the script object is `Osc` but the type
 and the runtime is the Ignitor. When unifying, pick one word and carry it everywhere.
 
 Also: when a surface is redesigned, REMOVE what it replaces. Two doors to the same thing
-(`MasterFx.gain()` next to `Master(m => m.gain())`) is a finding, not backward compatibility.
+(`MasterFx.gain()` next to `Master(m => m.gain())`, both gone since) is a finding, not backward compatibility.
 The project does not keep deprecated surfaces.
 
 ---
@@ -241,7 +242,7 @@ Two complementary rules that are often confused:
   internal invariants only.
 - **Do not add safety clamps to audio parameters without asking.** The Motor is raw with sharp
   edges by design; delay feedback above 1.0 (bounded by its `cap`) or extreme drive is a creative
-  choice, the master limiter is the safety net. When a review flags a parameter as "could clip",
+  choice, the house limiter (`MasterStage`) is the safety net. When a review flags a parameter as "could clip",
   ask, do not clamp. The reverb is the recorded exception: above unity comb feedback it has no
   sound, only a network running away to Inf/NaN, and its size bound sits at 10 (feedback 0.98) by
   maintainer decision (2026-09-16, `Reverb.normalizeSize`).
@@ -257,7 +258,7 @@ New wire-visible distinctions start as sealed `@WireName` hierarchies, not enums
 
 **Why:** variants carry exactly their own params; name-addressed variants have no ordinal
 append-only hazard (the KSP schema hash does not cover enum entries); exhaustive `when` over the
-sealed type makes every consumer arm compiler-checked. Precedents: `AdsrDef`, `MasterStageDsl`,
+sealed type makes every consumer arm compiler-checked. Precedents: `AdsrDef`, `KatalystStageDsl`,
 `EqSection`. An enum is acceptable only for a genuinely closed, param-less set (`AdsrCurve`).
 
 ---

@@ -25,7 +25,8 @@ stateful-effect resets, render nondeterminism.
 
 The numbers are from 2026-08-18. Since then the gain staging changed (`gain` is the one level word,
 2026-09-19, `docs/plans/signal-flow-redesign.md` section 6) and the song has moved on. The method
-drove the limiter with `MasterFx.gain`, which is retired; use the master DSL's `gain` stage instead:
+drove the limiter with `MasterFx.gain`, which is retired; use the `gain` stage of the Katalyst at the output instead
+(`master(Katalyst(k => k.gain(2.2).limiter()))`, since phase 3 step 12, 2026-09-28):
 
 - Render the song twice, identical except the master drive (2.2 against 0.55, 12.04 dB less, so the
   limiter idles in the reference). The per-frame envelope ratio of the two renders minus the drive

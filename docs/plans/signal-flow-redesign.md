@@ -315,7 +315,8 @@ The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisi
   like `sound()` and `master()`, the append rule of the task doc's step 1 is retired.
 - **D2 dissolves:** with no per-voice send amounts, the send buffers go. `reverb` and `delay`
   become insert-style stages fed by the mix at their list position scaled by `wet`, exactly the
-  master's `MasterStageDsl.Reverb` model. "The room hears the cab" is then just list order.
+  master's `MasterStageDsl.Reverb` model (retired 2026-09-28, phase 3 step 12: the master is now this same Katalyst
+  chain at the output). "The room hears the cab" is then just list order.
   The price is per-voice send variation within one orbit, which the lease already made unreliable;
   two orbits or a `katp` pattern cover it.
   **DECIDED 2026-09-19 with the maintainer, before Katalyst 5b-2.** Why it needed deciding: the

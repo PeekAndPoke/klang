@@ -1,4 +1,4 @@
-# `.katalyst(k => ...)` and `.master(m => ...)`: a pattern door that takes the value or its configure lambda
+# `.katalyst(k => ...)` and `.master(k => ...)`: a pattern door that takes the value or its configure lambda
 
 > **Written 2026-09-18, not started.** Priority: **NICE** (pure convenience, the maintainer's
 > words). Outside the signal-flow work stream on purpose. **Depends on**
@@ -6,13 +6,18 @@
 > cannot type the `k` in `.katalyst(k => k.`, and completion inside a builder is most of a
 > builder's value, so this task does not start before that one's step 3.
 
+> **Updated 2026-09-28 (phase 3 step 12 C5):** `.master()` takes a `KatalystDsl` now; the Master DSL, the script
+> `Master` object and `MasterBuilder` are gone. Both doors therefore take the SAME value and the same lambda
+> (`KatalystBuilder`), which makes this task smaller: one alias, `KatalystLike`, serves both. The text below is
+> rewritten to that.
+
 ## 1. What the author writes
 
 Today a chain is built and handed over in two words:
 
 ```
 .katalyst(Katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 0.8, db = 2.0))))
-.master(Master(m => m.reverb(0.2, 7)))
+.master(Katalyst(k => k.reverb(0.2, 7)))
 ```
 
 After this task both spellings work, on every form of the two doors:
@@ -20,8 +25,8 @@ After this task both spellings work, on every form of the two doors:
 ```
 .katalyst(k => k.classic().eq(e => e.band(freq = 300, q = 0.8, db = 2.0)))
 .katalyst(Katalyst(k => k.classic()))          // unchanged
-.master(m => m.reverb(0.2, 7))
-.master(Master.default())                      // unchanged
+.master(k => k.reverb(0.2, 7))
+.master(Katalyst())                            // unchanged (the empty chain: the master off)
 ```
 
 **Not for `.sound()`** (maintainer, 2026-09-18): it takes pattern-like names, where a lambda
@@ -30,11 +35,10 @@ already means a mapper, so the form would be ambiguous there.
 ## 2. Semantics
 
 - **The lambda is the configure lambda of the object's own door.** `.katalyst(f)` is exactly
-  `.katalyst(Katalyst(f))`, `.master(f)` is exactly `.master(Master(f))`. The builder starts where
-  that door starts it: EMPTY for `Katalyst` (so `.katalyst(k => k.eq(...))` is an EQ and nothing
-  else; `k.classic()` is the explicit word for the historical chain), and whatever
-  `Master(...)` starts from for the master. One definition, one place (`Katalyst.build`,
-  `Master.build`); the pattern door calls it and adds nothing.
+  `.katalyst(Katalyst(f))`, `.master(f)` is exactly `.master(Katalyst(f))`. The builder starts where
+  that door starts it: EMPTY (so `.katalyst(k => k.eq(...))` is an EQ and nothing else;
+  `k.classic()` is the explicit word for the historical orbit chain), at both positions. One
+  definition, one place (`Katalyst.build`); the pattern door calls it and adds nothing.
 - **The lambda runs ONCE, when the door is built, never per event.** The door stamps one shared
   value instance onto every event, as it does today (step 5a-2: one `KatalystValue.Dsl` per door).
   Per-event evaluation would allocate a chain per event and let an impure lambda mint a new
@@ -47,9 +51,8 @@ already means a mapper, so the form would be ambiguous there.
 ## 3. Shape in code
 
 - **Script door:** the ONE registered function per door form takes an alias of `Any`,
-  `KatalystLike` / `MasterLike`, with its union declared as the union-types task specifies:
-  `KatalystDsl | (KatalystBuilder) -> KatalystBuilder`, `MasterDsl | (MasterBuilder) ->
-  MasterBuilder`. KlangScript has no overloads, so this is the only way. Under `Any` a script
+  `KatalystLike` (both doors, since `.master()` takes a Katalyst), with its union declared as the
+  union-types task specifies: `KatalystDsl | (KatalystBuilder) -> KatalystBuilder`. KlangScript has no overloads, so this is the only way. Under `Any` a script
   lambda arrives as a Kotlin `Function1` (the interop's existing behaviour, the one sprudel's
   `patternMapper` relies on), so the door checks `is KatalystDsl`, `is Function1<*, *>`, else the
   error.
@@ -86,7 +89,7 @@ already means a mapper, so the form would be ambiguous there.
 ## 6. Docs
 
 KDoc on the two doors shows both spellings, the lambda form first (it is what people will
-write). The `Katalyst` and `Master` objects keep their KDoc; the tutorial and Lexikon sweep of the
+write). The `Katalyst` object keeps its KDoc; the tutorial and Lexikon sweep of the
 signal-flow plan's phase 5 picks the lambda form for new text.
 
 ## Links

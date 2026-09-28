@@ -7,7 +7,7 @@ description: Use when working on the klangscript module, implementing klangscrip
 
 Loads context for working on the `klangscript` Kotlin/Multiplatform module — a JavaScript-like
 scripting language for live coding, built with a hand-rolled recursive descent parser and
-tree-walking interpreter. The standard library (`Osc`, `Master`, `Katalyst`, `Math`, ...) is the
+tree-walking interpreter. The standard library (`Osc`, `Katalyst`, `Math`, ...) is the
 separate `klangscript-libs` module (read `klangscript-libs/CLAUDE.md` when the task touches the
 stdlib or a DSL door).
 

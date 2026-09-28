@@ -4,6 +4,12 @@
 > when that shipped (2026-08-03). Nothing here blocks anything; each item is small and independent.
 > Priority: **NICE**, except the parity audit, which the user raised to a standing principle.
 
+> **Status 2026-09-28, after phase 3 step 12** ([`../plans/phase3-step12-master-as-katalyst.md`](../plans/phase3-step12-master-as-katalyst.md)):
+> the Master DSL is gone; the output runs the same Katalyst chain an orbit runs, written
+> `master(Katalyst(k => ...))`. Section 2 is DONE (decisions (i) and (j)), section 5 is DONE (every Katalyst stage,
+> `eq` included, works at the output). Sections 1, 3, 4, 6 and 7 stay open and are rewritten below to the current
+> surface; where a section still says "master" it means the Katalyst at the output position.
+
 ## 1. Parameter parity audit — the principle, applied everywhere
 
 **The rule (user, 2026-08-02):** *"The same params must be available in the sprudel DSL, Ignitor, Master etc. and they
@@ -15,7 +21,7 @@ tail, existed on only one of them. Both are fixed for reverb/delay; nothing has 
 
 What an audit would cover, per effect: does the same concept have the same **name**, the same **scale**, the same
 **availability** on every surface it could sensibly appear on (sprudel per-voice, sprudel per-orbit, Ignitor,
-Pipeline/Stage, Master)?
+the Katalyst on an orbit and at the output; the Pipeline DSL retired in phase 3 step 9 and the Master DSL in step 12)?
 
 Known asymmetries already spotted, as a starting list:
 
@@ -33,7 +39,14 @@ Known asymmetries already spotted, as a starting list:
   **`roomDim` / `iResponse`** are stored but never read on **both** paths (`Reverb.kt` TODO) — dead vocabulary that
   still appears in the DSL and docs.
 
-**A DELIBERATE exception, recorded so nobody "fixes" it:** `lookahead` exists on the master limiter **only** — not on
+**Superseded 2026-09-27 (phase 3 step 12 decision (a), C2):** `lookahead` is now a knob of the Katalyst `compressor`
+and `limiter` doors and runs at ANY position; the orbit or playback it sits on runs late by it, the author's choice,
+nothing compensates. It is still not a sprudel `compressor()` knob, because it is fixed per chain (it sizes a ring)
+while a sprudel door writes slots on the running chain. The authored `limiter()` default stays at lookahead 0
+(`AUTHORED_LIMITER_LOOKAHEAD_SECONDS`) against the house limiter's 5 ms; the `limiter` row of
+`KlangScriptKatalystDoorParitySpec` pins its numbers. The recorded exception it replaces, kept for history:
+
+**A DELIBERATE exception (until 2026-09-27):** `lookahead` exists on the master limiter **only**, not on
 sprudel's `compressor()`, not per-orbit, not per-voice. A lookahead limiter delays the signal it protects; on the summed
 master that delay is uniform and harmless, but on an orbit it would shift that orbit late against every other one — a
 silent timing bug that reads as "my drums feel loose". Same reasoning one level up keeps the *authored*
@@ -45,6 +58,14 @@ per-playback. `MasterDefaultsSyncSpec` asserts both the shared values and the di
 Wants its own task doc once someone starts it; this is the brief.
 
 ## 2. Engine disposal truncates a long delay tail (shared orbit + master)
+
+> **DONE 2026-09-28** (phase 3 step 12 decisions (i) and (j)). After a stop, every tail that can end on its own rings
+> out in full; only an endless tail (a delay at `|feedback| >= 1`, on an orbit or at the output,
+> `KatalystChain.sustainsItself`) triggers the release, with whatever rings beside it (the engine's whole output, the
+> simple rule in the `PlaybackEngine.isIdle` KDoc), 20 s after the last note (`PlaybackEngine.MAX_TAIL_HOLD_SECONDS`), by an
+> exponential release (`TailRelease`, 60 dB per 3 s, retired under -90 dB), so there is no hard cut and no leaked
+> engine. A chain swapped away drains for at most `ChainSwap.MAX_DRAIN_SECONDS` (20 s), then gets the same release.
+> The text below is the original brief.
 
 `PlaybackEngine.isIdle()` bounds the master tail hold at 20 s of silence, then disposes the engine **between two
 samples** — a step, not a fade. A genuine (non-runaway) delay, e.g.
@@ -62,8 +83,13 @@ invite the orbit half.
 ## 3. Cache eviction can rebuild a master chain on the audio thread
 
 Returning to a master last used more than `MAX_CACHED_CHAINS` (8) edits ago is a cache miss, and
-`MasterBus.chainFor` rebuilds inside `process()` — Freeverb buffers plus a delay ring allocated in the render callback.
-Bounded and documented, but reachable by ordinary live-coding A/B ("was 2.0 better?").
+`MasterBus.chainFor` rebuilds the `KatalystChain` when the request lands (inside the scheduler's block, on the audio
+thread). Bounded and documented, but reachable by ordinary live-coding A/B ("was 2.0 better?").
+
+**Updated 2026-09-28 (phase 3 step 12 C4):** a chain out of service holds no units (eager retire), so even a cache
+HIT re-rents its reverb unit and delay ring at its first configure. The units come from the backend's shelves
+(`ReverbUnits`, `SizedBuffers`), shared with the orbits; the render thread allocates only when the shelf has none
+idle. What a miss still allocates on the audio thread is the chain's stage shells.
 
 **Proper fix belongs to the resource warehouse pool** — already written up there, see
 [`../tasks-archive/2026-09/20260927-resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) §"Master chains — the second customer".
@@ -71,7 +97,7 @@ Bounded and documented, but reachable by ordinary live-coding A/B ("was 2.0 bett
 ## 4. Delete-to-undo for `master(...)`
 
 `master == null` means "no change", so deleting the line leaves the last chain in place until the playback stops.
-**Decided 2026-08-02: accept it**, with `Master.default()` as the named, discoverable way back — it swaps to the empty
+**Decided 2026-08-02: accept it**, with `master(Katalyst())` (the empty chain; `Master.default()` until 2026-09-28) as the named, discoverable way back: it swaps to the empty
 chain through the normal crossfade and releases the engine properly.
 
 Recorded here only because the underlying tension stays: the FE cannot distinguish "the code no longer contains
@@ -80,7 +106,12 @@ master event. Revisit only if it bites in practice.
 
 ## 5. A master `eq` stage (`Master(m => m.eq(...))`), a gentle master-bus EQ (new, 2026-08-11)
 
-Wanted by [`auto-mix-advisor.md`](auto-mix-advisor.md) §3 (closed-loop master correction), and independently useful as
+> **DONE 2026-09-28** (phase 3 step 12 C5, decision (c)): the output runs a Katalyst chain, so the Katalyst `eq` stage
+> works there: `master(Katalyst(k => k.eq(e => e.band(80, 0.707, -2)).gain(1.4).limiter()))`. Its builder is the ignitor
+> `.eq`'s (`band(freq, q, db)`, `tap(freq, q, gain)`), one vocabulary on voice, orbit and output, and the stage order is the author's (the house limiter always comes last). No
+> dedicated master shelf door was built. The text below is the original brief.
+
+Wanted by [`auto-mix-advisor.md`](future/auto-mix-advisor.md) §3 (closed-loop master correction), and independently useful as
 an authored mastering tool. Scope: **2–3 bands — low shelf, high shelf, optionally one mid bell** — deliberately not a
 full parametric EQ.
 
@@ -115,6 +146,9 @@ full parametric EQ.
 
 ## 7. Greensleeves' authored `limiter()` never engages (found 2026-09-24, by-ear item)
 
+(2026-09-28: the song's master is now `master(Katalyst(k => k.reverb(0.14, 6).gain(1.6).limiter()))`, the same
+numbers through the Katalyst `limiter` door, so this item stands unchanged.)
+
 Phase 3 step 3d(ii)'s engagement control perturbed the master limiter's default attack and expected
 Greensleeves and ATruthWorthLyingFor to move; only ATruthWorthLyingFor did. Greensleeves peaks at about
 -6.2 dBFS after its `gain(1.6)`, below the limiter's knee onset (threshold -1 dBFS minus half the 2 dB
@@ -131,4 +165,4 @@ the song's gain into it.
 - Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
   precedent
 - [`../tasks-archive/2026-09/20260927-resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) — owns item 3
-- [`auto-mix-advisor.md`](auto-mix-advisor.md) — wants item 5 (the master `eq` stage) for its closed-loop phase
+- [`auto-mix-advisor.md`](future/auto-mix-advisor.md): wanted item 5 (the master `eq` stage, done 2026-09-28) for its closed-loop phase
