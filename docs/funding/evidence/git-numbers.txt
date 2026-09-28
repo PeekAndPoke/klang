@@ -1,0 +1,128 @@
+# git numbers, generated 2026-09-24T15:29Z at 0f1b774f on engine-redesign
+
+## totals
+commits reachable from HEAD: 2083
+merge commits:               69
+first commit:                996af21a 2025-12-20
+last commit:                 0f1b774f 2026-09-23
+tags:                        40  (v0.1.0 .. v0.3.15)
+
+## commits per month
+    115 2025-12
+    395 2026-01
+    343 2026-02
+    313 2026-03
+    128 2026-04
+     61 2026-05
+    100 2026-06
+     26 2026-07
+    249 2026-08
+    353 2026-09
+
+## author identities (name <email>)
+   2000 PeekAndPoke <kontakt@karsten-gerber.de>
+     35 Tenkars Berger <kontakt@karsten-gerber.de>
+     30 Karsten Gerber <kontakt@karsten-gerber.de>
+     15 codefactor-io <support@codefactor.io>
+      3 PeekAndPoke <karsten.john.gerber@googlemail.com>
+
+## AI co-author trailers (Co-Authored-By)
+    194 Claude Opus 5 (1M context) 
+    157 Claude Fable 5.1 
+     65 Claude Fable 5 
+     22 Claude Opus 5 
+      3 Claude Sonnet 4.5 
+      3 Claude Opus 5.5 (1M context) 
+commits carrying any Co-Authored-By trailer: 444
+first trailer commit: 25082f79 2026-01-29 Claude Sonnet 4.5 <noreply@anthropic.com>
+trailer commits per month:
+      3 2026-01
+    138 2026-08
+    303 2026-09
+
+## commits touching each module (git log -- <path>, no rename following)
+strudel 608
+sprudel 207
+klangscript 263
+klangscript-libs 22
+klangscript-ksp 47
+klangscript-ui 37
+audio_be 456
+audio_bridge 255
+audio_fe 65
+audio_jsworklet 27
+audio-wire-codec-ksp 8
+audio_benchmark 52
+tones 61
+klang 97
+src 924
+docs/whitepaper 18
+docs/plans 122
+docs/tasks 293
+docs/tasks-archive 63
+docs/blog 31
+.claude/skills 128
+DEV-DIARY.MD 5
+
+## keyword-matched commits per design area (proxy, see caveat): count | first | last
+revert                                8 | 2026-01-11 | 2026-09-15   grep: revert
+rework / rewrite / redesign          32 | 2026-01-29 | 2026-09-19   grep: rework|rewrite|redesign|redo
+Rational / CycleTime                 51 | 2026-01-08 | 2026-09-16   grep: rational|cycletime|fixed.point|fix.point
+named params                         34 | 2026-04-16 | 2026-09-07   grep: named param|named arg
+strudel compat tests                 21 | 2026-01-09 | 2026-09-06   grep: compat
+Exciter/Engine/Pipeline DSL          48 | 2026-03-27 | 2026-09-23   grep: exciter|enginedsl|engine dsl|pipelinedsl|pipeline dsl
+Ignitor                             105 | 2026-04-01 | 2026-09-23   grep: ignitor
+Katalyst                             69 | 2026-07-04 | 2026-09-23   grep: katalyst|katalyzer
+Master                               60 | 2026-08-02 | 2026-09-23   grep: master
+parity / unification                 70 | 2026-01-21 | 2026-09-19   grep: parity|unif
+EQ / optimizer                       34 | 2026-08-19 | 2026-09-20   grep: equalizer|eqcore|optimi[sz]er
+warehouse / warmup                   40 | 2026-08-12 | 2026-09-19   grep: warehouse|warmup
+wire / codec                         78 | 2026-01-29 | 2026-09-20   grep: codec|wire
+VoiceData                            41 | 2026-01-21 | 2026-09-19   grep: voicedata|voice data
+phase pool                           17 | 2026-08-12 | 2026-09-16   grep: phase.?pool|lottery
+block framing / size                 26 | 2026-08-28 | 2026-09-04   grep: block.?size|block-fram|framing
+klangblocks                          83 | 2026-02-26 | 2026-08-23   grep: klangblocks
+Motor naming                         15 | 2026-04-01 | 2026-09-15   grep: mot[oö]r
+configure lambda / builder           44 | 2026-08-19 | 2026-09-23   grep: configure|builder
+field accessors                      29 | 2026-08-28 | 2026-09-19   grep: accessor
+licensing                             6 | 2026-06-24 | 2026-09-06   grep: licen[sc]|agpl|spdx
+benchmark / perf                    133 | 2026-02-03 | 2026-09-19   grep: benchmark|perf
+white paper                          11 | 2026-08-09 | 2026-09-17   grep: white.?paper
+tutorials                            79 | 2026-03-23 | 2026-09-19   grep: tutorial|curriculum
+signal flow / gain                   54 | 2026-01-28 | 2026-09-19   grep: signal.flow|pregain|postgain
+door shape                           88 | 2026-08-20 | 2026-09-23   grep: door
+review rounds                       193 | 2026-03-24 | 2026-09-20   grep: review
+
+## tracked Kotlin lines (wc -l over git ls-files, includes blank and comment lines; reads the working tree)
+all .kt:  290354  in 1407 files
+test .kt: 138886
+main .kt: 151468
+test files (*Spec.kt, *Test.kt): 712
+per module:
+  sprudel 95413
+  audio_be 85760
+  klangscript 28361
+  src 24892
+  klangscript-libs 14834
+  audio_bridge 11165
+  tones 9500
+  klangscript-ksp 3885
+  klang 3760
+  common 2740
+  audio_fe 2157
+  klangscript-ui 2060
+  audio_benchmark 1507
+  klangjs 1457
+  klangui 1435
+  buildSrc 525
+  audio-wire-codec-ksp 430
+  audio_jsworklet 228
+  klangscript-annotations 216
+  klang-notebook 29
+
+## docs
+blog posts:            25
+archived task docs:    156
+open task docs:        47 (+ 25 in future/)
+plans:                 11
+built-in song files:   15

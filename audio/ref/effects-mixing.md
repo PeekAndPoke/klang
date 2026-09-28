@@ -54,21 +54,30 @@ Returns the existing `Cylinder` or creates a new one, copying effect parameters 
 One effect bus. Holds its own stereo accumulation buffer and effect instances.
 
 **PER-ORBIT (bus) vs PER-VOICE — which effects run where.** The Katalyst pipeline runs **once per orbit**
-on the summed mix: `[body, vowel, delay, reverb, phaser, compressor]` (+ ducking, separate pass). Config is
-copied from voices in `updateFromVoice` **last-writer-wins**, so all voices on an orbit SHARE these; put
-voices on different orbits for independent bus effects. Everything else (`lpf`/`hpf`/`bandf`/`notch` +
-envelopes, `distort`, `crush`, `coarse`, `adsr`, `vibrato`, `tremolo`, `fm`, pitch env, `gain`/`pan`/
-`postgain`, `unison`/`spread`, `analog`) is **per-voice** in the voice strip.
+on the summed mix: `[body, vowel, delay, reverb, phaser, compressor, gain]` (+ ducking, separate pass).
+The `gain` stage is the orbit's group fader, at unity on the classic chain and bit-transparent there;
+a pattern moves it with `katp("gain.gain", x)`.
 
-| Katalyst effect            | Class           | Applied when                           |
-|----------------------------|-----------------|----------------------------------------|
-| `KatalystBodyEffect`       | `BodyFilter`    | any voice on the orbit sets `body(…)`  |
-| `KatalystFormantEffect`    | `FormantFilter` | any voice on the orbit sets `vowel(…)` |
-| `KatalystDelayEffect`      | `DelayLine`     | owner voice touches the delay; time >= 0.01 s (default 0.25) |
-| `KatalystReverbEffect`     | `Reverb`        | owner voice touches the reverb; size >= 0.1 (default 5)       |
-| `KatalystPhaserEffect`     | `Phaser`        | cylinder-level phaser LFO              |
-| `KatalystCompressorEffect` | `Compressor`    | cylinder-level dynamic range           |
-| `KatalystDuckingEffect`    | `Ducking`       | sidechain from duckCylinder voice      |
+**Every knob of every stage comes from ONE place since Katalyst step 5b-1 (2026-09-19): the orbit's
+param state, which is the `katalystParams` map of the voice holding the orbit's lease.** The bus
+doors write those slots (a door and its `katp` slot are the same knob), the chain re-resolves only
+when the map instance changes, and the voice's bus fields are not a knob source any more (the
+delay, reverb, compressor and duck fields left the wire in step 5b-3). Ownership is the
+`VoiceLease`'s **first-writer-wins**, so all voices on an orbit SHARE these; put voices on different
+orbits for independent bus effects. Everything else is **per-voice**: `lpf`/`hpf`/`bpf`/`notch` +
+envelopes, `distort`, `crush`, `coarse`, `adsr`, `tremolo` as `classic()`'s slots in the instrument's
+Ignitor tree; `unison`/`spread`, `analog` as the oscillator's slots; `vibrato`, `fm`, pitch env in the
+voice's pitch stage; `gain`/`pan` in its send stage.
+
+| Katalyst effect            | Class           | Applied when                                                     |
+|----------------------------|-----------------|------------------------------------------------------------------|
+| `KatalystBodyEffect`       | `ResonatorBank` (`bodyBand`) | `body.material` names a material                                 |
+| `KatalystFormantEffect`    | `ResonatorBank` (`vowelBand`) | `vowel.vowel` names a vowel                                      |
+| `KatalystDelayEffect`      | `DelayLine`     | `delay.wet` above 0 and `delay.time` >= 0.01 s (default 0.25)    |
+| `KatalystReverbEffect`     | `Reverb`        | `reverb.wet` above 0 and `reverb.size` >= 0.1 authored (default 5) |
+| `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
+| `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
+| `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
 
 `body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
 per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.
@@ -79,7 +88,7 @@ All in `audio_be/src/commonMain/kotlin/effects/`.
 
 ### Compressor
 
-RMS-based compressor. Applied per-cylinder or per-voice.
+Peak-detecting compressor (`max(|L|, |R|)`). Applied per cylinder (the orbit's `compressor` stage).
 
 | Parameter   | Meaning                                 |
 |-------------|-----------------------------------------|
@@ -93,61 +102,69 @@ RMS-based compressor. Applied per-cylinder or per-voice.
 
 Sidechain-triggered gain reduction across orbits.
 
-- Triggered when a voice with `duckCylinder = N` is activated
-- Reduces gain of cylinder N according to `duckAttack`/`duckDepth`
+- Configured by the orbit owner's `duck.orbit` slot (the source orbit N)
+- Reduces this orbit's gain whenever orbit N plays, by `duck.depth`, recovering over `duck.attack`
 - Recovery is automatic after the triggering voice ends
 
-| Parameter    | Meaning                                    |
-|--------------|--------------------------------------------|
-| `duckDepth`  | Depth of ducking (0 = full mute, 1 = none) |
-| `duckAttack` | Attack time (s) before full ducking        |
+| Slot          | Meaning                                    |
+|---------------|--------------------------------------------|
+| `duck.depth`  | Depth of ducking (0 = none, 1 = full mute) |
+| `duck.attack` | Recovery time (s) after the trigger stops  |
 
 ### DelayLine
 
 Fixed-size circular buffer delay with feedback and multi-tap mixing.
 
-| Parameter       | Meaning                             |
-|-----------------|-------------------------------------|
-| `delayTime`     | Delay time in seconds               |
-| `delayFeedback` | Feedback coefficient (0–1)          |
-| `delay`         | Dry/wet mix (0 = dry, 1 = full wet) |
+| Slot             | Meaning                                           |
+|------------------|---------------------------------------------------|
+| `delay.time`     | Delay time in seconds                             |
+| `delay.feedback` | Feedback coefficient (0-1)                        |
+| `delay.cap`      | Ceiling the feedback saturates toward             |
+| `delay.wet`      | How much of the orbit mix feeds the line (insert) |
 
 ### Reverb
 
 Freeverb-style algorithmic reverb (no impulse-response path).
 
-| Parameter   | Meaning                                        |
+| Slot             | Meaning                                        |
 |-------------|------------------------------------------------|
-| `reverb`        | Send amount per voice (`SendRenderer`)                          |
-| `reverbSize`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
-| `reverbLowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
+| `reverb.wet`     | How much of the orbit mix feeds the room (insert, the owner's one amount) |
+| `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
+| `reverb.lowpass` | Tail damping cutoff in Hz (unset: fixed default damping)        |
 
 ### Phaser
 
 All-pass cascade with LFO modulation.
 
-| Parameter | Meaning                                |
-|-----------|----------------------------------------|
-| `depth`   | Modulation depth of the all-pass stage |
-| `center`  | Center frequency of the notch          |
-| `sweep`   | LFO sweep range                        |
+| Slot             | Meaning                                |
+|------------------|----------------------------------------|
+| `phaser.wet`     | Wet amount (the door's first knob)     |
+| `phaser.rate`    | LFO rate in Hz                         |
+| `phaser.center`  | Center frequency of the notch          |
+| `phaser.sweep`   | LFO sweep range                        |
+| `phaser.floor`   | Dry floor                              |
 
-Phaser can be applied per-voice (from `VoiceData.phaser`) or per-cylinder (cylinder-level).
+The phaser runs on the cylinder only (`KatalystPhaserEffect`); the per-voice phaser of a custom pipeline
+retired with the Pipeline DSL in phase 3 step 9. An Ignitor tree can hold its own `.phaser(...)` node.
 
 ## Filters
 
 `audio_be/src/commonMain/kotlin/filters/`
 
-All implement `AudioFilter` interface with `process(buffer: FloatArray)`.
+The class-form resonators implement `AudioFilter` (`process(buffer, offset, length)`); `DcBlocker` and
+`EqCore` have their own shapes.
 
-| Class            | Type                      |
-|------------------|---------------------------|
-| `LowPassFilter`  | 2-pole Biquad             |
-| `HighPassFilter` | 2-pole Biquad             |
-| `BandPassFilter` | 2-pole Biquad             |
-| `FormantFilter`  | Multi-band formant filter |
+| Class                                     | Type                                              |
+|-------------------------------------------|---------------------------------------------------|
+| `BaseSvf`, `SvfBPF`                       | SVF kernels (the resonators' bandpass)            |
+| `DcBlocker`                               | raw-pole DC blocker (the one-pole lowpass and highpass are Ignitor nodes, `ignitor/IgnitorFilters.kt`) |
+| `ResonatorBank` + `ParallelMixFilter`     | parallel SVF bandpass bank (body, vowel), blended |
+| `EqCore`                                  | the equalizer's fused sections                    |
 
-Constructed from `FilterDef` sealed types. Cutoff can be modulated by `FilterEnvelope` via `FilterModulator`.
+The per-voice filters are not class-form any more: `lpf`/`hpf`/`bpf`/`notch` are `classic()` stages, each the
+`Ignitor.svf` node (`ignitor/IgnitorFilters.kt`) with its cutoff envelope, filled from the `<door>.<param>` slots.
+The strip's `SvfLPF`/`SvfHPF`/`SvfNotch`, `FilterDef.LowPass` ... `Notch` and `FilterModulator` retired in phase 3
+step 9.
 
 ## StereoBuffer
 

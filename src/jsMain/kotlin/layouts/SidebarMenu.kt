@@ -91,6 +91,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Tutorials : State
         data object Docs : State
         data object Credits : State
+        data object DevStatus : State
     }
 
     private fun inferState(): State = when {
@@ -101,6 +102,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         currentRoute.route == Nav.midiPlayground -> State.MidiPlayground
         currentRoute.route == Nav.resources -> State.Resources
         currentRoute.route == Nav.credits -> State.Credits
+        currentRoute.route == Nav.devStatus -> State.DevStatus
         else -> State.Main
     }
 
@@ -219,9 +221,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             for (entry in entries) {
                 val isSelected = when (entry.targetState) {
-                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Resources, or Credits
+                    // "More" is selected only when we're on Main, Samples, MidiPlayground, Resources, Credits or DevStatus
                     State.Main -> state in listOf(
-                        State.Main, State.Samples, State.MidiPlayground, State.Resources, State.Credits,
+                        State.Main, State.Samples, State.MidiPlayground, State.Resources, State.Credits, State.DevStatus,
                     )
                     else -> state == entry.targetState
                 }
@@ -315,7 +317,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                         flexGrow = 1.0
                     }
                     when (state) {
-                        State.Main, State.MidiPlayground, State.Resources, State.Credits -> renderDefaultMenu()
+                        State.Main, State.MidiPlayground, State.Resources, State.Credits, State.DevStatus -> renderDefaultMenu()
                         State.Songs -> renderSongsMenu()
                         State.Samples -> renderSamplesMenu()
                         State.Tutorials -> renderTutorialsMenu()
@@ -348,6 +350,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             menuItem(state == State.Credits, "Credits", { bullhorn }) {
                 state = State.Credits
                 router.navToUri(Nav.credits())
+            }
+            menuItem(state == State.DevStatus, "Dev status", { satellite_dish }) {
+                state = State.DevStatus
+                router.navToUri(Nav.devStatus())
             }
         }
     }

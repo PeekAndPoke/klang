@@ -1,5 +1,9 @@
 # Audio backend audit — findings
 
+> **2026-09-27:** the voice strip (its filter, VCA, crush, coarse, distort, tremolo and phaser renderers), the Pipeline
+> DSL, `FilterDefs` and the typed voice-door fields retired in phase 3 step 9. Findings that cite them are the record of
+> the code at the time; the current voice is `audio/ref/voice-synthesis.md`.
+
 **Analysis only. Nothing here has been repaired.** We triage this list together, then decide what to fix. Each finding
 carries the evidence that produced it — a mutation that was actually run, or a reference trace — so triage does not have
 to re-derive it.
@@ -678,7 +682,7 @@ This is the standing click-diagnostic harness; it prints and guards nothing, by 
 ## F16 — The master limiter did not limit transients; the hard clip did ✅ FIXED
 
 **HIGH — user-reported symptom ("knock"), root-caused 2026-08-04, FIXED 2026-08-06** (`53834ba9` + follow-up) under [
-`docs/tasks/master-limiter-lookahead.md`](../tasks/master-limiter-lookahead.md). By-ear confirmed.
+`20260927-master-limiter-lookahead.md`](../tasks-archive/2026-09/20260927-master-limiter-lookahead.md). By-ear confirmed.
 
 > **Everything below describes the DEFECT as it was**, kept because it is the evidence and the
 > measurement baseline. After the fix, the same +12 dB kick exits at **−0.37 dBFS with zero samples

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.layouts.MotorBackgroundLayout
 import io.peekandpoke.klang.pages.CodeSongPage
 import io.peekandpoke.klang.pages.CreditsPage
 import io.peekandpoke.klang.pages.DashboardPage
+import io.peekandpoke.klang.pages.DevStatusPage
 import io.peekandpoke.klang.pages.MidiPlaygroundPage
 import io.peekandpoke.klang.pages.NotFoundPage
 import io.peekandpoke.klang.pages.ResourcesPage
@@ -77,6 +78,8 @@ object Nav {
 
     val credits = Static("/credits")
 
+    val devStatus = Static("/dev-status")
+
     val tour = Static("/tour")
 }
 
@@ -115,6 +118,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.resources) { ResourcesPage() }
 
         mount(Nav.credits) { CreditsPage() }
+
+        mount(Nav.devStatus) { DevStatusPage() }
     }
 
     layout({ FullscreenLayout { it() } }) {

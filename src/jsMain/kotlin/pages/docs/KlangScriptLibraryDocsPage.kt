@@ -132,7 +132,7 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
     private val filteredSymbols: List<KlangSymbol>
         get() {
             val terms = LibraryDocSearch.parseTerms(searchQuery)
-            // `invoke` is the operator behind a callable object (`Master(...)`, `freq(...)`); it is
+            // `invoke` is the operator behind a callable object (`Katalyst(...)`, `freq(...)`); it is
             // never typed, so it gets no card of its own. Its variants (the call form, with the
             // setter's parameters and examples) join the card of the object they are called on.
             val symbols = registry.symbols.values

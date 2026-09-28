@@ -117,8 +117,7 @@ class Oversampler(stages: Int) {
     /**
      * Clears all internal filter state — every [HalfBandState] delay line and
      * the upsampler's `lastSample`. NO callers today, and that is fine: every
-     * instance is per-voice (fresh per note-on on both the ignitor and strip
-     * doors), so there is no reuse path and no stale tail to clear. Kept for
+     * instance is per-voice (fresh per note-on in the Ignitor tree), so there is no reuse path and no stale tail to clear. Kept for
      * the planned warehouse-pool world, where pooled instances WILL need it
      * (ledger W11 — the old KDoc claimed a cleanup/retrigger lifecycle that
      * never existed).
@@ -287,6 +286,26 @@ class Oversampler(stages: Int) {
         fun factorToStages(factor: Int): Int {
             if (factor <= 1) return 0
             return 31 - factor.countLeadingZeroBits() // floor(log2(factor))
+        }
+
+        /**
+         * A factor that arrives as a knob value (the Ignitor `Shape` and `Distort` nodes' `oversample`,
+         * read once at voice build since phase 3 step 3b, decision D7) as the whole factor
+         * [factorToStages] takes: TRUNCATED toward zero, as the pattern door's `asIntOrNull` truncates
+         * `distort(amount, shape, 2.9)` to 2, so both doors mean the same factor by the same number.
+         *
+         * A non-finite value is 0 (off): the wire's "unset", and `+Infinity` must not become the
+         * largest Int. A huge finite value saturates to it, deliberately unclamped (the Motor stays
+         * raw, and `ResourceWarehouse.WARM_OVERSAMPLE_FACTORS` records that "beyond it the trade is
+         * the user's").
+         */
+        fun factorOf(knob: Double): Int {
+            // NaN-guard on a value the author (or, from step 5, a pattern slot) can write.
+            if (!knob.isFinite()) {
+                return 0
+            }
+
+            return knob.toInt()
         }
     }
 }

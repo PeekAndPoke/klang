@@ -6,9 +6,8 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.MasterDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -104,25 +103,18 @@ class KlangCommLink(capacity: Int = 8192) {
             val dsl: IgnitorDsl,
         ) : Cmd
 
-        /** Registers a custom PipelineDsl in the backend's pipeline registry. */
-        @WireName("register-pipeline")
-        data class RegisterPipeline(
-            override val playbackId: String,
-            val name: String,
-            val dsl: PipelineDsl,
-        ) : Cmd
-
         /**
-         * Registers a custom MasterDsl in the backend's master registry.
+         * Registers a custom KatalystDsl in the backend's chain registry, the one registry both
+         * positions resolve against: an orbit's `katalyst` name and the playback's `master` name.
          *
-         * Sent once per unique chain, before any voice referencing [name] is scheduled — the same
-         * send-once contract as [RegisterIgnitor] / [RegisterPipeline].
+         * Sent once per unique chain, before any voice referencing [name] is scheduled: the same
+         * send-once contract as [RegisterIgnitor].
          */
-        @WireName("register-master")
-        data class RegisterMaster(
+        @WireName("register-katalyst")
+        data class RegisterKatalyst(
             override val playbackId: String,
             val name: String,
-            val dsl: MasterDsl,
+            val dsl: KatalystDsl,
         ) : Cmd
 
         sealed interface Sample : Cmd {

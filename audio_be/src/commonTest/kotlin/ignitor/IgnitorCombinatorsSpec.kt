@@ -204,50 +204,24 @@ class ExciterCombinatorsSpec : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: lowpass
+    // Filters: lowpass and highpass under drive (their linear law is SvfNodeLawSpec's, a bit-exact TPT oracle)
     // ═════════════════════════════════════════════════════════════════════════════
-
-    "lowpass(cutoff) - attenuates high-frequency sine" {
-        val highFreq = 8000.0
-        val cutoff = 1000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = highFreq)
-        val wet = generate(Ignitors.sine().lowpass(cutoff), freqHz = highFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        // High-frequency signal should be significantly attenuated by lowpass
-        wetRms shouldBeLessThan (dryRms * 0.3)
-    }
-
-    "lowpass(cutoff, analog=0) - bit-identical to default linear" {
-        // Default `analog=0.0` must keep the linear closed-form path. Explicit `analog=0.0`
-        // should produce byte-for-byte equal output as the default — guards against
-        // accidental branch into the saturated path when analog is unset.
-        val lin = generate(Ignitors.sine().lowpass(800.0, 2.0), freqHz = 800.0)
-        val ana0 = generate(Ignitors.sine().lowpass(800.0, 2.0, analog = 0.0), freqHz = 800.0)
-
-        for (i in 0 until minOf(lin.size, ana0.size)) {
-            ana0[i] shouldBe lin[i]
-        }
-    }
 
     "lowpass(cutoff, analog>0) - resonance peak compressed under hot drive" {
         // Analog-style state-dependent damping makes `kEff` grow with state; under hot drive at the
         // resonance frequency the saturated path must produce a meaningfully smaller peak
         // than the linear path.
         //
-        // ⚠️ Unlike the SvfLPF/SvfHPF twins in LowPassHighPassFiltersSpec, this one CANNOT pin the
-        // drive: IgnitorFilters.kt:119 reads FILTER_DRIVE_PER_ANALOG directly — the ignitor filter
+        // ⚠️ Unlike the retired strip's SvfLPF/SvfHPF twins (phase 3 step 9), this one CANNOT pin the
+        // drive: `SvfIgnitor.generate` (IgnitorFilters.kt) reads FILTER_DRIVE_PER_ANALOG directly: the ignitor filter
         // path has no pipeline stage to carry the value (docs/tasks/audio-bridge-constants.md
         // §6.1). So this test rides the shipped default.
         //
         // It is a ONE-SIDED guard: `satMax < linMax * 0.9` fails only when the drive is LOWERED
         // (below ≈ 0.125 — margin at the shipped 0.25 is ratio 0.842 against the 0.9 bound).
         // Raising the drive makes this test greener, so it cannot catch an upward crank. The upper
-        // side is pinned in AnalogDriftSpec instead, on BOTH paths — `FILTER_DRIVE_PER_ANALOG`
-        // (what this test's path reads) and `StageDsl.Filter().drivePerAnalog` (the pipeline's).
+        // side is pinned in AnalogDriftSpec instead: `FILTER_DRIVE_PER_ANALOG`, what this test's path
+        // reads (the Pipeline DSL's filter stage, the second path, retired in phase 3 step 9).
         //
         // If a by-ear retune goes below ≈ 0.125, that is NOT a topology regression — widen the
         // bound and note the new value here.
@@ -269,48 +243,13 @@ class ExciterCombinatorsSpec : StringSpec({
     }
 
     "highpass(cutoff, analog>0) - lows still cut (no complementarity bug)" {
-        // Regression guard mirroring the voice-strip HPF test: a low-frequency sine fed
+        // Regression guard mirroring the retired voice-strip HPF test: a low-frequency sine fed
         // through a high-cutoff HPF must remain heavily attenuated even with saturation on.
         val cutoff = 2500.0
         val lowFreq = 200.0
         val dry = generate(Ignitors.sine(), freqHz = lowFreq)
         val wet = generate(Ignitors.sine().highpass(cutoff, 1.0, analog = 3.0), freqHz = lowFreq)
         wet.rms() shouldBeLessThan (dry.rms() * 0.3)
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: highpass
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "highpass(cutoff) - attenuates low-frequency sine" {
-        val lowFreq = 100.0
-        val cutoff = 2000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = lowFreq)
-        val wet = generate(Ignitors.sine().highpass(cutoff), freqHz = lowFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        // Low-frequency signal should be significantly attenuated by highpass
-        wetRms shouldBeLessThan (dryRms * 0.3)
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Filters: svf LOWPASS
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "svf(LOWPASS, cutoff, q) - attenuates above cutoff" {
-        val highFreq = 8000.0
-        val cutoff = 1000.0
-
-        val dry = generate(Ignitors.sine(), freqHz = highFreq)
-        val wet = generate(Ignitors.sine().svf(SvfMode.LOWPASS, cutoff, 0.707), freqHz = highFreq)
-
-        val dryRms = dry.rms()
-        val wetRms = wet.rms()
-
-        wetRms shouldBeLessThan (dryRms * 0.3)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

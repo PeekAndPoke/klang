@@ -14,6 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putOscParam
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
@@ -28,11 +29,19 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 }
 
 /**
- * Sets the level of each event, [per voice](/manuals/lexikon/voice).
+ * Sets the level each event leaves at, [per voice](/manuals/lexikon/voice).
  *
- * A plain multiplier on the voice's output: below 1 is quieter, above 1 is louder. `velocity` is
- * multiplied into it, and mute, solo and fade scale it as well. Takes a control pattern, so the
- * level can move from event to event.
+ * The one level word. It is tone-neutral and it comes last: the voice's filters, its distortion and
+ * its envelope have all run by the time `gain` is applied, so turning it down makes the sound
+ * smaller and changes nothing else about it. Set it once the sound is designed and only its size is
+ * still wrong. Below 1 is quieter, above 1 is louder.
+ *
+ * A later `gain` REPLACES an earlier one, so the last call in the chain wins. To scale a level
+ * that is already set instead of replacing it, pass a mapper: `gain(mul(0.5))` halves whatever is
+ * there. On an event with no gain set at all a mapper does nothing, so set a level first.
+ *
+ * `velocity` is multiplied into it, and mute, solo and fade scale it as well. Takes a control
+ * pattern, so the level can move from event to event.
  *
  * ```KlangScript(Playable)
  * s("bd sd hh cp").gain(0.5)              // all hits at half volume
@@ -40,6 +49,10 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *
  * ```KlangScript(Playable)
  * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * s("bd*4").distort(0.7).gain(0.2)       // dirty it first, then set the level it leaves at
  * ```
  *
  * @param amount Level multiplier, 1 leaves the event as it is.
@@ -114,6 +127,130 @@ object gain : FieldAccessor({ it.gain }) {
 @KlangScript.Function
 fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.gain(amount, callInfo) }
+
+// -- pregain() --------------------------------------------------------------------------------------------------------
+
+private val pregainMutation = voiceSetter { putOscParam("pregain", it?.asDoubleOrNull()) }
+
+private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    args.singleMapperOrNull()?.let { mapper ->
+        return source._mapNumericField(mapper, read = { it.oscParams?.get("pregain") }, update = pregainMutation)
+    }
+
+    return source._liftOrReinterpretNumericalField(args, pregainMutation)
+}
+
+/**
+ * Sets how hard each event is played INTO its instrument, [per voice](/manuals/lexikon/voice).
+ *
+ * The other level word, and the only one that is not a fader. `gain` is the level the event LEAVES
+ * at, after everything; `pregain` is the level the signal ARRIVES at inside the instrument, where
+ * it meets whatever the instrument does to it. Exactly `oscparam("pregain", amount)`: it writes the
+ * `pregain` slot and nothing else.
+ *
+ * **It does what the instrument wires it to, and nothing otherwise.** An instrument that places the
+ * slot in front of a nonlinearity turns this into touch: play harder, get dirtier, the way an amp
+ * does. An instrument that never places it ignores the call, note for note, and that is not a bug
+ * to work around: a bare sine has no drive. Reach for `gain` when you want the size of the sound.
+ *
+ * **`pregain` is not the drive amount, and the two scales are not the same.** An instrument's
+ * `distort(amount)` is EXPONENTIAL (about 4x at `0.5`, 16x at `1`, 250x at `2`) and it is fixed
+ * inside the instrument, one setting for every note; `pregain` is LINEAR, 1 is unity, and the
+ * pattern sets it per note. Design the drive once by ear, and leave `pregain` the touch.
+ *
+ * **Where it stops working, which is the opposite of what you might expect.** On a CLIPPING shape
+ * driven into hard saturation, turning `pregain` down changes almost nothing: not the tone and
+ * not the level either, because a clipper holds both. Measured on `saw.pregain().distort(2)
+ * .lowpass(2500)` at `pregain` 1 against 0.4: the level comes out at 0.999 of the loud one and
+ * the shape distance is 0.006, a rounding-scale no-op. So on a heavily driven lead, `pregain` is
+ * the wrong knob twice over: the LEVEL has to come from `gain`, and there is no touch left to
+ * find. The room to hear touch is at the gentle end of the drive (`distort(0.5)` gives a shape
+ * distance of 0.223 on the same measurement), which is what the example below uses.
+ *
+ * **That is true of the shapes that SATURATE, which is `soft` and the other clippers.** The three
+ * WAVEFOLDERS never saturate: `fold`, `linearfold` and `sineshaper` keep folding the harder you
+ * drive them, so there `pregain` IS the fold depth and stays the strongest tone knob at any drive
+ * (the same measurement at `distort(2)` gives a shape distance of 1.36 to 1.76 against `soft`'s
+ * 0.006). It is not a level knob there either, and it is not even monotonic: on `fold` at
+ * `distort(2)`, turning `pregain` DOWN to 0.4 makes the note about four times LOUDER. `rectify`
+ * sits between the two families (0.054). A folder is a fine home for touch; just do not expect
+ * "down" to mean "softer".
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * note("c3 e3 g3 e3").sound(amp).pregain("1 0.6 1 0.4").gain(0.3)   // touch: harder notes dirtier
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3 e3").sound("saw").distort(0.4).pregain("1 2.5").gain(0.3)   // every built-in SYNTH sound places the slot (samples do not): the distort bites harder on the loud notes
+ * ```
+ *
+ * **Per VOICE, which is what makes it touch at all**: every note carries its own value, so
+ * `"1 0.6 1 0.4"` is four different notes. The orbit's own knobs (`katp`, the bus doors) are per
+ * ORBIT and belong to the first voice that sounds there, so they cannot articulate a line.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ *
+ * @scope voice
+ * @category dynamics
+ * @tags pregain, drive, touch, level, oscillator
+ */
+@KlangScript.Function
+fun SprudelPattern.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPregain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets how hard each event is played into its instrument.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ */
+@KlangScript.Function
+fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pregain(amount, callInfo)
+
+/**
+ * How hard each event is played into its instrument, as a value other setters can read.
+ *
+ * Bare `pregain` reads what the chain has set so far, so it comes after whatever set the slot
+ * (`pregain(...)`, `oscparam("pregain", ...)`). Call it, `pregain(...)`, to set the slot; a mapper
+ * argument applies to the slot, and on an event that has none it does nothing, so set one first.
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * note("c3 e3").sound(amp).pregain(1).pregain(mul("1 0.5")).gain(0.3)   // the second note softer in
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * note("c3 e3").sound(amp).pregain("1 0.5").gain(pregain.mul(0.3))      // and quieter out with it
+ * ```
+ *
+ * @scope voice
+ * @category dynamics
+ * @tags pregain, accessor
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("pregain")
+object pregain : FieldAccessor({ it.oscParams?.get("pregain") }) {
+
+    /**
+     * Creates a [PatternMapperFn] that sets how hard each event is played into its instrument.
+     *
+     * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+     */
+    @KlangScript.Invoke
+    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+        { p -> p.pregain(amount, callInfo) }
+}
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the pregain after the previous mapper.
+ *
+ * @param amount How hard the note is played in, 1 leaves the instrument at its own level.
+ */
+@KlangScript.Function
+fun PatternMapperFn.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pregain(amount, callInfo) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
@@ -376,103 +513,3 @@ val vel: velocity = velocity
 @KlangScript.Function
 fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.velocity(amount, callInfo) }
-
-// -- postgain() -------------------------------------------------------------------------------------------------------
-
-private val postgainMutation = voiceSetter { postGain = it?.asDoubleOrNull() }
-
-private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.postGain }, update = postgainMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, postgainMutation)
-}
-
-/**
- * Sets the final level trim of each event, per voice.
- *
- * `postgain` and `gain` are both output multipliers applied at the voice output, so on a single
- * voice they do the same arithmetic. The difference is what else touches them: `gain` is scaled by
- * `velocity` and by the mute/solo/fade multiplier, while `postgain` is not. So `gain` is the
- * per-note, performable level and `postgain` is the line's own final trim.
- *
- * ```KlangScript(Playable)
- * s("bd sd").postgain(1.5)                    // amplify after processing
- * ```
- *
- * ```KlangScript(Playable)
- * s("hh*8").postgain(rand.range(0.1, 1.0))   // random post-gain per hit
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- *
- * @scope voice
- * @category dynamics
- * @tags postgain, gain, volume, post-processing
- */
-@KlangScript.Function
-fun SprudelPattern.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyPostgain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
-
-/**
- * Parses this string as a pattern and sets the post-gain for each event.
- *
- * ```KlangScript(Playable)
- * "hh*8".postgain(perlin.range(0.1, 1.0).slow(4)).s()   // perlin noised post-gain
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- */
-@KlangScript.Function
-fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).postgain(amount, callInfo)
-
-/**
- * The post-processing gain of each event, as a value other setters can read.
- *
- * Bare `postgain` reads what the chain has set so far, so it comes after whatever set the field
- * (`postgain(...)`, `adsr(...)`, an alias). Call it, `postgain(...)`, to set the field; a mapper argument applies to the field.
- *
- * ```KlangScript(Playable)
- * s("bd*4").distort(2).postgain(0.4).postgain(mul("1 0.5 1 0.5"))       // tame every second hit
- * ```
- *
- * ```KlangScript(Playable)
- * note("c e").postgain("0.5 0.25").gain(postgain)                        // match the two stages
- * ```
- *
- * @scope voice
- * @category dynamics
- * @tags postgain, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("postgain")
-object postgain : FieldAccessor({ it.postGain }) {
-
-    /**
-     * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
-     *
-     * ```KlangScript(Playable)
-     * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
-     * ```
-     *
-     * @param amount Final level trim, 1 leaves the event as it is.
-     */
-    @KlangScript.Invoke
-    operator fun invoke(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.postgain(amount, callInfo) }
-}
-
-/**
- * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
- *
- * ```KlangScript(Playable)
- * s("hh*4").apply(postgain(0.8).gain(0.5))  // postgain + gain chained
- * ```
- *
- * @param amount Final level trim, 1 leaves the event as it is.
- */
-@KlangScript.Function
-fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.postgain(amount, callInfo) }

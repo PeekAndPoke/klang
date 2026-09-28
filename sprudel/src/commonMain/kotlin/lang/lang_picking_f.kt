@@ -22,7 +22,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
  *
  * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev()), fast(2)])`
  * (`rev` takes optional arguments, so passing it ON to another function needs the call:
- * `jux(rev())`, not `jux(rev)`. See docs/tasks/future/native-interop-function-values.md.)
+ * `jux(rev())`, not `jux(rev)`. See docs/tasks/future/bugfix-native-interop-function-values.md.)
  */
 private fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val lookupArg = args.getOrNull(0) ?: return pattern

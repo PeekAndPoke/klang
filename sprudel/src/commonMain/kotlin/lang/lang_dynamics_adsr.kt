@@ -9,6 +9,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -194,15 +195,9 @@ object adsr {
 
 // -- ADSR curves ------------------------------------------------------------------------------------------------------
 
-private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.lowercase()) {
-    "linear", "lin" -> AdsrCurve.Linear
-    "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
-    "cube", "cb", "cubic" -> AdsrCurve.Cube
-    "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
-    "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
-    "exponential", "exp", "expo" -> AdsrCurve.Exponential
-    else -> null
-}
+// The curve names have ONE home, `AdsrCurves` in audio_bridge (phase 3 step 3c): the Ignitor doors
+// read the same table, and `AdsrCurvesSpec` pins it against the table this file used to carry.
+private fun parseAdsrCurveName(name: String?): AdsrCurve? = AdsrCurves.curveOf(name)
 
 private val attackCurveMutation = voiceSetter {
     attackCurve = parseAdsrCurveName(it?.toString()) ?: attackCurve
@@ -375,8 +370,9 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * Switches the voice's own amplitude envelope (the VCA) ON or OFF.
  *
  * Use [adsrOff] when the instrument already carries its own envelope: an ignitor built with
- * `.adsr(...)` shapes amplitude itself, and without this the voice envelope applies on top, so the
- * two multiply and every curve comes out twice as steep in dB.
+ * `.adsr(...)` and ending in `.classic()` shapes amplitude itself, and without this `classic()`'s envelope
+ * applies on top, so the two multiply and every curve comes out twice as steep in dB. The switch is
+ * `classic()`'s slot `adsr.on`: an instrument that does not end in `.classic()` has no voice envelope to switch.
  *
  * Switching it off does NOT throw the numbers away: `.adsr(0.005, 1.0, 1.0, 0.05).adsrOff()` keeps
  * them, so you can flip back with [adsrOn] and compare. Note lifetime is unaffected either way, the
@@ -384,7 +380,7 @@ private fun applyAdsrOn(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * modulated, which has no single static value: there the voice's own `release` still governs and is
  * worth setting even with the envelope off.
  *
- * When unset, the engine's `Vca` stage decides (the built-in engines leave it on).
+ * When unset, the voice envelope is on.
  *
  * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").adsrOn()   // shape the note here, whatever the engine defaults to
@@ -424,11 +420,14 @@ fun PatternMapperFn.adsrOn(flag: PatternLike = true, callInfo: CallInfo? = null)
  * amplitude. The counterpart of [adsrOn]; see there for the full story.
  *
  * With the voice envelope off, the voice's `release` window becomes a full-level HOLD rather than
- * a decay, so the instrument really does have to shape its own tail. And with a release under about
- * 4 ms the engine's teardown guard, not the instrument, owns the note-off.
+ * a decay, so the instrument really does have to shape its own tail. The voice ends on the instrument's
+ * own envelope when its `.adsr(...)` (with a fixed release) is the last thing built before `.classic()`;
+ * anything built after it, a stage of the instrument's own or a filter or other stage the pattern writes,
+ * hands the note-off to a short teardown fade. Either way the note ends cleanly (the one home of the
+ * rule: `BuiltIgnitor.endsInEnvelope`).
  *
  * ```KlangScript(Playable)
- * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08)
+ * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08).classic()
  * note("c3 e3 g3 c4").sound(pluck).adsrOff().gain(0.4)
  * ```
  *

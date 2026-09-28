@@ -264,11 +264,11 @@ private fun passesLadderRel(k: Int, n: Int): Double =
  * node type added later.
  */
 private fun expandPasses(
-    passes: Int,
+    passes: IgnitorDsl.Constant,
     q: IgnitorDsl,
     build: (stageQ: IgnitorDsl) -> IgnitorDsl.EqSection,
 ): List<IgnitorDsl.EqSection> {
-    val n = coercePasses(passes)
+    val n = coercePasses(passes.value)
     if (n == 1) {
         return listOf(build(q))
     }
@@ -282,12 +282,26 @@ private fun expandPasses(
             //
             // THESE TWO ARMS ARE A PAIR — keep them or remove them together. They live in
             // different modules and nothing pairs them structurally, so it is worth spelling
-            // out: `safeOut(x * 1.0) == x` only for FINITE x. With a non-finite oscparam q,
-            // an unwrapped q reaches `computeSvfCoeffs` raw and takes its Butterworth 0.7071
+            // out: `safeOut(x * 1.0) == x` only for FINITE x. With a non-finite q, an
+            // unwrapped q reaches `computeSvfCoeffs` raw and takes its Butterworth 0.7071
             // fallback, while `Times(q, Constant(1.0))` becomes `safeOut(NaN) = 0.0` and
             // takes the 0.1 q floor. Drop one arm alone and the middle stage of an odd-N
             // cascade is a different filter on the two doors. `IgnitorDslOptimizerRenderSpec`
-            // drives NaN and +/-Inf through passes = 3 for exactly this.
+            // drives NaN and +/-Inf through passes = 3 for exactly this, and BOTH mutations
+            // were run on 2026-09-19: each alone turns that row red. Only ODD N touches this
+            // pair, because only odd N has a ladder factor of exactly 1.0; the passes = 2 half
+            // of that row guards the other invariant, that a non-literal q goes through `times`
+            // on both doors.
+            //
+            // Where a non-finite q comes from, since 2026-09-19: NOT from `oscParams`. The
+            // `IgnitorDsl.Param` leaf reads a non-finite OVERRIDE as unset and falls back to
+            // the slot's default (`IgnitorDslRuntime`). Two routes keep this pair live: an
+            // authored `IgnitorDsl.Param` whose DEFAULT is non-finite (a default is the
+            // instrument's declaration and is not scrubbed), and arithmetic in the q expression,
+            // since `Plus` and `Minus` are clamp-free by contract and two finite operands can
+            // overflow to an infinity. A `ParamIgnitor` that engine code constructs directly
+            // would be a third, but no production caller does that today (`scaledBy` has two
+            // callers, both fed `q.noMod()`).
             rel == 1.0 -> q
             q is IgnitorDsl.Constant -> IgnitorDsl.Constant(q.value * rel)
             else -> IgnitorDsl.Times(q, IgnitorDsl.Constant(rel))
@@ -299,10 +313,28 @@ private fun expandPasses(
 /**
  * Maps a chained filter node to the equivalent EQ section list, or null when it must NOT fuse.
  *
- * Refuses when `analog` is anything but a literal zero: a non-zero analog switches SvfLPF/SvfHPF
- * to their state-dependent saturating branch, which is deliberate nonlinear character that
+ * Refuses when `analog` is anything but a literal zero: a non-zero analog switches the lowpass and
+ * highpass taps of `Ignitor.svf` to their state-dependent saturating branch, which is deliberate nonlinear character that
  * `EqCore` does not implement. A Param-backed analog is refused too, because an osc-param could
  * turn saturation on per note and the decision is made here, once, at registration.
+ *
+ * Refuses on the same grounds when the filter carries a CUTOFF ENVELOPE (`env` anything but a
+ * literal zero) or the per-voice `humanize` lane: an `EqSection` has neither field, so fusing
+ * one would silently drop the sweep or the tolerance. `env` takes the Param-backed refusal too,
+ * for the same reason `analog` does: a slot could switch the envelope on per note, and this
+ * decision is made once, at registration. `humanize` is structural, so a plain `!humanize`
+ * answers it.
+ *
+ * **That refusal is CONSERVATIVE.** A filter carrying an `env` slot (`classic()`'s `lpf.env`)
+ * never fuses, whether or not any note ever writes the slot, because the
+ * decision is made at registration and a `Param` could be written per note. The alternative is
+ * deciding per note-on, which is the BUILD, not the optimizer, and which would mean carrying both
+ * a fused and an unfused tree. What it costs is the Eq fusion on the classic tail, which is real
+ * but is not correctness; measure it before trading the simple rule away.
+ *
+ * Refuses a filter whose `passes` is not a `Constant` (phase 3 step 5 made it a knob): the
+ * section count is decided here, once, and a slot could change it per note. A `Constant` count
+ * expands through `coercePasses`, the same rounding and bounds the runtime reads it with.
  *
  * `OnePoleLowpass` (the `onepole()` door) is absent by design: there is no one-pole section
  * type, and substituting an SVF would change the sound.
@@ -312,29 +344,35 @@ private fun IgnitorDsl.asFusibleSections(): List<IgnitorDsl.EqSection>? = when (
     // the SAME commit the field landed — there is never a window where a passes-2 filter
     // fuses as one section and silently loses 12 dB/oct. A Constant q folds per stage; a
     // modulated q gets a Times wrapper so every stage keeps sweeping coherently.
-    is IgnitorDsl.Lowpass ->
-        if (analog.isLiteralZero()) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
-        } else {
-            null
-        }
+    is IgnitorDsl.Lowpass -> {
+        val count = passes
 
-    is IgnitorDsl.Highpass ->
-        if (analog.isLiteralZero()) {
-            expandPasses(passes, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Lowpass(freq, stageQ) }
         } else {
             null
         }
+    }
+
+    is IgnitorDsl.Highpass -> {
+        val count = passes
+
+        if (count is IgnitorDsl.Constant && analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
+            expandPasses(count, q) { stageQ -> IgnitorDsl.EqSection.Highpass(freq, stageQ) }
+        } else {
+            null
+        }
+    }
 
     is IgnitorDsl.Bandpass ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             listOf(IgnitorDsl.EqSection.Bandpass(freq, q))
         } else {
             null
         }
 
     is IgnitorDsl.Notch ->
-        if (analog.isLiteralZero()) {
+        if (analog.isLiteralZero() && env.isLiteralZero() && !humanize) {
             listOf(IgnitorDsl.EqSection.Notch(freq, q))
         } else {
             null
@@ -412,7 +450,8 @@ private fun IgnitorDsl.carriesNoParams(): Boolean = mutableListOf<IgnitorDsl.Par
 /** The absent pre-add or add: `Constant(-0.0)`, the bitwise identity of the add (see [IgnitorDsl.Affine]). */
 private val ABSENT: IgnitorDsl = IgnitorDsl.Constant(-0.0)
 
-private fun IgnitorDsl.isAbsent(): Boolean = this is IgnitorDsl.Constant && value == 0.0 && 1.0 / value < 0.0
+/** The absent-addend test lives on [IgnitorDsl.Affine] itself: the voice build reads the same encoding. */
+private fun IgnitorDsl.isAbsent(): Boolean = IgnitorDsl.Affine.isAbsentAddend(this)
 
 /** A finite literal multiply coefficient, the only kind a run composes. */
 private fun IgnitorDsl.literalOrNull(): Double? = (this as? IgnitorDsl.Constant)?.value?.takeIf { it.isFinite() }

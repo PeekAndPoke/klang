@@ -12,6 +12,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -76,7 +77,11 @@ class WarehouseStatsSpec : StringSpec({
         s4.reverbAllocations shouldBe 1
         s4.reverbIdleCount shouldBe 1
         s4.reverbDirtyCount shouldBe 1
-        val cylinder = w.cylinders.rent(id = 3, silentBlocksBeforeTailCheck = 10)
+        val cylinder = w.cylinders.rent(
+            id = 3,
+            silentBlocksBeforeTailCheck = 10,
+            katalysts = KatalystRegistry(),
+        )
         w.cylinders.giveBack(cylinder)
         val s5 = w.stats(0, 0)
         s5.cylinderAllocations shouldBe 1

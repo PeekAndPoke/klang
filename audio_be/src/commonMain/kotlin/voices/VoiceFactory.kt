@@ -6,66 +6,59 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.effects.Reverb
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
-import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
-import io.peekandpoke.klang.audio_be.ignitor.analogDriftStepRate
+import io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_CAP
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_FEEDBACK
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_TIME_SECONDS
-import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
-import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
-import io.peekandpoke.klang.audio_bridge.StageDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
 /**
  * Creates [Voice] instances from [ScheduledVoice] data.
  *
- * Extracted from [VoiceScheduler] to separate voice construction (parameter mapping,
- * pipeline building, filter creation) from scheduling concerns (timing, promotion, lifecycle).
+ * Extracted from [VoiceScheduler] to separate voice construction (parameter mapping, the tree build)
+ * from scheduling concerns (timing, promotion, lifecycle).
+ *
+ * Every voice is ONE Ignitor tree (phase 3 step 9 retired the voice strip): a registered instrument's tree
+ * (a built-in, an authored instrument, an inline one) or the sample instrument over the voice's PCM. Around
+ * it the voice runs only its pitch pipeline (in front), the teardown fade when the tree's root is not a built
+ * envelope, and the channel (gain, pan, the orbit's send). An authored instrument that does not end in
+ * `classic()` is played as its bare tree: no voice envelope, no doors.
  */
 class VoiceFactory(
     private val sampleRate: Int,
     private val sampleRateDouble: Double,
     private val blockFrames: Int,
     private val ignitorRegistry: IgnitorRegistry,
-    private val pipelineRegistry: PipelineRegistry,
     private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
 ) {
 
-    /**
-     * Block rate ≈ sampleRate / blockFrames. Used to configure per-voice filter
-     * `AnalogDrift` instances so that calling `nextMultiplier()` once per block
-     * gives drift trajectories with the correct time constants (the drift coeffs
-     * in `AnalogDriftCoeffs` are derived from the effective update rate, not
-     * the audio rate).
-     */
-    private val driftUpdateRate: Int = analogDriftStepRate(sampleRate, blockFrames)
+    private companion object {
+        /** The stages after the tree of a voice whose tree does not end in its own envelope: the teardown fade alone. */
+        val TEARDOWN_FADE_ONLY: List<BlockRenderer> = listOf(TeardownFadeRenderer)
+    }
 
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
@@ -100,36 +93,30 @@ class VoiceFactory(
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
-        // Create filters. The chain is baked in the EXACT order received from
-        // `data.filters` — VoiceFactory never reorders. The chain-order decision
-        // (highpass-first / lowpass-last for clean nonlinear behaviour) is made
-        // upstream by the language layer (see SprudelVoiceData.toVoiceData), which
-        // keeps the engine a faithful consumer and leaves explicit routing open.
-        val analog = data.oscParams?.get("analog") ?: 0.0
-        // The active engine's Filter stage carries the per-voice "filter feel" scales
-        // (cutoff offset / drive / drift). Default StageDsl.Filter() == today's constants.
-        val filterStage = pipelineRegistry.get(data.pipeline).stages
-            .firstNotNullOfOrNull { it as? StageDsl.Filter } ?: StageDsl.Filter()
-        // Body / vowel are orbit-level Katalyst effects now — pull them out of the per-voice filter
-        // chain (they're routed to the Cylinder via the Voice). Everything else stays per-voice.
-        val bodyDef = data.filters.getByType<FilterDef.Body>()
-        val vowelDef = data.filters.getByType<FilterDef.Formant>()
-        val voiceFilterDefs = data.filters.filters.filter { it !is FilterDef.Body && it !is FilterDef.Formant }
+        // THE one place the factory reads `analog` off the bag, guarded here rather than at each
+        // use: the sample playhead's drift lane (`SampleIgnitor`) takes it below; every tree reads its own
+        // `Slots.analog`. A non-finite override reads as UNSET, the same rule the `Param` leaf applies to every
+        // slot (`IgnitorDslRuntime`, `/dsl-design` section 4) and the same rule `gain` follows below.
+        // It matters because the readers disagree on which test a non-finite value fails: `AnalogDrift`
+        // tests `analog > 0.0` (a NaN fails it, an `+Infinity` passes). What each non-finite value used to
+        // render is written out once, in `VoiceBagGuardSpec`, which is the guard.
+        val analog = data.oscParams?.get("analog")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
 
         // Seeded-voice-rng: deal THIS voice's stream from the playback's coreRandom at the
-        // TOP of creation — before the filter build (per-voice cutoff tolerance + filter
-        // drift draw from it) and before any branch can bail (a `?: return null` after the
+        // TOP of creation, before any branch can bail (a `?: return null` after the
         // deal would make the core draw count depend on e.g. async sample-load timing,
         // shifting every later voice's seed). One instance feeds EVERYTHING this voice owns:
-        // filters here, the exciter build (IgnitorBuildCache.random), and the render context
-        // (IgniteContext.random).
+        // the exciter build (IgnitorBuildCache.random, the tree filters' humanization draws among it),
+        // the sample playhead, and the render context (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
-        val filters = voiceFilterDefs.map { it.toFilter(analog, filterStage, voiceRandom) }
-        val modulators = voiceFilterDefs.zip(filters).mapNotNull { (def, filter) ->
-            def.toModulator(filter, sampleRate, analog, filterStage, voiceRandom)
-        }
-        val bakedFilters = filters.combine()
+        // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` asks the
+        // factory's registry and the build asks the playback's; in production both are the scheduler's fork
+        // (`VoiceScheduler`), while a test may hand in two different ones.
+        val freqHz = data.freqHz
+        val sound = data.sound
+        val isOsci = ignitorRegistry.contains(sound)
+        val isSample = !isOsci && sound != null
 
         // Routing
         val cylinder = data.cylinder ?: 0
@@ -144,174 +131,86 @@ class VoiceFactory(
             rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
-        // Pitch Envelope
-        val pEnvAmount = data.pEnv ?: 0.0
+        // Pitch Envelope: the Ignitor pitch envelope's law and defaults (`PitchEnvelopeDefaults.kt`),
+        // curves on `MOD_ENV_CURVE` when unnamed (decision D3). The amount is the switch: 0 builds none.
+        // A non-finite amount or sustain reads as UNSET, like every other wire number (/dsl-design section 4);
+        // the stage times need no guard, `EnvelopeCore` makes a NaN or negative one a zero-length stage.
+        val pEnvAmount = data.pEnv?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
         val pitchEnvelope = if (pEnvAmount != 0.0) {
             Voice.PitchEnvelope(
-                attackFrames = (data.pAttack ?: 0.0) * sampleRate,
-                decayFrames = (data.pDecay ?: 0.0) * sampleRate,
-                releaseFrames = (data.pRelease ?: 0.0) * sampleRate,
                 semitones = pEnvAmount,
-                curve = data.pCurve ?: 1.0,
-                anchor = data.pAnchor ?: 0.0,
+                envelope = Voice.Envelope(
+                    attackFrames = (data.pAttack ?: PITCH_ENV_ATTACK_SEC) * sampleRate,
+                    decayFrames = (data.pDecay ?: PITCH_ENV_DECAY_SEC) * sampleRate,
+                    // NaN-guard: non-finite reads as unset
+                    sustainLevel = data.pSustain?.takeIf { it.isFinite() } ?: PITCH_ENV_SUSTAIN_LEVEL,
+                    releaseFrames = (data.pRelease ?: PITCH_ENV_RELEASE_SEC) * sampleRate,
+                    attackCurve = data.pAttackCurve ?: MOD_ENV_CURVE,
+                    decayCurve = data.pDecayCurve ?: MOD_ENV_CURVE,
+                    releaseCurve = data.pReleaseCurve ?: MOD_ENV_CURVE,
+                ),
             )
         } else {
             null
         }
 
-        // Delay and reverb. A voice that touches an effect (sets any of its slots) gets the shared
-        // defaults for every slot it left unset, the same ones the master stages use
-        // (constants/SendEffectDefaults.kt); a non-finite slot reads as unset. A voice that does not
-        // touch an effect sends nothing and configures nothing: otherwise every voice would feed
-        // every orbit's delay and reverb. Sprudel's `delay(...)`/`reverb(...)` already fill unset slots
-        // at write time; this is the wire contract for every other producer, and it still covers what a
-        // sprudel voice can carry non-finite (a NaN value).
-        val delayTouched = data.delay != null || data.delayTime != null ||
-                data.delayFeedback != null || data.delayCap != null
+        // Silence culling: the author's `cull(...)`; a tremolo inside the tree adds its own cull-never rule at the
+        // build (`treeCull`).
+        val cull = data.cull
 
-        val delay = if (delayTouched) {
-            Voice.Delay(
-                amount = data.delay.orDefault(DELAY_WET),
-                time = data.delayTime.orDefault(DELAY_TIME_SECONDS),
-                feedback = data.delayFeedback.orDefault(DELAY_FEEDBACK),
-                cap = data.delayCap.orDefault(DELAY_CAP),
-            )
-        } else {
-            Voice.Delay(amount = 0.0, time = 0.0, feedback = 0.0, cap = DELAY_CAP)
-        }
-
-        val reverbTouched = data.reverb != null || data.reverbSize != null || data.reverbLowpass != null
-
-        val reverb = if (reverbTouched) {
-            Voice.Reverb(
-                amount = data.reverb.orDefault(REVERB_WET),
-                size = Reverb.normalizeSize(data.reverbSize.orDefault(REVERB_SIZE)),
-                lowpass = data.reverbLowpass,
-            )
-        } else {
-            Voice.Reverb(amount = 0.0, size = 0.0)
-        }
-
-        // Phaser
-        val phaser = Voice.Phaser(
-            rate = data.phaser ?: 0.0,
-            depth = data.phaserDepth ?: 0.0,
-            center = data.phaserCenter ?: 1000.0,
-            sweep = data.phaserSweep ?: 1000.0,
-            floor = data.phaserFloor ?: 1.0,
-        )
-
-        // Tremolo
-        val tremolo = Voice.Tremolo(
-            rate = data.tremoloSync ?: 0.0,
-            depth = data.tremoloDepth ?: 0.0,
-            skew = data.tremoloSkew ?: 0.0,
-            phase = data.tremoloPhase ?: 0.0,
-            shape = data.tremoloShape,
-        )
-
-        // Silence culling: a tremolo gates the output (a square shape at full depth is exact silence
-        // for half a cycle), and a gated RELEASE would be culled at its first off-half. So a voice
-        // with a tremolo is not culled unless the author set `cull(...)` themselves.
-        val cull = data.cull ?: if (tremolo.depth > 0.0) VOICE_CULL_NEVER else null
-
-        // Ducking / Sidechain
-        val duckCylinderParam = data.duckCylinder
-        val duckDepthParam = data.duckDepth
-        val ducking = if (duckCylinderParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
-            Voice.Ducking(
-                cylinderId = duckCylinderParam,
-                attackSeconds = data.duckAttack ?: 0.1,
-                depth = duckDepthParam,
-            )
-        } else {
-            null
-        }
-
-        // Dynamics
-        val baseGain = data.gain ?: 1.0
-        val velocity = data.velocity ?: 1.0
-        val gain = baseGain * velocity
-        val postGain = data.postGain ?: 1.0
-
-        // Compressor
-        val compressor = Voice.Compressor.fromParams(
-            threshold = data.compressorThreshold,
-            ratio = data.compressorRatio,
-            knee = data.compressorKnee,
-            attack = data.compressorAttack,
-            release = data.compressorRelease,
-        )
-
-        // Effects
-        val distort = Voice.Distort(
-            amount = data.distort ?: 0.0,
-            shape = data.distortShape ?: "soft",
-            oversample = Oversampler.factorToStages(data.distortOversample ?: 0),
-        )
-        val crush = Voice.Crush(
-            amount = data.crush ?: 0.0,
-            oversample = Oversampler.factorToStages(data.crushOversample ?: 0),
-        )
-        val coarse = Voice.Coarse(
-            amount = data.coarse ?: 0.0,
-            oversample = Oversampler.factorToStages(data.coarseOversample ?: 0),
-        )
+        // Dynamics: `gain` is the channel fader, the one level word on the wire. A frontend's
+        // articulation shorthand (sprudel's `velocity`, a MIDI key velocity) is already folded
+        // into it before it crosses (signal-flow plan section 6).
+        //
+        // A non-finite gain reads as UNSET, like every other wire number (/dsl-design section 4).
+        // Two downstream readers depend on it, and both used to be wrong for a NaN: `Voice.heard`
+        // starts latched on a gain of exactly 0, and `NaN == 0.0` is false, so a NaN voice started
+        // unlatched; and `SendRenderer.measurePeak` scales the block peak by `abs(gain)`, so a NaN
+        // gain made the measured peak NaN, which fails every compare against the cull floor and
+        // reads as audible forever. The guard hands both readers a finite number, and a NaN can no
+        // longer reach the orbit mix, which the orbit's reverb and delay are fed from and would
+        // latch it for the rest of the playback.
+        val gain = data.gain?.takeIf { it.isFinite() } ?: 1.0 // NaN-guard: non-finite reads as unset
 
         // FM Synthesis
         val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
             val ratio = data.fmh ?: 1.0
             val depth = data.fmEnv ?: 0.0
+            // The modulation envelopes' curve, the Ignitor FM node's (decision D3).
             val fmEnv = Voice.Envelope(
                 attackFrames = (data.fmAttack ?: 0.0) * sampleRate,
                 decayFrames = (data.fmDecay ?: 0.0) * sampleRate,
                 sustainLevel = data.fmSustain ?: 1.0,
                 releaseFrames = 0.0,
+                attackCurve = MOD_ENV_CURVE,
+                decayCurve = MOD_ENV_CURVE,
+                releaseCurve = MOD_ENV_CURVE,
             )
             Voice.Fm(ratio, depth, fmEnv)
         } else {
             null
         }
 
-        // Decision: oscillator vs sample
-        val freqHz = data.freqHz
-        val sound = data.sound
-        val isOsci = ignitorRegistry.contains(sound)
-        val isSample = !ignitorRegistry.contains(sound) && sound != null
-
         return when {
             isOsci -> {
-                val resolvedAdsr = data.adsr.resolve(AdsrDef.defaultSynth)
-
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-                // Build FIRST: the ignitor's release tail is a finding of the build, not a separate
-                // analysis of the DSL tree, so `effectiveAdsr` has to come after it.
+                // Build FIRST: the voice's lifetime is a finding of the build (the tree's release tail), not a
+                // separate analysis of the DSL tree.
                 val built = playbackCtx.ignitorRegistry.createExciter(
                     sound, data, freqHz ?: 0.0,
                     phasePools = playbackCtx.phasePools,
                     random = voiceRandom,
+                    sampleRate = sampleRate,
+                    blockFrames = blockFrames,
                 ) ?: return null
-                val signal = built.ignitor
-
-                // Extend voice lifetime to cover an ignitor-level release tail. Because the tail
-                // falls out of the build, `.oscp("release", ...)` overrides and folded release
-                // expressions are already resolved in it. null = nothing tail-bearing, or a release
-                // time that is itself modulated (no static answer): the voice's own release governs.
-                val ignitorTailSec = built.releaseTailSec ?: 0.0
-                val effectiveAdsr = if (ignitorTailSec > resolvedAdsr.release) {
-                    resolvedAdsr.copy(release = ignitorTailSec)
-                } else {
-                    resolvedAdsr
-                }
 
                 buildVoice(
-                    data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
-                    delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
-                    fm, signal, freqHz ?: 0.0, voiceRandom = voiceRandom,
+                    data, treeLifetime(built), startFrame, gateEndFrame, voiceDurationFrames, cylinder,
+                    gain, accelerate, vibrato, pitchEnvelope,
+                    fm, built.ignitor, freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cut = data.cut,
-                    cull = cull,
-                    body = bodyDef, vowel = vowelDef,
+                    cull = treeCull(cull, built),
+                    treeStages = treeStages(built),
                 )
             }
 
@@ -321,24 +220,31 @@ class VoiceFactory(
                 val sample = entry.sample
                 if (sample.pcm.size <= 1) return null
 
-                val resolvedAdsr = data.adsr
-                    .mergeWith(sample.meta.adsr)
-                    .resolve(AdsrDef.defaultSynth)
+                // The sample's playback slots (`IgnitorDsl.Slots.sample`, phase 3 step 8): read off the voice's slot bag
+                // where the playhead is built, before any tree. A non-finite value reads as UNSET, the rule of every
+                // slot, and UNSET matters here beyond its default: an unset `begin` and `end` let the sample's own
+                // loop apply, and only a set `begin` moves the start.
+                val sampleBag = data.oscParams
+                val sampleBegin = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.begin)
+                val sampleEnd = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.end)
+                val sampleSpeed = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.speed)
+                val sampleLoop = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.loop)
 
                 val baseSamplePitchHz = entry.pitchHz
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
                 val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
-                val loopSpeed = data.speed ?: 1.0
+                val loopSpeed = sampleSpeed
                 val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * loopSpeed
                 val pcmSize = sample.pcm.size.toDouble()
 
-                val loopBeginRatio = data.begin ?: 0.0
+                val loopBeginRatio = sampleBegin ?: 0.0
                 val startSample = loopBeginRatio * pcmSize
-                val loopEndRatio = data.end ?: 1.0
+                val loopEndRatio = sampleEnd ?: 1.0
                 val endSample = loopEndRatio * pcmSize
 
-                val explicitLoop = data.loop == true
-                val useMetaLoop = !explicitLoop && data.begin == null && data.end == null
+                // A flag: any finite value but 0.0 is on (the house flag rule, as the envelope's `on`).
+                val explicitLoop = sampleLoop != 0.0
+                val useMetaLoop = !explicitLoop && sampleBegin == null && sampleEnd == null
                 val sampleMetaLoop = sample.meta.loop
 
                 val loopStart: Double
@@ -369,7 +275,7 @@ class VoiceFactory(
                 // measured against the decoded audio, `anchor` is the position of the loudest sample
                 // (argmax |x|), a normalisation artefact of the converter. For the nylon guitar that
                 // skipped the pluck. See docs/tasks-archive/2026-09/20260903-soundfont-looping-investigation.md.
-                val playhead0 = if (data.begin != null) startSample else 0.0
+                val playhead0 = if (sampleBegin != null) startSample else 0.0
 
                 // Sample-accurate onset, same as the oscillator branch: `Voice.render` clips the
                 // voice into the block itself (offset = startFrame - blockStart), so a sample that
@@ -395,20 +301,39 @@ class VoiceFactory(
                     loopEnd = loopEnd,
                     isLooping = isLooping,
                     stopFrame = endSample,
-                    analog = data.oscParams?.get("analog") ?: 0.0,
+                    // The guarded read from the top of this function, not a second lookup off the
+                    // bag: `SampleIgnitor` hands this straight to its `AnalogDrift`, whose lane
+                    // tests `analog > 0.0`, so an `+Infinity` used to take the playhead non-finite
+                    // on the first increment. Guard: `VoiceBagGuardSpec`.
+                    analog = analog,
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
                 )
 
+                // The SAMPLE INSTRUMENT (phase 3 step 7): the built-in shape over this playhead.
+                // The playhead is built FIRST, above, so its drift lane draws before the tree's filters do. The
+                // voice's slots reach the `classic()` stages as on a built-in; the sample's own
+                // meta envelope fills the `adsr.*` slots the pattern left unset. The instrument has no variants
+                // (`n` already chose the sample), so the build takes no sound index.
+                val built = IgnitorRegistry.SAMPLE_INSTRUMENT.buildExciter(
+                    oscParams = withSampleEnvelopeDefaults(sampleBag, sample.meta.adsr),
+                    phasePools = playbackCtx.phasePools,
+                    orbit = cylinder,
+                    random = voiceRandom,
+                    freqHz = baseSamplePitchHz,
+                    sampleRate = sampleRate,
+                    blockFrames = blockFrames,
+                    sampleSource = signal,
+                )
+
                 buildVoice(
-                    data, resolvedAdsr, sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
-                    gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
-                    delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
-                    fm, signal, baseSamplePitchHz,
+                    data, treeLifetime(built), sampleStartFrame, gateEndFrame, voiceDurationFrames, cylinder,
+                    gain, accelerate, vibrato, pitchEnvelope,
+                    fm, built.ignitor, baseSamplePitchHz,
                     voiceRandom = voiceRandom,
                     cut = data.cut,
-                    cull = cull,
-                    body = bodyDef, vowel = vowelDef,
+                    cull = treeCull(cull, built),
+                    treeStages = treeStages(built),
                 )
             }
 
@@ -420,124 +345,38 @@ class VoiceFactory(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    private fun FilterDef.toFilter(analog: Double, stage: StageDsl.Filter, rng: Random): AudioFilter {
-        // Per-voice constant cutoff offset — set once per filter at note-on so that
-        // two voices through "the same" configured filter no longer process identically.
-        // Real analog filters have component tolerances; we simulate that with a small
-        // random multiplier per filter instance. The engine's Filter stage scales it.
-        val offsetMul = perVoiceCutoffOffsetMul(analog, stage.cutoffOffsetPerAnalog, rng)
-        return when (this) {
-            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(freq, q, sampleRateDouble, analog, offsetMul, stage.drivePerAnalog, passes = passes)
-            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(
-                freq,
-                q,
-                sampleRateDouble,
-                analog,
-                offsetMul,
-                stage.drivePerAnalog,
-                passes = passes,
-            )
-            is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(freq, q, sampleRateDouble, offsetMul)
-            is FilterDef.Notch -> LowPassHighPassFilters.createNotch(freq, q, sampleRateDouble, offsetMul)
-            // Body / vowel are orbit-level Katalyst effects (KatalystBodyEffect / KatalystFormantEffect):
-            // VoiceFactory pulls them out of the per-voice chain (see voiceFilterDefs) and routes them to the
-            // Cylinder, so these arms are unreachable and exist only to satisfy the sealed `when`. floor is
-            // honored on the orbit path, not here.
-            is FilterDef.Formant, is FilterDef.Body ->
-                error("Body/Formant are orbit-level resonators, not per-voice filters")
-        }
-    }
-
-    /** A send-effect slot: its value when set and finite, otherwise the shared [default]. */
-    private fun Double?.orDefault(default: Double): Double =
-        if (this != null && this.isFinite()) this else default
+    /**
+     * The voice's lifetime past its gate, in seconds: the tree's own release tail, which a switched-off envelope
+     * still reports, so a release written only as a slot lives exactly that long. `null` (no static answer: no
+     * envelope on the spine, or a modulated release) takes the voice envelope's `VOICE_ADSR_RELEASE_SEC`. A
+     * sample never reaches that fallback: the sample instrument ends in `classic()`, whose release is a slot, a
+     * leaf with a finite default, so its tail is always static (its meta release reaches it as the slot's fill,
+     * `withSampleEnvelopeDefaults`). The LIFETIME (not the envelope) never ends before
+     * the gate: a raw negative release is a zero-length release stage, and the voice plays to its gate. Not a
+     * clamp on an audio parameter: the envelope still reads it raw.
+     */
+    private fun treeLifetime(built: BuiltIgnitor): Double =
+        maxOf(built.releaseTailSec ?: VOICE_ADSR_RELEASE_SEC, 0.0)
 
     /**
-     * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`
-     * (bit-identical to no offset). At `analog>0` returns `1 + uniform(-1,1) × analog ×
-     * cutoffOffsetPerAnalog`. At the shipped default (0.0002) that is ≈ ±0.02% at `analog=1`
-     * (≈ ±0.35 cents); ≈ ±0.06% at `analog=3` (≈ ±1 cent); ≈ ±0.2% at `analog=10` (≈ ±3.5 cents).
+     * The cull rule for a tremolo INSIDE the tree, which only the build can see (`BuiltIgnitor.gatesOutput`,
+     * phase 3 step 3b), on top of the author's [cull], which still wins.
      */
-    private fun perVoiceCutoffOffsetMul(analog: Double, cutoffOffsetPerAnalog: Double, rng: Random): Double {
-        if (analog <= 0.0) return 1.0
-        return 1.0 + (rng.nextDouble() - 0.5) * 2.0 * cutoffOffsetPerAnalog * analog
-    }
+    private fun treeCull(cull: Double?, built: BuiltIgnitor): Double? =
+        cull ?: if (built.gatesOutput) VOICE_CULL_NEVER else null
 
-    private fun FilterDef.toModulator(
-        filter: AudioFilter,
-        sampleRate: Int,
-        analog: Double,
-        stage: StageDsl.Filter,
-        rng: Random,
-    ): Voice.FilterModulator? {
-        // Non-tunable filters (Formant) can't be modulated at all.
-        if (filter !is AudioFilter.Tunable) return null
-
-        val envData = when (this) {
-            is FilterDef.LowPass -> this.envelope
-            is FilterDef.HighPass -> this.envelope
-            is FilterDef.BandPass -> this.envelope
-            is FilterDef.Notch -> this.envelope
-            is FilterDef.Formant -> null
-            is FilterDef.Body -> null
-        }
-
-        // Per-voice slow cutoff drift. Constructed with the block-rate effective
-        // sample rate so calling `nextMultiplier()` once per block in
-        // `FilterModRenderer` produces drift trajectories with the correct
-        // time constants. `analog * driftRelToOsc` scales it against oscillator pitch
-        // drift (1.0 cent per unit analog), so the stage field IS the filter-to-pitch
-        // ratio. At the shipped default of 0.25 the filter wanders 4x LESS than pitch —
-        // whether that is the right way round is open, see docs/tasks/audio-bridge-constants.md §6.
-        val drift = if (analog > 0.0) {
-            AnalogDrift(analog * stage.driftRelToOsc, driftUpdateRate, rng)
-        } else {
-            null
-        }
-
-        // Nothing to modulate — no envelope AND no drift. Skip the per-block work.
-        if (envData == null && drift == null) return null
-
-        val baseCutoff = when (this) {
-            is FilterDef.LowPass -> this.freq
-            is FilterDef.HighPass -> this.freq
-            is FilterDef.BandPass -> this.freq
-            is FilterDef.Notch -> this.freq
-            is FilterDef.Formant -> 0.0
-            is FilterDef.Body -> 0.0
-        }
-
-        // When there's no envelope but drift is active, build a degenerate envelope
-        // with depth=0 so the per-block `2^(0/12 * envValue) = 1` math (C3: semitone law)
-        // leaves the cutoff untouched by the envelope side — only drift multiplies it.
-        val envelope: Voice.Envelope
-        val depth: Double
-        if (envData != null) {
-            val resolved = envData.resolve()
-            envelope = Voice.Envelope(
-                attackFrames = resolved.attack * sampleRate,
-                decayFrames = resolved.decay * sampleRate,
-                sustainLevel = resolved.sustain,
-                releaseFrames = resolved.release * sampleRate,
-            )
-            depth = resolved.depth
-        } else {
-            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0)
-            depth = 0.0
-        }
-
-        return Voice.FilterModulator(
-            filter = filter,
-            envelope = envelope,
-            depth = depth,
-            baseCutoff = baseCutoff,
-            drift = drift,
-        )
-    }
+    /**
+     * The voice-level stages after the tree: none when the tree ends in its own envelope (a built root `Adsr`
+     * with a static release, `BuiltIgnitor.endsInEnvelope`), else the teardown fade, which takes the voice's
+     * last frames to exactly zero.
+     */
+    private fun treeStages(built: BuiltIgnitor): List<BlockRenderer> =
+        if (built.endsInEnvelope) emptyList() else TEARDOWN_FADE_ONLY
 
     private fun buildVoice(
         data: VoiceData,
-        resolvedAdsr: AdsrDef.Resolved,
+        /** The voice's lifetime past its gate, in seconds (`treeLifetime`). */
+        releaseSec: Double,
         // Absolute backend frames are Double (RenderClock.cursorFrame); the DURATION is relative
         // to the voice and stays Int.
         startFrame: Double,
@@ -545,21 +384,9 @@ class VoiceFactory(
         voiceDurationFrames: Int,
         cylinder: Int,
         gain: Double,
-        postGain: Double,
         accelerate: Voice.Accelerate,
         vibrato: Voice.Vibrato,
         pitchEnvelope: Voice.PitchEnvelope?,
-        bakedFilters: AudioFilter,
-        modulators: List<Voice.FilterModulator>,
-        delay: Voice.Delay,
-        reverb: Voice.Reverb,
-        phaser: Voice.Phaser,
-        tremolo: Voice.Tremolo,
-        ducking: Voice.Ducking?,
-        compressor: Voice.Compressor?,
-        distort: Voice.Distort,
-        crush: Voice.Crush,
-        coarse: Voice.Coarse,
         fm: Voice.Fm?,
         signal: Ignitor,
         freqHz: Double,
@@ -567,14 +394,13 @@ class VoiceFactory(
          *  with). NO default on purpose: a future call site must not silently fall back to
          *  the global and split the build/render channels. */
         voiceRandom: Random,
-        cut: Int? = null,
-        cull: Double? = null,
-        body: FilterDef.Body? = null,
-        vowel: FilterDef.Formant? = null,
+        cut: Int?,
+        cull: Double?,
+        /** The stages after the ignite stage (`treeStages`). */
+        treeStages: List<BlockRenderer>,
     ): Voice {
-        val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-        val endFrame = gateEndFrame + resolvedAdsr.release * sampleRate
-        val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
+        val endFrame = gateEndFrame + releaseSec * sampleRate
+        val releaseFrames = (releaseSec * sampleRate).toInt()
 
         val signalCtx = IgniteContext(
             sampleRate = sampleRate,
@@ -599,20 +425,7 @@ class VoiceFactory(
             signalCtx = signalCtx,
             freqHz = freqHz,
             startFrame = startFrame,
-        ) + buildFilterPipeline(
-            pipeline = pipelineRegistry.get(data.pipeline),
-            modulators = modulators,
-            startFrame = startFrame,
-            crush = crush,
-            coarse = coarse,
-            mainFilter = bakedFilters,
-            envelope = envelope,
-            distort = distort,
-            tremolo = tremolo,
-            phaser = phaser,
-            sampleRate = sampleRate,
-            vcaOn = resolvedAdsr.on,
-        )
+        ) + treeStages
 
         val blockCtx = BlockContext(
             audioBuffer = voiceBuffer,
@@ -635,19 +448,21 @@ class VoiceFactory(
             gateEndFrame = gateEndFrame,
             gain = gain,
             pan = data.pan ?: 0.5,
-            postGain = postGain,
-            delay = delay,
-            reverb = reverb,
-            phaser = phaser,
-            body = body,
-            vowel = vowel,
-            ducking = ducking,
-            compressor = compressor,
+            // By reference, never a copy: the map is immutable on the wire and only the orbit's
+            // owner reads it (see Voice.katalystParams).
+            katalystParams = data.katalystParams,
             cut = cut,
             cull = cull,
             pipeline = pipeline,
             blockCtx = blockCtx,
-            mainFilter = bakedFilters,
         )
     }
 }
+
+/** The finite value this bag holds for [slot] (an `IgnitorDsl.Param` of `IgnitorDsl.Slots`), or null: unset or non-finite. */
+private fun Map<String, Double>?.finiteSlot(slot: IgnitorDsl): Double? =
+    this?.get((slot as IgnitorDsl.Param).name)?.takeIf { it.isFinite() } // NaN-guard: non-finite reads as unset
+
+/** [finiteSlot], or the slot's own default when unset: the default has one home, the `Param`. */
+private fun Map<String, Double>?.finiteSlotOrDefault(slot: IgnitorDsl): Double =
+    finiteSlot(slot) ?: (slot as IgnitorDsl.Param).default

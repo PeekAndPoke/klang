@@ -6,14 +6,19 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
+import io.peekandpoke.klang.audio_be.filters.SvfCoeffSweep
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
+import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushState
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_DRIVE_PER_ANALOG
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.tan
@@ -35,7 +40,7 @@ enum class SvfMode {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Optional ADSR-style envelope that modulates filter cutoff at control rate (once per block).
+ * Optional ADSR-style envelope that modulates filter cutoff at control rate (at each block's two ends).
  *
  * When applied, the effective cutoff becomes: `baseCutoff * 2^(depth/12 * envValue)` —
  * depth is SEMITONES (C3 of the filter unification; +12 doubles the cutoff at full
@@ -43,11 +48,28 @@ enum class SvfMode {
  * envelope shape. `depth = 0.0` stays the exact no-envelope identity.
  */
 data class FilterEnvDef(
+    // The per-field defaults below are NOT the surface defaults, and deliberately so: this is the
+    // RESOLVED struct the runtime reads, not a door. Every production construction names all five
+    // (`IgnitorDslRuntime.filterEnvDef`, which fills from
+    // `audio_bridge/constants/FilterEnvelopeDefaults.kt`), so these values are reachable only
+    // through [NONE] and through tests that want a partial shape. `depth = 0.0` IS [NONE]: it is
+    // the off switch this class is read through, so it must not be moved to the surface's 7
+    // semitones. The other four keep the neutral values they were written with (three zeros and
+    // a unity sustain) for the same reason: with `depth = 0` nothing reads them, and giving them
+    // the surface constants would suggest they were the source of truth, which
+    // `FilterEnvelopeDefaults.kt` is.
     val depth: Double = 0.0,
     val attackSec: Double = 0.0,
     val decaySec: Double = 0.0,
     val sustainLevel: Double = 1.0,
     val releaseSec: Double = 0.0,
+    // The three stage curves, RESOLVED (`IgnitorDslRuntime.filterEnvDef` names them from the node's
+    // knobs). Unlike the values above these default to the surface's own constant, `MOD_ENV_CURVE`:
+    // a curve has no neutral value, and a partial shape built to mean "the node's envelope" must run
+    // the curve the node runs.
+    val attackCurve: AdsrCurve = MOD_ENV_CURVE,
+    val decayCurve: AdsrCurve = MOD_ENV_CURVE,
+    val releaseCurve: AdsrCurve = MOD_ENV_CURVE,
 ) {
     companion object {
         val NONE = FilterEnvDef()
@@ -64,9 +86,23 @@ data class FilterEnvDef(
  * The TPT/Zavalishin canonical Cytomic form computes lowpass, highpass, bandpass, and
  * notch simultaneously; [mode] selects which output is used. Each instance creates
  * per-voice filter state in its closure. Optional [env] modulates cutoff over the
- * voice's lifetime — when active, coefficients are computed at block start AND end
- * and Bresenham-style linearly interpolated per sample to avoid the ~187 Hz block-rate
- * stair-stepping that per-block-only recompute would produce.
+ * voice's lifetime: when active, the envelope ([EnvelopeCore], the engine's one envelope law) is
+ * read at block start AND at block end (`filterEnvCutoff`), and the coefficients are linearly
+ * interpolated per sample between the two (`SvfCoeffSweep`), which avoids the 375 Hz block-rate
+ * stair-stepping (128 frames at 48 kHz) that a per-block-only recompute would produce. The level is
+ * clamped to [0, 1] before it scales the depth. The retired voice strip's filter envelope ran the
+ * same two helpers (decision D3, the sampling).
+ *
+ * **The default curve** was the voice strip's too (decision D3 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`):
+ * an unshaped stage takes `MOD_ENV_CURVE`, exponential; `curves` can shape each stage, and sprudel's
+ * `lpfCurves` (and its three siblings) reach it through `classic()`'s curve slots.
+ *
+ * A node with `env.depth == 0.0` never enters this path at all.
+ *
+ * Optional [humanize] is the per-voice analog character the voice strip got from
+ * `VoiceFactory`: a fixed cutoff tolerance and a slow drift lane, both drawn once per voice.
+ * `null` is no humanization and renders bit-for-bit what this filter rendered without the
+ * feature. See [FilterHumanization].
  *
  * Coefficient math is shared with `BaseSvf` via `computeSvfCoeffs`. NaN/Inf-safe
  * cutoff (via `bilinearK`); Q is clamped to `[0.1, 200.0]` with `isFinite` fallback.
@@ -90,7 +126,8 @@ fun Ignitor.svf(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog, humanize)
 
 private class SvfIgnitor(
     private val upstream: Ignitor,
@@ -99,16 +136,21 @@ private class SvfIgnitor(
     private val q: Ignitor,
     private val env: FilterEnvDef,
     private val analog: Ignitor,
+    private val humanize: FilterHumanization?,
 ) : Ignitor {
     // Integrator state.
     private var ic1eq: Double = 0.0
     private var ic2eq: Double = 0.0
 
-    // Coefficient buffers (start-of-block, plus end-of-block when env is active).
+    // The static path's coefficients, and the envelope path's sweep (start coefficients plus steps).
     private val coefs = SvfCoeffs()
-    private val coefsEnd = SvfCoeffs()
+    private val sweep = SvfCoeffSweep()
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
+
+    // The cutoff envelope's evaluator, one per node (prepared per block).
+    private val envCore = EnvelopeCore()
+    private val hasDrift: Boolean = humanize?.hasDrift == true
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -117,6 +159,13 @@ private class SvfIgnitor(
             val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val qVal = Ignitors.readParam(q, freqHz, ctx)
             val analogVal = Ignitors.readParam(analog, freqHz, ctx).coerceAtLeast(0.0)
+            // Per-voice analog humanization, both 1.0 when the node has none, and `x * 1.0` is
+            // exactly `x` for every double, so a node without it renders bit-for-bit what it
+            // rendered before these two lines existed. The ORDER of the two multiplies is the
+            // retired voice strip's: it multiplied the envelope's cutoff by the block's drift and then
+            // both ends by the fixed tolerance.
+            val driftMul = humanize?.blockDriftMultiplier(ctx) ?: 1.0
+            val offsetMul = humanize?.cutoffOffsetMul ?: 1.0
             val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
             val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
             val sr = ctx.sampleRate.toDouble()
@@ -138,36 +187,28 @@ private class SvfIgnitor(
             var gStep = 0.0
 
             if (hasEnv) {
-                val envStart = computeFilterEnvelope(
+                envCore.prepareModEnvelope(
                     ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    sampleOffsetWithinBlock = 0,
+                    env.attackCurve, env.decayCurve, env.releaseCurve,
                 )
-                val envEnd = computeFilterEnvelope(
-                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
-                    sampleOffsetWithinBlock = length,
-                )
-                // C3 (filter unification): envelope depth is SEMITONES — the sweep is
-                // pitch-linear (cutoff = base * 2^(depth/12 * env)), negative depth sweeps
-                // down symmetrically, and there is no dead zone anywhere.
-                val cutoffStart = baseCutoff * 2.0.pow(env.depth / 12.0 * envStart)
-                val cutoffEnd = baseCutoff * 2.0.pow(env.depth / 12.0 * envEnd)
+                // The cutoff at the block's two ends, the drift held across the block
+                // (`filterEnvCutoff`: depth in SEMITONES, C3), swept linearly in between.
+                val pos = ctx.voiceElapsedFrames
+                val cutoffStart = envCore.filterEnvCutoff(pos, baseCutoff, env.depth) * driftMul * offsetMul
+                val cutoffEnd = envCore.filterEnvCutoff(pos + length, baseCutoff, env.depth) * driftMul * offsetMul
 
-                computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
-                computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
+                sweep.prepare(cutoffStart, cutoffEnd, qVal, sr, length)
 
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
+                val c = sweep.start
 
-                if (length > 0) {
-                    val invLen = 1.0 / length
-                    a1Step = (coefsEnd.a1 - coefs.a1) * invLen
-                    a2Step = (coefsEnd.a2 - coefs.a2) * invLen
-                    a3Step = (coefsEnd.a3 - coefs.a3) * invLen
-                    kStep = (coefsEnd.k - coefs.k) * invLen
-                    gStep = (coefsEnd.g - coefs.g) * invLen
-                }
+                a1 = c.a1; a2 = c.a2; a3 = c.a3; k = c.k; g = c.g
+                a1Step = sweep.a1Step; a2Step = sweep.a2Step; a3Step = sweep.a3Step; kStep = sweep.kStep; gStep = sweep.gStep
                 initialized = true
-            } else if (!initialized || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
-                computeSvfCoeffs(baseCutoff, qVal, sr, coefs)
+            } else if (!initialized || hasDrift || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
+                // `hasDrift` is false without a lane, so the cheap latch below is untouched for
+                // every node that does not humanize; with one, the cutoff moves every block and
+                // there is nothing to latch.
+                computeSvfCoeffs(baseCutoff * driftMul * offsetMul, qVal, sr, coefs)
                 a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
@@ -179,6 +220,17 @@ private class SvfIgnitor(
             // not per sample. LOWPASS/HIGHPASS additionally branch on `saturate` (analog>0)
             // to switch between the linear closed-form math and the analog-style state-dependent
             // damping path (per-sample diode-pair polynomial + explicit-feedback solve).
+            //
+            // The saturated branch, in its own words (moved here from the retired strip `SvfLPF`,
+            // phase 3 step 9):
+            //  - Convention conversion, why the factor of 2: the OB-X-style filter parameterises
+            //    resonance with `R`, where `2R` corresponds to our `k` (damping vs. inverse quality
+            //    factor). A feedback term `2 * (R + tCfb)` therefore maps onto our `k + 2 * tCfb`,
+            //    hence `kEff = k + 2 * driveScale * tCfb`.
+            //  - Why it works where tanh failed: the signal stays linear and only the DAMPING grows
+            //    with the state, so the resonance compresses and the filter stays bounded. A tanh
+            //    capping the feedback signal does the opposite (less damping, runaway). The failed
+            //    attempts are recorded in `audio/MEMORY.md`, "Filter Saturation Dead-End".
             when (mode) {
                 SvfMode.LOWPASS -> {
                     if (saturate) {
@@ -242,7 +294,7 @@ private class SvfIgnitor(
                     // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
                     // q is a pure width control, matching SvfBPF and the fused EqCore
                     // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
-                    // per-block q, so kStep is structurally 0 — no mid-ramp mismatch.
+                    // per-block q, so kStep is structurally 0: no mid-sweep mismatch.
                     for (i in ctx.offset until end) {
                         val v0 = input[i]
                         val v3 = v0 - ic2eq
@@ -302,12 +354,29 @@ fun Ignitor.svf(
  * fused and the chained door bit-identical: a literal folds into the value on both sides
  * (no `safeOut` on either), and anything else goes through [times] on both sides (so both
  * get the same block-constant fold, the same `safeOut` scrubbing and the same
- * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would
- * be safe as far as `oscParams` goes — substitution already happened in `IgnitorDslRuntime`
- * — but it would skip the `safeOut` the fused door applies, so a non-finite oscparam q would
- * land on the SVF's Butterworth 0.7071 fallback on one door and on the scrubbed value's clamp
- * on the other: the 0.1 floor for NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an
- * infinity to a finite SAFE_MAX). Same program, two filters.
+ * `controlRateValueOrNull` contract). Folding a [ParamIgnitor]'s value here instead would skip
+ * the `safeOut` the fused door applies, so a non-finite q would land on the SVF's Butterworth
+ * 0.7071 fallback on one door and on the scrubbed value's clamp on the other: the 0.1 floor for
+ * NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an infinity to a finite SAFE_MAX). Same
+ * program, two filters.
+ *
+ * Where a non-finite q still comes from, since 2026-09-19: NOT from `oscParams`, whose values the
+ * `IgnitorDsl.Param` leaf reads as unset when they are non-finite (`IgnitorDslRuntime`). Two live
+ * routes remain, which is why this is not dead code (both verified by a caller search and a
+ * render on 2026-09-19):
+ *
+ *  - an authored `IgnitorDsl.Param` whose DEFAULT is non-finite. A default is the instrument's own
+ *    declaration and is deliberately not scrubbed; `IgnitorDslOptimizerRenderSpec`'s C5 rows drive
+ *    exactly this.
+ *  - ARITHMETIC in a q expression. `Plus` and `Minus` are clamp-free by contract (see
+ *    `PlusIgnitor`), so two finite operands can overflow: `Osc.param("a", 1e308).plus(...)` as a q
+ *    renders sample for sample what a `+Infinity` q renders.
+ *
+ * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its
+ * wrappers) would be a third, but no production caller does that today: `scaledBy` has exactly two
+ * callers, both in `IgnitorDslRuntime`'s passes cascade and both fed `q.noMod()`. A voice's filter q
+ * reaches the tree as a slot (`classic()`), never as a `FilterDef`; the ignitor package does not
+ * reference `FilterDef`.
  */
 internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
     factor == 1.0 -> this
@@ -327,7 +396,8 @@ fun Ignitor.lowpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Lowpass filter (convenience overload with fixed values).
@@ -352,7 +422,8 @@ fun Ignitor.highpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Highpass filter (convenience overload with fixed values).
@@ -377,7 +448,8 @@ fun Ignitor.bandpass(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog, humanize)
 
 /**
  * Bandpass filter (convenience overload with fixed values).
@@ -402,7 +474,8 @@ fun Ignitor.notch(
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
     analog: Ignitor = ParamIgnitor("analog", 0.0),
-): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
+    humanize: FilterHumanization? = null,
+): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog, humanize)
 
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).
@@ -425,8 +498,8 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Filte
  * Gentler slope than the SVF (6 dB/oct vs 12 dB/oct). Good for subtle tone shaping.
  * Cutoff is read once per block (control rate).
  *
- * Same matched-Z one-pole leaky integrator as `LowPassHighPassFilters.OnePoleLPF` —
- * coefficient math is shared via `onePoleLpfCoeff`. See that file for review notes.
+ * The bilinear-prewarped one-pole leaky integrator, `y += a·(x − y)` with `a = K/(1+K)`: the coefficient
+ * math is `onePoleLpfCoeff` in `filters/LowPassHighPassFilters.kt`, whose header holds the review notes.
  *
  * Class form (not SAM lambda) so the integrator state lives in a class field rather
  * than a closure-captured `var` (Kotlin/JS ObjectRef). Hot loop snapshots state into
@@ -477,8 +550,8 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
  * Gentler slope than the SVF (6 dB/oct). Good for removing low-end rumble.
  * Cutoff is read once per block (control rate).
  *
- * Same canonical bilinear topology as `LowPassHighPassFilters.OnePoleHPF` — see that
- * file's header for the review history and topology rationale. Class form (not SAM
+ * The canonical bilinear topology `y = b0·(x − xPrev) + a1·y`: see the header of
+ * `filters/LowPassHighPassFilters.kt` for the review history and topology rationale. Class form (not SAM
  * lambda) so state stays in class fields, snapshotted into locals for the hot loop.
  *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
@@ -603,78 +676,33 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Internal: filter/FM envelope computation — the ONE shared envelope law
+// Internal: the filter and FM envelopes' block setup, one place for both node hosts
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Computes the ADSR envelope level at a given position (attack/decay/sustain — no release).
- *
- * Used to determine the actual level at any point during the gate-on phase,
- * including at gate-end for correct release-start calculation.
+ * Prepares this [EnvelopeCore] for one block of a MODULATION envelope on the Ignitor side: the filter
+ * cutoff envelope (`SvfIgnitor`, which reads [EnvelopeCore.at] at the block's two ends) and the FM index
+ * envelope (`FmModIgnitor`, which reads it per sample). The level is the core's; each host clamps it to
+ * [0, 1], the depth range of both destinations.
  */
-private fun envelopeLevelAtPosition(
-    absPos: Int,
-    attackFrames: Int,
-    decayFrames: Int,
-    sustainLevel: Double,
-): Double = when {
-    absPos < attackFrames -> {
-        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        absPos * attRate
-    }
-
-    absPos < attackFrames + decayFrames -> {
-        val decPos = absPos - attackFrames
-        val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
-        1.0 - (decPos * decRate)
-    }
-
-    else -> sustainLevel
-}
-
-/**
- * Computes a simple ADSR envelope value at the current block position.
- * Sample-addressable via [sampleOffsetWithinBlock]. Two calling patterns exist and BOTH are
- * load-bearing: `SvfIgnitor` evaluates it at a block's endpoints (its control-rate coefficient
- * chord), and `FmModIgnitor` calls it PER SAMPLE (block-framing ledger E1). Do NOT memoize the
- * result per block or hoist a call out of a per-sample loop — that reintroduces the zero-FM-head
- * defect, and `BlockFramingInvarianceSpec`'s "fm with envelope" case goes red. If per-sample cost
- * ever shows in a profile, the agreed shape is a per-block precompute (frames, rates,
- * levelAtGateEnd) plus a thin `at(absPos)` body — ONE law with two entry points, never a second
- * copy of this math.
- *
- * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
- * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
- */
-internal fun computeFilterEnvelope(
+internal fun EnvelopeCore.prepareModEnvelope(
     ctx: IgniteContext,
     attackSec: Double,
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
-    sampleOffsetWithinBlock: Int = 0,
-): Double {
-    val attackFrames = (attackSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val decayFrames = (decaySec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val releaseFrames = (releaseSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
-    val clampedSustain = sustainLevel.coerceIn(0.0, 1.0)
-
-    val absPos = ctx.voiceElapsedFrames + sampleOffsetWithinBlock
-    val gateEndPos = ctx.gateEndFrame
-
-    val envValue = if (absPos >= gateEndPos) {
-        val levelAtGateEnd = envelopeLevelAtPosition(gateEndPos, attackFrames, decayFrames, clampedSustain)
-        val relPos = absPos - gateEndPos
-        // Divides by N, not N-1 like the CURVE evaluators (releaseProgressDenom), so this ramp
-        // ends at levelAtGateEnd/N rather than 0 on the last rendered frame. Deliberate: this is a
-        // straight LINEAR ramp with no curve endpoint to land on, and it drives a filter cutoff, so
-        // the residual ends a sweep a hair above its floor rather than leaving a gain step.
-        // Changing it would move filter-sweep sound in existing songs for no click benefit.
-        val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
-        levelAtGateEnd - (relPos * relRate)
-    } else {
-        envelopeLevelAtPosition(absPos, attackFrames, decayFrames, clampedSustain)
-    }
-
-    return envValue.coerceIn(0.0, 1.0)
+    attackCurve: AdsrCurve,
+    decayCurve: AdsrCurve,
+    releaseCurve: AdsrCurve,
+) {
+    prepare(
+        attackFrames = attackSec * ctx.sampleRate,
+        decayFrames = decaySec * ctx.sampleRate,
+        sustainLevel = sustainLevel,
+        releaseFrames = releaseSec * ctx.sampleRate,
+        gateEndPos = ctx.gateEndFrame,
+        attackCurve = attackCurve,
+        decayCurve = decayCurve,
+        releaseCurve = releaseCurve,
+    )
 }

@@ -10,6 +10,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.coercePasses
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.OPTIMIZER_PARITY
 import io.peekandpoke.klang.audio_bridge.optimize
@@ -41,6 +43,8 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         var adversarialConstants = 0
         var hintsOff = 0
         var affines = 0
+        var sweptFilters = 0
+        var humanizedFilters = 0
     }
 
     fun ctx(random: Random): IgniteContext = IgniteContext(
@@ -127,7 +131,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
 
         val inner = tree(r, depth - 1, pool, stats)
         val k = IgnitorDsl.Constant(constant(r, stats))
-        val node: IgnitorDsl = when (r.nextInt(25)) {
+        val node: IgnitorDsl = when (r.nextInt(27)) {
             0 -> IgnitorDsl.Times(inner, k)
             1 -> IgnitorDsl.Times(k, inner)
             2 -> IgnitorDsl.Plus(inner, k)
@@ -142,9 +146,9 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             11 -> IgnitorDsl.Highpass(inner, freq = IgnitorDsl.Constant(50.0 + r.nextDouble() * 2000.0))
             12 -> IgnitorDsl.Bandpass(inner, freq = IgnitorDsl.Constant(200.0 + r.nextDouble() * 4000.0))
             13 -> IgnitorDsl.Notch(inner, freq = IgnitorDsl.Constant(200.0 + r.nextDouble() * 4000.0))
-            14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = 1 + r.nextInt(3))
+            14 -> IgnitorDsl.Lowpass(inner, freq = IgnitorDsl.Param("cut", 1000.0), passes = IgnitorDsl.Constant((1 + r.nextInt(3)).toDouble()))
             15 -> IgnitorDsl.Drive(inner, amount = IgnitorDsl.Constant(r.nextDouble()))
-            16 -> IgnitorDsl.Shape(inner, shape = listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)])
+            16 -> inner.shape(listOf("soft", "tube", "hard", "asym")[r.nextInt(4)], oversample = listOf(0, 2, 4)[r.nextInt(3)])
             17 -> IgnitorDsl.Adsr(inner, attackSec = IgnitorDsl.Constant(0.001 + r.nextDouble() * 0.05), decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.2))
             18 -> IgnitorDsl.Clamp(inner, lo = IgnitorDsl.Constant(-1.0), hi = IgnitorDsl.Constant(1.0))
             19 -> IgnitorDsl.Lerp(inner, tree(r, depth - 1, pool, stats), t = k)
@@ -173,6 +177,48 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
             }
 
             23 -> IgnitorDsl.Lowpass(IgnitorDsl.Times(inner, k), freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 5000.0))
+
+            // Phase 3 step 3a, and the two arms below buy DIFFERENT things, which is worth
+            // saying because it is easy to assume they are a pair.
+            //
+            // Arm 24, the swept filter, does reach the `env.isLiteralZero()` refusal: without
+            // it the filter fuses into an `EqSection`, the sweep disappears and the render
+            // leaves the parity margin.
+            //
+            // Arm 25, the humanized one, does NOT reach the `!humanize` clause and cannot: its
+            // `analog` is non-zero with probability 1 - 2^-53, so `analog.isLiteralZero()` refuses
+            // first
+            // and deleting `&& !humanize` from all four arms leaves this spec green. (Nor would
+            // a literal-zero analog help: at `analog = 0` the lane and the tolerance are inert,
+            // so a fused humanized filter renders the same anyway.) The refusal clause's home is
+            // the dedicated row in `IgnitorDslOptimizerSpec`, "humanize never fuses". What arm 25
+            // buys here is the other half: a humanized filter renders identically authored and
+            // optimized, and its four build-time rng draws stay aligned across the two streams,
+            // which is exactly what a fuzz over both trees can see and a shape spec cannot.
+            24 -> {
+                stats.sweptFilters++
+
+                IgnitorDsl.Lowpass(
+                    inner,
+                    freq = IgnitorDsl.Constant(300.0 + r.nextDouble() * 4000.0),
+                    env = IgnitorDsl.Constant(-24.0 + r.nextDouble() * 48.0),
+                    attackSec = IgnitorDsl.Constant(r.nextDouble() * 0.05),
+                    decaySec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                    sustainLevel = IgnitorDsl.Constant(r.nextDouble()),
+                    releaseSec = IgnitorDsl.Constant(r.nextDouble() * 0.3),
+                )
+            }
+
+            25 -> {
+                stats.humanizedFilters++
+
+                IgnitorDsl.Highpass(
+                    inner,
+                    freq = IgnitorDsl.Constant(50.0 + r.nextDouble() * 1500.0),
+                    analog = IgnitorDsl.Constant(r.nextDouble() * 8.0),
+                    humanize = true,
+                )
+            }
             // the optimizer's own node, authored (a wire may carry one; a fold must compose with it)
             else -> {
                 stats.affines++
@@ -230,8 +276,8 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
                         is IgnitorDsl.Eq -> node.sections.size
                         // a filter with passes = N renders N cascaded stages, which the pass
                         // expands into N sections: the same work before and after
-                        is IgnitorDsl.Lowpass -> node.passes.coerceAtLeast(1)
-                        is IgnitorDsl.Highpass -> node.passes.coerceAtLeast(1)
+                        is IgnitorDsl.Lowpass -> coercePasses((node.passes as IgnitorDsl.Constant).value)
+                        is IgnitorDsl.Highpass -> coercePasses((node.passes as IgnitorDsl.Constant).value)
                         else -> 1
                     }
 
@@ -323,5 +369,7 @@ class IgnitorDslOptimizerFuzzSpec : StringSpec({
         withClue("adversarial constants ${stats.adversarialConstants}") { (stats.adversarialConstants >= 100) shouldBe true }
         withClue("hints off ${stats.hintsOff}") { (stats.hintsOff >= 5) shouldBe true }
         withClue("affines ${stats.affines}") { (stats.affines >= 20) shouldBe true }
+        withClue("swept filters ${stats.sweptFilters}") { (stats.sweptFilters >= 20) shouldBe true }
+        withClue("humanized filters ${stats.humanizedFilters}") { (stats.humanizedFilters >= 20) shouldBe true }
     }
 })

@@ -30,6 +30,8 @@ data class CallExpressionAtResult(
     val cursorNodeFrom: Int = argFrom,
     /** End offset of the cursor node. */
     val cursorNodeTo: Int = argTo,
+    /** The argument's name when it is written as `name = value`, null for a positional one. */
+    val argName: String? = null,
 )
 
 /**
@@ -88,7 +90,8 @@ class AstIndex private constructor(
                 // Check if 'node' is (or is an ancestor of) one of the call's arguments
                 val argIndex = findArgIndex(node, parent)
                 if (argIndex >= 0) {
-                    val argExpr = parent.arguments[argIndex].value
+                    val arg = parent.arguments[argIndex]
+                    val argExpr = arg.value
                     val argRange = offsetMap[argExpr]
                     return CallExpressionAtResult(
                         call = parent,
@@ -100,6 +103,7 @@ class AstIndex private constructor(
                         cursorNode = deepestNode,
                         cursorNodeFrom = deepestRange?.first ?: pos,
                         cursorNodeTo = deepestRange?.let { it.last + 1 } ?: pos,
+                        argName = (arg as? Argument.Named)?.name,
                     )
                 }
             }

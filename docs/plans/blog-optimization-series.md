@@ -295,7 +295,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   (`docs/plans/unified-eq.md` opens with "Der Schmetterling runs on an older Fairphone 4 again";
   the D0 baseline `316cc8d8` is 2026-08-19).
 - **Artifacts.** `docs/plans/unified-eq.md` (goal, the on-device notes of 2026-08-19 and 2026-08-20),
-  `docs/plans/resource-warehouse.md` (the four Fairphone measurements of 2026-09-03/04),
+  `docs/tasks-archive/2026-09/20260927-resource-warehouse.md` (the four Fairphone measurements of 2026-09-03/04),
   `docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md` ("can barely
   run", 2026-09-15), `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md` (the first
   song analysis), `audio_benchmark/README.md`, `src/jvmMain/kotlin/SongBenchmark*.kt`,
@@ -357,7 +357,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   best paragraph: a hand-written `fastCopy` via `Object.assign` was 22x SLOWER on V8 than the
   constructor-based `copy()`.
 - **Artifacts.** `docs/tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md`,
-  `sprudel/MEMORY.md`, `docs/whitepaper/klang-whitepaper.html` (the 17x line), commits
+  `sprudel/MEMORY.md`, `src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
   `e9fa560c` .. `c303c333`.
 - **Mechanics.** (opus) run `VoiceDataCopyBenchmark` today on JVM and node
   (`:audio_benchmark:jvmRun`, `:jsNodeProductionRun`); it prints before the captured section.
@@ -458,7 +458,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   pool, and the warmup vocabulary that pre-builds and JITs every node kind before the first note.
   Four Fairphone measurements in two days, each moving the stall somewhere else until it was
   gone.
-- **Artifacts.** `docs/plans/resource-warehouse.md` (the whole plan is a diary of the two days
+- **Artifacts.** `docs/tasks-archive/2026-09/20260927-resource-warehouse.md` (the whole plan is a diary of the two days
   with the four device notes), `audio/MEMORY.md`, `docs/tasks/future/first-run-spike-v2.md`
   (what remains), commits `111c7355` .. `d3fb76ba`.
 - **Mechanics.** (haiku) the byte arithmetic (7.68 MB, 8 orbits, 63 MB) and the size-class
@@ -615,7 +615,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   tags, the song's work across its snapshots on one engine, and the phone timeline with the
   song's work at each date. The sentence the post exists for: the live song's RTF rose over the
   summer AND the engine's cost per pass fell, and both are true. What is open
-  (`docs/tasks/future/ignitor-optimizer-open-items.md`, `affine-chain-fusion.md`,
+  (`docs/tasks/future/ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimizer-on-the-frontend.md`, `high-performance-audio-backend.md`) and what the next
   complexity increase will cost at the current cost per pass.
 - **Mechanics, the engine axis** (opus, the big one). For each tag in the map: `git worktree
@@ -631,6 +631,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   fixed harness loop into the older worktree for the run. Tags whose build fails with today's
   toolchain are recorded as such, not skipped silently. Expect a day of wall clock; run it last,
   after every other post is drafted.
+  (**2026-09-25:** `FrozenSongs`' Der Schmetterling was REPLACED by a fresh snapshot (`derSchmetterling_2026_09_25`, phase 3 D4). At HEAD the song axis now renders the 09-25 text; the 2026-07-03 text lives in git (`0cc351a2` and earlier), so a fixed-work comparison across tags must check out that const explicitly.)
 - **Mechanics, the song axis** (opus). At HEAD only: render every snapshot of Der Schmetterling
   the repository can reproduce (the 2026-07-03 frozen text; the live text at each tag from
   `git show <tag>:src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`, migrated where a

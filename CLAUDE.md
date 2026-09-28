@@ -36,7 +36,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Every DSL value is immutable at construction time; runtime mutability is engine-internal (sprudel voice data is the deliberate exception).             | 2026-09-05 | `/dsl-design` §1                          |
 | No boxed types anywhere: no `Long`/`ULong`/`Byte`/`Short`/`Char`; `Int` or `Double`.                                                                    | 2026-04    | `/code-style` §5                          |
 | The Motor stays raw: no safety clamp on an audio parameter without asking. Coerce user-reachable inputs, never `require()` them.                       | 2026-05    | `/dsl-design` §6, `/code-style` §21       |
-| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, `docs/tasks/copyright-audit-00-overview.md` |
+| Licensing: AGPL v3 with `AUTHORS.MD`; `tones/` stays MIT and never gets the AGPL header. Commercial use waits for copyright-audit task 07 (lawyer).    | 2026-06-24 | `LICENSE`, `docs/tasks/copyright-audit-07-control-vocabulary-legal-review.md`, `docs/tasks-archive/2026-09/20260927-copyright-audit-00-overview.md` |
 | Naming: "Klangmotor" / "Motor" with a plain o (the umlaut was retired 2026-08-25, "too much ego"); historic diary and strategist records keep whatever they say; Motörhead keeps its umlaut. | 2026-08-25 | `/code-style` §17 (header)                |
 
 ### Rule
@@ -48,7 +48,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Two doors, one DSL: every surface addition lands in KlangScript stdlib AND Kotlin in the same deliverable, with a door-parity spec. | 2026-08 | `/dsl-design` §3                                |
 | Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
 | One word per concept end to end; a replaced surface is removed, not deprecated.                                              | 2026-08    | `/dsl-design` §5                                |
-| Door shape: knobs on a builder behind a `configure` lambda, construction inputs on the door, `configure` last and optional. | 2026-09-05 | `/dsl-design` §2, `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md` |
+| Door shape: musical inputs on the door (`wet` always first), secondary knobs on a builder behind a `configure` lambda that is last and always optional, dynamics stages flat, one shape per concept across the DSLs. | 2026-09-05, refined 2026-09-23 | `/dsl-design` §2, `.claude/skills/dsl-design/door-shapes.md` |
 | Wire types over enums: sealed `@WireName` hierarchies for wire-visible distinctions; enum only for a closed param-less set.  | 2026-08    | `/dsl-design` §7                                |
 | KlangScript stdlib follows Kotlin conventions, not JavaScript (naming, argument style, `name = value` named args).           | 2026-05    | `klangscript/MEMORY.md` Design Decisions        |
 | Code style: braces always, blank lines around `if`, flat directories, no FQCN, exhaustive `when`, NaN-guard comment, no allocation or exceptions in hot paths, flush IIR state, copyright header. | 2026-04 | `/code-style` |
@@ -57,6 +57,9 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klangbuch exported parts carry no arrangement timing and no scale; both live at song level.                                  | 2026-08-20 | `sprudel/MEMORY.md` Lessons                     |
 | Plans live in `docs/plans/`, tasks in `docs/tasks/`, finished tasks in `docs/tasks-archive/<month>/`.                        | 2026-06    | `docs/tasks/_priorities.md`                     |
 | Commit completed, reviewed steps on the working branch; leave work uncommitted only when the maintainer asks to inspect first. | 2026-09-06 | this file                                     |
+| Every commit an AI agent wrote or co-wrote carries a `Co-Authored-By:` trailer naming the model (e.g. `Claude Opus 5.5 (1M context) <noreply@anthropic.com>`); a commit the maintainer wrote alone carries none. The trailer is the provenance record funding applications rely on, so it is never dropped, not even for a one-line fix. Commits before 2026-08 are inconsistent: `docs/funding/gaps.md` G4. | 2026-09-24 | this file |
+| Compound doors fill per param at the door: a call that names a stage writes every companion it left out and the event has not set, from the constant in `audio_bridge/constants/`; an explicit value is never overwritten. A stage with a name knob is named only by that knob, and a tail-only call never invents it; a stage without one is named by any of its knobs. Which door is which: the two closed lists in `/dsl-design` §4, the one home of this rule's text, never copied. | 2026-09-18 | `/dsl-design` §4, checklist 11 and 12 |
+| Nothing in the backend or the frontend allocates without a way to clean it up: per-playback state lives in a storage the playback owns or in a per-playbackId registry that is freed when the playback dies; process-wide maps that grow per edit are debt (tracked in `docs/plans/signal-flow-redesign.md` §11). | 2026-09-17 | this file |
 
 ### Guideline
 
@@ -80,7 +83,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Kotest: one unquoted `--tests` FQCN per Gradle run; treat `No tests found` as a script error in any expect-red runner.      | 2026-07-03 | `/review-loop` Gotchas                     |
 | A frontend watcher blocks Gradle only in continuous mode (`-t` / `--continuous`); a plain `jsBrowserDevelopmentRun` does not. | 2026-09-09 | `/review-loop` Gotchas                     |
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
-| Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the master limiter lookahead is master-only. | 2026-05 | `/review-loop` templates, `docs/tasks/audio-backend-audit.md` §7 |
+| Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the house limiter's 5 ms lookahead (`MasterStage`) is always on and not authorable, and an authored lookahead (the Katalyst `compressor`/`limiter` `lookahead`, fixed per chain, at most 50 ms) makes its orbit or playback late by it, uncompensated, by the author's choice. | 2026-05, narrowed 2026-09-27 | `/review-loop` templates, `.claude/skills/review-loop/audio-constraints.md` |
 | Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
 | Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` |
 | Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
@@ -89,7 +92,10 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 ### Retired, do not restore or cite
 
 `klangblocks` (removed 2026-08-23, never user-visible); the `Motör` spelling; the sub-type method
-chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the single
+chain on oscillators (`Osc.supersaw().voices(9)`, gone 2026-09-05); `MasterFx.*` doors; the Master DSL (gone 2026-09-28, phase 3 step 12 C5: the master is the Katalyst at the
+output position, `master(Katalyst(k => ...))`): `MasterDsl`, `MasterStageDsl`, `MasterValue`, `MasterDslIdentity`,
+`MasterRegistry`, `Cmd.RegisterMaster` (`register-master`), the script `Master` object and `Master.default()`,
+`MasterBuilders`, `MasterChain` (gone in C3) and the C3 shim `MasterDslShim`; the single
 envelope doors `attack()`, `decay()`, `sustain()`, `release()` (gone 2026-09-07, `adsr(attack = ...)`
 sets a slot and `adsr.attack` reads it); the per-knob effect doors and their aliases (`roomWet`,
 `roomsize`/`rsize`/`sz`/`size`, `roomfade`, `roomlp`, `roomdim`, `delayWet`, `delaytime`, `delayfeedback`/`delayfb`,
@@ -108,7 +114,30 @@ stages as slots, `bpf` and `notch` the same without `passes`); the singular `ads
 `fmdecay`/`fmdec`, `fmsustain`/`fmsus`, `duckorbit`, `duckattack`/`duckatt`, `duckdepth`, the pattern-level `voices`, `spread`, `panSpread`
 (the ignitor builders keep their own `voices()`/`spread()`),
 `vowelWet`, `vowelFloor`, `bodyWet`, `bodyFloor` (gone 2026-09-07: `compressor`, `unison`, `duck`, `vibrato`, `penv`, `fm`,
-`vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). The spelling
+`vowel`, `body` carry them as slots; `comp`, `uni`, `vib`, `pamt` stay). The `penv` slots `curve` and
+`anchor` with the wire fields `pCurve` and `pAnchor` (gone 2026-09-25, phase 3 step 5b c1: `penv(amount, attack,
+decay, sustain, release)` has a real release, `penvCurves(attack, decay, release)` shapes it, `pSustain` is the wire word). The Pipeline DSL and the voice strip (gone 2026-09-27, phase 3 step 9: every voice
+is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`, `PipelineDsl.modern`, the script
+`Pipeline(...)` / `Pipeline.modern(...)` / `Pipeline.build(...)` with `PipelineBuilder`, `PipelineVcaBuilder`,
+`PipelineFilterBuilder`, `tuneVca`, `tuneFilter`, sprudel `.pipeline()` and the `pipeline(...)` mapper, `PipelineValue`,
+`PipelineRegistry`, `PipelinePreset`, `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
+`KlangPatternEvent.pipeline`, the strip's `FilterPipelineBuilder`, `EnvelopeRenderer` (the strip VCA),
+`FilterModRenderer`, `AudioFilterRenderer`, `CrushRenderer`, `CoarseRenderer`, `DistortionRenderer`, `TremoloRenderer`,
+`StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`
+and `Envelope.declick` (`Voice.Envelope` itself stays: FM and the pitch envelope use it), and
+the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` (the `IgnitorDsl.endsInClassic()` tag
+stays); and the strip-only filter classes `SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`, `createLPF` / `createHPF`
+/ `createBPF` / `createNotch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()` and `AudioFilter.Tunable`
+(the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The typed `VoiceData` fields
+that no reader was left for (gone 2026-09-27, phase 3 step 9 (b): a voice door is a `classic()` slot in `oscParams`, an
+orbit stage a `katalystParams` slot): `scale`, `filters`, `adsr`, `distort`, `distortShape`, `distortOversample`,
+`coarse`, `coarseOversample`, `crush`, `crushOversample`, `phaser`, `phaserDepth`, `phaserCenter`, `phaserSweep`,
+`phaserFloor`, `tremoloSync`, `tremoloDepth`, `tremoloSkew`, `tremoloPhase`, `tremoloShape`, `cutoff`, `hcutoff`, `bandf`,
+`resonance`, `begin`, `end`, `speed`, `loop`, `loopBegin`, `loopEnd`; with them `FilterDefs`, `FilterDef.LowPass` /
+`HighPass` / `BandPass` / `Notch`, the bridge `FilterEnvDef`, `AdsrDef.on` and the `AdsrDef` merge and resolve API (`mergeWith`, `resolve`,
+`Resolved`, `empty`, `defaultSynth`; the voice envelope defaults are `VOICE_ADSR_*`) (`FilterDef.Formant` / `Body` stay as the
+orbit's band carriers, `AdsrDef` for sample metadata), and the sprudel doors `loopBegin` / `loopb` / `loopEnd` / `loope`
+(they never reached the engine; a loop region is `loop().begin(x).end(y)`). The spelling
 `@KlangScript.Method(name = "invoke")` for a callable object (replaced 2026-09-07 by `@KlangScript.Invoke`; KSP
 refuses the old one). The sprudel `lang/addons/` directory, the package
 `io.peekandpoke.klang.sprudel.lang.addons` and the `addon` doc tag (gone 2026-09-07: sprudel is not a Strudel port,
@@ -117,6 +146,15 @@ so "what Strudel does not have" named nothing a reader could use; every DSL file
 `TutorialScope` and the tutorial field `scope` (renamed 2026-09-08 to `TutorialDepth` / `depth`, with
 `scopeLabel`/`scopeColor` and the `?scope=` URL parameter: Quick/Standard/DeepDive is a depth ladder, and
 "scope" now means one thing only, WHERE audio runs, see `KlangScope` and the `@scope` KDoc tag).
+The resonator MORPH (`ResonatorBank.morphTo`, the `MORPH` flags on the body and vowel hosts,
+`BaseSvf.retune` and `resetState`, the split bank and wrap factories, `MORPH_CAPACITY`) and
+`KatalystFilterSwap.MAX_BANKS` with its outgoing pool and drop rule, both gone 2026-09-20: the
+maintainer listened and rejected the morph (travelling a bank's resonances is an audible filter
+sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one parking slot holding a
+config, latest wins, at `BANK_CROSSFADE_SECONDS`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
+channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
+`velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
+`docs/plans/signal-flow-redesign.md` section 6).
 
 ## Available Agent
 

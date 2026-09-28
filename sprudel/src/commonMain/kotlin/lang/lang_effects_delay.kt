@@ -18,32 +18,33 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * A delay slot was just written on this event: every delay slot still unset takes the shared default
- * (`constants/SendEffectDefaults.kt`, the same the master delay uses), so one call sets them all. A slot
- * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
- * a mapper on a slot that was never set) is not filled.
+ * Fills the delay stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * master delay uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
+ * every delay setter, because the delay has no name knob: `delay(time = 0.5)` fills `wet` and the
+ * echo is ON.
+ *
+ * The slots are the delay's only storage since Katalyst step 5b-3 (the voice fields left the
+ * wire and `SprudelVoiceData`): the orbit's line reads them, and so do the `delay.*` accessors.
+ *
+ * Byte-identical to what the engine did with an unset field until then: `VoiceFactory`
+ * substituted exactly these constants.
+ *
+ * The HEAD setter, the wet, is the one setter here a bare call can reach with a null; it then
+ * writes nothing at all (`if (wet != null)`).
  */
 private fun SprudelVoiceData.fillDelayDefaults() {
-    if (delay == null) {
-        delay = DELAY_WET
-    }
+    val slots = katalystParamsOrNew()
 
-    if (delayTime == null) {
-        delayTime = DELAY_TIME_SECONDS
-    }
-
-    if (delayFeedback == null) {
-        delayFeedback = DELAY_FEEDBACK
-    }
-
-    if (delayCap == null) {
-        delayCap = DELAY_CAP
-    }
+    slots.setOrDefault("delay.wet", value = null, default = DELAY_WET)
+    slots.setOrDefault("delay.time", value = null, default = DELAY_TIME_SECONDS)
+    slots.setOrDefault("delay.feedback", value = null, default = DELAY_FEEDBACK)
+    slots.setOrDefault("delay.cap", value = null, default = DELAY_CAP)
 }
 
 // -- delay, the wet slot ---------------------------------------------------------------------------------------------
@@ -52,14 +53,14 @@ private val delayMutation = voiceSetter {
     val wet = it?.toString()?.toDoubleOrNull()
 
     if (wet != null) {
-        delay = wet
+        katalystParamsOrNew().set("delay.wet", wet)
         fillDelayDefaults()
     }
 }
 
 private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delay }, update = delayMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.wet") }, update = delayMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayMutation)
@@ -67,12 +68,15 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
 
 /**
- * The orbit delay: send, time, feedback and the feedback cap.
+ * The orbit delay: how much of the orbit is echoed, the time, the feedback and the feedback cap.
  *
- * One delay line per orbit, so `time`, `feedback` and `cap` are set once for everyone by the
- * orbit's owning voice. `wet` is the exception: it is a per-voice
- * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its
- * own delay by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
+ * One delay per [orbit bus](/manuals/lexikon/orbit-bus), and all four are set once for everyone by
+ * the orbit's owning voice. `wet` is how much of the orbit goes into the delay: the echoes are
+ * added on top of the dry sound, and every voice on the orbit is echoed alike. So a pattern that
+ * should stay dry, or echo by a different amount, goes on an orbit of its own. When another pattern
+ * with a delay takes the orbit over, `wet` and `feedback` move smoothly to its values, and a new
+ * time crossfades to the new echo; a pattern without one switches the delay off, which does not
+ * fade yet (the echoes already sent ring out).
  *
  * The call sets every slot: the ones you leave out take the same default as on the master delay,
  * wet 0.25, time 0.25 s, feedback 0.3 and cap 1, unless an earlier call already set them. So a bare
@@ -86,18 +90,18 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
  *
  * ```KlangScript(Playable)
- * s("hh*4").delay(0.3, 0.25, 0.4)                                        // send, time, feedback
+ * s("hh*4").delay(0.3, 0.25, 0.4)                                        // wet, time, feedback
  * ```
  *
  * ```KlangScript(Playable)
- * s("hh*4").delay(0.3, 0.25).delay(wet = mul("1 0 1 0"))                  // delay on every other hat only
+ * stack(s("hh ~ hh ~").delay(0.3, 0.25), s("~ hh ~ hh").orbit(1))        // delay on every other hat only
  * ```
  *
  * ```KlangScript(Playable)
- * s("sd sd").delay("0.1 0.4", 0.25).reverb(wet = delay.wet, size = 4)       // as much reverb as delay
+ * s("sd sd").delay("<0.1 0.4>", 0.25).reverb(wet = delay.wet, size = 4)     // as much reverb as delay
  * ```
  *
- * @param wet Send into the orbit delay, 0 to 1, default 0.25. Per voice.
+ * @param wet How much of the orbit goes into the delay, 0 to 1, default 0.25. Orbit-wide.
  * @param time Delay time in seconds, default 0.25. Orbit-wide.
  * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Orbit-wide.
  * @param cap Ceiling the repeats may not exceed, default 1. Orbit-wide.
@@ -105,7 +109,7 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @param-tool time SprudelDelayTimeEditor, SprudelDelayTimeSequenceEditor
  * @param-tool feedback SprudelDelayFeedbackEditor, SprudelDelayFeedbackSequenceEditor
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags delay, wet, time, feedback, cap
  */
@@ -155,7 +159,7 @@ fun PatternMapperFn.delay(
  * The `delay` object: `delay(...)` sets the slots, and each numeric slot reads back as a child,
  * `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`.
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags delay, accessor
  */
@@ -165,19 +169,19 @@ object delay {
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.delay }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.wet") }
 
     /** The time slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val time: FieldAccessor = FieldAccessor { it.delayTime }
+    val time: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.time") }
 
     /** The feedback slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val feedback: FieldAccessor = FieldAccessor { it.delayFeedback }
+    val feedback: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.feedback") }
 
     /** The cap slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val cap: FieldAccessor = FieldAccessor { it.delayCap }
+    val cap: FieldAccessor = FieldAccessor { it.katalystParams?.get("delay.cap") }
 
     /** The setter, see [SprudelPattern.delay]. */
     @KlangScript.Invoke
@@ -194,16 +198,17 @@ object delay {
 // -- delay.time ------------------------------------------------------------------------------------------------------
 
 private val delayTimeMutation = voiceSetter {
-    delayTime = it?.asDoubleOrNull()
+    val value = it?.asDoubleOrNull()
 
-    if (delayTime != null) {
+    if (value != null) {
+        katalystParamsOrNew().set("delay.time", value)
         fillDelayDefaults()
     }
 }
 
 private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayTime }, update = delayTimeMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.time") }, update = delayTimeMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayTimeMutation)
@@ -212,16 +217,17 @@ private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?
 // -- delay.feedback --------------------------------------------------------------------------------------------------
 
 private val delayFeedbackMutation = voiceSetter {
-    delayFeedback = it?.asDoubleOrNull()
+    val value = it?.asDoubleOrNull()
 
-    if (delayFeedback != null) {
+    if (value != null) {
+        katalystParamsOrNew().set("delay.feedback", value)
         fillDelayDefaults()
     }
 }
 
 private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayFeedback }, update = delayFeedbackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.feedback") }, update = delayFeedbackMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayFeedbackMutation)
@@ -230,16 +236,17 @@ private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<
 // -- delay.cap -------------------------------------------------------------------------------------------------------
 
 private val delayCapMutation = voiceSetter {
-    delayCap = it?.asDoubleOrNull()
+    val value = it?.asDoubleOrNull()
 
-    if (delayCap != null) {
+    if (value != null) {
+        katalystParamsOrNew().set("delay.cap", value)
         fillDelayDefaults()
     }
 }
 
 private fun applyDelayCap(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.delayCap }, update = delayCapMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("delay.cap") }, update = delayCapMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, delayCapMutation)

@@ -64,6 +64,12 @@ authored value visible in the DSL.
 
 ## 3. An `.adsrOff()` voice can refuse to end
 
+> **2026-09-27:** the `Vca` stage and the strip below retired in phase 3 step 9. `.adsrOff()` now switches
+> `classic()`'s envelope off (the slot `adsr.on`); the off envelope still reports its release as the voice's tail,
+> and for a tree with no envelope of its own the teardown fade (`VCA_OFF_TEARDOWN_FADE_SECONDS`) ends the voice
+> (the full rule: `BuiltIgnitor.endsInEnvelope`). The finding holds; the sketched
+> knob needs a new home (the `Vca` stage and `PipelineDsl.kt` named below are gone).
+
 `Vca(on = false)` renders a unity gate, so amplitude is entirely the ignitor's business. That is the
 point, and for anything with its own envelope or physics it ends on its own. **A plain sine or a
 self-oscillating filter never falls silent**, and nothing upstream will stop it: voice lifetime is
@@ -89,3 +95,39 @@ invites the second ADSR back in through the safety door.
 
 A cap never shapes anything. If it starts to, it has become an envelope and the parent task's whole
 argument has been undone.
+
+## 4. The FM index envelope has no `curves` (maintainer, 2026-09-23; shape updated 2026-09-25)
+
+Added 2026-09-27 from `ignitor-dsl-open-items.md` (archived as
+`docs/tasks-archive/2026-09/20260927-ignitor-dsl-open-items.md`); not one of the three measured findings
+above, but the same subject.
+
+The door-shape walk of 2026-09-23 (`.claude/skills/dsl-design/door-shapes.md` (the record's section 3b)) gave `fm` a builder with
+`adsr(attackSec, decaySec, sustainLevel, releaseSec)`, but NOT `adsrCurves`, because the FM index envelope
+has no curve support and a knob that does nothing is not offered. The maintainer wants it later, so `fm`
+speaks the same envelope vocabulary as the chain, the four filters and the pitch envelope.
+
+Needs: curve fields on `IgnitorDsl.Fm`, the curve law in `FmModIgnitor`'s envelope (today it runs
+`MOD_ENV_CURVE` on every stage, `PitchModFactories.kt`), and the envelope's own builder on the fm `adsr`,
+`adsr(a, d, s, r, e => e.curves(attack, decay, release))`, the shape every other envelope has since step
+3c, on both doors. Default: `MOD_ENV_CURVE` (decision D3, exponential; since step 5b (b) the FM envelope
+already reads it, so `sgbell` does not change).
+
+## 5. A per-curve bend (the retired `expK`, maintainer, 2026-09-25)
+
+Added 2026-09-28 when the phase 3 record was archived (`.claude/skills/dsl-design/door-shapes.md`
+(the record's section 3b), the envelope table's `expK` row). Phase 3 step 3c removed the `expK` knob; every exponential stage now
+bends at `ADSR_EXP_K` = 3 (`audio_bridge/src/commonMain/kotlin/constants/EnvelopeDefaults.kt`). The maintainer's words then: "maybe the
+user wants to set different k for each individual curve", a per-curve bend that is "its own later design". If it
+comes, it belongs on the envelope's own builder next to `curves(attack, decay, release)`, on every envelope at once
+(chain, filter, pitch, and FM once section 4 lands), one shape everywhere.
+
+## 6. A segment corner inside a block (the filter envelope's one weakness)
+
+Added 2026-09-28 from the same record (section 3, D3, "The SAMPLING"). Every modulation envelope that drives a
+filter is read at both ends of each 128-frame block and interpolated across it (`SvfCoeffSweep`, decision D3 (2)).
+Where an envelope segment boundary falls inside a block, the interpolation chords over the corner: at a 0.3 ms
+attack it cuts across the peak, and at an attack of 2 to 3 ms it measured level with the strip's old
+ramp-and-hold (1 to 26 dB closer to the ideal law at every other alignment tried).
+The fix, if ever wanted, is to split the block at the segment boundary, not to shorten the ramp. No one has heard
+a problem; measure and listen before building.

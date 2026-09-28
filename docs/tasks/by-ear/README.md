@@ -19,6 +19,8 @@ Created 2026-08-31.
 | File | What the ear work is |
 |---|---|
 | [`c3-depth-migration-flags.md`](c3-depth-migration-flags.md) | The C3 semitone-depth migration changed mid-sweep trajectories even where endpoints are exact. A ranked list of 5 song sites to check, deepest and slowest first (IrishLamentTechno hitStab, SoundOfTheSea "Waves", TetrisRemix sub, StrangerThings melody, then the fast percussive group). |
+| [`phase3-end-checkpoint.md`](phase3-end-checkpoint.md) | The phase 3 end checkpoint (2026-09-28): one listen, or declare the earlier checkpoints enough, then retire or regenerate `ClassicVoiceBaselineSpec` and `BuiltInVoiceMatrixSpec`, the strip's frozen sound. |
+| [`chain-swap-request-during-drain.md`](chain-swap-request-during-drain.md) | Phase 3 step 12 decision (g): a second chain edit (orbit or master) waits for the old chain's ring-out, up to about 24.5 s. Keep, cut the drain, or let several chains drain? |
 | [`analog-drift-ratio-tuning.md`](analog-drift-ratio-tuning.md) | Is Klang's `analog` character built the wrong way round? Real VCOs hold pitch well and VCF cutoff wanders; Klang does the opposite. An A/B ratio experiment on held/unison material: `(0.5 / 0.5)` then `(0.25 / 1.0)` then `(0.1 / 2.5)`. **Unblocked** since its precursor `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` shipped 2026-08-11. |
 
 ---

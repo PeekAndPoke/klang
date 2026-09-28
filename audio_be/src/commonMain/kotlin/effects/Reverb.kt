@@ -224,13 +224,18 @@ class Reverb(
      * configure door bounds it again), so unlike the delay there is no self-oscillating regime
      * to sentinel. The `|feedback| >= 1` arm exists only so the formula can never claim a
      * (test-rigged, production-unreachable) growing network drains.
+     *
+     * [size] is the one in force by default. A caller whose size is still MOVING passes the
+     * largest size the drain will run under instead (the orbit stage's knob glide, 2026-09-19):
+     * the proof needs a bound on the feedback of every revolution, and a countdown taken from a
+     * feedback that is still rising would end while the tail is audible.
      */
-    fun drainSamplesUntilSilent(peak: Double, threshold: Double = TAIL_THRESHOLD): Double {
+    fun drainSamplesUntilSilent(peak: Double, threshold: Double = TAIL_THRESHOLD, size: Double = this.size): Double {
         if (peak <= threshold) {
             return 0.0
         }
 
-        val fbAbs = abs(effectiveFeedback())
+        val fbAbs = abs(feedbackFor(size))
 
         if (fbAbs >= 1.0) {
             return Double.POSITIVE_INFINITY
@@ -277,7 +282,10 @@ class Reverb(
     /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one
      *  definition shared with [drainSamplesUntilSilent], so the drain math can never diverge from
      *  the DSP it predicts. */
-    private fun effectiveFeedback(): Double = size * FEEDBACK_SCALE + FEEDBACK_OFFSET
+    private fun effectiveFeedback(): Double = feedbackFor(size)
+
+    /** The comb feedback a normalized [size] maps to: the one definition of the size-to-feedback mapping. */
+    private fun feedbackFor(size: Double): Double = size * FEEDBACK_SCALE + FEEDBACK_OFFSET
 
     /** The comb feedback right now, for [TailCeiling] — one definition with [process] and the drain. */
     val tailFeedback: Double get() = effectiveFeedback()

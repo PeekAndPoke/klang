@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_benchmark
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
+import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
@@ -41,17 +42,18 @@ fun runVoiceDataCopyBenchmark() {
     }
     // Typical voice: adsr + low/high-pass filter + distortion groups set (a few non-null → deep-cloned).
     val voice = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
+        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
         sound = SoundValue.Named("supersaw"); soundIndex = 1
-        oscParams = mapOf("voices" to 7.0, "spread" to 0.3)
+        oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3
     }
-    // WORST case: at least one field set in EVERY group, so clone() must deep-copy all 15 nested objects.
+    // WORST case: a field set in 12 groups plus both param bags, so clone() deep-copies 14 nested objects.
+    // (The duck, delay and reverb groups left in Katalyst step 5b-3; their knobs ride the bus slots here.)
     val full = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95; postGain = 0.8
-        sound = SoundValue.Named("supersaw"); soundIndex = 1; oscParams = mapOf("voices" to 7.0)
+        note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
+        sound = SoundValue.Named("supersaw"); soundIndex = 1; oscParams = paramBagOf("voices" to 7.0)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05                 // adsr
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0                              // lpf
         hcutoff = 1350.0; hresonance = 0.8                                         // hpf
@@ -63,9 +65,11 @@ fun runVoiceDataCopyBenchmark() {
         distort = 0.3; coarse = 2.0; crush = 8.0                                   // distortion
         phaserRate = 0.5; phaserDepth = 0.6                                        // phaser
         tremoloSync = 4.0; tremoloDepth = 0.4                                      // tremolo
-        duckDepth = 0.5; duckAttack = 0.05                                         // duck
-        delay = 0.3; delayTime = 0.25; delayFeedback = 0.4                         // delayFx
-        reverb = 0.5; reverbSize = 0.8                                             // reverbFx
+        katalystParams = paramBagOf(                                               // bus slots
+            "duck.depth" to 0.5, "duck.attack" to 0.05,
+            "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4,
+            "reverb.wet" to 0.5, "reverb.size" to 0.8,
+        )
         begin = 0.0; end = 1.0; speed = 1.0; loop = true                          // sample
     }
 
@@ -98,7 +102,7 @@ fun runVoiceDataCopyBenchmark() {
     println()
     println("  leaf  (0 groups)      clone() : ${leafClone.toFixed(2)} ns/op   copy() : ${leafCopy.toFixed(2)} ns/op")
     println("  voice (4 groups)      clone() : ${voiceClone.toFixed(2)} ns/op   copy() : ${voiceCopy.toFixed(2)} ns/op")
-    println("  full  (all 15 groups) clone() : ${fullClone.toFixed(2)} ns/op   copy() : ${fullCopy.toFixed(2)} ns/op")
+    println("  full  (14 objects)    clone() : ${fullClone.toFixed(2)} ns/op   copy() : ${fullCopy.toFixed(2)} ns/op")
     println("  reference: pre-grouping flat 105-field copy()/clone() ≈ 820 ns/op (JS)")
     println("  sink=$copyBenchSink")
     println()

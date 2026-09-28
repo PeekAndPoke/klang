@@ -224,7 +224,7 @@ class NamedArgumentChecker(
     // resolve receiver types, avoiding a redundant second inference pass.
 
     private fun resolveCallable(call: CallExpression): KlangCallable? = when (val callee = call.callee) {
-        // A plain function, or a callable object (`Master(...)`) through its type's `invoke`,
+        // A plain function, or a callable object (`Katalyst(...)`) through its type's `invoke`,
         // the same fallback `ExpressionTypeInferrer.resolveCallable` applies.
         is Identifier -> docs.getCallable(callee.name, receiverType = null)
             ?: typeMap[callee]?.let { docs.getCallable(INVOKE, it) }

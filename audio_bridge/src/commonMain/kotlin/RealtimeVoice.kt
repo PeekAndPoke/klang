@@ -7,7 +7,7 @@ package io.peekandpoke.klang.audio_bridge
 
 /**
  * A voice started "now" by a realtime source (e.g. a MIDI keyboard) — the second note source
- * next to the pre-scheduled timeline (see docs/tasks/midi-keyboard-playground.md).
+ * next to the pre-scheduled timeline (see docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md).
  *
  * Deliberately carries NO start time: immediacy is not a special time value, it is the absence
  * of the concept. The backend stamps the current time at receipt; a realtime voice never enters

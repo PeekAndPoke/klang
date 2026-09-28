@@ -18,6 +18,8 @@ import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeToStringOrNull
+import io.peekandpoke.klang.sprudel.paramBagOf
+import io.peekandpoke.klang.sprudel.putKatalystParam
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
@@ -100,6 +102,9 @@ class GraalSprudelPattern(
         val velocity = value.safeGetMember("velocity").safeNumberOrNull()
             ?: value.safeGetMember("vel").safeNumberOrNull()
 
+        // Strudel still has `postgain`; sprudel does not (`gain` is the one level word). The two
+        // were one multiplier at one point in Klang already, so fold it into the gain here and the
+        // comparison keeps the level it had.
         val postGain = value.safeGetMember("postgain").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
@@ -148,10 +153,8 @@ class GraalSprudelPattern(
             ?: value.safeGetMember("prel").safeNumberOrNull()
         val pEnv = value.safeGetMember("penv").safeNumberOrNull()
             ?: value.safeGetMember("pamt").safeNumberOrNull()
-        val pCurve = value.safeGetMember("pcurve").safeNumberOrNull()
-            ?: value.safeGetMember("pcrv").safeNumberOrNull()
-        val pAnchor = value.safeGetMember("panchor").safeNumberOrNull()
-            ?: value.safeGetMember("panc").safeNumberOrNull()
+        // Strudel's `pcurve` and `panchor` have no sprudel counterpart since phase 3 step 5b (c1): sprudel's
+        // `penv` is an ADSR (`sustain`, `penvCurves`), not Strudel's anchored ramp, so they are not mapped.
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // FM Synthesis
@@ -320,16 +323,17 @@ class GraalSprudelPattern(
                 it.chord = chord
                 it.freqHz = freq
                 // Gain / Dynamics
-                it.gain = gain
+                // `gain` carries its long-standing `?: 1.0` default above; this oracle runs on GraalVM only,
+                // so its shape is left as it was and only the retired field is folded in.
+                it.gain = gain * (postGain ?: 1.0)
                 it.legato = legato
                 it.velocity = velocity
-                it.postGain = postGain
                 // Sound samples
                 it.bank = bank
                 it.sound = sound?.let(SoundValue::Named)
                 it.soundIndex = soundIndex
                 // Oscillator parameters
-                it.oscParams = oscParams
+                it.oscParams = oscParams?.let { params -> paramBagOf(params) }
                 // ADSR (flat fields)
                 it.attack = attack
                 it.decay = decay
@@ -348,8 +352,6 @@ class GraalSprudelPattern(
                 it.pDecay = pDecay
                 it.pRelease = pRelease
                 it.pEnv = pEnv
-                it.pCurve = pCurve
-                it.pAnchor = pAnchor
                 // FM Synthesis
                 it.fmh = fmh
                 it.fmAttack = fmAttack
@@ -372,10 +374,10 @@ class GraalSprudelPattern(
                 it.tremoloSkew = tremoloSkew
                 it.tremoloPhase = tremoloPhase
                 it.tremoloShape = tremoloShape
-                // Ducking / Sidechain
-                it.duckCylinder = duckOrbit
-                it.duckAttack = duckAttack
-                it.duckDepth = duckDepth
+                // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3
+                it.putKatalystParam("duck.orbit", duckOrbit?.toDouble())
+                it.putKatalystParam("duck.attack", duckAttack)
+                it.putKatalystParam("duck.depth", duckDepth)
                 // Filters (flat fields) - each filter has its own resonance
                 it.cutoff = cutoff
                 it.resonance = resonance
@@ -413,14 +415,13 @@ class GraalSprudelPattern(
                 it.cylinder = orbit
                 // Pan
                 it.pan = pan
-                // Delay
-                it.delay = delay
-                it.delayTime = delayTime
-                it.delayFeedback = delayFeedback
-                // Reverb
-                it.reverb = room
-                it.reverbSize = roomFade?.let { fade -> fade * 10.0 } ?: roomSize
-                it.reverbLowpass = roomLp
+                // Delay and reverb: the orbit slots, the only storage since Katalyst step 5b-3
+                it.putKatalystParam("delay.wet", delay)
+                it.putKatalystParam("delay.time", delayTime)
+                it.putKatalystParam("delay.feedback", delayFeedback)
+                it.putKatalystParam("reverb.wet", room)
+                it.putKatalystParam("reverb.size", roomFade?.let { fade -> fade * 10.0 } ?: roomSize)
+                it.putKatalystParam("reverb.lowpass", roomLp)
                 // Sample manipulation
                 it.begin = sampleBeginPos
                 it.end = sampleEndPos
@@ -428,19 +429,17 @@ class GraalSprudelPattern(
                 it.unit = sampleUnit
                 it.loop = sampleLoop
                 it.cut = sampleCut
-                it.loopBegin = null
-                it.loopEnd = null
                 // Voice / Singing
                 it.vowel = vowel
                 // Dynamics / Compression (JS oracle emits the legacy compound string; split it,
                 // keeping the OLD activation gate: only fully-parsable 5- or 2-slot forms count)
                 val compParts = compressor?.split(":")?.mapNotNull { d -> d.toDoubleOrNull() }
                     ?.takeIf { parts -> parts.size == 5 || parts.size == 2 }
-                it.compressorThreshold = compParts?.getOrNull(0)
-                it.compressorRatio = compParts?.getOrNull(1)
-                it.compressorKnee = compParts?.getOrNull(2)
-                it.compressorAttack = compParts?.getOrNull(3)
-                it.compressorRelease = compParts?.getOrNull(4)
+                it.putKatalystParam("compressor.threshold", compParts?.getOrNull(0))
+                it.putKatalystParam("compressor.ratio", compParts?.getOrNull(1))
+                it.putKatalystParam("compressor.knee", compParts?.getOrNull(2))
+                it.putKatalystParam("compressor.attack", compParts?.getOrNull(3))
+                it.putKatalystParam("compressor.release", compParts?.getOrNull(4))
                 // Playback control
                 it.solo = null
                 // Value

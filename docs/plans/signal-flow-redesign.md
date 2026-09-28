@@ -45,7 +45,8 @@ has no bus meaning). A stage belongs to the bus when it works on a sum.
 | `adsr` and the curves | instrument | onset and release are the note's |
 | `distort`, `crush`, `coarse` | instrument | nonlinear, the settled power-amp reason |
 | `vibrato`, `penv`, `fm`, `accelerate` | instrument | pitch is the note's |
-| `unison`, `spread`, `pregain`, `velocity` | instrument | the instrument's own knobs |
+| `unison`, `spread`, `pregain` | instrument | the instrument's own knobs |
+| `velocity` | frontend | articulation shorthand, folded into `gain` at the wire (§6) |
 | `tremolo` | instrument | its phase is synced to the onset |
 | `phaser` | bus | decided 2026-08-24, one coherent sweep over the bus |
 | `delay`, `reverb` | bus | time effects on the sum |
@@ -54,7 +55,7 @@ has no bus meaning). A stage belongs to the bus when it works on a sum.
 | `eq` as mix shaping | bus | linear and static, the case-1 win |
 | `gain`, `pan`, `orbit` | channel | |
 | `clip`, `late`, `swing`, `mute`, `solo` | timing and playback | not audio |
-| `postgain` | retired | folded into gain by multiplication |
+| `postgain` | retired | renamed to `gain`; folds by multiplication where a song uses both (§6) |
 
 A filter exists on both sides on purpose: the note's VCF and the bus's EQ filter different things.
 
@@ -78,7 +79,7 @@ instruments and the chains do, and the pattern only ever writes slots.
 timing        start, duration, in seconds
 instrument    sound: the name of a registered ignitor (built-in, authored, inline)
 note          freq
-slots         oscParams: the instrument's knobs, pregain and velocity among them
+slots         oscParams: the instrument's knobs, pregain among them (velocity never crosses, §6)
 channel       gain, pan, orbit
 bus           katalyst: chain name, katalystParams
 master        master: chain name
@@ -95,7 +96,12 @@ hot loop (the June work: twenty allocations per note down to one). The slot map 
 event in `toVoiceData()`, at the boundary that already allocates a `VoiceData` today, so a small
 map of the slots a note actually set replaces a hundred-and-fifty-field object. If a measurement
 ever shows the string-keyed map hurting on the worklet, the registered instrument's param list is
-known at registration and the slots can travel as an array in that order. Not before a number.
+known at registration and the slots can travel as an array in that order. Not before a number. (Confirmed
+2026-09-27 by the maintainer for phase 3 step 8: the doors stay typed, `toVoiceData()` builds the slot map.) The number,
+measured in step 8 (interleaved against the tree before it): on Kotlin/JS the main-thread `toVoiceData` of a voiced
+event went from about 0.87 to 1.9 microseconds (the string-keyed map: about 12 hashed puts), while the audio thread
+got cheaper per note-on (`makeVoice` about 10.3 to 7.4 microseconds; the worklet decode about +0.8); on the JVM every
+case got faster. Not worth the array form yet; revisit if a dense pattern's query time shows it.
 
 **The wire voice is the interchange format.** Nothing a pattern kind knows about an event may live
 only in its private event type if another kind should be able to modify or forward it (§8).
@@ -108,14 +114,18 @@ oscillator for authoring; the built-in sound behind `sound("saw")` is an instrum
 the Ignitor DSL, registered once, whose stages are today's voice pipeline in today's order, every
 stage gated on its slot:
 
+(SUPERSEDED as a sketch: the built function is `IgnitorDsl.classic()` in `audio_bridge/.../IgnitorDslClassic.kt`,
+phase 3 step 5, with slots named `<door>.<param>` (`OscSlot.lpf.freq`, `OscSlot.adsr.attack`, ...); the flat
+names below were retired before they shipped.)
+
 ```
 let classic = x => x
   .mul(OscSlot.pregain)
   .crush(OscSlot.crush).coarse(OscSlot.coarse).distort(OscSlot.distort)
-  .lowpass(freq = OscSlot.lpf, q = OscSlot.lpq, env = OscSlot.lpenv, ...)
   .highpass(freq = OscSlot.hpf, ...)
   .bandpass(freq = OscSlot.bpf, ...)
   .notch(freq = OscSlot.notch, ...)
+  .lowpass(OscSlot.lpf, OscSlot.lpq, f => f.env(OscSlot.lpenv) ...)   // builder form since phase 3 step 3d
   .tremolo(OscSlot.tremolo, ...)
   .adsr(OscSlot.attack, OscSlot.decay, OscSlot.sustain, OscSlot.release)
 
@@ -128,37 +138,167 @@ Osc.register("supersaw", Osc.supersaw().classic())
   full synth voice with one call and an author who wants another order writes their own lambda,
   as Der Schmetterling does for its amps. No builder, no new node kinds, nothing on the wire.
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
-- **The gate moves to the node.** Today `VoiceFactory` skips a pipeline stage whose amount the
-  note did not set. Under the slot rule, a stage whose governing slot is unset is not built, so a
-  plain `sound("saw")` is a bare saw, bit-identical to today, and ten slots cost nothing until one
-  is written.
+- **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
+  so a pregain inside it would land in the wrong place for every instrument with its own
+  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed: `source.pregain().onepole(slot).classic()` in step 6; since step 10 the onepole is `classic()`'s first stage, so `source.pregain().classic()`); an author places
+  `.mul(OscSlot.pregain)` where the player's touch enters, or does not place it, and then the
+  instrument has no drive knob (§6: no unconsumed rule, no magic).
+- **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs
+  after every ignitor, so `sound(guitar).hpf(120)` works on an authored guitar; Der Schmetterling
+  relies on it (the trommel's `.hpf(160).lpf(3500)`, the bass's `.adsr(...).hpf(30)`, the kick's
+  filters and `.distort(0.02)`, the guitars' `.adsrOff()`). Under the slot rule those doors write
+  slots the instrument does not declare and go silent, so phase 3 is byte-identical for built-ins
+  only. The migration: the built-in songs' authored instruments get `.classic()` appended where
+  they use the doors, then the frozen-song guard proves identity. The trap gets a diagnostic, not
+  magic: the editor knows every registered instrument's slot list (`collectParams`), so
+  `sound(guitar).hpf(120)` on an instrument without an `hpf` slot is flagged inline ("guitar
+  declares no slot hpf; append .classic() or place .highpass(OscSlot.hpf) in the instrument"),
+  and `.katp` is checked against the chain's slots the same way. Auto-wrapping would hide
+  structure, which is the thing this plan removes.
+- **The gate moves to the node (decided 2026-09-17, the optimization phase 3 stands on).** Today
+  the two paths differ. `FilterPipelineBuilder` adds a stage only when the voice wrote it (coarse
+  above 1, crush and distort above 0, tremolo depth above 0), so an off stage does not exist. The
+  Ignitor DSL path is not free: the literal overloads (`Ignitor.coarse(amount: Double)`) return the
+  inner when the amount is off, but a node whose knob is a `Param` or `Constant`, which is what
+  `.coarse(OscSlot.coarse)` becomes, builds its `CoarseIgnitor` unconditionally and pays a scratch
+  render and a copy per block even at 0. A classic tail of ten slotted stages with nothing written
+  would be ten buffer passes per voice. The rule that closes it: **at voice build, a stage whose
+  gating knob is `Param` or `Constant` backed and resolves to the unset sentinel or to that stage's
+  off value is not built; the builder returns the inner.** Params are per-note constants, so this is
+  exact; expression-backed knobs (an LFO on the amount) stay unconditional because they can move
+  within a note. The off value is per stage, not a global zero: coarse at or below 1, crush and
+  distort at 0, tremolo at depth 0, phaser below `Phaser.MIN_ACTIVE_DEPTH`, a filter only when its
+  cutoff is unset (a lowpass has no numeric off short of Nyquist), an envelope when unset. That list
+  lives in the phase 3 task next to the sentinel rule, and `Slots.lpf` and friends default to unset
+  rather than to a number. The build cache (`IgnitorBuildCache`, keyed on node identity and
+  accumulated modifiers) must cover the on and off state in its key, or a voice written with
+  `coarse(2)` could reuse a tree built for one without it. With the gate, a plain `sound("saw")` is
+  a bare saw, bit-identical to today, and ten slots cost nothing until one is written.
 - A pattern fills slots, never adds structure. Someone who wants a second lowpass or the highpass
   before the drive writes an instrument, inline or registered, and the same doors fill the same
   slot names on it. `sound(myGuitar).lpf(100)` on a guitar without an `lpf` slot does nothing.
 - `PipelineDsl`, the filter pipeline builder, `Cmd.RegisterPipeline`, `PipelineRegistry` and the
-  `pedal` preset (unused) retire. The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
-  writes the frequency modulation buffer as today and is untouched by this plan.
-- Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
+  `pedal` preset retire. (The preset is NOT unused: three corpus songs use it, DialogueWithTheStars,
+  FrozenDerSchmetterling and TetrisRemix, see `../tasks-archive/2026-09/20260928-builtin-instruments.md` D4; `DialogueWithTheStars` calls
+  `.pipeline("pedal")`, and a VCA-first tail has no `classic()` spelling. Decision D4 of
+  `../tasks-archive/2026-09/20260928-builtin-instruments.md`.) The pitch pipeline (vibrato, accelerate, pitch envelope, FM)
+  writes the frequency modulation buffer as today and is untouched by this plan, **so its wire
+  fields STAY** (`vibrato`, `vibratoMod`, `accelerate`, `pAttack` to `pSustain` (`pAnchor` renamed in step 5b c1), `fmh` to `fmEnv`):
+  section 4's minimum gains a pitch row for phase 3, and moving that pipeline into the tree is its
+  own later item (`../tasks/future/pitch-pipeline-into-the-tree.md`). Verified in the phase 3 spike: `buildPitchPipeline` only ever writes
+  `BlockContext.freqModBuffer`, the ignitor reads it as `phaseMod`, and the tree's own pitch mods
+  compose with it on every Der Schmetterling voice today.
+- **The order `classic()` must have** is today's strip order with the canonical filter sub-order of
+  `SprudelVoiceData.toVoiceData`: crush, coarse, distort, highpass, bandpass, notch, lowpass,
+  tremolo, adsr (since step 10, 2026-09-26, preceded by `onepole`, which the strip ran on the source). The sketch above had the lowpass first, which would change every song with both a
+  highpass and a lowpass at `analog > 0` (at analog 0 the filters commute).
+- **The step list, the measured cost of the gate, the three stages that are NOT bit-identical today
+  and the five decisions this phase needs from the maintainer are in
+  `../tasks-archive/2026-09/20260928-builtin-instruments.md`** (the spike of 2026-09-20).
+- (Reshaped 2026-09-27, phase 3 step 8: the doors stay typed; `toVoiceData()` writes the slot keys, section 4.)
+  Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
   `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
   vocabulary from the instrument definitions.
 
-## 6. Pregain, velocity, gain
+## 6. Pregain, gain, and where velocity went (rewritten 2026-09-18 with the maintainer)
 
-| word | where | meaning |
-|---|---|---|
-| `pregain`, times velocity | a slot the instrument places, `.mul(OscSlot.pregain)`, before its own chain | how hard the note hits the instrument; drives the amp |
-| `gain` | voice: after the instrument, before pan; orbit: after the chain; master: the shipped stage | tone-neutral level, one meaning on every surface |
+```
+Osc -> [A pregain] -> classic -> [B gain] -> pan, sum into the orbit -> Katalyst classic ... -> [C gain] -> master ... -> [D gain]
+```
 
-- **Unconsumed pregain is applied at the instrument's output.** The voice factory already collects
-  every `Param` a tree references. If `pregain` is among them, the resolved value goes into the
-  slot and nowhere else; if not, it multiplies the ignitor's output, as today. Every existing song
-  and authored instrument stays byte-identical; an author opts into drive by placing the slot.
-- Velocity is the player: it multiplies the resolved pregain. An instrument that wants velocity as
-  timbre reads a `velocity` slot with the same unconsumed rule.
-- `postgain` retires. Today gain and postgain are one multiplier at one point (`SendRenderer`), so
-  a song's `postgain(x)` folds into `gain` by multiplication; the word is removed.
-- `.oscp("pregain", x)` and `.pregain(x)` are the same write; `OscSlot.pregain` carries the
-  "filled by the engine, default 1.0" note the other engine-filled slots carry.
+| spot | what it is | word | owner |
+|---|---|---|---|
+| A | into the instrument, the level at which the sound meets its first nonlinearity: how hard it is played. Changes TIMBRE | `pregain` | the instrument places the slot |
+| B | after the voice's chain, per voice, tone-neutral | `gain` | the channel, with pan and orbit |
+| C | after the bus chain, per orbit: make-up gain after the bus compressor, the group fader | the Katalyst's `gain` stage | the bus |
+| D | end of the master | the master's `gain` stage | the master |
+
+`gain` means ONE thing on every surface, a tone-neutral fader after the processing (the parity
+rule). `pregain` is the one level that is not a fader, and it has its own word.
+
+**Where this came from.** Strudel has `gain`, `velocity` and `postgain`, and they are two
+POSITIONS, not three levels: `gain *= velocity` sits right after the source, before the filters
+and the distortion (spot A), and `postgain` is the only level at the end (spot B); verified in
+`superdough.mjs`. Klang's port applied all three at the very end, in the send stage, which is why
+they looked redundant: they were. Strudel's `gain` is our `pregain`, Strudel's `postgain` is our
+`gain`. Strudel has no shared insert bus, so it has no spot C.
+
+**Rules.**
+
+- **`pregain` is an ordinary slot: it does what the instrument wires it to, and nothing
+  otherwise.** No unconsumed rule, no level applied behind the author's back, no analysis of the
+  tree, no flag from the build. The built-ins place it explicitly:
+  `Osc.saw().mul(OscSlot.pregain).classic()`, with a helper so the line reads
+  `Osc.saw().pregain().classic()`. An authored instrument places it in front of its own
+  nonlinearity (the Orchestertrommel: on the summed partials, before the skin's `distort`; one
+  place, not one per oscillator, because the sum is linear), or not at all. On an instrument
+  that never places it, `.pregain()` does nothing, and that surprises nobody: a bare sine has no
+  drive. `.pregain(x)` is `.oscp("pregain", x)`.
+- **`gain` is the channel, not part of the instrument.** The engine applies it to every voice,
+  with pan, whatever the tree says, so it works on any instrument, wired or not. That is not
+  magic: the channel was never the instrument's.
+- **`velocity` is frontend shorthand and never reaches the backend.** Sprudel keeps the door,
+  the field and the accessor for authors, and multiplies velocity into `gain` where the voice
+  crosses the wire (`gain * velocity`, the product and order the backend computes today, so every
+  song keeps its bits). It folds into `gain`, not into `pregain`: that is where Klang applies it
+  today and where a real synth applies it by default (the amp), it works on every instrument,
+  and nothing has to be migrated or listened to. It is folded at the wire and not at the door,
+  because `velocity(p) = gain(mul(p))` taken literally does nothing on an unset gain and makes
+  `.velocity(0.7).gain(0.5)` order-dependent. A pattern that wants touch (play harder, get
+  dirtier) writes `.pregain("1 0.7 0.8")`. Another pattern kind may have its own articulation
+  dial and folds it the same way. The `velocity` field leaves the wire.
+- **`postgain` retires as a word**: it is renamed to `gain`. Where a song uses both, they fold by
+  multiplication; they were one multiplier at one point already (`SendRenderer`).
+- **`Katalyst.classic` ends in a `gain` stage at unity** (spot C). The stage returns early at
+  unity and is bit-transparent, so it costs nothing. No pattern door for it yet: a chain says
+  `k.classic().gain(0.8)` and a pattern reaches it with `katp`; a door is one line if the songs
+  want it. One value per orbit, like every bus knob: the owner voice's value applies.
+  Built 2026-09-19: the slot is `gain.gain` (the `<stage>.<knob>` rule; it reads oddly and it is
+  the rule). The stage is last in the SERIAL list, before the duck, whose list position is
+  ignored because it runs in the cross-orbit pass. It covers dry AND the delay and reverb
+  returns, because those stages mix their returns into the orbit's buffer at their own
+  positions. It is on the born-with chain too, and a gain stage never had a voice field, so
+  `katp("gain.gain", x)` reaches ANY orbit without a declaration. One consequence worth knowing:
+  orbit A's duck trigger is A's post-fader mix, so lowering A's fader also lowers how hard A
+  ducks B, which is what a fader on a desk does.
+- Non-finite values read as unset (`/dsl-design` §4). A non-finite `gain` is 1.0 at the voice
+  factory; a NaN there used to poison the orbit's reverb and delay for the rest of the playback.
+  For `pregain` the guard landed where a slot reads its value, the `Param` leaf, and for EVERY
+  slot, not by name: a non-finite OVERRIDE from the bag takes the slot's default (the bag is an
+  open map any frontend fills). An authored non-finite default still reaches the runtime; that
+  is the one confirmed route by which a non-finite slot value still arrives.
+
+**What was tried and deleted (2026-09-18), so nobody rebuilds it.** The first implementation
+gave `pregain` and `velocity` an unconsumed rule (an unplaced slot acts as level at the output)
+and coupled them (velocity rode on pregain). The slot's value then depended on knowing, BEFORE
+the build, which slots the build would create, so a separate analysis of the tree predicted it.
+Three review rounds found the prediction disagreeing with the build three times: `Variants`
+(the union over variants while the build picks one), two arms that skip a child (`Detune`'s
+identity fold, the plain-sine branch), and then the work cap that kept the analysis cheap on
+the audio thread mispredicting kits. Lesson, in the review ledger: code that predicts another
+walk's outcome drifts from it wherever that walk is conditional. The maintainer's rule that
+replaced it: no magic. A knob does what the tree wires, the channel is the channel, and
+articulation is the frontend's business.
+
+**Considered and rejected the same day:** wrapping a bare signal in `classic()` automatically
+(where is the line: is `Osc.sine().mul(0.5)` bare?); an unplaced knob acting at the output (the
+magic above); velocity as a second backend slot; velocity folded into `pregain` (Strudel's
+position: a trap for every instrument that does not place the slot, and a sound change for
+every driven one). Still open, deliberately: a construction that makes "this instrument does not
+listen to that door" impossible to write by accident, without a warning. A type boundary between
+a signal and an instrument was discussed and not adopted; `sound()` also takes samples.
+
+**Seen while migrating the songs (2026-09-19), parked for the maintainer.** With `postgain` gone
+there is no spelling for "scale this voice's level whatever it is": `gain(x)` replaces, and the
+mapper form `gain(mul(x))` scales a gain that is SET and is a silent no-op on an unset one (the
+general mapper rule of 2026-09-07: a mapper that yields nothing leaves the field unchanged). It
+also joins by `appLeft`, so a rest in a patterned trim drops the note where `postgain(P)` left it
+alone. In the repo this is safe: every exported `*_arrange` that trims with `gain(mul(x))` runs
+after a `*_shape` that sets `gain`. An importer who applies an arrange without its shape gets
+unity. Options when it comes up: leave it (the author sets gain first); let a mapper on a field
+with a known neutral value start from that value (`gain` unset reads as 1.0 for `mul`); or a
+group-level trim that is not a voice field at all (the Katalyst's `gain` stage, spot C, is
+already that for a whole orbit).
 
 ## 7. The Katalyst under this plan
 
@@ -168,12 +308,35 @@ The design in `../tasks/katalyst-dsl.md` stands, with three of its parked decisi
   `phaser`, `body`, `vowel`) stop being voice fields and become `katp` aliases on the orbit's
   chain; the owner-voice override rule of that doc's §2 disappears with the fields it overrode. On
   the default chain every classic effect has its slots, so a beginner's first `.reverb(0.3)`
-  works; on a declared chain without a reverb stage it does nothing.
+  works; on a declared chain without a reverb stage it does nothing. Decided 2026-09-18: the
+  `body` material and the `vowel` name are numeric INDEX slots into the shared tables in
+  `audio_bridge` (`body.material`, `vowel.vowel`, 0 = none), so no string slot kind joins the
+  wire and the pattern doors keep working on a declared chain; and `.katalyst(dsl)` REPLACES
+  like `sound()` and `master()`, the append rule of the task doc's step 1 is retired.
 - **D2 dissolves:** with no per-voice send amounts, the send buffers go. `reverb` and `delay`
   become insert-style stages fed by the mix at their list position scaled by `wet`, exactly the
-  master's `MasterStageDsl.Reverb` model. "The room hears the cab" is then just list order.
+  master's `MasterStageDsl.Reverb` model (retired 2026-09-28, phase 3 step 12: the master is now this same Katalyst
+  chain at the output). "The room hears the cab" is then just list order.
   The price is per-voice send variation within one orbit, which the lease already made unreliable;
   two orbits or a `katp` pattern cover it.
+  **DECIDED 2026-09-19 with the maintainer, before Katalyst 5b-2.** Why it needed deciding: the
+  sentence above rested on "the lease already made per-voice variation unreliable", which is true
+  for the room's SETTINGS (size, damping, time, feedback: the owner decides) and was not true for
+  the AMOUNT (`SendRenderer` sends each voice's own `wet`). A per-voice amount means the room is
+  fed from the voices before they are summed; a room that hears the chain means it is fed from the
+  summed mix. One orbit can have one of the two. The maintainer chose the chain:
+  - reverb and delay become insert-style stages, fed from the orbit mix at their list position,
+    scaled by ONE `wet` per orbit, the owner's. The room keeps TODAY's position (after body, vowel
+    and delay, before phaser, compressor and the fader), so it hears body, vowel and the delay's
+    echoes, and phaser and compressor still act on it. Two rooms, or two amounts, means two
+    orbits.
+  - two patterns competing for one orbit take turns owning it; that is how it is. What makes it
+    acceptable is that EVERY room setting (wet, size, damping, delay feedback) GLIDES to its new
+    value over 50 ms instead of jumping (`docs/plans/knob-glide.md`). The delay's time does not
+    glide (that would bend the echoes' pitch); it crossfades between the old and the new tap.
+  - the glide is piloted on the orbit reverb first, with a log of the problems met, so the other
+    orbit effects adopt it smoothly in 5c. The five doc examples that put two send amounts on one
+    orbit are rewritten in 5b-2; no built-in song carries two.
 - **D5:** the orbit `gain` stage stays; it is the group fader after the inserts.
 - One chain per orbit, declared where the orbit is; patterns stacked on one orbit share it, and two
   patterns declaring different chains for one orbit is the author error it is on the master.
@@ -194,9 +357,14 @@ one language's types (the pipeline reference leaves, a Katalyst reference joins)
 
 ## 9. Guards
 
-- Frozen-song byte identity (`FrozenSongs`, the song benchmark's frozen July text) after every
-  phase; the ledger's `ns/smp/pass` and the query-path benchmark before and after, so no phase
-  trades sound or speed silently.
+- **Sound identity is proven on minimal examples, not on songs** (§12 replaces the frozen-song
+  guard this bullet named until 2026-09-18): one voice or one stage in doubles compared by raw
+  bits, small multi-orbit render rows for wiring, and, where a claim is "identical to the code
+  before this change", a MINIMAL file rendered at HEAD in a throwaway worktree and on the final
+  tree with equal hashes. Every such claim names its render, made on the final tree and
+  exercising the changed path. `FrozenSongs` stays what it is, the song benchmark's input.
+- The ledger's `ns/smp/pass` and the query-path benchmark before and after a phase, so no phase
+  trades speed silently.
 - Door parity specs on every surface change; wire round trips for every new variant; every new
   test mutation-checked (audio_be and wire are the mandatory tier).
 
@@ -208,12 +376,42 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    the per-cylinder swap, `eq` and `gain`, the bus doors becoming `katp` aliases, insert-style
    sends. Byte-identical except where one orbit carried different per-voice send amounts, which
    the frozen songs do not.
-2. **Pregain**: the slot, the unconsumed rule, velocity onto pregain, `postgain` retired and
-   folded. Byte-identical for every existing instrument (none places the slot yet).
+2. **Pregain and the levels** (§6, rewritten 2026-09-18): the `pregain` slot with its door and
+   the `.pregain()` helper, inert unless placed; `velocity` folded into `gain` at the wire and
+   the `velocity` field off the wire (the wire golden is a baseline and is regenerated);
+   `postgain` renamed to `gain` across the built-in songs and the tutorial (the maintainer
+   allowed the mechanical change in Der Schmetterling); the finite guards on `pregain` and `gain`;
+   `Katalyst.classic` ending in a unity `gain` stage. The first attempt of 2026-09-18 is
+   discarded. Two steps: **levels on the wire**, DONE 2026-09-19 (spot B: the velocity fold, `postgain` retired,
+   the finite guard on `gain`, the song migration), then **the slot and the bus fader**, DONE
+   2026-09-19 (spots A and C: `pregain`, the unity `gain` stage). Identity, stated precisely: a voice that never used
+   `postgain` is bit-identical in doubles (`x * 1.0` is exact, and `gain * velocity` is the same
+   product computed on the other side of the wire). A voice that used `postgain` changes by
+   floating-point rounding only, because `(s * post) * (gain * pan)` became
+   `s * ((gain * post) * pan)`; that is accepted and needs no listening checkpoint. The song
+   migration is checked per event (old product against new wire gain, relative 1e-12) by a
+   one-off fixture that is deleted with the step.
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
-   the node-level gate, the voice doors as `oscp` aliases, `VoiceData` cut to §4, the Pipeline DSL
-   and the filter pipeline builder retired. Byte-identical by the gate rule.
+   the node-level gate with the build-cache key covering it, the voice doors reaching their slots (as `oscp` aliases in the first sketch; through `toVoiceData()` since step 8),
+   `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
+   songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
+   editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
+   (2026-09-27: step 9 done; the voice strip, the Pipeline DSL and the typed door fields are retired and
+   every voice is its tree. The diagnostic, step 11, is deferred: `../tasks/future/editor-voice-door-diagnostics.md`.
+   2026-09-28: phase 3 is done; the record, archived: `../tasks-archive/2026-09/20260928-builtin-instruments.md`
+   section 9, with its open items' new homes at the top.)
 4. **Interoperability lift**: when the second pattern kind exists, not before.
+5. **The announcements, last.** Everything that describes a retired surface is re-read and
+   rewritten once the surfaces are gone: the whitepaper (`src/jsMain/resources/klang-whitepaper.html`,
+   which explains the voice pipeline, `postgain`, the per-voice effect fields and the Strudel
+   lineage), the tutorials and the Lexikon (doors described as fields become slot aliases, the
+   Pipeline DSL and `pedal` disappear, `Katalyst` and `pregain` appear), the sprudel and ignitor
+   reference files that the klang-ai workspace symlinks (`ref/sprudel-reference.md`,
+   `ref/ignitor-reference.md`), the `/klang-music-writing` skill, the module `CLAUDE.md` and
+   `MEMORY.md` files, and the rules register's retired list, which gets `postgain`, `PipelineDsl`,
+   `pedal` and the per-voice bus doors with the date. A grep for each retired word over `docs/`,
+   the skills, the tutorials and the builtin songs is the checklist; the phase ends when it is
+   empty outside `docs/tasks-archive/`, `docs/history/` and the dev diary, which are never fixed.
 
 ## 11. Open points
 
@@ -222,8 +420,113 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
   read from the tree at build. Needs its own paragraph in phase 3's task.
 - `Osc` and `oscp` are misnomers for the Ignitor concept (the known debt in `/dsl-design` §5) and get
   renamed in their own item, after phase 3, once the slot vocabulary has settled.
-- Tutorials and the Lexikon describe doors as fields; they get re-read once as slot aliases.
+- Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
+  engine; phase 5 re-reads them once the surfaces are gone.
 - Sample voices: `sound("bd")` as the sample instrument with its playback slots, in phase 3.
+- **Parked for the maintainer, by ear (found in review 2026-09-19, NOT rendered): the group
+  fader patterned through exactly 0 on a dry orbit.** `katp("gain.gain", "<0 1>")`, default ADSR,
+  no room or line. The orbit's silence gate reads the POST-fader mix, so with the fader at 0 the
+  cylinder deactivates and resets while voices still play; the lease is then re-dealt, and the
+  first `configure` after a reset SNAPS. Depending on which voice wins the lease, the return to
+  level either jumps from 0 to full in one sample (with the muted note's release tail becoming
+  audible) or waits for the previous owner to lapse (release plus two blocks, about 56 ms) and
+  ramps mid-note. The mechanism is from Katalyst step 4; it is newly reachable because the fader
+  now sits on every orbit. The `katp` door says plainly that the fader is a mix knob that follows
+  the lease, not a per-note articulation. The root is that an orbit's liveness is judged on
+  post-fader output while its reset assumes nobody is playing; candidates: judge liveness before
+  the fader, or never snap while voices are active. Belongs with Katalyst 5c (crossfade on every
+  switch, the effect state machines), where the gain stage gets its states anyway.
+  **DECIDED 2026-09-19 with the maintainer: an orbit never deactivates while a voice plays on it.**
+  `Cylinder.tryDeactivate` already refuses while the chain has a tail or a swap runs; it also
+  refuses while the orbit's `VoiceLease` is held (every voice sounding on the orbit checks in each
+  block). A muted orbit with notes keeps running with the fader at 0, and the fader glides back up
+  from where it stands. Judging liveness before the fader was rejected (in a user chain the gain
+  stage can sit anywhere). BUILT in Katalyst 5c-8 (2026-09-19): `VoiceLease.isHeld` (the one
+  liveness rule, `claim` uses it) and `tryDeactivate(blockStart)` refusing while held; an orbit
+  goes on the first block the lease has lapsed (two blocks after the last check-in), silence
+  already counted stays counted. The fader glides over `KNOB_GLIDE_SECONDS` from where it stands
+  (the gain stage got no state classes: see `effect-state-machines.md` section 3). Consequence
+  heard in The Synthsale Pipers' Last Rave 163 to 237 s: orbit 6's supersaw plays at velocity 0
+  under a slow phaser, whose sweep HEAD restarted at every reset (about 167) and which now runs on.
+  No new cost: a culled voice holds its orbit until its scheduled end, as it did before (its
+  check-in reactivated the orbit on the very next block); what is gone is only the periodic
+  `chain.reset()` and the lease re-dealing, about 150 of each per 8 s on a muted orbit.
+- **Phase 3, from the pregain review (2026-09-19): a placed `pregain` costs CPU at unity.** Neither
+  `mulConstInPlace` nor the `Affine` fold special-cases a block-constant multiplier of exactly 1.0
+  at render, so every built-in that places the slot pays one multiply and one `safeOut` per sample
+  for the life of every voice. Folding it away at build would drop the `safeOut`, which changes
+  bits for a NaN or an out-of-range sample, so it is a decision (is the extra scrub wanted?), not
+  a blind optimisation. Measure in the phase 3 spike before the built-ins place the slot.
+- **CLOSED 2026-09-20 (phase 3 step 1): `analog` was the one bag key whose readers disagreed on a
+  non-finite value.** Both readers on a render path carry `takeIf { it.isFinite() }` now, and the
+  sample ignitor's second, independent lookup takes the guarded local. On a RENDER path in the
+  backend `GraphCensus` is now the one unguarded reader, and it stays so on purpose (benchmark-only
+  and audio-inert); sprudel's field accessors read the bag unguarded too, but only on the query side
+  for pattern arithmetic. What the guard closed, measured: a NaN retuned every filter on the voice to
+  1 kHz (and, on an rng-drawing oscillator, shifted its noise stream as well, because failing
+  `analog <= 0.0` also consumes a draw per filter); `+Infinity` drove the saturating branch to NaN at
+  the first sample and put NaN into the orbit mix, on a sample voice as well as a synth one. The paragraph below is the record of what it was, in the
+  present tense it was written in.
+- **Phase 3: `analog` WAS the one bag key with two readers that disagree on a non-finite value.**
+  Since the leaf guard, the oscillator's `Slots.analog` reads a NaN as its default, while
+  `VoiceFactory` still hands the raw value to the filter-feel scales and the sample ignitor.
+  `oscParams["onepole"]` is NaN-safe by accident and not `+Infinity`-safe. Both go away when those
+  doors become slots; until then they are listed here so nobody concludes the bag is guarded
+  everywhere. A `ParamIgnitor` that engine code constructs directly never passes the leaf either;
+  no production caller does that today (checked 2026-09-19: a `FilterDef` becomes an `AudioFilter`
+  and never reaches `Ignitor.svf`, whose `Double` overload has only a test caller). A fourth reader, `GraphCensus`
+  (benchmark-only, audio-inert), resolves an override without the guard too. For phase 5's grep
+  list: `docs/audio-backend-file-map.md` still spells the orbit chain without body, vowel and the
+  fader.
+- **Housekeeping, decided 2026-09-17: nothing in the backend or the frontend may allocate without a
+  way to clean it up.** The process-wide identity maps (`uniqueId()` for ignitors, masters and
+  chains) mint a name per live-coding edit and never forget it, while the backend bounds its built
+  chains. Move them behind a global per-playbackId registry of such storages, the frontend twin of
+  the backend's per-playback registry forks (`InlineDslRegistrar` already is one), and free the
+  playback's entries when it dies. Ids become per playback, which the registry forks allow. Its own
+  item, after phase 1; the Katalyst composition memo was retired 2026-09-18 with the append rule.
+
+## 12. Safety nets: what they are for, and when they go (maintainer, 2026-09-18)
+
+A byte-identity net is a MIGRATION TOOL, not a contract. It exists so the loop can run unattended
+between two moments at which the maintainer has listened; at the next such moment it has done its
+job. Kept past that, it ties knots around our legs: every deliberate sound change fights a test
+that only says "different", and the pace drops. Three kinds, three lifetimes:
+
+| kind | examples | lifetime |
+|---|---|---|
+| **contract** | door parity specs, the defaults-sync specs, catalogue index specs, `ParamBagSpec`, the wire codec round trip | permanent; they state what the surface promises |
+| **baseline** | the wire golden (`voicedata_golden.txt`, retired 2026-09-28 for targeted rows, test consolidation), the frozen minimal corpus of phase 3 (one hash per row of raw doubles) | valid from one ear-confirmed checkpoint to the next; REGENERATED at the checkpoint, never hand-edited, never defended against a change the maintainer approved by ear |
+| **migration fixture** | old-path against new-path comparisons (`Katalyst…MatchesUntouchedVoice`, the declared-against-born-with render rows, `*MigrationSpec`, `*ParitySpec` whose two sides are an old and a new implementation) | removed in the change that finishes the migration (the scaffolding guideline); the oracle it carried is frozen into the baseline first if it is still wanted |
+
+**No full songs as tests.** A song renders slowly, exercises only the doors it happens to call
+(the phaser fill had no evidence behind two frozen songs), quantises to 16 bits, and a failure
+does not say where. Acceptance is minimal examples at three levels: the wire as text, one voice
+or one stage in doubles compared by raw bits, and small multi-orbit render rows for wiring
+(shared orbit, chain install, swap), each with an engagement control, a not-silence floor and a
+mutation. The frozen-song hash used as the acceptance of Katalyst steps 1 to 5a-3 ends with 5a-3.
+
+**A one-off whole-corpus render is not a test, and it is the right net for one kind of claim**
+(2026-09-19, Katalyst 5b-1). When a step's claim is "every existing song sounds the same" and
+the change is a change of PATH (equal numbers travelling a different route), door-form tables and
+value tripwires cannot see a gate that treats equal values differently; rendering every built-in
+song and frozen piece at HEAD in a throwaway worktree and on the final tree can. It is a
+migration fixture: written for the step, deleted with it, its result recorded in the task doc.
+Two things it needs: enough cycles to reach every section (the longest `arrange` and the longest
+`mute` alternation set the bar; 256 covered the corpus of 2026-09-19), and the WALL CLOCK PINNED,
+because four songs seed their randomness from `timeOfDay` or `sinOfDay` and otherwise differ for
+a reason that has nothing to do with the engine. What it cannot see: differences under one 16-bit count, JS-only behaviour. (Corrected 2026-09-26: it DOES
+see sample voices; the CLI render loads the samples from the repo-root `./cache` before scheduling any voice,
+so run it from the repo root and check each log's sample-load count. Only the `:jvmTest` `renderSong` helper has
+no sample bank.)
+
+**Checkpoints.** A checkpoint is the maintainer saying "this sounds right". The foreseen ones:
+after the insert-style sends (Katalyst 5b), after the switch fades (5c), after the phase 3
+spike, at the end of phase 3. At each: regenerate the baselines, delete the migration fixtures
+whose migration is finished, and run one audit pass over the specs named `*Parity*`,
+`*Migration*` and `*Golden*` to classify each as contract, baseline or fixture. The first audit
+is due at the 5b checkpoint; candidates seen on 2026-09-18 without reading them: `DelayLineMigrationSpec`,
+`OnepoleParitySpec`, `BlockSizeParitySpec`, `OversamplerDecimatorParitySpec`, `OptimizerSongParitySpec`.
 
 ## Links
 

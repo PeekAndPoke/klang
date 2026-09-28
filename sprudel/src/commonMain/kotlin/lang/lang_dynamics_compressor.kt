@@ -8,60 +8,132 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_KNEE_DB
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RATIO
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.COMPRESSOR_THRESHOLD_DB
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 // -- compressor ------------------------------------------------------------------------------------------------------
 
-private val compressorThresholdMutation = voiceSetter { compressorThreshold = it?.asDoubleOrNull() ?: compressorThreshold }
+// Each setter writes the orbit chain's matching slot (`compressor.threshold`, ...), which is what
+// makes this door an alias of `katp` (signal-flow plan §7, Katalyst step 5a), and then fills the other
+// four. The slots are the compressor's only storage since Katalyst step 5b-3.
+
+/**
+ * Fills the compressor stage's companions from `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is
+ * the rule; this is only what THIS door does). Called from every one of the five setters, because
+ * the compressor has no name knob: `compressor(ratio = 8)` compresses at the constant threshold.
+ *
+ * Since step 5b-1 the orbit's compressor reads the SLOTS and nothing else, and since step 5b-3
+ * there are no voice fields beside them.
+ *
+ * Byte-identical to the engine's own fallback, which is what let the fill move to the door: the
+ * five constants written here are exactly what `Voice.Compressor.fromParams` substituted for a null
+ * field. Until step 5a-3 this door filled nothing and the asymmetry with `reverb(...)` was recorded
+ * rather than fixed.
+ *
+ * The HEAD setter, the threshold, is the one setter here a bare call can reach with a null; it then
+ * writes nothing at all (`if (value != null)`).
+ */
+private fun SprudelVoiceData.fillCompressorDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("compressor.threshold", value = null, default = COMPRESSOR_THRESHOLD_DB)
+    slots.setOrDefault("compressor.ratio", value = null, default = COMPRESSOR_RATIO)
+    slots.setOrDefault("compressor.knee", value = null, default = COMPRESSOR_KNEE_DB)
+    slots.setOrDefault("compressor.attack", value = null, default = COMPRESSOR_ATTACK_SECONDS)
+    slots.setOrDefault("compressor.release", value = null, default = COMPRESSOR_RELEASE_SECONDS)
+}
+
+private val compressorThresholdMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        katalystParamsOrNew().set("compressor.threshold", value)
+        fillCompressorDefaults()
+    }
+}
 
 private fun applyCompressorThreshold(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.compressorThreshold }, update = compressorThresholdMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("compressor.threshold") }, update = compressorThresholdMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, compressorThresholdMutation)
 }
 
-private val compressorRatioMutation = voiceSetter { compressorRatio = it?.asDoubleOrNull() ?: compressorRatio }
+private val compressorRatioMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        katalystParamsOrNew().set("compressor.ratio", value)
+        fillCompressorDefaults()
+    }
+}
 
 private fun applyCompressorRatio(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.compressorRatio }, update = compressorRatioMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("compressor.ratio") }, update = compressorRatioMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, compressorRatioMutation)
 }
 
-private val compressorKneeMutation = voiceSetter { compressorKnee = it?.asDoubleOrNull() ?: compressorKnee }
+private val compressorKneeMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        katalystParamsOrNew().set("compressor.knee", value)
+        fillCompressorDefaults()
+    }
+}
 
 private fun applyCompressorKnee(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.compressorKnee }, update = compressorKneeMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("compressor.knee") }, update = compressorKneeMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, compressorKneeMutation)
 }
 
-private val compressorAttackMutation = voiceSetter { compressorAttack = it?.asDoubleOrNull() ?: compressorAttack }
+private val compressorAttackMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        katalystParamsOrNew().set("compressor.attack", value)
+        fillCompressorDefaults()
+    }
+}
 
 private fun applyCompressorAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.compressorAttack }, update = compressorAttackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("compressor.attack") }, update = compressorAttackMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, compressorAttackMutation)
 }
 
-private val compressorReleaseMutation = voiceSetter { compressorRelease = it?.asDoubleOrNull() ?: compressorRelease }
+private val compressorReleaseMutation = voiceSetter { raw ->
+    val value = raw?.asDoubleOrNull()
+
+    if (value != null) {
+        katalystParamsOrNew().set("compressor.release", value)
+        fillCompressorDefaults()
+    }
+}
 
 private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.compressorRelease }, update = compressorReleaseMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("compressor.release") }, update = compressorReleaseMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, compressorReleaseMutation)
@@ -77,6 +149,13 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * and its settings come from the orbit's owning voice. That is what makes it a drum-bus compressor
  * rather than a per-note one: give a pattern its own orbit to compress it on its own.
  *
+ * The call sets every slot: the ones you leave out take the shared defaults, threshold -20 dB,
+ * ratio 4:1, knee 6 dB, attack 3 ms and release 100 ms, unless an earlier call already set them. So
+ * `compressor(ratio = 8)` is a working compressor at -20 dB, and `compressor.threshold` reads -20
+ * after it. Any of the five switches the stage on, because a compressor has no on-knob. Slots apply
+ * in order, threshold first, so a mapper on a later slot sees a default an earlier slot of the same
+ * call filled in (`compressor(-15, ratio = mul(2))` is ratio 8).
+ *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
  * a mapper (`compressor(ratio = mul(2))`), and the numeric slots read back as `compressor.threshold`, `compressor.ratio`, `compressor.knee`, `compressor.attack`, `compressor.release`.
  * With no argument at all, the pattern's own values are reinterpreted as `threshold`.
@@ -90,7 +169,7 @@ private fun applyCompressorRelease(source: SprudelPattern, args: List<SprudelDsl
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd hh sd").compressor(-20, 4).postgain(compressor.threshold.mul(-0.02).add(1))   // make-up gain from the threshold
+ * s("bd sd hh sd").compressor(-20, 4).gain(compressor.threshold.mul(-0.02).add(1))       // make-up gain from the threshold
  * ```
  *
  * @param threshold Level in dB where compression starts, such as -20.
@@ -143,23 +222,23 @@ object compressor {
 
     /** The threshold slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val threshold: FieldAccessor = FieldAccessor { it.compressorThreshold }
+    val threshold: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.threshold") }
 
     /** The ratio slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val ratio: FieldAccessor = FieldAccessor { it.compressorRatio }
+    val ratio: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.ratio") }
 
     /** The knee slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val knee: FieldAccessor = FieldAccessor { it.compressorKnee }
+    val knee: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.knee") }
 
     /** The attack slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val attack: FieldAccessor = FieldAccessor { it.compressorAttack }
+    val attack: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.attack") }
 
     /** The release slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val release: FieldAccessor = FieldAccessor { it.compressorRelease }
+    val release: FieldAccessor = FieldAccessor { it.katalystParams?.get("compressor.release") }
 
     /** The setter, see [SprudelPattern.compressor]. */
     @KlangScript.Invoke

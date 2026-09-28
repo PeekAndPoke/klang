@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Klang Topic Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/*__HUD_CSS__*/
+:root {
+    --ink: var(--text); --muted: var(--dim); --surface: var(--panel); --surface-2: var(--panel-2);
+    --danger: var(--red); --edge: #484e59; --bg: var(--void); --line: var(--rule); --focus: var(--cyan);
+}
+.app { grid-template-rows: auto auto 1fr; }
+.bar .search { margin-left: auto; }
+.bar .search input {
+    font: inherit; font-family: var(--mono); font-size: 12.5px; width: 220px; max-width: 60vw; padding: 5px 10px;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--text);
+}
+.bar .search input::placeholder { color: var(--faint); }
+.bar .search input:focus { outline: 1px solid var(--cyan); outline-offset: 1px; }
+.glyph { flex: none; }
+#canvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#canvas:active { cursor: grabbing; }
+.hull { stroke-linejoin: round; stroke-width: 46; opacity: .09; }
+.area-label { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .38; pointer-events: none; }
+.link { stroke: var(--edge); stroke-opacity: .6; fill: none; }
+.link.rel { stroke-dasharray: 4 4; stroke-opacity: .7; }
+.link.arch { stroke-opacity: .28; }
+.node .ring { fill: none; stroke: var(--ink); }
+.node text { font-family: var(--mono); font-size: 10.5px; fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.node.archived text { font-size: 9.5px; fill: var(--faint); }
+.node { cursor: pointer; }
+.node:focus { outline: none; }
+.node:focus-visible .ring, .node.sel .ring { stroke: var(--cyan); stroke-width: 3px; stroke-dasharray: none; opacity: 1; }
+.dim .node:not(.hl) { opacity: .12; }
+.dim .link:not(.hl) { opacity: .05; }
+.dim .link.hl { stroke: var(--cyan); stroke-opacity: .9; }
+.hidden-node { display: none; }
+.labels-off .node text { display: none; }
+.labels-off .node.big text, .labels-off .node.hl text { display: block; }
+.maplegend {
+    position: absolute; left: 12px; bottom: 12px; background: rgba(25, 28, 34, .92); border: 1px solid var(--rule);
+    padding: 10px 12px; font-family: var(--mono); font-size: 11.5px; color: var(--dim); display: grid; gap: 6px; max-width: calc(100% - 24px); z-index: 3;
+}
+.maplegend h2 { margin: 0 0 2px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 400; }
+.maplegend .row { display: flex; align-items: center; gap: 8px; }
+.zoombar { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 3; }
+.zoombar .iconbtn { width: 34px; height: 34px; font-size: 16px; }
+aside.inspector { bottom: 12px; width: 370px; display: flex; flex-direction: column; }
+aside .head { display: flex; align-items: flex-start; gap: 8px; padding: 14px 14px 10px; border-bottom: 1px solid var(--rule); }
+aside .head h2 { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 600; text-wrap: balance; flex: 1; }
+aside .body { overflow: auto; padding: 12px 14px 18px; display: grid; gap: 14px; align-content: start; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.path { font-family: var(--mono); font-size: 12px; display: flex; gap: 6px; align-items: center; background: var(--void); border: 1px solid var(--rule); padding: 6px 8px; color: var(--cyan); }
+.path code { flex: 1; overflow-wrap: anywhere; font-family: inherit; }
+.path button { font: inherit; font-size: 11px; border: 1px solid var(--rule); background: var(--panel); color: var(--text); padding: 2px 6px; cursor: pointer; }
+.sec h3 { margin: 0 0 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 400; }
+.sec p { margin: 0; line-height: 1.5; max-width: 65ch; font-size: 13px; }
+.quote { border-left: 2px solid var(--rule); padding-left: 10px; }
+.assess { border-left: 2px solid var(--cyan); padding-left: 10px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-family: var(--mono); font-size: 12.5px; margin: 0; }
+.facts dt { color: var(--faint); }
+.facts dd { margin: 0; }
+.nlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.nlist button { font: inherit; font-size: 12.5px; text-align: left; width: 100%; display: flex; gap: 9px; align-items: baseline; border: 0; background: none; color: var(--text); cursor: pointer; padding: 3px 4px; }
+.nlist button:hover, .nlist button:focus-visible { background: var(--panel-2); outline: none; }
+.nlist .sw { width: 7px; height: 7px; transform: rotate(45deg) translateY(-1px); }
+.nlist .why { color: var(--faint); font-size: 11.5px; display: block; }
+.nlist .fn { font-family: var(--mono); font-size: 12px; }
+.empty { color: var(--faint); font-size: 12.5px; }
+.intro { color: var(--dim); line-height: 1.5; font-size: 13px; }
+.intro code { font-family: var(--mono); color: var(--cyan); }
+@media (max-width: 720px) {
+    aside.inspector { top: auto; height: 55%; }
+    .maplegend { display: none; }
+    .bar .search { margin-left: 0; flex: 1; }
+    .bar .search input { width: 100%; max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <div class="kicker">Klang dev status · docs/tasks · docs/plans · as of <span id="asof"></span></div>
+      <h1>Klang <span>//</span> Topic Map</h1>
+      <nav class="hud-nav" aria-label="Dev status pages"><a href="klang-topic-map.html" aria-current="page">Topic map</a><a href="klang-mission-log.html">Mission log</a><a href="klang-whitepaper.html">White paper</a></nav>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="bar" id="filters">
+    <div class="search" id="searchBox"><label for="q" style="position:absolute;left:-9999px">Find a document</label><input id="q" type="search" placeholder="Find a file or title" autocomplete="off"></div>
+    <button class="iconbtn" id="labelsBtn" title="Toggle labels" aria-pressed="true" aria-label="Toggle labels" style="width:auto;padding-inline:8px;font-family:var(--mono);font-size:12px">Aa</button>
+  </div>
+  <div class="screen">
+    <svg id="canvas" role="group" aria-label="Graph of open tasks and plans"></svg>
+    <div class="maplegend">
+      <h2>How to read it</h2>
+      <div class="row"><svg width="46" height="14"><circle cx="7" cy="7" r="4" fill="var(--dim)"/><circle cx="30" cy="7" r="7" fill="var(--dim)"/></svg>size = length of the doc</div>
+      <div class="row"><svg width="46" height="14"><line x1="2" y1="7" x2="44" y2="7" stroke="var(--edge)" stroke-width="1.6"/></svg>the docs link to each other</div>
+      <div class="row"><svg width="46" height="14"><line x1="2" y1="7" x2="44" y2="7" stroke="var(--edge)" stroke-width="1.6" stroke-dasharray="4 4"/></svg>related, not linked yet</div>
+    </div>
+    <div class="zoombar">
+      <button class="iconbtn" id="zin" aria-label="Zoom in">+</button>
+      <button class="iconbtn" id="zout" aria-label="Zoom out">&minus;</button>
+      <button class="iconbtn" id="zfit" aria-label="Fit all" style="font-size:11px;font-family:var(--mono)">FIT</button>
+    </div>
+    <aside class="inspector" id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const DATA = __DATA__;
+
+const AREAS = [
+  {id:'engine',   name:'Engine redesign'},
+  {id:'sound',    name:'Sound and instruments'},
+  {id:'perf',     name:'Performance'},
+  {id:'realtime', name:'Realtime, MIDI, playback'},
+  {id:'analysis', name:'Mix analysis'},
+  {id:'sprudel',  name:'Sprudel DSL'},
+  {id:'script',   name:'KlangScript and editor'},
+  {id:'launch',   name:'Tutorials, launch, legal'},
+];
+const STATES = [
+  {id:'active',    name:'In progress'},
+  {id:'next',      name:'Scheduled next'},
+  {id:'open',      name:'Open'},
+  {id:'blocked',   name:'Blocked'},
+  {id:'byear',     name:'Needs ears'},
+  {id:'future',    name:'Future'},
+  {id:'finished',  name:'Looks finished'},
+  {id:'reference', name:'Reference'},
+];
+const ARCH_STATES = [
+  {id:'done',       name:'Done'},
+  {id:'wont',       name:"Won't implement"},
+  {id:'superseded', name:'Closed, not built'},
+];
+const areaName = Object.fromEntries(AREAS.map(a=>[a.id,a.name]));
+const stateName = Object.fromEntries(STATES.concat(ARCH_STATES).map(s=>[s.id,s.name]));
+const areaColor = id => `var(--l-${id})`;
+
+const nodes = DATA.nodes.map(n=>({...n}));
+const byId = new Map(nodes.map(n=>[n.id,n]));
+const links = DATA.edges.map(e=>({source:e.source,target:e.target,kind:'doc',count:e.count}))
+  .concat(DATA.related.map(e=>({source:e.source,target:e.target,kind:'rel',why:e.why})));
+const outs = new Map(nodes.map(n=>[n.id,[]])), ins = new Map(nodes.map(n=>[n.id,[]])), rels = new Map(nodes.map(n=>[n.id,[]]));
+DATA.edges.forEach(e=>{outs.get(e.source).push(e.target);ins.get(e.target).push(e.source);});
+DATA.related.forEach(e=>{rels.get(e.source).push({id:e.target,why:e.why});rels.get(e.target).push({id:e.source,why:e.why});});
+const neighbours = new Map(nodes.map(n=>[n.id,new Set([n.id,...outs.get(n.id),...ins.get(n.id),...rels.get(n.id).map(r=>r.id)])]));
+
+nodes.forEach(n=>{ n.r = n.archived ? 3.5 + Math.sqrt(n.lines)*0.36 : 5 + Math.sqrt(n.lines)*0.55; });
+
+// ---------- summary ----------
+const cnt = s => nodes.filter(n=>n.state===s).length;
+const openCount = nodes.filter(n=>!n.archived).length, archCount = nodes.length-openCount;
+document.getElementById('stats').innerHTML = [
+  {c:'bad',k:'Open',v:openCount,s:'docs'},
+  {c:'info',k:'In progress',v:cnt('active'),s:''},
+  {c:'warn',k:'Blocked',v:cnt('blocked'),s:''},
+  {c:'good',k:'Archive',v:archCount,s:`${cnt('wont')} won't`},
+].map(s=>`<div class="stat ${s.c}"><div class="k">${s.k}</div><div class="v">${s.v}<small>${s.s}</small></div></div>`).join('');
+document.getElementById('asof').textContent = DATA.generated;
+
+// ---------- filters ----------
+const shownAreas = new Set(AREAS.map(a=>a.id));
+const shownStates = new Set(STATES.map(s=>s.id));
+const filters = document.getElementById('filters');
+const searchBox = document.getElementById('searchBox');
+function chipGroup(label, items, set, swatch, countOf){
+  const l = document.createElement('span'); l.className='group-label'; l.textContent=label; filters.insertBefore(l, searchBox);
+  items.forEach(it=>{
+    if(countOf(it.id)===0) return;
+    const b = document.createElement('button'); b.className='toggle chip'; b.type='button'; b.setAttribute('aria-pressed','true');
+    b.innerHTML = `${swatch(it)}<span>${it.name}</span><span class="n">${countOf(it.id)}</span>`;
+    b.addEventListener('click',()=>{ if(set.has(it.id)){set.delete(it.id);b.setAttribute('aria-pressed','false');} else {set.add(it.id);b.setAttribute('aria-pressed','true');} applyFilters(); });
+    filters.insertBefore(b, searchBox);
+  });
+}
+chipGroup('Areas', AREAS, shownAreas, a=>`<span class="sw" style="background:${areaColor(a.id)}"></span>`, id=>nodes.filter(n=>n.area===id&&!n.archived).length);
+
+chipGroup('State', STATES, shownStates, s=>stateGlyphSvg(s.id,10), id=>cnt(id));
+
+ARCH_STATES.forEach(s=>shownStates.add(s.id));
+chipGroup('Archive', ARCH_STATES, shownStates, s=>stateGlyphSvg(s.id,10), id=>cnt(id));
+ARCH_STATES.forEach(s=>shownStates.delete(s.id));
+[...filters.querySelectorAll('.chip')].slice(-3).forEach(b=>b.setAttribute('aria-pressed','false'));
+
+function stateGlyphSvg(state,size){
+  const r=size/2-1.2, c=size/2;
+  const base=`<circle cx="${c}" cy="${c}" r="${r}"`;
+  const map={
+    active:   `${base} fill="var(--muted)" stroke="var(--ink)" stroke-width="2"/>`,
+    next:     `${base} fill="var(--muted)"/><circle cx="${c}" cy="${c}" r="${r*0.45}" fill="var(--surface)"/>`,
+    open:     `${base} fill="var(--muted)"/>`,
+    blocked:  `${base} fill="none" stroke="var(--danger)" stroke-width="1.6" stroke-dasharray="2 1.5"/>`,
+    byear:    `${base} fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="0.5 2" stroke-linecap="round"/>`,
+    future:   `${base} fill="var(--muted)" fill-opacity=".35"/>`,
+    finished: `${base} fill="none" stroke="var(--muted)" stroke-width="1.6"/><path d="M${c-r*0.5} ${c} l${r*0.35} ${r*0.4} l${r*0.7} -${r*0.8}" fill="none" stroke="var(--muted)" stroke-width="1.4"/>`,
+    reference:`<rect x="1.5" y="1.5" width="${size-3}" height="${size-3}" rx="1.5" fill="none" stroke="var(--muted)" stroke-width="1.4"/>`,
+    done:     `${base} fill="var(--muted)" fill-opacity=".5"/>`,
+    wont:     `${base} fill="none" stroke="var(--muted)" stroke-width="1.4"/><path d="M${c-r*0.55} ${c-r*0.55} L${c+r*0.55} ${c+r*0.55} M${c+r*0.55} ${c-r*0.55} L${c-r*0.55} ${c+r*0.55}" stroke="var(--muted)" stroke-width="1.4"/>`,
+    superseded:`${base} fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="2 1.6"/><path d="M${c-r*0.6} ${c+r*0.6} L${c+r*0.6} ${c-r*0.6}" stroke="var(--muted)" stroke-width="1.3"/>`,
+  };
+  return `<svg class="glyph" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${map[state]}</svg>`;
+}
+
+// ---------- layout ----------
+const anchors = {};
+(function(){
+  anchors.engine={x:0,y:0};
+  const ring = AREAS.filter(a=>a.id!=='engine');
+  ring.forEach((a,i)=>{ const t = -Math.PI/2 + i*2*Math.PI/ring.length; anchors[a.id]={x:Math.cos(t)*700,y:Math.sin(t)*500}; });
+})();
+nodes.forEach((n,i)=>{ const a=anchors[n.area]; n.x=a.x+(Math.random()-.5)*80; n.y=a.y+(Math.random()-.5)*80; });
+// deterministic-ish jitter
+let seed=7; const rand=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
+nodes.forEach(n=>{const a=anchors[n.area]; n.x=a.x+(rand()-.5)*120; n.y=a.y+(rand()-.5)*120;});
+
+const openNodes = nodes.filter(n=>!n.archived), archNodes = nodes.filter(n=>n.archived);
+const openLinks = links.filter(l=>!byId.get(l.source).archived && !byId.get(l.target).archived);
+const sim = d3.forceSimulation(openNodes)
+  .force('link', d3.forceLink(openLinks).id(d=>d.id).distance(l=>l.kind==='rel'?110:95).strength(l=>{
+    const same = (l.source.area||byId.get(l.source).area)===(l.target.area||byId.get(l.target).area);
+    return l.kind==='rel' ? (same?0.12:0.03) : (same?0.35:0.05);
+  }))
+  .force('charge', d3.forceManyBody().strength(-300).distanceMax(520))
+  .force('x', d3.forceX(d=>anchors[d.area].x).strength(0.11))
+  .force('y', d3.forceY(d=>anchors[d.area].y).strength(0.11))
+  .force('collide', d3.forceCollide(d=>d.r+20).iterations(3))
+  .stop();
+for(let i=0;i<700;i++) sim.tick();
+// phase two: the open docs stay where they are, the archive settles around them
+openNodes.forEach(n=>{n.fx=n.x;n.fy=n.y;});
+const areaBox = {};
+AREAS.forEach(a=>{ const ns=openNodes.filter(n=>n.area===a.id); areaBox[a.id]={x:d3.mean(ns,n=>n.x)||anchors[a.id].x,y:d3.mean(ns,n=>n.y)||anchors[a.id].y}; });
+archNodes.forEach(n=>{ const b=areaBox[n.area]; const t=rand()*2*Math.PI, d=160+rand()*120; n.x=b.x+Math.cos(t)*d; n.y=b.y+Math.sin(t)*d; });
+const archLinks = links.filter(l=>!openLinks.includes(l)).map(l=>({...l}));
+const sim2 = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(archLinks.concat(openLinks.map(l=>({source:l.source.id,target:l.target.id,kind:l.kind})))).id(d=>d.id).distance(70).strength(l=>l.source.area===l.target.area?0.2:0.02))
+  .force('charge', d3.forceManyBody().strength(d=>d.archived?-90:-300).distanceMax(400))
+  .force('x', d3.forceX(d=>areaBox[d.area].x).strength(d=>d.archived?0.05:0))
+  .force('y', d3.forceY(d=>areaBox[d.area].y).strength(d=>d.archived?0.05:0))
+  .force('collide', d3.forceCollide(d=>d.r+(d.archived?9:20)).iterations(3))
+  .stop();
+for(let i=0;i<500;i++) sim2.tick();
+openNodes.forEach(n=>{n.fx=null;n.fy=null;});
+links.forEach(l=>{ if(typeof l.source==='string') l.source=byId.get(l.source); if(typeof l.target==='string') l.target=byId.get(l.target); });
+
+// ---------- render ----------
+const svg = d3.select('#canvas');
+const root = svg.append('g');
+const gHull = root.append('g'), gLink = root.append('g'), gAreaLabel = root.append('g'), gNode = root.append('g');
+
+function hullPath(ns){
+  const pts=[]; ns.forEach(n=>{ for(let k=0;k<8;k++){const t=k*Math.PI/4; pts.push([n.x+Math.cos(t)*(n.r+4),n.y+Math.sin(t)*(n.r+4)]);} });
+  const h = d3.polygonHull(pts); return h ? 'M'+h.join('L')+'Z' : '';
+}
+const hulls = gHull.selectAll('path').data(AREAS).join('path').attr('class','hull')
+  .attr('fill',a=>areaColor(a.id)).attr('stroke',a=>areaColor(a.id));
+const areaLabels = gAreaLabel.selectAll('text').data(AREAS).join('text').attr('class','area-label')
+  .attr('text-anchor','middle').attr('fill',a=>areaColor(a.id)).text(a=>a.name);
+
+const linkSel = gLink.selectAll('line').data(links).join('line')
+  .attr('class',l=>'link'+(l.kind==='rel'?' rel':'')+((l.source.archived||l.target.archived)?' arch':''))
+  .attr('stroke-width',l=>l.kind==='rel'?1.2:Math.min(1+Math.log2(l.count||1)*0.6,3));
+
+const nodeSel = gNode.selectAll('g').data(nodes,d=>d.id).join('g')
+  .attr('class',d=>'node'+(d.r>17&&!d.archived?' big':'')+(d.archived?' archived':''))
+  .attr('tabindex',0).attr('role','button').attr('aria-label',d=>`${d.id}, ${areaName[d.area]}, ${stateName[d.state]}`);
+
+nodeSel.each(function(d){
+  const g=d3.select(this), c=areaColor(d.area);
+  if(d.archived){
+    const muted = d.state!=='done';
+    g.append('circle').attr('class','body').attr('r',d.r)
+      .attr('fill',muted?'var(--surface)':c).attr('fill-opacity',muted?1:0.5)
+      .attr('stroke',c).attr('stroke-width',muted?1.6:0).attr('stroke-dasharray',d.state==='superseded'?'2.5 2':null);
+    if(d.state==='wont'){ const k=d.r*0.55; g.append('path').attr('d',`M${-k} ${-k} L${k} ${k} M${k} ${-k} L${-k} ${k}`).attr('stroke',c).attr('stroke-width',1.6); }
+    if(d.state==='superseded'){ const k=d.r*0.6; g.append('path').attr('d',`M${-k} ${k} L${k} ${-k}`).attr('stroke',c).attr('stroke-width',1.4); }
+    g.append('circle').attr('class','ring').attr('r',d.r+3).attr('opacity',0);
+  } else if(d.state==='reference'){
+    g.append('rect').attr('class','body').attr('x',-d.r).attr('y',-d.r).attr('width',d.r*2).attr('height',d.r*2).attr('rx',3)
+      .attr('fill','var(--surface)').attr('stroke',c).attr('stroke-width',2);
+    g.append('rect').attr('class','ring').attr('x',-d.r-3).attr('y',-d.r-3).attr('width',d.r*2+6).attr('height',d.r*2+6).attr('rx',4).attr('opacity',0);
+  } else {
+    const hollow = d.state==='finished'||d.state==='byear'||d.state==='blocked';
+    g.append('circle').attr('class','body').attr('r',d.r)
+      .attr('fill',hollow?'var(--surface)':c)
+      .attr('fill-opacity',d.state==='future'?0.38:1)
+      .attr('stroke',hollow?c:'none').attr('stroke-width',hollow?2:0)
+      .attr('stroke-dasharray',d.state==='byear'?'1 3':null).attr('stroke-linecap','round');
+    if(d.state==='next'){ g.append('circle').attr('r',d.r*0.42).attr('fill','var(--surface)'); }
+    if(d.state==='finished'){ g.append('path').attr('d',`M${-d.r*0.45} 0 l${d.r*0.32} ${d.r*0.36} l${d.r*0.62} -${d.r*0.72}`).attr('fill','none').attr('stroke',c).attr('stroke-width',2); }
+    const ring = g.append('circle').attr('class','ring').attr('r',d.r+3.5);
+    if(d.state==='active'){ ring.attr('stroke-width',2.2); }
+    else if(d.state==='blocked'){ ring.attr('stroke','var(--danger)').attr('stroke-width',2).attr('stroke-dasharray','3 2.5'); }
+    else ring.attr('opacity',0);
+  }
+  if(d.stale){ g.append('circle').attr('cx',d.r*0.75).attr('cy',-d.r*0.75).attr('r',4.2).attr('fill','var(--danger)').attr('stroke','var(--surface)').attr('stroke-width',1.5); }
+  g.append('text').attr('y',d.r+14).attr('text-anchor','middle').text(d.id);
+});
+
+function draw(){
+  linkSel.attr('x1',l=>l.source.x).attr('y1',l=>l.source.y).attr('x2',l=>l.target.x).attr('y2',l=>l.target.y);
+  nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+  hulls.attr('d',a=>hullPath(nodes.filter(n=>n.area===a.id&&visible(n)&&!n.archived)));
+  areaLabels.each(function(a){
+    const ns=nodes.filter(n=>n.area===a.id&&visible(n)&&!n.archived);
+    if(!ns.length){d3.select(this).attr('opacity',0);return;}
+    const minY=d3.min(ns,n=>n.y-n.r), cx=d3.mean(ns,n=>n.x);
+    d3.select(this).attr('opacity',null).attr('x',cx).attr('y',minY-30);
+  });
+}
+draw();
+
+// ---------- zoom ----------
+const zoom = d3.zoom().scaleExtent([0.15,4]).on('zoom',ev=>{
+  root.attr('transform',ev.transform);
+  document.body.classList.toggle('labels-off', !labelsOn || ev.transform.k<0.8);
+});
+svg.call(zoom).on('dblclick.zoom',null);
+function fit(ns=nodes.filter(visible), pad=60, instant=false){
+  const el=svg.node(); const w=el.clientWidth, h=el.clientHeight;
+  const panelW = isMobile() ? 0 : 390;
+  const x0=d3.min(ns,n=>n.x-n.r)-pad, x1=d3.max(ns,n=>n.x+n.r)+pad, y0=d3.min(ns,n=>n.y-n.r)-pad-30, y1=d3.max(ns,n=>n.y+n.r)+pad;
+  const k=Math.min((w-panelW)/(x1-x0), h/(y1-y0), 2.2);
+  const t=d3.zoomIdentity.translate((w-panelW)/2 - k*(x0+x1)/2, h/2 - k*(y0+y1)/2).scale(k);
+  if(instant||reduced()){ svg.call(zoom.transform,t); } else { svg.transition().duration(450).call(zoom.transform,t); }
+}
+const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile=()=>window.matchMedia('(max-width:720px)').matches;
+document.getElementById('zin').onclick=()=>svg.transition().duration(reduced()?0:200).call(zoom.scaleBy,1.4);
+document.getElementById('zout').onclick=()=>svg.transition().duration(reduced()?0:200).call(zoom.scaleBy,1/1.4);
+document.getElementById('zfit').onclick=()=>fit();
+let labelsOn=true;
+document.getElementById('labelsBtn').onclick=function(){labelsOn=!labelsOn;this.setAttribute('aria-pressed',String(labelsOn));document.body.classList.toggle('labels-off',!labelsOn||d3.zoomTransform(svg.node()).k<0.8);};
+
+// ---------- drag ----------
+nodeSel.call(d3.drag()
+  .on('start',(ev,d)=>{ev.sourceEvent.stopPropagation();})
+  .on('drag',(ev,d)=>{d.x=ev.x;d.y=ev.y;draw();}));
+
+// ---------- filtering ----------
+const query={v:''};
+function visible(n){ return shownAreas.has(n.area) && shownStates.has(n.state); }
+function matches(n){ const q=query.v; return !q || n.id.toLowerCase().includes(q) || n.title.toLowerCase().includes(q); }
+function applyFilters(){
+  nodeSel.classed('hidden-node',d=>!visible(d));
+  linkSel.classed('hidden-node',l=>!visible(l.source)||!visible(l.target));
+  draw(); applyHighlight();
+}
+document.getElementById('q').addEventListener('input',e=>{query.v=e.target.value.trim().toLowerCase(); applyHighlight();});
+document.getElementById('q').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ const m=nodes.find(n=>visible(n)&&matches(n)); if(m) select(m.id,true); }
+});
+
+// ---------- highlight & selection ----------
+let hovered=null, selected=null;
+function applyHighlight(){
+  const focus = hovered||selected;
+  const body=svg.node();
+  if(query.v){
+    body.classList.add('dim');
+    nodeSel.classed('hl',d=>matches(d)); linkSel.classed('hl',false);
+  } else if(focus){
+    const nb=neighbours.get(focus);
+    body.classList.add('dim');
+    nodeSel.classed('hl',d=>nb.has(d.id));
+    linkSel.classed('hl',l=>l.source.id===focus||l.target.id===focus);
+  } else {
+    body.classList.remove('dim'); nodeSel.classed('hl',false); linkSel.classed('hl',false);
+  }
+  nodeSel.classed('sel',d=>d.id===selected);
+}
+nodeSel.on('mouseenter',(ev,d)=>{hovered=d.id;applyHighlight();})
+  .on('mouseleave',()=>{hovered=null;applyHighlight();})
+  .on('click',(ev,d)=>{ev.stopPropagation(); select(d.id,false);})
+  .on('keydown',(ev,d)=>{ if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select(d.id,false);} });
+svg.on('click',()=>{ selected=null; renderPanel(); applyHighlight(); });
+
+function select(id, center){
+  const sn=byId.get(id);
+  if(!visible(sn)){
+    shownStates.add(sn.state); shownAreas.add(sn.area);
+    filters.querySelectorAll('.chip').forEach(b=>{ const label=b.children[1].textContent; if(label===stateName[sn.state]||label===areaName[sn.area]) b.setAttribute('aria-pressed','true'); });
+    applyFilters();
+  }
+  selected=id; renderPanel(); applyHighlight();
+  try{ history.replaceState(null,'','#'+id); }catch(e){}
+  if(center){
+    const n=byId.get(id); const el=svg.node(); const k=Math.max(d3.zoomTransform(el).k,1.1);
+    const panelW=(!isMobile())?390:0; const h=isMobile()?el.clientHeight*0.45:el.clientHeight;
+    svg.transition().duration(reduced()?0:450).call(zoom.transform,d3.zoomIdentity.translate((el.clientWidth-panelW)/2-k*n.x,h/2-k*n.y).scale(k));
+  }
+}
+
+// ---------- panel ----------
+const panel=document.getElementById('panel');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function listHtml(items){
+  if(!items.length) return '<p class="empty">None.</p>';
+  return '<ul class="nlist">'+items.map(it=>{
+    const n=byId.get(it.id);
+    return `<li><button type="button" data-go="${n.id}"><span class="sw" style="background:${areaColor(n.area)}"></span><span><span class="fn">${esc(n.id)}</span>${it.why?`<span class="why">${esc(it.why)}</span>`:''}</span></button></li>`;
+  }).join('')+'</ul>';
+}
+function renderPanel(){
+  if(!selected){
+    panel.innerHTML=`<div class="head"><h2>Open tasks and plans</h2></div><div class="body">
+      <p class="intro">Every Markdown file still in <code>docs/tasks</code> and <code>docs/plans</code>, grouped by area. The archive is off by default. Click a document to see its status, what it links to and what links to it. Drag to pan, scroll or pinch to zoom, drag a node to move it.</p>
+      <div class="sec"><h3>Worth a look first</h3>${listHtml(nodes.filter(n=>n.state==='finished'||n.stale).map(n=>({id:n.id,why:n.stale?'status line is out of date':'looks finished, candidate to archive'})))}</div>
+      <div class="sec"><h3>In progress</h3>${listHtml(nodes.filter(n=>n.state==='active').map(n=>({id:n.id})))}</div>
+      <div class="sec"><h3>Blocked</h3>${listHtml(nodes.filter(n=>n.state==='blocked').map(n=>({id:n.id})))}</div>
+      <div class="sec"><h3>The archive</h3><p class="intro">Switch on the Archive chips to add ${archCount} closed docs from docs/tasks-archive around the open ones. Their areas were assigned by file name, so a few may sit in a neighbouring cluster.</p></div>
+      <div class="sec"><h3>Won't implement</h3>${listHtml(nodes.filter(n=>n.state==='wont').map(n=>({id:n.id})))}</div>
+      <div class="sec"><h3>Linked to no open doc</h3>${listHtml(nodes.filter(n=>!n.archived&&[...neighbours.get(n.id)].every(m=>m===n.id||byId.get(m).archived)).map(n=>({id:n.id})))}</div>
+    </div>`;
+  } else {
+    const n=byId.get(selected);
+    const o=outs.get(n.id).map(id=>({id})), i=ins.get(n.id).map(id=>({id})), r=rels.get(n.id);
+    panel.innerHTML=`<div class="head"><h2>${esc(n.title)}</h2><button class="iconbtn" id="closeP" aria-label="Close details">&times;</button></div>
+    <div class="body">
+      <div class="meta">
+        <span class="tag" style="color:${areaColor(n.area)}">${areaName[n.area]}</span>
+        <span class="tag" style="color:var(--dim)">${stateName[n.state]}</span>
+        ${n.archived?`<span class="tag" style="color:var(--green)">archived ${esc(n.month)}</span>`:''}
+        ${n.prio&&!n.archived?`<span class="tag" style="color:var(--gold)">${n.prio}</span>`:''}
+        ${n.stale?'<span class="tag" style="color:var(--red)">status line out of date</span>':''}
+      </div>
+      <div class="path"><code>${esc(n.path)}</code><button type="button" id="copyP">Copy</button></div>
+      ${n.note?`<div class="sec"><h3>Assessment, ${DATA.generated}</h3><p class="assess">${esc(n.note)}</p></div>`:''}
+      <div class="sec"><h3>What the doc says</h3><p class="quote">${esc(n.status||'No status line.')}</p></div>
+      <dl class="facts"><dt>Length</dt><dd>${n.lines} lines</dd><dt>Last commit</dt><dd>${esc(n.date||'not committed')}</dd></dl>
+      <div class="sec"><h3>Links to (${o.length})</h3>${listHtml(o)}</div>
+      <div class="sec"><h3>Linked from (${i.length})</h3>${listHtml(i)}</div>
+      <div class="sec"><h3>Related, not linked yet (${r.length})</h3>${listHtml(r)}</div>
+    </div>`;
+    document.getElementById('closeP').onclick=()=>{selected=null;renderPanel();applyHighlight();try{history.replaceState(null,'',location.pathname);}catch(e){}};
+    const cp=document.getElementById('copyP');
+    cp.onclick=()=>{ const t=n.path; const ok=()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1200);};
+      try{ navigator.clipboard.writeText(t).then(ok,()=>{selectText(cp.previousElementSibling);}); }catch(e){ selectText(cp.previousElementSibling); } };
+  }
+  panel.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>select(b.dataset.go,true)));
+}
+function selectText(el){ const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+applyFilters();
+renderPanel();
+const h0=(location.hash||'').slice(1);
+if(h0 && byId.has(h0)){ select(h0,false); }
+fit(undefined,60,true);
+requestAnimationFrame(()=>fit(undefined,60,true));
+window.addEventListener('resize',()=>fit(undefined,60,true));
+</script>
+</body>
+</html>

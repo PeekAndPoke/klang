@@ -1,3 +1,7 @@
+> **2026-09-27:** the voice strip this plan mutates (`voices/strip/filter/`, `EnvelopeRenderer`, `FilterPipelineBuilder`,
+> `AudioFilterRenderer`, the Pipeline DSL and its presets) retired in phase 3 step 9, so most file and line references
+> below point at deleted code. Kept as the record of the pilot; the current voice is `audio/ref/voice-synthesis.md`.
+
 # Mutation-Check Plan — W1: Envelope (audio_be/voices)
 
 Repo root: `/opt/dev/peekandpoke/klang`

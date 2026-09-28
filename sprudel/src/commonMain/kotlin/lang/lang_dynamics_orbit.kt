@@ -8,13 +8,19 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_ATTACK_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.sprudel.ParamBag
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.putKatalystParam
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -173,31 +179,83 @@ val o: orbit = orbit
 
 // -- duck ------------------------------------------------------------------------------------------------------------
 
-private val duckOrbitMutation = voiceSetter { duckCylinder = it?.asIntOrNull() ?: duckCylinder }
+/**
+ * Fills the duck stage's companions, `duck.depth` and `duck.attack`, from
+ * `constants/BusEffectDefaults.kt` (`/dsl-design` §4 is the rule; this is only what THIS door
+ * does). Called from the ORBIT setter alone, and only when that call named an orbit: the orbit is
+ * this stage's name knob, so a tail-only `duck(depth = 0.5)` or `duck(attack = 0.3)` writes its own
+ * slot and nothing else, and a bare `duck()` that names nothing fills nothing.
+ *
+ * The filled depth is [DUCK_DEPTH], which is 0, so `duck(1)` alone names a source and still ducks
+ * nothing: it waits for a depth, the way the phaser waits for a wet. 0 is also what
+ * `KatalystDsl.classic` carries for that slot, so filling it changes nothing on the historical
+ * chain either.
+ *
+ * The slots are the duck's only storage since Katalyst step 5b-3 (the voice fields left the wire
+ * and `SprudelVoiceData`), and the `duck.*` accessors read them: `duck.attack` reads
+ * [DUCK_ATTACK_SECONDS] after `duck(1)`, the value the orbit runs. Until 5b-3 the accessors read
+ * the fields, which this fill never wrote, so the same read came back empty.
+ *
+ * Two different things keep a fill off a value it must not touch, and they are worth telling apart.
+ * The `value = null` plus the absence test is what lets a `katp("duck.depth", 0.7)` from an earlier
+ * call survive: that value IS in the event's bag, so the fill leaves it. A CHAIN-authored depth is
+ * not in the bag at all, it is the chain's own `Param` default, so nothing in [ParamBag] could
+ * protect it; what protects it is calling this fill from the ORBIT setter alone, so a tail-only
+ * `duck(attack = 0.3)` never writes `duck.depth` and the chain's 0.8 is never asked about. Until
+ * round 3 of step 5a-3 every duck knob filled, and that call silenced the ducking on a declared
+ * chain.
+ */
+private fun SprudelVoiceData.fillDuckDefaults() {
+    val slots = katalystParamsOrNew()
+
+    slots.setOrDefault("duck.depth", value = null, default = DUCK_DEPTH)
+    slots.setOrDefault("duck.attack", value = null, default = DUCK_ATTACK_SECONDS)
+}
+
+// The orbit is the NAME KNOB. It is also the one duck setter a bare call can reach with a null (the
+// bare-call reinterpret of `_liftOrReinterpretNumericalField`); naming nothing must write nothing,
+// slot included, or `duck(2).katp("duck.orbit", 5).duck()` would stamp the stale field back over
+// the 5 (checklist 12).
+private val duckOrbitMutation = voiceSetter {
+    val named = it?.asIntOrNull()
+
+    if (named != null) {
+        katalystParamsOrNew().set("duck.orbit", named.toDouble())
+        fillDuckDefaults()
+    }
+}
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckCylinder?.toDouble() }, update = duckOrbitMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.orbit") }, update = duckOrbitMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckOrbitMutation)
 }
 
-private val duckDepthMutation = voiceSetter { duckDepth = it?.asDoubleOrNull() }
+// The two tail setters write their own slot and nothing else. Not filling here is the whole of the
+// round 3 fix: a fill from a tail call would write `duck.depth` with DUCK_DEPTH, and on a chain that
+// authored its own depth as a `Param` default that 0 is what the stage then resolves to
+// (`/dsl-design` §4, the name-knob half).
+private val duckDepthMutation = voiceSetter {
+    putKatalystParam("duck.depth", it?.asDoubleOrNull())
+}
 
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckDepth }, update = duckDepthMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.depth") }, update = duckDepthMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckDepthMutation)
 }
 
-private val duckAttackMutation = voiceSetter { duckAttack = it?.asDoubleOrNull() }
+private val duckAttackMutation = voiceSetter {
+    putKatalystParam("duck.attack", it?.asDoubleOrNull())
+}
 
 private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.duckAttack }, update = duckAttackMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("duck.attack") }, update = duckAttackMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, duckAttackMutation)
@@ -273,15 +331,15 @@ object duck {
 
     /** The orbit slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val orbit: FieldAccessor = FieldAccessor { it.duckCylinder?.toDouble() }
+    val orbit: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.orbit") }
 
     /** The depth slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val depth: FieldAccessor = FieldAccessor { it.duckDepth }
+    val depth: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.depth") }
 
     /** The attack slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val attack: FieldAccessor = FieldAccessor { it.duckAttack }
+    val attack: FieldAccessor = FieldAccessor { it.katalystParams?.get("duck.attack") }
 
     /** The setter, see [SprudelPattern.duck]. */
     @KlangScript.Invoke

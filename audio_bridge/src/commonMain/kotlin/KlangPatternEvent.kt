@@ -35,24 +35,25 @@ interface KlangPatternEvent {
     val sound: SoundValue? get() = null
 
     /**
-     * The voice pipeline this event references, if any. Default `null` for pattern types that don't
-     * carry [PipelineValue]. Pattern languages that may carry an inline pipeline (e.g. sprudel) override
-     * to expose the event's [PipelineValue].
+     * The output chain (the playback's master) this event references, if any: a [KatalystValue],
+     * the same chain type an orbit runs. Default `null` for pattern types that don't carry one.
+     * Pattern languages that may carry an inline chain (e.g. sprudel) override to expose it.
      *
-     * Used by the playback's wire-emission step to pre-register inline pipelines with the backend before
-     * voice events that reference them are scheduled. Mirror of [sound].
+     * Used by the playback's wire-emission step to pre-register inline chains with the backend
+     * before events that reference them are scheduled, into the one Katalyst registry. Mirror of
+     * [sound].
      */
-    val pipeline: PipelineValue? get() = null
+    val master: KatalystValue? get() = null
 
     /**
-     * The master chain this event references, if any. Default `null` for pattern types that don't
-     * carry [MasterValue]. Pattern languages that may carry an inline master (e.g. sprudel) override
-     * to expose the event's [MasterValue].
+     * The orbit chain this event references, if any. Default `null` for pattern types that don't
+     * carry [KatalystValue]. Pattern languages that may carry an inline chain (e.g. sprudel)
+     * override to expose the event's [KatalystValue].
      *
-     * Used by the playback's wire-emission step to pre-register inline masters with the backend before
-     * events that reference them are scheduled. Mirror of [pipeline].
+     * Used by the playback's wire-emission step to pre-register inline chains with the backend
+     * before events that reference them are scheduled. Mirror of [master].
      */
-    val master: MasterValue? get() = null
+    val katalyst: KatalystValue? get() = null
 
     /** Convert to engine-level voice data. */
     fun toVoiceData(): VoiceData

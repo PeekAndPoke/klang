@@ -15,13 +15,21 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.filter.EnvelopeRenderer
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.PhasePools
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
+import kotlin.random.Random
 import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import kotlin.math.abs
 
 /**
- * Guards the teardown fade on the `on = false` (`.adsrOff()`) path.
+ * Guards the teardown fade (`TeardownFadeRenderer`): the voice's last frames when its tree does not end in a
+ * built envelope with a static release (`BuiltIgnitor.endsInEnvelope`, the one home of the rule), as for a bare
+ * source under `classic()` with `.adsrOff()` or an instrument without `classic()` (the bare tree of phase 3 step 9). Until step 9 the rows below drove the voice strip's VCA with `on = false`, whose gate path
+ * was exactly this fade; they now drive the fade itself, and one row plays the guitar through the real factory.
  *
  * **The bug this exists for.** Found by ear on Der Schmetterling's guitars, 2026-08-27, right after
  * Phase 3 shipped. The VCA sits LAST in the strip, so with a curve it drove the fully amplified
@@ -53,7 +61,8 @@ class VcaOffTeardownSpec : StringSpec({
 
     fun amp(inner: IgnitorDsl) = IgnitorDsl.Highpass(
         inner = IgnitorDsl.Distort(
-            inner = inner, amount = IgnitorDsl.Constant(0.80), shape = "tube", oversample = 4,
+            inner = inner, amount = IgnitorDsl.Constant(0.80),
+            shape = IgnitorDsl.Constant(DistortionShapes.indexOf("tube")), oversample = IgnitorDsl.Constant(4.0),
         ),
         freq = IgnitorDsl.Constant(100.0),
     )
@@ -61,12 +70,11 @@ class VcaOffTeardownSpec : StringSpec({
     /** The guitar's topology: the envelope is INSIDE the instrument, before its amp. */
     val envelopeBeforeAmp: IgnitorDsl = amp(env(IgnitorDsl.Sawtooth()))
 
-    /** The control: envelope last, the way the strip VCA used to apply it. */
+    /** The control: envelope last, the way the strip VCA used to apply it (and `classic()` applies it now). */
     val envelopeAfterAmp: IgnitorDsl = env(amp(IgnitorDsl.Sawtooth()))
 
     /**
-     * Renders a whole voice through the real EnvelopeRenderer with the VCA off, over an arbitrary
-     * frame span and an arbitrary (possibly fractional) endFrame — the branches the fade's clamps
+     * Renders a whole voice through the teardown fade, over an arbitrary frame span and an arbitrary (possibly fractional) endFrame: the branches the fade's clamps
      * actually depend on.
      */
     fun renderSpan(dsl: IgnitorDsl, freqHz: Double, gate: Int, rel: Int, endFrame: Double): AudioBuffer {
@@ -78,10 +86,7 @@ class VcaOffTeardownSpec : StringSpec({
         )
         val out = AudioBuffer(total)
         val block = AudioBuffer(blockFrames)
-        val renderer = EnvelopeRenderer(
-            Voice.Envelope(attackFrames = 1.0, decayFrames = 1.0, sustainLevel = 1.0, releaseFrames = rel.toDouble()),
-            startFrame = 0.0, on = false,
-        )
+        val renderer = TeardownFadeRenderer
         val ctx = BlockContext(
             audioBuffer = block, freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames), sampleRate = sampleRate,
@@ -102,7 +107,7 @@ class VcaOffTeardownSpec : StringSpec({
         return out
     }
 
-    /** Renders a whole voice through the real EnvelopeRenderer with the VCA switched off. */
+    /** Renders a whole voice through the teardown fade. */
     fun renderVoiceVcaOff(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
         val signal: Ignitor = dsl.toExciter()
         val signalCtx = IgniteContext(
@@ -114,11 +119,7 @@ class VcaOffTeardownSpec : StringSpec({
         )
         val out = AudioBuffer(totalFrames)
         val block = AudioBuffer(blockFrames)
-        val renderer = EnvelopeRenderer(
-            Voice.Envelope(attackFrames = 480.0, decayFrames = 480.0, sustainLevel = 1.0, releaseFrames = 2400.0),
-            startFrame = 0.0,
-            on = false,
-        )
+        val renderer = TeardownFadeRenderer
         val ctx = BlockContext(
             audioBuffer = block,
             freqModBuffer = DoubleArray(blockFrames),
@@ -148,7 +149,7 @@ class VcaOffTeardownSpec : StringSpec({
         return out
     }
 
-    /** The same signal with NO EnvelopeRenderer at all — the reference the gate must not shape. */
+    /** The same signal with NO fade at all: the reference the fade must not shape. */
     fun renderRaw(dsl: IgnitorDsl, freqHz: Double): AudioBuffer {
         val signal: Ignitor = dsl.toExciter()
         val signalCtx = IgniteContext(
@@ -255,6 +256,55 @@ class VcaOffTeardownSpec : StringSpec({
         }
         // ...and it still ends silent.
         lastSample(buf) shouldBe 0.0
+    }
+
+    "the guitar as a BARE authored instrument (no classic()) ends on the fade through the real VoiceFactory" {
+        // Phase 3 step 9's case: the guitar played without `classic()` has no voice envelope at all, and its
+        // own envelope sits before its amp, so the tube stage's tail is exactly what the fade has to take out.
+        val registry = IgnitorRegistry().apply { register("guitar", envelopeBeforeAmp) }
+        val factory = VoiceFactory(
+            sampleRate = sampleRate,
+            sampleRateDouble = sampleRate.toDouble(),
+            blockFrames = blockFrames,
+            ignitorRegistry = registry,
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
+            voiceBuffer = AudioBuffer(blockFrames),
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+        val voice = factory.makeVoice(
+            scheduled = ScheduledVoice(
+                playbackId = "test",
+                data = VoiceData.empty.copy(sound = "guitar", freqHz = 82.4),
+                startTime = 0.0,
+                gateEndTime = gateFrames.toDouble() / sampleRate,
+                playbackStartTime = 0.0,
+            ),
+            backendStartTimeSec = 0.0,
+            playbackCtx = PlaybackCtx(playbackId = "test", ignitorRegistry = registry, phasePools = PhasePools(Random(1))),
+            getSample = { null },
+        ) ?: error("makeVoice returned null")
+
+        val ctx = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
+        val blocks = (totalFrames + blockFrames) / blockFrames + 2
+        val out = AudioBuffer(blocks * blockFrames)
+
+        for (b in 0 until blocks) {
+            ctx.blockStart = (b * blockFrames).toDouble()
+            voice.render(ctx)
+
+            val cylinder = ctx.cylinders.getOrInit(voice.cylinderId, voice, 0.0)
+
+            cylinder.mixBuffer.left.copyInto(out, b * blockFrames, 0, blockFrames)
+            cylinder.mixBuffer.left.fill(0.0)
+            cylinder.mixBuffer.right.fill(0.0)
+        }
+
+        // The lifetime is the guitar's own release (0.05 s, a static tail), so the last rendered frame is
+        // totalFrames - 1, and the fade takes it to an exact zero; the frame before the fade window still sounds.
+        withClue("the last rendered frame") { out[totalFrames - 1] shouldBe 0.0 }
+        withClue("engaged: the tail before the fade window is not silent") { (abs(out[totalFrames - 400]) > 0.0) shouldBe true }
+        withClue("the voice is gone after it") { (totalFrames until totalFrames + 200).all { out[it] == 0.0 } shouldBe true }
     }
 
     "the envelope-after-amp control was always silent at teardown" {

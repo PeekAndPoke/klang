@@ -54,7 +54,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | pipeline_stage_design                    | 2     | `docs/plans/unified-eq.md`, whitepaper (double-VCA sandwich)                                 |
 | project_analog_drift_tuning              | 2     | `AnalogDriftSpec`, `audio/MEMORY.md`                                                         |
 | project_arrange_boundary_drop            | 2     | `StructuralCycleSelectionSpec`; register (guardrail)                                         |
-| project_audio_backend_audit              | 2     | `docs/tasks/audio-backend-audit.md`, `docs/tasks/future/audit-parked-decisions.md`           |
+| project_audio_backend_audit              | 2     | `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md`, `docs/tasks/future/audit-parked-decisions.md`           |
 | project_block_framing_invariance         | 2     | `docs/plans/block-framing-invariance.md`, `docs/tasks/by-ear/`                               |
 | project_block_size_parity                | 2     | `DelayLine` KDoc; register (guardrail)                                                       |
 | project_bluetooth_latency                | 2     | `docs/tasks/future/midi-latency-optimizations.md`                                            |
@@ -68,7 +68,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_filter_freq_naming               | 2     | `docs/tasks-archive/2026-08/` (decided, unstarted)                                           |
 | project_filter_review                    | 2     | OnePole HPF bias documented in code; register (guardrail)                                    |
 | project_filter_saturation_dead_end       | 2     | `audio/MEMORY.md` section                                                                    |
-| project_filter_unification               | 2     | `docs/plans/filter-unification.md`                                                           |
+| project_filter_unification               | 2     | `docs/tasks-archive/2026-09/20260927-filter-unification.md`                                                           |
 | project_fractional_pitch_closed          | 2     | `docs/tasks-archive/2026-08/20260824-fractional-pitch-input.md`                              |
 | project_gradle_no_concurrent_builds      | 2     | `/agent-fleet`, `/review-loop` Gotchas (watcher line added)                                  |
 | project_ignitor_envelope_ownership       | 1     | archived task, `docs/tasks/future/envelope-shape-followups.md`                               |
@@ -77,14 +77,14 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_klangblocks_removed              | 2     | register (retired list)                                                                      |
 | project_klangmotor_rename                | 2     | archived motor-branding task; register (stone, naming)                                       |
 | project_latency_hint_topic               | 0     | superseded by later commits ("js backend back to playback"); ownership expired               |
-| project_licensing                        | 2     | `LICENSE`, `AUTHORS.MD`, `tones/LICENSE`, `docs/tasks/copyright-audit-00-overview.md`; register (stone) |
+| project_licensing                        | 2     | `LICENSE`, `AUTHORS.MD`, `tones/LICENSE`, `docs/tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`; register (stone) |
 | project_live_update_double_voice         | 2     | `VoiceScheduler.isDuplicate` and its spec                                                    |
 | project_midi_note_off_review             | 1     | archived task                                                                                |
-| project_midi_playground                  | 1     | `docs/tasks/midi-keyboard-playground.md`, `realtime-playback-controller.md`; KeyLab map committed |
+| project_midi_playground                  | 1     | `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`, `realtime-playback-controller.md`; KeyLab map committed |
 | project_mini_notation_tweaks             | 1     | archived task, `docs/tasks/future/mini-notation-tweaks-followups.md`                         |
 | project_motor_naming                     | 2     | README, whitepaper vocabulary (Cylinder, Injection, Ignitor, Katalyst)                       |
 | project_motor_slogans                    | 2     | strategist agent memory                                                                      |
-| project_mutable_voicedata                | 2     | `sprudel/MEMORY.md` Lessons, `docs/tasks/constant-control-fast-path.md`                      |
+| project_mutable_voicedata                | 2     | `sprudel/MEMORY.md` Lessons, `docs/tasks/future/optimize-constant-control-fast-path.md`                      |
 | project_n_add_noop                       | 2     | `docs/tasks/future/n-pattern-add-noop.md`                                                    |
 | project_noise_generator_knobs            | 1     | archived task                                                                                |
 | project_notstrom_demo                    | 2     | strategist agent memory, song sources                                                        |
@@ -112,7 +112,7 @@ archive is not loaded by any session; the maintainer can delete the directory on
 | project_version_info                     | 2     | `docs/tasks-archive/2026-06/20260624-build-version-info.md`                                  |
 | project_voice_takeover                   | 2     | `docs/tasks/voice-takeover.md`                                                               |
 | project_warehouse_stats_feed             | 1     | archived task                                                                                |
-| project_whitepaper                       | 2     | `docs/whitepaper/klang-whitepaper.html`; the "old artifact preview" note was session-only    |
+| project_whitepaper                       | 2     | `src/jsMain/resources/klang-whitepaper.html`; the "old artifact preview" note was session-only    |
 | project_worklet_clock_divergence         | 3     | `docs/tasks/future/worklet-clock-divergence.md`                                              |
 | project_worklet_serialization            | 2     | archived task (ProtoBuf rejection recorded there)                                            |
 | sprudel_dsl_test_coverage                | 2     | `docs/tasks/sprudel-test-coverage-and-review.md`                                             |

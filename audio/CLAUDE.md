@@ -21,9 +21,10 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 | File                                                   | Role                                           |
 |--------------------------------------------------------|------------------------------------------------|
-| `src/commonMain/kotlin/VoiceData.kt`                   | All voice parameters (pitch, gain, filters…)   |
-| `src/commonMain/kotlin/AdsrEnvelope.kt`                | Attack/decay/sustain/release                   |
-| `src/commonMain/kotlin/FilterDefs.kt` + `FilterDef.kt` | Sealed filter type hierarchy                   |
+| `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `oscParams`, orbit slots in `katalystParams` |
+| `src/commonMain/kotlin/IgnitorDslClassic.kt`           | `classic()`, the voice chain, and its slot groups        |
+| `src/commonMain/kotlin/AdsrDef.kt`                     | `AdsrCurve`; `AdsrDef` for a sample's own envelope |
+| `src/commonMain/kotlin/FilterDef.kt`                   | The orbit resonators' band carriers (`Formant`, `Body`) |
 | `src/commonMain/kotlin/ScheduledVoice.kt`              | Voice scheduling message (VoiceData + timing)  |
 | `src/commonMain/kotlin/MonoSamplePcm.kt`               | Decoded sample data (FloatArray + metadata)    |
 | `src/commonMain/kotlin/infra/KlangCommLink.kt`         | Ring-buffer IPC; Cmd + Feedback sealed classes |
@@ -35,14 +36,14 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 |-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | `src/commonMain/kotlin/PlaybackEngineDispatcher.kt` | Routes each `Cmd` by `playbackId` → its own `PlaybackEngine` (own scheduler + cylinders); see `ref/architecture.md` |
 | `src/commonMain/kotlin/KlangAudioRenderer.kt`       | Main render loop driver + master limiter                                                                            |
-| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice` — runs the Pitch → Excite → Filter strip per note                                                           |
-| `src/commonMain/kotlin/voices/VoiceFactory.kt`      | Builds a `Voice` (ignitor + filter chain) from `VoiceData`                                                          |
-| `src/commonMain/kotlin/voices/strip/`               | Per-block strip stages: `pitch/`, `ignite/`, `filter/`, `send/`                                                     |
+| `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: runs Pitch → Ignite → (teardown fade) → Send per note; the Ignitor tree is the whole instrument            |
+| `src/commonMain/kotlin/voices/VoiceFactory.kt`      | Builds a `Voice` (the instrument's Ignitor tree, the sample instrument for samples) from `VoiceData`                  |
+| `src/commonMain/kotlin/voices/strip/`               | Per-block voice stages: `pitch/`, `ignite/`, `send/` (the old filter/VCA strip retired in phase 3 step 9)           |
 | `src/commonMain/kotlin/voices/VoiceScheduler.kt`    | Voice lifecycle management                                                                                          |
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |
 | `src/commonMain/kotlin/cylinders/katalyst/`         | Orbit-level effects: body/vowel resonators, `VoiceLease` ownership, `KatalystFilterSwap` declick                    |
-| `src/commonMain/kotlin/filters/`                    | SVF cutoff filters + resonator banks (`BodyFilter`/`FormantFilter`/`ParallelMixFilter`)                             |
+| `src/commonMain/kotlin/filters/`                    | SVF kernels (`BaseSvf`, `SvfBPF`), OnePoles, resonator bank (`ResonatorBank`/`ParallelMixFilter`)     |
 | `src/commonMain/kotlin/ignitor/Ignitors.kt`         | Oscillator + signal-gen factories (Ignitor DSL); samples via `ignitor/SampleIgnitor.kt`                             |
 | `src/jvmMain/kotlin/JvmAudioBackend.kt`             | JVM: javax.sound.sampled output                                                                                     |
 | `src/jsMain/kotlin/JsAudioBackend.kt`               | JS: Web Audio API AudioContext output                                                                               |
@@ -68,9 +69,10 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | Topic                                                                              | File                       |
 |------------------------------------------------------------------------------------|----------------------------|
 | Architecture, data flow, comm-link protocol, platform backends                     | `ref/architecture.md`      |
-| VoiceData fields (all parameters), FilterDefs, ADSR, ScheduledVoice                | `ref/data-model.md`        |
-| Voice interface, AbstractVoice, SynthVoice, SampleVoice, oscillators               | `ref/voice-synthesis.md`   |
+| VoiceData fields, the `oscParams` / `katalystParams` slots, AdsrDef, FilterDef, ScheduledVoice | `ref/data-model.md` |
+| Voice stages, `classic()`, the sample instrument, oscillators                      | `ref/voice-synthesis.md`   |
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
+| The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |
 | KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
 | Samples registry, audio decoders, URL caching (audio_fe)                           | `ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX`, framework precedents | `ref/numerical-safety.md`  |

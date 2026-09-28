@@ -19,10 +19,9 @@ import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WarmupVocabulary
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -62,7 +61,7 @@ class CylinderShelfSpec : StringSpec({
         val context = AudioBackendContext(
             sampleRate = sampleRate, blockFrames = blockFrames, commLink = commLink.backend,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
-            pipelineRegistry = PipelineRegistry(), masterRegistry = MasterRegistry(),
+            katalystRegistry = KatalystRegistry(),
             clock = clock, performanceTimeMs = { 0.0 }, warehouse = warehouse,
         )
         val dispatcher = PlaybackEngineDispatcher(context = context, clock = clock).also { it.setBackendStartTime(0.0) }
@@ -73,8 +72,17 @@ class CylinderShelfSpec : StringSpec({
         playbackId = pid, startTime = start, gateEndTime = start + 0.05,
         data = VoiceData.empty.copy(
             sound = sound, freqHz = 330.0, cylinder = cylinder,
-            delay = 0.5, delayTime = 0.3, delayFeedback = 0.3, reverb = 0.5, reverbSize = 0.6,
-            phaser = 0.5, phaserDepth = 0.6, cutoff = 1500.0, resonance = 0.2,
+            // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included
+            // since step 5b-2.
+            katalystParams = mapOf(
+                "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.3, "delay.cap" to 1.0,
+                // AUTHORED 0 to 10, the scale the old `VoiceData.reverbSize` was already on, so the
+                // faithful translation keeps the number. (`Voice.Reverb.size` is the NORMALIZED
+                // tenth of it, and a fixture built from THAT converts; this one did not.)
+                "reverb.wet" to 0.5, "reverb.size" to 0.6,
+                "phaser.rate" to 0.5, "phaser.wet" to 0.6,
+                "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
+            ),
         ),
         playbackStartTime = 0.0,
     )
@@ -93,8 +101,8 @@ class CylinderShelfSpec : StringSpec({
 
         f.warehouse.cylinders.idleCount shouldBe 1
         used.isActive shouldBe false
-        used.delay.delayLine.shouldBeNull() // the ring went to ITS shelf, not idle inside the cylinder
-        used.reverb.reverb.shouldBeNull()
+        used.delay!!.delayLine.shouldBeNull() // the ring went to ITS shelf, not idle inside the cylinder
+        used.reverb!!.reverb.shouldBeNull()
         f.warehouse.sized.shelfCount shouldBe 1
         f.warehouse.reverbs.idleCount shouldBe 1
 
@@ -141,8 +149,13 @@ class CylinderShelfSpec : StringSpec({
                 playbackId = "a", startTime = 0.0, gateEndTime = 0.2,
                 data = VoiceData.empty.copy(
                     sound = "supersaw", freqHz = 110.0 + 50.0 * orbit, cylinder = orbit, gain = 2.0,
-                    delay = 0.9, delayTime = 0.05 + 0.1 * orbit, delayFeedback = 0.8,
-                    reverb = 0.9, reverbSize = 0.95, phaser = 0.9, phaserDepth = 0.9, cutoff = 400.0 + 900.0 * orbit, resonance = 0.9,
+                    katalystParams = mapOf(
+                        "delay.wet" to 0.9, "delay.time" to 0.05 + 0.1 * orbit,
+                        "delay.feedback" to 0.8, "delay.cap" to 1.0,
+                        "reverb.wet" to 0.9, "reverb.size" to 0.95,
+                        "phaser.rate" to 0.9, "phaser.wet" to 0.9,
+                        "phaser.center" to 1000.0, "phaser.sweep" to 1000.0, "phaser.floor" to 1.0,
+                    ),
                 ),
                 playbackStartTime = 0.0,
             )
@@ -174,9 +187,12 @@ class CylinderShelfSpec : StringSpec({
     "the shelf holds at most maxIdle cylinders and refuses a double return" {
         val rings = SizedBuffers.forRings(sampleRate)
         val units = CylinderUnits(blockFrames, sampleRate, rings, ReverbUnits(sampleRate), maxIdle = 2)
-        val a = units.rent(0, 10)
-        val b = units.rent(1, 10)
-        val c = units.rent(2, 10)
+        // The renting engine's chain registry; this spec is about the shelf, so one empty
+        // registry serves every rent.
+        val katalysts = KatalystRegistry()
+        val a = units.rent(0, 10, katalysts)
+        val b = units.rent(1, 10, katalysts)
+        val c = units.rent(2, 10, katalysts)
         units.allocations shouldBe 3
 
         units.giveBack(a)
@@ -189,8 +205,8 @@ class CylinderShelfSpec : StringSpec({
         units.idleCount shouldBe 2
         units.dropped shouldBe 1
 
-        units.rent(7, 10) shouldBeSameInstanceAs b
-        units.rent(8, 10).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
+        units.rent(7, 10, katalysts) shouldBeSameInstanceAs b
+        units.rent(8, 10, katalysts).let { it shouldBeSameInstanceAs a; it.id shouldBe 8 }
         units.hits shouldBe 2
     }
 
@@ -317,10 +333,10 @@ class CylinderShelfSpec : StringSpec({
         repeat(WarmupRunner.WARMUP_ORBITS + WarmupRunner.TAIL_BLOCKS - 1) { f.render(1); warmup.tick() }
 
         val cylinders = f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldNotBeNull().cylinders.cylinders.sortedBy { it.id }
-        cylinders[0].phaser.phaser.depth shouldBeGreaterThan 0.0
-        cylinders[1].compressor.compressor.shouldNotBeNull()
-        cylinders[2].body.isEngaged shouldBe true
-        cylinders[3].vowel.isEngaged shouldBe true
+        cylinders[0].phaser!!.phaser.depth shouldBeGreaterThan 0.0
+        cylinders[1].compressor!!.compressor.shouldNotBeNull()
+        cylinders[2].body!!.isEngaged shouldBe true
+        cylinders[3].vowel!!.isEngaged shouldBe true
     }
 
     "every warmup voice actually sounds through its orbit — the warmed paths are the real ones" {
@@ -337,8 +353,8 @@ class CylinderShelfSpec : StringSpec({
         engine.cylinders.cylinders.size shouldBe WarmupRunner.WARMUP_ORBITS
         engine.cylinders.cylinders.forEach { c ->
             c.isActive shouldBe true
-            c.delay.delayLine.shouldNotBeNull()
-            c.reverb.reverb.shouldNotBeNull()
+            c.delay!!.delayLine.shouldNotBeNull()
+            c.reverb!!.reverb.shouldNotBeNull()
         }
         engine.scheduler.droppedVoiceCount(WarmupRunner.WARMUP_PLAYBACK_ID) shouldBe 0
     }

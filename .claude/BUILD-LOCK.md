@@ -14,8 +14,8 @@ in [`build-lock-log.md`](build-lock-log.md), which nobody reads to take the lock
 
 ---
 
-**HOLDER: (none)**
-**SINCE: 2026-09-08**
+**HOLDER: none**
+**SINCE: 2026-09-28**
 **STATE: FREE**
 
 ## Uncommitted in this tree

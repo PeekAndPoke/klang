@@ -12,12 +12,10 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.SampleStore
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -52,7 +50,13 @@ class SamplePlayheadStartSpec : StringSpec({
     fun ramp() = AudioBuffer(pcmSize) { it.toDouble() / (pcmSize - 1) }
 
     /** Renders [blocks] blocks of a sample voice built through the real [VoiceFactory]. */
-    fun render(meta: SampleMetadata, begin: Double? = null, blocks: Int = 30, freqHz: Double = 220.0): DoubleArray {
+    fun render(
+        meta: SampleMetadata,
+        begin: Double? = null,
+        blocks: Int = 30,
+        freqHz: Double = 220.0,
+        slots: Map<String, Double>? = null,
+    ): DoubleArray {
         val pcm = MonoSamplePcm(sampleRate = sampleRate, pcm = ramp(), meta = meta)
         val registry = IgnitorRegistry().apply { registerDefaults() }
         val voiceBuffer = DoubleArray(blockFrames)
@@ -61,7 +65,6 @@ class SamplePlayheadStartSpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = voiceBuffer,
             freqModBuffer = DoubleArray(blockFrames),
@@ -73,9 +76,8 @@ class SamplePlayheadStartSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = freqHz, // pitchHz below is 220, so freqHz / 220 is the playback rate
                     sound = "playheadprobe", // unregistered => the sample branch
-                    adsr = AdsrDef.Std(release = 0.01, on = false), // VCA off: raw sample values
-                    begin = begin,
-                ),
+                    oscParams = slots,
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = 0.01, on = false), begin = begin)), // envelope off: raw sample values
                 startTime = 0.0,
                 gateEndTime = 0.5,
                 playbackStartTime = 0.0,
@@ -110,7 +112,7 @@ class SamplePlayheadStartSpec : StringSpec({
             startSec = loopStartFrame.toDouble() / sampleRate,
             endSec = loopEndFrame.toDouble() / sampleRate,
         ),
-        adsr = AdsrDef.empty,
+        adsr = null,
         anchor = 0.0,
     )
 
@@ -147,7 +149,7 @@ class SamplePlayheadStartSpec : StringSpec({
                 startSec = loopStartFrame.toDouble() / sampleRate,
                 endSec = tinyLoopEnd.toDouble() / sampleRate,
             ),
-            adsr = AdsrDef.empty,
+            adsr = null,
             anchor = 0.0,
         )
         val out = render(meta)
@@ -172,7 +174,7 @@ class SamplePlayheadStartSpec : StringSpec({
                 startSec = loopStartFrame.toDouble() / sampleRate,
                 endSec = tinyLoopEnd.toDouble() / sampleRate,
             ),
-            adsr = AdsrDef.empty,
+            adsr = null,
             anchor = 0.0,
         )
         val out = render(meta, freqHz = 275.0)
@@ -190,7 +192,7 @@ class SamplePlayheadStartSpec : StringSpec({
     }
 
     "a non-looped sample starts at frame 0 even when anchor says otherwise" {
-        val meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.05) // 2205 frames in
+        val meta = SampleMetadata(loop = null, adsr = null, anchor = 0.05) // 2205 frames in
         val out = render(meta)
 
         // anchor is the loudest sample's position, not a start offset. The old code began here at
@@ -207,5 +209,50 @@ class SamplePlayheadStartSpec : StringSpec({
         // 0.25 * 4410 = 1102.5 — a FRACTIONAL frame, which the interpolator honours, so the
         // expectation is the ramp evaluated at 1102.5, not at pcm[1102].
         out[0] shouldBe ((0.25 * pcmSize) / (pcmSize - 1)).plusOrMinus(1e-9)
+    }
+
+    // ── The playback slots, read raw off the voice's bag (phase 3 step 8: `begin`, `end`, `speed`, `loop`) ──
+
+    "a non-finite begin, end or speed slot reads as UNSET: the attack plays from frame 0 and the sample's own loop applies" {
+        val plain = render(loopedMeta)
+
+        for ((name, value) in listOf("begin" to Double.NaN, "end" to Double.POSITIVE_INFINITY, "speed" to Double.NaN)) {
+            val out = render(loopedMeta, slots = mapOf(name to value))
+
+            withClue("$name = $value against no slot, first mismatching frame") {
+                (plain.indices.firstOrNull { plain[it].toRawBits() != out[it].toRawBits() } ?: -1) shouldBe -1
+            }
+        }
+    }
+
+    "a set end slot, even at 1.0, switches the sample's own loop off: only an unset begin AND end let it apply" {
+        val out = render(loopedMeta, slots = mapOf("end" to 1.0))
+
+        // No wrap at loopEnd: the playhead runs on through the PCM.
+        out[loopEndFrame + 10] shouldBe pcmAt(loopEndFrame + 10).plusOrMinus(1e-9)
+    }
+
+    "the loop slot is a flag: 0.0 is off (the sample's own loop still applies), 1.0 loops [begin, end)" {
+        val plain = render(loopedMeta)
+        val off = render(loopedMeta, slots = mapOf("loop" to 0.0))
+
+        withClue("loop 0.0 against no slot, first mismatching frame") {
+            (plain.indices.firstOrNull { plain[it].toRawBits() != off[it].toRawBits() } ?: -1) shouldBe -1
+        }
+
+        // begin 0, end 0.5 (2205 frames): frame 2205 + k wraps to pcm[k].
+        val looped = render(loopedMeta, slots = mapOf("loop" to 1.0, "begin" to 0.0, "end" to 0.5))
+
+        for (k in listOf(10, 100)) {
+            withClue("frame ${loopStartFrame + k}, one explicit loop in") {
+                looped[loopStartFrame + k] shouldBe pcmAt(k).plusOrMinus(1e-9)
+            }
+        }
+    }
+
+    "the speed slot scales the playback rate" {
+        val out = render(loopedMeta, slots = mapOf("speed" to 2.0))
+
+        out[500] shouldBe pcmAt(1000).plusOrMinus(1e-9)
     }
 })

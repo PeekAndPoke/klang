@@ -16,8 +16,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
  * deep-copies only the non-null groups; setters lazily create a group on first write and then mutate it in
  * place (zero-copy), preserving the single-owner mutation model.
  *
- * These are sprudel-internal mutable mirrors — the immutable wire-format equivalents live in `audio_bridge`
- * (`AdsrDef`, `FilterDefs`/`FilterDef`/`FilterEnvDef`); [SprudelVoiceData.toVoiceData] maps across.
+ * These are sprudel-internal mutable mirrors. On the wire the voice doors' groups travel as the instruments' slot
+ * keys (`classic()`'s `<door>.<param>`, phase 3 step 8): [SprudelVoiceData.toVoiceData] maps across.
  *
  * `copy()` (the generated data-class copy) is the per-group deep clone — every field is an immutable scalar,
  * so a shallow `copy()` fully detaches the clone. Each group has a `mergeSvd*` helper (field-wise `over`-wins,
@@ -33,7 +33,7 @@ data class SvdAdsr(
     var attackCurve: AdsrCurve? = null,
     var decayCurve: AdsrCurve? = null,
     var releaseCurve: AdsrCurve? = null,
-    /** Whether the VCA stage shapes this voice at all; `null` = unset, the pipeline's `Vca` decides. */
+    /** Whether the voice envelope shapes this voice at all (`classic()`'s `adsr.on`); `null` = unset, it stays on. */
     var on: Boolean? = null,
 )
 
@@ -53,6 +53,10 @@ data class SvdFilter(
     var env: Double? = null,
     /** Cascade count (C5, `lpx`/`hpx`): null = 1. Only lp/hp surfaces exist. */
     var passes: Double? = null,
+    /** The envelope's stage curves (`lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves`); null = unset. */
+    var attackCurve: AdsrCurve? = null,
+    var decayCurve: AdsrCurve? = null,
+    var releaseCurve: AdsrCurve? = null,
 )
 
 /** Pitch modulation: glide ([accelerate]) + vibrato. */
@@ -63,14 +67,16 @@ data class SvdPitchMod(
     var vibratoMod: Double? = null,
 )
 
-/** Pitch envelope. */
+/** Pitch envelope: `penv(amount, attack, decay, sustain, release)` and `penvCurves(attack, decay, release)`. */
 data class SvdPitchEnv(
     var pAttack: Double? = null,
     var pDecay: Double? = null,
+    var pSustain: Double? = null,
     var pRelease: Double? = null,
     var pEnv: Double? = null,
-    var pCurve: Double? = null,
-    var pAnchor: Double? = null,
+    var pAttackCurve: AdsrCurve? = null,
+    var pDecayCurve: AdsrCurve? = null,
+    var pReleaseCurve: AdsrCurve? = null,
 )
 
 /** FM synthesis. */
@@ -112,29 +118,6 @@ data class SvdTremolo(
     var tremoloShape: String? = null,
 )
 
-/** Ducking / sidechain. */
-data class SvdDuck(
-    var duckCylinder: Int? = null,
-    var duckAttack: Double? = null,
-    var duckDepth: Double? = null,
-)
-
-/** Delay. */
-data class SvdDelay(
-    var delay: Double? = null,
-    var delayTime: Double? = null,
-    var delayFeedback: Double? = null,
-    /** Ceiling the delay feedback saturates toward. `delay(cap = ...)`; default 1.0 at the engine. */
-    var delayCap: Double? = null,
-)
-
-/** Reverb. */
-data class SvdReverb(
-    var reverb: Double? = null,
-    var reverbSize: Double? = null,
-    var reverbLowpass: Double? = null,
-)
-
 /** Body resonator: material + dry/wet mix + broadband dry floor. */
 data class SvdBody(
     var material: String? = null,
@@ -157,8 +140,6 @@ data class SvdSample(
     var unit: String? = null,
     var loop: Boolean? = null,
     var cut: Int? = null,
-    var loopBegin: Double? = null,
-    var loopEnd: Double? = null,
 )
 
 // --- Field-wise merge helpers: `over` wins per field; always return a fresh, single-owner group. ----------
@@ -190,6 +171,9 @@ fun mergeSvdFilter(base: SvdFilter?, over: SvdFilter?): SvdFilter? {
         release = over.release ?: base.release,
         env = over.env ?: base.env,
         passes = over.passes ?: base.passes,
+        attackCurve = over.attackCurve ?: base.attackCurve,
+        decayCurve = over.decayCurve ?: base.decayCurve,
+        releaseCurve = over.releaseCurve ?: base.releaseCurve,
     )
 }
 
@@ -209,10 +193,12 @@ fun mergeSvdPitchEnv(base: SvdPitchEnv?, over: SvdPitchEnv?): SvdPitchEnv? {
     return SvdPitchEnv(
         pAttack = over.pAttack ?: base.pAttack,
         pDecay = over.pDecay ?: base.pDecay,
+        pSustain = over.pSustain ?: base.pSustain,
         pRelease = over.pRelease ?: base.pRelease,
         pEnv = over.pEnv ?: base.pEnv,
-        pCurve = over.pCurve ?: base.pCurve,
-        pAnchor = over.pAnchor ?: base.pAnchor,
+        pAttackCurve = over.pAttackCurve ?: base.pAttackCurve,
+        pDecayCurve = over.pDecayCurve ?: base.pDecayCurve,
+        pReleaseCurve = over.pReleaseCurve ?: base.pReleaseCurve,
     )
 }
 
@@ -266,37 +252,6 @@ fun mergeSvdTremolo(base: SvdTremolo?, over: SvdTremolo?): SvdTremolo? {
     )
 }
 
-fun mergeSvdDuck(base: SvdDuck?, over: SvdDuck?): SvdDuck? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdDuck(
-        duckCylinder = over.duckCylinder ?: base.duckCylinder,
-        duckAttack = over.duckAttack ?: base.duckAttack,
-        duckDepth = over.duckDepth ?: base.duckDepth,
-    )
-}
-
-fun mergeSvdDelay(base: SvdDelay?, over: SvdDelay?): SvdDelay? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdDelay(
-        delay = over.delay ?: base.delay,
-        delayTime = over.delayTime ?: base.delayTime,
-        delayFeedback = over.delayFeedback ?: base.delayFeedback,
-        delayCap = over.delayCap ?: base.delayCap,
-    )
-}
-
-fun mergeSvdReverb(base: SvdReverb?, over: SvdReverb?): SvdReverb? {
-    if (base == null) return over?.copy()
-    if (over == null) return base.copy()
-    return SvdReverb(
-        reverb = over.reverb ?: base.reverb,
-        reverbSize = over.reverbSize ?: base.reverbSize,
-        reverbLowpass = over.reverbLowpass ?: base.reverbLowpass,
-    )
-}
-
 fun mergeSvdSample(base: SvdSample?, over: SvdSample?): SvdSample? {
     if (base == null) return over?.copy()
     if (over == null) return base.copy()
@@ -307,8 +262,6 @@ fun mergeSvdSample(base: SvdSample?, over: SvdSample?): SvdSample? {
         unit = over.unit ?: base.unit,
         loop = over.loop ?: base.loop,
         cut = over.cut ?: base.cut,
-        loopBegin = over.loopBegin ?: base.loopBegin,
-        loopEnd = over.loopEnd ?: base.loopEnd,
     )
 }
 

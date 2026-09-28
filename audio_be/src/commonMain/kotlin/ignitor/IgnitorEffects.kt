@@ -8,22 +8,24 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.ShapingFuncs
+import io.peekandpoke.klang.audio_be.CrushCore
+import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.HALF_PI
+import io.peekandpoke.klang.audio_be.LfoShape
+import io.peekandpoke.klang.audio_be.TremoloCore
 import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushState
-import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.parseDistortionShape
 import kotlin.math.exp
 import kotlin.math.pow
-import kotlin.math.round
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion
@@ -62,18 +64,11 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
 // full-scale input; identity only well below |x| ~ 0.3). A CONSTANT 0 through the Double
 // overload below still short-circuits to a true bypass; the DSL door has always behaved like
 // this chain. (Ledger W5.)
-// ^ The fused legacy DistortIgnitor is DELETED (ledger W5, maintainer decision): every live
-// authoring door already built this exact Drive+Shape chain, the fused node was the file's
-// third bypass policy (stale DC blocker + oversampler across its gate, plus a group-delay pop
-// at every gate flip), and wire trees are never persisted, so nothing can miss it. The chain
-// is the documented equivalence ("Equivalent to this.drive(amount).shape(shape, oversample)")
-// — same gain, same shaper, same DC blocker and softCap, applied by ShapeIgnitor, which has
-// NO bypass and therefore no policy to disagree about. One audible nuance vs the fused node:
-// an amount at or crossing 0 (modulated, or a CONSTANT 0 in a legacy wire tree — the Double
-// convenience below still short-circuits) now bypasses only the DRIVE; the shaper keeps
-// shaping at unity gain. For the default soft shape that is a real squash at full scale
-// (tanh(1.0) = 0.76, -2.4 dB + odd harmonics; identity only below |x| ~ 0.3) — the DSL door
-// has ALWAYS behaved this way, and the shaper state staying contiguous is the point.
+// ^ The DOORS' law, kept by decision D2 (option A, 2026-09-25): `Shape(Drive(...))`, the drive at the
+// base rate, the shaper, the DC blocker and `softCap`. The fused `IgnitorDsl.Distort` node is a
+// DIFFERENT law since phase 3 step 4, the voice strip's (see `fusedDistort` below): `classic()` needs
+// it to rebuild the strip bit for bit. The chain here renders DerSchmetterling's guitars, Sandsturm
+// and ATruthWorthLyingFor and does not change.
 
 /**
  * Distortion / waveshaping combinator (convenience overload with fixed amount).
@@ -95,18 +90,15 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 0.5 = moderate boost, 1.0 = loud,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
- * @param type Drive type. Default: "linear". Future: "tube", "fet", "tape".
+ *
+ * Gain without a curve: every colour belongs to `shape`, which is why there is no drive type.
  */
-fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor =
-    DriveIgnitor(this, amount, type)
+fun Ignitor.drive(amount: Ignitor): Ignitor =
+    DriveIgnitor(this, amount)
 
 private class DriveIgnitor(
     private val upstream: Ignitor,
     private val amount: Ignitor,
-    // Reserved for the future tube/fet/tape dispatch; "linear" is the only implemented type,
-    // so nothing stores or reads it today (ledger W12 hoisted the old per-block lowercase()
-    // out of generate; storing a lowercased copy per note-on would just move the allocation).
-    @Suppress("UNUSED_PARAMETER") type: String,
 ) : Ignitor {
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -122,7 +114,7 @@ private class DriveIgnitor(
                 return@use
             }
 
-            val driveGain = 10.0.pow(amt * 1.2)
+            val driveGain = DistortionCore.drive(amt)
 
             for (i in ctx.offset until end) {
                 buffer[i] = (work[i] * driveGain)
@@ -135,11 +127,10 @@ private class DriveIgnitor(
  * Pre-amplification stage (convenience overload with fixed amount).
  *
  * @param amount Gain boost intensity. 0.0 = bypass, 1.0 = loud. Default: 0.0.
- * @param type Drive type. Default: "linear".
  */
-fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
+fun Ignitor.drive(amount: Double): Ignitor {
     if (amount <= 0.0) return this
-    return drive(ParamIgnitor("amount", amount), type)
+    return drive(ParamIgnitor("amount", amount))
 }
 
 /**
@@ -159,14 +150,17 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *   "rectify").
  */
 fun Ignitor.shape(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
+    ShapeIgnitor(this, parseDistortionShape(shape), oversampleStages)
+
+/** The waveshaper with the shape already resolved (from an index knob, at build): the DSL runtime's form. */
+internal fun Ignitor.shape(shape: DistortionShape, oversampleStages: Int): Ignitor =
     ShapeIgnitor(this, shape, oversampleStages)
 
 private class ShapeIgnitor(
     private val upstream: Ignitor,
-    shape: String,
+    private val shape: DistortionShape,
     oversampleStages: Int,
 ) : Ignitor {
-    private val shape: DistortionShape = parseDistortionShape(shape)
     private val oversampler: Oversampler? =
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
@@ -203,6 +197,55 @@ private class ShapeIgnitor(
     }
 }
 
+/**
+ * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds: drive and
+ * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the loop the strip's
+ * distort ran (phase 3 step 4, decision D2 option A, 2026-09-25): the drive INSIDE the
+ * oversampler, the DC blocker, NO soft cap. The doors keep their own law (`distort` above).
+ *
+ * **D2 supersedes ledger W5's "delete it"** (maintainer, 2026-08-30), which removed an earlier fused
+ * node. W5's REASON is designed out rather than reintroduced: that node bypassed per block, so a
+ * MODULATED amount crossing 0 left the oversampler and the DC blocker holding stale state and popped
+ * at every crossing. Here there is one bypass policy, and it is the build's:
+ *  - a LEAF amount at or below 0 (or unset) is the build gate (`IgnitorDslRuntime`): the node is not
+ *    built, which is exactly what the strip did: it skipped its stage for the note;
+ *  - a MODULATED (non-leaf) amount at or below 0 is NOT a bypass: the core keeps running at UNITY drive
+ *    (what the `Drive` node does there), so its state stays contiguous through the crossing. A NaN
+ *    amount drives with NaN: the core's NaN guard writes 0 for every shaped sample of that block, and
+ *    what leaves it is the oversampler's and the DC blocker's decaying tail from the block before;
+ *    the next finite block renders the signal again.
+ *
+ * @param amount the drive amount, read once per block; see [DistortionCore.drive].
+ * @param shape the waveshaper, resolved at build.
+ * @param oversampleStages 2x stages, read at build; 0 is the plain path.
+ */
+internal fun Ignitor.fusedDistort(amount: Ignitor, shape: DistortionShape, oversampleStages: Int): Ignitor =
+    FusedDistortIgnitor(this, amount, DistortionCore(shape, oversampleStages))
+
+private class FusedDistortIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+    private val core: DistortionCore,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
+
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            // Unity at or below 0, never a bypass: see the KDoc (W5's hazard).
+            val drive = if (amt <= 0.0) 1.0 else DistortionCore.drive(amt)
+
+            core.process(work, ctx.offset, ctx.length, drive, ctx.scratchBuffers)
+
+            val end = ctx.windowEnd
+
+            for (i in ctx.offset until end) {
+                buffer[i] = work[i]
+            }
+        }
+    }
+}
+
 // ResolvedShape and resolveDistortionShape() moved to audio_be/DistortionShape.kt
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -212,13 +255,14 @@ private class ShapeIgnitor(
 /**
  * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
  *
- * Symmetric midtread quantizer: `round(x * halfLevels) / halfLevels`, output
- * clamped to `[-1, 1]`. No DC bias, no amplitude inflation. The clamp catches
- * the non-integer `halfLevels` case where a unit input would otherwise map to
- * a grid point outside the input range (e.g. `amount = 1.5` → `hl ≈ 1.414` →
- * raw output `2/1.414 ≈ 1.414`, clamped to `1.0`).
+ * The law is [CrushCore], the voice strip's crush law (phase 3
+ * step 4, decision D1, 2026-09-25: FLOOR everywhere): an asymmetric `floor` quantizer,
+ * `floor(x * halfLevels) / halfLevels`, clamped to `[-1, 1]`, with a DC offset of about
+ * `-0.5 / halfLevels` (-0.5 at amount 1), which moves with a modulated amount: the classic crunch. A
+ * NaN sample comes out as 0. Until step 4 this node rounded (a symmetric midtread quantizer),
+ * up to one grid step (0.125 at amount 4) away from the strip.
  *
- * Amount is read once per block (control rate). **Bypasses when amount < 1.0** —
+ * Amount is read once per block (control rate). **Bypasses when amount < 1.0**, and at a NaN amount:
  * fewer than 2 levels means the grid step exceeds the input range entirely.
  *
  * @param amount Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
@@ -235,24 +279,17 @@ private class CrushIgnitor(
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
-            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val halfLevels = CrushCore.halfLevels(Ignitors.readParam(amount, freqHz, ctx))
             val end = ctx.windowEnd
 
-            val levels = 2.0.pow(amt)
-            if (levels < 2.0) {
+            if (halfLevels == CrushCore.BYPASS) {
                 for (i in ctx.offset until end) {
                     buffer[i] = work[i]
                 }
                 return@use
             }
 
-            val halfLevels = levels / 2.0
-            for (i in ctx.offset until end) {
-                // Midtread symmetric quantizer (round, not floor) — no DC bias.
-                // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
-                val q = round(work[i] * halfLevels) / halfLevels
-                buffer[i] = q.coerceIn(-1.0, 1.0)
-            }
+            CrushCore.quantize(work, buffer, ctx.offset, end, halfLevels)
         }
     }
 }
@@ -328,7 +365,7 @@ private class CoarseIgnitor(
 
             for (i in ctx.offset until end) {
                 if (counter >= 1.0) {
-                    // nanGuard mirrors the strip door: a NaN input must not latch into the
+                    // nanGuard mirrors the retired strip's coarse: a NaN input must not latch into the
                     // held value for `amount` frames.
                     lastValue = work[i].nanGuard()
                     counter -= 1.0
@@ -366,24 +403,26 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  * effective Nyquist is `sampleRate / (2 * blockFrames)` (~187 Hz at 48 kHz / 128); above that the
  * sweep aliases at the block rate. `rate` is deliberately unclamped (raw engine).
  *
+ * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
+ *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0. FIRST,
+ *   as on the DSL door (`IgnitorDsl.phaser(wet, rate, ...)`), so a positional pair means the
+ *   same thing on both Kotlin surfaces.
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
  *   5.0+ = fast. Typical range: 0.1–5.0. Default: no default (required).
- * @param wet Wet/dry balance under the shared C4 law (correlated branch, p = 2):
- *   0.0 = bit-exact bypass, 0.5 = equal mix, 1.0 = phased only. Typical range: 0.3–1.0.
  * @param center Center frequency of the notch sweep in Hz. Default: 1000.0.
  *   Clamped to [100, 18000]. Typical range: 500–4000.
  * @param sweep Modulation width in Hz — how far the notch sweeps from center.
  *   Default: 1000.0. Clamped to [100, 18000]. Typical range: 500–3000.
- * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
+ * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade);
  *   1.0 makes the phaser purely additive like the orbit-side phaser.
  */
 fun Ignitor.phaser(
-    rate: Ignitor,
     wet: Ignitor,
+    rate: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
-    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
-): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, dryFloor)
+    floor: Ignitor = ParamIgnitor("floor", 0.0),
+): Ignitor = PhaserIgnitor(this, rate, wet, center, sweep, floor)
 
 private class PhaserIgnitor(
     private val upstream: Ignitor,
@@ -391,7 +430,7 @@ private class PhaserIgnitor(
     private val wet: Ignitor,
     private val center: Ignitor,
     private val sweep: Ignitor,
-    private val dryFloor: Ignitor,
+    private val floor: Ignitor,
 ) : Ignitor {
     // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
     // ctx.sampleRate on the first generate() call.
@@ -409,7 +448,7 @@ private class PhaserIgnitor(
             // Read every param and advance the LFO clock UNCONDITIONALLY (ledger D1): the sweep
             // is a function of note-relative time, not of how many blocks happened to observe
             // wet > 0, and a stateful param ignitor ticks through its per-block read. The read
-            // ORDER (wet, rate, center, sweep, dryFloor) is the pre-D1 order on purpose: a
+            // ORDER (wet, rate, center, sweep, floor) is the pre-D1 order on purpose: a
             // hand-built Kotlin graph may share one stateful instance across two slots, and the
             // slot assignment of its per-block draws is observable (review round 3). The
             // ctx.length guard on the kernel WRITES is defensive, currently unreachable: today a
@@ -427,7 +466,7 @@ private class PhaserIgnitor(
 
             phaser.prepareBlock(ctx.length)
 
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            val floorVal = Ignitors.readParam(floor, freqHz, ctx)
             val end = ctx.windowEnd
 
             if (wetVal <= 0.0) {
@@ -469,26 +508,27 @@ private class PhaserIgnitor(
 /**
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
+ * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. First and
+ *   required, as on the DSL door.
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param wet Wet/dry balance (shared C4 law, p = 2): 0.0 = bypass, 1.0 = phased only. Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
- * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.phaser(
+    wet: Double,
     rate: Double,
-    wet: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
-    dryFloor: Double = 0.0,
+    floor: Double = 0.0,
 ): Ignitor {
     if (wet <= 0.0) return this
     return phaser(
-        ParamIgnitor("rate", rate),
         ParamIgnitor("wet", wet),
+        ParamIgnitor("rate", rate),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
-        ParamIgnitor("dryFloor", dryFloor),
+        ParamIgnitor("floor", floor),
     )
 }
 
@@ -497,7 +537,7 @@ fun Ignitor.phaser(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Amplitude modulation (tremolo) via sine LFO. Processes per-sample.
+ * Amplitude modulation (tremolo) via an LFO. Processes per-sample.
  *
  * Modulates the volume up and down rhythmically, creating a pulsing effect.
  * Rate and depth are read once per block (control rate). Bypasses when depth <= 0.
@@ -511,14 +551,35 @@ fun Ignitor.phaser(
 fun Ignitor.tremolo(
     rate: Ignitor,
     depth: Ignitor,
-): Ignitor = TremoloIgnitor(this, rate, depth)
+): Ignitor = TremoloIgnitor(this, rate, depth, skew = null, shape = LfoShape.SINE, startPhase = 0.0)
 
+/**
+ * The tremolo with every knob the voice strip's had (phase 3 step 3b, 2026-09-25), the form the DSL
+ * runtime builds. [shape] and [startPhase] (in cycles) are resolved once, at build; [skew] is read
+ * once per block like [rate] and [depth], and `null` means a constant 0 without the read.
+ */
+internal fun Ignitor.tremolo(
+    rate: Ignitor,
+    depth: Ignitor,
+    skew: Ignitor?,
+    shape: LfoShape,
+    startPhase: Double,
+): Ignitor = TremoloIgnitor(this, rate, depth, skew, shape, startPhase)
+
+/**
+ * The Ignitor host of [TremoloCore], the one tremolo law (the voice strip's, which retired in phase 3
+ * step 9): this class only adapts the node's contract (rate, depth and skew read once per block,
+ * the clock kept running through a bypassed block).
+ */
 private class TremoloIgnitor(
     private val upstream: Ignitor,
     private val rate: Ignitor,
     private val depth: Ignitor,
+    private val skew: Ignitor?,
+    shape: LfoShape,
+    startPhase: Double,
 ) : Ignitor {
-    private var phase: Double = 0.0
+    private val core = TremoloCore(shape, startPhase, skew = 0.0)
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -527,14 +588,20 @@ private class TremoloIgnitor(
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
             val depthVal = Ignitors.readParam(depth, freqHz, ctx)
             val end = ctx.windowEnd
-            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
+            // A non-finite rate reads as phase 0 every sample (wrapPhase) = a steady 1 - depth/2
+            // gain on the sine (a level change, not silence), healing the moment the rate returns.
+            val phaseInc = TremoloCore.increment(rateVal, ctx.sampleRate)
+
+            if (skew != null) {
+                core.setSkew(Ignitors.readParam(skew, freqHz, ctx))
+            }
 
             if (depthVal <= 0.0) {
                 // The LFO is a clock (ledger W2, the D1/D2 shape one file over): it advances
                 // through a depth gap by the whole window, so a modulated depth dipping to 0
-                // resumes exactly where an ungated LFO would be — not at a block-quantised
+                // resumes exactly where an ungated LFO would be, not at a block-quantised
                 // stale phase. A zero-length window advances nothing by construction.
-                phase = (phase + phaseInc * ctx.length).wrapPhase(TWO_PI)
+                core.skip(ctx.length, phaseInc)
 
                 for (i in ctx.offset until end) {
                     buffer[i] = input[i]
@@ -542,17 +609,7 @@ private class TremoloIgnitor(
                 return@use
             }
 
-            for (i in ctx.offset until end) {
-                // wrapPhase over the bare subtract (ledger W2): identical in range, and a
-                // non-finite or negative rate can no longer kill the phase for the note's life.
-                // A non-finite rate reads as phase 0 every sample = a steady 1 - depth/2 gain
-                // (a level change, not silence), healing the moment the rate returns.
-                phase = (phase + phaseInc).wrapPhase(TWO_PI)
-
-                val lfoNorm = (fastSin(phase) + 1.0) * 0.5
-                val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
-                buffer[i] = (input[i] * gain)
-            }
+            core.apply(input, buffer, ctx.offset, end, phaseInc, depthVal)
         }
     }
 }
@@ -579,7 +636,7 @@ fun Ignitor.tremolo(
  * Granular shimmer effect — short overlapping grains read back from a ring buffer at
  * pitched rates, with a feedback loop through a tone lowpass.
  *
- * `wet`, `feedback`, `tone` and `dryFloor` are read once per block (control rate) with no
+ * `wet`, `feedback`, `tone` and `floor` are read once per block (control rate) with no
  * smoothing: a fast-modulated wet steps the mix gain at the block rate, and a modulated tone
  * switches the feedback-LPF coefficient at block boundaries — raw engine, no hidden ramps. The
  * grain machinery itself is sample-anchored (the first grain fires on the note's first sample).
@@ -587,7 +644,7 @@ fun Ignitor.tremolo(
  * @param wet Wet/dry balance. 0.0 = bit-exact bypass regardless of feedback, 1.0 = cloud only.
  * Mix: the shared wet/dry law, equal-POWER branch (p = 1) — the pitch-shifted tail is
  * decorrelated from the dry, so powers add and the level holds across the knob.
- * @param dryFloor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient in [0, 1]. Default 0.0 (true crossfade).
  * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
@@ -599,8 +656,8 @@ fun Ignitor.shimmer(
     feedback: Ignitor,
     tone: Ignitor,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-    dryFloor: Ignitor = ParamIgnitor("dryFloor", 0.0),
-): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, dryFloor)
+    floor: Ignitor = ParamIgnitor("floor", 0.0),
+): Ignitor = ShimmerIgnitor(this, wet, feedback, tone, pitches, floor)
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -611,7 +668,7 @@ private class ShimmerIgnitor(
     private val feedback: Ignitor,
     private val tone: Ignitor,
     pitches: List<Double>,
-    private val dryFloor: Ignitor,
+    private val floor: Ignitor,
 ) : Ignitor {
     /** True once the grain engine has produced state that a bypass must clear. */
     private var stateDirty = false
@@ -644,8 +701,8 @@ private class ShimmerIgnitor(
             val wetVal = Ignitors.readParam(wet, freqHz, ctx).coerceIn(0.0, 1.0)
             val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
-            // Read (tick) dryFloor unconditionally too — the D1 rule, all four slots.
-            val floorVal = Ignitors.readParam(dryFloor, freqHz, ctx)
+            // Read (tick) floor unconditionally too (the D1 rule, all four slots).
+            val floorVal = Ignitors.readParam(floor, freqHz, ctx)
             val end = ctx.windowEnd
 
             // C4: wet == 0 IS bypass, regardless of feedback — bit-identical passthrough is
@@ -768,14 +825,14 @@ private class ShimmerIgnitor(
  * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
  * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
  * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]`.
- * @param dryFloor Minimum dry coefficient. Default: 0.0 (true crossfade).
+ * @param floor Minimum dry coefficient. Default: 0.0 (true crossfade).
  */
 fun Ignitor.shimmer(
     wet: Double = 0.5,
     feedback: Double = 0.5,
     tone: Double = 4000.0,
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
-    dryFloor: Double = 0.0,
+    floor: Double = 0.0,
 ): Ignitor {
     if (wet <= 0.0) return this
     return shimmer(
@@ -783,7 +840,7 @@ fun Ignitor.shimmer(
         ParamIgnitor("feedback", feedback),
         ParamIgnitor("tone", tone),
         pitches,
-        ParamIgnitor("dryFloor", dryFloor),
+        ParamIgnitor("floor", floor),
     )
 }
 
@@ -806,7 +863,8 @@ fun Ignitor.shimmer(
  * Implementation delegates to [LowPassHighPassFilters.DcBlocker]; see that class for
  * the dedup history (this used to be one of 9 inline copies before 2026-04-29).
  *
- * @param coefficient Raw IIR pole. NaN/Inf or out-of-range values fall back to 0.995. Default: 0.995.
+ * @param coefficient Raw IIR pole. A finite value is clamped to [0, 0.99999]; NaN/Inf falls back to 0.995.
+ *   Default: 0.995.
  */
 fun Ignitor.dcBlock(coefficient: Double = DEFAULT_DC_BLOCK_COEFF): Ignitor =
     DcBlockIgnitor(this, coefficient)

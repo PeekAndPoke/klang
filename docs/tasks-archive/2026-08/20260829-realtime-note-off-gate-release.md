@@ -16,7 +16,7 @@ maintainer inspects the diff and gives the commit go.
 Amendments A1 + A3 in as reviewed; **A2 implemented STRICT — see the implementation note in the
 A2 section.** A1's manual mutation check ran: exactly the vca-off spec went red. Test-only
 surprise: the house master's 5 ms lookahead delays all output ~1.7 blocks, so onset assertions
-allow the pipe delay. Parent workstream: `docs/tasks/midi-keyboard-playground.md`.
+allow the pipe delay. Parent workstream: `docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`.
 
 ## Goal
 

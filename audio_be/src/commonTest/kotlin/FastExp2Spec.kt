@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.ignitor.pitchEnvelopeModIgnitor
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.PitchEnvelopeRenderer
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -85,19 +86,24 @@ class FastExp2Spec : StringSpec({
 
     "a rendered pitch envelope matches the per-sample pow law, through and past the settled point" {
         // The envelope renderer computes one ratio per sample while attack and decay run and one
-        // per block once it has settled on the anchor. Both must be the same law; the reference
+        // per block once it has settled on the sustain. Both must be the same law; the reference
         // is the pow-based formula evaluated per sample, including the blocks after settling.
         val sampleRate = 48000
         val blockFrames = 128
         val attackSec = 0.02
         val decaySec = 0.05
         val semitones = 9.0
-        val anchor = 0.25
+        val sustain = 0.25
         val mod = pitchEnvelopeModIgnitor(
             attackSec = ParamIgnitor("a", attackSec),
             decaySec = ParamIgnitor("d", decaySec),
             semitones = ParamIgnitor("amount", semitones),
-            anchor = ParamIgnitor("anchor", anchor),
+            sustainLevel = ParamIgnitor("sustain", sustain),
+            // Pinned Linear: this row is about the ratio's exp2 against pow, and its reference below
+            // writes the linear stages out; the default curve is `ModEnvelopeDefaultCurveSpec`'s.
+            attackCurve = AdsrCurve.Linear,
+            decayCurve = AdsrCurve.Linear,
+            releaseCurve = AdsrCurve.Linear,
         )
         val ctx = IgniteContext(
             sampleRate = sampleRate, voiceDurationFrames = sampleRate, gateEndFrame = sampleRate, releaseFrames = 0,
@@ -130,12 +136,12 @@ class FastExp2Spec : StringSpec({
 
             for (i in offset until blockFrames) {
                 val relPos = (b * blockFrames + i).toDouble()
-                var level = anchor
+                var level = sustain
 
                 if (relPos < attackFrames) {
-                    level = anchor + (1.0 - anchor) * (relPos / attackFrames)
+                    level = relPos / attackFrames
                 } else if (relPos < attackFrames + decayFrames) {
-                    level = 1.0 - (1.0 - anchor) * ((relPos - attackFrames) / decayFrames)
+                    level = sustain + (1.0 - sustain) * (1.0 - (relPos - attackFrames) / decayFrames)
                 }
 
                 val expected = 2.0.pow(semitones * level / 12.0)
@@ -154,10 +160,13 @@ class FastExp2Spec : StringSpec({
         // second against a buffer prefilled with 2.0.
         val sampleRate = 48000
         val blockFrames = 128
-        val pEnv = Voice.PitchEnvelope(
-            attackFrames = 0.02 * sampleRate, decayFrames = 0.05 * sampleRate, releaseFrames = 0.0,
-            semitones = 9.0, curve = 0.0, anchor = 0.25,
+        // Linear stages keep the level oracle below plain; the curves are pinned in EnvelopeLawSpec.
+        val lin = AdsrCurve.Linear
+        val env = Voice.Envelope(
+            attackFrames = 0.02 * sampleRate, decayFrames = 0.05 * sampleRate, sustainLevel = 0.25, releaseFrames = 0.0,
+            attackCurve = lin, decayCurve = lin, releaseCurve = lin,
         )
+        val pEnv = Voice.PitchEnvelope(semitones = 9.0, envelope = env)
         val renderer = PitchEnvelopeRenderer(pEnv, startFrame = 0.0)
         val ctx = BlockContext(
             audioBuffer = AudioBuffer(blockFrames),
@@ -194,12 +203,12 @@ class FastExp2Spec : StringSpec({
 
                 for (i in offset until blockFrames) {
                     val relPos = (b * blockFrames + i).toDouble()
-                    var level = pEnv.anchor
+                    var level = env.sustainLevel
 
-                    if (relPos < pEnv.attackFrames) {
-                        level = pEnv.anchor + (1.0 - pEnv.anchor) * (relPos / pEnv.attackFrames)
-                    } else if (relPos < pEnv.attackFrames + pEnv.decayFrames) {
-                        level = 1.0 - (1.0 - pEnv.anchor) * ((relPos - pEnv.attackFrames) / pEnv.decayFrames)
+                    if (relPos < env.attackFrames) {
+                        level = relPos / env.attackFrames
+                    } else if (relPos < env.attackFrames + env.decayFrames) {
+                        level = 1.0 - (1.0 - env.sustainLevel) * ((relPos - env.attackFrames) / env.decayFrames)
                     }
 
                     val expected = (if (multiplyIn) 2.0 else 1.0) * 2.0.pow(pEnv.semitones * level / 12.0)

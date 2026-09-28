@@ -61,14 +61,14 @@ class LangSpeedSpec : StringSpec({
         }
     }
 
-    "speed() sets VoiceData.speed correctly" {
+    "speed() sets SprudelVoiceData.speed correctly" {
         val p = sound("hh hh").apply(speed("0.5 2.0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.speed } shouldBe listOf(0.5, 2.0)
     }
 
-    "control pattern speed() sets VoiceData.speed on existing pattern" {
+    "control pattern speed() sets SprudelVoiceData.speed on existing pattern" {
         val base = note("c3 e3")
         val p = base.speed("0.5 2.0")
         val events = p.queryArc(0.0, 2.0)

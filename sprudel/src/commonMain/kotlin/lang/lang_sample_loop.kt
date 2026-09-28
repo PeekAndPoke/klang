@@ -14,8 +14,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._liftData
-import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
-import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
@@ -32,7 +30,7 @@ private fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * Enables continuous looping of the sample.
  *
  * When `loop` is set to a truthy value, the sample repeats continuously after reaching
- * the end (or [loopEnd] position). Use [loopBegin] and [loopEnd] to set the loop region.
+ * the end (or the [end] position). Use [begin] and [end] to set the loop region.
  *
  * @param flag Loop flag; truthy = enable looping. Defaults to `true`.
  * @return A pattern with sample looping enabled.
@@ -42,7 +40,7 @@ private fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * ```
  *
  * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin(0.25).loopEnd(0.75)  // loop only the middle section
+ * s("pad").loop(1).begin(0.25).end(0.75)  // loop only the middle section
  * ```
  *
  * @category sampling
@@ -78,244 +76,6 @@ fun loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn 
 @KlangScript.Function
 fun PatternMapperFn.loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.loop(flag, callInfo) }
-
-// -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
-
-private val loopBeginMutation = voiceSetter { loopBegin = it?.asDoubleOrNull() }
-
-private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.loopBegin }, update = loopBeginMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, loopBeginMutation)
-}
-
-/**
- * Sets the loop start position as a fraction of the total sample length (0–1).
- *
- * Only relevant when [loop] is enabled. `0` starts looping from the very beginning of
- * the sample. Use together with [loopEnd] to define the looping region.
- *
- * @param pos Loop start position in [0, 1].
- * @return A pattern with the loop start position set.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin(0.25)              // loop starts at 25% into the sample
- * ```
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin("<0 0.5>")         // alternate loop start position per cycle
- * ```
- *
- * @alias loopb
- * @category sampling
- * @tags loopBegin, loopb, loop, start, sample, position
- */
-@KlangScript.Function
-fun SprudelPattern.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyLoopBegin(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
-
-/** Sets the loop start position (0–1) on a string pattern. */
-@KlangScript.Function
-fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).loopBegin(pos, callInfo)
-
-/**
- * The loop start position of each event (0..1), as a value other setters can read. Reserved:
- * the engine loops between `begin` and `end` for now; `loopBegin` travels but is not read yet.
- *
- * Bare `loopBegin` reads what the chain has set so far, so it comes after whatever set the field
- * (`loopBegin(...)` or an alias). Call it, `loopBegin(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `loopb`.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin(0.25).loopBegin(mul("<1 2>")).loopEnd(0.9)   // reserved, inaudible for now
- * ```
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin("0.2 0.4").loopEnd(loopBegin.add(0.3))      // reserved: a fixed loop length, once the engine reads it
- * ```
- *
- * @category sampling
- * @tags loopBegin, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("loopBegin")
-object loopBegin : FieldAccessor({ it.loopBegin }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the loop start position (0–1).
-     *
-     * @param pos Loop start position in [0, 1].
-     * @return A [PatternMapperFn] that sets the loopBegin field.
-     *
-     * ```KlangScript(Playable)
-     * s("pad").loop(1).apply(loopBegin(0.25))   // via mapper
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.loopBegin(pos, callInfo) }
-}
-
-
-/** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
-@KlangScript.Function
-fun PatternMapperFn.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.loopBegin(pos, callInfo) }
-
-/**
- * Alias for [loopBegin]. Sets the loop start position.
- *
- * @param pos Loop start position as a ratio of sample length. Default: same as begin(). Range: 0.0–1.0.
- * @alias loopBegin
- * @category sampling
- * @tags loopb, loopBegin, loop, start, sample, position
- */
-@KlangScript.Function
-fun SprudelPattern.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.loopBegin(pos, callInfo)
-
-/** Alias for [loopBegin] on a string pattern. */
-@KlangScript.Function
-fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).loopb(pos, callInfo)
-
-/**
- * Alias of [loopBegin]: the same accessor under another name.
- *
- * @category sampling
- * @tags loopb, loopBegin, accessor
- */
-@KlangScript.Constant
-val loopb: loopBegin = loopBegin
-
-/** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.loopBegin(pos, callInfo)
-
-// -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
-
-private val loopEndMutation = voiceSetter { loopEnd = it?.asDoubleOrNull() }
-
-private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.loopEnd }, update = loopEndMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, loopEndMutation)
-}
-
-/**
- * Sets the loop end position as a fraction of the total sample length (0–1).
- *
- * Only relevant when [loop] is enabled. `1` loops to the very end of the sample. Use
- * together with [loopBegin] to define the looping region.
- *
- * @param pos Loop end position in [0, 1].
- * @return A pattern with the loop end position set.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopEnd(0.75)              // loop ends at 75% into the sample
- * ```
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopEnd("<0.5 1>")         // alternate loop end position per cycle
- * ```
- *
- * @alias loope
- * @category sampling
- * @tags loopEnd, loope, loop, end, sample, position
- */
-@KlangScript.Function
-fun SprudelPattern.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyLoopEnd(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
-
-/** Sets the loop end position (0–1) on a string pattern. */
-@KlangScript.Function
-fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).loopEnd(pos, callInfo)
-
-/**
- * The loop end position of each event (0..1), as a value other setters can read. Reserved:
- * the engine loops between `begin` and `end` for now; `loopEnd` travels but is not read yet.
- *
- * Bare `loopEnd` reads what the chain has set so far, so it comes after whatever set the field
- * (`loopEnd(...)` or an alias). Call it, `loopEnd(...)`, to set the field; a mapper argument applies
- * to the field.
- *
- * Aliases: `loope`.
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopBegin(0.1).loopEnd(0.5).loopEnd(mul("<1 1.5>"))    // reserved, inaudible for now
- * ```
- *
- * ```KlangScript(Playable)
- * s("pad").loop(1).loopEnd("0.5 0.9").loopBegin(loopEnd.sub(0.3))        // reserved: a fixed loop length, once the engine reads it
- * ```
- *
- * @category sampling
- * @tags loopEnd, accessor
- */
-@KlangScript.Library("sprudel")
-@KlangScript.Object("loopEnd")
-object loopEnd : FieldAccessor({ it.loopEnd }) {
-
-    /**
-     * Returns a [PatternMapperFn] that sets the loop end position (0–1).
-     *
-     * @param pos Loop end position in [0, 1].
-     * @return A [PatternMapperFn] that sets the loopEnd field.
-     *
-     * ```KlangScript(Playable)
-     * s("pad").loop(1).apply(loopEnd(0.75))   // via mapper
-     * ```
-     */
-    @KlangScript.Invoke
-    operator fun invoke(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-        { p -> p.loopEnd(pos, callInfo) }
-}
-
-
-/** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
-@KlangScript.Function
-fun PatternMapperFn.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.loopEnd(pos, callInfo) }
-
-/**
- * Alias for [loopEnd]. Sets the loop end position.
- *
- * @param pos Loop end position as a ratio of sample length. Default: same as end(). Range: 0.0–1.0.
- * @alias loopEnd
- * @category sampling
- * @tags loope, loopEnd, loop, end, sample, position
- */
-@KlangScript.Function
-fun SprudelPattern.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.loopEnd(pos, callInfo)
-
-/** Alias for [loopEnd] on a string pattern. */
-@KlangScript.Function
-fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).loope(pos, callInfo)
-
-/**
- * Alias of [loopEnd]: the same accessor under another name.
- *
- * @category sampling
- * @tags loope, loopEnd, accessor
- */
-@KlangScript.Constant
-val loope: loopEnd = loopEnd
-
-/** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
-@KlangScript.Function
-fun PatternMapperFn.loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.loopEnd(pos, callInfo)
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 

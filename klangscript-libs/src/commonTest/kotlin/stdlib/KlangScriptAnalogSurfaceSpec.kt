@@ -18,8 +18,8 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 /**
  * `analog` used to be ONE method on the base [IgnitorDsl] — a `when` over 17 oscillator types
  * ending in `else -> self`. Asking a noise source or a filter wrapper for drift therefore
- * returned it unchanged: the knob did nothing and said nothing. Four shipped songs carried
- * such a call (IrishLament x3, Sakura, DialogueWithTheStars) and nobody could have known.
+ * returned it unchanged: the knob did nothing and said nothing. Shipped songs carried such a
+ * call (IrishLament x3, Sakura, and one song since retired) and nobody could have known.
  *
  * It now lives on each oscillator's BUILDER (`Osc.sine(x => x.analog(3))`), which makes an
  * unsupported receiver a type error. This spec is what keeps it that way: drop the knob from one
@@ -87,7 +87,7 @@ class KlangScriptAnalogSurfaceSpec : StringSpec({
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().highpass(120).analog(2)""") }
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().onepole(600).analog(2)""") }
         shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().vibrato(2, 0.1).analog(2)""") }
-        shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().pitchEnvelope(0.4, 0.001, 0.04).analog(2)""") }
+        shouldThrow<KlangScriptTypeError> { eval("""Osc.sine().pitchEnvelope(0.4, x => x.adsr(0.001, 0.04, 0, 0)).analog(2)""") }
     }
 
     "analog actually reaches the node (it is not merely accepted and dropped)" {

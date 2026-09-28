@@ -8,49 +8,13 @@ package io.peekandpoke.klang.audio_bridge
 import kotlin.math.roundToInt
 
 
+/**
+ * The orbit's resonator band carriers: a vowel's formant bands ([Formant]) and a body's modes ([Body]), resolved from
+ * their tables (`VowelBands`, `BodyMaterials`) by the orbit's slots (`KatalystSlots`). The voice filter variants
+ * (low-pass, high-pass, band-pass, notch) left with the typed `VoiceData.filters` field in phase 3 step 9: a voice
+ * filter is a `classic()` slot now.
+ */
 sealed class FilterDef {
-    @WireName("low-pass")
-    data class LowPass(
-        val freq: Double,
-        val q: Double?,
-        val envelope: FilterEnvDef? = null,
-        /**
-         * Cascade count (C5): run the 12 dB/oct stage [passes] times — 2 = 24 dB/oct,
-         * 3 = 36. Structural, coerced `>= 1` at the engine. The per-stage q is STAGGERED
-         * (Butterworth ladder scaled by `q/0.707`) so the cascade stays -3 dB AT [freq]
-         * — `lpf(800, passes = 2)` still means 800, it does not go darker-with-a-moved-knee.
-         * A resonant q's peak compounds across stages: gain at [freq] is
-         * `(q*sqrt(2))^passes / sqrt(2)`, so `q = 1.0, passes = 2` is +3 dB and `q = 10,
-         * passes = 4` is about +89 dB (documented, raw engine, no clamp). So does `analog`,
-         * which every stage receives in full.
-         */
-        val passes: Int = 1,
-    ) : FilterDef()
-
-    @WireName("high-pass")
-    data class HighPass(
-        val freq: Double,
-        val q: Double?,
-        val envelope: FilterEnvDef? = null,
-        /** Cascade count — see [LowPass.passes]. */
-        val passes: Int = 1,
-    ) : FilterDef()
-
-    @WireName("band-pass")
-    data class BandPass(
-        val freq: Double,
-        val q: Double?,
-        val envelope: FilterEnvDef? = null,
-    ) : FilterDef()
-
-    @WireName("notch")
-    data class Notch(
-        val freq: Double,
-        val q: Double?,
-        val envelope: FilterEnvDef? = null,
-    ) : FilterDef()
-
-    @WireName("formant")
     data class Formant(
         val bands: List<Band>,
         /**
@@ -63,7 +27,7 @@ sealed class FilterDef {
          */
         val mix: Double,
         /**
-         * Broadband dry floor for the blend (the `vowelFloor()` DSL). `null` = engine default
+         * Broadband dry floor for the blend (the `vowel(floor = ...)` door). `null` = engine default
          * (`VOWEL_FLOOR`). Lower = the formants dominate a thinner source (more "vowel"); higher =
          * more untouched source between formants.
          */
@@ -74,7 +38,7 @@ sealed class FilterDef {
          *
          * **Gain semantic (legacy Q-peak convention, preserved by a fold):** the actual
          * peak gain at `freq` is `Q · 10^(db/20)`. The engine bandpass is UNITY-peak since
-         * C2 of the filter unification; `FormantFilter` folds the legacy Q peak back into
+         * C2 of the filter unification; the engine's vowel mapping folds the legacy Q peak into
          * its band gains so the shipped vowel tables keep this convention exactly — do NOT
          * "clean up" that fold without rewriting every table. A band with `db = 0, q = 10`
          * produces **+20 dB** at `freq`. F1 is conventionally `db = 0`; upper formants use
@@ -106,14 +70,13 @@ sealed class FilterDef {
      *    because it is the whole point of the effect.)
      *
      * Bands are resolved from a named material (`wood`, `cedar`, `tube`, `glass`, `membrane`,
-     * `brass`) at the sprudel DSL layer; this contract carries only the already-resolved modes + mix.
+     * `brass`) through [BodyMaterials]; this contract carries only the already-resolved modes + mix.
      */
-    @WireName("body")
     data class Body(
         val bands: List<Mode>,
         val mix: Double,
         /**
-         * Broadband dry floor for the blend (the `bodyFloor()` DSL). `null` = engine default
+         * Broadband dry floor for the blend (the `body(floor = ...)` door). `null` = engine default
          * (`BODY_FLOOR`). Lower = more audible body (resonances over less dry); higher = subtler
          * colour. Independent of [mix] (which lives on [0, 1] since C4).
          */
@@ -123,7 +86,7 @@ sealed class FilterDef {
          * One body mode — a single SVF bandpass tuned to a resonance of the body.
          *
          * **Gain semantic (unity-peak):** UNLIKE [Formant.Band], the peak gain at `freq`
-         * is `10^(db/20)` — `BodyFilter` always normalised the Q peak away (pre-C2 via an
+         * is `10^(db/20)`: the engine's body bank always normalised the Q peak away (pre-C2 via an
          * explicit 1/Q, since C2 natively via the unity-peak SVF), so `db` IS the peak.
          * Material tables conventionally set the lowest mode to `db = 0` and use negative
          * dB for upper modes.
@@ -150,8 +113,8 @@ const val FILTER_MAX_PASSES = 16
  * ignitor runtime, the graph optimizer and the engine's q-ladder — so a value that is legal
  * on one door cannot be illegal on another.
  *
- * Two callers coerce while CONSTRUCTING the node rather than while consuming it: sprudel's
- * `toVoiceData` (which builds the `FilterDef` the wire carries) and, on the ignitor door, the
+ * Two callers coerce while CONSTRUCTING the value rather than while consuming it: sprudel's
+ * `classicSlotParams` (which writes the `lpf.passes` / `hpf.passes` slot the wire carries) and, on the ignitor door, the
  * KlangScript stdlib builder — the latter because its generated thunk would truncate a `Double`
  * (`0.3 * 10` is 2.9999999999999996, and every KlangScript number is a double). Coercing
  * early only normalises the value that gets stored and encoded; every consumer re-coerces
@@ -164,10 +127,17 @@ fun coercePasses(passes: Int): Int = passes.coerceIn(1, FILTER_MAX_PASSES)
  * `Double`, and pattern arithmetic lands on things like `2.9999999996` — truncating there
  * silently drops a cascade stage, so the value is ROUNDED. `roundToInt()` throws on NaN, and
  * this runs on the render thread, hence the explicit guard rather than a try.
+ *
+ * A NON-FINITE value is one pass, the house rule that a non-finite wire number reads as unset
+ * (`/dsl-design` section 4). Until phase 3 step 5 only the NaN was guarded and `+Infinity`
+ * saturated `roundToInt()` to the 16-pass ceiling; the filters' `passes` knob (read at voice
+ * build for `classic()`'s `lpf.passes` / `hpf.passes` slots) reads through here too, so the
+ * pattern side and the tree agree on every value.
  */
 fun coercePasses(passes: Double): Int {
-    if (passes != passes) { // NaN-guard
+    if (!passes.isFinite()) { // NaN-guard: non-finite reads as unset, one pass
         return 1
     }
+
     return coercePasses(passes.roundToInt())
 }

@@ -8,9 +8,11 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -238,3 +240,137 @@ object notch {
     ): PatternMapperFn =
         { p -> p.notch(freq, q, env, attack, decay, sustain, release, callInfo) }
 }
+
+// -- notchCurves ----------------------------------------------------------------------------------------------------------
+
+// The curve names have ONE home, `AdsrCurves` in audio_bridge; the rule is `adsrCurves`' (and `penvCurves`'):
+// an unknown name, like an omitted stage, keeps the stage's current curve.
+private val notchAttackCurveMutation = voiceSetter {
+    nfAttackCurve = AdsrCurves.curveOf(it?.toString()) ?: nfAttackCurve
+}
+
+private val notchDecayCurveMutation = voiceSetter {
+    nfDecayCurve = AdsrCurves.curveOf(it?.toString()) ?: nfDecayCurve
+}
+
+private val notchReleaseCurveMutation = voiceSetter {
+    nfReleaseCurve = AdsrCurves.curveOf(it?.toString()) ?: nfReleaseCurve
+}
+
+private fun applyNfAttackCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, notchAttackCurveMutation) { src, ctrl ->
+        src.nfAttackCurve = ctrl.nfAttackCurve ?: src.nfAttackCurve
+        src
+    }
+}
+
+private fun applyNfDecayCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, notchDecayCurveMutation) { src, ctrl ->
+        src.nfDecayCurve = ctrl.nfDecayCurve ?: src.nfDecayCurve
+        src
+    }
+}
+
+private fun applyNfReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, notchReleaseCurveMutation) { src, ctrl ->
+        src.nfReleaseCurve = ctrl.nfReleaseCurve ?: src.nfReleaseCurve
+        src
+    }
+}
+
+/**
+ * Sets the shape of each stage of the notch filter's cutoff envelope ([notch]'s `env`, `attack`,
+ * `decay`, `sustain`, `release`), the way [adsrCurves] shapes the amplitude envelope. Each stage is
+ * independent; an omitted stage, or an unknown curve name, keeps its current curve, so
+ * `notchCurves(decay = "linear")` changes only the decay.
+ *
+ * The curves are the same six as `adsrCurves`: `linear`, `square`, `cube`, `scurve`, `invsquare`,
+ * `exponential`, with the same aliases. Unset, every stage is `exponential`, the default of every
+ * modulation envelope on every surface (decision D3). A curve alone switches nothing on: without an
+ * envelope on the `notch` there is no sweep to shape. The Ignitor filters name the same curves inside
+ * their envelope: `x => x.adsr(a, d, s, r, e => e.curves(...))`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("saw").notch(freq = 800, q = 2, env = 24, decay = 0.3, sustain = 0).notchCurves(decay = "cube")   // a fast first drop, a long tail
+ * ```
+ *
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
+ *
+ * @scope voice
+ * @category effects
+ * @tags notch, curve, envelope, shape, filter envelope
+ */
+@KlangScript.Function
+fun SprudelPattern.notchCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = applyNfAttackCurve(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (decay != null) p = applyNfDecayCurve(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (release != null) p = applyNfReleaseCurve(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(2)))
+    return p
+}
+
+/**
+ * Parses this string as a pattern and sets the notch filter envelope's stage curves (see [notchCurves]).
+ *
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
+ */
+@KlangScript.Function
+fun String.notchCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).notchCurves(attack, decay, release, callInfo)
+
+/**
+ * The `notchCurves` object: `notchCurves(attack, decay, release)` sets the notch filter envelope's stage curves
+ * by name. The slots are names, not numbers, so the object carries the setter only and no readers
+ * (the `adsrCurves` rule).
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("saw").notch(freq = 800, q = 2, env = 24, decay = 0.3, sustain = 0).apply(notchCurves(decay = "linear"))
+ * ```
+ *
+ * @scope voice
+ * @category effects
+ * @tags notch, curve, envelope, shape, filter envelope
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("notchCurves")
+object notchCurves {
+
+    /** The setter, see [SprudelPattern.notchCurves]. */
+    @KlangScript.Invoke
+    operator fun invoke(
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        release: PatternLike? = null,
+        callInfo: CallInfo? = null,
+    ): PatternMapperFn = { p -> p.notchCurves(attack, decay, release, callInfo) }
+}
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the notch filter envelope's stage curves after the previous mapper.
+ *
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
+ */
+@KlangScript.Function
+fun PatternMapperFn.notchCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.notchCurves(attack, decay, release, callInfo) }

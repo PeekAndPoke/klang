@@ -15,8 +15,8 @@ import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
 import kotlin.math.abs
@@ -41,12 +41,12 @@ class VoiceCullingSpec : StringSpec({
 
     /** Decays to silence 10 ms in, stays silent: the percussive shape. */
     fun percussive(releaseFrames: Double) = Voice.Envelope(
-        attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = releaseFrames, level = 1.0,
+        attackFrames = 0.0, decayFrames = 480.0, sustainLevel = 0.0, releaseFrames = releaseFrames,
     )
 
     /** Holds full level through the gate, then releases: audible until the release ends. */
     fun held(releaseFrames: Double) = Voice.Envelope(
-        attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = releaseFrames, level = 1.0,
+        attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = releaseFrames,
     )
 
     fun voice(envelope: Voice.Envelope, cull: Double?, blockFrames: Int = 128, end: Double = endFrame) = createVoice(
@@ -239,43 +239,6 @@ class VoiceCullingSpec : StringSpec({
         death shouldBeGreaterThanOrEqualTo endFrame
     }
 
-    "the measured peak bounds the send buses, not only the mix" {
-        // Loud through the gate (so the voice counts as heard), then a level just under the floor:
-        // silent on the mix bus, but a x3 delay send carries it above the floor until the VCA's
-        // release ramp has taken two thirds off. The send must delay the cull by far more than a window.
-        val quiet = 0.9 * VOICE_CULL_FLOOR
-        fun fading() = object : Ignitor {
-            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-                val end = ctx.windowEnd
-
-                for (i in ctx.offset until end) {
-                    val frame = ctx.voiceElapsedFrames + (i - ctx.offset)
-                    buffer[i] = if (frame < gateEndFrame) 1.0 else quiet
-                }
-            }
-        }
-        fun voiceWith(delay: Voice.Delay) = createVoice(
-            startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
-            sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
-            signal = fading(), delay = delay,
-        )
-        val plain = voiceWith(Voice.Delay(amount = 0.0, time = 0.1, feedback = 0.0))
-        val sent = voiceWith(Voice.Delay(amount = 3.0, time = 0.1, feedback = 0.0))
-        val plainCull = cullFrame(plain)
-        val sentCull = cullFrame(sent)
-
-        withClue("both end up culled: the release ramp takes the send under the floor too") {
-            plain.culled shouldBe true
-            sent.culled shouldBe true
-        }
-        withClue("the plain voice is culled as soon as the window elapses") {
-            plainCull shouldBeLessThanOrEqualTo gateEndFrame + defaultWindowFrames + 128
-        }
-        withClue("the delay send keeps the voice audible for a good part of the release") {
-            sentCull - plainCull shouldBeGreaterThanOrEqualTo 4800.0
-        }
-    }
-
     "a zombie keeps its orbit lease: a later voice with its own bus config is refused" {
         // The zombie has no body; the challenger brings one. While the zombie renews its lease every
         // block the challenger's claim is denied and the orbit's body stays off. Two blocks without
@@ -284,7 +247,9 @@ class VoiceCullingSpec : StringSpec({
         val challenger = createVoice(
             startFrame = 0.0, gateEndFrame = gateEndFrame, endFrame = endFrame,
             sampleRate = sampleRate, blockFrames = 128, envelope = held(releaseFrames), cull = null,
-            body = FilterDef.Body(bands = listOf(FilterDef.Body.Mode(200.0, 0.0, 5.0)), mix = 1.0),
+            // The orbit's body reads the SLOT state (Katalyst step 5b-1): a material INDEX from
+            // the shared catalogue plus its mix, which is what `.body(material = "wood", wet = 1)` writes.
+            katalystParams = mapOf("body.material" to BodyMaterials.indexOf("wood"), "body.wet" to 1.0),
         )
         val ctx = createContext(blockStart = 0.0, blockFrames = 128, sampleRate = sampleRate)
         var start = 0.0
@@ -302,13 +267,13 @@ class VoiceCullingSpec : StringSpec({
             ctx.blockStart = start
             zombie.render(ctx)                                          // renews first, like the active list
             ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-            withClue("block $it: the zombie holds the lease") { cylinder.body.isEngaged shouldBe false }
+            withClue("block $it: the zombie holds the lease") { cylinder.body!!.isEngaged shouldBe false }
             start += 128
         }
 
         start += 2 * 128                                                // the zombie missed two blocks
         ctx.cylinders.getOrInit(challenger.cylinderId, challenger, start)
-        withClue("the lease lapsed without the zombie") { cylinder.body.isEngaged shouldBe true }
+        withClue("the lease lapsed without the zombie") { cylinder.body!!.isEngaged shouldBe true }
     }
     "a hand-muted voice (gain 0) can never be heard and is culled like any silent tail" {
         val v = createVoice(

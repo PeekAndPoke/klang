@@ -7,7 +7,8 @@
 #
 # Usage: ./console/song-snapshots.sh [tag ...]
 #   default tags: v0.3.8.2 v0.3.8.3 v0.3.9 v0.3.10 v0.3.11 v0.3.12 v0.3.13 v0.3.14 HEAD
-#   (texts before v0.3.8.2 do not parse on today's doors; the July 3 snapshot is FrozenSongs)
+#   (texts before v0.3.8.2 do not parse on today's doors; the July 3 snapshot left FrozenSongs on
+#   2026-09-25 and is in git history, src/jvmMain/kotlin/FrozenSongs.kt at 0cc351a2)
 #
 set -euo pipefail
 cd "$(dirname "$0")/.."

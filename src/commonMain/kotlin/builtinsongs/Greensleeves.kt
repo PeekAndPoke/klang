@@ -52,8 +52,8 @@ let wind = s("brown!4")
   .clip(1.2).adsr("0.2:0.1:0.0:0.2")
   .pan(perlin.range(0.3, 0.7).slow(5))
 
-let lute = Osc.pluck().highpass(90).lowpass(3200)
-let bass = Osc.triangle().plus(Osc.sine().mul(0.5)).lowpass(400).adsr(0.01, 0.4, 0.5, 0.3)
+let lute = Osc.pluck().highpass(90).lowpass(3200).classic()
+let bass = Osc.triangle().plus(Osc.sine().mul(0.5)).lowpass(400).adsr(0.01, 0.4, 0.5, 0.3).classic()
 
 let verse = (x) => x >= 4 && x < 36
 let secondTime = (x) => x >= 20 && x < 36
@@ -63,14 +63,14 @@ stack(
 
   , harmony.voicing().s(lute).struct("x ~ ~ x ~ x").orbit(0).gain(0.20).pan(0.62)
      .filterWhen(verse)
-  , harmony.rootNotes(2).s(bass).struct("x ~ ~ ~ ~ ~").orbit(0).gain(0.25).legato(2).pan(0.5)
+  , harmony.rootNotes(2).s(bass).adsr(release = 0.3).struct("x ~ ~ ~ ~ ~").orbit(0).gain(0.25).legato(2).pan(0.5) // classic() releases over this, not the bass's own 0.3 s tail; keep them equal
      .filterWhen(verse)
 
   , whistleOf(melody).orbit(1).gain(5.5).pan(0.42).filterWhen(verse)
   , breathOf(melody).orbit(1).gain(0.01).pan(0.58).filterWhen(verse)
   , whistleOf(melody.transpose(-12)).orbit(1).gain(4.0).pan(0.36).filterWhen(secondTime)
 
-  , master(Master(m => m.reverb(r => r.wet(0.14).size(6)).gain(1.6).limiter()))
+  , master(Katalyst(k => k.reverb(0.14, 6).gain(1.6).limiter()))
 )
     
     

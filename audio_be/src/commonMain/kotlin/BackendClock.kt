@@ -26,7 +26,7 @@ interface RenderClock {
      * **`Double`, not `Int`, and deliberately so.** This counter grows for the whole life of the
      * backend — it advances every block whether or not anything is playing. As an `Int` it overflows
      * after **12.4 h at 48 kHz** (13.5 h at 44.1), and the failure is silent: audio simply stops,
-     * with no crash and no error. Confirmed by test — see `docs/tasks/audio-backend-audit.md`.
+     * with no crash and no error. Confirmed by test — see `docs/tasks-archive/2026-09/20260927-audio-backend-audit.md` §6b.
      *
      * `Double` holds integers **exactly** up to 2^53, i.e. **~5,950 years** at 48 kHz, with zero
      * drift: we only ever add, subtract and compare, and those are exact below 2^53 (verified
@@ -36,7 +36,7 @@ interface RenderClock {
      * cheaper than what it replaces.
      *
      * ⚠️ **Absolute frames are `Double`; per-sample offsets stay `Int`.** The conversion happens once
-     * per block per voice (e.g. `EnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
+     * per block per voice (e.g. `PitchEnvelopeRenderer`: `(ctx.blockStart + ctx.offset) - startFrame`),
      * and everything inside the sample loop is `Int`. Do not widen the loop variables.
      *
      * **Between renders, this is the NEXT block to be rendered** (block-framing B1, 2026-09-03).

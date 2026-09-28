@@ -26,8 +26,9 @@
 The release-defining set, regardless of when they're sequenced:
 
 - ✅ **Master / loudness stage** (Act 1) — **DONE 2026-08-03.** The point of the whole backend rework.
-- **Pipeline DSL finish** (Act 1) — nail the engine's authoring surface.
-- **Katalyst DSL** — per-orbit effect authoring, counterpart to the Ignitor/Pipeline DSLs.
+- ~~**Pipeline DSL finish** (Act 1)~~: closed 2026-09-27: the Pipeline DSL retired in phase 3 step 9; an instrument's
+  voice chain is `.classic()` on the Ignitor DSL.
+- **Katalyst DSL**: per-orbit effect authoring, counterpart to the Ignitor DSL.
   ⚠️ Q3 sequences Katalyzers in the *lower* track, but it's flagged **must-have** — it likely belongs
   up with the Act-1 engine-authoring DSLs. **Ordering to confirm.**
 - **Fix the current tutorial set + through-line** (Act 2) — the core of the tutorial quarter.
@@ -46,13 +47,15 @@ The release-defining set, regardless of when they're sequenced:
    `Master.default()` switches it back off. Plus the reverb/delay **parameter-parity**
    fix (`d78ff3da`) — the same word now means the same thing on the orbit and master buses. Archived: [
    `20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md); loose ends in [
-   `master-dsl-followups.md`](master-dsl-followups.md).
-2. **MUST** · **Pipeline DSL finish** — [`engine-tuning-profile.md`](engine-tuning-profile.md) 🟡
+   `master-dsl-followups.md`](master-dsl-followups.md). (2026-09-28: the Master DSL retired in phase 3 step 12; the
+   master is a Katalyst at the output, `master(Katalyst(k => k.gain(2.5).limiter()))`, `master(Katalyst())` for off.)
+2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
+   (every voice is an Ignitor tree); archived as [`20260927-engine-tuning-profile.md`](../tasks-archive/2026-09/20260927-engine-tuning-profile.md). Was:
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
 3. **MUST** · **Katalyst DSL** — [`katalyst-dsl.md`](katalyst-dsl.md) 🔴 *(effects shipped; authoring surface not)*
-   Author per-orbit effect chains from KlangScript — the counterpart to the Ignitor/Pipeline DSLs.
+   Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
    ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
    engine-authoring item. → wants its own task doc.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
@@ -66,7 +69,7 @@ The release-defining set, regardless of when they're sequenced:
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
    quality — arguably a MUST; parked-last by Q3.)
 6. **SHOULD** (→ MUST before launch) · **Audio backend audit** — [
-   `audio-backend-audit.md`](audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started)*
+   `audio-backend-audit.md`](../tasks-archive/2026-09/20260927-audio-backend-audit.md) 🔴 *(planned 2026-08-04, not started; closed 2026-09-27)*
    Every `audio_be` test was written **without a mutation check** and every file was built with a **single review
    round** — the Master DSL then needed 5 rounds, each finding defects in the previous round's fixes, and turned up 3
    toothless guards. So the green suite is an *unmeasured* net. Verify-the-net → map-the-holes → `/review-loop` →
@@ -90,7 +93,7 @@ The release-defining set, regardless of when they're sequenced:
    basics → crafted-sound path isn't coherent. Lean on the music-writing/recording skills + tutorial
    factory (sound first). → wants its own task doc.
 9. **SHOULD** · **Mini-notation attribute-blocks tutorial (+ Phase 2 series)** — [
-   `mini-notation-extensions.md`](mini-notation-extensions.md) 🟡
+   `mini-notation-extensions.md`](../tasks-archive/2026-09/20260927-mini-notation-extensions.md) 🟡 *(archived 2026-09-27; the attribute block was removed 2026-08-30)*
    Phase 1 (`{key=value}` engine feature) shipped, so this tutorial is a clean, high-value fit. Phase 3
    (MIDI → mini-notation recording) stays future/NICE.
 10. **NICE** · **Tutorial expansion backlog** — [`tutorial-master-plan.md`](tutorial-master-plan.md) 🟡
@@ -111,8 +114,8 @@ The release-defining set, regardless of when they're sequenced:
 13. **NICE** · **Sprudel editor tools backlog** — [`sprudel-ui-tools.md`](sprudel-ui-tools.md) 🟡
     ~16 param editors still unwired; aids the tutorial quarter.
     Since 2026-09-07 the tools also resolve a named argument by position, so `room(size = 4)`
-    opens the wet editor: [`editor-tools-named-arguments.md`](editor-tools-named-arguments.md),
-    to be folded into the rework.
+    opens the wet editor: [`editor-tools-named-arguments.md`](../tasks-archive/2026-09/20260927-editor-tools-named-arguments.md),
+    to be folded into the rework. (Fixed 2026-09-26, `ffa490e4`.)
 14. **NICE** · **Named-args docs polish** — [
     `klangscript-named-args-docs-polish.md`](klangscript-named-args-docs-polish.md) 🔴
     Usage-styles panel, KDoc conventions + `@sample` sweep. Small remainder of a done feature.
@@ -123,10 +126,10 @@ The release-defining set, regardless of when they're sequenced:
     [`20260903-soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md).
     Three stacked defects; in the browser no soundfont had ever looped (the worklet dropped every sample's metadata).
     The only user-visible item on that list; blocks round-trip drops loop/break/continue.
-17. **NICE** · **Filter-envelope curve config** (`lpadsrCurves`) — [
-    `filter-envelope-configuration.md`](filter-envelope-configuration.md) 🔴
-    Engine / by-ear feature; well-scoped, not started.
-18. **NICE** · **Constant-control fast-path** — [`constant-control-fast-path.md`](constant-control-fast-path.md) 🔴
+17. **NICE** · **Filter-envelope curve config**: DONE 2026-09-25 (phase 3 step 5b c2: `lpfCurves`, `hpfCurves`,
+    `bpfCurves`, `notchCurves`), archived as
+    [`20260925-filter-envelope-configuration.md`](../tasks-archive/2026-09/20260925-filter-envelope-configuration.md).
+18. **NICE** · **Constant-control fast-path** — [`optimize-constant-control-fast-path.md`](future/optimize-constant-control-fast-path.md) 🔴
     Optional sprudel perf; modest (~7% of query frame) after the VoiceData grouping. Measure-first.
 19. **NICE** · **JS bundle §1 (KSP-registration de-bloat)** — [`reduce-js-bundle-size.md`](reduce-js-bundle-size.md) 🔴
     ~1.2–1.6 MB win, no UX tradeoff; but "hard performance" is deliberately parked late-game.
@@ -138,11 +141,28 @@ The release-defining set, regardless of when they're sequenced:
     (ignitor-agnostic — no ADSR inference; gated by a per-voice `cullAfter` life-fraction). Reclaims wasted
     silent-tail rendering on dense `sustain=0` sections (Der Schmetterling). Complements the orbit-body move;
     measure the win via `runSongBenchmark`.
+22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
+    [`20260928-builtin-instruments.md`](../tasks-archive/2026-09/20260928-builtin-instruments.md)):
+    - **By ear, owed:** [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) (retire or regenerate
+      the two voice baselines) and [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)
+      (step 12 decision (g)).
+    - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
+      (step 11: warn on doors an instrument does not hear, a string in a wet slot).
+    - **NICE, a naming decision:** [`future/tremolo-rate-naming-parity.md`](future/tremolo-rate-naming-parity.md)
+      (sprudel's `sync` against the Ignitor's `rate`).
+    - **NICE, parked:** [`future/svf-resonator-class-collapse.md`](future/svf-resonator-class-collapse.md) (dead
+      sweep code in `BaseSvf`/`SvfBPF`), [`future/pitch-pipeline-into-the-tree.md`](future/pitch-pipeline-into-the-tree.md)
+      (vibrato, accelerate, `penv`, `fm` still outside the tree).
+    - Existing homes: [`future/envelope-shape-followups.md`](future/envelope-shape-followups.md) sections 4 to 6 (FM
+      curves, a per-curve bend, the in-block corner), [`future/one-chain-host.md`](future/one-chain-host.md),
+      [`future/onepole-highpass-door.md`](future/onepole-highpass-door.md),
+      [`oversampling-regions.md`](oversampling-regions.md) (the D7 stopgap, crush and coarse oversampling, the
+      distort cap), [`future/stored-lambda-type-inference.md`](future/stored-lambda-type-inference.md).
 
 ## Blocked / off-plan / parked
 
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
-  `copyright-audit-00-overview.md`](copyright-audit-00-overview.md) + [
+  `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)
   Code work done & archived; the one open item awaits external IP counsel. Gates a non-AGPL license, not Q3.
 - **DONE 2026-09-07** — **Sprudel field accessors** — [`20260907-sprudel-field-accessors.md`](../tasks-archive/2026-09/20260907-sprudel-field-accessors.md) —
@@ -151,8 +171,8 @@ The release-defining set, regardless of when they're sequenced:
 - **NICE** — **Native-object operators** — [
   `klangscript-native-object-operators.md`](klangscript-native-object-operators.md) — prerequisite for field accessors;
   readability win.
-- **NICE** — **Ignitor DSL backlog** — [`ignitor-dsl-open-items.md`](ignitor-dsl-open-items.md) — attributes /
-  splitAndJoin / convolution (convolution = long-term guitar/body realism).
+- **NICE** — **Ignitor DSL backlog** — [`ignitor-dsl-open-items.md`](../tasks-archive/2026-09/20260927-ignitor-dsl-open-items.md) — attributes /
+  splitAndJoin / convolution (convolution = long-term guitar/body realism). *(Retired 2026-09-27; see its banner.)*
 - **NICE · ⚪ parked** — **IR → modal-table extraction** — [
   `future/ir-to-modal-table-extraction.md`](future/ir-to-modal-table-extraction.md) — real `body()` materials from
   recorded IRs.

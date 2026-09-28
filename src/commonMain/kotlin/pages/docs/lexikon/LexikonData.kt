@@ -756,7 +756,8 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         tags = setOf(LexikonTag.Motor, LexikonTag.Fundamental),
         summary = "The one shared effect chain an orbit's voices are mixed through.",
         detail = "Every voice on an orbit is summed into one mix, and that mix runs through a single " +
-                "chain of effects: body, vowel, delay, reverb, phaser, compressor, and ducking last. " +
+                "chain of effects: body, vowel, delay, reverb, phaser, compressor, the orbit's own " +
+                "fader, and ducking last. " +
                 "There is exactly ONE of each per orbit, which is why they are cheap and why they are " +
                 "shared. The settings belong to the FIRST voice that sounds on the orbit while it lives " +
                 "(first-writer-wins): a second voice asking for a different reverb size is simply ignored, " +
@@ -771,14 +772,15 @@ val allLexikonEntries: List<LexikonEntry> = listOf(
         term = "Send",
         category = LexikonCategory.MotorTerms,
         tags = setOf(LexikonTag.Motor, LexikonTag.Effect),
-        summary = "How much of one voice is fed into a shared effect — per voice, not per orbit.",
-        detail = "Reverb and delay sit on the orbit bus, but each voice decides how much of itself to " +
-                "send into them. That amount is the send, and it is the `wet` slot of `reverb` and " +
-                "`delay`. So a dry voice on a wet orbit stays dry: only voices with a send above zero " +
-                "are mixed into the effect at all. The effect's character (reverb size, delay time, " +
-                "feedback) is a bus setting and belongs to the orbit; only the amount is yours. " +
-                "Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs is a " +
-                "bus mix knob, not a send, because those effects process the whole orbit mix.",
+        summary = "How much of an orbit is fed into its reverb or its delay: one amount per orbit.",
+        detail = "Reverb and delay sit on the orbit bus, and the orbit's mix is fed into them by an " +
+                "amount: that amount is the send, the `wet` slot of `reverb` and `delay`. What they " +
+                "give back is added on top of the dry sound. The send belongs to the orbit like every " +
+                "other bus setting: the orbit's owning voice sets it, and every voice on the orbit " +
+                "goes in alike. A dry voice next to a wet one, or two different amounts, means two " +
+                "orbits. Watch out for the word: `body` and `vowel` also have a `wet` slot, but theirs " +
+                "is a mix knob, not a send: it blends the processed sound with the dry instead of " +
+                "adding a return on top.",
         conventional = "Send, aux send, effect send",
     ),
 

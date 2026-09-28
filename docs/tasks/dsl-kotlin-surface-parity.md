@@ -35,7 +35,16 @@ in the same deliverable.
   - A full audit of script-stdlib functions vs Kotlin extensions has not been done; unknown
     smaller gaps likely (phasePool/analog/spreadPower/gainJitter etc. — check which exist as
     Kotlin extensions vs script-only).
-- **Master DSL / Pipeline DSL / (future) Katalyst DSL**: audit alongside.
+- **Katalyst DSL** (at both positions, orbit and output): audit alongside (the Pipeline DSL retired in phase 3 step 9,
+  2026-09-27; the Master DSL in step 12 C5, 2026-09-28).
+- **Two-door asymmetries recorded in phase 3** (each with its reason in the archived record,
+  `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3b and section 9 rows 7 and 8): the Kotlin
+  `tremolo` and filter doors stay flat where the script doors take a builder; the Kotlin `shape`/`distort` doors
+  take a `String` and an `Int` where the script doors also take a slot; `floor` is only a builder knob, so Kotlin
+  sets it with `.copy(floor = ...)`; there is no Kotlin `pitchEnvelope` door; the sample instrument has no script
+  door (no `Osc.sample()`, "not yet" at step 7) and its playback slots (`begin`, `end`, `speed`, `loop`) are
+  Kotlin-only (`IgnitorDsl.Slots.sample`). Revisit them in the audit; the `Osc.sample()` door is the one marked
+  "not yet".
 
 ## Work
 

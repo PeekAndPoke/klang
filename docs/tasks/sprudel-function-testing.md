@@ -1,6 +1,6 @@
 # Sprudel functions that nothing exercises
 
-> Opened 2026-08-31, from the doc-example compile sweep (`docs/tasks/dsl-doc-example-rot.md`).
+> Opened 2026-08-31, from the doc-example compile sweep (`docs/tasks-archive/2026-09/20260927-dsl-doc-example-rot.md`).
 > `DslDocExamplesSpec` compiled the 1425 playable examples in sprudel's own KDoc and found 42
 > broken, and querying a cycle found 4 more. Most were doc rot and were fixed. The rest were
 > **call forms and properties no test has ever run**, which is why nobody noticed the docs
@@ -23,7 +23,7 @@ not. `rev` is `fun rev(n: PatternLike = 1): PatternMapperFn`, so a bare `rev` is
 All three `pickF` examples are back in the KDoc, spelled `jux(rev())`, and pass the gate.
 
 What is left is a papercut, parked in
-[`future/native-interop-function-values.md`](future/native-interop-function-values.md): the
+[`future/bugfix-native-interop-function-values.md`](future/bugfix-native-interop-function-values.md): the
 spelling that fails is the point-free one every Tidal and Strudel user reaches for first, and it
 fails with an internal cast error rather than a "did you mean `rev()`?" diagnostic. The affected
 surface (every function taking a `PatternMapperFn`) is listed there.

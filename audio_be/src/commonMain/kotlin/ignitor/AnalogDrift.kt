@@ -49,7 +49,7 @@ import kotlin.random.Random
  * val dm = (drift.blockEnd - m) / length
  * for (...) { phase += inc * m; m += dm }
  * ```
- * [nextMultiplier] is the raw step; the filter drift (`FilterModRenderer`) holds one per block
+ * [nextMultiplier] is the raw step; the filter drift (`FilterHumanization`) holds one per block
  * without a ramp.
  */
 class AnalogDrift(analog: Double, stepRate: Int, rng: Random = Random) {

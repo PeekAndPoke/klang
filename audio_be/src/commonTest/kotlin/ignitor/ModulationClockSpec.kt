@@ -8,14 +8,15 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * Modulation/waveshaper class guards (block-framing ledger W1-W3, W5): the coarse hold grid is
- * note-anchored and survives window boundaries and amount crossings; the tremolo LFO is a
- * clock; the legacy Distort node builds as the modern Drive+Shape chain.
+ * Modulation class guards (block-framing ledger W1-W3): the coarse hold grid is note-anchored and
+ * survives window boundaries and amount crossings; the tremolo LFO is a clock. W5's row (the fused
+ * Distort node renders the runtime `fusedDistort`, not the doors' Drive+Shape chain) is
+ * `WaveshaperKnobsSpec`'s "the Distort node reads its shape and factor ..." row; W5's hazard is
+ * `StripLawCoresSpec`'s continuity row.
  */
 class ModulationClockSpec : StringSpec({
 
@@ -225,29 +226,6 @@ class ModulationClockSpec : StringSpec({
             }
         }
         varies shouldBe true
-    }
-
-    "W5: the legacy Distort node builds as the modern Drive+Shape chain, bit-exactly" {
-        // A MAPPING guard, not an equivalence proof — both sides render through the same graph
-        // now. Its mutation value: re-fusing the node with the gain inside the oversampled loop
-        // reassociates the interpolation (~1e-16) and breaks the exact-zero diff.
-        fun render(dsl: IgnitorDsl): DoubleArray {
-            val ignitor = dsl.buildExciter(random = Random(3), freqHz = 220.0).ignitor
-            return renderSegments(ignitor, List(4) { blockFrames })
-        }
-
-        val legacy = render(
-            IgnitorDsl.Distort(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5), shape = "soft", oversample = 2)
-        )
-        val modern = render(
-            IgnitorDsl.Shape(
-                IgnitorDsl.Drive(IgnitorDsl.Sine(), IgnitorDsl.Constant(0.5)),
-                shape = "soft", oversample = 2,
-            )
-        )
-
-        legacy.any { it != 0.0 } shouldBe true
-        maxDiff(legacy, modern) shouldBe 0.0
     }
 })
 

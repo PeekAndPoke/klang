@@ -10,6 +10,10 @@ assertion at all. That is what it is for. But it is **5.4 s of the suite's 6.9 s
 mutation verdict in the audit — and every developer's red/green loop — pays it. Options: a Kotest
 tag so it runs only on request, or a separate Gradle task. Keep it; just not in the default run.
 
+**DECIDED and DONE 2026-09-27** (maintainer; test consolidation commit 1, `docs/tasks-archive/2026-09/20260928-test-consolidation.md`
+section 4): moved to `audio_be/src/jvmTest`, tagged `ClickHunt`, excluded from the default run; run it with
+`./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest`.
+
 ## 2. `attackSeconds` means two different things in one directory (F17a)
 
 - `Compressor.attackSeconds` is a **one-pole τ**, not a rise time: measured t10-90 is 2.33–2.54 × τ,

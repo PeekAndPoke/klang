@@ -59,19 +59,26 @@
 - **Pipeline builders, S6 (2026-09-06)**: `Pipeline(p => p.filterMod().vca(v => v.expK(2)).distort())`,
   presets `Pipeline.modern(p => p.tuneVca(...))`; stage knobs append, `tuneVca`/`tuneFilter` configure
   existing stages (error when none). `Pipeline.of`, `Stage` and the stage knob objects deleted.
+  (All of it retired 2026-09-27 with the Pipeline DSL, phase 3 step 9: an instrument ends in `.classic()`.)
 
 - **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
   `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/
-  `PhaserBuilder`/`ShimmerBuilder` (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
+  `PhaserBuilder`/`ShimmerBuilder` (superseded by phase 3 step 3d(i), 2026-09-24: `wet` is the first
+  door parameter, `.phaser(wet, rate, ..., x => x.floor())`, and the builders carry `floor` only)
+  (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
   Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
-  .limiter(l => ...))` via the `invoke` operator, aliases `Master.build`/`Master.default`;
+  .limiter(l => ...))` (superseded by phase 3 step 3d(ii), 2026-09-24: `m.reverb(0.05, 9).gain(2.5)
+  .limiter(threshold = -3)`, reverb and limiter flat, delay keeps `configure` for `cap`) via the `invoke` operator, aliases `Master.build`/`Master.default`;
   `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
   float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
+  (The `Master` object and `MasterBuilders` retired 2026-09-28, phase 3 step 12 C5: `.master()` takes a Katalyst,
+  `master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))`; `limiter` is a Katalyst compressor preset.)
 
 - **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`
   extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`);
   `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`;
-  `KlangCallable.signature` renders it as `Master(...)`; member completion hides `invoke`.
+  `KlangCallable.signature` renders it as `Katalyst(...)` (`Master(...)` until the Master object retired, 2026-09-28);
+  member completion hides `invoke`.
   `NativeOperatorNames` holds the name. Arithmetic operators of the same plan: not built.
 
 - **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are

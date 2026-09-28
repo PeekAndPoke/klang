@@ -39,8 +39,10 @@ class SprudelScopeSpec : StringSpec({
         "crush" to KlangScope.VOICE,
         "coarse" to KlangScope.VOICE,
         "gain" to KlangScope.VOICE,
+        // The other level word, and a voice setting for a reason worth naming: it is a SLOT in
+        // the voice's own instrument, so it reaches exactly the note that carries it.
+        "pregain" to KlangScope.VOICE,
         "pan" to KlangScope.VOICE,
-        "postgain" to KlangScope.VOICE,
         "velocity" to KlangScope.VOICE,
         "adsr" to KlangScope.VOICE,
         "unison" to KlangScope.VOICE,
@@ -56,10 +58,9 @@ class SprudelScopeSpec : StringSpec({
         "phaser" to KlangScope.ORBIT,
         "compressor" to KlangScope.ORBIT,
         "duck" to KlangScope.ORBIT,
-
-        // Orbit processor, per-voice send amount
-        "reverb" to KlangScope.ORBIT_SEND,
-        "delay" to KlangScope.ORBIT_SEND,
+        // Fed from the orbit mix by one amount per orbit since Katalyst step 5b-2: no per-voice send
+        "reverb" to KlangScope.ORBIT,
+        "delay" to KlangScope.ORBIT,
 
         // The whole playback
         "master" to KlangScope.MASTER,

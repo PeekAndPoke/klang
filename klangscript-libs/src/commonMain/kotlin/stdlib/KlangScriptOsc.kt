@@ -17,8 +17,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * and passed directly to `.sound()`:
  *
  * ```
- * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)
- * note("c3 e3 g3").sound(pad)
+ * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5).classic()
+ * note("c3 e3 g3").sound(pad).adsrOff()
  * ```
  *
  * The playback denormalizes inline ignitor references at the wire boundary via the
@@ -416,6 +416,16 @@ object KlangScriptOsc {
      * Param slots are the leaf nodes of the ignitor tree — they produce a constant signal
      * at [default] unless overridden by oscParam() at play time.
      *
+     * `OscSlot` holds the names a sprudel door already writes, so placing one of those wires that
+     * door into your instrument. The one to know is `pregain`: how hard the pattern plays INTO
+     * the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of its own
+     * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `decay`,
+     * `brightness`, `pickPosition`, `stiffness` and `rate` are the others. Reach for
+     * `OscSlot.<name>` rather than retyping the name and the default here, so one default serves
+     * every instrument; a name of your own is what this door is for.
+     *
+     * A non-finite value written into a slot reads as UNSET: the leaf falls back to [default].
+     *
      * @param name parameter name — used for oscParam() overrides and UI discovery
      * @param default constant value when no override is provided
      * @param description human-readable description for documentation
@@ -453,7 +463,7 @@ object KlangScriptOsc {
      * axis can drive correlated changes throughout the tree.
      *
      * ```
-     * let combined = Osc.variants(Osc.sine(), Osc.saw())
+     * let combined = Osc.variants(Osc.sine(), Osc.saw()).classic()
      * note("a b c:1 d:1").sound(combined)   // a/b → sine, c:1/d:1 → saw
      * ```
      *

@@ -20,8 +20,8 @@ import kotlin.random.Random
  * construction (it multiplies the freq ARGUMENT, which an absolute-freq oscillator ignores);
  * phaseMod was not, because an oscillator scales its phase increment by `ctx.phaseMod` whatever
  * its frequency came from. So a fixed-pitch body resonance on the spine of a vibrato'd patch was
- * bent along with the note — live in `DialogueWithTheStars`, whose 180 Hz soundbox thump is
- * commented "fixed-pitch" and was being pitch-enveloped by 0.4 semitones.
+ * bent along with the note. A built-in song of the time had one: a nylon guitar whose 180 Hz
+ * soundbox thump was commented "fixed-pitch" and was being pitch-enveloped by 0.4 semitones.
  *
  * The two doors are genuinely different mechanisms and each gets its own rows:
  *  - the IGNITOR door hands modulation down through `ModApplyingIgnitor`;
@@ -79,8 +79,8 @@ class AbsoluteFreqPitchModSpec : StringSpec({
     // ── The strip door: sprudel's vibrato / pitchEnvelope / accelerate ───────────────────────
 
     "an absolute-freq oscillator ignores a strip-level phaseMod" {
-        // DialogueWithTheStars' soundbox thump, reduced: 180 Hz, fixed by authoring, sitting in
-        // a patch whose pitch envelope writes ctx.phaseMod for the whole graph.
+        // That guitar's soundbox thump, reduced: 180 Hz, fixed by authoring, sitting in a patch
+        // whose pitch envelope writes ctx.phaseMod for the whole graph.
         maxDiff(render(absolute, phaseMod = 1.05), render(absolute)) shouldBe 0.0
     }
 

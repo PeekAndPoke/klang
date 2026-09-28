@@ -5,18 +5,18 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
 import kotlin.math.exp
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shape math for AdsrCurve.Exponential — shared by every envelope evaluator
-// (EnvelopeRenderer, EnvelopeCalc, IgnitorEnvelopes) so the curve is identical
-// across the amp VCA, the filter/FM envelopes, and the ignitor envelopes.
+// The curve math of the envelope law (`EnvelopeCore`, which every ADSR envelope hosts, the voice's pitch
+// envelope included since phase 3 step 5b (c1)):
+// the stage shapes, the release time base, and the de-click coefficient.
 //
 // The tunable values themselves (ADSR_EXP_K, ENV_DECLICK_SECONDS) live in
-// `audio_bridge/constants/EnvelopeDefaults.kt` — they are the defaults of
-// `StageDsl.Vca` fields, so both sides must read one declaration. Only the math
-// lives here.
+// `audio_bridge/constants/EnvelopeDefaults.kt`, which the authoring side reads too, so both sides read one
+// declaration. Only the math lives here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -34,23 +34,35 @@ internal inline fun adsrExpNorm(k: Double): Double = 1.0 / (fastExp(k) - 1.0)
 internal val ADSR_EXP_NORM: Double = adsrExpNorm(ADSR_EXP_K)
 
 /**
- * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]`,
- * with `g(0)=0`, `g(1)=1`. Convex (like `Square` but longer-tailed). For decay /
- * release the caller passes `omp = 1−p`, giving the natural "fast drop, long tail".
- *
- * This no-arg form uses the global-default [ADSR_EXP_K] (the filter/FM and ignitor
- * envelopes). The amp VCA passes a per-engine curvature via [adsrExpShape] below.
+ * True-exponential ADSR shape `g(x) = (e^(K·x) − 1)/(e^K − 1)` on `x ∈ [0,1]` at curvature [k], with
+ * the precomputed [norm] = [adsrExpNorm]\(k\); `g(0)=0`, `g(1)=1`. Convex (like `Square` but
+ * longer-tailed). For decay / release the caller passes `omp = 1−p`, giving the natural "fast drop,
+ * long tail". Every envelope passes [ADSR_EXP_K].
  *
  * NOTE: one [fastExp] per call (since 2026-09-15; it was a library `exp`, one transcendental
  * per sample in every renderer, the rest of the curve family being multiply-only). The next
  * step down, if the curve ever shows up again, is a recursive multiply-only one-pole per stage.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun adsrExpShape(x: Double): Double = (fastExp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
-
-/** Parameterized exp shape at curvature [k] with precomputed [norm] = [adsrExpNorm]\(k\). */
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (fastExp(k * x) - 1.0) * norm
+
+/**
+ * THE shape of one ADSR stage at linear progress [x] in 0..1, for every [AdsrCurve]: the one `when`
+ * of the engine, evaluated by `EnvelopeCore` for every envelope. An attack passes `p`; a decay or
+ * release passes `omp = 1 - p`, which gives the falling shapes. [k] and [norm] are the Exponential
+ * curvature and its [adsrExpNorm].
+ *
+ * `Linear` returns [x] itself, bit for bit.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun adsrCurveShape(curve: AdsrCurve, x: Double, k: Double, norm: Double): Double = when (curve) {
+    AdsrCurve.Linear -> x
+    AdsrCurve.Square -> x * x
+    AdsrCurve.Cube -> x * x * x
+    AdsrCurve.SCurve -> if (x < 0.5) 2.0 * x * x else 1.0 - 2.0 * (1.0 - x) * (1.0 - x)
+    AdsrCurve.InvSquare -> x * (2.0 - x)
+    AdsrCurve.Exponential -> adsrExpShape(x, k, norm)
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Release progress — the time base every release stage shares.
@@ -66,8 +78,8 @@ internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (
 //
 // Scope, measured: on the ignitor envelope (AdsrIgnitor, where declickSeconds defaults
 // to 0 = off) the rendered gain reaches 0.0 too, and that is the path Der Schmetterling's
-// guitars clicked on. On the strip VCA the de-click one-pole sits DOWNSTREAM of the curve
-// and is on by default, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
+// guitars clicked on. With the de-click one-pole on (`classic()`'s envelope, as on the retired strip VCA)
+// it sits DOWNSTREAM of the curve, lagging ~47 frames at ENV_DECLICK_SECONDS, so the gain on the last
 // frame only moves 3.38e-3 -> 3.31e-3 at a 50 ms release: the curve residual was never the
 // dominant term there. Fixing THAT is a separate question (it changes every song's note-off)
 // and is deliberately not attempted here.
@@ -78,8 +90,9 @@ internal inline fun adsrExpShape(x: Double, k: Double, norm: Double): Double = (
 // It MUST stay a divide. Hoisting a reciprocal and multiplying looks free but is not
 // exact: 239 * (1.0/239.0) is 0.9999999999999999, so `omp` comes out 1.1e-16 instead
 // of 0 and the endpoint is missed all over again by a hair. Division of equal values
-// is exact. `ReleaseEndsAtZeroSpec` asserts `shouldBe 0.0` with no tolerance, and it
-// caught precisely this.
+// is exact. `ReleaseEndsAtZeroSpec` asserted `shouldBe 0.0` with no tolerance and caught precisely
+// this; its rows live on in `EnvelopeLawSpec` (the core, every curve) and `BareTreeVoiceSpec` (a
+// 240-frame exponential release through a voice, the 239 above) since 2026-09-27.
 //
 // The degenerate N<=1 case (a release too short to ramp) is folded into the pair as
 // offset=1, denom=1, making p=1 on its single frame instead of leaving the gain at full.

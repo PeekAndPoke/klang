@@ -11,8 +11,6 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngine
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -42,8 +40,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
     fun noteData(): VoiceData = VoiceData.empty.copy(
         sound = "supersaw",
         oscParams = mapOf("analog" to 3.0),
-        filters = FilterDefs(listOf(FilterDef.LowPass(freq = 2000.0, q = 1.0))),
-    )
+    ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = 2000.0, q = 1.0))))
 
     val sampleSound = "seedtest"
     val sampleReq = SampleRequest(bank = null, sound = sampleSound, index = null, note = null)

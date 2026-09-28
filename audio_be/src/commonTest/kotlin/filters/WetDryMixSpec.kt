@@ -13,7 +13,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * C4 guard (docs/plans/filter-unification.md): THE wet/dry law. Two exponents, two
+ * C4 guard (docs/tasks-archive/2026-09/20260927-filter-unification.md): THE wet/dry law. Two exponents, two
  * statistics — the rows pin each law's defining invariant, the floor's pinning region,
  * and the domain coercions.
  */
@@ -67,6 +67,9 @@ class WetDryMixSpec : StringSpec({
     "domain coercions: w and floor clamp, non-finite falls to safe values" {
         WetDryMix.dryCoeff(-0.5, floor = 0.0, p = 1) shouldBe (1.0 plusOrMinus 1e-12)
         WetDryMix.wetCoeff(1.5, p = 1) shouldBe (1.0 plusOrMinus 1e-12)
+        // past 1 is exactly 1 on the dry side too (C4: the raw > 1 extension is a DELETED capability;
+        // unclamped, cos^2 folds back up to 0.5 at w = 1.5)
+        WetDryMix.dryCoeff(1.5, floor = 0.0, p = 2) shouldBeLessThan 1e-30
         WetDryMix.dryCoeff(Double.NaN, floor = 0.0, p = 2) shouldBe (1.0 plusOrMinus 1e-12)
         WetDryMix.wetCoeff(Double.NaN, p = 2) shouldBe (0.0 plusOrMinus 1e-12)
         WetDryMix.dryCoeff(0.5, floor = Double.NaN, p = 2) shouldBe (0.5 plusOrMinus 1e-12)

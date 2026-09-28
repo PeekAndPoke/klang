@@ -11,7 +11,7 @@ plt.rcParams.update({"font.family": "monospace", "font.size": 9})
 # ---------------------------------------------------------------------------------------------
 # Fig 1 of the post: what one orbit allocated at its first touch, before the warehouse (a 10 s
 # stereo delay ring of doubles, 480 000 frames x 2 x 8 bytes = 7.68 MB; the Freeverb network
-# 204 KB; buffers and wrappers about 3 KB: docs/plans/resource-warehouse.md, "The problem,
+# 204 KB; buffers and wrappers about 3 KB: docs/tasks-archive/2026-09/20260927-resource-warehouse.md, "The problem,
 # measured"), against what it allocates after (nothing until the song asks; a class-0 ring of
 # 0.5 s plus a 64-frame margin is (24 000 + 64) x 16 bytes = 385 KB at 48 kHz; the reverb network
 # only once an orbit asks for room; Der Schmetterling has no delaytime and four orbits with a

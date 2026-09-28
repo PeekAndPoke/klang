@@ -11,6 +11,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.pattern.StackPattern
 import kotlin.math.pow
 
@@ -25,9 +26,18 @@ private fun applyEcho(source: SprudelPattern, times: Int, delay: Double, decay: 
         if (i == 0) {
             source // Original (no delay, no gain change)
         } else {
-            // Delayed and decayed echo
-            val gainMultiplier = decay.pow(i)
-            source.late(delay * i).gain(gainMultiplier)
+            // Delayed and decayed echo: the decay MULTIPLIES the event's own gain (decided 2026-09-28), so a
+            // patterned source gain keeps its shape in every layer. Not `gain(mul(...))`: a mapper on an unset
+            // gain is a no-op, and an unset gain reads as 1.0 here, so those layers are decay^i.
+            // NaN-guard: both operands are guarded before the product, as the wire's gain fold does. A non-finite
+            // decay (`0/0` from a script) leaves the level alone, a non-finite source gain reads as unset.
+            val gainMultiplier = decay.pow(i).takeIf { it.isFinite() } ?: 1.0
+
+            source.late(delay * i).reinterpretVoice { voice ->
+                val sourceGain = voice.gain?.takeIf { it.isFinite() } ?: 1.0
+
+                voice.copy(gain = sourceGain * gainMultiplier)
+            }
         }
     }
 
@@ -37,7 +47,9 @@ private fun applyEcho(source: SprudelPattern, times: Int, delay: Double, decay: 
 /**
  * Superimposes delayed and decayed copies of the pattern, creating an echo effect.
  *
- * Each copy is delayed by `delay × copy_number` cycles and its gain reduced by `decay ^ copy_number`.
+ * Each copy is delayed by `delay × copy_number` cycles and its gain multiplied by `decay ^ copy_number`.
+ * The multiply is into each event's own gain, so `note("c3 e3").gain(0.9).echo(3, 0.125, 0.6)` gives
+ * the layers 0.9, 0.54 and 0.324; an event with no gain set counts as 1.0, so its layers are 1.0, 0.6 and 0.36.
  *
  * @param times Number of layers including the original (must be ≥ 1).
  * @param delay Time offset per echo in cycles.

@@ -11,6 +11,12 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.mul
+import io.peekandpoke.klang.audio_bridge.pregain
+import io.peekandpoke.klang.audio_bridge.endsInClassic
+import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.optimizer
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -222,31 +228,6 @@ class IgnitorRegistryTest : StringSpec({
         (sig1 !== sig2) shouldBe true
     }
 
-    "registerDefaults compositions produce non-zero output" {
-        val registry = IgnitorRegistry()
-        registry.registerDefaults()
-
-        val blockFrames = 128
-        val ctx = IgniteContext(
-            sampleRate = 44100,
-            voiceDurationFrames = 44100,
-            gateEndFrame = 44100,
-            releaseFrames = 4410,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply {
-            updateOffsetAndLength(0, blockFrames)
-            voiceElapsedFrames = 0
-        }
-
-        for (name in listOf("sgpad", "sgbell", "sgbuzz")) {
-            val dsl = registry.get(name)!!
-            val sig = dsl.toExciter()
-            val buffer = AudioBuffer(blockFrames)
-            sig.generate(buffer, 440.0, ctx)
-            buffer.any { it != 0.0 } shouldBe true
-        }
-    }
-
     "createExciter dispatches Variants by VoiceData.soundIndex" {
         val registry = IgnitorRegistry()
         val variants = IgnitorDsl.Variants(
@@ -297,5 +278,92 @@ class IgnitorRegistryTest : StringSpec({
             one[i] shouldBe sawRef[i]
             negative[i] shouldBe sawRef[i]
         }
+    }
+    // ── The tag: a tree that ends in classic() (phase 3 step 10). The engine no longer asks (every voice is its tree
+    //    since step 9); the tag stays for the editor and the future auto-attach. ──────────────────────────────────
+
+    "the tag: a tree that ends in classic(), whoever built it; not a plain tree, not a stage after classic()" {
+        IgnitorRegistry.builtInVoice(IgnitorDsl.Sawtooth()).endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().classic().endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().endsInClassic() shouldBe false
+        IgnitorDsl.Sawtooth().classic().mul(IgnitorDsl.Constant(0.5)).endsInClassic() shouldBe false
+    }
+
+    "the tag: an optimizer hint on a classic() tree (the by-ear A/B) still ends in classic()" {
+        IgnitorDsl.Sawtooth().classic().optimizer(0).endsInClassic() shouldBe true
+        IgnitorDsl.Sawtooth().classic().optimizer(1).endsInClassic() shouldBe true
+    }
+
+    "the tag reads the same on the authored and the optimized tree: no optimizer rewrite makes or hides it" {
+        // The optimizer rewrites no `Adsr` root, and an `on != 0` hint at the root dissolves, which the tag looks
+        // through. A future pass that rewrote the classic root would turn this row red.
+        val saw = IgnitorDsl.Sawtooth()
+        val trees = listOf(
+            saw.classic(),
+            saw.classic().optimizer(1),
+            saw.classic().optimizer(0),
+            IgnitorRegistry.builtInVoice(saw),
+            saw.lowpass(900.0).lowpass(900.0).classic(),
+            saw.classic().mul(IgnitorDsl.Constant(0.5)),
+            saw.classic().mul(IgnitorDsl.Constant(1.0)),
+            saw.lowpass(900.0),
+        )
+
+        for (tree in trees) {
+            tree.optimize().endsInClassic() shouldBe tree.endsInClassic()
+        }
+    }
+
+    "registerDefaults: every built-in tree ends in classic(), and so does the default sound's" {
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+
+        registry.names().all { registry.get(it)?.endsInClassic() == true } shouldBe true
+        registry.get(IgnitorRegistry.DEFAULT_SOUND)?.endsInClassic() shouldBe true
+    }
+
+    "the built-in shape is still step 6's tree: under classic()'s crush sits the onepole on the pregained source" {
+        // Step 6 wrote it `OnePoleLowpass(source.pregain(), slot).classic()`; since step 10 the onepole is classic()'s
+        // first stage, so the same tree comes out of `source.pregain().classic()`.
+        val saw = IgnitorDsl.Sawtooth()
+        val shape = IgnitorRegistry.builtInVoice(saw)
+
+        shape.let { root ->
+            var n: IgnitorDsl = root
+
+            while (n !is IgnitorDsl.Crush) {
+                n = when (n) {
+                    is IgnitorDsl.Adsr -> n.inner
+                    is IgnitorDsl.Tremolo -> n.inner
+                    is IgnitorDsl.Lowpass -> n.inner
+                    is IgnitorDsl.Notch -> n.inner
+                    is IgnitorDsl.Bandpass -> n.inner
+                    is IgnitorDsl.Highpass -> n.inner
+                    is IgnitorDsl.Distort -> n.inner
+                    is IgnitorDsl.Coarse -> n.inner
+                    else -> error("unexpected stage $n")
+                }
+            }
+
+            n.inner shouldBe IgnitorDsl.OnePoleLowpass(inner = saw.pregain(), freq = IgnitorDsl.Slots.onepole)
+        }
+    }
+
+    "a built-in's UNITY pregain is folded at build: no multiply node, and a written pregain builds one" {
+        // With the envelope switched off and nothing else written every classic stage passes through, so
+        // the built root is whatever the pregain left behind: the bare source when it folded at unity.
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+
+        fun rootOf(bag: Map<String, Double>): Ignitor {
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", oscParams = bag)
+            val root = registry.createExciter("saw", data, freqHz = 220.0)?.ignitor ?: error("no exciter")
+
+            return (root as MemoizingIgnitor).inner
+        }
+
+        val bareSource = (builtInSources().getValue("saw").buildExciter(freqHz = 220.0).ignitor as MemoizingIgnitor).inner
+
+        rootOf(mapOf("adsr.on" to 0.0))::class shouldBe bareSource::class
+        rootOf(mapOf("adsr.on" to 0.0, "pregain" to 1.0))::class shouldBe bareSource::class
+        rootOf(mapOf("adsr.on" to 0.0, "pregain" to 2.0)).shouldBeInstanceOf<AffineIgnitor>()
     }
 })

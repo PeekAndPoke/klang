@@ -61,7 +61,7 @@ class LangCutSpec : StringSpec({
         }
     }
 
-    "cut() sets VoiceData.cut correctly" {
+    "cut() sets SprudelVoiceData.cut correctly" {
         val p = sound("hh hh").apply(cut("1 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2

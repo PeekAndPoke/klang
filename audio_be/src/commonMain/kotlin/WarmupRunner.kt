@@ -5,15 +5,19 @@
 
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+
+/** This voice's orbit slots plus [more]: the warmup builds its variants by adding to one base. */
+private fun VoiceData.withKatalystParams(vararg more: Pair<String, Double>): VoiceData =
+    copy(katalystParams = (katalystParams ?: emptyMap()) + more)
 
 /**
  * Primes the audio render hot path before the first real voice arrives.
@@ -95,6 +99,19 @@ class WarmupRunner(
             listOf("sine", "saw", "supersaw", "square", "triangle", WARMUP_SAMPLE_NAME) + WarmupVocabulary.sounds.map { it.first }
 
         /**
+         * The warmed voices' envelope and lowpass as `classic()`'s slots: attack 1 ms, decay 50 ms to 0, release
+         * 50 ms, a lowpass at 2 kHz, q 0.3. The vocabulary graphs do not end in `classic()`, so they play as their
+         * bare trees and ignore these.
+         */
+        private val WARMUP_CLASSIC_SLOTS: Map<String, Double> = IgnitorDsl.Slots.let { s ->
+            listOf(
+                s.adsr.attack to 0.001, s.adsr.decay to 0.05, s.adsr.sustain to 0.0, s.adsr.release to 0.05,
+                s.lpf.freq to 2000.0, s.lpf.q to 0.3,
+            )
+                .associate { (slot, value) -> (slot as IgnitorDsl.Param).name to value }
+        }
+
+        /**
          * Orbit-level effects the warmed voices rotate through on top of delay + room + filter, so
          * their constructors and first blocks run here and not in a song's first frame: a phaser,
          * a compressor, a body resonator, a vowel bank (review round 3). Ducking is left out — it
@@ -156,24 +173,50 @@ class WarmupRunner(
                     // behind the block it is promoted for, and `k * blockSec` can land an ulp before
                     // the clock's own `k * frames / sampleRate`.
                     val start = (orbit + 0.5) * blockSec
+                    // The orbit chain reads its knobs from `katalystParams` alone (Katalyst step
+                    // 5b-1; the bus fields left the wire in 5b-3), so the warmup writes SLOTS:
+                    // without them this warmup would warm the voices alone and leave every orbit
+                    // stage cold, and no ring and no reverb network would be rented in the warmup
+                    // window, which is most of what it is for.
+                    //
+                    // The body and the vowel are named through the shared catalogues rather than
+                    // by hand-built bands, because a slot carries an INDEX and there is no spelling
+                    // for a private band list on the bus. Warming the catalogue lookup is what a
+                    // real song does anyway.
                     val base = VoiceData.empty.copy(
                         sound = WARMUP_SOUNDS[orbit % WARMUP_SOUNDS.size],
                         freqHz = 220.0 + 20.0 * orbit,
                         cylinder = orbit,
-                        adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
-                        cutoff = 2000.0,
-                        resonance = 0.3,
-                        delay = 0.5,
-                        delayTime = 0.3,
-                        delayFeedback = 0.2,
-                        reverb = 0.5,
-                        reverbSize = 0.6,
+                        // The envelope and the lowpass as `classic()`'s slots, for the built-ins and the sample.
+                        oscParams = WARMUP_CLASSIC_SLOTS,
+                        katalystParams = mapOf(
+                            "delay.wet" to 0.5,
+                            "delay.time" to 0.3,
+                            "delay.feedback" to 0.2,
+                            "reverb.wet" to 0.5,
+                            "reverb.size" to 0.6,
+                        ),
                     )
                     val data = when (orbit % EXTRA_EFFECT_KINDS) {
-                        0 -> base.copy(phaser = 0.5, phaserDepth = 0.5)
-                        1 -> base.copy(compressorThreshold = -18.0, compressorRatio = 4.0, compressorKnee = 6.0, compressorAttack = 0.01, compressorRelease = 0.2)
-                        2 -> base.copy(filters = FilterDefs(listOf(FilterDef.Body(bands = listOf(FilterDef.Body.Mode(freq = 220.0, db = 6.0, q = 8.0), FilterDef.Body.Mode(freq = 440.0, db = 3.0, q = 6.0)), mix = 0.5))))
-                        else -> base.copy(filters = FilterDefs(listOf(FilterDef.Formant(bands = listOf(FilterDef.Formant.Band(freq = 700.0, db = 0.0, q = 8.0), FilterDef.Formant.Band(freq = 1200.0, db = -6.0, q = 10.0)), mix = 0.5))))
+                        0 -> base.withKatalystParams("phaser.rate" to 0.5, "phaser.wet" to 0.5)
+
+                        1 -> base.withKatalystParams(
+                            "compressor.threshold" to -18.0,
+                            "compressor.ratio" to 4.0,
+                            "compressor.knee" to 6.0,
+                            "compressor.attack" to 0.01,
+                            "compressor.release" to 0.2,
+                        )
+
+                        2 -> base.withKatalystParams(
+                            "body.material" to BodyMaterials.indexOf("wood"),
+                            "body.wet" to 0.5,
+                        )
+
+                        else -> base.withKatalystParams(
+                            "vowel.vowel" to VowelBands.indexOf("a"),
+                            "vowel.wet" to 0.5,
+                        )
                     }
                     ScheduledVoice(
                         playbackId = WARMUP_PLAYBACK_ID,

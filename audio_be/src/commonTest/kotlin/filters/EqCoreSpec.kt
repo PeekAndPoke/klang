@@ -35,7 +35,7 @@ import kotlin.random.Random
  * optimizer's replacement contract.
  *
  * ORACLE CHOICE: the Ignitor-form chain (`Ignitor.lowpass(...)` etc.) driven by a deterministic
- * [BufferSourceIgnitor] — NOT the class-form `SvfLPF` — because the Ignitor form is literally
+ * [BufferSourceIgnitor] (not the class-form `SvfLPF`, retired in phase 3 step 9) because the Ignitor form is literally
  * what the optimizer replaces (the plan's oracle-drift risk item is moot this way).
  *
  * The LOOP SHAPE bake-off closed 2026-08-19 (locals-state section-major won — see the class

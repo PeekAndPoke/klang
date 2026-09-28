@@ -73,9 +73,9 @@ export bassShape = (p) => p
     .unison(spread = sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(freq = 2900, env = 14.4)
     .lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))
 
-// Sub voice: tremoloed triangle, soft distortion, pedal engine.
+// Sub voice: tremoloed triangle, soft distortion.
 export subShape = (p) => p
-    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7).distort(0.2, "tube", 2).postgain(0.80).analog(2.5)
+    .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.7 * 0.80).distort(0.2, "tube", 2).analog(2.5)
     .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
 
 // Drums: tight, panned right, fast.
@@ -105,7 +105,7 @@ export song = stack(
     bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
-    master(Master(m => m.gain(1.5))),
+    master(Katalyst(k => k.gain(1.5))),
 ).reverb(0.3, 0.5, 11500).compressor(-6, 2.5, 7, 0.02, 0.025).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
 
 

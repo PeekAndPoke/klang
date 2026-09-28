@@ -73,7 +73,7 @@ class LangLegatoSpec : StringSpec({
         events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
     }
 
-    "legato() sets VoiceData.legato correctly" {
+    "legato() sets SprudelVoiceData.legato correctly" {
         val p = note("c3 e3").legato("0.25 0.75")
         val events = p.queryArc(0.0, 1.0)
 
@@ -81,7 +81,7 @@ class LangLegatoSpec : StringSpec({
         events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
     }
 
-    "control pattern legato() sets VoiceData.legato on existing pattern" {
+    "control pattern legato() sets SprudelVoiceData.legato on existing pattern" {
         // Given a base note pattern producing two events per cycle
         val base = note("c3 e3")
 

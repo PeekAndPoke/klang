@@ -57,7 +57,7 @@ class LangControlRestSpec : StringSpec({
     val unisonSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"), t("pan", "0.3", "0.6"))
     val penvSlots = arrayOf(
         t("amount", "12", "24"), t("attack", "0.01", "0.02"), t("decay", "0.1", "0.2"),
-        t("release", "0.1", "0.2"), t("curve", "1", "2"), t("anchor", "0.25", "0.5"),
+        t("sustain", "0.25", "0.5"), t("release", "0.1", "0.2"),
     )
     val vibratoSlots = arrayOf(t("rate", "4", "6"), t("depth", "0.3", "0.6"))
     val superSlots = arrayOf(t("voices", "3", "5"), t("spread", "0.1", "0.2"))
@@ -69,8 +69,8 @@ class LangControlRestSpec : StringSpec({
     val rows: List<Row> = listOf(
         // Level
         single("gain", "amount", "0.3", "0.6"),
+        single("pregain", "amount", "0.3", "0.6"),
         single("pan", "amount", "0.3", "0.6"),
-        single("postgain", "amount", "0.3", "0.6"),
         single("velocity", "amount", "0.3", "0.6"),
         single("vel", "amount", "0.3", "0.6"),
         // Routing and dynamics
@@ -88,15 +88,15 @@ class LangControlRestSpec : StringSpec({
         compound("compressor", *compressorSlots),
         compound("comp", *compressorSlots),
         // Effects
-        compound("body", t("material", "\"wood\"", "metal"), t("wet", "0.3", "0.6"), t("floor", "0.3", "0.6")),
-        compound("vowel", t("vowel", "\"a\"", "o"), t("wet", "0.3", "0.6"), t("floor", "0.3", "0.6")),
+        compound("body", t("wet", "0.3", "0.6"), t("material", "\"wood\"", "metal"), t("floor", "0.3", "0.6")),
+        compound("vowel", t("wet", "0.3", "0.6"), t("vowel", "\"a\"", "o"), t("floor", "0.3", "0.6")),
         compound("delay", t("wet", "0.3", "0.6"), t("time", "0.25", "0.5"), t("feedback", "0.4", "0.7"), t("cap", "1", "2")),
         compound("reverb", t("size", "3", "6"), t("lowpass", "1000", "2000")),
         compound("distort", t("amount", "0.3", "0.6"), t("oversample", "2", "4")),
         compound("crush", t("amount", "4", "8"), t("oversample", "2", "4")),
         compound("coarse", t("amount", "2", "4"), t("oversample", "2", "4")),
         compound(
-            "phaser", t("rate", "0.5", "1"), t("wet", "0.3", "0.6"), t("center", "1000", "2000"),
+            "phaser", t("wet", "0.3", "0.6"), t("rate", "0.5", "1"), t("center", "1000", "2000"),
             t("sweep", "500", "1000"), t("floor", "0.3", "0.6"),
         ),
         compound("tremolo", t("depth", "0.3", "0.6"), t("sync", "2", "4"), t("skew", "0.2", "0.4"), t("phase", "0.25", "0.5")),
@@ -112,10 +112,6 @@ class LangControlRestSpec : StringSpec({
         listOf(
             single("begin", "pos", "0.1", "0.2"),
             single("end", "pos", "0.8", "0.9"),
-            single("loopBegin", "pos", "0.1", "0.2"),
-            single("loopb", "pos", "0.1", "0.2"),
-            single("loopEnd", "pos", "0.8", "0.9"),
-            single("loope", "pos", "0.8", "0.9"),
             single("cut", "group", "1", "2"),
             single("speed", "rate", "1.5", "2"),
         ),

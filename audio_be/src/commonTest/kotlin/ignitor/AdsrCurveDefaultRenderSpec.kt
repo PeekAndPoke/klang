@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 
@@ -61,14 +62,22 @@ class AdsrCurveDefaultRenderSpec : StringSpec({
     fun buildDsl(node: IgnitorDsl): Ignitor = node.toExciter()
 
     "DSL runtime: unset curves render bit-identical to explicit Exponential (and NOT to Square)" {
-        fun adsrNode(a: AdsrCurve?, d: AdsrCurve?, r: AdsrCurve?) = IgnitorDsl.Adsr(
-            inner = IgnitorDsl.Sine(),
-            attackSec = IgnitorDsl.Constant(0.005),
-            decaySec = IgnitorDsl.Constant(0.005),
-            sustainLevel = IgnitorDsl.Constant(0.6),
-            releaseSec = IgnitorDsl.Constant(0.01),
-            attackCurve = a, decayCurve = d, releaseCurve = r,
-        )
+        // `null` = unset: the node's own default knob (since step 3c a curve is an index knob).
+        fun adsrNode(a: AdsrCurve?, d: AdsrCurve?, r: AdsrCurve?): IgnitorDsl.Adsr {
+            val base = IgnitorDsl.Adsr(
+                inner = IgnitorDsl.Sine(),
+                attackSec = IgnitorDsl.Constant(0.005),
+                decaySec = IgnitorDsl.Constant(0.005),
+                sustainLevel = IgnitorDsl.Constant(0.6),
+                releaseSec = IgnitorDsl.Constant(0.01),
+            )
+
+            return base.copy(
+                attackCurve = a?.let(AdsrCurves::knob) ?: base.attackCurve,
+                decayCurve = d?.let(AdsrCurves::knob) ?: base.decayCurve,
+                releaseCurve = r?.let(AdsrCurves::knob) ?: base.releaseCurve,
+            )
+        }
         val unset = render(buildDsl(adsrNode(null, null, null)))
         val explicit = render(buildDsl(adsrNode(AdsrCurve.Exponential, AdsrCurve.Exponential, AdsrCurve.Exponential)))
         for (i in 0 until frames) {

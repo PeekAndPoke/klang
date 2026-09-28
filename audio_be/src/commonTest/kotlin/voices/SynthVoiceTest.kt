@@ -11,8 +11,6 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -152,32 +150,12 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext(blockFrames = 100)
         voice.render(ctx)
 
-        // VCA gain is de-clicked, so the linear attack ramp lags slightly; verify the
-        // envelope modulates the signal up from ~0 monotonically (exact shape: EnvelopeShapeTest).
+        // The envelope is the test instrument's own (in its tree since phase 3 step 9); verify it
+        // modulates the signal up from ~0 monotonically (exact shape: EnvelopeLawSpec).
         ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.02)
         (ctx.voiceBuffer[50] > ctx.voiceBuffer[0]) shouldBe true
         (ctx.voiceBuffer[99] > ctx.voiceBuffer[50]) shouldBe true
         (ctx.voiceBuffer[99] > 0.6) shouldBe true
-    }
-
-    "SynthVoice with filter affects signal output" {
-        // The old fixture passed VoiceTestHelpers.NoOpFilter — a filter that by definition cannot
-        // affect the signal — so the test asserted its own name false and then checked nothing.
-        // A one-pole highpass on a constant is the clearest possible case: DC is exactly what a
-        // highpass removes, so the output has to collapse away from the unfiltered 1.0.
-        fun render(filter: AudioFilter): AudioBuffer {
-            val voice = createSynthVoice(signal = TestIgnitors.constant, filter = filter)
-            val ctx = createContext()
-            voice.render(ctx)
-
-            return ctx.voiceBuffer
-        }
-
-        val unfiltered = render(VoiceTestHelpers.NoOpFilter)
-        val highpassed = render(LowPassHighPassFilters.OnePoleHPF(cutoffHz = 5000.0, sampleRate = 44100.0))
-
-        unfiltered.all { it == 1.0 } shouldBe true
-        kotlin.math.abs(highpassed[99]) shouldBe 0.0.plusOrMinus(0.05)
     }
 
     "SynthVoice with all modulations renders correctly" {
@@ -187,12 +165,8 @@ class SynthVoiceTest : StringSpec({
             vibrato = Voice.Vibrato(rate = 5.0, semitones = 0.25),
             accelerate = Voice.Accelerate(semitones = 1.0),
             pitchEnvelope = Voice.PitchEnvelope(
-                attackFrames = 50.0,
-                decayFrames = 50.0,
-                releaseFrames = 0.0,
                 semitones = 1.0,
-                curve = 0.0,
-                anchor = 0.0
+                envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.0, releaseFrames = 0.0),
             ),
             fm = Voice.Fm(
                 ratio = 2.0,

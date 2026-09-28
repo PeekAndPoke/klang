@@ -27,8 +27,10 @@ import kotlin.math.max
  *     soft-knee parabolic gain curve. Standard musical-compressor design; no added latency.
  *   - `> 0` — anticipating: running MINIMUM of the required gain over the lookahead window, a
  *     release stage, then two cascaded box filters, applied to the signal delayed by that window.
- *     Holds the ceiling on transients instead of chasing them. Costs exactly that much latency, so
- *     it belongs only where the delay is uniform downstream (the summed master mix).
+ *     Holds the ceiling on transients instead of chasing them. Costs exactly that much latency: on
+ *     the summed mix (the house limiter) that shifts everything together, anywhere else it makes
+ *     whatever runs through it late by that much (an orbit's `Katalyst(k => k.limiter(lookahead =
+ *     ...))`, phase 3 step 12 C2: the author's choice, never compensated).
  *
  * Used in two places:
  *   1. Per-cylinder musical compressor (user-facing).
@@ -60,15 +62,17 @@ class Compressor(
     releaseSeconds: Double = 0.1,
     /**
      * Lookahead in seconds. `0.0` (the default) keeps the classic feed-forward one-pole path with
-     * no delay line and no added latency — which is what every per-orbit compressor uses, and must,
-     * since latency on one orbit would shift it against the rest of the mix.
+     * no delay line and no added latency, which is what an orbit compressor uses unless its author
+     * asks for more.
      *
      * Above [MIN_LOOKAHEAD_FRAMES] worth of samples this switches to the anticipating path, which
-     * delays the signal by this much and is therefore only appropriate where the delay is uniform
-     * for everything downstream — i.e. the final master bus.
+     * delays the signal by this much. On the summed mix (the house limiter in `MasterStage`) the
+     * delay is uniform for everything downstream; on an orbit (a Katalyst `compressor` or `limiter`
+     * stage with a `lookahead`) that orbit runs late by it, by the author's choice and uncompensated.
      *
      * A constructor `val`, deliberately, unlike every other parameter here: the rings are sized once
-     * from it and must never be reallocated on the audio thread.
+     * from it and must never be reallocated on the audio thread. A caller that takes it from a user
+     * passes it through [coerceLookaheadSeconds] first, the one bound on what a build allocates.
      */
     val lookaheadSeconds: Double = 0.0,
 ) {
@@ -142,8 +146,8 @@ class Compressor(
     /** Signal delay D in frames. 0 disables the whole lookahead path. */
     private val delayFrames: Int = run {
         // guardOr like every sibling param: Infinity would saturate .toInt() to Int.MAX_VALUE and
-        // ask for a 2-billion-element array. MasterChain already guards, but this class is public
-        // with three other call sites.
+        // ask for a 2-billion-element array. KatalystCompressorEffect already guards, but this class is public
+        // with two other call sites (MasterStage and EffectBenchmark).
         val seconds = guardOr(lookaheadSeconds, 0.0)
         val frames = (seconds * sampleRate).toInt()
         if (frames < MIN_LOOKAHEAD_FRAMES) 0 else frames
@@ -304,28 +308,13 @@ class Compressor(
     fun process(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
         val makeupLinear = computeMakeupLinear()
 
-        // Two loop bodies, branched OUTSIDE the per-sample loop: `envelopeStep` is inlined into each
-        // so the zero-lookahead path stays exactly as specialized as it was.
+        // Two loop bodies, branched OUTSIDE the per-sample loop: `envelopeStep` is inlined into the
+        // classic one so the zero-lookahead path stays exactly as specialized as it was. The
+        // lookahead loop is [processLookahead]'s, with the block itself as the delayed-dry target
+        // (every sample is read before it is written, so the aliasing is safe).
         if (delayFrames > 0) {
-            for (i in 0 until blockSize) {
-                val l = left[i]
-                val r = right[i]
-                val gain = lookaheadStep(max(abs(l), abs(r))) * makeupLinear
-                // Emit the DELAYED sample, then park the current one. One shared write index.
-                val outL = delayL[delayPos]
-                val outR = delayR[delayPos]
-                // NaN-guard on the ring write too, not just the detector: MasterStage maps NaN to
-                // Short.MIN_VALUE (full-scale negative), so an unguarded NaN would surface as a
-                // click delayFrames samples later, far from whatever produced it.
-                // NaN-guard, and non-finite generally: an Infinity survives `l != l`, is stored,
-                // and later emerges as `Inf * 0.0` = NaN — which MasterStage maps to
-                // Short.MIN_VALUE, the exact full-scale click this guard exists to prevent.
-                delayL[delayPos] = if (l.isFinite()) l else 0.0
-                delayR[delayPos] = if (r.isFinite()) r else 0.0
-                delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
-                left[i] = outL * gain
-                right[i] = outR * gain
-            }
+            processLookahead(left, right, blockSize, left, right)
+
             return
         }
 
@@ -333,6 +322,130 @@ class Compressor(
             val totalGain = envelopeStep(max(abs(left[i]), abs(right[i]))) * makeupLinear
             left[i] = left[i] * totalGain
             right[i] = right[i] * totalGain
+        }
+    }
+
+    /**
+     * One stereo block of the classic path while the three GAIN-COMPUTER knobs move: threshold,
+     * inverse ratio and knee run linearly per sample from the values the previous block ended on
+     * ([thresholdFrom], [inverseRatioFrom], [kneeFrom]) to [thresholdTo], [inverseRatioTo] and
+     * [kneeTo], written from the END, so the last sample runs at the `To` values bit for bit. The
+     * envelope follower is the same one [process] runs (it reads none of the three), so it stays
+     * continuous.
+     *
+     * **The ratio moves as its inverse, `1 / ratio`**, so the curve's slope `1 / ratio - 1` moves
+     * linearly. A glide linear in the ratio itself bunches a wide change into one end of the glide
+     * (from 100:1 to 1:1 the slope barely moves until the last few blocks): measured -41 dB above
+     * 8 kHz for 100 to 1, where the inverse glide sits at the floor (5c-7 review round 1).
+     *
+     * Why per sample: the gain computer has no memory, so a knob that moved once per block would
+     * step the gain once per block. Measured in Katalyst step 5c-7 (a band-limited saw, chord and
+     * bass, energy above 8 kHz against the signal): a threshold, ratio or knee JUMP sits at -9 to
+     * -52 dB, the same jump in 17 to 19 per-block steps at -31 to -69 dB (a model of this curve),
+     * and a per-sample ramp at the steady floor. The orbit compressor's glide
+     * (`KatalystCompressorEffect`) is the caller; the fields are NOT touched here, they hold what
+     * the caller configured last.
+     *
+     * The values are the caller's and are used as given: pass what the setters stored (an inverse
+     * ratio in `(0, 1]`, a knee of at least 0), and a linear ramp between two such values stays in
+     * range.
+     *
+     * Classic path only: an instance with [lookaheadSeconds] runs [process] instead, on the knobs
+     * in force, because its delay ring must see every block. There a knob step does not step the
+     * output: the required gain passes through the hold, the release and the box smoother first.
+     */
+    internal fun processGliding(
+        left: AudioBuffer,
+        right: AudioBuffer,
+        blockSize: Int,
+        thresholdFrom: Double,
+        thresholdTo: Double,
+        inverseRatioFrom: Double,
+        inverseRatioTo: Double,
+        kneeFrom: Double,
+        kneeTo: Double,
+    ) {
+        if (delayFrames > 0 || blockSize <= 0) {
+            process(left, right, blockSize)
+
+            return
+        }
+
+        val makeupLinear = computeMakeupLinear()
+        val thresholdStep = (thresholdTo - thresholdFrom) / blockSize
+        val inverseRatioStep = (inverseRatioTo - inverseRatioFrom) / blockSize
+        val kneeStep = (kneeTo - kneeFrom) / blockSize
+        val last = blockSize - 1
+
+        for (i in 0 until blockSize) {
+            val back = (last - i).toDouble()
+
+            followEnvelope(max(abs(left[i]), abs(right[i])))
+
+            val reductionDb = gainReductionDb(
+                inputDb = envelopeDb,
+                thresholdDb = thresholdTo - thresholdStep * back,
+                slope = (inverseRatioTo - inverseRatioStep * back) - 1.0,
+                kneeDb = kneeTo - kneeStep * back,
+            )
+            val totalGain = gainFor(reductionDb) * makeupLinear
+
+            left[i] = left[i] * totalGain
+            right[i] = right[i] * totalGain
+        }
+    }
+
+    /**
+     * The lookahead loop, the ONE loop of the lookahead path ([process] runs it too, with the block
+     * as its own target), which also hands out the DELAYED DRY signal: [delayedLeft] and
+     * [delayedRight] receive, per sample, what leaves the delay ring before the gain is applied, so
+     * `left[i] == delayedLeft[i] * gain`. That is the fade partner of an orbit compressor with
+     * lookahead (`KatalystCompressorEffect`): blending the compressed signal against the UNDELAYED
+     * input would sum two copies D frames apart, and landing on it would jump the orbit in time.
+     *
+     * [delayedLeft] and [delayedRight] may alias [left] and [right]: each sample is read before
+     * either is written.
+     *
+     * On an instance without lookahead there is no ring: the delayed dry is the input itself, and
+     * the block runs [process].
+     */
+    internal fun processLookahead(
+        left: AudioBuffer,
+        right: AudioBuffer,
+        blockSize: Int,
+        delayedLeft: AudioBuffer,
+        delayedRight: AudioBuffer,
+    ) {
+        if (delayFrames <= 0) {
+            left.copyInto(delayedLeft, 0, 0, blockSize)
+            right.copyInto(delayedRight, 0, 0, blockSize)
+            process(left, right, blockSize)
+
+            return
+        }
+
+        val makeupLinear = computeMakeupLinear()
+
+        for (i in 0 until blockSize) {
+            val l = left[i]
+            val r = right[i]
+            val gain = lookaheadStep(max(abs(l), abs(r))) * makeupLinear
+            // Emit the DELAYED sample, then park the current one. One shared write index.
+            val outL = delayL[delayPos]
+            val outR = delayR[delayPos]
+
+            // NaN-guard on the ring write too, not just the detector: MasterStage maps NaN to
+            // Short.MIN_VALUE (full-scale negative), so an unguarded NaN would surface as a click
+            // delayFrames samples later, far from whatever produced it. Non-finite generally: an
+            // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
+            // MasterStage maps to Short.MIN_VALUE, the exact full-scale click this guard prevents.
+            delayL[delayPos] = if (l.isFinite()) l else 0.0
+            delayR[delayPos] = if (r.isFinite()) r else 0.0
+            delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
+            delayedLeft[i] = outL
+            delayedRight[i] = outR
+            left[i] = outL * gain
+            right[i] = outR * gain
         }
     }
 
@@ -361,6 +474,18 @@ class Compressor(
      */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun envelopeStep(level: Double): Double {
+        followEnvelope(level)
+
+        return gainFor(calculateGainReduction(envelopeDb))
+    }
+
+    /**
+     * One sample of the envelope follower: moves [envelopeDb] toward [level] (in dB). It reads no
+     * gain-computer knob (threshold, ratio, knee), which is what lets [processGliding] move those
+     * per sample over the one envelope.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun followEnvelope(level: Double) {
         // Same non-finite guard the lookahead path carries at `lookaheadStep`, and for a
         // sharper reason here: this path had NONE, so one +Inf sample latched the envelope
         // and silently DISABLED the limiter for good. `ln(Inf)` gives `envelopeDb = Inf`, the
@@ -387,10 +512,15 @@ class Compressor(
         val blend = smoothstep01((error + ENV_COEFF_BLEND_DB) / (2.0 * ENV_COEFF_BLEND_DB))
         val coeff = releaseCoeff + (attackCoeff - releaseCoeff) * blend
         envelopeDb += coeff * error
+    }
 
-        // Gain curve → linear multiplier. Skip `exp` only below an inaudible reduction floor
-        // (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped the gain 1.0<->0.99885.
-        val gainReductionDb = calculateGainReduction(envelopeDb)
+    /**
+     * Gain curve output (a reduction in dB, 0 or below) to a linear multiplier. Skip `exp` only
+     * below an inaudible reduction floor (GAIN_SKIP_THRESHOLD_DB); the old -0.01 dB cutoff snapped
+     * the gain 1.0<->0.99885.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun gainFor(gainReductionDb: Double): Double {
         return if (gainReductionDb < GAIN_SKIP_THRESHOLD_DB) {
             fastExp(gainReductionDb * LN10_OVER_20)
         } else {
@@ -411,7 +541,7 @@ class Compressor(
      * Why the ceiling is actually met: the min-hold window is `delayFrames + 1`, so the sample
      * emerging from the delay ring lies inside the hold window of **every** tap the smoother is
      * averaging. An average is >= its minimum, so the smoothed gain is <= what that sample requires.
-     * Derivation in `docs/tasks/master-limiter-lookahead.md` §2.3.
+     * Derivation in `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` §2.3.
      */
     private fun lookaheadStep(inputLevel: Double): Double {
         // NaN-guard, and non-finite generally. NaN would poison the deque ordering (every
@@ -483,6 +613,11 @@ class Compressor(
         delayL.fill(0.0)
         delayR.fill(0.0)
         delayPos = 0
+        resetLookaheadGain()
+    }
+
+    /** The detector half of [resetLookaheadState]: hold, release and boxes at rest, the ring untouched. */
+    private fun resetLookaheadGain() {
         minHead = 0
         minTail = 0
         sampleCounter = 0
@@ -513,7 +648,17 @@ class Compressor(
      * Implements soft-knee compression — parabolic blend on `[-halfKnee, +halfKnee]`,
      * verified C¹ continuous at both boundaries when `kneeDb > 0`.
      */
-    private fun calculateGainReduction(inputDb: Double): Double {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun calculateGainReduction(inputDb: Double): Double =
+        gainReductionDb(inputDb, thresholdDb, 1.0 / ratio - 1.0, kneeDb)
+
+    /**
+     * [calculateGainReduction] with the knobs passed in: the one home of the curve, shared by the
+     * settled path (the fields) and [processGliding] (the knobs of each sample). The ratio arrives as
+     * the curve's SLOPE, `1 / ratio - 1` (0 at 1:1, -1 at infinity:1), because that is the quantity
+     * the curve is linear in, and so the one a glide must move linearly.
+     */
+    private fun gainReductionDb(inputDb: Double, thresholdDb: Double, slope: Double, kneeDb: Double): Double {
         val overshootDb = inputDb - thresholdDb
         val halfKnee = kneeDb / 2.0
 
@@ -523,11 +668,11 @@ class Compressor(
 
             // In the knee - soft transition
             overshootDb < halfKnee -> {
-                (1.0 / ratio - 1.0) * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
+                slope * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
             }
 
             // Above threshold - full compression
-            else -> (1.0 / ratio - 1.0) * overshootDb
+            else -> slope * overshootDb
         }
     }
 
@@ -543,6 +688,34 @@ class Compressor(
         // Fast branch of the dual release (lookahead path only). A tenth of the configured release,
         // so `releaseSeconds` keeps meaning "the release" and no new knob is needed.
         fastReleaseCoeff = 1.0 - exp(-1.0 / ((releaseTime / FAST_RELEASE_DIVISOR) * sampleRate))
+    }
+
+    /**
+     * Re-seeds the lookahead detector from what the ring holds now, under the knobs in force, and
+     * leaves the ring (the signal) untouched: the detector goes to rest and then hears the ring's
+     * [latencyFrames] samples, oldest first. The instance is then in the state of a FRESH one that
+     * has been fed exactly those samples, so the ceiling argument of [lookaheadStep] holds from the
+     * next sample it emits, as it does for a fresh instance.
+     *
+     * For an orbit compressor that switches back on after an off stretch with its ring running
+     * (`KatalystCompressorEffect`): without it the new life starts from whatever the detector last
+     * computed, at other knobs. A one-off pass of [latencyFrames] detector steps (at most
+     * [MAX_LOOKAHEAD_SECONDS] of frames), for a switch edge, never per block. Allocates nothing. A no-op without a
+     * lookahead.
+     */
+    internal fun reseedFromRing() {
+        if (delayFrames <= 0) {
+            return
+        }
+
+        resetLookaheadGain()
+
+        var p = delayPos
+
+        repeat(delayFrames) {
+            lookaheadStep(max(abs(delayL[p]), abs(delayR[p])))
+            p = if (p + 1 == delayFrames) 0 else p + 1
+        }
     }
 
     /**
@@ -566,6 +739,25 @@ class Compressor(
          * gain would step rather than ramp — a click. Sub-minimum lookahead takes the classic path.
          */
         const val MIN_LOOKAHEAD_FRAMES: Int = 8
+
+        /**
+         * Ceiling on a lookahead a user can ask for. Chains are built on the audio thread (the
+         * orbit's `KatalystChainBuilder`, the master's `MasterBus.register`), so an unbounded value
+         * would allocate there. At 50 ms and 48 kHz the stereo ring is 2400 frames of 16 bytes,
+         * about 38 KB, and the whole lookahead state (ring, hold deque, boxes) about 86 KB; 10 s
+         * would be about 17 MB. A resource bound, not a taste clamp.
+         */
+        const val MAX_LOOKAHEAD_SECONDS: Double = 0.05
+
+        /**
+         * The one coercion of a user's lookahead, in seconds: a non-finite or negative value is
+         * 0 (no lookahead, the classic path), and anything above [MAX_LOOKAHEAD_SECONDS] is that
+         * ceiling. A negative size would throw on the audio thread and Infinity would ask for
+         * `Int.MAX_VALUE` doubles, so every build path that takes a lookahead from a DSL goes
+         * through here.
+         */
+        fun coerceLookaheadSeconds(seconds: Double): Double =
+            if (seconds.isFinite()) seconds.coerceIn(0.0, MAX_LOOKAHEAD_SECONDS) else 0.0
 
         /** How much faster the dual release's fast branch is than the configured release. */
         private const val FAST_RELEASE_DIVISOR: Double = 10.0

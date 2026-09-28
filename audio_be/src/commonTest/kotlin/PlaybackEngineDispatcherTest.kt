@@ -10,9 +10,7 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.voices.TestSamples
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -60,17 +58,6 @@ class PlaybackEngineDispatcherTest : StringSpec({
         scheduler.containsIgnitor("sine") shouldBe true
         // ...but NOT on the shared parent — it dies with the engine.
         d.ignitorRegistry.get("myosc") shouldBe null
-    }
-
-    "RegisterPipeline lands on the per-playback engine fork, not the shared parent" {
-        val d = newDispatcher()
-
-        d.handle(KlangCommLink.Cmd.RegisterPipeline(playbackId = "song", name = "myeng", dsl = PipelineDsl.pedal))
-
-        // Resolvable on the engine's fork...
-        d.engine("song").shouldNotBeNull().scheduler.resolvePipeline("myeng") shouldBe PipelineDsl.pedal
-        // ...but the shared parent doesn't know "myeng" (falls back to the default engine).
-        d.pipelineRegistry.get("myeng") shouldNotBe PipelineDsl.pedal
     }
 
     "Sample routes to the shared sample store" {

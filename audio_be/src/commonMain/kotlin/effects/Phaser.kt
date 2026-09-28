@@ -7,6 +7,11 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.filters.WetDryMix
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_CENTER_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_RATE_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
+import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
 
 /**
  * Stereo phaser — two independent [PhaserCore] instances (one per channel) sharing
@@ -25,15 +30,13 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * and the delay/reverb returns included (bus order: body/vowel -> delay -> reverb -> phaser;
  * first-writer-wins owns the knobs, route to another orbit for different bus settings).
  *
- * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): the built-in pipeline presets
- * carry no per-voice phaser stage, so this bus pass is the ONE application of the knobs —
- * the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is an
- * exact crossfade here. Only a CUSTOM pipeline that adds `StageDsl.Phaser` gets per-voice
- * phasing on top (then the same knobs drive both passes and a floor below 1 floors the dry
- * twice — the [voices.strip.filter.StripPhaserRenderer] KDoc carries that warning).
+ * THE BUS OWNS THE PHASER (maintainer decision, 2026-08-24): this bus pass is the ONE application
+ * of the knobs, the DAW-insert model, one coherent sweep over the summed orbit. `phaserFloor < 1` is
+ * an exact crossfade here. (The per-voice phaser a custom voice pipeline could add retired with the
+ * Pipeline DSL, phase 3 step 9.)
  *
  * The Ignitor-DSL phaser ([io.peekandpoke.klang.audio_be.ignitor.PhaserIgnitor]) is the
- * same law at `dryFloor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for
+ * same law at `floor = 0.0`, applied ONCE inside the voice. They share [PhaserCore] for
  * the per-sample math; only the floor default differs.
  *
  * **Stereo image**: both channels share the same LFO phase (centred-mono image).
@@ -44,9 +47,16 @@ class Phaser(sampleRate: Int) {
 
     companion object {
         /**
-         * Below this the bus phaser is a bypass — the historical katalyst `< 0.01` gate, kept as
-         * the ONE gate now that it lives here (the old outer/inner threshold disagreement is
-         * resolved to this value). The LFO advances above the gate regardless.
+         * Below this the bus phaser is a bypass: the historical katalyst `< 0.01` gate, and still
+         * the ONE gate and the ONE threshold. Since Katalyst 5c-9 it is APPLIED in
+         * `KatalystPhaserEffect.configure`, which is where the knobs arrive: below it the stage
+         * aims its two C4 coefficients at identity and writes no kernel param. This class only
+         * ever sees the coefficients a block runs at, and it reads identity, not a depth. So the
+         * bare two-argument [process] does not gate at all: it renders [depth] as it stands, which
+         * is what makes it the reference a spec builds an oracle from.
+         *
+         * The LFO advances above the gate regardless, and it keeps advancing while the stage is
+         * off (block-framing ledger D2).
          */
         const val MIN_ACTIVE_DEPTH: Double = 0.01
     }
@@ -127,7 +137,8 @@ class Phaser(sampleRate: Int) {
     }
 
     /**
-     * Full factory state, for ORBIT TEARDOWN only (`Cylinder.resetBusEffects`): cascade, engaged
+     * Full factory state, for ORBIT TEARDOWN only (`KatalystPhaserEffect.reset`, which
+     * `KatalystChain.reset` and `KatalystChain.retire` call): cascade, engaged
      * latch, LFO phase AND the kernel params. The retained-kernel rule (a no-phaser owner keeps
      * the previous owner's clock) is scoped to owner handoffs WITHIN one orbit life — across a
      * teardown there is no timeline left to preserve, and a surviving rate would free-run the
@@ -138,20 +149,85 @@ class Phaser(sampleRate: Int) {
     fun resetForReuse() {
         reset()
         zeroLfoPhase()
-        depth = 0.0
-        floor = 1.0
-        rate = 0.0
-        center = 1000.0
-        sweep = 1000.0
+        depth = PHASER_WET
+        floor = PHASER_FLOOR
+        rate = PHASER_RATE_HZ
+        center = PHASER_CENTER_HZ
+        sweep = PHASER_SWEEP_HZ
         feedback = 0.5
     }
 
+    /**
+     * The C4 law's dry coefficient for the knobs as they stand: what a `dry` glide aims at. The
+     * law lives here, in the one class that owns the two knobs, and the stage only moves between
+     * the numbers it returns.
+     */
+    fun dryCoeff(): Double = WetDryMix.dryCoeff(depth, floor = floor, p = 2)
+
+    /** The C4 law's wet coefficient for the knobs as they stand. See [dryCoeff]. */
+    fun wetCoeff(): Double = WetDryMix.wetCoeff(depth, p = 2)
+
+    /**
+     * One block of [buffer], in place, with every knob exactly as it STANDS: no glide, no ramp.
+     *
+     * The bare-DSP entry. The orbit stage never calls it (it hands in what its glides hold, see
+     * below), and it is what a spec builds its oracle from: a phaser whose knobs do not move
+     * renders bit-identically through either entry, which is what makes "settled equals the old
+     * path" true by construction rather than by a conditional.
+     */
     fun process(buffer: StereoBuffer, frames: Int) {
+        val dry = dryCoeff()
+        val wet = wetCoeff()
+
+        process(
+            buffer = buffer,
+            frames = frames,
+            centerTo = center,
+            sweepTo = sweep,
+            dryFrom = dry,
+            dryTo = dry,
+            wetFrom = wet,
+            wetTo = wet,
+        )
+    }
+
+    /**
+     * One block of [buffer], in place.
+     *
+     * Every knob arrives as the value the GLIDE holds for this block, never as a field read
+     * (Katalyst 5c-9, `docs/plans/knob-glide.md`): `KatalystPhaserEffect` owns one
+     * `KnobGlide` per knob and hands the results in.
+     *
+     * - [centerTo] and [sweepTo] are the breakpoint this block ENDS at; the cores start from the
+     *   one they still hold and interpolate (see [PhaserCore.prepareBlock]).
+     * - the C4 law's two coefficients ramp PER SAMPLE from ([dryFrom], [wetFrom]) to
+     *   ([dryTo], [wetTo]), written from the END so the block's last sample is the block's value
+     *   bit for bit. The output is linear in the pair, so a linear ramp of both IS a linear
+     *   crossfade between the phaser's old and new settings: one mechanism for the `wet` knob, the
+     *   `floor` knob and the ON and OFF edges alike.
+     *
+     * IDENTITY, `dry = 1` and `wet = 0` for the whole block, is the stage's OFF: the cascade is
+     * cleared (once) and the block passes through untouched, while the LFO clock keeps running.
+     * The glide lands on it exactly, so the cascade is only ever dropped where the output is
+     * already the dry mix (entering Off early is the click this stage exists to prevent).
+     */
+    fun process(
+        buffer: StereoBuffer,
+        frames: Int,
+        centerTo: Double,
+        sweepTo: Double,
+        dryFrom: Double,
+        dryTo: Double,
+        wetFrom: Double,
+        wetTo: Double,
+    ) {
+        val identity = dryFrom == 1.0 && dryTo == 1.0 && wetFrom == 0.0 && wetTo == 0.0
+
         // Fast path for orbits that never had a phaser: at rate 0 the phase cannot move, alpha is
         // discarded on the gated path, and there is nothing engaged to clear — provably equivalent
         // to falling through (the next engaged block recomputes alpha from scratch anyway), and it
         // keeps the unconditional clock from taxing phaser-less orbits (review round 2).
-        if (rate == 0.0 && depth < MIN_ACTIVE_DEPTH && !engaged) {
+        if (rate == 0.0 && identity && !engaged) {
             return
         }
 
@@ -159,10 +235,10 @@ class Phaser(sampleRate: Int) {
         // stop the sweep — the phase would otherwise resume framing-dependently after a patterned
         // depth dips through zero. Cost on the gated path: two sin + two tan per core per block
         // (alphaAt runs at both block boundaries).
-        coreL.prepareBlock(frames)
-        coreR.prepareBlock(frames)
+        coreL.prepareBlock(frames, centerTo, sweepTo)
+        coreR.prepareBlock(frames, centerTo, sweepTo)
 
-        if (depth < MIN_ACTIVE_DEPTH) {
+        if (identity) {
             // Same policy as the ignitor door (ledger D5): a bypass clears the cascade instead of
             // freezing a stale feedback sample for a framing-dependent resume click.
             if (engaged) {
@@ -176,13 +252,41 @@ class Phaser(sampleRate: Int) {
 
         val left = buffer.left
         val right = buffer.right
+
         // C4 (filter unification): shared wet/dry law, correlated branch (p = 2). At the
         // default floor = 1.0 the dry coefficient is pinned at 1 (purely additive); the wet
         // follows sin^2 instead of the old linear depth (identical at 0, 0.5 and 1).
-        val dryC = WetDryMix.dryCoeff(depth, floor = floor, p = 2)
-        val wetC = WetDryMix.wetCoeff(depth, p = 2)
+        if (dryFrom == dryTo && wetFrom == wetTo) {
+            // Settled: one pair for the whole block, the path a phaser whose knobs stand has
+            // always taken.
+            val dryC = dryTo
+            val wetC = wetTo
+
+            for (i in 0 until frames) {
+                val dryL = left[i]
+                val wetL = coreL.step(dryL)
+                left[i] = dryL * dryC + wetL * wetC
+
+                val dryR = right[i]
+                val wetR = coreR.step(dryR)
+                right[i] = dryR * dryC + wetR * wetC
+            }
+
+            return
+        }
+
+        // A block of zero frames never enters the loop; the reciprocal keeps the division out of
+        // the divide-by-zero corner anyway.
+        val inv = if (frames > 0) 1.0 / frames else 0.0
+        val dryStep = (dryTo - dryFrom) * inv
+        val wetStep = (wetTo - wetFrom) * inv
+        val last = frames - 1
 
         for (i in 0 until frames) {
+            val back = (last - i).toDouble()
+            val dryC = dryTo - dryStep * back
+            val wetC = wetTo - wetStep * back
+
             val dryL = left[i]
             val wetL = coreL.step(dryL)
             left[i] = dryL * dryC + wetL * wetC

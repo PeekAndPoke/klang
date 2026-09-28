@@ -5,8 +5,11 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.pregain
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
@@ -23,6 +26,42 @@ class IgnitorRegistry(
     companion object {
         /** Default sound when none is specified */
         const val DEFAULT_SOUND = "triangle"
+
+        /**
+         * THE built-in voice shape (phase 3 steps 6 and 7), the one place it is written: [source] becomes the
+         * subtractive synth voice `sound("saw")` has always been, as one Ignitor tree,
+         *
+         * ```
+         * source.pregain().classic()
+         * ```
+         *
+         * The `pregain` slot sits on the source, where the player's touch enters, in front of every
+         * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Osc -> pregain -> classic").
+         * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
+         * nothing until a pattern writes `pregain(x)`. Then `classic()`: the pattern's `onepole`, then crush
+         * ... adsr, the retired voice strip's order. Every built-in sound ([registerDefaults]) and the sample
+         * instrument ([SAMPLE_INSTRUMENT]) are this shape.
+         */
+        internal fun builtInVoice(source: IgnitorDsl): IgnitorDsl = source.pregain().classic()
+
+        /**
+         * The SAMPLE INSTRUMENT (phase 3 step 7): the tree every sample voice (`sound("bd")`, any name that is
+         * not a registered instrument) runs, [builtInVoice] over the voice's sample ([IgnitorDsl.Sample]). So a
+         * sample takes the pattern's doors exactly as a built-in synth does.
+         *
+         * One generic instrument, keyed by nothing: the voice's sample is resolved by the engine and handed to
+         * the build (`VoiceFactory`). Deliberately NOT registered under a name: a name would enter the sound
+         * namespace (`sound("sample")` would pick an instrument with no sample) and invite a fork to shadow it.
+         * Optimized once, here, like every registered tree; like [register] it never throws, falling back to
+         * the authored tree ([optimizerFailures] cannot count it: no registry owns it).
+         */
+        internal val SAMPLE_INSTRUMENT: IgnitorDsl = builtInVoice(IgnitorDsl.Sample).let { tree ->
+            try {
+                tree.optimize()
+            } catch (_: Throwable) {
+                tree
+            }
+        }
     }
 
     private val defs = mutableMapOf<String, IgnitorDsl>()
@@ -51,9 +90,14 @@ class IgnitorRegistry(
      * failure the authored tree is stored instead, so a broken optimizer degrades to
      * unoptimized audio rather than silence, and never serves a tree other than the last one
      * registered.
+     *
+     * The built-in sounds come through here too ([registerDefaults], each in [builtInVoice]'s shape).
      */
     fun register(name: String, dsl: IgnitorDsl) {
-        val key = name.lowercase()
+        store(name.lowercase(), dsl)
+    }
+
+    private fun store(key: String, dsl: IgnitorDsl) {
         defs[key] = dsl
         optimizedDefs[key] = try {
             dsl.optimize()
@@ -110,26 +154,33 @@ class IgnitorRegistry(
         phasePools: PhasePools? = null,
         /** The voice's random stream (seeded-voice-rng; see IgniteContext.random). */
         random: Random = Random,
+        /** The backend's sample rate and block size. Read only by a `humanize` filter's drift
+         *  lane, whose time constants follow the rate it is stepped at. */
+        sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
+        blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     ): BuiltIgnitor? {
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        val oscParams = data.oscParams
 
         // No `?: get(key)` fallback on purpose: it could never fire (register writes both maps
         // together), so it would only mask a future regression in optimized()'s delegation by
         // silently rendering unoptimized instead of failing a test.
         val dsl = optimized(key) ?: return null
 
-        val raw = dsl.buildExciter(
-            oscParams,
+        // The tree renders as registered: nothing is hung around it (the registry's `onepole` wrap for an
+        // instrument that did not end in `classic()` retired with the voice strip, phase 3 step 9; the pattern's
+        // `onepole` reaches `classic()`'s first stage, or a tree that places `OscSlot.onepole` itself).
+        // The slot bag is the voice's own: a producer writes `classic()`'s slots there (sprudel's `toVoiceData`,
+        // phase 3 step 8).
+        return dsl.buildExciter(
+            data.oscParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
             orbit = data.cylinder ?: 0,
             random = random,
             freqHz = freqHz,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
         )
-        val onepoleHz = oscParams?.get("onepole") ?: 0.0
-        // Same kernel as the ignitor-door onepole(freq) — one filter, one law, both doors.
-        return if (onepoleHz > 0.0) raw.copy(ignitor = raw.ignitor.onePoleLowpass(onepoleHz)) else raw
     }
 
     /** Create a child that delegates to this registry for keys not found locally. */

@@ -13,7 +13,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * `DelayLine.adoptHistory` on its own — the migration the resource warehouse performs when a ring
- * grows (`docs/plans/resource-warehouse.md` step 2c). `LazyRingSpec` proves the seam is bit-identical
+ * grows (`docs/tasks-archive/2026-09/20260927-resource-warehouse.md` step 2c). `LazyRingSpec` proves the seam is bit-identical
  * through the effect at one arbitrary alignment; review round 1 asked for the alignments that
  * matter to be pinned directly: a source whose write cursor sits at 0, equal sizes (the branch
  * whose absence is a HANG, not a wrong sample), and the smaller-target direction, which a first cut

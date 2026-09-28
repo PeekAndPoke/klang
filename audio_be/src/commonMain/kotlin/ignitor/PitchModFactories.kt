@@ -9,12 +9,17 @@ import io.peekandpoke.klang.audio_be.safeDiv
 import io.peekandpoke.klang.audio_be.safeOut
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.fastExp2
 import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.PITCH_ENV_SUSTAIN_LEVEL
 import kotlin.math.pow
 import kotlin.math.abs
 
@@ -148,9 +153,18 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
     accelerateModIgnitor(ParamIgnitor("semitones", semitones))
 
 /**
- * Pitch envelope — ADSR-shaped pitch ratio.
+ * Pitch envelope: an ADSR on the pitch ratio, the chain `adsr`'s pattern.
  *
- * Produces `2^(amount * envLevel / 12)` per sample.
+ * Produces `2^(semitones * envLevel / 12)` per sample. The level rises from 0 to 1 over the
+ * attack, falls to the sustain over the decay, holds, and from the gate's end falls from the
+ * level it had reached back to 0 over the release. The release does NOT extend the voice's life
+ * (nothing reports it as a tail), and release `0` returns to the note at the gate frame.
+ *
+ * **The law** is [EnvelopeCore], the engine's one envelope law (fractional attack and decay frames,
+ * the release on `floor(N)` frames, the release starting from the level AT the gate frame, the
+ * sustain raw). The level becomes a ratio in [renderPitchEnvelopeRatios], the ONE mapping this node
+ * and the voice strip's pitch envelope (sprudel's `penv`, `PitchEnvelopeRenderer`) share, so the two
+ * render the same numbers by construction.
  *
  * Output is passed through [safeOut] — extreme `amount` values cannot produce
  * `+Inf` ratios that would poison the oscillator phase accumulator.
@@ -159,27 +173,38 @@ fun accelerateModIgnitor(semitones: Double): Ignitor =
  * @param semitones semitones of pitch shift at peak
  * @param attackSec attack time
  * @param decaySec decay time
- * @param releaseSec release time
- * @param curve envelope curve (not yet implemented — linear)
- * @param anchor starting envelope level: 0.0 = start shifted, 1.0 = start normal
+ * @param releaseSec release time, from the gate's end
+ * @param sustainLevel held level, a share of [semitones]; not clamped (the Motor stays raw), and a
+ *   non-finite one reads as unset, [PITCH_ENV_SUSTAIN_LEVEL] (`finiteOr`, the chain `adsr`'s rule)
+ * @param attackCurve attack shape, [MOD_ENV_CURVE] when the node leaves it unset
+ * @param decayCurve decay shape
+ * @param releaseCurve release shape
  */
 fun pitchEnvelopeModIgnitor(
     attackSec: Ignitor,
     decaySec: Ignitor,
-    releaseSec: Ignitor = ParamIgnitor("releaseSec", 0.0),
+    releaseSec: Ignitor = ParamIgnitor("releaseSec", PITCH_ENV_RELEASE_SEC),
     semitones: Ignitor,
-    curve: Ignitor = ParamIgnitor("curve", 0.0),
-    anchor: Ignitor = ParamIgnitor("anchor", 0.0),
-): Ignitor = PitchEnvelopeModIgnitor(attackSec, decaySec, releaseSec, semitones, curve, anchor)
+    sustainLevel: Ignitor = ParamIgnitor("sustainLevel", PITCH_ENV_SUSTAIN_LEVEL),
+    attackCurve: AdsrCurve = MOD_ENV_CURVE,
+    decayCurve: AdsrCurve = MOD_ENV_CURVE,
+    releaseCurve: AdsrCurve = MOD_ENV_CURVE,
+): Ignitor = PitchEnvelopeModIgnitor(
+    attackSec, decaySec, releaseSec, semitones, sustainLevel, attackCurve, decayCurve, releaseCurve,
+)
 
 private class PitchEnvelopeModIgnitor(
     private val attackSec: Ignitor,
     private val decaySec: Ignitor,
     private val releaseSec: Ignitor,
     private val semitones: Ignitor,
-    private val curve: Ignitor,
-    private val anchor: Ignitor,
+    private val sustainLevel: Ignitor,
+    private val attackCurve: AdsrCurve,
+    private val decayCurve: AdsrCurve,
+    private val releaseCurve: AdsrCurve,
 ) : Ignitor {
+    private val core = EnvelopeCore()
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val amountVal = Ignitors.readParam(semitones, freqHz, ctx)
         val end = ctx.windowEnd
@@ -189,44 +214,87 @@ private class PitchEnvelopeModIgnitor(
             return
         }
 
+        // Read order is the pre-ADSR order (attack, decay, release, then the sustain in the slot the
+        // anchor had): a stateful param subtree advances when it is read.
         val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
         val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx)
-
-        @Suppress("UNUSED_VARIABLE")
         val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the shared default, the chain
+        // `adsr`'s rule (`finiteOr`). No clamp: every finite sustain passes raw (the Motor stays raw).
+        val sustainVal = finiteOr(Ignitors.readParam(sustainLevel, freqHz, ctx), PITCH_ENV_SUSTAIN_LEVEL)
 
-        @Suppress("UNUSED_VARIABLE")
-        val curveVal = Ignitors.readParam(curve, freqHz, ctx)
-        val anchorVal = Ignitors.readParam(anchor, freqHz, ctx)
+        core.prepare(
+            attackFrames = attackSecVal * ctx.sampleRate,
+            decayFrames = decaySecVal * ctx.sampleRate,
+            sustainLevel = sustainVal,
+            releaseFrames = releaseSecVal * ctx.sampleRate,
+            gateEndPos = ctx.gateEndFrame,
+            attackCurve = attackCurve,
+            decayCurve = decayCurve,
+            releaseCurve = releaseCurve,
+        )
 
-        val attackFrames = attackSecVal * ctx.sampleRate
-        val decayFrames = decaySecVal * ctx.sampleRate
+        renderPitchEnvelopeRatios(core, amountVal, buffer, ctx.offset, end, ctx.voiceElapsedFrames, multiply = false)
+    }
+}
 
-        if (ctx.voiceElapsedFrames >= attackFrames + decayFrames) {
-            // Settled on the anchor for the whole block: one ratio, not one per sample.
-            val settled = safeOut(fastExp2(amountVal * anchorVal / 12.0))
+/**
+ * THE pitch envelope's level-to-ratio mapping, one copy for both hosts (phase 3 step 5b (c1)): the
+ * Ignitor node ([pitchEnvelopeModIgnitor], which writes) and the voice strip's pitch envelope
+ * (`PitchEnvelopeRenderer`, which writes, or multiplies into a buffer an earlier pitch stage wrote).
+ *
+ * Fills `buffer[from until to]` with `safeOut(2^(amount * level / 12))`, where `level` is [core]'s
+ * law at the voice-relative frame `firstPos + (i - from)`. [core] must be prepared for this block.
+ *
+ * Two shortcuts write ONE ratio for the whole block, and each is bit for bit what the per-sample loop
+ * would write:
+ *  - the block sits wholly in the sustain, before the gate;
+ *  - the block is wholly released: the release is complete on its first sample, or it starts from
+ *    level 0 (sustain 0, gate after the sweep). In the second case every sample would compute
+ *    `0 * shape(x)` for an x in 0..1, a signed zero whatever the curve, and `fastExp2` returns exactly
+ *    1.0 for both +0.0 and -0.0.
+ *
+ * No allocation; the [multiply] branch is taken once per block, outside the loops.
+ */
+internal fun renderPitchEnvelopeRatios(
+    core: EnvelopeCore,
+    amount: Double,
+    buffer: DoubleArray,
+    from: Int,
+    to: Int,
+    firstPos: Int,
+    multiply: Boolean,
+) {
+    val gateEndPos = core.gateEndPos
+    val lastPos = firstPos + (to - 1 - from)
 
-            for (i in ctx.offset until end) {
+    val inSustain = firstPos >= core.sustainFrom && lastPos < gateEndPos
+    val released = firstPos >= gateEndPos && (core.levelAtGate == 0.0 || core.releaseDone(firstPos - gateEndPos))
+
+    if (inSustain || released) {
+        val level = if (inSustain) core.sustain else core.releaseEndLevel()
+        val settled = safeOut(fastExp2(amount * level / 12.0))
+
+        if (multiply) {
+            for (i in from until to) {
+                buffer[i] *= settled
+            }
+        } else {
+            for (i in from until to) {
                 buffer[i] = settled
             }
-
-            return
         }
 
-        for (i in ctx.offset until end) {
-            val sampleOffset = i - ctx.offset
-            val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
+        return
+    }
 
-            var envLevel = anchorVal
-            if (relPos < attackFrames) {
-                val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
-                envLevel = anchorVal + (1.0 - anchorVal) * progress
-            } else if (relPos < (attackFrames + decayFrames)) {
-                val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
-                envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
-            }
-
-            buffer[i] = safeOut(fastExp2(amountVal * envLevel / 12.0))
+    if (multiply) {
+        for (i in from until to) {
+            buffer[i] *= safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
+        }
+    } else {
+        for (i in from until to) {
+            buffer[i] = safeOut(fastExp2(amount * core.at(firstPos + (i - from)) / 12.0))
         }
     }
 }
@@ -235,7 +303,8 @@ private class PitchEnvelopeModIgnitor(
  * FM — frequency modulation in ratio space.
  *
  * Generates the [modulator] at `fmFreq * ratio`, scales by `depth / fmFreq`, applies
- * an optional ADSR envelope to the depth. Output: `1.0 + modOutput * effectiveDepth / fmFreq`,
+ * an optional ADSR envelope to the depth (every stage on `MOD_ENV_CURVE`, exponential).
+ * Output: `1.0 + modOutput * effectiveDepth / fmFreq`,
  * where `fmFreq` is the [freq] param — DEFAULTING to the note ([FreqIgnitor] answers the freq
  * argument), so default-authored FM behaves exactly as before, while an absolute [freq] makes
  * the patch immune to `detune` like any absolute oscillator (the D13 anchor; the runtime no
@@ -272,6 +341,8 @@ private class FmModIgnitor(
     private val envReleaseSec: Ignitor,
     private val freq: Ignitor,
 ) : Ignitor {
+    private val envCore = EnvelopeCore()
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val end = ctx.windowEnd
 
@@ -312,7 +383,13 @@ private class FmModIgnitor(
         // freeze a modulated envelope time. The same E2 shape, one level down.
         val envAttackSecVal = Ignitors.readParam(envAttackSec, fmFreqVal, ctx)
         val envDecaySecVal = Ignitors.readParam(envDecaySec, fmFreqVal, ctx)
-        val envSustainLevelVal = Ignitors.readParam(envSustainLevel, fmFreqVal, ctx)
+        // NaN-guard: a non-finite sustain reads as UNSET and takes the node's default 1.0, the chain
+        // `adsr`'s rule (`finiteOr`); a NaN would otherwise make the depth NaN and `safeOut` would
+        // freeze the carrier at ratio 0. The sustain passes raw into the envelope law; the LEVEL is
+        // clamped to [0, 1] below, the depth range, as the filter envelope clamps it. The three stage
+        // times need no guard: the envelope law reads a NaN or negative time as a zero-length stage,
+        // and an infinite one as a stage that never ends, never a NaN.
+        val envSustainLevelVal = finiteOr(Ignitors.readParam(envSustainLevel, fmFreqVal, ctx), 1.0)
         val envReleaseSecVal = Ignitors.readParam(envReleaseSec, fmFreqVal, ctx)
 
         ctx.scratchBuffers.use { modBuf ->
@@ -351,15 +428,19 @@ private class FmModIgnitor(
             // evaluated once at the block's first sample and held flat, which snapped every
             // envelope breakpoint to a block boundary: with sgbell's 1 ms attack the first block
             // of every note had ZERO FM, and the peak depth was never produced at any block size
-            // unless the attack happened to be a multiple of the block length. The envelope is
-            // analytic and sample-addressable via `sampleOffsetWithinBlock`, so the hold bought
-            // nothing but the bug. Cost: computeFilterEnvelope per sample, on FM-with-envelope
-            // voices only.
+            // unless the attack happened to be a multiple of the block length. The envelope core is
+            // prepared once per block and read per sample.
+            //
+            // `MOD_ENV_CURVE` on every stage, the default of every modulation envelope (decision D3):
+            // the FM index envelope has no curve surface yet (`future/envelope-shape-followups.md` §4), so the
+            // default is all it gets.
+            envCore.prepareModEnvelope(
+                ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
+                MOD_ENV_CURVE, MOD_ENV_CURVE, MOD_ENV_CURVE,
+            )
+
             for (i in ctx.offset until end) {
-                val envLevel = computeFilterEnvelope(
-                    ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal,
-                    sampleOffsetWithinBlock = i - ctx.offset,
-                )
+                val envLevel = envCore.at(ctx.voiceElapsedFrames + (i - ctx.offset)).coerceIn(0.0, 1.0)
                 val effectiveDepth = depthVal * envLevel
                 buffer[i] = safeOut((1.0 + modBuf[i] * effectiveDepth / safeFreq))
             }

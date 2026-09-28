@@ -70,6 +70,10 @@ class KlangScriptOscSlotTest : StringSpec({
         evalIgnitorDsl("OscSlot.rate") shouldBe IgnitorDsl.Param("rate", 1.0)
     }
 
+    "OscSlot.pregain → Param(\"pregain\", 1.0)" {
+        evalIgnitorDsl("OscSlot.pregain") shouldBe IgnitorDsl.Param("pregain", 1.0)
+    }
+
     "Osc.slot.analog (member-property chain) → Param(\"analog\", 0.0)" {
         evalIgnitorDsl("Osc.slot.analog") shouldBe IgnitorDsl.Param("analog", 0.0)
     }

@@ -1,7 +1,7 @@
 # KlangScript Libs — Dispatcher
 
 The KlangScript **standard library**: everything a script sees under `import * from "stdlib"`.
-`Osc`, `Master`, `Pipeline`, `Stage`, `OscSlot`, `Math`, `Object`, `console`, and the
+`Osc`, `Katalyst`, `OscSlot`, `Math`, `Object`, `console`, and the
 String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
@@ -18,13 +18,12 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangStdLib.kt`     | Assembles the `"stdlib"` library: generated registration + console         |
 | `src/commonMain/kotlin/stdlib/KlangScriptOsc.kt`  | The `Osc` doors (oscillators, noise, super-oscillators, pluck)             |
 | `src/commonMain/kotlin/stdlib/KlangScriptOscExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
-| `src/commonMain/kotlin/stdlib/KlangScriptMaster.kt` | `Master(m => ...)` (`invoke`), `Master.build`, `Master.default`               |
-| `src/commonMain/kotlin/stdlib/MasterBuilders.kt` | `MasterBuilder` (gain, limiter, reverb, delay) and the three stage builders     |
-| `src/commonMain/kotlin/stdlib/KlangScriptPipeline.kt` | `Pipeline(p => ...)` (`invoke`), `Pipeline.build`, `Pipeline.modern`, `Pipeline.pedal` |
-| `src/commonMain/kotlin/stdlib/PipelineBuilders.kt` | `PipelineBuilder` (stage knobs append; `tuneVca`/`tuneFilter` configure existing stages) and the two stage builders |
+| `src/commonMain/kotlin/stdlib/KlangScriptOscSlot.kt` / `KlangScriptClassicSlots.kt` | `OscSlot` and its slot groups (`OscSlot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
+| `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (`invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
+| `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
-| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `EqBuilder` (band, tap), `PhaserBuilder`, `ShimmerBuilder` (wet, dryFloor) |
+| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape, skew, phase) |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
 | `build/generated/ksp/metadata/commonMain/kotlin/`  | `GeneratedStdlibRegistration.kt` (KSP output, never edit)                 |
 
@@ -35,9 +34,10 @@ script registration). Split out of `:klangscript` on 2026-09-06
   land HERE, next to their doors; this module is the Kotlin door for them as well.
 - Script-door parameter defaults are safe literals (number, string, boolean, null); KSP refuses a
   door that invites a trailing lambda but carries a non-literal optional default.
-- Tests come in two shapes: script-vs-Kotlin equivalence specs (`KlangScriptSuperSawSpec` is the
-  template) and door-parity specs (`KlangScriptFilterDoorParitySpec`). Analyzer tests that need
-  the real stdlib registry (`generatedStdlibDocs`) live here too (`src/jvmTest/kotlin/intel/`).
+- Tests come in two shapes: script-vs-Kotlin equivalence specs (`KlangScriptSineSpec` is the
+  template for one door, `KlangScriptSuperOscSpec` for a family of builders with the same knobs)
+  and door-parity specs (`KlangScriptFilterDoorParitySpec`). Analyzer tests that need the real
+  stdlib registry (`generatedStdlibDocs`) live here too (`src/jvmTest/kotlin/intel/`).
 - Memory and language references stay in `klangscript/` (`MEMORY.md`, `ref/`); this module has no
   separate memory file.
 

@@ -9,11 +9,14 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
-import io.peekandpoke.klang.audio_bridge.AdsrDef
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_NEVER
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.adsr
+import io.peekandpoke.klang.audio_bridge.tremolo
 
 /**
  * Silence culling through the real path: a scheduled voice, the factory, the scheduler's render
@@ -43,11 +46,14 @@ class VoiceSchedulerCullingSpec : StringSpec({
         data = VoiceData.empty.copy(
             sound = "sine",
             freqHz = 440.0,
-            adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 1.0),
             cull = cull,
-            tremoloSync = if (tremoloDepth != null) 4.0 else null,
-            tremoloDepth = tremoloDepth,
-            tremoloShape = if (tremoloDepth != null) "square" else null,
+        ).withClassicSlots(
+            DoorFields(
+                adsr = DoorAdsr(attack = 0.001, decay = 0.05, sustain = 0.0, release = 1.0),
+                tremoloSync = if (tremoloDepth != null) 4.0 else null,
+                tremoloDepth = tremoloDepth,
+                tremoloShape = if (tremoloDepth != null) "square" else null,
+            ),
         ),
         playbackStartTime = 0.0,
     )
@@ -119,5 +125,101 @@ class VoiceSchedulerCullingSpec : StringSpec({
 
         scheduler.renderingVoiceCount() shouldBe 1
         scheduler.culledVoicesTotal() shouldBe 0
+    }
+
+    // ── A tremolo INSIDE the tree (phase 3 step 3b, `BuiltIgnitor.gatesOutput`) ────────────────────
+
+    /**
+     * A sustained note whose own ignitor carries a SQUARE tremolo at full depth, 4 Hz: exact silence
+     * from 125 ms to 250 ms, and the gate ends at 100 ms, so that first off-half lies in the release.
+     * The strip has no tremolo here; only the build can see this one.
+     */
+    fun treeTremolo(cull: Double?) = ScheduledVoice(
+        playbackId = pid,
+        startTime = 0.0,
+        gateEndTime = 0.1,
+        data = VoiceData.empty.copy(
+            sound = "tremsine",
+            freqHz = 440.0,
+            cull = cull,
+        ),
+        playbackStartTime = 0.0,
+    )
+
+    fun registerTreeTremolo(d: PlaybackEngineDispatcher) {
+        d.handle(
+            KlangCommLink.Cmd.RegisterIgnitor(
+                playbackId = pid,
+                name = "tremsine",
+                // The envelope is the instrument's own (a bare tree since phase 3 step 9 has no voice envelope): its
+                // 1 s release keeps the voice in its release through the tremolo's off-half.
+                dsl = IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0, shape = "square").adsr(0.001, 0.01, 1.0, 1.0),
+            )
+        )
+    }
+
+    "a square tremolo in the TREE, on a voice in release, survives its first off-half" {
+        val d = newDispatcher()
+        registerTreeTremolo(d)
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = null)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)                           // past the off-half (125 to 250 ms), into the next on-half
+
+        scheduler.culledVoicesTotal() shouldBe 0
+        scheduler.renderingVoiceCount() shouldBe 1
+    }
+
+    "the tree tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
+        // The engagement row for the one above: the same voice, the author's 50 ms window instead of
+        // the build's cull-never, and the off-half culls it. So the row above passes because of the
+        // report, not because the scenario never goes silent.
+        val d = newDispatcher()
+        registerTreeTremolo(d)
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = treeTremolo(cull = 0.05)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 1
+    }
+    // ── A built-in's tremolo written only as SLOTS (phase 3 step 6) ────────────────────────────────
+
+    /**
+     * The built-in `sine` with its `classic()` tremolo written straight into the bag (the step 8 path):
+     * no typed tremolo field, so only the build's `gatesOutput` can keep the voice from being culled.
+     */
+    fun slotTremolo(cull: Double?) = ScheduledVoice(
+        playbackId = pid,
+        startTime = 0.0,
+        gateEndTime = 0.1,
+        data = VoiceData.empty.copy(
+            sound = "sine",
+            freqHz = 440.0,
+            oscParams = mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 4.0, "tremolo.shape" to LfoShapes.indexOf("square")),
+            cull = cull,
+        ).withClassicSlots(DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = 1.0))),
+        playbackStartTime = 0.0,
+    )
+
+    "a built-in's slot-written square tremolo survives its first off-half in the release" {
+        val d = newDispatcher()
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = null)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 0
+        scheduler.renderingVoiceCount() shouldBe 1
+    }
+
+    "the slot-written tremolo's off-half IS a cull hazard: with the author's cull(...) the voice dies there" {
+        val d = newDispatcher()
+        d.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = pid, voice = slotTremolo(cull = 0.05)))
+        val scheduler = d.engine(pid).shouldNotBeNull().scheduler
+
+        Clock(d).render(0.4)
+
+        scheduler.culledVoicesTotal() shouldBe 1
     }
 })

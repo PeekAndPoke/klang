@@ -204,7 +204,7 @@ Combined §1 + §2 ≈ **1.8–2.2 MB off the initial 9.3 MB (~20–24%)**.
 ## Verification
 
 - `./gradlew :klangscript:jvmTest :klangscript:jsTest` — interpreter + native-interop correctness (§1).
-- `./gradlew :sprudel:jvmTest :sprudel:jsTest` — the big stdlib consumer (golden / round-trip).
+- `./gradlew :sprudel:jvmTest :sprudel:jsTest`: the big stdlib consumer (door specs / round-trip).
 - Rebuild: `./gradlew jsBrowserProductionWebpack`; re-measure `build/dist/js/productionExecutable/klang-engine.*.js` vs
   the **9.3 MB baseline**. For §2 confirm a new `@codemirror`-bearing lazy chunk appears and the main bundle drops ~0.6
   MB.

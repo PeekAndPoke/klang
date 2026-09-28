@@ -30,6 +30,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- parameter slots / special leaves -------------------------------------------------------------------
     "Freq" { check(IgnitorDsl.Freq) }
     "Silence" { check(IgnitorDsl.Silence) }
+    "Sample" { check(IgnitorDsl.Sample) }
     "Constant" { check(IgnitorDsl.Constant(42.0)) }
 
     // The by-ear A/B hatch travels over the wire to the browser worklet, which is exactly where
@@ -168,10 +169,45 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Detune" { check(IgnitorDsl.Sine().detune(7.0)) }
     "Lowpass" { check(IgnitorDsl.Square().lowpass(2000.0)) }
     "Lowpass with passes" { check(IgnitorDsl.Square().lowpass(2000.0, 1.2, passes = 3)) }
+    "Lowpass with a slotted passes (a knob since phase 3 step 5)" {
+        check(IgnitorDsl.Lowpass(IgnitorDsl.Square(), passes = IgnitorDsl.Param("lpf.passes", 2.0)))
+    }
+
+    // An inline `sound(Osc.saw().classic())` crosses the wire; its filter slots default to SLOT_UNSET,
+    // so this is the same NaN-through-the-codec question the Katalyst's classic chain answers.
+    "classic(): the whole slotted tail round-trips, its unset defaults included, and keeps its name" {
+        val tail = IgnitorDsl.Sawtooth().classic()
+        val decoded = roundTrip(tail)
+
+        decoded shouldBe tail
+        decoded.uniqueId() shouldBe tail.uniqueId()
+        decoded.getParamSlots().first { it.name == "lpf.freq" }.default.isFinite() shouldBe false
+        // the tag survives the wire (phase 3 step 10): a registered instrument reaches the engine through here
+        decoded.endsInClassic() shouldBe true
+    }
     "Highpass (custom q)" { check(IgnitorDsl.Sawtooth().highpass(500.0, 1.5)) }
     "OnePoleLowpass" { check(IgnitorDsl.Sawtooth().onepole(3000.0)) }
     "Bandpass" { check(IgnitorDsl.Sine().bandpass(1000.0, 2.0)) }
     "Notch" { check(IgnitorDsl.Sine().notch(1000.0, 2.0)) }
+    "Lowpass, Highpass, Bandpass, Notch with envelope curves (non-default)" {
+        listOf(
+            IgnitorDsl.Square().lowpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().highpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().bandpass(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+            IgnitorDsl.Square().notch(800.0, env = 24.0, attackCurve = AdsrCurve.Square, decayCurve = AdsrCurve.Cube, releaseCurve = AdsrCurve.SCurve),
+        ).forEach { check(it) }
+    }
+    // Step 3c: the curves are index KNOBS now, so a slot must survive too (one per node, a
+    // different stage each time, so a codec that drops one field of three still shows up).
+    "Lowpass, Highpass, Bandpass, Notch with a curve SLOT" {
+        val slot = IgnitorDsl.Param("lpcurve", 3.0)
+        listOf(
+            IgnitorDsl.Square().lowpass(800.0, env = 24.0).copy(attackCurve = slot),
+            IgnitorDsl.Square().highpass(800.0, env = 24.0).copy(decayCurve = slot),
+            IgnitorDsl.Square().bandpass(800.0, env = 24.0).copy(releaseCurve = slot),
+            IgnitorDsl.Square().notch(800.0, env = 24.0).copy(attackCurve = slot, releaseCurve = slot),
+        ).forEach { check(it) }
+    }
     "Eq (every section variant, all fields non-default)" {
         check(
             IgnitorDsl.Eq(
@@ -194,18 +230,23 @@ class IgnitorDslWireCodecSpec : StringSpec({
 
     // --- envelope / FM --------------------------------------------------------------------------------------
     "Adsr" { check(IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)) }
-    "Adsr with declick + expK" {
-        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008), expK = IgnitorDsl.Constant(4.5)))
+    "Adsr with declick" {
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), declickSeconds = IgnitorDsl.Constant(0.0008)))
     }
-    "Adsr with curves" {
+    // Every field step 3c added or retyped, each NON-default: the three curve knobs (one a slot)
+    // and the ON/OFF switch (off, and a slot).
+    "Adsr with curves and the on switch (every step-3c field non-default)" {
         check(
             IgnitorDsl.Adsr(
                 inner = IgnitorDsl.SuperSaw(),
                 attackSec = IgnitorDsl.Constant(0.02),
-                attackCurve = AdsrCurve.Exponential,
-                releaseCurve = AdsrCurve.Square,
+                attackCurve = AdsrCurves.knob(AdsrCurve.Linear),
+                decayCurve = IgnitorDsl.Param("adsr.decayCurve", 1.0),
+                releaseCurve = AdsrCurves.knob(AdsrCurve.Square),
+                on = IgnitorDsl.Constant(0.0),
             )
         )
+        check(IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), on = IgnitorDsl.Param("adsrOn", 1.0)))
     }
     "Fm" { check(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0, envDecaySec = 0.5)) }
     "Fm with absolute freq" {
@@ -221,17 +262,61 @@ class IgnitorDslWireCodecSpec : StringSpec({
     // --- effects --------------------------------------------------------------------------------------------
     "Drive" { check(IgnitorDsl.Sine().drive(0.5)) }
     "Shape" { check(IgnitorDsl.Sine().shape("hard")) }
+    // Phase 3 step 3b: `shape` is an INDEX knob and `oversample` a knob read at build (D7). Both
+    // non-default, one of them a slot, so a dropped or swapped field cannot round-trip green.
+    "Shape (index and oversample knobs)" {
+        check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Constant(10.0), oversample = IgnitorDsl.Param("os", 4.0)))
+    }
     "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5)) }
+    "Distort (the gated unit node, every field non-default)" {
+        check(
+            IgnitorDsl.Distort(
+                inner = IgnitorDsl.Sine(),
+                amount = IgnitorDsl.Constant(0.7),
+                shape = IgnitorDsl.Param("d.shape", 14.0),
+                oversample = IgnitorDsl.Constant(8.0),
+            )
+        )
+    }
     "Crush" { check(IgnitorDsl.Sine().crush(8.0)) }
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
-    "Phaser" { check(IgnitorDsl.Sine().phaser(0.5).wet(0.4).dryFloor(0.25)) }
+    "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
-    "Shimmer (pitches list)" { check(IgnitorDsl.Square().shimmer(pitches = listOf(0.0, 7.0, 12.0)).wet(0.3).dryFloor(0.1)) }
+    "Tremolo (shape, skew and phase non-default, one a slot)" {
+        check(
+            IgnitorDsl.Tremolo(
+                inner = IgnitorDsl.Sine(),
+                rate = IgnitorDsl.Constant(3.0),
+                depth = IgnitorDsl.Constant(0.8),
+                shape = IgnitorDsl.Constant(2.0),
+                skew = IgnitorDsl.Param("t.skew", 0.3),
+                phase = IgnitorDsl.Constant(0.25),
+            )
+        )
+    }
+    "Shimmer (pitches list)" {
+        check(IgnitorDsl.Square().shimmer(wet = 0.3, pitches = listOf(0.0, 7.0, 12.0)).copy(floor = IgnitorDsl.Constant(0.1)))
+    }
 
     // --- pitch modulation -----------------------------------------------------------------------------------
     "Vibrato" { check(IgnitorDsl.Sine().vibrato(5.0, 0.02)) }
     "Accelerate" { check(IgnitorDsl.Sine().accelerate(1.0)) }
     "PitchEnvelope" { check(IgnitorDsl.PitchEnvelope(inner = IgnitorDsl.Sine(), semitones = IgnitorDsl.Constant(12.0))) }
+    "PitchEnvelope (every ADSR field and curve non-default)" {
+        check(
+            IgnitorDsl.PitchEnvelope(
+                inner = IgnitorDsl.Sine(),
+                semitones = IgnitorDsl.Constant(24.0),
+                attackSec = IgnitorDsl.Constant(0.002),
+                decaySec = IgnitorDsl.Constant(0.07),
+                sustainLevel = IgnitorDsl.Constant(0.3),
+                releaseSec = IgnitorDsl.Constant(0.2),
+                attackCurve = AdsrCurves.knob(AdsrCurve.Square),
+                decayCurve = AdsrCurves.knob(AdsrCurve.Exponential),
+                releaseCurve = IgnitorDsl.Param("pcurve", 4.0),
+            )
+        )
+    }
     "PitchMod" { check(IgnitorDsl.Sine().pitchMod(IgnitorDsl.Sine())) }
 
     // --- dispatch / deep composites -------------------------------------------------------------------------

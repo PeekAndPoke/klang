@@ -15,9 +15,9 @@ import kotlin.math.cos
 import kotlin.random.Random
 
 /**
- * C4.2 guard: the ignitor-door `dryFloor` follows the shared wet/dry law on both routed
- * effects — phaser `dry = max(dryFloor, cos²(w·π/2))` (correlated, p = 2), shimmer
- * `dry = max(dryFloor, cos(w·π/2))` (decorrelated, p = 1). Same method as
+ * C4.2 guard: the ignitor-door `floor` follows the shared wet/dry law on both routed
+ * effects: phaser `dry = max(floor, cos²(w·π/2))` (correlated, p = 2), shimmer
+ * `dry = max(floor, cos(w·π/2))` (decorrelated, p = 1). Same method as
  * `PhaserFloorLawSpec`: identical inputs give identical wet streams (both effects tap their
  * feedback BEFORE the output mix — the phaser from its allpass state, the shimmer from the
  * raw grain sum — so the wet path never sees dryC/wetC at ANY feedback), and output
@@ -81,14 +81,14 @@ class IgnitorDryFloorSpec : StringSpec({
         return out
     }
 
-    "ignitor phaser: dryFloor scales the dry by max(floor, cos²(w·π/2)) — p = 2" {
+    "ignitor phaser: floor scales the dry by max(floor, cos²(w·π/2)) (p = 2)" {
         val cos2 = cos(wet * PI / 2.0).let { it * it }
         fun chain(floor: Double) = noiseSource().phaser(
             rate = ConstantIgnitor(1.0),
             wet = ConstantIgnitor(wet),
             center = ConstantIgnitor(1000.0),
             sweep = ConstantIgnitor(500.0),
-            dryFloor = ConstantIgnitor(floor),
+            floor = ConstantIgnitor(floor),
         )
         val a = render(chain(0.5)) // dryC = max(0.5, cos2) = 0.5
         val b = render(chain(0.0)) // dryC = cos2
@@ -97,13 +97,13 @@ class IgnitorDryFloorSpec : StringSpec({
         }
     }
 
-    "ignitor shimmer: dryFloor scales the dry by max(floor, cos(w·π/2)) — p = 1, NOT squared" {
+    "ignitor shimmer: floor scales the dry by max(floor, cos(w·π/2)) (p = 1, NOT squared)" {
         val cos1 = cos(wet * PI / 2.0)
         fun chain(floor: Double) = noiseSource().shimmer(
             wet = ConstantIgnitor(wet),
             feedback = ConstantIgnitor(0.0),
             tone = ConstantIgnitor(4000.0),
-            dryFloor = ConstantIgnitor(floor),
+            floor = ConstantIgnitor(floor),
         )
         val a = render(chain(0.5)) // dryC = max(0.5, cos1) = 0.5
         val b = render(chain(0.0)) // dryC = cos1
@@ -112,14 +112,14 @@ class IgnitorDryFloorSpec : StringSpec({
         }
     }
 
-    "ignitor shimmer: default dryFloor is 0.0 — a true crossfade (bit-identical to explicit 0)" {
+    "ignitor shimmer: default floor is 0.0, a true crossfade (bit-identical to explicit 0)" {
         fun chain(explicit: Boolean): Ignitor {
             return if (explicit) {
                 noiseSource().shimmer(
                     wet = ConstantIgnitor(wet),
                     feedback = ConstantIgnitor(0.3),
                     tone = ConstantIgnitor(4000.0),
-                    dryFloor = ConstantIgnitor(0.0),
+                    floor = ConstantIgnitor(0.0),
                 )
             } else {
                 noiseSource().shimmer(
@@ -169,14 +169,14 @@ class IgnitorDryFloorSpec : StringSpec({
         )
     }
 
-    "ignitor phaser: default dryFloor is 0.0 — a true crossfade (bit-identical to explicit 0)" {
+    "ignitor phaser: default floor is 0.0, a true crossfade (bit-identical to explicit 0)" {
         val explicit = render(
             noiseSource().phaser(
                 rate = ConstantIgnitor(1.0),
                 wet = ConstantIgnitor(wet),
                 center = ConstantIgnitor(1000.0),
                 sweep = ConstantIgnitor(500.0),
-                dryFloor = ConstantIgnitor(0.0),
+                floor = ConstantIgnitor(0.0),
             )
         )
         val defaulted = render(

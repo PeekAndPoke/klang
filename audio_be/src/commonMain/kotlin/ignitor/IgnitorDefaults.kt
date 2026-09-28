@@ -14,11 +14,23 @@ import io.peekandpoke.klang.audio_bridge.onepole
 import io.peekandpoke.klang.audio_bridge.plus
 
 /**
- * Registers all built-in oscillators with explicit Param slots for sprudel oscParam() compatibility.
+ * Registers every built-in sound: its source from [builtInSources] in the built-in voice shape
+ * ([IgnitorRegistry.builtInVoice], `source.pregain().classic()`). The tree ends in `classic()`, so the pattern's voice
+ * doors reach it.
+ */
+fun IgnitorRegistry.registerDefaults() {
+    for ((name, source) in builtInSources()) {
+        register(name = name, dsl = IgnitorRegistry.builtInVoice(source))
+    }
+}
+
+/**
+ * The built-in sounds' SOURCES by name (several names share one tree), in registration order: what a
+ * built-in is before [IgnitorRegistry.builtInVoice] wraps it in the classic voice. The one list
+ * [registerDefaults] registers, and the list a spec renders each built-in against its own raw source from.
  *
- * IgnitorDsl types default to Constant (locked, no oscParam override). Here we explicitly
- * open Param slots — pulled from [IgnitorDsl.Slots] — for the parameters that sprudel's
- * oscParam() functions target:
+ * Every tree opens explicit Param slots, pulled from [IgnitorDsl.Slots], for the parameters that
+ * sprudel's oscParam() functions target:
  * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "spread" on super oscillators
@@ -26,7 +38,7 @@ import io.peekandpoke.klang.audio_bridge.plus
  * - "density" on dust/crackle
  * - "decay", "brightness", "pickPosition", "stiffness" on pluck
  */
-fun IgnitorRegistry.registerDefaults() {
+internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 
     val slots = IgnitorDsl.Slots
 
@@ -34,43 +46,43 @@ fun IgnitorRegistry.registerDefaults() {
     // Each gets "analog" as an overridable param
 
     val sine = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "sine", dsl = sine)
-    register(name = "sin", dsl = sine)
+    put("sine", sine)
+    put("sin", sine)
 
     val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "sawtooth", dsl = saw)
-    register(name = "saw", dsl = saw)
+    put("sawtooth", saw)
+    put("saw", saw)
 
     // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" osc-param (0.5 = square).
     val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
-    register(name = "square", dsl = pulse)
-    register(name = "sqr", dsl = pulse)
-    register(name = "pulse", dsl = pulse)
+    put("square", pulse)
+    put("sqr", pulse)
+    put("pulse", pulse)
     // Raw pulse (pulze) — naive/aliased counterpart, same "duty" osc-param.
     val rawPulse = IgnitorDsl.RawPulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
-    register(name = "pulze", dsl = rawPulse)
+    put("pulze", rawPulse)
 
     val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "triangle", dsl = triangle)
-    register(name = "tri", dsl = triangle)
+    put("triangle", triangle)
+    put("tri", triangle)
 
     // ramp = rounded reverse-saw; zamp = its raw/aliased counterpart.
     val ramp = IgnitorDsl.Ramp(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "ramp", dsl = ramp)
+    put("ramp", ramp)
 
     val zamp = IgnitorDsl.Zamp(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "zamp", dsl = zamp)
+    put("zamp", zamp)
 
     // zaw = raw/aliased saw (counterpart of saw/sawtooth).
     val zawtooth = IgnitorDsl.Zawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "zawtooth", dsl = zawtooth)
-    register(name = "zaw", dsl = zawtooth)
+    put("zawtooth", zawtooth)
+    put("zaw", zawtooth)
 
     val impulse = IgnitorDsl.Impulse(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "impulse", dsl = impulse)
+    put("impulse", impulse)
 
     val silence = IgnitorDsl.Silence
-    register(name = "silence", dsl = silence)
+    put("silence", silence)
 
     // ─── Super oscillators ───────────────────────────────────────────────────
     // Each gets "voices", "spread", "analog" as overridable params
@@ -81,7 +93,7 @@ fun IgnitorRegistry.registerDefaults() {
         spread = slots.spread,
         analog = slots.analog,
     )
-    register(name = "supersaw", dsl = superSaw)
+    put("supersaw", superSaw)
 
     val superSine = IgnitorDsl.SuperSine(
         freq = IgnitorDsl.Freq,
@@ -89,7 +101,7 @@ fun IgnitorRegistry.registerDefaults() {
         spread = slots.spread,
         analog = slots.analog,
     )
-    register(name = "supersine", dsl = superSine)
+    put("supersine", superSine)
 
     val superSquare = IgnitorDsl.SuperSquare(
         freq = IgnitorDsl.Freq,
@@ -97,9 +109,9 @@ fun IgnitorRegistry.registerDefaults() {
         spread = slots.spread,
         analog = slots.analog,
     )
-    register(name = "supersquare", dsl = superSquare)
-    register(name = "supersqr", dsl = superSquare)
-    register(name = "superpulse", dsl = superSquare)
+    put("supersquare", superSquare)
+    put("supersqr", superSquare)
+    put("superpulse", superSquare)
 
     val superTri = IgnitorDsl.SuperTri(
         freq = IgnitorDsl.Freq,
@@ -107,7 +119,7 @@ fun IgnitorRegistry.registerDefaults() {
         spread = slots.spread,
         analog = slots.analog,
     )
-    register(name = "supertri", dsl = superTri)
+    put("supertri", superTri)
 
     val superRamp = IgnitorDsl.SuperRamp(
         freq = IgnitorDsl.Freq,
@@ -115,32 +127,32 @@ fun IgnitorRegistry.registerDefaults() {
         spread = slots.spread,
         analog = slots.analog,
     )
-    register(name = "superramp", dsl = superRamp)
+    put("superramp", superRamp)
 
     // ─── Noises ──────────────────────────────────────────────────────────────
 
     val whiteNoise = IgnitorDsl.WhiteNoise()
-    register(name = "whitenoise", dsl = whiteNoise)
-    register(name = "white", dsl = whiteNoise)
+    put("whitenoise", whiteNoise)
+    put("white", whiteNoise)
 
     val brownNoise = IgnitorDsl.BrownNoise()
-    register(name = "brownnoise", dsl = brownNoise)
-    register(name = "brown", dsl = brownNoise)
+    put("brownnoise", brownNoise)
+    put("brown", brownNoise)
 
     val pinkNoise = IgnitorDsl.PinkNoise()
-    register(name = "pinknoise", dsl = pinkNoise)
-    register(name = "pink", dsl = pinkNoise)
+    put("pinknoise", pinkNoise)
+    put("pink", pinkNoise)
 
     val perlinNoise = IgnitorDsl.PerlinNoise(rate = slots.rate)
-    register(name = "perlinnoise", dsl = perlinNoise)
-    register(name = "perlin", dsl = perlinNoise)
+    put("perlinnoise", perlinNoise)
+    put("perlin", perlinNoise)
 
     val berlinNoise = IgnitorDsl.BerlinNoise(rate = slots.rate)
-    register(name = "berlinnoise", dsl = berlinNoise)
-    register(name = "berlin", dsl = berlinNoise)
+    put("berlinnoise", berlinNoise)
+    put("berlin", berlinNoise)
 
-    register(name = "dust", dsl = IgnitorDsl.Dust(density = slots.density))
-    register(name = "crackle", dsl = IgnitorDsl.Crackle(chaos = slots.chaos))
+    put("dust", IgnitorDsl.Dust(density = slots.density))
+    put("crackle", IgnitorDsl.Crackle(chaos = slots.chaos))
 
     // ─── Physical models ────────────────────────────────────────────────────
 
@@ -152,9 +164,9 @@ fun IgnitorRegistry.registerDefaults() {
         stiffness = slots.stiffness,
         analog = slots.analog,
     )
-    register(name = "pluck", dsl = pluck)
-    register(name = "ks", dsl = pluck)
-    register(name = "string", dsl = pluck)
+    put("pluck", pluck)
+    put("ks", pluck)
+    put("string", pluck)
 
     val superPluck = IgnitorDsl.SuperPluck(
         freq = IgnitorDsl.Freq,
@@ -166,22 +178,22 @@ fun IgnitorRegistry.registerDefaults() {
         stiffness = slots.stiffness,
         analog = slots.analog,
     )
-    register(name = "superpluck", dsl = superPluck)
+    put("superpluck", superPluck)
 
     // ─── Ignitor compositions ──────────────────────────────────────────────
 
     // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered
-    register(
-        name = "sgpad",
-        dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(semitones = 0.1))
+    put(
+        "sgpad",
+        (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(semitones = 0.1))
             .div(other = IgnitorDsl.Param(name = "divisor", default = 2.0))
             .onepole(freq = 3000.0)
     )
 
     // FM bell: sine carrier with sine modulator
-    register(
-        name = "sgbell",
-        dsl = IgnitorDsl.Sine().fm(
+    put(
+        "sgbell",
+        IgnitorDsl.Sine().fm(
             modulator = IgnitorDsl.Sine(),
             ratio = 1.4,
             depth = 300.0,
@@ -197,9 +209,9 @@ fun IgnitorRegistry.registerDefaults() {
     )
 
     // Buzzy filtered square
-    register(
-        name = "sgbuzz",
-        dsl = IgnitorDsl.Square().lowpass(freq = 2000.0),
+    put(
+        "sgbuzz",
+        IgnitorDsl.Square().lowpass(freq = 2000.0),
     )
 
     // ─── Unified-EQ demo: the smallest sound that exercises the fused EqCore end to end
@@ -209,9 +221,9 @@ fun IgnitorRegistry.registerDefaults() {
     // Sawtooth through one fused Eq: a bell (0 dB by default = bit-transparent, so the
     // sound equals a plain saw until "eqdb" moves) followed by a gentle cabinet lowpass.
     // All knobs are osc-params — override per note via `.oscparam("eqdb", 9)` etc.
-    register(
-        name = "eqdemo",
-        dsl = IgnitorDsl.Eq(
+    put(
+        "eqdemo",
+        IgnitorDsl.Eq(
             inner = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = slots.analog),
             sections = listOf(
                 IgnitorDsl.EqSection.Bell(
@@ -266,7 +278,7 @@ fun IgnitorRegistry.registerDefaults() {
 //
 // ── Effects Chains ───────────────────────────────────────────────────────────
 //   SuperSaw.distort(0.4).lowpass(3000)             — heavy lead
-//   Pluck.phaser(0.3, x => x.wet(0.5))               — spacey pluck
+//   Pluck.phaser(0.5, 0.3)                           : spacey pluck (wet, rate)
 //   Square.crush(6.0)                               — retro / chiptune
 //   Saw.coarse(8.0)                                 — sample-rate reduced lo-fi
 //
@@ -274,7 +286,7 @@ fun IgnitorRegistry.registerDefaults() {
 //   WhiteNoise.adsr(0.001, 0.05, 0.0, 0.01)        — hi-hat
 //       .highpass(8000)
 //   Impulse.lowpass(200)                             — kick body
-//   Sine.pitchEnvelope(semitones=24, decaySec=0.05) — kick with pitch sweep
+//   Sine.pitchEnvelope(24, x => x.adsr(0.01, 0.05, 0, 0)): kick with pitch sweep
 //   Dust.mul(PinkNoise)                             — textured crackle
 //
 // ═════════════════════════════════════════════════════════════════════════════════

@@ -1146,22 +1146,14 @@ let a = placeholder("aa", Osc.sine())"""
         stdlibRegistry().getCallable("voices", builder).shouldNotBeNull()
     }
 
-    "real stdlib: Master(m => m.gain(2)) resolves through invoke; m is the MasterBuilder" {
-        val code = "Master(m => m.reverb(r => r.wet(0.05)).gain(2))"
+    "real stdlib: Katalyst(k => k.gain(2)) resolves through invoke; k is the KatalystBuilder" {
+        val code = "Katalyst(k => k.delay(0.05, d => d.cap(2)).gain(2))"
         val a = analyze(code)
-        a.typeOf(a.topExpr())?.simpleName shouldBe "MasterDsl"
-        a.receiverTypeBeforeDot(code.indexOf("m.reverb") + 1)?.simpleName shouldBe "MasterBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("r.wet") + 1)?.simpleName shouldBe "MasterReverbBuilder"
-        stdlibRegistry().getCallable("invoke", KlangType("Master"))!!.signature shouldBe
-                "Master(configure: ((MasterBuilder) -> MasterBuilder)? = null): MasterDsl"
-    }
-
-    "real stdlib: Pipeline(p => p.vca(v => v.expK(2))) resolves through invoke; p and v are typed" {
-        val code = "Pipeline(p => p.vca(v => v.expK(2)).distort())"
-        val a = analyze(code)
-        a.typeOf(a.topExpr())?.simpleName shouldBe "PipelineDsl"
-        a.receiverTypeBeforeDot(code.indexOf("p.vca") + 1)?.simpleName shouldBe "PipelineBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("v.expK") + 1)?.simpleName shouldBe "PipelineVcaBuilder"
+        a.typeOf(a.topExpr())?.simpleName shouldBe "KatalystDsl"
+        a.receiverTypeBeforeDot(code.indexOf("k.delay") + 1)?.simpleName shouldBe "KatalystBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("d.cap") + 1)?.simpleName shouldBe "KatalystDelayBuilder"
+        stdlibRegistry().getCallable("invoke", KlangType("Katalyst"))!!.signature shouldBe
+                "Katalyst(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl"
     }
 
     "function type renders structurally in the callable signature" {

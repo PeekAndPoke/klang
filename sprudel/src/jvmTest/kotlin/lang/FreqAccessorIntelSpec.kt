@@ -67,7 +67,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-one accessor is an object with a call form and the first-step operators" {
-        listOf("gain", "velocity", "pan", "postgain").forEach { name ->
+        listOf("gain", "velocity", "pan").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -84,7 +84,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "coarse" to listOf("amount", "oversample"),
             "reverb" to listOf("wet", "size", "lowpass"),
             "delay" to listOf("wet", "time", "feedback", "cap"),
-            "phaser" to listOf("rate", "wet", "center", "sweep", "floor"),
+            "phaser" to listOf("wet", "rate", "center", "sweep", "floor"),
             "tremolo" to listOf("depth", "sync", "skew", "phase"),
             "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
@@ -94,7 +94,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "unison" to listOf("voices", "spread", "pan"),
             "duck" to listOf("orbit", "depth", "attack"),
             "vibrato" to listOf("rate", "depth"),
-            "penv" to listOf("amount", "attack", "decay", "release", "curve", "anchor"),
+            "penv" to listOf("amount", "attack", "decay", "sustain", "release"),
             "fm" to listOf("env", "h", "attack", "decay", "sustain")).forEach { (name, slots) ->
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
@@ -115,7 +115,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-three accessor is an object with a call form and the first-step operators" {
-        listOf("begin", "end", "speed", "loopBegin", "loopEnd", "cut", "legato", "accelerate").forEach { name ->
+        listOf("begin", "end", "speed", "cut", "legato", "accelerate").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -125,7 +125,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every batch-four accessor is an object with a call form and the first-step operators" {
-        listOf("density", "orbit", "analog", "duty", "onepole").forEach { name ->
+        listOf("density", "orbit", "analog", "duty", "onepole", "pregain").forEach { name ->
             val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
             type.simpleName shouldBe name
             registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
@@ -135,7 +135,7 @@ class FreqAccessorIntelSpec : StringSpec({
     }
 
     "every alias constant carries its canonical object's type, so it calls and reads like the original" {
-        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "loopb" to "loopBegin", "loope" to "loopEnd", "vel" to "velocity").forEach { (alias, canonical) ->
+        mapOf("d" to "density", "o" to "orbit", "clip" to "legato", "vel" to "velocity").forEach { (alias, canonical) ->
             val symbol = registry.get(alias).shouldNotBeNull()
             // An alias constant's KDoc carries the category: the property entry merges first and
             // would otherwise turn the whole symbol "uncategorized" on the docs page.
@@ -167,7 +167,8 @@ class FreqAccessorIntelSpec : StringSpec({
             withClue(name) {
                 val type = registry.get(name).shouldNotBeNull().variants.filterIsInstance<KlangProperty>().single { it.owner == null }.type
                 type.simpleName shouldBe name
-                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name("
+                // Wet first, as on every door that has one (step 3d(iii), 2026-09-24).
+                registry.getCallable("invoke", type).shouldNotBeNull().signature shouldStartWith "$name(wet"
                 val children = CompletionProvider(registry).memberCompletions(type, "").map { it.name }
                 children shouldContainAll slots
                 children shouldNotContain name

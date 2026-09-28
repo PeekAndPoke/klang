@@ -753,8 +753,12 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
 
 ### D9 — Sprudel voice-filter baking → EqCore (maintainer-added 2026-08-20, LAST in order)
 
+> **2026-09-27: D9's premise is gone.** The per-voice `FilterDef` list, `ChainAudioFilter` and the strip's
+> class-form filters retired in phase 3 step 9; a sprudel filter is now a `classic()` stage, an `Ignitor.svf`
+> node in the voice's tree. Fusing those would be an optimizer pass over the tree, a new design.
+
 > **NOT IN V1 — decided 2026-08-31 (maintainer).** Sprudel gets no `band`/`tap` in V1, so D9 is
-> no longer gating anything on the surface: `docs/plans/filter-unification.md` §C6 ships canonical
+> no longer gating anything on the surface: `docs/tasks-archive/2026-09/20260927-filter-unification.md` §C6 ships canonical
 > NAMES only and no longer waits for D9's static tier. What remains here is **pure internal perf**
 > (fusing per-voice FilterDefs into one EqCore pass), which changes no authored surface and no
 > tuned sound, so it can run underneath the frontend/tutorial phase rather than blocking it.
@@ -852,7 +856,11 @@ the critical path for the device goal.
 - collectParams over fused trees: name-set + first-occurrence assertions (dup counts change by
   design when sharing collapses).
 - D2a test oracle: verify SvfLPF linear branch ≡ SvfIgnitor before using it; else Ignitor-form.
-- MasterFx.eq/Katalyst adoption blocked on the ramp API (deliberate, documented in EqCore KDoc).
+- MasterFx.eq adoption blocked on the ramp API (deliberate, documented in EqCore KDoc). **Katalyst
+  is unblocked as of 2026-09-18** and did not need it: `KatalystEqEffect` smooths a curve change by
+  crossfading two pre-built banks over 12 ms (`KatalystFilterSwap`, the body/vowel declick path), so
+  the policy the KDoc demands of a bus surface is built BY the surface. A master eq may still prefer
+  the ramp; the choice is per host now, not a precondition of the core.
 
 ## Verification
 - Per deliverable: `console/with-build-lock.sh ./gradlew :audio_be:jvmTest` (+ :audio_bridge and

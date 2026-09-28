@@ -35,29 +35,32 @@ let lead = Osc.saw().mul(0.5)
     .lowpass(4200, 2.5)
     .distort(1.0, "soft", 4)
     .adsr(0.001, 0.7, 0.0, 0.04)
+    .classic()
 
 // The fizzy supersaw PAD = the actual JP-8080 "Sandstorm" boot preset the track
 // is named after — bright + wide, sits under the lead as syncopated stabs.
 let pad = Osc.supersaw(x => x.voices(9).spread(0.3).analog(0.25))
     .lowpass(Osc.sine(0.1).plus(1).times(1500).plus(2200))
     .adsr(0.008, 0.25, 0.3, 0.2)
+    .classic()
 
 // Rolling saw bass — fast filter env (sidechain pump added at pattern level)
 let bass = Osc.saw()
     .lowpass(Osc.constant(400).plus(Osc.constant(2200).adsr(0.002, 0.08, 0.0, 0.04)))
     .adsr(0.004, 0.09, 0.0, 0.04)
+    .classic()
 
 // Synth kit
-let kick = Osc.sine().pitchEnvelope(48, 0.001, 0.05).adsr(0.001, 0.22, 0.0, 0.02)
-let hat  = Osc.whitenoise().highpass(8000).adsr(0.001, 0.035, 0.0, 0.02)
-let ohat = Osc.whitenoise().highpass(7000).adsr(0.001, 0.12, 0.05, 0.10)
-let clap = Osc.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04)
-let riser = Osc.pinknoise().highpass(300)
+let kick = Osc.sine().pitchEnvelope(48, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.001, 0.22, 0.0, 0.02).classic()
+let hat  = Osc.whitenoise().highpass(8000).adsr(0.001, 0.035, 0.0, 0.02).classic()
+let ohat = Osc.whitenoise().highpass(7000).adsr(0.001, 0.12, 0.05, 0.10).classic()
+let clap = Osc.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04).classic()
+let riser = Osc.pinknoise().highpass(300).classic()
 
 // ── Patterns ────────────────────────────────────────────────────────
 let kickPat = note("a1*4").sound(kick).gain(0.95).orbit(0)
 let hatPat  = note("c5*16").sound(hat).gain(0.28).orbit(1)
-let ohatPat = note("~ c5 ~ c5 ~ c5 ~ c5").sound(ohat).gain(0.3).orbit(1)
+let ohatPat = note("~ c5 ~ c5 ~ c5 ~ c5").sound(ohat).adsr(release = 0.1).gain(0.3).orbit(1) // classic() releases over this, not the open hat's own 0.1 s tail; keep them equal
 let clapPat = note("~ c4 ~ c4").sound(clap).gain(0.5).orbit(1).reverb(wet = 0.2, size = 3)
 
 let bassPat = note("<[~ b1 ~ b1 ~ b1 ~ b1] [~ g1 ~ g1 ~ g1 ~ g1] [~ d2 ~ d2 ~ d2 ~ d2] [~ a1 ~ a1 ~ a1 ~ a1]>")
@@ -65,7 +68,7 @@ let bassPat = note("<[~ b1 ~ b1 ~ b1 ~ b1] [~ g1 ~ g1 ~ g1 ~ g1] [~ d2 ~ d2 ~ d2
 
 // Syncopated chord stabs — 3-3-2 tresillo gate (hits on 16ths 1,4,7), the
 // classic dance-floor pad rhythm. Swap the struct string to taste.
-let padPat = chord("<Bm G D A>").voicing().sound(pad).struct("x ~ ~ x ~ ~ x ~")
+let padPat = chord("<Bm G D A>").voicing().sound(pad).adsr(release = 0.2).struct("x ~ ~ x ~ ~ x ~") // classic() releases over this, not the pad's own 0.2 s tail; keep them equal
     .legato(0.6).gain(0.20).orbit(3).reverb(wet = 0.35, size = 6)
 
 // The gated 16th-note hook (B minor). Each cycle = one bar; <...> rotates the 4 bars.
@@ -74,7 +77,7 @@ let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
                      [d5 d5 d5 d5 d5 d5 b4 d5 d5 d5 d5 d5 d5 d5 f#5 d5]
                      [a4 a4 a4 a4 a4 a4 f#4 a4 a4 a4 a4 a4 a4 a4 c#5 a4]>`)
     .transpose(-36)
-    .sound(lead).legato(0.55).gain(0.4).postgain(0.5).orbit(4)
+    .sound(lead).legato(0.55).gain(0.4 * 0.5).orbit(4)
     .delay(wet = 0.14, time = pure(3/16).div(cps), feedback = 0.25).reverb(wet = 0.12, size = 5)
 
 let riserPat = note("c5").fast(2).sound(riser)

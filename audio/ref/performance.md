@@ -218,6 +218,42 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
 - **Cylinder cache locality** — cross-cylinder mix order is a separate (and
   currently un-actioned) optimization. See `audio_be/optimizations.md` for
   the analysis from Gemini-3-Pro and the rationale for deferring.
+- **Accepted, and temporary: every bus-door event ships `katalystParams` as
+  well as its voice fields** (Katalyst step 5a, 2026-09-18). A song touching
+  `reverb` / `delay` / `compressor` / `duck` / `phaser` / `body` / `vowel`
+  sends the matching `<stage>.<knob>` slots over the wire AND the fields.
+  Since step 5b-1 (2026-09-19) the SLOTS are what every orbit reads and the
+  fields are the temporary half. Step 5b-3 (2026-09-19) took the delay,
+  reverb, compressor and duck fields off the wire, so for those four doors this
+  row's cost is gone; phase 3 step 9 (2026-09-27) took the phaser fields and
+  the `filters` list (body and vowel) off too, so every orbit door now ships its
+  slots only.
+  The rule's one home is the `katp` door's KDoc in
+  `sprudel/lang/lang_katalyst.kt`. Measured with
+  `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
+  Node 24) on one voice.
+
+  Re-measured 2026-09-18 after Katalyst step 5a-3, on the fixture as it stands
+  (11 slots and the 11 matching bus voice fields, where the step-5a fixture had
+  7 slots): encode 822 and 952 ns/op, `structuredClone` 11820 and 11905 ns/op,
+  worklet decode 2073 and 2258 ns/op, two consecutive runs on one machine. Two
+  runs is enough to show the spread (roughly 15 % on encode and decode, 1 % on
+  the clone) and not enough to attribute the difference from the step-5a
+  reading (609 / 8720 / 836) to the fixture rather than to the machine: that
+  reading was taken on a different day, and the numbers before it (448 / 8097 /
+  459, at 36b15ca0) came from a fixture with no slot map at all and are a
+  record, not a baseline this can be reproduced against. What the three
+  readings agree on is the shape: the clone dominates, and it grows with the
+  payload. Step 5b takes the voice half off the wire and leaves the slots
+  alone, which pays it back.
+- **`SprudelVoiceData.clone()` deep-copies both param maps** (`oscParams`,
+  `katalystParams`) since 2026-09-18: they are mutable and single-owner, so a
+  door writes one key in place instead of allocating a map per slot, and the
+  clone owns its own. `VoiceDataCopyBenchmark`
+  (`./gradlew :audio_benchmark:jvmRun`) showed no change outside its own
+  run-to-run noise, which on this harness is wider than the effect (`copy()`
+  on a code path the change never touched read 123 to 257 ns/op across three
+  runs).
 
 ## When to break the rules
 

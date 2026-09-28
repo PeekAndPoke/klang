@@ -27,9 +27,9 @@ class MasterStage(
     /**
      * The house limiter's own TIMING: what runs on the summed mix, always.
      *
-     * The *character* it shares with `MasterStageDsl.Limiter` — threshold, ratio, knee, release —
-     * lives in `audio_bridge/constants/MasterLimiterDefaults.kt`, because those four are also that
-     * stage's wire defaults and must have exactly one declaration.
+     * The *character* it shares with the authored `limiter(...)` door of the Katalyst builder (threshold,
+     * ratio, knee, release) lives in `audio_bridge/constants/MasterLimiterDefaults.kt`, because those
+     * four are also that door's defaults and must have exactly one declaration.
      *
      * The two constants below are **house-only**: no DSL field carries them, because the house
      * limiter is not authorable. The opt-in stage has its own `AUTHORED_*` timing (also in the
@@ -43,10 +43,12 @@ class MasterStage(
          * and the hard clip below does the work — 2-6 ms of clipping per hit, audible as a "knock".
          *
          * Uniform on the whole output (this stage runs once, after every playback is summed), so the
-         * delay shifts everything together and nothing can desync. That is why lookahead lives here
-         * and not on a per-orbit or per-playback compressor.
+         * delay shifts everything together and nothing can desync. That is why the HOUSE lookahead
+         * lives here, always on, and why an authored one upstream (a Katalyst `compressor` or
+         * `limiter` with `lookahead`, since phase 3 step 12 C2) is opt-in: it makes its orbit or its
+         * playback late by that much, uncompensated.
          *
-         * See `docs/tasks/master-limiter-lookahead.md`.
+         * See `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`.
          */
         const val HOUSE_LIMITER_LOOKAHEAD_SECONDS: Double = 0.005
 
@@ -67,7 +69,7 @@ class MasterStage(
      * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
      * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
      * clock), so anything aligning visuals to audio has to add it explicitly. See
-     * `docs/tasks/master-limiter-lookahead.md` Phase 5.
+     * `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` Phase 5.
      */
     val latencyFrames: Int get() = limiter.latencyFrames
 
@@ -120,35 +122,42 @@ class MasterStage(
         // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
         limiter.process(mix.left, mix.right, blockFrames)
 
-        // Transparent clip + interleave. Most samples are within [-1, 1]; we skip all math for
-        // them to preserve CPU and unity-gain transparency.
-        val left = mix.left
-        val right = mix.right
-        val maxShort = Short.MAX_VALUE
+        // Transparent clip + interleave into the platform's 16-bit PCM.
+        interleavePcm16(mix.left, mix.right, blockFrames, out)
+    }
+}
 
-        for (i in 0 until blockFrames) {
-            val lSample = left[i]
-            val rSample = right[i]
+/**
+ * The master's clip + stereo interleave: writes `[L0, R0, L1, R1, ...]` into [out] (which must hold
+ * `2 * frames` shorts), every sample through [pcm16]. [MasterStage.process] runs it once per block,
+ * after the limiter; it is its own function so the specs exercise the real loop, not a copy.
+ */
+internal fun interleavePcm16(left: AudioBuffer, right: AudioBuffer, frames: Int, out: ShortArray) {
+    for (i in 0 until frames) {
+        val idx = i * 2
+        out[idx] = pcm16(left[i])
+        out[idx + 1] = pcm16(right[i])
+    }
+}
 
-            val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
-                (lSample * maxShort).toInt()
-            } else if (lSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
-                (rSample * maxShort).toInt()
-            } else if (rSample > 1.0) {
-                Short.MAX_VALUE.toInt()
-            } else {
-                Short.MIN_VALUE.toInt()
-            }
-
-            val idx = i * 2
-            out[idx] = lOut.toShort()
-            out[idx + 1] = rOut.toShort()
-        }
+/**
+ * One sample to 16-bit PCM: in `[-1, 1]` it scales by [Short.MAX_VALUE] and truncates (so -1.0 lands
+ * on `-Short.MAX_VALUE`, not on [Short.MIN_VALUE]); above 1 it is [Short.MAX_VALUE], anything else
+ * [Short.MIN_VALUE]. Most samples are in range, and they take the first branch with no clamp math.
+ *
+ * NaN fails both comparisons and lands on [Short.MIN_VALUE], a full-scale negative click. It cannot
+ * arrive through [MasterStage.process]: the house limiter's delay ring stores every non-finite
+ * sample as 0.0 (`Compressor.processLookahead`), so the clip only ever sees finite values.
+ *
+ * Inline so the hot loop in [interleavePcm16] stays one flat body on both platforms.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun pcm16(sample: AudioSample): Short {
+    return if (sample >= -1.0 && sample <= 1.0) {
+        (sample * Short.MAX_VALUE).toInt().toShort()
+    } else if (sample > 1.0) {
+        Short.MAX_VALUE
+    } else {
+        Short.MIN_VALUE
     }
 }

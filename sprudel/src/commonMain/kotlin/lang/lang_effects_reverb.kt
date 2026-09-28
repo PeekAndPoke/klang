@@ -17,25 +17,38 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
+import io.peekandpoke.klang.sprudel.katalystParamsOrNew
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 // -- the call sets every slot ----------------------------------------------------------------------------------------
 
 /**
- * A reverb slot was just written on this event: every reverb slot still unset takes the shared default
- * (`constants/SendEffectDefaults.kt`, the same the master reverb uses), so one call sets them all. A slot
- * an earlier call set keeps its value. An event the call writes nothing to (a rest in a control pattern,
- * a mapper on a slot that was never set) is not filled. Lowpass has no default and stays unset.
+ * Fills the reverb stage's companions from `constants/SendEffectDefaults.kt`, the same constants the
+ * master reverb uses (`/dsl-design` §4 is the rule; this is only what THIS door does). Called from
+ * every reverb setter, because the reverb has no name knob: `reverb(size = 4)` fills `wet` and the
+ * room is ON.
+ *
+ * **`lowpass` has no constant** and is never filled: unset means no damping, and inventing a cutoff
+ * would darken every room.
+ *
+ * The slots are the reverb's only storage since Katalyst step 5b-3 (the voice fields left the
+ * wire and `SprudelVoiceData`): the orbit's room reads them, and so do the `reverb.*` accessors.
+ *
+ * Byte-identical to what the engine did with an unset field until then: `VoiceFactory`
+ * substituted exactly these constants.
  */
 private fun SprudelVoiceData.fillReverbDefaults() {
-    if (reverb == null) {
-        reverb = REVERB_WET
-    }
+    val slots = katalystParamsOrNew()
 
-    if (reverbSize == null) {
-        reverbSize = REVERB_SIZE
-    }
+    slots.setOrDefault("reverb.wet", value = null, default = REVERB_WET)
+    slots.setOrDefault("reverb.size", value = null, default = REVERB_SIZE)
+}
+
+/** Writes the wet this call named into its slot, and fills the companions. */
+private fun SprudelVoiceData.setReverbWet(wet: Double) {
+    katalystParamsOrNew().set("reverb.wet", wet)
+    fillReverbDefaults()
 }
 
 // -- reverb, the wet slot --------------------------------------------------------------------------------------------
@@ -44,35 +57,34 @@ private val reverbMutation = voiceSetter {
     val wet = it?.toString()?.toDoubleOrNull()
 
     if (wet != null) {
-        reverb = wet
-        fillReverbDefaults()
+        setReverbWet(wet)
     }
 }
 
 private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.reverb }, update = reverbMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("reverb.wet") }, update = reverbMutation)
     }
 
-    // No args: reinterpret pattern's own values as the reverb send
+    // No args: reinterpret the pattern's own values as the wet. This is the one path that can hand
+    // this door's HEAD setter a null, and a null writes nothing, like every other setter here.
     if (args.isEmpty()) {
         return source.reinterpretVoice {
             it.clone().apply {
-                reverb = value?.asDouble
+                val wet = value?.asDouble
 
-                if (reverb != null) {
-                    fillReverbDefaults()
+                if (wet != null) {
+                    setReverbWet(wet)
                 }
             }
         }
     }
 
     return source._applyControlFromParams(args, reverbMutation) { src, ctrl ->
-        val wet = ctrl.reverb
+        val wet = ctrl.katalystParams?.get("reverb.wet")
 
         if (wet != null) {
-            src.reverb = wet
-            src.fillReverbDefaults()
+            src.setReverbWet(wet)
         }
 
         src
@@ -81,12 +93,15 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
 
 /**
- * The orbit reverb: send, size and lowpass.
+ * The orbit reverb: how much of the orbit goes into the room, its size and its lowpass.
  *
- * One reverb per orbit, so `size` and `lowpass` are set once for everyone by the orbit's owning
- * voice. `wet` is the exception and the thing to remember: it is a per-voice
- * [send](/manuals/lexikon/send), so a dry voice on a wet orbit stays dry. Give a pattern its own
- * reverb by giving it its own [orbit bus](/manuals/lexikon/orbit-bus).
+ * One reverb per [orbit bus](/manuals/lexikon/orbit-bus), and all three are set once for everyone
+ * by the orbit's owning voice. `wet` is how much of the orbit goes into the room: the room is added
+ * on top of the dry sound, and every voice on the orbit is in it alike. So a pattern that should
+ * stay dry, or sit in the room by a different amount, goes on an orbit of its own. The room hears
+ * everything before it on the orbit: a `body`, a `vowel` and the `delay`'s echoes. When another
+ * pattern with a reverb takes the orbit over, `wet` and `size` move smoothly to its values; a
+ * pattern without one switches the room off, which does not fade yet (the tail rings out).
  *
  * The call sets every slot: the ones you leave out take the same default as on the master reverb,
  * wet 0.25 and size 5 (lowpass has none), unless an earlier call already set them. So a bare
@@ -102,7 +117,7 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * With no argument at all, the pattern's own values are reinterpreted as `wet`.
  *
  * ```KlangScript(Playable)
- * s("bd sd").reverb(0.3, 4)                                                  // send and size
+ * s("bd sd").reverb(0.3, 4)                                                  // wet and size
  * ```
  *
  * ```KlangScript(Playable)
@@ -114,16 +129,16 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * ```
  *
  * ```KlangScript(Playable)
- * s("bd sd").reverb("0.1 0.5", 4).delay(wet = reverb.wet, time = 0.25)       // as much delay as reverb
+ * s("bd sd").reverb("<0.1 0.5>", 4).delay(wet = reverb.wet, time = 0.25)     // as much delay as reverb
  * ```
  *
- * @param wet Send into the orbit reverb, 0 to 1, default 0.25. Per voice.
+ * @param wet How much of the orbit goes into the room, 0 to 1, default 0.25. Orbit-wide.
  * @param size Tail length, about 0 to 10, default 5; above 10 is bounded at 10. Orbit-wide.
  * @param lowpass Lowpass on the tail, Hz. Lower is darker. Unset by default. Orbit-wide.
  * @param-tool wet SprudelReverbEditor, SprudelReverbSequenceEditor
  * @param-tool size SprudelReverbSizeEditor, SprudelReverbSizeSequenceEditor
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags reverb, wet, size, lowpass
  */
@@ -169,7 +184,7 @@ fun PatternMapperFn.reverb(
  * The `reverb` object: `reverb(...)` sets the slots, and each numeric slot reads back as a child,
  * `reverb.wet`, `reverb.size`, `reverb.lowpass`.
  *
- * @scope orbit-send
+ * @scope orbit
  * @category effects
  * @tags reverb, accessor
  */
@@ -179,15 +194,15 @@ object reverb {
 
     /** The wet slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val wet: FieldAccessor = FieldAccessor { it.reverb }
+    val wet: FieldAccessor = FieldAccessor { it.katalystParams?.get("reverb.wet") }
 
     /** The size slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val size: FieldAccessor = FieldAccessor { it.reverbSize }
+    val size: FieldAccessor = FieldAccessor { it.katalystParams?.get("reverb.size") }
 
     /** The lowpass slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val lowpass: FieldAccessor = FieldAccessor { it.reverbLowpass }
+    val lowpass: FieldAccessor = FieldAccessor { it.katalystParams?.get("reverb.lowpass") }
 
     /** The setter, see [SprudelPattern.reverb]. */
     @KlangScript.Invoke
@@ -203,16 +218,17 @@ object reverb {
 // -- reverb.size -----------------------------------------------------------------------------------------------------
 
 private val reverbSizeMutation = voiceSetter {
-    reverbSize = it?.asDoubleOrNull()
+    val size = it?.asDoubleOrNull()
 
-    if (reverbSize != null) {
+    if (size != null) {
+        katalystParamsOrNew().set("reverb.size", size)
         fillReverbDefaults()
     }
 }
 
 private fun applyReverbSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.reverbSize }, update = reverbSizeMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("reverb.size") }, update = reverbSizeMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, reverbSizeMutation)
@@ -221,16 +237,17 @@ private fun applyReverbSize(source: SprudelPattern, args: List<SprudelDslArg<Any
 // -- reverb.lowpass --------------------------------------------------------------------------------------------------
 
 private val reverbLowpassMutation = voiceSetter {
-    reverbLowpass = it?.asDoubleOrNull()
+    val lowpass = it?.asDoubleOrNull()
 
-    if (reverbLowpass != null) {
+    if (lowpass != null) {
+        katalystParamsOrNew().set("reverb.lowpass", lowpass)
         fillReverbDefaults()
     }
 }
 
 private fun applyReverbLowpass(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.reverbLowpass }, update = reverbLowpassMutation)
+        return source._mapNumericField(mapper, read = { it.katalystParams?.get("reverb.lowpass") }, update = reverbLowpassMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, reverbLowpassMutation)

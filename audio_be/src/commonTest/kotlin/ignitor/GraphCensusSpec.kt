@@ -37,13 +37,16 @@ class GraphCensusSpec : StringSpec({
             it.traffic shouldBe 3
             it.bytes shouldBe 64 + 48
         }
-        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = 3)).let {
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = c(3.0))).let {
             it.passes shouldBe 4
             it.traffic shouldBe 7
             it.bytes shouldBe 64 + 3 * 48
         }
         // the engine clamps a cascade at FILTER_MAX_PASSES (16), so does the count
-        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = 64)).passes shouldBe 1 + 16
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = c(64.0))).passes shouldBe 1 + 16
+        // a slotted count (phase 3 step 5) is read through the voice's params, as the runtime reads it
+        GraphCensus.of(IgnitorDsl.Lowpass(saw, freq = c(1000.0), passes = IgnitorDsl.Param("p", 1.0)), params = mapOf("p" to 3.0))
+            .passes shouldBe 4
     }
 
     "scalar-only arithmetic is one value per block: no pass, no traffic" {
@@ -114,6 +117,19 @@ class GraphCensusSpec : StringSpec({
 
         census.passes shouldBe 3
         census.traffic shouldBe 1 + 2 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
+    }
+
+    "the fused Distort node is ONE stage: the drive rides in the shaper loop, a copy out replaces the cap" {
+        // classic()'s distort stage, the strip's law since phase 3 step 4 (D2): no separate drive pass.
+        // At 4x: the saw (one pass, one write, its 64 bytes); the stage reads one and writes four,
+        // drives and shapes eight in place (2 * 4), runs the DC blocker in place (2) and copies its
+        // work buffer out (2), plus the oversampler's round trip; its state is the oversampler's plus
+        // the DC blocker's 24 bytes.
+        val census = GraphCensus.of(IgnitorDsl.Distort(saw, IgnitorDsl.Constant(0.5), oversample = IgnitorDsl.Constant(4.0)))
+
+        census.passes shouldBe 1 + 1
+        census.traffic shouldBe 1 + (2 * 4 + 2 + 2 + GraphCensus.oversampleTraffic(4))
+        census.bytes shouldBe 64 + (GraphCensus.oversampleBytes(4) + 24)
     }
 
     "a shared node renders once into a memo, and every consumer copies the memo out" {

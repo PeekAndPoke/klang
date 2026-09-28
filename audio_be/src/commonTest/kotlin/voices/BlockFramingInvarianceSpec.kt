@@ -10,7 +10,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.SampleStore
@@ -21,8 +20,8 @@ import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.ignitor.toExciter
-import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.coarse
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -64,8 +63,10 @@ class BlockFramingInvarianceSpec : StringSpec({
 
     /**
      * Renders one voice of the given instrument through the real [VoiceFactory] and [Voice.render],
-     * and returns exactly the NOTE-RELATIVE `gateFrames + relFrames` samples. The VCA is switched
-     * off so the exciter itself is what gets compared. Fresh registry + [PlaybackCtx] per call with
+     * and returns exactly the NOTE-RELATIVE `gateFrames + relFrames` samples. The instrument is the
+     * probe with `classic()` appended and its envelope switched off (`adsrOff`), so the exciter itself is
+     * what gets compared and the voice lives its `release` slot past the gate (until phase 3 step 9 the
+     * voice strip's VCA, switched off, did the same). Fresh registry + [PlaybackCtx] per call with
      * a fixed pid, so every RNG-consuming node draws the identical stream on every call.
      */
     fun renderVoice(
@@ -76,14 +77,13 @@ class BlockFramingInvarianceSpec : StringSpec({
         /** Lets a row add STRIP-door modulation (`vibrato`, `accelerate`, the pitch envelope). */
         dataMod: (VoiceData) -> VoiceData = { it },
     ): DoubleArray {
-        val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl) }
+        val registry = IgnitorRegistry().apply { registerDefaults(); register("probe", dsl.classic()) }
         val voiceBuffer = DoubleArray(blockFrames)
         val factory = VoiceFactory(
             sampleRate = sampleRate,
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = voiceBuffer,
             freqModBuffer = DoubleArray(blockFrames),
@@ -97,9 +97,8 @@ class BlockFramingInvarianceSpec : StringSpec({
                     VoiceData.empty.copy(
                         freqHz = 220.0,
                         sound = "probe",
-                        adsr = AdsrDef.Std(release = relSec, on = false),
                     )
-                ),
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = relSec, on = false))),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,
@@ -149,7 +148,6 @@ class BlockFramingInvarianceSpec : StringSpec({
             sampleRateDouble = sampleRate.toDouble(),
             blockFrames = blockFrames,
             ignitorRegistry = registry,
-            pipelineRegistry = PipelineRegistry(),
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             voiceBuffer = voiceBuffer,
             freqModBuffer = DoubleArray(blockFrames),
@@ -161,8 +159,7 @@ class BlockFramingInvarianceSpec : StringSpec({
                 data = VoiceData.empty.copy(
                     freqHz = 220.0,
                     sound = "framingsample",
-                    adsr = AdsrDef.Std(release = relSec, on = false),
-                ),
+                ).withClassicSlots(DoorFields(adsr = DoorAdsr(release = relSec, on = false))),
                 startTime = (startFrame + 0.25) / sampleRate,
                 gateEndTime = (startFrame + gateFrames + 0.25) / sampleRate,
                 playbackStartTime = 0.0,
@@ -305,15 +302,18 @@ class BlockFramingInvarianceSpec : StringSpec({
     // `blockStart + offset` (+ a phase accumulator, in vibrato's case, advanced once per rendered
     // sample), so they are Class 1.
     //
-    // `FilterModRenderer` and `FmRenderer` are deliberately NOT here, and cannot be: they evaluate
-    // their envelope ONCE PER BLOCK, so their note-relative sampling grid is a function of where the
+    // `FmRenderer` is deliberately NOT here, and cannot be (nor could the voice strip's filter
+    // modulator, retired in phase 3 step 9): it evaluates its envelope at BLOCK granularity (once per
+    // block), so their note-relative sampling grid is a function of where the
     // block boundaries fall. That makes them Class 2 on BOTH axes — block size and onset alignment —
-    // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of them that
+    // and Class 2 means "named, not fixed". `MidBlockOnsetControlRateSpec` pins the part of it that
     // IS fixed: the first evaluation lands on the voice's onset, not the block's first frame.
     val stripNodes = listOf<Pair<String, (VoiceData) -> VoiceData>>(
         "strip vibrato" to { d -> d.copy(vibrato = 5.0, vibratoMod = 0.4) },
+        // A sustain and a release inside the render: the gate at 4813 frames starts a 0.03 s release
+        // (1323 frames) that ends inside the rendered tail, so the release path is framed too.
         "strip pitch envelope" to { d ->
-            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pRelease = 0.0)
+            d.copy(pEnv = 3.0, pAttack = 0.011, pDecay = 0.023, pSustain = 0.4, pRelease = 0.03)
         },
     )
 

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Klang Mission Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/*__HUD_CSS__*/
+
+.gridline { stroke: var(--grid); }
+.gridline.year { stroke: var(--rule); }
+.axis text { font-family: var(--mono); font-size: 11px; fill: var(--dim); }
+.axis line, .axis path { stroke: var(--rule); }
+.lane-bg { fill: rgba(255, 255, 255, .012); }
+.lane-bg.alt { fill: rgba(86, 182, 194, .025); }
+.lane-label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.now line { stroke: var(--gold); stroke-width: 1.5; }
+.now .beam { fill: url(#beam); }
+.now text { font-family: var(--mono); font-size: 11px; fill: var(--gold); letter-spacing: .14em; }
+.mil line { stroke: var(--red); stroke-dasharray: 2 5; stroke-opacity: .7; }
+.mil text { font-family: var(--mono); font-size: 10.5px; fill: var(--red); letter-spacing: .08em; text-transform: uppercase; }
+.mil .dia { fill: var(--void); stroke: var(--red); stroke-width: 1.5; }
+.win { stroke-width: 2; stroke-opacity: .35; stroke-linecap: round; }
+.dot { cursor: pointer; }
+.dot:focus { outline: none; }
+.dot:focus-visible .shape, .dot.sel .shape { stroke: #fff; stroke-width: 2; }
+.proj .shape { fill: var(--void); stroke-width: 1.6; stroke-dasharray: 2.4 1.8; }
+.area-done { fill: url(#doneFill); stroke: var(--green); stroke-width: 1.5; }
+.area-proj { fill: url(#projFill); stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.chart-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; fill: var(--dim); text-transform: uppercase; }
+.readout { font-family: var(--mono); font-size: 11px; fill: var(--text); }
+#vis { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#vis:active { cursor: grabbing; }
+.inspector { padding: 14px 16px 16px; display: grid; gap: 10px; }
+.inspector .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inspector h2 { margin: 0; font-size: 17px; line-height: 1.25; font-weight: 600; text-wrap: balance; }
+.inspector .fid { font-family: var(--mono); font-size: 12px; color: var(--cyan); overflow-wrap: anywhere; }
+.inspector .when { font-family: var(--mono); font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+.inspector .when dt { color: var(--dim); }
+.inspector .when dd { margin: 0; }
+.inspector p { margin: 0; line-height: 1.5; font-size: 13px; max-width: 60ch; }
+.inspector .guess { color: var(--gold); font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; }
+.inspector .close { margin-left: auto; }
+@media (prefers-reduced-motion: no-preference) {
+    .now .beam { animation: pulse 3.2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    .proj.soon .shape { animation: blink 1.8s steps(2, jump-none) infinite; }
+    @keyframes blink { 50% { stroke-opacity: .35; } }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <div class="kicker">Klang dev status · docs/tasks-archive · docs/tasks · docs/plans</div>
+      <h1>Klang <span>//</span> Mission Log</h1>
+      <nav class="hud-nav" aria-label="Dev status pages"><a href="klang-topic-map.html">Topic map</a><a href="klang-mission-log.html" aria-current="page">Mission log</a><a href="klang-whitepaper.html">White paper</a></nav>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="bar" id="bar"></div>
+  <div class="screen">
+    <svg id="vis" aria-label="Timeline of completed and projected tasks"></svg>
+    <div class="inspector" id="insp" hidden></div>
+  </div>
+  <div class="legend">
+    <span><svg width="14" height="14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="var(--green)"/></svg>completed</span>
+    <span><svg width="14" height="14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="var(--void)" stroke="var(--dim)" stroke-width="1.4"/><path d="M4 4 L10 10 M10 4 L4 10" stroke="var(--dim)" stroke-width="1.3"/></svg>won't implement</span>
+    <span><svg width="14" height="14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="var(--void)" stroke="var(--dim)" stroke-width="1.4"/><path d="M4 10 L10 4" stroke="var(--dim)" stroke-width="1.3"/></svg>closed, not built</span>
+    <span><svg width="44" height="14"><line x1="3" y1="7" x2="41" y2="7" stroke="var(--dim)" stroke-width="2" stroke-opacity=".5"/><circle cx="22" cy="7" r="5" fill="var(--void)" stroke="var(--dim)" stroke-width="1.6" stroke-dasharray="2.4 1.8"/></svg>projected, with its guess window</span>
+    <span class="sep"></span>
+    <span>projected dates are guesses from pace and priority order, as of <b id="asof"></b></span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const DATA = __DATA__;
+const LANES = [
+  {id:'engine',name:'Engine'},{id:'sound',name:'Sound'},{id:'perf',name:'Performance'},{id:'realtime',name:'Realtime'},
+  {id:'analysis',name:'Analysis'},{id:'sprudel',name:'Sprudel'},{id:'script',name:'Script + editor'},{id:'launch',name:'Launch + legal'},
+];
+const laneName = Object.fromEntries(LANES.map(l=>[l.id,l.name]));
+const laneColor = id => `var(--l-${id})`;
+const STATE_LABEL = {done:'Completed',wont:"Won't implement",superseded:'Closed, not built',active:'In progress',next:'Scheduled next',
+  open:'Open',blocked:'Blocked',byear:'Needs ears',future:'Future'};
+const parse = d3.timeParse('%Y-%m-%d'), fmt = d3.timeFormat('%Y-%m-%d'), fmtMon = d3.timeFormat('%b %Y');
+const NOW = parse(DATA.now);
+document.getElementById('asof').textContent = DATA.now;
+
+const items = DATA.items.filter(d=>d.kind!=='reference').map(d=>({...d, t:parse(d.date), lo:d.lo?parse(d.lo):null, hi:d.hi?parse(d.hi):null}));
+const done = items.filter(d=>d.kind==='archived'), proj = items.filter(d=>d.kind==='projected');
+const refCount = DATA.items.length - items.length;
+
+// ---------- stats ----------
+const first = d3.min(done,d=>d.t), months = (NOW-first)/(1000*3600*24*30.4);
+const pace = done.length/months;
+const lastEta = d3.max(proj.filter(d=>d.state!=='future'),d=>d.t);
+const stats = [
+  {c:'good',k:'Cleared',v:done.length,s:'docs'},
+  {c:'bad',k:'Open',v:proj.length,s:`+${refCount} ref`},
+  {c:'info',k:'Pace',v:pace.toFixed(1),s:'/ month'},
+  {c:'warn',k:'Non-future ETA',v:fmtMon(lastEta),s:''},
+];
+document.getElementById('stats').innerHTML = stats.map(s=>`<div class="stat ${s.c}"><div class="k">${s.k}</div><div class="v">${s.v}<small>${s.s}</small></div></div>`).join('');
+
+// ---------- toggles ----------
+const shownLanes = new Set(LANES.map(l=>l.id));
+const shownKinds = new Set(['archived','projected']);
+const bar = document.getElementById('bar');
+function tog(label, pressed, onClick, sw){
+  const b=document.createElement('button'); b.className='toggle'; b.type='button'; b.setAttribute('aria-pressed',String(pressed));
+  b.innerHTML=(sw||'')+`<span>${label}</span>`; b.addEventListener('click',()=>{const p=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(p));onClick(p);}); bar.appendChild(b);
+}
+tog(`Completed ${done.length}`,true,p=>{p?shownKinds.add('archived'):shownKinds.delete('archived');render();},'<i class="sw" style="background:var(--green)"></i>');
+tog(`Projected ${proj.length}`,true,p=>{p?shownKinds.add('projected'):shownKinds.delete('projected');render();},'<i class="sw" style="background:var(--red)"></i>');
+LANES.forEach(l=>tog(l.name,true,p=>{p?shownLanes.add(l.id):shownLanes.delete(l.id);layoutLanes();render();},`<i class="sw" style="background:${laneColor(l.id)}"></i>`));
+const hint=document.createElement('span'); hint.className='hint'; hint.textContent='drag to pan · scroll or pinch to zoom · click a marker'; bar.appendChild(hint);
+
+// ---------- scene ----------
+const svg = d3.select('#vis');
+const defs = svg.append('defs');
+defs.html(`
+  <linearGradient id="beam" x1="0" x2="1"><stop offset="0" stop-color="#e8b84b" stop-opacity="0"/><stop offset="1" stop-color="#e8b84b" stop-opacity=".16"/></linearGradient>
+  <linearGradient id="doneFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#98c379" stop-opacity=".32"/><stop offset="1" stop-color="#98c379" stop-opacity="0"/></linearGradient>
+  <linearGradient id="projFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e06c75" stop-opacity=".2"/><stop offset="1" stop-color="#e06c75" stop-opacity="0"/></linearGradient>
+  <clipPath id="plot"><rect id="plotRect"/></clipPath>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`);
+const gGrid=svg.append('g').attr('clip-path','url(#plot)'), gChart=svg.append('g').attr('clip-path','url(#plot)'), gLanes=svg.append('g'),
+      gMil=svg.append('g').attr('clip-path','url(#plot)'), gNow=svg.append('g').attr('class','now').attr('clip-path','url(#plot)'),
+      gWin=svg.append('g').attr('clip-path','url(#plot)'), gDots=svg.append('g').attr('clip-path','url(#plot)'), gAxis=svg.append('g').attr('class','axis'), gLabels=svg.append('g');
+
+const M = {l:112, r:20, t:14};
+const CHART_H = 96;
+let W=0,H=0, laneTop=0, laneH=0, visibleLanes=[];
+const x0 = d3.scaleTime().domain([d3.timeMonth.offset(first,-1), d3.timeMonth.offset(d3.max(items,d=>d.hi||d.t),1)]);
+let x = x0.copy();
+
+function size(){
+  const el=svg.node(); W=el.clientWidth; H=el.clientHeight;
+  x0.range([M.l, W-M.r]); x = currentT.rescaleX(x0);
+  d3.select('#plotRect').attr('x',M.l-10).attr('y',0).attr('width',Math.max(0,W-M.l-M.r+10)).attr('height',H);
+  layoutLanes();
+}
+function layoutLanes(){
+  visibleLanes = LANES.filter(l=>shownLanes.has(l.id));
+  laneTop = M.t + CHART_H + 30;
+  laneH = Math.max(34,(H - laneTop - 30)/Math.max(visibleLanes.length,1));
+  swarm();
+}
+
+// beeswarm offsets computed at the base scale; zoom only stretches x
+function swarm(){
+  const base = x0.copy();
+  visibleLanes.forEach((l,i)=>{
+    const ns = items.filter(d=>d.area===l.id);
+    const cy = laneTop + i*laneH + laneH/2;
+    ns.forEach(d=>{d.r = Math.min(3.2+Math.sqrt(d.lines)*0.24,8); d.bx=base(d.t); d.x=d.bx; d.y=cy; d.cy=cy;});
+    const sim=d3.forceSimulation(ns).force('x',d3.forceX(d=>d.bx).strength(1)).force('y',d3.forceY(cy).strength(0.08))
+      .force('c',d3.forceCollide(d=>d.r+1.2)).stop();
+    for(let k=0;k<120;k++) sim.tick();
+    ns.forEach(d=>{ d.dy=Math.max(-laneH/2+d.r+2,Math.min(laneH/2-d.r-2,d.y-cy)); });
+  });
+}
+
+function shapePath(r){ return `M0 ${-r} L${r} 0 L0 ${r} L${-r} 0 Z`; }
+let selected=null;
+
+function render(){
+  // grid + axis
+  const ticks = x.ticks(Math.max(4,Math.floor(W/110)));
+  gGrid.selectAll('line').data(ticks,d=>+d).join('line')
+    .attr('class',d=>'gridline'+(d.getMonth()===0?' year':'')).attr('x1',d=>x(d)).attr('x2',d=>x(d)).attr('y1',M.t).attr('y2',H-24);
+  gAxis.attr('transform',`translate(0,${H-24})`).call(d3.axisBottom(x).ticks(Math.max(4,Math.floor(W/110))).tickSizeOuter(0).tickFormat(d=>d.getMonth()===0?d3.timeFormat('%Y')(d):d3.timeFormat('%b')(d)));
+
+  // lanes
+  const lanes = gLanes.selectAll('g.lane').data(visibleLanes,d=>d.id).join(enter=>{const g=enter.append('g').attr('class','lane');g.append('rect').attr('class','lane-bg');return g;});
+  lanes.select('rect').attr('class',(d,i)=>'lane-bg'+(i%2?' alt':'')).attr('x',M.l).attr('width',Math.max(0,W-M.l-M.r)).attr('y',(d,i)=>laneTop+i*laneH).attr('height',laneH);
+  gLabels.selectAll('text.lane-label').data(visibleLanes,d=>d.id).join('text').attr('class','lane-label')
+    .attr('x',12).attr('y',(d,i)=>laneTop+i*laneH+laneH/2+4).attr('fill',d=>laneColor(d.id)).text(d=>d.name);
+
+  // cumulative chart
+  const allDone = done.filter(d=>shownLanes.has(d.area)).sort((a,b)=>a.t-b.t);
+  const allProj = proj.filter(d=>shownLanes.has(d.area)).sort((a,b)=>a.t-b.t);
+  let c=0; const cum=[{t:x0.domain()[0],v:0}]; allDone.forEach(d=>cum.push({t:d.t,v:++c})); cum.push({t:NOW,v:c});
+  const pc=[{t:NOW,v:c}]; let p=c; allProj.forEach(d=>pc.push({t:d.t,v:++p}));
+  const total = Math.max(p,1);
+  const yC = d3.scaleLinear().domain([0,total]).range([M.t+CHART_H, M.t+8]);
+  const area = d3.area().curve(d3.curveStepAfter).x(d=>x(d.t)).y0(M.t+CHART_H).y1(d=>yC(d.v));
+  gChart.selectAll('path.area-done').data([cum]).join('path').attr('class','area-done').attr('d',area);
+  gChart.selectAll('path.area-proj').data([pc]).join('path').attr('class','area-proj').attr('d',area)
+    .attr('opacity',shownKinds.has('projected')?1:0);
+  gLabels.selectAll('text.chart-label').data([0]).join('text').attr('class','chart-label').attr('x',12).attr('y',M.t+14).text('Docs closed');
+  gLabels.selectAll('text.readout').data([[c,total]]).join('text').attr('class','readout').attr('x',12).attr('y',M.t+32)
+    .text(d=>`${d[0]} / ${d[1]}`);
+  gChart.selectAll('line.base').data([0]).join('line').attr('class','base gridline year').attr('x1',M.l).attr('x2',W-M.r).attr('y1',M.t+CHART_H).attr('y2',M.t+CHART_H);
+
+  // milestones
+  const mil = gMil.selectAll('g.mil').data(DATA.milestones).join(enter=>{const g=enter.append('g').attr('class','mil');g.append('line');g.append('path').attr('class','dia');g.append('text');g.append('title');return g;});
+  mil.attr('transform',d=>`translate(${x(parse(d.date))},0)`).attr('display',d=>shownKinds.has('projected')?null:'none');
+  mil.select('line').attr('y1',M.t+CHART_H+8).attr('y2',H-24);
+  mil.select('path').attr('d',`M0 ${M.t+CHART_H+2} l6 6 l-6 6 l-6 -6 Z`);
+  mil.select('text').attr('x',9).attr('y',M.t+CHART_H+12).text(d=>d.label);
+  mil.select('title').text(d=>`${d.label}, ${d.date}: ${d.note}`);
+
+  // now beam
+  const nx=x(NOW);
+  gNow.selectAll('rect.beam').data([0]).join('rect').attr('class','beam').attr('x',nx-60).attr('width',60).attr('y',M.t).attr('height',H-24-M.t);
+  gNow.selectAll('line').data([0]).join('line').attr('x1',nx).attr('x2',nx).attr('y1',M.t).attr('y2',H-24).attr('filter','url(#glow)');
+  gNow.selectAll('text').data([0]).join('text').attr('x',nx+6).attr('y',H-30).text(`NOW ${DATA.now}`);
+
+  // windows
+  const vis = d=>shownLanes.has(d.area)&&shownKinds.has(d.kind);
+  const laneIndex = Object.fromEntries(visibleLanes.map((l,i)=>[l.id,i]));
+  gWin.selectAll('line').data(proj.filter(vis),d=>d.id).join('line').attr('class','win')
+    .attr('stroke',d=>laneColor(d.area)).attr('x1',d=>x(d.lo)).attr('x2',d=>x(d.hi)).attr('y1',d=>d.cy+d.dy).attr('y2',d=>d.cy+d.dy);
+
+  // markers
+  const dots = gDots.selectAll('g.dot').data(items.filter(vis),d=>d.id).join(enter=>{
+    const g=enter.append('g').attr('class',d=>'dot'+(d.kind==='projected'?' proj':'')+(d.kind==='projected'&&(d.t-NOW)<1000*3600*24*45?' soon':''))
+      .attr('tabindex',0).attr('role','button').attr('aria-label',d=>`${d.id}, ${STATE_LABEL[d.state]}, ${d.date}`);
+    g.append('path').attr('class','shape');
+    g.each(function(d){
+      const s=d3.select(this), col=laneColor(d.area);
+      s.select('.shape').attr('d',shapePath(d.r)).attr('fill',d.kind==='archived'&&d.state==='done'?col:'var(--void)').attr('stroke',col)
+        .attr('stroke-width',d.kind==='archived'&&d.state==='done'?0:1.6).attr('filter',d.kind==='archived'&&d.state==='done'?'url(#glow)':null);
+      const k=d.r*0.5;
+      if(d.state==='wont') s.append('path').attr('d',`M${-k} ${-k} L${k} ${k} M${k} ${-k} L${-k} ${k}`).attr('stroke',col).attr('stroke-width',1.3);
+      if(d.state==='superseded') s.append('path').attr('d',`M${-k} ${k} L${k} ${-k}`).attr('stroke',col).attr('stroke-width',1.3);
+    });
+    g.on('click',(ev,d)=>{ev.stopPropagation();inspect(d);}).on('keydown',(ev,d)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();inspect(d);}});
+    return g;
+  });
+  dots.attr('transform',d=>`translate(${x(d.t)},${d.cy+d.dy})`).classed('sel',d=>selected&&d.id===selected.id);
+}
+
+// ---------- zoom ----------
+let currentT = d3.zoomIdentity;
+const zoom = d3.zoom().scaleExtent([1,40]).on('zoom',ev=>{ currentT=ev.transform; x=currentT.rescaleX(x0); render(); });
+svg.call(zoom).on('dblclick.zoom',null);
+svg.on('click',()=>{ selected=null; document.getElementById('insp').hidden=true; render(); });
+function applyExtent(){ zoom.translateExtent([[M.l-40,0],[W-M.r+40,H]]).extent([[M.l,0],[W-M.r,H]]); }
+
+// ---------- inspector ----------
+const insp=document.getElementById('insp');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function inspect(d){
+  selected=d; render();
+  const col=laneColor(d.area);
+  const when = d.kind==='archived'
+    ? `<dt>Closed</dt><dd>${d.date}</dd>`
+    : `<dt>ETA</dt><dd>${d.date}</dd><dt>Window</dt><dd>${fmt(d.lo)} to ${fmt(d.hi)}</dd>`;
+  insp.innerHTML=`<div class="row"><span class="tag" style="color:${col}">${esc(laneName[d.area])}</span><span class="tag" style="color:${d.kind==='archived'?'var(--green)':'var(--red)'}">${esc(STATE_LABEL[d.state])}</span><button class="close iconbtn" type="button" aria-label="Close">&times;</button></div>
+    <h2>${esc(d.title)}</h2>
+    <div class="fid">${esc(d.path)}</div>
+    <dl class="when">${when}</dl>
+    ${d.kind==='projected'?'<div class="guess">ETA is a guess from pace and priority order, not a plan.</div>':''}
+    ${d.status?`<p>${esc(d.status)}</p>`:''}`;
+  insp.hidden=false;
+  insp.querySelector('.close').onclick=()=>{insp.hidden=true;selected=null;render();};
+}
+
+// ---------- boot ----------
+function boot(){
+  size(); applyExtent();
+  // open on the whole history and the next 9 months of projections
+  const a=d3.timeDay.offset(first,-10), b=d3.timeMonth.offset(NOW,9);
+  const k=(x0.range()[1]-x0.range()[0])/(x0(b)-x0(a));
+  const t=d3.zoomIdentity.translate(M.l-k*x0(a),0).scale(k);
+  svg.call(zoom.transform,t);
+}
+boot();
+window.addEventListener('resize',()=>{ size(); applyExtent(); x=currentT.rescaleX(x0); render(); });
+</script>
+</body>
+</html>

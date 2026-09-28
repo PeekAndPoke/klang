@@ -31,7 +31,7 @@ does, which is no longer true:
 `EqIgnitorSpec.kt:648`. They are A/B parity specs so they still pass — both sides get the same
 context — but a negative clock clamps any envelope in them to zero, so those rows compare near-silence.
 The correct shape is `offset = 37, voiceElapsedFrames = 0`. Carried forward in
-`docs/tasks/audio-backend-audit.md` §5.2 rather than done here, because it wants a test run and the
+`docs/tasks/audio-backend-audit.md` §5.2 (since 2026-09-27: `docs/tasks/audit-audio-backend-leftovers.md` §1) rather than done here, because it wants a test run and the
 build lock was held elsewhere on 2026-08-31.
 
 Everything below is the original 2026-08-21 filing, kept as the record of how it was spotted by

@@ -5,13 +5,16 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.safeOut
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.sqrt
 
 class PitchModFactoriesSpec : StringSpec({
@@ -37,9 +40,6 @@ class PitchModFactoriesSpec : StringSpec({
     }
 
     fun AudioBuffer.mean(): Double = sumOf { it } / size
-    fun AudioBuffer.rms(): Double {
-        var s = 0.0; for (x in this) s += x * x; return sqrt(s / size)
-    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Vibrato mod
@@ -58,12 +58,6 @@ class PitchModFactoriesSpec : StringSpec({
         val out = render(mod, ctx = ctx)
         // Mean should be near 1.0 (symmetric LFO over complete cycles, ratio space)
         abs(out.mean() - 1.0) shouldBeLessThan 0.01
-    }
-
-    "vibratoMod: output has RMS > 1.0 (actual modulation above unity)" {
-        val mod = vibratoModIgnitor(rate = 5.0, semitones = 1.0)
-        val out = render(mod)
-        out.rms() shouldBeGreaterThan 0.9
     }
 
     "vibratoMod: larger depth produces larger deviation from 1.0" {
@@ -117,16 +111,6 @@ class PitchModFactoriesSpec : StringSpec({
         )
         val out = render(mod)
         for (s in out) s shouldBe 1.0
-    }
-
-    "pitchEnvelopeMod: produces non-zero deviation when amount is non-zero" {
-        val mod = pitchEnvelopeModIgnitor(
-            attackSec = ParamIgnitor("a", 0.01),
-            decaySec = ParamIgnitor("d", 0.05),
-            semitones = ParamIgnitor("amount", 12.0), // one octave
-        )
-        val out = render(mod)
-        out.rms() shouldBeGreaterThan 0.01
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -310,8 +294,11 @@ class PitchModFactoriesSpec : StringSpec({
             for (i in from until until) m = maxOf(m, abs(x[i] - 1.0))
             return m
         }
+        // With a release the index is still alive: the stages run the exponential default (decision D3),
+        // so the level at the gate is g(1 - (6000 - 44.1) / 22050) = g(0.73) ~ 0.42 of the depth, and the
+        // ratio swings by about 300 * 0.42 / 523.25 ~ 0.24 right after it.
         maxDev(steppedRender, gate + 2, gate + 100) shouldBe 0.0          // the raw hard cut: 0 means 0
-        (maxDev(rampedRender, gate + 2, gate + 100) > 0.3) shouldBe true  // a release keeps the depth alive
+        (maxDev(rampedRender, gate + 2, gate + 100) > 0.15) shouldBe true // a release keeps the depth alive
     }
 
     "fm env: a RELEASE-ONLY envelope is honoured, not silently dropped (hasEnv counts release)" {
@@ -365,5 +352,89 @@ class PitchModFactoriesSpec : StringSpec({
         // swings at full modulation index.
         (maxDev(relOnly, gate + 2200, gate + 2395) < 0.02) shouldBe true
         (maxDev(noEnv, gate + 2200, gate + 2395) > 0.3) shouldBe true
+    }
+
+    "fm env: a NON-FINITE sustain reads as unset (1.0, the node's default), never a carrier frozen at ratio 0" {
+        // Oracle written from the definition, not from the code: the modulator is a constant 0.5,
+        // so each ratio is `1 + 0.5 * (depth * env) / freq`, and `env` is the envelope law with the
+        // exponential curve every stage of the FM index envelope runs (decision D3), `g(x) = (e^3x - 1) /
+        // (e^3 - 1)` (attack `g(pos / af)`, decay `s + (1 - s) * g(1 - decPos / df)`, hold `s`, release
+        // from the level at the gate, `L * g(1 - relPos / (rf - 1))`), the level clamped to 0..1 by the FM host, the
+        // sustain raw inside. A finite sustain passes raw (the 0.3 control); NaN, +Inf and -Inf all
+        // take 1.0 (the chain `adsr`'s `finiteOr` rule).
+        val sr = 48000
+        val gate = 1000
+        val total = gate + 800
+        val depth = 200.0
+        val freq = 440.0
+        val a = 0.002
+        val d = 0.01
+        val r = 0.005
+
+        fun oracleEnv(pos: Int, s: Double): Double {
+            val af = a * sr
+            val df = d * sr
+            val rf = r * sr
+
+            fun g(x: Double): Double = (exp(3.0 * x) - 1.0) / (exp(3.0) - 1.0)
+
+            fun level(p: Int): Double = when {
+                p < af -> g(p / af)
+                p < af + df -> s + (1.0 - s) * g(1.0 - (p - af) / df)
+                else -> s
+            }
+
+            val v = if (pos >= gate) {
+                val atGate = level(gate)
+                atGate * g(1.0 - minOf((pos - gate) / (rf - 1.0), 1.0))
+            } else {
+                level(pos)
+            }
+
+            return v.coerceIn(0.0, 1.0)
+        }
+
+        fun renderFm(sustain: Double): DoubleArray {
+            val ig = fmModIgnitor(
+                ConstantIgnitor(0.5), ConstantIgnitor(1.0), ConstantIgnitor(depth),
+                envAttackSec = ConstantIgnitor(a),
+                envDecaySec = ConstantIgnitor(d),
+                envSustainLevel = ConstantIgnitor(sustain),
+                envReleaseSec = ConstantIgnitor(r),
+            )
+            val ctx = IgniteContext(
+                sampleRate = sr, voiceDurationFrames = gate, gateEndFrame = gate,
+                releaseFrames = 800, scratchBuffers = ScratchBuffers(128),
+            )
+            val out = DoubleArray(total)
+            val tmp = AudioBuffer(128)
+            var pos = 0
+
+            while (pos < total) {
+                val n = minOf(128, total - pos)
+                ctx.updateOffsetAndLength(0, n)
+                ctx.voiceElapsedFrames = pos
+                ig.generate(tmp, freq, ctx)
+
+                for (i in 0 until n) {
+                    out[pos + i] = tmp[i]
+                }
+
+                pos += n
+            }
+
+            return out
+        }
+
+        for ((given, substituted) in listOf(0.3 to 0.3, Double.NaN to 1.0, Double.POSITIVE_INFINITY to 1.0, Double.NEGATIVE_INFINITY to 1.0)) {
+            val out = renderFm(given)
+
+            for (pos in 0 until total) {
+                val expected = safeOut(1.0 + 0.5 * (depth * oracleEnv(pos, substituted)) / freq)
+
+                // 1e-9: the engine bends the curve through `fastExp` (relative error under 1e-10).
+                withClue("sustain=$given pos=$pos") { out[pos] shouldBe (expected plusOrMinus 1e-9) }
+            }
+        }
     }
 })

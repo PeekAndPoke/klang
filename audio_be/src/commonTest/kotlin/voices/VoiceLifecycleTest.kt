@@ -92,12 +92,20 @@ class VoiceLifecycleTest : StringSpec({
         )
 
         val ctx = createContext(blockStart = 0.0, blockFrames = 100)
+
+        // A SENTINEL, not the default zeros: "partial buffer" means the voice writes only its window
+        // [offset, offset + length) and leaves the rest of the block alone, which a pre-zeroed buffer
+        // cannot tell from a voice that writes silence across the whole block (moved here from
+        // VoicePipelineTest, 2026-09-27).
+        val sentinel = 7.0
+        ctx.voiceBuffer.fill(sentinel)
+
         val result = voice.render(ctx)
 
         result shouldBe true
 
-        // First 50 samples should be 0 (voice hasn't started)
-        ctx.voiceBuffer.take(50).all { it == 0.0 } shouldBe true
+        // The first 50 samples are untouched (the voice hasn't started)
+        ctx.voiceBuffer.take(50).all { it == sentinel } shouldBe true
 
         // Last 50 samples should have audio
         ctx.voiceBuffer.takeLast(50).all { it == 1.0 } shouldBe true
@@ -176,44 +184,6 @@ class VoiceLifecycleTest : StringSpec({
         // Voice continues but doesn't render anything
         result shouldBe true
         ctx.voiceBuffer.all { it == 0.0 } shouldBe true
-    }
-
-    "gateEndFrame triggers release phase" {
-        val voice = createSynthVoice(
-            startFrame = 0.0,
-            endFrame = 200.0,
-            gateEndFrame = 100.0, // Gate ends at 100
-            envelope = Voice.Envelope(
-                attackFrames = 0.0,
-                decayFrames = 0.0,
-                sustainLevel = 1.0,
-                releaseFrames = 100.0
-            )
-        )
-
-        // Before gate ends (frame 50)
-        val ctx1 = createContext(blockStart = 50.0, blockFrames = 1)
-        voice.render(ctx1)
-        val beforeGate = ctx1.voiceBuffer[0]
-
-        // At gate end (frame 100)
-        val ctx2 = createContext(blockStart = 100.0, blockFrames = 1)
-        voice.render(ctx2)
-        val atGateEnd = ctx2.voiceBuffer[0]
-
-        // After gate ends (frame 150, mid-release)
-        val ctx3 = createContext(blockStart = 150.0, blockFrames = 1)
-        voice.render(ctx3)
-        val midRelease = ctx3.voiceBuffer[0]
-
-        // Voice should be at full amplitude before gate
-        beforeGate shouldBe 1.0
-
-        // At gate end, still at sustain level
-        atGateEnd shouldBe 1.0
-
-        // Mid-release should be lower
-        (midRelease < atGateEnd) shouldBe true
     }
 
     "voice with startFrame > endFrame handles edge case" {
@@ -327,26 +297,6 @@ class VoiceLifecycleTest : StringSpec({
 
         val ctx4 = createContext(blockStart = 1_000_000.0, blockFrames = 100)
         voice.render(ctx4) shouldBe false
-    }
-
-    "gateEndFrame can equal startFrame (immediate release)" {
-        val voice = createSynthVoice(
-            startFrame = 100.0,
-            endFrame = 200.0,
-            gateEndFrame = 100.0, // Gate ends immediately
-            envelope = Voice.Envelope(
-                attackFrames = 0.0,
-                decayFrames = 0.0,
-                sustainLevel = 1.0,
-                releaseFrames = 50.0
-            )
-        )
-
-        val ctx = createContext(blockStart = 100.0, blockFrames = 100)
-        voice.render(ctx) shouldBe true
-
-        // Should start in release phase immediately
-        // (exact values depend on envelope calculation)
     }
 
     "gateEndFrame after endFrame is handled correctly" {

@@ -31,6 +31,11 @@ checks for these names during operator and call dispatch. No new storage infrast
 > and `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md` (`gain(0.5)` on a callable accessor constant). This revision
 > supersedes Steps 1 to 3a for `invoke`; Steps 3b/3c (arithmetic, comparison, unary) remain
 > valid designs but are NOT part of the configure-lambda work and stay unscheduled.
+>
+> **Note 2026-09-28:** the worked example below is the `Master` object, which retired in phase 3 step 12
+> (`.master()` takes a Katalyst). The live consumer of the same shape is `Katalyst`
+> (`klangscript-libs/.../stdlib/KlangScriptKatalyst.kt`: `build`, `invoke`, `Katalyst()` is the empty chain). Read
+> `Master` as `Katalyst` below; the mechanism is unchanged.
 
 ### What stays
 

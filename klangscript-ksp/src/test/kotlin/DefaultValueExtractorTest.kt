@@ -171,7 +171,7 @@ class DefaultValueExtractorTest : StringSpec({
     }
 
     "param named like its function — must skip the function name (MasterFx.gain bug)" {
-        val src = "fun gain(gain: Double = 1.0): MasterStageDsl.Gain = MasterStageDsl.Gain(gain = gain)"
+        val src = "fun gain(gain: Double = 1.0): KatalystStageDsl.Gain = KatalystStageDsl.Gain(gain = gain)"
         DefaultValueExtractor.extractFromWindow(src, "gain") shouldBe "1.0"
     }
 

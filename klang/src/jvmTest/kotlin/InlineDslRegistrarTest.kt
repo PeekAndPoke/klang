@@ -9,11 +9,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterValue
-import io.peekandpoke.klang.audio_bridge.PipelineDsl
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -52,8 +51,8 @@ class InlineDslRegistrarTest : StringSpec({
     /** Minimal event carrying only what the sweep reads. */
     class FakeEvent(
         override val sound: SoundValue? = null,
-        override val pipeline: PipelineValue? = null,
-        override val master: MasterValue? = null,
+        override val master: KatalystValue? = null,
+        override val katalyst: KatalystValue? = null,
     ) : KlangPatternEvent {
         override val startCycles: Double = 0.0
         override val durationCycles: Double = 1.0
@@ -117,6 +116,25 @@ class InlineDslRegistrarTest : StringSpec({
         reg.ignitors.registerOrLookup(dsl) shouldBe dsl.uniqueId()
     }
 
+    "dedup is on the NAME, so a structurally equal but distinct instance is a no-op" {
+        val (reg, sent) = newRegistrar()
+        // Two separate trees, equal in content. The identity map gives them one name, so the
+        // second sighting must not announce and must not grow the retained set.
+        val first = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), freq = IgnitorDsl.Constant(1234.5))
+        val second = IgnitorDsl.Lowpass(inner = IgnitorDsl.Sine(), freq = IgnitorDsl.Constant(1234.5))
+
+        (first === second) shouldBe false
+        first shouldBe second
+
+        val nameA = reg.ignitors.registerOrLookup(first)
+        val nameB = reg.ignitors.registerOrLookup(second)
+
+        nameA shouldBe nameB
+        sent.size shouldBe 1
+        // One string retained, not one per instance: the set is keyed on the name.
+        reg.ignitors.size shouldBe 1
+    }
+
     "two registrars (two playbacks) share names but each announces independently" {
         val (regA, sentA) = newRegistrar()
         val (regB, sentB) = newRegistrar()
@@ -131,21 +149,22 @@ class InlineDslRegistrarTest : StringSpec({
         sentB.size shouldBe 1
     }
 
-    // ── the generic really is shared: pipelines and masters behave identically ──
+    // ── one chain type, two positions, one registry (phase 3 step 12 C5) ──
 
-    "each DSL kind announces once and lands as its own Cmd type" {
+    "a chain written at both positions, master and orbit, is announced ONCE" {
         val (reg, sent) = newRegistrar()
-        val pipeline = PipelineDsl.pedal
-        val master = MasterDsl.of()
+        val chain = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.23)))
 
-        reg.pipelines.registerOrLookup(pipeline)
-        reg.pipelines.registerOrLookup(pipeline)
-        reg.masters.registerOrLookup(master)
-        reg.masters.registerOrLookup(master)
+        reg.announceAll(
+            listOf(
+                FakeEvent(master = KatalystValue.Dsl(chain)),
+                FakeEvent(katalyst = KatalystValue.Dsl(chain)),
+                FakeEvent(master = KatalystValue.Dsl(chain)),
+            )
+        )
 
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterPipeline>().size shouldBe 1
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterMaster>().size shouldBe 1
-        sent.size shouldBe 2
+        sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().single().dsl shouldBe chain
+        sent.size shouldBe 1
     }
 
     // ── the shared sweep (was hand-written at every call site) ───────────────
@@ -153,20 +172,38 @@ class InlineDslRegistrarTest : StringSpec({
     "announceAll registers every inline DSL kind found in the events" {
         val (reg, sent) = newRegistrar()
         val osc = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Constant(123.45))
-        val pipeline = PipelineDsl.pedal
-        val master = MasterDsl.of()
+        val master = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(2.6)))
+        val katalyst = KatalystDsl.of(KatalystStageDsl.Gain(IgnitorDsl.Constant(1.4)))
 
         reg.announceAll(
             listOf(
                 FakeEvent(sound = SoundValue.Osc(osc)),
-                FakeEvent(pipeline = PipelineValue.Dsl(pipeline)),
-                FakeEvent(master = MasterValue.Dsl(master)),
+                FakeEvent(master = KatalystValue.Dsl(master)),
+                FakeEvent(katalyst = KatalystValue.Dsl(katalyst)),
             )
         )
 
         sent.filterIsInstance<KlangCommLink.Cmd.RegisterIgnitor>().single().dsl shouldBe osc
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterPipeline>().single().dsl shouldBe pipeline
-        sent.filterIsInstance<KlangCommLink.Cmd.RegisterMaster>().single().dsl shouldBe master
+        // The output chain is announced like an orbit chain, into the one Katalyst registry.
+        sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().map { it.dsl }.toSet() shouldBe
+                setOf(master, katalyst)
+        sent.size shouldBe 3
+    }
+
+    "the katalyst sweep announces once per chain and stamps the playbackId" {
+        val (reg, sent) = newRegistrar()
+        val katalyst = KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.31)))
+        val events = listOf(FakeEvent(katalyst = KatalystValue.Dsl(katalyst)))
+
+        // A carrier re-emits its chain every cycle, so the sweep sees the same chain again and
+        // again; without the gate that would be one RegisterKatalyst per cycle, forever.
+        reg.announceAll(events)
+        reg.announceAll(events)
+
+        val cmd = sent.filterIsInstance<KlangCommLink.Cmd.RegisterKatalyst>().single()
+        cmd.dsl shouldBe katalyst
+        cmd.name shouldBe katalyst.uniqueId()
+        cmd.playbackId shouldBe playbackId
     }
 
     "announceAll ignores events that carry no inline DSL, and repeats announce nothing" {

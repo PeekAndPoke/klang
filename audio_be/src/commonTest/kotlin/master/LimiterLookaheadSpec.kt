@@ -36,7 +36,7 @@ import kotlin.math.tanh
  * 2. **Drive is bounded at +18 dB over threshold.** At `ratio = 20` the best achievable output is
  *    `threshold + overshoot/ratio`, so ≥ +20 dB over legitimately exceeds 0 dBFS no matter how good
  *    the anticipation is. That bound is a property of the ratio, not a defect — see
- *    `docs/tasks/master-limiter-lookahead.md` §2.4.
+ *    `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md` §2.4.
  *
  * **Known unguarded details** — recorded rather than covered by tests that would only look like
  * guards:
@@ -241,7 +241,7 @@ class LimiterLookaheadSpec : StringSpec({
     }
 
     "reset() clears the delay ring — no stale audio into the first block after warmup" {
-        // WarmupRunner -> dispatcher.resetPostChain() -> MasterStage.reset(), and MasterBus.beginFade
+        // WarmupRunner -> dispatcher.resetPostChain() -> MasterStage.reset(), and MasterBus.land
         // resets chains ON THE AUDIO THREAD. Without clearing the ring, whatever was mid-flight
         // replays into the next block.
         val limiter = houseLimiter()

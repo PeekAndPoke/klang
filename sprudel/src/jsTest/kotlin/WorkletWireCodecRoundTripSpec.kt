@@ -7,11 +7,8 @@ package io.peekandpoke.klang.sprudel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.PipelineValue
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -40,12 +37,20 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         playbackStartTime = 0.5,
     )
 
-    "fully-populated voice (every cluster + all filter types) survives the worklet round-trip" {
-        // Touch every Svd* group so toVoiceData() emits adsr + all 5 filters + every scalar effect field.
+    "fully-populated voice (every cluster, every voice door as its slots) survives the worklet round-trip" {
+        // Touch every Svd* group, so toVoiceData() writes every slot key the doors translate to and every field left.
         val data = createSprudelVoiceData {
-            note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8; legato = 0.95
+            note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
-            oscParams = mapOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
+            oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
+            // The bus knobs travel as orbit slots only since Katalyst step 5b-3: every door's worth.
+            katalystParams = paramBagOf(
+                "reverb.wet" to 0.5, "reverb.size" to 6.0, "reverb.lowpass" to 8000.0,
+                "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4, "delay.cap" to 2.5,
+                "compressor.threshold" to -12.0, "compressor.ratio" to 4.0, "compressor.knee" to 2.5,
+                "compressor.attack" to 0.01, "compressor.release" to 0.31,
+                "duck.orbit" to 0.0, "duck.attack" to 0.05, "duck.depth" to 0.5,
+            )
             attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
             attackCurve = AdsrCurve.Linear; decayCurve = AdsrCurve.Square; releaseCurve = AdsrCurve.Cube
             adsrOn = false   // non-default: `Boolean?` is the shape a dynamic codec can confuse with undefined
@@ -53,26 +58,29 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             hcutoff = 1350.0; hresonance = 0.8; hpattack = 0.02; hpenv = 0.7; hpPasses = 3.0
             bandf = 800.0; bandq = 1.0; bpenv = 0.5
             notchf = 500.0; nresonance = 0.7; nfenv = 0.4
+            lpAttackCurve = AdsrCurve.Linear; lpDecayCurve = AdsrCurve.SCurve; lpReleaseCurve = AdsrCurve.Square
+            hpAttackCurve = AdsrCurve.Cube; bpDecayCurve = AdsrCurve.InvSquare; nfReleaseCurve = AdsrCurve.Linear
             vowel = "a"; vowelMix = 0.45; vowelFloor = 0.15; body = "wood"; bodyMix = 0.4; bodyFloor = 0.25
             accelerate = 0.1; vibrato = 5.0; vibratoMod = 0.3
-            pAttack = 0.01; pDecay = 0.05; pRelease = 0.1; pEnv = 12.0; pCurve = 1.0; pAnchor = 0.5
+            pAttack = 0.01; pDecay = 0.05; pSustain = 0.5; pRelease = 0.1; pEnv = 12.0
+            pAttackCurve = AdsrCurve.Square; pDecayCurve = AdsrCurve.SCurve; pReleaseCurve = AdsrCurve.InvSquare
             fmh = 2.0; fmAttack = 0.01; fmDecay = 0.1; fmSustain = 0.5; fmEnv = 0.8
             distort = 0.3; distortShape = "tube"; distortOversample = 4; coarse = 2.0; coarseOversample = 2; crush = 8.0; crushOversample =
             2
             phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
             tremoloSync = 4.0; tremoloDepth = 0.4; tremoloSkew = 0.5; tremoloPhase = 0.0; tremoloShape = "sine"
-            duckCylinder = 0; duckAttack = 0.05; duckDepth = 0.5
             cylinder = 1; pan = 0.3
-            delay = 0.3; delayTime = 0.25; delayFeedback = 0.4; delayCap = 2.5
-            reverb = 0.5; reverbSize = 0.8; reverbLowpass = 8000.0
-            begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1; loopBegin = 0.1; loopEnd = 0.9
-            compressorThreshold = -12.0; compressorRatio = 4.0; compressorKnee = 2.5
-            compressorAttack = 0.01; compressorRelease = 0.31
-            solo = 1.0; pipeline = PipelineValue.Named("pedal"); cull = 0.2
+            begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1
+            solo = 1.0; cull = 0.2
         }.toVoiceData()
 
-        // Sanity: the conversion produced the full canonical filter chain (HP → BP → Notch → Formant → Body → LP).
-        data.filters.size shouldBe 6
+        // Sanity: the four voice filters and every voice door travel as `classic()` slot keys in `oscParams` (phase 3
+        // step 8), so the map carries them through the codec too. The vowel and body fields set above cross nothing:
+        // the orbit stages travel as `katalystParams` slots (the doors write them; this voice sets the fields directly).
+        data.oscParams?.get("lpf.passes") shouldBe 2.0
+        data.oscParams?.get("notch.env") shouldBe 0.4
+        data.oscParams?.get("adsr.on") shouldBe 0.0
+        data.oscParams?.get("loop") shouldBe 1.0
 
         val original = scheduled(data)
         val decoded = roundTrip(original)
@@ -95,19 +103,20 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             "hpf" to { hcutoff = 500.0; hresonance = 2.0; hpdecay = 0.1; hpenv = 0.6 },
             "bpf" to { bandf = 750.0; bandq = 1.2; bpsustain = 0.5; bpenv = 0.5 },
             "notch" to { notchf = 600.0; nresonance = 0.8; nfrelease = 0.2; nfenv = 0.4 },
-            "formant" to { vowel = "o"; vowelFloor = 0.1 },
-            "body" to { body = "glass"; bodyMix = 0.5; bodyFloor = 0.3 },
         )
-        for ((_, cfg) in cases) {
+        // Each voice filter's envelope depth as written above, the literal the decoded slot must carry.
+        val envDepth = mapOf("lpf" to 1.0, "hpf" to 0.6, "bpf" to 0.5, "notch" to 0.4)
+
+        for ((name, cfg) in cases) {
             val data = createSprudelVoiceData { note = "c4"; freqHz = 261.6; sound = SoundValue.Named("saw"); cfg() }.toVoiceData()
             val decoded = roundTrip(scheduled(data))
             decoded shouldBe scheduled(data)
-            // and the decoded filter chain is intact
-            decoded.data.filters.size shouldBe 1
+            // and the decoded filter is intact, as its slots
+            decoded.data.oscParams?.get("$name.env") shouldBe envDepth.getValue(name)
         }
     }
 
-    "decoded VoiceData reconstructs grouped sub-objects (AdsrDef + FilterDef.LowPass envelope)" {
+    "decoded VoiceData carries the envelope and the lowpass with its envelope as slots" {
         val data = createSprudelVoiceData {
             note = "c4"; sound = SoundValue.Named("saw")
             attack = 0.01; release = 0.3
@@ -116,14 +125,12 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
 
         val decoded = roundTrip(scheduled(data)).data
 
-        val adsr = decoded.adsr.shouldBeInstanceOf<AdsrDef.Std>()
-        adsr.attack shouldBe 0.01
-        adsr.release shouldBe 0.3
-
-        val lpf = decoded.filters[0].shouldBeInstanceOf<FilterDef.LowPass>()
-        lpf.freq shouldBe 1000.0
-        lpf.q shouldBe 1.5
-        lpf.envelope?.attack shouldBe 0.02
-        lpf.envelope?.depth shouldBe 0.9
+        val slots = decoded.oscParams.shouldNotBeNull()
+        slots["adsr.attack"] shouldBe 0.01
+        slots["adsr.release"] shouldBe 0.3
+        slots["lpf.freq"] shouldBe 1000.0
+        slots["lpf.q"] shouldBe 1.5
+        slots["lpf.attack"] shouldBe 0.02
+        slots["lpf.env"] shouldBe 0.9
     }
 })

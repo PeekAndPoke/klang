@@ -73,6 +73,72 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   Test-only or doc-only portions get ONE reviewer or none — mutation checks (Standard 2) already
   guard tests harder than a reviewer can.
 - **Never silently drop a finding.** Every finding ends as fix / reject+reason / user-decision.
+- **A rule with a closed list is reviewed by table** (2026-09-18, ledger): when a change lands or
+  edits a rule that enumerates cases (which door is in which list, which stage has which gate),
+  the reviewer brief asks for a table of EVERY case against the rule's clauses, read from the
+  code. Three rounds of prose review missed what one table found in a pass.
+- **A cached config is reviewed for the non-finite input** (2026-09-18, ledger): for every
+  `configure` / `update` on the audio thread that compares an incoming value against a stored one
+  and rebuilds on a mismatch, the audio reviewer answers: what happens when the incoming value is
+  NaN (self-unequal, so a raw compare never settles), what is STORED afterwards, and does the
+  mismatch branch allocate. The rule for the code: compare and store SUBSTITUTED values, never the
+  raw input. A change that touches one such stage asks the reviewer to sweep the others.
+- **A claim about what existing code DOES is verified by reading it before it is written anywhere**
+  (2026-09-19, rewritten 2026-09-24 after the third recurrence, ledger): a plan, a task doc, a brief, a
+  reviewer's remark, a fix round's KDoc, and a table written during a design walk with the maintainer
+  alike. The walk is where it keeps escaping, because a decision is being made and the code is not open:
+  write the decision, and mark any sentence about current behaviour UNVERIFIED until someone has read
+  the code, then brief the implementer to confirm or refute it before building on it. A correction of
+  such a claim is CLOSED only by a repo-wide grep for its phrasing (not a fix of the file it was found
+  in), run and its result recorded before the fix is reported: step 3d(ii) corrected two copies and
+  left a third in the rule's own home, found one round later. Repo-wide includes `.claude/skills/` (the references agents write patches from):
+  a brief that splits the grep between implementer (code) and coordinator (docs) names the skills in the
+  coordinator's half (step 5b (b), 2026-09-25: the music-writing reference still taught the old default).
+  A rule stated in many places in different words is not closed by grepping one phrasing (step 9 (c),
+  2026-09-27: the teardown-fade rule took six rounds, each finding another paraphrase that was wrong in its
+  own way): grep its mechanism words (the field, the flag, the door), name ONE home for the full statement,
+  and make every other copy a pointer to it or one short sentence verified once and reused verbatim.
+- **An audibility claim that reaches the maintainer is measured on the isolated voice and verified first**
+  (2026-09-26, twice in one day: step 7's "about 10 cents per hit" was sub-cent, step 10's "vibrato 15 to 30 cents,
+  up to 7 cents per note" was about 1 cent): a detune, level or onset figure measured on the full mix (cross-correlation,
+  1 ms frames over noise) mixes other voices and noise statistics into it. The implementer measures the changed
+  voice soloed and names the metric and its resolution; the coordinator relays the audio reviewer's verified numbers,
+  never the implementer's first ones, and a listening note says what changed (a texture, other dice), not a number
+  nobody checked.
+- **A decision that REPLACES an expression lists every clause of the old one** (2026-09-26, ledger, a
+  recurrence of 2026-09-25): when a brief or an approved plan swaps one evaluator, lifetime source, default or
+  formula for another (state for a stateless law, `max(tail ?: 0, release)` for "the tree alone"), it first
+  writes out the OLD expression's clauses and implicit defaults (floors, initial values, fallbacks, `?:`
+  arms) and marks each one kept, changed by a named decision, or gone. A clause nobody named is kept.
+- **Every byte-identity claim names its render** (2026-09-18, ledger): made on the final tree,
+  exercising the changed path. A render that predates the last edit, or a song that never calls
+  the changed door, backs nothing.
+- **A rung renders its predicted rows, in parallel; the step ends on one full corpus** (maintainer,
+  2026-09-25: the serial full-corpus render per rung was the bottleneck, ~9.5 minutes each). Each rung
+  renders the rows it predicts to move plus one or two control rows it predicts IDENTICAL; the full
+  corpus renders once before the step is reported, to catch the moves nobody predicted. Renders run as
+  plain `java` on a classpath captured by one locked Gradle run and snapshotted, several at a time,
+  never one Gradle run per row. A new render tool proves itself first: the same sha as the serial
+  render on the same tree.
+- **The effort ladder: every round that is not clean escalates one level, up to max**
+  (maintainer, 2026-09-18). The Agent tool has no per-call effort dial, so the levels are agent
+  definitions in `.claude/agents/` with model and effort pinned:
+
+  | round | reviewers | how to spawn |
+  |---|---|---|
+  | 1 (blind) | `opus`, session effort | `subagent_type: general-purpose`, `model: opus` |
+  | 2 | `opus`, high | `subagent_type: reviewer-high` |
+  | 3 | strongest tier, xhigh | `subagent_type: reviewer-xhigh` (the 2026-09-05 "round 3 on the strongest tier" rule, now with the effort) |
+  | 4 and later | strongest tier, max | `subagent_type: reviewer-max` (the safety valve has already fired; the maintainer is in the loop) |
+
+  Why a ladder and not max from the start: a round that is not clean means the previous tier
+  missed something or the fix delta introduced something, and both call for more scrutiny of a
+  SMALLER target (the delta), so the extra effort is spent where it pays. Round 1 is the wide
+  net at the ordinary tier. The implementer of a fix round stays at the session effort unless the
+  round found a CRITICAL, then it is briefed on `opus` with the reviewer-high definition's
+  discipline restated in the prompt. Watched together with the "opening line" table in
+  `/agent-fleet`: if round 2 at high finds what round 1 at session effort missed, the ladder
+  earns its cost; if it never does, round 1 can start higher and the ladder shortens.
 - **Final report** lists: rounds run; per round the findings and their outcomes; the parked user decisions on top.
 
 ### Reviewer prompt templates
@@ -84,7 +150,9 @@ Coding reviewer (fill the brackets, attach the diff):
 > the reconcile phase.) Review the attached diff for: correctness,
 > hidden regressions, API consistency, missing test coverage, convention adherence (project
 > code-style: braces always, no FQCN, no `Long`/boxed types in audio paths, exhaustive `when`,
-> NaN-guard comments). Return a numbered findings list — severity (CRITICAL/MAJOR/MINOR),
+> NaN-guard comments), and SURPLUS: what does this change add that the need did not ask for
+> (a helper half nothing calls yet, a parameter, a mapping, a branch), and could it be removed or
+> deferred? Complexity is the stone rule; a removal is a valid finding. Return a numbered findings list: severity (CRITICAL/MAJOR/MINOR),
 > `file:line`, and a concrete failure scenario each. "NO FINDINGS" is a valid answer; do not pad.
 
 Audio-engineer reviewer:
@@ -95,8 +163,13 @@ Audio-engineer reviewer:
 > sound preservation (defaults must be behavior-identical), click/zipper risk on parameter
 > changes (ramps/crossfades), cycle-boundary correctness. House philosophy: the engine is
 > intentionally raw — do NOT propose safety clamps on user-facing params; coerce only where the
-> project already coerces. Return findings as severity + `file:line` + failure scenario.
+> project already coerces. Also SURPLUS: a mechanism more elaborate than the audible problem
+> needs (a glide is a safety net against clicks, not a loudness keeper). Return findings as severity + `file:line` + failure scenario.
 > "NO FINDINGS" is a valid answer; do not pad.
+
+Paste [`audio-constraints.md`](audio-constraints.md) (the engine's deliberate decisions) into every
+audio-engineer prompt and into any audio brief; a reviewer without it files findings that would make
+the engine worse.
 
 ---
 
@@ -112,7 +185,9 @@ A green test proves nothing until it has been RED for the right reason.
    fallback when the code can't be safely touched.
 3. **RED** — run the test. It MUST fail. If it stays green, the test is toothless → fix the test and repeat from 1.
 4. **RESTORE** — revert the mutation exactly; run again → green. **Verify with `git diff` that only the intended change
-   remains. NEVER leave a mutation behind.**
+   remains. NEVER leave a mutation behind.** An agent can be stopped mid-run with a mutant applied (2026-09-25,
+   ledger): a worker that takes over from a stopped one first `cmp`s every production file the predecessor's
+   mutation runner touched against that runner's backups, before it reads the code as the predecessor's work.
 5. **REPORT** one line per test: `mutation-checked: <what was mutated> → red ✓`
 
 ### Scope — two tiers (maintainer, 2026-08-28)
@@ -156,8 +231,49 @@ Mutation checking is the antidote: it tests the test.
 
 ---
 
+## Standard 3: every escape closes one hole (deterministic self-improvement, maintainer, 2026-09-18)
+
+The loop improves itself without experiments. The unit is not a rate over many rounds (the sample
+stays too small to estimate one) but a single escaped defect: every CRITICAL or MAJOR that a
+review round finds is something the stage before it let through, and each one is classified and
+closed ONCE, deterministically, so the same class cannot escape the same way again.
+
+**Classify each CRITICAL/MAJOR by what would have caught it earlier**, and make that thing exist:
+
+| class | what let it through | the fix to the process |
+|---|---|---|
+| brief | the implementer was not told a constraint or a decided rule | a line in the brief template of `/agent-fleet` or in the rules register |
+| checklist | the reviewer template does not ask the question | an item in the `/dsl-design` or `/review-loop` checklist, with the failing scenario as its example |
+| test | no test class could see it (a mutation would have stayed green) | a mandatory test pattern for that kind of change (a parity render, a defaults-sync spec, an identity spec) |
+| design | it should have been decided before implementing | a "decide before implementing" line in the task doc's step template |
+| tooling | a mechanical check would have caught it | a pre-commit grep or a script (`git diff | grep -c '—'`) |
+
+**The signal that a rule failed is recurrence, not a rate.** If a finding of a class that already
+has a rule escapes again, the rule's TEXT failed (it was not where the agent read, or it did not
+name the scenario), and it is rewritten, not re-stated. One recurrence is enough to act on; that is
+what makes the loop deterministic at n = 1.
+
+**What stays a judgement call, set by the maintainer and revisited on evidence:** the effort
+ladder, the opening line, the safety valve. The recurrence ledger is the evidence: when round 1
+keeps letting through classes that already have a rule, the problem is the tier of round 1, not
+the rules.
+
+**The ledger lives in `escape-ledger.md`**, the sibling of this file: one row per escape, the
+class it was filed under, and what each one changed. The coordinator appends a row when a step
+commits. Open it when you are filing an escape, and BEFORE writing a brief for a change of a kind
+that has escaped before, because a repeat is what tells you a rule's text failed rather than its
+reader.
+
 ## Gotchas
 
+- **Kotlin/JS browser tests: one TeamCity line per module, 1 MB max** (2026-09-27). Kotlin's Karma reporter
+  wrote every service message with no newline, so a module's whole run was ONE line of about 250 bytes per test; over
+  1 MB the plugin drops it ("too long teamcity service message") and one test's result is lost (an empty failure).
+  Printed output does not count, only the test count and name lengths; the line length also swings about 15 KB with the
+  random `flowId`, so it fails intermittently near the limit. Fixed by `karma.config.d/one-teamcity-message-per-line.js`
+  in `sprudel` and `audio_be` (the file says why); a module growing toward about 4000 JS tests gets the same file.
+- **`:<module>:jsBrowserTest --tests X` runs the WHOLE JS suite**; read the result XML for the spec you want, and a
+  spec's printed output lands in the aggregate `TEST-Kotest.xml`, not in its own XML.
 - **A scripted rename must know what a word is.** A door name that is also an English word (`voices`,
   `spread`, `vibrato`, `compressor`, `body`) rewritten by a bare regex lands in KDoc prose, Lexikon
   strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
@@ -176,6 +292,9 @@ Mutation checking is the antidote: it tests the test.
   `-t` or `--continuous`. A plain `jsBrowserDevelopmentRun` is not that, so it does not block you.
   Check `ps aux | grep gradle | grep -- "-t \|--continuous"`, not the bare process name. The old
   rule read the process name alone and stalled a whole round of work for nothing.
+- **A `--tests` filter does not apply to a JS test task the way it does on the JVM** (2026-09-17):
+  `:audio_bridge:jvmTest :audio_bridge:jsTest --tests <Fqcn>` in one invocation fails. Filter the JVM
+  task; run the JS task unfiltered, on its own.
 - Don't fuss over whitespace/blank-line findings — codefactor.io auto-fixes formatting.
 - **Generated batches: review the prose, trust the structure.** Across 88 script-generated accessor
   objects (2026-09-07) the reviewers found zero read/update or parameter slips; every finding was
@@ -188,6 +307,16 @@ Mutation checking is the antidote: it tests the test.
   matches your own shell's command line.
 
 ## Changelog
+
+- **2026-09-27**: the audio backend constraints list moved here as `audio-constraints.md`, from the
+  audio backend audit brief (§7), which closed that day.
+
+- **2026-09-20**: Standard 3's ledger moved to `escape-ledger.md`, the sibling of this file
+  (maintainer: reading the standard should not carry the whole record). The method, the five
+  classes and the recurrence rule stay here; the 38 rows live next door. Nothing was dropped.
+
+- **2026-09-18**: the effort ladder per round (round 2 `reviewer-high`, round 3 `reviewer-xhigh`,
+  round 4 and later `reviewer-max`, agent definitions in `.claude/agents/`).
 
 - **2026-08-28** — Loop tightened after the envelope-ownership review ran 5 rounds. Evidence both
   ways, recorded honestly: the loop's catches were decisive (the IgniteRenderer onset bug behind

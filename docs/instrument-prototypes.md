@@ -20,7 +20,7 @@ let flute = Osc.sine(x => x.analog(0.15))
         .lowpass(3000)
         .highpass(400)
         .vibrato(4.5, 0.012)
-        .pitchEnvelope(1.5, 0.01, 0.06)
+        .pitchEnvelope(1.5, x => x.adsr(0.01, 0.06, 0, 0))
         .adsr(0.06, 0.15, 0.75, 0.2)
 ```
 
@@ -38,7 +38,7 @@ let clarinet = Osc.triangle().mul(0.7)
         .highpass(150)
         .onepole(4000)
         .vibrato(5, 0.003)
-        .pitchEnvelope(0.5, 0.01, 0.06)
+        .pitchEnvelope(0.5, x => x.adsr(0.01, 0.06, 0, 0))
         .adsr(0.04, 0.08, 0.9, 0.1)
 ```
 
@@ -55,7 +55,7 @@ let jazzClar = Osc.triangle().mul(0.6)
         .lowpass(3500)
         .highpass(150)
         .vibrato(4.5, 0.01)
-        .pitchEnvelope(-1, 0.01, 0.1)
+        .pitchEnvelope(-1, x => x.adsr(0.01, 0.1, 0, 0))
         .adsr(0.03, 0.1, 0.85, 0.12)
 ```
 
@@ -72,7 +72,7 @@ let alto = Osc.square().mul(0.6)
         .lowpass(3500)
         .highpass(200)
         .vibrato(4.5, 0.015)
-        .pitchEnvelope(-2, 0.01, 0.12)
+        .pitchEnvelope(-2, x => x.adsr(0.01, 0.12, 0, 0))
         .adsr(0.03, 0.1, 0.85, 0.12)
 ```
 
@@ -89,7 +89,7 @@ let tenor = Osc.square().mul(0.5)
         .lowpass(2500)
         .highpass(120)
         .vibrato(4, 0.018)
-        .pitchEnvelope(-3, 0.01, 0.15)
+        .pitchEnvelope(-3, x => x.adsr(0.01, 0.15, 0, 0))
         .adsr(0.04, 0.12, 0.8, 0.15)
 ```
 
@@ -106,7 +106,7 @@ let soprano = Osc.square().mul(0.5)
         .lowpass(5000)
         .highpass(300)
         .vibrato(5, 0.012)
-        .pitchEnvelope(-1.5, 0.01, 0.08)
+        .pitchEnvelope(-1.5, x => x.adsr(0.01, 0.08, 0, 0))
         .adsr(0.02, 0.08, 0.85, 0.1)
 ```
 
@@ -155,7 +155,7 @@ let twelve = Osc.superpluck()
 let electric = Osc.pluck()
         .lowpass(6000)
         .highpass(200)
-        .phaser(0.3, x => x.wet(0.3))
+        .phaser(0.3, 0.3)
 ```
 
 ### Electric Distorted
@@ -277,7 +277,7 @@ let marimba = Osc.sine().mul(0.7)
         )
         .lowpass(2500)
         .onepole(3000)
-        .pitchEnvelope(1, 0.001, 0.04)
+        .pitchEnvelope(1, x => x.adsr(0.001, 0.04, 0, 0))
         .adsr(0.005, 0.5, 0.0, 0.08)
 ```
 
@@ -296,7 +296,7 @@ let lowMarimba = Osc.sine().mul(0.8)
         )
         .lowpass(1800)
         .onepole(2000)
-        .pitchEnvelope(0.5, 0.001, 0.05)
+        .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
         .adsr(0.005, 0.8, 0.0, 0.1)
 ```
 
@@ -347,6 +347,6 @@ let hat = Osc.whitenoise()
 - **Breath noise on attack**: `Osc.perlin(rate).mul(amount).adsr(fast attack, short decay, 0, short release)`
 - **Filter envelope**: `lowpass(Osc.constant(base).plus(Osc.constant(sweep).adsr(...)))`
 - **Per-partial envelopes**: each overtone gets its own ADSR (higher partials decay faster)
-- **Pitch scoop**: `pitchEnvelope(semitones, attack, decay)` — negative for sax (scoop up), positive for mallet (pitch
+- **Pitch scoop**: `pitchEnvelope(semitones, x => x.adsr(attack, decay, 0, 0))`: negative for sax (scoop up), positive for mallet (pitch
   drop)
 - **Material character**: lowpass cutoff defines material — wood ~2500Hz, brass ~3500Hz, metal ~8000Hz+

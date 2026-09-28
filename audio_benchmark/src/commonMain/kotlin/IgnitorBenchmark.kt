@@ -7,12 +7,13 @@ package io.peekandpoke.klang.audio_benchmark
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrDef
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_SIZE
+import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.audio_bridge.highpass
@@ -20,6 +21,9 @@ import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.createSprudelVoiceData
+import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
@@ -177,63 +181,49 @@ class IgnitorBenchmark(
     }
 
     companion object {
-        /** Helper to build VoiceData with common defaults for benchmarking. */
+        /**
+         * A benchmark voice as the frontend sends it: built as a sprudel event and converted by its own
+         * `toVoiceData()`, so the voice doors ([doors], sprudel's typed fields) reach the instrument as the slots a
+         * song writes (phase 3 step 8), through the one translation and no copy of it. A case that asks for a room
+         * writes what the `reverb(...)` door does: the named knob plus the companion the door would fill (the
+         * orbit reverb reads its slots alone; a size-only case would measure a dry orbit, because the stage's
+         * gate is "the wet was written or is positive", `sendStageRuns`).
+         */
         private fun voice(
             sound: String,
             freqHz: Double = 440.0,
             oscParams: Map<String, Double>? = null,
-            filters: FilterDefs = FilterDefs.empty,
-            adsr: AdsrDef = AdsrDef.defaultSynth,
             reverb: Double? = null,
             reverbSize: Double? = null,
-            distort: Double? = null,
-            distortShape: String? = null,
-            distortOversample: Int? = null,
-            crush: Double? = null,
-            crushOversample: Int? = null,
-            coarse: Double? = null,
-            coarseOversample: Int? = null,
-            fmh: Double? = null,
-            fmEnv: Double? = null,
-            vibrato: Double? = null,
-            vibratoMod: Double? = null,
-            tremoloSync: Double? = null,
-            tremoloDepth: Double? = null,
-        ): VoiceData = VoiceData.empty.copy(
-            sound = sound,
-            freqHz = freqHz,
-            oscParams = oscParams,
-            filters = filters,
-            adsr = adsr,
-            reverb = reverb,
-            reverbSize = reverbSize,
-            distort = distort,
-            distortShape = distortShape,
-            distortOversample = distortOversample,
-            crush = crush,
-            crushOversample = crushOversample,
-            coarse = coarse,
-            coarseOversample = coarseOversample,
-            fmh = fmh,
-            fmEnv = fmEnv,
-            vibrato = vibrato,
-            vibratoMod = vibratoMod,
-            tremoloSync = tremoloSync,
-            tremoloDepth = tremoloDepth,
-        )
+            doors: SprudelVoiceData.() -> Unit = {},
+        ): VoiceData = createSprudelVoiceData().also { d ->
+            d.sound = SoundValue.Named(sound)
+            d.freqHz = freqHz
+            d.oscParams = oscParams?.let { paramBagOf(it) }
+            d.katalystParams = if (reverb == null && reverbSize == null) {
+                null
+            } else {
+                paramBagOf("reverb.wet" to (reverb ?: REVERB_WET), "reverb.size" to (reverbSize ?: REVERB_SIZE))
+            }
+            d.doors()
+        }.toVoiceData()
 
         /**
          * Standard set of benchmark cases covering individual oscillators, super oscillators,
          * physical models, noise, and common compositions.
          */
         fun defaultCases(): List<Case> {
-            val lpf1k = FilterDefs(listOf(FilterDef.LowPass(freq = 1000.0, q = 1.0)))
+            val lpf1k: SprudelVoiceData.() -> Unit = { cutoff = 1000.0; resonance = 1.0 }
             val super8v = mapOf("voices" to 8.0)
 
             return listOf(
                 // ── Individual oscillators ─────────────────────────────────────
                 Case("sine", voiceData = voice("sine")),
                 Case("sawtooth", voiceData = voice("sawtooth")),
+                // The phase 3 target (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 2): 8 sustained plain saws
+                // through the real renderer, 9290 ns per block on the JVM before phase 3. Kept as a case so
+                // the number can be re-measured on both platforms instead of quoted.
+                Case("sawtooth_8v", voiceCount = 8, voiceData = voice("sawtooth")),
                 Case("square", voiceData = voice("square")),
                 Case("triangle", voiceData = voice("triangle")),
                 Case("ramp", voiceData = voice("ramp")),
@@ -324,30 +314,45 @@ class IgnitorBenchmark(
                 Case("supersaw_16v", voiceData = voice("supersaw", oscParams = mapOf("voices" to 16.0))),
 
                 // ── Compositions ──────────────────────────────────────────────
-                Case("supersaw+lpf+adsr", voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k)),
+                Case("supersaw+lpf+adsr", voiceData = voice("supersaw", oscParams = super8v, doors = lpf1k)),
+                // The lowpass's filter envelope (`classic()`'s swept SVF since phase 3 step 6): one
+                // envelope that keeps moving for the whole run (a 100 s decay), and one that sits
+                // at its sustain, where both block ends read the same cutoff.
+                Case(
+                    "lpf-env-moving",
+                    voiceData = voice("sawtooth") {
+                        cutoff = 400.0; resonance = 1.0; lpattack = 0.01; lpdecay = 100.0; lpsustain = 0.0; lprelease = 0.1; lpenv = 24.0
+                    },
+                ),
+                Case(
+                    "lpf-env-held",
+                    voiceData = voice("sawtooth") {
+                        cutoff = 400.0; resonance = 1.0; lpattack = 0.01; lpdecay = 0.1; lpsustain = 0.5; lprelease = 0.1; lpenv = 24.0
+                    },
+                ),
                 Case(
                     "supersaw+lpf+adsr+reverb",
-                    voiceData = voice("supersaw", oscParams = super8v, filters = lpf1k, reverb = 0.5, reverbSize = 0.5)
+                    voiceData = voice("supersaw", oscParams = super8v, reverb = 0.5, reverbSize = 0.5, doors = lpf1k)
                 ),
-                Case("pluck+distort", voiceData = voice("pluck", distort = 0.5, distortShape = "soft")),
+                Case("pluck+distort", voiceData = voice("pluck") { distort = 0.5; distortShape = "soft" }),
                 Case(
                     "pluck+distort_2x",
-                    voiceData = voice("pluck", distort = 0.5, distortShape = "soft", distortOversample = 2),
+                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 2 },
                 ),
                 Case(
                     "pluck+distort_4x",
-                    voiceData = voice("pluck", distort = 0.5, distortShape = "soft", distortOversample = 4),
+                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 4 },
                 ),
                 Case(
                     "pluck+distort_8x",
-                    voiceData = voice("pluck", distort = 0.5, distortShape = "soft", distortOversample = 8),
+                    voiceData = voice("pluck") { distort = 0.5; distortShape = "soft"; distortOversample = 8 },
                 ),
-                Case("pluck+crush_4x", voiceData = voice("pluck", crush = 4.0, crushOversample = 4)),
-                Case("pluck+coarse_4x", voiceData = voice("pluck", coarse = 4.0, coarseOversample = 4)),
-                Case("square+fm", voiceData = voice("square", fmh = 2.0, fmEnv = 200.0)),
+                Case("pluck+crush_4x", voiceData = voice("pluck") { crush = 4.0; crushOversample = 4 }),
+                Case("pluck+coarse_4x", voiceData = voice("pluck") { coarse = 4.0; coarseOversample = 4 }),
+                Case("square+fm", voiceData = voice("square") { fmh = 2.0; fmEnv = 200.0 }),
                 Case(
                     "sine+vibrato+tremolo",
-                    voiceData = voice("sine", vibrato = 6.0, vibratoMod = 0.3, tremoloSync = 4.0, tremoloDepth = 0.5)
+                    voiceData = voice("sine") { vibrato = 6.0; vibratoMod = 0.3; tremoloSync = 4.0; tremoloDepth = 0.5 }
                 ),
 
                 // ── A guitar rig, and what its level knobs and drive stages cost ──
@@ -387,7 +392,7 @@ class IgnitorBenchmark(
             fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
                 val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
 
-                return IgnitorDsl.Shape(inner = driven, shape = shape, oversample = if (oversample) os else 0)
+                return driven.shape(shape, oversample = if (oversample) os else 0)
             }
 
             val string = guitarString(muls)

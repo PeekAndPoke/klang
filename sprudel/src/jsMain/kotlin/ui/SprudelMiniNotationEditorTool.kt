@@ -66,9 +66,12 @@ import kotlinx.html.span
 class SprudelMiniNotationEditorTool(
     private val atomTool: KlangUiTool? = null,
 ) : KlangUiTool {
-    override val title: String = atomTool?.title ?: "Mini-Notation Editor"
+    // Distinct from the atom tool's own title: the context menu lists both, with the same icon.
+    override val title: String = atomTool?.title?.let { "$it (mini-notation)" } ?: "Mini-Notation Editor"
 
     override val iconFn: SemanticIconFn = atomTool?.iconFn ?: { code }
+
+    override val editsSequence: Boolean = true
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         SprudelMiniNotationEditorComp(ctx, atomTool)

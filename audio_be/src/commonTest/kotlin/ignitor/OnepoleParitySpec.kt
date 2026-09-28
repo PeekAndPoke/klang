@@ -10,7 +10,11 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.classic
+import io.peekandpoke.klang.audio_bridge.onepole
+import io.peekandpoke.klang.audio_bridge.optimize
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -61,15 +65,22 @@ class OnepoleParitySpec : StringSpec({
         return out
     }
 
-    "IgnitorRegistry's oscParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
+    "the `onepole` slot's oscParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
         // The one row that pins BOTH the wiring and the UNIT: build the same "sine" exciter
-        // twice — once through the oscParam key ("onepole" in Hz), once plain plus a manual
-        // .onePoleLowpass(800.0). A dropped registry line, a changed key, a halved value, or
-        // a reinstated coefficient interpretation (the old warmth semantics) all go red.
-        val registry = IgnitorRegistry().apply { registerDefaults() }
+        // twice, once through the oscParam key ("onepole" in Hz), once plain plus a manual
+        // .onePoleLowpass(800.0). A changed key, a halved value, or a reinstated coefficient
+        // interpretation (the old warmth semantics) all go red.
+        //
+        // The sound is an AUTHORED sine that places the slot itself (`OscSlot.onepole`): the registry's wrap
+        // of every authored instrument retired with the voice strip (phase 3 step 9). A built-in carries the
+        // slot as `classic()`'s first stage (the row below).
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("rawsine", IgnitorDsl.OnePoleLowpass(IgnitorDsl.Sine(), IgnitorDsl.Slots.onepole))
+        }
         fun exciter(params: Map<String, Double>?): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = params)
-            return registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", oscParams = params)
+            return registry.createExciter("rawsine", data, freqHz = 220.0, random = Random(7))
                 ?.ignitor ?: error("no exciter")
         }
         val viaOscParam = render(exciter(mapOf("onepole" to 800.0)))
@@ -79,9 +90,32 @@ class OnepoleParitySpec : StringSpec({
         }
     }
 
+    "a built-in carries the oscParam onepole on its SOURCE, in front of classic()'s envelope (phase 3 step 6)" {
+        // Where the voice strip had it: the source, then crush ... adsr (step 6 hung it on the source, step 10
+        // made it `classic()`'s first stage, the same place). A wrap around the whole tree would put it AFTER the
+        // envelope, which the anti-vacuous side shows is a different signal.
+        val registry = IgnitorRegistry().apply { registerDefaults() }
+        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = mapOf("onepole" to 800.0))
+        val viaRegistry = render(
+            registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))?.ignitor ?: error("no exciter"),
+        )
+
+        fun built(tree: IgnitorDsl): Ignitor = tree.optimize().buildExciter(freqHz = 220.0, random = Random(7)).ignitor
+
+        val sine = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = IgnitorDsl.Slots.analog)
+        val onSource = render(built(sine.onepole(800.0).classic()))
+        val afterEnvelope = render(built(sine.classic().onepole(800.0)))
+
+        for (i in 0 until frames) {
+            viaRegistry[i].toRawBits() shouldBe onSource[i].toRawBits()
+        }
+
+        (0 until frames).any { viaRegistry[it].toRawBits() != afterEnvelope[it].toRawBits() } shouldBe true
+    }
+
     "live path frequency response: |H| at the nominal cutoff is pinned (~0.437, all-pole)" {
-        // The absolute-response guard for the LIVE one-pole (OnePoleLowpassIgnitor). The
-        // legacy OnePoleLPF spec rows now guard a test-only class; without this row a
+        // The absolute-response guard for the LIVE one-pole (OnePoleLowpassIgnitor), the only
+        // one-pole lowpass since its class twin retired (2026-09-27); without this row a
         // mutant that stops calling onePoleLpfCoeff (e.g. fc/sampleRate) keeps every other
         // row green while retuning all onepole() sites.
         //

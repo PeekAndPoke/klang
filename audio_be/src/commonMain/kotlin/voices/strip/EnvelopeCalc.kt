@@ -5,99 +5,51 @@
 
 package io.peekandpoke.klang.audio_be.voices.strip
 
-import io.peekandpoke.klang.audio_be.adsrExpShape
-import io.peekandpoke.klang.audio_be.releaseProgressDenom
+import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.voices.Voice
-import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
- * Shared control-rate envelope calculation for filter modulation and FM depth.
+ * The voice's control-rate FM envelope: one value per block, 0.0 to 1.0, from [EnvelopeCore], the
+ * engine's one envelope law. [core] is the calling renderer's own evaluator (prepared here).
  *
- * Calculates a single envelope value (0.0–1.0) at the given block position.
- * Per-stage shape curves (Linear/Square/Cube/SCurve/InvSquare/Exponential; default exp) are read from [Voice.Envelope].
- * Uses the fixed release calculation: decays from the actual level at gate end,
- * not from sustainLevel.
+ * The value is taken at the block's first rendered frame (the voice's onset on its first block) and
+ * HELD for the block: the voice FM holds its depth flat (block-framing ledger E11, recorded and
+ * deliberately not fixed piecemeal). The voice's pitch envelope prepares its envelope the same way
+ * ([prepareControlRateEnvelope]).
  *
- * All arithmetic uses Int/Double — no Long boxing on Kotlin/JS.
+ * All arithmetic uses Int/Double, no Long boxing on Kotlin/JS.
  */
-fun calculateControlRateEnvelope(
+internal fun calculateControlRateEnvelope(
     env: Voice.Envelope,
     // Absolute backend frames are Double (see RenderClock.cursorFrame); the relative positions
     // derived from them below are Int, and everything downstream of that stays Int.
     blockStart: Double,
     startFrame: Double,
     gateEndFrame: Double,
+    core: EnvelopeCore,
 ): Double {
-    val currentFrame = maxOf(blockStart, startFrame)
-    val absPos = (currentFrame - startFrame).toInt()
-    val gateEndPos = (gateEndFrame - startFrame).toInt()
+    core.prepareControlRateEnvelope(env, startFrame, gateEndFrame)
 
-    val envValue = if (absPos >= gateEndPos) {
-        val levelAtGateEnd = envelopeLevelAtPosition(env, gateEndPos)
-        val relPos = absPos - gateEndPos
-        // The split between the two helpers is by DESTINATION, not by evaluator:
-        //  - the DENOMINATOR is unified everywhere a curve is evaluated, because it is a time-base
-        //    correction (a release of N frames spans relPos 0..N-1) and applies whatever the value
-        //    drives. `IgnitorFilters.computeFilterEnvelope` is exempt only because it is a straight
-        //    LINEAR ramp with no curve endpoint to land on. Note this site does NOT floor
-        //    releaseFrames the way EnvelopeRenderer does: this envelope's release is the FILTER's,
-        //    independent of the voice's rendered span, so there is no last-rendered-frame for it to
-        //    land on and nothing to floor against.
-        //  - the OFFSET is amplitude-only. It exists to stop a step when a release is too short
-        //    to ramp. NOT because modulation steps are inaudible — a depth step ticks audibly
-        //    (ledger E10, heard on sgbell). The real reason is compatibility: VoiceFactory always
-        //    builds the FM envelope with releaseFrames = 0, so applying the offset here would drop
-        //    FM depth to zero at gate end for every fmh voice in every song. That door's own
-        //    block-held envelope and missing release knob are tracked as ledger E11 (P4).
-        // `EnvelopeCalcNoOffsetSpec` guards that second bullet.
-        val p = (relPos / releaseProgressDenom(env.releaseFrames)).coerceAtMost(1.0)
-        val omp = 1.0 - p
-        val shape = when (env.releaseCurve) {
-            AdsrCurve.Linear -> omp
-            AdsrCurve.Square -> omp * omp
-            AdsrCurve.Cube -> omp * omp * omp
-            AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-            AdsrCurve.InvSquare -> omp * (2.0 - omp)
-            AdsrCurve.Exponential -> adsrExpShape(omp)
-        }
-        levelAtGateEnd * shape
-    } else {
-        envelopeLevelAtPosition(env, absPos)
-    }
-
-    return envValue.coerceIn(0.0, 1.0)
+    return core.at(controlRatePos(blockStart, startFrame)).coerceIn(0.0, 1.0)
 }
 
-/** Calculate the envelope level at a given position (attack/decay/sustain only). */
-fun envelopeLevelAtPosition(env: Voice.Envelope, absPos: Int): Double = when {
-    absPos < env.attackFrames -> {
-        val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
-        val p = absPos * attRate
-        when (env.attackCurve) {
-            AdsrCurve.Linear -> p
-            AdsrCurve.Square -> p * p
-            AdsrCurve.Cube -> p * p * p
-            AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
-            AdsrCurve.InvSquare -> p * (2.0 - p)
-            AdsrCurve.Exponential -> adsrExpShape(p)
-        }
-    }
+/**
+ * The voice-relative frame of a block's first rendered frame: the voice's onset on its first block.
+ * `maxOf` is the same expression `Voice.render` derives the block's offset from, so this lands on the
+ * onset of a voice that starts mid-block.
+ */
+internal fun controlRatePos(blockStart: Double, startFrame: Double): Int = (maxOf(blockStart, startFrame) - startFrame).toInt()
 
-    absPos < env.attackFrames + env.decayFrames -> {
-        val decPos = absPos - env.attackFrames
-        val decRate = if (env.decayFrames > 0) 1.0 / env.decayFrames else 1.0
-        val p = decPos * decRate
-        val omp = 1.0 - p
-        val shape = when (env.decayCurve) {
-            AdsrCurve.Linear -> omp
-            AdsrCurve.Square -> omp * omp
-            AdsrCurve.Cube -> omp * omp * omp
-            AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
-            AdsrCurve.InvSquare -> omp * (2.0 - omp)
-            AdsrCurve.Exponential -> adsrExpShape(omp)
-        }
-        env.sustainLevel + (1.0 - env.sustainLevel) * shape
-    }
-
-    else -> env.sustainLevel
+/** Prepares this [EnvelopeCore] for one block of a strip modulation envelope ([env] counts frames). */
+internal fun EnvelopeCore.prepareControlRateEnvelope(env: Voice.Envelope, startFrame: Double, gateEndFrame: Double) {
+    prepare(
+        attackFrames = env.attackFrames,
+        decayFrames = env.decayFrames,
+        sustainLevel = env.sustainLevel,
+        releaseFrames = env.releaseFrames,
+        gateEndPos = (gateEndFrame - startFrame).toInt(),
+        attackCurve = env.attackCurve,
+        decayCurve = env.decayCurve,
+        releaseCurve = env.releaseCurve,
+    )
 }

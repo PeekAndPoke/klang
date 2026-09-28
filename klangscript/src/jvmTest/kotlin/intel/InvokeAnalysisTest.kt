@@ -25,16 +25,16 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
 /**
- * The analyzer's side of the `invoke` operator: `Master(m => m.gain(2))` resolves to the
+ * The analyzer's side of the `invoke` operator: `Katalyst(k => k.gain(2))` resolves to the
  * `invoke` callable registered on the object's type, so the call's return type, the typed
  * lambda parameter and the popup signature all work, while `invoke` never shows up as a
  * member completion. Hand-built registry, no stdlib: this is language machinery.
  */
 class InvokeAnalysisTest : StringSpec({
 
-    val masterType = KlangType("Master", fqcn = "test.Master")
-    val builderType = KlangType("MasterBuilder", fqcn = "test.MasterBuilder")
-    val dslType = KlangType("MasterDsl", fqcn = "test.MasterDsl")
+    val katalystType = KlangType("Katalyst", fqcn = "test.Katalyst")
+    val builderType = KlangType("KatalystBuilder", fqcn = "test.KatalystBuilder")
+    val dslType = KlangType("KatalystDsl", fqcn = "test.KatalystDsl")
     val configureType = KlangType(
         "Function1", fqcn = "kotlin.Function1", isNullable = true,
         functionParams = listOf(builderType), functionReturn = builderType,
@@ -43,25 +43,25 @@ class InvokeAnalysisTest : StringSpec({
     fun registry(): KlangDocsRegistry = KlangDocsRegistry().apply {
         registerAll(listOf(
             KlangSymbol(
-                name = "Master", category = "master", origin = KlangSymbol.Origin.Library("test"),
-                variants = listOf(KlangProperty(name = "Master", type = masterType)),
+                name = "Katalyst", category = "katalyst", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(KlangProperty(name = "Katalyst", type = katalystType)),
             ),
             KlangSymbol(
-                name = "invoke", category = "master", origin = KlangSymbol.Origin.Library("test"),
+                name = "invoke", category = "katalyst", origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
-                        name = "invoke", receiver = masterType,
+                        name = "invoke", receiver = katalystType,
                         params = listOf(KlangParam(name = "configure", type = configureType, isOptional = true)),
                         returnType = dslType,
                     )
                 ),
             ),
             KlangSymbol(
-                name = "default", category = "master", origin = KlangSymbol.Origin.Library("test"),
-                variants = listOf(KlangCallable(name = "default", receiver = masterType, params = emptyList(), returnType = dslType)),
+                name = "classic", category = "katalyst", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(KlangCallable(name = "classic", receiver = katalystType, params = emptyList(), returnType = dslType)),
             ),
             KlangSymbol(
-                name = "gain", category = "master", origin = KlangSymbol.Origin.Library("test"),
+                name = "gain", category = "katalyst", origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "gain", receiver = builderType,
@@ -76,26 +76,26 @@ class InvokeAnalysisTest : StringSpec({
     fun analyze(code: String) = AnalyzedAst.build(code, registry())
     fun AnalyzedAst.top() = (ast.statements.first() as ExpressionStatement).expression
 
-    "Master() resolves through invoke to the object's return type" {
-        val a = analyze("Master()")
-        a.typeOf(a.top())?.simpleName shouldBe "MasterDsl"
+    "Katalyst() resolves through invoke to the object's return type" {
+        val a = analyze("Katalyst()")
+        a.typeOf(a.top())?.simpleName shouldBe "KatalystDsl"
     }
 
-    "Master(m => m.gain(2)) types the lambda parameter as the builder" {
-        val code = "Master(m => m.gain(2))"
+    "Katalyst(k => k.gain(2)) types the lambda parameter as the builder" {
+        val code = "Katalyst(k => k.gain(2))"
         val a = analyze(code)
         val call = a.top() as CallExpression
         val arrow = call.arguments.single().value as ArrowFunction
         val body = (arrow.body as ArrowFunctionBody.ExpressionBody).expression as CallExpression
-        val m = (body.callee as MemberAccess).obj as Identifier
-        a.typeOf(m)?.simpleName shouldBe "MasterBuilder"
-        a.typeOf(body)?.simpleName shouldBe "MasterBuilder"
-        a.receiverTypeBeforeDot(code.indexOf("m.gain") + 1)?.simpleName shouldBe "MasterBuilder"
+        val k = (body.callee as MemberAccess).obj as Identifier
+        a.typeOf(k)?.simpleName shouldBe "KatalystBuilder"
+        a.typeOf(body)?.simpleName shouldBe "KatalystBuilder"
+        a.receiverTypeBeforeDot(code.indexOf("k.gain") + 1)?.simpleName shouldBe "KatalystBuilder"
     }
 
     "a plain method on the object still resolves ahead of invoke" {
-        val a = analyze("Master.default()")
-        a.typeOf(a.top())?.simpleName shouldBe "MasterDsl"
+        val a = analyze("Katalyst.classic()")
+        a.typeOf(a.top())?.simpleName shouldBe "KatalystDsl"
     }
 
     "an object without invoke is not a callable for the analyzer" {
@@ -105,23 +105,23 @@ class InvokeAnalysisTest : StringSpec({
     }
 
     "the invoke signature renders as the call the user writes" {
-        val invoke = registry().getCallable("invoke", masterType)
+        val invoke = registry().getCallable("invoke", katalystType)
         invoke.shouldNotBeNull()
-        invoke.signature shouldBe "Master(configure: ((MasterBuilder) -> MasterBuilder)?): MasterDsl"
+        invoke.signature shouldBe "Katalyst(configure: ((KatalystBuilder) -> KatalystBuilder)?): KatalystDsl"
     }
 
     "named-argument diagnostics reach a callable object through invoke" {
-        val a = analyze("Master(configur = m => m.gain(2))")
+        val a = analyze("Katalyst(configur = k => k.gain(2))")
         a.diagnostics.size shouldBe 1
         a.diagnostics.single().message shouldContain "Unknown parameter 'configur'"
         a.diagnostics.single().message shouldContain "configure"
         // and a correct call is clean
-        analyze("Master(configure = m => m.gain(2))").diagnostics.size shouldBe 0
+        analyze("Katalyst(configure = k => k.gain(2))").diagnostics.size shouldBe 0
     }
 
     "invoke is hidden from member completions after the dot" {
-        val names = CompletionProvider(registry()).memberCompletions(masterType, "").map { it.name }
+        val names = CompletionProvider(registry()).memberCompletions(katalystType, "").map { it.name }
         names shouldNotContain "invoke"
-        names shouldBe listOf("default")
+        names shouldBe listOf("classic")
     }
 })

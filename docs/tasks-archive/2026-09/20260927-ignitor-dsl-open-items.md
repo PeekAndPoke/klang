@@ -1,0 +1,335 @@
+# IgnitorDsl — Open Items
+
+> **RETIRED 2026-09-27 (maintainer).** Where each item went:
+> - **Non-finite pitch amount:** still open, now `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`
+>   (the re-check found vibrato and accelerate with the same shape).
+> - **FM index envelope `curves`:** still wanted, now `docs/tasks/future/envelope-shape-followups.md` §4.
+> - **Per-playback attributes (`Osc.cps()`), `splitAndJoin`, the KSP nested-alias note:** dropped. The first
+>   was postponed since 2026-04 with no application (`oscp()` covers it), the second is `(a + b + c).div(3)`
+>   by hand, the third is latent.
+> - **Impulse response convolution:** dropped; a future convolution reverb designs its own door (the
+>   `iresponse` retirement in `CLAUDE.md`). The related idea is `docs/tasks/future/ir-to-modal-table-extraction.md`;
+>   the design and the IR resource list below stay here as the record.
+> - **Filter dry/wet and a cab filter:** superseded by the `Eq` node (bell and tap sections), the `passes`
+>   slot on `lpf`/`hpf`, and the Katalyst `eq` stage.
+
+> **Completed work** is archived in
+`docs/tasks-archive/2026-03/20260329-exciter-dsl-klangscript-stabilization.md`.
+> Everything below is NOT YET IMPLEMENTED — these are future features and designs.
+
+## FM index envelope: `curves` (maintainer, 2026-09-23; shape updated 2026-09-25)
+
+The door-shape walk of 2026-09-23 (`20260928-builtin-instruments.md` section 3b) gave `fm` a builder with
+`adsr(attackSec, decaySec, sustainLevel, releaseSec)` and `freq(hz)`, but NOT `adsrCurves`, because the
+FM index envelope has no curve support and a knob that does nothing is not offered. The maintainer
+wants it later, so `fm` speaks the same envelope vocabulary as the chain, the four filters and the
+pitch envelope. Needs: curve fields on `IgnitorDsl.Fm`, the curve law in `FmModIgnitor`'s envelope,
+the envelope's own builder on the fm `adsr`, `adsr(a, d, s, r, e => e.curves(attack, decay, release))`, the shape every other envelope has since step 3c, on both doors. The default curve must be the one
+D3 decides for modulation envelopes, or every existing FM patch (`sgbell`) changes. (2026-09-25: D3
+decided exponential; since step 5b (b) the FM envelope reads `MOD_ENV_CURVE` and `sgbell` changed with it,
+so the knob only has to default to `MOD_ENV_CURVE`.)
+
+## A non-finite pitch amount freezes the oscillator (found 2026-09-24, pre-existing)
+
+Phase 3 step 3d(i) gave the pitch envelope's sustain and the FM index envelope's sustain the house
+`finiteOr` substitution. The same class remains, at HEAD before 3d(i) too, on the pitch envelope's
+`semitones` and FM's `depth` and `ratio`: a NaN passes the `== 0.0` bypass, the ratio becomes NaN, and
+`safeOut` turns it into 0, so the oscillator's phase stops and the note is a DC hold. Slots are guarded
+at build, so only arithmetic can produce it today; phase 3 step 5 slots these knobs. Fix shape: the
+house `finiteOr` at the read with the node's own default, plus a NaN row per knob.
+
+## Per-Playback Numerical Attributes (CPS etc.)
+
+> **Status (2026-04-26)**: Postponed — nice-to-have, no real application today.
+>
+> The original motivation (e.g. tempo-synced tremolo via `Osc.cps()`) is already covered by `oscp()`,
+> which accepts control patterns and snapshots the value at each note-on event. For live-coding
+> workflows you only configure a voice once at note-on, and any in-note time variation can be
+> expressed inside the IgnitorDsl from start values via envelopes, LFOs, and arithmetic.
+>
+> Cases this feature *would* unlock that the snapshot model can't:
+> - Long-held notes that need to follow a mid-note tempo change
+> - External real-time controllers (modwheel / hardware knob) bending notes already in flight
+> - Cross-voice phase-lock (better solved by a global audio-clock intrinsic if ever needed)
+>
+> None of these are current pain points. Revisit when a concrete need emerges.
+
+Let the frontend push named numerical values (like `cps`) to the audio backend per-playback.
+Ignitors read these at audio rate for tempo-synced effects.
+
+### Design
+
+```
+Frontend                          Bridge                          Backend
+─────────                         ──────                          ───────
+KlangPlayback.updateAttributes()
+  → Cmd.SetAttribute(playbackId, name, value)
+                                  → WorkletContract encode/decode
+                                                                  → PlaybackCtx.attributes[name] = value
+                                                                  → IgniteContext.attributes (ref to PlaybackCtx map)
+
+IgnitorDsl.Attribute("cps")       → at render time reads from ctx.attributes["cps"]
+```
+
+### Steps
+
+1. `audio_bridge/KlangCommLink.kt` — add `Cmd.SetAttribute(playbackId, name: String, value: Double)`
+2. `audio_be/voices/PlaybackCtx.kt` — add `val attributes: MutableMap<String, Double>`
+3. `audio_be/ignitor/IgniteContext.kt` — add `var attributes: Map<String, Double>`
+4. `audio_be/voices/VoiceScheduler.kt` — handle `Cmd.SetAttribute`
+5. `audio_bridge/IgnitorDsl.kt` — add `IgnitorDsl.Attribute(name: String)` node type
+6. `audio_be/ignitor/IgnitorDslRuntime.kt` — runtime ignitor reads `ctx.attributes[name]`
+7. `klangscript/KlangScriptOsc.kt` — `Osc.cps()` → `IgnitorDsl.Attribute("cps")`, `Osc.attr(name)`
+8. `klang/KlangPlayback.kt` — `updateAttributes(attrs: Map<String, Double>)`
+9. Sprudel integration — `SprudelPlayback` calls `playback.updateAttributes(mapOf("cps" to cps))`
+
+### Usage
+
+```javascript
+let pad = Osc.supersaw().tremolo(Osc.cps(), 0.5).lowpass(2000).adsr(0.01, 0.3, 0.5, 0.5)
+note("c3 e3 g3").sound(pad)
+```
+
+---
+
+## splitAndJoin Operator
+
+Split a signal into parallel branches, process each independently, sum and normalize.
+
+### Design
+
+```javascript
+Osc.supersaw().splitAndJoin(
+    x => x.octaveUp(),
+    x => x.octaveDown(),
+    x => x.detune(7)
+)
+// Desugars to: (branch0 + branch1 + branch2) / 3
+```
+
+Each branch gets its own copy of the source tree (independent state).
+Future `splitSignalAndJoin()` would share the same source buffer (true signal split).
+
+### Implementation
+
+- KlangScript: vararg arrow functions, call each with self, collect IgnitorDsl results
+- Register manually since it needs to invoke KlangScript lambdas at construction time
+- Result: `Plus(Plus(b0, b1), b2).div(Constant(numBranches))`
+
+---
+
+## Impulse Response Convolution
+
+### Goal
+
+Enable realistic instrument body modeling, cabinet simulation, and room reverb via impulse response convolution.
+Designed for incremental implementation — start with simple FIR, swap in FFT later without changing the API.
+
+### DSL Node
+
+One node for all convolution variants:
+
+```kotlin
+data class Convolve(
+  val inner: IgnitorDsl,
+  val ir: String,  // named IR reference (like sound names in IgnitorRegistry)
+) : IgnitorDsl
+```
+
+### IR Registry
+
+Mirrors `IgnitorRegistry` — named lookup with auto-selected strategy:
+
+```kotlin
+interface ConvolveStrategy {
+    fun process(input: FloatArray, output: FloatArray, offset: Int, length: Int)
+}
+
+class IrRegistry {
+    fun register(name: String, samples: FloatArray) {
+        val strategy = when {
+            samples.size <= 512 -> FirConvolve(samples)       // direct, zero latency
+            samples.size <= 8192 -> PartitionedFftConvolve(samples)  // future
+            else -> FftConvolve(samples)              // future
+        }
+        entries[name] = IrEntry(samples, strategy)
+    }
+}
+```
+
+### Implementation steps
+
+**Prerequisite — SampleLibrary cleanup**
+The existing SampleLibrary infrastructure will be reused for loading IR WAV files.
+Before starting IR work, the SampleLibrary needs cleanup/refactoring to support this use case cleanly.
+
+**Step 1 — FIR convolution + IR loading (the "cheap" start)**
+One implementation, two data sources:
+
+- `FirConvolve(ir: FloatArray)` — direct time-domain convolution, ~50 lines of DSP
+- Generated IRs: `ir = generateGuitarBodyIr(warmth = 0.5)` — math-based body/cabinet models
+- Loaded IRs: `ir = sampleLibrary.load("ir/marshall4x12")` — WAV files via existing sample transport
+- Both are short (256-1024 samples), both use the same FIR engine
+- Zero latency, simple implementation
+- Reuses existing `SampleRequest` / `Cmd.Sample.Complete` / `Cmd.Sample.Chunk` infrastructure
+- Naming convention: `ir/` prefix distinguishes IRs from playback samples
+- Good for: cabinet IRs, mic IRs, instrument body IRs
+
+**Step 2 — Partitioned FFT (medium IRs, future)**
+
+- `PartitionedFftConvolve` — split IR into chunks, convolve via FFT, overlap-add
+- Good for: plate reverb, spring reverb (up to ~8192 samples)
+- Requires FFT implementation
+
+**Step 3 — Full FFT (long IRs, future)**
+
+- `FftConvolve` — full frequency-domain convolution
+- Good for: room reverbs, cathedral (seconds of tail)
+- Bigger project
+
+### KlangScript API — shorthands with parameters
+
+```javascript
+// Low level — raw IR reference
+Osc.pluck().convolve("guitar-body-dreadnought")
+
+// User-friendly parameterized shorthands
+Osc.pluck().guitarBody("dreadnought")
+Osc.pluck().guitarBody("classical", 0.7)        // warmth param
+Osc.saw().distort(0.5).cabinet("marshall", 0.5)  // mic position
+Osc.sine().room("cathedral", 0.9, 0.3)           // size, damping
+Osc.pluck().violinBody(0.6)                       // brightness
+```
+
+Each shorthand:
+
+1. Selects or generates the right IR based on parameters
+2. Calls `.convolve(irName)` internally
+
+### IR sources
+
+**Built-in generated** — mathematical models for common body/cabinet shapes:
+
+```kotlin
+fun generateGuitarBodyIr(warmth: Double, size: Double): FloatArray {
+    val ir = FloatArray(512)
+    // Sum decaying sinusoids at resonant frequencies
+    // Guitar body resonances: ~100Hz, ~400Hz, ~800Hz, ~2kHz
+    addResonance(ir, freq = 100 * (1 - warmth * 0.3), decay = 0.95, amp = 0.5)
+    addResonance(ir, freq = 400 * (1 - warmth * 0.2), decay = 0.90, amp = 0.3)
+    addResonance(ir, freq = 800, decay = 0.85, amp = 0.2)
+    addResonance(ir, freq = 2000 * (1 + warmth * 0.3), decay = 0.80, amp = 0.1)
+    return ir
+}
+```
+
+**Pre-baked** — named presets for specific gear ("marshall", "fender", "cathedral")
+
+**User-loaded** — WAV file upload (future, needs sample loading infrastructure)
+
+### Files involved
+
+| File                                      | Change                                                           |
+|-------------------------------------------|------------------------------------------------------------------|
+| `audio_bridge/IgnitorDsl.kt`              | Add `Convolve(inner, ir)` node                                   |
+| `audio_be/ignitor/IgnitorDslRuntime.kt`   | Handle `Convolve` → look up IR, create convolver                 |
+| `audio_be/ignitor/ir/IrRegistry.kt`       | NEW — named IR storage with strategy selection                   |
+| `audio_be/ignitor/ir/FirConvolve.kt`      | NEW — direct time-domain convolution                             |
+| `audio_be/ignitor/ir/ConvolveStrategy.kt` | NEW — interface for convolution variants                         |
+| `audio_jsworklet/KlangAudioWorklet.kt`    | Initialize IrRegistry alongside IgnitorRegistry                  |
+| `klangscript/KlangScriptOscExtensions.kt` | Add `.convolve()`, `.guitarBody()`, `.cabinet()`, `.room()` etc. |
+
+### Electric guitar signal chain — multiple IRs
+
+A realistic electric guitar needs two IRs in series:
+
+```
+String vibration
+  → Guitar body IR (wood resonance, pickup position)     ~256-512 samples
+    → Amp (preamp gain, EQ, distortion — NOT an IR)
+      → Cabinet IR (speaker + mic response)               ~512-1024 samples
+        → Room IR (optional — the space the cab is in)     ~4800-144000 samples
+```
+
+In our DSL:
+
+```javascript
+Osc.pluck()
+    .guitarBody("stratocaster")     // IR 1: guitar body
+    .distort(0.6)                   // amp (just processing, not IR)
+    .lowpass(4000)                  // amp tone stack
+    .cabinet("marshall4x12")        // IR 2: speaker cabinet + mic
+```
+
+The cabinet IR is the most impactful — 80% of the "amp sound" comes from the speaker, not the preamp.
+Guitar body IR matters less for electric (pickups bypass acoustic resonance) but adds character.
+
+### How IRs are captured (theory)
+
+**Method 1 — Sine sweep (professional standard):**
+
+1. Attach transducer to the instrument/speaker
+2. Play logarithmic sine sweep (20Hz → 20kHz over ~10s)
+3. Record the output
+4. Deconvolve: `IR = IFFT(FFT(recorded) / FFT(original_sweep))`
+
+**Method 2 — Direct impulse (simple):**
+Tap the bridge/speaker cone, record the response. Quick but noisy.
+
+**Method 3 — MLS/white noise:**
+Play white noise, cross-correlate input and output. Fast, lower quality.
+
+### What an IR contains (guitar body example)
+
+- **~0-1ms:** Initial transient (wood "click")
+- **~1-5ms:** Body resonances ringing (peaks at ~100Hz, ~400Hz, ~800Hz, ~2kHz)
+- **~5-10ms:** Decay tail — wood absorbing energy
+- Frequency peaks define the character: dreadnought vs classical vs violin body
+
+### Free & open-source IR resources
+
+**Large free collections:**
+
+- [Overdriven.fr](https://overdriven.fr/overdriven/index.php/irdownloads/) — extensive free guitar cabinet IR library
+- [Djammincabs](https://zystrix.com/djammincabs.htm) — 200 free guitar cab IRs + 200 free bass cab IRs
+- [Origin Effects IR Cab Library](https://origineffects.com/product/ir-cab-library/) — free vintage cab collection
+- [PreSonus 25 Analog Cab IRs](https://www.presonus.com/blogs/home/free-download-25-analog-cab-irs) — 25 free analog
+  cabinet IRs
+
+**Curated lists:**
+
+- [Neural DSP community list](https://unity.neuraldsp.com/t/list-of-ir-sites-paid-or-free/10016) — comprehensive list of
+  free and paid IR sources
+- [Produce Like A Pro — Best Guitar IRs 2025](https://producelikeapro.com/blog/best-guitar-impulse-responses/) — top 20
+  rated
+- [Line 6 community IR links](https://line6.com/support/topic/17076-links-for-free-impulse-responses-ir-here/) —
+  community-collected
+
+**Specialty:**
+
+- [Worship Tutorials Acoustic IR Pack](https://worshiptutorials.com/product/acoustic-ir-sample-pack/) — free acoustic
+  guitar body IRs (rare)
+
+**Format:** Typically WAV, 44.1/48kHz, mono. Cabinet IRs are 512-4096 samples (perfect for our FIR step 1).
+
+---
+
+## Minor Items
+
+- KSP: nested type alias resolution only one level deep (latent — no chained aliases exist today)
+
+## Filter dry/wet + a real cab filter (from Der Schmetterling mixing, 2026-08-18)
+
+Two gaps surfaced while voicing the supersaw guitars (maintainer request, parked for later):
+
+1. **Dry/wet (mix) knob on processing stages.** Emphasis EQ currently needs the
+   add-a-scaled-bandpass idiom — `signal.add(signal.bandpass(f, q).mul(amount))` — which costs an
+   extra graph branch per band and reads backwards (amount is a linear add, not a mix). A `mix`
+   param on filter stages (or a general `.blend(dry, wet, amount)` combinator) would collapse
+   these. Same need appears for shallow cuts: a depth-limited notch is currently
+   `signal.minus(signal.bandpass(f, q).mul(d))`.
+2. **Cabinet lowpass is CPU-heavy as two cascaded biquads.** The `.lowpass(5200).lowpass(5200)`
+   idiom (×4 guitars ×unison voices) is at the edge of a strong desktop CPU. Candidates: a single
+   4th-order lowpass primitive (one call, precomputed cascade), or a dedicated `cab()` stage
+   (fixed 12–24 dB/oct + the presence dip baked in) that guitars share. Benchmark before/after
+   with `runSongBenchmark`.

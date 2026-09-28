@@ -45,8 +45,7 @@ class VoiceLease {
      * settings to the effect. Returns `false` if a different, still-live owner holds it (skip this voice).
      */
     fun claim(voiceId: Int, blockStart: Double, blockFrames: Int): Boolean {
-        val ownerAlive = owned && (blockStart - lastSeenFrame) <= blockFrames
-        if (!ownerAlive || voiceId == ownerId) {
+        if (!isHeld(blockStart, blockFrames) || voiceId == ownerId) {
             owned = true
             ownerId = voiceId
             lastSeenFrame = blockStart
@@ -54,6 +53,24 @@ class VoiceLease {
         }
         return false
     }
+
+    /**
+     * True while the owner is alive in the block starting at [blockStart]: it checked in during this
+     * block or the one before (the one-block grace above). The same test [claim] makes, in one place.
+     *
+     * **Held whenever ANY voice plays on the orbit**, not only the owner: a voice that offers itself
+     * this block either renews or takes the lease (so it is held), or is turned away because a live
+     * owner holds it (so it is held). A lease that is not held therefore means nobody checked in this
+     * block, and the owner not in the block before either. `Cylinder.tryDeactivate` reads it that way
+     * (an orbit never deactivates while a voice plays on it, decided 2026-09-19). The grace after the
+     * last check-in is at most one block: a turned-away voice that stops renews nothing, so its last
+     * block is covered by the owner's grace and the block after it is not.
+     *
+     * Every voice that renders checks in, a culled one included (`Voice.render` renews the lease of a
+     * culled voice and nothing else), so the lease stays held until the last voice's scheduled end,
+     * its release included, whether that release is still audible or not.
+     */
+    fun isHeld(blockStart: Double, blockFrames: Int): Boolean = owned && (blockStart - lastSeenFrame) <= blockFrames
 
     /** Release the lease — called when the orbit fully deactivates so a reused orbit starts fresh. */
     fun reset() {

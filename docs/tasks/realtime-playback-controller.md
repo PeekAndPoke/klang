@@ -2,7 +2,7 @@
 
 **Status:** DRAFT v2 (2026-08-29), nothing built. Supersedes the first draft (which put the
 held-note bookkeeping in the playback controller — wrong seam). Sibling of
-`docs/tasks/midi-keyboard-playground.md`; v1's ignitor editor lands on top of this.
+`docs/tasks-archive/2026-09/20260927-midi-keyboard-playground.md`; v1's ignitor editor lands on top of this.
 
 ## The three things, and what each one is NOT
 

@@ -88,7 +88,7 @@ plt.close(fig)
 # ---------------------------------------------------------------------------------------------
 # Fig 3 of the post: the phone timeline with the song's work underneath. Events: the timeline of
 # docs/blog/2026-08-19-the-phone-that-does-not-get-faster/make_fig.py (its sources: docs/plans/
-# unified-eq.md:225,808; docs/plans/resource-warehouse.md:214,321,417; docs/tasks-archive/2026-09/
+# unified-eq.md:225,808; docs/tasks-archive/2026-09/20260927-resource-warehouse.md:214,321,417; docs/tasks-archive/2026-09/
 # 20260916-ignitor-optimizer-arithmetic-folds.md:40; audio/MEMORY.md). The work per block per
 # snapshot: docs/benchmarks/2026-09-16_144137_song_jvm.md (Fig 1); the song texts between July 3
 # and September 8 do not parse on today's doors (console/song-snapshots.sh), so that span is

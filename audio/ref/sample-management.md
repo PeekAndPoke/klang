@@ -122,7 +122,7 @@ Platform HTTP clients:
 4. `AssetLoader.load(url)` → bytes (cache hit or HTTP fetch + cache put)
 5. `AudioDecoder.decode(bytes)` → `MonoSamplePcm`
 6. Frontend sends `Cmd.Sample.Complete(request, pcm)` on the command channel
-7. `VoiceScheduler` receives it, stores PCM, activates the pending `SampleVoice`
+7. `VoiceScheduler` receives it, stores PCM, activates the pending sample voice
 
 ## MonoSamplePcm (reminder)
 
@@ -135,4 +135,5 @@ data class MonoSamplePcm(
 ```
 
 Stereo samples are downmixed to mono during decoding (L+R averaged).
-Rate conversion to engine sample rate is done in `SampleVoice.generateSignal()`.
+Rate conversion to the engine sample rate is part of the playhead rate `VoiceFactory` computes at voice
+build (the PCM's rate over the engine's, times pitch and speed); `SampleIgnitor` steps the playhead by it.

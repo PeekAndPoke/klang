@@ -88,7 +88,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         private val shapes = listOf("sine", "triangle", "square", "sawtooth", "ramp")
 
         /**
-         * The engine's aliases (LfoShape.parseLfoShape) folded onto the canonical entries, so
+         * The engine's aliases (the `LfoShapes` catalogue in audio_bridge) folded onto the canonical entries, so
          * a document written as `"saw"` — which is what this editor itself emitted before the
          * list was corrected — still opens with its shape selected.
          */

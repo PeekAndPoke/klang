@@ -25,6 +25,8 @@ import io.peekandpoke.klang.audio_be.ignitor.highpass
 import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.klang.audio_be.ignitor.mul
 import io.peekandpoke.klang.audio_be.ignitor.notch
+import io.peekandpoke.klang.audio_be.ignitor.onePoleHighpass
+import io.peekandpoke.klang.audio_be.ignitor.onePoleLowpass
 import io.peekandpoke.klang.audio_be.ignitor.plus
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.ultra.common.toFixed
@@ -199,7 +201,7 @@ class EffectBenchmark(
             step
         }
 
-        // ── Ignitor combinators (sine source → svf filter, freshly built per iteration) ──
+        // ── Ignitor nodes (sine source → a filter node, freshly built per iteration) ──
 
         private fun svfIgnitorCase(
             name: String,
@@ -266,15 +268,16 @@ class EffectBenchmark(
 
         fun defaultCases(): List<Case> = listOf(
             // Filters
-            monoFilterCase("OnePoleLPF (1k)") { sr -> LowPassHighPassFilters.OnePoleLPF(1000.0, sr) },
-            monoFilterCase("OnePoleHPF (1k)") { sr -> LowPassHighPassFilters.OnePoleHPF(1000.0, sr) },
-            monoFilterCase("SvfLPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr) },
-            monoFilterCase("SvfHPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr) },
+            // The one-poles are Ignitor nodes (their class twins retired 2026-09-27): the step also runs the sine
+            // source, so subtract "Ignitor sine (bare source baseline)" below for the filter alone.
+            svfIgnitorCase("Ignitor onePoleLowpass (1k)") { Ignitors.sine().onePoleLowpass(1000.0) },
+            svfIgnitorCase("Ignitor onePoleHighpass (1k)") { Ignitors.sine().onePoleHighpass(1000.0) },
+            // The class-form SVF left is the resonators' bandpass; the strip's lowpass, highpass and notch
+            // classes retired in phase 3 step 9 (the tree's SVF is the `Ignitor.svf` cases below).
             monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
-            monoFilterCase("SvfNotch (1k, q=1)") { sr -> LowPassHighPassFilters.SvfNotch(1000.0, 1.0, sr) },
 
             // Resonators — orbit-level body/vowel banks: ParallelMixFilter over an N-band parallel
-            // SVF-BPF (BodyFilter / FormantFilter). This is what body()/vowel() run per orbit.
+            // SVF-BPF (ResonatorBank). This is what body()/vowel() run per orbit.
             monoFilterCase("Body (wood, 8-band, mix0.5)") { sr ->
                 LowPassHighPassFilters.createBody(BODY_WOOD_MODES, 0.5, sr)
             },
@@ -282,38 +285,13 @@ class EffectBenchmark(
                 LowPassHighPassFilters.createFormant(VOWEL_A_BANDS, 0.5, sr)
             },
 
-            // ── Filter humanization (analog > 0) — cost of the tanh feedback saturation ──
-            // Compared against the analog=0 cases above, the delta is the saturation cost
-            // alone (one fastTanh + 2 muls per sample in the saturating branch).
-            monoFilterCase("SvfLPF (1k, q=1, analog=3)") { sr ->
-                LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr, analog = 3.0)
-            },
-            monoFilterCase("SvfHPF (1k, q=1, analog=3)") { sr ->
-                LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr, analog = 3.0)
+            // ── Filter humanization (analog > 0): the cost of the saturated branch on the tree's SVF.
+            // Compared against the analog = 0 case below, the delta is the diode-pair damping alone.
+            svfIgnitorCase("Ignitor.svf LPF (no env, 1k, q=1, analog=3)") {
+                Ignitors.sine().lowpass(1000.0, 1.0, analog = 3.0)
             },
 
-            // Full envelope-modulated hot path: setCutoff per block (triggers tan + the
-            // 32-sample coefficient ramp) AND the saturated process loop. Mimics what an
-            // `lpf(..., env = 2.0)` patch actually does each block.
-            Case("SvfLPF (mod, 1k, q=1, analog=3)") { sr, bf ->
-                val filter = LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr.toDouble(), analog = 3.0)
-                val src = sineSource(440.0, sr, bf)
-                val buf = AudioBuffer(bf)
-                var phase = 0
-                val step: () -> Unit = {
-                    // Sweep cutoff 500 Hz → 2000 Hz over 256 blocks, then repeat. Each block
-                    // triggers a setCutoff so the coefficient ramp runs at the block boundary.
-                    phase = (phase + 1) and 0xFF
-                    val cutoff = 500.0 + (phase / 256.0) * 1500.0
-                    filter.setCutoff(cutoff)
-                    src.copyInto(buf)
-                    filter.process(buf, 0, bf)
-                }
-                step
-            },
-
-            // Ignitor.svf combinator (sine → lowpass), env-off vs env-on. Comparable to
-            // class-form `SvfLPF` but exercises the closure-based DSL hot path.
+            // Ignitor.svf combinator (sine → lowpass), env-off vs env-on: the tree's filter hot path.
             svfIgnitorCase("Ignitor.svf LPF (no env, 1k, q=1)") {
                 Ignitors.sine().lowpass(1000.0, 1.0)
             },

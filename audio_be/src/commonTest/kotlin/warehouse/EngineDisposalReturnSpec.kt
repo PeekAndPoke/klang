@@ -15,12 +15,12 @@ import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.BackendClock
 import io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher
 import io.peekandpoke.klang.audio_be.SampleStore
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
-import io.peekandpoke.klang.audio_be.engines.PipelineRegistry
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -31,7 +31,7 @@ import kotlin.math.abs
  * and reverb network a playback rented became garbage when its engine was disposed, and the next
  * playback allocated the same things again inside render. Now `PlaybackEngine.dispose()` hands
  * them back to the backend's one warehouse, and the next playback's first delay or reverb of that
- * class is a shelf hit. `docs/plans/resource-warehouse.md`.
+ * class is a shelf hit. `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
  *
  * Through the real dispatcher: schedule, render, `Cleanup`, drain, observe the shelf.
  */
@@ -51,8 +51,7 @@ class EngineDisposalReturnSpec : StringSpec({
             blockFrames = blockFrames,
             commLink = commLink,
             ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
-            pipelineRegistry = PipelineRegistry(),
-            masterRegistry = MasterRegistry(),
+            katalystRegistry = KatalystRegistry(),
             clock = clock,
             performanceTimeMs = { 0.0 },
             warehouse = warehouse,
@@ -68,8 +67,14 @@ class EngineDisposalReturnSpec : StringSpec({
         gateEndTime = 0.05,
         data = VoiceData.empty.copy(
             sound = "sine", freqHz = 440.0, cylinder = cylinder,
-            delay = 0.5, delayTime = 0.3, delayFeedback = 0.0,
-            reverb = 0.5, reverbSize = 0.6,
+            // The orbit's stages read the SLOT state (Katalyst step 5b-1), the amounts included since
+            // step 5b-2. What a `delay(...)` / `reverb(...)` call writes.
+            katalystParams = mapOf(
+                "delay.wet" to 0.5, "delay.time" to 0.3, "delay.feedback" to 0.0, "delay.cap" to 1.0,
+                // AUTHORED 0 to 10, the scale the old `VoiceData.reverbSize` was already on: the number
+                // is unchanged from the fixture this replaced.
+                "reverb.wet" to 0.5, "reverb.size" to 0.6,
+            ),
         ),
         playbackStartTime = 0.0,
     )
@@ -90,8 +95,8 @@ class EngineDisposalReturnSpec : StringSpec({
         f.render(4) shouldBeGreaterThan 0.0 // positive control: the voice sounded
         val engine = f.dispatcher.engine("song").shouldNotBeNull()
         val cylinder = engine.cylinders.cylinders.single()
-        val ring = cylinder.delay.delayLine.shouldNotBeNull().ring
-        val unit = cylinder.reverb.reverb.shouldNotBeNull()
+        val ring = cylinder.delay!!.delayLine.shouldNotBeNull().ring
+        val unit = cylinder.reverb!!.reverb.shouldNotBeNull()
         f.warehouse.sized.shelfCount shouldBe 0
         f.warehouse.reverbs.idleCount shouldBe 0
 
@@ -102,8 +107,8 @@ class EngineDisposalReturnSpec : StringSpec({
         f.warehouse.sized.shelfCount shouldBe 1
         f.warehouse.reverbs.idleCount shouldBe 1
         // The cylinder forgot its units: whoever rents them next owns them.
-        cylinder.delay.delayLine.shouldBeNull()
-        cylinder.reverb.reverb.shouldBeNull()
+        cylinder.delay!!.delayLine.shouldBeNull()
+        cylinder.reverb!!.reverb.shouldBeNull()
         engine.cylinders.cylinders.size shouldBe 0
         // ...and they are the very instances, cleared.
         f.warehouse.sized.rent(1) shouldBeSameInstanceAs ring
@@ -144,19 +149,33 @@ class EngineDisposalReturnSpec : StringSpec({
     "a disposed engine's master chains return their units as well" {
         val f = fixture()
         f.dispatcher.handle(
-            KlangCommLink.Cmd.RegisterMaster(
+            KlangCommLink.Cmd.RegisterKatalyst(
                 playbackId = "song", name = "wet",
-                dsl = MasterDsl.of(
-                    MasterStageDsl.Delay(wet = 0.5, time = 0.3),
-                    MasterStageDsl.Reverb(wet = 0.4, size = 5.0),
+                dsl = KatalystDsl.of(
+                    KatalystStageDsl.Delay(wet = IgnitorDsl.Constant(0.5), time = IgnitorDsl.Constant(0.3)),
+                    KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0)),
                 ),
             )
         )
-        f.warehouse.sized.allocations shouldBe 1
-        f.warehouse.reverbs.allocations shouldBe 1
+        // Registration builds nothing: one registry serves both positions (phase 3 step 12 C5), so
+        // the output chain is built, and rents, on its first `master(...)` request.
+        f.warehouse.sized.allocations shouldBe 0
+        f.warehouse.reverbs.allocations shouldBe 0
 
-        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoice(playbackId = "song", voice = wetVoice("song", cylinder = 3)))
+        val carrier = ScheduledVoice(
+            playbackId = "song",
+            startTime = 0.0,
+            gateEndTime = 1.0,
+            data = VoiceData.empty.copy(master = "wet", control = true),
+            playbackStartTime = 0.0,
+        )
+        f.dispatcher.handle(
+            KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(carrier, wetVoice("song", cylinder = 3)))
+        )
         f.render(4)
+        // The request built the master chain: its ring and its network, beside the orbit's.
+        f.warehouse.sized.allocations shouldBe 2
+        f.warehouse.reverbs.allocations shouldBe 2
         f.dispatcher.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
         f.render(2000)
 

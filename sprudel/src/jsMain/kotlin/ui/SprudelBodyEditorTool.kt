@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.sprudel.SprudelBodyMaterials
+import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -76,7 +76,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
 
     // ── Available materials ───────────────────────────────────────────────────
 
-    private val materials = SprudelBodyMaterials.names
+    private val materials = BodyMaterials.names
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
@@ -172,7 +172,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
                     fontStyle = FontStyle.italic
                     marginBottom = 8.px
                 }
-                +(SprudelBodyMaterials.descriptions[material] ?: "")
+                +(BodyMaterials.descriptions[material] ?: "")
             }
 
             ui.divider {}
@@ -187,7 +187,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
 
     /**
      * Sum of the material's parallel bandpass modes — the "fingerprint" the ear reads. Each mode is
-     * a unity-peak BPF (peak 1 at its centre, matching the post-C2 BodyFilter) scaled by its linear `db` gain; the sum is
+     * a unity-peak BPF (peak 1 at its centre, matching the engine's post-C2 body bank) scaled by its linear `db` gain; the sum is
      * normalized to its own max so every material fills the plot. Log-frequency axis (20 Hz–20 kHz).
      */
     private fun FlowContent.renderResponseSvg() {
@@ -203,7 +203,7 @@ private class SprudelBodyEditorComp(ctx: Ctx<Props>) : Component<SprudelBodyEdit
         val logMin = ln(20.0)
         val logMax = ln(20000.0)
 
-        val modes = SprudelBodyMaterials.modesFor(material) ?: emptyList()
+        val modes = BodyMaterials.modesFor(material) ?: emptyList()
 
         fun response(f: Double): Double {
             var sum = 0.0

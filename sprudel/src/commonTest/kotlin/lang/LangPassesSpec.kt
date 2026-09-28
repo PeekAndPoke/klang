@@ -8,8 +8,9 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FILTER_MAX_PASSES
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.WireFilter
+import io.peekandpoke.klang.sprudel.wireFilters
 
 /**
  * C5 sprudel-door pin: `passes` reaches the wire from the head's third slot AND the
@@ -18,13 +19,13 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
  */
 class LangPassesSpec : StringSpec({
 
-    fun firstLp(p: SprudelPattern?): FilterDef.LowPass =
+    fun firstLp(p: SprudelPattern?): WireFilter.LowPass =
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
-            .filters.filters.filterIsInstance<FilterDef.LowPass>().first()
+            .wireFilters().filterIsInstance<WireFilter.LowPass>().first()
 
-    fun firstHp(p: SprudelPattern?): FilterDef.HighPass =
+    fun firstHp(p: SprudelPattern?): WireFilter.HighPass =
         (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
-            .filters.filters.filterIsInstance<FilterDef.HighPass>().first()
+            .wireFilters().filterIsInstance<WireFilter.HighPass>().first()
 
     "head slot 3: lpf(freq, q, passes) reaches the wire on both doors" {
         firstLp(note("c").lpf(800, 1.0, 2)).passes shouldBe 2
@@ -72,10 +73,10 @@ class LangPassesSpec : StringSpec({
         // pattern silently acquires a cutoff nobody asked for.
         val p = seq("400 800").lpf(passes = 2)
         val vd = (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
-        vd.filters.filters.filterIsInstance<FilterDef.LowPass>().isEmpty() shouldBe true
+        vd.wireFilters().filterIsInstance<WireFilter.LowPass>().isEmpty() shouldBe true
         val hp = seq("400 800").hpf(passes = 2)
         (hp ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
-            .filters.filters.filterIsInstance<FilterDef.HighPass>().isEmpty() shouldBe true
+            .wireFilters().filterIsInstance<WireFilter.HighPass>().isEmpty() shouldBe true
     }
 
     "mapper forms (c) and (d): the standalone and the CHAINED mapper both carry passes" {

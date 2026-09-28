@@ -7,150 +7,62 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangVowelSpec : StringSpec({
 
-    "vowel dsl interface" {
-        val pat = "c3"
-        val vowelVal = "a"
-
-        dslInterfaceTests(
-            "pattern.vowel(v)" to note(pat).vowel(vowelVal),
-            "script pattern.vowel(v)" to SprudelPattern.compile("""note("$pat").vowel("$vowelVal")"""),
-            "string.vowel(v)" to pat.vowel(vowelVal),
-            "script string.vowel(v)" to SprudelPattern.compile(""""$pat".vowel("$vowelVal")"""),
-            "vowel(v)" to note(pat).apply(vowel(vowelVal)),
-            "script vowel(v)" to SprudelPattern.compile("""note("$pat").apply(vowel("$vowelVal"))"""),
-        ) { _, events ->
-            events.shouldNotBeEmpty()
-            events[0].data.vowel shouldBe "a"
-        }
-    }
-
-    "reinterpret voice data as vowel | seq(\"a e i\").vowel()" {
-        val p = seq("a e i").vowel()
+    // A bare call reinterprets the pattern's own values as the HEAD, which is the WET since step
+    // 3d(iii). It writes the wet alone: the vowel is the stage's name knob, and a wet never invents it.
+    "reinterpret voice data as wet | seq(\"0.2 0.5 0.8\").vowel()" {
+        val p = seq("0.2 0.5 0.8").vowel()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
-    }
-
-    "reinterpret voice data as vowel | \"a e i\".vowel()" {
-        val p = "a e i".vowel()
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
-    }
-
-    "reinterpret voice data as vowel | seq(\"a e i\").apply(vowel())" {
-        val p = seq("a e i").apply(vowel())
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 3
-        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
-    }
-
-    "vowel() sets the vowel property" {
-        val p = note("c3").vowel("a")
-
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.vowel shouldBe "a"
-    }
-
-    "vowel() works with string pattern sequences" {
-        val p = note("c3 e3").vowel("a o")
-
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events[0].data.vowel shouldBe "a"
-        events[1].data.vowel shouldBe "o"
+        events.map { it.data.vowelMix } shouldBe listOf(0.2, 0.5, 0.8)
+        events.map { it.data.vowel } shouldBe listOf(null, null, null)
     }
 
     "vowel() handles case insensitively" {
-        val p = note("c3").vowel("A")
+        val p = note("c3").vowel(vowel = "A")
 
         val events = p.queryArc(0.0, 1.0)
 
         events[0].data.vowel shouldBe "a"
     }
 
-    "vowel() converts to FilterDef.Formant in toVoiceData()" {
-        val p = note("c3").vowel("a")
+    // The orbit's vowel stage reads its SLOTS (`vowel.vowel`, `vowel.wet`, `vowel.floor` in `katalystParams`); the
+    // `FilterDef.Formant` the voice once carried in `filters` left the wire in phase 3 step 9. These rows read the
+    // slots the door writes and resolve the vowel index through the table the orbit uses.
+    fun slots(pattern: SprudelPattern): Map<String, Double> =
+        pattern.queryArc(0.0, 1.0)[0].data.toVoiceData().katalystParams ?: emptyMap()
 
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        voiceData.filters.filters.size shouldBe 1
-        val formant = voiceData.filters.filters[0] as io.peekandpoke.klang.audio_bridge.FilterDef.Formant
-
-        // Verify vowel 'a' formant bands
-        formant.bands.size shouldBe 5
-        // Default dry/wet amount (blended over the dry source, not wet-only).
-        formant.mix shouldBe 0.5
-    }
-
-    "vowel(wet = ...) overrides the formant dry/wet amount" {
-        val p = note("c3").vowel(vowel = "a", wet = 0.3)
-
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        val formant = voiceData.filters.filters[0] as io.peekandpoke.klang.audio_bridge.FilterDef.Formant
-        formant.mix shouldBe 0.3
-    }
+    fun bands(slots: Map<String, Double>) = VowelBands.bandsAt(slots["vowel.vowel"] ?: Double.NaN)
 
     "vowel() works with all vowels (a, e, i, o, u)" {
-        val vowels = listOf("a", "e", "i", "o", "u")
+        listOf("a", "e", "i", "o", "u").forEach { v ->
+            val p = note("c3").vowel(vowel = v)
 
-        vowels.forEach { v ->
-            val p = note("c3").vowel(v)
-
-            val events = p.queryArc(0.0, 1.0)
-            events[0].data.vowel shouldBe v
-
-            // Verify vowel creates a formant filter
-            val voiceData = events[0].data.toVoiceData()
-            voiceData.filters.filters.size shouldBe 1
-
-            // Type check for formant filter
-            val filter = voiceData.filters.filters[0]
-            (filter is io.peekandpoke.klang.audio_bridge.FilterDef.Formant) shouldBe true
+            p.queryArc(0.0, 1.0)[0].data.vowel shouldBe v
+            // Every one resolves to a formant bank.
+            bands(slots(p)).shouldNotBeNull().shouldNotBeEmpty()
         }
     }
 
-    "vowel() with unknown vowel is ignored" {
-        val p = note("c3").vowel("x")
+    "vowel() with unknown vowel is ignored: its index is none, and no formant bank resolves" {
+        val slots = slots(note("c3").vowel(vowel = "x"))
 
-        val events = p.queryArc(0.0, 1.0)
-        val voiceData = events[0].data.toVoiceData()
-
-        // Should not create a formant filter for unknown vowel
-        voiceData.filters.filters.size shouldBe 0
+        slots["vowel.vowel"] shouldBe 0.0
+        bands(slots) shouldBe null
     }
 
-    "vowel(\"none\") resets — clears a previously set vowel" {
-        val p = note("c3").vowel("a").vowel("none")
+    "vowel(vowel = \"none\") is the off switch: it clears a previously set vowel" {
+        // "none" is the explicit reset: no formant bank, even after an earlier vowel(vowel = "a").
+        val slots = slots(note("c3").vowel(vowel = "a").vowel(vowel = "none"))
 
-        val voiceData = p.queryArc(0.0, 1.0)[0].data.toVoiceData()
-
-        // "none" is the explicit reset — no formant filter, even after an earlier vowel("a").
-        voiceData.filters.filters.size shouldBe 0
-    }
-
-    "vowel() as string extension" {
-        val p = "c3 e3".vowel("a")
-
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events[0].data.vowel shouldBe "a"
-        events[1].data.vowel shouldBe "a"
+        slots["vowel.vowel"] shouldBe 0.0
+        bands(slots) shouldBe null
     }
 })

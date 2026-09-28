@@ -251,8 +251,20 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** A count slot: a literal, a `Param` through the voice's params or its default, else one. */
         private fun countOf(slot: IgnitorDsl): Int = when (slot) {
             is IgnitorDsl.Constant -> slot.value.toInt().coerceAtLeast(1)
-            is IgnitorDsl.Param -> (params[slot.name] ?: slot.default).toInt().coerceAtLeast(1)
+            is IgnitorDsl.Param -> (params[slot.name]?.takeIf { it.isFinite() } ?: slot.default).toInt().coerceAtLeast(1)
             else -> 1
+        }
+
+        /**
+         * An `oversample` knob as the whole factor the runtime reads at voice build: a `Constant` or
+         * `Param` leaf through the one conversion, [Oversampler.factorOf]; anything else is 0, which is
+         * what the runtime's leaf-only read gives it. A non-finite override reads as unset and takes the
+         * slot's default, as the runtime's `Param` leaf does.
+         */
+        private fun factorOf(knob: IgnitorDsl): Int = when (knob) {
+            is IgnitorDsl.Constant -> Oversampler.factorOf(knob.value)
+            is IgnitorDsl.Param -> Oversampler.factorOf(params[knob.name]?.takeIf { it.isFinite() } ?: knob.default)
+            else -> 0
         }
 
         private fun source(bytes: Int = SOURCE_BYTES) = GraphCensus(1, 1, bytes)
@@ -266,16 +278,27 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(n, 2 * n - 1, SOURCE_BYTES + n * UNISON_VOICE_BYTES)
         }
 
-        private fun shaped(oversample: Int, drive: Boolean): GraphCensus {
-            // the shaper: its loop at the oversampled rate, the DC blocker and the soft cap in place
+        private fun shaped(oversample: Int): GraphCensus {
+            // the shaper: its loop at the oversampled rate, the DC blocker, and the output pass in place
+            // (the soft cap on `Shape`, the copy out on the fused `Distort`, whose drive rides in the loop)
             val f = 1 shl Oversampler.factorToStages(oversample)
-            val shape = GraphCensus(1, 2 * f + 2 + 2 + oversampleTraffic(oversample), oversampleBytes(oversample) + 24)
 
-            return if (drive) shape + inPlace() else shape
+            return GraphCensus(1, 2 * f + 2 + 2 + oversampleTraffic(oversample), oversampleBytes(oversample) + 24)
         }
 
-        private fun filter(passes: Int): GraphCensus {
-            val n = coercePasses(passes)
+        /**
+         * A filter's `passes` knob as the count the runtime reads at voice build: a `Constant` or `Param`
+         * leaf through [coercePasses]; anything else is one pass, the runtime's leaf-only answer. A
+         * non-finite override reads as unset and takes the slot's default, as the `Param` leaf does.
+         */
+        private fun passesOf(knob: IgnitorDsl): Int = when (knob) {
+            is IgnitorDsl.Constant -> coercePasses(knob.value)
+            is IgnitorDsl.Param -> coercePasses(params[knob.name]?.takeIf { it.isFinite() } ?: knob.default)
+            else -> 1
+        }
+
+        private fun filter(passes: IgnitorDsl): GraphCensus {
+            val n = passesOf(passes)
 
             return GraphCensus(n, 2 * n, SECTION_BYTES * n)
         }
@@ -289,7 +312,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             is IgnitorDsl.Sawtooth, is IgnitorDsl.Square, is IgnitorDsl.Triangle, is IgnitorDsl.Ramp,
             is IgnitorDsl.Pulze, is IgnitorDsl.RawPulze, is IgnitorDsl.Zawtooth, is IgnitorDsl.Zamp,
             is IgnitorDsl.Impulse, is IgnitorDsl.WhiteNoise, is IgnitorDsl.PinkNoise, is IgnitorDsl.BrownNoise,
-            is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise -> source()
+            is IgnitorDsl.Crackle, is IgnitorDsl.Dust, is IgnitorDsl.PerlinNoise, is IgnitorDsl.BerlinNoise,
+            is IgnitorDsl.Sample -> source()
 
             // a sine with partials is one pass over a bank; every partial keeps a phase, an increment and a gain
             is IgnitorDsl.Sine -> {
@@ -356,8 +380,9 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             }
 
             // shapers
-            is IgnitorDsl.Shape -> shaped(node.oversample, drive = false)
-            is IgnitorDsl.Distort -> shaped(node.oversample, drive = true)
+            is IgnitorDsl.Shape -> shaped(factorOf(node.oversample))
+            // since phase 3 step 4 (D2) one fused stage, not a drive pass plus a shaper
+            is IgnitorDsl.Distort -> shaped(factorOf(node.oversample))
             is IgnitorDsl.Drive -> inPlace()
             is IgnitorDsl.Crush -> inPlace()
             is IgnitorDsl.Coarse -> inPlace(16)

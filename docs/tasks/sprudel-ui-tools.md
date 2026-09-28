@@ -8,6 +8,27 @@ Since last revision, these editor tools have been added (see `sprudel/src/jsMain
 `SprudelSuperPluckEditorTool`, `SprudelSuperSawEditorTool`, `SprudelTremoloEditorTool`. Tier tables below still
 reflect proposals — cross-check the directory before starting a "new" tool.
 
+> **2026-09-25 follow-up (phase 3 step 3b):** the LFO and distortion shape names now have ONE home each,
+> `audio_bridge/.../LfoShapes.kt` and `DistortionShapes.kt` (names, aliases, `indexOf`). `SprudelTremoloEditorTool`,
+> `SprudelDistortEditorTool` and `SprudelDistortShapeEditorTool` still hold their own copies of the lists and
+> should read the catalogues.
+
+## Open, carried 2026-09-27 from the named-arguments task
+
+The named-argument bug itself is fixed (2026-09-26, `ffa490e4`: a named argument binds by name through
+`klangscript/.../intel/ArgumentBinding.kt`; record in
+`docs/tasks-archive/2026-09/20260927-editor-tools-named-arguments.md`). Still open on the tools:
+
+- **The filter whole-envelope editors are bound to no door.** `SprudelLpAdsrEditor`, `SprudelHpAdsrEditor`,
+  `SprudelBpAdsrEditor`, `SprudelNfAdsrEditor` (and their sequence twins) are registered but no `@param-tool`
+  names them: they still read and write argument slots 0 to 3 of their call
+  (`SprudelFilterAdsrEditorTool.kt`), the shape of the retired `lpadsr(a, d, s, r)`, while the stages are the
+  `attack .. release` slots of `lpf`/`hpf` (4..7) and `bpf`/`notch` (3..6). `SprudelNotchQEditor` and
+  `SprudelNotchFreq*` are unwired the same way. Bind them by `paramNames.indexOf("attack")` or retire them.
+- **The phaser editor has no `floor` control** (it edits wet, rate, center, sweep).
+- **The tremolo `sync` slot is an LFO rate in Hz** (`TremoloCore.kt`, `lang_effects_modulation.kt`
+  `@param sync`); any tool or doc that presents it as cycles per cycle is wrong.
+
 ## Summary
 
 Most core DSL params have editor tools; a backlog of ~16 param editors remains (see the Tier tables below).
@@ -70,7 +91,7 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 |----|----------------------------------------|------------------------------|-------------------------------------|
 | 34 | `degrade()` / `degradeBy()`            | `SprudelDegradeEditorTool`   | probability slider (0–100%)         |
 | 35 | `vowel()`                              | `SprudelVowelEditorTool`     | vowel picker (a, e, i, o, u)        |
-| 36 | `loop()` / `loopBegin()` / `loopEnd()` | `SprudelLoopEditorTool`      | toggle + range bar                  |
+| 36 | `loop()` with `begin()` / `end()`      | `SprudelLoopEditorTool`      | toggle + range bar                  |
 | 37 | `phaser*()` family                     | `SprudelPhaserEditorTool`    | combined center/depth/sweep editor  |
 | 38 | `tremolo*()` family                    | `SprudelTremoloEditorTool`   | combined depth/rate/shape editor    |
 | 39 | `unison(pan = ...)` (was `panSpread()`, before that `spread()`)         | `SprudelPanSpreadEditorTool` | numeric slider (0–1) stereo width   |
@@ -99,15 +120,15 @@ All tools are registered in `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`.
 
 | DSL Function                      | Editor                       | Sequence Editor                      | Format          |
 |-----------------------------------|------------------------------|--------------------------------------|-----------------|
-| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | slots `(wet, time, feedback)`; the `cap` slot has no control yet (2026-09-07) |
+| `delay()`                         | `SprudelDelayEditor`         | `SprudelDelaySequenceEditor`         | slots `(wet, time, feedback, cap)` |
 | `delay(time = ...)`                     | `SprudelDelayTimeEditor`     | `SprudelDelayTimeSequenceEditor`     | single value    |
 | `delay(feedback = ...)`           | `SprudelDelayFeedbackEditor` | `SprudelDelayFeedbackSequenceEditor` | single value    |
 | `reverb()`                        | `SprudelReverbEditor`        | `SprudelReverbSequenceEditor`        | single value    |
 | `reverb(size = ...)`              | `SprudelReverbSizeEditor`    | `SprudelReverbSizeSequenceEditor`    | single value    |
 
-Named arguments resolve by position today (`docs/tasks/editor-tools-named-arguments.md`).
+Named arguments bind by name since 2026-09-26 (`ffa490e4`).
 Compound slots carry no aliases since 2026-09-07 (`reverb(size = ...)`, `delay(feedback = ...)`, ...
-are the only spellings); the phaser editor has no `floor` control and the delay editor no `cap`.
+are the only spellings); the phaser editor has no `floor` control (see the Open list at the top).
 
 ## Low Pass Filter
 
@@ -116,7 +137,7 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | `lpf()` | `SprudelLpFilterEditor`    | `SprudelLpFilterSequenceEditor`    | `freq:resonance:env` |
 | `lpf(q = ...)` | `SprudelLpResonanceEditor` | `SprudelLpResonanceSequenceEditor` | single value         |
 | `lpf(env = ...)` | `SprudelLpEnvEditor`       | `SprudelLpEnvSequenceEditor`       | single value         |
-| whole envelope of `lpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelLpAdsrEditor` | `SprudelLpAdsrSequenceEditor` | `a:d:s:r` |
+| whole envelope of `lpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see the Open list at the top) | `SprudelLpAdsrEditor` | `SprudelLpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## High Pass Filter
 
@@ -125,7 +146,7 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | `hpf()` | `SprudelHpFilterEditor`    | `SprudelHpFilterSequenceEditor`    | `freq:resonance:env` |
 | `hpf(q = ...)` | `SprudelHpResonanceEditor` | `SprudelHpResonanceSequenceEditor` | single value         |
 | `hpf(env = ...)` | `SprudelHpEnvEditor`       | `SprudelHpEnvSequenceEditor`       | single value         |
-| whole envelope of `hpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelHpAdsrEditor` | `SprudelHpAdsrSequenceEditor` | `a:d:s:r` |
+| whole envelope of `hpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see the Open list at the top) | `SprudelHpAdsrEditor` | `SprudelHpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Band Pass Filter
 
@@ -134,7 +155,7 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | `bpf()` | `SprudelBpFilterEditor`  | `SprudelBpFilterSequenceEditor`  | `freq:q:env` |
 | `bpf(q = ...)` | `SprudelBpQEditor`       | `SprudelBpQSequenceEditor`       | single value |
 | `bpf(env = ...)` | `SprudelBpEnvEditor`     | `SprudelBpEnvSequenceEditor`     | single value |
-| whole envelope of `bpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelBpAdsrEditor` | `SprudelBpAdsrSequenceEditor` | `a:d:s:r` |
+| whole envelope of `bpf` (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see the Open list at the top) | `SprudelBpAdsrEditor` | `SprudelBpAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Notch Filter
 
@@ -147,7 +168,7 @@ are the only spellings); the phaser editor has no `floor` control and the delay 
 | `notch(decay = ...)`              | `SprudelNfDecayEditor`                            | `SprudelNfDecaySequenceEditor`     | single value |
 | `notch(sustain = ...)`            | `SprudelNfSustainEditor`                          | `SprudelNfSustainSequenceEditor`   | single value |
 | `notch(release = ...)`            | `SprudelNfReleaseEditor`                          | `SprudelNfReleaseSequenceEditor`   | single value |
-| whole envelope (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see `editor-tools-named-arguments.md`) | `SprudelNfAdsrEditor` | `SprudelNfAdsrSequenceEditor` | `a:d:s:r` |
+| whole envelope (unbound since 2026-09-07: the tool edits slots 0 to 3 of its call, see the Open list at the top) | `SprudelNfAdsrEditor` | `SprudelNfAdsrSequenceEditor` | `a:d:s:r` |
 
 ## Other
 

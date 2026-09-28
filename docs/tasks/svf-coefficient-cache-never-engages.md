@@ -63,6 +63,6 @@ but the block is 128 frames, so the per-sample share is small. If the win does n
 real song, say so and close this; the tidiness argument alone does not justify touching the
 hottest path in the engine.
 
-Related: `docs/plans/filter-unification.md` (C5 review, finding rejected as out-of-scope),
+Related: `docs/tasks-archive/2026-09/20260927-filter-unification.md` (C5 review, finding rejected as out-of-scope),
 `docs/tasks/future/ignitor-optimizer-open-items.md` §8 (`analog > 0` filters) (which cites this same `is ParamIgnitor` check
 while arguing a DIFFERENT relaxation is unsafe — read it before touching either).

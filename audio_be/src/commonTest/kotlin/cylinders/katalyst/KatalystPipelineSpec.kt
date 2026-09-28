@@ -9,15 +9,18 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_be.effects.DelayLine
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.voices.Voice
 import kotlin.math.abs
 
 /**
  * Integration tests for the bus effect pipeline.
  * Verifies that effects chain correctly: Delay → Reverb → Phaser → Compressor.
+ *
+ * What each stage does on its own is its stage spec's (`KatalystDelayEffectSpec`,
+ * `KatalystReverbEffectSpec`, `KatalystCompressorEffectSpec`); these rows are about the chain.
  */
 class BusPipelineSpec : StringSpec({
 
@@ -27,8 +30,6 @@ class BusPipelineSpec : StringSpec({
     fun createCtx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     fun createPipeline(
@@ -38,27 +39,28 @@ class BusPipelineSpec : StringSpec({
         compressorThreshold: Double? = null,
     ): List<KatalystEffect> {
         val delay = KatalystDelayEffect(DelayLine(10.0, sampleRate), blockFrames).apply {
-            configure(time = delayTime, feedback = 0.0, cap = 1.0)
+            configure(time = delayTime, feedback = 0.0, cap = 1.0, wet = 1.0)
         }
         val reverb = KatalystReverbEffect(Reverb(sampleRate), blockFrames).apply {
-            configure(size = reverbRoom, lowpass = null)
+            configure(size = reverbRoom, lowpass = null, wet = 1.0)
         }
-        val phaser = KatalystPhaserEffect(Phaser(sampleRate).apply {
-            depth = phaserDepth
-            rate = 2.0
-            center = 1000.0
-            sweep = 1000.0
-            feedback = 0.5
-        })
-        val compressor = KatalystCompressorEffect().apply {
+        val phaser = KatalystPhaserEffect(
+            phaser = Phaser(sampleRate),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+        ).apply {
+            configure(depth = phaserDepth, rate = 2.0, center = 1000.0, sweep = 1000.0, floor = 1.0)
+        }
+        val compressor = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames).apply {
             if (compressorThreshold != null) {
-                this.compressor = Compressor(
-                    sampleRate = sampleRate,
-                    thresholdDb = compressorThreshold,
-                    ratio = 4.0,
-                    kneeDb = 0.0,
-                    attackSeconds = 0.0001,
-                    releaseSeconds = 0.1,
+                configure(
+                    Voice.Compressor(
+                        thresholdDb = compressorThreshold,
+                        ratio = 4.0,
+                        kneeDb = 0.0,
+                        attackSeconds = 0.0001,
+                        releaseSeconds = 0.1,
+                    )
                 )
             }
         }
@@ -80,63 +82,6 @@ class BusPipelineSpec : StringSpec({
         ctx.mixBuffer.right[0] shouldBe (0.3 plusOrMinus 1e-6)
     }
 
-    "delay-only pipeline adds delayed signal to mix" {
-        val pipeline = createPipeline(delayTime = 0.05)
-        val ctx = createCtx()
-
-        // Feed signal through multiple blocks
-        repeat(50) {
-            ctx.delaySendBuffer.left.fill(0.5)
-            ctx.delaySendBuffer.right.fill(0.5)
-            ctx.mixBuffer.clear()
-
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        // After enough blocks, delayed signal should appear
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 }
-        hasSignal shouldBe true
-    }
-
-    "reverb-only pipeline adds reverb signal to mix" {
-        val pipeline = createPipeline(reverbRoom = 0.5)
-        val ctx = createCtx()
-
-        // Reverb comb filters need time to build up signal
-        repeat(20) {
-            ctx.reverbSendBuffer.left.fill(0.5)
-            ctx.reverbSendBuffer.right.fill(0.5)
-            ctx.mixBuffer.clear()
-
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 }
-        hasSignal shouldBe true
-    }
-
-    "compressor reduces loud signal at end of chain" {
-        val pipeline = createPipeline(compressorThreshold = -20.0)
-        val ctx = createCtx()
-
-        // Process enough blocks for the compressor envelope to converge
-        repeat(20) {
-            ctx.mixBuffer.left.fill(0.9)
-            ctx.mixBuffer.right.fill(0.9)
-            for (effect in pipeline) {
-                effect.process(ctx)
-            }
-        }
-
-        // Signal should be compressed
-        val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (outputLevel < 0.9) shouldBe true
-    }
-
     "full pipeline chains all effects: delay + reverb + phaser + compressor" {
         val pipeline = createPipeline(
             delayTime = 0.05,
@@ -146,14 +91,10 @@ class BusPipelineSpec : StringSpec({
         )
         val ctx = createCtx()
 
-        // Feed signal through all send buffers
+        // The delay and the reverb take their feed from the mix
         repeat(50) {
             ctx.mixBuffer.left.fill(0.5)
             ctx.mixBuffer.right.fill(0.5)
-            ctx.delaySendBuffer.left.fill(0.3)
-            ctx.delaySendBuffer.right.fill(0.3)
-            ctx.reverbSendBuffer.left.fill(0.2)
-            ctx.reverbSendBuffer.right.fill(0.2)
 
             for (effect in pipeline) {
                 effect.process(ctx)
@@ -181,9 +122,5 @@ class BusPipelineSpec : StringSpec({
         // Phaser should modify the signal
         val phaserModified = ctx.mixBuffer.left.any { it != 0.5 }
         phaserModified shouldBe true
-
-        // But send buffers should be untouched (delay/reverb were inactive)
-        ctx.delaySendBuffer.left[0] shouldBe 0.0
-        ctx.reverbSendBuffer.left[0] shouldBe 0.0
     }
 })

@@ -5,14 +5,19 @@
 > (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`, `/dsl-design`):
 > - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
 >   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
-> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer wet knobs:
->   `.phaser(0.3, x => x.wet(0.3))`.
-> - Master: `master(Master(m => m.reverb(r => r.wet(0.05)).gain(2.5).limiter()))`, `master(Master())`
->   for unity. `Master.of` and `MasterFx` are gone.
-> - Pipeline: `Pipeline(p => p.filterMod().vca().distort().filter().vca())`,
->   `Pipeline.modern(p => p.tuneVca(v => v.expK(2.5)))`. `Pipeline.of` and `Stage` are gone.
-> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the five songs now use
-> the `Master(m => ...)` form.
+> - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer take `wet` FIRST
+>   on the door, `floor` on the builder: `.phaser(0.3, 0.5, x => x.floor(0.2))` (wet, rate; since
+>   2026-09-24, phase 3 step 3d, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3b). Filters:
+>   `.lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.01, 0.3, 0.2, 0.5))`; pitch sweeps:
+>   `.pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))`.
+> - Master: `master(Katalyst(k => k.reverb(0.05).gain(2.5).limiter()))`, the same Katalyst chain an orbit runs
+>   (phase 3 step 12, 2026-09-28: the `Master` object is gone); `reverb(wet, size, lowpass)` and
+>   `limiter(threshold, ratio, knee, attack, release, lookahead)` are flat. `master(Katalyst())` switches the
+>   master off (the empty chain). `Master.of`, `MasterFx` and `Master(m => ...)` are gone.
+> - Pipeline: retired with the voice strip in phase 3 step 9 (2026-09-27). An authored instrument gets the
+>   pattern's voice doors by ending in `.classic()`: `Osc.saw().distort(0.4, "tube").classic()`.
+> The song-usage counts below (line "Master: 5/14 songs ...") predate this; the mastered songs now use
+> the `Katalyst(k => ...)` form (the `Master(m => ...)` form between 2026-09-06 and 2026-09-28).
 
 > **Second hand-off, from the sprudel field accessors, 2026-09-07**
 > (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`, four batches, all specced and reviewed): every numeric
@@ -62,13 +67,13 @@ Ignitor / Master / Pipeline (they weren't on the generator's function allow-list
 Ground truth from the 14 built-in songs (full tally in session analysis, key facts):
 
 - Used by **all 14** songs: `stack`, `note`/`n`, `sound`/`s`, `gain`, `adsr`. Second tier (10+):
-  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `postgain`, `distort`, `onepole`, `analog`.
+  `orbit`, `hpf`/`lpf`, `pan`, `superimpose`, `fast`/`slow`, `room`, `distort`, `onepole`, `analog`. (The tally also had `postgain`, retired into `gain` on 2026-09-19.)
 - Signals-as-modulators is the highest-value intermediate concept: 72 `.range(` calls across 7 songs.
 - Mini-notation actually used: sequences, `~`, `[]`, `<>`, `*`, `!`, `@`, comma-chords, `|`, `` >/n `` suffix,
   `struct` gates. Never used: polymeter. `.euclid()` in one song only.
 - Ignitor building is opt-in (6/14 songs) with a natural teaching ladder:
-  Sandsturm → IrishLament → DialogueWithTheStars → Sakura → ATruthWorthLyingFor.
-- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"`.
+  Sandsturm → IrishLament → Sakura → ATruthWorthLyingFor (DialogueWithTheStars left the built-in songs 2026-09-25).
+- Master: 5/14 songs, always the static `master(Master.of(...))` carrier. Pipeline: 2/14, both `"pedal"` (the `pedal` preset was REMOVED 2026-09-25, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27).
 - Two arrangement idioms both in real use: `arrange([bars, section], ...)` vs. one big `stack` + `filterWhen(t => ...)`.
 
 ## Principles (the anti-slop rules)
@@ -174,8 +179,8 @@ stages must not carry it.
 | B9 | The transform toolkit | `fast`/`slow`, `superimpose`, `legato`, `clip` | — | One melody, four transformations, by song-frequency order. *Listen for: superimpose's thickening vs. an octave doubling.* |
 | B10 | Gates — struct | `.struct("x ~ ~ x ...")` | `chord` preview | The tresillo gate from Sandsturm. *Listen for: 3-3-2.* |
 | A6 | Thickness — unison, spread, analog | `unison` (with the `spread` slot), `analog` | — | Supersaw anatomy: one copy → many → spread apart → drifting. *Listen for: the shimmer of copies disagreeing about the pitch.* ⚠️ The original *mono vs. wide on headphones* listen-for was ENGINE-FALSE and is dropped: the super oscillators sum to mono and `panSpread` is wired but inaudible. Stereo width belongs to B9, which earns it with a transposed copy panned opposite. |
-| A7 | Space & dirt | `room`, `delay`, `distort`, `onepole`, `postgain` | — | Dress the sound (room/delay), dirty it (distort/onepole), lift it (postgain). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages) — sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
-| A8 | Body | `body(material, wet)` | — | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
+| A7 | Space & dirt | `room`, `delay`, `distort`, `onepole` | none | Dress the sound (room/delay), dirty it (distort/onepole), set its level last (`gain`; `postgain` was retired into it on 2026-09-19). ⚠️ Chain order is FIXED by the PipelineDsl (FilterPipelineBuilder iterates the preset's stages): sprudel CALL order does NOT reorder the chain, so never A/B "swapped order" here; the order-matters demo belongs to C7 via `.pipeline()`. |
+| A8 | Body | `body(wet, material)`, or `body(material = "...")` (wet first since 2026-09-24) | (none) | Same pluck through mahogany / glass / membrane. *Listen for: the cabinet in front of the speaker.* (8/14 songs use it; zero tutorials.) |
 | B11 | Chords & voicing | `chord()` + `voicing()`, why Am–F–C–G works | `struct` | Progression built from song examples, one paragraph of real harmony. (The old `tut_ChordsAndHarmony` staging was sound — reuse the staging, not the file.) |
 | A9 | The note moves the knobs | field accessors: a knob changed relative to itself (`gain(mul(0.5))`), and a knob that reads another field (`bpf(freq)`, `bpf(freq.mul(2))`) | `bpf` and the `mul`/`add` mappers, none of which anything teaches yet | Pink noise through a bandpass sitting on the note: the wind whistles the melody. *Listen for: noise turning into a pitch as the filter locks onto each note.* Built-in song **Greensleeves** is the reference; the surface landed 2026-09-07, the lesson did not. |
 
@@ -186,10 +191,10 @@ stages must not carry it.
 | C1 | Caricature drums (recipes) | kick = sine + `pitchEnvelope`, hat = noise + `hpf`, snare | everything so far | Build a drum kit from raw waves, pattern-level. *Listen for: the pitch drop that makes a kick a kick.* Caricature model: 2–4 acoustic tells, tune by ear. |
 | C2 | Your first Ignitor | `Osc.*` chains: osc → filter → adsr | — | Sandsturm's lead, explained line by line; rebuild C1's kick as an Ignitor. *Listen for: detuned square joining the saw.* |
 | C3 | Layered ignitors | additive `.plus()` stacks | — | IrishLament's flute/fingerpick/contrabass: many layers, flat wiring. *Listen for: the noise crackle that makes the pluck "wood".* |
-| C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | — | DialogueWithTheStars' three guitars, round-robin. *Listen for: open vs. muted variant.* |
+| C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
 | C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
-| C6 | The Master bus | `master(Master(m => m.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
-| C7 | Pipeline — modern vs. pedal | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
+| C6 | The Master bus | `master(Katalyst(k => k.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
+| C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
 | C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
 | C10 | Capstone: a song from zero | everything | — | Build a Sandsturm-lite start to finish — the "worked song". |
@@ -228,8 +233,8 @@ stages must not carry it.
   claims contested-channel behavior — keep it that way.
 - **A7 (Space and Dirt) — AUTHORED 2026-08-31, review loop NOT yet run:** delivers B6's
   `reverb(wet, size)` preview under its own intuitions, plus the delay family, `distort`,
-  `onepole` and `postgain`. One of the two biggest `teaches` lists in the corpus (5) and the only `Standard`
-  depth (the field was called `scope` until 2026-09-08, renamed so that "scope" means one thing:
+  `onepole` and the level. It has four `teaches` entries since 2026-09-19 (five before `postgain`
+  retired into `gain`) and is the only lesson of `Standard` depth (the field was called `scope` until 2026-09-08, renamed so that "scope" means one thing:
   where audio runs, see `KlangScope`); if the panel finds it dense the natural split is space (§§1-3) and dirt-plus-level
   (§§4-6). ⚠️ Engine truths (all in the lesson KDoc), two of which killed a drafted section:
   (a) Until 2026-09-16 BOTH space effects were sends WITH A GATE (an unset `size` or `time` was 0, so a
@@ -239,11 +244,11 @@ stages must not carry it.
   Needs a by-ear pass in the review loop.
   (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
-  (c) `gain` and `postgain` are BOTH applied at the voice output in SendRenderer, so `gain`
-  does NOT drive the distortion and on one line the two are the same arithmetic; the draft's
-  "dropping gain feeds the distortion less" was also FALSE. The real split is that `velocity`
-  and mute/solo scale `gain` only, which is now what §6 teaches (and the misleading
-  "applied before synthesis" line in the `postgain` KDoc was corrected at source too).
+  (c) `gain` is applied at the voice output in SendRenderer, so it does NOT drive the
+  distortion; the draft's "dropping gain feeds the distortion less" was FALSE. Until 2026-09-19
+  a second multiplier, `postgain`, sat at the same point and §6 taught the two apart; it retired
+  into `gain` (signal-flow plan §6), and §6 now teaches one level word, set last. The level that
+  DOES change the tone will be `pregain`.
   Open: review loop not run; the dry-vs-distorted pair is a render-QA level item by nature.
 - **A7 (space & dirt):** B6 previews `reverb(wet, size)` ("how much goes in" / "how big the room is")
   and points to "a Sound-track lesson still to come" — A7 must deliver both under those intuitions.
@@ -251,7 +256,7 @@ stages must not carry it.
   a chords lesson still to come takes that up properly") and licenses only the power chord; B11
   must pick that up. B7 also glossed "riff" ("a short figure that repeats") — reuse, don't re-gloss.
 - **A8 (body resonator):** A3 spends **"body"** as the standing term for the low half of the
-  spectrum ("body below, sparkle above"). A8 teaches `body(material, wet)` — the cabinet resonator —
+  spectrum ("body below, sparkle above"). A8 teaches `body(wet, material)`, the cabinet resonator,
   and must disambiguate the collision explicitly at first use, the way A6 must for "voice".
 - **B5 re-licences "bar" (decided in review):** B1 retired the word; B5 brings it back with a
   split meaning — the **cycle** is the container (window in time), a **bar** is one cycle's worth
@@ -336,8 +341,8 @@ stages must not carry it.
   - ⚠️ **Engine gaps found during the sweep, documented as "reserved" in the object KDocs, that must
     never appear in a lesson example:** `unison(pan)` (was `panSpread`) has no engine stage at all; `density` is the
     dust grain rate, not a unison knob; `duck(attack)` is the recovery time (the duck-down is
-    instant); `penv(curve)` is not read by `PitchEnvelopeRenderer`; `loopBegin`/`loopEnd` are not read by
-    `VoiceFactory`; negative `speed` is silence, not reverse.
+    instant); `penv(curve)` is gone (step 5b c1: `penvCurves`); `loopBegin`/`loopEnd` are gone (phase 3
+    step 9: a loop region is `loop().begin(x).end(y)`); negative `speed` is silence, not reverse.
   - **Title is provisional.** "The note moves the knobs" pairs with A5 and matches the headline
     example, but §2 generalizes past the note (`pan(gain)` is just as legal). Settle it when the
     lesson is written; it goes in `Tut` (`TutorialModel.kt`) either way.

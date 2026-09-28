@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystDelayEffect
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 
 /**
- * The warehouse in isolation — step 1 of `docs/plans/resource-warehouse.md`. No DSP anywhere in
+ * The warehouse in isolation — step 1 of `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`. No DSP anywhere in
  * here; the rules are the subject. Every row names the rule it pins, and every rule has a mutation
  * that turns its row red.
  *
@@ -506,7 +506,7 @@ class ResourceWarehouseSpec : StringSpec({
 
         for (time in listOf(0.25, 0.375, 0.5)) {
             val fx = KatalystDelayEffect(rings = w.sized, sampleRate = 44_100, blockFrames = 128)
-            fx.configure(time = time, feedback = 0.0, cap = 1.0)
+            fx.configure(time = time, feedback = 0.0, cap = 1.0, wet = 1.0)
             withClue("delaytime $time") { fx.delayLine.shouldNotBeNull().capacityFrames shouldBe class0 }
         }
     }

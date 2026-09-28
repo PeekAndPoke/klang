@@ -87,7 +87,7 @@ or reproduce the inner chain for the tap's source, which is not free.
 
 `onepole()` (the one-pole lowpass) never fuses, because `EqCore` has no one-pole section type and
 substituting an SVF would change the sound. Adding `ONEPOLE_LP` / `ONEPOLE_HP` section types is
-mechanical; note that `OnePoleHPF` carries a documented cutoff bias that is deliberate raw-engine
+mechanical; note that the one-pole highpass (`OnePoleHighpassIgnitor`) carries a documented cutoff bias that is deliberate raw-engine
 character and must be reproduced exactly, not "fixed".
 
 
@@ -116,7 +116,7 @@ next deploy; the JVM and node numbers are in the archive record.
 ## 7. Refinements recorded and not taken
 
 - Merging two nested Affines, algebraically or as one fused runtime pass:
-  `docs/tasks/future/affine-chain-fusion.md` (last in line, more complexity than gain).
+  `docs/tasks/future/optimize-affine-chain-fusion.md` (last in line, more complexity than gain).
 - A literal reciprocal composing with a following literal run (`div(4).mul(2)` as one node):
   needs `SAFE_MIN`/`SAFE_MAX` in the bridge to reproduce the runtime's guard; the expression form
   costs one guarded divide per block.

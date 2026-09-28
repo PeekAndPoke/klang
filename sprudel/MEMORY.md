@@ -1,10 +1,140 @@
 # Sprudel — Memory
 
+## The typed voice fields left the wire (phase 3 step 9, 2026-09-27)
+
+- `toVoiceData()` no longer writes the 30 typed door fields `VoiceData` lost (the filters, `adsr`, crush,
+  coarse, distort, phaser, tremolo, begin, end, speed, loop, scale, ...): the voice doors travel only as
+  slot keys in `oscParams` (`classic()`'s, and the sample's flat `begin`/`end`/`speed`/`loop`), the orbit stages only as `katalystParams` slots. The step 8 window
+  below is closed: the strip is gone, and an authored instrument without `classic()` plays as its bare tree.
+- The doors `loopBegin`/`loopb` and `loopEnd`/`loope` and their accessors are removed (they never reached the
+  engine). A loop region is `loop().begin(x).end(y)`.
+- `crush(oversample = ...)` and `coarse(oversample = ...)` still travel (`crush.oversample`,
+  `coarse.oversample`) but nothing reads them: `classic()`'s crush and coarse have no oversampler
+  (`docs/tasks/oversampling-regions.md`). `distort.oversample` is a `classic()` slot, read at voice build.
+
+## The classic slot keys are written in toVoiceData (phase 3 step 8, 2026-09-27)
+
+- The doors, readers and control merges stay TYPED (signal-flow plan section 4: the query hot loop keeps its one
+  allocation). `toVoiceData()` maps the voice-door fields onto the `classic()` slot keys in `_classic_slot_params.kt`
+  (the rules the backend's step 6 scaffold carried: only set, finite fields; a filter only with its cutoff, `q` and
+  `passes` always; the envelope only with one of its knobs; names as catalogue indexes, flags as 1.0 / 0.0; a typed
+  door written AFTER the bag copy, so it beats an `oscp` of the same key). Guard: `ClassicSlotParamsSpec`, the key
+  contract read from `IgnitorDsl.Slots`, never retyped.
+- The sample playback fields `begin`, `end`, `speed`, `loop` are flat slot keys; `n` and `cut` stay wire fields.
+- An authored instrument that does NOT end in `classic()` gets none of these doors on its strip from step 8 on (the
+  strip reads typed fields that are no longer sent; a `classic()` inside the tree, or a tree reading a slot itself,
+  now receives them there instead): accepted by the maintainer for the window up to step 9, on condition that the
+  branch does not merge between step 8 and step 9 and step 11's editor diagnostic lands before the merge. (The
+  second condition was dropped when the maintainer deferred step 11, 2026-09-27; the diagnostic's home is
+  `docs/tasks/future/editor-voice-door-diagnostics.md`.)
+
+## `phaser`, `body` and `vowel` are wet-first (2026-09-24, phase 3 step 3d(iii))
+
+- **The doors are `phaser(wet, rate, center, sweep, floor)`, `body(wet, material, floor)` and
+  `vowel(wet, vowel, floor)`**: the maintainer's wet rule (`.claude/skills/dsl-design/door-shapes.md`
+  (the record's section 3b), `/dsl-design` §2), the same order the Ignitor and Katalyst doors took in 3d(i) and
+  3d(ii). Still flat: sprudel has no builder layer. The entries below that name the old order
+  (batch E, batch G) are the history of those steps.
+- **A bare call reinterprets the pattern's values as the WET** on all three
+  (`seq("<0.2 0.5>").body()`), no longer as the rate, the material or the vowel. `note`, `s` and
+  `n` drop the value, so a bare call after them has nothing to reinterpret. A value that is not a
+  number writes NOTHING: the wet head returns early (`?: return@voiceSetter`), the shape of the
+  `reverb` and `delay` heads. Without it the field would clear and the slot would not (a null
+  slot write is skipped), and the phaser's fill would stamp `PHASER_WET` over the author's depth.
+- **No setter of a bus door clears on a null any more.** The material and vowel setters were the
+  two that did, and only because the bare call reached them; now nothing hands them a null, so
+  the clear arms and their reinterpret path are gone (`_liftStringField`, not the reinterpret
+  variant). The off switch is `material = "none"` / `vowel = "none"`, index 0, silent on both paths.
+- **The fill did not change**: `body` and `vowel` are still named only by their name knob, the
+  phaser by any knob. What changed is the ORDER inside one call, declaration order, wet first. A
+  wet mapper in the same call as the name therefore maps an unset wet, which does nothing:
+  `body(mul(2), "wood")` is wet 0.5 on a fresh note, where `body("wood", wet = mul(2))` was 1.0.
+  Doubling a wet takes a second call once it is set.
+- **The migration** was 11 positional `body("x")` calls, 7 in built-in songs and 4 in
+  `FrozenSongs` (Seltsamere Dinge), now `body(material = "x")`, the corpus bit-identical; no song
+  called `vowel` or `phaser` positionally. The phaser editor tool reads and writes the whole call
+  by the new indices and stays attached to `rate`.
+- Guards: `LangKatalystParamSpec` ("a bare body(), vowel() or phaser() on a value that is not a
+  number writes NOTHING"), the bare-call rows in `LangFieldAccessorsSpec` batch G, `LangPhaserSpec`,
+  `LangVowelSpec`, `LangBodySpec`, `LangWetKnobSpec` (positional wet on all five wet doors) and the
+  `invoke` signatures in `FreqAccessorIntelSpec`.
+
+## The `pregain` door: the other level word (2026-09-19)
+
+- **`pregain(amount)` is exactly `oscp("pregain", amount)`**, one key of the oscParams bag, and it
+  lives next to `gain` in `lang_dynamics_level.kt` because a reader looking for a level word looks
+  there. All four forms (pattern, String, the callable object, the `PatternMapperFn` chain), plus
+  the accessor object, `@scope voice`, `@category dynamics`.
+- **It takes a control pattern**, which is the idiom the plan named: `.pregain("1 0.7 0.8")` is
+  play harder, get dirtier, on an instrument that places the slot in front of a nonlinearity.
+- **On a CLIPPING shape it needs a gentle drive to be worth anything**, which the door's KDoc now
+  says because it is the opposite of the intuition: in hard saturation the slot moves neither the
+  tone nor the level (a clipper holds both, measured at 0.006 shape distance and 0.999 level ratio
+  at `distort(2)`), so there the level has to come from `gain`. The WAVEFOLDERS (`fold`,
+  `linearfold`, `sineshaper`) are the exception: they never saturate, so `pregain` is the fold
+  depth and the strongest tone knob at any drive, and on `fold` turning it down makes the sound
+  louder. The per-shape numbers and the chosen example drive are in `audio/MEMORY.md`.
+- **It has the numeric lift, the mapper form and an accessor, and needed no new machinery for
+  any of them.** `analog`, `duty` and `onepole` are the precedent: an `oscp`-backed door reads its
+  own slot back through `_mapNumericField(read = { it.oscParams?.get(name) })` exactly as a
+  field-backed door reads a field. It uses `_liftOrReinterpretNumericalField` (like `gain`) rather
+  than the String lift those three use, because the value is always a number and the numeric lift
+  leaves the slot untouched for a control value that is not one.
+- **The mapper on an UNSET slot is a no-op**, the general 2026-09-07 rule, the same as
+  `gain(mul(x))`. Recorded, not worked around; the entry below has the longer note on what a
+  mapper-spelled trim costs.
+- **What it does NOT do** is the part worth remembering: it writes a slot, and a slot does what
+  the instrument's tree wires it to. Since phase 3 step 6 (2026-09-26) every built-in SYNTH sound places it at the
+  source, `source.pregain().classic()` (the onepole is `classic()`'s first stage since step 10), in front of every nonlinear stage; at unity it
+  folds away bit for bit (samples place it too since step 7: `Sample.pregain().classic()`). With no nonlinear stage written it is a plain level.
+- Guards: `LangPregainSpec`, rows in `LangControlRestSpec`, `LangFieldAccessorsSpec`,
+  `SprudelScopeSpec`, `CallInfoTest` and `FreqAccessorIntelSpec`. What the slot DOES is
+  audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`); nothing in sprudel can hear it.
+
+## `gain` is the one level word; `velocity` folds at the wire (2026-09-19)
+
+- **`postgain` is retired**, every form of it (the pattern door, the string door, the accessor
+  object, the mapper chain). It was a SECOND multiplier at the same point in `SendRenderer`, so it
+  said nothing `gain` does not say. One word per concept: `gain` is the level at which the voice
+  leaves, and a song that used both now folds them by multiplication. `LangPostGainSpec` is gone,
+  the `postgain` rows left `LangDynamicsSpec`, `LangControlRestSpec`, `LangFieldAccessorsSpec`,
+  `SprudelScopeSpec`, `CallInfoTest` and `FreqAccessorIntelSpec`.
+- **`velocity` stays a sprudel word and stops at the wire.** The door, the `vel` alias, the field
+  and the accessor are unchanged; `SprudelVoiceData.toVoiceData` multiplies it into `gain`
+  (`foldedGain()`) and `VoiceData` has no `velocity` field any more. Both unset gives `null`, so the
+  wire stays sparse and the engine's own `?: 1.0` answers; otherwise `(gain ?: 1.0) * (velocity ?: 1.0)`,
+  the same operands in the same order the voice factory used, so an unaccented voice keeps its bits.
+  A non-finite value reads as unset PER OPERAND, before the product: substituting after it would
+  turn `gain(0.5).velocity(NaN)` into a NaN the engine reads as 1.0, full level where the author
+  asked for half. Two operands that both read as unset give `null`, the same answer as writing
+  neither. Guard: `WireGainFoldSpec` (the four null/non-null combinations, the set ones by raw
+  bits and the both-unset one asserting `null`, plus the non-finite operands and a patterned row).
+- **Why at the wire and not at the `velocity()` door.** `velocity(p)` read as `gain(mul(p))` does
+  NOTHING on an event whose gain is unset, because a mapper on an unset field leaves it unset
+  (`_mapNumericField`, decided 2026-09-07), and it would make `.velocity(0.7).gain(0.5)`
+  order-dependent. Folding once, at the boundary, has neither problem.
+- **The rounding note.** A voice that never used `postgain` is BIT-IDENTICAL: the product moved to
+  the other side of the wire with its operands and their order intact. A voice that used both
+  changes by floating-point rounding only, because `(s·p)·(g·c)` became `s·((g·p)·c)` and the
+  literal folds in the songs re-associate a product. Measured over 309,867 onset events of every
+  song text in the repo: 89.4 % bit-identical, worst relative deviation 2.3e-16.
+- **A trim spelled as a mapper is not the door it replaced.** Where a song's level lived in a
+  separate lambda from its `gain` (the `*_arrange` functions of Der Schmetterling), the migration
+  wrote `gain(mul(P))`. That goes through `_mapNumericField` and `_appLeft`, not the `_outerJoin`
+  the retired door used, and the three differences are worth knowing before writing another one:
+  a REST in the control pattern DROPS the event instead of leaving the field alone; a control that
+  changes inside an event FRAGMENTS it into parts sharing one whole, of which only the first is an
+  onset (so playback, which schedules onsets only, does not hear it); and on an event whose gain is
+  UNSET it is a silent no-op, which is what makes it safe only when a `gain(...)` runs upstream on
+  every event. That last one bites anyone who imports an exported `*_arrange` without its
+  `*_shape`: the trim then does nothing and the part plays at full level.
+- Signal-flow plan section 6; `pregain` and the Katalyst's unity `gain` stage are the next step.
+
 ## Recent Work (2026-09-07)
 
 - **Batch G, the last compounds.** `compressor(threshold, ratio, knee, attack, release)`,
   `unison(voices, spread, pan)`, `duck(orbit, depth, attack)`, `vibrato(rate, depth)`,
-  `penv(amount, attack, decay, release, curve, anchor)`, `fm(env, h, attack, decay, sustain)`,
+  `penv(amount, attack, decay, sustain, release)`, `fm(env, h, attack, decay, sustain)`,
   `vowel(vowel, wet, floor)`, `body(material, wet, floor)`: objects with a child per numeric slot;
   the name slots `vowel` and `material` have no readers (`docs/tasks/future/string-slot-readers.md`).
   Retired: `vibratoMod`, the `p*` pitch stage doors, `fmenv/fmmod/fmh/fmattack/fmdecay/fmsustain`,
@@ -21,7 +151,9 @@
   The long names `lowpass`/`highpass`/`bandpass` stay as constants. Compound objects have NO bare
   read: children only, one rule for every compound. `adsrCurves` is an object with the setter
   only (name slots, no readers); the singular `adsrCurve` went from sprudel and the ignitor door.
-  Filter curve objects wait for engine fields (`docs/tasks/filter-envelope-configuration.md`).
+  Filter curve objects landed 2026-09-25 (phase 3 step 5b c2): `lpfCurves`, `hpfCurves`, `bpfCurves`,
+  `notchCurves(attack, decay, release)`, setters like `adsrCurves`, on `FilterEnvDef`'s curve fields
+  (since phase 3 step 9 they reach the engine only as the `<door>Curves.*` slots; the bridge `FilterEnvDef` is gone).
 
 - **Compound effects are objects with named slots (batch E).** `reverb(wet, size, lowpass)`,
   `delay(wet, time, feedback, cap)`, `phaser(rate, wet, center, sweep, floor)`,
@@ -36,8 +168,8 @@
   slots: the curriculum lint reads call names.
 
 - **The reverb is `reverb`, not `room` (2026-09-16).** One word on every surface: the sprudel door, the
-  master builder (`r.size().lowpass()`), the wire (`VoiceData.reverb`/`reverbSize`/`reverbLowpass`,
-  `SprudelVoiceData.reverbFx` as the group, mirroring `delayFx`) and the engine (`Reverb.size`/`lowpass`).
+  master builder (`r.size().lowpass()`), the wire (then `VoiceData.reverb`/`reverbSize`/`reverbLowpass`,
+  `SprudelVoiceData.reverbFx` as the group; since step 5b-3 the `reverb.*` slots) and the engine (`Reverb.size`/`lowpass`).
   `fade` was `size / 10` with an override and is gone (`fade = x` is `size = 10x`); `dim` was never read;
   the master's `damp` went because `lowpass` spans the same range. A third positional argument is now
   `lowpass`. `docs/tasks-archive/2026-09/20260916-reverb-naming-unification.md`.
@@ -52,12 +184,82 @@
   `loop`, `adsrOn`) and `hurry`'s `fast`, where a rest still drops the notes. Guard: `LangControlRestSpec`,
   one test per setter and per compound slot (187), mutation-checked.
 
-- **A `delay(...)` / `reverb(...)` call sets every slot (2026-09-16).** Every slot still unset takes the
-  shared default (`audio_bridge/constants/SendEffectDefaults.kt`, the master stages' too): delay wet 0.25,
-  time 0.25, feedback 0.3, cap 1; reverb wet 0.25, size 5. Filled at WRITE time in the slot mutations, so a
-  slot an earlier call set keeps its value, a rest in a control pattern or a mapper on a never-set slot fills
-  nothing, `merge` carries filled defaults, and `reverb.size` reads 5 after `reverb(0.3)`. `VoiceFactory`
-  applies the same fill as the wire contract for non-sprudel producers. `docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`.
+- **The bus doors also write the orbit's slot state (2026-09-18, Katalyst step 5a).** `katalystParams`
+  is the `oscParams` twin on the other host: `oscp` fills the voice's instrument, `.katp(name, value)`
+  the chain its orbit runs, and the two namespaces never cross. Until the voice fields leave the wire
+  (step 5b-3) every bus door writes BOTH: its own voice fields and the matching `<stage>.<knob>` slots,
+  filling the stage's companions per the compound-door rule (`/dsl-design` §4, which is that rule's
+  one home). **Since 2026-09-19 (step 5b-1) the SLOT is the one that reaches the orbit**: every
+  chain reads the map, the one a cylinder is born with included, so a bus door and its `katp` slot
+  are the same knob and a `katp("reverb.size", 8)` needs no declaration first. The fields still
+  carry the per-voice send AMOUNTS (`delay`, `reverb`) until step 5b-2 and are inert for everything
+  else. The rule's one home is the `katp` door's KDoc. Guard: `LangKatalystParamSpec`,
+  mutation-checked (one deletion per door family). `docs/tasks/katalyst-dsl.md` §9, step 5a.
+  **Since step 5b-3 (2026-09-19) the delay, reverb, compressor and duck doors write the SLOTS
+  only**: their voice fields (`SvdDelay`, `SvdReverb`, `SvdDuck`, the five `compressor*`) are gone
+  from `SprudelVoiceData` and the wire, and their accessors and mappers read the slots
+  (`reverb.wet` is `katalystParams["reverb.wet"]`, the `pregain` precedent). Five reads changed on
+  purpose, all judged correct under the slot vocabulary in review: (a) an accessor or mapper now
+  sees a value a `katp` wrote; (b) the duck's accessors and mappers see the companions its fill
+  wrote, `attack` AND `depth` (`duck.attack` after `duck(1)` reads `DUCK_ATTACK_SECONDS`, it read
+  nothing before, so `duck(1, 0.8).duck(attack = mul(4))` multiplies that constant, and
+  `duck(1).duck(depth = add(0.5))` now ducks at 0.5 where it wrote nothing); (c) a null or
+  non-numeric write on a tail setter used to clear the field and now writes nothing; (d) the bare
+  `reverb()` reinterpret on a non-number used to clear the field, so `reverb.wet` read nothing, and
+  now leaves the slot readable; (e) `reverb`'s control-pattern combine reads the control's slot,
+  which differs only when `katp` sits on the control pattern itself. Guards: the accessor rows in
+  `LangKatalystParamSpec`. The phaser, body and vowel doors still write both halves.
+
+- **A body material and a vowel are INDICES, and `.katalyst(dsl)` REPLACES (2026-09-18, Katalyst
+  step 5a-2).** Two cleanups that retired the step-5a rule above it. (1) The door replaces like
+  `sound()` and `master()`: `x.katalyst(A).katalyst(B)` is `x.katalyst(B)`, `KatalystAppend` and
+  `KatalystDsl.plus` are gone, and each door stamps ONE `KatalystValue.Dsl` instance onto every event
+  (cheaper than the memo it replaced). `KatalystBuilder.classic()` appends its block at most
+  once per builder. (2) There is no string slot: `body.material` and `vowel.vowel` carry the INDEX of
+  a name in `BodyMaterials.names` / `VowelBands.names` (0 = `none`), so `body(material = "wood")` on
+  a pattern reaches a declared chain like every other knob and the song text did not move. The doors
+  convert through the one shared `BodyMaterials.indexOf` / `VowelBands.indexOf`. `KatalystDsl.classic`
+  carries `body.material`, `vowel.vowel`, `body.wet` AND `vowel.wet` as UNSET `Param` slots, because
+  a 0.0 wet is a SET wet that the engine never substitutes for, which made a material-only
+  `body("wood")` run dry on a declared chain (round 1 of this step's review). Since 5a-3 the DOOR
+  fills those two as well, so the engine's substitution is the NaN rule for a raw `katp` write only.
+  Guards: `CatalogueIndexSpec` (audio_bridge, the conversion both ways and its edges), the
+  `LangKatalystParamSpec` body/vowel index rows, `KatalystClassicMatchesUntouchedVoiceSpec` (what the
+  chain installs against what the wire carries, both spellings) and `KatalystDoorFillRenderSpec`
+  (the render, byte-identical).
+  `docs/tasks/katalyst-dsl.md` §9, step 5a-2.
+
+- **`oscParams` and `katalystParams` are one class, `ParamBag`, mutable and single-owner
+  (2026-09-18).** They were immutable-replace (`map + (k to v)` per write, a fresh map per slot);
+  with a dozen bus doors writing slots after Katalyst 5b that is the "twenty allocations per note"
+  class the June work removed. They are now `ParamBag` fields (`sprudel/ParamBag.kt`) with the same
+  contract as the `Svd*` groups: `putOscParam` / `putKatalystParam` write ONE name into the bag the
+  event already owns, `oscParamsOrNew()` / `katalystParamsOrNew()` hand a whole-stage fill the bag
+  once, `copy()` is the per-event deep copy `clone()` makes, `merge` builds a fresh bag as
+  `mergeSvdAdsr` does and `mergeFrom` folds into the receiver's own (last writer wins per name). The
+  copying helpers (`withOscParam`, `withOscParams`, `mergeOscParamsFrom`, `putOscParams`,
+  `putOscParamsFrom`) went with the old storage: nothing called them, and a copy helper over a
+  mutable bag is a second way to own one. `toVoiceData` hands the wire a `toMap()` COPY of each: the
+  wire value outlives the pattern event (the backend holds `Voice.katalystParams` for the whole life
+  of the voice and gates its re-resolve on the map's IDENTITY), and the boundary already allocates a
+  `VoiceData`. The bag also carries the fill rule's one method, `setOrDefault` (below); the rule
+  itself lives in `/dsl-design` §4.
+  Guards: `ParamBagSpec`, `LangKatalystParamSpec` ("a bus door call on an already-cloned voice
+  allocates no map", "toVoiceData hands the wire a COPY of both maps"), `VoiceDataAliasingSpec` and the
+  clone/merge ownership rows of `SprudelVoiceDataSpec`, mutation-checked.
+
+- **A compound door fills per param, at the door (2026-09-16 for the sends, 2026-09-18 for the rest,
+  Katalyst step 5a-3).** The rule and its two kinds of stage live in `/dsl-design` §4, its one home;
+  do not restate them here. What the sprudel side does: each per-slot setter writes its own slot with
+  `ParamBag.set`, the stage's fill then writes the companions with `setOrDefault(name, null, CONST)`,
+  and the constants come from `audio_bridge/constants/`. Six of the seven bus doors also fill their
+  VOICE fields with the same constants; `duck` does not, because `VoiceFactory` already supplies both
+  its numbers and writing them out would change what every existing song sends. Byte-identical for
+  every existing song, because the engine was already substituting exactly those constants for an
+  unset field (`VoiceFactory`, `Voice.Compressor.fromParams`, `FilterDef.Body`/`Formant`'s null
+  floor); the engine keeps them as the NaN rule for a raw `katp` write, not as a second fill. Guards:
+  `ParamBagSpec`, `LangKatalystParamSpec`, the per-door lang specs, `KatalystDoorFillRenderSpec`
+  (renders: body, compressor, duck). `docs/tasks/katalyst-dsl.md` §9 step 5a-3.
 
 - **Accessor objects carry the script name** (`object gain`, `object adsr`), the `val` twins are
   gone: one declaration per concept in both doors. `"ClassName"` is suppressed at file level in
@@ -90,7 +292,7 @@
   `crushos(2)` never wrote its field from a number. Now `asDoubleOrNull()?.toInt()`.
 
 - **Field accessors, batch one** (`docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`): fourteen objects on the
-  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain, lpf, hpf, bpf, lpq, hpq,
+  new `FieldAccessor` base (`lang.kt`): `gain, velocity, pan, postgain (retired 2026-09-19), lpf, hpf, bpf, lpq, hpq,
   bpq, attack, decay, sustain, release`. Recipe in `ref/dsl-conventions.md`. Null rule decided:
   on the mapper path a `null` result leaves the field unchanged (`_mapNumericField`).
   Specs: `LangFieldAccessorsSpec` (two rows per accessor, both doors), `FreqAccessorIntelSpec`.
@@ -161,6 +363,13 @@ sits in. Every DSL file now lives in `lang/` as `lang_<group>_<subgroup>.kt`, no
 pattern (the project-wide DSL principle, see `audio/MEMORY.md` Architecture Decisions and
 `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`). The query/render path uses mutable single-owner
 `SprudelVoiceData` on purpose (leaf clone ~17x faster). Do not "fix" either side toward the other.
+Guard (2026-09-28, replacing the 2.7 MB wire golden `MutableVoiceDataGoldenSpec`): `VoiceDataAliasingSpec`
+asserts by identity that no two events of a query share their data, an `Svd*` group or a `ParamBag`, over
+the constructs in its table. A dropped clone turns the leaf atom, ply, arithmetic, `adsrOff()`/`loop()` alone and
+MergePattern rows red today; stack, superimpose, jux, echo, `_liftData` behind a door chain and bare `reverb()` pin
+a future cache (its KDoc has the mutant per row). `SprudelVoiceDataSpec` pins the same ownership per instance
+for `clone()`, `merge()`, `mergeFrom()` and every branch of the `mergeSvd*` helpers. A new group joins
+`mutableParts()` and `writeEveryPart()` (in `VoiceDataAliasingSpec.kt`).
 
 **`.scale()` applies exactly once per chain** (decided 2026-08-20 on Der Schmetterling):
 `resolveNote()` (`lang/lang_tonal_note.kt`) consumes the note index on first resolution (writes
@@ -306,7 +515,7 @@ return applyCat(patterns)
 - `lpf(freq, q, passes, env, attack, decay, sustain, release)` / `lowpass`; readers `lpf.freq/.q/.passes/.env/.attack/.decay/.sustain/.release`
 - `hpf(...)` / `highpass` the same; `bpf(freq, q, env, attack, decay, sustain, release)` / `bandpass`
 - `notch(freq, q, env, attack, decay, sustain, release)`; readers `notch.*`
-- `vowel()`
+- `vowel(wet, vowel, floor)` and `body(wet, material, floor)`, wet first since 2026-09-24; readers `vowel.wet/.floor`, `body.wet/.floor`
 
 ### Audio Effects — Filter Envelopes
 
@@ -315,12 +524,13 @@ return applyCat(patterns)
 
 ### Audio Effects — Pitch Envelope
 
-- `penv(amount, attack, decay, release, curve, anchor)` / `pamt`; readers `penv.*`
+- `penv(amount, attack, decay, sustain, release)` / `pamt`; readers `penv.*`; curves `penvCurves(attack, decay, release)`
 
 ### Audio Effects — Waveshaping / Distortion
 
 - `distort(amount, shape, oversample)`, `crush(amount, oversample)`, `coarse(amount, oversample)`;
-  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E)
+  readers `distort.amount`, `distort.oversample`, `crush.*`, `coarse.*` (2026-09-07, batch E); the crush and
+  coarse `oversample` are carried but unread (phase 3 step 9)
 
 ### Audio Effects — Tremolo / AM
 
@@ -328,7 +538,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Dynamics & Panning
 
-- `velocity()`, `postgain()`, `compressor()`
+- `velocity()`, `compressor()`
 - `jux()`, `juxBy()` / `juxby`
 
 ### Audio Effects — Reverb
@@ -341,7 +551,7 @@ return applyCat(patterns)
 
 ### Audio Effects — Phaser
 
-- `phaser(rate, wet, center, sweep, floor)`; readers `phaser.rate/.wet/.center/.sweep/.floor`
+- `phaser(wet, rate, center, sweep, floor)`, wet first since 2026-09-24; readers `phaser.wet/.rate/.center/.sweep/.floor`
 
 ### Audio Effects — Duck / Sidechain
 
@@ -354,7 +564,6 @@ return applyCat(patterns)
 ### Sample Manipulation
 
 - `begin()`, `end()`, `speed()`, `loop()`
-- `loopBegin()` / `loopb`, `loopEnd()` / `loope`
 - `loopAt()`, `loopAtCps()`
 - `cut()`, `slice()`, `splice()`
 
@@ -390,14 +599,14 @@ return applyCat(patterns)
 
 ### Synthesis Parameters
 
-- `gain()`, `pan()`, `legato()` / `clip()`
+- `gain()`, `pregain()`, `pan()`, `legato()` / `clip()`
 - `vibrato(rate, depth)` / `vib`; readers `vibrato.rate`, `vibrato.depth`
 - `accelerate()`, `unison(voices, spread, pan)` / `uni`, `density()` / `d` (`detune()` and `spread()` are gone)
 - `adsr()` (its stages are slots and `adsr.*` children; the single doors were removed 2026-09-07)
 - `onepole()` (Klang extension; formerly `warmth`, now Hz)
-- `velocity()`, `postgain()`
+- `velocity()`
 - FM synthesis: `fm(env, h, attack, decay, sustain)`; readers `fm.*`
-- Pitch envelope: `penv(amount, attack, decay, release, curve, anchor)`
+- Pitch envelope: `penv(amount, attack, decay, sustain, release)`
 
 ### System Functions
 

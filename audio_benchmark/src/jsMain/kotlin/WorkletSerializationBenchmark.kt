@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
+import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
@@ -28,12 +29,22 @@ private fun structuredCloneJs(@Suppress("unused") obj: dynamic): dynamic = js("s
  */
 fun runWorkletSerializationBenchmark() {
     val voiceData = createSprudelVoiceData {
-        note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; postGain = 0.8
+        note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9
         sound = SoundValue.Named("supersaw"); soundIndex = 1
-        oscParams = mapOf("voices" to 7.0, "spread" to 0.3)
+        oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 0.2; sustain = 0.6; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3; cylinder = 1
+        // The orbit's slot state a bus door writes: what
+        // `.reverb(wet, size).delay(wet, time).compressor(ratio = 8)` puts on every event, the
+        // knobs the call names plus the ones each door's fill supplies (Katalyst step 5a-3). Since
+        // step 5b-3 it is the only form those knobs take on the wire (`audio/ref/performance.md`).
+        katalystParams = paramBagOf(
+            "reverb.wet" to 0.3, "reverb.size" to 4.0,
+            "delay.wet" to 0.2, "delay.time" to 0.25, "delay.feedback" to 0.3, "delay.cap" to 1.0,
+            "compressor.threshold" to -20.0, "compressor.ratio" to 8.0, "compressor.knee" to 6.0,
+            "compressor.attack" to 0.003, "compressor.release" to 0.1,
+        )
     }.toVoiceData()
     val sv = ScheduledVoice("pb-1", voiceData, 1.0, 2.0, 0.5)
 

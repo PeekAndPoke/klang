@@ -8,9 +8,11 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -329,3 +331,137 @@ fun PatternMapperFn.lowpass(
     callInfo: CallInfo? = null
 ): PatternMapperFn =
     this.lpf(freq, q, passes, env, attack, decay, sustain, release, callInfo)
+
+// -- lpfCurves ------------------------------------------------------------------------------------------------------------
+
+// The curve names have ONE home, `AdsrCurves` in audio_bridge; the rule is `adsrCurves`' (and `penvCurves`'):
+// an unknown name, like an omitted stage, keeps the stage's current curve.
+private val lpfAttackCurveMutation = voiceSetter {
+    lpAttackCurve = AdsrCurves.curveOf(it?.toString()) ?: lpAttackCurve
+}
+
+private val lpfDecayCurveMutation = voiceSetter {
+    lpDecayCurve = AdsrCurves.curveOf(it?.toString()) ?: lpDecayCurve
+}
+
+private val lpfReleaseCurveMutation = voiceSetter {
+    lpReleaseCurve = AdsrCurves.curveOf(it?.toString()) ?: lpReleaseCurve
+}
+
+private fun applyLpAttackCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, lpfAttackCurveMutation) { src, ctrl ->
+        src.lpAttackCurve = ctrl.lpAttackCurve ?: src.lpAttackCurve
+        src
+    }
+}
+
+private fun applyLpDecayCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, lpfDecayCurveMutation) { src, ctrl ->
+        src.lpDecayCurve = ctrl.lpDecayCurve ?: src.lpDecayCurve
+        src
+    }
+}
+
+private fun applyLpReleaseCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, lpfReleaseCurveMutation) { src, ctrl ->
+        src.lpReleaseCurve = ctrl.lpReleaseCurve ?: src.lpReleaseCurve
+        src
+    }
+}
+
+/**
+ * Sets the shape of each stage of the lowpass filter's cutoff envelope ([lpf]'s `env`, `attack`,
+ * `decay`, `sustain`, `release`), the way [adsrCurves] shapes the amplitude envelope. Each stage is
+ * independent; an omitted stage, or an unknown curve name, keeps its current curve, so
+ * `lpfCurves(decay = "linear")` changes only the decay.
+ *
+ * The curves are the same six as `adsrCurves`: `linear`, `square`, `cube`, `scurve`, `invsquare`,
+ * `exponential`, with the same aliases. Unset, every stage is `exponential`, the default of every
+ * modulation envelope on every surface (decision D3). A curve alone switches nothing on: without an
+ * envelope on the `lpf` there is no sweep to shape. The Ignitor filters name the same curves inside
+ * their envelope: `x => x.adsr(a, d, s, r, e => e.curves(...))`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("saw").lpf(freq = 300, env = 24, decay = 0.3, sustain = 0.2).lpfCurves("linear", "linear", "linear")   // a straight glide in semitones
+ * ```
+ *
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
+ *
+ * @scope voice
+ * @category effects
+ * @tags lpf, curve, envelope, shape, filter envelope
+ */
+@KlangScript.Function
+fun SprudelPattern.lpfCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern {
+    var p = this
+    if (attack != null) p = applyLpAttackCurve(p, listOf<Any?>(attack).asSprudelDslArgs(callInfo?.forParam(0)))
+    if (decay != null) p = applyLpDecayCurve(p, listOf<Any?>(decay).asSprudelDslArgs(callInfo?.forParam(1)))
+    if (release != null) p = applyLpReleaseCurve(p, listOf<Any?>(release).asSprudelDslArgs(callInfo?.forParam(2)))
+    return p
+}
+
+/**
+ * Parses this string as a pattern and sets the lowpass filter envelope's stage curves (see [lpfCurves]).
+ *
+ * @param attack Curve name for the attack stage.
+ * @param decay Curve name for the decay stage.
+ * @param release Curve name for the release stage.
+ */
+@KlangScript.Function
+fun String.lpfCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lpfCurves(attack, decay, release, callInfo)
+
+/**
+ * The `lpfCurves` object: `lpfCurves(attack, decay, release)` sets the lowpass filter envelope's stage curves
+ * by name. The slots are names, not numbers, so the object carries the setter only and no readers
+ * (the `adsrCurves` rule).
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("saw").lpf(freq = 300, env = 24, decay = 0.3, sustain = 0.2).apply(lpfCurves(decay = "scurve"))
+ * ```
+ *
+ * @scope voice
+ * @category effects
+ * @tags lpf, curve, envelope, shape, filter envelope
+ */
+@KlangScript.Library("sprudel")
+@KlangScript.Object("lpfCurves")
+object lpfCurves {
+
+    /** The setter, see [SprudelPattern.lpfCurves]. */
+    @KlangScript.Invoke
+    operator fun invoke(
+        attack: PatternLike? = null,
+        decay: PatternLike? = null,
+        release: PatternLike? = null,
+        callInfo: CallInfo? = null,
+    ): PatternMapperFn = { p -> p.lpfCurves(attack, decay, release, callInfo) }
+}
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the lowpass filter envelope's stage curves after the previous mapper.
+ *
+ * @param attack Curve name for the attack stage. Omit to keep the current curve.
+ * @param decay Curve name for the decay stage. Omit to keep the current curve.
+ * @param release Curve name for the release stage. Omit to keep the current curve.
+ */
+@KlangScript.Function
+fun PatternMapperFn.lpfCurves(
+    attack: PatternLike? = null,
+    decay: PatternLike? = null,
+    release: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.lpfCurves(attack, decay, release, callInfo) }

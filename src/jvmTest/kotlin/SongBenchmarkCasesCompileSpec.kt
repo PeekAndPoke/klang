@@ -35,4 +35,16 @@ class SongBenchmarkCasesCompileSpec : StringSpec({
             withClue(case.name) { SprudelPattern.compile(engine(), case.code).shouldNotBeNull() }
         }
     }
+
+    "the live rig ablation and the ledger build and compile: every text anchor still matches the song it edits" {
+        // `rig()` rewrites the LIVE Der Schmetterling through text anchors that fail loudly when the song no
+        // longer contains them, and `all()` does not build it, so six anchors went stale unnoticed (found in
+        // phase 3 step 10). Building the cases here is what runs the anchors.
+        val cases = SongBenchmarkCases.rig() + SongBenchmarkCases.ledger()
+        cases.isNotEmpty() shouldBe true
+
+        for (case in cases) {
+            withClue(case.name) { SprudelPattern.compile(engine(), case.code).shouldNotBeNull() }
+        }
+    }
 })

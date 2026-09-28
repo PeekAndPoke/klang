@@ -36,7 +36,7 @@ AUDIO BACKEND (audio thread)
   │
   └─ Every block (128–256 frames):
        VoiceScheduler.processBlock()
-         ├─ Activate due voices → SynthVoice or SampleVoice
+         ├─ Activate due voices → a Voice running its Ignitor tree
          │    (requests MonoSamplePcm from audio_fe if needed)
          ├─ Call voice.render(ctx) for each active voice
          │    └─ Voice writes into ctx.voiceBuffer (FloatArray)
@@ -45,7 +45,12 @@ AUDIO BACKEND (audio thread)
        Cylinders.processAndMix()
          ├─ Apply per-cylinder effects: Delay → Reverb → Phaser
          ├─ Apply cross-cylinder Ducking (sidechain)
-         └─ Mix all orbits to master StereoBuffer
+         └─ Mix all orbits to the playback's bus (straight into the shared mix while no master is active
+            and the engine is not releasing)
+
+       MasterBus.process()   (only while a master chain is in service or leaving it)
+         └─ The playback's master: a KatalystChain on the summed orbits, swapped by ChainSwap
+            (phase 3 step 12; `master(Katalyst(k => ...))`)
 
        KlangAudioRenderer
          ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
@@ -64,12 +69,15 @@ Each `PlaybackEngine` owns its **entire render state**:
 
 - its own `VoiceScheduler` (the scheduled min-heap + the active-voice list),
 - its own `Cylinders` (the 16 orbits and their effects),
-- its own ignitor / pipeline **forks** — custom `Osc`/`pipeline` registered for that playback live
-  here, not on the shared parent, so they die with the engine.
+- its own **forks** of the ignitor and Katalyst registries: the inline instruments and chains
+  registered for that playback live there, not on the shared parents, so they die with the engine (the
+  pipeline fork retired with the Pipeline DSL, phase 3 step 9). The one Katalyst fork serves the orbits AND the
+  output (`MasterBus`); the Master registry retired in phase 3 step 12.
+- its own `MasterBus`: the playback's master chain and its swap.
 
 **Shared across engines** (not per-playback): the `SampleStore`, the backend clock
-(`AudioBackendContext` / `BackendClock`), and the ignitor/pipeline **parent** registries (forks
-inherit the built-ins from these).
+(`AudioBackendContext` / `BackendClock`), and the ignitor and Katalyst **parent**
+registries (the forks inherit the built-ins from them).
 
 **Why**: with a single global cylinder pool, two playbacks using the same orbit id would collide
 (last-writer-wins). Per-engine isolation fixes that — two playbacks on orbit 0 get independent
@@ -100,6 +108,8 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices |
 | `Cmd.ClearScheduled`  | —                                       | discard all pending (not yet active) voices                                                      |
 | `Cmd.Cleanup`         | —                                       | stop all voices, reset state                                                                     |
+| `Cmd.RegisterIgnitor` | name + `IgnitorDsl`                     | register an inline instrument on the playback's ignitor fork                                    |
+| `Cmd.RegisterKatalyst`| name + `KatalystDsl`                    | register a chain on the playback's Katalyst fork (for `katalyst(...)` and `master(...)`)        |
 | `Cmd.Sample.Complete` | `SampleRequest` + PCM bytes             | deliver decoded sample to backend                                                                |
 | `Cmd.Sample.NotFound` | `SampleRequest`                         | signal that a sample could not be decoded                                                        |
 | `Cmd.Sample.Chunk`    | partial PCM data                        | streaming delivery for large samples                                                             |

@@ -13,7 +13,8 @@ package io.peekandpoke.klang.pages.docs.tutorials
  * example IS the B2 groove plus the B3 melody.
  *
  * Engine truth behind §§3–4 (verified in audio_be): the reverb
- * is per-orbit; `reverb(wet)` is a per-voice SEND into it, and a bare reverb(wet) plays in
+ * is per-orbit; `reverb(wet)` is how much of the orbit goes into it, one amount per orbit since
+ * Katalyst step 5b-2, and a bare reverb(wet) plays in
  * the default room, size 5 (constants/SendEffectDefaults.kt, since 2026-09-16). Orbit bus settings
  * are first-writer-wins (Cylinder.kt), so the lesson only ever demos
  * uncontested configurations and teaches the engine's own craft rule — an

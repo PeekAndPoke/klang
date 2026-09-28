@@ -48,12 +48,14 @@ judges numerical stability, per-sample cost and click risk; run it at `opus` or 
 | Mechanical / bulk stages      | `low`                         |
 | Standard work                 | omit (inherit session effort) |
 | Hardest verify / judge stages | `high` or `xhigh`             |
+| Review rounds 2, 3, 4+        | `high`, `xhigh`, `max` via the `reviewer-*` agent definitions (`/review-loop`, the effort ladder) |
 
 ## Where the dials live
 
 - **Agent tool**: set the `model` parameter per call. There is no per-call effort override — effort comes from the agent
   definition. `fork`-type agents always inherit the parent model; don't set
-  `model` on them.
+  `model` on them. Klang pins effort through `.claude/agents/reviewer-high.md`, `reviewer-xhigh.md`
+  and `reviewer-max.md` (added 2026-09-18 for the review ladder).
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
   never varies. Klang currently has one: `music-platform-strategist`
@@ -141,7 +143,53 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   decisions (raw Motor no-clamping, reverb's `ANTI_DENORMAL` exception, the linear SVF, documented HPF bias). A reviewer
   without that list files findings that would make the engine worse. Paste the relevant constraint list into the
   prompt — `/review-loop` has templates, and
-  `docs/tasks/audio-backend-audit.md` §7 has the audio-backend list.
+  `.claude/skills/review-loop/audio-constraints.md` has the audio-backend list.
+
+## Every brief opens with the bar: world-class, not average (maintainer, 2026-09-18, under observation)
+
+Every agent in the fleet, whatever its role (coder, reviewer, audio engineer, tester, strategist,
+writer), is told at the top of its brief that it is world-class at that role, and the coordinator
+says the same about itself ("you are a great coder, and I am a great manager"). This is not
+politeness.
+
+**Why:** the training data these models are built on holds work of every quality, roughly normally
+distributed, and an agent that is not told otherwise reaches for the middle of that distribution:
+the ordinary fix, the test that restates the implementation, the review that files whitespace.
+Klang works in the upper percentiles, and the opening line is what tells the agent which part of
+its training to draw on. It has been observed to matter: the briefs written this way came back
+with mutation-checked tests, named the decisions the brief had not settled, and refused to
+paper over an asymmetry they found.
+
+**How:** one sentence, first line of the prompt, naming the role, and right after it the other
+half of the bar, from the top of `CLAUDE.md` (maintainer, 2026-09-18): mistakes are fine, that is
+why the review loop exists; hiding a mistake or brushing over one is what would hurt us. An agent
+that has been told it is world-class must also be told that a reported weakness in its own work
+is part of being world-class here, or the first line alone invites the arrogance the caveat
+below warns about. Then the constraints and the task. The bar is also stated for the work itself where it helps ("byte-identical is the
+acceptance", "only CRITICAL and MAJOR force a round, so be precise about severity"), so the agent
+knows what excellent looks like here rather than in general.
+
+**Status: a theory, not a proven rule.** Two caveats from the maintainer. It might tip an agent
+into arrogance instead. And it might do nothing: every sub-agent already reads `CLAUDE.md`, whose
+first lines state the same bar ("We write exceptional software"), and the harness may frame the
+role in its own system prompt, which the coordinator cannot see; the line in the brief is then a
+second or third statement of the same thing, and a null result in the ledger is the likely
+outcome. If the density does not move, the line goes and `CLAUDE.md`'s opening stays the one
+place the bar is stated. Signs that it did, to watch for in every report: a finding dismissed without
+a scenario, a mutation check skipped or reported as "obviously red", a claim of byte identity
+without the hash, a deliberate engine exception "corrected", a brief's scope widened because the
+agent knew better, or a report that argues with the reviewer instead of answering the finding.
+Signs that it worked: decisions the brief did not settle are named and reasoned, weak tests are
+called weak by their own author, an asymmetry is reported rather than papered over. Record what
+you see in the changelog below with the date; after a few steps the maintainer decides whether
+the line stays, changes, or goes.
+
+**The numbers to watch** (maintainer's hypothesis: fewer review rounds and fewer
+CRITICAL/MAJOR findings per step) live in **`defect-density-ledger.md`**, the sibling of this
+file: the measure's definition, one row per committed step, and the reading so far. The
+coordinator adds a row when a step commits, and writes "N review rounds, C critical, M major"
+in the commit message so a row can be rebuilt from `git log`. Open it when you are filling a row
+or judging the theory; reading this skill to launch a fleet does not need it.
 
 ## Notes
 
@@ -152,6 +200,20 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   expensive than a right answer from Opus.
 
 ## Changelog
+
+- **2026-09-20**: the defect-density table moved to `defect-density-ledger.md`, the sibling of
+  this file (maintainer: reading the skill should not carry the whole record). Nothing about the
+  measure changed; the skill keeps the policy, the ledger keeps the evidence. Observations on the
+  opening line stay here, dated, and the numbers they cite live there.
+- **2026-09-18**, first observations on the opening line (steps 5a-2, 5a-3): no arrogance signal
+  in any of nine agent reports; both implementers named unsettled decisions, called their own
+  weak tests weak, and reported "no red mutation available" twice rather than claim one. The
+  reviewers stated the weakness of their own reasoning when asked to. Density did not drop
+  (2.5 per kLoC against 1.2 and 0.0 before), but three of the four MAJORs were text or inherited,
+  so the number says nothing about the line yet.
+- **2026-09-18**: "Every brief opens with the bar": each agent is told it is world-class at its
+  role, with the maintainer's reason (the training distribution is average; we work in its upper
+  percentiles).
 
 - **2026-07-17** *(upstream `ultra`)* — Initial version. Opus↔coding and Sonnet↔retrieval mapping set by the user.
   Haiku/inherit tiers, effort table, escalation rule, and cheap-finders-expensive- verifier pattern proposed by Claude;

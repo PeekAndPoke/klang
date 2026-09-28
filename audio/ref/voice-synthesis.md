@@ -2,93 +2,67 @@
 
 All types in `audio_be/src/commonMain/kotlin/voices/`.
 
-## Voice sealed interface
+## Voice
 
-`Voice.kt` — defines the full contract for all voice types.
+`Voice.kt`: one class for every voice; the instrument is its Ignitor tree.
 
 ### Processing Order
 
-Voice strip runs four stages in sequence: **Pitch → Ignite → Filter → Send**.
-Each stage is a list of `BlockRenderer`s; `Voice.render()` just iterates the
-composed pipeline.
+Since phase 3 step 9 (2026-09-27) every voice is an Ignitor tree, and the tree IS the instrument,
+envelope and filters included. `Voice` runs its stages in sequence: **Pitch → Ignite → (teardown
+fade) → Send**. Each stage is a list of `BlockRenderer`s (the interface and the pitch, ignite and send renderers
+live in `voices/strip/`, `TeardownFadeRenderer` in `voices/`); `Voice.render()` iterates
+the composed pipeline.
 
 ```
 Pitch stage     (PitchPipelineBuilder → writes freqModBuffer)
-  1. Accelerate         — pitch ramp modulation
-  2. Vibrato            — LFO pitch modulation
+  1. Vibrato            : LFO pitch modulation
+  2. Accelerate         : pitch ramp modulation
   3. PitchEnvelope      — one-shot pitch curve
   4. FM                 — frequency modulation
 
 Ignite stage    (IgniteRenderer → writes audioBuffer)
-  5. Ignitor            — oscillator / sample playback
+  5. the instrument's Ignitor tree (oscillator or sample, and everything the tree holds)
 
-Filter stage    (FilterPipelineBuilder → reads/writes audioBuffer)
-  6. FilterMod          — control-rate cutoff modulation
-  7. Crush              — waveshaper (bit-depth reduce)
-  8. Coarse             — waveshaper (sample-rate reduce)
-  9. Distort            — waveshaper (various shapes)
-  10. AudioFilter       — subtractive LP/HP/BP/Notch
-  11. Tremolo           — amplitude LFO
-  12. StripPhaser       — 4-stage allpass + LFO
-  13. Envelope (ADSR)   — VCA, last in the tonal stage
+Teardown fade   (TeardownFadeRenderer, unless the tree's root is a built amplitude envelope with a
+                 static release; the one home of the rule is BuiltIgnitor.endsInEnvelope. adsrOff
+                 switches classic()'s envelope off, and the node hands on its inner's answer: the
+                 instrument's own static-release envelope ends the voice only when nothing built
+                 sits over it, neither a stage of the instrument's own nor a classic() stage the
+                 pattern wrote; otherwise the fade does)
 
 Send stage      (SendRenderer → mixes to cylinder)
-  14. postGain → pan → gain → cylinder mix + delay/reverb sends
+  6. pan + gain → cylinder mix
 ```
 
-**Classic subtractive ordering**: `osc → waveshaper → VCF → VCA`. The ADSR
-sits at the end of the tonal stage so the filter, phaser and waveshapers all
-see steady-state amplitude and don't smear the attack.
+**The voice chain is `classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`), a tail of slotted
+Ignitor stages in the classic subtractive order:
 
-Compressor and ducking are **cylinder-level** (katalyst) effects, not per-voice
-— applied in `Cylinder.processBusEffects()` after all voices mix into the
-cylinder (`Delay → Reverb → Phaser → Compressor`).
-
-### Voice Properties (key fields)
-
-```kotlin
-sealed interface Voice {
-    // Lifecycle
-    val startFrame: Int              // absolute frame when voice becomes active
-    val endFrame: Int?               // absolute frame when voice finishes (null = until envelope done)
-    val gateEndFrame: Int            // absolute frame when gate closes (ADSR release starts)
-  val orbitId: Int                 // target Cylinder index
-
-    // Synthesis modulation
-    val fm: Fm?                      // FM modulator (ratio + ADSR depth)
-    val accelerate: Accelerate?      // pitch ramp
-    val vibrato: Vibrato?            // LFO pitch modulation
-    val pitchEnvelope: PitchEnvelope?// one-shot pitch curve
-
-    // Dynamics
-    val gain: Double
-    val pan: Double
-    val postGain: Double
-    val envelope: Envelope           // ADSR
-    val compressor: Compressor?
-
-    // Filters
-    val filter: AudioFilter?         // primary filter
-    val filterModulators: List<FilterModulator>
-    val preFilters: List<AudioFilter>
-    val postFilters: List<AudioFilter>
-
-    // Effects
-    val delay: Delay?
-    val reverb: Reverb?
-    val phaser: Phaser?
-    val tremolo: Tremolo?
-    val distort: Distort?
-    val crush: Crush?
-    val coarse: Coarse?
-
-    // Control
-    var gainMultiplier: Float        // applied by VoiceScheduler for solo/mute
-
-    // Render
-    fun render(ctx: RenderContext): Boolean  // returns false when voice is done
-}
 ```
+onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
+```
+
+Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.oscParams`, and a stage
+whose slot is at its off value is not built. Every built-in sound is `source.pregain().classic()`, every
+sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.builtInVoice`), and an authored
+instrument gets the voice doors by ending in `.classic()`. A tree without `classic()` plays as it is: no
+doors, no default envelope.
+
+Compressor, ducking, phaser, delay, reverb, body and vowel are **cylinder-level** (Katalyst) effects,
+not per-voice: applied on the orbit bus after all voices mix into the cylinder.
+
+### Voice construction
+
+`VoiceFactory` builds each `Voice` from `VoiceData`: the instrument's tree (`IgnitorRegistry.createExciter`,
+or the sample instrument for a sample), the pitch pipeline from the typed pitch fields, and the stages
+after the tree. `Voice` itself holds the lifecycle frames, `cylinderId`, `gain`, `pan`,
+`katalystParams`, `cut`, the cull window and the pipeline.
+
+**`Voice.gain` is stored, not guarded.** `Voice` keeps whatever it is constructed with, including
+a NaN. The substitution of a non-finite wire value by 1.0 happens in `VoiceFactory`, which is the
+only production path that builds a voice. Anything that adds a second construction path has to do
+it there too, or `Voice.heard` (which compares against 0) and `SendRenderer.measurePeak` (which
+scales by `abs(gain)`) go back to being wrong for a NaN.
 
 ### RenderContext
 
@@ -104,27 +78,14 @@ class RenderContext(
 )
 ```
 
-## AbstractVoice
+## Samples
 
-`AbstractVoice.kt` — implements `Voice`; handles steps 2–15 above.
-Subclasses only implement `generateSignal(ctx: RenderContext)`.
-
-## SynthVoice
-
-`SynthVoice.kt` — oscillator-based voice.
-
-- `generateSignal()` calls the selected `OscFn` (oscillator function) in a sample loop
-- Phase accumulation: `phase += (freqHz / sampleRate) * TWO_PI` per sample
-- Unison: multiple phase accumulators for `density` voices with detuning
-
-## SampleVoice
-
-`SampleVoice.kt` — sample playback voice.
-
-- `generateSignal()` reads from `MonoSamplePcm.pcm` with rate modulation
-- Rate: `(sample.sampleRate / engineSampleRate) * speed * pitchRatio`
-- Looping: respects `loopBegin`/`loopEnd` range from `VoiceData`
-- Cut groups: on activation, sends a cut signal to other `SampleVoice`s with same `cut` ID
+A sample voice runs the sample instrument (`IgnitorRegistry.SAMPLE_INSTRUMENT`, phase 3 step 7):
+`builtInVoice(IgnitorDsl.Sample)`, playing the voice's `MonoSamplePcm` through `ignitor/SampleIgnitor.kt`.
+Its playback slots are `begin`, `end`, `speed` and `loop` (`IgnitorDsl.Slots.sample`), read where the
+playhead is built; a loop region is sprudel's `loop().begin(x).end(y)`. A sample's own envelope
+(`SampleMetadata.adsr`) fills the `adsr.*` slots the pattern left unset (`withSampleEnvelopeDefaults`).
+Cut groups: a new voice in the same `cut` group ends the ones still sounding.
 
 ## VoiceScheduler
 
@@ -132,7 +93,7 @@ Subclasses only implement `generateSignal(ctx: RenderContext)`.
 
 - Stores pending voices in a `KlangMinHeap` (priority queue by `startTime`)
 - On each block: activates due voices, removes finished voices
-- Sample resolution: when a `SampleVoice` is due but the PCM isn't loaded yet,
+- Sample resolution: when a sample voice is due but the PCM isn't loaded yet,
   sends `Feedback.RequestSample` to frontend and delays activation
 - Solo/mute: `Voice.gainMultiplier` set to 0 for muted voices
 
@@ -180,15 +141,8 @@ class Vibrato(depth: Double, rate: Double)
 ### PitchEnvelope
 
 ```kotlin
-class PitchEnvelope(attack: Double, decay: Double, release: Double, env: Double, curve: Double, anchor: Double)
-// One-shot pitch curve: anchor → peak → sustain → release
-```
-
-### FilterModulator
-
-```kotlin
-class FilterModulator(filter: AudioFilter, envelope: FilterEnvelope)
-// Applies FilterEnvelope to filter cutoff dynamically
+class PitchEnvelope(semitones: Double, envelope: Envelope)
+// An ADSR in frames (Voice.Envelope, with its three curves) scaling a pitch offset of `semitones`
 ```
 
 ## Envelope / voice-lifetime semantics
@@ -198,10 +152,12 @@ class FilterModulator(filter: AudioFilter, envelope: FilterEnvelope)
 Two classes of envelope, with different roles in deciding when a voice ends:
 
 - **Amplitude envelopes** determine voice lifetime. The longest one wins.
-    - The voice amp ADSR (`data.adsr` → `Voice.Envelope`) — the VCA stage.
-    - Any `IgnitorDsl.Adsr` node inside the ignitor tree — wraps an audio
-      signal directly, so cutting it off mid-decay would click.
-    - Voice end frame = `gateEndFrame + max(amp.release, ignitorAmpRelease)`.
+    - The `IgnitorDsl.Adsr` nodes on the tree's spine, `classic()`'s `adsr` included (its
+      release is the `adsr.release` slot). They wrap the audio signal directly, so cutting one
+      off mid-decay would click.
+    - Voice end frame = `gateEndFrame + releaseTailSec`, the tree's own release tail
+      (`BuiltIgnitor.releaseTailSec`, floored at 0); a tree with no static answer takes `VOICE_ADSR_RELEASE_SEC`
+      (0.05 s).
 
 - **Modulator envelopes** do **not** extend voice lifetime:
     - Filter modulator envelope (the `attack, decay, sustain, release` slots of `lpf` / `hpf` / `bpf` / `notch`)
@@ -224,28 +180,25 @@ just stop modulating — no artefact, just less colour. So the engine doesn't
 spend CPU keeping a silent voice alive purely to finish a filter sweep
 nobody can hear.
 
-**Implementation reference:** `voices/VoiceFactory.kt:205-212` (oscillator
-path — extends amp ADSR to cover ignitor-internal `Adsr` nodes via
-`IgnitorDsl.maxReleaseSec()` at `audio_bridge/.../IgnitorDsl.kt:1304`).
-Per-block envelope math at `voices/strip/EnvelopeCalc.kt:14-34`.
+**Implementation reference:** `treeLifetime` in `voices/VoiceFactory.kt` (the tree's
+`releaseTailSec`, found by the build); the one envelope law is `EnvelopeCore`.
 
 ### Silence culling (2026-09-15)
 
 The scheduled lifetime above is an upper bound. A voice also ends itself EARLY once it is in
 its release and its own output has stayed under the audibility floor for the cull window:
 
-- **Measure:** `SendRenderer`, the last strip stage, keeps the block's peak `|output|`
-  (post-VCA, times `postGain`, `gain` and the largest send amount, so it bounds the mix bus AND
-  the send buses; BEFORE the solo/mute multiplier, so a voice a solo faded out is not taken for
+- **Measure:** `SendRenderer`, the last voice stage, keeps the block's peak `|output|`
+  (the tree's output times `gain`; BEFORE the solo/mute multiplier, so a voice a solo faded out is not taken for
   a dead one) in `BlockContext.voiceOutputPeak`. A separate pass, run only on the blocks that
   read it (`BlockContext.measurePeak`): until the voice has been heard, then in the release; a
   heard voice pays nothing for the rest of its gate, `noCull()` voices pay nothing at all.
-- **Decide:** `Voice.render`, after the strip loop, only when `blockStart >= gateEndFrame`.
+- **Decide:** `Voice.render`, after the stage loop, only when `blockStart >= gateEndFrame`.
   Silent frames accumulate (frames, not blocks, so the window has the same length at any block
   size and the cut lands within one block of the same frame); an audible block resets them; when
   they cover the window, `Voice.culled` is set and the scheduler counts it
   (`VoiceScheduler.culledVoicesTotal`, `renderingVoiceCount`).
-- **A culled voice is a ZOMBIE, not a removal.** It runs no strip any more, but it keeps its slot
+- **A culled voice is a ZOMBIE, not a removal.** It runs no stage any more, but it keeps its slot
   in the scheduler's active list and renews its orbit lease every block until its scheduled
   `endFrame`, where it expires like any voice. Removing it early was measured to change the
   MIX: the orbit lease passes to whichever voice renders first after an owner dies, that order
@@ -257,9 +210,9 @@ its release and its own output has stayed under the audibility floor for the cul
   stop, is culled, and only once at least one block has been audible (`Voice.heard`): a sample
   with leading silence pitched down, or an ignitor attack outliving a short gate, is silent at
   gate end and sounds later; the gate says "told to stop", the latch says "has started". A release that goes
-  silent and comes back is cut at its first gap: the factory excludes voices with a `tremolo`
-  (a square shape at full depth is exact silence for half a cycle) unless `cull` is set
-  explicitly; a sparse source inside an ignitor is the author's call (`noCull()`).
+  silent and comes back is cut at its first gap: the factory excludes voices whose tree holds a
+  tremolo on the output (`BuiltIgnitor.gatesOutput`; a square shape at full depth is exact silence
+  for half a cycle) unless `cull` is set explicitly; a sparse source inside an ignitor is the author's call (`noCull()`).
 - **Tails on the orbit are untouched:** reverb and delay live on the cylinder buses; culling
   only stops future ~zero sends. The orbit lease does not move either (the zombie renews it), so
   the handover sequence on an orbit with mixed bus configs is the same as without culling.

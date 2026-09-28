@@ -15,20 +15,20 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystContext
+import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.cylinders.katalyst.KatalystReverbEffect
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.master.MasterBus
-import io.peekandpoke.klang.audio_be.master.MasterChain
-import io.peekandpoke.klang.audio_be.master.MasterRegistry
-import io.peekandpoke.klang.audio_bridge.MasterDsl
-import io.peekandpoke.klang.audio_bridge.MasterStageDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import kotlin.math.abs
 
 /**
  * Resource warehouse step 2d: a reverb network exists only once an owner asks for `reverb`, rented
  * from the backend's one unit shelf, and refused gracefully. A Freeverb unit is ~200 KB; every
  * `Cylinder` used to build one in its constructor, eight of them per playback before any note.
- * `docs/plans/resource-warehouse.md`.
+ * `docs/tasks-archive/2026-09/20260927-resource-warehouse.md`.
  */
 class LazyReverbSpec : StringSpec({
 
@@ -49,13 +49,11 @@ class LazyReverbSpec : StringSpec({
     fun effect(units: ReverbUnits) = KatalystReverbEffect(units = units, blockFrames = blockFrames)
 
     fun KatalystReverbEffect.configureSize(size: Double) =
-        configure(size = size, lowpass = null)
+        configure(size = size, lowpass = null, wet = 1.0)
 
     fun ctx() = KatalystContext(
         blockFrames = blockFrames,
         mixBuffer = StereoBuffer(blockFrames),
-        delaySendBuffer = StereoBuffer(blockFrames),
-        reverbSendBuffer = StereoBuffer(blockFrames),
     )
 
     fun noise(frames: Int, seed: Int): StereoBuffer {
@@ -81,7 +79,7 @@ class LazyReverbSpec : StringSpec({
         alloc.asked shouldBe 0
         // ...AND no cylinder holds a unit: a cylinder that built its own Reverb would bypass the
         // shelf and the counter above would not see it (the delay's lesson, 2b).
-        eight.forEach { it.reverb.reverb.shouldBeNull() }
+        eight.forEach { it.reverb!!.reverb.shouldBeNull() }
     }
 
     "a fresh effect renders as a no-op, without a unit and without throwing" {
@@ -89,7 +87,6 @@ class LazyReverbSpec : StringSpec({
         val fx = effect(units)
         val ctx = ctx()
         ctx.mixBuffer.left.fill(0.25)
-        ctx.reverbSendBuffer.left.fill(0.5)
 
         fx.process(ctx)
 
@@ -146,7 +143,7 @@ class LazyReverbSpec : StringSpec({
         val (units, _) = shelf(alloc)
         val fx = effect(units)
         val ctx = ctx()
-        ctx.reverbSendBuffer.left.fill(0.5)
+        ctx.mixBuffer.left.fill(0.5)
 
         repeat(100) {
             fx.configureSize(size = 0.6) // the owner re-applies every block
@@ -157,7 +154,7 @@ class LazyReverbSpec : StringSpec({
         fx.deniedRents shouldBe 1
         alloc.asked shouldBe 1 // asked ONCE, not 100 times
         units.failures shouldBe 1
-        ctx.mixBuffer.left[3] shouldBe 0.0 // dry
+        ctx.mixBuffer.left[3] shouldBe 0.5 // dry: the mix passes untouched
         fx.hasTail() shouldBe false
 
         alloc.failing = false
@@ -301,36 +298,27 @@ class LazyReverbSpec : StringSpec({
 
     // ── The master bus: same shelf, same return path ────────────────────────────────────────────
 
-    "a master reverb rents from the shelf; a refused unit skips the stage, counted" {
-        val alloc = Recording()
-        val (units, _) = shelf(alloc)
-        val dsl = MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 7.0))
-
-        val chain = MasterChain.build(dsl, sampleRate, blockFrames, reverbs = units)
-        chain.reverbs.size shouldBe 1
-        alloc.asked shouldBe 1
-
-        alloc.failing = true
-        val denied = MasterChain.build(dsl, sampleRate, blockFrames, reverbs = units)
-        denied.reverbs.size shouldBe 0
-        denied.deniedRents shouldBe 1
-        denied.isActive shouldBe false // nothing else in the chain
-    }
-
-    "an evicted master chain returns its unit, and the next master reverb takes it without allocating" {
+    "a master chain leaving service returns its unit, and the next master reverb takes it without allocating" {
         val (units, alloc) = shelf()
-        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = MasterRegistry(), reverbs = units)
+        val registry = KatalystRegistry()
+        val bus = MasterBus(sampleRate = sampleRate, blockFrames = blockFrames, registry = registry, reverbs = units)
 
-        for (i in 0 until 8) {
-            bus.register("m$i", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 5.0 + i * 0.1)))
+        // Before the engine's first block every request is adopted at once and the chain it
+        // replaces is retired there and then (eager retire, step 12 C4); a chain is built when its
+        // request lands.
+        for (i in 0 until 3) {
+            registry.register("m$i", KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Constant(0.4), size = IgnitorDsl.Constant(5.0 + i * 0.1))))
         }
-        units.idleCount shouldBe 0
+
+        bus.requestSwap("m0")
+        bus.requestSwap("m1")
+        units.idleCount shouldBe 1
         val askedBefore = alloc.asked
 
-        bus.register("m8", MasterDsl.of(MasterStageDsl.Reverb(wet = 0.4, size = 6.0)))
+        bus.requestSwap("m2")
 
         units.hits shouldBe 1
-        units.idleCount shouldBe 0
+        units.idleCount shouldBe 1
         alloc.asked shouldBe askedBefore
     }
 })

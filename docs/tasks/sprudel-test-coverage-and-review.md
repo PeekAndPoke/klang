@@ -21,7 +21,9 @@ untested, not dead.
 
 ## The fix (per operation)
 
-1. Add a **chained form-(d) case** to that op's `dslInterfaceTests` block, in both Kotlin and KlangScript, e.g.:
+1. For a voice DOOR knob (a setter that writes a field or slot): add an entry to `LangDoorFormsSpec`, which covers
+   (a) to (d) in both doors with the value asserted (2026-09-27). For any other op, add a **chained form-(d) case**
+   to that op's `dslInterfaceTests` block, in both Kotlin and KlangScript, e.g.:
    ```kotlin
    "pattern.apply(gain(1.0).X(c))" to note("c3").apply(gain(1.0).X(c)),
    "script apply(gain(1.0).X(c))" to SprudelPattern.compile("""note("c3").apply(gain(1.0).X(c))"""),
@@ -42,7 +44,22 @@ on the `lang_arithmetic_numeric.kt` vestigial params (`flipSign`/`oneMinusValue`
 
 Walk the rest of `lang/` file-by-file. For each file: run the IDE inspection, and for every
 "Function `X` is never used" on a `PatternMapperFn.X` overload, apply the fix above. The new `voices()` alias (retired 2026-09-07 into `unison(voices)`)
-(2026-06-30) already ships with its form-(d) covered in `LangUnisonSpec` — use it as the template.
+(2026-06-30) already ships with its form-(d) covered. Since 2026-09-27 the forms, (d) included, of every knob of the doors listed in
+`LangDoorFormsSpec`'s KDoc are one entry there (test consolidation commit 2); the doors outside the table keep their
+forms in their own specs. A new knob of a listed door adds an entry there, not a spec file of its own.
+
+### Found 2026-09-24: 44 doors put no ARGUMENT location on their events
+
+Phase 3 step 3d(iii) strengthened `CallInfoTest`'s helper so a row must show a location that starts
+inside the call's argument span (before, any location passed, including the receiver's own mini-notation,
+so the file guarded nothing about arguments). 72 of 116 rows hold the strict check. 44 cannot, because no
+argument location ever reaches an event: the structural and time doors that take their argument as a
+structure parameter (`euclid` and its variants, `bjork`, `unit`, `loop`, `loopAt`, `loopAtCps`, `slice`,
+`splice`, `early`, `late`, `compress`, `focus`, `fastGap`, `densityGap`, `swing`, `swingBy`) and the
+no-argument doors (the 17 `snd*` sounds, `rev`, `palindrome`, `brak`). Those rows now use
+`assertReceiverLocationsSurvive`, which proves only that the receiver's locations are not dropped.
+Open: should those doors put their argument's location on the events (the editor would then highlight
+the `euclid(3, 8)` argument while it plays)? A UI and sprudel-core decision, not a defect.
 
 ## Overall module review (fold in while sweeping)
 

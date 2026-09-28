@@ -5,8 +5,8 @@ description: Use when someone asks to design a DSL surface, add a DSL door or kn
 
 ## What This Skill Does
 
-Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), MasterDsl, PipelineDsl,
-sprudel patterns, the future Katalyst DSL, and any DSL still to come. Apply these rules whenever
+Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), KatalystDsl (on an orbit and,
+since phase 3 step 12, at the output through `master(...)`), sprudel patterns, and any DSL still to come. Apply these rules whenever
 you add, change, or review a DSL surface, on either door (KlangScript stdlib or Kotlin).
 
 This is a reference skill. It changes how you judge a design; it does not run a workflow.
@@ -18,8 +18,8 @@ Companion skills: `/klangaudio-knowhow` (the engine the DSLs drive), `/klangscri
 
 ## 1. Everything is immutable at construction time
 
-Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders, `MasterDsl`,
-`PipelineDsl`, patterns. A "mutating" operation returns a NEW instance with the updated values and
+Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders,
+`KatalystDsl`, patterns. A "mutating" operation returns a NEW instance with the updated values and
 leaves the receiver untouched.
 
 ```javascript
@@ -60,7 +60,7 @@ door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```javascript
 Osc.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
-master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
+master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size): flat since 2026-09-24
 ```
 
 **Rules:**
@@ -68,18 +68,40 @@ master(Master(m => m.reverb(r => r.wet(0.05).size(9)).gain(2.5).limiter()))
 - The builder exposes ONLY that node's knobs. Base wrappers (`lowpass`, `adsr`, `mul`, ...) live on
   the base type only. Calling the wrong function inside the lambda is not an error, it is not
   offered. This is what the editor shows, so the type split IS the documentation.
-- **Anything with a default is a knob** and lives on the builder. Construction inputs stay on the
-  door: `freq` on oscillators (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), the
-  wrapper's own inputs (`phaser(rate, center, sweep)`).
-- `configure` is always the LAST parameter, always named `configure`, and optional on a DOOR
-  (no lambda = defaults). The one exception: an operation whose whole purpose is the lambda, like
-  `tuneVca(configure)` on a pipeline preset, takes it REQUIRED, because an optional lambda there
-  would make `tuneVca()` a silent no-op.
+- **Which parameter goes where** (refined 2026-09-23 by the maintainer, walking every door of the
+  Ignitor, Katalyst and Master DSLs, the last retired into the Katalyst on 2026-09-28; the per-door record is `.claude/skills/dsl-design/door-shapes.md`):
+  - The effect's MUSICAL inputs stay on the door, defaulted or not: `freq` on oscillators
+    (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
+    `tremolo(rate, depth)`, `fm(modulator, ratio, depth)`. SECONDARY knobs go on the builder
+    (`passes`, `analog`, `humanize`, `floor`, `cap`), even when one is the builder's only knob.
+  - **`wet` is the very FIRST parameter** of every door that has one, in all four DSLs, sprudel
+    included: `phaser(wet, rate, center, sweep)`, `body(wet, material)`, `reverb(wet, size, lowpass)`.
+    `floor` is always on the builder.
+  - A DYNAMICS stage is flat, because every one of its knobs is musical: `compressor` and `duck`,
+    each identical to sprudel's, and `limiter`, the Katalyst's compressor preset (no sprudel twin).
+  - An envelope is ONE `adsr(attackSec, decaySec, sustainLevel, releaseSec, configure)` call, never four
+    stage knobs, with the SAME shape wherever it appears: on the chain and nested inside a filter's or the
+    pitch envelope's builder (`x => x.adsr(a, d, s, r, e => e.curves(...))`). Inside a builder a knob drops
+    the prefix its door needed (`curves`, not `adsrCurves`; `declick`, not `declickSeconds`). An envelope's
+    builder offers only what THAT envelope can do (the chain: `curves`, `declick`; the filter and pitch
+    envelopes: `curves`; FM's index envelope: none yet). Maintainer, 2026-09-25.
+  - A door whose only defaulted knob is temporary stays flat (`shape`, `distort`: their `oversample`
+    leaves with `docs/tasks/oversampling-regions.md`).
+  - A knob that nothing reads is REMOVED, not moved (`drive`'s `driveType`, the pitch envelope's
+    `releaseSec` and `curve`).
+  - ONE shape per concept across the DSLs. On the Katalyst every door parameter is optional: an
+    omitted one is the bare stage's fixed default, never the owner voice; only a `Param` slot reads
+    the orbit's `katp` state (per-door record: `.claude/skills/dsl-design/door-shapes.md`).
+- `configure` is always the LAST parameter, always named `configure`, and always OPTIONAL (no
+  lambda = defaults; the maintainer, 2026-09-23: "all configure callbacks are optional", so an
+  `eq()` with no bands is a transparent stage, not an error). The one historical exception,
+  `tuneVca(configure)` on a pipeline preset, retired with the Pipeline DSL (phase 3 step 9, 2026-09-27).
 - The lambda is called ONCE at construction; the tree it produces is bit-identical to hand-built
   nodes. No new node kinds, no wire change.
-- Callable objects (`Master(...)`, `Pipeline(...)`) go through the `invoke` operator
+- Callable objects (`Katalyst(...)`) go through the `invoke` operator
   (`docs/tasks/klangscript-native-object-operators.md`), aliased to a method form
-  (`Master.build(...)`, `Master()` == `Master.default()`) so both can be tested against each other.
+  (`Katalyst.build(...)`; `Katalyst()` == `Katalyst.build()`, the empty chain) so both can be tested
+  against each other.
 - No sub-type methods on the node types. The pre-2026-09 "config first, base wrappers last" chain
   form is gone; do not reintroduce it.
 - Sprudel patterns have no builder layer: every method returns a `SprudelPattern`, there is no
@@ -126,27 +148,86 @@ the bug.
   each host convert on its own.
 - **Defaults are the same on every surface, and live in ONE place** (maintainer, 2026-09-16): the
   wire defaults in `audio_bridge/constants/` (`SendEffectDefaults.kt` for delay and reverb). The
-  master stage, a sprudel call (it sets every slot it leaves unset at write time), the engine's
+  Katalyst stage (on an orbit or at the output), a sprudel call (it sets every slot it leaves unset at write time), the engine's
   wire fallback (`VoiceFactory`) and the editor tools all read the same constant; a non-finite
   value reads as unset. Never a literal default per host.
+- **A compound door fills per param, at the door, everywhere** (maintainer, 2026-09-18): when a
+  call NAMES a stage, the door checks every companion slot of that stage and, if it is not yet
+  set on the event and the call did not provide it, writes the constant from
+  `audio_bridge/constants/`. A later call that provides the knob overwrites it; an earlier
+  explicit value is never overwritten by a fill. What "names the stage" means differs by stage
+  kind, and the two kinds must not be confused (round 1 of step 5a-3 caught this text saying
+  "wet is the gate of the sends", which its own blueprint contradicts):
+  - stages with a NAME knob (`body` by its material, `vowel` by its vowel, `duck` by its orbit)
+    are named only by that knob; a tail-only call (`body(wet = 0.3)`, `duck(depth = 0.5)`)
+    writes its own slot and never invents the name knob, because inventing it would switch the
+    stage on;
+  - the sends, the compressor and the phaser have no name knob, so ANY of their knobs names the
+    stage: `reverb(size = 4)` fills `wet` with `REVERB_WET` and the room is on,
+    `compressor(ratio = 8)` fills the other four and compresses at the constant threshold,
+    `phaser(rate = 2)` fills the other four and stays silent because `PHASER_WET` is 0. That is
+    the documented, guarded behaviour of `fillReverbDefaults` / `fillDelayDefaults`, the
+    blueprint. The two lists above are CLOSED and complete for the bus doors (name knob: body,
+    vowel, duck; any knob: delay, reverb, compressor, phaser); a new bus door is added to one of
+    them in the same change, or the rule is silently wrong for it (round 2 of step 5a-3 caught the
+    phaser missing from this list one round after the sends' gate was mis-stated).
+  A knob with no constant, where unset means off (`reverb.lowpass`), is not a companion in this
+  sense and is never filled; inventing a constant for it would damp every room.
+  **This bullet is the ONE home of the rule's text.** The register row is its index line. Every
+  other site (a door's KDoc, `ParamBag`, the classic chain's KDoc, the constants headers, the
+  module `MEMORY.md` files) states only what THAT door or class does, in a sentence or two, and
+  points here. The rule escaped review three times in one step because its text was copied to a
+  dozen sites and each correction reached only some of them.
+  `body`, `vowel`, `compressor`, `phaser` and `duck` follow the blueprint since Katalyst step
+  5a-3, which also gave the bags a class (`ParamBag`, `setOrDefault`). The value a door hands to `setOrDefault` is
+  what THIS call named, never a voice field that an earlier fill wrote, or a `katp` between two
+  calls of the same door is overwritten. The engine's non-finite guard stays as the NaN rule for
+  a raw `katp` write, not as a second fill. The voice-side compound doors (`adsr`, `lpf`, FM and
+  pitch envelopes) adopt it when phase 3 of `docs/plans/signal-flow-redesign.md` rebuilds the
+  built-ins as instruments with slots. **First adoption, 2026-09-20 (phase 3 step 3a): the four
+  Ignitor filter doors.** Their envelope has no NAME knob, so ANY of its five knobs names the stage
+  and a call that names one writes every companion it left out, `env` included; a call that names
+  none is the untouched filter. Since step 3d (2026-09-24) the five knobs are two builder calls,
+  `env(...)` and `adsr(...)`, and the fill runs once after the lambda. The three CURVES are NOT stage
+  knobs (maintainer, 2026-09-23): a curve shapes an envelope, it does not ask for one. Since 3c they
+  live only inside the envelope's own builder (`adsr(..., e => e.curves(...))`), so on the script door a
+  curve cannot be written without naming the stage; on the flat Kotlin door a curve alone still leaves
+  the filter untouched. The pitch envelope's builder
+  has no depth to fill (the depth is its door input), so the rule has nothing to do there. Sprudel's
+  `penv(amount, attack, decay, sustain, release)` (phase 3 step 5b (c), 2026-09-25) is a voice-side door on
+  neither closed list: `amount` is its switch and a tail-only call never invents it; its unset stages read
+  the shared `PitchEnvelopeDefaults` on both hosts. The `<door>Curves` doors (`adsrCurves`, `penvCurves`,
+  `lpfCurves`, ...) are setters only: a curve never switches its envelope on, and a bare call changes
+  nothing. **It is adopted AT THE DOOR only, and a door fill does not survive
+  SLOTTING:** the reading is "named against null" at call time, while a slotted instrument hands the
+  node one set of `Param`s once and the per-note decision moves into the build, which has no notion
+  of "named". **The SLOT layer answers it a second time (decided 2026-09-25, built in phase 3 step 5 as
+  `slotLayerDepth` in `IgnitorDslRuntime.filterEnvDef`):** a knob is WRITTEN when the note's bag holds a
+  finite value for its slot (sprudel's `!= null`; an authored default alone never counts). A written depth
+  always stands, an explicit 0 included. Only an UNSET depth slot (a `Param` whose default is the
+  `SLOT_UNSET` sentinel, as `classic()` places it) takes `FILTER_ENV_DEPTH_SEMITONES`, and only when one of
+  the FOUR stage knobs is written. An authored depth default, 0 included, is the author's value and is
+  never filled; a `Constant` depth (a door fill) is never the question.
 - A KDoc claim "orbit twin: x()" must be verified; a wrong parity claim is worse than none.
-- Deliberate asymmetries are RECORDED with their reason (the master limiter's `lookahead` exists
-  on the master only because a per-orbit lookahead would shift that orbit late). See
-  `docs/tasks/master-dsl-followups.md` for the audit brief.
+- Deliberate asymmetries are RECORDED with their reason (the compressor's `lookahead` exists on the
+  Katalyst doors only, `k.compressor(...)` and `k.limiter(...)`, not on sprudel's `compressor(...)`: it is
+  fixed when the chain is built because it sizes a delay ring, while a sprudel door writes slots on the
+  running chain; the orbit route is `katalyst(Katalyst(k => k.limiter(lookahead = ...)))`). See
+  `docs/tasks/master-dsl-followups.md` section 1 for the parity audit brief.
 
 ---
 
 ## 5. One word per concept, end to end
 
 A concept carries ONE name across the KlangScript object, the `*Dsl` type, the sprudel carrier,
-the wire, and the backend registry/runtime. The Pipeline rename is the model:
-`Pipeline` object, `PipelineDsl`, `.pipeline()`, `PipelineRegistry`, no split.
+the wire, and the backend registry/runtime. The Katalyst is the model:
+`Katalyst` object, `KatalystDsl`, `.katalyst()`, `KatalystRegistry`, no split.
 
 Known debt, capture-only, not scheduled: the script object is `Osc` but the type is `IgnitorDsl`
 and the runtime is the Ignitor. When unifying, pick one word and carry it everywhere.
 
 Also: when a surface is redesigned, REMOVE what it replaces. Two doors to the same thing
-(`MasterFx.gain()` next to `Master(m => m.gain())`) is a finding, not backward compatibility.
+(`MasterFx.gain()` next to `Master(m => m.gain())`, both gone since) is a finding, not backward compatibility.
 The project does not keep deprecated surfaces.
 
 ---
@@ -161,7 +242,7 @@ Two complementary rules that are often confused:
   internal invariants only.
 - **Do not add safety clamps to audio parameters without asking.** The Motor is raw with sharp
   edges by design; delay feedback above 1.0 (bounded by its `cap`) or extreme drive is a creative
-  choice, the master limiter is the safety net. When a review flags a parameter as "could clip",
+  choice, the house limiter (`MasterStage`) is the safety net. When a review flags a parameter as "could clip",
   ask, do not clamp. The reverb is the recorded exception: above unity comb feedback it has no
   sound, only a network running away to Inf/NaN, and its size bound sits at 10 (feedback 0.98) by
   maintainer decision (2026-09-16, `Reverb.normalizeSize`).
@@ -177,7 +258,7 @@ New wire-visible distinctions start as sealed `@WireName` hierarchies, not enums
 
 **Why:** variants carry exactly their own params; name-addressed variants have no ordinal
 append-only hazard (the KSP schema hash does not cover enum entries); exhaustive `when` over the
-sealed type makes every consumer arm compiler-checked. Precedents: `FilterDefs`, `MasterStageDsl`,
+sealed type makes every consumer arm compiler-checked. Precedents: `AdsrDef`, `KatalystStageDsl`,
 `EqSection`. An enum is acceptable only for a genuinely closed, param-less set (`AdsrCurve`).
 
 ---
@@ -226,4 +307,15 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
     actually built (read the `VoiceFactory` gate: a tremolo needs depth > 0, a filter envelope needs its cutoff, a decay needs a sustain below 1, ducking needs depth and a
     trigger on the named orbit) and the comment describes what the engine does. Lesson of the
     accessor sweep (2026-09-07): every MAJOR across four batches was an example that compiled,
-    queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear.
+    queried and demonstrated nothing; `DslDocExamplesSpec` cannot hear. An example that NAMES a
+    built-in ("the `sgbell` index envelope") quotes the built-in's values read from its definition,
+    never from memory: step 3d(i) (2026-09-24) shipped `sgbell` with release 0, the very variant the
+    preset's own comment says ticks on every note-off.
+11. A compound door fills its companions per param from `audio_bridge/constants/` when the
+    stage is named, never overwrites an explicit value, and never invents a NAME knob. Check the
+    door against the two closed lists in §4 (they are not repeated here on purpose); a new bus
+    door joins one of them in the same change. Review a change to this rule BY TABLE: every door,
+    every setter, against every clause.
+
+12. The value handed to `setOrDefault` is what this call named, never a field an earlier fill
+    wrote (§4).

@@ -3,8 +3,8 @@
 JavaScript-like scripting language for live coding. Kotlin Multiplatform (JVM + JS).
 Hand-rolled lexer + recursive descent parser. Tree-walking interpreter.
 
-**This module is the language and runtime only.** The standard library (`Osc`, `Master`,
-`Pipeline`, `Math`, `Object`, `console`, value-type extensions) lives in `:klangscript-libs`
+**This module is the language and runtime only.** The standard library (`Osc`,
+`Katalyst`, `Math`, `Object`, `console`, value-type extensions) lives in `:klangscript-libs`
 (see `klangscript-libs/CLAUDE.md`), which depends on this module, never the other way round.
 `klangScriptEngine()` here builds a bare engine; `klangScript()` in the libs module builds one
 with the stdlib registered.

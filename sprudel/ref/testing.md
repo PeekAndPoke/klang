@@ -13,6 +13,8 @@
 - **Test across ≥12 cycles** — timing bugs compound and only surface after several cycles
 - **Always verify both `part` and `whole`** explicitly
 - **Filter by `isOnset`** when testing playback behavior; `queryArc()` returns all events
+- **A new leaf emitter or fan-out construct joins `VoiceDataAliasingSpec`'s construct table**: every event must
+  own its `SprudelVoiceData`, its `Svd*` groups and its param bags (the doors write them in place)
 
 ## Test Structure
 
@@ -37,3 +39,13 @@
 
 `compat/JsCompatTests.kt` — compares Kotlin output directly against JS implementation.
 Add compat test cases when implementing any new DSL function.
+
+## Door calling forms: one table
+
+Each knob of the voice doors (level and routing, the oscillator knobs, `adsr`, `unison`, the bus doors, the modulation
+and distortion doors, the four filters, `fm`, `vibrato`, `penv`; the spec's KDoc has the list and what is not in it) is
+one entry of `lang/LangDoorFormsSpec`, which runs it through every calling form (pattern method, string receiver,
+standalone mapper, chained mapper, each in Kotlin and KlangScript) and asserts the VALUE written, plus the bare-call
+reinterpret of each head, a continuous pattern per knob, and each listed compound door's positional order. A new voice
+door or knob adds an entry there; the door's own spec keeps only what is particular to the door (its fill, its
+guards, its wire mapping). The accessor, mapper, gap and tail-only rows of both doors are `LangFieldAccessorsSpec`'s.

@@ -58,7 +58,7 @@ class LangBankSpec : StringSpec({
         events[1].data.bank shouldBe "User1"
     }
 
-    "bank() sets VoiceData.bank" {
+    "bank() sets SprudelVoiceData.bank" {
         val p = s("bd").bank("RolandCR78")
         val events = p.queryArc(0.0, 1.0)
 

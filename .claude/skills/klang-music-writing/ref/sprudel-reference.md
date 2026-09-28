@@ -56,15 +56,17 @@ let koto = Osc.pluck()
   .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
   .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
   .highpass(200)
+  .classic()
 
 let kick = Osc.sine()
-  .pitchEnvelope(24, 0.001, 0.04)
+  .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
   .adsr(0.001, 0.2, 0.0, 0.02)
+  .classic()
 
 stack(
   note("a4 b4 c5 b4 a4 [b4 a4] f4@2").sound(koto)
     .legato(0.8).slow(4),
-  note("a1 ~ ~ ~").sound(kick).gain(0.8),
+  note("a1 ~ ~ ~").sound(kick).adsrOff().gain(0.8),
   sound("~ ~ cp ~").gain(0.4),
   sound("hh*8").gain(0.3)
 ).reverb(wet = 0.2, size = 5)
@@ -162,8 +164,8 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `n(pat)`                   | Play by scale index                                                                                              | `n("0 2 4 7").scale("C4:major")`                                               |
 | `chord(pat)`               | Play chord names                                                                                                 | `chord("<Am C F G>")`                                                          |
 | `stack(p1, p2, ...)`       | Layer simultaneously                                                                                             | `stack(s("bd sd"), s("hh*4"))`                                                 |
-| `master(chain)`            | Set the song's master bus (silent control layer — put it in the `stack`)                                         | `stack(lead, bass, master(Master(m => m.gain(2.0).limiter())))` |
-| `master(Master.default())` | Switch the master back **off** — deleting the `master(...)` line does not, since a master means "change to this" | `master(Master.default())`                                                     |
+| `master(chain)`            | Set the song's master bus (silent control layer: put it in the `stack`)                                         | `stack(lead, bass, master(Katalyst(k => k.gain(2.0).limiter())))` |
+| `master(Katalyst())`       | Switch the master back **off** (an empty chain): deleting the `master(...)` line does not, since a master means "change to this" | `master(Katalyst())`                                                           |
 | `cat(p1, p2, ...)`         | Sequence across cycles                                                                                           | `cat(s("bd sd"), s("cp cp"))`                                                  |
 | `fastcat(p1, p2, ...)`     | Sequence within one cycle                                                                                        | `fastcat(s("bd"), s("sd"))`                                                    |
 | `arrange([n,p], ...)`      | Timed sections                                                                                                   | `arrange([4, melody], [2, silence])`                                           |
@@ -183,37 +185,37 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 > simply ignored (`Cylinder.kt`). **To give voices independent bus effects, put them on different orbits.**
 >
 > Since 2026-09-08 this is also metadata, not just prose: every DSL function carries a `@scope` tag that the
-> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `orbit-send` /
-> `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
+> docs popup and the library page render as a badge (`KlangScope`, values `voice` / `orbit` / `master`). If this table and a badge ever disagree, the badge is generated from the function and wins.
 >
 > | Scope | Effects |
 > |-------|---------|
-> | **PER-ORBIT (bus)** — one processor per orbit, settings first-writer-wins | `body` / `vowel` (their `wet` is a bus MIX, not a send), `phaser` (slots `rate`/`wet`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; only custom pipelines add a per-voice pass), `compressor`, ducking |
-> | **PER-ORBIT + PER-VOICE SEND** — shared processor, own send amount | `reverb` (`wet` is the per-voice send; `size`/`lowpass` are the orbit's) and `delay` (`wet` per voice; `time`/`feedback`/`cap` the orbit's). A dry voice on a wet orbit stays dry: only voices with a send above zero are summed into the effect (`SendRenderer.kt`) |
-> | **PER-VOICE** — independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`/`postgain`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
-> | **PER-PLAYBACK (master)** — the whole song's bus, after every orbit | `master(Master(m => m...))` with the builder knobs `gain` (make-up level), `limiter`, `reverb`, `delay`, each appending a stage |
+> | **PER-ORBIT (bus)**: one processor per orbit, settings from the orbit's current owner voice (the first to sound; settings glide over 50 ms when the owner changes) | `body` / `vowel` (their `wet` is the mix), `delay` and `reverb` (since 2026-09-19 inserts fed from the orbit mix at their place in the chain, so the room hears body, vowel and the delay's echoes; ONE `wet` per orbit, the owner's), `phaser` (slots `wet`/`rate`/`center`/`sweep`/`floor`; bus-owned since 2026-08-24, one sweep over the summed orbit; there is no per-voice phaser), `compressor`, ducking |
+> | **PER-VOICE**: independent per note | `lpf`/`hpf`/`bpf`/`notch` (with their `q`, `env` and envelope slots), `distort`, `crush`, `coarse`, `gain`/`velocity`/`pan`, `adsr` (slots `attack`/`decay`/`sustain`/`release`), `vibrato`, `tremolo`, `fm*`, pitch env (`penv`…), `unison`/`spread`, `analog`, `sound`/`n`/`note` |
+> | **PER-PLAYBACK (master)**: the whole song's bus, after every orbit | `master(Katalyst(k => k...))`: the same Katalyst chain an orbit runs (since phase 3 step 12), so every stage door works there (`gain(gain)` as make-up level, `limiter(...)`, `compressor(...)`, `eq(...)`, `reverb(wet, size, lowpass)`, `delay(wet, time, feedback, d => d.cap(level))`, `phaser`, `body`, `vowel`), each appending a stage; `duck` is inert at the output and a `Katalyst.param(...)` stays at its default there |
 
-**Master limiter knobs.** `m.limiter(l => l...)` takes: `thresholdDb(db)` `ratio(x)` `kneeDb(db)`
-`attack(seconds)` `release(seconds)` `lookahead(seconds)`.
+**The limiter.** `k.limiter(threshold, ratio, knee, attack, release, lookahead)`, flat and every parameter optional
+(an omitted one keeps its default): `threshold` in dBFS (-1), `ratio` (20), `knee` in dB (2), `attack`, `release` and
+`lookahead` in seconds (0.001, 0.1, 0). Name them: `k.limiter(threshold = -3, ratio = 4)`. It is a compressor stage
+with limiter defaults, so it works on an orbit too.
 
 - An **always-on safety limiter** already runs on the summed mix (−1 dB, 20:1, 5 ms lookahead), so every song is delayed
   5 ms and peaks are already caught. An authored `limiter` stage is for *shaping*, not peak-catching.
-- **`.lookahead()` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack — three
-  limiters with lookahead are three delay lines, and the delay is per-playback, so it shifts this song against anything
-  else playing.
+- **`lookahead` defaults to 0 and is opt-in**, because it costs exactly that much latency and stages stack: three
+  limiters with lookahead are three delay lines. At the master it shifts this song against anything else playing; on an
+  orbit it shifts that orbit against the song's other orbits (nothing compensates).
 - With lookahead **off**, `attack` is a one-pole time constant (short = keeps transient punch). With it **on**, `attack`
   is the gain-smoothing length — set it equal to the lookahead, since peak performance is invariant to it while
   low-frequency cleanliness tracks it.
 - **Staged gain** works better than one big push: split the total in dB evenly across stages, with descending thresholds
-  and ascending ratios, e.g. `gain(1.45)` → `limiter().thresholdDb(-8.0).ratio(2.0).attack(0.015).release(0.25)`
-  → `gain(1.40)` → `limiter().thresholdDb(-4.0).ratio(4.0).attack(0.008).release(0.15)` → `gain(1.30)`. Slow attacks (30
+  and ascending ratios, e.g. `gain(1.45)` → `limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)`
+  → `gain(1.40)` → `limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)` → `gain(1.30)`. Slow attacks (30
   ms+) arrive after the transient and read as "shocks" on dense material.
 >
 > Example — two guitars that each need their **own** wood body must be on separate orbits:
 > ```javascript
 > stack(
->   guitarA.orbit(1).body("wood"),   // orbit 1's body
->   guitarB.orbit(2).body("wood"),   // orbit 2's body — independent
+>   guitarA.orbit(1).body(material = "wood"),   // orbit 1's body
+>   guitarB.orbit(2).body(material = "wood"),   // orbit 2's body, independent
 > )
 > ```
 > If both were `orbit(1)`, they'd share ONE body over their summed signal (fuller, but not two bodies).
@@ -322,7 +324,7 @@ selection — extended to ignitor variants and per-note gain.
 
 | Function         | Aliases    | Description                    | Example                               |
 |------------------|------------|--------------------------------|---------------------------------------|
-| `gain(amt)`      |            | Volume (0-1+)                  | `s("bd").gain(0.8)`                   |
+| `gain(amt)`      |            | The one level word: tone-neutral, after the voice's filters and distortion; a later `gain` REPLACES an earlier one (`gain(mul(x))` scales a gain that is set) | `s("bd").distort(3).gain(0.1)` |
 | `velocity(amt)`  | `vel`      | Velocity (0-1)                 | `note("c3").velocity(0.5)`            |
 | `pan(pos)`       |            | Stereo (0=L, 0.5=C, 1=R)       | `s("hh").pan(sine)`                   |
 | `orbit(n)`       | `cylinder` | Effect send channel (0-3)      | `note("c3").orbit(1).reverb(0.5, 4)`       |
@@ -331,7 +333,6 @@ selection — extended to ignitor variants and per-note gain.
 | `adsrOff()`      |            | Voice envelope OFF — the instrument owns amplitude | `note("c3").sound(gtr).adsrOff()` |
 | `adsrOn(flag?)`  |            | Voice envelope ON (the default) | `note("c3").adsrOn()`                |
 | `legato(amt)`    | `clip`     | Note duration scaling          | `note("c3").legato(1.5)`              |
-| `postgain(amt)`  |            | Post-processing gain           | `s("bd").distort(3).postgain(0.1)`    |
 
 ### Sound Selection
 
@@ -362,6 +363,7 @@ at the cutoff). Same third slot on the ignitor door.
 | `hpf(freq, q, passes, env, attack, decay, sustain, release)`           | `highpass` | Highpass, same slots and readers as `lpf` (`hpf.freq`, `hpf.env`, ...)                                                                                 | `s("bd").hpf(freq = 200, q = 2)`                                                                     |
 | `bpf(freq, q, env, attack, decay, sustain, release)`                   | `bandpass` | Bandpass: centre Hz, Q, envelope depth in semitones and the stages; readers `bpf.freq`, `bpf.q`, ...                                                   | `note("c3").bpf(freq.mul(4), 3)`                                                                     |
 | `notch(freq, q, env, attack, decay, sustain, release)`                 |            | Notch (band reject), same slots as `bpf`; readers `notch.freq`, `notch.q`, ...                                                                         | `s("sd").notch(freq = 1000, q = 2)`                                                                  |
+| `lpfCurves(attack, decay, release)` / `hpfCurves` / `bpfCurves` / `notchCurves` |            | Stage curves of that filter's envelope, like `adsrCurves` (`"exp"` default, `"linear"`, `"square"`, ...); an omitted or unknown stage keeps its curve; a curve alone switches no envelope on | `note("c3").s("saw").lpf(freq = 400, env = 24, decay = 0.3).lpfCurves("linear", "linear", "linear")` |
 
 ### Effects
 
@@ -374,16 +376,16 @@ at the cutoff). Same third slot on the ignitor door.
 | `delay.wet` / `delay.time` / `delay.feedback` / `delay.cap`                 |          | Read a delay slot                                                                                                                                                | `p.delay(time = 0.25).reverb(size = delay.time.mul(20))`     |
 | `distort(amount, shape, oversample)`                                        |          | Distortion amount, shape name (`soft`, `hard`, `fold`, `exp`, ...), oversample factor (Int)                                                                      | `s("bd").distort(amount = 2, shape = "fold")`                |
 | `distort.amount` / `distort.oversample`                                     |          | Read a distortion slot (`shape` is a string, no reader)                                                                                                          | `p.distort(0.4).pan(distort.amount)`                         |
-| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor; readers `crush.amount`, `crush.oversample`                                                                                   | `s("hh").crush(8)`                                           |
-| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor; readers `coarse.amount`, `coarse.oversample`                                                                    | `note("c3").s("saw").coarse(3)`                              |
-| `phaser(rate, wet, center, sweep, floor)`                                   |          | Phaser: LFO rate in Hz, wet (additive by default), center Hz, sweep range Hz, floor                                                                              | `note("c3").phaser(rate = 1, wet = 0.5, center = 1000)`      |
-| `phaser.rate` / `phaser.wet` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
+| `crush(amount, oversample)`                                                 |          | Bitcrusher bits, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `crush.amount`, `crush.oversample` | `s("hh").crush(8)`                                           |
+| `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.amount`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
+| `phaser(wet, rate, center, sweep, floor)`                                   |          | Phaser: wet FIRST (additive by default), then the LFO rate in Hz, center Hz, sweep range Hz, floor. A bare `phaser()` reads the pattern's values as `wet` | `note("c3").phaser(wet = 0.5, rate = 1, center = 1000)`      |
+| `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
 | `tremolo(depth, sync, shape, skew, phase)`                                  |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name, skew, phase                                                                               | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
-| `tremolo.depth` / `tremolo.sync` / `tremolo.skew` / `tremolo.phase`         |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(tremolo.sync)`                     |
+| `tremolo.depth` / `tremolo.sync` / `tremolo.skew` / `tremolo.phase`         |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.sync)`                     |
 | `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
 | `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
-| `vowel(vowel, wet, floor)`                                             |            | Vowel formant: the vowel name (no reader), send 0..1, dry floor; readers `vowel.wet`, `.floor`                                                         | `note("c3").s("saw").vowel("a", 0.8)`                                                                |
-| `body(material, wet, floor)`                                           |            | Resonant body: material name (no reader), send 0..1, dry floor; readers `body.wet`, `.floor`                                                           | `note("c3").s("saw").body("wood", 0.7)`                                                              |
+| `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
+| `body(wet, material, floor)`                                           |            | Resonant body: wet FIRST (a mix 0..1), then the material name (no reader), dry floor; readers `body.wet`, `.floor`. A material alone is named: `body(material = "wood")`; `"none"` is off | `note("c3").s("saw").body(0.7, "wood")`                                                              |
 
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
 
@@ -398,8 +400,9 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function          | Aliases | Description          | Example                             |
 |-------------------|---------|----------------------|-------------------------------------|
-| `penv(amount, attack, decay, release, curve, anchor)`                  | `pamt`     | Pitch envelope: depth in semitones, its stages, curve (1 linear, below concave) and sustain anchor                                                     | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
-| `penv.amount` / `penv.attack` / ... / `penv.anchor`                    |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
+| `penv(amount, attack, decay, sustain, release)`                        | `pamt`     | Pitch envelope, the Ignitor `pitchEnvelope`'s law: depth in semitones and an ADSR (sustain a share of the depth, 0 = the note); stages exponential by default; unset stages 0.01 / 0.1 / 0 / 0 | `s("bd*4").penv(24, 0.001, 0.08)`                                                                    |
+| `penvCurves(attack, decay, release)`                                   |            | Stage curves of the pitch envelope, like `adsrCurves` (`"exp"`, `"linear"`, `"square"`, ...; an omitted stage keeps its curve) | `s("bd*4").penv(24, 0.001, 0.08).penvCurves("linear", "linear", "linear")`                          |
+| `penv.amount` / `penv.attack` / ... / `penv.release`                   |            | Read a pitch envelope slot                                                                                                                             | `p.penv("12 -12", 0.01, 0.2).lpf(penv.amount.mul(100).add(2000))`                                    |
 
 ### Sampling
 
@@ -409,10 +412,8 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 | `end(pos)`       |         | End position (0-1)        | `s("breaks").end(0.5)`             |
 | `speed(factor)`  |         | Playback speed            | `s("breaks").speed(0.5)`           |
 | `cut(group)`     |         | Choke group               | `s("hh*4").cut(1)`                 |
-| `loop(flag)`     |         | Enable looping            | `s("pad").loop(1)`                 |
+| `loop(flag)`     |         | Loop the begin..end region | `s("pad").loop(1).begin(0.25).end(0.75)` |
 | `loopAt(cycles)` |         | Fit sample to n cycles    | `s("breaks").loopAt(1)`            |
-| `loopBegin(pos)` | `loopb` | Loop start (0-1)          | `s("pad").loop(1).loopBegin(0.25)` |
-| `loopEnd(pos)`   | `loope` | Loop end (0-1)            | `s("pad").loop(1).loopEnd(0.75)`   |
 | `slice(n, pat)`  |         | Slice sample into n parts | `s("breaks").slice(8, "0 3 5 2")`  |
 | `splice(n, pat)` |         | Slice + pitch-adjust      | `s("breaks").splice(8, "0 3 5 2")` |
 
@@ -697,7 +698,7 @@ stack(
 >`).scale("C1:minor")
     .sound("pluck")
     .adsr(0.01, 0.2, 0.5, 0.2)
-    .clip(0.5).distort(0.1).onepole(20257).postgain(0.2)
+    .clip(0.5).distort(0.1).onepole(20257).gain(0.2)
     .superimpose(x => x.sound("tri"))  // layer triangle on top
 
   // Hi-hats
