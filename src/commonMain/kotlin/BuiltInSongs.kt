@@ -14,6 +14,7 @@ import io.peekandpoke.klang.builtinsongs.finalFantasy7PreludeSong
 import io.peekandpoke.klang.builtinsongs.greensleevesSong
 import io.peekandpoke.klang.builtinsongs.irishLamentSong
 import io.peekandpoke.klang.builtinsongs.irishLamentTechnoSong
+import io.peekandpoke.klang.builtinsongs.kokonSong
 import io.peekandpoke.klang.builtinsongs.sakuraSong
 import io.peekandpoke.klang.builtinsongs.sandsturmSong
 import io.peekandpoke.klang.builtinsongs.smallTownBoySong
@@ -48,6 +49,7 @@ object BuiltInSongs {
     val smallTownBoy: Song = smallTownBoySong
     val drunkenSailor: Song = drunkenSailorSong
     val greensleeves: Song = greensleevesSong
+    val kokon: Song = kokonSong
 
     val songs: List<Song> = listOf(
         finalFantasy7Prelude,
@@ -64,5 +66,6 @@ object BuiltInSongs {
         irishLament,
         smallTownBoy,
         drunkenSailor,
+        kokon,
     )
 }
