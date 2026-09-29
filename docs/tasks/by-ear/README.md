@@ -153,6 +153,12 @@ listening pass, and nothing here is new sound by design: it is what the songs al
 
 Listen, deepest change first:
 
+> **Checked by render, 2026-09-29** (pairs 30 to 33 in the listening folder, before `a0ca2abd`, after `8afee51b`):
+> Tetris is **bit-identical** across the fix (with `seg(n).slow(n)` each slice is a whole cycle, so its q was already
+> walking; only a bare `seg(4)` changes). In Stranger Things the moving band-pass is on the brown-noise "Shore" layer,
+> not the arpeggio; in Greensleeves it is the brown-noise wind, not the pad. In Der Schmetterling the shaker's
+> `late(...)` micro-timing moved too. The list below is the original expectation.
+
 - **Tetris** `lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))`: q used to sit still for 32 cycles, now
   it walks once per cycle. Resonance breathing that was never there.
 - **Stranger Things** `bpf(freq = perlin.range(440, 1760).segment(16).slow(6))`: the arpeggio's band-pass
