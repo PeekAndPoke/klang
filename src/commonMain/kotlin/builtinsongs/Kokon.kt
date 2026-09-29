@@ -273,6 +273,14 @@ let breakingOpen = stack(
   beat(cocoonRoots).gain(0.7),
 )
 
+// The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading.
+let unravelling = stack(
+  spin(cocoonArp.add(7)).ply(2).gain(0.45),
+  wings(cocoonPower),
+  chug(cocoonRoots),
+  beat(cocoonRoots).gain(0.7),
+)
+
 // The lift: Bb, C, Dm.
 let lifting = stack(
   spin(liftArp).ply(2).gain(0.20).oscp("decay", 2.5),
@@ -310,6 +318,7 @@ export song = stack(
     [4, stretching],
     [4, holdingBreath],
     [4, breakingOpen],
+    [4, unravelling],
     [3, lifting],
     [1, landing],
     [4, flyingOff],
