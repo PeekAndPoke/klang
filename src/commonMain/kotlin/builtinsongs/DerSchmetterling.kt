@@ -123,10 +123,10 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =   80, q = 1.2, db =  4.0)         // thump: closed-back box resonance
-    .band(freq =  400, q = 0.6, db =  7.0)         // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  3.5)         // bark:  the upper-mid speaker peak
-    .band(freq =  100, q = 0.7, db = -2.0)         // mud:   reduce the mud
+    .band(freq =  120, q = 1.2, db =  3.0)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
+    .band(freq =  100, q = 0.7, db = -3.0)         // mud:   reduce the mud
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
 
@@ -165,7 +165,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(8.0).sideAtten(0.5).gainJitter(0.05).centerJitter(0.10)
+    .spreadPower(4.0).sideAtten(0.5).gainJitter(0.05).centerJitter(0.10)
     // analog settings
     .analog(pAnalog).analogSpread(0.5)
   )
@@ -255,7 +255,7 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.4)
-  .hpf(600, 0.7).lpf(6500, 3.5)
+  .hpf(800, 0.7).lpf(6500, 3.5)
   .pan(perlin.range(0.2, 0.4)).superimpose(pan(perlin.range(0.8, 0.6))) // . solo()
   .clip(1.0)
 
@@ -263,7 +263,7 @@ export lead_arrange = x => x.orbit(0) //  .mute()
   .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e3:minor!16>").gain("<1.00!48 0.50!16 1.00!48 2.00!16>").gain(mul(0.22))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!48 0!48>")
+  .mute("<1!64 0!32 1!96 0!16>")
   .late(berlin.range(0.0005, 0.0015).mul(drunk))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -322,7 +322,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.46) // . mute()
-    .oscp("sub", 1.00).oscp("harmonics", 1.00)  // . solo()
+    .oscp("sub", 0.90).oscp("harmonics", 1.00)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -352,7 +352,7 @@ let granCassa = (() => {
   let beater = Osc.whitenoise().adsr(0.0005, 0.025, 0.0, 0.015).lowpass(2000).mul(8.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.50, "tube", 2)
+    .distort(0.40, "tube", 2)
     .classic()
 })()
 
@@ -360,8 +360,8 @@ let granCassa = (() => {
 export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [0 0 ~ 2 2 ~ -2 ~]>`
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
-  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4).notch(130, 0.7)
-  .hpf(60).lpf("3200".add(sine.range(-200, 200).slow(16).early(8)))
+  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4).notch(100, 0.7)
+  .hpf(120).lpf("3200".add(sine.range(-200, 200).slow(16).early(8)))
   .pan(sine.range(0.3, 0.7).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
@@ -409,7 +409,7 @@ let metalSnare = (() => {
   // the body: the head, pushed a fifth up by the hit, a deeper sine under it, the thud of the stick driving the whole drum
   // (noise, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
   let head  = Osc.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(2.0)
-  let deep  = Osc.sine(Osc.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(4.0)
+  let deep  = Osc.sine(Osc.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(3.5)
   let thud  = Osc.pinknoise().bandpass(220, 1.0).highpass(140, 0.707, x => x.passes(2)).adsr(0.0005, 0.050, 0.0, 0.02).mul(40)
   let shell = Osc.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
   let m2    = Osc.sine(Osc.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
