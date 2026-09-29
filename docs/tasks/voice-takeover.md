@@ -58,7 +58,7 @@ sharing one onset).
 ### What comes free from the engine
 
 `body()` / `vowel()` are **orbit-level Katalyst effects** — they run once on the summed cylinder mix, not per voice
-(`cylinders/katalyst/`, `audio/MEMORY.md`). Delay and reverb are likewise cylinder-level tanks. So fading a voice at the
+(`cylinders/katalyst/`, `audio/ref/katalyst.md`). Delay and reverb are likewise cylinder-level tanks. So fading a voice at the
 **send** stage stops it *feeding* those resonators while their own high-Q state keeps ringing out.
 
 That is exactly the acoustic caricature we want, for free: **the string stops, the body does not.**
@@ -68,7 +68,7 @@ Der Schmetterling already runs `.body(material = "violin", wet = 0.3)`, so it be
 
 A 5 ms fade under the incoming note's 5 ms attack is enough: the fresh transient perceptually masks the decaying tail.
 That is why this needs no curve sophistication — smoothstep over linear costs 3 multiplies for 5 ms and removes the
-slope-corner click documented in the VCA de-click work (`audio/MEMORY.md`, `ENV_DECLICK_SECONDS`), so use it, but do not
+slope-corner click documented in the VCA de-click work (`audio/ref/memory-history.md`, `ENV_DECLICK_SECONDS`), so use it, but do not
 expect to hear the difference.
 
 **Practical note:** the tail is often still *loud* when the next note lands (e.g. `clip(0.86)` with

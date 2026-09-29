@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.constants.BANK_CROSSFADE_SECONDS
  *
  * A resonant bank (body / vowel / eq) carries state: its SVF integrators are mid-ring. Replacing
  * the instance outright, or dropping it to dry, makes the output jump in one sample (measured -12
- * to -30 dB above 8 kHz against the signal, a click; `docs/tasks/katalyst-dsl.md`, step 5c). So
+ * to -30 dB above 8 kHz against the signal, a click; `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`, step 5c). So
  * every edge is a linear crossfade over [BANK_CROSSFADE_SECONDS] (decided with the maintainer,
  * 2026-09-19, Katalyst step 5c-6; the fade became its own 20 ms constant in 5c-11), **from what
  * sounds now**:

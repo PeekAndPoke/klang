@@ -193,7 +193,7 @@ object WarmupVocabulary {
         .coarse(3.0)
         .phaser(wet = 0.5, rate = 0.7, center = 800.0)
         .tremolo(rate = 4.0, depth = 0.4)
-        .tremolo(rate = 3.0, depth = 0.3, shape = "triangle", skew = 0.3, phase = 0.25) // the skewed, non-sine law
+        .tremolo(rate = 3.0, depth = 0.3, shape = "square") // a non-sine LFO, the pulse oscillator with its edge
         .shimmer()
         .vibrato(rate = 5.0, semitones = 0.2)
         .accelerate(1.0)

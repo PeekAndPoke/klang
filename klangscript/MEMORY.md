@@ -1,208 +1,106 @@
-# KlangScript — Memory
+# KlangScript: Memory
 
-## Current Status
+What is true in the klangscript module (and the stdlib in `:klangscript-libs`, which keeps no memory of
+its own) now: the state, the decisions and rules in force, the traps and the open threads, each said once
+with a pointer to its home. Short by design. To keep it that way: when a change moves something here,
+update the section it touched in place, add ONE line to History (date, a few words, the link to the task
+record), and put the narrative in the task record, which gets archived. The full dated record up to
+2026-09-29 is `ref/memory-history.md`; read it only when you need the history of a decision.
 
-- **Tests**: 970+ passing on JVM ✅ (as of 2026-03-02)
-- **Production**: Kotlin/JS builds working ✅
-- **Parser**: Hand-rolled recursive descent (replaced better-parse due to Kotlin/JS issue #66)
+## Current state
 
-## Recent Work (2026-09)
+- **Parser**: hand-rolled lexer and recursive descent (`ref/parser-impl.md`). better-parse broke Kotlin/JS
+  production builds; do not re-introduce a parser combinator library.
+- **Language**: literals, operators including `===`, arrow functions, `let` / `const`, objects, arrays,
+  `if` / `else` as an expression, `while` / `do-while` / `for`, `break` / `continue`, template literals,
+  named arguments (`name = value`), imports and exports including `export name = expr`. The status per
+  feature is `ref/feature-catalog.md` and `language-features/NN-*.md`.
+- **Module split**: this module is the language and runtime (`klangScriptEngine()` builds a bare engine);
+  the stdlib (`Osc`, `Katalyst`, `Math`, `Object`, `console`, the value-type extensions) and `klangScript()`
+  live in `:klangscript-libs` (`klangscript-libs/CLAUDE.md`), which depends on this module, never the
+  reverse. Tests that need the real stdlib live there too.
+- **Configure lambdas**: `runtime/ArgAlignment` holds the trailing-lambda rule for the interpreter and the
+  analyzer; `ParamSpec.isFunctionType` and `KlangType.functionParams` / `functionReturn` (KSP emits the
+  `FunctionN` components) let the analyzer bind a lambda's parameters with the callee's declared types, so
+  `.superimpose(x => x.` completes. Language docs: `language-features/04-functions.md` 4.10.
+- **Callable objects**: `@KlangScript.Invoke` and the `invoke` dispatch, `ref/interpreter-impl.md`.
+- **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Osc.name(freq?, configure?)` with the knobs
+  on immutable `Osc*Builder` wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
+  `octaves`, `suboctaves`, `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
+  carry `analogSpread` (0 to 1, 1 is a drift lane per voice). Door shapes follow `/dsl-design` §2.
+- **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod
+  log2 log10 ln exp sign semitones cents toSemitones db toDb`, and `toRatio()` on strings (via `Interval.get`
+  from `tones`). The Kotlin door for the musical conversions is `common/math/PitchAndGain.kt` plus
+  `val Interval.ratio`. `min` / `max` are clamps (rules register). No `coerce*` aliases (maintainer).
 
-- **`analogSpread` on the whole super family (2026-09-10)**: the knob `Osc.sine` shipped with on
-  2026-09-07 is now on all six super oscillator builders (`supersaw`, `supersine`, `supersquare`,
-  `supertri`, `superramp`, `superpluck`), same word and same 0 to 1 scale: 1 (the default) is a
-  drift lane per voice, 0 is one shared walk for the stack. `KlangScriptSuperPluckSpec` is new, the
-  family had no door spec for the pluck.
-  Task: `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`.
+## Design Decisions
 
-- **Number methods, stdlib half (2026-09-08)**: `pow abs sqrt round floor ceil min max clamp rem mod
-  log2 log10 ln exp sign semitones cents toSemitones db toDb` on `KlangScriptNumberExtensions`
-  (`klangscript-libs`), `toRatio()` on strings via `Interval.get` from `tones`; the Kotlin door for the
-  five musical conversions is `common/math/PitchAndGain.kt` plus `val Interval.ratio`. No `coerce*`
-  aliases (maintainer, "add them later if we want"). Lessons: the `tones` parser spells a descending
-  interval `"-5P"` / `"P-5"`, never `"-P5"`; and a stdlib STRING method must not share a name with a
-  sprudel function, because sprudel registers every pattern function on strings too and the later
-  import wins (`ratio` became `toRatio`; guard `LangStdlibStringMethodCollisionSpec` in sprudel).
-  Task: `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md` (both halves done).
+KlangScript keeps a JavaScript-like syntax but its semantics and its stdlib follow Kotlin.
 
-- **Library registration merges per name (2026-09-08)**: `Environment.register` used a shallow
-  `putAll` on the receiver-keyed extension maps, so importing sprudel after stdlib dropped every
-  stdlib string method (`"hello".toUpperCase()` failed in every song). It now merges per receiver
-  and name; same name, later import wins. Spec: `LibraryExtensionMergeSpec`.
+- **The stdlib follows Kotlin conventions, not JavaScript**: Kotlin naming and argument style, named
+  arguments as `name = value`. Array methods already do (`size`, `first`, `add`, `removeAt`, `reversed`,
+  `joinToString`, `contains`); the string methods still carry JS names (`charAt`, `substring`, `toUpperCase`).
+- **No implicit type coercion**: `string + number` and `string + null` throw a type error
+  (`ArithmeticTest`); use a template literal. `string + string` concatenates.
+- **No `switch`**: a Kotlin-style `when` expression is planned instead (no fall-through, exhaustive).
+- **No `this`, no `var`, no `undefined`**: object methods are stored arrow functions; only `let` and
+  `const`; only `null`.
+- **Control flow is expression-based**, and the out-of-scope list (async, `class`, `try`, `eval`, JS
+  globals) is `ref/language-design.md`.
+- **A JS-syntax dialect for V1** (maintainer, 2026-09-05): no Kotlin grammar subset. The broken sub-type
+  chains were fixed with configure lambdas on the existing arrow syntax and dedicated immutable builder
+  types, no back-compat. Receiver lambdas are PARKED (they need several `this` and mutable builders); a
+  Kotlin round trip is a later editor feature (paste-detect, "copy as Kotlin" from the AST), not grammar.
+  Record: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`.
+- **One call form per callable object**: KlangScript has no overloads (`ref/interpreter-impl.md`).
+- **Number literals take methods with Kotlin precedence**: `2.pow(7/12)` is a member call, `-x.abs()` is
+  `-(x.abs())`, and `-6.db()` is refused as ambiguous (`ref/parser-impl.md`).
 
-- **Methods on number literals, parser half (2026-09-08)**: the lexer takes a `.` into a number only
-  when a digit or an exponent follows it, and only once (companion `scanDecimalEnd()`, not a local
-  function: a local that writes the lexer index boxes it for the whole loop), so `2.pow(7/12)`, `2.5.pow(2)`
-  and `2.exp()` are member calls, `2.e5` stays a number, and `2.` / `1.2.3` are parse errors. `parseUnary` folds `-` + `NUMBER`
-  into one negative `NumberLiteral` (a bare `-42`, also behind `--`), but REFUSES the spelling when a `.`
-  follows: `-6.db()` is a syntax error naming both `(-6).db()` and `-(6.db())`. Precedence is Kotlin's,
-  `-x.abs()` is `-(x.abs())`. A literal-wins reading shipped on 2026-09-08 and was reverted on
-  2026-09-09: it made a literal and a variable disagree ("a design error", maintainer). Spec
-  `parser/NumberLiteralMethodCallSpec`; the stdlib methods themselves are the open half of
-  `docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`.
+## Lessons
 
-- **Sine partial banks (2026-09-07)**: `Osc.sine(freq, x => x.harmonics(count, rolloff).octaves(...).suboctaves(...).fundamental(gain).analogSpread(s))`,
-  five knobs on `OscSineBuilder`, same builders on the Kotlin door; parity guard `KlangScriptSineSpec`.
-  Design: `docs/plans/sine-partial-banks.md` (knobs on the sine, not separate doors; `fundamental` is a gain,
-  not a boolean; sub-harmonics won't-implement).
+- **Lexer**: multi-char tokens before their single-char prefixes; a number scanner must look past the dot
+  (`ref/parser-impl.md`). Template literal brace matching tracks `inString` / `escaped`.
+- **Parser**: an arrow body `{` is an object literal only when `identifier :` follows; method chaining is
+  a postfix loop, not recursion (`ref/parser-impl.md`).
+- **`ReturnException` is control flow**, caught only at the function call boundary.
+- **Blocks that must not leak `let` / `const`** (loop bodies, if branches) use `executeBlockInChildScope()`,
+  never a bare `executeBlock()`.
+- **`ast/Ast.kt` changes cascade** through parser, interpreter and tests (`ref/adding-features.md`).
+- **Library maps merge per name; `checkArgsSize` is a minimum** (`ref/interpreter-impl.md`).
+- **A stdlib string method must not share a name with a sprudel function**: sprudel registers every
+  pattern function on strings too and the later import wins (`ratio` became `toRatio`). Guard in sprudel:
+  `LangStdlibStringMethodCollisionSpec`.
+- **`tones` spells a descending interval `"-5P"` or `"P-5"`**, never `"-P5"` (`IntervalRatio.kt`).
+- **KSP-generated code in another module** needs the members it touches to be public
+  (`NativeObjectExtensionsBuilder.builder` / `cls`), and Kotlin cannot smart-cast a property declared in
+  another module.
+- **A script-door default must be a safe literal**, or KSP emits no thunk and the trailing lambda cannot
+  float (rules register guardrail, `/dsl-design` §3).
+- **Keep the feature docs in sync**: after every implementation update `ref/feature-catalog.md` and the
+  matching `language-features/NN-*.md` status.
 
-- **`@KlangScript.Invoke` (2026-09-07, maintainer decision)**: the call form of a callable object is
-  a dedicated annotation on `operator fun invoke`, replacing `@KlangScript.Method(name = "invoke")`
-  (68 sprudel sites migrated). The name is defined once, `KlangScript.Invoke.NAME`;
-  `NativeOperatorNames.INVOKE`, the signature rendering and the completion filter read it. KSP
-  (`InvokeShape`, unit-tested) rejects an `@Invoke` outside an `@Object`/`@TypeExtensions` class,
-  one not named `invoke`, one without `operator`, and a second one in the same class: KlangScript
-  has no overloads, so a callable object has exactly one call form. A `@Method` whose script name
-  resolves to `invoke` is refused too (`methodSpelledInvoke`): one spelling. The generic
-  (name, receiver) collision check still fires as well.
+## Open threads
 
-- **Pipeline builders, S6 (2026-09-06)**: `Pipeline(p => p.filterMod().vca(v => v.expK(2)).distort())`,
-  presets `Pipeline.modern(p => p.tuneVca(...))`; stage knobs append, `tuneVca`/`tuneFilter` configure
-  existing stages (error when none). `Pipeline.of`, `Stage` and the stage knob objects deleted.
-  (All of it retired 2026-09-27 with the Pipeline DSL, phase 3 step 9: an instrument ends in `.classic()`.)
+- `klangscript/TODOS.MD`: higher-order array methods (`map`, `filter`, ...), the `when` expression,
+  `for...in` / `for...of`, spread, destructuring.
+- `docs/tasks/klangscript-native-object-operators.md` (arithmetic operators on native objects),
+  `docs/tasks/klangscript-union-types.md`, `docs/tasks/klangscript-intellisense.md`,
+  `docs/tasks/klangscript-named-args-docs-polish.md`.
 
-- **Effect and master builders, S3 + S5 (2026-09-06, `klangscript-libs`)**: `.eq(e => e.band().tap())`,
-  `.phaser(rate, center, sweep, x => x.wet())`, `.shimmer(..., x => x.wet())` on `EqBuilder`/
-  `PhaserBuilder`/`ShimmerBuilder` (superseded by phase 3 step 3d(i), 2026-09-24: `wet` is the first
-  door parameter, `.phaser(wet, rate, ..., x => x.floor())`, and the builders carry `floor` only)
-  (`EffectBuilders.kt`; `EqBuilder` delegates to the audio_bridge
-  Kotlin `Eq.band/tap`, which stay as the engine-level API). `Master(m => m.reverb(r => ...).gain(2.5)
-  .limiter(l => ...))` (superseded by phase 3 step 3d(ii), 2026-09-24: `m.reverb(0.05, 9).gain(2.5)
-  .limiter(threshold = -3)`, reverb and limiter flat, delay keeps `configure` for `cap`) via the `invoke` operator, aliases `Master.build`/`Master.default`;
-  `Master.of` and `MasterFx` deleted. Lesson: `shimmer.pitches` needed a literal default (`null`) for the lambda to
-  float; any door parameter with a non-literal default blocks the trailing lambda (KSP guard).
-  (The `Master` object and `MasterBuilders` retired 2026-09-28, phase 3 step 12 C5: `.master()` takes a Katalyst,
-  `master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))`; `limiter` is a Katalyst compressor preset.)
+## History
 
-- **`invoke` operator (S4, 2026-09-06)**: a `NativeObjectValue` callee dispatches to the `invoke`
-  extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`);
-  `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`;
-  `KlangCallable.signature` renders it as `Katalyst(...)` (`Master(...)` until the Master object retired, 2026-09-28);
-  member completion hides `invoke`.
-  `NativeOperatorNames` holds the name. Arithmetic operators of the same plan: not built.
+One line per step; the narrative is in the linked record or in `ref/memory-history.md`.
 
-- **Configure-lambda doors, S2 (2026-09-06, `klangscript-libs`)**: the 16 oscillator doors are
-  `Osc.name(freq?, configure?)`, knobs live on immutable `Osc*Builder` value wrappers
-  (`IgnitorBuilders.kt`), the 17 sub-type extension objects are gone. Lesson: the old `pluck`/
-  `superpluck` doors baked SEALED `Constant` defaults while the nodes carry open `Slots.*` params;
-  a builder door that falls back to node defaults changes the tree. A migration-only fingerprint
-  spec over every builtin song's sound trees caught it; the spec was removed with the migration
-  done (2026-09-06, maintainer: migration guards go once the migration is over).
-
-- **Module split (2026-09-06)**: `stdlib/` (35 files + `PlatformConsole`) moved to the new
-  `:klangscript-libs` module together with `stdlibLib` and `klangScript()`; the core gained
-  `klangScriptEngine()` (bare engine) and dropped its `audio_bridge` dependency and its own KSP
-  processor run (the KSP *plugin* stays applied for kotest). Tests that need the real stdlib
-  (`stdlib/`, docs, `GeneratedRegistrationTest`, analyzer tests using `generatedStdlibDocs`)
-  moved with it. `sprudel` and `klangscript-ui` depend on the libs module. Plan and facts:
-  `docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`. Lesson: KSP-generated code in another module needs the
-  members it touches to be public (`NativeObjectExtensionsBuilder.builder/cls`), and Kotlin cannot
-  smart-cast a property declared in another module (two moved tests needed explicit casts).
-
-- **Configure-lambda foundation (S1 of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`)**:
-  `runtime/ArgAlignment` (trailing-lambda rule, shared by interpreter and analyzer),
-  `ParamSpec.isFunctionType`, `KlangType.functionParams/functionReturn` (KSP now emits the
-  `FunctionN` components, aliases like `PatternMapperFn` included), and the analyzer binds a
-  lambda argument's parameters with the callee's declared types (`.superimpose(x => x.` now
-  completes). Language docs: `language-features/04-functions.md` 4.10.
-
-## Recent Work (2026-05)
-
-- Added `ExportDeclaration` — new top-level form `export name = expr` (immutable binding +
-  auto-export under same name). Parser, AST, interpreter, feature catalog, and language docs
-  all updated. Existing
-  `export { a, b as c }` form remains. Foundation for Projekt Klangbuch's named-part
-  imports across modules.
-
-## Recent Work (2026-03)
-
-- Implemented "medium" language features: `if/else` expression, `while`/`do-while`/`for` loops,
-  `break`/`continue`, template literals with `${...}` interpolation
-- Fixed per-iteration loop scoping (`executeBlockInChildScope()`) and if-branch scoping
-- Fixed template literal brace matching to handle strings inside `${}` expressions
-- Fixed `NumberValue.toDisplayString()` cross-platform: whole numbers format as `"42"` (not `"42.0"`)
-- Implemented `string + string` concatenation (no implicit coercion — not `string + number`)
-- Added `NativeInteropConversionTest` covering `wrapAsRuntimeValue`, `convertToKotlin` for all
-  array types, `convertArgToKotlin`, `checkArgsSize`, and actual arrow-function argument passing
-- Updated all `language-features/` files with correct ✅/🟡/❌ status
-
-## Design Decisions (Kotlin-style, not JS-style)
-
-- **No `switch`**: will implement `when`-expression (no fall-through, exhaustive, expression form)
-- **No implicit type coercion**: `string + number` throws TypeError; use template literals instead
-- **Immutable stdlib**: array/list/string/object methods will follow Kotlin conventions (no in-place
-  mutation where possible)
-- **No `this` keyword**: object methods use stored arrow functions (`obj.fn = (a, b) => ...`)
-- **No `var`**: only `let` and `const`
-- **No `undefined`**: only `null`
-- **Stays a JS-syntax dialect for V1 (decided 2026-09-05)**: the maintainer considered a Kotlin
-  subset (trailing lambdas `f { }`, receiver lambdas) to fix the broken sub-type chains
-  (`Osc.supersaw().voices(9).lowpass(800).analog(3)` cannot reach `.analog`). Decided instead:
-  **configure lambdas on the existing arrow syntax with dedicated immutable builder types**,
-  `Osc.sine(freq, configure: (OscSineBuilder) -> OscSineBuilder)`; knobs leave `IgnitorDsl`;
-  NO back-compat; `Master(...)`/`Pipeline(...)` via the `invoke` operator
-  (`docs/tasks/klangscript-native-object-operators.md` must be revised first). Full plan and
-  every closed decision: `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`. Receiver lambdas PARKED (need
-  multiple `this` + mutable builders). Kotlin round trip is an editor feature for later
-  (paste-detect + "copy as Kotlin" from the AST), not a grammar change. Analyzer gap that this
-  work closes: arrow params bind with `type = null`, so `.superimpose(x => x.` has no completion.
-
-## Completed Phases
-
-- **Phase 1**: Foundation & parsing (AST, lexer, all literal types, operators, arrow functions, variables, objects,
-  arrays)
-- **Phase 2**: Tree-walking interpreter (all value types, scoping, native interop, error handling, stack traces,
-  array/string/object built-in methods)
-- **Phase 3**: API & integration (import/export, native Kotlin interop, library system, immutable builder pattern)
-- **Phase 4a**: Medium control-flow features (if/else expr, loops, break/continue, template literals, ternary, ===)
-- **Phase 4b**: Scoping correctness audit + fixes (per-iteration scope, if-branch scope, closure tests)
-- **Phase 4c**: NativeInterop tests + string concatenation fix
-
-## Lessons Learned
-
-**Multi-char tokens must be defined before single-char tokens** in the lexer — e.g. `==` before `=`, `!=` before `!`,
-`<=` before `<`. Initial comparison operator implementation failed because of wrong ordering.
-
-**Arrow function with object literal body** (`x => { key: val }`) is ambiguous with block body — must disambiguate at
-parse time by peeking for `identifier:` pattern.
-
-**Method chaining requires a loop**, not recursion — `obj.method().prop.method2()` must allow any alternating order of
-call and member access. Recursive descent naturally handles this with a postfix loop.
-
-**`ReturnException` is not an error** — it's a control flow mechanism. Throw on `return` statement, catch at function
-call site. Don't let it bubble past function boundaries.
-
-**better-parse breaks in Kotlin/JS production builds** — the hand-rolled parser has zero dependencies and works on both
-platforms. Do not re-introduce parser combinator libraries.
-
-**`ast/Ast.kt` changes have wide impact** — every AST node change requires updates to parser + interpreter + potentially
-all existing tests using `FunctionValue` or affected node constructors.
-
-**`executeBlockInChildScope()`** — always use this for any block that should not leak `let`/`const` to the outer scope
-(loop bodies, if branches). Never call bare `executeBlock()` for these.
-
-**`checkArgsSize` is a minimum check**: a surplus argument is caught by the parameter specs, and a
-door with no parameters has no specs, so it needs `checkNoArgs` (both the builder's zero-arg bridge
-and the KSP emission do that since 2026-09-08; before, `3.14159.round(2)` returned 3).
-
-**Library maps are keyed by receiver, so merge them per name**: a `putAll` on
-`Map<KClass, MutableMap<String, ...>>` replaces a whole receiver's methods with the last library's.
-Any registry of that shape needs the two-level merge.
-
-**A number scanner must look past the dot**: `codes[i] == C_DOT` without a digit lookahead eats `2.pow`
-into the token `2.`, and nothing downstream can tell. Lex a `.` into a number only when a digit or a complete
-exponent (`2.e5`) follows it.
-
-**Template literal brace matching** — naive depth counter fails for `${obj.toString("{}")}`. Track `inString`/`escaped`
-state when scanning for the closing `}`.
-
-**Feature-catalog files must be kept in sync** — after every implementation, update the relevant
-`language-features/NN-*.md` file to reflect the new ✅/🟡/❌ status.
-
-## Pending (see TODOS.MD)
-
-- Higher-order array methods (`map`, `filter`, `forEach`, `find`, `some`, `every`, `reduce`)
-- `when`-expression (replacement for `switch`)
-- `for...in` / `for...of` loops
-- Kotlin-style string/array/object stdlib (separate module)
-- Spread operator, destructuring
+- 2026-02 to 2026-03: phases 1 to 4c, from parsing to control flow, scoping fixes and native interop
+  tests (`ref/memory-history.md#completed-phases`, `#recent-work-2026-03`).
+- 2026-05: `export name = expr` (`ref/memory-history.md#recent-work-2026-05`).
+- 2026-09-05: stays a JS-syntax dialect for V1 (`ref/memory-history.md#design-decisions-kotlin-style-not-js-style`).
+- 2026-09-06: configure lambdas S1 to S6, the `invoke` operator, the `klangscript-libs` split
+  (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`,
+  `docs/tasks-archive/2026-09/20260906-klangscript-libs-split.md`). The Pipeline and Master builders of S5
+  and S6 are retired since (rules register).
+- 2026-09-07: `@KlangScript.Invoke`; sine partial banks (`docs/plans/sine-partial-banks.md`).
+- 2026-09-08: methods on number literals, the number methods, library registration merges per name
+  (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
+- 2026-09-10: `analogSpread` on the super family (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`).
+- 2026-09-29: this file restructured; the old status, phases and dated entries are in `ref/memory-history.md`.

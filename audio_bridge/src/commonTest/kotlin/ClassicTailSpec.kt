@@ -128,8 +128,6 @@ class ClassicTailSpec : StringSpec({
             "tremolo.sync" to 0.0,
             "tremolo.depth" to 0.0,
             "tremolo.shape" to LfoShapes.SINE_INDEX.toDouble(),
-            "tremolo.skew" to 0.0,
-            "tremolo.phase" to 0.0,
             "adsr.attack" to 0.01,
             "adsr.decay" to 0.1,
             "adsr.sustain" to 1.0,

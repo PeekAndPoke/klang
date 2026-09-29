@@ -214,8 +214,6 @@ class GraalSprudelPattern(
         // Tremolo
         val tremoloSync = value.safeGetMember("tremolosync").safeNumberOrNull()
         val tremoloDepth = value.safeGetMember("tremolodepth").safeNumberOrNull()
-        val tremoloSkew = value.safeGetMember("tremoloskew").safeNumberOrNull()
-        val tremoloPhase = value.safeGetMember("tremolophase").safeNumberOrNull()
         val tremoloShape = value.safeGetMember("tremoloshape").safeStringOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
@@ -371,8 +369,6 @@ class GraalSprudelPattern(
                 // Tremolo
                 it.tremoloSync = tremoloSync
                 it.tremoloDepth = tremoloDepth
-                it.tremoloSkew = tremoloSkew
-                it.tremoloPhase = tremoloPhase
                 it.tremoloShape = tremoloShape
                 // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3
                 it.putKatalystParam("duck.orbit", duckOrbit?.toDouble())

@@ -323,13 +323,14 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
 
 
 /**
- * The tremolo: depth, rate, waveform, skew and phase.
+ * The tremolo: depth, rate and waveform.
  *
  * Unlike the phaser above it, the tremolo runs [per voice](/manuals/lexikon/voice): every note gets
- * its own LFO, so two notes on one orbit can wobble at different rates.
+ * its own LFO, so two notes on one orbit can wobble at different rates. The LFO is the oscillator
+ * of that shape; the square, sawtooth and ramp get a 16 ms soft edge, so they pulse without clicking.
  *
  * Every slot is independent and patternable; an omitted slot keeps its value, a named slot takes
- * a mapper (`tremolo(sync = mul(2))`), and the numeric slots read back as `tremolo.depth`, `tremolo.sync`, `tremolo.skew`, `tremolo.phase`.
+ * a mapper (`tremolo(sync = mul(2))`), and the numeric slots read back as `tremolo.depth` and `tremolo.sync`.
  * With no argument at all, the pattern's own values are reinterpreted as `depth`.
  *
  * ```KlangScript(Playable)
@@ -347,34 +348,28 @@ private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<An
  * @param depth Depth, 0 to 1. The stage is built only above 0.
  * @param sync Rate in Hz.
  * @param shape LFO waveform: `sine`, `triangle`, `square`, `sawtooth`, `ramp`.
- * @param skew Waveform skew, -1 to 1, 0 is symmetric.
- * @param phase LFO start phase, 0 to 1.
  * @param-tool depth SprudelTremoloEditor, SprudelTremoloSequenceEditor
  * @param-tool shape SprudelWaveformEditor, SprudelWaveformSequenceEditor
  *
  * @scope voice
  * @category effects
- * @tags tremolo, depth, sync, shape, skew, phase
+ * @tags tremolo, depth, sync, shape
  */
 @KlangScript.Function
 fun SprudelPattern.tremolo(
     depth: PatternLike? = null,
     sync: PatternLike? = null,
     shape: PatternLike? = null,
-    skew: PatternLike? = null,
-    phase: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern {
     // A tail-only call must not touch depth: reinterpret runs only on a fully bare call.
-    var p = if (depth != null || !(sync != null || shape != null || skew != null || phase != null)) {
+    var p = if (depth != null || !(sync != null || shape != null)) {
         applyTremoloDepth(this, listOfNotNull(depth).asSprudelDslArgs(callInfo))
     } else {
         this
     }
     if (sync != null) p = applyTremoloSync(p, listOf<Any?>(sync).asSprudelDslArgs(callInfo?.forParam(1)))
     if (shape != null) p = applyTremoloShape(p, listOf<Any?>(shape).asSprudelDslArgs(callInfo?.forParam(2)))
-    if (skew != null) p = applyTremoloSkew(p, listOf<Any?>(skew).asSprudelDslArgs(callInfo?.forParam(3)))
-    if (phase != null) p = applyTremoloPhase(p, listOf<Any?>(phase).asSprudelDslArgs(callInfo?.forParam(4)))
     return p
 }
 
@@ -384,11 +379,9 @@ fun String.tremolo(
     depth: PatternLike? = null,
     sync: PatternLike? = null,
     shape: PatternLike? = null,
-    skew: PatternLike? = null,
-    phase: PatternLike? = null,
     callInfo: CallInfo? = null
 ): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(depth, sync, shape, skew, phase, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(depth, sync, shape, callInfo)
 
 /** Chains a [tremolo] step onto this [PatternMapperFn]. */
 @KlangScript.Function
@@ -396,15 +389,13 @@ fun PatternMapperFn.tremolo(
     depth: PatternLike? = null,
     sync: PatternLike? = null,
     shape: PatternLike? = null,
-    skew: PatternLike? = null,
-    phase: PatternLike? = null,
     callInfo: CallInfo? = null
 ): PatternMapperFn =
-    this.chain { p -> p.tremolo(depth, sync, shape, skew, phase, callInfo) }
+    this.chain { p -> p.tremolo(depth, sync, shape, callInfo) }
 
 /**
  * The `tremolo` object: `tremolo(...)` sets the slots, and each numeric slot reads back as a child,
- * `tremolo.depth`, `tremolo.sync`, `tremolo.skew`, `tremolo.phase`.
+ * `tremolo.depth`, `tremolo.sync`.
  *
  * @scope voice
  * @category effects
@@ -422,25 +413,15 @@ object tremolo {
     @KlangScript.Property
     val sync: FieldAccessor = FieldAccessor { it.tremoloSync }
 
-    /** The skew slot of each event, as a value other setters can read. */
-    @KlangScript.Property
-    val skew: FieldAccessor = FieldAccessor { it.tremoloSkew }
-
-    /** The phase slot of each event, as a value other setters can read. */
-    @KlangScript.Property
-    val phase: FieldAccessor = FieldAccessor { it.tremoloPhase }
-
     /** The setter, see [SprudelPattern.tremolo]. */
     @KlangScript.Invoke
     operator fun invoke(
         depth: PatternLike? = null,
         sync: PatternLike? = null,
         shape: PatternLike? = null,
-        skew: PatternLike? = null,
-        phase: PatternLike? = null,
         callInfo: CallInfo? = null
     ): PatternMapperFn =
-        { p -> p.tremolo(depth, sync, shape, skew, phase, callInfo) }
+        { p -> p.tremolo(depth, sync, shape, callInfo) }
 }
 
 // -- tremolo.depth ---------------------------------------------------------------------------------------------------
@@ -453,30 +434,6 @@ private fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<A
     }
 
     return source._liftOrReinterpretNumericalField(args, tremoloDepthMutation)
-}
-
-// -- tremolo.skew ----------------------------------------------------------------------------------------------------
-
-private val tremoloSkewMutation = voiceSetter { tremoloSkew = it?.asDoubleOrNull() }
-
-private fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.tremoloSkew }, update = tremoloSkewMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, tremoloSkewMutation)
-}
-
-// -- tremolo.phase ---------------------------------------------------------------------------------------------------
-
-private val tremoloPhaseMutation = voiceSetter { tremoloPhase = it?.asDoubleOrNull() }
-
-private fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.tremoloPhase }, update = tremoloPhaseMutation)
-    }
-
-    return source._liftOrReinterpretNumericalField(args, tremoloPhaseMutation)
 }
 
 // -- tremolo, the shape slot -----------------------------------------------------------------------------------------

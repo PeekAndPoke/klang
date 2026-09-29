@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Klangmotor — A White Paper</title>
+    <title>Klangmotor: A White Paper</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
@@ -728,13 +728,13 @@
                 <span>Pre-Alpha</span>
                 <span>Kotlin Multiplatform</span>
                 <span>AGPL-3.0</span>
-                <span>Sep 10th 2026</span>
+                <span>Sep 28th 2026</span>
             </p>
 
             <h1>Klangmotor</h1>
 
             <p class="deck">
-                A real-time audio engine, a pattern language, and a scripting language —
+                A real-time audio engine, a pattern language, and a scripting language,
                 written from scratch, running in a browser tab.
                 This is what exists, and where it might go.
             </p>
@@ -756,7 +756,7 @@
                         <rect x="270" y="0" width="360" height="46" fill="url(#sawFadeGrad)"/>
                     </mask>
                 </defs>
-                <!-- detuned side voices, quieter — the script below re-rolls these per
+                <!-- detuned side voices, quieter: the script below re-rolls these per
                      visit with random detune AND random phase, so every load of the
                      paper plays a different chord. Only the sides ride the edge-fade
                      mask; the centre voice stays anchored and fully drawn. -->
@@ -774,7 +774,7 @@
                               points="270,40 317,26.1 317,40 364,26.1 364,40 411,26.1 411,40 458,26.1 458,40 505,26.1 505,40 552,26.1 552,40 599,26.1 599,40 630,30.8"
                               fill="none" stroke="var(--mh-spark)" stroke-width="1.1" opacity="0.45"/>
                 </g>
-                <!-- the on-pitch centre voice — unmasked, on top; enters and exits at
+                <!-- the on-pitch centre voice, unmasked, on top; enters and exits at
                      mid-ramp (y=23), so it meets both blue segments on their midline -->
                 <polyline class="center"
                           points="270,23 292.5,6 292.5,40 337.5,6 337.5,40 382.5,6 382.5,40 427.5,6 427.5,40 472.5,6 472.5,40 517.5,6 517.5,40 562.5,6 562.5,40 607.5,6 607.5,40 630,23"
@@ -799,11 +799,11 @@
             <ol>
                 <li><span class="n">01</span><a href="#s1">The shape of the thing</a></li>
                 <li><span class="n">02</span><a href="#s2">The company we keep</a></li>
-                <li><span class="n">03</span><a href="#s3">KlangScript — the language you type</a></li>
-                <li><span class="n">04</span><a href="#s4">Sprudel — patterns as functions of time</a></li>
-                <li><span class="n">05</span><a href="#s5">The Motor — the audio engine</a></li>
+                <li><span class="n">03</span><a href="#s3">KlangScript: the language you type</a></li>
+                <li><span class="n">04</span><a href="#s4">Sprudel: patterns as functions of time</a></li>
+                <li><span class="n">05</span><a href="#s5">The Motor: the audio engine</a></li>
                 <li><span class="n">06</span><a href="#s6">Oscillators, filters, effects</a></li>
-                <li><span class="n">07</span><a href="#s7">Three DSLs above the engine — and one to come</a></li>
+                <li><span class="n">07</span><a href="#s7">Three owners above the engine</a></li>
                 <li><span class="n">08</span><a href="#s8">A real song, in full</a></li>
                 <li><span class="n">09</span><a href="#s9">Engineering notes</a></li>
                 <li><span class="n">10</span><a href="#s10">Surfaces around the engine</a></li>
@@ -811,8 +811,8 @@
                 <li><span class="n">12</span><a href="#s12">Open source, and the node idea</a></li>
                 <li><span class="n">13</span><a href="#s13">What's rough</a></li>
                 <li><span class="n">14</span><a href="#s14">An invitation</a></li>
-                <li><span class="n">A</span><a href="#appA">Appendix — credits and lineage</a></li>
-                <li><span class="n">B</span><a href="#appB">Appendix — about the codebase</a></li>
+                <li><span class="n">A</span><a href="#appA">Appendix: credits and lineage</a></li>
+                <li><span class="n">B</span><a href="#appB">Appendix: about the codebase</a></li>
             </ol>
         </div>
     </section>
@@ -836,7 +836,7 @@
             <p>
                 Klang is a live-coding music system. You type code, it makes sound, and it keeps making
                 sound while you edit the code. There is no compile step you wait on and no audio file
-                anywhere in the loop — every sample you hear is computed, in the browser, in real time.
+                anywhere in the loop: every sample you hear is computed, in the browser, in real time.
             </p>
 
             <p>
@@ -858,21 +858,23 @@
                         <td><b>Language</b></td>
                         <td><code>klangscript</code></td>
                         <td>A small scripting language: hand-rolled lexer, parser, tree-walking interpreter, type
-                            inference. Sandboxed — no filesystem, no network, no <code>eval</code>.
+                            inference. Sandboxed: no filesystem, no network, no <code>eval</code>.
                         </td>
                     </tr>
                     <tr>
                         <td><b>Patterns</b></td>
                         <td><code>sprudel</code></td>
                         <td>A pattern language in the Tidal/Strudel tradition. Music as pure functions of time. Started
-                            as a Kotlin sibling of strudel.cc; has since gone its own way.
+                            as a rebuild of strudel.cc in Kotlin; today it is one possible frontend of the engine
+                            below it.
                         </td>
                     </tr>
                     <tr>
                         <td><b>Engine</b></td>
                         <td><code>audio_be</code> · <code>audio_fe</code> · <code>audio_bridge</code></td>
                         <td>The Motor. Oscillators, filters, effects, voice lifecycle, mixing. Block-based DSP with a
-                            strict frontend/backend split across a thread boundary.
+                            strict frontend/backend split across a thread boundary. The project's goal moved here
+                            over time: a multi-platform audio engine that any frontend can drive.
                         </td>
                     </tr>
                     <tr>
@@ -887,7 +889,7 @@
             <p>
                 It is Kotlin Multiplatform: the same code compiles to <b>JS</b> (browser, running the DSP
                 inside a Web Audio worklet, the dedicated real-time audio thread) and to the <b>JVM</b> (desktop via <code>javax.sound.sampled</code>,
-                plus an offline WAV renderer). The JVM target is not a toy — it's how songs get rendered to
+                plus an offline WAV renderer). The JVM target is not a toy: it is how songs get rendered to
                 disk and how the benchmark harness measures the engine.
             </p>
 
@@ -906,23 +908,23 @@
             <h3>The company we keep</h3>
 
             <p>
-                A fair question before going deeper: does anyone actually make music this way? They do —
+                A fair question before going deeper: does anyone actually make music this way? They do,
                 including some of the most respected names in electronic music.
                 <a href="https://musictech.com/news/gear/benn-jordan-aphex-twin-software/">Aphex Twin</a> has
                 described building many of his sounds in SuperCollider patches. Jonny Greenwood runs
                 <a href="https://thekingofgear.com/post/25443456600/maxmsp">Max patches on stage with
-                    Radiohead</a> — the stutter effect on "Go to Sleep", a generative patch driving the piano in
+                    Radiohead</a>: the stutter effect on "Go to Sleep", a generative patch driving the piano in
                 live performances of "True Love Waits". Autechre built <em>Confield</em> on generative Max
-                processes — in 2001. And <a
+                processes, in 2001. And <a
                     href="https://www.musicradar.com/news/guitars/how-65daysofstatic-built-the-soundtrack-to-no-mans-skys-infinite-universe-641184">65daysofstatic
-                used TidalCycles</a> in building the generative soundtrack of <em>No Man's Sky</em> — and
+                used TidalCycles</a> in building the generative soundtrack of <em>No Man's Sky</em>, and
                 opened its live premiere with a live-coded piece.
             </p>
 
             <p>
                 The live-coding scene itself has grown from an in-joke into a movement.
-                <a href="https://algorave.com/">Algoraves</a> — club nights where the music is written as
-                code, projected in front of the crowd — have run in
+                <a href="https://algorave.com/">Algoraves</a>, club nights where the music is written as
+                code, projected in front of the crowd, have run in
                 <a href="https://mixmag.net/feature/algorave-live-coding-musical-movement-10-years-interview">more
                     than eighty cities worldwide</a> since 2012, covered by the Guardian, Wired and Mixmag. And
                 its artists are crossing into ordinary music careers:
@@ -935,16 +937,19 @@
 
             <p>
                 The tools have numbers to match. <a href="https://sonic-pi.net/">Sonic Pi</a> counts its
-                downloads in the millions and sits in school computing curricula worldwide. Max — the
-                patch-as-instrument grandfather of all of this — was
+                downloads in the millions and sits in school computing curricula worldwide. Max, the
+                patch-as-instrument grandfather of all of this, was
                 <a href="https://ra.co/news/39187">acquired by Ableton</a> and ships inside the world's
-                dominant electronic-music DAW. Strudel, the browser-based Tidal this project descends from,
-                is lively enough to make the
+                dominant electronic-music DAW. Strudel, the browser-based Tidal that inspired this project and
+                was its starting point, is lively enough to make the
                 <a href="https://news.ycombinator.com/item?id=45571822">front page of Hacker News</a>.
-                Music-as-code is not a hypothesis — it is a working scene with audiences, labels, classrooms
-                and festivals, and it keeps growing. Klang is not here to replace any of it: the lineage runs
-                Tidal → Strudel → Sprudel, and Appendix A says thank you properly. It is here to develop the
-                idea further — the same pattern-language joy, on a deeper, hand-built synthesis engine.
+                Music-as-code is a working scene with audiences, labels, classrooms and festivals, and it
+                keeps growing. Klang is not here to replace any of it. It began as a rebuild of Strudel, and
+                Appendix A says thank you properly. Over time the rebuild turned into a different goal: a
+                multi-platform audio engine, where sprudel is one possible frontend that drives musical
+                events into it, with a pad controller, MIDI, sheet music and tab in view for later. Sprudel
+                keeps the pattern-language way of writing; the engine underneath it is where most of the
+                work goes.
             </p>
         </div>
     </section>
@@ -953,35 +958,35 @@
     <section id="s3">
         <div class="rail"><span class="num">03</span><span class="tag lang">Language</span></div>
         <div class="body">
-            <h3>KlangScript — the language you type</h3>
+            <h3>KlangScript: the language you type</h3>
 
             <p>
-                Songs are written in KlangScript, not Kotlin. The syntax is deliberately JavaScript-shaped
-                so it's instantly readable, but the standard library follows <em>Kotlin</em> conventions —
+                Songs are written in KlangScript, not Kotlin. The syntax is JavaScript-shaped, so it
+                looks familiar at first sight, and the standard library follows <em>Kotlin</em> conventions:
                 collections behave the way a Kotlin developer expects, not the way JavaScript does.
             </p>
 
             <p>
                 There is no <code>eval</code> and no host interop hole. The parser and interpreter are
-                hand-written; the interpreter walks the AST. That's a deliberate security boundary: a song is
-                code someone else wrote, and running a stranger's song must never be able to touch the
-                filesystem or the network. Everything a script can reach is explicitly registered from
-                Kotlin.
+                hand-written; the interpreter walks the AST. That is a deliberate security boundary: a song is
+                code someone else wrote, and a stranger's song should not be able to reach the
+                filesystem or the network on its own: a script can only call what is explicitly registered
+                from Kotlin.
             </p>
 
             <h4>Registration is generated, not hand-maintained</h4>
 
             <p>
-                The bridge from Kotlin into the script runtime is a KSP processor — KSP being Kotlin's
-                compile-time codegen hook. You annotate a Kotlin
+                The bridge from Kotlin into the script runtime is a KSP processor (KSP is Kotlin's
+                compile-time codegen hook). You annotate a Kotlin
                 function or object with <code>@Function</code> / <code>@Method</code> / <code>@Object</code>,
                 and the processor generates the stdlib registration, the type signatures, the completion
-                data, and the hover documentation — all from one source of truth. Adding a DSL function to
+                data, and the hover documentation, all from one source. Adding a DSL function to
                 the engine and having it show up in the editor's autocomplete with the right parameter names
                 is one annotation, not four files.
             </p>
 
-            <h4>It has a real module system</h4>
+            <h4>It has a module system</h4>
 
             <p>
                 Imports and exports work today, JavaScript-shaped: wildcard, selective, aliased, namespaced,
@@ -999,14 +1004,14 @@
 
 <span class="kw">export</span> { bass, feel }</pre>
                 </div>
-                <figcaption>Every song starts with the two wildcard imports. The exported <code>bass</code> is exactly
-                    what §11's cross-server import will want to fetch.
+                <figcaption>Every song starts with the two wildcard imports. The exported <code>bass</code> is
+                    what §11's cross-server import would fetch.
                 </figcaption>
             </figure>
 
             <p>
-                That module system is the load-bearing piece for everything in Part II. The import syntax
-                already exists; what doesn't exist yet is where an import is allowed to <em>point</em>.
+                Part II builds on that module system. The import syntax
+                already exists; what does not exist yet is where an import is allowed to <em>point</em>.
             </p>
         </div>
     </section>
@@ -1015,18 +1020,18 @@
     <section id="s4">
         <div class="rail"><span class="num">04</span><span class="tag lang">Patterns</span></div>
         <div class="body">
-            <h3>Sprudel — patterns as functions of time</h3>
+            <h3>Sprudel: patterns as functions of time</h3>
 
             <p>
                 A pattern is not a list of notes. It is a pure function: give it a time span, it returns the
-                events that happen in that span. Everything else follows from that — <code>fast(2)</code>
+                events that happen in that span. Everything else follows from that: <code>fast(2)</code>
                 scales the query, <code>rev()</code> reflects it, <code>every(4, …)</code> switches on the
                 cycle number. Patterns compose because functions compose.
             </p>
 
             <p>
                 The time in that sentence is measured in <b>cycles</b>. A cycle is the unit of musical
-                repetition — this world's bar — and a pattern repeats every cycle unless told otherwise.
+                repetition (this world's bar), and a pattern repeats every cycle unless told otherwise.
                 Tempo is cycles per second (<code>cps</code>), and arrangement is written in cycle numbers:
                 "the shakuhachi enters at cycle 28" is a line of code you'll meet in §8.
             </p>
@@ -1122,20 +1127,20 @@
             </figure>
 
             <p>
-                The operator surface is wide — time (<code>fast</code>, <code>swing</code>, <code>compress</code>,
+                The operator surface is wide: time (<code>fast</code>, <code>swing</code>, <code>compress</code>,
                 <code>inside</code>), structure (<code>every</code>, <code>jux</code>, <code>off</code>,
                 <code>chunk</code>, <code>bite</code>, <code>arrange</code>), tonality (scales, chords,
                 voicings, transposition in scale degrees), probability (<code>sometimesBy</code>,
                 <code>degradeBy</code>, seeded randomness), and arithmetic that maps over event values.
-                Continuous signals — <code>sine</code>, <code>perlin</code>, <code>rand</code> — can be fed
+                Continuous signals (<code>sine</code>, <code>perlin</code>, <code>rand</code>) can be fed
                 into any parameter, so a filter cutoff can be an LFO and a pan position can be noise.
             </p>
 
             <h4>Time is fixed-point, not rational</h4>
 
             <p>
-                Musical time needs exact thirds, fifths and sevenths as well as exact halves — a triplet
-                inside a cycle must land <em>exactly</em> on the third, forever, with no drift. Rational
+                Musical time needs exact thirds, fifths and sevenths as well as exact halves: a triplet
+                inside a cycle has to land <em>exactly</em> on the third, every cycle, with no drift. Rational
                 arithmetic gives you that, and it was the original implementation. It was also a performance
                 disaster on JS, where every <code>gcd</code> and every <code>plus</code> hit BigInt in the
                 hot path.
@@ -1143,10 +1148,10 @@
 
             <p>
                 Time is now a fixed-point value class: <code>CycleTime</code>, with
-                <b>110,100,480 ticks per cycle</b> — that is 2<sup>20</sup> × 3 × 5 × 7. Halves down to
+                <b>110,100,480 ticks per cycle</b> (that is 2<sup>20</sup> × 3 × 5 × 7). Halves down to
                 1/2<sup>20</sup>, plus thirds, fifths and sevenths and all their products, are all exactly
-                representable. It is an <code>Int</code> under the hood, and the whole class of
-                subdivision-drift bugs disappears by construction.
+                representable. It is an <code>Int</code> under the hood, and subdivision drift cannot
+                arise in the arithmetic itself.
             </p>
         </div>
     </section>
@@ -1155,29 +1160,29 @@
     <section id="s5">
         <div class="rail"><span class="num">05</span><span class="tag engine">Engine</span></div>
         <div class="body">
-            <h3>The Motor — the audio engine</h3>
+            <h3>The Motor: the audio engine</h3>
 
             <p>
-                First, vocabulary. Every sounding note is a <b>voice</b> — one running instance of an
+                First, vocabulary. Every sounding note is a <b>voice</b>, one running instance of an
                 instrument. The engine has a metaphor and uses it consistently, in the code and in the DSL:
                 a voice is lit by an <b>Ignitor</b>, the instrument's signal graph (§7 builds them). Each
-                voice is routed to a numbered effect bus called an <b>orbit</b> — that's what
-                <code>.orbit(1)</code> in a pattern picks — and the bus itself is a <b>Cylinder</b>.
-                Cylinders can carry a <b>Katalyst</b>, an orbit-level resonator or effect shared by every
-                voice on that bus. Everything sums into the <b>Master</b>. It's a naming convention, but a
-                load-bearing one: it keeps four genuinely different scopes — note, instrument, bus, mix —
-                from collapsing into the word "effect".
+                voice is routed to a numbered effect bus called an <b>orbit</b> (that is what
+                <code>.orbit(1)</code> in a pattern picks), and the bus itself is a <b>Cylinder</b>.
+                Every Cylinder runs a <b>Katalyst</b>, the chain of effects shared by every voice on that
+                bus. Everything sums into the <b>master</b>, which, when a song declares one, is the same kind of
+                Katalyst chain once more, at the output. It is a naming convention, kept because it names four different places
+                (note, instrument, bus, output) that would otherwise all be called "effect".
             </p>
 
             <div class="note">
-                <span class="lab">Wait — bus, orbit, cylinder?</span>
+                <span class="lab">Wait: bus, orbit, cylinder?</span>
                 <p>
                     Same thing, three lineages.
                     <b>Bus</b> is the classical audio-engineering word: a channel several signals mix into,
                     sharing its processing.
                     <b>Orbit</b> is the Tidal / SuperDirt / Strudel word for exactly that, and sprudel keeps
-                    it — <code>.orbit(n)</code> — so live coders arriving from strudel.cc feel at home.
-                    <b>Cylinder</b> is the Motor's own name for the machinery that implements one — and
+                    it (<code>.orbit(n)</code>), so live coders arriving from strudel.cc feel at home.
+                    <b>Cylinder</b> is the Motor's own name for the machinery that implements one, and
                     <code>.cylinder(n)</code> works in a pattern too, as an alias.
                 </p>
                 <p>
@@ -1190,7 +1195,7 @@
 
             <figure>
                 <svg class="schematic" viewBox="0 0 900 430" role="img"
-                     aria-label="Signal flow diagram: on the main thread, KlangScript source is queried by Sprudel into voice events and pushed as commands into a lock-free ring buffer; on the audio thread, a per-playback engine schedules voices, renders each through a four-stage voice strip, mixes into cylinders with orbit effects, then through the master chain and safety limiter to the device.">
+                     aria-label="Signal flow diagram: on the main thread, KlangScript source is queried by Sprudel into voice events and pushed as commands into a lock-free ring buffer, timed in seconds, never in cycles; on the audio thread, a per-playback engine schedules voices, renders each as its instrument's Ignitor tree, applies the channel's gain and pan, mixes into cylinders that each run a Katalyst chain, sums the orbits through the master Katalyst and the house limiter to the device.">
 
                     <!-- LEFT: main thread -->
                     <text x="20" y="22" class="t-lab t-lang">MAIN THREAD</text>
@@ -1204,14 +1209,18 @@
 
                     <rect x="20" y="112" width="250" height="46" class="bx-lang"/>
                     <text x="36" y="134" class="t">Sprudel query</text>
-                    <text x="36" y="148" class="t-sm">timespan → events</text>
+                    <text x="36" y="148" class="t-sm">timespan → events, in cycles</text>
 
                     <path class="arw" d="M145,158 L145,184"/>
                     <path class="arw" d="M139,178 L145,186 L151,178"/>
 
                     <rect x="20" y="186" width="250" height="46" class="bx-lang"/>
                     <text x="36" y="208" class="t">ScheduledVoice</text>
-                    <text x="36" y="222" class="t-sm">KSP-generated wire codec</text>
+                    <text x="36" y="222" class="t-sm">seconds and slots · generated wire codec</text>
+
+                    <text x="36" y="262" class="t-sm">The wire speaks seconds, never cycles.</text>
+                    <text x="36" y="276" class="t-sm">Sprudel is one frontend: anything that emits</text>
+                    <text x="36" y="290" class="t-sm">these events drives the same Motor.</text>
 
                     <!-- BOUNDARY -->
                     <line x1="320" y1="30" x2="320" y2="410" class="bnd"/>
@@ -1227,8 +1236,7 @@
 
                     <rect x="380" y="38" width="500" height="42" class="bx-eng"/>
                     <text x="396" y="58" class="t">PlaybackEngine</text>
-                    <text x="396" y="72" class="t-sm">one per playbackId — own scheduler, own cylinders, own
-                        registries
+                    <text x="396" y="72" class="t-sm">one per playbackId: own scheduler, cylinders, ignitor and Katalyst registries
                     </text>
 
                     <path class="arw" d="M630,80 L630,102"/>
@@ -1241,54 +1249,52 @@
                     <path class="arw" d="M630,146 L630,168"/>
                     <path class="arw" d="M624,162 L630,170 L636,162"/>
 
-                    <!-- voice strip -->
+                    <!-- voice: the instrument's tree, then the channel -->
                     <rect x="380" y="170" width="500" height="66" class="bx"/>
-                    <text x="396" y="190" class="t">Voice strip &nbsp;<tspan class="t-sm">— per note, per block</tspan>
+                    <text x="396" y="190" class="t">Voice &nbsp;<tspan class="t-sm">per note, per block: the instrument, then the channel</tspan>
                     </text>
-                    <rect x="396" y="200" width="104" height="24" class="bx-eng"/>
+                    <rect x="396" y="200" width="80" height="24" class="bx-eng"/>
                     <text x="408" y="216" class="t-sm">PITCH</text>
-                    <rect x="512" y="200" width="104" height="24" class="bx-eng"/>
-                    <text x="524" y="216" class="t-sm">IGNITE</text>
-                    <rect x="628" y="200" width="104" height="24" class="bx-eng"/>
-                    <text x="640" y="216" class="t-sm">SHAPE</text>
-                    <rect x="744" y="200" width="104" height="24" class="bx-eng"/>
-                    <text x="756" y="216" class="t-sm">SEND</text>
-                    <path class="arw" d="M500,212 L510,212"/>
-                    <path class="arw" d="M616,212 L626,212"/>
-                    <path class="arw" d="M732,212 L742,212"/>
+                    <rect x="488" y="200" width="190" height="24" class="bx-eng"/>
+                    <text x="500" y="216" class="t-sm">IGNITE · the Ignitor tree</text>
+                    <rect x="690" y="200" width="174" height="24" class="bx-eng"/>
+                    <text x="702" y="216" class="t-sm">CHANNEL · gain, pan → orbit</text>
+                    <path class="arw" d="M476,212 L486,212"/>
+                    <path class="arw" d="M678,212 L688,212"/>
 
                     <path class="arw" d="M630,236 L630,258"/>
                     <path class="arw" d="M624,252 L630,260 L636,252"/>
 
                     <rect x="380" y="260" width="500" height="42" class="bx"/>
-                    <text x="396" y="280" class="t">Cylinder &nbsp;<tspan class="t-sm">— one per orbit</tspan>
+                    <text x="396" y="280" class="t">Cylinder &nbsp;<tspan class="t-sm">one per orbit, running the classic Katalyst chain or the one you declare</tspan>
                     </text>
-                    <text x="396" y="294" class="t-sm">delay → reverb → phaser → Katalyst (body / vowel) → ducking
+                    <text x="396" y="294" class="t-sm">classic: body → vowel → delay → reverb → phaser → compressor → gain → duck
                     </text>
 
                     <path class="arw" d="M630,302 L630,324"/>
                     <path class="arw" d="M624,318 L630,326 L636,318"/>
 
                     <rect x="380" y="326" width="500" height="42" class="bx"/>
-                    <text x="396" y="346" class="t">Master chain</text>
-                    <text x="396" y="360" class="t-sm">authored gain / limiter / reverb / delay — dual-chain crossfade
-                        on change
+                    <text x="396" y="346" class="t">Master &nbsp;<tspan class="t-sm">the same Katalyst chain, at the output</tspan>
+                    </text>
+                    <text x="396" y="360" class="t-sm">master(Katalyst(k =&gt; …)) · on a swap the old chain's input fades, then its tail drains
                     </text>
 
                     <path class="arw" d="M630,368 L630,388"/>
                     <path class="arw" d="M624,382 L630,390 L636,382"/>
 
                     <rect x="380" y="390" width="500" height="32" class="bx-eng"/>
-                    <text x="396" y="410" class="t">Safety limiter &nbsp;<tspan class="t-sm">−1 dB · 20:1 · 5 ms
-                        lookahead → device
+                    <text x="396" y="410" class="t">House limiter &nbsp;<tspan class="t-sm">−1 dB · 20:1 · 5 ms
+                        lookahead · always on → device
                     </tspan>
                     </text>
                 </svg>
                 <figcaption>
                     Blue is the language side, orange the engine side. The dashed line is a real thread
                     boundary, crossed only through the lock-free ring buffer (SPSC: one producer, one
-                    consumer) — no locks anywhere on the right. The per-block render path is allocation-free
-                    by house rule; setup still allocates — see §13.
+                    consumer) and only in seconds: the backend never learns about cycles. No locks anywhere
+                    on the right. The per-block render path is allocation-free by house rule; setup still
+                    allocates, see §13.
                 </figcaption>
             </figure>
 
@@ -1298,22 +1304,22 @@
                 <b>The backend is sharded per playback.</b> It is not one global engine. A dispatcher routes
                 every command by <code>playbackId</code> to its own <code>PlaybackEngine</code>, created
                 lazily and disposed when idle. Each one owns its entire render state: its own scheduler, its
-                own cylinders, and its own ignitor and pipeline registries, forked from the shared
-                built-ins. Two songs playing at once on
+                own cylinders, its own ignitor registry and one Katalyst registry that serves both positions,
+                the orbits and the master, all forked from the shared built-ins. Two songs playing at once on
                 "orbit 1" get independent orbits instead of silently fighting over one. Custom instruments
                 registered by a playback die with it, rather than leaking into the next.
             </p>
 
             <p>
                 <b>The block size is a tuning parameter, pinned everywhere.</b> 128 frames, in the browser
-                worklet, on the JVM, and in the offline renderer. It is not a performance dial — several
+                worklet, on the JVM, and in the offline renderer. It is not a performance dial: several
                 engine behaviours are block-derived, including the analog-drift update rate. Raising it to
                 make an offline render faster would change how the render <em>sounds</em>. Pinning it is what
-                makes the offline WAV bit-faithful to what you heard live.
+                keeps the offline WAV faithful to what you heard live.
             </p>
 
             <p>
-                <b>There is always a safety limiter.</b> −1 dB, 20:1, 5 ms lookahead on the summed mix, on
+                <b>There is always a house limiter.</b> −1 dB, 20:1, 5 ms lookahead on the summed mix, on
                 every song, whether or not you asked. Any limiter you author on the master is for
                 <em>shaping</em>; peak-catching is already handled. The 5 ms is a real, accepted latency cost.
             </p>
@@ -1322,7 +1328,7 @@
                 <span class="lab">A house rule that shapes the code</span>
                 <p>
                     The Motor stays raw. Parameters are not clamped "for safety" unless there is a numerical
-                    reason — you can absolutely make it scream. What <em>is</em> guarded is numerical sanity:
+                    reason: you can make it scream. What <em>is</em> guarded is numerical sanity:
                     NaN/Inf guards, denormal handling, and explicit safe bounds in the DSP, because a single
                     NaN in a feedback delay poisons the buffer forever.
                 </p>
@@ -1337,7 +1343,7 @@
             <h3>Oscillators, filters, effects</h3>
 
             <p>
-                Every sound source below is hand-written DSP — no wavetables, no samples underneath, no Web
+                Every synthesized source below is hand-written DSP: no wavetables, no samples underneath, no Web
                 Audio nodes doing the work. They're addressable by name from a pattern
                 (<code>.sound("supersaw")</code>) and as builders in the instrument DSL
                 (<code>Osc.supersaw()</code>).
@@ -1355,15 +1361,15 @@
                     <tr>
                         <td><b>Classic</b></td>
                         <td><code>sine</code>, <code>sawtooth</code>, <code>square</code>, <code>triangle</code>, <code>ramp</code>,
-                            <code>pulze</code> (variable duty), <code>impulse</code>, and <code>zawtooth</code> — a
-                            deliberately naive, aliasing saw, kept because it is brighter and sometimes that's what you
+                            <code>pulze</code> (variable duty), <code>impulse</code>, and <code>zawtooth</code>, a
+                            deliberately naive, aliasing saw, kept because it is brighter and sometimes that is what you
                             want
                         </td>
                     </tr>
                     <tr>
                         <td><b>Unison</b></td>
                         <td><code>supersaw</code>, <code>supersine</code>, <code>supersquare</code>,
-                            <code>supertri</code>, <code>superramp</code> — N detuned copies with per-voice spread, gain
+                            <code>supertri</code>, <code>superramp</code>: N detuned copies with per-voice spread, gain
                             jitter and phase randomisation
                         </td>
                     </tr>
@@ -1383,7 +1389,7 @@
                     </tr>
                     <tr>
                         <td><b>Samples</b></td>
-                        <td>Drum banks, soundfonts, arbitrary URLs — with slicing, looping, and per-hit start
+                        <td>Drum banks, soundfonts, arbitrary URLs, with slicing, looping, and per-hit start
                             positions
                         </td>
                     </tr>
@@ -1393,10 +1399,10 @@
 
             <p>
                 <b>Filters</b>: resonant SVF lowpass / highpass / bandpass / notch, one-pole variants, and two
-                resonator banks — <code>body()</code>, which models a passive instrument body (mahogany,
+                resonator banks: <code>body()</code>, which models a passive instrument body (mahogany,
                 rosewood, tube…), and <code>vowel()</code>, a formant filter. Both are blended through a
-                shared parallel-mix filter with a physical floor, so they colour without ever thinning the
-                signal out — a passive body adds no energy and never makes a sound sparse.
+                shared parallel-mix filter with a physical floor, so they colour the signal rather than
+                thinning it out; the floor is there because a real instrument body colours the direct sound without taking it away.
             </p>
 
             <p>
@@ -1409,8 +1415,8 @@
                 <span class="lab">Design position</span>
                 <p>
                     The sound model is a <em>pencil sketch</em>, not photorealism. An instrument gets two to
-                    four real acoustic "tells" — the right waveform family, a breath-noise transient, a
-                    material-appropriate cutoff, a pitch scoop — and sparse fill around them. The target is
+                    four real acoustic "tells" (the right waveform family, a breath-noise transient, a
+                    material-appropriate cutoff, a pitch scoop) and sparse fill around them. The target is
                     deliberately non-moving: nothing adapts, nothing randomises itself behind your back. You
                     can learn it.
                 </p>
@@ -1420,17 +1426,22 @@
 
     <!-- ---------------------------- §7 ---------------------------- -->
     <section id="s7">
-        <div class="rail"><span class="num">07</span><span class="tag engine">DSLs</span></div>
+        <div class="rail"><span class="num">07</span><span class="tag engine">Owners</span></div>
         <div class="body">
-            <h3>Three DSLs above the engine — and one to come</h3>
+            <h3>Three owners above the engine</h3>
 
             <p>
-                The pattern language says <em>when</em> and <em>what</em>. Three further DSLs say <em>how</em>,
-                at three different scopes — and the fourth scope is still waiting for its DSL, at the end of
-                this section.
+                The pattern language says <em>when</em> and <em>what</em>. Everything that shapes the sound
+                has exactly one owner, and each owner has one way of being set: the <b>instrument</b> is an
+                Ignitor tree, the <b>channel</b> is three numbers, and the <b>bus</b> is a Katalyst chain,
+                once per orbit and once more at the output. A pattern never carries an effect of its own;
+                what it carries are values for the slots those owners declare. The one exception is pitch:
+                the engine runs the pitch doors (<code>vibrato</code>, <code>penv</code>, <code>fm</code>,
+                <code>accelerate</code>) in front of every tree, whatever the tree says. This is the shape the engine
+                redesign of September 2026 settled on, and the picture in §5 follows it.
             </p>
 
-            <h4>1 · Ignitor DSL — building an instrument</h4>
+            <h4>1 · The instrument: the Ignitor DSL</h4>
 
             <p>
                 An instrument is a signal graph, composed with ordinary method chaining. Any numeric
@@ -1440,8 +1451,8 @@
 
             <p>
                 To be clear about what runs where: the script builds the graph <em>once</em>, and the graph
-                crosses to the audio thread as data. What you composed is block-based arithmetic —
-                <code>.plus()</code> is a 128-frame buffer add, <code>.times()</code> a buffer multiply —
+                crosses to the audio thread as data. What you composed is block-based arithmetic:
+                <code>.plus()</code> is a 128-frame buffer add, <code>.times()</code> a buffer multiply,
                 rendered in tight loops over <code>FloatArray</code>s. The interpreter never runs per
                 sample; it only describes the machine.
             </p>
@@ -1449,71 +1460,129 @@
             <figure>
                 <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Glockenspiel: inharmonic partials + a noise transient + a filter that closes</span>
 <span class="kw">let</span> glock = Osc.sine().mul(0.5)
-    <span class="cm">// 19.02 and 27.86 semitones — deliberately inharmonic intervals:</span>
+    <span class="cm">// 19.02 and 27.86 semitones, deliberately inharmonic intervals:</span>
     <span class="cm">// this is what makes it read as metal rather than as an organ</span>
     .plus(Osc.sine().detune(19.02).mul(0.3))
     .plus(Osc.sine().detune(27.86).mul(0.15))
     .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
     .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
     .adsr(0.001, 1.5, 0.0, 0.3)
+    .classic()
 
-<span class="cm">// A kick is four lines: sine, pitch drop, fast decay.</span>
-<span class="cm">// The drop depth is a named param — a slot the pattern can override.</span>
+<span class="cm">// A kick is four lines: sine, pitch drop, fast decay, the classic tail.</span>
+<span class="cm">// The drop depth is a named param, a slot the pattern can fill.</span>
 <span class="kw">let</span> kick = Osc.sine()
     .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), x =&gt; x.adsr(0.001, 0.04, 0, 0))
     .adsr(0.001, 0.2, 0.0, 0.02)
+    .classic()
 
-note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).gain(0.3).roomWet(0.2)
-note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
+note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).adsrOff().gain(0.3).reverb(wet = 0.2, size = 4)
+note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().oscparam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
                             class="cm">// every other cycle drops harder</span></pre>
                 </div>
             </figure>
 
             <p>
-                That <code>Osc.param(name = "punch", default = 24)</code> in the kick is the parameter
-                system: a named slot
-                with a default, overridable per note from the pattern side — and since the override value is
-                itself a pattern, <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. The
-                two languages meet exactly there: the instrument declares the knob, the pattern plays it.
-                <code>Osc.variants(a, b, …)</code> bundles
-                several flavours of one instrument into a single sound, selected per event with the same
-                <code>:index</code> suffix that picks sample-bank variants — so
-                <code>seq("0 1 2:1 3:1")</code> can have two notes ring out and two chug, from one
-                instrument.
+                Two things in there are worth a closer look. The first is
+                <code>Osc.param(name = "punch", default = 24)</code>: a named slot with a default, filled
+                per note from the pattern side, and since the value the pattern writes is itself a pattern,
+                <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. The two languages meet
+                exactly there: the instrument declares the knob, the pattern plays it. The second is the
+                <code>.classic()</code> at the end of both instruments. It is the tail every built-in sound
+                has: the pattern's familiar per-note doors (<code>onepole</code>, <code>lpf</code>,
+                <code>hpf</code>, <code>bpf</code>, <code>notch</code>, <code>crush</code>,
+                <code>coarse</code>, <code>distort</code>, <code>tremolo</code>, <code>adsr</code>) are its
+                slots, so <code>.lpf(800)</code> on the pattern reaches the tail's filter, and a stage the
+                note does not write is not built. An instrument that brings its own amplitude envelope, as
+                both of these do, has two options: <code>.adsrOff()</code> on the pattern lets the
+                instrument's envelope be the only one, or the tail's envelope stays and the pattern shapes it
+                with <code>adsr(…)</code>, as the song in §8 does with <code>adsr(release = …)</code>. Leave
+                <code>.classic()</code> out and the tree keeps the pitch doors in front of it
+                (<code>vibrato</code>, <code>penv</code>, <code>fm</code>, <code>accelerate</code>) and the
+                channel after it, but the tail's doors reach only the slots the tree places itself, and there
+                is no default envelope. The tree is the voice, and the order is whatever you composed.
+                <code>Osc.variants(a, b, …)</code> still bundles several flavours of one
+                instrument into a single sound, selected per event with the same <code>:index</code> suffix
+                that picks sample-bank variants, so <code>seq("0 1 2:1 3:1")</code> can have two notes ring
+                out and two chug, from one instrument.
             </p>
 
-            <h4>2 · Pipeline DSL — reordering the voice strip itself</h4>
+            <h4>2 · The channel: three numbers</h4>
 
             <p>
-                The per-voice chain — filter modulation, crush, coarse, distort, filter, tremolo, phaser,
-                VCA (synth-speak for the amplitude stage the ADSR envelope drives) — is data, not hardcoded
-                order. Two built-ins ship: <code>modern</code>, the classic
-                subtractive order with the amplitude envelope last, and <code>pedal</code>, where the VCA
-                comes <em>early</em> so the envelope drives the waveshapers the way a guitar pedal does. You
-                can also author your own:
+                Between the instrument and the bus sits the channel fader, and it is deliberately not a
+                DSL: <code>gain</code>, <code>pan</code>, <code>orbit</code>. The engine applies gain and
+                pan to every voice once, after the tree, whatever the tree says, and <code>orbit</code>
+                picks the bus. <code>gain</code> is the one level word on every surface: a tone-neutral
+                fader after the processing. The level that is <em>not</em> a fader has its own word.
+                <code>pregain</code> is how hard the instrument is played, the level at which the signal
+                meets its first nonlinearity, and it changes timbre. The built-in sounds place that slot in
+                front of their tail (<code>Osc.saw().pregain().classic()</code>); an authored instrument
+                places it where its own drive is, or not at all. In desk terms: pregain is the guitar's
+                volume knob and the player's touch, and gain is the channel fader with pan after it. A channel on a
+                desk has one fader, and so does the channel here.
             </p>
 
             <figure>
-                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Double-VCA sandwich: the first VCA shapes how hard the distortion is driven</span>
-<span class="cm">// (so the envelope sculpts harmonics), the second rides the output level.</span>
-<span class="kw">let</span> chain = Pipeline(p =&gt; p
-    .filterMod()
-    .vca()              <span class="cm">// early — sculpts the drive</span>
-    .distort()
-    .filter()
-    .vca()              <span class="cm">// late — trims the level</span>
-)</pre>
+                <div class="code" data-lang="KlangScript"><pre>note(<span class="st">"c2 ~ eb2 g2"</span>).sound(<span class="st">"supersaw"</span>).pregain(1.5).lpf(600).gain(0.4).pan(0.3).orbit(1)</pre>
                 </div>
-                <figcaption>Stage order is audible. This is the difference between a synth and a pedalboard.
+                <figcaption><code>pregain</code> drives the instrument, <code>lpf</code> fills one of its
+                    <code>classic()</code> slots, and the last three calls are the channel: level, position,
+                    bus.
                 </figcaption>
             </figure>
 
-            <h4>3 · Master DSL — the whole song's bus</h4>
+            <h4>3 · The bus: the Katalyst DSL, on every orbit and at the output</h4>
 
             <p>
-                The master chain rides in the pattern stream rather than sitting in global config, which
-                means live edits to it cross-fade instead of clicking, and an offline render reproduces it
-                exactly.
+                Everything that works on a <em>sum</em> lives on the bus: eq, reverb, delay, compressor,
+                phaser, the <code>body</code> and <code>vowel</code> resonators, sidechain ducking, and the
+                group fader. Each orbit runs one <b>Katalyst</b> chain, declared once with
+                <code>Katalyst(k =&gt; …)</code>, where the written order is the signal order. A knob written
+                as a number stays that number; a knob declared as <code>Katalyst.param(…)</code> is a slot
+                the pattern fills with <code>katp(name, value)</code>. Where a jump would be audible, an
+                orbit knob glides to its new value over 50 ms rather than stepping (a filter bank swaps by
+                a 20 ms crossfade instead): a safety net against clicks when two patterns take turns on one
+                orbit, not a guarantee. A song that declares nothing runs
+                <code>Katalyst.classic()</code>, the chain the engine ran before chains could be declared,
+                and the pattern doors <code>reverb(wet, size, lowpass)</code>,
+                <code>delay(wet, time, feedback)</code>, <code>compressor(…)</code>, <code>body(…)</code>
+                and friends are aliases that write its slots, so a <code>.reverb(0.3, 5)</code> on a
+                pattern that declares no chain reaches the classic chain's room.
+            </p>
+
+            <figure>
+                <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// A declared chain: the order you write is the order the orbit's mix runs through</span>
+<span class="kw">let</span> guitarBus = Katalyst(k =&gt; k
+    .eq(e =&gt; e.band(freq = 300, q = 0.8, db = 2.0))   <span class="cm">// the mix EQ, after the amp</span>
+    .reverb(0.15, 3)                                   <span class="cm">// reverb(wet, size, lowpass)</span>
+    .compressor(threshold = -21, ratio = 3)
+)
+
+<span class="cm">// A chain slot: the knob a pattern moves with katp(); it glides to a new value over 50 ms</span>
+<span class="kw">let</span> bus = Katalyst(k =&gt; k.reverb(0.5, Katalyst.param(<span class="st">"room"</span>, 5.0)))
+
+stack(guitar1, guitar2, guitar3).katalyst(guitarBus)   <span class="cm">// three orbits, one chain</span>
+note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).katalyst(bus).katp(<span class="st">"room"</span>, <span class="st">"&lt;2 9&gt;"</span>)   <span class="cm">// a small room, then a hall</span></pre>
+                </div>
+                <figcaption>The reverb is an insert fed by the orbit's mix at its place in the list, so a
+                    room written after the EQ hears the EQ. Two instruments that need different rooms, or
+                    different amounts of one room, need two orbits.
+                </figcaption>
+            </figure>
+
+            <p>
+                The master is the same Katalyst chain at the output position, over the sum of every orbit:
+                <code>master(Katalyst(k =&gt; …))</code>, riding in the pattern stream rather than sitting in
+                global config, so an offline render reproduces it. A live edit is a chain swap: the leaving
+                chain's input ramps down over 60 ms while the arriving chain's output ramps up, and the leaving
+                chain keeps running until its tail has drained. <code>master(Katalyst())</code> is the
+                master switched off. Every stage the builder offers works there, with two differences that
+                follow from the position: a <code>duck</code> stage is inert (there is no other orbit to
+                listen to), and nothing fills a <code>Katalyst.param(…)</code> at the output, it stays at its
+                default, since <code>katp</code> reaches orbits only. One door to know about is
+                <code>limiter(…)</code>, a compressor stage with limiter defaults, which is allowed on an
+                orbit too.
             </p>
 
             <figure>
@@ -1528,32 +1597,21 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
   ))
 )</pre>
                 </div>
-                <figcaption>The reverb sits before the loudness staging so the limiters catch its tail too. Staged gain
-                    — split the total across descending thresholds and ascending ratios — beats one big push.
+                <figcaption>The reverb sits before the loudness staging so the limiters catch its tail too. Staged
+                    gain, the total split across descending thresholds and ascending ratios, is gentler than one
+                    big push.
+                    The house limiter (§5) still runs after all of this; an authored limiter is for shaping.
                 </figcaption>
             </figure>
 
-            <h4>4 · Katalyst DSL — the missing quadrant <span class="pill sketch">Designed, not built</span></h4>
-
-            <p>
-                The symmetry above has a hole. Per-voice source: Ignitor DSL. Per-voice processing order:
-                Pipeline DSL. Whole-song bus: Master DSL. The fourth scope — the <em>shared</em> effects
-                path on a Cylinder — has the effects but not the authoring surface. The orbit effects of §6
-                all run at that level today; patterns set their
-                amounts, but the chain itself — which effects, in what order — is hardcoded in the engine.
-                The Katalyst DSL closes that quadrant: declare a per-orbit chain the way
-                <code>Pipeline(p =&gt; …)</code> declares the per-voice one, following the Master DSL's
-                registration pattern and reusing the same DSP underneath. One word per concept: the Ignitor
-                lights the voice, the Katalyst refines the bus.
-            </p>
-
             <div class="note">
-                <span class="lab">The rule that keeps four DSLs coherent</span>
+                <span class="lab">The rule that keeps the surfaces coherent</span>
                 <p>
                     <b>Parameter parity.</b> If a parameter exists on one surface it should exist on all of
-                    them, mean the same thing, and use the same scale — and the conversion lives in exactly one
-                    place. This is not theoretical tidiness: ignoring it produced a <code>roomSize</code> that
-                    was 10× different between the master and an orbit, and that bug was found by ear.
+                    them, mean the same thing, and use the same scale, and the conversion lives in exactly one
+                    place. Ignoring it once produced a reverb size that was 10× different between the master
+                    and an orbit; the bug was found by ear. Running one chain type at both positions is the
+                    same rule, applied to structure.
                 </p>
             </div>
         </div>
@@ -1566,91 +1624,140 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).oscparam(<span class="st">
             <h3>A real song, in full</h3>
 
             <p>
-                Everything above, used together. This is an actual built-in song — <em>Die Kirschblüte</em> —
-                not a constructed example. Five hand-built instruments, a pad voiced across independent lines, layered entries
-                over 42 cycles.
+                Everything above, used together. This is an actual built-in song, <em>Die Kirschblüte</em>,
+                as it sits in the corpus today, not a constructed example. Seven hand-built instruments,
+                each ending in <code>.classic()</code>, a pad voiced across six independent lines, layered
+                entries over 42 cycles.
             </p>
 
             <figure>
-                <div class="code" data-lang="KlangScript"><pre><span class="kw">import</span> * <span
-                        class="kw">from</span> <span class="st">"stdlib"</span>
+                <div class="code" data-lang="KlangScript"><pre><span class="kw">import</span> * <span class="kw">from</span> <span class="st">"stdlib"</span>
 <span class="kw">import</span> * <span class="kw">from</span> <span class="st">"sprudel"</span>
 
 <span class="kw">let</span> wait = 14
 
-<span class="cm">// Koto — plucked string + an octave shimmer, filter opening on attack</span>
 <span class="kw">let</span> koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(Osc.constant(2500).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)),
-               0.707, x =&gt; x.analog(Osc.slot.analog))
+      .lowpass(Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x =&gt; x.analog(Osc.slot.analog))
+      .classic()
 
-<span class="cm">// Shakuhachi — sine body, triangle edge, two breath-noise layers, vibrato</span>
-<span class="kw">let</span> shaku = Osc.sine(x =&gt; x.analog(0.2)).mul(0.6)
-      .plus(Osc.triangle(x =&gt; x.analog(0.2)).mul(0.25))
+<span class="kw">let</span> shaku = Osc.sine().mul(0.6)
+      .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .highpass(300, x => x.analog(Osc.slot.analog))
-      .lowpass(3800, 1.0, x => x.analog(Osc.slot.analog))
-      .vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
-      .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
+      .lowpass(3500, 1.0, x =&gt; x.analog(Osc.slot.analog))
+      .highpass(600, x =&gt; x.analog(Osc.slot.analog))
+      .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
+      .pitchEnvelope(1, x =&gt; x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
+      .classic()
+
+<span class="kw">let</span> kick = Osc.sine()
+      .pitchEnvelope(24, x =&gt; x.adsr(0.001, 0.04, 0, 0))
+      .adsr(0.001, 0.2, 0.0, 0.02)
+      .classic()
+
+<span class="kw">let</span> rim = Osc.sine(800)
+      .plus(Osc.whitenoise().highpass(4000).mul(0.3))
+      .lowpass(3500)
+      .adsr(0.001, 0.03, 0.0, 0.005)
+      .classic()
+
+<span class="kw">let</span> brush = Osc.perlin(30).mul(0.5)
+      .plus(Osc.whitenoise().mul(0.3))
+      .lowpass(12000).highpass(2000)
+      .adsr(0.01, 0.08, 0.0, 0.02)
+      .classic()
+
+<span class="kw">let</span> sub = Osc.sine().lowpass(200)
+      .adsr(0.005, 0.4, 0.0, 0.05)
+      .classic()
 
 <span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
-      .lowpass(Osc.sine(0.3).plus(3).times(400).plus(Osc.freq()),
-               2, x =&gt; x.analog(Osc.slot.analog))
+      .lowpass(Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), 3, x =&gt; x.analog(Osc.slot.analog))
       .adsr(1.5, 3.0, 0.6, 1.5, e =&gt; e.curves(<span class="st">"scurve"</span>, <span class="st">"scurve"</span>, <span class="st">"scurve"</span>))
+      .classic()
+
 
 stack(
-  <span class="cm">// Melody — mahogany body, doubled an octave up and panned wide</span>
-  note(`
+  <span class="cm">// Sakura melody</span>
+  note(<span class="st">`
     [a4 a4 b4 ~ a4 a4 b4 ~]       [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
-  `).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.5).body(material = <span class="st">"mahogany"</span>)
-    .superimpose(fast(2).velocity(0.1).pan(0.3).superimpose(pan(0.7)))
+    [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
+    [e4 f4 [b4 a4] f4 e4@4]
+  `</span>).orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = <span class="st">"mahogany"</span>).pan(0.66) <span class="cm">// .struct()</span>
+    .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
 
-  <span class="cm">// Shakuhachi enters at cycle 28, drifting in pan and cutoff</span>
-  ,note(`
+  <span class="cm">// Shakuhachi</span>
+  ,note(<span class="st">`
     a4@2  ~  ~  ~  ~  b4 ~
+    a4@2  ~  ~  ~  ~  f4 ~
+    e4@2  ~  ~  ~  ~  a4 ~
     e5@2  ~  ~  c5@2  b4 a4
-  `).orbit(1).sound(shaku).slow(14).gain(0.23)
-    .pan(perlin.range(0.3, 0.7).slow(8))
-    .lpf(perlin.range(3600, 3800).slow(2)).body(material = <span class="st">"rosewood"</span>)
-    .filterWhen(x =&gt; x &gt;= wait * 2)
+    c5@2  ~  ~  ~  ~  a4 ~
+    a5@2  ~  ~  e5@2  d5@2
+    &lt;[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]&gt;@8
+  `</span>).orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33) <span class="cm">// classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal</span>
+    .lpf(perlin.range(3800, 4000).slow(2)).body(material = <span class="st">"rosewood"</span>)
+    .filterWhen(x =&gt; x &gt;= wait * 2) <span class="cm">// . solo()</span>
 
-  <span class="cm">// Pad — independent voices, each panned and high-passed differently,</span>
-  <span class="cm">// so the chord occupies real stereo space instead of stacking in the centre</span>
+  <span class="cm">// Drums</span>
+  ,note(<span class="st">"a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~"</span>).orbit(2).sound(kick).gain(0.7).hpf(100)
+  ,note(<span class="st">"~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~"</span>).orbit(2).sound(rim).gain(0.45).pan(0.6)
+  ,note(<span class="st">"~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~"</span>).orbit(2).sound(brush).gain(0.35).pan(0.4)
+
+  <span class="cm">// Sub-Bass</span>
+  ,note(<span class="st">"a1 d2 a1 f1 c2 e1 a1"</span>).orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
+    .filterWhen(x =&gt; x &gt;= wait * 1)
+
   ,stack(
-    note(<span class="st">"a2  d2  a2  f2  c2  e2  a2"</span>).sound(pad).slow(14).gain(0.250).pan(0.4).hpf(160)
-   ,note(<span class="st">"c3  f2  c3  a2  e2  gs2 c3"</span>).sound(pad).slow(14).gain(0.250).pan(0.7).hpf(280)
-   ,note(<span class="st">"e3  a2  e3  c3  g2  b2  e3"</span>).sound(pad).slow(14).gain(0.250).pan(0.2).hpf(400)
-   ,note(<span class="st">"a3  d3  a3  f3  c3  e3  a3"</span>).sound(pad).slow(14).gain(0.200).pan(0.8).hpf(600)
-  ).orbit(4).coarse(3).body(0.3, <span class="st">"tube"</span>).filterWhen(x =&gt; x &gt;= wait * 3)
+    <span class="cm">// Root</span>
+    note(<span class="st">"a2  d2  a2  f2  c2  e2  a2"</span>).sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.4).hpf(100)
+    <span class="cm">// Third (minor/major character)</span>
+    ,note(<span class="st">"c3  f2  c3  a2  e2  gs2 c3"</span>).sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.55).hpf(280)
+    <span class="cm">// Fifth</span>
+    ,note(<span class="st">"e3  a2  e3  c3  g2  b2  e3"</span>).sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.6).hpf(400)
+    <span class="cm">// Octave</span>
+    ,note(<span class="st">"a3  d3  a3  f3  c3  e3  a3"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.3).hpf(600)
+    <span class="cm">// High third</span>
+    ,note(<span class="st">"c4  f3  c4  a3  e3  gs3 c4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
+    <span class="cm">// High fifth</span>
+    ,note(<span class="st">"e4  a3  e4  c4  g3  b3  e4"</span>).sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
+  ).orbit(4).adsr(release = 1.5).coarse(amount = 2, oversample = 1).filterWhen(x =&gt; x &gt;= wait * 3).body(material = <span class="st">"tube"</span>, wet = 0.3) <span class="cm">// adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal</span>
 
-  <span class="cm">// Three noise beds, each breathing on its own slow LFO</span>
-  , sound(<span class="st">"dust"</span>).gain(0.025).vel(sine.range(0.750, 1.0).slow(21)).lpf(8000)
-  , sound(<span class="st">"pink"</span>).gain(0.010).vel(sine.range(0.625, 1.0).slow(13)).lpf(14000)
-  , sound(<span class="st">"brown"</span>).gain(0.015).vel(sine.range(0.500, 1.0).slow(8)).lpf(10000)
-
-).roomWet(<span class="fl">0.25</span>, <span class="fl">7</span>, <span class="fl">0.75</span>).delayWet(0.2).delaytime(pure(1/8).div(cps))
- .compressor(<span class="fl">-15</span>, <span class="fl">2</span>, <span class="fl">6</span>, <span class="fl">0.01</span>, <span class="fl">0.2</span>).analog(8)</pre>
+  <span class="cm">// Noise</span>
+  , sound(<span class="st">"dust!2"</span>).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound(<span class="st">"pink!3"</span>).gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound(<span class="st">"brown!4"</span>).gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+ 
+).reverb(0.35, 7.5).delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.0).compressor(-15, 2, 6, 0.01, 0.2).analog(8)</pre>
                 </div>
-                <figcaption>Abridged. The <code>let wait = 14</code> at the top is the
+                <figcaption>Every line of code as the song has it; the author's whole-line workbench comments left
+                    out. The
+                    <code>let wait = 14</code> at the top is the
                     whole arrangement: every layer's entry is expressed as a multiple of it, so one number restructures
                     the piece.
                 </figcaption>
             </figure>
 
             <p>
-                A few things in there are worth noticing. <code>.orbit(n)</code> assigns an effect bus, and
-                that assignment is <em>architectural</em> — orbit-level effects like <code>body()</code> and
-                reverb are shared by everything on that orbit, so two instruments that each need their own
-                wooden body must be on different orbits. <code>.filterWhen(x =&gt; x &gt;= wait * 2)</code> is
-                arrangement as a predicate over the cycle number. And <code>analog(…)</code> threads a single
-                "how much does this drift out of tune" number to five linear destinations at once, seeded so
-                note attacks land in tune and only then wander. The <code>Osc.slot.analog</code> inside the
-                instrument definitions is the receiving end of that thread — the note's analog amount exposed
-                as a slot, so the instrument's own filters drift along with its pitch.
+                A few things in there are worth noticing. The instruments are trees that end in
+                <code>.classic()</code>, so the pattern's <code>.lpf(…)</code>, <code>.hpf(…)</code> and
+                <code>.adsr(release = …)</code> reach each instrument's own slots; the shakuhachi and the
+                pad bring an envelope of their own and set the tail's release to match it.
+                <code>.orbit(n)</code> assigns a bus, and that assignment is <em>architectural</em>: the bus
+                effects, <code>body()</code> and the reverb among them, are shared by everything on that
+                orbit, so two instruments that each need their own wooden body must be on different orbits.
+                The <code>.reverb(…)</code>, <code>.delay(…)</code> and <code>.compressor(…)</code> on the
+                outer stack write slots of every orbit's classic chain; nothing here declares a chain of its
+                own. <code>.filterWhen(x =&gt; x &gt;= wait * 2)</code> is arrangement as a predicate over
+                the cycle number. And <code>analog(…)</code> threads a single "how much does this drift out
+                of tune" number to five linear destinations at once, seeded so note attacks land in tune and
+                only then wander. The <code>Osc.slot.analog</code> inside the instrument definitions is the
+                receiving end of that thread, the note's analog amount exposed as a slot, so the
+                instrument's own filters drift along with its pitch.
             </p>
         </div>
     </section>
@@ -1678,10 +1785,10 @@ stack(
             <h4>The wire codec is generated</h4>
             <p>
                 Voice data crosses from the main thread into the worklet on every scheduled note.
-                <code>kotlinx.serialization</code> was decoding at ~67 µs per voice, which is not survivable
+                <code>kotlinx.serialization</code> was decoding at ~67 µs per voice, which is too slow
                 at note density. A second KSP processor now generates a trust-codec directly from the
                 <code>@WireFormat</code> types: <b>67 µs → 385 ns</b>, about 174×, confirmed in the browser.
-                Protobuf was tried and rejected — it is slow on JS.
+                Protobuf was tried and set aside: in our measurements it was slow on JS.
             </p>
 
             <h4>Voice data is mutable and single-owner</h4>
@@ -1699,8 +1806,8 @@ stack(
             </p>
 
             <p>
-                Golden-file tests cover the pattern language, and dedicated specs guard every bug class
-                that has bitten twice — cycle-boundary selection, timeshift duplication, analog-drift
+                Golden-file tests cover the pattern language, and dedicated specs guard the bug classes
+                that have bitten twice: cycle-boundary selection, timeshift duplication, analog-drift
                 coefficients, sample onset alignment.
             </p>
         </div>
@@ -1723,14 +1830,14 @@ stack(
                     <tbody>
                     <tr>
                         <td><b>Code editor</b></td>
-                        <td>CodeMirror with completions, hover documentation and inline tool badges — fed from
-                            the same KSP data as §3, so the editor can't drift from the runtime.
+                        <td>CodeMirror with completions, hover documentation and inline tool badges, fed from
+                            the same KSP data as §3, so the editor and the runtime share one source.
                         </td>
                     </tr>
                     <tr>
                         <td><b>Tutorials</b></td>
-                        <td>A growing library of written tutorials, running live in the page — every example is
-                            real, playable code, not a screenshot.
+                        <td>A growing library of written tutorials, running live in the page: every example is
+                            playable code, not a screenshot.
                         </td>
                     </tr>
                     <tr>
@@ -1749,7 +1856,7 @@ stack(
 
             <p>
                 There are no accounts and no server. Songs you write live in browser storage. That is
-                genuinely all of it today — which is exactly what makes Part II an open question rather than
+                all of it today, which is what makes Part II an open question rather than
                 a migration.
             </p>
         </div>
@@ -1761,7 +1868,7 @@ stack(
         <h2>Where the journey might go</h2>
         <p>
             Nearly everything from here on is design, not code. Some of it is settled as an <em>idea</em> while
-            being completely unsettled as a <em>mechanism</em> — and where that's true, it's marked.
+            being completely unsettled as a <em>mechanism</em>, and where that is true, it is marked.
         </p>
     </div>
 
@@ -1772,21 +1879,21 @@ stack(
             <h3>Import / export <span class="pill sketch">Idea set, mechanism open</span></h3>
 
             <p>
-                This is the one I most want argued with, so here it is in full.
+                This is the part we most want argued with, so here it is in full.
             </p>
 
             <p>
-                <b>The observation.</b> Every other music genre sits on a corpus. Sample-based music
-                literally could not exist without one — producers don't start from a blank page, they start
+                <b>The observation.</b> Most music genres sit on a corpus. Sample-based music
+                could not exist without one: producers do not start from a blank page, they start
                 from the breaks. Live coders open empty editors. There is no canon, no "Amen break" of
                 patterns.
             </p>
 
             <p>
-                The interesting part is that Klang's medium is <em>text</em>, not audio. Which means lineage
-                can be exact rather than anecdotal. If you make something good and it was built from other
-                people's parts, that ancestry is machine-readable — a citation chain, not a rumour. No
-                stem-sharing platform can offer that, because binaries don't compose.
+                Klang's medium is <em>text</em>, not audio, which means lineage
+                can be exact rather than anecdotal: if you make something good from other
+                people's parts, that ancestry is machine-readable, a citation chain rather than a rumour.
+                Audio stems cannot offer that, because binaries do not compose.
             </p>
 
             <h4>The shape</h4>
@@ -1808,8 +1915,8 @@ stack(
             </figure>
 
             <p>
-                Reframed honestly: this is not a distributed filesystem, it's a <b>federated package
-                registry</b> — a far better-solved problem. The design cornerstones so far:
+                Put plainly: this is not a distributed filesystem, it is a <b>federated package
+                registry</b>, a much better understood problem. The design cornerstones so far:
             </p>
 
             <div class="tablewrap">
@@ -1830,29 +1937,29 @@ stack(
                     <tr>
                         <td><b>Content addressing</b></td>
                         <td>Every file and blob is referenced by hash; a tag resolves to a manifest of hashes. Caching
-                            mostly disappears — fetch once, cache forever, verify locally, so content can come from
+                            becomes simple: fetch once, keep it, verify locally, so content can come from
                             anywhere.
                         </td>
                     </tr>
                     <tr>
                         <td><b>Flatten at tag time</b></td>
                         <td>When a version is tagged, the origin resolves the full transitive closure <em>then</em> and
-                            writes it into the manifest — a lockfile. An importer needs exactly one conversation to
-                            learn everything it must fetch. Hops never cascade at import time.
+                            writes it into the manifest, a lockfile. An importer needs one conversation to
+                            learn everything it must fetch, so hops do not cascade at import time.
                         </td>
                     </tr>
                     <tr>
                         <td><b><code>@latest</code> is edit-time only</b></td>
                         <td>Publishing pins everything. A song that sounded right yesterday must sound identical today;
                             an unpinned import contradicts that. Resolution is pull with a short TTL, the Go
-                            module-proxy model — no webhooks, no subscription registry.
+                            module-proxy model: no webhooks, no subscription registry.
                         </td>
                     </tr>
                     <tr>
                         <td><b>Everything cacheable is immutable</b></td>
-                        <td>Cache invalidation — the hard CDN problem — doesn't exist here. Which is what makes
-                            "everyone runs an instance" credible instead of a bandwidth trap: a hobbyist box survives a
-                            viral song because the edge eats the traffic and the origin serves each blob once.
+                        <td>Cache invalidation, the hard CDN problem, does not arise here. That is what makes
+                            "everyone runs an instance" plausible instead of a bandwidth trap: a hobbyist box can survive a
+                            popular song because the edge takes the traffic and the origin serves each blob once.
                         </td>
                     </tr>
                     </tbody>
@@ -1874,8 +1981,8 @@ stack(
 /v1/versions(name)            <span class="cm">// → list           (also servable as an Atom feed)</span></pre>
                 </div>
                 <figcaption>Two version axes: protocol version in the URL, capability requirements in the manifest.
-                    Manifests evolve additively — new fields only, readers ignore what they don't know — so a manifest
-                    tagged in 2027 is byte-identical in 2035.
+                    Manifests evolve additively (new fields only, readers ignore what they do not know), so a manifest
+                    tagged in 2027 would still be byte-identical in 2035.
                 </figcaption>
             </figure>
 
@@ -1899,14 +2006,14 @@ stack(
                     a small lattice makes it machine-checkable.
                 </li>
                 <li>
-                    <b>Attribution is automatic.</b> The pinned closure <em>is</em> the credits roll — generated
+                    <b>Attribution is automatic.</b> The pinned closure <em>is</em> the credits roll, generated
                     from ground truth rather than self-reported.
                 </li>
             </ul>
 
             <p>
-                And because it's mechanical, it's honest by construction. That attribution graph is a
-                citation network in the scientific sense.
+                Because it is mechanical, the credits are complete by construction: every import is in them.
+                That attribution graph is a citation network in the scientific sense.
             </p>
 
             <div class="note open">
@@ -1919,47 +2026,45 @@ stack(
                     not a feed.
                 </p>
                 <p>
-                    This isn't only taste. Any in-system honour mechanism recurses — citations reward the
+                    This isn't only taste. Any in-system honour mechanism recurses: citations reward the
                     roots (samples, presets) and finished songs are sink nodes; answer that with
                     curation-as-citation and you just move the question to who honours the curator. The only
-                    termination we can find is outside the system: people. And it has a nice side effect —
-                    citation cartels attack <em>scores</em>, so with no scores there's nothing to attack. A
+                    termination we can find is outside the system: people. And it has a nice side effect:
+                    citation cartels attack <em>scores</em>, so with no scores there is nothing to attack. A
                     viral wave landing here hits a credits page and nothing inside re-amplifies it. You can't
                     stop the wave; you can decline to build the resonance chamber.
                 </p>
                 <p>
-                    Play counts are not merely unwanted, they are structurally impossible: edge caches mean
-                    origins never see most fetches. Counting would require telemetry in the player —
+                    Play counts are not only unwanted, they also do not fit the design: with edge caches,
+                    origins do not see most fetches. Counting would require telemetry in the player,
                     surveillance built into the instrument.
                 </p>
             </div>
 
-            <h4>One consequence nobody expects</h4>
+            <h4>One consequence that surprised us</h4>
 
             <p>
-                Klang songs are infinitely long — patterns cycle forever. So a mixtape entry can't just
+                Klang songs have no end: patterns cycle for as long as they play. So a mixtape entry cannot just
                 reference a song; it has to specify a <b>cycle window</b>:
                 <code>super-song@v1.0 [cycles 128..192)</code>.
             </p>
 
             <p>
-                Which means making a mixtape is unavoidably authorship. Choosing which cycles are <em>the</em>
-                cycles is the DJ picking the break. Effortless consumption doesn't exist even in principle —
-                the format demands a decision. And because playback re-performs the song live through the
+                Which means making a mixtape is a form of authorship. Choosing which cycles are <em>the</em>
+                cycles is the DJ picking the break; the format asks for a decision. And because playback re-performs the song live through the
                 engine, with per-voice drift making each pass a fresh performance, a mixtape is closer to
-                sheet music than to tape. Add author-exposed parameters — a song can publish
-                <code>feel: 0..100</code> with a default and a meaning — and an entry becomes
+                sheet music than to tape. Add author-exposed parameters (a song can publish
+                <code>feel: 0..100</code> with a default and a meaning) and an entry becomes
                 <code>(song@version, cycleWindow, overrides)</code>: score, window, and interpretation.
             </p>
 
             <div class="note">
-                <span class="lab">Genuinely open</span>
+                <span class="lab">Still open</span>
                 <p>
-                    Identity and migration (server-in-name couples you to your home server — the email
+                    Identity and migration (server-in-name couples you to your home server, the email
                     problem). Private and unlisted songs. The exact license set. Whether non-commercial
-                    licenses are offered at all — they fragment a commons into two incompatible pools and chill
-                    exactly the remixing this is meant to encourage; the current lean is to launch without
-                    them. And whether any of it should be built before there's evidence anyone wants to remix
+                    licenses are offered at all: they split a commons into two incompatible pools and discourage
+                    the remixing this is meant to encourage; the current lean is to leave them out. And whether any of it should be built before there's evidence anyone wants to remix
                     anything.
                 </p>
             </div>
@@ -1974,17 +2079,17 @@ stack(
 
             <p>
                 Klangmotor is free software under the <b>GNU AGPL v3</b>. The <code>tones</code>
-                module — a Kotlin port of tonal.js — is carved out as <b>MIT</b>, matching upstream. Every
+                module (a Kotlin port of tonal.js) is carved out as <b>MIT</b>, matching upstream. Every
                 file carries an SPDX header; <code>AUTHORS.MD</code> is the authoritative copyright list and
-                <code>CREDITS.MD</code> the list of what this stands on — condensed in
+                <code>CREDITS.MD</code> the list of what this stands on, condensed in
                 <a href="#appA">Appendix A</a>.
             </p>
 
             <p>
                 AGPL is chosen deliberately for the network case: if you run a modified Klang server, the
-                modifications are owed back. And to state the thing users need to see in writing — <b>the
-                engine's license does not reach your songs.</b> Songs are user content, not derivative works
-                of the engine.
+                modifications are owed back. And to say the thing users need to see in writing: <b>we hold
+                that the engine's license does not reach your songs.</b> Our position is that songs are user content,
+                not derivative works of the engine.
             </p>
 
             <h4>Anyone can run a node</h4>
@@ -1996,44 +2101,44 @@ stack(
                 songs depend on.
             </p>
 
-            <p>That last part is doing real work:</p>
+            <p>That last part matters:</p>
 
             <ul>
                 <li>
                     <b>Server death is survivable.</b> On cross-server import, your home server vendors the
-                    pinned closure — a durable copy, not an evictable cache. Every song is then self-sufficient
-                    where it lives. A dead server kills its own songs, never anything downstream. The license
-                    gate is what makes that lawful, which is why the two designs are the same design.
+                    pinned closure, a durable copy rather than an evictable cache. Every song is then self-sufficient
+                    where it lives. A dead server takes only its own songs with it, nothing downstream. The license
+                    gate is what makes that lawful, which is why the two designs belong together.
                 </li>
                 <li>
                     <b>Liability distributes to operators</b>, the e-mail and Mastodon model. Each operator
-                    gatekeeps their own accounts and answers for what they host. A bad server dies here and
-                    there; the network shrugs.
+                    gatekeeps their own accounts and answers for what they host. A bad server can die here or
+                    there and the network shrugs.
                 </li>
                 <li>
-                    <b>Policy is the operator's liability dial.</b> Instance settings — bring-your-own samples
-                    on or off, open or invite-only registration, quotas, a minimum license floor — live in the
-                    discovery document next to protocol capabilities. Curated-samples-only is near-zero
-                    exposure; enabling uploads is an accepted moderation burden. Risk appetite becomes a config
+                    <b>Policy is the operator's liability dial.</b> Instance settings (bring-your-own samples
+                    on or off, open or invite-only registration, quotas, a minimum license floor) live in the
+                    discovery document next to protocol capabilities. Curated-samples-only keeps exposure
+                    low; enabling uploads is an accepted moderation burden. Risk appetite becomes a config
                     file, and clients adapt their UI from it.
                 </li>
                 <li>
-                    <b>Old versions are supported effectively forever.</b> In a federation every server is also
-                    a client of every other server, and the network will always contain unattended instances
+                    <b>Old versions stay supported while instances still speak them.</b> In a federation every server is also
+                    a client of every other server, and the network will contain unattended instances
                     that never upgraded. The oldest living API version is the lingua franca. Immutability makes
-                    that nearly free — old responses are static bytes. The intended enforcement is a public
+                    that cheap: old responses are static bytes. The intended enforcement is a public
                     conformance suite with golden wire fixtures, runnable by any third-party implementation.
                 </li>
             </ul>
 
             <p>
-                Which sets a hard constraint on the design: a five-endpoint API that must be right the first
-                time is a much better problem to have than a large one that must be right the first time. The
-                plan is to ship v1 <em>narrower</em> than feels comfortable — additive evolution means
-                yes-later is always possible, unsaying never is.
+                That sets a hard constraint on the design: a five-endpoint API that has to be right the first
+                time is a better problem to have than a large one that has to be right the first time. The
+                plan is to ship v1 <em>narrower</em> than feels comfortable: with additive evolution, saying
+                yes later stays possible, while unsaying is not.
             </p>
 
-            <h4>What a node actually serves</h4>
+            <h4>What a node serves</h4>
 
             <p>
                 Concretely: five HTTP endpoints plus one well-known document. That is the whole surface an
@@ -2091,9 +2196,9 @@ stack(
             </div>
 
             <p>
-                The discovery document is where the operator's dial actually lives. It reports two different
-                kinds of "what does this server do" side by side — <em>capabilities</em>, what the software
-                speaks, and <em>policies</em>, what this operator permits — and clients build their UI from it:
+                The discovery document is where the operator's dial lives. It reports two
+                kinds of "what does this server do" side by side, <em>capabilities</em> (what the software
+                speaks) and <em>policies</em> (what this operator permits), and clients build their UI from it:
             </p>
 
             <figure>
@@ -2115,8 +2220,8 @@ stack(
   }
 }</pre>
                 </div>
-                <figcaption>Feature detection, not version sniffing. A client asks "does this server do X?", never
-                    "is this server new enough?" — which is what lets URL versions stay rare coarse epochs while
+                <figcaption>Feature detection, not version sniffing. A client asks "does this server do X?" rather than
+                    "is this server new enough?", which is what lets URL versions stay rare, coarse epochs while
                     everything else evolves by adding fields.
                 </figcaption>
             </figure>
@@ -2124,14 +2229,14 @@ stack(
             <p>
                 The manifest's <code>requires</code> block is the mirror image, on the content side: a song
                 states what it needs (a backend, one day a specific plugin) so that "can I play this?",
-                "can I import this?" and "can this song live on this server?" are one operation — match a
-                manifest against a server's capabilities, policies and license floor. All three answerable
-                before a single byte of audio is fetched.
+                "can I import this?" and "can this song live on this server?" are one operation: match a
+                manifest against a server's capabilities, policies and license floor. All three can be answered
+                before a byte of audio is fetched.
             </p>
 
             <p>
                 The intended reference instance is <code>klang.art</code>. It has no special protocol status;
-                it's just the first one.
+                it would simply be the first one.
             </p>
         </div>
     </section>
@@ -2149,22 +2254,25 @@ stack(
 
             <ul>
                 <li>
-                    <b>The first note of a song can stutter.</b> Expensive per-engine resources — delay rings,
-                    cylinders — are allocated on first use, and the spike lands on the first thing you hear.
-                    The fix is designed (a self-balancing pool that keeps N warm and refills toward N per
-                    render cycle) and not built.
+                    <b>The first run pays for cold code.</b> The per-engine resources (delay rings, reverb
+                    networks, cylinders) used to be allocated on first use, and the spike landed on the first
+                    note. Since September 2026 they come from a warehouse that keeps them warm, and a warmup
+                    pass runs the engine's whole vocabulary once before the first song. We measured this on a
+                    Fairphone: the first run plays. What is still visible is the warmup's own CPU spike before
+                    the song starts, paid in silence, which we can live with. Why that first-time work is as
+                    large as it is remains an open question for a future round.
                 </li>
                 <li>
                     <b>Voice eviction doesn't exist.</b> Nothing culls voices under load yet.
                 </li>
                 <li>
                     <b>Many effects are not fully rounded yet.</b> The body and vowel resonators especially
-                    are proofs-of-concept — a handful of preset materials, constants tuned by ear, calibration
+                    are proofs-of-concept: a handful of preset materials, constants tuned by ear, calibration
                     unfinished across instruments and registers. They make the right kind of sound; they don't
                     yet make it everywhere.
                 </li>
                 <li>
-                    <b>The frontend and backend clocks can diverge</b> when the worklet stalls — the frontend
+                    <b>The frontend and backend clocks can diverge</b> when the worklet stalls: the frontend
                     runs on wall time, the worklet derives time from frames. A sync layer absorbs part of it,
                     not all.
                 </li>
@@ -2180,18 +2288,19 @@ stack(
 
             <p>
                 The working order is engine first, then a stretch of tutorials, then whatever launch means,
-                and hard performance work last. Sound before platform — an instrument that sounds like a
-                prototype doesn't get saved by infrastructure.
+                and hard performance work last. Sound before platform: an instrument that sounds like a
+                prototype is not saved by infrastructure.
             </p>
 
             <h4>Where to poke</h4>
 
             <p>
-                The demo is at <a href="https://klang.finzo.de">klang.finzo.de</a> — open a built-in song,
+                The demo is at <a href="https://klang.finzo.de">klang.finzo.de</a>: open a built-in song,
                 change a number, hear it change. If you want to read code rather than play with it, the
-                three most interesting files are probably the pattern query machinery in
-                <code>sprudel/src/commonMain/kotlin/lang/</code>, the per-voice strip in
-                <code>audio_be/…/voices/strip/</code>, and the dispatcher in
+                four most interesting places are probably the pattern query machinery in
+                <code>sprudel/src/commonMain/kotlin/lang/</code>, the Ignitor tree that renders every voice in
+                <code>audio_be/src/commonMain/kotlin/ignitor/</code>, the Katalyst chain in
+                <code>audio_be/…/cylinders/katalyst/</code>, and the dispatcher in
                 <code>audio_be/…/PlaybackEngineDispatcher.kt</code>.
             </p>
         </div>
@@ -2211,30 +2320,30 @@ stack(
 
             <ol>
                 <li>
-                    <b>Play with it — and report back, unhinged but constructive.</b> The most useful thing
+                    <b>Play with it and report back, unhinged but constructive.</b> The most useful thing
                     you can tell us is where the abstractions leak: where you tried something reasonable and
                     the system fought you. Second most useful: what surprised you by working.
                 </li>
                 <li>
                     <b>Write a short song.</b> The built-in corpus is small; §11 dreams of a canon. Every
-                    good thirty-cycle piece extends the initial corpus — and stress-tests the DSL surface in
+                    good thirty-cycle piece extends the initial corpus and stress-tests the DSL surface in
                     ways no test suite can.
                 </li>
                 <li>
                     <b>Write tutorials.</b> A growing library of live tutorials exists (§10), every example
-                    playable in the page — but they were written by the people who built the thing, and it shows. If you can
+                    playable in the page, but they were written by the people who built the thing, and it shows. If you can
                     explain without assuming, and make a beginner want the next lesson, that is a
                     contribution no amount of engine work replaces.
                 </li>
                 <li>
                     <b>Author an instrument.</b> The Ignitor DSL (§7) makes an instrument a signal graph.
-                    Pick something the roster lacks — a harmonica, a broken church organ, rain on a tin roof —
+                    Pick something the roster lacks (a harmonica, a broken church organ, rain on a tin roof)
                     and chase its two-to-four acoustic tells.
                 </li>
                 <li>
                     <b>Mix and master the built-in songs.</b> They were balanced by ear at the workbench,
-                    and the Master DSL (§7) has more to give than we ask of it. Take a song, balance its
-                    orbits, stage its master chain — and leave it sounding like a record.
+                    and the Katalyst at the output (§7) has more to give than we ask of it. Take a song,
+                    balance its orbits, stage its master chain, and leave it sounding like a record.
                 </li>
                 <li>
                     <b>Calibrate by ear.</b> The body and vowel resonators (§13) need exactly the
@@ -2242,13 +2351,13 @@ stack(
                     them and saying "the mahogany gets boxy above c5". Bring taste, not patches.
                 </li>
                 <li>
-                    <b>Record a sample library.</b> Recorded for Klang, owned by the project — genuine
+                    <b>Record a sample library.</b> Recorded for Klang, owned by the project: clear
                     provenance for the day any of this goes public, with no licensing shadow over the default
                     catalogue.
                 </li>
                 <li>
                     <b>Argue with §11.</b> The federation API intends to freeze v1 the way Go froze
-                    Go 1 — every exposed field a forever-promise. The cheapest moment to find the design
+                    Go 1, every exposed field a long-term promise. The cheapest moment to find the design
                     mistake is before that, which is now. Tell us whether it is a good idea or a
                     beautifully-designed mistake.
                 </li>
@@ -2262,7 +2371,7 @@ stack(
             <p>
                 One hint before the bigger ones: <b>talk to the authors first.</b> The engine moves fast,
                 several subsystems are mid-rework, and a short conversation saves a long rebase.
-                Der Weg ist das Ziel — but it is more fun in company.
+                Der Weg ist das Ziel, and it is more fun in company.
             </p>
         </div>
     </section>
@@ -2279,7 +2388,7 @@ stack(
             <h3>What this stands on</h3>
 
             <p>
-                §11 proposes credits as protocol — an attribution graph generated from imports, honest by
+                §11 proposes credits as protocol, an attribution graph generated from imports, complete by
                 construction. This project already keeps the habit by hand. What follows is
                 <code>CREDITS.MD</code>, condensed; every layer of Klang has an ancestry, and it is a
                 pleasure to name it.
@@ -2292,20 +2401,22 @@ stack(
                         <td colspan="2">The lineage</td>
                     </tr>
                     <tr>
-                        <td><a href="https://tidalcycles.org">Tidal Cycles</a> — Alex McLean</td>
+                        <td><a href="https://tidalcycles.org">Tidal Cycles</a> · Alex McLean</td>
                         <td>The Haskell live-coding environment that pioneered the cyclic pattern language at the heart
                             of all of this
                         </td>
                     </tr>
                     <tr>
                         <td><a href="https://strudel.cc">Strudel</a></td>
-                        <td>The JavaScript reimagining of Tidal. Klang exists because of Strudel — its open code, open
-                            samples and documentation were the way in. Lineage: Tidal → Strudel → Sprudel
+                        <td>The JavaScript reimagining of Tidal. Klang exists because of Strudel: its open code, open
+                            samples and documentation were the way in, and Klang began as a rebuild of it. The
+                            pattern language's lineage runs Tidal → Strudel → sprudel; the engine under sprudel
+                            grew into the project's own goal, and sprudel is one possible frontend that drives it.
                         </td>
                     </tr>
                     <tr>
                         <td><a href="https://www.youtube.com/@Switch-Angel">Switch Angel</a></td>
-                        <td>The YouTube short of a Strudel session that sparked the whole project — and most of the
+                        <td>The YouTube short of a Strudel session that sparked the whole project, and most of the
                             default drum kit's samples (uzu-drumkit): the kicks, snares and hats you hear first are hers
                         </td>
                     </tr>
@@ -2315,21 +2426,21 @@ stack(
                     </tr>
                     <tr>
                         <td>Vadim Zavalishin</td>
-                        <td><em>The Art of VA Filter Design</em> — the zero-delay-feedback (TPT) state-variable filter
+                        <td><em>The Art of VA Filter Design</em>: the zero-delay-feedback (TPT) state-variable filter
                             behind lowpass / highpass / bandpass / notch
                         </td>
                     </tr>
                     <tr>
-                        <td>Andrew Simper — Cytomic</td>
+                        <td>Andrew Simper · Cytomic</td>
                         <td>The canonical trapezoidal-integrator SVF formulation the implementation follows</td>
                     </tr>
                     <tr>
-                        <td>Vadim Filatov — Obxd</td>
+                        <td>Vadim Filatov · Obxd</td>
                         <td>The diode-pair resonance-saturation idea that warms the filters when driven</td>
                     </tr>
                     <tr>
                         <td>Jezar at Dreampoint</td>
-                        <td>Freeverb — the reverb architecture (public domain)</td>
+                        <td>Freeverb, the reverb architecture (public domain)</td>
                     </tr>
                     <tr>
                         <td>Karplus &amp; Strong</td>
@@ -2341,11 +2452,11 @@ stack(
                     </tr>
                     <tr>
                         <td>Adam Szabo</td>
-                        <td><em>How to Emulate the Super Saw</em> — the JP-8000 analysis behind the super-oscillators
+                        <td><em>How to Emulate the Super Saw</em>: the JP-8000 analysis behind the super-oscillators
                         </td>
                     </tr>
                     <tr>
-                        <td><a href="https://signalsmith-audio.co.uk/writing/2022/limiter/">Geraint Luff</a> —
+                        <td><a href="https://signalsmith-audio.co.uk/writing/2022/limiter/">Geraint Luff</a> ·
                             Signalsmith
                         </td>
                         <td>The lookahead-limiter construction, and the insight that the smoothing must fit inside the
@@ -2354,7 +2465,7 @@ stack(
                     </tr>
                     <tr>
                         <td>Giannoulis, Massberg &amp; Reiss</td>
-                        <td><em>Digital Dynamic Range Compressor Design</em> (JAES 2012) — the compressor's feed-forward
+                        <td><em>Digital Dynamic Range Compressor Design</em> (JAES 2012): the compressor's feed-forward
                             topology
                         </td>
                     </tr>
@@ -2370,7 +2481,7 @@ stack(
                     </tr>
                     <tr>
                         <td>Roland JP-8000 (1997)</td>
-                        <td>The synthesizer that introduced the Super Saw — seven sawtooth oscillators, one centre and
+                        <td>The synthesizer that introduced the Super Saw: seven sawtooth oscillators, one centre and
                             six detuned, in a single voice. The sound that defined trance, and the reason a <code>supersaw</code>
                             lives in every live-coding environment today. Klang's super-oscillators chase that sound, by
                             way of Szabo's analysis above; the implementation is its own
@@ -2378,17 +2489,17 @@ stack(
                     </tr>
                     <tr>
                         <td>Roland TR-808 &amp; TR-909</td>
-                        <td>The drum machines whose voices echo through the bundled sample banks — <code>bank("RolandTR808")</code>
+                        <td>The drum machines whose voices echo through the bundled sample banks: <code>bank("RolandTR808")</code>
                         </td>
                     </tr>
 
                     <tr class="grp">
-                        <td colspan="2">Acoustics — the body-resonator landmarks</td>
+                        <td colspan="2">Acoustics: the body-resonator landmarks</td>
                     </tr>
                     <tr>
                         <td>Fletcher &amp; Rossing · Benade · Sundberg</td>
                         <td><em>The Physics of Musical Instruments</em>, <em>Fundamentals of Musical Acoustics</em>,
-                            <em>The Science of the Singing Voice</em> — the resonance landmarks behind the wood, violin,
+                            <em>The Science of the Singing Voice</em>: the resonance landmarks behind the wood, violin,
                             bell, brass and croon materials. Everything beyond the landmarks is sparse fill, tuned by
                             ear
                         </td>
@@ -2398,7 +2509,7 @@ stack(
                         <td colspan="2">Music theory &amp; samples</td>
                     </tr>
                     <tr>
-                        <td><a href="https://github.com/tonaljs/tonal">Tonal.js</a> — danigb</td>
+                        <td><a href="https://github.com/tonaljs/tonal">Tonal.js</a> · danigb</td>
                         <td>The music-theory library ported to Kotlin as <code>tones</code>, kept MIT to match upstream
                         </td>
                     </tr>
@@ -2422,7 +2533,7 @@ stack(
                     </tr>
                     <tr>
                         <td>The modern browser</td>
-                        <td>Web Audio API, AudioWorklet, Canvas, Web Workers — none of this is possible without what
+                        <td>Web Audio API, AudioWorklet, Canvas, Web Workers, none of this would be possible without what
                             browsers have become
                         </td>
                     </tr>
@@ -2432,12 +2543,12 @@ stack(
                     </tr>
                     <tr>
                         <td>Kotlin &amp; friends</td>
-                        <td>Kotlin Multiplatform, KSP, Coroutines, Serialization, Ktor, Gradle, Kotest — the
+                        <td>Kotlin Multiplatform, KSP, Coroutines, Serialization, Ktor, Gradle, Kotest: the
                             foundation
                         </td>
                     </tr>
                     <tr>
-                        <td>Kraft &amp; Ultra — PeekAndPoke</td>
+                        <td>Kraft &amp; Ultra · PeekAndPoke</td>
                         <td>The project's own open-source UI framework and Kotlin foundations, which the entire
                             interface is built with
                         </td>
@@ -2451,10 +2562,9 @@ stack(
                         <td colspan="2">AI assistance</td>
                     </tr>
                     <tr>
-                        <td><a href="https://claude.ai">Claude</a> — Anthropic</td>
-                        <td>A significant amount of Klang's code was written together with Claude. In §11's vocabulary
-                            this codebase is proudly <em>co-created</em> — declared here in exactly the spirit the
-                            manifest field intends
+                        <td><a href="https://claude.ai">Claude</a> · Anthropic</td>
+                        <td>A significant amount of Klang's code was written together with Claude, and we are glad to
+                            say so here: this codebase is co-created.
                         </td>
                     </tr>
                     </tbody>
@@ -2477,19 +2587,19 @@ stack(
             <p>
                 As of August 2026: roughly 230,000 lines of Kotlin, close to half of them tests.
                 Most of that test weight sits on the three modules where behaviour is subtle and
-                regressions are silent — the pattern language, the scripting language, and the DSP.
+                regressions are silent: the pattern language, the scripting language, and the DSP.
                 The UI shells, the KSP processors and the worklet glue carry few direct tests; they
-                are exercised through what they generate. <code>src</code> is the app itself —
-                pages, tutorials, built-in songs — content more than machinery.
+                are exercised through what they generate. <code>src</code> is the app itself (pages,
+                tutorials, built-in songs), content more than machinery.
             </p>
         </div>
     </section>
 
     <footer class="colophon-end">
         <p>
-            <b>Klangmotor</b> — Copyright © 2025–2026 The Klangmotor Authors.<br/>
+            <b>Klangmotor</b> · Copyright © 2025-2026 The Klangmotor Authors.<br/>
             Licensed under the GNU Affero General Public License v3. The <code>tones</code> module: MIT.<br/>
-            Built in Kotlin Multiplatform. Written August 2026, at pre-alpha.<br/>
+            Built in Kotlin Multiplatform. Written August 2026, revised September 2026, at pre-alpha.<br/>
             Demo: <a href="https://klang.finzo.de">klang.finzo.de</a> ·
             Repo: <a href="https://github.com/PeekAndPoke/klang">github.com/PeekAndPoke/klang</a>
         </p>

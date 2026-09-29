@@ -15,7 +15,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 //
 //  - the Ignitor pitch envelope (`IgnitorDsl.PitchEnvelope`'s field defaults and
 //    `pitchEnvelopeModIgnitor` in `audio_be`, its non-finite sustain too);
-//  - the voice strip's pitch envelope, sprudel's `penv(amount, attack, decay,
+//  - the voice's own pitch envelope, sprudel's `penv(amount, attack, decay,
 //    sustain, release)`, which `VoiceFactory` resolves at note-on.
 //
 // So `penv(24)` and `pitchEnvelope(24)` sweep the same way. The CURVE is not a

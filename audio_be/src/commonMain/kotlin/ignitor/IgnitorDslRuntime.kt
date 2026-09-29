@@ -7,12 +7,10 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.DistortionShape
-import io.peekandpoke.klang.audio_be.LfoShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.distortionShapeAt
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
-import io.peekandpoke.klang.audio_be.lfoShapeAt
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
@@ -27,6 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_DEPTH_SEMITONES
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_RELEASE_SEC
 import io.peekandpoke.klang.audio_bridge.constants.FILTER_ENV_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
+import io.peekandpoke.klang.audio_bridge.constants.TREMOLO_EDGE_SECONDS
 import kotlin.random.Random
 
 /**
@@ -399,8 +398,8 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  * strip, and a pattern writes two of them. Without the gate the other seven each pay a scratch
  * render and a buffer copy per block per voice at their off value, and a nine-stage tail with
  * nothing written costs more than ten times a bare saw. With the gate a plain `sound("saw")` IS a
- * bare saw. The measurements have ONE home, `audio/MEMORY.md`'s entry for this rule, so that a
- * re-measurement never has to be chased through comments.
+ * bare saw. The measurements have ONE home, the gate's entry of 2026-09-20 in
+ * `audio/ref/memory-history.md`, so that a re-measurement never has to be chased through comments.
  *
  * **It is also a NaN GUARDRAIL, and that is the half a reviewer must not weaken.** `SLOT_UNSET`
  * is `Double.NaN`, and the [IgnitorDsl.Param] leaf above reads a NON-FINITE OVERRIDE as unset and
@@ -686,9 +685,9 @@ private fun IgnitorDsl.filterEnvKnob(
 
 // ── The knobs read ONCE at voice build (phase 3 step 3b, 2026-09-25) ──
 //
-// A waveshaper's shape, its oversampling factor, and a tremolo's shape and start phase are chosen
-// once per note, as they always were on both hosts: the shaper and the oversampler are built with
-// the stage, and the start phase SEEDS the LFO's clock. They are knobs so that `classic()` can fill
+// A waveshaper's shape, its oversampling factor, and a tremolo's shape are chosen once per note, as
+// they always were: the shaper and the oversampler are built with the stage, and the shape picks the
+// LFO's oscillator. They are knobs so that `classic()` can fill
 // them from slots. Each is read the leaf-only way [filterEnvDef] reads its knobs: a `Param` or
 // `Constant` leaf gives its value, and anything else has no build-time answer, takes the knob's
 // default and is NOT BUILT, so asking moves no rng draw. None of them is a gate: they choose HOW a
@@ -718,16 +717,47 @@ private fun IgnitorDsl.oversampleStagesKnob(oscParams: Map<String, Double>?, cac
 private fun IgnitorDsl.passesKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
     coercePasses(buildTimeKnobValue(oscParams, cache) ?: 1.0)
 
-/** The LFO waveform a tremolo `shape` knob selects, `LfoShapes.indexAt`'s rule; a non-leaf is `sine`. */
-private fun IgnitorDsl.lfoShapeKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): LfoShape =
-    lfoShapeAt(buildTimeKnobValue(oscParams, cache) ?: LfoShapes.SINE_INDEX.toDouble())
+/** The LFO waveform a tremolo `shape` knob selects, as its index in [LfoShapes] (`indexAt`'s rule); a non-leaf is `sine`. */
+private fun IgnitorDsl.lfoShapeIndexKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Int =
+    LfoShapes.indexAt(buildTimeKnobValue(oscParams, cache) ?: LfoShapes.SINE_INDEX.toDouble())
 
 /**
- * A tremolo's start phase in cycles; a non-leaf is 0. A non-finite value passes through on purpose:
- * `TremoloCore` folds the seed with `wrapPhase`, which turns it into 0, the strip's own rule.
+ * The tremolo's LFO: the oscillator of the shape at [lfoShapeIndex] (an index into [LfoShapes.names]),
+ * running at [rate] with no analog drift. The square, sawtooth and ramp get a soft edge of
+ * [TREMOLO_EDGE_SECONDS] (`flankSamples` on the square, `resetSamples` on the other two); the sine and
+ * the triangle have no edge. Shielded from pitch modulation: a vibrato on the voice must not move it.
  */
-private fun IgnitorDsl.startPhaseKnob(oscParams: Map<String, Double>?, cache: IgnitorBuildCache): Double =
-    buildTimeKnobValue(oscParams, cache) ?: 0.0
+private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Ignitor {
+    val analog = ConstantIgnitor(0.0)
+    val edgeSamples = TREMOLO_EDGE_SECONDS * sampleRate
+
+    // The catalogue's names ARE the oscillator names; `sine` is also every index `indexAt` falls back to.
+    val lfo = when (LfoShapes.names[lfoShapeIndex]) {
+        "triangle" -> Ignitors.triangle(rate, analog)
+        "square" -> Ignitors.pulze(rate, ConstantIgnitor(0.5), analog, flankSamples = edgeSamples)
+        "sawtooth" -> Ignitors.sawtooth(rate, analog, resetSamples = edgeSamples)
+        "ramp" -> Ignitors.ramp(rate, analog, resetSamples = edgeSamples)
+        else -> Ignitors.sine(rate, analog)
+    }
+
+    return ModBlockingIgnitor(lfo)
+}
+
+/**
+ * The tremolo's gain: [tremoloLfo] mapped by `range(1 - depth, 1)`, so the gain is `1 - depth * (1 - level)` with
+ * `level = (osc + 1) / 2`. The `Tremolo` arm multiplies it into the signal. The rate is read per block (the
+ * oscillator's frequency); a block-constant depth per block, a signal depth per sample (`range`'s signal-bound path).
+ *
+ * Every depth is floored at 0 (`1 - max(depth, 0)`), so any depth at or below 0 passes the signal unchanged
+ * (the gain is exactly 1), whatever spelled it: a leaf the gate did not catch, arithmetic, a signal, a variant, a
+ * hint. For a block-constant depth the floor and `1 - depth` fold to one value per block and `range` keeps its
+ * constant-bound path.
+ */
+internal fun tremoloGain(rate: Ignitor, depth: Ignitor, lfoShapeIndex: Int, sampleRate: Int): Ignitor {
+    val floored = depth.max(ConstantIgnitor(0.0))
+
+    return tremoloLfo(lfoShapeIndex, rate, sampleRate).range(ConstantIgnitor(1.0).minus(floored), ConstantIgnitor(1.0))
+}
 
 /**
  * The curve an envelope's curve knob selects (phase 3 step 3c): `AdsrCurves.curveAt`'s rule, so a
@@ -1429,22 +1459,28 @@ private fun IgnitorDsl.buildRaw(
         )
 
         // GATE ROW `tremolo`: DEPTH at or below 0.0, or unset. The rate is not a gating knob: a
-        // tremolo at rate 0 is a static gain, not an absence. Nor are shape, skew and phase.
+        // tremolo at rate 0 is a static gain, not an absence. Nor is the shape.
         //
-        // Build order is rng draw order: inner, rate, depth as before, then the skew (read per
-        // block, so built); the shape and the start phase are read once, leaf-only, and build
-        // nothing. A BUILT tremolo reports that it gates its own output (see `BuiltIgnitor`).
+        // A composition, not a primitive: the oscillator of the shape at the rate, mapped to a gain from
+        // `1 - depth` to 1 and multiplied into the inner signal. Build order is rng draw order: inner,
+        // rate, depth; the shape is read once, leaf-only, and builds nothing. At render, the SINE LFO takes
+        // three draws off the voice's stream at its first block (its drift lane is constructed even at
+        // analog 0), after the inner signal's, as a hand-built `Osc.sine` does; so a noise under a sine
+        // tremolo draws different dice than it would without one. A BUILT tremolo reports that it gates its
+        // own output (see `BuiltIgnitor`).
         is IgnitorDsl.Tremolo -> if (depth.gatedOff(oscParams, cache) { it <= 0.0 }) {
             inner.passThrough()
         } else {
             spineGatesOutput = true
 
-            inner.withMod().tremolo(
+            val signal = inner.withMod()
+            val lfoShapeIndex = shape.lfoShapeIndexKnob(oscParams, cache)
+
+            signal * tremoloGain(
                 rate = rate.noMod(),
                 depth = depth.noMod(),
-                skew = skew.noMod(),
-                shape = shape.lfoShapeKnob(oscParams, cache),
-                startPhase = phase.startPhaseKnob(oscParams, cache),
+                lfoShapeIndex = lfoShapeIndex,
+                sampleRate = cache.sampleRate,
             )
         }
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(wet.noMod(), feedback.noMod(), tone.noMod(), pitches, floor.noMod())

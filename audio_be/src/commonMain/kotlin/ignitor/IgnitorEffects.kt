@@ -14,8 +14,6 @@ import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.HALF_PI
-import io.peekandpoke.klang.audio_be.LfoShape
-import io.peekandpoke.klang.audio_be.TremoloCore
 import io.peekandpoke.klang.audio_be.fastSin
 import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
@@ -530,102 +528,6 @@ fun Ignitor.phaser(
         ParamIgnitor("sweep", sweep),
         ParamIgnitor("floor", floor),
     )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Tremolo
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Amplitude modulation (tremolo) via an LFO. Processes per-sample.
- *
- * Modulates the volume up and down rhythmically, creating a pulsing effect.
- * Rate and depth are read once per block (control rate). Bypasses when depth <= 0.
- *
- * @param rate LFO speed in Hz. 0.0 = static, 2.0 = gentle pulse, 5.0 = moderate,
- *   10.0+ = fast chopping. Typical range: 1.0–8.0. Default: no default (required).
- * @param depth Modulation intensity. 0.0 = bypass (no tremolo), 0.5 = subtle,
- *   1.0 = full depth (volume drops to zero). Typical range: 0.2–0.8.
- *   Default: no default (required).
- */
-fun Ignitor.tremolo(
-    rate: Ignitor,
-    depth: Ignitor,
-): Ignitor = TremoloIgnitor(this, rate, depth, skew = null, shape = LfoShape.SINE, startPhase = 0.0)
-
-/**
- * The tremolo with every knob the voice strip's had (phase 3 step 3b, 2026-09-25), the form the DSL
- * runtime builds. [shape] and [startPhase] (in cycles) are resolved once, at build; [skew] is read
- * once per block like [rate] and [depth], and `null` means a constant 0 without the read.
- */
-internal fun Ignitor.tremolo(
-    rate: Ignitor,
-    depth: Ignitor,
-    skew: Ignitor?,
-    shape: LfoShape,
-    startPhase: Double,
-): Ignitor = TremoloIgnitor(this, rate, depth, skew, shape, startPhase)
-
-/**
- * The Ignitor host of [TremoloCore], the one tremolo law (the voice strip's, which retired in phase 3
- * step 9): this class only adapts the node's contract (rate, depth and skew read once per block,
- * the clock kept running through a bypassed block).
- */
-private class TremoloIgnitor(
-    private val upstream: Ignitor,
-    private val rate: Ignitor,
-    private val depth: Ignitor,
-    private val skew: Ignitor?,
-    shape: LfoShape,
-    startPhase: Double,
-) : Ignitor {
-    private val core = TremoloCore(shape, startPhase, skew = 0.0)
-
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-        ctx.scratchBuffers.use { input ->
-            upstream.generate(input, freqHz, ctx)
-
-            val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-            val depthVal = Ignitors.readParam(depth, freqHz, ctx)
-            val end = ctx.windowEnd
-            // A non-finite rate reads as phase 0 every sample (wrapPhase) = a steady 1 - depth/2
-            // gain on the sine (a level change, not silence), healing the moment the rate returns.
-            val phaseInc = TremoloCore.increment(rateVal, ctx.sampleRate)
-
-            if (skew != null) {
-                core.setSkew(Ignitors.readParam(skew, freqHz, ctx))
-            }
-
-            if (depthVal <= 0.0) {
-                // The LFO is a clock (ledger W2, the D1/D2 shape one file over): it advances
-                // through a depth gap by the whole window, so a modulated depth dipping to 0
-                // resumes exactly where an ungated LFO would be, not at a block-quantised
-                // stale phase. A zero-length window advances nothing by construction.
-                core.skip(ctx.length, phaseInc)
-
-                for (i in ctx.offset until end) {
-                    buffer[i] = input[i]
-                }
-                return@use
-            }
-
-            core.apply(input, buffer, ctx.offset, end, phaseInc, depthVal)
-        }
-    }
-}
-
-/**
- * Amplitude modulation / tremolo (convenience overload with fixed values).
- *
- * @param rate LFO speed in Hz. Typical range: 1.0–8.0.
- * @param depth Modulation intensity. 0.0 = bypass, 1.0 = full depth.
- */
-fun Ignitor.tremolo(
-    rate: Double,
-    depth: Double,
-): Ignitor {
-    if (depth <= 0.0) return this
-    return tremolo(ParamIgnitor("rate", rate), ParamIgnitor("depth", depth))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

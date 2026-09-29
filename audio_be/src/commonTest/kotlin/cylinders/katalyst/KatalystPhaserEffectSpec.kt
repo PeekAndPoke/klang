@@ -18,7 +18,7 @@ import kotlin.math.sin
 
 /**
  * The contract of [KatalystPhaserEffect] (Katalyst 5c-9, `docs/plans/knob-glide.md` and
- * `docs/tasks/katalyst-dsl.md` step 5c).
+ * `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c).
  *
  * Every oracle here is written out by hand from the decided law, never read back from the stage:
  * the glide is the straight line from where the knob stands to its target over

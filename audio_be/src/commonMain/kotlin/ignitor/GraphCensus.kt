@@ -389,7 +389,15 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
 
             // envelopes and modulation effects, in place
             is IgnitorDsl.Adsr -> inPlace(64)
-            is IgnitorDsl.Tremolo -> inPlace(32)
+            // the tremolo is a composition: its LFO oscillator writes a block, `range(1 - depth, 1)` maps it
+            // in place, and the multiply reads the signal and the gain and writes one. Every depth is floored
+            // (`1 - max(depth, 0)`); a control-rate depth folds that to one value per block, a signal depth adds
+            // the floor and the `1 - depth` pass (each in place over a scalar side) and makes the range read both bounds
+            is IgnitorDsl.Tremolo -> if (isScalar(node.depth)) {
+                source() + GraphCensus(1, 2, 0) + GraphCensus(1, 3, 0)
+            } else {
+                source() + inPlace() + inPlace() + GraphCensus(1, 2 + 2, 0) + GraphCensus(1, 3, 0)
+            }
             is IgnitorDsl.Phaser -> inPlace(4 * 16 + 32)
             is IgnitorDsl.Shimmer -> GraphCensus(1, SHIMMER_TRAFFIC, SHIMMER_BYTES)
 

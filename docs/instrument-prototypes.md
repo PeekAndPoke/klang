@@ -329,6 +329,31 @@ let hat = Osc.whitenoise()
 
 ---
 
+## Pads
+
+### Analog pad (from the drift listening pair, 2026-09-29)
+
+The maintainer liked this pad in listening pair `10-analog-drift-a` (the "before", today's drift constants), and it
+is kept here to become an instrument later. Today it is a pattern line on built-in sounds, not yet an Ignitor tree.
+Rendered at a very slow tempo (one cycle is 13 s, rpm 4.615), so each chord holds.
+
+The resonant saw pad (the second half of the pair, from 15 s):
+
+```javascript
+note("[a2,e3,a3,c4]").s("saw").lpf(freq = 700, q = 6).adsr(0.4, 0.1, 1.0, 1.0).analog(10).gain(0.07)
+```
+
+The supersaw chord it followed (the first half, 0 to 14 s), in case that was the one:
+
+```javascript
+note("[c3,g3,c4,e4,g4]").s("supersaw").lpf(3000).adsr(0.4, 0.1, 1.0, 1.0).analog(10).gain(0.4)
+```
+
+What makes it: the high `analog(10)` (pitch drift on each saw, and the cutoff drifting with it), the resonant
+lowpass at 700 Hz with `q = 6`, and the slow attack and long release. As an instrument, the natural shape is
+`Osc.saw()` (or a few detuned saws) with `analog`, a `lowpass(700, 6)` and `.classic()` last, so a pattern can still
+move the cutoff.
+
 ## Design Principles
 
 ### Waveform choice by instrument family

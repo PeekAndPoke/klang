@@ -238,11 +238,8 @@ object ClassicVoiceRig {
         // ── tremolo ──
         ClassicRow("tremolo depth 0.5 sync 4", mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0)),
         ClassicRow(
-            "tremolo square, skew 0.3, phase 0.25",
-            mapOf(
-                "tremolo.depth" to 1.0, "tremolo.sync" to 3.3, "tremolo.shape" to LfoShapes.indexOf("square"),
-                "tremolo.skew" to 0.3, "tremolo.phase" to 0.25,
-            ),
+            "tremolo square",
+            mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 3.3, "tremolo.shape" to LfoShapes.indexOf("square")),
         ),
 
         // ── the envelope ──

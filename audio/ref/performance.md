@@ -206,6 +206,44 @@ After (`audio_be/.../ignitor/Ignitors.kt` — all five now share `DetunedStackIg
   hoists each voice's fields into locals (register residency); the per-voice
   render is a `final override` so the shape loop stays monomorphic.
 
+## Rules learned by measurement (2026-09)
+
+The records behind each of these are in `audio/ref/memory-history.md` (the 2026-09-07 to 2026-09-16 entries).
+
+- **Loop shape beats block-pass count.** A multi-voice or multi-partial oscillator renders voice-major (outer loop
+  over voices or partials, inner tight loop over samples with the phase in a local), accumulating into the buffer.
+  A sample-major loop that keeps its phase in an array was slower than twenty-one separate block passes.
+- **On Kotlin/JS, hoist every per-block value into a LOCAL before the sample loop.** Reading a container's fields
+  through an inline method inside the loop is free on the JVM and cost a drifting supersaw 16 percent on V8
+  (`DriftLanes`: `ownLane(n)`, `sharedWalk()`, the weights as locals, one inline `driftStep`). `copyInto` allocates
+  a typed-array view per call on JS: use a plain loop in a hot path.
+- **Fast math, `DspUtil.kt`**: `fastSin` (degree-11 polynomial on the folded half period, bound
+  `FAST_SIN_MAX_ERROR` 1e-10), `fastExp2` (table plus polynomial with exact ends, `fastExp2(n) = 2^n` bit for bit,
+  bound `FAST_EXP2_MAX_REL_ERROR` 1e-10) and `fastExp(x) = fastExp2(x * log2 e)` replace the library calls per
+  sample in the oscillators, the modulators, the envelopes and the compressor. **Contract: wrap the phase first.**
+  `fastSin` is exact only a quarter period past `[0, 2pi)` and diverges beyond, so every accumulator that can step
+  a full period per sample wraps per sample through the hoisted `safeWrap = !(abs(inc) < TWO_PI)` (guards:
+  `SuperSineOutOfRangePhaseSpec`, `ModulatorPhaseWrapSpec`). Still on the library: `accelerate` (one `pow` per
+  block), note-on detune, the generic `pow`/`exp` ignitors, the phaser LFO and the phase-pool selection. No
+  `fastLn`: measured under 1 percent of a song.
+- **The analog drift steps once per block** and ramps across it; the drift is free now, and its time constants
+  follow the block rate (so the pinned block size is part of its sound).
+- **Measure a fold's ceiling by deleting the nodes before building it** (the Eq and shaper gain folds were won't
+  implement: deleting every level `mul` and `Drive` bought under 4 percent, while oversampling was 63 percent of
+  the guitar rig and the polyphase decimator then paid).
+
+### Measuring the engine
+
+- **`./gradlew runSongBenchmark --args=ledger`** renders the six instrument pieces of Der Schmetterling solo on the
+  frozen text (`src/jvmMain/kotlin/FrozenPieces.kt`) and on the live text, and appends a row per piece to
+  `docs/benchmarks/ledger.md`. Run it after every optimization round: within one piece and one machine only the
+  engine moves between rows. The other suites are listed in `src/jvmMain/kotlin/SongBenchmarkMain.kt`.
+- **`GraphCensus`** (`ignitor/GraphCensus.kt`, diagnostic, never on the render path) counts what a note asks of
+  the engine (passes, traffic, held state). It does not model the build gate: every `classic()` stage counts as
+  built, set or not.
+- **`KLANG_BENCH_FILTER=guitar-rig`** runs only the `guitar-rig*` rows of `audio_benchmark`'s `IgnitorBenchmark`.
+- A timing claim needs interleaved runs and a control row: `audio/ref/verification.md`.
+
 ## Adjacent rules (linked, not duplicated here)
 
 - **Boxed types are banned** — `Long`, `ULong`, `Byte`, `Short`, `UByte`,

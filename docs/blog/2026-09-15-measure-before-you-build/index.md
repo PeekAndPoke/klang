@@ -57,7 +57,7 @@ The rhythm rig of Der Schmetterling went into the ignitor benchmark as an inline
 
 *[IgnitorBenchmark.kt at v0.3.14](https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_benchmark/src/commonMain/kotlin/IgnitorBenchmark.kt#L375-L422)*
 
-Six rows: the string alone, the full rig, the rig without its level knobs, without its drives, without both, and, because it cost one more switch, the rig with every shaper at 1x. The rows are cost rows, not sound rows; without the drives the shapers see a quieter signal, and nobody listened to them. A filter runs only the matching rows, a few minutes per platform. One honest limit: the third helper opens every equalizer explicitly, so a deleted level knob does not let two equalizers merge into one. The no-knobs row bounds the multiply passes, which is what the fold would remove; the extra fusion it would allow is not in the number, and the filter passes it would save are the cheap kind, as the last row shows.
+Six rows: the string alone, the full rig, the rig without its level knobs, without its drives, without both, and, because it cost one more switch, the rig with every shaper at 1x. The rows are cost rows, not sound rows; without the drives the shapers see a quieter signal, and nobody listened to them. A filter runs only the matching rows, a few minutes per platform. One limit: the third helper opens every equalizer explicitly, so a deleted level knob does not let two equalizers merge into one. The no-knobs row bounds the multiply passes, which is what the fold would remove; the extra fusion it would allow is not in the number, and the filter passes it would save are the cheap kind, as the last row shows.
 
 ![the six guitar-rig rows on node](rig-ablation.png)
 
@@ -128,7 +128,7 @@ A distortion stage in Klangmotor is a waveshaper wrapped in an oversampler, so t
 
 *[Oversampler.kt at v0.3.13](https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/Oversampler.kt#L148-L206)*
 
-For a 4x stage that is six pushes and three of those walks per input sample, before a single multiply. The block is already sitting in a buffer with every sample the FIR needs at a fixed distance from the output. There was never a reason to push it anywhere.
+For a 4x stage that is six pushes and three of those walks per input sample, before a single multiply. The block is already sitting in a buffer with every sample the FIR needs at a fixed distance from the output. There was no reason to push it anywhere.
 
 ## The same taps, read in place
 
@@ -204,7 +204,7 @@ The house review loop puts two fresh reviewers on every engine change, and both 
 | pluck, distortion at 4x | 13.4 | 10.1 | -25% |
 | the rhythm guitar rig | 53.2 | 44.3 | -17% |
 
-The guitar's oversampling share went from 22 µs to 12. Every oversampled stage in the engine took the change: the shaper on the voice doors, and the shaper, the crusher and the rate reducer on the strip. None of them sounds different, because none of them computes anything different.
+The guitar's oversampling share went from 22 µs to 12. Every oversampled stage in the engine took the change, the shaper an instrument places in its own tree and the shaper behind the pattern's per-note doors alike, since all of them run through the one `Oversampler`. None of them sounds different, because none of them computes anything different.
 
 Sound cost: none. The output is bit-identical to the ring's for every block length, and the specification holds the old implementation as its witness.
 
@@ -212,7 +212,7 @@ Sound cost: none. The output is bit-identical to the ring's for every block leng
 
 The cheapest measurement is the one that says no. A benchmark row that deletes a node costs one line and a minute, and it bounds from above everything a fold of that node could ever buy. Ten loop variants in the equalizer would have been built, reviewed and mutation-checked for a rounding error's worth of time. The optimizer plan carries both steps as won't-implement with the six rows attached, so the next person does not have to redo the argument.
 
-And the number you were sent to look at is not always the number. The request named the filter stages; the census agreed there were many; the rows said the filters were cheap and the oversampling was not. A census counts passes, a benchmark counts microseconds, and when they disagree the microseconds win.
+And the number we were sent to look at was not the number this time. The request named the filter stages; the census agreed there were many; the rows said the filters were cheap and the oversampling was not. A census counts passes, a benchmark counts microseconds, and when they disagree the microseconds win.
 
 ## References
 

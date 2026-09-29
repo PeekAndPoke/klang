@@ -192,9 +192,9 @@ class AnalogDriftSpec : StringSpec({
         // slack — a ceiling that far above the value guards nothing.
         //
         // These are a TUNING RECORD, not a regression alarm. A deliberate retune is expected to
-        // trip them: raising `driftRelToOsc` past 0.5 (the ratio-inversion experiment in
-        // docs/tasks/audio-bridge-constants.md §6) breaks `filterDriftPeak` by design. That is the
-        // intended workflow — move the bound WITH the value and say why, don't widen it in advance.
+        // trip them: the filter drift ratio's raise from 0.25 to 2.0 (maintainer, 2026-09-29) broke
+        // `filterDriftPeak` by design and moved its bound with it. That is the intended workflow:
+        // move the bound WITH the value and say why, don't widen it in advance.
         // drivePerAnalog has no cents budget (it scales filter damping, not pitch), so it gets a
         // flat pin instead.
         //
@@ -210,7 +210,7 @@ class AnalogDriftSpec : StringSpec({
 
         oscPeak shouldBeLessThan 3.5             // ±3 cents pitch (unchanged since 06-17)
         filterOffsetPeak shouldBeLessThan 2.0    // ±~1 cent  (was ±5 at 0.001, ±15 at 0.003)
-        filterDriftPeak shouldBeLessThan 1.5     // ±0.75 cents (was ±7.5 at 2.5, ±15 at 5.0)
+        filterDriftPeak shouldBeLessThan 6.5     // ±6 cents (was ±0.75 at 0.25, ±7.5 at 2.5, ±15 at 5.0)
 
         // Eyeball table across the range people actually use (analog 1–8).
         for (a in listOf(1.0, 2.0, 3.0, 5.0, 8.0)) {

@@ -83,9 +83,11 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   NaN (self-unequal, so a raw compare never settles), what is STORED afterwards, and does the
   mismatch branch allocate. The rule for the code: compare and store SUBSTITUTED values, never the
   raw input. A change that touches one such stage asks the reviewer to sweep the others.
-- **A claim about what existing code DOES is verified by reading it before it is written anywhere**
-  (2026-09-19, rewritten 2026-09-24 after the third recurrence, ledger): a plan, a task doc, a brief, a
-  reviewer's remark, a fix round's KDoc, and a table written during a design walk with the maintainer
+- **A claim about what existing code DOES, or about a fact a record holds (a count, a number, a status),
+  is verified by reading the code or the record before it is written anywhere** (2026-09-19, rewritten
+  2026-09-24 after the third recurrence, widened 2026-09-28 to facts after a writer's doubt about two counts
+  went into public text unverified and turned both wrong, ledger): a plan, a task doc, a brief, a reviewer's
+  remark, a worker's doubt, a fix round's KDoc, and a table written during a design walk with the maintainer
   alike. The walk is where it keeps escaping, because a decision is being made and the code is not open:
   write the decision, and mark any sentence about current behaviour UNVERIFIED until someone has read
   the code, then brief the implementer to confirm or refute it before building on it. A correction of

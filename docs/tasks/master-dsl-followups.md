@@ -162,7 +162,7 @@ the song's gain into it.
 - Shipped plan + full review history: [
   `../tasks-archive/2026-08/20260803-master-dsl.md`](../tasks-archive/2026-08/20260803-master-dsl.md)
 - Foundation: [`../tasks-archive/2026-09/20260904-per-playback-engine.md`](../tasks-archive/2026-09/20260904-per-playback-engine.md) §H
-- Next in the same family: [`katalyst-dsl.md`](katalyst-dsl.md) — follows this application-path and effect-reuse
+- Next in the same family: [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md) (built by 2026-09-20), which follows this application-path and effect-reuse
   precedent
 - [`../tasks-archive/2026-09/20260927-resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) — owns item 3
 - [`auto-mix-advisor.md`](future/auto-mix-advisor.md): wanted item 5 (the master `eq` stage, done 2026-09-28) for its closed-loop phase

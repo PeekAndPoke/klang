@@ -78,7 +78,7 @@ generalizes to per-orbit Katalyst compressors later.
 
 What it answers at a glance: is the limiter working at all · how many dB on kick hits · does GR return to 0 between
 beats (breathing) or stay depressed (the measured 1.25 dB @ 100 ms pump — see
-[`bugfix-master-limiter-surge.md`](bugfix-master-limiter-surge.md); the pump decision itself was taken 2026-08-07) · did a master `gain` stage
+[`20260929-bugfix-master-limiter-surge.md`](../tasks-archive/2026-09/20260929-bugfix-master-limiter-surge.md), closed 2026-09-29 as not audible; the pump decision itself was taken 2026-08-07) · did a master `gain` stage
 change move GR from "occasional −2 dB" to "pinned −6 dB".
 
 It is also the trust indicator for meter 2.1: a program-dependent limiter ducks the low-heavy moments hardest, so under

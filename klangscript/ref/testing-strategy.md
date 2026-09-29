@@ -47,5 +47,4 @@ class MyFeatureTest : StringSpec({
 
 ## Test Count Baseline
 
-- 735 tests passing as of 2026-02-17
-- If count drops, a test was broken — do not commit
+- If the test count drops between runs, a test was broken; do not commit.

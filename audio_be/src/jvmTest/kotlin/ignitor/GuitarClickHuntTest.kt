@@ -551,8 +551,8 @@ class GuitarClickHuntTest : StringSpec({
 // `y[n] = x[n] - x[n-1] + α·y[n-1]` with α=0.995 — its impulse response is essentially
 // a differential filter, so a square-wave input edge of magnitude 2 produces an output
 // peak of ±2 (the audible click on the rhythm pattern). This is documented as the
-// 2026-04-27 trade-off (see audio/MEMORY.md). The fixes here keep DC-blocking but
-// remove or bound the 2x edge response.
+// 2026-04-27 trade-off (see the numerical safety entry of that date in `audio/ref/memory-history.md`).
+// The fixes here keep DC-blocking but remove or bound the 2x edge response.
 
 internal enum class DistortVariant {
     /** Current behaviour. Reference baseline. */

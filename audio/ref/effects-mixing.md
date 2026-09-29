@@ -79,6 +79,9 @@ voice's pitch stage; `gain`/`pan` in its send stage.
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
 | `KatalystDuckEffect`       | `Ducking`       | `duck.orbit` names a source and `duck.depth` above 0             |
 
+How each stage switches and glides, when an orbit may deactivate, the chain swap and the output host (`MasterBus`):
+`audio/ref/katalyst.md`.
+
 `body`/`vowel` moved from the per-voice filter chain to the orbit bus (2026-07-03) — an 8-band SVF bank
 per voice became one per orbit; see `docs/tasks/body-vowel-to-orbit-katalyst.md`.
 

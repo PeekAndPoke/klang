@@ -268,7 +268,7 @@ sealed interface IgnitorDsl {
         /** The lowpass stage: `lpf.freq`, `lpf.q`, `lpf.passes`, `lpf.env` and its four stages. */
         val lpf: PassFilterSlots = PassFilterSlots("lpf")
 
-        /** The tremolo stage: `tremolo.depth`, `tremolo.sync`, `tremolo.shape`, `tremolo.skew`, `tremolo.phase`. */
+        /** The tremolo stage: `tremolo.depth`, `tremolo.sync`, `tremolo.shape`. */
         val tremolo: TremoloSlots = TremoloSlots()
 
         /** The amplitude envelope: `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`, `adsr.on`. */
@@ -1995,31 +1995,22 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change.
+     * Tremolo effect: a pulsing volume change. At voice build it becomes an oscillator of [shape] at [rate]
+     * (no analog drift; the square, sawtooth and ramp get a 16 ms soft edge, `TREMOLO_EDGE_SECONDS`), mapped
+     * to a gain from `1 - depth` to 1 and multiplied into the signal.
      *
-     * The LFO law is the voice strip's (`TremoloCore` in the backend): at every [shape], [skew] and
-     * [phase] this node rendered what the strip's tremolo rendered, bit for bit, which is what let
-     * `classic()` rebuild it (phase 3 step 3b, 2026-09-25).
-     *
-     * @param rate LFO rate in Hz, read once per block. Default 5.0.
-     * @param depth modulation depth, 0 to 1, read once per block; at or below 0 the tremolo passes the
-     *   signal through and its clock keeps running. Default 0.5.
+     * @param rate LFO rate in Hz, read once per block. A negative rate runs the oscillator backwards, and its
+     *   soft edges then go instant (the edge length goes negative), so the square, sawtooth and ramp click, and
+     *   the sawtooth and ramp also lose amplitude (a peak of about 0.85 at -5 Hz). Default 5.0.
+     * @param depth modulation depth, 0 to 1. A leaf at or below 0 (or unset) builds no stage and runs no
+     *   oscillator. A moving depth is read per sample and floored at 0: wherever it is at or below 0 the
+     *   signal passes unchanged, as with a fixed depth at or below 0. Default 0.5.
      * @param shape the LFO waveform as an INDEX into [LfoShapes.names] (`sine`, `triangle`, `square`,
      *   `sawtooth`, `ramp`). Both doors take a NAME (the script door also a number or a slot). **Read
      *   ONCE, at voice build**, leaf-only (a non-leaf is `sine` and is not built); the index rounds to
      *   the nearest position, and a non-finite, negative or past-the-end one is `sine`, as an unknown
-     *   name is. Default: `sine` (index 0).
-     * @param skew -1 to +1, 0 symmetric: positive keeps the LFO HIGH for more of the cycle, negative LOW,
-     *   on every shape. A non-finite one reads as symmetric. Default 0.0. **Read once per block and held**
-     *   for it: the skew warps the unwarped phase accumulator, which is never remapped (that keeps the
-     *   LFO locked to the beat, ledger W2), so a MOVING skew steps the gain at every block edge. The
-     *   step is about `depth * pi * deltaSkew / 2` mid-range and grows as `0.5 / duty` toward
-     *   |skew| = 1; a full-range skew moving at 2 Hz on a 5 Hz sine at depth 1 steps by up to about 0.19,
-     *   a zipper at the block rate (344 Hz at 128 frames). A constant skew, which is every slot
-     *   `classic()` writes, never steps.
-     * @param phase where in its own cycle the LFO starts, in cycles (0 to 1 is one cycle; 3.25 is a
-     *   quarter). **Read ONCE, at voice build** (it seeds the clock), leaf-only (a non-leaf is 0 and
-     *   is not built); a non-finite one is 0. Default 0.0.
+     *   name is. Default: `sine` (index 0). Above about 31.25 Hz the 16 ms edges fill the whole cycle, so
+     *   `square`, `sawtooth` and `ramp` all become the same symmetric triangle (only the start differs).
      */
     @WireName("tremolo")
     data class Tremolo(
@@ -2027,12 +2018,10 @@ sealed interface IgnitorDsl {
         val rate: IgnitorDsl = Constant(5.0),
         val depth: IgnitorDsl = Constant(0.5),
         val shape: IgnitorDsl = Constant(LfoShapes.SINE_INDEX.toDouble()),
-        val skew: IgnitorDsl = Constant(0.0),
-        val phase: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
-            shape.collectParams(out); skew.collectParams(out); phase.collectParams(out)
+            shape.collectParams(out)
         }
     }
 
@@ -2123,7 +2112,7 @@ sealed interface IgnitorDsl {
      *
      * The level is the engine's one envelope law (`EnvelopeCore` in `audio_be`, decision D3), the
      * chain `adsr`'s: fractional attack and decay frame counts (`seconds * sampleRate` as a Double).
-     * The voice strip's pitch envelope (sprudel's `penv`) is a host of the same law with the same
+     * The voice's own pitch envelope (sprudel's `penv`) is a host of the same law with the same
      * defaults (`constants/PitchEnvelopeDefaults.kt`), so the two sweep alike.
      *
      * @param semitones pitch shift at envelope peak, in SEMITONES (`2^(semitones·env/12)`):
@@ -2883,27 +2872,21 @@ fun IgnitorDsl.phaser(wet: Double, rate: Double, center: Double = 1000.0, sweep:
 
 /**
  * Applies a tremolo (amplitude modulation) at the given LFO [rate] in Hz and [depth], with the LFO's
- * [shape] (a name from [LfoShapes], converted to its index), [skew] (-1 to +1) and start [phase] in
- * cycles. See [IgnitorDsl.Tremolo] for each knob.
+ * [shape] (a name from [LfoShapes], converted to its index). See [IgnitorDsl.Tremolo].
  *
- * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape`, `skew` and `phase` on
- * a builder: a recorded two-door asymmetry, the filter doors' precedent (`audio_bridge` cannot see the
- * script builders; the flat door is a superset of the builder). A slot in any knob is written through
- * the node (phase 3 step 3b, 2026-09-25).
+ * FLAT, where the script door is `tremolo(rate, depth, configure)` with `shape` on a builder: a recorded
+ * two-door asymmetry, the filter doors' precedent (`audio_bridge` cannot see the script builders; the
+ * flat door is a superset of the builder). A slot in any knob is written through the node.
  */
 fun IgnitorDsl.tremolo(
     rate: Double,
     depth: Double,
     shape: String = "sine",
-    skew: Double = 0.0,
-    phase: Double = 0.0,
 ) = IgnitorDsl.Tremolo(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
     depth = IgnitorDsl.Constant(depth),
     shape = IgnitorDsl.Constant(LfoShapes.indexOf(shape)),
-    skew = IgnitorDsl.Constant(skew),
-    phase = IgnitorDsl.Constant(phase),
 )
 
 /**

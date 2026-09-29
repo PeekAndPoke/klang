@@ -74,6 +74,10 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
 | The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |
 | KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
+| The Katalyst chain's laws: switching, knob glides, orbit deactivation, chain swap, the output host | `ref/katalyst.md` |
+| Envelope law and knobs, the voice rng and its draw order                           | `ref/voice-synthesis.md`   |
+| How an engine change is proven: identity renders, controls, metric floors, oracle specs | `ref/verification.md` |
+| The full dated record of `MEMORY.md` up to 2026-09-29 (history, not read by default) | `ref/memory-history.md` |
 | Samples registry, audio decoders, URL caching (audio_fe)                           | `ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX`, framework precedents | `ref/numerical-safety.md`  |
 | Performance rules (no SAM Ignitors, no per-block alloc, JS hot-path patterns)      | `ref/performance.md`       |

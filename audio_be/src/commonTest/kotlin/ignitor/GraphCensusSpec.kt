@@ -7,13 +7,16 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.assertions.withClue
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.distort
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.tremolo
 
 /**
  * The census on hand-counted graphs: each row states the passes and the buffer traffic a reader
@@ -184,5 +187,43 @@ class GraphCensusSpec : StringSpec({
         }
         GraphCensus.of(IgnitorDsl.SuperSaw(), params = mapOf("voices" to 13.0)).passes shouldBe 13
         GraphCensus.of(IgnitorDsl.SuperSaw()).passes shouldBe 8
+    }
+
+    "a tremolo is its composition: the LFO source, the range, the multiply; a signal depth adds its floor and 1 - depth" {
+        for (shape in LfoShapes.names) {
+            withClue("$shape, a constant depth") {
+                // the saw (1 pass, 1 write) + the LFO (1, 1) + range in place (1, 2) + the multiply (1, 3)
+                GraphCensus.of(saw.tremolo(4.0, 0.5, shape = shape)).let {
+                    it.passes shouldBe 4
+                    it.traffic shouldBe 7
+                    it.bytes shouldBe 64 + 64
+                }
+            }
+
+            withClue("$shape, a signal depth") {
+                // + the depth's own sine (1, 1), max(depth, 0) in place (1, 2), 1 - depth in place (1, 2), and the
+                // range reads both bounds (1, 2 + 2)
+                val depth = IgnitorDsl.Sine(freq = c(2.0))
+                val node = IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = depth, shape = c(LfoShapes.indexOf(shape)))
+
+                GraphCensus.of(node).let {
+                    it.passes shouldBe 7
+                    it.traffic shouldBe 14
+                    it.bytes shouldBe 3 * 64
+                }
+            }
+
+            withClue("$shape, block-constant arithmetic as the depth: control-rate, so counted like a leaf") {
+                // the floor and 1 - depth fold to one value per block, and the range keeps its constant-bound path
+                val depth = IgnitorDsl.Plus(IgnitorDsl.Param("d", 0.2), c(0.3))
+                val node = IgnitorDsl.Tremolo(saw, rate = c(4.0), depth = depth, shape = c(LfoShapes.indexOf(shape)))
+
+                GraphCensus.of(node).let {
+                    it.passes shouldBe 4
+                    it.traffic shouldBe 7
+                    it.bytes shouldBe 2 * 64
+                }
+            }
+        }
     }
 })

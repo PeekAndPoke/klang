@@ -36,9 +36,10 @@ general mechanism, and a frontend chooses a routing.
 - Step 6 re-registers the built-ins on `classic()` and switches the strip off for them; step 9 cuts
   `VoiceData` and retires the Pipeline DSL (both done 2026-09-27). The voice strip is gone and every voice is an
   Ignitor tree, so part 1 of the idea needs only the auto-attach and the tag.
-- One law per effect, shared by every host (`TremoloCore`, `CrushCore`, `DistortionCore`,
+- One law per effect, shared by every host (`CrushCore`, `DistortionCore`,
   `EnvelopeCore`, `SvfCoeffSweep`): a Katalyst stage and a master stage can already run the same code (since
-  phase 3 step 12 they ARE the same stage: the output runs a `KatalystChain`).
+  phase 3 step 12 they ARE the same stage: the output runs a `KatalystChain`). The tremolo has no law of its own any
+  more since 2026-09-29: it is composed from the oscillators.
   Part 2 needs exactly this.
 - The door shapes are one shape per concept across the Ignitor and Katalyst DSLs (`.claude/skills/dsl-design/door-shapes.md`,
   once section 3b of the phase 3 record; the Master DSL merged into the Katalyst in phase 3 step 12): the surfaces are already
@@ -158,5 +159,5 @@ kick's reverb tail also holds the duck), the follower's shape and defaults, the 
 
 - `docs/plans/signal-flow-redesign.md` sections 5 (built-in instruments) and 7 (the Katalyst).
 - `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (phase 3, archived 2026-09-28: `classic()`, the door shapes, the shared cores).
-- `docs/tasks/katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
+- `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md`, `docs/tasks/master-dsl-followups.md`, `docs/tasks/future/one-chain-host.md`.
 - `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` (the master became a Katalyst at the output).

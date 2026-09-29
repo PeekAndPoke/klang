@@ -40,7 +40,7 @@ internal fun calculateControlRateEnvelope(
  */
 internal fun controlRatePos(blockStart: Double, startFrame: Double): Int = (maxOf(blockStart, startFrame) - startFrame).toInt()
 
-/** Prepares this [EnvelopeCore] for one block of a strip modulation envelope ([env] counts frames). */
+/** Prepares this [EnvelopeCore] for one block of a voice modulation envelope, FM or pitch ([env] counts frames). */
 internal fun EnvelopeCore.prepareControlRateEnvelope(env: Voice.Envelope, startFrame: Double, gateEndFrame: Double) {
     prepare(
         attackFrames = env.attackFrames,

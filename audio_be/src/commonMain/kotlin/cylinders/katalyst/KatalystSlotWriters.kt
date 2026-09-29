@@ -24,7 +24,7 @@ import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 // cost.
 //
 // Nothing here decides a gate of its own: each writer reproduces the per-stage contract of
-// `docs/tasks/katalyst-dsl.md` §7 through the same KatalystSlots functions the build used, so a
+// `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7 through the same KatalystSlots functions the build used, so a
 // value that arrives from a slot and one that was authored as a constant take the identical path.
 
 /**

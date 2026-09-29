@@ -39,7 +39,7 @@ approximation `x (27 + x^2) / (27 + 9 x^2)`, clamped at |x| > 3.
 
 ## To decide when it is picked up
 
-- **Is it wanted at all.** `docs/tasks/katalyst-dsl.md` ("Settled design decisions", the power-amp bullet) keeps saturation
+- **Is it wanted at all.** `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` ("Settled design decisions", the power-amp bullet) keeps saturation
   on the voice by default, because shared clipping on a bus makes voices intermodulate ("chords eat
   each other"). On the master that cross-voice colour is the point of the effect, but it is a
   different sound, not a cheaper one. Listen before building: a by-ear A/B on a finished song with a

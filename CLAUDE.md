@@ -45,6 +45,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 |-----------------------------------------------------------------------------------------------------------------------------|------------|-------------------------------------------------|
 | Reviews loop until a clean round; every new test is mutation-checked (mandatory tier for engine/wire/KSP, light elsewhere). | 2026-08-02 | `/review-loop`                                  |
 | Gradle is a single-writer resource: one build at a time, the coordinator owns it, workers never fan out.                    | 2026-08-04 | `/agent-fleet`                                  |
+| Published writing (whitepaper, blog, README, release notes, site copy) follows the public voice: friendly, calm and humble, inviting, human, "we", no hype, cautious with claims. Tutorials and in-app text have their own style. | 2026-09-28 | `/public-voice` |
 | Two doors, one DSL: every surface addition lands in KlangScript stdlib AND Kotlin in the same deliverable, with a door-parity spec. | 2026-08 | `/dsl-design` §3                                |
 | Parameter parity: same name, meaning and scale on every surface; conversions in one place; asymmetries recorded with a reason. | 2026-08-02 | `/dsl-design` §4                              |
 | One word per concept end to end; a replaced surface is removed, not deprecated.                                              | 2026-08    | `/dsl-design` §5                                |
@@ -74,6 +75,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klang UI conventions: `.with()` for custom classes, `.render()` on stored icon functions, RoundGauge proportions.          | 2026-05    | `/kraft-knowhow`                           |
 | Review rounds 3 and later run on the strongest model tier (`fable`) at effort xhigh, never max.                            | 2026-09-05, capped 2026-09-28 | `/agent-fleet`                             |
 | Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
+| Module `MEMORY.md` files state what is true NOW and stay short (restructured 2026-09-29 after `audio/MEMORY.md` reached 3,000 lines): a change updates its section in place and adds one History line; the narrative lives in the task record, the full dated record in `<module>/ref/memory-history.md`. | 2026-09-29 | the knowhow skills |
 | Scaffolding goes when its job is done: a migration guard, a one-off script or a comparison fixture is removed in the change that finishes the migration, so no future reader wonders why it exists. | 2026-09-06 | this line |
 
 ### Guardrail
@@ -85,7 +87,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
 | Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the house limiter's 5 ms lookahead (`MasterStage`) is always on and not authorable, and an authored lookahead (the Katalyst `compressor`/`limiter` `lookahead`, fixed per chain, at most 50 ms) makes its orbit or playback late by it, uncompensated, by the author's choice. | 2026-05, narrowed 2026-09-27 | `/review-loop` templates, `.claude/skills/review-loop/audio-constraints.md` |
 | Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
-| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` |
+| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` Lessons |
 | Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
 | `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibOscTest`, `StdLibNumberMethodsTest`. | 2026-09-10 | `/dsl-design` §5 |
 
@@ -120,7 +122,7 @@ decay, sustain, release)` has a real release, `penvCurves(attack, decay, release
 is an Ignitor tree; `classic()` is the sprudel voice): `PipelineDsl`, `StageDsl`, `PipelineDsl.modern`, the script
 `Pipeline(...)` / `Pipeline.modern(...)` / `Pipeline.build(...)` with `PipelineBuilder`, `PipelineVcaBuilder`,
 `PipelineFilterBuilder`, `tuneVca`, `tuneFilter`, sprudel `.pipeline()` and the `pipeline(...)` mapper, `PipelineValue`,
-`PipelineRegistry`, `PipelinePreset`, `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
+`PipelineRegistry`, `PipelinePreset` (the `pedal` preset went first, 2026-09-25, with `Pipeline.pedal(...)`), `Cmd.RegisterPipeline` (`register-pipeline`), `VoiceData.pipeline`,
 `KlangPatternEvent.pipeline`, the strip's `FilterPipelineBuilder`, `EnvelopeRenderer` (the strip VCA),
 `FilterModRenderer`, `AudioFilterRenderer`, `CrushRenderer`, `CoarseRenderer`, `DistortionRenderer`, `TremoloRenderer`,
 `StripPhaserRenderer`, `Voice.Phaser` / `Tremolo` / `Distort` / `Crush` / `Coarse` / `FilterModulator`, `Voice.Envelope.of`
@@ -151,7 +153,7 @@ The resonator MORPH (`ResonatorBank.morphTo`, the `MORPH` flags on the body and 
 `KatalystFilterSwap.MAX_BANKS` with its outgoing pool and drop rule, both gone 2026-09-20: the
 maintainer listened and rejected the morph (travelling a bank's resonances is an audible filter
 sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one parking slot holding a
-config, latest wins, at `BANK_CROSSFADE_SECONDS`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
+config, latest wins, at `BANK_CROSSFADE_SECONDS`. The tremolo's own LFO and its two shape knobs (gone 2026-09-29, `docs/tasks/tremolo-as-composition.md`: the tremolo is composed from the oscillators at voice build, the maintainer chose it by ear): `TremoloIgnitor`, `Ignitor.tremolo(...)`, `TremoloCore`, `LfoShape` (the `LfoShapes` name vocabulary stays), and `skew` / `phase` on every tremolo door with the slot keys `tremolo.skew` / `tremolo.phase`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
 channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
 `velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
 `docs/plans/signal-flow-redesign.md` section 6).
@@ -173,6 +175,7 @@ Use `/skill-name` or describe what you need in natural language to invoke a skil
 | `/klangscript-knowhow`   | "work on klangscript", "add language feature", "klangscript parser", "klangscript interpreter" | Load klangscript context incrementally (dispatcher + targeted ref files)                                  |
 | `/klangaudio-knowhow`    | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)                       |
 | `/code-style`            | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                                                 |
+| `/public-voice`          | "write a blog post", "whitepaper", "README", "release notes", "public text", "review the tone" | The public voice of every published text: what it is, what it is not, before/after pairs, a reviewer's grep list |
 | `/dsl-design`            | "design a DSL", "add a DSL door/knob", "review a DSL change", "builder", "configure lambda", "DSL immutability", "parameter parity" | Design principles for every Klang DSL: construction-time immutability, builder/configure-lambda door shape, two doors, parity, one word per concept, coerce vs raw, wire types, review checklist |
 | `/review-loop`           | "review this change", "code review", "review loop", "mutation check", "apply review findings"  | Review standard: reviews loop until a clean round (fixes get re-reviewed); new tests are mutation-checked |
 | `/ultra-libs-knowhow`    | "ultra libs", "ultra.html", "ultra events", "io.peekandpoke.ultra"                             | Source reference for all `io.peekandpoke.ultra.*` modules (html, streams, common, etc.)                   |

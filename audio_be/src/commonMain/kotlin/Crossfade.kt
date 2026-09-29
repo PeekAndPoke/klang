@@ -13,7 +13,7 @@ import kotlin.math.abs
  *
  * Owned by [ChainSwap], the one swap both hosts of a whole chain run under live audio: every orbit
  * bus (`Cylinder`, since phase 3 step 12 C1) and the master bus (`MasterBus`, since step 12 C4). One
- * instance per swap, created once. Katalyst step 3b, 2026-09-17 (`docs/tasks/katalyst-dsl.md` §D3)
+ * instance per swap, created once. Katalyst step 3b, 2026-09-17 (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §D3)
  * extracted it from `MasterBus`, which had carried it alone since the master DSL shipped.
  *
  * **The blend is LINEAR, not equal-power.** Both chains process the *same* material, so their outputs

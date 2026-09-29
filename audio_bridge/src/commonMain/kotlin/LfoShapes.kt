@@ -10,14 +10,15 @@ package io.peekandpoke.klang.audio_bridge
  * on the Ignitor, `tremolo(shape = "square")` on a pattern), as a closed, ordered list whose POSITION the
  * Ignitor `Tremolo` node carries as a knob (phase 3 step 3b, 2026-09-25).
  *
- * The vocabulary is the OSCILLATOR vocabulary on purpose (see the backend's `LfoShape`): no LFO-only
- * names. An unknown name and a bad index are both [SINE_INDEX], the shipped tremolo.
+ * The vocabulary is the OSCILLATOR vocabulary on purpose: each shape IS the oscillator of that name, which
+ * the backend builds as the tremolo's LFO. No LFO-only names. An unknown name and a bad index are both
+ * [SINE_INDEX], the shipped tremolo.
  */
 object LfoShapes {
 
     /**
      * The canonical names, in their index order. **Append only, never reorder**: see
-     * [DistortionShapes.names]. The order is the backend enum's (`LfoShape`), pinned by a spec.
+     * [DistortionShapes.names]. The backend's tremolo arm maps each index to its oscillator.
      */
     val names: List<String> = listOf("sine", "triangle", "square", "sawtooth", "ramp")
 

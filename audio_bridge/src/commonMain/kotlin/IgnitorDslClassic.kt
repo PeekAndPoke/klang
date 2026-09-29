@@ -109,10 +109,9 @@ class DistortSlots internal constructor() {
 
 /**
  * The slots of the tremolo stage (`Slots.tremolo`), mirroring sprudel's
- * `tremolo(depth, sync, shape, skew, phase)`: `tremolo.depth` (default 0.0, off), `tremolo.sync` (the
- * RATE in Hz; default 0.0, the strip's untouched rate, NOT the node's 5.0), `tremolo.shape` (an
- * INDEX into [LfoShapes], default `sine`; no sprudel reader, the name is a string there),
- * `tremolo.skew` and `tremolo.phase` (both 0.0).
+ * `tremolo(depth, sync, shape)`: `tremolo.depth` (default 0.0, off), `tremolo.sync` (the
+ * RATE in Hz; default 0.0, the strip's untouched rate, NOT the node's 5.0) and `tremolo.shape` (an
+ * INDEX into [LfoShapes], default `sine`; no sprudel reader, the name is a string there).
  */
 class TremoloSlots internal constructor() {
     val depth: IgnitorDsl = slot("tremolo", "depth", 0.0)
@@ -121,8 +120,6 @@ class TremoloSlots internal constructor() {
         "tremolo", "shape", LfoShapes.SINE_INDEX.toDouble(),
         "The LFO shape as its index in the shape list; what sprudel's `tremolo(shape = ...)` names",
     )
-    val skew: IgnitorDsl = slot("tremolo", "skew", 0.0)
-    val phase: IgnitorDsl = slot("tremolo", "phase", 0.0)
 }
 
 /**
@@ -324,8 +321,6 @@ fun IgnitorDsl.classic(): IgnitorDsl {
         rate = s.tremolo.sync,
         depth = s.tremolo.depth,
         shape = s.tremolo.shape,
-        skew = s.tremolo.skew,
-        phase = s.tremolo.phase,
     )
 
     return IgnitorDsl.Adsr(

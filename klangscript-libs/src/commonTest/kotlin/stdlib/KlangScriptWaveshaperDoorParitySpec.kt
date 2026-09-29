@@ -22,7 +22,7 @@ private fun c(v: Double) = IgnitorDsl.Constant(v)
 
 /** Every field of a tremolo, shape or distort node except its input, by name. */
 private fun IgnitorDsl.knobs(): Map<String, Any?> = when (this) {
-    is IgnitorDsl.Tremolo -> linkedMapOf("rate" to rate, "depth" to depth, "shape" to shape, "skew" to skew, "phase" to phase)
+    is IgnitorDsl.Tremolo -> linkedMapOf("rate" to rate, "depth" to depth, "shape" to shape)
     is IgnitorDsl.Shape -> linkedMapOf("shape" to shape, "oversample" to oversample)
     else -> error("not a tremolo or shape node: ${this::class.simpleName}")
 }
@@ -40,9 +40,10 @@ private fun IgnitorDsl.distortKnobs(): Map<String, Any?> {
  * never its input, so how either side builds the oscillator cannot mask a difference). Phase 3 step
  * 3b (2026-09-25):
  *
- *  - `tremolo(rate, depth, configure)` on the script door, with `shape`, `skew` and `phase` on a
- *    builder; the Kotlin door is FLAT, `tremolo(rate, depth, shape, skew, phase)`, a recorded
- *    asymmetry (the filter doors' precedent);
+ *  - `tremolo(rate, depth, configure)` on the script door, with `shape` on a builder; the Kotlin door
+ *    is FLAT, `tremolo(rate, depth, shape)`, a recorded asymmetry (the filter doors' precedent). The
+ *    tremolo's `skew` and `phase` were dropped on 2026-09-29 (the tremolo became a composition of the
+ *    oscillators);
  *  - `shape(shape, oversample)` and `distort(amount, shape, oversample)` flat on both, the shape a
  *    NAME converted to its index in `DistortionShapes`. The script door also takes a number or a
  *    slot, and a slot is written on the Kotlin side through the node (a recorded asymmetry).
@@ -67,13 +68,13 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
         for (name in spellings) {
             withClue(name) {
-                ks("""Osc.saw().tremolo(4, 0.5, x => x.shape("$name").skew(0.3).phase(0.25))""").knobs() shouldBe
-                        saw.tremolo(4.0, 0.5, shape = name, skew = 0.3, phase = 0.25).knobs()
+                ks("""Osc.saw().tremolo(4, 0.5, x => x.shape("$name"))""").knobs() shouldBe
+                        saw.tremolo(4.0, 0.5, shape = name).knobs()
             }
         }
     }
 
-    "tremolo: the bare door is the sine at skew 0 and phase 0 on both doors, and the node's own default" {
+    "tremolo: the bare door is the sine on both doors, and the node's own default" {
         val script = ks("Osc.saw().tremolo(4, 0.5)").knobs()
 
         script shouldBe saw.tremolo(4.0, 0.5).knobs()
@@ -81,28 +82,28 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
         script["shape"] shouldBe c(LfoShapes.SINE_INDEX.toDouble())
     }
 
-    "tremolo: each builder knob writes its own field and nothing else" {
+    "tremolo: the builder's one knob writes its own field and nothing else" {
         val bare = saw.tremolo(4.0, 0.5).knobs()
 
-        for ((knob, call, value) in listOf(
-            Triple("shape", """x.shape("ramp")""", c(LfoShapes.indexOf("ramp"))),
-            Triple("skew", "x.skew(-0.6)", c(-0.6)),
-            Triple("phase", "x.phase(0.7)", c(0.7)),
-        )) {
-            withClue(knob) {
-                ks("Osc.saw().tremolo(4, 0.5, x => $call)").knobs() shouldBe bare + (knob to value)
-            }
-        }
+        ks("""Osc.saw().tremolo(4, 0.5, x => x.shape("ramp"))""").knobs() shouldBe bare + ("shape" to c(LfoShapes.indexOf("ramp")))
     }
 
-    "tremolo: the shape knob takes an index as a number and a slot as itself; skew and phase take slots" {
+    "tremolo: the shape knob takes an index as a number and a slot as itself" {
         ks("Osc.saw().tremolo(4, 0.5, x => x.shape(2))").knobs()["shape"] shouldBe c(2.0)
         ks("""Osc.saw().tremolo(4, 0.5, x => x.shape(Osc.param("ts", 3)))""").knobs()["shape"] shouldBe IgnitorDsl.Param("ts", 3.0)
+    }
 
-        val slotted = ks("""Osc.saw().tremolo(4, 0.5, x => x.skew(Osc.param("tk", 0.1)).phase(Osc.param("tp", 0.2)))""").knobs()
+    "tremolo: skew and phase are gone from both doors" {
+        // The script builder refuses them; the node, which the Kotlin door builds, has no such field.
+        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.skew(0.3))") }
+        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.phase(0.25))") }
 
-        slotted["skew"] shouldBe IgnitorDsl.Param("tk", 0.1)
-        slotted["phase"] shouldBe IgnitorDsl.Param("tp", 0.2)
+        val node = saw.tremolo(4.0, 0.5, shape = "square").toString()
+
+        withClue(node) {
+            node.contains("skew") shouldBe false
+            node.contains("phase") shouldBe false
+        }
     }
 
     "tremolo: named door arguments, and a configure lambda that returns nothing is refused" {

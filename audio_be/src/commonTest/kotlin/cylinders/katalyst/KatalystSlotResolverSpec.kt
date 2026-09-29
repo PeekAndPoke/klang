@@ -37,7 +37,7 @@ import io.peekandpoke.klang.audio_bridge.constants.VOWEL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOWEL_WET
 
 /**
- * One row per stage of the resolver contract (`docs/tasks/katalyst-dsl.md` §7): what a chain's
+ * One row per stage of the resolver contract (`docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §7): what a chain's
  * stage is configured with, given what the chain AUTHORED and what the orbit's param state says.
  *
  * Most rows configure from no state at all ([declared]) and are therefore about the authored
@@ -281,7 +281,7 @@ class KatalystSlotResolverSpec : StringSpec({
         // its room. What that buys is the slot vocabulary being consistent with itself, "non-finite
         // is unset" on EVERY knob, which is what lets a cleared slot read as untouched at all. No
         // ordinary spelling reaches it: it takes a string atom (`"NaN"`) or a hand-written `katp`.
-        // Recorded in `audio/MEMORY.md` with the same honesty.
+        // Recorded in `audio/ref/katalyst.md` ("Where a knob comes from") with the same honesty.
         val chain = KatalystChainBuilder.build(
             dsl = KatalystDsl.of(
                 KatalystStageDsl.Reverb(

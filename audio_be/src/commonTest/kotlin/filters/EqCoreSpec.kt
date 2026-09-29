@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.audio_be.filters
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBackendContext
@@ -526,7 +528,7 @@ class EqCoreSpec : StringSpec({
         // samples on a mid-block first call (shifted by offset, zero-fill past length),
         // SILENTLY on both platforms (the capacity round-up keeps it in bounds); the value
         // comparison below is what catches it.
-        for ((_, single) in windowSections) {
+        for ((name, single) in windowSections) {
             val sections = listOf(single)
             val offset = 37
             val length = 64
@@ -541,14 +543,18 @@ class EqCoreSpec : StringSpec({
             val bufOracle = AudioBuffer(blockFrames).apply { fill(sentinel) }
             val c = ctx().apply {
                 this.updateOffsetAndLength(offset, length)
-                voiceElapsedFrames = -offset // production mid-block-onset shape
+                // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer
+                // index `offset`, the voice's first frame (never negative).
+                voiceElapsedFrames = 0
             }
             oracle.generate(bufOracle, 220.0, c)
 
             // Bell entries compare with the C2 tolerance (see assertChainParity's note).
             val tol = if (single.type == EqCore.BELL) 1e-12 else null
+            var windowPeak = 0.0
             for (i in 0 until blockFrames) {
                 if (i in offset until offset + length) {
+                    windowPeak = max(windowPeak, abs(bufOracle[i]))
                     if (tol != null) {
                         val scale = max(abs(bufCore[i]), abs(bufOracle[i]))
                         abs(bufCore[i] - bufOracle[i]) shouldBeLessThanOrEqual scale * tol
@@ -559,6 +565,10 @@ class EqCoreSpec : StringSpec({
                     bufCore[i] shouldBe sentinel
                     bufOracle[i] shouldBe sentinel
                 }
+            }
+            // Not-silence floor: two silent windows would compare equal whatever the loops do.
+            withClue("$name: the onset window rendered (near) silence") {
+                windowPeak shouldBeGreaterThan 0.01
             }
 
             // The onset round-up must have allocated a FULL quantum for the short window

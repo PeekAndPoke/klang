@@ -13,9 +13,10 @@ gone is removed when someone notices, not kept for history.
   defend at integration points (`ShapingFuncs.kt`, the KDoc at the top).
 - **Reverb's `+ ANTI_DENORMAL` is a deliberate exception** to the engine-wide `flushDenormal()`
   convention; the consistent version cost about +11 % per sample and was reverted 2026-05-19.
-- **The SVF is purely linear by design** (the BPF included). Two saturation attempts failed and were
-  reverted; the `analog`/`bpFb` infrastructure is kept for a future re-introduction. Warmth comes
-  from upstream.
+- **The SVF's feedback is never capped with a tanh.** Two saturation attempts that did that failed and were
+  reverted. What exists instead: lowpass and highpass at `analog > 0` take the diode-pair damping path in
+  `Ignitor.svf` (state-dependent, `audio_be/.../ignitor/IgnitorFilters.kt`); bandpass, notch and the resonators are
+  linear. Further warmth comes from upstream.
 - **The OnePole HPF cutoff bias is documented, not corrected.**
 - **The house limiter's lookahead is the only one that is always on** (5 ms, `MasterStage`, not authorable). An
   authored lookahead (the Katalyst `compressor(..., lookahead)` and `limiter(..., lookahead)`, phase 3 step 12 C2,
@@ -26,8 +27,8 @@ gone is removed when someone notices, not kept for history.
   2026-09-16). Normalized 1.0 is comb feedback 0.98; unity sits at about 1.071, and past it the comb
   network has no steady state. The soft-cap alternative was measured (DC rail, AC-RMS 0.0) and
   reverted 2026-08-03. See `Reverb.normalizeSize`.
-- **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), the hard clip at
-  `IgniteRenderer`, the unconditional DC-block on distort, cylinder last-writer-wins,
+- **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `IgniteRenderer`
+  (the `distort()` and `shape()` doors bound their output with a soft cap; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
   `Ducking.attackSeconds`'s misleading name (`docs/tasks/future/audit-parked-decisions.md` §2),
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound
   change, body and vowel at orbit level.

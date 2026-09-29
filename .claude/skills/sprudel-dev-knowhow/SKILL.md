@@ -16,7 +16,7 @@ Also covers `sprudel-ksp`, the KSP processor that extracts DSL documentation fro
 **Always read first:**
 
 1. **`sprudel/CLAUDE.md`** — dispatcher: key files + which ref file to read next
-2. **`sprudel/MEMORY.md`** — current status and lessons learned
+2. **`sprudel/MEMORY.md`**: what is true now (state, rules in force, traps, open threads), short by design; the full dated record is `sprudel/ref/memory-history.md`, read only when you need the history of a decision
 
 **Then read only the ref file(s) relevant to your task:**
 
@@ -39,5 +39,5 @@ Also covers `sprudel-ksp`, the KSP processor that extracts DSL documentation fro
 ## Notes
 
 - Do NOT read all ref files upfront — load only what the task requires.
-- Update `sprudel/MEMORY.md` after completing significant work.
+- After completing significant work, keep `sprudel/MEMORY.md` short (restructured 2026-09-29, it had grown into a log): update the current-state section your change touched IN PLACE, add ONE line to its History list (date, a few words, the link to the task record), and put the narrative in the task record, which gets archived. Never append a dated essay to MEMORY.md.
 - `sprudel/TODOS.MD` has the pending feature checklist.

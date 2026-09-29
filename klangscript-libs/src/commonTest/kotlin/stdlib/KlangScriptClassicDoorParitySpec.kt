@@ -53,7 +53,6 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
         "lpf.freq" to s.lpf.freq, "lpf.q" to s.lpf.q, "lpf.passes" to s.lpf.passes, "lpf.env" to s.lpf.env,
         "lpf.attack" to s.lpf.attack, "lpf.decay" to s.lpf.decay, "lpf.sustain" to s.lpf.sustain, "lpf.release" to s.lpf.release,
         "tremolo.depth" to s.tremolo.depth, "tremolo.sync" to s.tremolo.sync, "tremolo.shape" to s.tremolo.shape,
-        "tremolo.skew" to s.tremolo.skew, "tremolo.phase" to s.tremolo.phase,
         "adsr.attack" to s.adsr.attack, "adsr.decay" to s.adsr.decay, "adsr.sustain" to s.adsr.sustain,
         "adsr.release" to s.adsr.release, "adsr.on" to s.adsr.on,
         "adsrCurves.attack" to s.adsrCurves.attack, "adsrCurves.decay" to s.adsrCurves.decay, "adsrCurves.release" to s.adsrCurves.release,

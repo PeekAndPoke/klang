@@ -62,12 +62,11 @@ Length target: 120–220 lines of markdown. Shorter is fine (the parity post); l
 
 ## 4. Voice
 
-- First-person plural, past tense for history, present for how things work now.
-- **Numbers over adjectives.** "sd 6.0 → 2.7 dB" beats "much more consistent" every time.
-- **Keep the failures in.** The prototype that clipped, the metric that didn't move, the review flag that contradicted
-  measurement — the negative results are what make the positives credible (and they're usually the best paragraphs).
-- Credit by name when a design came from somewhere (Luff, Szabó, McKeeman) — and record *why*
-  the credit is owed, not just a link.
+The voice lives in the `/public-voice` skill (`.claude/skills/public-voice/SKILL.md`): friendly, calm and humble,
+inviting, human, "we", numbers over adjectives, the failures kept in, credit by name, no hype, no overstated claims.
+It applies to every public text, the whitepaper included. What is specific to the blog stays here:
+
+- Past tense for history, present for how things work now.
 - One good closing line beats three closing paragraphs. Don't summarize what was just read.
 - **American English spelling** — center, color, behavior, analog. Never centre/colour/cheque. (Verbatim code quotes
   stay faithful to the source, even where the source says CENTRE.)

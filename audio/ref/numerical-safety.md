@@ -100,6 +100,33 @@ The constants live in `audio_be/src/commonMain/kotlin/DspUtil.kt`.
 - `SAFE_MAX² = 1e30` is still finite Float (`Float.MAX_VALUE ≈ 3.4e38`), so
   even an unclamped square between two max-safe values doesn't overflow.
 
+## Non-finite inputs: where a pattern's NaN is stopped
+
+The rule on every surface is the wire's NaN rule (`/dsl-design` section 4): a non-finite value a pattern writes
+reads as UNSET. It is not a clamp: every finite value passes raw (the Motor stays raw). A NaN that gets into a
+voice multiplies through the tree and reaches the orbit mix, where nothing scrubs it and it latches the orbit's
+effects for the rest of the playback, so each reader substitutes at its own read, once:
+
+- **The `IgnitorDsl.Param` leaf** (`IgnitorDslRuntime`, where a slot resolves against `oscParams`): a non-finite
+  OVERRIDE takes the slot's authored default. It does not touch the authored default itself: an instrument that
+  declares an infinite release asks for a drone. Guard: `VoicePregainWireSpec`.
+- **The raw bag read** left in `VoiceFactory` (`analog`, read once per voice). Guard: `VoiceBagGuardSpec`.
+  (An `+Infinity` `analog` once made every sample of the voice NaN through the saturating SVF branch.)
+- **`gain`**: a non-finite wire gain reads 1.0 in `VoiceFactory`, the only production path that builds a voice;
+  `Voice` stores what it is given. Guard: `VoiceGainWireSpec`.
+- **The gate**: a stage whose gating knob resolves non-finite is not built, which is what keeps `SLOT_UNSET`
+  (NaN) out of the DSP (`audio/ref/off-values.md`). An UNGATED knob needs its own substitution: the envelope's
+  sustain (`AdsrIgnitor`, `finiteOr`).
+- **Katalyst slots**: a non-finite knob is the stage's declared OFF state (`audio/ref/katalyst.md`).
+- **A stage that caches its config compares the substituted value**, never the raw input (NaN != NaN).
+- **Not a render path**: `GraphCensus` reads the bag unguarded; it is a benchmark diagnostic only.
+
+Two things the guards do NOT cover: a q or cutoff EXPRESSION can still overflow (`Plus` and `Minus` are clamp-free
+by contract, so two 1e308 params sum to an infinity), and the Karplus family writes `filtered * decay` into its
+delay line with `decay` read raw, so an authored `decay > 1` diverges. The second is authored character. The rule
+for new code: a NEW node on the audio spine that can emit a non-finite sample from finite input owes a
+substitution at its own read.
+
 ## Closed gaps
 
 All known gaps as of 2026-04-27 have been addressed. Kept here for

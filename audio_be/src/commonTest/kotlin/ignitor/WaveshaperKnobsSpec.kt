@@ -21,7 +21,7 @@ import kotlin.random.Random
 
 /**
  * The knobs phase 3 step 3b (2026-09-25) put on the waveshaper and the tremolo, and how the runtime
- * reads them. The tremolo's LAW is `TremoloLawSpec`'s; the catalogues are
+ * reads them. The tremolo's LAW is `TremoloCompositionSpec`'s; the catalogues are
  * `ShapeCatalogueSpec`'s. This file is the plumbing between a knob on a node and the stage it builds:
  *
  *  - the `Shape` and `Distort` nodes' `shape` INDEX and `oversample` FACTOR, read once at voice build
@@ -30,8 +30,8 @@ import kotlin.random.Random
  *    fractional factor, and a knob that is not a leaf;
  *  - the RNG STREAM: a build-time knob that is not a leaf is NOT BUILT, so a drawing node there moves
  *    no draw (the `filterEnvKnob` rule);
- *  - the tremolo's skew, read per BLOCK, which is why an expression works there and not in the two
- *    build-time knobs;
+ *  - the tremolo's rate, read per BLOCK, which is why an expression works there and not in the
+ *    build-time shape knob;
  *  - `BuiltIgnitor.gatesOutput`, the build's report that the tree carries a tremolo.
  */
 class WaveshaperKnobsSpec : StringSpec({
@@ -235,39 +235,37 @@ class WaveshaperKnobsSpec : StringSpec({
 
         val tremolo = IgnitorDsl.Tremolo(inner = noise, rate = IgnitorDsl.Constant(37.3), depth = IgnitorDsl.Constant(0.8))
 
-        render(tremolo.copy(shape = IgnitorDsl.PerlinNoise(), phase = IgnitorDsl.PerlinNoise())).bits() shouldBe render(tremolo).bits()
+        render(tremolo.copy(shape = IgnitorDsl.PerlinNoise())).bits() shouldBe render(tremolo).bits()
 
-        // Engagement: the same perlin in a knob the runtime DOES build (the skew, read per block)
+        // Engagement: the same perlin in a knob the runtime DOES build (the rate, read per block)
         // changes the render, so the rows above are not passing because the knob position is inert.
-        render(tremolo.copy(skew = IgnitorDsl.PerlinNoise())).bits() shouldNotBe render(tremolo).bits()
+        render(tremolo.copy(rate = IgnitorDsl.PerlinNoise())).bits() shouldNotBe render(tremolo).bits()
     }
 
-    // ── The tremolo's skew is read per block ─────────────────────────────────────────────────────
+    // ── The tremolo's rate is read per block ─────────────────────────────────────────────────────
 
-    "the tremolo's skew is read per block, so an expression reaches it (the two build-time knobs ignore one)" {
+    "the tremolo's rate is read per block, so an expression reaches it (the build-time shape knob ignores one)" {
         val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
         val base = source.tremolo(37.3, 1.0, shape = "square") as IgnitorDsl.Tremolo
-        val sum = IgnitorDsl.Plus(IgnitorDsl.Constant(0.25), IgnitorDsl.Constant(0.25))
+        val sum = IgnitorDsl.Plus(IgnitorDsl.Constant(18.65), IgnitorDsl.Constant(18.65))
 
-        render(base.copy(skew = sum)).bits() shouldBe render(base.copy(skew = IgnitorDsl.Constant(0.5))).bits()
-        render(base.copy(skew = sum)).bits() shouldNotBe render(base).bits()
+        render(base.copy(rate = sum)).bits() shouldBe render(base).bits()
+        render(base.copy(rate = sum)).bits() shouldNotBe render(base.copy(rate = IgnitorDsl.Constant(18.65))).bits()
     }
 
-    "the tremolo's shape and phase from the bag reach the stage, and their defaults are the sine at 0" {
+    "the tremolo's shape from the bag reaches the stage, and its default is the sine" {
         val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
         val slotted = IgnitorDsl.Tremolo(
             inner = source,
             rate = IgnitorDsl.Constant(37.3),
             depth = IgnitorDsl.Constant(1.0),
             shape = IgnitorDsl.Param("t.shape", LfoShapes.SINE_INDEX.toDouble()),
-            phase = IgnitorDsl.Param("t.phase", 0.0),
         )
 
         render(slotted).bits() shouldBe render(source.tremolo(37.3, 1.0)).bits()
         render(slotted, mapOf("t.shape" to LfoShapes.indexOf("square"))).bits() shouldBe
                 render(source.tremolo(37.3, 1.0, shape = "square")).bits()
-        render(slotted, mapOf("t.phase" to 0.25)).bits() shouldBe render(source.tremolo(37.3, 1.0, phase = 0.25)).bits()
-        render(slotted, mapOf("t.phase" to 0.25)).bits() shouldNotBe render(slotted).bits()
+        render(slotted, mapOf("t.shape" to LfoShapes.indexOf("square"))).bits() shouldNotBe render(slotted).bits()
     }
 
     // ── gatesOutput ──────────────────────────────────────────────────────────────────────────────

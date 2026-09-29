@@ -28,9 +28,7 @@ The release-defining set, regardless of when they're sequenced:
 - ✅ **Master / loudness stage** (Act 1) — **DONE 2026-08-03.** The point of the whole backend rework.
 - ~~**Pipeline DSL finish** (Act 1)~~: closed 2026-09-27: the Pipeline DSL retired in phase 3 step 9; an instrument's
   voice chain is `.classic()` on the Ignitor DSL.
-- **Katalyst DSL**: per-orbit effect authoring, counterpart to the Ignitor DSL.
-  ⚠️ Q3 sequences Katalyzers in the *lower* track, but it's flagged **must-have** — it likely belongs
-  up with the Act-1 engine-authoring DSLs. **Ordering to confirm.**
+- ~~**Katalyst DSL**~~: DONE 2026-09-20; since 2026-09-28 it is also the master (`master(Katalyst(k => ...))`).
 - **Fix the current tutorial set + through-line** (Act 2) — the core of the tutorial quarter.
 - **Audio backend audit** (Act 1) — every `audio_be` test was written without a mutation check, so the suite is an
   *unmeasured* net. **SHOULD** now, **MUST** before launch: this is the foundation.
@@ -54,17 +52,14 @@ The release-defining set, regardless of when they're sequenced:
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
    done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
-3. **MUST** · **Katalyst DSL** — [`katalyst-dsl.md`](katalyst-dsl.md) 🔴 *(effects shipped; authoring surface not)*
-   Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
-   ⚠️ Q3 lists Katalyzers in the *lower* track; you've flagged it must-have. Reads as an Act-1
-   engine-authoring item. → wants its own task doc.
+3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md). Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
    decision record: [`20260820-resonator-swing.md`](../tasks-archive/2026-08/20260820-resonator-swing.md).
    The design discussion revealed a three-axis model family (source/target/weighting), too diverse to tune by
    ear; and the original "filters feel hard" complaint re-diagnosed as mostly a **mixing** issue, not static
    banks. Taste call: *taste is also what you do not do.* Replacement work: **tune the material tables by ear**
    (the deferred "POC starting points" item in the body-resonator work).
-5. **SHOULD** · **Resource warehouse pool** — [`resource-warehouse-pool.md`](resource-warehouse-pool.md) 🔴
+5. ~~**SHOULD** · **Resource warehouse pool**~~: ✅ DONE 2026-09-04 as the resource warehouse, archived as [`20260927-resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md). Was: 🔴
    Self-balancing pool for expensive per-engine resources (~7.68 MB delay rings, cylinders); kills the
    audible first-note alloc spike (the "Der Schmetterling" stutter). Q3 schedules it **last**. (Audible
    quality — arguably a MUST; parked-last by Q3.)

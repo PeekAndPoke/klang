@@ -1,8 +1,15 @@
 # KlangScript union types: tell the editor what an `XLike` parameter accepts
 
 > **Written 2026-09-18, updated 2026-09-28, not started.** Priority: **NICE** (editor convenience; no engine or sound
-> impact). Outside the signal-flow work stream on purpose. Follow-up that depends on it:
-> [`katalyst-master-configure-doors.md`](katalyst-master-configure-doors.md).
+> impact). Outside the signal-flow work stream on purpose. Follow-ups that depend on it:
+> [`katalyst-master-configure-doors.md`](katalyst-master-configure-doors.md), and (2026-09-29) the edit-time diagnostic
+> for a typo in a shape function ([`silent-shape-discard-on-error.md`](silent-shape-discard-on-error.md), via
+> [`future/editor-diagnostics.md`](future/editor-diagnostics.md)).
+>
+> **Direction added 2026-09-29 (maintainer):** "TypeScript-like string union types" are needed before those
+> diagnostics can be shown. That reaches past §3.3 as written, which checks "is it a String", not "is the string
+> valid": string LITERAL unions (`"soft" | "hard"`) would let the editor check the value too. The maintainer's
+> "EnumString" direction for these is §3.6.
 > The 2026-09-28 update records the maintainer's direction (§3.5): typed Kotlin overloads that
 > KlangScript does not see, one generic script door that dispatches by kind and throws on an
 > unknown one, and IntelliSense that checks arguments before runtime (§3.3, §D2).
@@ -182,6 +189,48 @@ instead, §3.5.
   the script door and asserts the same pattern, so a member added on one side only goes red.
 - **Nullable parameters** (`attack: PatternLike?`): `null` stays a member of the conversion, so an
   omitted optional parameter still means "not set", never a throw.
+
+### 3.6 Maintainer direction, 2026-09-29: "EnumString" parameters
+
+"String unions can be expressed as Enums on the kotlin side, so we need a way to expose an 'EnumString' param to
+klangscript, while the intellisense needs to be aware of all possible values. This would also be handy for any other
+string-enum based param, like the distort shapes, the adsr-curves and similar."
+
+So a string union is not only a union of TYPES (§3.1) but also a union of VALUES: a parameter whose value is one of a
+closed set of names. The Kotlin side owns the set; KlangScript sees a string; IntelliSense knows every allowed name.
+
+**Where the sets live today** (read 2026-09-29), two forms the mechanism has to serve:
+
+| set | Kotlin form | where |
+|---|---|---|
+| ADSR curves (`adsrCurves(...)`, the filter and pitch curve doors) | a public `enum class AdsrCurve` | `audio_bridge/src/commonMain/kotlin/AdsrDef.kt`, names read by `AdsrCurves.curveOf` (`AdsrCurves.kt`) |
+| distort shapes (`distort(amount, shape)`, `shape(...)`) | a name catalogue: `DistortionShapes.names` plus `aliases`, the POSITION is the wire index; the backend's `internal enum class DistortionShape` mirrors it, pinned by a spec | `audio_bridge/src/commonMain/kotlin/DistortionShapes.kt` |
+| body materials (`body(wet, material)`) | a name catalogue, `BodyMaterials` | `audio_bridge/src/commonMain/kotlin/BodyMaterials.kt` |
+| vowels, LFO/tremolo shapes, and similar | the tremolo shapes are the `LfoShapes` catalogue in `audio_bridge` (since 2026-09-29 the tremolo composes the oscillators; the backend enum `LfoShape` is gone) | to be listed when the task starts |
+
+**Ideas, not decided:**
+
+- **One declaration form for both.** An annotation or a marker type that points KSP at the set, e.g. a parameter typed
+  `EnumString<AdsrCurve>` or annotated `@KlangScript.OneOf(DistortionShapes::class)` where the catalogue implements a
+  small interface (`names`, optional `aliases`). KSP emits the names into the docs registry as a string literal union
+  (`"soft" | "hard" | ...`), so the analyzer needs no Kotlin reflection at edit time. The declaration form is §D1's
+  question, widened to value unions.
+- **IntelliSense:** completion INSIDE the string literal offers the canonical names (not the aliases); hover shows the
+  set; a literal that is not in the set is a diagnostic (the diagnostics topic, `future/editor-diagnostics.md`).
+- **Runtime stays as it is:** coerce, never `require` (stone rule "The Motor stays raw"): an unknown name keeps today's
+  fallback (distort: `soft`), names stay case-insensitive, aliases keep working.
+- **Mixed parameters.** `distort`'s `shape` is `IgnitorDslLike`: a name, a number (the index) or a slot. So the value
+  union is one member of a type union (`OneOf<DistortionShapes> | Number | IgnitorDsl`), which is exactly §3.1's shape.
+- **Sprudel pattern strings.** On sprudel doors the string is often mini-notation (`distort(0.5, "<soft hard>")`), not a
+  single literal. The check has to parse the mini-notation and test each atom against the set, and completion has to
+  work inside the pattern string. That is the harder half, and worth its own step.
+- **NOT SETTLED (maintainer, 2026-09-29): validating inside mini-notation.** The mini-notation parser would need a
+  way to be told which values are acceptable for the door it feeds; the same would let `note("a1 x1")` report `x1`
+  as not a valid note. That means one layer of abstraction somewhere (a validate callback or similar), and how such
+  a layer feeds IntelliSense (completion and diagnostics inside a pattern string) is an open question. Not to be
+  designed now; any design of this section must not assume it is solved.
+- **House rule check:** "Wire types over enums" allows an enum for a closed, parameter-less set, which these are; the
+  wire keeps carrying what it carries today (the curve enum, the shape index).
 
 ## 4. Steps
 

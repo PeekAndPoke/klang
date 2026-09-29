@@ -394,7 +394,7 @@ their short names) and `declick(seconds)` rounds the gain's corners (0 = off, th
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(wet, rate, center?, sweep?, x => x.floor(f))` | Allpass phaser: wet FIRST, wet and rate required, center/sweep default 1000; the dry floor (default 0) is the builder knob |
 | `.shimmer(wet?, feedback?, tone?, pitches?, x => x.floor(f))` | Granular pitch-shift cloud: wet 0.5, feedback 0.5, tone 4000, pitches `[0, 7, 12]`; dry floor on the builder |
-| `.tremolo(rate, depth, x => x.shape(name).skew(s).phase(p))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), the skew (-1 to 1, 0 symmetric, positive stays high longer) and the start phase in cycles |
+| `.tremolo(rate, depth, x => x.shape(name))` | Amplitude LFO: rate in Hz, depth 0 to 1; the builder sets the LFO shape (`"sine"` default, `"triangle"`, `"square"`, `"sawtooth"`, `"ramp"`), which is the oscillator of that name; the square, sawtooth and ramp get a 16 ms soft edge |
 
 `.drive()`, `.shape()` and `.distort()` are one family: `drive` is gain with no curve,
 `shape` is the curve with no gain, and `distort(amount, shape)` is exactly `drive(amount).shape(shape)`.
@@ -411,8 +411,9 @@ Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to pow
 `2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
 `"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`. Read once per note; a number or an `Osc.param(...)` slot.
 
-Tremolo shapes are read once per note; the skew is read every block. A `"square"` at depth 1 is silence for half
-of each cycle, on purpose; a voice with a tremolo is not cut short by the silence culler unless you set `cull(...)`.
+Tremolo shapes are read once per note, the rate every block, a fixed depth every block and a moving depth
+every sample (a moving depth at or below 0 leaves the signal unchanged). A `"square"` at depth 1 is silence for about
+half of each cycle, on purpose; a voice with a tremolo is not cut short by the silence culler unless you set `cull(...)`.
 
 ### FM Synthesis
 
@@ -516,7 +517,7 @@ note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 The slots it places are grouped per stage on `OscSlot` (also `Osc.slot`), named after the sprudel
 readers: `OscSlot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
 same on `hpf`; `bpf` and `notch` without `passes`), `OscSlot.crush.amount`, `OscSlot.coarse.amount`,
-`OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape|skew|phase`,
+`OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape`,
 `OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.onepole`, `OscSlot.adsrCurves.attack|decay|release`, and the filter envelope curves
 `OscSlot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 

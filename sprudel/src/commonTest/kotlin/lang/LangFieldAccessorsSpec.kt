@@ -85,8 +85,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))""", { it.phaserFloor }, 0.5, s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))),
         row("tremolo.depth", """s("bd sd").tremolo(0.5).tremolo(mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolo(0.5).tremolo(mul(0.5))),
         row("tremolo.sync", """s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))""", { it.tremoloSync }, 8.0, s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))),
-        row("tremolo.skew", """s("bd sd").tremolo(skew = 0.5).tremolo(skew = add(0.3))""", { it.tremoloSkew }, 0.8, s("bd sd").tremolo(skew = 0.5).tremolo(skew = add(0.3))),
-        row("tremolo.phase", """s("bd sd").tremolo(phase = 0.25).tremolo(phase = add(0.5))""", { it.tremoloPhase }, 0.75, s("bd sd").tremolo(phase = 0.25).tremolo(phase = add(0.5))),
     )
 
     // The children of a compound read their slot bare. Slots apply in declaration order within one
@@ -112,8 +110,6 @@ class LangFieldAccessorsSpec : StringSpec({
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).pan(phaser.floor)""", { it.pan }, 0.2, s("bd sd").phaser(floor = 0.2).pan(phaser.floor)),
         row("tremolo.depth", """s("bd sd").tremolo(0.5).pan(tremolo.depth)""", { it.pan }, 0.5, s("bd sd").tremolo(0.5).pan(tremolo.depth)),
         row("tremolo.sync", """s("bd sd").tremolo(sync = 4).phaser(rate = tremolo.sync)""", { it.phaserRate }, 4.0, s("bd sd").tremolo(sync = 4).phaser(rate = tremolo.sync)),
-        row("tremolo.skew", """s("bd sd").tremolo(skew = 0.5, phase = tremolo.skew)""", { it.tremoloPhase }, 0.5, s("bd sd").tremolo(skew = 0.5, phase = tremolo.skew)),
-        row("tremolo.phase", """s("bd sd").tremolo(phase = 0.25).tremolo(skew = tremolo.phase)""", { it.tremoloSkew }, 0.25, s("bd sd").tremolo(phase = 0.25).tremolo(skew = tremolo.phase)),
     )
 
     // Every alias is a constant of the canonical object: it sets the canonical field and reads it bare.
@@ -555,11 +551,10 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.phaserCenter shouldBe 2000.0
                 it.phaserSweep shouldBe 2000.0
             },
-            Case("tremolo(skew = add(0.2))", s("bd sd").tremolo(0.5, 4, "sine", 0.3).tremolo(skew = add(0.2)), """s("bd sd").tremolo(0.5, 4, "sine", 0.3).tremolo(skew = add(0.2))""") {
+            Case("tremolo(sync = mul(2))", s("bd sd").tremolo(0.5, 4, "sine").tremolo(sync = mul(2)), """s("bd sd").tremolo(0.5, 4, "sine").tremolo(sync = mul(2))""") {
                 it.tremoloDepth shouldBe 0.5
-                it.tremoloSync shouldBe 4.0
+                it.tremoloSync shouldBe 8.0
                 it.tremoloShape shouldBe "sine"
-                it.tremoloSkew shouldBe 0.5
             },
             Case("distort(oversample = mul(2))", s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2)), """s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2))""") {
                 it.distort shouldBe 0.5
@@ -976,8 +971,6 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("phaser.floor", s("bd sd").phaser(floor = "0.1 0.5"), """s("bd sd").phaser(floor = "0.1 0.5")""") { it.phaserFloor },
             Case("tremolo.depth", s("bd sd").tremolo(depth = "0.1 0.5"), """s("bd sd").tremolo(depth = "0.1 0.5")""") { it.tremoloDepth },
             Case("tremolo.sync", s("bd sd").tremolo(sync = "0.1 0.5"), """s("bd sd").tremolo(sync = "0.1 0.5")""") { it.tremoloSync },
-            Case("tremolo.skew", s("bd sd").tremolo(skew = "0.1 0.5"), """s("bd sd").tremolo(skew = "0.1 0.5")""") { it.tremoloSkew },
-            Case("tremolo.phase", s("bd sd").tremolo(phase = "0.1 0.5"), """s("bd sd").tremolo(phase = "0.1 0.5")""") { it.tremoloPhase },
             Case("distort.amount", s("bd sd").distort(amount = "0.1 0.5"), """s("bd sd").distort(amount = "0.1 0.5")""") { it.distort },
             Case("crush.amount", s("bd sd").crush(amount = "0.1 0.5"), """s("bd sd").crush(amount = "0.1 0.5")""") { it.crush },
             Case("coarse.amount", s("bd sd").coarse(amount = "0.1 0.5"), """s("bd sd").coarse(amount = "0.1 0.5")""") { it.coarse },

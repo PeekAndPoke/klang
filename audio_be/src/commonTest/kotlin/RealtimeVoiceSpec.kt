@@ -84,8 +84,8 @@ class RealtimeVoiceSpec : StringSpec({
     }
 
     // NB on "immediate": the house master limiter delays ALL output by its 5 ms lookahead
-    // (220 frames = ~1.7 blocks at 44.1k/128 — see audio/MEMORY.md). The voice starts in the
-    // very FIRST rendered block after the command (no heap, no epoch anchoring); through the
+    // (220 frames, about 1.7 blocks at 44.1k/128; see `MasterStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS`).
+    // The voice starts in the very FIRST rendered block after the command (no heap, no epoch anchoring); through the
     // master its output emerges 220 frames later. That pipe delay is a CONSTANT, so onset rows
     // pin exact block indices where it matters.
 

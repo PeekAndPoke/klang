@@ -18,7 +18,7 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
- * The `katalyst(…)` authoring surface, see `docs/tasks/katalyst-dsl.md` §6.
+ * The `katalyst(…)` authoring surface, see `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §6.
  *
  * The top-level form is a **control carrier** (one silent event per cycle, routed with `.orbit(n)`);
  * the mapper forms stamp the reference onto sounding events. Like `master(…)`, the door REPLACES

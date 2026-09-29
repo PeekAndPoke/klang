@@ -28,7 +28,7 @@ import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
  * exactly as it was.
  *
  * **How it switches and changes** (decided with the maintainer 2026-09-19,
- * `docs/tasks/katalyst-dsl.md` step 5c; built in Katalyst 5c-9). What the swap's ramps never
+ * `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c; built in Katalyst 5c-9). What the swap's ramps never
  * covered is the stage's OWN edges, a `.katp("duck.orbit", ...)` or a `duck.depth` that reaches 0,
  * or an owner handover on one chain. Those were a hard cut, and this is where they glide:
  *

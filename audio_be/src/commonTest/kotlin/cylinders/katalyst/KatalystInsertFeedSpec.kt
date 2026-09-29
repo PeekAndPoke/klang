@@ -226,7 +226,7 @@ class KatalystInsertFeedSpec : StringSpec({
 
     // ── Nothing on the bus reads a voice's send amounts ─────────────────────────────────────────
 
-    /** Renders [voice] through the real voice strip and the real cylinder; both channels' raw bits. */
+    /** Renders [voice] through the real voice and the real cylinder; both channels' raw bits. */
     fun renderVoice(voice: Voice): Pair<List<Long>, RentedUnits> {
         val ctx = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = blockFrames, sampleRate = sampleRate)
         val out = mutableListOf<Long>()
@@ -256,7 +256,7 @@ class KatalystInsertFeedSpec : StringSpec({
     )
 
     "the slots alone reach the stages: the same voice without them renders dry" {
-        // Through the real voice strip and cylinder: without the slots the orbit rents nothing and
+        // Through the real voice and cylinder: without the slots the orbit rents nothing and
         // sounds different. Until step 5b-3 this was the engagement control for a row showing that
         // the voice's delay and reverb FIELDS reached nothing; the fields left in that step.
         val (wet, _) = renderVoice(VoiceTestHelpers.createSynthVoice(blockFrames = blockFrames, katalystParams = slots))

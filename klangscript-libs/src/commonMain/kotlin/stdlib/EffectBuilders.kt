@@ -380,11 +380,7 @@ fun PhaserBuilder.floor(floor: IgnitorDslLike): PhaserBuilder = copy(node = node
 
 // ── Tremolo ──────────────────────────────────────────────────────────────────
 
-/**
- * Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knobs:
- * `shape`, `skew`, `phase`, the LFO knobs the voice strip's tremolo always had (phase 3 step 3b,
- * 2026-09-25).
- */
+/** Builder for [IgnitorDsl.Tremolo], handed to the `configure` lambda of `.tremolo(...)`. Knob: `shape`. */
 data class TremoloBuilder(val node: IgnitorDsl.Tremolo)
 
 /**
@@ -392,27 +388,13 @@ data class TremoloBuilder(val node: IgnitorDsl.Tremolo)
  * oscillator aliases (`"tri"`, `"sqr"`, `"pulse"`, `"saw"`, `"sin"`); an unknown name is sine. [name]
  * may also be the index in that list as a number, or a slot carrying it, and the door is the only
  * way to write one. Chosen once per note, so give it a name, a number or a slot: a moving signal
- * has no value to choose by and reads as sine. A `square` at full depth is silence for half of
- * every cycle, which is the point.
+ * has no value to choose by and reads as sine. The shape IS the oscillator of that name; the square,
+ * sawtooth and ramp get a 16 ms soft edge, so they pulse without clicking. A `square` at full depth
+ * is silence for about half of every cycle, which is the point.
  */
 @KlangScript.Function
 fun TremoloBuilder.shape(name: IgnitorDslLike): TremoloBuilder =
     copy(node = node.copy(shape = catalogueIndex(name, node.shape, LfoShapes::indexOf)))
-
-/**
- * The LFO's skew, -1 to +1 (default 0, symmetric): positive keeps the level HIGH for more of each
- * cycle, negative LOW, on every shape. Read once per block.
- */
-@KlangScript.Function
-fun TremoloBuilder.skew(amount: IgnitorDslLike): TremoloBuilder = copy(node = node.copy(skew = amount.toIgnitorDsl()))
-
-/**
- * Where the LFO starts in its own cycle, in cycles (default 0; 0.25 is a quarter cycle, 3.25 the
- * same quarter). Set once, when the note starts, so give it a number or a slot: a moving signal
- * reads as 0.
- */
-@KlangScript.Function
-fun TremoloBuilder.phase(cycles: IgnitorDslLike): TremoloBuilder = copy(node = node.copy(phase = cycles.toIgnitorDsl()))
 
 // ── Shimmer ──────────────────────────────────────────────────────────────────
 

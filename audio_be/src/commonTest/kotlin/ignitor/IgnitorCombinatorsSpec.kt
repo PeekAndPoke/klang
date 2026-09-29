@@ -14,6 +14,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -156,7 +157,7 @@ class ExciterCombinatorsSpec : StringSpec({
     "tremolo(rate, depth) - output amplitude varies (min < max)" {
         // Use a long block to capture multiple tremolo cycles
         val blockFrames = 44100 // 1 second
-        val wet = generate(Ignitors.sine().tremolo(rate = 4.0, depth = 1.0), blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().tremolo(rate = 4.0, depth = 1.0).toExciter(), blockFrames = blockFrames)
 
         // Compute RMS in windows to detect amplitude variation
         val windowSize = 2205 // 50ms windows

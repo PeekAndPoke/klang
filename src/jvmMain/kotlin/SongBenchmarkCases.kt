@@ -643,7 +643,7 @@ object SongBenchmarkCases {
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
             swap("    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))\n", "")(
-                swap("    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.015, 0.1, 0.0, 0.05).mul(1.0))\n", "")(it),
+                swap("    .plus(Osc.crackle(1.25).highpass(1200).adsr(0.001, 0.1, 0.0, 0.05).mul(1.5))\n", "")(it),
             )
         },
         // the marimba, one component at a time

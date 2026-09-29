@@ -23,7 +23,7 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |
-| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape, skew, phase) |
+| `src/commonMain/kotlin/stdlib/EffectBuilders.kt` | `AdsrBuilder` (curves, declick) and `ModAdsrBuilder` (curves) for the envelopes, `FilterBuilder`/`BandFilterBuilder` (the four filters), `EqBuilder` (band, tap), `PitchEnvelopeBuilder`, `FmBuilder`, `PhaserBuilder`/`ShimmerBuilder` (floor), `TremoloBuilder` (shape) |
 | `src/{jvmMain,jsMain}/kotlin/stdlib/PlatformConsole.kt` | Platform console output                                              |
 | `build/generated/ksp/metadata/commonMain/kotlin/`  | `GeneratedStdlibRegistration.kt` (KSP output, never edit)                 |
 

@@ -294,8 +294,8 @@ class BlockFramingInvarianceSpec : StringSpec({
     // ── The STRIP door (block-framing P4) ────────────────────────────────────────────────────────
     //
     // Everything above drives the IGNITOR door: the rows are `IgnitorDsl` chains, and even the
-    // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice strip's own
-    // modulation renderers were therefore untouched by this harness, which is what P4 is about.
+    // "fm with envelope" row is `IgnitorDsl.Sine().fm(...)`, NOT `Voice.Fm`. The voice's own pitch
+    // pipeline renderers (`voices/strip/pitch`) were therefore untouched by this harness, which is what P4 is about.
     //
     // Only the PER-SAMPLE ones belong on a bit-identity list. `VibratoRenderer`,
     // `PitchEnvelopeRenderer` and `AccelerateRenderer` all derive their position per sample from

@@ -11,8 +11,8 @@ summary: >
   The fix made the object mutable with a single owner, cloned exactly once where a leaf pattern
   emits it, and converted 113 setters to mutate in place, with a differential golden of a frozen
   song standing guard, which caught the one aliasing bug that mattered. The copy that remained
-  cost 820 nanoseconds on V8 and would not go lower by any hand-written route; a native copy via
-  Object.assign was 22 times slower. What made it smaller was grouping the fields, so that a
+  cost 820 nanoseconds on V8, and none of the hand-written routes we tried took it lower; a
+  native copy via Object.assign was 22 times slower. What made it smaller was grouping the fields, so that a
   leaf's empty clusters are one null each.
 authors: [ peekandpoke, claude ]
 hero: copy-ns.png
@@ -43,7 +43,7 @@ val voiceValueModifier = voiceModifier {
 
 *[lang_helpers.kt at ea4c2d4b](https://github.com/PeekAndPoke/klang/blob/ea4c2d4b0480832fc3b8cbbd99917710d688505c/sprudel/src/commonMain/kotlin/lang/lang_helpers.kt#L91-L96), the one modifier the sweep deliberately left copy-based, because it only ever runs on a fresh instance*
 
-A voice in Der Schmetterling passes through gain, note, scale, sound, unison, envelope, filters, distortion, pan and a room on its way out, and each of those was an allocation of a hundred-and-five-field object, on the order of twenty per voice, for every event of every cycle, on the page's main thread, in JavaScript, with the garbage collector keeping the score.
+A voice in Der Schmetterling passes through gain, note, scale, sound, unison, envelope, filters, distortion, pan and a reverb on its way out, and each of those was an allocation of a hundred-and-five-field object, on the order of twenty per voice, for every event of every cycle, on the page's main thread, in JavaScript, with the garbage collector keeping the score.
 
 ![the chain before and after](copy-chain.png)
 
@@ -76,7 +76,7 @@ private val gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
 
 *[lang_dynamics.kt at v0.1.0](https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/lang/lang_dynamics.kt#L22-L28)*
 
-The golden earned its keep on the first sweep. A helper that parsed pattern text built its atoms from a shared empty singleton, and an in-place modifier corrupted the singleton, so that a guitar's envelope curve bled into the drums. The first fix cloned the singleton; the hardening removed it, since a shared mutable default is the root footgun of the whole design, and a second hardening the same day took away the constructor defaults the first had introduced, so that the only full-field constructions left, the clone, the merge and a factory, fail to compile if a field is ever added and silently dropped from the clone. The class KDoc carries the contract:
+The golden earned its keep on the first sweep. A helper that parsed pattern text built its atoms from a shared empty singleton, and an in-place modifier corrupted the singleton, so that a guitar's envelope curve bled into the drums. The first fix cloned the singleton; the hardening removed it, since a shared mutable default is exactly what the invariant forbids, and a second hardening the same day took away the constructor defaults the first had introduced, so that the only full-field constructions left, the clone, the merge and a factory, fail to compile if a field is ever added and silently dropped from the clone. The class KDoc carries the contract:
 
 ```kotlin
  * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
@@ -94,7 +94,7 @@ The golden earned its keep on the first sweep. A helper that parsed pattern text
 
 ## The copy that would not go lower
 
-With one clone per event, the profile moved to that clone: about a quarter of the query path. Three things were tried on it and two of them are the reason this post exists. A hand-written clone as an explicit constructor call with a hundred and five arguments was no faster than the generated `copy`, which is the same call. A native copy on the JavaScript side, `Object.assign` onto an object created with the right prototype, one own-property copy instead of a hundred and five field reads, was measured at 18,390 nanoseconds against 820 for `copy`, twenty-two times slower. V8 optimizes the constructor-based copy, whose result has the same hidden class as every other instance [[2]](#bynens2018); an object built by create-and-assign falls into dictionary mode [[1]](#bruni2017), and everything that touches it afterward pays. The record filed it under rejected, do not retry, and the benchmark that measured it stayed in the repository as a warning with the number in its KDoc.
+With one clone per event, the profile moved to that clone: about a quarter of the query path. Three things were tried on it, and two of them are the interesting part. A hand-written clone as an explicit constructor call with a hundred and five arguments was no faster than the generated `copy`, which is the same call. A native copy on the JavaScript side, `Object.assign` onto an object created with the right prototype, one own-property copy instead of a hundred and five field reads, was measured at 18,390 nanoseconds against 820 for `copy`, twenty-two times slower. V8 optimizes the constructor-based copy, whose result has the same hidden class as every other instance [[2]](#bynens2018); an object built by create-and-assign falls into dictionary mode [[1]](#bruni2017), and everything that touches it afterward pays. The record filed it under rejected, do not retry, and the benchmark that measured it stayed in the repository as a warning with the number in its KDoc.
 
 ![the copy costs](copy-ns.png)
 
@@ -126,7 +126,7 @@ The leaf clone is the hot one, since it runs once per emitted event, and it is t
 
 ## What transferred
 
-Mutability is safe under an invariant you can state in one sentence and test with one golden, and the golden has to exist before the first field changes, because the failure it guards against is silent. The dead end is worth more than the win: an optimization that looks like a native fast path can be a slow path in disguise on a JIT that has opinions about how an object was built, and the only way to know is to measure it, which is why the rejected number lives in a KDoc and not only in a task record. And when a copy is at its floor, the lever is not a faster copy but a smaller thing to copy, which is a lesson [the engine side of this series](../2026-09-07-loop-shape-beats-pass-count/index.md) keeps finding in its own shape: the cost is in what a loop carries, not in how many times it runs.
+Mutability was workable here under an invariant we could state in one sentence and hold with one golden, and the golden had to exist before the first field changed, because the failure it guards against is silent. The dead end taught us more than the win: an optimization that looks like a native fast path can be a slow path in disguise on a JIT that has opinions about how an object was built, and the only way to know is to measure it, which is why the rejected number lives in a KDoc and not only in a task record. And when a copy is at its floor, the lever is not a faster copy but a smaller thing to copy, which is a lesson [the engine side of this series](../2026-09-07-loop-shape-beats-pass-count/index.md) keeps finding in its own shape: the cost is in what a loop carries, not in how many times it runs.
 
 ## References
 

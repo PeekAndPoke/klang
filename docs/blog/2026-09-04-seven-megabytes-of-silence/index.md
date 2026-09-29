@@ -9,8 +9,8 @@ summary: >
   orbits zero-filled a 7.68 MB delay ring inside a callback of under three milliseconds, one after another, for a
   song with no delay in it. This is the post in the series with no microsecond in it: bytes and
   a stall, measured by a hand on a phone, four times in one day. Rings became lazy and
-  class-sized, grow by migration with their contents kept, return to a shelf that is never
-  stocked by guessing, and fail as null instead of killing the render thread. Then the stall
+  class-sized, grow by migration with their contents kept, return to a shelf that is
+  stocked by return and not by guessing, and fail as null instead of killing the render thread. Then the stall
   moved twice, from allocation to construction to cold code, and a warmup vocabulary that
   executes every node kind in silence is what finally let the first run play.
 authors: [ peekandpoke, claude ]
@@ -67,7 +67,7 @@ The decisions, agreed with the maintainer on September 3, read like a warehouse 
 
 The ratio is two rather than the Fibonacci ratio of 1.6 because the ladder's job is headroom, not packing: a coarser step means a changing delay time crosses a class boundary, and forces a regrow, less often, and right-sizing had already solved the memory problem twenty times over. Class zero holds half a second plus the 64 frames of interpolation margin a delay needs beyond its time, which a review round insisted on, since without it a quarter note at 120 BPM, exactly half a second, would have fallen into class one and doubled its memory. There is no maximum: a sixty-second delay gets the 64-second class, about 49 MB, and the one-time allocation it asked for. A ring only grows, by migration into the next class with its contents copied in, so a delay that is ringing keeps ringing across the resize; and it never shrinks, because a shrink is an allocation and a copy for no audible benefit, and dropping it deleted a whole family of decisions about when and with what hysteresis that could not be made well.
 
-Returned rings go onto a shelf. The maintainer's concern, verbatim in the plan: with size classes "we will not know upfront which rings to keep, so we would need some kind of heuristic, which can always be exactly wrong." So there is no heuristic. Nothing is pre-filled by prediction; a ring goes onto the shelf when it is returned, at the end of a playback, at a master-chain eviction or after a migration, and, as decided, a request takes the smallest idle ring that is big enough; as built, a clean one beats a dirty one whatever its class, within the bound the next section explains. A cache cannot be exactly wrong: its worst case is empty, and empty is the old behavior minus 97 percent of the cost. The re-evaluate-and-play loop that is live coding hits the shelf every time, because the rings that come back are precisely the ones the next run wants.
+Returned rings go onto a shelf. The maintainer's concern, verbatim in the plan: with size classes "we will not know upfront which rings to keep, so we would need some kind of heuristic, which can always be exactly wrong." So there is no heuristic. Nothing is pre-filled by prediction; a ring goes onto the shelf when it is returned, at the end of a playback, at a master-chain eviction or after a migration, and, as decided, a request takes the smallest idle ring that is big enough; as built, a clean one beats a dirty one whatever its class, within the bound the next section explains. A cache cannot be exactly wrong: its worst case is empty, and empty is the old behavior minus 97 percent of the cost. The re-evaluate-and-play loop that is live coding hits the shelf almost every time, because the rings that come back are usually the ones the next run asks for.
 
 ![the shelf](shelf.png)
 
@@ -89,7 +89,7 @@ Before the warehouse an allocation failure was fatal on both platforms: an uncau
 
 *[SizedBuffers.kt at v0.3.7](https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/warehouse/SizedBuffers.kt#L341-L350)*
 
-The rent returns a nullable ring, and the maintainer's point about that choice is the whole design: the compiler tells us every place that needs a null check. The rule that an audio callback never allocates is as old as audio callbacks [[1]](#bencina2011); the warehouse is the deterministic allocator that rule recommends instead, with the one difference that its failure is a value. A grow that fails keeps the ring it has and clamps the time to it; a first allocation that fails takes an oversized idle ring if the shelf has one, and otherwise leaves the effect dry on that orbit, since a device that cannot find 385 KB is moments from killing the tab anyway:
+The rent returns a nullable ring, and the maintainer's point about that choice was the reason for it: the compiler tells us every place that needs a null check. The rule that an audio callback never allocates is as old as audio callbacks [[1]](#bencina2011); the warehouse is the deterministic allocator that rule recommends instead, with the one difference that its failure is a value. A grow that fails keeps the ring it has and clamps the time to it; a first allocation that fails takes an oversized idle ring if the shelf has one, and otherwise leaves the effect dry on that orbit, since a device that cannot find 385 KB is moments from killing the tab anyway:
 
 ```kotlin
     fun configure(timeSeconds: Double, feedback: Double, cap: Double) {
@@ -100,7 +100,7 @@ The rent returns a nullable ring, and the maintainer's point about that choice i
 
 *[KatalystDelayEffect.kt at v0.3.7](https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDelayEffect.kt#L186-L198)*
 
-Every refusal is counted and rides the diagnostics feed to the frontend, so the interface can say that a delay time was reduced for lack of memory instead of the set going quiet. The house rule against exceptions in hot paths is not broken by this: a catch around one large allocation, once per ring, is not a per-sample throw, and on the JVM catching the out-of-memory error at a single big-allocation site is the one sound pattern for it, since the allocation that failed never happened and the heap is as it was.
+Every refusal is counted and rides the diagnostics feed to the frontend, so the interface can say that a delay time was reduced for lack of memory instead of the set going quiet. The house rule against exceptions in hot paths is not broken by this: a catch around one large allocation, once per ring, is not a per-sample throw, and on the JVM catching the out-of-memory error at a single big-allocation site is a sound pattern for it, since the allocation that failed never happened and the heap is as it was.
 
 ## The stall that moved
 
@@ -123,7 +123,7 @@ Six synthetic graphs, waves, supers, noises, math, filters and effects, finite b
 
 ## What transferred
 
-The stall moved twice in one day, from allocation to construction to compilation, and each move was found by a hand on a phone, not by a benchmark; a first-run problem can only be measured on a first run. A cache that is stocked by return cannot be exactly wrong, because its worst case is the day before. A nullable return type is the cheapest audit there is: the compiler enumerates every consumer that must now decide what silence means. And the honest close is a task, not a claim: the plan's follow-up says to profile the tutti on the phone before guessing again, and that the second run being clean still means first-time work, per session, somewhere the vocabulary cannot reach.
+The stall moved twice in one day, from allocation to construction to compilation, and each move was found by a hand on a phone, not by a benchmark; a first-run problem can only be measured on a first run. A cache that is stocked by return cannot be exactly wrong, because its worst case is the day before. A nullable return type is a cheap audit: the compiler enumerates every consumer that must now decide what silence means. And the close is a task, not a claim: the plan's follow-up says to profile the tutti on the phone before guessing again, and that the second run being clean still means first-time work, per session, somewhere the vocabulary cannot reach.
 
 ## References
 

@@ -46,7 +46,7 @@ Each lane of that process costs a handful of operations: six bit operations for 
 
 *[Ignitors.kt at v0.3.12](https://github.com/PeekAndPoke/klang/blob/v0.3.12/audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt#L139-L184)*
 
-`nextMultiplier()` is the whole drift, every sample. For a unison stack the call sits inside a per-voice loop with the shared lane blended in; the blend had already been hoisted into an inline function so that V8 read no object property per sample, a story the DriftLanes post tells, and it was still the single largest slice of a drifting guitar that a stage swap could find.
+`nextMultiplier()` is the whole drift, every sample. For a unison stack the call sits inside a per-voice loop with the shared lane blended in; the blend had already been hoisted into an inline function so that V8 read no object property per sample, a story [Loop Shape Beats Pass Count](../2026-09-07-loop-shape-beats-pass-count/index.md) tells, and it was still the single largest slice of a drifting guitar that a stage swap could find.
 
 ## The clock
 
@@ -88,7 +88,7 @@ And the same sine loop at v0.3.13:
 
 *[Ignitors.kt at v0.3.13](https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt#L140-L192)*
 
-One add per sample where the whole process used to be. The `sin` became `fastSin` the same day for a different reason, told in the post about polynomial transcendentals; the drift change is the three lines above the loop and the one inside it. The unison stacks and the strings got the same shape through their lane container, which now prepares the shared lane once per block and hands each voice the start and end of its blended multiplier:
+One add per sample where the whole process used to be. The `sin` became `fastSin` the same day for a different reason, told in [Eleven Digits of Sine](../2026-09-15-eleven-digits-of-sine/index.md); the drift change is the three lines above the loop and the one inside it. The unison stacks and the strings got the same shape through their lane container, which now prepares the shared lane once per block and hands each voice the start and end of its blended multiplier:
 
 ```kotlin
     fun advanceLane(lane: Int) {
@@ -130,7 +130,7 @@ The guards, since "judged by ear" is not a test: a ramp specification holds the 
 | bass | 0.0087 | | 0.0063 | | -28% |
 | melody guitar | 0.0198 | | 0.0165 | | -16% |
 
-The floor columns are the row the rig suite calls "no analog", each measured in the same run as the column to its left. Before the change the drift cost the rhythm guitars 0.0065 of their 0.0401; after it, drifting against not drifting in one run is 0.0006, and for the marimba and the drum the floor came out above the drifting row. The drift is free, in the only sense that can be measured.
+The floor columns are the row the rig suite calls "no analog", each measured in the same run as the column to its left. Before the change the drift cost the rhythm guitars 0.0065 of their 0.0401; after it, drifting against not drifting in one run is 0.0006, and for the marimba and the drum the floor came out above the drifting row. The drift is free, in the sense the benchmark can measure.
 
 ![the whole song before and after](song-before-after.png)
 
@@ -140,7 +140,7 @@ The live song went from a median RTF of 0.106 to 0.097 on the desktop, the froze
 
 ## What transferred
 
-Modulation has its own clock, and it is rarely the sample clock. A one-pole with a 50 ms time constant produces the same sound whether it is asked 48,000 or 375 times a second, provided its coefficients are computed for the rate it is actually asked at, and provided the consumer interpolates instead of holding. The block is the engine's natural clock: it is when parameters are read, when envelopes are checked, when a voice decides whether it still needs to render. A modulation that steps per block and ramps per sample costs one add where it used to cost a process, and the ramp's spectrum is the reason it can be trusted without listening, though we listened anyway.
+Modulation has its own clock, and it is rarely the sample clock. A one-pole with a 50 ms time constant produces the same sound whether it is asked 48,000 or 375 times a second, provided its coefficients are computed for the rate it is actually asked at, and provided the consumer interpolates instead of holding. The block is the engine's natural clock: it is when parameters are read, when envelopes are checked, when a voice decides whether it still needs to render. A modulation that steps per block and ramps per sample costs one add where it used to cost a process, and the ramp's spectrum is why it can be trusted without listening; we listened anyway.
 
 The other lesson is the one the series keeps finding. The request that evening named the guitars' filter stages. The number that moved the phone was the drift.
 

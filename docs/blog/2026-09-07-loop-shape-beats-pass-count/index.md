@@ -29,7 +29,7 @@ references:
 
 *Twenty-one block passes were cheaper than one loop, twice, and both times the fix was where a value lived.*
 
-The bass of Der Schmetterling plays a low E that most speakers cannot reproduce, so it carries its own harmonics: the ear rebuilds a 41 Hz fundamental from partials at 82 to 328 Hz, the trick every small speaker's DSP relies on, done at the source where the pitch is known. Until September 7 that stack was written by hand:
+The bass of Der Schmetterling plays a low E that most speakers cannot reproduce, so it carries its own harmonics: the ear rebuilds a 41 Hz fundamental from partials at 82 to 328 Hz, a trick many small speakers' DSP uses, done at the source where the pitch is known. Until September 7 that stack was written by hand:
 
 ```javascript
   let harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
@@ -53,7 +53,7 @@ The first cut of the bank did what the argument said. One loop over the samples,
 
 *Fig. 1: The seven-harmonic voice in its three shapes on September 7, JVM, microseconds per block. The sample-major bank was never committed; it was measured, rejected and rewritten the same day. That day's harness rendered every voice twice, which was found and fixed the same evening, so the bars are relative to each other and about double the real cost.*
 
-The rewrite turned the loops inside out, the interchange every compiler textbook describes [[2]](#allen1984): for each partial, one tight loop over the samples, with the phase in a local variable and the buffer accumulated once per partial. That is the shape the engine's unison stacks already had, and it brought the bank to 22 microseconds, under the tree at last:
+The rewrite turned the loops inside out, the loop interchange the compiler literature describes [[2]](#allen1984): for each partial, one tight loop over the samples, with the phase in a local variable and the buffer accumulated once per partial. That is the shape the engine's unison stacks already had, and it brought the bank to 22 microseconds, under the tree at last:
 
 ```kotlin
         private fun renderPartial(
@@ -74,7 +74,7 @@ The rewrite turned the loops inside out, the interchange every compiler textbook
 
 *Fig. 2: The same forty sine evaluations in the two orders, a diagram. Sample-major reloads every partial's state for every sample; partial-major keeps one partial's state in registers for the whole block and touches the buffer once per partial. The microsecond figures are the day's, relative.*
 
-Why the tree had won: each of its sine nodes is exactly this tight loop, phase in a local, and the multiplies and adds are passes over a 1 KB buffer, which nobody measured for cache residency but which is small enough to stay in the first level. The sample-major bank did more work per sample than the tree did per sample, eight array reads and writes for the phase alone, and the JIT could keep none of it in a register. The number of passes was never the cost. What a loop carries between iterations, and where it keeps it, is.
+Why the tree had won: each of its sine nodes is exactly this tight loop, phase in a local, and the multiplies and adds are passes over a 1 KB buffer, which nobody measured for cache residency but which is small enough to stay in the first level. The sample-major bank did more work per sample than the tree did per sample, eight array reads and writes for the phase alone, and the JIT could keep none of it in a register. The number of passes was not the cost here. What a loop carries between iterations, and where it keeps it, was.
 
 ## What the bank actually bought
 

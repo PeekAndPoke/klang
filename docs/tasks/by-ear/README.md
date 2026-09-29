@@ -21,13 +21,23 @@ Created 2026-08-31.
 | [`c3-depth-migration-flags.md`](c3-depth-migration-flags.md) | The C3 semitone-depth migration changed mid-sweep trajectories even where endpoints are exact. A ranked list of 5 song sites to check, deepest and slowest first (IrishLamentTechno hitStab, SoundOfTheSea "Waves", TetrisRemix sub, StrangerThings melody, then the fast percussive group). |
 | [`phase3-end-checkpoint.md`](phase3-end-checkpoint.md) | The phase 3 end checkpoint (2026-09-28): one listen, or declare the earlier checkpoints enough, then retire or regenerate `ClassicVoiceBaselineSpec` and `BuiltInVoiceMatrixSpec`, the strip's frozen sound. |
 | [`chain-swap-request-during-drain.md`](chain-swap-request-during-drain.md) | Phase 3 step 12 decision (g): a second chain edit (orbit or master) waits for the old chain's ring-out, up to about 24.5 s. Keep, cut the drain, or let several chains drain? |
-| [`analog-drift-ratio-tuning.md`](analog-drift-ratio-tuning.md) | Is Klang's `analog` character built the wrong way round? Real VCOs hold pitch well and VCF cutoff wanders; Klang does the opposite. An A/B ratio experiment on held/unison material: `(0.5 / 0.5)` then `(0.25 / 1.0)` then `(0.1 / 2.5)`. **Unblocked** since its precursor `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` shipped 2026-08-11. |
+| [`duck-orbit-switch-click.md`](duck-orbit-switch-click.md) | Katalyst step 5c (2026-09-20, measured): moving a ducker's sidechain to a sounding orbit steps the reduction. Leave it, blend the two sources, or dip and return? |
 
 ---
 
 ## Owed rounds (shipped code nobody has heard)
 
 ### 1. W10 tremolo shapes — committed unheard
+
+> **HEARD 2026-09-29 (pairs 20 to 23 and 70 to 78 in the listening folder).** Sine and triangle differ audibly and
+> both are kept. Square, sawtooth and ramp CLICK in today's tremolo ("not useful"): the LFO jumps instantly. Composed
+> from the existing oscillators instead (`Osc.square/saw/ramp(...).range(1 - depth, 1)` multiplied into the voice,
+> with the oscillators' own soft edges, `flankSamples` / `resetSamples`), the clicks are gone (70, 71: "fine"); the
+> sine composed the same way matches today's tremolo to -76 dB (one sample of phase). Edge length by ear: 8 ms
+> still thumps on the sawtooth, **16 ms for all** (74 to 78). Direction (maintainer): keep the `.tremolo()` doors,
+> remove the `TremoloIgnitor` and its own LFO (`LfoShape`), and model the tremolo by composition, "the dsp surface
+> would shrink". Decided the same day: `skew` and `phase` are dropped. The build task:
+> [`../tremolo-as-composition.md`](../tremolo-as-composition.md).
 
 **Commit `9cb896ff`.** Recorded only in the W10 row of `docs/plans/block-framing-invariance.md` and
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.
@@ -151,6 +161,12 @@ listening pass, and nothing here is new sound by design: it is what the songs al
    at the cycle start. Now it is read at every note.
 
 Listen, deepest change first:
+
+> **Checked by render, 2026-09-29** (pairs 30 to 33 in the listening folder, before `a0ca2abd`, after `8afee51b`):
+> Tetris is **bit-identical** across the fix (with `seg(n).slow(n)` each slice is a whole cycle, so its q was already
+> walking; only a bare `seg(4)` changes). In Stranger Things the moving band-pass is on the brown-noise "Shore" layer,
+> not the arpeggio; in Greensleeves it is the brown-noise wind, not the pad. In Der Schmetterling the shaker's
+> `late(...)` micro-timing moved too. The list below is the original expectation.
 
 - **Tetris** `lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))`: q used to sit still for 32 cycles, now
   it walks once per cycle. Resonance breathing that was never there.

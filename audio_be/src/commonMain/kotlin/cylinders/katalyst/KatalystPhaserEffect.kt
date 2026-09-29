@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_SWEEP_HZ
  * multi-stage all-pass cascade.
  *
  * **How it switches and changes** (decided with the maintainer 2026-09-19,
- * `docs/tasks/katalyst-dsl.md` step 5c; built in Katalyst 5c-9). Every edge and every knob move
+ * `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` step 5c; built in Katalyst 5c-9). Every edge and every knob move
  * glides over [KNOB_GLIDE_SECONDS] from where the stage stands, and only the first initialisation
  * is instant.
  *

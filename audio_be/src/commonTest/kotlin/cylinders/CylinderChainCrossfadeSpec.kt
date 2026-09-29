@@ -31,7 +31,7 @@ import kotlin.math.abs
 
 /**
  * The chain swap of a SOUNDING orbit: the dual-chain crossfade, and the drain that lets the
- * outgoing chain ring out instead of being cut (Katalyst step 3b, `docs/tasks/katalyst-dsl.md` §6
+ * outgoing chain ring out instead of being cut (Katalyst step 3b, `docs/tasks-archive/2026-09/20260928-katalyst-dsl.md` §6
  * and §D3).
  *
  * What a request DOES (the five cases, the cache, `retire` / `adopt`) is `CylinderChainSwapSpec`'s

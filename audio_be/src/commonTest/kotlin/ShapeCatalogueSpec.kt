@@ -12,18 +12,19 @@ import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 
 /**
- * The two shape catalogues (`DistortionShapes`, `LfoShapes` in `audio_bridge`) against the backend's
- * enums (phase 3 step 3b, 2026-09-25). Since 3b a shape NAME no longer reaches the enum directly:
- * `parseDistortionShape` and `parseLfoShape` (a test helper since phase 3 step 9) go through the
- * catalogue's index, and the Ignitor nodes
- * carry that index as a knob. Two things can therefore go silently wrong, and each has its rows:
+ * The two shape catalogues (`DistortionShapes`, `LfoShapes` in `audio_bridge`) against the backend
+ * (phase 3 step 3b, 2026-09-25). Since 3b a shape NAME no longer reaches the backend directly:
+ * `parseDistortionShape` goes through the catalogue's index, the Ignitor nodes carry that index as a
+ * knob, and the tremolo's LFO is the oscillator its index names (since 2026-09-29, when the backend's
+ * own LFO enum retired). Two things can therefore go silently wrong, and each has its rows:
  *
  *  - **the NAME TABLE moved**: a name or alias now reaches a different shape than it did before 3b.
  *    The expected tables below are the old `when` arms copied verbatim, the independent oracle; they do
  *    not route through the catalogue.
- *  - **the ORDER drifted**: the catalogue's position `i` and the enum's entry `i` are different shapes,
- *    so an index knob selects the wrong one while every name still parses right (a name goes through
- *    the index, so it would move with the drift and hide it). Pinned position by position.
+ *  - **the ORDER drifted**: the catalogue's position `i` and the shape an index `i` selected before are
+ *    different shapes, so an index knob (a stored `tremolo.shape` slot) selects the wrong one while every
+ *    name still parses right (a name goes through the index, so it would move with the drift and hide it).
+ *    Pinned position by position.
  */
 class ShapeCatalogueSpec : StringSpec({
 
@@ -47,14 +48,20 @@ class ShapeCatalogueSpec : StringSpec({
         "soft" to DistortionShape.SOFT,
     )
 
-    // The old parseLfoShape, arm by arm (HEAD 0303c330).
-    val lfoBefore: Map<String, LfoShape> = mapOf(
-        "triangle" to LfoShape.TRIANGLE, "tri" to LfoShape.TRIANGLE,
-        "square" to LfoShape.SQUARE, "sqr" to LfoShape.SQUARE, "pulse" to LfoShape.SQUARE,
-        "sawtooth" to LfoShape.SAWTOOTH, "saw" to LfoShape.SAWTOOTH,
-        "ramp" to LfoShape.RAMP,
-        "sine" to LfoShape.SINE, "sin" to LfoShape.SINE,
+    // The old parseLfoShape, arm by arm (HEAD 0303c330), onto the canonical name of the shape it reached.
+    val lfoBefore: Map<String, String> = mapOf(
+        "triangle" to "triangle", "tri" to "triangle",
+        "square" to "square", "sqr" to "square", "pulse" to "square",
+        "sawtooth" to "sawtooth", "saw" to "sawtooth",
+        "ramp" to "ramp",
+        "sine" to "sine", "sin" to "sine",
     )
+
+    // The old backend enum's entry order (SINE, TRIANGLE, SQUARE, SAWTOOTH, RAMP): what index i selected.
+    val lfoOrderBefore: List<String> = listOf("sine", "triangle", "square", "sawtooth", "ramp")
+
+    /** A shape name through the catalogue's index, as the tremolo's knob carries it, back to its canonical name. */
+    fun parseLfoShape(name: String?): String = LfoShapes.names[LfoShapes.indexAt(LfoShapes.indexOf(name))]
 
     // ── The name tables did not move ─────────────────────────────────────────────────────────────
 
@@ -91,10 +98,10 @@ class ShapeCatalogueSpec : StringSpec({
     }
 
     "an unknown LFO name, and none at all, is the sine, as it always was" {
-        parseLfoShape(null) shouldBe LfoShape.SINE
+        parseLfoShape(null) shouldBe "sine"
 
         for (name in listOf("rampup", "rampdown", "", "noise")) {
-            withClue(name) { parseLfoShape(name) shouldBe LfoShape.SINE }
+            withClue(name) { parseLfoShape(name) shouldBe "sine" }
         }
     }
 
@@ -111,11 +118,11 @@ class ShapeCatalogueSpec : StringSpec({
         }
     }
 
-    "position i of the LFO catalogue is entry i of the backend enum" {
-        LfoShape.entries.size shouldBe LfoShapes.names.size
+    "position i of the LFO catalogue is the shape index i selected before" {
+        LfoShapes.names.size shouldBe lfoOrderBefore.size
 
         LfoShapes.names.forEachIndexed { i, name ->
-            withClue("$i $name") { lfoShapeAt(i.toDouble()) shouldBe lfoBefore.getValue(name) }
+            withClue("$i $name") { LfoShapes.names[LfoShapes.indexAt(i.toDouble())] shouldBe lfoOrderBefore[i] }
         }
     }
 
@@ -129,7 +136,7 @@ class ShapeCatalogueSpec : StringSpec({
         }
 
         for (index in bad + listOf(5.0, 4.5000001)) {
-            withClue("lfo $index") { lfoShapeAt(index) shouldBe LfoShape.SINE }
+            withClue("lfo $index") { LfoShapes.indexAt(index) shouldBe LfoShapes.SINE_INDEX }
         }
 
         // Nearest position, ties to EVEN (the BodyMaterials rule). A tie is only a test where half-up
@@ -138,7 +145,7 @@ class ShapeCatalogueSpec : StringSpec({
         distortionShapeAt(2.5) shouldBe DistortionShape.GENTLE
         distortionShapeAt(-0.4) shouldBe DistortionShape.SOFT
         distortionShapeAt(15.4) shouldBe DistortionShape.STOMP_BOX
-        lfoShapeAt(4.4) shouldBe LfoShape.RAMP
-        lfoShapeAt(2.5) shouldBe LfoShape.SQUARE
+        LfoShapes.names[LfoShapes.indexAt(4.4)] shouldBe "ramp"
+        LfoShapes.names[LfoShapes.indexAt(2.5)] shouldBe "square"
     }
 })
