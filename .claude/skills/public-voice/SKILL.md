@@ -33,7 +33,7 @@ brochure ("no Hochglanz-rubbish"). Factual, but not cold.
 - **Not hype.** No marketing or tech-hype speak: no "game-changer", "revolutionary", "blazing", "seamless",
   "next-level", no superlatives about ourselves.
 - **Not overstating.** Be on the cautious side with every claim. Describe only what exists today and label plans
-  as plans ("only sprudel exists, so sprudel is one possible frontend", not "the first of several").
+  as plans ("a pad controller, sheet music and tab are ideas for later", not "the first of several frontends").
 - **Not promissory.** No "never", "always" or "guarantee" about sound, performance or behaviour. Describe the
   mechanism and let the reader draw the conclusion.
 - **Not insight theatre.** No rhetorical setups that sell a plain fact ("X is not a hypothesis", "This is not
@@ -79,7 +79,7 @@ Add one whenever the maintainer corrects a public text.
 | ... so two patterns taking turns on one orbit never click. | ... a safety net against clicks when two patterns take turns on one orbit, not a guarantee. | promissory "never"; the mechanism is a safety net | 2026-09-28 |
 | ... and a live edit swaps chains without a click. | A live edit is a chain swap: the leaving chain's input ramps down over 60 ms while the arriving chain's output ramps up, and the leaving chain keeps running until its tail has drained. | describe the mechanism, let the reader conclude | 2026-09-28 |
 | Music-as-code is not a hypothesis … it is a working scene ... | Music-as-code is a working scene ... | insight theatre | 2026-09-28 |
-| today it is one frontend of the engine below it, the first of several. | today it is one possible frontend of the engine below it. | overstating: only one exists | 2026-09-28 |
+| today it is one frontend of the engine below it, the first of several. | today it is one possible frontend of the engine below it. | overstating: "several" promised what does not exist (corrected 2026-09-29: a small MIDI keyboard playground exists beside sprudel, so check what exists before writing either way) | 2026-09-28 |
 | `// A chain slot: the knob a pattern moves with katp(), gliding, never stepping` | `// A chain slot: the knob a pattern moves with katp(); it glides to a new value over 50 ms` | a flat "never", and not literally true (the first configure snaps) | 2026-09-28 |
 | And there's a subtler version of the problem that most systems don't even attempt. | And there is a subtler version of the problem. | comparative at others' expense (blog sweep) | 2026-09-28 |
 | Culling is not a discount on the engine; it is a refund on silence, and the refund is exactly as large as the silence a song carries. | Culling is a refund on silence, and the refund is as large as the silence a song carries. | insight theatre ("not X; it is Y") | 2026-09-28 |
