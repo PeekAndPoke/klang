@@ -22,6 +22,8 @@ the old `{key=value}` attribute block. Works on `note()`, `n()`, `s()`, chords, 
 
 ## 1. The unknown-tweak diagnostic (the one that matters)
 
+> **Parked 2026-09-29** with every diagnostics item: [`editor-diagnostics.md`](editor-diagnostics.md).
+
 **A misspelled tweak is silently inert.** `note("c3 e3{swel}")` plays the note with no swell and says
 nothing at all.
 
