@@ -43,7 +43,7 @@ https://klang.finzo.de
 # White Paper
 
 An in-depth tour of what Klang is — the engine, the languages, the DSL surfaces, and where the journey might
-go: [docs/whitepaper/klang-whitepaper.html](docs/whitepaper/klang-whitepaper.html)
+go: [src/jsMain/resources/klang-whitepaper.html](src/jsMain/resources/klang-whitepaper.html)
 
 # Module Structure
 
