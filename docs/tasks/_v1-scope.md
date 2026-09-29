@@ -152,6 +152,9 @@ Tracked in the order they bite. See the conversation record for the reasoning.
    design as written in `voice-takeover.md`, so Phase 1 is no longer decision-free and must not be
    picked up as ready-to-build work. What the alternatives are, and which problem `takeover` is
    really meant to solve, is the open question.
+8. **A general EQ core and sprudel `.eq()`** (added 2026-09-29, [`future/general-eq-core.md`](future/general-eq-core.md)):
+   not planned; if it is built it removes `lpf`/`hpf`/`bpf`/`notch`, a shape change, so it lands before the
+   tutorials or not in V1. Its engine half (every filter feature as an EQ section) changes no surface.
 
 ~~C6 chunk walkthrough~~ — moot, C6 shipped 2026-08-31.
 
@@ -162,7 +165,7 @@ Tracked in the order they bite. See the conversation record for the reasoning.
   operator is a language change that buys one spelling. The answer is number methods instead:
   `2.pow(7/12)`, in the extension mechanism the stdlib already uses for strings, arrays and booleans.
   [`../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`](../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md) keeps the reasoning.
-- **No sprudel `band`/`tap` in V1** (2026-08-31). C6 ships names only and is unblocked; D9 leaves
+- **No sprudel `band`/`tap` in V1** (2026-08-31). (Re-opened as an idea 2026-09-29: open decision 8, `future/general-eq-core.md`.) C6 ships names only and is unblocked; D9 leaves
   V1 with it. Full record in `plans/filter-unification.md` §C6.
 - **Tutorials are owned by a separate session.** `tutorial-fix-and-through-line.md` and
   `tutorial-master-plan.md` are stale (they plan work on the 38 tutorials wiped in `92f6d54f`);
