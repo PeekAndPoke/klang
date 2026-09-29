@@ -25,7 +25,8 @@ What you hand over (the brief for the writer):
   to synthesizers does not know what an envelope is when it first appears in section 5; it needs a one-line
   explanation or a small picture there"), never the sentence to write instead. The writer does the writing.
 - Ranked by value to the reader: structure and order, then paragraphs, then what to condense, extend or cut, then
-  visuals (what picture, showing what, where), then tone and feel.
+  visuals (what picture, showing what, where; and where the reader would understand more by TRYING it, an
+  interactive figure: a slider, a hover, a filter), then tone and feel.
 - Quote the passage you mean and give its location, so every point can be found.
 - How it FEELS is a real finding: warm or cold, inviting or intimidating, tiring or light. Say where, and why.
 
