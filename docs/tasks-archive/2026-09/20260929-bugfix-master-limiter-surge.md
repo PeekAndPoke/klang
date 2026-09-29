@@ -1,6 +1,12 @@
 # Master limiter: the mix surges back after deep limiting
 
-Status: **open, sound; re-measured 2026-09-29 (it still shows, on every snare hit), next: by ear.** Carried 2026-09-27 out of the master limiter lookahead task (archived as
+> **CLOSED 2026-09-29: measured, not audible.** The maintainer listened to the pair around the worst event
+> (`tmp/listening/01-limiter-snare-*`, the song as written against 3.3 dB less drive): "there is nothing after the
+> snare hit, that feels as if it surges in volume"; no ducking heard in the lower-drive version, and the snare stays
+> prominent. So the house limiter's dips under each snare (measured below) are masked by the snare itself, and
+> neither the depth-aware release nor an upstream change is needed. Re-open only on a new report by ear.
+
+Status (before closing): **open, sound; re-measured 2026-09-29 (it still shows, on every snare hit), next: by ear.** Carried 2026-09-27 out of the master limiter lookahead task (archived as
 `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`, section "REOPENED 2026-08-18"; the
 full measurements and the limiter's design live there). Reported by ear by the maintainer, measured
 2026-08-18, not fixed.

@@ -26,7 +26,7 @@ even when they are valuable.
 
 ---
 
-## Layer 1: harden the engine (1 open, 9 done; reviewed 2026-09-28)
+## Layer 1: harden the engine (all 10 done or closed; reviewed 2026-09-29)
 
 | # | Task | Source | Why V1 |
 |---|---|---|---|
@@ -39,7 +39,7 @@ even when they are valuable.
 | ~~7~~ | ~~**Resource warehouse**~~ | [`plans/resource-warehouse.md`](../tasks-archive/2026-09/20260927-resource-warehouse.md) | ✅ **DONE 2026-09-04** (steps 1–2g, cylinders in the warehouse, bucketed 16-orbit warmup, the warmup vocabulary; 5 review rounds, the last clean on code). Rings, reverb networks and cylinders are lazy, shelved by return, zeroed by deferred housekeeping; OOM caught at one site per resource. **Fairphone: the resource stutter is gone; a cold-code spike on the first run was the last symptom, answered by the vocabulary (`da002b73`); measured on the Fairphone the same day, the first run plays (why first-time work is that large stays open: [`future/first-run-spike-v2.md`](future/first-run-spike-v2.md)).** Reporting half ✅ shipped 2026-09-04 too (the warehouse stats feed, `Diagnostics.warehouse`, shown on a click on KLANGMOTOR); closed-form tail (`TailCeiling`) shipped the same day. Nothing open |
 | ~~8~~ | ~~`per-playback-engine` **D4** cylinder eviction~~ | same, step 2f | ✅ **DONE 2026-09-04** as engine disposal: the end of a playback returns every unit. Idle cylinders inside a live engine stay (maintainer, settled) |
 | ~~9~~ | ~~Soundfont looping bug~~ | [`soundfont-looping-investigation.md`](../tasks-archive/2026-09/20260903-soundfont-looping-investigation.md) | ✅ **DONE 2026-09-03**, confirmed by ear (`aa93eef8`, `c1b503d8`, `f9e076f5`). Three stacked defects; the third (worklet reassembly dropped every sample's metadata) meant **no soundfont had ever looped in the browser**. Left as data curation, not code: JCLive's roots are 0.4–1.4 st sharp, see `soundfont-variant-curation.md` |
-| 9a | Master limiter surge after deep limiting | [`bugfix-master-limiter-surge.md`](bugfix-master-limiter-surge.md) | **Added 2026-09-28.** Changes how songs sound (the maintainer heard it in Der Schmetterling). Re-measure first on today's gain staging; it may already be gone |
+| ~~9a~~ | ~~Master limiter surge after deep limiting~~ | [`20260929-bugfix-master-limiter-surge.md`](../tasks-archive/2026-09/20260929-bugfix-master-limiter-surge.md) | ✅ **CLOSED 2026-09-29, measured, not audible**: the limiter dips under every snare hit, but the maintainer heard no surge after it |
 
 ## Layer 2: widen and harden the interface (6 open, 2 of them parked: 1 blocked on a design decision, 2 maintainer calls; the rest done or closed; reviewed 2026-09-29)
 
