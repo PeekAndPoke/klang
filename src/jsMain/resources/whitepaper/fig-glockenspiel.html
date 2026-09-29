@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The glockenspiel as a signal graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --rule-soft: #2C313A;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --code-cm: #5C6370;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        margin: 0;
+        padding: 2px 2px 4px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+    code, .mono { font-family: var(--f-mono); }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+    figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+    code { font-family: var(--f-mono); font-size: 0.86em; }
+    .lab { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+    /* ---- graph and envelope, side by side ---- */
+    .top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+    @media (min-width: 720px) {
+        .top { grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 20px 26px; }
+    }
+    .graph { display: block; width: 100%; height: auto; max-width: 340px; }
+    .graph .bx { fill: var(--surface); stroke: var(--rule); stroke-width: 1; }
+    .graph .bx-eng { fill: var(--spark-bg); stroke: var(--spark); stroke-width: 1; }
+    .graph .bx-env { fill: rgba(232, 184, 75, 0.14); stroke: var(--gold); stroke-width: 1; }
+    .graph .bx-classic { fill: none; stroke: var(--spark); stroke-width: 1; stroke-dasharray: 4 3; }
+    .graph .arw { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+    .graph .t { font-family: var(--f-mono); font-size: 10.5px; fill: var(--ink); }
+    .graph .t-sm { font-family: var(--f-mono); font-size: 10px; fill: var(--muted); }
+    .graph .t-xs { font-family: var(--f-mono); font-size: 9.5px; fill: var(--muted); }
+    .graph .nd { transition: opacity .12s; }
+    .graph .nd[data-env] { cursor: pointer; }
+    .graph .nd:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+    .graph .nd.hl rect, .graph .nd.hl circle { stroke: var(--ink); stroke-width: 2; }
+    .graph .nd.sel rect { stroke-width: 2.5; fill: rgba(232, 184, 75, 0.34); }
+    .has-hl .graph .nd:not(.hl) { opacity: 0.4; }
+
+    /* ---- the envelope panel ---- */
+    .env { min-width: 0; }
+    @media (max-width: 719px) { .env { border-top: 1px solid var(--rule); padding-top: 14px; } }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+    .tab {
+        appearance: none;
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+        color: var(--ink);
+        background: var(--code-bg);
+        border: 1px solid var(--rule);
+        border-radius: 0;
+        padding: 5px 10px 4px;
+        cursor: pointer;
+    }
+    .tab[aria-pressed="true"] { border-color: var(--gold); background: rgba(232, 184, 75, 0.14); }
+    .envnote { margin: 0 0 12px; font-size: 15px; line-height: 1.45; color: var(--muted); max-width: 46em; }
+    .envnote { min-height: 2.9em; }
+    @media (max-width: 719px) { .envnote { min-height: 4.4em; } }
+    .chartwrap { min-width: 0; }
+    .chart { display: block; width: 100%; height: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+    .chart .axis { stroke: var(--faint); stroke-width: 1; }
+    .chart .grid { stroke: var(--rule); stroke-width: 1; }
+    .chart .ax { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); pointer-events: none; }
+    .chart .curve { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .chart .area { fill: rgba(232, 184, 75, 0.12); stroke: none; }
+    .chart .ghost { fill: none; stroke: var(--faint); stroke-width: 1.4; stroke-dasharray: 4 4; }
+    .chart .gate { stroke: var(--signal); stroke-width: 1.4; stroke-dasharray: 5 4; }
+    .chart .gatelab { font-family: var(--f-mono); font-size: 11px; fill: var(--signal); pointer-events: none; }
+    .chart .guide { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 2 4; }
+    .chart .cross { stroke: var(--ink); stroke-width: 1; opacity: 0.5; pointer-events: none; }
+    .chart .h { fill: var(--paper); stroke: var(--gold); stroke-width: 2; cursor: grab; }
+    .chart .h.g { stroke: var(--signal); }
+    .chart .hit { fill: transparent; cursor: grab; touch-action: none; }
+    .chart .hl { font-family: var(--f-mono); font-size: 10.5px; fill: var(--gold); pointer-events: none; }
+    .chart .hl.g { fill: var(--signal); }
+    .readouts { margin: 6px 0 0; font-family: var(--f-mono); font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .readouts .probe { color: var(--ink); min-height: 1.5em; }
+    .ctrls { display: none; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 8px 22px; align-items: end; margin-top: 12px; }
+    .js .ctrls { display: grid; }
+    .tabs { display: none; }
+    .js .tabs { display: flex; }
+    .row { display: flex; flex-direction: column; gap: 0; }
+    .row .hd { display: flex; justify-content: space-between; align-items: baseline; }
+    .row label { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink); }
+    .row output { font-family: var(--f-mono); font-size: 12.5px; color: var(--gold); text-align: right; }
+    .row.gate label, .row.gate output { color: var(--signal); }
+    input[type="range"] { width: 100%; margin: 0; accent-color: var(--gold); background: transparent; height: 24px; }
+    .row.gate input[type="range"] { accent-color: var(--signal); }
+    .call { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink); background: var(--code-bg); border: 1px solid var(--rule); padding: 6px 8px; overflow-wrap: anywhere; }
+    .call .st { color: var(--code-str); }
+    .callrow { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: stretch; }
+    .callrow .call { flex: 1 1 200px; }
+    .reset {
+        appearance: none;
+        font-family: var(--f-mono); font-size: 12px; color: var(--muted);
+        background: transparent; border: 1px solid var(--rule); border-radius: 0; padding: 4px 10px 3px; cursor: pointer;
+    }
+    .reset:hover { color: var(--ink); border-color: var(--muted); }
+    .foot { margin: 0; font-family: var(--f-mono); font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .hint { margin: 8px 0 0; }
+    .js-only { display: none; }
+    .js .js-only { display: block; }
+    .js .nojs { display: none; }
+
+</style>
+<script>document.documentElement.className = "js";</script>
+</head>
+<body>
+<figure id="fig">
+    <div class="top">
+        <div class="gcol">
+            <p class="lab">Signal graph</p>
+            <svg class="graph" viewBox="0 0 320 475" role="img" aria-label="Signal graph of the glockenspiel, each box labelled with its call. Four branches are added with plus: Osc.sine() times 0.5; Osc.sine() detuned 19.02 semitones, times 0.3; Osc.sine() detuned 27.86 semitones, times 0.15; and Osc.whitenoise() through a 6000 Hz highpass, times 0.15, shaped by an adsr envelope. The sum goes into a lowpass whose cutoff is Osc.constant(8000) plus Osc.constant(4000) shaped by its own adsr, then through an adsr loudness envelope, then classic(), and out to the voice.">
+<defs><marker id="ga" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M1.5,1.5 L8,5 L1.5,8.5" fill="none" stroke="var(--muted)" stroke-width="1.4"/></marker></defs>
+<path class="arw" d="M31.0,34 L31.0,112" marker-end="url(#ga)"/>
+<path class="arw" d="M103.0,34 L103.0,50" marker-end="url(#ga)"/>
+<path class="arw" d="M103.0,96 L103.0,112" marker-end="url(#ga)"/>
+<path class="arw" d="M179.0,34 L179.0,50" marker-end="url(#ga)"/>
+<path class="arw" d="M179.0,96 L179.0,112" marker-end="url(#ga)"/>
+<path class="arw" d="M270.0,34 L270.0,50" marker-end="url(#ga)"/>
+<path class="arw" d="M270.0,96 L270.0,112" marker-end="url(#ga)"/>
+<path class="arw" d="M270.0,146 L270.0,162" marker-end="url(#ga)"/>
+<path class="arw" d="M31.0,146 L31.0,214" marker-end="url(#ga)"/>
+<path class="arw" d="M103.0,146 L103.0,214" marker-end="url(#ga)"/>
+<path class="arw" d="M179.0,146 L179.0,214" marker-end="url(#ga)"/>
+<path class="arw" d="M270.0,196 L270.0,214" marker-end="url(#ga)"/>
+<path class="arw" d="M268.0,240 L268.0,299" marker-end="url(#ga)"/>
+<path class="arw" d="M268.0,333 L268.0,349" marker-end="url(#ga)"/>
+<path class="arw" d="M268.0,383 L268.0,399" marker-end="url(#ga)"/>
+<path class="arw" d="M268.0,433 L268.0,453" marker-end="url(#ga)"/>
+<path class="arw" d="M50.0,342 L50.0,358" marker-end="url(#ga)"/>
+<path class="arw" d="M100,275.0 L150,275.0 L150,305.0" marker-end="url(#ga)"/>
+<path class="arw" d="M100,375.0 L150,375.0 L150,327.0" marker-end="url(#ga)"/>
+<path class="arw" d="M161,316.0 L216,316.0" marker-end="url(#ga)"/>
+<g class="nd src" data-l="b1"><rect class="bx-eng" x="0" y="0" width="62" height="34"/><text class="t" x="31.0" y="14" text-anchor="middle">Osc</text><text class="t" x="31.0" y="27" text-anchor="middle">.sine()</text></g>
+<g class="nd mod" data-l="b1"><rect class="bx" x="0" y="112" width="62" height="34"/><text class="t" x="31.0" y="133.0" text-anchor="middle">.mul(0.5)</text></g>
+<g class="nd src" data-l="b2"><rect class="bx-eng" x="68" y="0" width="70" height="34"/><text class="t" x="103.0" y="14" text-anchor="middle">Osc</text><text class="t" x="103.0" y="27" text-anchor="middle">.sine()</text></g>
+<g class="nd mod" data-l="b2"><title>detune(19.02): 19.02 semitones up, a frequency ratio of 2^(19.02/12) = 3.000, the 3rd harmonic</title><rect class="bx" x="68" y="50" width="70" height="46"/><text class="t" x="103.0" y="64" text-anchor="middle">.detune</text><text class="t" x="103.0" y="77" text-anchor="middle">(19.02)</text><text class="t-xs" x="103.0" y="90" text-anchor="middle">semitones</text></g>
+<g class="nd mod" data-l="b2"><rect class="bx" x="68" y="112" width="70" height="34"/><text class="t" x="103.0" y="133.0" text-anchor="middle">.mul(0.3)</text></g>
+<g class="nd src" data-l="b3"><rect class="bx-eng" x="144" y="0" width="70" height="34"/><text class="t" x="179.0" y="14" text-anchor="middle">Osc</text><text class="t" x="179.0" y="27" text-anchor="middle">.sine()</text></g>
+<g class="nd mod" data-l="b3"><title>detune(27.86): 27.86 semitones up, a frequency ratio of 2^(27.86/12) = 4.999, the 5th harmonic</title><rect class="bx" x="144" y="50" width="70" height="46"/><text class="t" x="179.0" y="64" text-anchor="middle">.detune</text><text class="t" x="179.0" y="77" text-anchor="middle">(27.86)</text><text class="t-xs" x="179.0" y="90" text-anchor="middle">semitones</text></g>
+<g class="nd mod" data-l="b3"><rect class="bx" x="144" y="112" width="70" height="34"/><text class="t" x="179.0" y="133.0" text-anchor="middle">.mul(0.15)</text></g>
+<g class="nd src" data-l="b4"><rect class="bx-eng" x="220" y="0" width="100" height="34"/><text class="t" x="270.0" y="14" text-anchor="middle">Osc</text><text class="t" x="270.0" y="27" text-anchor="middle">.whitenoise()</text></g>
+<g class="nd mod" data-l="b4"><rect class="bx" x="220" y="50" width="100" height="46"/><text class="t" x="270.0" y="64" text-anchor="middle">.highpass</text><text class="t" x="270.0" y="77" text-anchor="middle">(6000)</text><text class="t-xs" x="270.0" y="90" text-anchor="middle">Hz</text></g>
+<g class="nd mod" data-l="b4"><rect class="bx" x="220" y="112" width="100" height="34"/><text class="t" x="270.0" y="133.0" text-anchor="middle">.mul(0.15)</text></g>
+<g class="nd env" data-l="b4" data-env="noise" tabindex="0" role="button" aria-label="Edit the envelope on the noise burst: adsr 0.001, 0.02, 0.0, 0.005"><title>adsr(0.001, 0.02, 0.0, 0.005) on the noise burst: click to edit</title><rect class="bx-env" x="220" y="162" width="100" height="34"/><text class="t" x="270.0" y="176" text-anchor="middle">.adsr</text><text class="t-sm" x="270.0" y="189" text-anchor="middle">.001 .02 0 .005</text></g>
+<g class="nd sum" data-l="b1 b2 b3 b4 sum"><rect class="bx" x="0" y="214" width="320" height="26"/><text class="t" x="160" y="231" text-anchor="middle">.plus() adds the four branches</text></g>
+<text class="t-sm" x="276.0" y="260">the sum</text>
+<g class="nd mod" data-l="cut"><rect class="bx" x="216" y="299" width="104" height="34"/><text class="t" x="268.0" y="320.0" text-anchor="middle">.lowpass</text></g>
+<g class="nd env" data-l="amp" data-env="amp" tabindex="0" role="button" aria-label="Edit the loudness envelope: adsr 0.001, 1.5, 0.0, 0.3"><title>adsr(0.001, 1.5, 0.0, 0.3) on the whole sum: click to edit</title><rect class="bx-env" x="216" y="349" width="104" height="34"/><text class="t" x="268.0" y="363" text-anchor="middle">.adsr</text><text class="t-sm" x="268.0" y="376" text-anchor="middle">.001 1.5 0 .3</text></g>
+<g class="nd classic" data-l="cl"><rect class="bx-classic" x="216" y="399" width="104" height="34"/><text class="t" x="268.0" y="413" text-anchor="middle">.classic()</text><text class="t-sm" x="268.0" y="426" text-anchor="middle">adds stages</text></g>
+<text class="t-sm" x="268.0" y="467" text-anchor="middle">to the voice</text>
+<g class="nd src" data-l="cut"><rect class="bx-eng" x="0" y="258" width="100" height="34"/><text class="t" x="50.0" y="272" text-anchor="middle">Osc</text><text class="t" x="50.0" y="285" text-anchor="middle">.constant(8000)</text></g>
+<g class="nd src" data-l="cut"><rect class="bx-eng" x="0" y="308" width="100" height="34"/><text class="t" x="50.0" y="322" text-anchor="middle">Osc</text><text class="t" x="50.0" y="335" text-anchor="middle">.constant(4000)</text></g>
+<g class="nd env" data-l="cut" data-env="cut" tabindex="0" role="button" aria-label="Edit the filter cutoff envelope: adsr 0.001, 0.8, 0.0, 0.1"><title>adsr(0.001, 0.8, 0.0, 0.1) on the cutoff: click to edit</title><rect class="bx-env" x="0" y="358" width="100" height="34"/><text class="t" x="50.0" y="372" text-anchor="middle">.adsr</text><text class="t-sm" x="50.0" y="385" text-anchor="middle">.001 .8 0 .1</text></g>
+<g class="nd sum" data-l="cut"><circle class="bx" cx="150" cy="316.0" r="11"/><text class="t" x="150" y="320.0" text-anchor="middle">+</text></g>
+<text class="t-sm" x="188.5" y="309.0" text-anchor="middle">cutoff</text>
+<rect class="bx-eng" x="0" y="403" width="12" height="12"/><text class="t-sm" x="20" y="413">makes a signal</text>
+<rect class="bx" x="0" y="421" width="12" height="12"/><text class="t-sm" x="20" y="431">reshapes it</text>
+<rect class="bx-env" x="0" y="439" width="12" height="12"/><text class="t-sm" x="20" y="449">envelope, click to edit</text>
+</svg>
+            <p class="foot hint js-only">Hover or tap a node to light its branch. Click a gold envelope to edit it.</p>
+        </div>
+        <section class="env" aria-labelledby="env-h">
+            <p class="lab" id="env-h">The envelope, as the engine draws it</p>
+            <div class="tabs" role="group" aria-label="Which envelope">
+                <button type="button" class="tab" data-env="amp" aria-pressed="true">Loudness</button>
+                <button type="button" class="tab" data-env="cut" aria-pressed="false">Filter cutoff</button>
+                <button type="button" class="tab" data-env="noise" aria-pressed="false">Noise burst</button>
+            </div>
+            <p class="envnote" id="envnote">The loudness envelope: the whole sum passes through it.</p>
+            <div class="chartwrap">
+                <svg class="chart" id="chart" viewBox="0 0 520 210" role="img" aria-label="The loudness envelope with the listing values: it jumps up in 1 ms and then falls along an exponential curve for 1.5 s. The gate closes at 0.5 s, when the level is about 0.34, and the release takes it to 0 over 0.3 s."><line class="axis" x1="40" y1="180" x2="506" y2="180"/><line class="axis" x1="40" y1="14" x2="40" y2="180"/><text class="ax" x="34" y="18" text-anchor="end">1</text><text class="ax" x="34" y="184" text-anchor="end">0</text><text class="ax" x="40.0" y="196" text-anchor="middle">0</text><text class="ax" x="186.4" y="196" text-anchor="middle">0.5</text><text class="ax" x="332.9" y="196" text-anchor="middle">1</text><text class="ax" x="479.3" y="196" text-anchor="middle">1.5</text><text class="ax" x="506" y="207" text-anchor="end">time (s)</text><path class="ghost" d="M186.4,124.3 L187.6,124.8 L189.5,125.6 L191.5,126.5 L193.4,127.3 L195.3,128.1 L197.3,128.9 L199.2,129.7 L201.2,130.5 L203.1,131.2 L205.0,132.0 L207.0,132.7 L208.9,133.5 L210.9,134.2 L212.8,134.9 L214.8,135.6 L216.7,136.3 L218.6,137.0 L220.6,137.7 L222.5,138.4 L224.5,139.0 L226.4,139.7 L228.3,140.3 L230.3,141.0 L232.2,141.6 L234.2,142.2 L236.1,142.8 L238.0,143.4 L240.0,144.0 L241.9,144.6 L243.9,145.2 L245.8,145.8 L247.8,146.3 L249.7,146.9 L251.6,147.4 L253.6,148.0 L255.5,148.5 L257.5,149.0 L259.4,149.6 L261.3,150.1 L263.3,150.6 L265.2,151.1 L267.2,151.6 L269.1,152.1 L271.1,152.6 L273.0,153.0 L274.3,153.4 L274.9,153.5 L276.9,154.0 L278.8,154.4 L280.8,154.9 L282.7,155.3 L284.6,155.8 L286.6,156.2 L288.5,156.6 L290.5,157.0 L292.4,157.5 L294.4,157.9 L296.3,158.3 L298.2,158.7 L300.2,159.1 L302.1,159.5 L304.1,159.9 L306.0,160.2 L307.9,160.6 L309.9,161.0 L311.8,161.3 L313.8,161.7 L315.7,162.1 L317.7,162.4 L319.6,162.8 L321.5,163.1 L323.5,163.4 L325.4,163.8 L327.4,164.1 L329.3,164.4 L331.2,164.7 L333.2,165.1 L335.1,165.4 L337.1,165.7 L339.0,166.0 L341.0,166.3 L342.9,166.6 L344.8,166.9 L346.8,167.2 L348.7,167.4 L350.7,167.7 L352.6,168.0 L354.5,168.3 L356.5,168.5 L358.4,168.8 L360.4,169.1 L362.3,169.3 L364.3,169.6 L366.2,169.8 L368.1,170.1 L370.1,170.3 L372.0,170.6 L374.0,170.8 L375.9,171.0 L377.8,171.3 L379.8,171.5 L381.7,171.7 L383.7,172.0 L385.6,172.2 L387.6,172.4 L389.5,172.6 L391.4,172.8 L393.4,173.0 L395.3,173.2 L397.3,173.4 L399.2,173.6 L401.2,173.8 L403.1,174.0 L405.0,174.2 L407.0,174.4 L408.9,174.6 L410.9,174.8 L412.8,175.0 L414.7,175.2 L416.7,175.3 L418.6,175.5 L420.6,175.7 L422.5,175.9 L424.4,176.0 L426.4,176.2 L428.3,176.4 L430.3,176.5 L432.2,176.7 L434.2,176.8 L436.1,177.0 L438.0,177.1 L440.0,177.3 L441.9,177.4 L443.9,177.6 L445.8,177.7 L447.8,177.9 L449.7,178.0 L451.6,178.2 L453.6,178.3 L455.5,178.4 L457.5,178.6 L459.4,178.7 L461.3,178.8 L463.3,179.0 L465.2,179.1 L467.2,179.2 L469.1,179.4 L471.0,179.5 L473.0,179.6 L474.9,179.7 L476.9,179.8 L478.8,180.0 L479.6,180.0 L480.8,180.0 L482.7,180.0 L484.6,180.0 L486.6,180.0 L488.5,180.0 L490.5,180.0 L492.4,180.0 L494.4,180.0 L496.3,180.0 L498.2,180.0 L500.2,180.0 L502.1,180.0 L504.1,180.0 L506.0,180.0"/><path class="area" d="M40.0,180.0 L40.3,14.0 L41.9,16.0 L43.9,18.2 L45.8,20.5 L47.8,22.7 L49.7,24.9 L51.6,27.0 L53.6,29.2 L55.5,31.3 L57.5,33.3 L59.4,35.4 L61.4,37.4 L63.3,39.4 L65.2,41.4 L67.2,43.3 L69.1,45.2 L71.1,47.1 L73.0,49.0 L75.0,50.8 L76.9,52.6 L78.8,54.4 L80.8,56.2 L82.7,57.9 L84.7,59.7 L86.6,61.4 L88.5,63.0 L90.5,64.7 L92.4,66.3 L94.4,67.9 L96.3,69.5 L98.2,71.1 L100.2,72.6 L102.1,74.2 L104.1,75.7 L106.0,77.2 L108.0,78.6 L109.9,80.1 L111.8,81.5 L113.8,82.9 L115.7,84.3 L117.7,85.7 L119.6,87.1 L121.5,88.4 L123.5,89.7 L125.4,91.0 L127.4,92.3 L129.3,93.6 L131.3,94.8 L133.2,96.1 L135.1,97.3 L137.1,98.5 L139.0,99.7 L141.0,100.9 L142.9,102.0 L144.9,103.1 L146.8,104.3 L148.7,105.4 L150.7,106.5 L152.6,107.6 L154.6,108.6 L156.5,109.7 L158.4,110.7 L160.4,111.8 L162.3,112.8 L164.3,113.8 L166.2,114.8 L168.2,115.7 L170.1,116.7 L172.0,117.6 L174.0,118.6 L175.9,119.5 L177.9,120.4 L179.8,121.3 L181.7,122.2 L183.7,123.1 L185.6,123.9 L186.4,124.3 L187.6,126.5 L189.5,130.1 L191.5,133.5 L193.4,136.7 L195.3,139.6 L197.3,142.4 L199.2,145.0 L201.2,147.5 L203.1,149.7 L205.0,151.9 L207.0,153.8 L208.9,155.7 L210.9,157.5 L212.8,159.1 L214.8,160.6 L216.7,162.0 L218.6,163.4 L220.6,164.6 L222.5,165.8 L224.5,166.9 L226.4,167.9 L228.3,168.9 L230.3,169.8 L232.2,170.6 L234.2,171.4 L236.1,172.2 L238.0,172.9 L240.0,173.5 L241.9,174.1 L243.9,174.7 L245.8,175.2 L247.8,175.7 L249.7,176.2 L251.6,176.6 L253.6,177.0 L255.5,177.4 L257.5,177.7 L259.4,178.1 L261.3,178.4 L263.3,178.7 L265.2,178.9 L267.2,179.2 L269.1,179.4 L271.1,179.7 L273.0,179.9 L274.3,180.0 L274.9,180.0 L276.9,180.0 L278.8,180.0 L280.8,180.0 L282.7,180.0 L284.6,180.0 L286.6,180.0 L288.5,180.0 L290.5,180.0 L292.4,180.0 L294.4,180.0 L296.3,180.0 L298.2,180.0 L300.2,180.0 L302.1,180.0 L304.1,180.0 L306.0,180.0 L307.9,180.0 L309.9,180.0 L311.8,180.0 L313.8,180.0 L315.7,180.0 L317.7,180.0 L319.6,180.0 L321.5,180.0 L323.5,180.0 L325.4,180.0 L327.4,180.0 L329.3,180.0 L331.2,180.0 L333.2,180.0 L335.1,180.0 L337.1,180.0 L339.0,180.0 L341.0,180.0 L342.9,180.0 L344.8,180.0 L346.8,180.0 L348.7,180.0 L350.7,180.0 L352.6,180.0 L354.5,180.0 L356.5,180.0 L358.4,180.0 L360.4,180.0 L362.3,180.0 L364.3,180.0 L366.2,180.0 L368.1,180.0 L370.1,180.0 L372.0,180.0 L374.0,180.0 L375.9,180.0 L377.8,180.0 L379.8,180.0 L381.7,180.0 L383.7,180.0 L385.6,180.0 L387.6,180.0 L389.5,180.0 L391.4,180.0 L393.4,180.0 L395.3,180.0 L397.3,180.0 L399.2,180.0 L401.2,180.0 L403.1,180.0 L405.0,180.0 L407.0,180.0 L408.9,180.0 L410.9,180.0 L412.8,180.0 L414.7,180.0 L416.7,180.0 L418.6,180.0 L420.6,180.0 L422.5,180.0 L424.4,180.0 L426.4,180.0 L428.3,180.0 L430.3,180.0 L432.2,180.0 L434.2,180.0 L436.1,180.0 L438.0,180.0 L440.0,180.0 L441.9,180.0 L443.9,180.0 L445.8,180.0 L447.8,180.0 L449.7,180.0 L451.6,180.0 L453.6,180.0 L455.5,180.0 L457.5,180.0 L459.4,180.0 L461.3,180.0 L463.3,180.0 L465.2,180.0 L467.2,180.0 L469.1,180.0 L471.0,180.0 L473.0,180.0 L474.9,180.0 L476.9,180.0 L478.8,180.0 L479.6,180.0 L480.8,180.0 L482.7,180.0 L484.6,180.0 L486.6,180.0 L488.5,180.0 L490.5,180.0 L492.4,180.0 L494.4,180.0 L496.3,180.0 L498.2,180.0 L500.2,180.0 L502.1,180.0 L504.1,180.0 L506.0,180.0 L506.0,180.0 L40.0,180.0 Z"/><path class="curve" d="M40.0,180.0 L40.3,14.0 L41.9,16.0 L43.9,18.2 L45.8,20.5 L47.8,22.7 L49.7,24.9 L51.6,27.0 L53.6,29.2 L55.5,31.3 L57.5,33.3 L59.4,35.4 L61.4,37.4 L63.3,39.4 L65.2,41.4 L67.2,43.3 L69.1,45.2 L71.1,47.1 L73.0,49.0 L75.0,50.8 L76.9,52.6 L78.8,54.4 L80.8,56.2 L82.7,57.9 L84.7,59.7 L86.6,61.4 L88.5,63.0 L90.5,64.7 L92.4,66.3 L94.4,67.9 L96.3,69.5 L98.2,71.1 L100.2,72.6 L102.1,74.2 L104.1,75.7 L106.0,77.2 L108.0,78.6 L109.9,80.1 L111.8,81.5 L113.8,82.9 L115.7,84.3 L117.7,85.7 L119.6,87.1 L121.5,88.4 L123.5,89.7 L125.4,91.0 L127.4,92.3 L129.3,93.6 L131.3,94.8 L133.2,96.1 L135.1,97.3 L137.1,98.5 L139.0,99.7 L141.0,100.9 L142.9,102.0 L144.9,103.1 L146.8,104.3 L148.7,105.4 L150.7,106.5 L152.6,107.6 L154.6,108.6 L156.5,109.7 L158.4,110.7 L160.4,111.8 L162.3,112.8 L164.3,113.8 L166.2,114.8 L168.2,115.7 L170.1,116.7 L172.0,117.6 L174.0,118.6 L175.9,119.5 L177.9,120.4 L179.8,121.3 L181.7,122.2 L183.7,123.1 L185.6,123.9 L186.4,124.3 L187.6,126.5 L189.5,130.1 L191.5,133.5 L193.4,136.7 L195.3,139.6 L197.3,142.4 L199.2,145.0 L201.2,147.5 L203.1,149.7 L205.0,151.9 L207.0,153.8 L208.9,155.7 L210.9,157.5 L212.8,159.1 L214.8,160.6 L216.7,162.0 L218.6,163.4 L220.6,164.6 L222.5,165.8 L224.5,166.9 L226.4,167.9 L228.3,168.9 L230.3,169.8 L232.2,170.6 L234.2,171.4 L236.1,172.2 L238.0,172.9 L240.0,173.5 L241.9,174.1 L243.9,174.7 L245.8,175.2 L247.8,175.7 L249.7,176.2 L251.6,176.6 L253.6,177.0 L255.5,177.4 L257.5,177.7 L259.4,178.1 L261.3,178.4 L263.3,178.7 L265.2,178.9 L267.2,179.2 L269.1,179.4 L271.1,179.7 L273.0,179.9 L274.3,180.0 L274.9,180.0 L276.9,180.0 L278.8,180.0 L280.8,180.0 L282.7,180.0 L284.6,180.0 L286.6,180.0 L288.5,180.0 L290.5,180.0 L292.4,180.0 L294.4,180.0 L296.3,180.0 L298.2,180.0 L300.2,180.0 L302.1,180.0 L304.1,180.0 L306.0,180.0 L307.9,180.0 L309.9,180.0 L311.8,180.0 L313.8,180.0 L315.7,180.0 L317.7,180.0 L319.6,180.0 L321.5,180.0 L323.5,180.0 L325.4,180.0 L327.4,180.0 L329.3,180.0 L331.2,180.0 L333.2,180.0 L335.1,180.0 L337.1,180.0 L339.0,180.0 L341.0,180.0 L342.9,180.0 L344.8,180.0 L346.8,180.0 L348.7,180.0 L350.7,180.0 L352.6,180.0 L354.5,180.0 L356.5,180.0 L358.4,180.0 L360.4,180.0 L362.3,180.0 L364.3,180.0 L366.2,180.0 L368.1,180.0 L370.1,180.0 L372.0,180.0 L374.0,180.0 L375.9,180.0 L377.8,180.0 L379.8,180.0 L381.7,180.0 L383.7,180.0 L385.6,180.0 L387.6,180.0 L389.5,180.0 L391.4,180.0 L393.4,180.0 L395.3,180.0 L397.3,180.0 L399.2,180.0 L401.2,180.0 L403.1,180.0 L405.0,180.0 L407.0,180.0 L408.9,180.0 L410.9,180.0 L412.8,180.0 L414.7,180.0 L416.7,180.0 L418.6,180.0 L420.6,180.0 L422.5,180.0 L424.4,180.0 L426.4,180.0 L428.3,180.0 L430.3,180.0 L432.2,180.0 L434.2,180.0 L436.1,180.0 L438.0,180.0 L440.0,180.0 L441.9,180.0 L443.9,180.0 L445.8,180.0 L447.8,180.0 L449.7,180.0 L451.6,180.0 L453.6,180.0 L455.5,180.0 L457.5,180.0 L459.4,180.0 L461.3,180.0 L463.3,180.0 L465.2,180.0 L467.2,180.0 L469.1,180.0 L471.0,180.0 L473.0,180.0 L474.9,180.0 L476.9,180.0 L478.8,180.0 L479.6,180.0 L480.8,180.0 L482.7,180.0 L484.6,180.0 L486.6,180.0 L488.5,180.0 L490.5,180.0 L492.4,180.0 L494.4,180.0 L496.3,180.0 L498.2,180.0 L500.2,180.0 L502.1,180.0 L504.1,180.0 L506.0,180.0"/><line class="gate" x1="186.4" y1="14" x2="186.4" y2="180"/><text class="ax" x="191.4" y="24">gate</text></svg>
+                <p class="readouts"><span id="status">Level at the gate: 0.34. The release starts from there.</span><br><span class="probe js-only" id="probe"></span></p>
+            </div>
+            <div class="ctrls" id="ctrls">
+                <div class="row"><div class="hd"><label for="s-a">Attack</label><output id="o-a"></output></div><input type="range" id="s-a" min="0" max="1000" step="1"></div>
+                <div class="row"><div class="hd"><label for="s-d">Decay</label><output id="o-d"></output></div><input type="range" id="s-d" min="0" max="1000" step="1"></div>
+                <div class="row"><div class="hd"><label for="s-s">Sustain</label><output id="o-s"></output></div><input type="range" id="s-s" min="0" max="1000" step="1"></div>
+                <div class="row"><div class="hd"><label for="s-r">Release</label><output id="o-r"></output></div><input type="range" id="s-r" min="0" max="1000" step="1"></div>
+                <div class="row gate"><div class="hd"><label for="s-g">Gate</label><output id="o-g"></output></div><input type="range" id="s-g" min="0" max="1000" step="1"></div>
+                <div class="callrow">
+                    <div class="call" id="callout"></div>
+                    <button type="button" class="reset" id="reset">Reset to the glockenspiel's values</button>
+                </div>
+            </div>
+        </section>
+    </div>
+    <p class="foot">Every stage is drawn with the engine's default curve, exponential: (e<sup>3x</sup> &minus; 1) / (e<sup>3</sup> &minus; 1). The release falls from the level the envelope has when the gate closes. The gate is a sketch value: your pattern sets it, and 0.5 s is one step of <code>note("c5 e5 g5 c6")</code> at the default tempo of 0.5 cycles per second.</p>
+</figure>
+
+<script>
+
+(function () {
+    "use strict";
+
+    // ---- the envelope law: audio_be/EnvelopeCore.kt (adsAt, releaseAt), audio_be/AdsrCurveMath.kt (adsrExpShape) ----
+    var K = 3.0;                                  // ADSR_EXP_K, audio_bridge/constants/EnvelopeDefaults.kt
+    var NORM = 1 / (Math.exp(K) - 1);
+    function G(x) { return (Math.exp(K * x) - 1) * NORM; }
+
+    var DEFAULTS = {                              // the three adsr(...) calls of the listing
+        amp:   { a: 0.001, d: 1.5,  s: 0, r: 0.3 },
+        cut:   { a: 0.001, d: 0.8,  s: 0, r: 0.1 },
+        noise: { a: 0.001, d: 0.02, s: 0, r: 0.005 }
+    };
+    var GATE_DEFAULT = 0.5;
+    var NOTES = {
+        amp:   "The loudness envelope: the whole sum passes through it.",
+        cut:   "The low-pass cutoff is 8000 Hz plus 4000 Hz times this envelope: 12000 Hz at the peak, 8000 Hz at level 0.",
+        noise: "The envelope on the noise burst that stands for the strike."
+    };
+
+    function copy(o) { return { a: o.a, d: o.d, s: o.s, r: o.r }; }
+    var state = { amp: copy(DEFAULTS.amp), cut: copy(DEFAULTS.cut), noise: copy(DEFAULTS.noise) };
+    var gate = GATE_DEFAULT;
+    var cur = "amp";
+    var frozenT = null;
+
+    function ads(e, t) {
+        if (e.a > 0 && t < e.a) { return G(t / e.a); }
+        if (e.d > 0 && t < e.a + e.d) { return e.s + (1 - e.s) * G(1 - (t - e.a) / e.d); }
+        return e.s;
+    }
+    function gateLevel(e) { return gate <= 0 ? 0 : ads(e, gate); }
+    function lvl(e, t) {
+        if (t < gate) { return ads(e, t); }
+        if (e.r <= 0) { return 0; }
+        var p = (t - gate) / e.r;
+        if (p >= 1) { return 0; }
+        return gateLevel(e) * G(1 - p);
+    }
+    function windowT(e) {
+        var ad = e.a + e.d;
+        var T = gateLevel(e) > 0.001 ? Math.max(ad, gate + e.r) : ad;
+        return Math.max(T, 0.002) * 1.06;
+    }
+
+    // ---- number helpers ----
+    function snap(v) {
+        if (v < 0.0005) { return 0; }
+        return Number(v.toPrecision(2));
+    }
+    function posToTime(p) { return p <= 0 ? 0 : 0.001 * Math.pow(3000, (p - 1) / 999); }
+    function timeToPos(v) {
+        if (v <= 0) { return 0; }
+        var p = 1 + 999 * Math.log(v / 0.001) / Math.log(3000);
+        return Math.max(1, Math.min(1000, Math.round(p)));
+    }
+    function fmtSec(v) { return v === 0 ? "0 s" : v + " s"; }
+    function fmtArg(v) { return Number.isInteger(v) ? v.toFixed(1) : String(v); }
+    function tickLabel(t, ms) {
+        var v = ms ? t * 1000 : t;
+        return String(Number(v.toPrecision(3)));
+    }
+    function niceStep(T) {
+        var raw = T / 4;
+        var p = Math.pow(10, Math.floor(Math.log10(raw)));
+        var m = raw / p;
+        var n = m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10;
+        return n * p;
+    }
+
+    // ---- elements ----
+    var fig = document.getElementById("fig");
+    var svg = document.getElementById("chart");
+    var status = document.getElementById("status");
+    var probe = document.getElementById("probe");
+    var envnote = document.getElementById("envnote");
+    var callout = document.getElementById("callout");
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+    var sl = {
+        a: document.getElementById("s-a"), d: document.getElementById("s-d"),
+        s: document.getElementById("s-s"), r: document.getElementById("s-r"), g: document.getElementById("s-g")
+    };
+    var out = {
+        a: document.getElementById("o-a"), d: document.getElementById("o-d"),
+        s: document.getElementById("o-s"), r: document.getElementById("o-r"), g: document.getElementById("o-g")
+    };
+
+    // ---- chart ----
+    var geo = null;   // the last layout: {W, H, L, top, PW, PH, T}
+
+    function draw() {
+        var e = state[cur];
+        var W = Math.max(280, Math.round(svg.parentNode.clientWidth));
+        var H = W < 460 ? 196 : 214;
+        var cutTab = cur === "cut";
+        var L = 40, R = cutTab ? 60 : 16, top = 16, bottom = 32;
+        var PW = W - L - R, PH = H - top - bottom;
+        var T = frozenT !== null ? frozenT : windowT(e);
+        var ms = T < 0.2;
+        function X(t) { return L + t / T * PW; }
+        function Y(v) { return top + PH * (1 - v); }
+        geo = { W: W, H: H, L: L, top: top, PW: PW, PH: PH, T: T, R: R };
+
+        var Lg = gateLevel(e);
+        var eps = T * 1e-6;
+        var ts = [];
+        var N = 260, i;
+        for (i = 0; i <= N; i++) { ts.push(T * i / N); }
+        [e.a, e.a + e.d, gate, gate + e.r].forEach(function (b) {
+            if (b >= 0 && b <= T) { ts.push(b - eps, b, b + eps); }
+        });
+        ts = ts.filter(function (t) { return t >= 0 && t <= T; }).sort(function (x, y) { return x - y; });
+
+        var p = [], ghost = [];
+        ts.forEach(function (t) {
+            p.push(X(t).toFixed(1) + "," + Y(lvl(e, t)).toFixed(1));
+            if (t >= gate) { ghost.push(X(t).toFixed(1) + "," + Y(ads(e, t)).toFixed(1)); }
+        });
+        var curve = "M" + p.join(" L");
+        var area = curve + " L" + X(ts[ts.length - 1]).toFixed(1) + "," + Y(0) + " L" + X(0).toFixed(1) + "," + Y(0) + " Z";
+
+        var m = [];
+        m.push('<line class="axis" x1="' + L + '" y1="' + Y(0) + '" x2="' + (W - R) + '" y2="' + Y(0) + '"/>');
+        m.push('<line class="axis" x1="' + L + '" y1="' + top + '" x2="' + L + '" y2="' + Y(0) + '"/>');
+        m.push('<text class="ax" x="' + (L - 7) + '" y="' + (Y(1) + 4) + '" text-anchor="end">1</text>');
+        m.push('<text class="ax" x="' + (L - 7) + '" y="' + (Y(0) + 4) + '" text-anchor="end">0</text>');
+        if (cutTab) {
+            m.push('<text class="ax" x="' + (W - R + 6) + '" y="' + (Y(1) + 4) + '">12000 Hz</text>');
+            m.push('<text class="ax" x="' + (W - R + 6) + '" y="' + (Y(0) + 4) + '">8000 Hz</text>');
+        }
+        var step = niceStep(T);
+        for (var tk = 0; tk <= T + step * 1e-6; tk += step) {
+            m.push('<line class="grid" x1="' + X(tk).toFixed(1) + '" y1="' + Y(0) + '" x2="' + X(tk).toFixed(1) + '" y2="' + (Y(0) + 4) + '"/>');
+            m.push('<text class="ax" x="' + X(tk).toFixed(1) + '" y="' + (Y(0) + 17) + '" text-anchor="middle">' + tickLabel(tk, ms) + '</text>');
+        }
+        m.push('<text class="ax" x="' + (W - R) + '" y="' + (Y(0) + 29) + '" text-anchor="end">time (' + (ms ? "ms" : "s") + ')</text>');
+        m.push('<line class="guide" x1="' + L + '" y1="' + Y(e.s) + '" x2="' + (W - R) + '" y2="' + Y(e.s) + '"/>');
+        if (ghost.length > 1 && gate < T) { m.push('<path class="ghost" d="M' + ghost.join(" L") + '"/>'); }
+        m.push('<path class="area" d="' + area + '"/>');
+        m.push('<path class="curve" d="' + curve + '"/>');
+
+        // the gate: a marker line, or a note at the right edge when it lies beyond the window
+        var gx = X(Math.min(gate, T));
+        var gOff = gate > T;
+        m.push('<line class="gate" x1="' + gx.toFixed(1) + '" y1="' + top + '" x2="' + gx.toFixed(1) + '" y2="' + Y(0) + '"/>');
+        var glabel = gOff ? "gate at " + fmtSec(gate) + " ▸" : "gate";
+        m.push('<text class="gatelab" x="' + (gOff ? gx - 6 : gx + 6).toFixed(1) + '" y="' + (top + 10) + '" text-anchor="' + (gOff ? "end" : "start") + '">' + glabel + '</text>');
+
+        // handles: a hit area and a mark each. A and D and R move in time, S in level, the gate in time.
+        function handle(id, x, y, label, gateStyle, lx, ly, anchor) {
+            m.push('<circle class="h' + (gateStyle ? " g" : "") + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5.5"/>');
+            m.push('<text class="hl' + (gateStyle ? " g" : "") + '" x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="' + anchor + '">' + label + '</text>');
+            m.push('<circle class="hit" data-h="' + id + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="15"/>');
+        }
+        handle("a", X(e.a), Y(1), "A", false, X(e.a) + 10, Y(1) + 4, "start");
+        if (e.d > 0 || true) { handle("d", X(e.a + e.d), Y(e.s), "D", false, X(e.a + e.d) + 9, Y(e.s) - 8, "start"); }
+        handle("s", L, Y(e.s), "S", false, L + 10, Y(e.s) - 8, "start");
+        if (Lg > 0.001 && gate + e.r <= T) { handle("r", X(gate + e.r), Y(0), "R", false, X(gate + e.r) + 9, Y(0) - 8, "start"); }
+        handle("g", gx, top + 20, "", true, gx, top + 20, "middle");
+
+        m.push('<line class="cross" id="cross" x1="0" y1="' + top + '" x2="0" y2="' + Y(0) + '" style="display:none"/>');
+        svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+        svg.innerHTML = m.join("");
+        svg.setAttribute("aria-label", "The " + describe() + " envelope: attack " + fmtSec(e.a) + ", decay " + fmtSec(e.d) + ", sustain " + e.s + ", release " + fmtSec(e.r) + ", with the gate closing at " + fmtSec(gate) + ".");
+    }
+
+    function describe() { return cur === "amp" ? "loudness" : cur === "cut" ? "filter cutoff" : "noise burst"; }
+
+    // ---- controls ----
+    function syncCtrls() {
+        var e = state[cur];
+        sl.a.value = timeToPos(e.a); out.a.textContent = fmtSec(e.a); sl.a.setAttribute("aria-valuetext", fmtSec(e.a));
+        sl.d.value = timeToPos(e.d); out.d.textContent = fmtSec(e.d); sl.d.setAttribute("aria-valuetext", fmtSec(e.d));
+        sl.s.value = Math.round(e.s * 1000); out.s.textContent = String(e.s); sl.s.setAttribute("aria-valuetext", String(e.s));
+        sl.r.value = timeToPos(e.r); out.r.textContent = fmtSec(e.r); sl.r.setAttribute("aria-valuetext", fmtSec(e.r));
+        sl.g.value = timeToPos(gate); out.g.textContent = fmtSec(gate); sl.g.setAttribute("aria-valuetext", fmtSec(gate));
+
+        callout.textContent = "";
+        callout.appendChild(document.createTextNode(".adsr(" + [e.a, e.d, e.s, e.r].map(fmtArg).join(", ") + ")"));
+
+        var Lg = gateLevel(e);
+        var msg;
+        if (gate <= 0) {
+            msg = "The gate closes at 0 s, before the envelope can start, so it stays at 0.";
+        } else if (Lg > 0.001) {
+            msg = "Level at the gate: " + (Math.round(Lg * 100) / 100) + ". The release starts from there.";
+        } else {
+            msg = "Level at the gate: 0. The release has nothing to fall from, so the sound has already ended.";
+        }
+        status.textContent = msg;
+        envnote.textContent = NOTES[cur];
+    }
+
+    function refresh() { syncCtrls(); draw(); }
+
+    function select(name) {
+        cur = name;
+        tabs.forEach(function (t) { t.setAttribute("aria-pressed", t.getAttribute("data-env") === name ? "true" : "false"); });
+        Array.prototype.forEach.call(document.querySelectorAll("[data-env]"), function (n) {
+            if (n.classList.contains("tab")) { return; }
+            n.classList.toggle("sel", n.getAttribute("data-env") === name);
+        });
+        refresh();
+    }
+
+    tabs.forEach(function (t) { t.addEventListener("click", function () { select(t.getAttribute("data-env")); }); });
+    Array.prototype.forEach.call(document.querySelectorAll(".nd[data-env]"), function (n) {
+        n.addEventListener("click", function () { select(n.getAttribute("data-env")); });
+        n.addEventListener("keydown", function (ev) {
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(n.getAttribute("data-env")); }
+        });
+    });
+
+    function onSlider(key) {
+        return function () {
+            var v = Number(sl[key].value);
+            var e = state[cur];
+            if (key === "s") { e.s = Math.round(v) / 1000; e.s = Math.round(e.s * 100) / 100; }
+            else if (key === "g") { gate = snap(posToTime(v)); }
+            else { e[key] = snap(posToTime(v)); }
+            refresh();
+        };
+    }
+    ["a", "d", "s", "r", "g"].forEach(function (k) { sl[k].addEventListener("input", onSlider(k)); });
+    document.getElementById("reset").addEventListener("click", function () {
+        state[cur] = copy(DEFAULTS[cur]);
+        gate = GATE_DEFAULT;
+        refresh();
+    });
+
+    // ---- dragging the handles on the curve ----
+    var drag = null;
+    function svgPoint(ev) {
+        var r = svg.getBoundingClientRect();
+        var sx = geo.W / r.width, sy = geo.H / r.height;
+        return { x: (ev.clientX - r.left) * sx, y: (ev.clientY - r.top) * sy };
+    }
+    function onMove(ev) {
+        if (!drag) { return; }
+        var e = state[cur];
+        var pt = svgPoint(ev);
+        var t = Math.max(0, Math.min(3, (pt.x - geo.L) / geo.PW * geo.T));
+        if (drag === "a") { e.a = snap(t); }
+        else if (drag === "d") { e.d = snap(Math.max(0, t - e.a)); }
+        else if (drag === "r") { e.r = snap(Math.max(0, t - gate)); }
+        else if (drag === "g") { gate = snap(t); }
+        else if (drag === "s") {
+            var v = (geo.top + geo.PH - pt.y) / geo.PH;
+            e.s = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
+        }
+        refresh();
+    }
+    function onUp() {
+        drag = null;
+        frozenT = null;
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        refresh();
+    }
+    svg.addEventListener("pointerdown", function (ev) {
+        var h = ev.target && ev.target.getAttribute ? ev.target.getAttribute("data-h") : null;
+        if (!h) { return; }
+        ev.preventDefault();
+        drag = h;
+        frozenT = geo.T;
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+    });
+
+    // ---- the probe: level under the pointer ----
+    svg.addEventListener("pointermove", function (ev) {
+        if (drag || !geo) { return; }
+        var pt = svgPoint(ev);
+        var cross = document.getElementById("cross");
+        if (pt.x < geo.L || pt.x > geo.L + geo.PW) {
+            if (cross) { cross.style.display = "none"; }
+            probe.textContent = "";
+            return;
+        }
+        var t = (pt.x - geo.L) / geo.PW * geo.T;
+        var e = state[cur];
+        var v = lvl(e, t);
+        if (cross) { cross.setAttribute("x1", pt.x); cross.setAttribute("x2", pt.x); cross.style.display = ""; }
+        var txt = "at " + Number((geo.T < 0.2 ? t * 1000 : t).toPrecision(3)) + (geo.T < 0.2 ? " ms" : " s") + ": level " + v.toFixed(2);
+        if (cur === "cut") { txt += ", cutoff " + Math.round(8000 + 4000 * v) + " Hz"; }
+        probe.textContent = txt;
+    });
+    svg.addEventListener("pointerleave", function () {
+        var cross = document.getElementById("cross");
+        if (cross) { cross.style.display = "none"; }
+        probe.textContent = "";
+    });
+
+    // ---- hover, focus or tap a node: its branch lights, the rest dims ----
+    var linked = Array.prototype.slice.call(document.querySelectorAll(".graph [data-l]"));
+    var pinned = null, touched = false;
+    function highlight(ids) {
+        fig.classList.toggle("has-hl", !!ids);
+        linked.forEach(function (n) {
+            var mine = n.getAttribute("data-l").split(" ");
+            var on = !!ids && mine.some(function (x) { return ids.indexOf(x) >= 0; });
+            n.classList.toggle("hl", on);
+        });
+    }
+    linked.forEach(function (n) {
+        var ids = n.getAttribute("data-l").split(" ");
+        n.addEventListener("mouseenter", function () { if (!pinned) { highlight(ids); } });
+        n.addEventListener("mouseleave", function () { if (!pinned) { highlight(null); } });
+        n.addEventListener("focus", function () { if (!pinned) { highlight(ids); } });
+        n.addEventListener("blur", function () { if (!pinned) { highlight(null); } });
+        n.addEventListener("pointerdown", function (ev) { touched = ev.pointerType === "touch"; });
+        n.addEventListener("click", function () {
+            // a tap keeps the branch lit (there is no hover on a phone); a second tap lets go
+            if (!touched) { return; }
+            pinned = pinned === n ? null : n;
+            highlight(pinned ? ids : null);
+        });
+    });
+    document.querySelector(".graph").addEventListener("click", function (ev) {
+        if (!ev.target.closest || !ev.target.closest(".nd")) { pinned = null; highlight(null); }
+    });
+
+    // ---- keep the chart the width of its column ----
+    var lastW = 0;
+    if (window.ResizeObserver) {
+        new ResizeObserver(function () {
+            var w = svg.parentNode.clientWidth;
+            if (w && w !== lastW) { lastW = w; draw(); }
+        }).observe(svg.parentNode);
+    } else {
+        window.addEventListener("resize", draw);
+    }
+
+    select("amp");
+
+    // ---- report the content height to the host page ----
+    var last = 0;
+    function report() {
+        var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+        if (h && h !== last) {
+            last = h;
+            try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no host */ }
+        }
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", report);
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(document.body); }
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(report); }
+    report();
+})();
+
+</script>
+</body>
+</html>

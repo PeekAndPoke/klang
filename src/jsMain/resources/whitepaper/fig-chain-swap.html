@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The live chain swap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<script>document.documentElement.className = "js";</script>
+<style>
+    /* Tokens copied from the whitepaper's :root (dark only). */
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+
+    html, body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .fig { max-width: 1040px; margin: 0; padding: 6px 2px 10px; }
+
+    .lab {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0;
+    }
+
+    .cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (min-width: 720px) { .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 26px; } }
+    .panel { margin: 0; min-width: 0; }
+    .panel-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 0 0 2px; }
+    .panel-head .push { margin-left: auto; }
+    .panel-head .sub { font-family: var(--f-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 4px 0 6px; font-family: var(--f-mono); font-size: 12px; color: var(--ink); }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
+    .sw.dash { border-top-style: dotted; }
+    .sw.leave { border-color: var(--spark); }
+    .sw.arrive { border-color: var(--signal); }
+    .sw.sum { border-color: var(--muted); }
+
+    svg.plot { display: block; width: 100%; height: auto; overflow: visible; }
+    svg.plot text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); }
+    svg.plot text.ink { fill: var(--ink); }
+    svg.plot text.sm { font-size: 10.5px; }
+    svg.plot .grid { stroke: var(--rule); stroke-width: 1; }
+    svg.plot .axis { stroke: var(--muted); stroke-width: 1; }
+    svg.plot .mark { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 4; }
+    svg.plot .leave { fill: none; stroke: var(--spark); stroke-width: 2; stroke-linejoin: round; }
+    svg.plot .arrive { fill: none; stroke: var(--signal); stroke-width: 2; stroke-linejoin: round; }
+    svg.plot .sumline { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.8; }
+    svg.plot .head { stroke: var(--ink); stroke-width: 1; }
+    svg.plot .dot-leave { fill: var(--spark); stroke: var(--paper); stroke-width: 2; }
+    svg.plot .dot-arrive { fill: var(--signal); stroke: var(--paper); stroke-width: 2; }
+    svg.plot .band-fade { fill: var(--surface-2); stroke: var(--spark); }
+    svg.plot .band-drain { fill: var(--spark-bg); stroke: var(--spark); }
+    svg.plot .band-release { fill: var(--surface-2); stroke: var(--muted); }
+    svg.plot .rel { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 5 3; }
+    svg.plot .band-idle { fill: none; stroke: var(--rule); }
+
+    .scrub { margin: 10px 0 2px; }
+    .scrub-row { display: flex; align-items: center; gap: 10px; }
+    .scrub input[type=range] { flex: 1 1 auto; min-width: 0; height: 28px; accent-color: var(--spark); margin: 0; cursor: pointer; }
+    .scrub input[type=range]:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; }
+    .ticks { position: relative; height: 16px; margin: 0 8px; font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+    .ticks i { position: absolute; left: 30%; top: -30px; height: 40px; border-left: 1px dashed var(--faint); pointer-events: none; }
+    .ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+    .ticks span.first { transform: none; }
+    .ticks span.last { transform: translateX(-100%); }
+    .ticks span.endl { transform: translateX(-100%); padding-right: 5px; }
+    .ticks span.startr { transform: none; padding-left: 5px; }
+    @media (max-width: 420px) { .ticks span.startr { display: none; } }
+    .jumps { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+    button.chip, label.chip {
+        font-family: var(--f-mono); font-size: 12px; color: var(--ink);
+        background: var(--surface); border: 1px solid var(--rule); border-radius: 0;
+        padding: 4px 9px; cursor: pointer; line-height: 1.3;
+    }
+    button.chip:hover, label.chip:hover { border-color: var(--muted); }
+    button.chip:focus-visible, .radios input:focus-visible + span { outline: 2px solid var(--spark); outline-offset: 2px; }
+
+    .readout {
+        display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+        margin: 8px 0 0; padding: 8px 10px;
+        background: var(--surface); border: 1px solid var(--rule); border-left: 2px solid var(--spark);
+        font-family: var(--f-mono); font-size: 12.5px; color: var(--ink); min-height: 40px;
+    }
+    .state {
+        font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.02em;
+        padding: 1px 8px; border: 1px solid var(--spark); color: var(--ink); background: var(--spark-bg);
+    }
+    .state.s-fading { border-color: var(--spark); background: var(--surface-2); }
+    .state.s-releasing { border-color: var(--muted); background: var(--surface-2); }
+    .state.s-idle { border-color: var(--rule); background: transparent; color: var(--muted); }
+    .readout .nums { color: var(--muted); }
+    .readout b { color: var(--ink); font-weight: 400; }
+
+    .radios { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; padding: 0; border: 0; }
+    .radios legend { padding: 0; margin: 0 0 4px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+    .radios label { display: inline-block; }
+    .radios input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .radios span { display: inline-block; font-family: var(--f-mono); font-size: 12px; padding: 4px 9px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+    .radios input:checked + span { border-color: var(--spark); background: var(--spark-bg); }
+    .radios label:hover span { border-color: var(--muted); }
+    .radios input:checked:hover + span { border-color: var(--spark); }
+
+    .tailnote { font-family: var(--f-mono); font-size: 11.5px; line-height: 1.45; color: var(--muted); margin: 4px 0 0; min-height: 50px; }
+    .foot { font-family: var(--f-mono); font-size: 11px; line-height: 1.5; color: var(--muted); margin: 10px 0 0; max-width: 92ch; }
+
+    /* Controls only exist when a script can drive them. */
+    .js-only { display: none; }
+    .js .js-only { display: block; }
+    .js .js-only[hidden] { display: none; }
+    .js .js-only.flex { display: flex; }
+
+    @media (max-width: 520px) {
+        .legend { font-size: 11px; gap: 4px 12px; }
+        .readout { font-size: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="fig" id="fig">
+
+    <div class="cols">
+        <section class="panel" aria-labelledby="ha">
+            <div class="panel-head">
+                <h2 class="lab" id="ha">The ramp</h2>
+                <span class="sub">0 to 60 ms, one weight per chain</span>
+            </div>
+            <div class="legend" aria-hidden="true">
+                <span><i class="sw leave"></i>leaving chain, its input</span>
+                <span><i class="sw arrive"></i>arriving chain, its output</span>
+                <span><i class="sw sum dash"></i>the two weights added</span>
+            </div>
+            <div id="pa"><svg class="plot" viewBox="0 0 428 192" role="img" aria-label="Two linear ramps over 60 milliseconds. The leaving chain's input weight falls from 1 to 0 while the arriving chain's output weight rises from 0 to 1, and the two add to 1 at every moment. Below, the leaving chain's own tail is not scaled by the ramp."><line class="grid" x1="30" x2="414" y1="102" y2="102"/><text x="24" y="106" text-anchor="end">0</text><line class="grid" x1="30" x2="414" y1="60" y2="60"/><text x="24" y="64" text-anchor="end">0.5</text><line class="grid" x1="30" x2="414" y1="18" y2="18"/><text x="24" y="22" text-anchor="end">1</text><text x="30" y="11" class="sm">weight, 0 to 1</text><line class="mark" x1="379.1" x2="379.1" y1="14" y2="158"/><text x="374.1" y="11" text-anchor="end" class="sm">ramp ends</text><line class="sumline" x1="30" x2="414" y1="18" y2="18"/><polyline class="leave" points="30,18 379.1,102 414,102"/><polyline class="arrive" points="30,102 379.1,18 414,18"/><line class="grid" x1="30" x2="414" y1="158" y2="158"/><text x="30" y="121" class="sm">the tail it holds: the ramp leaves it alone</text><line class="mark" x1="379.1" x2="379.1" y1="126" y2="158"/><polyline class="leave" points="30,140.6 414,140.6"/><line class="axis" x1="30" x2="414" y1="164" y2="164"/><line class="axis" x1="30" x2="30" y1="164" y2="168"/><text x="30" y="181" text-anchor="middle">0</text><line class="axis" x1="88.2" x2="88.2" y1="164" y2="168"/><line class="axis" x1="146.4" x2="146.4" y1="164" y2="168"/><text x="146.4" y="181" text-anchor="middle">20</text><line class="axis" x1="204.5" x2="204.5" y1="164" y2="168"/><line class="axis" x1="262.7" x2="262.7" y1="164" y2="168"/><text x="262.7" y="181" text-anchor="middle">40</text><line class="axis" x1="320.9" x2="320.9" y1="164" y2="168"/><line class="axis" x1="379.1" x2="379.1" y1="164" y2="168"/><text x="379.1" y="181" text-anchor="middle">60</text><text x="414" y="194" text-anchor="end" class="sm">milliseconds since the swap begins</text><line class="head" x1="204.5" x2="204.5" y1="14" y2="164"/><circle class="dot-leave" cx="204.5" cy="60" r="4.5"/><circle class="dot-arrive" cx="204.5" cy="60" r="4.5"/><circle class="dot-leave" cx="204.5" cy="140.6" r="3.5"/></svg></div>
+        </section>
+
+        <section class="panel" aria-labelledby="hb">
+            <div class="panel-head">
+                <h2 class="lab" id="hb">The drain</h2>
+                <span class="sub">seconds after the ramp ends; a sketch, decay drawn in dB</span>
+            </div>
+            <fieldset class="radios js-only flex" id="tails">
+                <legend>What the leaving chain still holds</legend>
+            </fieldset>
+            <div id="pb"><svg class="plot" viewBox="0 0 428 201" role="img" aria-label="The drain, in seconds after the ramp ends. The leaving chain keeps running on silent input. Its tail either ends by itself or, if it would not end on its own, is cut off at a cap of 20 seconds and released at 60 decibels every 3 seconds until it is 90 decibels down, at 24.5 seconds."><rect class="band-drain" x="44" y="15" width="37.4" height="20"/><text class="ink sm" x="44" y="11">Draining</text><rect class="band-idle" x="81.4" y="15" width="332.6" height="20"/><text class="ink sm" x="88.4" y="29">Idle</text><text class="sm" x="44" y="47">dB, from a tail that starts at full scale</text><line class="grid" x1="44" x2="414" y1="55" y2="55"/><text x="38" y="59" text-anchor="end">0</text><line class="grid" x1="44" x2="414" y1="76.5" y2="76.5"/><text x="38" y="80.5" text-anchor="end">-20</text><line class="grid" x1="44" x2="414" y1="98.1" y2="98.1"/><text x="38" y="102.1" text-anchor="end">-40</text><line class="grid" x1="44" x2="414" y1="119.6" y2="119.6"/><text x="38" y="123.6" text-anchor="end">-60</text><line class="grid" x1="44" x2="414" y1="141.2" y2="141.2"/><text x="38" y="145.2" text-anchor="end">-80</text><line class="grid" x1="44" x2="414" y1="162.7" y2="162.7"/><text x="38" y="166.7" text-anchor="end">-100</text><text class="sm" x="50" y="157.7">silent</text><line class="mark" x1="340" x2="340" y1="53" y2="167"/><polyline class="leave" points="44,55 44.7,57.2 45.5,59.4 46.2,61.6 47,63.8 47.7,66 48.4,68.2 49.2,70.3 49.9,72.5 50.7,74.7 51.4,76.9 52.1,79.1 52.9,81.3 53.6,83.5 54.4,85.7 55.1,87.9 55.8,90.1 56.6,92.3 57.3,94.5 58.1,96.7 58.8,98.9 59.5,101 60.3,103.2 61,105.4 61.8,107.6 62.5,109.8 63.2,112 64,114.2 64.7,116.4 65.5,118.6 66.2,120.8 66.9,123 67.7,125.2 68.4,127.4 69.2,129.6 69.9,131.7 70.6,133.9 71.4,136.1 72.1,138.3 72.9,140.5 73.6,142.7 74.3,144.9 75.1,147.1 75.8,149.3 76.6,151.5 77.3,153.7 78,155.9 78.8,158.1 79.5,160.3 80.3,162.4 81,164.6"/><text class="ink" x="51.4" y="72">the room dies away by itself</text><text class="sm" x="334" y="161" text-anchor="end">cap, 20 s</text><line class="axis" x1="44" x2="414" y1="173" y2="173"/><line class="axis" x1="44" x2="44" y1="173" y2="177"/><text x="44" y="190" text-anchor="middle">0</text><line class="axis" x1="118" x2="118" y1="173" y2="177"/><text x="118" y="190" text-anchor="middle">5</text><line class="axis" x1="192" x2="192" y1="173" y2="177"/><text x="192" y="190" text-anchor="middle">10</text><line class="axis" x1="266" x2="266" y1="173" y2="177"/><text x="266" y="190" text-anchor="middle">15</text><line class="axis" x1="340" x2="340" y1="173" y2="177"/><text x="340" y="190" text-anchor="middle">20</text><line class="axis" x1="414" x2="414" y1="173" y2="177"/><text x="414" y="190" text-anchor="middle">25</text><text x="414" y="203" text-anchor="end" class="sm">seconds after the ramp ends</text><line class="head" x1="44" x2="44" y1="13" y2="173" opacity="0.35"/></svg></div>
+            <p class="tailnote" id="tailnote">Comb feedback 0.84, about 41 dB per second. The engine counts 2.5 s for this room, under the cap, so the leaving chain drains on its own and retires.</p>
+        </section>
+    </div>
+
+    <div class="scrub js-only" id="scrub">
+        <div class="scrub-row">
+            <input type="range" id="pos" min="0" max="1000" step="1" value="150" aria-label="Time since the swap began: the first third is the 60 ms ramp, the rest is the drain in seconds">
+        </div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <div class="jumps" role="group" aria-label="Jump to a moment">
+            <button type="button" class="chip" data-pos="150">Halfway, 30 ms</button>
+            <button type="button" class="chip" data-pos="300">Ramp ends, 60 ms</button>
+            <button type="button" class="chip" data-pos="356">2 s into the drain</button>
+            <button type="button" class="chip" data-pos="860">Drain cap, 20 s</button>
+            <button type="button" class="chip" data-pos="986">Release ends, 24.5 s</button>
+        </div>
+    </div>
+
+    <div class="readout" id="readout"><span class="state s-fading">Fading</span><span class="nums"><b>30 ms</b> into the ramp. Leaving chain's input weight <b>0.50</b>, arriving chain's output weight <b>0.50</b>, together <b>1.00</b>.</span></div>
+
+    <p class="foot">The 60 ms is one constant in the engine, and the ramp is linear: the two weights add to 1, so the mix keeps its level. The start rounds to the current 128-frame block (at most about 2.7 ms at 48 kHz), and a lookahead compressor in either chain shifts both ramps by its delay; neither is drawn.</p>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   The numbers, and where they come from (all in the klang repository):
+   audio_be/src/commonMain/kotlin/Crossfade.kt      XFADE_SECONDS = 0.06, the ramp is linear (rampAt)
+   audio_be/src/commonMain/kotlin/ChainSwap.kt      MAX_DRAIN_SECONDS = 20.0, the four states
+   audio_be/src/commonMain/kotlin/TailRelease.kt    RT60_SECONDS = 3.0, FLOOR_DB = -90.0
+   audio_be/src/commonMain/kotlin/effects/Reverb.kt feedback = size/10 * 0.28 + 0.70, comb tunings,
+                                                     TAIL_THRESHOLD = 1e-5, the drain countdown
+   ------------------------------------------------------------------ */
+var XFADE_MS = 60;                       // Crossfade.kt: XFADE_SECONDS = 0.06
+var CAP_S = 20;                          // ChainSwap.kt: MAX_DRAIN_SECONDS
+var RT60_S = 3;                          // TailRelease.kt: RT60_SECONDS
+var FLOOR_DB = -90;                      // TailRelease.kt: FLOOR_DB
+var REL_DB_PER_S = -60 / RT60_S;         // 60 dB every 3 s
+var REL_END_S = CAP_S + (-FLOOR_DB) / (60 / RT60_S);   // 20 + 4.5 = 24.5 s
+var SILENT_DB = -100;                    // Reverb.kt: TAIL_THRESHOLD = 1e-5, about -100 dBFS
+var COMB_S = (1617 + 23) / 44100;        // Reverb.kt: longest comb + stereo spread, seconds
+var DRAIN_MAX_S = 25;                    // right edge of the drain axis
+var POS_RAMP_END = 300;                  // slider: 0..300 is the ramp, 300..1000 is the drain
+var POS_MAX = 1000;
+
+function reverbTail(size) {
+    var fb = size / 10 * 0.28 + 0.70;                       // Reverb.kt feedbackFor()
+    var perRev = 20 * Math.log10(fb);                        // dB lost per comb revolution
+    var periods = Math.ceil(Math.log(1e-5) / Math.log(fb)) + 1;   // Reverb.kt drainSamplesUntilSilent, peak 1
+    return { fb: fb, dbPerS: perRev / COMB_S, retireS: periods * COMB_S };
+}
+var R5 = reverbTail(5), R10 = reverbTail(10);   // 5 is the default size (SendEffectDefaults.kt REVERB_SIZE)
+
+var TAILS = [
+    { id: "room5", label: "room, size 5 (the default)", kind: "room", r: R5 },
+    { id: "room10", label: "room, size 10", kind: "room", r: R10 },
+    { id: "echo", label: "echo, feedback 1", kind: "echo" },
+    { id: "none", label: "no delay or reverb", kind: "none" }
+];
+
+function tailById(id) { for (var i = 0; i < TAILS.length; i++) { if (TAILS[i].id === id) { return TAILS[i]; } } return TAILS[0]; }
+
+/* The ring-out on its own (dB from a tail that starts at 0 dBFS), before any release. */
+function ringDb(tail, age) {
+    if (tail.kind === "echo") { return 0; }
+    if (tail.kind === "room") { return tail.r.dbPerS * age; }
+    return -Infinity;
+}
+
+/* When the ring-out ends by itself, or Infinity when only the cap ends it. */
+function ownEnd(tail) {
+    if (tail.kind === "none") { return 0; }
+    if (tail.kind === "room") { return tail.r.retireS; }
+    return Infinity;
+}
+
+/* ChainSwap.kt state table: Fading, Draining, Releasing, Idle. age is seconds after the ramp ends. */
+function drainState(tail, age) {
+    var end = ownEnd(tail);
+    if (tail.kind === "none") { return "Idle"; }
+    if (end <= CAP_S) { return age < end ? "Draining" : "Idle"; }
+    if (age < CAP_S) { return "Draining"; }
+    return age < REL_END_S ? "Releasing" : "Idle";
+}
+
+/* What the leaving chain adds to the mix, in dB, at this age (ring-out under the release gain). */
+function heardDb(tail, age) {
+    var s = drainState(tail, age);
+    if (s === "Idle") { return -Infinity; }
+    var db = ringDb(tail, age);
+    if (s === "Releasing") { db += REL_DB_PER_S * (age - CAP_S); }
+    return db;
+}
+
+function posToState(pos) {
+    if (pos < POS_RAMP_END) { return { seg: 1, t: pos / POS_RAMP_END * XFADE_MS, age: null }; }
+    return { seg: 2, t: XFADE_MS, age: (pos - POS_RAMP_END) / (POS_MAX - POS_RAMP_END) * DRAIN_MAX_S };
+}
+
+function fmt(n, d) { return (Math.round(n * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+function px(n) { return Math.round(n * 10) / 10; }
+function P(x, y) { return px(x) + "," + px(y); }
+
+/* ---------------- panel A: the ramp ---------------- */
+function panelA(W, st) {
+    var narrow = W < 520;
+    var L = narrow ? 30 : 44, R = 14;
+    var topPad = 18, h1 = narrow ? 84 : 96, gap = 28, h2 = narrow ? 28 : 32, axisH = 34;
+    var H = topPad + h1 + gap + h2 + axisH;
+    var x0 = L, x1 = W - R, TMAX = narrow ? 66 : 80;
+    function X(t) { return x0 + (x1 - x0) * t / TMAX; }
+    function Y1(v) { return topPad + h1 * (1 - v); }
+    var base2 = topPad + h1 + gap + h2;
+    function Y2(v) { return base2 - h2 * v; }
+    var tp = st.seg === 1 ? st.t : XFADE_MS;
+    var u = 1 - tp / XFADE_MS, a = tp / XFADE_MS;
+    var s = [];
+    s.push('<svg class="plot" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Two linear ramps over 60 milliseconds. The leaving chain\'s input weight falls from 1 to 0 while the arriving chain\'s output weight rises from 0 to 1, and the two add to 1 at every moment. Below, the leaving chain\'s own tail is not scaled by the ramp.">');
+    var gy = [0, 0.5, 1];
+    for (var i = 0; i < gy.length; i++) {
+        s.push('<line class="grid" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(Y1(gy[i])) + '" y2="' + px(Y1(gy[i])) + '"/>');
+        s.push('<text x="' + px(x0 - 6) + '" y="' + px(Y1(gy[i]) + 4) + '" text-anchor="end">' + (gy[i] === 0.5 ? '0.5' : String(gy[i])) + '</text>');
+    }
+    s.push('<text x="' + px(x0) + '" y="' + px(topPad - 7) + '" class="sm">weight, 0 to 1</text>');
+    s.push('<line class="mark" x1="' + px(X(XFADE_MS)) + '" x2="' + px(X(XFADE_MS)) + '" y1="' + px(topPad - 4) + '" y2="' + px(base2) + '"/>');
+    s.push('<text x="' + px(X(XFADE_MS) - 5) + '" y="' + px(topPad - 7) + '" text-anchor="end" class="sm">ramp ends</text>');
+    // the two weights added stay at 1: a dotted line on the top gridline
+    s.push('<line class="sumline" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(Y1(1)) + '" y2="' + px(Y1(1)) + '"/>');
+    s.push('<polyline class="leave" points="' + P(X(0), Y1(1)) + ' ' + P(X(XFADE_MS), Y1(0)) + ' ' + P(X(TMAX), Y1(0)) + '"/>');
+    s.push('<polyline class="arrive" points="' + P(X(0), Y1(0)) + ' ' + P(X(XFADE_MS), Y1(1)) + ' ' + P(X(TMAX), Y1(1)) + '"/>');
+    var roomAfter = (x1 - X(XFADE_MS + 2.5)) >= 165;
+    if (roomAfter) {
+        s.push('<text class="ink" x="' + px(X(XFADE_MS + 2.5)) + '" y="' + px(Y1(0) - 7) + '">leaving chain, input</text>');
+        s.push('<text class="ink" x="' + px(X(XFADE_MS + 2.5)) + '" y="' + px(Y1(1) + 17) + '">arriving chain, output</text>');
+        s.push('<text class="sm" x="' + px(X(XFADE_MS + 2.5)) + '" y="' + px(Y1(1) - 6) + '">together: 1</text>');
+    }
+    // lane 2: the leaving chain's tail (sketch)
+    s.push('<line class="grid" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(base2) + '" y2="' + px(base2) + '"/>');
+    s.push('<text x="' + px(x0) + '" y="' + px(topPad + h1 + gap - 9) + '" class="sm">' + (narrow ? 'the tail it holds: the ramp leaves it alone' : 'the tail the leaving chain already holds, a sketch: the ramp does not scale it') + '</text>');
+    var lvl = 0.62;
+    s.push('<line class="mark" x1="' + px(X(XFADE_MS)) + '" x2="' + px(X(XFADE_MS)) + '" y1="' + px(base2 - h2 - 4) + '" y2="' + px(base2) + '"/>');
+    s.push('<polyline class="leave" points="' + P(X(0), Y2(lvl)) + ' ' + P(X(TMAX), Y2(lvl)) + '"/>');
+    var ay = base2 + 6;
+    s.push('<line class="axis" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(ay) + '" y2="' + px(ay) + '"/>');
+    for (var t = 0; t <= 60; t += 10) {
+        s.push('<line class="axis" x1="' + px(X(t)) + '" x2="' + px(X(t)) + '" y1="' + px(ay) + '" y2="' + px(ay + 4) + '"/>');
+        if (!narrow || t % 20 === 0) {
+            s.push('<text x="' + px(X(t)) + '" y="' + px(ay + 17) + '" text-anchor="middle">' + t + '</text>');
+        }
+    }
+    s.push('<text x="' + px(x1) + '" y="' + px(ay + 30) + '" text-anchor="end" class="sm">milliseconds since the swap begins</text>');
+    var hx = X(tp);
+    s.push('<line class="head" x1="' + px(hx) + '" x2="' + px(hx) + '" y1="' + px(topPad - 4) + '" y2="' + px(ay) + '"/>');
+    s.push('<circle class="dot-leave" cx="' + px(hx) + '" cy="' + px(Y1(u)) + '" r="4.5"/>');
+    s.push('<circle class="dot-arrive" cx="' + px(hx) + '" cy="' + px(Y1(a)) + '" r="4.5"/>');
+    s.push('<circle class="dot-leave" cx="' + px(hx) + '" cy="' + px(Y2(lvl)) + '" r="3.5"/>');
+    s.push('</svg>');
+    return s.join("");
+}
+
+/* ---------------- panel B: the drain ---------------- */
+function panelB(W, st, tail) {
+    var narrow = W < 380;
+    var L = narrow ? 34 : 44, R = 14;
+    var bandTop = 15, bandH = 20;
+    var topPad = bandTop + bandH + 20, h = narrow ? 104 : 112, axisH = 34;
+    var H = topPad + h + axisH;
+    var x0 = L, x1 = W - R;
+    function X(a) { return x0 + (x1 - x0) * a / DRAIN_MAX_S; }
+    function Y(db) { var d = Math.max(-104, Math.min(0, db)); return topPad + h * (-d / 104); }
+    var age = st.age;
+    var end = ownEnd(tail);
+    var releases = tail.kind !== "none" && end > CAP_S;
+    var s = [];
+    s.push('<svg class="plot" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="The drain, in seconds after the ramp ends. The leaving chain keeps running on silent input. Its tail either ends by itself or, if it would not end on its own, is cut off at a cap of 20 seconds and released at 60 decibels every 3 seconds until it is 90 decibels down, at 24.5 seconds.">');
+    var segs = [];
+    if (tail.kind === "none") {
+        segs.push({ n: "Idle", a: 0, b: DRAIN_MAX_S, c: "band-idle" });
+    } else if (!releases) {
+        segs.push({ n: "Draining", a: 0, b: end, c: "band-drain" });
+        segs.push({ n: "Idle", a: end, b: DRAIN_MAX_S, c: "band-idle" });
+    } else {
+        segs.push({ n: "Draining", a: 0, b: CAP_S, c: "band-drain" });
+        segs.push({ n: "Releasing", a: CAP_S, b: REL_END_S, c: "band-release" });
+        segs.push({ n: "Idle", a: REL_END_S, b: DRAIN_MAX_S, c: "band-idle" });
+    }
+    for (var i = 0; i < segs.length; i++) {
+        var sg = segs[i], w = X(sg.b) - X(sg.a);
+        s.push('<rect class="' + sg.c + '" x="' + px(X(sg.a)) + '" y="' + bandTop + '" width="' + px(Math.max(w, 1)) + '" height="' + bandH + '"/>');
+        if (w > 66) { s.push('<text class="ink sm" x="' + px(X(sg.a) + 7) + '" y="' + (bandTop + 14) + '">' + sg.n + '</text>'); }
+        else if (w >= 8) { s.push('<text class="ink sm" x="' + px(X(sg.a)) + '" y="' + (bandTop - 4) + '">' + sg.n + '</text>'); }   // a short band is named above it
+    }
+    s.push('<text class="sm" x="' + px(x0) + '" y="' + px(topPad - 8) + '">dB, from a tail that starts at full scale</text>');
+    for (var g = 0; g >= -100; g -= 20) {
+        s.push('<line class="grid" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(Y(g)) + '" y2="' + px(Y(g)) + '"/>');
+        s.push('<text x="' + px(x0 - 6) + '" y="' + px(Y(g) + 4) + '" text-anchor="end">' + g + '</text>');
+    }
+    s.push('<text class="sm" x="' + px(x0 + 6) + '" y="' + px(Y(SILENT_DB) - 5) + '">silent</text>');
+    s.push('<line class="mark" x1="' + px(X(CAP_S)) + '" x2="' + px(X(CAP_S)) + '" y1="' + px(topPad - 2) + '" y2="' + px(topPad + h) + '"/>');
+    if (releases) {
+        s.push('<line class="mark" x1="' + px(X(REL_END_S)) + '" x2="' + px(X(REL_END_S)) + '" y1="' + px(topPad - 2) + '" y2="' + px(topPad + h) + '"/>');
+        s.push('<polyline class="rel" points="' + P(X(CAP_S), Y(0)) + ' ' + P(X(REL_END_S), Y(FLOOR_DB)) + '"/>');
+        if (!narrow) { s.push('<text class="sm" x="' + px(X(CAP_S) - 7) + '" y="' + px(Y(-30)) + '" text-anchor="end">release gain, -60 dB per 3 s</text>'); }
+    }
+    if (tail.kind === "none") {
+        s.push('<text class="ink" x="' + px(x0 + 10) + '" y="' + px(topPad + h * 0.34) + '">' + (W < 470 ? 'Nothing rings on.' : 'The chain has no delay or reverb, so nothing rings on.') + '</text>');
+        s.push('<text x="' + px(x0 + 10) + '" y="' + px(topPad + h * 0.34 + 17) + '">' + (W < 470 ? 'It retires at once.' : 'It retires one block after the ramp ends, about 3 ms later.') + '</text>');
+    } else {
+        var pts = [];
+        for (var a = 0; a <= DRAIN_MAX_S + 1e-9; a += 0.05) {
+            var db = heardDb(tail, a);
+            if (db === -Infinity) { break; }
+            pts.push(P(X(a), Y(db)));
+            if (db < SILENT_DB - 4) { break; }
+        }
+        s.push('<polyline class="leave" points="' + pts.join(" ") + '"/>');
+        if (!narrow) {
+            if (tail.kind === "echo") {
+                s.push('<text class="ink" x="' + px(X(0.5)) + '" y="' + px(Y(0) + 17) + '">echoes recirculate and the level holds</text>');
+            } else {
+                s.push('<text class="ink" x="' + px(X(0.5)) + '" y="' + px(Y(0) + 17) + '">' + (releases ? 'the room rings on, slowly' : 'the room dies away by itself') + '</text>');
+            }
+        }
+    }
+    s.push('<text class="sm" x="' + px(X(CAP_S) - 6) + '" y="' + px(topPad + h - 6) + '" text-anchor="end">cap, 20 s</text>');
+    if (releases) {
+        s.push('<text class="sm" x="' + px(X(REL_END_S) - 6) + '" y="' + px(topPad + h - 6) + '" text-anchor="end">24.5 s</text>');
+    }
+    var ay = topPad + h + 6;
+    s.push('<line class="axis" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + px(ay) + '" y2="' + px(ay) + '"/>');
+    for (var t = 0; t <= 25; t += 5) {
+        s.push('<line class="axis" x1="' + px(X(t)) + '" x2="' + px(X(t)) + '" y1="' + px(ay) + '" y2="' + px(ay + 4) + '"/>');
+        s.push('<text x="' + px(X(t)) + '" y="' + px(ay + 17) + '" text-anchor="middle">' + t + '</text>');
+    }
+    s.push('<text x="' + px(x1) + '" y="' + px(ay + 30) + '" text-anchor="end" class="sm">seconds after the ramp ends</text>');
+    var hx = X(age === null ? 0 : age);
+    s.push('<line class="head" x1="' + px(hx) + '" x2="' + px(hx) + '" y1="' + (bandTop - 2) + '" y2="' + px(ay) + '" opacity="' + (age === null ? 0.35 : 1) + '"/>');
+    if (age !== null && tail.kind !== "none") {
+        var hd = heardDb(tail, age);
+        if (hd !== -Infinity) { s.push('<circle class="dot-leave" cx="' + px(hx) + '" cy="' + px(Y(hd)) + '" r="4.5"/>'); }
+    }
+    s.push('</svg>');
+    return s.join("");
+}
+
+/* ---------------- readout text ---------------- */
+function readoutFor(st, tail) {
+    var chip, nums;
+    if (st.seg === 1) {
+        var u = 1 - st.t / XFADE_MS;
+        chip = "Fading";
+        nums = "<b>" + fmt(st.t, 0) + " ms</b> into the ramp. Leaving chain's input weight <b>" + fmt(u, 2) + "</b>, arriving chain's output weight <b>" + fmt(1 - u, 2) + "</b>, together <b>1.00</b>.";
+        return { chip: chip, cls: "s-fading", html: nums, text: "Fading, " + fmt(st.t, 0) + " milliseconds into the ramp. Leaving input weight " + fmt(u, 2) + ", arriving output weight " + fmt(1 - u, 2) + "." };
+    }
+    var stateName = drainState(tail, st.age);
+    var db = heardDb(tail, st.age);
+    var tx;
+    if (stateName === "Idle") {
+        tx = st.age === 0 || tail.kind === "none" ? "The leaving chain has retired; the arriving chain runs alone." : "The leaving chain has retired; the arriving chain runs alone.";
+        if (tail.kind === "none") { tx = "Nothing rings on, so the leaving chain retired one block after the ramp ended."; }
+    } else if (stateName === "Draining") {
+        tx = "<b>" + fmt(st.age, 1) + " s</b> of drain. The leaving chain hears silence and adds its tail at full weight, now <b>" + fmt(db, 0) + " dB</b>.";
+    } else {
+        tx = "<b>" + fmt(st.age, 1) + " s</b> in, <b>" + fmt(st.age - CAP_S, 1) + " s</b> into the release. Release gain <b>" + fmt(REL_DB_PER_S * (st.age - CAP_S), 0) + " dB</b>, chain retires at 24.5 s.";
+    }
+    return { chip: stateName, cls: "s-" + stateName.toLowerCase(), html: tx, text: stateName + ". " + tx.replace(/<[^>]+>/g, "") };
+}
+
+function noteFor(tail) {
+    if (tail.kind === "none") { return "No delay or reverb: the chain has nothing left to ring, so it retires as soon as the ramp is over."; }
+    if (tail.kind === "echo") { return "A delay at feedback 1 does not end on its own. The drain stops at 20 s, then the output is released at 60 dB every 3 s until it is 90 dB down: 24.5 s after the ramp ends, at most."; }
+    var r = tail.r;
+    if (r.retireS > CAP_S) { return "Comb feedback " + fmt(r.fb, 2) + ", about " + fmt(-r.dbPerS, 1) + " dB per second. The engine counts " + fmt(r.retireS, 1) + " s for this room, past the cap, so the cap and the release end it, with the tail still about " + fmt(-r.dbPerS * CAP_S, 0) + " dB down at 20 s."; }
+    return "Comb feedback " + fmt(r.fb, 2) + ", about " + fmt(-r.dbPerS, 0) + " dB per second. The engine counts " + fmt(r.retireS, 1) + " s for this room, under the cap, so the leaving chain drains on its own and retires.";
+}
+/*END-PURE*/
+
+(function () {
+    if (typeof document === "undefined") { return; }
+    var state = { pos: 150, tailId: "room5" };
+    var pa = document.getElementById("pa"), pb = document.getElementById("pb");
+    var posEl = document.getElementById("pos"), readout = document.getElementById("readout");
+    var tailsEl = document.getElementById("tails");
+    var noteEl = document.getElementById("tailnote"), ticksEl = document.getElementById("ticks");
+
+    // slider tick labels: the left third is milliseconds, the rest is seconds, with a divider between
+    var ticks = [[0, "0 ms", "first"], [POS_RAMP_END, "60 ms", "endl"], [POS_RAMP_END, "0 s", "startr"]];
+    [5, 10, 15, 20, 25].forEach(function (s) { ticks.push([POS_RAMP_END + s / DRAIN_MAX_S * (POS_MAX - POS_RAMP_END), s + " s", s === 25 ? "last" : ""]); });
+    ticksEl.innerHTML = '<i></i>' + ticks.map(function (t) {
+        return '<span class="' + t[2] + '" style="left:' + (t[0] / POS_MAX * 100) + '%">' + t[1] + '</span>';
+    }).join("");
+
+    // tail choice
+    var rad = '';
+    TAILS.forEach(function (t) {
+        rad += '<label><input type="radio" name="tail" value="' + t.id + '"' + (t.id === state.tailId ? " checked" : "") + '><span>' + t.label + '</span></label>';
+    });
+    tailsEl.insertAdjacentHTML("beforeend", rad);
+
+    var lastWA = 0, lastWB = 0;
+    function widths() {
+        return { a: Math.max(240, Math.floor(pa.clientWidth)), b: Math.max(240, Math.floor(pb.clientWidth)) };
+    }
+    function render() {
+        var w = widths();
+        lastWA = w.a; lastWB = w.b;
+        var st = posToState(state.pos), tail = tailById(state.tailId);
+        pa.innerHTML = panelA(w.a, st);
+        pb.innerHTML = panelB(w.b, st, tail);
+        var r = readoutFor(st, tail);
+        readout.innerHTML = '<span class="state ' + r.cls + '">' + r.chip + '</span><span class="nums">' + r.html + '</span>';
+        posEl.setAttribute("aria-valuetext", r.text);
+        noteEl.textContent = noteFor(tail);
+    }
+
+    posEl.addEventListener("input", function () { state.pos = parseInt(posEl.value, 10); render(); });
+    document.getElementById("scrub").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-pos]");
+        if (b) { state.pos = parseInt(b.getAttribute("data-pos"), 10); posEl.value = state.pos; render(); }
+    });
+    tailsEl.addEventListener("change", function (e) {
+        if (e.target && e.target.name === "tail") { state.tailId = e.target.value; render(); }
+    });
+
+    var lastH = 0;
+    function postHeight(force) {
+        var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+        if (!h || (h === lastH && force !== true)) { return; }
+        lastH = h;
+        try {
+            window.parent.postMessage({ type: "klang-figure-height", height: h }, "*");
+        } catch (e) { /* no host page to tell */ }
+    }
+    render();
+    postHeight();
+    if (typeof ResizeObserver !== "undefined") {
+        var ro = new ResizeObserver(function () {
+            var w = widths();
+            if (w.a !== lastWA || w.b !== lastWB) { render(); }
+            postHeight();
+        });
+        ro.observe(document.body);
+    } else {
+        window.addEventListener("resize", function () { render(); postHeight(); });
+    }
+    window.addEventListener("load", function () { postHeight(true); });
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { postHeight(true); }); }
+})();
+</script>
+</body>
+</html>

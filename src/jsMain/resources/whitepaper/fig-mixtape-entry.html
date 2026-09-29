@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>A mixtape entry: score, window and interpretation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+    <script>document.documentElement.className = "js";</script>
+    <style>
+        /* Tokens copied from the whitepaper's :root (klang-whitepaper.html). Dark only. */
+        :root {
+            color-scheme: dark;
+            --paper: #191C22;
+            --surface: #21252B;
+            --surface-2: #2C313A;
+            --ink: #D7DADF;
+            --muted: #ABB2BF;
+            --faint: #5C6370;
+            --rule: #353A42;
+            --spark: #D19A66;
+            --signal: #56B6C2;
+            --gold: #E8B84B;
+            --code-bg: #12131C;
+            --code-str: #98C379;
+            --code-cm: #5C6370;
+
+            /* the three parts of an entry keep their colour through the whole figure */
+            --c-score: var(--signal);
+            --c-window: var(--spark);
+            --c-over: var(--code-str);
+
+            --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+            --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+            --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            background: var(--paper);
+        }
+
+        body {
+            margin: 0;
+            padding: 4px 2px 8px;
+            display: flow-root;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: var(--f-body);
+            font-size: 16px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .sr {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        code, .mono {
+            font-family: var(--f-mono);
+        }
+
+        button:focus-visible, input:focus-visible, .h:focus-visible {
+            outline: 2px solid var(--signal);
+            outline-offset: 2px;
+        }
+
+        /* A sketch is drawn with a dashed edge and says so in the corner, like the page's Sketch pill. */
+        .fig {
+            border: 1px dashed var(--faint);
+            border-radius: 2px;
+            padding: 12px 16px 16px;
+        }
+
+        .head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 12px;
+            margin: 0 0 16px;
+            font-family: var(--f-mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-block;
+            font-family: var(--f-mono);
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--spark);
+            padding: 2px 8px;
+            border: 1px solid currentColor;
+            white-space: nowrap;
+        }
+
+        h2 {
+            margin: 0 0 4px;
+            font-family: var(--f-display);
+            font-weight: 600;
+            font-size: 15px;
+            line-height: 1.35;
+            color: var(--ink);
+        }
+
+        h2 .dim {
+            font-family: var(--f-body);
+            font-weight: 400;
+            color: var(--muted);
+        }
+
+        .sec + .sec {
+            margin-top: 22px;
+        }
+
+        /* ---------- the strip ---------- */
+        .lane {
+            position: relative;
+            margin: 34px 44px 14px 0;
+            user-select: none;
+        }
+
+        .track {
+            position: relative;
+            height: 46px;
+            background-color: var(--surface);
+            background-image: linear-gradient(to right, var(--rule) 1px, transparent 1px);
+            background-size: 6.25% 100%;
+            border: 1px solid var(--rule);
+            border-right: 0;
+            touch-action: none;
+        }
+
+        .mj {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-left: 1px solid var(--faint);
+        }
+
+        .tail {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            width: 44px;
+            height: 46px;
+            background: linear-gradient(to right, var(--surface), transparent);
+            border-top: 1px solid var(--rule);
+            border-bottom: 1px solid var(--rule);
+            color: var(--muted);
+            font: 400 16px/44px var(--f-mono);
+            text-align: center;
+            letter-spacing: 2px;
+            padding-left: 8px;
+            /* the tail fades into the page: the song goes on */
+            mask-image: linear-gradient(to right, #000 30%, transparent);
+            -webkit-mask-image: linear-gradient(to right, #000 30%, transparent);
+        }
+
+        .ruler {
+            position: relative;
+            height: 18px;
+            margin-top: 4px;
+            font: 400 12px/18px var(--f-mono);
+            color: var(--muted);
+        }
+
+        .ruler span {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .ruler span:first-child {
+            transform: none;
+        }
+
+        .win {
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            left: calc(var(--a) / 256 * 100%);
+            width: calc((var(--b) - var(--a)) / 256 * 100%);
+            background: rgba(209, 154, 102, .26);
+            border: 2px solid var(--c-window);
+            border-top-width: 2px;
+            border-bottom-width: 2px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .win:active {
+            cursor: grabbing;
+        }
+
+        .win .wlen {
+            font: 400 13px/1 var(--f-mono);
+            color: var(--ink);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* the two edges: real sliders with keyboard support, present only when the script runs */
+        .h {
+            display: none;
+            position: absolute;
+            top: -7px;
+            bottom: -7px;
+            width: 16px;
+            margin-left: -8px;
+            cursor: ew-resize;
+            touch-action: none;
+            z-index: 2;
+        }
+
+        .js .h {
+            display: block;
+        }
+
+        .h::before { /* the grip */
+            content: "";
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            top: 0;
+            bottom: 0;
+            background: var(--c-window);
+            border-radius: 2px;
+        }
+
+        .h::after { /* the bigger touch target */
+            content: "";
+            position: absolute;
+            inset: 0 -8px;
+        }
+
+        .ha {
+            left: calc(var(--a) / 256 * 100%);
+        }
+
+        .hb {
+            left: calc(var(--b) / 256 * 100%);
+        }
+
+        .hl {
+            position: absolute;
+            top: -22px;
+            font: 400 13px/1 var(--f-mono);
+            color: var(--c-window);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .ha .hl {
+            right: 50%;
+            margin-right: 4px;
+        }
+
+        .hb .hl {
+            left: 50%;
+            margin-left: 4px;
+        }
+
+        /* static edge labels for the no-script state */
+        .edge {
+            position: absolute;
+            top: -22px;
+            font: 400 13px/1 var(--f-mono);
+            color: var(--c-window);
+            white-space: nowrap;
+        }
+
+        .js .edge {
+            display: none;
+        }
+
+        .edge.ea {
+            left: calc(var(--a) / 256 * 100%);
+            transform: translateX(-100%);
+            padding-right: 6px;
+        }
+
+        .edge.eb {
+            left: calc(var(--b) / 256 * 100%);
+            padding-left: 6px;
+        }
+
+        /* ---------- numeric fallback for the window ---------- */
+        .nums {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            font: 400 13px/1.3 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .js .nums {
+            display: flex;
+        }
+
+        .nums label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .nums input {
+            width: 4.6em;
+            font: 400 14px/1 var(--f-mono);
+            color: var(--ink);
+            background: var(--code-bg);
+            border: 1px solid var(--rule);
+            border-radius: 2px;
+            padding: 6px 6px;
+            min-height: 32px;
+        }
+
+        .nums .len {
+            color: var(--c-window);
+        }
+
+        .hint {
+            margin: 8px 0 0;
+            font: 400 12px/1.5 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .js .hint.nojs {
+            display: none;
+        }
+
+        .hint.js-only {
+            display: none;
+        }
+
+        .js .hint.js-only {
+            display: block;
+        }
+
+        /* ---------- the knob ---------- */
+        .knob {
+            padding: 10px 12px 12px;
+            background: var(--surface);
+            border-left: 2px solid var(--c-over);
+        }
+
+        .khead {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 2px 12px;
+            margin-bottom: 4px;
+        }
+
+        .kname {
+            font: 400 16px/1.3 var(--f-mono);
+            color: var(--c-over);
+        }
+
+        .kmeta {
+            flex: 1 0 100%;
+            font: 400 12px/1.4 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .kval {
+            margin-left: auto;
+            font: 400 18px/1.2 var(--f-mono);
+            color: var(--ink);
+            min-width: 2.2em;
+            text-align: right;
+        }
+
+        .srow {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+            font: 400 12px/1 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .sbox {
+            position: relative;
+            padding-bottom: 16px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            display: block;
+            width: 100%;
+            height: 30px;
+            margin: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type=range]:disabled {
+            cursor: default;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: var(--rule);
+            border-radius: 2px;
+        }
+
+        input[type=range]::-moz-range-track {
+            height: 4px;
+            background: var(--rule);
+            border-radius: 2px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            margin-top: -8px;
+            border-radius: 50%;
+            background: var(--c-over);
+            border: 3px solid var(--surface);
+            box-shadow: 0 0 0 1px var(--c-over);
+        }
+
+        input[type=range]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--c-over);
+            border: 3px solid var(--surface);
+            box-shadow: 0 0 0 1px var(--c-over);
+        }
+
+        .defmark {
+            position: absolute;
+            top: 22px;
+            left: calc(10px + (100% - 20px) * .2);
+            transform: translateX(-50%);
+            font: 400 11.5px/1 var(--f-mono);
+            color: var(--muted);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .defmark::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: -8px;
+            height: 6px;
+            border-left: 1px solid var(--muted);
+        }
+
+        .reset {
+            display: none;
+            font: 400 12px/1 var(--f-mono);
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid var(--rule);
+            border-radius: 2px;
+            padding: 6px 10px;
+            min-height: 30px;
+            cursor: pointer;
+        }
+
+        .js .reset {
+            display: inline-block;
+        }
+
+        .reset:hover {
+            color: var(--ink);
+            border-color: var(--muted);
+        }
+
+        /* ---------- the entry ---------- */
+        .entry {
+            background: var(--code-bg);
+            border: 1px solid var(--rule);
+            padding: 12px 14px 14px;
+            font-family: var(--f-mono);
+            font-size: 14.5px;
+            line-height: 1.55;
+        }
+
+        .sig {
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: var(--code-cm);
+            font-style: italic;
+            overflow-wrap: anywhere;
+        }
+
+        .sig span {
+            font-style: normal;
+        }
+
+        .tuple {
+            margin: 0;
+        }
+
+        .tuple .open, .tuple .close {
+            display: block;
+            color: var(--muted);
+        }
+
+        .part {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: 16px;
+            padding: 1px 0 1px 20px;
+            color: var(--c);
+        }
+
+        .part .v {
+            flex: 0 0 auto;
+            min-width: 20ch;
+        }
+
+        .part .role {
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .part .role b {
+            font-weight: 400;
+            color: var(--c);
+        }
+
+        .p-score {
+            --c: var(--c-score);
+        }
+
+        .p-window {
+            --c: var(--c-window);
+        }
+
+        .p-over {
+            --c: var(--c-over);
+        }
+
+        .tok-score {
+            color: var(--c-score);
+        }
+
+        .tok-window {
+            color: var(--c-window);
+        }
+
+        .tok-over {
+            color: var(--c-over);
+        }
+
+        @media (max-width: 560px) {
+            .fig {
+                padding: 10px 10px 14px;
+            }
+
+            .part .v {
+                min-width: 0;
+                flex-basis: 100%;
+            }
+
+            .part {
+                padding-bottom: 5px;
+            }
+
+            .entry {
+                font-size: 14px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="fig" id="fig">
+
+    <p class="head">
+        <span class="pill">Sketch, not built</span>
+        <span>Part II is an idea, not built. <code>super-song</code> is made up, and so is every value here.</span>
+    </p>
+
+    <!-- ============ 1. the song's endless run of cycles, and the window ============ -->
+    <section class="sec" aria-labelledby="h1">
+        <h2 id="h1"><span class="tok-score">super-song@v1.0</span>
+            <span class="dim">has no end: its cycles keep coming.</span></h2>
+
+        <div class="lane" id="lane" role="group" aria-label="Cycle window of super-song@v1.0, cycles 0 to 256 shown">
+            <div class="track" id="track" style="--a:128;--b:192">
+                <span class="mj" style="left:25%"></span>
+                <span class="mj" style="left:50%"></span>
+                <span class="mj" style="left:75%"></span>
+                <div class="win" id="win"><span class="wlen" id="wlen">64 cycles</span></div>
+                <span class="edge ea" id="ea">128</span>
+                <span class="edge eb" id="eb">192</span>
+                <div class="h ha" id="ha" role="slider" tabindex="0" aria-orientation="horizontal"
+                     aria-label="Window start: the first cycle that plays"
+                     aria-valuemin="0" aria-valuemax="191" aria-valuenow="128" aria-valuetext="cycle 128">
+                    <span class="hl" id="hla">128</span></div>
+                <div class="h hb" id="hb" role="slider" tabindex="0" aria-orientation="horizontal"
+                     aria-label="Window end: the cycle it stops before, which does not play"
+                     aria-valuemin="129" aria-valuemax="256" aria-valuenow="192" aria-valuetext="cycle 192">
+                    <span class="hl" id="hlb">192</span></div>
+            </div>
+            <div class="tail" aria-hidden="true">…</div>
+            <div class="ruler" aria-hidden="true">
+                <span style="left:0">0</span>
+                <span style="left:25%">64</span>
+                <span style="left:50%">128</span>
+                <span style="left:75%">192</span>
+                <span style="left:100%">256</span>
+            </div>
+        </div>
+
+        <div class="nums">
+            <label>first cycle <input type="number" id="in-a" min="0" max="255" step="1" value="128" disabled></label>
+            <label>stops before <input type="number" id="in-b" min="1" max="256" step="1" value="192" disabled></label>
+            <span class="len" id="len">64 cycles</span>
+        </div>
+        <p class="hint js-only">Drag an edge, or the middle to slide the window. Whole cycles, and the last one is left
+            out, like a range in code: 128 is in, 192 is out.</p>
+        <p class="hint nojs">Window drawn here: cycles 128 up to, but not including, 192.</p>
+    </section>
+
+    <!-- ============ 2. the one knob the song publishes ============ -->
+    <section class="sec" aria-labelledby="h2">
+        <h2 id="h2">The song publishes one knob <span class="dim">and the mixtape picks a point on it.</span></h2>
+        <div class="knob">
+            <div class="khead">
+                <span class="kname">feel</span>
+                <span class="kval mono" id="kval">63</span>
+                <span class="kmeta">0 to 100, default 20, from ice to fire</span>
+            </div>
+            <div class="srow">
+                <span>ice</span>
+                <span class="sbox">
+                    <input type="range" id="feel" min="0" max="100" step="1" value="63" disabled
+                           aria-label="feel, from 0 (ice) to 100 (fire), default 20">
+                    <span class="defmark" aria-hidden="true">default 20</span>
+                </span>
+                <span>fire</span>
+            </div>
+            <div style="margin-top:8px"><button type="button" class="reset" id="reset">back to the default</button></div>
+        </div>
+    </section>
+
+    <!-- ============ 3. the entry ============ -->
+    <section class="sec" aria-labelledby="h3">
+        <h2 id="h3">The entry <span class="dim">is score, window and interpretation.</span></h2>
+        <div class="entry">
+            <p class="sig">// the shape: (<span class="tok-score">song@version</span>, <span class="tok-window">cycleWindow</span>,
+                <span class="tok-over">overrides</span>)</p>
+            <div class="tuple" role="group" aria-label="The mixtape entry, filled in">
+                <span class="open">(</span>
+                <div class="part p-score">
+                    <span class="v" id="e-song">super-song@v1.0,</span>
+                    <span class="role"><b>score</b>: which song, which version</span>
+                </div>
+                <div class="part p-window">
+                    <span class="v" id="e-win">[cycles 128..192),</span>
+                    <span class="role"><b>window</b>: <span id="e-len">64 cycles</span></span>
+                </div>
+                <div class="part p-over">
+                    <span class="v" id="e-over">{ feel: 63 }</span>
+                    <span class="role"><b>interpretation</b>: <span id="e-role">the knob, set for this mixtape</span></span>
+                </div>
+                <span class="close">)</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        var MAX = 256;      // cycles drawn; the song itself has no end
+        var DEFAULT = 20;   // the default the song publishes for feel (the feel snippet in section 3)
+        var st = {a: 128, b: 192, f: 63};
+
+        function $(id) {
+            return document.getElementById(id);
+        }
+
+        var track = $("track"), lane = $("lane"), win = $("win");
+        var ha = $("ha"), hb = $("hb");
+        var inA = $("in-a"), inB = $("in-b"), feel = $("feel");
+
+        function clamp(v, lo, hi) {
+            return Math.max(lo, Math.min(hi, v));
+        }
+
+        function cyc(n) {
+            return n + (n === 1 ? " cycle" : " cycles");
+        }
+
+        function render() {
+            track.style.setProperty("--a", st.a);
+            track.style.setProperty("--b", st.b);
+
+            ha.setAttribute("aria-valuenow", st.a);
+            ha.setAttribute("aria-valuemax", st.b - 1);
+            ha.setAttribute("aria-valuetext", "cycle " + st.a);
+            hb.setAttribute("aria-valuenow", st.b);
+            hb.setAttribute("aria-valuemin", st.a + 1);
+            hb.setAttribute("aria-valuetext", "cycle " + st.b);
+            $("hla").textContent = st.a;
+            $("hlb").textContent = st.b;
+            $("ea").textContent = st.a;
+            $("eb").textContent = st.b;
+
+            var len = st.b - st.a;
+            $("len").textContent = cyc(len);
+            $("e-len").textContent = cyc(len);
+            // the label inside the window only when it fits
+            var wl = $("wlen");
+            wl.textContent = cyc(len);
+            wl.style.visibility = (win.clientWidth > wl.scrollWidth + 12) ? "visible" : "hidden";
+
+            if (document.activeElement !== inA) {
+                inA.value = st.a;
+            }
+            if (document.activeElement !== inB) {
+                inB.value = st.b;
+            }
+
+            $("e-win").textContent = "[cycles " + st.a + ".." + st.b + "),";
+
+            $("kval").textContent = st.f;
+            feel.value = st.f;
+            if (st.f === DEFAULT) {
+                $("e-over").textContent = "{ }";
+                $("e-role").textContent = "nothing overridden, the song's own default";
+            } else {
+                $("e-over").textContent = "{ feel: " + st.f + " }";
+                $("e-role").textContent = "the knob, set for this mixtape";
+            }
+        }
+
+        function setA(v) {
+            st.a = clamp(Math.round(v), 0, st.b - 1);
+            render();
+        }
+
+        function setB(v) {
+            st.b = clamp(Math.round(v), st.a + 1, MAX);
+            render();
+        }
+
+        function cycleAt(e) {
+            var r = track.getBoundingClientRect();
+            return clamp(Math.round((e.clientX - r.left) / r.width * MAX), 0, MAX);
+        }
+
+        // ----- dragging (edges and middle) -----
+        var drag = null;
+
+        function begin(kind) {
+            return function (e) {
+                if (e.button !== undefined && e.button !== 0) {
+                    return;
+                }
+                drag = {kind: kind, off: cycleAt(e) - st.a, len: st.b - st.a};
+                try {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                } catch (err) { /* older browsers: the move events still arrive on the element */
+                }
+                e.preventDefault();
+            };
+        }
+
+        function move(e) {
+            if (!drag) {
+                return;
+            }
+            var c = cycleAt(e);
+            if (drag.kind === "a") {
+                setA(c);
+            } else if (drag.kind === "b") {
+                setB(c);
+            } else {
+                var a = clamp(c - drag.off, 0, MAX - drag.len);
+                st.a = a;
+                st.b = a + drag.len;
+                render();
+            }
+        }
+
+        function end() {
+            drag = null;
+        }
+
+        [[ha, "a"], [hb, "b"], [win, "m"]].forEach(function (p) {
+            p[0].addEventListener("pointerdown", begin(p[1]));
+            p[0].addEventListener("pointermove", move);
+            p[0].addEventListener("pointerup", end);
+            p[0].addEventListener("pointercancel", end);
+        });
+        // the handles sit on top of the window: a press on one must not also slide the window
+        ha.addEventListener("pointerdown", function (e) {
+            e.stopPropagation();
+        });
+        hb.addEventListener("pointerdown", function (e) {
+            e.stopPropagation();
+        });
+
+        // ----- keyboard on the edges -----
+        function keys(get, set, lo, hi) {
+            return function (e) {
+                var step = 0, v = get();
+                if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+                    step = 1;
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+                    step = -1;
+                } else if (e.key === "PageUp") {
+                    step = 16;
+                } else if (e.key === "PageDown") {
+                    step = -16;
+                } else if (e.key === "Home") {
+                    set(lo());
+                    e.preventDefault();
+                    return;
+                } else if (e.key === "End") {
+                    set(hi());
+                    e.preventDefault();
+                    return;
+                } else {
+                    return;
+                }
+                set(v + step);
+                e.preventDefault();
+            };
+        }
+
+        ha.addEventListener("keydown", keys(function () {
+            return st.a;
+        }, setA, function () {
+            return 0;
+        }, function () {
+            return st.b - 1;
+        }));
+        hb.addEventListener("keydown", keys(function () {
+            return st.b;
+        }, setB, function () {
+            return st.a + 1;
+        }, function () {
+            return MAX;
+        }));
+
+        // ----- numbers -----
+        inA.addEventListener("input", function () {
+            var v = parseInt(inA.value, 10);
+            if (!isNaN(v)) {
+                setA(v);
+            }
+        });
+        inB.addEventListener("input", function () {
+            var v = parseInt(inB.value, 10);
+            if (!isNaN(v)) {
+                setB(v);
+            }
+        });
+        inA.addEventListener("blur", render);
+        inB.addEventListener("blur", render);
+
+        // ----- the knob -----
+        feel.addEventListener("input", function () {
+            st.f = parseInt(feel.value, 10);
+            render();
+        });
+        $("reset").addEventListener("click", function () {
+            st.f = DEFAULT;
+            render();
+        });
+
+        inA.disabled = false;
+        inB.disabled = false;
+        feel.disabled = false;
+        render();
+
+        // ----- self-sizing -----
+        function post() {
+            var h = Math.ceil(document.body.getBoundingClientRect().height);
+            try {
+                window.parent.postMessage({type: "klang-figure-height", height: h}, "*");
+            } catch (err) { /* nobody listens: the default frame height applies */
+            }
+        }
+
+        if ("ResizeObserver" in window) {
+            new ResizeObserver(function () {
+                render();
+                post();
+            }).observe(document.body);
+        }
+        window.addEventListener("resize", post);
+        window.addEventListener("load", post);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function () {
+                render();
+                post();
+            });
+        }
+        post();
+    })();
+</script>
+</body>
+</html>

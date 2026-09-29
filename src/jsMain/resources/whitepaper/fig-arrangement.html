@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The arrangement of Die Kirschblüte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<script>document.documentElement.className = "js";</script>
+<style>
+    /* Tokens copied from the whitepaper's :root (dark only). */
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+
+    html, body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .fig { max-width: 1040px; margin: 0; padding: 6px 2px 10px; }
+
+    .lab { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+    .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 0 0 8px; }
+    .wait { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; flex: 1 1 320px; min-width: 0; }
+    .wait label { font-family: var(--f-mono); font-size: 13px; color: var(--ink); white-space: nowrap; }
+    .wait label b { color: var(--spark); font-weight: 400; }
+    .wait input[type=range] { flex: 1 1 140px; min-width: 0; height: 28px; margin: 0; accent-color: var(--spark); cursor: pointer; }
+    .wait input[type=range]:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; }
+    .facts { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+    .facts b { color: var(--ink); font-weight: 400; }
+    button.chip {
+        font-family: var(--f-mono); font-size: 12px; color: var(--ink); background: var(--surface);
+        border: 1px solid var(--rule); border-radius: 0; padding: 4px 9px; cursor: pointer; line-height: 1.3;
+    }
+    button.chip:hover:not(:disabled) { border-color: var(--muted); }
+    button.chip:disabled { color: var(--muted); cursor: default; opacity: 0.6; }
+    button.chip:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+
+    .listing { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+    .listing code { font-family: var(--f-mono); color: var(--ink); background: var(--surface-2); border: 1px solid var(--rule); padding: 0 5px; }
+    .listing .st { color: var(--code-str); }
+
+    #rows { outline: none; }
+    #rows:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; }
+    svg.plot { display: block; width: 100%; height: auto; overflow: visible; }
+    svg.plot text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted); }
+    svg.plot text.ink { fill: var(--ink); }
+    svg.plot text.sm { font-size: 10.5px; }
+    svg.plot text.onbar { fill: var(--paper); font-size: 10.5px; }
+    svg.plot .grid { stroke: var(--rule); stroke-width: 1; }
+    svg.plot .loop { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.55; }
+    svg.plot .axis { stroke: var(--muted); stroke-width: 1; }
+    svg.plot .wait-line { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 3 3; }
+    svg.plot .bar-lang { fill: var(--signal); opacity: 0.6; }
+    svg.plot .bar-gated { fill: var(--spark); }
+    svg.plot .rowbg { fill: transparent; }
+    svg.plot .row.sel .rowbg { fill: var(--surface-2); }
+    svg.plot .row.sel .bar-lang { opacity: 0.95; }
+    svg.plot .row.sel text.name { fill: var(--ink); }
+    svg.plot .row { cursor: pointer; }
+    svg.plot .entry-mark { fill: none; stroke: var(--gold); stroke-width: 1.5; }
+
+    .detail {
+        margin: 10px 0 0; padding: 8px 10px; min-height: 62px;
+        background: var(--surface); border: 1px solid var(--rule); border-left: 2px solid var(--signal);
+        font-family: var(--f-mono); font-size: 12.5px; color: var(--muted);
+    }
+    .detail.gated { border-left-color: var(--spark); }
+    .detail b { color: var(--ink); font-weight: 400; }
+    .detail .code { display: block; margin-top: 4px; color: var(--ink); overflow-wrap: anywhere; }
+    .detail .code i { font-style: normal; color: var(--spark); }
+
+    details { margin: 10px 0 0; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+    summary { cursor: pointer; }
+    summary:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; }
+    table { border-collapse: collapse; width: 100%; margin: 6px 0 0; }
+    th, td { text-align: left; font-weight: 400; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--rule); }
+    th { color: var(--muted); }
+    td { color: var(--ink); }
+    td.num, th.num { text-align: right; }
+    .foot { font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin: 10px 0 0; max-width: 72ch; }
+
+    .js-only { display: none; }
+    .js .js-only { display: block; }
+    .js .js-only.flex { display: flex; }
+    .js .js-only.inline { display: inline-block; }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="fig" id="fig">
+
+    <div class="head">
+        <div class="wait js-only flex">
+            <label for="wait">let wait = <b id="waitval">14</b></label>
+            <input type="range" id="wait" min="0" max="24" step="1" value="14" aria-label="wait, in cycles" aria-describedby="facts">
+            <button type="button" class="chip" id="reset">The song's 14</button>
+        </div>
+        <div class="facts" id="facts">Die Kirschblüte, <b>28 rpm</b>: a cycle lasts <b>2.14 s</b>, so wait = <b>14</b> is <b>0:30</b>.</div>
+    </div>
+
+    <div id="rows" role="listbox" aria-label="The layers of Die Kirschblüte. Use the arrow keys to pick a layer." tabindex="0"><svg class="plot" viewBox="0 0 880 360" role="presentation" focusable="false"><line class="loop" x1="122" x2="122" y1="14" y2="320"/><line class="loop" x1="246.3" x2="246.3" y1="14" y2="320"/><line class="loop" x1="370.7" x2="370.7" y1="14" y2="320"/><line class="loop" x1="495" x2="495" y1="14" y2="320"/><line class="loop" x1="619.3" x2="619.3" y1="14" y2="320"/><line class="loop" x1="743.7" x2="743.7" y1="14" y2="320"/><line class="loop" x1="868" x2="868" y1="14" y2="320"/><text class="sm" x="122" y="12">dotted lines: the slow(14) melodies start over here, whatever wait is</text><g class="row" data-i="0" role="option" id="opt0" aria-selected="false" aria-label="Sakura melody, played by koto, orbit 0, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="20" width="880" height="26"/><text class="name" x="6" y="37">melody (koto)</text><rect class="bar-lang" x="122" y="25" width="746" height="16"/></g><g class="row sel" data-i="1" role="option" id="opt1" aria-selected="true" aria-label="Shakuhachi, orbit 1, first note at cycle 28, 1:00"><rect class="rowbg" x="0" y="47" width="880" height="26"/><text class="name" x="6" y="64">shakuhachi</text><line class="wait-line" x1="122" x2="370.7" y1="60" y2="60"/><rect class="bar-gated" x="370.7" y="52" width="497.3" height="16"/><text class="onbar" x="376.7" y="64">cycle 28, 1:00</text></g><g class="row" data-i="2" role="option" id="opt2" aria-selected="false" aria-label="Drums, the kick, orbit 2, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="83" width="880" height="26"/><text class="name" x="6" y="100">drums: kick</text><rect class="bar-lang" x="122" y="88" width="746" height="16"/></g><g class="row" data-i="3" role="option" id="opt3" aria-selected="false" aria-label="Drums, the rim, orbit 2, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="110" width="880" height="26"/><text class="name" x="6" y="127">drums: rim</text><rect class="bar-lang" x="122" y="115" width="746" height="16"/></g><g class="row" data-i="4" role="option" id="opt4" aria-selected="false" aria-label="Drums, the brush, orbit 2, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="137" width="880" height="26"/><text class="name" x="6" y="154">drums: brush</text><rect class="bar-lang" x="122" y="142" width="746" height="16"/></g><g class="row" data-i="5" role="option" id="opt5" aria-selected="false" aria-label="Sub-Bass, orbit 3, first note at cycle 14, 0:30"><rect class="rowbg" x="0" y="173" width="880" height="26"/><text class="name" x="6" y="190">sub-bass</text><line class="wait-line" x1="122" x2="246.3" y1="186" y2="186"/><rect class="bar-gated" x="246.3" y="178" width="621.7" height="16"/><text class="onbar" x="252.3" y="190">cycle 14, 0:30</text></g><g class="row" data-i="6" role="option" id="opt6" aria-selected="false" aria-label="Pad, six lines from root to high fifth, orbit 4, first note at cycle 42, 1:30"><rect class="rowbg" x="0" y="200" width="880" height="26"/><text class="name" x="6" y="217">pad (6 lines)</text><line class="wait-line" x1="122" x2="495" y1="213" y2="213"/><rect class="bar-gated" x="495" y="205" width="373" height="16"/><text class="onbar" x="501" y="217">cycle 42, 1:30</text></g><g class="row" data-i="7" role="option" id="opt7" aria-selected="false" aria-label="Noise, dust, no orbit call, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="236" width="880" height="26"/><text class="name" x="6" y="253">noise: dust</text><rect class="bar-lang" x="122" y="241" width="746" height="16"/></g><g class="row" data-i="8" role="option" id="opt8" aria-selected="false" aria-label="Noise, pink, no orbit call, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="263" width="880" height="26"/><text class="name" x="6" y="280">noise: pink</text><rect class="bar-lang" x="122" y="268" width="746" height="16"/></g><g class="row" data-i="9" role="option" id="opt9" aria-selected="false" aria-label="Noise, brown, no orbit call, first note at cycle 0, 0:00"><rect class="rowbg" x="0" y="290" width="880" height="26"/><text class="name" x="6" y="307">noise: brown</text><rect class="bar-lang" x="122" y="295" width="746" height="16"/></g><line class="axis" x1="122" x2="868" y1="320" y2="320"/><line class="axis" x1="122" x2="122" y1="320" y2="324"/><text x="122" y="337" text-anchor="start">0</text><text class="sm" x="122" y="351" text-anchor="start">0:00</text><line class="axis" x1="246.3" x2="246.3" y1="320" y2="324"/><text x="246.3" y="337" text-anchor="middle">14</text><text class="sm" x="246.3" y="351" text-anchor="middle">0:30</text><line class="axis" x1="370.7" x2="370.7" y1="320" y2="324"/><text x="370.7" y="337" text-anchor="middle">28</text><text class="sm" x="370.7" y="351" text-anchor="middle">1:00</text><line class="axis" x1="495" x2="495" y1="320" y2="324"/><text x="495" y="337" text-anchor="middle">42</text><text class="sm" x="495" y="351" text-anchor="middle">1:30</text><line class="axis" x1="619.3" x2="619.3" y1="320" y2="324"/><text x="619.3" y="337" text-anchor="middle">56</text><text class="sm" x="619.3" y="351" text-anchor="middle">2:00</text><line class="axis" x1="743.7" x2="743.7" y1="320" y2="324"/><text x="743.7" y="337" text-anchor="middle">70</text><text class="sm" x="743.7" y="351" text-anchor="middle">2:30</text><line class="axis" x1="868" x2="868" y1="320" y2="324"/><text x="868" y="337" text-anchor="end">84</text><text class="sm" x="868" y="351" text-anchor="end">3:00</text><text class="sm" x="6" y="337">cycle</text><text class="sm" x="6" y="351">at 28 rpm</text></svg></div>
+
+    <div class="detail gated" id="detail"><b>Shakuhachi</b>, orbit <b>1</b>. It waits: first note at <b>cycle 28</b> (1:00). slow(14): one pass of the notes takes 14 cycles, then it starts over.<span class="code">.orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30)<i>.filterWhen(x =&gt; x &gt;= wait * 2)</i>  // x &gt;= 28</span></div>
+
+    <details id="tbl">
+        <summary>The entries as a table</summary>
+        <div id="tblbody"><table><thead><tr><th>Layer</th><th>Orbit</th><th class="num">First note, cycle</th><th class="num">Time</th></tr></thead><tbody><tr><td>melody (koto)</td><td>0</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>shakuhachi</td><td>1</td><td class="num">28</td><td class="num">1:00</td></tr><tr><td>drums: kick</td><td>2</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>drums: rim</td><td>2</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>drums: brush</td><td>2</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>sub-bass</td><td>3</td><td class="num">14</td><td class="num">0:30</td></tr><tr><td>pad (6 lines)</td><td>4</td><td class="num">42</td><td class="num">1:30</td></tr><tr><td>noise: dust</td><td>none</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>noise: pink</td><td>none</td><td class="num">0</td><td class="num">0:00</td></tr><tr><td>noise: brown</td><td>none</td><td class="num">0</td><td class="num">0:00</td></tr></tbody></table></div>
+    </details>
+
+    <p class="foot">The bars are drawn from each layer's first note. The layer is silent before that; <code style="font-family:inherit">filterWhen</code> keeps a note only if it starts at or after the mark. A gold tick marks wait * n where the first note comes later than that. One cycle lasts 60 / 28 = 2.14 s.</p>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   Everything below comes from the song's own source,
+   src/commonMain/kotlin/builtinsongs/Sakura.kt:
+     rpm = 28.0                                   line 16
+     let wait = 14                                line 22
+     melody .orbit(0) ... .slow(14)               line 77
+     shakuhachi .orbit(1) ... .slow(14)           line 89, filterWhen(x => x >= wait * 2)  line 91
+     drums (kick, rim, brush) .orbit(2)           lines 94 to 96
+     sub-bass .orbit(3) ... .slow(14)             line 99, filterWhen(x => x >= wait * 1)  line 100
+     pad, six lines .slow(14), .orbit(4)          lines 102 to 116, filterWhen(x => x >= wait * 3)  line 116
+     noise: dust!2, pink!3, brown!4               lines 119 to 121
+   filterWhen keeps events whose begin time, in cycles, satisfies the predicate:
+     sprudel/src/commonMain/kotlin/lang/lang_structural_mask.kt, filterWhen
+   One cycle is 60 / rpm seconds (cps = rpm / 60): klang/src/commonMain/kotlin/KlangOfflineRenderer.kt
+   ------------------------------------------------------------------ */
+var RPM = 28;
+var WAIT_SONG = 14;
+var LOOP = 14;          // slow(14): one pass of a slowed pattern takes 14 cycles
+var CYCLES = 84;        // axis length: 6 x 14 cycles, exactly 3 minutes at 28 rpm
+var WAIT_MAX = 24;
+
+/* Where a note can start inside one 14-cycle pass, for the gated layers.
+   Sub-bass and pad: seven notes, each two cycles long ("a1 d2 a1 f1 c2 e1 a1" slowed by 14).
+   Shakuhachi: seven lines of eight steps, four steps per cycle, and every line starts with a note.
+   The slider only takes whole numbers, so wait * 2 is always a line start. */
+var STARTS = [0, 2, 4, 6, 8, 10, 12];
+
+var LAYERS = [
+    { key: "melody", name: "melody (koto)", short: "melody", orbit: "0", n: null, slow: true,
+      title: "Sakura melody, played by koto",
+      code: ".orbit(0).sound(koto).legato(0.8).slow(14).gain(0.55)", gate: null },
+    { key: "shaku", name: "shakuhachi", short: "shaku", orbit: "1", n: 2, slow: true, startsAt: STARTS,
+      title: "Shakuhachi",
+      code: ".orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30)", gate: "wait * 2" },
+    { key: "kick", name: "drums: kick", short: "kick", orbit: "2", n: null, slow: false, group: 1,
+      title: "Drums, the kick",
+      code: ".orbit(2).sound(kick).gain(0.7).hpf(100)", gate: null },
+    { key: "rim", name: "drums: rim", short: "rim", orbit: "2", n: null, slow: false,
+      title: "Drums, the rim",
+      code: ".orbit(2).sound(rim).gain(0.45).pan(0.6)", gate: null },
+    { key: "brush", name: "drums: brush", short: "brush", orbit: "2", n: null, slow: false,
+      title: "Drums, the brush",
+      code: ".orbit(2).sound(brush).gain(0.35).pan(0.4)", gate: null },
+    { key: "sub", name: "sub-bass", short: "sub", orbit: "3", n: 1, slow: true, startsAt: STARTS, group: 1,
+      title: "Sub-Bass",
+      code: ".orbit(3).sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)", gate: "wait * 1" },
+    { key: "pad", name: "pad (6 lines)", short: "pad", orbit: "4", n: 3, slow: true, startsAt: STARTS,
+      title: "Pad, six lines from root to high fifth",
+      code: ".orbit(4).adsr(release = 1.5).coarse(amount = 2, oversample = 1)", gate: "wait * 3" },
+    { key: "dust", name: "noise: dust", short: "dust", orbit: null, n: null, slow: false, group: 1,
+      title: "Noise, dust",
+      code: 'sound("dust!2").gain(0.0400).vel(sine.range(0.500, 1.0).slow(21))', gate: null },
+    { key: "pink", name: "noise: pink", short: "pink", orbit: null, n: null, slow: false,
+      title: "Noise, pink",
+      code: 'sound("pink!3").gain(0.0070).vel(sine.range(0.625, 1.0).slow(13))', gate: null },
+    { key: "brown", name: "noise: brown", short: "brown", orbit: null, n: null, slow: false,
+      title: "Noise, brown",
+      code: 'sound("brown!4").gain(0.0150).vel(sine.range(0.500, 1.0).slow(8))', gate: null }
+];
+
+function firstStart(threshold, starts) {
+    var base = Math.floor(threshold / LOOP) * LOOP;
+    for (var k = 0; k < 4; k++) {
+        for (var i = 0; i < starts.length; i++) {
+            var c = base + k * LOOP + starts[i];
+            if (c >= threshold - 1e-9) { return c; }
+        }
+    }
+    return threshold;
+}
+
+/* The cycle at which a layer's first note sounds, for a given wait. */
+function entryOf(layer, wait) {
+    if (layer.n === null) { return 0; }
+    return firstStart(wait * layer.n, layer.startsAt);
+}
+
+function mmss(cycle) {
+    var sec = Math.round(cycle * 60 / RPM);
+    return Math.floor(sec / 60) + ":" + (sec % 60 < 10 ? "0" : "") + (sec % 60);
+}
+
+function px(n) { return Math.round(n * 10) / 10; }
+function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+function factsHtml(wait) {
+    return "Die Kirschblüte, <b>" + RPM + " rpm</b>: a cycle lasts <b>" + (60 / RPM).toFixed(2) + " s</b>, so wait = <b>" + wait + "</b> is <b>" + mmss(wait) + "</b>.";
+}
+
+function rowsSvg(W, wait, sel) {
+    var narrow = W < 560;
+    var LW = narrow ? 68 : 122, R = 12;
+    var rowH = 22, rowGap = 5, groupGap = 9, top = 22;
+    var x0 = LW, x1 = W - R;
+    function X(c) { return x0 + (x1 - x0) * c / CYCLES; }
+    var y = top, ys = [];
+    for (var i = 0; i < LAYERS.length; i++) {
+        if (LAYERS[i].group) { y += groupGap; }
+        ys.push(y);
+        y += rowH + rowGap;
+    }
+    var plotBottom = y - rowGap + 6;
+    var H = plotBottom + 40;
+    var s = [];
+    s.push('<svg class="plot" viewBox="0 0 ' + W + ' ' + H + '" role="presentation" focusable="false">');
+    // loop marks: where the slowed melodies start over; they do not move with wait
+    for (var c = 0; c <= CYCLES; c += LOOP) {
+        s.push('<line class="loop" x1="' + px(X(c)) + '" x2="' + px(X(c)) + '" y1="' + (top - 8) + '" y2="' + px(plotBottom) + '"/>');
+    }
+    s.push('<text class="sm" x="' + px(x0) + '" y="12">' + (narrow ? 'dotted: slow(14) loops' : 'dotted lines: the slow(14) melodies start over here, whatever wait is') + '</text>');
+    for (var r = 0; r < LAYERS.length; r++) {
+        var L = LAYERS[r], e = entryOf(L, wait), yy = ys[r];
+        var gated = L.n !== null;
+        var cls = "row" + (r === sel ? " sel" : "");
+        var lbl = L.title + ", " + (L.orbit === null ? "no orbit call" : "orbit " + L.orbit) + ", first note at cycle " + e + ", " + mmss(e);
+        s.push('<g class="' + cls + '" data-i="' + r + '" role="option" id="opt' + r + '" aria-selected="' + (r === sel ? "true" : "false") + '" aria-label="' + esc(lbl) + '">');
+        s.push('<rect class="rowbg" x="0" y="' + (yy - 2) + '" width="' + W + '" height="' + (rowH + 4) + '"/>');
+        s.push('<text class="name" x="' + (narrow ? 4 : 6) + '" y="' + px(yy + rowH / 2 + 4) + '">' + esc(narrow ? L.short : L.name) + '</text>');
+        if (gated && e > 0) {
+            s.push('<line class="wait-line" x1="' + px(x0) + '" x2="' + px(X(e)) + '" y1="' + px(yy + rowH / 2) + '" y2="' + px(yy + rowH / 2) + '"/>');
+        }
+        var bw = X(CYCLES) - X(e);
+        s.push('<rect class="' + (gated ? 'bar-gated' : 'bar-lang') + '" x="' + px(X(e)) + '" y="' + (yy + 3) + '" width="' + px(Math.max(bw, 1)) + '" height="' + (rowH - 6) + '"/>');
+        if (gated) {
+            var txt = narrow ? String(e) : "cycle " + e + ", " + mmss(e);
+            if (bw > (narrow ? 34 : 110)) {
+                s.push('<text class="onbar" x="' + px(X(e) + 6) + '" y="' + px(yy + rowH / 2 + 4) + '">' + txt + '</text>');
+            }
+            // the mark the filter compares against, when the first note comes later
+            var thr = wait * L.n;
+            if (Math.abs(thr - e) > 1e-9) {
+                s.push('<line class="entry-mark" x1="' + px(X(thr)) + '" x2="' + px(X(thr)) + '" y1="' + (yy) + '" y2="' + (yy + rowH) + '"/>');
+            }
+        }
+        s.push('</g>');
+    }
+    // axes: cycles, then minutes
+    var ay = plotBottom;
+    s.push('<line class="axis" x1="' + px(x0) + '" x2="' + px(x1) + '" y1="' + ay + '" y2="' + ay + '"/>');
+    for (var t = 0; t <= CYCLES; t += LOOP) {
+        s.push('<line class="axis" x1="' + px(X(t)) + '" x2="' + px(X(t)) + '" y1="' + ay + '" y2="' + (ay + 4) + '"/>');
+        s.push('<text x="' + px(X(t)) + '" y="' + (ay + 17) + '" text-anchor="' + (t === 0 ? "start" : (t === CYCLES ? "end" : "middle")) + '">' + t + '</text>');
+        if (!narrow || (t / LOOP) % 2 === 0) {
+            s.push('<text class="sm" x="' + px(X(t)) + '" y="' + (ay + 31) + '" text-anchor="' + (t === 0 ? "start" : (t === CYCLES ? "end" : "middle")) + '">' + mmss(t) + '</text>');
+        }
+    }
+    s.push('<text class="sm" x="' + (narrow ? 4 : 6) + '" y="' + (ay + 17) + '">cycle</text>');
+    s.push('<text class="sm" x="' + (narrow ? 4 : 6) + '" y="' + (ay + 31) + '">at ' + RPM + ' rpm</text>');
+    s.push('</svg>');
+    return s.join("");
+}
+
+function detailHtml(sel, wait) {
+    var L = LAYERS[sel], e = entryOf(L, wait);
+    var head = "<b>" + esc(L.title) + "</b>, " + (L.orbit === null ? "no <b>.orbit</b> call" : "orbit <b>" + L.orbit + "</b>");
+    var lines = [];
+    if (L.n === null) {
+        lines.push(head + ". No <b>filterWhen</b>, so it sounds from <b>cycle 0</b>.");
+    } else {
+        var thr = wait * L.n;
+        lines.push(head + (e === 0 ? ". With wait at 0 there is nothing to wait for: the first note is at <b>cycle 0</b>." : ". It waits: first note at <b>cycle " + e + "</b> (" + mmss(e) + ")."));
+        if (Math.abs(thr - e) > 1e-9) {
+            lines.push("wait * " + L.n + " = " + thr + ", and its notes start on even cycles, so the first one that passes is at " + e + ".");
+        }
+    }
+    if (L.slow) { lines.push("slow(14): one pass of the notes takes 14 cycles, then it starts over."); }
+    var code = "<span class=\"code\">" + esc(L.code) + (L.gate ? "<i>.filterWhen(x =&gt; x &gt;= " + L.gate.replace("wait", "wait") + ")</i>" : "") +
+        (L.gate ? "  // x &gt;= " + (wait * L.n) : "") + "</span>";
+    return lines.join(" ") + code;
+}
+
+function tableHtml(wait) {
+    var h = '<table><thead><tr><th>Layer</th><th>Orbit</th><th class="num">First note, cycle</th><th class="num">Time</th></tr></thead><tbody>';
+    for (var i = 0; i < LAYERS.length; i++) {
+        var L = LAYERS[i], e = entryOf(L, wait);
+        h += "<tr><td>" + esc(L.name) + "</td><td>" + (L.orbit === null ? "none" : L.orbit) + '</td><td class="num">' + e + '</td><td class="num">' + mmss(e) + "</td></tr>";
+    }
+    return h + "</tbody></table>";
+}
+/*END-PURE*/
+
+(function () {
+    if (typeof document === "undefined") { return; }
+    var state = { wait: WAIT_SONG, sel: 1 };
+    var rowsEl = document.getElementById("rows"), waitEl = document.getElementById("wait");
+    var factsEl = document.getElementById("facts"), detailEl = document.getElementById("detail");
+    var tblEl = document.getElementById("tblbody"), valEl = document.getElementById("waitval");
+    var resetEl = document.getElementById("reset");
+
+    function paintSelection() {
+        var gs = rowsEl.querySelectorAll("g.row");
+        for (var i = 0; i < gs.length; i++) {
+            var on = i === state.sel;
+            gs[i].setAttribute("class", "row" + (on ? " sel" : ""));
+            gs[i].setAttribute("aria-selected", on ? "true" : "false");
+        }
+        rowsEl.setAttribute("aria-activedescendant", "opt" + state.sel);
+        detailEl.innerHTML = detailHtml(state.sel, state.wait);
+        detailEl.className = "detail" + (LAYERS[state.sel].n !== null ? " gated" : "");
+    }
+
+    var lastW = 0;
+    function render() {
+        var w = Math.floor(document.getElementById("fig").clientWidth - 4);
+        lastW = w;
+        rowsEl.innerHTML = rowsSvg(w, state.wait, state.sel);
+        factsEl.innerHTML = factsHtml(state.wait);
+        tblEl.innerHTML = tableHtml(state.wait);
+        valEl.textContent = state.wait;
+        waitEl.setAttribute("aria-valuetext", "wait " + state.wait + " cycles, " + mmss(state.wait));
+        resetEl.disabled = state.wait === WAIT_SONG;
+        paintSelection();
+    }
+
+    waitEl.addEventListener("input", function () { state.wait = parseInt(waitEl.value, 10); render(); });
+    resetEl.addEventListener("click", function () { state.wait = WAIT_SONG; waitEl.value = WAIT_SONG; render(); });
+
+    function rowIndexOf(target) {
+        var g = target.closest ? target.closest("g.row") : null;
+        return g ? parseInt(g.getAttribute("data-i"), 10) : -1;
+    }
+    rowsEl.addEventListener("mouseover", function (e) {
+        var i = rowIndexOf(e.target);
+        if (i >= 0 && i !== state.sel) { state.sel = i; paintSelection(); }
+    });
+    rowsEl.addEventListener("click", function (e) {
+        var i = rowIndexOf(e.target);
+        if (i >= 0) { state.sel = i; paintSelection(); }
+    });
+    rowsEl.addEventListener("keydown", function (e) {
+        var k = e.key, n = LAYERS.length, next = state.sel;
+        if (k === "ArrowDown" || k === "ArrowRight") { next = Math.min(n - 1, state.sel + 1); }
+        else if (k === "ArrowUp" || k === "ArrowLeft") { next = Math.max(0, state.sel - 1); }
+        else if (k === "Home") { next = 0; }
+        else if (k === "End") { next = n - 1; }
+        else { return; }
+        e.preventDefault();
+        state.sel = next;
+        paintSelection();
+    });
+
+    var lastH = 0;
+    function postHeight(force) {
+        var h = Math.ceil(document.body.getBoundingClientRect().height);
+        if (!h || (h === lastH && force !== true)) { return; }
+        lastH = h;
+        try {
+            window.parent.postMessage({ type: "klang-figure-height", height: h }, "*");
+        } catch (e) { /* no host page to tell */ }
+    }
+    render();
+    postHeight();
+    if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(function () {
+            if (Math.floor(document.getElementById("fig").clientWidth - 4) !== lastW) { render(); }
+            postHeight();
+        }).observe(document.body);
+    } else {
+        window.addEventListener("resize", function () { render(); postHeight(); });
+    }
+    window.addEventListener("load", function () { postHeight(true); });
+    document.getElementById("tbl").addEventListener("toggle", function () { postHeight(true); });
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { postHeight(true); }); }
+})();
+</script>
+</body>
+</html>

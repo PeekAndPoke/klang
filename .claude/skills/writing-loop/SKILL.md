@@ -53,3 +53,17 @@ blog post, the one allowed HTML block (`docs/blog/howto-write-a-post.md` section
 Record in the task or the maintainer's notes after each run: did the cold reader find real problems the first missed;
 did the writer's second pass improve on the first; did Sonnet 5.5 hold the voice and the facts. If a run shows the
 split costing more than it gives, say so; won't-keep is a valid outcome.
+
+**First run, the whitepaper (2026-09-29/30).** Reader brief, writer in five scoped passes, 13 figures from four
+parallel visualizers, a cold reader, a writer round on its brief, two parallel fact checkers, a correction round.
+
+- The cold reader found real problems the first could not: figures that duplicated a table or a listing, a figure at
+  the wrong depth for its section, caption contrast, phone widths, unlinked cross-references.
+- Building figures from the code is itself a fact check: the visualizers found six wrong facts in the text
+  (harmonic partials called inharmonic, a stale pan comment, a benchmark number with no record, the wrong command
+  name, a block length, "exactly" for an approximation). Keep the rule "real numbers, cite the file".
+- The fact check still found seven WRONG claims, most copied from stale internal records (a "lock-free SPSC ring",
+  a "binary" codec, a deleted golden file). A record is a source that can be stale: the fact check traces a claim to
+  the code, and the coordinator fixes the stale record too, not only the page.
+- Sonnet 5.5 held the voice and flagged its own doubts honestly; it did not invent facts, but it did repeat stale
+  ones. Parallel work was safe with one owner per file (writer: the page; visualizers: the figure files).

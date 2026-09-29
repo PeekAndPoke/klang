@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The classic stages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --rule-soft: #2C313A;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --code-cm: #5C6370;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        margin: 0;
+        padding: 2px 2px 4px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+    code, .mono { font-family: var(--f-mono); }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+    figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+    code { font-family: var(--f-mono); font-size: 0.86em; }
+    .lab { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+    .bar { display: none; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+    .js .bar { display: flex; }
+    .sw {
+        appearance: none; display: inline-flex; align-items: center; gap: 9px;
+        font-family: var(--f-mono); font-size: 13px; color: var(--ink);
+        background: var(--code-bg); border: 1px solid var(--rule); border-radius: 0; padding: 5px 10px 4px 8px; cursor: pointer;
+    }
+    .sw .track { width: 30px; height: 14px; border: 1px solid var(--muted); border-radius: 8px; position: relative; flex: none; }
+    .sw .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: transform .15s, background-color .15s; }
+    .sw[aria-checked="true"] { border-color: var(--spark); }
+    .sw[aria-checked="true"] .track { border-color: var(--spark); }
+    .sw[aria-checked="true"] .track::after { transform: translateX(16px); background: var(--spark); }
+    .reset {
+        appearance: none; font-family: var(--f-mono); font-size: 12.5px; color: var(--muted);
+        background: transparent; border: 1px solid var(--rule); border-radius: 0; padding: 5px 10px 4px; cursor: pointer;
+    }
+    .reset:hover { color: var(--ink); border-color: var(--muted); }
+
+    /* ---- the flow ---- */
+    .flow { display: flex; flex-direction: column; align-items: stretch; }
+    .blk {
+        background: var(--spark-bg); border: 1px solid var(--spark); padding: 8px 12px 9px;
+        font-size: 14px; line-height: 1.4; color: var(--muted);
+    }
+    .blk b { font-family: var(--f-display); font-weight: 700; font-size: 15px; color: var(--ink); margin-right: 8px; }
+    .blk.dashed { background: transparent; border: 1px dashed var(--faint); }
+    .blk code { color: var(--ink); }
+    .link { height: 20px; position: relative; }
+    .link::before { content: ""; position: absolute; left: 22px; top: 0; bottom: 5px; border-left: 1.2px solid var(--muted); }
+    .link::after {
+        content: ""; position: absolute; left: 18px; bottom: 3px; width: 8px; height: 8px;
+        border-right: 1.2px solid var(--muted); border-bottom: 1.2px solid var(--muted); transform: rotate(45deg);
+    }
+
+    .classic { border: 1px solid var(--rule); border-left: 2px solid var(--spark); background: var(--surface); padding: 10px 10px 8px 12px; }
+    .cl-head { margin: 0 0 9px; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+    .cl-head code { color: var(--spark); font-size: 12.5px; }
+    .stage {
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1.6fr) minmax(0, 1fr) 214px;
+        column-gap: 14px; row-gap: 3px; align-items: center;
+        padding: 7px 8px 7px 6px; margin: 0 0 5px;
+        border: 1px solid var(--rule); background: var(--paper);
+        transition: background-color .12s, border-color .12s;
+    }
+    .stage:last-child { margin-bottom: 0; }
+    .stage .nm { display: flex; align-items: center; gap: 8px; }
+    .stage .nm b { font-family: var(--f-display); font-weight: 600; font-size: 14.5px; }
+    .stage .dot { width: 9px; height: 9px; border-radius: 50%; border: 1.4px dashed var(--faint); flex: none; }
+    .stage .slots { display: flex; flex-wrap: wrap; gap: 2px 10px; min-width: 0; }
+    .stage .slots code { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+    .stage .slots code.w { color: var(--ink); }
+    .stage .more { font-family: var(--f-mono); font-size: 12px; color: var(--faint); }
+    .stage .status { font-family: var(--f-mono); font-size: 12px; color: var(--muted); display: grid; }
+    /* both status texts sit in one cell, so a row is as tall for either state of classic() */
+    .stage .status > span { grid-area: 1 / 1; align-self: center; }
+    .stage .status .off-s { visibility: hidden; }
+    .no-classic .stage .status .on-s { visibility: hidden; }
+    .no-classic .stage .status .off-s { visibility: visible; }
+    .stage .calls { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+    .stage.is-built { border-color: var(--spark); background: var(--spark-bg); }
+    .stage.is-built .dot { background: var(--spark); border: 1.4px solid var(--spark); }
+    .stage.is-built .status { color: var(--ink); }
+    .stage.is-off { border-style: dashed; }
+    .stage.is-off .nm b { color: var(--muted); font-weight: 500; }
+    .chip {
+        appearance: none; font-family: var(--f-mono); font-size: 12.5px; color: var(--ink);
+        background: var(--code-bg); border: 1px solid var(--rule); border-radius: 0; padding: 4px 8px 3px; cursor: default; white-space: nowrap;
+    }
+    .chip[aria-pressed="true"] { border-color: var(--spark); background: #4a3526; }
+    .js .chip { cursor: pointer; }
+    .js .chip:hover { border-color: var(--muted); }
+    /* both heads share one grid cell, so the frame is as tall for either and does not jump when classic() goes off */
+    .cl-head { display: grid; }
+    .cl-head > span { grid-area: 1 / 1; }
+    .cl-head .off-t { visibility: hidden; }
+    .no-classic .cl-head .on-t { visibility: hidden; }
+    .no-classic .cl-head .off-t { visibility: visible; }
+    .cl-head .off-t code { color: var(--ink); }
+    .no-classic .classic { border-left-color: var(--faint); border-left-style: dashed; }
+    .no-classic .stage { opacity: 0.45; border-style: dashed; background: transparent; }
+    .no-classic .stage .dot { background: transparent; border: 1.4px dashed var(--faint); }
+    .no-classic .stage.is-built .nm b { color: var(--muted); }
+    .summary { margin: 0; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+    .summary b { color: var(--ink); font-weight: 400; }
+    .gone { visibility: hidden; }
+    .summary { display: grid; }
+    .summary > span { grid-area: 1 / 1; }
+    .summary .off-t { visibility: hidden; }
+    .no-classic .summary .on-t { visibility: hidden; }
+    .no-classic .summary .off-t { visibility: visible; }
+
+    @media (max-width: 719px) {
+        .stage { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+        .stage .nm { grid-column: 1; grid-row: 1; }
+        .stage .calls { grid-column: 2; grid-row: 1; }
+        .stage .slots { grid-column: 1 / -1; grid-row: 2; }
+        .stage .status { grid-column: 1 / -1; grid-row: 3; }
+        .stage.two .nm { grid-column: 1 / -1; }
+        .stage.two .calls { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+        .stage.two .slots { grid-row: 3; }
+        .stage.two .status { grid-row: 4; }
+    }
+
+</style>
+<script>document.documentElement.className = "js";</script>
+</head>
+<body>
+<figure id="fig">
+    <div class="bar">
+        <button type="button" class="sw" id="sw" role="switch" aria-checked="true"><span class="track" aria-hidden="true"></span><span>The tree ends in <code>.classic()</code></span></button>
+        <button type="button" class="reset" id="reset">Back to the note of section 5</button>
+    </div>
+    <div class="flow">
+        <div class="blk dashed"><b>Pitch</b> <code>vibrato</code>, <code>penv</code>, <code>fm</code> and <code>accelerate</code> run in front of every instrument.</div>
+        <div class="link" aria-hidden="true"></div>
+        <div class="blk"><b>The tree</b> <span id="treetxt">the supersaw oscillator, then <code>pregain</code>, then <code>.classic()</code></span></div>
+        <div class="link" aria-hidden="true"></div>
+        <div class="classic" id="classic">
+            <p class="cl-head"><span class="on-t"><code>.classic()</code> adds these stages, in this order. A stage is built only if the note writes its slot.</span><span class="off-t">Without <code>.classic()</code> the tree plays as composed: no stage reads these slots, and no default envelope runs.</span></p>
+<div class="stage is-off" data-stage="onepole"><div class="nm"><span class="dot" aria-hidden="true"></span><b>One-pole</b></div><div class="slots"><code>onepole 0</code></div><div class="status"><span class="on-s">not built: onepole is 0</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="onepole" aria-pressed="false">.onepole(2000)</button></div></div>
+<div class="stage is-off" data-stage="crush"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Crush</b></div><div class="slots"><code>crush.amount 0</code></div><div class="status"><span class="on-s">not built: amount is below 1</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="crush" aria-pressed="false">.crush(4)</button></div></div>
+<div class="stage is-off" data-stage="coarse"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Coarse</b></div><div class="slots"><code>coarse.amount 0</code></div><div class="status"><span class="on-s">not built: amount is 1 or less</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="coarse" aria-pressed="false">.coarse(8)</button></div></div>
+<div class="stage is-off" data-stage="distort"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Distort</b></div><div class="slots"><code>distort.amount 0</code><code>distort.shape soft</code><code>distort.oversample 0</code></div><div class="status"><span class="on-s">not built: amount is 0</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="distort" aria-pressed="false">.distort(0.5)</button></div></div>
+<div class="stage is-off" data-stage="hpf"><div class="nm"><span class="dot" aria-hidden="true"></span><b>High-pass</b></div><div class="slots"><code>hpf.freq unset</code><code>hpf.q 0.707</code><code>hpf.passes 1</code><span class="more">+ envelope slots</span></div><div class="status"><span class="on-s">not built: the cutoff is unset</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="hpf" aria-pressed="false">.hpf(200)</button></div></div>
+<div class="stage is-off" data-stage="bpf"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Band-pass</b></div><div class="slots"><code>bpf.freq unset</code><code>bpf.q 0.707</code><span class="more">+ envelope slots</span></div><div class="status"><span class="on-s">not built: the cutoff is unset</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="bpf" aria-pressed="false">.bpf(1000)</button></div></div>
+<div class="stage is-off" data-stage="notch"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Notch</b></div><div class="slots"><code>notch.freq unset</code><code>notch.q 0.707</code><span class="more">+ envelope slots</span></div><div class="status"><span class="on-s">not built: the cutoff is unset</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="notch" aria-pressed="false">.notch(1000)</button></div></div>
+<div class="stage is-built" data-stage="lpf"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Low-pass</b></div><div class="slots"><code class="w">lpf.freq = 800</code><code>lpf.q 0.707</code><code>lpf.passes 1</code><span class="more">+ envelope slots</span></div><div class="status"><span class="on-s">built: the cutoff is set</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="lpf" aria-pressed="true">.lpf(800)</button></div></div>
+<div class="stage is-off" data-stage="tremolo"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Tremolo</b></div><div class="slots"><code>tremolo.depth 0</code><code>tremolo.sync 0</code><code>tremolo.shape sine</code></div><div class="status"><span class="on-s">not built: depth is 0</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="tremolo" aria-pressed="false">.tremolo(0.5)</button></div></div>
+<div class="stage is-built two" data-stage="adsr"><div class="nm"><span class="dot" aria-hidden="true"></span><b>Envelope</b></div><div class="slots"><code>adsr.attack 0.01</code><code>adsr.decay 0.1</code><code>adsr.sustain 1</code><code>adsr.release 0.05</code><code>adsr.on 1</code></div><div class="status"><span class="on-s">built: adsr.on is 1, the default</span><span class="off-s">no .classic(), no stage</span></div><div class="calls"><button type="button" class="chip" data-chip="adsr" aria-pressed="false">.adsr(release = 0.3)</button><button type="button" class="chip" data-chip="adsroff" aria-pressed="false">.adsrOff()</button></div></div>
+        </div>
+        <div class="link" aria-hidden="true"></div>
+        <div class="blk"><b>Channel</b> <code>gain</code>, <code>pan</code> and <code>orbit</code>, applied once after the tree.</div>
+    </div>
+    <p class="summary" id="summary" aria-live="polite"><span class="on-t">Built: <b>Low-pass, Envelope</b> (2 of 10 stages). The note writes <code>.lpf(800)</code> and nothing else.</span><span class="off-t"></span></p>
+</figure>
+
+<script>
+(function () {
+    "use strict";
+
+    // The stages, in the order classic() builds them (audio_bridge/IgnitorDslClassic.kt), with the slot defaults
+    // read from the same file and the built-when rules from audio/ref/off-values.md.
+    var STAGES = [{"id": "onepole", "name": "One-pole", "slots": [["onepole", "0"]], "more": "", "chips": [{"id": "onepole", "label": ".onepole(2000)", "writes": {"onepole": "2000"}}], "on": "onepole is above 0", "off": "onepole is 0"}, {"id": "crush", "name": "Crush", "slots": [["crush.amount", "0"]], "more": "", "chips": [{"id": "crush", "label": ".crush(4)", "writes": {"crush.amount": "4"}}], "on": "amount is 1 or more", "off": "amount is below 1"}, {"id": "coarse", "name": "Coarse", "slots": [["coarse.amount", "0"]], "more": "", "chips": [{"id": "coarse", "label": ".coarse(8)", "writes": {"coarse.amount": "8"}}], "on": "amount is above 1", "off": "amount is 1 or less"}, {"id": "distort", "name": "Distort", "slots": [["distort.amount", "0"], ["distort.shape", "soft"], ["distort.oversample", "0"]], "more": "", "chips": [{"id": "distort", "label": ".distort(0.5)", "writes": {"distort.amount": "0.5"}}], "on": "amount is above 0", "off": "amount is 0"}, {"id": "hpf", "name": "High-pass", "slots": [["hpf.freq", "unset"], ["hpf.q", "0.707"], ["hpf.passes", "1"]], "more": "envelope slots", "chips": [{"id": "hpf", "label": ".hpf(200)", "writes": {"hpf.freq": "200"}}], "on": "the cutoff is set", "off": "the cutoff is unset"}, {"id": "bpf", "name": "Band-pass", "slots": [["bpf.freq", "unset"], ["bpf.q", "0.707"]], "more": "envelope slots", "chips": [{"id": "bpf", "label": ".bpf(1000)", "writes": {"bpf.freq": "1000"}}], "on": "the cutoff is set", "off": "the cutoff is unset"}, {"id": "notch", "name": "Notch", "slots": [["notch.freq", "unset"], ["notch.q", "0.707"]], "more": "envelope slots", "chips": [{"id": "notch", "label": ".notch(1000)", "writes": {"notch.freq": "1000"}}], "on": "the cutoff is set", "off": "the cutoff is unset"}, {"id": "lpf", "name": "Low-pass", "slots": [["lpf.freq", "unset"], ["lpf.q", "0.707"], ["lpf.passes", "1"]], "more": "envelope slots", "chips": [{"id": "lpf", "label": ".lpf(800)", "writes": {"lpf.freq": "800"}}], "on": "the cutoff is set", "off": "the cutoff is unset"}, {"id": "tremolo", "name": "Tremolo", "slots": [["tremolo.depth", "0"], ["tremolo.sync", "0"], ["tremolo.shape", "sine"]], "more": "", "chips": [{"id": "tremolo", "label": ".tremolo(0.5)", "writes": {"tremolo.depth": "0.5"}}], "on": "depth is above 0", "off": "depth is 0"}, {"id": "adsr", "name": "Envelope", "slots": [["adsr.attack", "0.01"], ["adsr.decay", "0.1"], ["adsr.sustain", "1"], ["adsr.release", "0.05"], ["adsr.on", "1"]], "more": "", "chips": [{"id": "adsr", "label": ".adsr(release = 0.3)", "writes": {"adsr.release": "0.3"}}, {"id": "adsroff", "label": ".adsrOff()", "writes": {"adsr.on": "0"}}], "on": "adsr.on is 1, the default", "off": "adsr.on is 0"}];
+    var DEFAULT_PRESSED = ["lpf"];
+
+    var fig = document.getElementById("fig");
+    var sw = document.getElementById("sw");
+    var summary = document.getElementById("summary");
+    var sumOn = summary.querySelector(".on-t");
+    var sumOff = summary.querySelector(".off-t");
+    var treetxt = document.getElementById("treetxt");
+    var pressed = {};
+    var classicOn = true;
+
+    function reset() {
+        pressed = {};
+        DEFAULT_PRESSED.forEach(function (k) { pressed[k] = true; });
+        classicOn = true;
+    }
+
+    function isBuilt(st) {
+        if (st.id === "adsr") { return !pressed.adsroff; }
+        return st.chips.some(function (c) { return pressed[c.id]; });
+    }
+
+    function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) { e.className = cls; }
+        if (text) { e.textContent = text; }
+        return e;
+    }
+
+    function update() {
+        fig.classList.toggle("no-classic", !classicOn);
+        sw.setAttribute("aria-checked", classicOn ? "true" : "false");
+        treetxt.textContent = "";
+        treetxt.appendChild(document.createTextNode("the supersaw oscillator, then "));
+        var c1 = el("code", null, "pregain");
+        treetxt.appendChild(c1);
+        // the tail stays in the line, hidden, so the block keeps its height
+        var tailSpan = el("span", classicOn ? null : "gone");
+        tailSpan.appendChild(document.createTextNode(", then "));
+        tailSpan.appendChild(el("code", null, ".classic()"));
+        treetxt.appendChild(tailSpan);
+
+        var builtNames = [];
+        STAGES.forEach(function (st) {
+            var row = document.querySelector('.stage[data-stage="' + st.id + '"]');
+            var would = isBuilt(st);                // built if the tree ends in classic()
+            var b = classicOn && would;
+            if (would) { builtNames.push(st.name.toLowerCase()); }
+            row.classList.toggle("is-built", b);
+            row.classList.toggle("is-off", !b);
+
+            var written = {};
+            st.chips.forEach(function (c) { if (pressed[c.id]) { Object.keys(c.writes).forEach(function (k) { written[k] = c.writes[k]; }); } });
+            var slots = row.querySelector(".slots");
+            slots.textContent = "";
+            st.slots.forEach(function (s) {
+                var code = el("code", written.hasOwnProperty(s[0]) ? "w" : null);
+                code.textContent = written.hasOwnProperty(s[0]) ? s[0] + " = " + written[s[0]] : s[0] + " " + s[1];
+                slots.appendChild(code);
+            });
+            if (st.more) { slots.appendChild(el("span", "more", "+ " + st.more)); }
+
+            row.querySelector(".status .on-s").textContent = b ? "built: " + st.on : "not built: " + st.off;
+            Array.prototype.forEach.call(row.querySelectorAll(".chip"), function (btn) {
+                btn.setAttribute("aria-pressed", pressed[btn.getAttribute("data-chip")] ? "true" : "false");
+            });
+        });
+
+        var written = [];
+        STAGES.forEach(function (st) { st.chips.forEach(function (c) { if (pressed[c.id]) { written.push(c.label); } }); });
+        var wtxt = written.length ? "The note writes " + written.join(", ") + "." : "The note writes none of them.";
+        // both texts are always built; the one for the other state stays hidden in the same cell
+        sumOn.textContent = "";
+        sumOn.appendChild(document.createTextNode("Built: "));
+        sumOn.appendChild(el("b", null, builtNames.length ? builtNames.join(", ") : "nothing"));
+        sumOn.appendChild(document.createTextNode(" (" + builtNames.length + " of " + STAGES.length + " stages). " + wtxt));
+        sumOff.textContent = "";
+        sumOff.appendChild(document.createTextNode("Built: "));
+        sumOff.appendChild(el("b", null, "the tree alone"));
+        var tail = written.length ? " The note writes " + written.join(", ") + ", and nothing reads " + (written.length > 1 ? "them" : "it") + "." : "";
+        sumOff.appendChild(document.createTextNode(" (0 of " + STAGES.length + " stages)." + tail));
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (btn) {
+        btn.addEventListener("click", function () {
+            var id = btn.getAttribute("data-chip");
+            if (pressed[id]) { delete pressed[id]; } else { pressed[id] = true; }
+            update();
+        });
+    });
+    sw.addEventListener("click", function () { classicOn = !classicOn; update(); });
+    document.getElementById("reset").addEventListener("click", function () { reset(); update(); });
+
+    reset();
+    update();
+
+    // Report the content height to the host page, on load and on every size change.
+    var last = 0;
+    function report() {
+        var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+        if (h && h !== last) {
+            last = h;
+            try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no host */ }
+        }
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", report);
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(document.body); }
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(report); }
+    report();
+})();
+</script>
+</body>
+</html>

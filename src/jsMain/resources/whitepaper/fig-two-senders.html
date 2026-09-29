@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two senders, one payload</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    /* Tokens copied from the whitepaper's :root (the Klang UI palette, dark only). */
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --code-cm: #5C6370;
+
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    .fig { display: flow-root; margin: 0; padding: 2px 0 6px; }
+    button { font: inherit; }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+
+    /* the page's own "sketch" pill */
+    .sketchnote {
+        margin: 0 0 14px;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--muted);
+    }
+    .pill {
+        display: inline-block;
+        font-family: var(--f-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 1px 7px;
+        border: 1px solid currentColor;
+        vertical-align: 0.1em;
+        margin-right: 8px;
+        white-space: nowrap;
+        color: var(--spark);
+    }
+
+    /* ---------- the two senders ---------- */
+    .senders { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+
+    .side { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .side h2 {
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        margin: 0;
+    }
+    .side h2 small {
+        display: block;
+        font-family: var(--f-body);
+        font-weight: 400;
+        font-size: 13.5px;
+        letter-spacing: 0;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    /* message frames follow the page's code frames */
+    .msg {
+        position: relative;
+        background:
+            repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+            linear-gradient(180deg, #161822, var(--code-bg));
+        border: 1px solid var(--rule);
+        border-left: 2px solid var(--signal);
+        box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+        padding: 26px 12px 16px 14px;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--ink);
+    }
+    .msg::before {
+        content: "";
+        position: absolute;
+        left: -2px;
+        top: -1px;
+        width: 2.2rem;
+        border-top: 2px solid var(--signal);
+    }
+    .msg::after {
+        content: attr(data-who);
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--signal);
+        background: var(--surface-2);
+        border-left: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+        padding: 2px 9px 3px;
+    }
+    .msg.kb { border-left-color: var(--gold); box-shadow: inset 3px 0 12px -6px rgba(232, 184, 75, .5); }
+    .msg.kb::before { border-top-color: var(--gold); }
+    .msg.kb::after { color: var(--gold); }
+
+    .msg .ln { display: flex; flex-wrap: wrap; column-gap: 1ch; padding-left: calc(var(--i, 0) * 2ch); }
+    .msg .ln.i1 { --i: 1; }
+    .msg .ln.i2 { --i: 2; }
+    .msg .ln.i3 { --i: 3; }
+    .msg .gap { height: 0.9em; }
+    .msg .k { color: var(--muted); flex: 0 0 auto; }
+    .msg .k.w { min-width: 18ch; }
+    .msg .kb-k.w { min-width: 11ch; }
+    .msg .t { color: var(--ink); font-weight: 600; }
+    .msg .s { color: var(--code-str); }
+    .msg .n { color: var(--ink); }
+    .msg .nul { color: var(--faint); font-style: italic; }
+    .msg .c { color: var(--code-cm); font-style: italic; }
+    .msg .ln.hi { background: rgba(232, 184, 75, 0.11); margin-left: -14px; padding-right: 8px; box-shadow: inset 2px 0 0 var(--gold); }
+    .msg .ln.hi { padding-left: calc(14px + var(--i, 0) * 2ch); }
+
+    .cap { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+    .cap b { color: var(--ink); font-weight: 600; }
+
+    /* ---------- arrows ---------- */
+    .into { display: none; }
+    .down { display: flex; justify-content: center; height: 30px; margin: 4px 0; }
+    .down svg { display: block; }
+    .down .lbl {
+        align-self: center;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: var(--muted);
+        margin-left: 8px;
+    }
+
+    /* ---------- the shared payload ---------- */
+    .vd {
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        padding: 12px 14px 14px;
+    }
+    .vd h2 {
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .vd .sub { margin: 2px 0 10px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+    .grp { margin: 10px 0 0; }
+    .grp h3 {
+        font-family: var(--f-mono);
+        font-weight: 400;
+        font-size: 11.5px;
+        color: var(--muted);
+        margin: 0 0 6px;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 1px;
+        text-align: left;
+        border: 1px solid var(--rule);
+        background: transparent;
+        color: var(--muted);
+        opacity: 0.62;
+        padding: 3px 8px;
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        line-height: 1.35;
+        min-width: 0;
+    }
+    button.chip { cursor: pointer; color: var(--ink); opacity: 1; }
+    .chip.both, .chip.sp { opacity: 1; }
+    .no-js button.chip { cursor: default; }
+    .chip .fn { display: block; }
+    .chip .fv { display: block; color: var(--muted); overflow-wrap: anywhere; }
+    .chip.both { background: var(--surface-2); border-color: var(--muted); }
+    .chip.sp { background: var(--signal-bg); border-color: var(--signal); }
+    button.chip:hover { border-color: var(--gold); }
+    button.chip[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+    .chip.none { font-size: 11px; padding: 1px 7px; }
+
+    .unset { margin: 12px 0 0; padding-top: 8px; border-top: 1px solid var(--rule); }
+    .unset summary {
+        cursor: pointer;
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        color: var(--muted);
+        padding: 2px 0;
+    }
+    .unset summary:hover { color: var(--ink); }
+    .unset .unset-note { margin: 8px 0 8px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+
+    .dd {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        line-height: 13px;
+        text-align: center;
+        font-size: 9px;
+        font-style: normal;
+        color: var(--paper);
+        margin-right: 5px;
+        vertical-align: 0.05em;
+    }
+    .dd.s { background: var(--signal); }
+    .dd.k { background: var(--gold); margin-left: 8px; }
+
+    .who { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 5px 8px; align-items: start; font-size: 13.5px; line-height: 1.45; color: var(--muted); margin: 0 0 4px; }
+    .who b { color: var(--ink); font-weight: 600; }
+    .who code { font-family: var(--f-mono); font-size: 12px; color: var(--ink); overflow-wrap: anywhere; }
+    .who .dd { margin: 2px 0 0; }
+    .who .dd.k { margin-left: 0; }
+
+    .readout {
+        margin: 10px 0 0;
+        padding-top: 8px;
+        border-top: 1px solid var(--rule);
+        font-size: 13.5px;
+        line-height: 1.45;
+        color: var(--muted);
+        min-height: 4.4em;
+    }
+    .readout b { color: var(--ink); font-weight: 400; font-family: var(--f-mono); font-size: 12.5px; }
+    .no-js .readout { display: none; }
+
+    /* ---------- the Motor ---------- */
+    .motor {
+        background: var(--spark-bg);
+        border: 1px solid var(--spark);
+        padding: 12px 14px;
+    }
+    .motor h2 { font-family: var(--f-display); font-weight: 700; font-size: 17px; margin: 0 0 4px; letter-spacing: -0.01em; }
+    .motor p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+    .motor p b { color: var(--ink); font-weight: 600; }
+
+    @media (min-width: 760px) {
+        .senders { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 22px; }
+        .into {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            column-gap: 22px;
+            height: 36px;
+        }
+        .into div { display: flex; justify-content: center; align-items: center; }
+        .into svg { display: block; }
+        .into .lbl { font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+        .down.only-narrow { display: none; }
+    }
+
+    @media (max-width: 479px) {
+        .msg .k.w { min-width: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+    }
+</style>
+</head>
+<body>
+<figure class="fig" id="fig" aria-label="Two frontends, one payload. sprudel sends a batch of scheduled voices, each with a start time and a gate end in seconds. The MIDI keyboard playground sends a realtime voice when a key goes down and a stop message when it comes up, with no start time. Both messages carry the same VoiceData, which the Motor reads.">
+    <p class="sketchnote"><span class="pill">Sketch</span>The field names are the real ones from the code. The values are one example, and the bytes on the wire come from a generated codec, not from this layout.</p>
+
+    <div class="senders">
+        <section class="side" aria-labelledby="hs">
+            <h2 id="hs">sprudel<small>a pattern, asked for one cycle at a time</small></h2>
+            <div class="msg" data-who="sprudel" role="group" aria-label="Sketch of a Cmd.ScheduleVoices message">
+                <div class="ln"><span class="t">Cmd.ScheduleVoices</span></div>
+                <div class="ln i1"><span class="k w">playbackId</span><span class="s">"playback-0"</span></div>
+                <div class="ln i1"><span class="k w">voices</span><span>[</span></div>
+                <div class="ln i2"><span class="t">ScheduledVoice</span></div>
+                <div class="ln i3"><span class="k w">playbackId</span><span class="s">"playback-0"</span></div>
+                <div class="ln i3 hi"><span class="k w">startTime</span><span class="n">1.071</span><span class="c">seconds</span></div>
+                <div class="ln i3 hi"><span class="k w">gateEndTime</span><span class="n">2.143</span><span class="c">seconds</span></div>
+                <div class="ln i3"><span class="k w">playbackStartTime</span><span class="n">1234.5</span></div>
+                <div class="ln i3"><span class="k w">data</span><span><span class="t">VoiceData</span> ↓</span></div>
+                <div class="ln i2"><span class="c">… one ScheduledVoice per event</span></div>
+                <div class="ln i1"><span>]</span></div>
+            </div>
+            <p class="cap">Sent in batches, ahead of time. Each voice says when it starts and when its gate ends, in seconds from the playback's start, and waits in the scheduler until then.</p>
+        </section>
+
+        <section class="side" aria-labelledby="hk">
+            <h2 id="hk">MIDI keyboard playground<small>a key press, played now</small></h2>
+            <div class="msg kb" data-who="MIDI keyboard" role="group" aria-label="Sketch of a Cmd.StartRealtimeVoice message and, later, a Cmd.StopRealtimeVoice message">
+                <div class="ln"><span class="t">Cmd.StartRealtimeVoice</span><span class="c">key down</span></div>
+                <div class="ln i1"><span class="k w kb-k">playbackId</span><span class="s">"custom-midi-playground"</span></div>
+                <div class="ln i1"><span class="k w kb-k">voice</span><span class="t">RealtimeVoice</span></div>
+                <div class="ln i2"><span class="k w kb-k">liveId</span><span class="n">7</span></div>
+                <div class="ln i2 hi"><span class="k w kb-k">gateDurSec</span><span class="nul">null</span><span class="c">held until the key is up</span></div>
+                <div class="ln i2"><span class="k w kb-k">data</span><span><span class="t">VoiceData</span> ↓</span></div>
+                <div class="ln i2"><span class="c">no startTime: none is sent</span></div>
+                <div class="gap"></div>
+                <div class="ln"><span class="t">Cmd.StopRealtimeVoice</span><span class="c">key up, later</span></div>
+                <div class="ln i1"><span class="k w kb-k">playbackId</span><span class="s">"custom-midi-playground"</span></div>
+                <div class="ln i1"><span class="k w kb-k">liveId</span><span class="n">7</span></div>
+            </div>
+            <p class="cap">No start time: the backend stamps the moment the message arrives. The gate stays open until a stop message with the same <b>liveId</b> comes in, and the voice then fades out through its release.</p>
+        </section>
+    </div>
+
+    <div class="into" aria-hidden="true">
+        <div><svg width="12" height="36" viewBox="0 0 12 36"><path d="M6,1 L6,30" stroke="#ABB2BF" stroke-width="1.2" fill="none"/><path d="M1,24 L6,33 L11,24" stroke="#ABB2BF" stroke-width="1.2" fill="none"/></svg><span class="lbl">data</span></div>
+        <div><svg width="12" height="36" viewBox="0 0 12 36"><path d="M6,1 L6,30" stroke="#ABB2BF" stroke-width="1.2" fill="none"/><path d="M1,24 L6,33 L11,24" stroke="#ABB2BF" stroke-width="1.2" fill="none"/></svg><span class="lbl">data</span></div>
+    </div>
+    <div class="down only-narrow" aria-hidden="true"><svg width="12" height="30" viewBox="0 0 12 30"><path d="M6,1 L6,24" stroke="#ABB2BF" stroke-width="1.2" fill="none"/><path d="M1,18 L6,27 L11,18" stroke="#ABB2BF" stroke-width="1.2" fill="none"/></svg><span class="lbl">both carry a VoiceData</span></div>
+
+    <section class="vd" aria-labelledby="hv">
+        <h2 id="hv">VoiceData: what to play</h2>
+        <p class="sub">The payload both messages carry: 35 fields, every one optional. Here is what each sender fills in for one c3.</p>
+        <div class="who">
+            <div><i class="dd s" aria-hidden="true">S</i></div>
+            <div><b>sprudel</b>, for the line of section 5: <code>note("c3").sound("supersaw").lpf(800).gain(0.4).pan(0.3).orbit(1).reverb(0.3, 5)</code></div>
+            <div><i class="dd k" aria-hidden="true">K</i></div>
+            <div><b>the keyboard</b>, for key 48 (the same c3) pressed at velocity 100</div>
+        </div>
+        <div id="chips"><!--R:chips--><div class="grp"><h3>Filled by both (3)</h3><div class="chips"><button type="button" class="chip both" data-f="freqHz" aria-pressed="false"><span class="fn">freqHz</span><span class="fv"><i class="dd s">S</i>130.81<i class="dd k">K</i>130.81</span></button><button type="button" class="chip both" data-f="gain" aria-pressed="false"><span class="fn">gain</span><span class="fv"><i class="dd s">S</i>0.4<i class="dd k">K</i>0.787</span></button><button type="button" class="chip both" data-f="sound" aria-pressed="false"><span class="fn">sound</span><span class="fv"><i class="dd s">S</i>&quot;supersaw&quot;<i class="dd k">K</i>&quot;supersaw&quot;</span></button></div></div><div class="grp"><h3>Filled by sprudel only (6)</h3><div class="chips"><button type="button" class="chip sp" data-f="note" aria-pressed="false"><span class="fn">note</span><span class="fv"><i class="dd s">S</i>&quot;c3&quot;</span></button><button type="button" class="chip sp" data-f="oscParams" aria-pressed="false"><span class="fn">oscParams</span><span class="fv"><i class="dd s">S</i>{ lpf.freq: 800 }</span></button><button type="button" class="chip sp" data-f="katalystParams" aria-pressed="false"><span class="fn">katalystParams</span><span class="fv"><i class="dd s">S</i>{ reverb.wet: 0.3, reverb.size: 5 }</span></button><button type="button" class="chip sp" data-f="cylinder" aria-pressed="false"><span class="fn">cylinder</span><span class="fv"><i class="dd s">S</i>1</span></button><button type="button" class="chip sp" data-f="pan" aria-pressed="false"><span class="fn">pan</span><span class="fv"><i class="dd s">S</i>0.3</span></button><button type="button" class="chip sp" data-f="sourceId" aria-pressed="false"><span class="fn">sourceId</span><span class="fv"><i class="dd s">S</i>&quot;loc_…&quot;</span></button></div></div><!--/R:chips--></div>
+        <details class="unset" id="unset">
+            <summary id="unset-sum">26 more fields, unset for this note</summary>
+            <p class="unset-note">Neither sender writes these, so the engine reads its own default for each.</p>
+            <div class="chips"><!--R:unset--><span class="chip none">legato</span><span class="chip none">bank</span><span class="chip none">soundIndex</span><span class="chip none">accelerate</span><span class="chip none">vibrato</span><span class="chip none">vibratoMod</span><span class="chip none">pAttack</span><span class="chip none">pDecay</span><span class="chip none">pSustain</span><span class="chip none">pRelease</span><span class="chip none">pEnv</span><span class="chip none">pAttackCurve</span><span class="chip none">pDecayCurve</span><span class="chip none">pReleaseCurve</span><span class="chip none">fmh</span><span class="chip none">fmAttack</span><span class="chip none">fmDecay</span><span class="chip none">fmSustain</span><span class="chip none">fmEnv</span><span class="chip none">cut</span><span class="chip none">solo</span><span class="chip none">master</span><span class="chip none">katalyst</span><span class="chip none">control</span><span class="chip none">tags</span><span class="chip none">cull</span><!--/R:unset--></div>
+        </details>
+        <p class="readout" id="readout" aria-live="polite">Select one of the filled fields to read what it means and where each side gets its value.</p>
+    </section>
+
+    <div class="down" aria-hidden="true"><svg width="12" height="30" viewBox="0 0 12 30"><path d="M6,1 L6,24" stroke="#ABB2BF" stroke-width="1.2" fill="none"/><path d="M1,18 L6,27 L11,18" stroke="#ABB2BF" stroke-width="1.2" fill="none"/></svg><span class="lbl">read on the audio thread</span></div>
+
+    <section class="motor" aria-labelledby="hm">
+        <h2 id="hm">The Motor</h2>
+        <p>Builds a voice from the VoiceData it is given. A scheduled voice waits in the scheduler until its start time and a realtime voice starts at once; after that both are the same kind of voice, built by the same code.</p>
+    </section>
+</figure>
+
+<script>
+(function () {
+    "use strict";
+
+    // The fields of VoiceData, in declaration order (audio_bridge/.../VoiceData.kt, constructor).
+    var FIELDS = [
+        "note", "freqHz", "gain", "legato", "bank", "sound", "soundIndex", "oscParams", "katalystParams",
+        "accelerate", "vibrato", "vibratoMod", "pAttack", "pDecay", "pSustain", "pRelease", "pEnv",
+        "pAttackCurve", "pDecayCurve", "pReleaseCurve", "fmh", "fmAttack", "fmDecay", "fmSustain", "fmEnv",
+        "cylinder", "pan", "cut", "solo", "sourceId", "master", "katalyst", "control", "tags", "cull"
+    ];
+
+    // What each sender writes for one example note. Sprudel: note("c3").sound("supersaw").lpf(800).gain(0.4)
+    // .pan(0.3).orbit(1).reverb(0.3, 5), the line of section 5 (SprudelVoiceData.toVoiceData). Keyboard: MIDI
+    // key 48 at velocity 100 through voiceFor (MidiPlaygroundPage.kt): sound = selectedSound, freqHz =
+    // Midi.midiToFreq(48) = 440 * 2^((48 - 69) / 12) = 130.81, gain = velocity / 127 = 100 / 127.
+    var FREQ = (440 * Math.pow(2, (48 - 69) / 12)).toFixed(2);
+    var GAIN_K = (100 / 127).toFixed(3);
+    var SET = {
+        note: { s: '"c3"' },
+        freqHz: { s: FREQ, k: FREQ },
+        gain: { s: "0.4", k: GAIN_K },
+        sound: { s: '"supersaw"', k: '"supersaw"' },
+        oscParams: { s: "{ lpf.freq: 800 }" },
+        katalystParams: { s: "{ reverb.wet: 0.3, reverb.size: 5 }" },
+        cylinder: { s: "1" },
+        pan: { s: "0.3" },
+        sourceId: { s: '"loc_…"' }
+    };
+
+    // The words shown when a filled field is selected.
+    var WHAT = {
+        note: "The note name, when a pattern has one. The keyboard sends none: it sends a frequency instead.",
+        freqHz: "The pitch in Hz. Sprudel works it out from the name c3. The keyboard works it out from the key number, with the same formula (key 48 is c3, 130.81 Hz).",
+        gain: "The one level word on the wire, the channel fader. Sprudel sends the gain the pattern set. The keyboard sends the key velocity divided by 127.",
+        sound: "Which instrument plays: an Ignitor name such as supersaw, or a sample name. The keyboard sends whichever oscillator is selected on its page; supersaw is the page's default.",
+        oscParams: "Named numbers for the instrument, its slots. Our .lpf(800) fills the slot lpf.freq.",
+        katalystParams: "Named numbers for the orbit's effect chain. Our .reverb(0.3, 5) fills reverb.wet and reverb.size.",
+        cylinder: "The orbit the voice is sent to. Our .orbit(1) writes 1; a voice that names none goes to orbit 0.",
+        pan: "Stereo position from 0 (left) to 1 (right); unset reads as 0.5. Our .pan(0.3) sits a little left of center.",
+        sourceId: "Where in the code the voice came from, so the editor can highlight it while it plays: a hash of the call's position. The keyboard has no code to point at."
+    };
+
+    function esc(t) {
+        return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function chip(name, sel) {
+        var v = SET[name];
+        if (!v) { return '<span class="chip none">' + name + "</span>"; }
+        var cls = v.s && v.k ? "both" : "sp";
+        var vals = (v.s ? '<i class="dd s">S</i>' + esc(v.s) : "") + (v.k ? '<i class="dd k">K</i>' + esc(v.k) : "");
+        return '<button type="button" class="chip ' + cls + '" data-f="' + name + '" aria-pressed="' + (sel === name) + '">' +
+            '<span class="fn">' + name + '</span><span class="fv">' + vals + "</span></button>";
+    }
+
+    function split() {
+        var both = [], sp = [], none = [];
+        FIELDS.forEach(function (f) {
+            var v = SET[f];
+            (v ? (v.s && v.k ? both : sp) : none).push(f);
+        });
+        return { both: both, sp: sp, none: none };
+    }
+
+    // the filled fields, shown; the unset ones sit behind a details element (unsetHTML)
+    function chipsHTML(sel) {
+        var g = split();
+        function group(title, list) {
+            return '<div class="grp"><h3>' + title + '</h3><div class="chips">' + list.map(function (f) { return chip(f, sel); }).join("") + "</div></div>";
+        }
+        return group("Filled by both (" + g.both.length + ")", g.both) +
+            group("Filled by sprudel only (" + g.sp.length + ")", g.sp);
+    }
+
+    function unsetHTML() {
+        return split().none.map(function (f) { return chip(f, null); }).join("");
+    }
+
+    // For the static build: a node script fills the no-JavaScript state from this same code.
+    if (typeof window !== "undefined" && window.__BUILD) {
+        window.__regions = function () { return { chips: chipsHTML(null), unset: unsetHTML() }; };
+        return;
+    }
+
+    document.documentElement.className = document.documentElement.className.replace("no-js", "js");
+
+    var chips = document.getElementById("chips");
+    var readout = document.getElementById("readout");
+    var selected = null;
+    var DEFAULT_TEXT = readout.textContent;
+
+    function show(name, quiet) {
+        selected = selected === name ? null : name;
+        chips.innerHTML = chipsHTML(selected);
+        if (!selected) { readout.textContent = DEFAULT_TEXT; return; }
+        var v = SET[selected];
+        var who = (v.s ? "sprudel sends <b>" + esc(v.s) + "</b>" : "") + (v.s && v.k ? ", the keyboard <b>" + esc(v.k) + "</b>" : "");
+        readout.innerHTML = "<b>" + selected + "</b>: " + who + ". " + esc(WHAT[selected]);
+        var btn = chips.querySelector('[data-f="' + selected + '"]');
+        if (btn && !quiet) { btn.focus(); }
+    }
+
+    chips.addEventListener("click", function (ev) {
+        var t = ev.target;
+        while (t && t !== chips && !(t.getAttribute && t.getAttribute("data-f"))) { t = t.parentNode; }
+        if (t && t !== chips) { show(t.getAttribute("data-f")); }
+    });
+
+    // the count in the summary comes from the same lists as the chips
+    document.getElementById("unset-sum").textContent = split().none.length + " more fields, unset for this note";
+
+    // open on one filled field where the two senders differ, so the first view is not a still picture
+    show("gain", true);
+
+    function report() {
+        var h = Math.ceil(document.body.getBoundingClientRect().height);
+        try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no parent */ }
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", report);
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(document.body); }
+    report();
+})();
+</script>
+</body>
+</html>

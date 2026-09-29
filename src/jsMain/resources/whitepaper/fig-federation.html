@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Three servers: imports, license gates and durable copies</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+    <script>document.documentElement.className = "js";</script>
+    <style>
+        /* Tokens copied from the whitepaper's :root (klang-whitepaper.html). Dark only. */
+        :root {
+            color-scheme: dark;
+            --paper: #191C22;
+            --surface: #21252B;
+            --surface-2: #2C313A;
+            --ink: #D7DADF;
+            --muted: #ABB2BF;
+            --faint: #5C6370;
+            --rule: #353A42;
+            --spark: #D19A66;
+            --signal: #56B6C2;
+            --signal-bg: #1A2A30;
+            --gold: #E8B84B;
+            --code-bg: #12131C;
+            --code-str: #98C379;
+
+            --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+            --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+            --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+            --gap: 108px; /* width of an import arrow between two cards, wide layout */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            background: var(--paper);
+        }
+
+        body {
+            margin: 0;
+            padding: 4px 2px 8px;
+            display: flow-root;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: var(--f-body);
+            font-size: 16px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .sr {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--signal);
+            outline-offset: 2px;
+        }
+
+        /* A sketch is drawn with a dashed edge and says so in the corner, like the page's Sketch pill. */
+        .fig {
+            border: 1px dashed var(--faint);
+            border-radius: 2px;
+            padding: 12px 16px 16px;
+        }
+
+        .head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 12px;
+            margin: 0 0 14px;
+            font-family: var(--f-mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-block;
+            font-family: var(--f-mono);
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--spark);
+            padding: 2px 8px;
+            border: 1px solid currentColor;
+            white-space: nowrap;
+        }
+
+        /* ---------- the one control that needs a label: how imports are kept ---------- */
+        .ctl {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 12px;
+            margin: 0 0 14px;
+            font: 400 12.5px/1.3 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .js .ctl {
+            display: flex;
+        }
+
+        .seg {
+            display: inline-flex;
+            flex-wrap: wrap;
+            border: 1px solid var(--rule);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .seg button {
+            font: inherit;
+            color: var(--muted);
+            background: transparent;
+            border: 0;
+            padding: 6px 11px;
+            cursor: pointer;
+            min-height: 32px;
+        }
+
+        .seg button + button {
+            border-left: 1px solid var(--rule);
+        }
+
+        .seg button[aria-pressed="true"] {
+            background: var(--surface-2);
+            color: var(--ink);
+            box-shadow: inset 0 -2px 0 var(--signal);
+        }
+
+        .seg button:hover {
+            color: var(--ink);
+        }
+
+        /* ---------- the stage: three servers and the two imports between them ---------- */
+        .stage {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) var(--gap) minmax(0, 1fr) var(--gap) minmax(0, 1fr);
+            align-items: start;
+        }
+
+        .srv {
+            background: var(--surface);
+            border: 1px solid var(--rule);
+            border-radius: 3px;
+            min-width: 0;
+        }
+
+        .srv header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            height: 42px;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--rule);
+        }
+
+        .srv h2 {
+            margin: 0;
+            font-family: var(--f-display);
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--ink);
+        }
+
+        /* a power switch, present only when the script runs */
+        .pw {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font: 400 12px/1 var(--f-mono);
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid var(--rule);
+            border-radius: 13px;
+            padding: 4px 10px 4px 5px;
+            min-height: 28px;
+            cursor: pointer;
+        }
+
+        .js .pw {
+            display: inline-flex;
+        }
+
+        .pw i {
+            width: 24px;
+            height: 14px;
+            border-radius: 7px;
+            background: var(--rule);
+            position: relative;
+            transition: background .15s;
+        }
+
+        .pw i::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: left .15s, background .15s;
+        }
+
+        .pw[aria-checked="true"] i {
+            background: var(--signal-bg);
+            box-shadow: inset 0 0 0 1px var(--signal);
+        }
+
+        .pw[aria-checked="true"] i::after {
+            left: 12px;
+            background: var(--signal);
+        }
+
+        .pw:hover {
+            border-color: var(--muted);
+            color: var(--ink);
+        }
+
+        .state {
+            font: 400 12px/1 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .js .state {
+            display: none;
+        }
+
+        .body {
+            padding: 10px 12px 12px;
+        }
+
+        .gl {
+            display: block;
+            font: 400 11.5px/1.3 var(--f-mono);
+            color: var(--muted);
+            margin: 0 0 5px;
+        }
+
+        .grp + .grp {
+            margin-top: 12px;
+        }
+
+        .own-grp {
+            min-height: 96px;
+        }
+
+        .itm {
+            padding: 7px 9px 8px;
+            border: 1px solid var(--rule);
+            background: var(--surface-2);
+            border-radius: 2px;
+            min-width: 0;
+        }
+
+        .itm + .itm {
+            margin-top: 6px;
+        }
+
+        .nm {
+            display: block;
+            font: 400 13px/1.35 var(--f-mono);
+            color: var(--ink);
+            overflow-wrap: anywhere;
+        }
+
+        .nb {
+            white-space: nowrap;
+        }
+
+        .n {
+            font-family: var(--f-mono);
+            font-size: 0.86em;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .mt {
+            display: block;
+            font: 400 11.5px/1.4 var(--f-mono);
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .chip {
+            display: inline-block;
+            margin-top: 5px;
+            font: 400 11.5px/1.3 var(--f-mono);
+            padding: 1px 7px;
+            border: 1px solid currentColor;
+            border-radius: 2px;
+            color: var(--code-str);
+        }
+
+        .chip.off {
+            color: var(--muted);
+        }
+
+        .chip.bad {
+            color: var(--gold);
+        }
+
+        .itm.copy {
+            background: transparent;
+            border: 1px dashed var(--signal);
+        }
+
+        .itm.copy.saves {
+            border-style: solid;
+            background: var(--signal-bg);
+        }
+
+        .ghost .itm.copy {
+            border: 1px dotted var(--faint);
+            opacity: .6;
+        }
+
+        .none {
+            font: 400 12px/1.4 var(--f-mono);
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .cn {
+            margin: 10px 0 0;
+            font: 400 12px/1.45 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .cn:empty {
+            display: none;
+        }
+
+        /* a server that is off: the body dims, the header stays readable */
+        .srv.off {
+            border-style: dashed;
+            border-color: var(--faint);
+        }
+
+        .srv.off .body > .grp:first-child .itm {
+            opacity: .55;
+        }
+
+        .srv.off .body > .grp:first-child .nm {
+            text-decoration: line-through;
+            text-decoration-color: var(--faint);
+        }
+
+        /* ---------- an import arrow, with its license gate on it ---------- */
+        .arr {
+            position: relative;
+            height: 78px;
+            margin-top: 75px; /* lines the arrow up with the imported item in the card on its right */
+        }
+
+        .arr .lbl {
+            position: absolute;
+            top: 6px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font: 400 11.5px/1 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .arr .line {
+            position: absolute;
+            left: 0;
+            right: 6px;
+            top: 50%;
+            border-top: 1.5px solid var(--signal);
+        }
+
+        .arr .head {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            margin-top: -5px;
+            border-left: 8px solid var(--signal);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .gate {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--paper);
+            border: 1.5px solid var(--signal);
+            border-radius: 3px;
+            padding: 3px 7px;
+            font: 400 12px/1.2 var(--f-mono);
+            color: var(--ink);
+            white-space: nowrap;
+        }
+
+        .arr.dead .line {
+            border-top-style: dashed;
+            border-top-color: var(--faint);
+        }
+
+        .arr.dead .head {
+            border-left-color: var(--faint);
+        }
+
+        .arr.dead .gate {
+            border-color: var(--faint);
+            color: var(--muted);
+        }
+
+        /* ---------- what happens, and the key ---------- */
+        .say {
+            margin: 14px 0 0;
+            padding: 8px 12px 9px;
+            background: var(--surface);
+            border-left: 2px solid var(--signal);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .key {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin: 12px 0 0;
+            padding: 0;
+            list-style: none;
+            font: 400 12px/1.4 var(--f-mono);
+            color: var(--muted);
+        }
+
+        .key li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .kw {
+            flex: 0 0 34px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .kbox {
+            width: 30px;
+            height: 14px;
+            border-radius: 2px;
+        }
+
+        .kbox.solid {
+            background: var(--surface-2);
+            border: 1px solid var(--rule);
+        }
+
+        .kbox.dash {
+            border: 1px dashed var(--signal);
+        }
+
+        .kgate {
+            border: 1.5px solid var(--signal);
+            border-radius: 3px;
+            padding: 0 4px;
+            font: 400 10px/13px var(--f-mono);
+            color: var(--ink);
+        }
+
+        /* ---------- narrow: the servers stack and the imports point down ---------- */
+        @media (max-width: 820px) {
+            .stage {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .arr {
+                height: 84px;
+                margin-top: 0;
+            }
+
+            .arr .lbl {
+                left: 46px;
+                right: auto;
+                top: 50%;
+                margin-top: -32px;
+                text-align: left;
+            }
+
+            .arr .line {
+                left: 26px;
+                right: auto;
+                top: 0;
+                bottom: 6px;
+                border-top: 0;
+                border-left: 1.5px solid var(--signal);
+            }
+
+            .arr.dead .line {
+                border-left-style: dashed;
+                border-left-color: var(--faint);
+            }
+
+            .arr .head {
+                right: auto;
+                left: 21px;
+                top: auto;
+                bottom: 0;
+                margin-top: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 8px solid var(--signal);
+                border-bottom: 0;
+            }
+
+            .arr.dead .head {
+                border-left-color: transparent;
+                border-top-color: var(--faint);
+            }
+
+            .gate {
+                left: 26px;
+                top: 50%;
+                transform: translate(0, -50%);
+                margin-left: 20px;
+            }
+
+            .own-grp {
+                min-height: 0;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .fig {
+                padding: 10px 10px 14px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="fig" id="fig">
+
+    <p class="head">
+        <span class="pill">Sketch, not built</span>
+        <span>Part II is an idea, not built. The names are made up, the same three as in the credits roll above.</span>
+    </p>
+
+    <div class="ctl">
+        <span id="keepl">Imports are</span>
+        <span class="seg" role="group" aria-labelledby="keepl">
+            <button type="button" id="k-yes" aria-pressed="true">kept as durable copies (the idea)</button>
+            <button type="button" id="k-no" aria-pressed="false">fetched from the origin</button>
+        </span>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- ============ server A ============ -->
+        <section class="srv" id="srv-A" aria-labelledby="sA">
+            <header>
+                <h2 id="sA">server A</h2>
+                <span class="state" id="st-A">on</span>
+                <button type="button" class="pw" id="pw-A" role="switch" aria-checked="true">
+                    <i aria-hidden="true"></i><span><span class="sr">server A </span><span id="pt-A">on</span></span>
+                </button>
+            </header>
+            <div class="body">
+                <div class="grp own-grp">
+                    <span class="gl">lives here</span>
+                    <div class="itm" id="it-song">
+                        <span class="nm"><span class="nb">peekandpoke/</span><wbr><span class="nb">super-song@v1.0</span></span>
+                        <span class="mt">song · CC BY-SA</span>
+                        <span class="chip" id="ch-song">self-sufficient</span>
+                    </div>
+                </div>
+                <div class="grp" id="cg-A">
+                    <span class="gl" id="cl-A">durable copy of its pinned closure</span>
+                    <div class="itm copy" id="cp-A-bass">
+                        <span class="nm">deep-bass@v2.1</span>
+                        <span class="mt">copy, from server B</span>
+                    </div>
+                    <div class="itm copy" id="cp-A-sample">
+                        <span class="nm">sub-sample@v1.0</span>
+                        <span class="mt">copy, from server C</span>
+                    </div>
+                </div>
+                <p class="cn" id="cn-A"></p>
+            </div>
+        </section>
+
+        <div class="arr" id="ar-AB" role="img"
+             aria-label="super-song on server A imports deep-bass from server B. The gate on this import is deep-bass's license, CC BY-SA.">
+            <span class="lbl">imports</span>
+            <span class="line"></span><span class="head"></span>
+            <span class="gate">CC BY-SA</span>
+        </div>
+
+        <!-- ============ server B ============ -->
+        <section class="srv" id="srv-B" aria-labelledby="sB">
+            <header>
+                <h2 id="sB">server B</h2>
+                <span class="state" id="st-B">on</span>
+                <button type="button" class="pw" id="pw-B" role="switch" aria-checked="true">
+                    <i aria-hidden="true"></i><span><span class="sr">server B </span><span id="pt-B">on</span></span>
+                </button>
+            </header>
+            <div class="body">
+                <div class="grp own-grp">
+                    <span class="gl">lives here</span>
+                    <div class="itm" id="it-bass">
+                        <span class="nm">deep-bass@v2.1</span>
+                        <span class="mt">bass · by ada · CC BY-SA</span>
+                        <span class="chip" id="ch-bass">self-sufficient</span>
+                    </div>
+                </div>
+                <div class="grp" id="cg-B">
+                    <span class="gl" id="cl-B">durable copy of its pinned closure</span>
+                    <div class="itm copy" id="cp-B-sample">
+                        <span class="nm">sub-sample@v1.0</span>
+                        <span class="mt">copy, from server C</span>
+                    </div>
+                </div>
+                <p class="cn" id="cn-B"></p>
+            </div>
+        </section>
+
+        <div class="arr" id="ar-BC" role="img"
+             aria-label="deep-bass on server B imports sub-sample from server C. The gate on this import is sub-sample's license, CC0.">
+            <span class="lbl">imports</span>
+            <span class="line"></span><span class="head"></span>
+            <span class="gate">CC0</span>
+        </div>
+
+        <!-- ============ server C ============ -->
+        <section class="srv" id="srv-C" aria-labelledby="sC">
+            <header>
+                <h2 id="sC">server C</h2>
+                <span class="state" id="st-C">on</span>
+                <button type="button" class="pw" id="pw-C" role="switch" aria-checked="true">
+                    <i aria-hidden="true"></i><span><span class="sr">server C </span><span id="pt-C">on</span></span>
+                </button>
+            </header>
+            <div class="body">
+                <div class="grp own-grp">
+                    <span class="gl">lives here</span>
+                    <div class="itm" id="it-sample">
+                        <span class="nm">sub-sample@v1.0</span>
+                        <span class="mt">sample · by ben · CC0</span>
+                        <span class="chip" id="ch-sample">self-sufficient</span>
+                    </div>
+                </div>
+                <div class="grp" id="cg-C">
+                    <span class="gl">imports nothing, so keeps no copies</span>
+                </div>
+                <p class="cn" id="cn-C"></p>
+            </div>
+        </section>
+    </div>
+
+    <p class="say" id="say" role="status" aria-live="polite">All three servers are on. Every item plays where it lives,
+        and each importing server also holds a copy of what it imports.</p>
+
+    <ul class="key" aria-label="Key">
+        <li><span class="kw"><span class="kbox solid"></span></span>lives on this server</li>
+        <li><span class="kw"><span class="kbox dash"></span></span>a durable copy, kept by the server that imports it</li>
+        <li><span class="kw"><span class="kgate">CC0</span></span>the license gate: the license permits redistribution, so the import exists</li>
+    </ul>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        // The model follows the text of section 12: on a cross-server import the home server keeps a durable
+        // copy of the pinned transitive closure, and every song is then self-sufficient where it lives.
+        var IDS = ["song", "bass", "sample"];
+        var ITEMS = {
+            song: {home: "A", short: "super-song", needs: ["bass", "sample"]},
+            bass: {home: "B", short: "deep-bass", needs: ["sample"]},
+            sample: {home: "C", short: "sub-sample", needs: []}
+        };
+        var COPIES = {A: ["bass", "sample"], B: ["sample"], C: []};
+
+        var on = {A: true, B: true, C: true};
+        var keep = true;
+
+        function $(id) {
+            return document.getElementById(id);
+        }
+
+        function list(names) {
+            if (names.length <= 1) {
+                return names.join("");
+            }
+            return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+        }
+
+        function short(id) {
+            return '<span class="n">' + ITEMS[id].short + "</span>";
+        }
+
+        function lostNeeds(id) {
+            return ITEMS[id].needs.filter(function (n) {
+                return !on[ITEMS[n].home];
+            });
+        }
+
+        function say() {
+            var off = ["A", "B", "C"].filter(function (s) {
+                return !on[s];
+            });
+            if (off.length === 0) {
+                return keep
+                    ? "All three servers are on. Every item plays where it lives, and each importing server also holds a copy of what it imports."
+                    : "All three servers are on. Every import can be fetched from its origin.";
+            }
+            if (off.length === 3) {
+                return "All three servers are off. Nothing plays.";
+            }
+            var parts = [];
+            parts.push((off.length === 1 ? "Server " : "Servers ") + off.join(" and ") + (off.length === 1 ? " is off." : " are off."));
+
+            var gone = IDS.filter(function (id) {
+                return !on[ITEMS[id].home];
+            }).map(short);
+            var one = gone.length === 1;
+            parts.push(list(gone) + (one ? " is" : " are") + " offline, and so is the news of "
+                + (one ? "its" : "their") + " new versions.");
+
+            var fine = [];
+            IDS.forEach(function (id) {
+                if (!on[ITEMS[id].home]) {
+                    return;
+                }
+                var lost = lostNeeds(id);
+                if (lost.length === 0) {
+                    fine.push(short(id));
+                } else if (keep) {
+                    parts.push(short(id) + " still plays on server " + ITEMS[id].home + ": it keeps its own copy of "
+                        + list(lost.map(short)) + ".");
+                } else {
+                    parts.push(short(id) + " cannot play: it needs " + list(lost.map(function (n) {
+                        return short(n) + " from server " + ITEMS[n].home;
+                    })) + ", and " + (lost.length === 1 ? "that server is off." : "those servers are off."));
+                }
+            });
+            if (fine.length) {
+                parts.push(list(fine) + (fine.length === 1 ? " plays" : " play") + " as before.");
+            }
+            return parts.join(" ");
+        }
+
+        function render() {
+            ["A", "B", "C"].forEach(function (s) {
+                var isOn = on[s];
+                $("srv-" + s).classList.toggle("off", !isOn);
+                $("pw-" + s).setAttribute("aria-checked", isOn ? "true" : "false");
+                $("pt-" + s).textContent = isOn ? "on" : "off";
+                $("st-" + s).textContent = isOn ? "on" : "off";
+                $("cn-" + s).textContent = isOn
+                    ? ""
+                    : "Off: what lives here is offline, and so is the news of its new versions.";
+
+                var cg = $("cg-" + s);
+                cg.classList.toggle("ghost", !keep);
+                if (COPIES[s].length) {
+                    $("cl-" + s).textContent = keep ? "durable copy of its pinned closure" : "no copy kept, fetched when played";
+                }
+                COPIES[s].forEach(function (id) {
+                    var el = $("cp-" + s + "-" + id);
+                    var origin = ITEMS[id].home;
+                    var originOff = !on[origin];
+                    el.classList.toggle("saves", keep && originOff && isOn);
+                    var mt = el.querySelector(".mt");
+                    if (!keep) {
+                        mt.textContent = "asked of server " + origin + " each time";
+                    } else if (originOff) {
+                        mt.textContent = "copy, from server " + origin + " (off)";
+                    } else {
+                        mt.textContent = "copy, from server " + origin;
+                    }
+                });
+            });
+
+            IDS.forEach(function (id) {
+                var chip = $("ch-" + id);
+                var it = ITEMS[id];
+                var lost = lostNeeds(id);
+                if (!on[it.home]) {
+                    chip.textContent = "offline";
+                    chip.className = "chip off";
+                } else if (keep || lost.length === 0) {
+                    chip.textContent = "self-sufficient";
+                    chip.className = "chip";
+                } else {
+                    var homes = lost.map(function (n) {
+                        return ITEMS[n].home;
+                    }).filter(function (h, i, a) {
+                        return a.indexOf(h) === i;
+                    });
+                    chip.textContent = (homes.length === 1 ? "needs server " : "needs servers ") + homes.join(" and ");
+                    chip.className = "chip bad";
+                }
+            });
+
+            $("ar-AB").classList.toggle("dead", !(on.A && on.B));
+            $("ar-BC").classList.toggle("dead", !(on.B && on.C));
+
+            $("k-yes").setAttribute("aria-pressed", keep ? "true" : "false");
+            $("k-no").setAttribute("aria-pressed", keep ? "false" : "true");
+            $("say").innerHTML = say();
+        }
+
+        ["A", "B", "C"].forEach(function (s) {
+            $("pw-" + s).addEventListener("click", function () {
+                on[s] = !on[s];
+                render();
+            });
+        });
+        $("k-yes").addEventListener("click", function () {
+            keep = true;
+            render();
+        });
+        $("k-no").addEventListener("click", function () {
+            keep = false;
+            render();
+        });
+
+        render();
+
+        // Self-sizing: report the content height to the host page.
+        function post() {
+            var h = Math.ceil(document.body.getBoundingClientRect().height);
+            try {
+                window.parent.postMessage({type: "klang-figure-height", height: h}, "*");
+            } catch (err) { /* nobody listens: the default frame height applies */
+            }
+        }
+
+        if ("ResizeObserver" in window) {
+            new ResizeObserver(post).observe(document.body);
+        }
+        window.addEventListener("resize", post);
+        window.addEventListener("load", post);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(post);
+        }
+        post();
+    })();
+</script>
+</body>
+</html>

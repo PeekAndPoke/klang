@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A pattern is a function of a time span</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    /* Tokens copied from the whitepaper's :root (the Klang UI palette, dark only). */
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    .fig { display: flow-root; margin: 0; padding: 2px 0 6px; }
+    button, input { font: inherit; }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+
+    code, .m { font-family: var(--f-mono); font-size: 0.92em; }
+
+    /* ---------- controls ---------- */
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 24px;
+        margin: 0 0 8px;
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+        color: var(--muted);
+    }
+    .no-js .controls, .no-js .hint { display: none; }
+    .js .static-note { display: none; }
+    .static-note { font-family: var(--f-mono); font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+
+    .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+    .ctl label, .ctl .lab { color: var(--ink); }
+    .ctl output { color: var(--gold); min-width: 3.4em; display: inline-block; }
+    input[type="range"] { width: 210px; max-width: 100%; accent-color: var(--gold); height: 24px; margin: 0; }
+
+    .chip {
+        background: var(--surface);
+        color: var(--muted);
+        border: 1px solid var(--rule);
+        padding: 3px 10px;
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.4;
+        cursor: pointer;
+    }
+    .chip:hover { border-color: var(--gold); color: var(--ink); }
+    .chip[aria-pressed="true"] { border-color: var(--gold); background: rgba(232, 184, 75, 0.12); color: var(--ink); }
+
+    .hint { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); margin: 0 0 10px; }
+
+    .query {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        color: var(--muted);
+        margin: 4px 0 10px;
+        min-height: 1.5em;
+    }
+    .query b { color: var(--gold); font-weight: 400; }
+    .query .call { color: var(--ink); }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 18px;
+        margin: 0 0 6px;
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        color: var(--muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { width: 16px; height: 11px; display: inline-block; border: 1px solid var(--signal); }
+    .sw.hit { background: var(--signal); }
+    .sw.carry { background: rgba(86, 182, 194, 0.42); }
+    .sw.idle { background: var(--signal-bg); border-color: rgba(86, 182, 194, 0.55); }
+    .sw.win { background: rgba(232, 184, 75, 0.14); border-color: var(--gold); }
+
+    /* ---------- the plot ---------- */
+    #plot { touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+    #plot.dragging { cursor: grabbing; }
+    #plot svg { display: block; width: 100%; height: auto; }
+    #plot svg text { font-family: var(--f-mono); }
+
+    .gl { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 1 3; }
+    .cb { stroke: var(--faint); stroke-width: 1; }
+    .ax { stroke: var(--muted); stroke-width: 1; }
+    .tk { font-size: 10px; fill: var(--muted); }
+    .rl { font-size: 12px; fill: var(--ink); }
+    .rl.small { font-size: 11.5px; }
+    .ru { font-size: 10px; fill: var(--faint); }
+
+    .ev.idle { fill: var(--signal-bg); stroke: var(--signal); stroke-opacity: 0.55; stroke-width: 1; }
+    .ev.carry { fill: rgba(86, 182, 194, 0.42); stroke: var(--signal); stroke-width: 1; }
+    .ev.hit { fill: var(--signal); stroke: var(--signal); stroke-width: 1; }
+    .et { font-size: 10px; text-anchor: middle; }
+    .et.idle { fill: var(--muted); }
+    .et.carry { fill: var(--ink); }
+    .et.hit { fill: var(--paper); }
+
+    .win { fill: rgba(232, 184, 75, 0.10); stroke: var(--gold); stroke-width: 1.5; }
+    .grip { fill: var(--gold); }
+
+    /* ---------- ring and results ---------- */
+    .bottom {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px 22px;
+        margin-top: 12px;
+        align-items: start;
+    }
+    .ringbox { max-width: 250px; }
+    .ringbox svg { display: block; width: 100%; height: auto; }
+    .ringbox svg text { font-family: var(--f-mono); }
+    .rc { fill: var(--surface); stroke: var(--rule); stroke-width: 1; }
+    .rp.idle { fill: var(--signal-bg); stroke: var(--signal); stroke-opacity: 0.55; stroke-width: 1; }
+    .rp.carry { fill: rgba(86, 182, 194, 0.42); stroke: var(--signal); stroke-width: 1; }
+    .rp.hit { fill: var(--signal); stroke: var(--signal); stroke-width: 1; }
+    .ri { font-size: 9px; fill: var(--faint); text-anchor: middle; }
+    .rn { font-size: 12px; text-anchor: middle; }
+    .rn.idle { fill: var(--muted); }
+    .rn.carry { fill: var(--ink); }
+    .rn.hit { fill: var(--paper); }
+    .rt { font-size: 15px; fill: var(--ink); text-anchor: middle; }
+    .rs { font-size: 9.5px; fill: var(--muted); text-anchor: middle; }
+    .warc { fill: none; stroke: var(--gold); stroke-width: 4; }
+    .ringnote { margin: 6px 0 0; font-family: var(--f-mono); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+    .ringnote b { color: var(--ink); font-weight: 400; }
+
+    table.res { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.res th {
+        font-family: var(--f-mono);
+        font-weight: 400;
+        font-size: 11.5px;
+        text-align: left;
+        color: var(--muted);
+        padding: 0 10px 4px 0;
+        border-bottom: 1px solid var(--rule);
+    }
+    table.res td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--surface-2); vertical-align: top; }
+    table.res td:first-child { white-space: nowrap; font-family: var(--f-mono); font-size: 12px; color: var(--ink); }
+    table.res td .n { font-family: var(--f-mono); color: var(--gold); margin-right: 6px; }
+    table.res td .nm { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+    table.res td .none { color: var(--faint); }
+
+    @media (min-width: 640px) {
+        .bottom { grid-template-columns: 250px minmax(0, 1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+    }
+</style>
+</head>
+<body>
+<figure class="fig" id="fig" aria-label="A cycle grid. Four patterns drawn as strips over three cycles, and a(3,8) as a ring. A query window you can move shows which events each pattern returns for that span of time.">
+    <p class="static-note">Shown with the query window covering half a cycle, from 0.75 to 1.25.</p>
+
+    <div class="controls" role="group" aria-label="Query window">
+        <div class="ctl">
+            <label for="from">Window starts at</label>
+            <input type="range" id="from" min="0" max="2.5" step="0.0625" value="0.75" aria-describedby="q">
+            <output id="fromOut" for="from">0.75</output>
+        </div>
+        <div class="ctl" role="group" aria-label="Window width, in cycles">
+            <span class="lab">Width</span>
+            <button type="button" class="chip" data-w="0.125" aria-pressed="false" aria-label="one eighth of a cycle">⅛</button>
+            <button type="button" class="chip" data-w="0.25" aria-pressed="false" aria-label="a quarter of a cycle">¼</button>
+            <button type="button" class="chip" data-w="0.5" aria-pressed="true" aria-label="half a cycle">½</button>
+            <button type="button" class="chip" data-w="1" aria-pressed="false" aria-label="one cycle">1</button>
+            <button type="button" class="chip" data-w="2" aria-pressed="false" aria-label="two cycles">2</button>
+            <span>cycles</span>
+        </div>
+    </div>
+    <p class="hint">Drag the gold window, or click anywhere on the grid to move it. The app itself asks for one whole cycle at a time.</p>
+
+    <p class="query" id="q" aria-live="polite"><!--R:q--><span class="call">queryArc(0.75, 1.25)</span> asks every pattern below the same question: <b>10 events</b> in all.<!--/R:q--></p>
+
+    <div class="legend" aria-hidden="true">
+        <span><i class="sw win"></i>the query window</span>
+        <span><i class="sw hit"></i>starts inside it</span>
+        <span><i class="sw carry"></i>started earlier, still overlaps</span>
+        <span><i class="sw idle"></i>outside the window</span>
+    </div>
+
+    <div id="plot"><!--R:plot--><svg viewBox="0 0 880 178" width="880" height="178" role="img" aria-label="Four patterns as strips over three cycles: bd sd bd sd, hh*8, ~ ~ cp ~ and &lt;a b c&gt;. The query window runs from 0.75 to 1.25 cycles."><line class="cb" x1="111" y1="20" x2="111" y2="176"/><line class="gl" x1="174.8" y1="20" x2="174.8" y2="176"/><line class="gl" x1="238.5" y1="20" x2="238.5" y2="176"/><line class="gl" x1="302.3" y1="20" x2="302.3" y2="176"/><line class="cb" x1="366" y1="20" x2="366" y2="176"/><line class="gl" x1="429.8" y1="20" x2="429.8" y2="176"/><line class="gl" x1="493.5" y1="20" x2="493.5" y2="176"/><line class="gl" x1="557.3" y1="20" x2="557.3" y2="176"/><line class="cb" x1="621" y1="20" x2="621" y2="176"/><line class="gl" x1="684.8" y1="20" x2="684.8" y2="176"/><line class="gl" x1="748.5" y1="20" x2="748.5" y2="176"/><line class="gl" x1="812.3" y1="20" x2="812.3" y2="176"/><line class="cb" x1="876" y1="20" x2="876" y2="176"/><line class="ax" x1="111" y1="17" x2="876" y2="17"/><text class="tk" x="111" y="9" text-anchor="start">0</text><text class="tk" x="366" y="9" text-anchor="middle">1</text><text class="tk" x="621" y="9" text-anchor="middle">2</text><text class="tk" x="876" y="9" text-anchor="end">3</text><text class="ru" x="0" y="9">time, in cycles</text><text class="rl" x="0" y="39">bd sd bd sd</text><rect class="ev idle" x="111.5" y="22" width="62.8" height="26"/><text class="et idle" x="142.9" y="38.5">bd</text><rect class="ev idle" x="175.3" y="22" width="62.8" height="26"/><text class="et idle" x="206.6" y="38.5">sd</text><rect class="ev idle" x="239" y="22" width="62.8" height="26"/><text class="et idle" x="270.4" y="38.5">bd</text><rect class="ev hit" x="302.8" y="22" width="62.8" height="26"/><text class="et hit" x="334.1" y="38.5">sd</text><rect class="ev hit" x="366.5" y="22" width="62.8" height="26"/><text class="et hit" x="397.9" y="38.5">bd</text><rect class="ev idle" x="430.3" y="22" width="62.8" height="26"/><text class="et idle" x="461.6" y="38.5">sd</text><rect class="ev idle" x="494" y="22" width="62.8" height="26"/><text class="et idle" x="525.4" y="38.5">bd</text><rect class="ev idle" x="557.8" y="22" width="62.8" height="26"/><text class="et idle" x="589.1" y="38.5">sd</text><rect class="ev idle" x="621.5" y="22" width="62.8" height="26"/><text class="et idle" x="652.9" y="38.5">bd</text><rect class="ev idle" x="685.3" y="22" width="62.8" height="26"/><text class="et idle" x="716.6" y="38.5">sd</text><rect class="ev idle" x="749" y="22" width="62.8" height="26"/><text class="et idle" x="780.4" y="38.5">bd</text><rect class="ev idle" x="812.8" y="22" width="62.8" height="26"/><text class="et idle" x="844.1" y="38.5">sd</text><text class="rl" x="0" y="77">hh*8</text><rect class="ev idle" x="111.5" y="60" width="30.9" height="26"/><text class="et idle" x="126.9" y="76.5">hh</text><rect class="ev idle" x="143.4" y="60" width="30.9" height="26"/><text class="et idle" x="158.8" y="76.5">hh</text><rect class="ev idle" x="175.3" y="60" width="30.9" height="26"/><text class="et idle" x="190.7" y="76.5">hh</text><rect class="ev idle" x="207.1" y="60" width="30.9" height="26"/><text class="et idle" x="222.6" y="76.5">hh</text><rect class="ev idle" x="239" y="60" width="30.9" height="26"/><text class="et idle" x="254.4" y="76.5">hh</text><rect class="ev idle" x="270.9" y="60" width="30.9" height="26"/><text class="et idle" x="286.3" y="76.5">hh</text><rect class="ev hit" x="302.8" y="60" width="30.9" height="26"/><text class="et hit" x="318.2" y="76.5">hh</text><rect class="ev hit" x="334.6" y="60" width="30.9" height="26"/><text class="et hit" x="350.1" y="76.5">hh</text><rect class="ev hit" x="366.5" y="60" width="30.9" height="26"/><text class="et hit" x="381.9" y="76.5">hh</text><rect class="ev hit" x="398.4" y="60" width="30.9" height="26"/><text class="et hit" x="413.8" y="76.5">hh</text><rect class="ev idle" x="430.3" y="60" width="30.9" height="26"/><text class="et idle" x="445.7" y="76.5">hh</text><rect class="ev idle" x="462.1" y="60" width="30.9" height="26"/><text class="et idle" x="477.6" y="76.5">hh</text><rect class="ev idle" x="494" y="60" width="30.9" height="26"/><text class="et idle" x="509.4" y="76.5">hh</text><rect class="ev idle" x="525.9" y="60" width="30.9" height="26"/><text class="et idle" x="541.3" y="76.5">hh</text><rect class="ev idle" x="557.8" y="60" width="30.9" height="26"/><text class="et idle" x="573.2" y="76.5">hh</text><rect class="ev idle" x="589.6" y="60" width="30.9" height="26"/><text class="et idle" x="605.1" y="76.5">hh</text><rect class="ev idle" x="621.5" y="60" width="30.9" height="26"/><text class="et idle" x="636.9" y="76.5">hh</text><rect class="ev idle" x="653.4" y="60" width="30.9" height="26"/><text class="et idle" x="668.8" y="76.5">hh</text><rect class="ev idle" x="685.3" y="60" width="30.9" height="26"/><text class="et idle" x="700.7" y="76.5">hh</text><rect class="ev idle" x="717.1" y="60" width="30.9" height="26"/><text class="et idle" x="732.6" y="76.5">hh</text><rect class="ev idle" x="749" y="60" width="30.9" height="26"/><text class="et idle" x="764.4" y="76.5">hh</text><rect class="ev idle" x="780.9" y="60" width="30.9" height="26"/><text class="et idle" x="796.3" y="76.5">hh</text><rect class="ev idle" x="812.8" y="60" width="30.9" height="26"/><text class="et idle" x="828.2" y="76.5">hh</text><rect class="ev idle" x="844.6" y="60" width="30.9" height="26"/><text class="et idle" x="860.1" y="76.5">hh</text><text class="rl" x="0" y="115">~ ~ cp ~</text><rect class="ev idle" x="239" y="98" width="62.8" height="26"/><text class="et idle" x="270.4" y="114.5">cp</text><rect class="ev idle" x="494" y="98" width="62.8" height="26"/><text class="et idle" x="525.4" y="114.5">cp</text><rect class="ev idle" x="749" y="98" width="62.8" height="26"/><text class="et idle" x="780.4" y="114.5">cp</text><text class="rl" x="0" y="153">&lt;a b c&gt;</text><rect class="ev carry" x="111.5" y="136" width="254" height="26"/><text class="et carry" x="238.5" y="152.5">a</text><rect class="ev hit" x="366.5" y="136" width="254" height="26"/><text class="et hit" x="493.5" y="152.5">b</text><rect class="ev idle" x="621.5" y="136" width="254" height="26"/><text class="et idle" x="748.5" y="152.5">c</text><rect class="win" x="302.3" y="13" width="127.5" height="163"/><rect class="grip" x="356.1" y="12" width="20" height="4"/></svg><!--/R:plot--></div>
+
+    <div class="bottom">
+        <div class="ringbox">
+            <div id="ring"><!--R:ring--><svg viewBox="0 0 220 226" role="img" aria-label="a(3,8) as a ring of eight steps read clockwise from the top: pulses on steps 0, 3, 6. The gold arc is the query window folded onto one cycle."><text class="rs" x="110" y="10">cycle starts at the top</text><path class="rp hit" d="M111.5,38 A84 84 0 0 1 168.4,61.6 L146.1,84.6 A52 52 0 0 0 110.9,70 Z"/><text class="rn hit" x="133" y="70.6">a</text><text class="ri" x="138.7" y="55.7">0</text><path class="rc" d="M170.4,63.6 A84 84 0 0 1 194,120.5 L162,121.1 A52 52 0 0 0 147.4,85.9 Z"/><text class="ri" x="179.3" y="96.3">1</text><path class="rc" d="M194,123.5 A84 84 0 0 1 170.4,180.4 L147.4,158.1 A52 52 0 0 0 162,122.9 Z"/><text class="ri" x="179.3" y="153.7">2</text><path class="rp idle" d="M168.4,182.4 A84 84 0 0 1 111.5,206 L110.9,174 A52 52 0 0 0 146.1,159.4 Z"/><text class="rn idle" x="133" y="181.4">a</text><text class="ri" x="138.7" y="194.3">3</text><path class="rc" d="M108.5,206 A84 84 0 0 1 51.6,182.4 L73.9,159.4 A52 52 0 0 0 109.1,174 Z"/><text class="ri" x="81.3" y="194.3">4</text><path class="rc" d="M49.6,180.4 A84 84 0 0 1 26,123.5 L58,122.9 A52 52 0 0 0 72.6,158.1 Z"/><text class="ri" x="40.7" y="153.7">5</text><path class="rp hit" d="M26,120.5 A84 84 0 0 1 49.6,63.6 L72.6,85.9 A52 52 0 0 0 58,121.1 Z"/><text class="rn hit" x="54.6" y="103">a</text><text class="ri" x="40.7" y="96.3">6</text><path class="rc" d="M51.6,61.6 A84 84 0 0 1 108.5,38 L109.1,70 A52 52 0 0 0 73.9,84.6 Z"/><text class="ri" x="81.3" y="55.7">7</text><text class="rt" x="110" y="123">a(3,8)</text><text class="rs" x="110" y="137">one cycle</text><path class="warc" d="M14,122 A96 96 0 0 1 206,122"/></svg><!--/R:ring--></div>
+            <p class="ringnote" id="ringnote"><!--R:ringnote-->Pulses at steps <b>0, 3, 6</b> (cycle time 0, 3/8, 6/8). The gaps between them are <b>3, 3, 2</b> steps: as even as eight steps allow.<!--/R:ringnote--></p>
+        </div>
+        <table class="res" aria-label="What each pattern returns for the current window">
+            <thead><tr><th>pattern</th><th>returns for the window</th></tr></thead>
+            <tbody id="res"><!--R:res--><tr><td>bd sd bd sd</td><td><span class="n">2</span><span class="nm">sd, bd</span></td></tr><tr><td>hh*8</td><td><span class="n">4</span><span class="nm">hh&nbsp;×4</span></td></tr><tr><td>~ ~ cp ~</td><td><span class="n">0</span><span class="none">nothing: a rest is an answer too</span></td></tr><tr><td>&lt;a b c&gt;</td><td><span class="n">2</span><span class="nm">a, b</span></td></tr><tr><td>a(3,8)</td><td><span class="n">2</span><span class="nm">a&nbsp;×2</span></td></tr><!--/R:res--></tbody>
+        </table>
+    </div>
+</figure>
+
+<script>
+(function () {
+    "use strict";
+
+    var CYCLES = 3;            // the time axis of this figure: cycles 0, 1 and 2
+    var GRID = 1 / 16;         // the window moves in sixteenths of a cycle (all exact in binary)
+    var DEFAULT = { from: 0.75, width: 0.5 };
+    var FRACTIONS = { 0.125: "⅛", 0.25: "¼", 0.5: "½", 1: "1", 2: "2" };
+
+    // ---- the Euclidean rhythm: a port of common/.../math/bjorklund.kt, step for step ---------------------
+    function bjorklund(pulses, steps) {
+        if (steps <= 0) { return []; }
+        var onsets = Math.min(Math.abs(pulses), steps);
+        var rests = steps - onsets;
+        var primary = [], tail = [], i;
+        for (i = 0; i < onsets; i++) { primary.push([1]); }
+        for (i = 0; i < rests; i++) { tail.push([0]); }
+        while (Math.min(primary.length, tail.length) > 1) {
+            var fold = Math.min(primary.length, tail.length);
+            var folded = [];
+            for (i = 0; i < fold; i++) {
+                primary[i] = primary[i].concat(tail[i]);
+                folded.push(primary[i]);
+            }
+            var leftover = primary.length > tail.length ? primary : tail;
+            var remainder = leftover.slice(fold);
+            primary = folded;
+            tail = remainder;
+        }
+        var pattern = [].concat.apply([], primary.concat(tail));
+        return pulses < 0 ? pattern.map(function (x) { return 1 - x; }) : pattern;
+    }
+
+    var EUCLID = bjorklund(3, 8);   // [1, 0, 0, 1, 0, 0, 1, 0]
+    var PULSE_STEPS = [];
+    EUCLID.forEach(function (v, i) { if (v === 1) { PULSE_STEPS.push(i); } });
+
+    // ---- the patterns: events per cycle, as [name, begin, end] in cycles --------------------------------
+    // A sequence splits a cycle equally between its steps (SequencePattern); "hh*8" is the step repeated
+    // eight times inside the cycle; "~" is a rest; "<a b c>" plays one step per cycle, rotating.
+    function seq(names) {
+        return function (c) {
+            var out = [];
+            names.forEach(function (n, i) {
+                if (n !== "~") { out.push([n, c + i / names.length, c + (i + 1) / names.length]); }
+            });
+            return out;
+        };
+    }
+    var PATTERNS = [
+        { label: "bd sd bd sd", cycle: seq(["bd", "sd", "bd", "sd"]) },
+        { label: "hh*8", cycle: seq(["hh", "hh", "hh", "hh", "hh", "hh", "hh", "hh"]) },
+        { label: "~ ~ cp ~", cycle: seq(["~", "~", "cp", "~"]) },
+        { label: "<a b c>", cycle: function (c) { return [["abc".charAt(c % 3), c, c + 1]]; } },
+        { label: "a(3,8)", cycle: function (c) {
+            return PULSE_STEPS.map(function (s) { return ["a", c + s / 8, c + (s + 1) / 8]; });
+        } }
+    ];
+    var STRIPS = PATTERNS.slice(0, 4);   // the fifth is drawn as a ring
+
+    function eventsOf(p) {
+        var out = [];
+        for (var c = 0; c < CYCLES; c++) { out = out.concat(p.cycle(c)); }
+        return out;
+    }
+
+    // What queryArc(from, to) returns: the events whose span overlaps [from, to). An event that starts
+    // inside the window is "hit", one that began earlier is "carry" (SequencePattern: `scaledPart.end > from`,
+    // AtomicPattern: `begin < to && begin + 1 > from`).
+    function stateOf(ev, st) {
+        var to = st.from + st.width;
+        if (ev[1] < to && ev[2] > st.from) { return ev[1] >= st.from ? "hit" : "carry"; }
+        return "idle";
+    }
+
+    function clampFrom(v, width) {
+        var max = CYCLES - width;
+        v = Math.round(v / GRID) * GRID;
+        return Math.min(max, Math.max(0, v));
+    }
+
+    function num(v) { return String(Math.round(v * 10000) / 10000); }
+    function r1(n) { return Math.round(n * 10) / 10; }
+
+    // ---- the strips ----------------------------------------------------------------------------------
+    function plotSVG(W, st) {
+        var labelW = W >= 560 ? 108 : 0;
+        var x0 = labelW + 3, x1 = W - 4;
+        var sc = (x1 - x0) / CYCLES;
+        var rulerH = 22, rowH = 26, gap = 12, labelLine = labelW ? 0 : 18;
+        var block = rowH + gap + labelLine;
+        var H = rulerH + STRIPS.length * block + 4;
+        var s = "", i, k, x;
+
+        function X(t) { return r1(x0 + t * sc); }
+
+        // grid: quarters of a cycle, cycle boundaries
+        for (k = 0; k <= CYCLES * 4; k++) {
+            x = X(k / 4);
+            s += '<line class="' + (k % 4 === 0 ? "cb" : "gl") + '" x1="' + x + '" y1="' + (rulerH - 2) + '" x2="' + x + '" y2="' + (H - 2) + '"/>';
+        }
+        // ruler
+        s += '<line class="ax" x1="' + X(0) + '" y1="' + (rulerH - 5) + '" x2="' + X(CYCLES) + '" y2="' + (rulerH - 5) + '"/>';
+        for (k = 0; k <= CYCLES; k++) {
+            s += '<text class="tk" x="' + X(k) + '" y="9" text-anchor="' + (k === 0 ? "start" : k === CYCLES ? "end" : "middle") + '">' + k + "</text>";
+        }
+        if (labelW) { s += '<text class="ru" x="0" y="9">time, in cycles</text>'; }
+
+        // rows
+        STRIPS.forEach(function (p, r) {
+            var top = rulerH + r * block;
+            var y = top + labelLine;
+            if (labelW) {
+                s += '<text class="rl" x="0" y="' + r1(y + rowH / 2 + 4) + '">' + escapeHtml(p.label) + "</text>";
+            } else {
+                s += '<text class="rl small" x="0" y="' + r1(top + 12) + '">' + escapeHtml(p.label) + "</text>";
+            }
+            eventsOf(p).forEach(function (ev) {
+                var state = stateOf(ev, st);
+                var ex = x0 + ev[1] * sc, w = (ev[2] - ev[1]) * sc;
+                s += '<rect class="ev ' + state + '" x="' + r1(ex + 0.5) + '" y="' + y + '" width="' + r1(Math.max(w - 1, 1)) + '" height="' + rowH + '"/>';
+                if (w >= 8 + 6.2 * ev[0].length) {
+                    s += '<text class="et ' + state + '" x="' + r1(ex + w / 2) + '" y="' + r1(y + rowH / 2 + 3.5) + '">' + ev[0] + "</text>";
+                }
+            });
+        });
+
+        // the query window
+        var wx = X(st.from), ww = r1(st.width * sc);
+        s += '<rect class="win" x="' + wx + '" y="13" width="' + ww + '" height="' + (H - 15) + '"/>';
+        s += '<rect class="grip" x="' + r1(wx + ww / 2 - Math.min(10, ww / 2)) + '" y="12" width="' + r1(Math.min(20, ww)) + '" height="4"/>';
+
+        var label = "Four patterns as strips over three cycles: bd sd bd sd, hh*8, ~ ~ cp ~ and <a b c>. The query window runs from " +
+            num(st.from) + " to " + num(st.from + st.width) + " cycles.";
+        return '<svg viewBox="0 0 ' + r1(W) + " " + H + '" width="' + r1(W) + '" height="' + H + '" role="img" aria-label="' + escapeHtml(label) + '">' + s + "</svg>";
+    }
+
+    // ---- the ring: a(3,8) ----------------------------------------------------------------------------
+    function ringSVG(st) {
+        var cx = 110, cy = 122, R = 84, r = 52, Rw = 96;
+        var to = st.from + st.width;
+        var s = "", i;
+
+        function P(rad, deg) {
+            var a = deg * Math.PI / 180;
+            return [r1(cx + rad * Math.sin(a)), r1(cy - rad * Math.cos(a))];
+        }
+        function sector(i) {
+            var a0 = i * 45 + 1, a1 = (i + 1) * 45 - 1;
+            var o0 = P(R, a0), o1 = P(R, a1), i1 = P(r, a1), i0 = P(r, a0);
+            return "M" + o0 + " A" + R + " " + R + " 0 0 1 " + o1 + " L" + i1 + " A" + r + " " + r + " 0 0 0 " + i0 + " Z";
+        }
+
+        // per step: the best state over every cycle the window can touch
+        var rank = { idle: 0, carry: 1, hit: 2 };
+        var stateOfStep = [];
+        for (i = 0; i < 8; i++) {
+            var best = "idle";
+            if (EUCLID[i] === 1) {
+                for (var c = 0; c < CYCLES; c++) {
+                    var ev = ["a", c + i / 8, c + (i + 1) / 8];
+                    var stt = stateOf(ev, st);
+                    if (rank[stt] > rank[best]) { best = stt; }
+                }
+            }
+            stateOfStep.push(best);
+        }
+
+        s += '<text class="rs" x="' + cx + '" y="10">cycle starts at the top</text>';
+        for (i = 0; i < 8; i++) {
+            var mid = i * 45 + 22.5;
+            if (EUCLID[i] === 1) {
+                s += '<path class="rp ' + stateOfStep[i] + '" d="' + sector(i) + '"/>';
+                var pn = P(60, mid);
+                s += '<text class="rn ' + stateOfStep[i] + '" x="' + pn[0] + '" y="' + (pn[1] + 4) + '">a</text>';
+            } else {
+                s += '<path class="rc" d="' + sector(i) + '"/>';
+            }
+            var pi = P(75, mid);
+            s += '<text class="ri" x="' + pi[0] + '" y="' + (pi[1] + 3) + '">' + i + "</text>";
+        }
+        s += '<text class="rt" x="' + cx + '" y="' + (cy + 1) + '">a(3,8)</text>';
+        s += '<text class="rs" x="' + cx + '" y="' + (cy + 15) + '">one cycle</text>';
+
+        // the window, as an arc on the outside; two or more cycles wrap the whole ring
+        if (st.width >= 1) {
+            s += '<circle class="warc" cx="' + cx + '" cy="' + cy + '" r="' + Rw + '"/>';
+        } else {
+            var p0 = (st.from - Math.floor(st.from)) * 360;
+            var p1 = p0 + st.width * 360;
+            var a = P(Rw, p0), b = P(Rw, p1);
+            s += '<path class="warc" d="M' + a + " A" + Rw + " " + Rw + " 0 " + (st.width > 0.5 ? 1 : 0) + " 1 " + b + '"/>';
+        }
+
+        var label = "a(3,8) as a ring of eight steps read clockwise from the top: pulses on steps " + PULSE_STEPS.join(", ") +
+            ". The gold arc is the query window folded onto one cycle.";
+        return '<svg viewBox="0 0 220 226" role="img" aria-label="' + escapeHtml(label) + '">' + s + "</svg>";
+    }
+
+    function ringNote() {
+        var gaps = [];
+        PULSE_STEPS.forEach(function (p, i) {
+            var next = i + 1 < PULSE_STEPS.length ? PULSE_STEPS[i + 1] : PULSE_STEPS[0] + EUCLID.length;
+            gaps.push(next - p);
+        });
+        var times = PULSE_STEPS.map(function (p) { return p + "/8"; });
+        return "Pulses at steps <b>" + PULSE_STEPS.join(", ") + "</b> (cycle time 0, " + times.slice(1).join(", ") +
+            "). The gaps between them are <b>" + gaps.join(", ") + "</b> steps: as even as eight steps allow.";
+    }
+
+    // ---- the readout ---------------------------------------------------------------------------------
+    function summarize(evs) {
+        if (evs.length === 0) { return '<span class="n">0</span><span class="none">nothing: a rest is an answer too</span>'; }
+        var groups = [];
+        evs.forEach(function (e) {
+            var g = groups[groups.length - 1];
+            if (g && g.name === e[0]) { g.n++; } else { groups.push({ name: e[0], n: 1 }); }
+        });
+        var names = groups.map(function (g) { return g.n > 1 ? g.name + "&nbsp;×" + g.n : g.name; }).join(", ");
+        return '<span class="n">' + evs.length + '</span><span class="nm">' + names + "</span>";
+    }
+
+    function resHTML(st) {
+        return PATTERNS.map(function (p) {
+            var got = eventsOf(p).filter(function (ev) { return stateOf(ev, st) !== "idle"; });
+            return "<tr><td>" + escapeHtml(p.label) + "</td><td>" + summarize(got) + "</td></tr>";
+        }).join("");
+    }
+
+    function total(st) {
+        var n = 0;
+        PATTERNS.forEach(function (p) {
+            n += eventsOf(p).filter(function (ev) { return stateOf(ev, st) !== "idle"; }).length;
+        });
+        return n;
+    }
+
+    function queryHTML(st) {
+        var to = st.from + st.width;
+        return '<span class="call">queryArc(' + num(st.from) + ", " + num(to) + ")</span> asks every pattern below the same question: <b>" +
+            total(st) + " events</b> in all.";
+    }
+
+    function escapeHtml(t) {
+        return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function regions(W, st) {
+        return { q: queryHTML(st), plot: plotSVG(W, st), ring: ringSVG(st), ringnote: ringNote(), res: resHTML(st) };
+    }
+
+    // For the static build: a node script fills the no-JavaScript state from this same code.
+    if (typeof window !== "undefined" && window.__BUILD) {
+        window.__regions = function () { return regions(880, DEFAULT); };
+        return;
+    }
+
+    // ---- wiring --------------------------------------------------------------------------------------
+    document.documentElement.className = document.documentElement.className.replace("no-js", "js");
+
+    var st = { from: DEFAULT.from, width: DEFAULT.width };
+    var plot = document.getElementById("plot");
+    var fromInput = document.getElementById("from");
+    var fromOut = document.getElementById("fromOut");
+    var drag = null;
+
+    function put(id, html) {
+        var el = document.getElementById(id);
+        if (el) { el.innerHTML = html; }
+    }
+
+    function plotWidth() {
+        return Math.max(280, Math.floor(plot.getBoundingClientRect().width));
+    }
+
+    function draw() {
+        st.from = clampFrom(st.from, st.width);
+        var r = regions(plotWidth(), st);
+        put("q", r.q);
+        put("plot", r.plot);
+        put("ring", r.ring);
+        put("ringnote", r.ringnote);
+        put("res", r.res);
+        fromInput.max = String(CYCLES - st.width);
+        fromInput.value = String(st.from);
+        fromInput.setAttribute("aria-valuetext", "from " + num(st.from) + " to " + num(st.from + st.width) + " cycles");
+        fromOut.textContent = num(st.from);
+        var chips = document.querySelectorAll("[data-w]");
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].setAttribute("aria-pressed", String(Number(chips[i].getAttribute("data-w")) === st.width));
+        }
+    }
+
+    function timeAt(ev) {
+        var box = plot.getBoundingClientRect();
+        var W = box.width;
+        var labelW = W >= 560 ? 108 : 0;
+        var x0 = labelW + 3, x1 = W - 4;
+        return (ev.clientX - box.left - x0) / ((x1 - x0) / CYCLES);
+    }
+
+    plot.addEventListener("pointerdown", function (ev) {
+        if (ev.button !== undefined && ev.button !== 0) { return; }
+        var t = timeAt(ev);
+        var inside = t >= st.from && t <= st.from + st.width;
+        drag = { offset: inside ? t - st.from : st.width / 2 };
+        if (!inside) { st.from = t - drag.offset; draw(); }
+        try { plot.setPointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
+        plot.classList.add("dragging");
+        ev.preventDefault();
+    });
+    plot.addEventListener("pointermove", function (ev) {
+        if (!drag) { return; }
+        st.from = timeAt(ev) - drag.offset;
+        draw();
+    });
+    function endDrag() { drag = null; plot.classList.remove("dragging"); }
+    plot.addEventListener("pointerup", endDrag);
+    plot.addEventListener("pointercancel", endDrag);
+
+    fromInput.addEventListener("input", function () {
+        st.from = Number(fromInput.value);
+        draw();
+    });
+
+    document.addEventListener("click", function (ev) {
+        var t = ev.target;
+        while (t && t !== document && !(t.getAttribute && t.getAttribute("data-w"))) { t = t.parentNode; }
+        if (!t || t === document) { return; }
+        st.width = Number(t.getAttribute("data-w"));
+        draw();
+    });
+
+    draw();
+
+    // ---- height reporting and redraw on resize -----------------------------------------------------
+    var lastW = plotWidth();
+    function report() {
+        var h = Math.ceil(document.body.getBoundingClientRect().height);
+        try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no parent */ }
+    }
+    function onSize() {
+        var w = plotWidth();
+        if (w !== lastW) { lastW = w; draw(); }
+        report();
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", onSize);
+    if (window.ResizeObserver) { new ResizeObserver(onSize).observe(document.body); }
+    report();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three owners: instrument, channel, bus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    :root {
+        color-scheme: dark;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --rule-soft: #2C313A;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --code-cm: #5C6370;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        margin: 0;
+        padding: 2px 2px 4px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+    figure { margin: 0; display: flex; flex-direction: column; gap: 18px; }
+    code { font-family: var(--f-mono); font-size: 0.86em; }
+    .st-str { color: var(--code-str); }
+
+    /* ---- the line: one chip per call ---- */
+    .line-lab, .lab {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 6px;
+    }
+    .line { display: flex; flex-wrap: wrap; gap: 8px 6px; align-items: flex-start; }
+    .call {
+        appearance: none;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        text-align: left;
+        font-family: var(--f-mono);
+        font-size: 13.5px;
+        line-height: 1.25;
+        color: var(--ink);
+        background: var(--code-bg);
+        border: 1px solid var(--rule);
+        border-radius: 0;
+        padding: 5px 8px 4px;
+        cursor: pointer;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        transition: border-color .12s, background-color .12s, opacity .12s;
+    }
+    .call .tag { font-size: 10.5px; letter-spacing: 0.05em; color: var(--muted); }
+    .call.far { border-style: dashed; }
+    .call.on { border-color: var(--spark); }
+    .call.on .tag { color: var(--spark); }
+    .call.cur { background: var(--spark-bg); }
+
+    /* ---- the stations ---- */
+    .stations { display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; }
+    @media (min-width: 780px) { .stations { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px; } }
+    .cell { position: relative; display: flex; }
+    .cell + .cell::before {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-top: 1.4px solid var(--muted);
+        border-right: 1.4px solid var(--muted);
+        top: -19px;
+        left: 22px;
+        transform: rotate(135deg);
+    }
+    @media (min-width: 780px) {
+        .cell + .cell::before { top: 24px; left: -19px; transform: rotate(45deg); }
+    }
+    .st {
+        flex: 1;
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        padding: 14px 13px 16px;
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+        transition: opacity .12s, background-color .12s, border-color .12s;
+        cursor: pointer;
+    }
+    .st::before {
+        content: "";
+        position: absolute;
+        left: -1px;
+        top: -1px;
+        width: 2rem;
+        border-top: 2px solid var(--spark);
+        pointer-events: none;
+    }
+    .st.on { background: var(--spark-bg); border-color: var(--spark); }
+    .st h4 {
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 17px;
+        line-height: 1.15;
+        margin: 0 0 2px;
+        color: var(--ink);
+    }
+    .st .what { font-family: var(--f-mono); font-size: 12px; color: var(--spark); margin: 0 0 8px; }
+    .st p { margin: 0 0 8px; font-size: 14px; line-height: 1.42; color: var(--muted); }
+    .st .knobs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
+    .st .knobs li {
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        line-height: 1.2;
+        padding: 2px 5px;
+        background: var(--code-bg);
+        border: 1px solid var(--rule);
+        color: var(--ink);
+        overflow-wrap: anywhere;
+    }
+    .st .here { border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 4px; }
+    .st .here .lab { margin-bottom: 4px; font-size: 10.5px; }
+    .st .here ul { margin: 0; padding: 0; list-style: none; }
+    .st .here li { font-size: 13px; line-height: 1.35; margin: 0 0 4px; color: var(--muted); }
+    .st .here li code { color: var(--ink); overflow-wrap: anywhere; }
+    .st .here .none { font-size: 13px; color: var(--muted); }
+    .has-active .st:not(.on), .has-active .call:not(.on) { opacity: 0.5; }
+
+    /* ---- the readout ---- */
+    .detail {
+        display: none;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-left: 2px solid var(--spark);
+        padding: 10px 14px 11px;
+        font-size: 15px;
+        line-height: 1.45;
+        color: var(--ink);
+    }
+    @media (max-width: 480px) { .detail { font-size: 14.5px; padding: 9px 12px 10px; } }
+    .js .detail { display: block; }
+    .detail .head { font-family: var(--f-display); font-weight: 700; font-size: 15px; margin: 0 0 3px; }
+    .detail .head code { font-weight: 400; font-size: 14px; color: var(--ink); }
+    .detail p { margin: 0 0 5px; color: var(--muted); }
+    .detail p:last-child { margin-bottom: 0; }
+    .detail .wire { font-family: var(--f-mono); font-size: 12.5px; color: var(--spark); overflow-wrap: anywhere; }
+    .detail .hint { color: var(--muted); }
+    .detail ul { margin: 2px 0 0; padding: 0; list-style: none; }
+    .detail li { margin: 0 0 4px; font-size: 14.5px; color: var(--muted); }
+    .detail li code { color: var(--ink); }
+</style>
+<script>document.documentElement.className = "js";</script>
+</head>
+<body>
+<figure id="fig">
+    <div>
+        <p class="line-lab" id="line-lab">The line from section 5, one call per chip</p>
+        <div class="line" role="group" aria-labelledby="line-lab">
+            <button type="button" class="call" data-call="note" data-owner="instrument"><span>note(<span class="st-str">"c3"</span>)</span><span class="tag">instrument</span></button>
+            <button type="button" class="call" data-call="sound" data-owner="instrument"><span>.sound(<span class="st-str">"supersaw"</span>)</span><span class="tag">instrument</span></button>
+            <button type="button" class="call" data-call="lpf" data-owner="instrument"><span>.lpf(800)</span><span class="tag">instrument</span></button>
+            <button type="button" class="call" data-call="gain" data-owner="channel"><span>.gain(0.4)</span><span class="tag">channel</span></button>
+            <button type="button" class="call" data-call="pan" data-owner="channel"><span>.pan(0.3)</span><span class="tag">channel</span></button>
+            <button type="button" class="call" data-call="orbit" data-owner="channel"><span>.orbit(1)</span><span class="tag">channel</span></button>
+            <button type="button" class="call" data-call="reverb" data-owner="bus"><span>.reverb(0.3, 5)</span><span class="tag">bus</span></button>
+            <button type="button" class="call far" data-call="master" data-owner="master"><span>master(Katalyst(k =&gt; k.gain(1.45).limiter(threshold = -8.0, ratio = 2.0)))</span><span class="tag">master, not in this line</span></button>
+        </div>
+    </div>
+
+    <div class="detail" id="detail" role="status" aria-live="polite"></div>
+
+    <div class="stations">
+        <div class="cell">
+            <section class="st" data-owner="instrument" tabindex="0" role="group" aria-labelledby="h-instrument">
+                <h4 id="h-instrument">Instrument</h4>
+                <p class="what">an Ignitor tree</p>
+                <p>Every knob of the tree is a slot, and a pattern call fills it. Pitch calls (<code>vibrato</code>, <code>penv</code>, <code>fm</code>, <code>accelerate</code>) run in front of every instrument.</p>
+                <ul class="knobs" aria-label="Knobs of the instrument">
+                    <li>sound</li><li>lpf.freq</li><li>adsr.attack</li><li>oscparam</li>
+                </ul>
+                <div class="here">
+                    <p class="lab">In this line</p>
+                    <ul>
+                        <li><code>note("c3")</code> the pitch</li>
+                        <li><code>.sound("supersaw")</code> the tree</li>
+                        <li><code>.lpf(800)</code> fills <code>lpf.freq</code></li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+        <div class="cell">
+            <section class="st" data-owner="channel" tabindex="0" role="group" aria-labelledby="h-channel">
+                <h4 id="h-channel">Channel</h4>
+                <p class="what">three numbers</p>
+                <p>A fader like the one on a mixing desk. The engine applies it to every voice once, after the tree, whatever the tree says.</p>
+                <ul class="knobs" aria-label="Knobs of the channel">
+                    <li>gain</li><li>pan</li><li>orbit</li>
+                </ul>
+                <div class="here">
+                    <p class="lab">In this line</p>
+                    <ul>
+                        <li><code>.gain(0.4)</code> the level</li>
+                        <li><code>.pan(0.3)</code> a little left</li>
+                        <li><code>.orbit(1)</code> the bus</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+        <div class="cell">
+            <section class="st" data-owner="bus" tabindex="0" role="group" aria-labelledby="h-bus">
+                <h4 id="h-bus">Bus</h4>
+                <p class="what">a Katalyst chain, one per orbit</p>
+                <p>Works on the sum of the voices sent to the orbit. Its knob values come from the first voice sounding on it.</p>
+                <ul class="knobs" aria-label="Knobs of the bus">
+                    <li>reverb</li><li>delay</li><li>compressor</li><li>eq</li><li>phaser</li><li>body</li><li>vowel</li><li>duck</li>
+                </ul>
+                <div class="here">
+                    <p class="lab">In this line</p>
+                    <ul>
+                        <li><code>.reverb(0.3, 5)</code> fills <code>reverb.wet</code> and <code>reverb.size</code></li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+        <div class="cell">
+            <section class="st" data-owner="master" tabindex="0" role="group" aria-labelledby="h-master">
+                <h4 id="h-master">Master</h4>
+                <p class="what">the same chain, at the output</p>
+                <p>Runs on the sum of every orbit. <code>katp</code> does not reach it and a <code>duck</code> stage does nothing there. The house limiter follows, and a song cannot change it.</p>
+                <ul class="knobs" aria-label="Knobs of the master">
+                    <li>master(Katalyst(k =&gt; &hellip;))</li>
+                </ul>
+                <div class="here">
+                    <p class="lab">In this line</p>
+                    <p class="none">Nothing. A song that declares no master skips this station.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+</figure>
+
+<script>
+(function () {
+    "use strict";
+
+    // Where each call lands, and what the engine does with it. The wire keys are the real ones:
+    // VoiceData (audio_bridge/VoiceData.kt), classicSlotParams (sprudel/_classic_slot_params.kt),
+    // the reverb door (sprudel/lang/lang_effects_reverb.kt), SendRenderer (audio_be).
+    var OWNERS = {
+        instrument: "the instrument",
+        channel: "the channel",
+        bus: "the bus, orbit 1",
+        master: "the master"
+    };
+
+    // pan 0.3 with gain 0.4, by SendRenderer's equal-power law: left = cos(pan * pi / 2) * gain, right = sin(...) * gain
+    var panL = (Math.cos(0.3 * Math.PI / 2) * 0.4).toFixed(3);
+    var panR = (Math.sin(0.3 * Math.PI / 2) * 0.4).toFixed(3);
+
+    var CALLS = {
+        note: {
+            owner: "instrument", title: 'note("c3")',
+            text: "The pitch the note plays at. The tree's oscillators follow it.",
+            wire: 'VoiceData.note = "c3", freqHz = 130.81'
+        },
+        sound: {
+            owner: "instrument", title: '.sound("supersaw")',
+            text: "Names the instrument. The engine builds that Ignitor tree: the supersaw, a pregain slot, then the classic() stages.",
+            wire: 'VoiceData.sound = "supersaw"'
+        },
+        lpf: {
+            owner: "instrument", title: ".lpf(800)",
+            text: "Fills the cutoff slot of the low-pass stage that classic() adds. A stage nobody fills is not built.",
+            wire: 'oscParams["lpf.freq"] = 800.0'
+        },
+        gain: {
+            owner: "channel", title: ".gain(0.4)",
+            text: "The channel's level, applied after the tree together with the pan.",
+            wire: "VoiceData.gain = 0.4"
+        },
+        pan: {
+            owner: "channel", title: ".pan(0.3)",
+            text: "Left 0 to right 1, an equal-power pan. With a gain of 0.4 the left side gets " + panL + " and the right side " + panR + ".",
+            wire: "VoiceData.pan = 0.3"
+        },
+        orbit: {
+            owner: "channel", title: ".orbit(1)",
+            text: "Picks the bus this voice is added to: Cylinder 1 inside the engine.",
+            wire: "VoiceData.cylinder = 1"
+        },
+        reverb: {
+            owner: "bus", title: ".reverb(0.3, 5)",
+            text: "Fills the reverb slots of the chain orbit 1 runs, for the whole orbit. The first voice sounding on the orbit supplies them.",
+            wire: 'katalystParams["reverb.wet"] = 0.3, ["reverb.size"] = 5.0'
+        },
+        master: {
+            owner: "master", title: "master(Katalyst(k => \u2026))",
+            text: "Not part of the line. It travels as a control event with no note, and the engine swaps the master chain when it arrives.",
+            wire: "VoiceData.master = the chain's name, control = true"
+        }
+    };
+
+    var OWNER_TEXT = {
+        instrument: "The tree that makes the sound. Three calls of the line land here.",
+        channel: "Level, position and bus, applied once after the tree. Three calls of the line land here.",
+        bus: "The effects of orbit 1. One call of the line lands here.",
+        master: "The same chain type, over the sum of every orbit. No call of this line lands here; a song declares the master with its own call."
+    };
+
+    var fig = document.getElementById("fig");
+    var detail = document.getElementById("detail");
+    var calls = Array.prototype.slice.call(document.querySelectorAll(".call"));
+    var stations = Array.prototype.slice.call(document.querySelectorAll(".st"));
+
+    var hover = null;   // {owner, call}
+    var pinned = null;
+
+    function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) { e.className = cls; }
+        if (text) { e.textContent = text; }
+        return e;
+    }
+
+    function renderDetail(active) {
+        while (detail.firstChild) { detail.removeChild(detail.firstChild); }
+
+        if (!active) {
+            detail.appendChild(el("p", "hint", "Every call in a pattern that shapes the sound lands with one owner. Hover or focus a call to see how, or a station to see its calls. Tap or press Enter to keep one selected."));
+            return;
+        }
+
+        var head = el("p", "head");
+        if (active.call) {
+            var c = CALLS[active.call];
+            var code = el("code", null, c.title);
+            head.appendChild(code);
+            head.appendChild(document.createTextNode(" lands with " + OWNERS[c.owner]));
+            detail.appendChild(head);
+            detail.appendChild(el("p", null, c.text));
+            detail.appendChild(el("p", "wire", "wire: " + c.wire));
+        } else {
+            head.appendChild(document.createTextNode(OWNERS[active.owner].replace(", orbit 1", "").replace(/^the /, "").replace(/^./, function (m) { return m.toUpperCase(); })));
+            detail.appendChild(head);
+            detail.appendChild(el("p", null, OWNER_TEXT[active.owner]));
+            var wires = [];
+            Object.keys(CALLS).forEach(function (k) {
+                if (CALLS[k].owner === active.owner && k !== "master") { wires.push(CALLS[k].wire); }
+            });
+            if (wires.length) { detail.appendChild(el("p", "wire", "wire: " + wires.join("; "))); }
+        }
+    }
+
+    function apply() {
+        var active = hover || pinned;
+        fig.classList.toggle("has-active", !!active);
+        calls.forEach(function (b) {
+            var isOwner = !!active && b.getAttribute("data-owner") === active.owner;
+            var isCall = !!active && active.call === b.getAttribute("data-call");
+            b.classList.toggle("on", isOwner);
+            b.classList.toggle("cur", isCall);
+            b.setAttribute("aria-pressed", pinned && pinned.call === b.getAttribute("data-call") ? "true" : "false");
+        });
+        stations.forEach(function (s) {
+            s.classList.toggle("on", !!active && s.getAttribute("data-owner") === active.owner);
+        });
+        renderDetail(active);
+    }
+
+    function same(a, b) { return !!a && !!b && a.owner === b.owner && a.call === b.call; }
+
+    function bind(node, make) {
+        node.addEventListener("mouseenter", function () { hover = make(); apply(); });
+        node.addEventListener("mouseleave", function () { hover = null; apply(); });
+        node.addEventListener("focus", function () { hover = make(); apply(); });
+        node.addEventListener("blur", function () { hover = null; apply(); });
+        node.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            var m = make();
+            pinned = same(pinned, m) ? null : m;
+            apply();
+        });
+    }
+
+    calls.forEach(function (b) {
+        bind(b, function () { return { owner: b.getAttribute("data-owner"), call: b.getAttribute("data-call") }; });
+    });
+    stations.forEach(function (s) {
+        bind(s, function () { return { owner: s.getAttribute("data-owner"), call: null }; });
+        s.addEventListener("keydown", function (ev) {
+            if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                s.click();
+            }
+        });
+    });
+    document.addEventListener("click", function () { pinned = null; apply(); });
+
+    // Keep the readout the same height whatever it says, so the frame does not jump while a reader hovers.
+    function fitDetail() {
+        var keep = hover || pinned;
+        detail.style.minHeight = "0";
+        var max = 0;
+        var states = [null];
+        Object.keys(CALLS).forEach(function (k) { states.push({ owner: CALLS[k].owner, call: k }); });
+        Object.keys(OWNERS).forEach(function (o) { states.push({ owner: o, call: null }); });
+        states.forEach(function (st) {
+            renderDetail(st);
+            max = Math.max(max, detail.offsetHeight);
+        });
+        renderDetail(keep);
+        detail.style.minHeight = max + "px";
+    }
+
+    var t = null;
+    window.addEventListener("resize", function () {
+        clearTimeout(t);
+        t = setTimeout(fitDetail, 80);
+    });
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fitDetail); }
+
+    apply();
+    fitDetail();
+
+    // Report the content height to the host page, on load and on every size change.
+    var last = 0;
+    function report() {
+        var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+        if (h && h !== last) {
+            last = h;
+            try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no host */ }
+        }
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", report);
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(document.body); }
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(report); }
+    report();
+})();
+</script>
+</body>
+</html>
