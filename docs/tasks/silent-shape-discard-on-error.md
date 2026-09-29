@@ -1,5 +1,10 @@
 # A typo in a shape function silently discards the WHOLE shape
 
+> **Parked 2026-09-29, and split in two (maintainer):** it falls into the KlangScript union types bucket first. The
+> editor can only flag a typo inside a shape function once it knows what the function's parameter is, which needs
+> TypeScript-like union types: [`klangscript-union-types.md`](klangscript-union-types.md) (the prerequisite). The
+> diagnostic itself then belongs to the diagnostics topic: [`future/editor-diagnostics.md`](future/editor-diagnostics.md).
+
 Found 2026-08-21 while diagnosing a reported `.tap()` bug in Der Schmetterling's lead. The tap
 was innocent; this was the actual cause, and it cost a debugging session.
 

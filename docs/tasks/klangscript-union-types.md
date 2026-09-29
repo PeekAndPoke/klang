@@ -1,8 +1,14 @@
 # KlangScript union types: tell the editor what an `XLike` parameter accepts
 
 > **Written 2026-09-18, updated 2026-09-28, not started.** Priority: **NICE** (editor convenience; no engine or sound
-> impact). Outside the signal-flow work stream on purpose. Follow-up that depends on it:
-> [`katalyst-master-configure-doors.md`](katalyst-master-configure-doors.md).
+> impact). Outside the signal-flow work stream on purpose. Follow-ups that depend on it:
+> [`katalyst-master-configure-doors.md`](katalyst-master-configure-doors.md), and (2026-09-29) the edit-time diagnostic
+> for a typo in a shape function ([`silent-shape-discard-on-error.md`](silent-shape-discard-on-error.md), via
+> [`future/editor-diagnostics.md`](future/editor-diagnostics.md)).
+>
+> **Direction added 2026-09-29 (maintainer):** "TypeScript-like string union types" are needed before those
+> diagnostics can be shown. That reaches past §3.3 as written, which checks "is it a String", not "is the string
+> valid": string LITERAL unions (`"soft" | "hard"`) would let the editor check the value too. To be settled in §D1/§D2.
 > The 2026-09-28 update records the maintainer's direction (§3.5): typed Kotlin overloads that
 > KlangScript does not see, one generic script door that dispatches by kind and throws on an
 > unknown one, and IntelliSense that checks arguments before runtime (§3.3, §D2).

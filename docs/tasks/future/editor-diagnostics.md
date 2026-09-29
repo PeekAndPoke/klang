@@ -17,7 +17,7 @@ silently: a warning or an error with a source location, instead of a sound that 
 | A misspelled mini-notation tweak is silently inert (`note("c3{swel}")`) | [`mini-notation-tweaks-followups.md`](mini-notation-tweaks-followups.md) section 1 | open; parked here 2026-09-29 |
 | Warnings for voice doors an instrument does not hear, a string in a wet slot (phase 3 step 11) | [`editor-voice-door-diagnostics.md`](editor-voice-door-diagnostics.md) | deferred 2026-09-27 ("diagnostics tools come later once the design is fully settled") |
 | Runtime errors in the editor with a clickable location | [`../runtime-errors-in-the-editor.md`](../runtime-errors-in-the-editor.md) | phases 1 to 3 shipped 2026-08-22; phase 4 has one decision left and the known gap below |
-| A typo in a shape function discards the whole shape; errors at query time are not captured yet | [`../silent-shape-discard-on-error.md`](../silent-shape-discard-on-error.md), and the "KNOWN GAP" section of the runtime-errors task | open |
+| A typo in a shape function discards the whole shape; errors at query time are not captured yet | [`../silent-shape-discard-on-error.md`](../silent-shape-discard-on-error.md), and the "KNOWN GAP" section of the runtime-errors task | open; the edit-time diagnostic depends on [`../klangscript-union-types.md`](../klangscript-union-types.md) first (TypeScript-like union types, string literal unions included; maintainer 2026-09-29) |
 | Editor code completion for local symbols (a neighbour: the analyzer's scope, not a diagnostic) | [`../editor-local-symbol-completion.md`](../editor-local-symbol-completion.md) | open, a maintainer call |
 
 ## When it is picked up
