@@ -75,6 +75,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Klang UI conventions: `.with()` for custom classes, `.render()` on stored icon functions, RoundGauge proportions.          | 2026-05    | `/kraft-knowhow`                           |
 | Review rounds 3 and later run on the strongest model tier (`fable`) at effort xhigh, never max.                            | 2026-09-05, capped 2026-09-28 | `/agent-fleet`                             |
 | Whitespace and blank-line findings are not worth a round; codefactor.io fixes formatting.                                  | 2026-07    | `/review-loop` Gotchas                     |
+| Module `MEMORY.md` files state what is true NOW and stay short (restructured 2026-09-29 after `audio/MEMORY.md` reached 3,000 lines): a change updates its section in place and adds one History line; the narrative lives in the task record, the full dated record in `<module>/ref/memory-history.md`. | 2026-09-29 | the knowhow skills |
 | Scaffolding goes when its job is done: a migration guard, a one-off script or a comparison fixture is removed in the change that finishes the migration, so no future reader wonders why it exists. | 2026-09-06 | this line |
 
 ### Guardrail
@@ -86,7 +87,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Block size is pinned to 128 frames everywhere (it is a tone parameter); never raise it to speed up a render.                | 2026-08    | `audio/MEMORY.md`, `DelayLine` KDoc        |
 | Deliberate engine exceptions a reviewer must not "fix": reverb uses `+ ANTI_DENORMAL` (not `flushState`); OnePole HPF cutoff bias is documented, not corrected; BPF stays linear; the house limiter's 5 ms lookahead (`MasterStage`) is always on and not authorable, and an authored lookahead (the Katalyst `compressor`/`limiter` `lookahead`, fixed per chain, at most 50 ms) makes its orbit or playback late by it, uncompensated, by the author's choice. | 2026-05, narrowed 2026-09-27 | `/review-loop` templates, `.claude/skills/review-loop/audio-constraints.md` |
 | Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
-| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` |
+| Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` Lessons |
 | Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
 | `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibOscTest`, `StdLibNumberMethodsTest`. | 2026-09-10 | `/dsl-design` §5 |
 

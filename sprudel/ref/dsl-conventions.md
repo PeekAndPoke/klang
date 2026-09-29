@@ -73,6 +73,8 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   }
   ```
 
+- A slot-backed door (`pregain`, `analog`, the bus doors) reads its own slot back: `read = { it.oscParams?.get(name) }`
+  (or `katalystParams`), not a typed field.
 - The accessor is ONE declaration, named exactly like the script name (maintainer decision
   2026-09-07, the Kotlin naming convention is suppressed at file level with `"ClassName"`):
   `@KlangScript.Library("sprudel") @KlangScript.Object("gain") object gain : FieldAccessor({ it.gain })`
@@ -82,7 +84,9 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   `pan(gain)` reads the value. No top-level `fun gain(...)` factory and no `val gain` twin (both
   removed 2026-09-07). The old factory's KDoc lives on `invoke`; the object's KDoc describes the
   accessor with two playable examples and keeps the field's category.
-  Never make the accessor a `PatternMapperFn`: see `MEMORY.md` 2026-09-06 for the ambiguity.
+  Never make the accessor a `PatternMapperFn`: a `Function1` member `invoke(SprudelPattern)` next to the
+  setter would give `Freq(pattern)` and `freq(pattern)` opposite meanings in Kotlin
+  (`ref/memory-history.md#recent-work-2026-09-06`).
 - Every new accessor gets two rows in `LangFieldAccessorsSpec`: a mapper on its own field and the
   bare accessor read into another field, both doors.
 - Every compound door is an object with the slot accessors as children (`adsr` was the pilot,
@@ -107,6 +111,35 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   The editor types it as the canonical object, so `vel(` shows the `velocity(...)` signature. One
   alias row per alias. Compound slots get no aliases at all (`rsize`, `delayfb` went 2026-09-07).
 - Design record and rejected alternatives: `docs/tasks-archive/2026-09/20260907-sprudel-field-accessors.md`.
+
+## Setter semantics in force
+
+What a setter does with its arguments, the same for every per-field setter and compound slot. The
+guards are `LangControlRestSpec` (one row per setter and slot) and `LangFieldAccessorsSpec`.
+
+- **A rest leaves the field untouched** (2026-09-16). `_liftNumericField` and `_liftStringField` write
+  nothing on an event where the control pattern has no event, so `gain(0.5).gain("<0.8 ~>")` keeps 0.5 in
+  the rest cycle. The numeric helper also skips a control value that is not a number. Known asymmetry:
+  the numeric setters that sit on the string helper (`orbit` / `o` / `cylinder`, the `adsr` stages) still
+  clear on a non-number such as `x`. Not covered: the structural `_lift` / `_liftData` family
+  (`degradeByWith`, `undegradeByWith`, `unit`, `loop`, `adsrOn`) and `hurry`'s `fast`, where a rest still
+  drops the notes.
+- **A mapper on an unset field is a no-op**, and a mapper that returns `null` leaves the field unchanged
+  (`_mapNumericField`, 2026-09-07). So `gain(mul(x))` does nothing on an event whose gain was never set.
+- **A trim spelled as a mapper is not a plain setter.** `gain(mul(P))` goes through `_mapNumericField`
+  and `_appLeft`, so a rest in `P` DROPS the event; a control that changes inside an event fragments it
+  into parts sharing one whole, of which only the first is an onset (playback does not hear the rest);
+  and on an unset field it does nothing. It is safe only where a `gain(...)` runs upstream on every event.
+- **The wet doors take `wet` first, and a bare call reinterprets the pattern's values as the wet**
+  (`reverb`, `delay`, `phaser`, `body`, `vowel`; guard `LangWetKnobSpec`). A value that is not a number
+  writes nothing (`?: return@voiceSetter`). Inside one call the slots apply in declaration order, so a wet
+  mapper in the same call as the name maps an unset wet: `body(mul(2), "wood")` is wet 0.5 on a fresh
+  note. No bus-door setter clears on a null; the off switch of a name slot is `"none"` (index 0).
+- **Every compound head keeps its value on a control gap and reinterprets on a bare call.** `note`, `s`
+  and `n` drop the value, so a bare call after them has nothing to reinterpret.
+- A slot name that is also a top-level symbol (`lowpass`) shows two property variants under one docs
+  symbol; intel tests filter on `owner == null`. Tutorials name the compound object in `teaches` /
+  `previews` (`reverb`), never a slot: the curriculum lint (`TutorialCurriculumSpec`) reads call names.
 
 ## KDoc Rules
 

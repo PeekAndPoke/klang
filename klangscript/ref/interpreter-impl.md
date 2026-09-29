@@ -63,6 +63,30 @@ registerObject("Math", MathObject) {
 **Auto-conversion:** Kotlin primitives ↔ `RuntimeValue` via reified generics. Native returns are auto-wrapped in
 `NativeObjectValue`. Registry-based lookup by `KClass<*>`.
 
+## Callable objects (`invoke`)
+
+- A `NativeObjectValue` callee (`Katalyst(...)`, sprudel's `reverb(0.3)`) dispatches to the `invoke`
+  extension method of its type through the spec-aware member-call path (`Interpreter.evaluateCall`).
+  The editor follows: `ExpressionTypeInferrer.resolveCallable` falls back to `getCallable("invoke", type)`,
+  `KlangCallable.signature` renders the call as `Katalyst(...)`, member completion hides `invoke`.
+- The call form is declared with `@KlangScript.Invoke` on `operator fun invoke` (2026-09-07; the old
+  `@KlangScript.Method(name = "invoke")` spelling is retired). The name has one definition,
+  `KlangScript.Invoke.NAME`, read by `NativeOperatorNames.INVOKE`. KSP (`InvokeShape`) refuses an `@Invoke`
+  outside an `@Object` / `@TypeExtensions` class, one not named `invoke`, one without `operator`, a second
+  one in the same class (KlangScript has no overloads, so one call form), and a `@Method` whose script
+  name resolves to `invoke` (`methodSpelledInvoke`).
+- Only `invoke` is wired; the arithmetic and comparison operators of
+  `docs/tasks/klangscript-native-object-operators.md` are not built.
+
+## Library registration and argument checks
+
+- `Environment.register` merges the receiver-keyed extension maps PER NAME: same name, later import wins.
+  A plain `putAll` on a `Map<KClass, MutableMap<String, ...>>` replaces a receiver's whole method map
+  (importing sprudel after the stdlib once dropped every stdlib string method). Any registry of that shape
+  needs the two-level merge. Spec: `LibraryExtensionMergeSpec`.
+- `checkArgsSize` is a MINIMUM check. A surplus argument is caught by the parameter specs, so a door with
+  no parameters needs `checkNoArgs` (the builder's zero-arg bridge and the KSP emission both call it).
+
 ## Built-in Type Methods
 
 Handled in `Interpreter.evaluateMemberAccess()` — checks for extension methods on `ArrayValue`, `StringValue`,

@@ -230,7 +230,7 @@ private class SvfIgnitor(
             //  - Why it works where tanh failed: the signal stays linear and only the DAMPING grows
             //    with the state, so the resonance compresses and the filter stays bounded. A tanh
             //    capping the feedback signal does the opposite (less damping, runaway). The failed
-            //    attempts are recorded in `audio/MEMORY.md`, "Filter Saturation Dead-End".
+            //    attempts are recorded in `audio/ref/memory-history.md`, "Filter Saturation Dead-End".
             when (mode) {
                 SvfMode.LOWPASS -> {
                     if (saturate) {

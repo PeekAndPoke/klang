@@ -399,8 +399,8 @@ private fun applyMod(source: Ignitor, mod: Ignitor?): Ignitor =
  * strip, and a pattern writes two of them. Without the gate the other seven each pay a scratch
  * render and a buffer copy per block per voice at their off value, and a nine-stage tail with
  * nothing written costs more than ten times a bare saw. With the gate a plain `sound("saw")` IS a
- * bare saw. The measurements have ONE home, `audio/MEMORY.md`'s entry for this rule, so that a
- * re-measurement never has to be chased through comments.
+ * bare saw. The measurements have ONE home, the gate's entry of 2026-09-20 in
+ * `audio/ref/memory-history.md`, so that a re-measurement never has to be chased through comments.
  *
  * **It is also a NaN GUARDRAIL, and that is the half a reviewer must not weaken.** `SLOT_UNSET`
  * is `Double.NaN`, and the [IgnitorDsl.Param] leaf above reads a NON-FINITE OVERRIDE as unset and

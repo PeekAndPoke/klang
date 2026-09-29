@@ -2,7 +2,7 @@
 
 ## Design Principles
 
-- **No `undefined`** — `undefined` is a plain alias for `null`; there is no distinct undefined type or value
+- **No `undefined`**: only `null`; `undefined` is not a defined identifier
 - **Semicolons optional** — newlines act as statement separators
 - **Arrow functions only** — no `function` keyword; both expression and block bodies supported
 - **Immutable engine** — builder pattern for configuration, immutable after build (thread-safe)
@@ -18,7 +18,7 @@
 
 **Literals:** numbers, strings (double/single/backtick), booleans, `null`, objects `{}`, arrays `[]`
 
-**Operators:** arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `<=`, `>`, `>=`), logical (`&&`,
+**Operators:** arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `===`, `!==`, `<`, `<=`, `>`, `>=`), logical (`&&`,
 `||`), unary (`-`, `+`, `!`)
 
 **Functions:**
@@ -74,15 +74,11 @@ These features are **explicitly excluded** from KlangScript. Do not plan, protot
 - **`class` / `extends` / `new`** — no OOP class hierarchy; use object literals and closures.
 - **`try` / `catch` / `throw`** — no user-level exception handling; errors propagate as interpreter-level exceptions.
 - **`eval`** — never.
-- **`undefined` as a distinct value** — `undefined` is just a global alias for `null`. There is no separate undefined
-  type, `typeof x === "undefined"` pattern, or `void 0`. Use `null` everywhere.
+- **`undefined`**: not defined. There is no undefined type, value or identifier, no `typeof x === "undefined"`
+  pattern and no `void 0`; use `null`.
 
 ## Known Limitations (not yet implemented)
 
-- Array indexing: `arr[0]` — requires `IndexAccess` AST node
-- Control flow: `if/else`, `while`, `for`
-- Strict equality: `===`, `!==` (current `==` uses reference equality for objects/arrays)
-- Template string interpolation: `` `hello ${name}` ``
 - Spread operator: `...args`
 - Destructuring: `let { a, b } = obj`
 - Higher-order array methods: `map()`, `filter()`, `reduce()` etc. (needs callback execution from extension context)

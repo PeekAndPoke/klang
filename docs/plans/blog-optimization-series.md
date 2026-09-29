@@ -317,7 +317,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 - **Story.** Musical time in four representations: `double` (drift, event-fetch errors),
   Rational v1, Rational v2 with the JS BigInt hot path, `CycleTime` fixed-point Int with
   `2^20 * 3 * 5 * 7 = 110,100,480` ticks per cycle. Both a correctness and a performance story.
-- **Artifacts.** `docs/history/2026-Q1.md` and `2026-Q2.md`, `sprudel/MEMORY.md`, the commits of
+- **Artifacts.** `docs/history/2026-Q1.md` and `2026-Q2.md`, `sprudel/ref/memory-history.md`, the commits of
   2026-01-08, 2026-01-13 (PR #3), 2026-02-05, 2026-03-16/17 (PRs #35/#36/#38), 2026-05-29/30;
   `StructuralCycleSelectionSpec`, `LangLateAlternationSpec`; the §04 war-story box cut from the
   whitepaper on 2026-08-28 (in git history of `docs/whitepaper/`).
@@ -335,7 +335,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   control-rate value (`controlRateValueOrNull`) let a block-constant parameter be read as one
   number instead of rendering a scratch buffer to read its first sample.
 - **Artifacts.** `docs/tasks-archive/2026-06/20260605-oscillator-engine-unification.md`,
-  `audio/MEMORY.md` ("Oscillator Engine Unified (2026-06-05)"), commits `e303c66c` .. `b0173e4d`.
+  `audio/ref/memory-history.md` ("Oscillator Engine Unified (2026-06-05)"), commits `e303c66c` .. `b0173e4d`.
 - **Mechanics.** (haiku) the µs/voice table from the archive doc (supersaw 4.65/8.57, supersquare
   5.00/9.60 from about 8.2 JVM, supertri 5.04/9.73, supersine 15.68/22.56 from 18.7). (opus)
   re-run today's `IgnitorBenchmark` rows supersaw/supersquare/supertri/supersine on JVM and node
@@ -357,7 +357,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   best paragraph: a hand-written `fastCopy` via `Object.assign` was 22x SLOWER on V8 than the
   constructor-based `copy()`.
 - **Artifacts.** `docs/tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md`,
-  `sprudel/MEMORY.md`, `src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
+  `sprudel/ref/memory-history.md`, `src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
   `e9fa560c` .. `c303c333`.
 - **Mechanics.** (opus) run `VoiceDataCopyBenchmark` today on JVM and node
   (`:audio_benchmark:jvmRun`, `:jsNodeProductionRun`); it prints before the captured section.
@@ -395,7 +395,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 - **Artifacts.** `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md`,
   `docs/tasks-archive/2026-07/20260703-body-vowel-orbit-katalyst.md`,
   `20260704-body-vowel-materials-floor-crossfade.md`, `docs/benchmarks/2026-07-04_233042_song_jvm.md`,
-  `audio/MEMORY.md` ("Body / Vowel resonators", the superimpose finding marked obsolete).
+  `audio/ref/memory-history.md` ("Body / Vowel resonators", the superimpose finding marked obsolete).
 - **Mechanics.** (haiku) the voice count and the 52 % from the analysis doc, with the rows they
   come from. (opus) today's `EffectBenchmark` rows Body and Vowel (JVM and node) for the cost of
   one instance, and the arithmetic "per voice times 1088 against once per orbit" as a table, not
@@ -485,7 +485,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
 - **Artifacts.** `docs/plans/sine-partial-banks.md`, `docs/benchmarks/2026-09-07_sine-partial-banks_jvm.md`,
   `docs/tasks-archive/2026-09/20260907-*` (the sine bank record),
   `docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`,
-  `docs/benchmarks/2026-09-10_drift-lanes_{jvm,nodejs}.md`, `audio/MEMORY.md` ("Loop shape beats
+  `docs/benchmarks/2026-09-10_drift-lanes_{jvm,nodejs}.md`, `audio/ref/memory-history.md` ("Loop shape beats
   block-pass count", "One drift-lane container"), commits `6d4056f9`, `39119aef`, `e5596416` ..
   `54b988aa`.
 - **Mechanics.** (haiku) both tables. (opus) today's rows `sine-harmonics7`, `sine-octaves6`,
@@ -527,7 +527,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   integers (4.7e-11), `e^x` through `2^x`; the credits to Cody and Waite in `CREDITS.MD`. The
   numbers that did not move as hoped: JVM `exp` is an intrinsic (3.7 to 3.5 ns), and `fastLn`
   was measured to be worth at most 1.3 % of the song and NOT built.
-- **Artifacts.** `audio/MEMORY.md` (three entries), `docs/benchmarks/2026-09-15_1508*`, `_1509*`,
+- **Artifacts.** `audio/ref/memory-history.md` (three entries), `docs/benchmarks/2026-09-15_1508*`, `_1509*`,
   `_1539*`, `_162314`, `_171710`, commits `80915245`, `2aaaf62b`, `65b1842d`, `b9565f67`,
   `FastSinSpec`, `FastExp2Spec`, `CREDITS.MD`, `src/jsMain/kotlin/pages/CreditsPage.kt`.
 - **Mechanics.** (opus) `runMathBenchmark` today on JVM and node (it prints before the captured
@@ -549,7 +549,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   375 Hz and ramping the multiplier across the block: the rhythm rig 0.040 to 0.036, the "no
   analog" floor at 0.035, so the drift is free; the live song 0.106 to 0.097. Not bit-identical,
   judged by ear, and the phone went from "barely" to "smooth" that evening.
-- **Artifacts.** `audio/MEMORY.md` ("Analog drift steps per block"), the archive record of the
+- **Artifacts.** `audio/ref/memory-history.md` ("Analog drift steps per block"), the archive record of the
   optimizer stream (census table with the 19 %), `docs/benchmarks/2026-09-15_1755*`, `_1759*`,
   `_1800*`, commit `d4f0d868`, `AnalogDriftRampSpec`, `AnalogDriftSpec` (the exact AR(1) sigma).
 - **Mechanics.** (haiku) the rig table before and after. (opus) today's rig rows `full` against
@@ -573,7 +573,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   slips. And the number: measured alone, R2 changed nothing, which is the honest end of the post
   and the door to P15.
 - **Artifacts.** `docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md`
-  (steps 0 to 4b with the rule derivations), `audio/MEMORY.md` (the two entries), the specs
+  (steps 0 to 4b with the rule derivations), `audio/ref/memory-history.md` (the two entries), the specs
   named there, commits `bb9bdbb3`, `a645a97d`, `1056a1c0`, `841cdb8b`, and the review triage
   notes in the session scratch (summarized in the archive record).
 - **Mechanics.** (haiku) permalinks at `v0.3.14` to `OPTIMIZER_PARITY` and its KDoc, `Affine`,
@@ -596,7 +596,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   out of the buffer, bit for bit the ring form) took the guitar voice from 53 to 44 µs on node
   and a 4x shaper from 13.4 to 10.1. Two steps declared won't-implement with the number
   attached, one step never planned that paid.
-- **Artifacts.** the archive record (the `guitar-rig*` table, steps 3 and 4), `audio/MEMORY.md`
+- **Artifacts.** the archive record (the `guitar-rig*` table, steps 3 and 4), `audio/ref/memory-history.md`
   ("The oversampler's decimator"), `audio_benchmark/src/commonMain/kotlin/IgnitorBenchmark.kt`
   (the rows), `OversamplerDecimatorParitySpec` (the ring oracle), commit `6c1ae38b`.
 - **Mechanics.** (opus) `KLANG_BENCH_FILTER=guitar-rig` and `KLANG_BENCH_FILTER=distort` on node

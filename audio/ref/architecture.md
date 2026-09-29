@@ -34,7 +34,7 @@ AUDIO BACKEND (audio thread)
   │
   ├─ Cmd.ReplaceVoices   → that engine's VoiceScheduler.replaceVoices (grace-cutoff replace + dedup)
   │
-  └─ Every block (128–256 frames):
+  └─ Every block (128 frames, pinned):
        VoiceScheduler.processBlock()
          ├─ Activate due voices → a Voice running its Ignitor tree
          │    (requests MonoSamplePcm from audio_fe if needed)
@@ -154,9 +154,9 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | Constant             | Value                                        | Location             |
 |----------------------|----------------------------------------------|----------------------|
 | Max orbits           | 16                                           | `Cylinders`          |
-| Limiter threshold    | −1 dB                                        | `KlangAudioRenderer` |
-| Limiter ratio        | 20:1                                         | `KlangAudioRenderer` |
+| Limiter threshold    | −1 dB                                        | `MasterLimiterDefaults.kt`, used by `MasterStage` |
+| Limiter ratio        | 20:1                                         | `MasterLimiterDefaults.kt`, used by `MasterStage` |
 | Limiter attack       | 5 ms — gain-SMOOTHING length, not a one-pole | `MasterStage`        |
 | Limiter lookahead    | 5 ms — delays the whole output uniformly     | `MasterStage`        |
-| Limiter release      | 100 ms                                       | `KlangAudioRenderer` |
-| Block size (typical) | 128–256                                      | platform backend     |
+| Limiter release      | 100 ms                                       | `MasterLimiterDefaults.kt`, used by `MasterStage` |
+| Block size           | 128, pinned everywhere (a tone parameter)    | `AudioBackendContext.RENDER_QUANTUM_FRAMES` |

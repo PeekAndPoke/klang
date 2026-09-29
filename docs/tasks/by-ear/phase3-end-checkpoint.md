@@ -32,4 +32,4 @@ wants one whole listen at the end before the baselines lose their "strip" meanin
    their own specs) or REGENERATE it as the new baseline (fingerprints taken from the current tree, never
    hand-edited), keeping `BuiltInVoiceMatrixSpec`'s draw-order row either way if the draw order is still wanted as
    a guard.
-3. Update the KDoc of whichever stays, and `audio/MEMORY.md` (the step 9 entry names them as the frozen strip).
+3. Update the KDoc of whichever stays, and `audio/MEMORY.md` (its Open threads name them as the frozen strip).

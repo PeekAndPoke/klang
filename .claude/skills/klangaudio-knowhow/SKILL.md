@@ -1,4 +1,7 @@
-Base directory for this skill: /opt/dev/peekandpoke/klang/.claude/skills/klangaudio-knowhow
+---
+name: klangaudio-knowhow
+description: Use when working on the audio engine (audio_bridge, audio_be, audio_fe, audio_jsworklet), voice synthesis, Ignitor instruments, Katalyst effects, orbits and the master, sample loading, or needing audio architecture knowledge.
+---
 
 ## What This Skill Does
 
@@ -19,7 +22,7 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 **Always read first:**
 
 1. **`audio/CLAUDE.md`** — dispatcher: module overview, key files, which ref to read next
-2. **`audio/MEMORY.md`** — current status, recent changes, lessons learned
+2. **`audio/MEMORY.md`**: what is true now (state, rules in force, traps, open threads), short by design; the full dated record is `audio/ref/memory-history.md`, read only when you need the history of a decision
 
 **Then read only the ref file(s) relevant to your task:**
 
@@ -33,6 +36,9 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 | Working on sample loading, decoding, caching (audio_fe)                                             | `audio/ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX` choice, framework precedents (SC/JUCE) | `audio/ref/numerical-safety.md`  |
 | Performance rules — no SAM Ignitors, no per-block alloc, Kotlin/JS hot-path patterns                | `audio/ref/performance.md`       |
+| The Katalyst chain: its two hosts, where a knob comes from, how each stage switches and glides, swaps, drains | `audio/ref/katalyst.md`          |
+| Proving identity (corpus renders, measurement floors) and test lessons                              | `audio/ref/verification.md`      |
+| The history of a decision (the full dated record, not read by default)                              | `audio/ref/memory-history.md`    |
 
 ## Testing
 
@@ -52,10 +58,10 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 - **Stateful Ignitors must be classes, not SAM lambdas.** `interface Ignitor` is intentionally NOT a `fun interface`.
   Anything with mutable cross-block state lives in a `private class XxxIgnitor : Ignitor` with explicit fields.
   See `audio/ref/performance.md` for the full rationale (closure-captured `var` becomes Kotlin/JS ObjectRef).
-- Real-time audio: no heap allocations in hot paths; block-based processing (128–256 frames/block).
+- Real-time audio: no heap allocations in hot paths; block-based processing, 128 frames per block, pinned (a tone parameter; never raised to speed up a render).
 - `audio_bridge` is the dependency root — all other audio modules depend on it.
 
 ## Notes
 
 - Do NOT read all ref files upfront — load only what the task requires.
-- Update `audio/MEMORY.md` after completing significant work.
+- After completing significant work, keep `audio/MEMORY.md` short (restructured 2026-09-29, it had grown into a log): update the current-state section your change touched IN PLACE, add ONE line to its History list (date, a few words, the link to the task record), and put the narrative in the task record, which gets archived. Never append a dated essay to MEMORY.md.

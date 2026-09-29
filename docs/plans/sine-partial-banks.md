@@ -317,7 +317,7 @@ the KDoc up through `generatedStdlibDocs`. `sprudel/MEMORY.md` and `audio/MEMORY
 
 **C4 Benchmark.** `IgnitorBenchmark` cases `sine-harmonics7`, `sine-octaves6`, and
 `sine-harmonics7-tree` (the hand-rolled equivalent) so the win is a number in `docs/benchmarks/`.
-Done 2026-09-07; numbers in 5.2, the lesson (loop shape) in `audio/MEMORY.md`. Phase 2 stays gated.
+Done 2026-09-07; numbers in 5.2, the lesson (loop shape) in `audio/ref/performance.md`. Phase 2 stays gated.
 
 ## 7. Decisions
 

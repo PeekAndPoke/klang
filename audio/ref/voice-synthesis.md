@@ -223,3 +223,63 @@ its release and its own output has stayed under the audibility floor for the cul
   orbit alive; the known exceptions, summed sub-floor tails and a feedback delay's tail ceiling,
   are on the constant's KDoc). Constants in `audio_bridge/constants/VoiceCullingDefaults.kt`.
 - Guard: `VoiceCullingSpec`. Record: `docs/tasks-archive/2026-09/20260915-voice-culling.md`.
+
+## The envelope law and its knobs
+
+- **One law, `EnvelopeCore`** (`audio_be/.../EnvelopeCore.kt`; its KDoc is the rule's home): every ADSR-shaped
+  envelope is a thin host of it (the chain `adsr`, the filter cutoff envelope, the FM index envelope, the Ignitor
+  and the voice pitch envelope, the voice FM envelope). Attack and decay count fractional frames, the release
+  `floor(N)` frames ending on an exact 0.0, a non-positive or NaN time is a zero-length stage, the sustain is raw.
+  A gate at or before the onset releases from 0 (the stateless law evaluated there would extrapolate the attack).
+  Guard: `EnvelopeLawSpec`.
+- **Per destination**: amplitude floors at 0, filter and FM depth clamp to [0, 1], pitch is raw.
+- **Curves are INDEX knobs** through `AdsrCurves` (audio_bridge), read once at build and leaf-only
+  (`adsrCurveKnob`). There is no single fallback: an unknown name or index takes the READER's default, the chain's
+  `AdsrCurve.Default` or the modulation envelopes' `MOD_ENV_CURVE` (both Exponential). Every exponential stage bends
+  at `ADSR_EXP_K` (3.0); `expK` is gone from node, slot and wire. Guard: `AdsrCurvesSpec`.
+- **One `adsr` call is the whole envelope** inside a builder: a later call replaces an earlier one, curves included.
+- **`Adsr.on`** is OFF at exactly 0.0 (either sign); unset, any other number and a non-leaf are ON. OFF builds
+  nothing but still reports a LEAF release tail (the voice keeps its lifetime).
+- **Defaults**: `classic()`'s envelope uses the `VOICE_ADSR_*` constants (attack 0.01, decay 0.1, sustain 1.0,
+  release 0.05; `audio_bridge/constants/EnvelopeDefaults.kt`). The bare Ignitor `adsr` node's sustain default is
+  `ADSR_SUSTAIN_LEVEL` (0.7), and `AdsrIgnitor` substitutes it for a non-finite sustain (`finiteOr`, so the
+  infinities read as unset too; a finite sustain passes raw, no clamp). A sample's own envelope fills only the `adsr.*` slots a pattern
+  left unset (`withSampleEnvelopeDefaults`).
+- **De-click**: `EnvelopeDeclick` is the one smoother. `classic()`'s envelope de-clicks with the constant
+  `ENV_DECLICK_SECONDS` (1 ms, not a slot); the chain `adsr` builder's `declick` writes the node's `declickSeconds`
+  (default 0, off). Modulation envelopes are not de-clicked.
+- **An instrument whose own tail outlasts the envelope** writes `adsr(release = <tail>)`; the engine does not
+  stretch a release to an instrument's tail (maintainer, 2026-09-26).
+- The filter envelope's slot-layer fill (a written stage knob switches an unset depth on at
+  `FILTER_ENV_DEPTH_SEMITONES`): the rule's text is `/dsl-design` section 4, the code `slotLayerDepth` in
+  `IgnitorDslRuntime.kt`.
+
+## The voice rng and its draw order
+
+- **`IgnitorBuildCache` never spans two voices.** The stage gate decides per voice (an unwritten slot builds no
+  stage), and that is only sound because a build cache lives for one voice build. `IgnitorGateSpec`'s
+  different-graphs row is the tripwire if a cache is ever shared across voices.
+
+Each voice deals ONE rng stream at the top of `VoiceFactory.makeVoice` (`voiceRandom`) and feeds everything it
+owns from it: the tree build (`IgnitorBuildCache.random`), the sample playhead and the render context. The ORDER
+of the draws is part of the sound: a moved draw shifts every later consumer's values, so a refactor that only
+reorders the build changes songs with `analog > 0`.
+
+- **The sample playhead is built before the tree**, so its drift lane draws first; the tree then draws per node
+  in build order.
+- **A filter's humanization** (`humanize`, at `analog > 0`) has one home, `ignitor/FilterHumanization.kt`: one
+  `nextDouble()` for the cutoff tolerance, then the drift lane's three draws (two doubles, one int). At `analog`
+  at or below 0, or non-finite, nothing is drawn. A `passes` cascade draws once and shares the result. A second
+  copy of a draw is a second reader of the stream, so `perVoiceCutoffOffsetMul` is one shared function.
+- **Construction-time drawers**: `perlin`, `berlin`, `crackle` and the sample's `AnalogDrift` lane draw in a
+  property initialiser; every other source captures the stream and draws when it renders. So build order reaches
+  only these, and a gated-off stage (not built, `audio/ref/off-values.md`) also stops its sibling knob subtrees
+  from drawing: chosen deliberately, pinned by `IgnitorGateSpec`.
+- **Build-time knobs are read leaf-only** (`buildTimeKnobValue` and its siblings in `IgnitorDslRuntime.kt`: shapes,
+  oversample factor, passes, curves, tremolo shape and phase): a `Param` or `Constant` leaf is read, a non-leaf
+  takes the knob's default and is NOT built, so asking never moves a draw.
+- **`DriftLanes`** (`ignitor/DriftLanes.kt`): one int for the shared lane's seed at construction, then an own lane
+  whenever `ensureLanes` first reaches its index; the shared lane takes nothing further, so lowering
+  `analogSpread` later cannot shift another consumer.
+- The analog drift itself steps once per block and ramps across it (`analogDriftStepRate`, `AnalogDrift.beginBlock`),
+  so the block size is part of its sound.
