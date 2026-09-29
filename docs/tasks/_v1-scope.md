@@ -166,7 +166,7 @@ Tracked in the order they bite. See the conversation record for the reasoning.
   `2.pow(7/12)`, in the extension mechanism the stdlib already uses for strings, arrays and booleans.
   [`../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md`](../tasks-archive/2026-09/20260908-klangscript-caret-as-power-wont-implement.md) keeps the reasoning.
 - **No sprudel `band`/`tap` in V1** (2026-08-31). (Re-opened as an idea 2026-09-29: open decision 8, `future/general-eq-core.md`.) C6 ships names only and is unblocked; D9 leaves
-  V1 with it. Full record in `plans/filter-unification.md` §C6.
+  V1 with it. Full record in `../tasks-archive/2026-09/20260927-filter-unification.md` §C6.
 - **Tutorials are owned by a separate session.** `tutorial-fix-and-through-line.md` and
   `tutorial-master-plan.md` are stale (they plan work on the 38 tutorials wiped in `92f6d54f`);
   the live plan is `tutorial-curriculum.md`.

@@ -37,8 +37,8 @@ lists, written in the author's order, are the answer to try.
 - **Sprudel's filter doors** fill fixed slots of the `classic()` tail
   (`audio_bridge/.../IgnitorDslClassic.kt`: `onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch ->
   lowpass -> tremolo -> adsr`), with per-filter `freq`, `q`, `env` and its ADSR stages and curves, `passes` (lowpass and
-  highpass), and the voice's `analog`. In use: `lpf` in 12 of the 14 built-in songs; 173 filter calls across them
-  (`lpf` 68, `hpf` 86, `bpf` 14, `notch` 5, on 111 lines).
+  highpass), and the voice's `analog`. In use: `lpf` in 12 of the 14 built-in songs; about 175 filter calls across them, bare mapper calls such as
+  `superimpose(bpf(195))` included (`lpf` 68, `hpf` 86, `bpf` 16, `notch` 5; grep, 2026-09-29).
 - The topology is the SAME on both sides: `Ignitor.svf` and `EqCore` compute the same SVF coefficients
   (`computeSvfCoeffs`), and parity rows pin them. So generalising the core is extending one filter, not replacing one.
 
@@ -48,20 +48,22 @@ Each refusal of the optimizer names a feature a section must learn. Sketch, per 
 
 | feature | what a section needs | notes |
 |---|---|---|
-| cutoff envelope (`env`, attack, decay, sustain, release, curves) | an optional envelope per section, the same law and defaults as the filter envelope today | `SvfCoeffSweep` carries a swept filter's coefficients with PER-SAMPLE steps inside each block; a snap-only core recomputed per block cannot do that without a zipper (unified-eq D9 tier 3 records it as an audible regression class). So the section loop must carry the sweep's per-sample steps: a ramp tier in `EqCore`, the unified-eq plan's ramp API (D9, cut from V1 on 2026-08-31). One answer for voice and bus |
+| cutoff envelope (`env`, attack, decay, sustain, release, curves) | an optional envelope per section, the same law and defaults as the filter envelope today, the slot-layer fill included (a stage knob written without `env` gets the default depth) | `SvfCoeffSweep` carries a swept filter's coefficients with PER-SAMPLE steps inside each block; a snap-only core recomputed per block cannot do that without a zipper (unified-eq D9 tier 3 records it as an audible regression class). So the section loop must carry the sweep's per-sample steps: a ramp tier in `EqCore`, the unified-eq plan's ramp API (D9, cut from V1 on 2026-08-31). One answer for voice and bus |
 | `analog` (the saturating branch) | a per-section saturation flag or amount | the state-dependent branch of `Ignitor.svf`'s lowpass and highpass taps moves into the section loop; nonlinear, so parity with today is pinned per sample, not by superposition |
-| `passes` (cascade) | nothing: expand to N identical sections at build | the Butterworth ladder (`butterworthQLadder`) sets the per-pass q; a `passes` that a note writes becomes a build-time decision (see section 4) |
+| `passes` (cascade) | nothing: expand to N sections of one kind and cutoff at build, each with its ladder q | the Butterworth ladder (`butterworthQLadder`) sets the per-pass q; the expanded sections must share ONE humanization (today a cascade shares one `FilterHumanization` and draws once; one draw per section would shift the rng order and break render identity); a `passes` that a note writes becomes a build-time decision (see section 4) |
 | `humanize` (per-voice tolerance and drift lane) | a per-section drift lane reference | today it is `FilterHumanization` (`audio_be/.../ignitor/FilterHumanization.kt`): a fixed per-voice tolerance plus an `AnalogDrift` walk per node, stepped per block (`blockDriftMultiplier`); a section carries the same |
-| one-pole (`onepole`) | a first-order section kind | one step toward [`onepole-highpass-door.md`](onepole-highpass-door.md); lets the pattern's `onepole` fuse into the same core |
+| **the stage gate** (an unset section is not built) | a per-section gate in the `Eq` build, PER KIND as today: an SVF section is skipped when its `freq` is unset; the one-pole section when its freq is at or below 0.0 or unset (its slot default is `0.0`, not unset). The gate is leaf-only, as today: a cutoff that is not a `Param` or `Constant` builds the section unconditionally (`buildTimeKnobValue`), and the gate runs BEFORE the section's rng draws (today a gated-off filter never reaches `filterHumanization`), so a gated section shifts no random stream. When every section is gated, the build returns the inner (pass-through), not an empty core. The per-filter draw order is pinned by `IgnitorFilterKnobsSpec`; a fused section keeps its draws in front of its knobs | today the runtime skips an unset filter STAGE (`gatedOffWhenUnset`, `audio_be/.../ignitor/IgnitorDslRuntime.kt`, the `GATE ROW` comments of the four SVF filters and of `onepole`), while the `Eq` arm builds every section, and an unset (NaN) cutoff clamps to 1000 Hz (`clampSvfCutoff`). Without the gate, fusing `classic()`'s bandpass and notch would put a 1000 Hz bandpass and notch on every plain `sound("saw")` |
+| one-pole (`onepole`) | a first-order section kind | one step toward [`onepole-highpass-door.md`](onepole-highpass-door.md). The pattern's `onepole` sits in front of `crush`, `coarse` and `distort`, which are present at registration, so it is adjacent to an instrument's own `eq` (which sits right before it) already at registration, and adjacent to `classic()`'s own filters only under note-on fusion, when crush, coarse and distort are skipped |
 
 With all of that, the optimizer's refusals go away and **any run of filters with nothing nonlinear between them
-fuses into one `EqCore`**. What stays unfusable is structural, not a missing feature: a node with more than one
+fuses into one `EqCore`**, and a section nobody wrote costs nothing. What stays unfusable is structural: a node with more than one
 consumer, a nonlinearity between two filters (distort, crush), a tap that must read a specific signal.
 
 **Guards the core needs** (mandatory tier, every row mutation-checked): per feature, a parity row of a section against
 today's `Ignitor.svf` with the same feature (bit-identical where the math is the same, a stated bound where the
 evaluation order changes); a render-identity run over the built-in corpus before and after the fusion lifts
-(a one-off whole-corpus render, `docs/plans/signal-flow-redesign.md` section 12, wall clock pinned); a benchmark of the fused `classic()` tail against today's.
+(a one-off whole-corpus render, `docs/plans/signal-flow-redesign.md` section 12, wall clock pinned); a guard that an unwritten `classic()` builds no section (the default envelope is the only stage it builds); a
+benchmark of the fused `classic()` tail against today's.
 
 ## 3. Part B: sprudel speaks `.eq()`
 
@@ -131,7 +133,7 @@ that covers the section list), measured before it is trusted on the audio thread
 
 ## 6. Migration (if built)
 
-Every built-in song (12 of 14 use `lpf`, 173 filter calls in total), the tutorials (their own session), the Lexikon,
+Every built-in song (12 of 14 use `lpf`, about 175 filter calls in total), the tutorials (their own session), the Lexikon,
 `.claude/skills/klang-music-writing/ref/sprudel-reference.md` and `ignitor-reference.md`, the `/klang-music-writing` skill, the editor's filter tools
 (`sprudel-ui-tools.md`), and the rules register's retired list. Render identity of the corpus through the migration is
 the acceptance (`classic()`'s order written out explicitly keeps every song identical where the math is unchanged, within the
@@ -142,11 +144,13 @@ stated bounds of Part A's parity rows elsewhere).
 1. Option 1, 2 or 3 in section 4 (or a mix: a fixed block for the common case, registered shapes for the rest).
 2. How a single section's knob is addressed and patterned (index, name, or both).
 3. Whether `lpf`-style shorthands survive as builder spellings (`e.lpf(800)`) or only the long names.
-4. The envelope's glide on the core: per-block recompute in the surface (today's `SvfCoeffSweep` way), or a ramp tier in
-   `EqCore` (unified-eq D9); one answer for voice and bus.
+4. The shape of `EqCore`'s ramp tier (Part A's envelope row): reuse `SvfCoeffSweep`'s per-sample steps per section,
+   and one API for the voice and the bus (unified-eq D9). A per-block recompute without steps is not an option: it
+   zippers.
 5. Where fusion is decided (registration or note-on) and what the per-shape build cache costs.
-6. Order of work: Part A (the core, pure engine, no surface change, fusion wins measurable on its own) can ship before
-   Part B, and is worth doing even if Part B is declined.
+6. Order of work: Part A (the core, pure engine, no surface change) can ship before Part B, and is worth doing even if
+   Part B is declined. Its fusion win on its own is limited while fusion is decided at registration: a Param `passes`
+   keeps `classic()`'s lowpass and highpass unfused until fusion moves to note-on (question 5).
 
 ## Links
 
