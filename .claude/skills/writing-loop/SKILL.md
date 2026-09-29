@@ -10,9 +10,9 @@ production from text critique, the way a human writer and editor work, "otherwis
 and the brakes at the same time". All three agents run on Claude Sonnet 5.5 at effort xhigh, also a trial
 (`.claude/agents/reader.md`, `writer.md`, `visualizer.md`).
 
-**Open (maintainer):** blog posts are CommonMark only (`docs/blog/howto-write-a-post.md` section 7), so an
-interactive figure cannot be embedded in a post yet; until that is decided, a post gets a static fallback picture and
-a link to the interactive figure's own page. The whitepaper is HTML and takes figures inline.
+**Interactive figures are inline** (maintainer, 2026-09-29): a self-contained figure file, embedded as a frame. In a
+blog post, the one allowed HTML block (`docs/blog/howto-write-a-post.md` section 7); in the whitepaper, the same frame.
+"Self-contained figures are good. Most flexible."
 
 ## The roles
 

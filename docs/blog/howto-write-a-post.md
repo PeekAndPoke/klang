@@ -103,10 +103,25 @@ It applies to every public text, the whitepaper included. What is specific to th
 
 ## 7. Markdown constraints
 
-The posts must render correctly in the repo browser today and in an unknown generator tomorrow:
+The TEXT of a post must read correctly in the repo browser today and in an unknown generator tomorrow; interactive
+figures show on the site (decided 2026-09-29: "the interactive parts have to be inline"):
 
 - **CommonMark/GFM only.** No kramdown `{#id}` attributes, no Hugo/Jekyll shortcodes, no HTML beyond `<a id="..."></a>`
-  anchors.
+  anchors and the one figure block below.
+- **Interactive figures are inline, as a frame to a self-contained figure file** next to the post (built by the
+  `visualizer` agent, `/writing-loop`). Exactly this block, nothing else:
+
+  ```html
+  <figure class="klang-figure">
+    <iframe src="filter-curve.html" title="The filter curve: drag the cutoff" loading="lazy"></iframe>
+    <figcaption>Drag the cutoff and watch the resonance move.</figcaption>
+  </figure>
+  ```
+
+  The figure file carries its own HTML, CSS and script, so nothing collides with the page or the generator; it reports
+  its height to the page (the site template holds the one small listener that sizes the frame). The repo browser does
+  not show the frame (GitHub filters iframes), so the caption must still make sense there, and the text must never
+  depend on the reader having used the figure. The chosen generator must pass this HTML block through.
 - Heading links rely on auto-slugs (`## References` → `#references`).
 - **Code blocks that contain markdown fences** (KDoc with sample blocks) need a **4-backtick outer fence**. Never put
   backtick runs inside a shorter inline code span — rephrase instead.

@@ -16,12 +16,17 @@ existing SVGs) wins over any skill default: a figure must look like part of the 
 
 What every figure is:
 
-- **Stand-alone and self-contained**: plain HTML, inline SVG, a small inline script; no framework, no build step. An
-  external library only from `cdn.jsdelivr.net` or `cdnjs.cloudflare.com`, and only when it saves real work. It lives
-  where the brief says (inline in the whitepaper, or a file next to a blog post).
+- **Stand-alone and self-contained, one file**: plain HTML, inline SVG, a small inline script; no framework, no build
+  step. An external library only from `cdn.jsdelivr.net` or `cdnjs.cloudflare.com`, and only when it saves real work.
+  The file lives next to the page that shows it and is embedded INLINE as a frame (the blog guide's figure block,
+  `docs/blog/howto-write-a-post.md` section 7; the whitepaper uses the same frame). Its CSS and script stay inside
+  the file; nothing reaches into the host page.
+- **Self-sizing**: the figure reports its content height to the host page with
+  `window.parent.postMessage({ type: "klang-figure-height", height: <px> }, "*")` on load and on every resize, and it
+  still looks right in a frame of a sensible default height if nobody listens.
 - **Honest**: it shows the real mechanism with the real numbers from the repository (cite the file for every number
   and formula in your report). Never invent data; a sketch is labelled as a sketch.
-- **Robust**: readable without JavaScript (a sensible static state), keyboard reachable, labelled for screen readers,
+- **Robust**: its caption and its static state make sense without JavaScript, keyboard reachable, labelled for screen readers,
   legible in light and dark, at phone width without horizontal scroll.
 - **Silent**: no sound. A figure that plays audio would be DSP outside the engine ("the engine is the horse"); sound
   belongs to the app's playable examples, which the text can link to.
