@@ -15,7 +15,7 @@ and the brakes at the same time". Both agents run on Claude Sonnet 5.5 at effort
 | role | agent | does | never does |
 |---|---|---|---|
 | reader | `reader` | reads as the intended reader would (skim, map, questions, in depth), judges comprehension, tone, feel and where pictures would help, hands over a brief of problems and goals | writes replacement text; rules on facts |
-| writer | `writer` | turns the brief into text and pictures in the house voice, in two passes (draft, refine) | re-judges the original on its own; invents facts |
+| writer | `writer` | turns the brief into text and pictures in the house voice, in two passes (draft, refine); outside the loop it also takes any writing task directly | re-judges the original on its own; invents facts |
 | fact check | a reviewer (`/review-loop`, docs tier) | checks every claim the new text makes against the code and the records | touches style |
 | coordinator | the session | writes the briefs, keeps the scope, relays nothing unverified, commits | writes the text itself |
 
