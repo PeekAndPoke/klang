@@ -40,7 +40,12 @@ itself."
 - **Idempotent and reviewable**: re-running with no post changed produces byte-identical files; the output is
   committed like the dev-status pages.
 
-## Decision to make before building (complexity is the enemy: stone rule)
+## The renderer: Python (decided 2026-09-29)
+
+The maintainer: "no need for kotlin here. These are internal tools, so pick what is the most lean, probably python
+here." So option 1 below: a Python script next to the dev-status build, with the one small dependency it needs.
+
+## The options that were considered
 
 A CommonMark renderer is not in the Python standard library, which the dev-status build relies on. Options:
 
@@ -49,7 +54,7 @@ A CommonMark renderer is not in the Python standard library, which the dev-statu
 2. **Kotlin on the JVM** (`org.commonmark:commonmark` plus its GFM tables extension) as a small main in the existing
    JVM source set, run through Gradle: no new language toolchain, but Gradle wiring for a docs tool.
 
-Recommendation to discuss: option 1 (the same shape and place as the dev-status pages, no build-system change).
+Chosen: option 1.
 
 ## Guards
 
