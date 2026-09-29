@@ -36,8 +36,8 @@ Created 2026-08-31.
 > sine composed the same way matches today's tremolo to -76 dB (one sample of phase). Edge length by ear: 8 ms
 > still thumps on the sawtooth, **16 ms for all** (74 to 78). Direction (maintainer): keep the `.tremolo()` doors,
 > remove the `TremoloIgnitor` and its own LFO (`LfoShape`), and model the tremolo by composition, "the dsp surface
-> would shrink". Open before the task is written: a start-phase knob on the oscillators (for `phase`), and what
-> happens to `skew`.
+> would shrink". Decided the same day: `skew` and `phase` are dropped. The build task:
+> [`../tremolo-as-composition.md`](../tremolo-as-composition.md).
 
 **Commit `9cb896ff`.** Recorded only in the W10 row of `docs/plans/block-framing-invariance.md` and
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.
