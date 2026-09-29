@@ -18,11 +18,13 @@ audio_jsworklet  (JS worklet entry point — depends on audio_be)
 ```
 LIVE-CODING FRONTEND (main thread / JVM caller)
   │
-  │  KlangCommLink.frontend.send(Cmd.ScheduleVoice(...))
+  │  KlangCommLink.frontend.send(Cmd.ScheduleVoices(...))   (batches; the single ScheduleVoice is not on the hot path)
   │  KlangCommLink.frontend.send(Cmd.ReplaceVoices(...))
   ▼
-KlangRingBuffer (lock-free, single-producer / single-consumer)
-  │
+KlangRingBuffer (a small ring guarded by a lock: ReentrantLock on the JVM, a no-op lock in JS)
+  │  JVM: the audio thread drains the ring at the top of every block (JvmAudioBackend)
+  │  JS:  the ring stays on the main thread; JsAudioBackend.pump() drains it into the worklet port
+  │       (postMessage), and the worklet decodes each Cmd in port.onmessage (KlangAudioWorklet)
   ▼
 AUDIO BACKEND (audio thread)
   │

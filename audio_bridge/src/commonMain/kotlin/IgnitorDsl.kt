@@ -352,7 +352,7 @@ sealed interface IgnitorDsl {
     data class Sawtooth(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
-        /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
+        /** Analog flyback time in samples: lower = brighter/sharper reset, higher = softer (default [SAW_RESET_SAMPLES]). */
         val resetSamples: Double = SAW_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps very high notes sane. */
         val shapeMax: Double = SAW_SHAPE_MAX,
@@ -568,7 +568,7 @@ sealed interface IgnitorDsl {
     data class Ramp(
         val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Slots.analog,
-        /** Analog flyback time in samples — lower = brighter/sharper reset, higher = softer (default 2.0). */
+        /** Analog flyback time in samples: lower = brighter/sharper reset, higher = softer (default [RAMP_RESET_SAMPLES]). */
         val resetSamples: Double = RAMP_RESET_SAMPLES,
         /** Max flyback fraction of a cycle: 0.5 = symmetric-triangle limit; keeps high notes sane. */
         val shapeMax: Double = RAMP_SHAPE_MAX,

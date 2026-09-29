@@ -33,8 +33,9 @@ a much better-solved problem (npm / Go modules / Deno) than general DFS.
 
 ### 1. Immutable tagged versions + content addressing
 
-- A tagged version is **immutable, forever** — republishing `@v1.0` is an error, period (npm learned this via left-pad;
-  Go enforced it from day one).
+- A tagged version is **immutable, forever** — republishing `@v1.0` is an error, period (npm tightened
+  unpublishing after left-pad, 2016; Go's module checksum database, the default since Go 1.13, makes a changed
+  version detectable).
 - Every file/blob is stored and referenced **by content hash**; a version tag resolves to a **manifest of hashes**.
 
 Consequence: the caching layer mostly *disappears*. A tagged import is fetched once and cached forever — no invalidation

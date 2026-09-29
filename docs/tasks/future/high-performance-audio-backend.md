@@ -75,8 +75,10 @@ it plugs into.
 
 ## Wire security — a cost SPECIFIC to the open-wire daemon
 
-The current `@WireFormat` KSP codec is a **trust codec**: fast (67 µs → 385 ns/op) because it's a compact binary
-layout with direct field reads **and** cuts corners (unchecked lengths, trusts the buffer). That's safe only
+The current `@WireFormat` KSP codec is a **trust codec**: fast (67 µs → 385 ns/op) because it reads a plain JS object
+with known keys, property by property, **and** cuts corners (no shape checks, trusts the object; only the
+`WIRE_SCHEMA_HASH` stamp rejects a peer from another build). Not a binary layout: the June record rejected one
+(`docs/tasks-archive/2026-06/20260607-worklet-codec-ksp.md`). That's safe only
 because it's in-process/closed. A WebSocket is an **open boundary** → it needs a **hardened, validating**
 decoder.
 
