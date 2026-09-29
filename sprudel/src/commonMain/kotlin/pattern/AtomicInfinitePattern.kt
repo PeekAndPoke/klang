@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -17,8 +18,14 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
  * Equivalent to `pure(x)` in Tidal / cyclic-pattern languages when used inside time transformations like `ply`.
  * Unlike [AtomicPattern] which usually represents a single event at 0..1, this pattern
  * conceptually exists across all time.
+ *
+ * @property sourceLocations The source location chain every emitted event carries, for live code highlighting.
+ *   `ply` passes the outer event's chain here, so the copies still highlight the atom they came from.
  */
-class AtomicInfinitePattern(val data: SprudelVoiceData) : SprudelPattern {
+class AtomicInfinitePattern(
+    val data: SprudelVoiceData,
+    val sourceLocations: SourceLocationChain?,
+) : SprudelPattern {
     override val weight: Double = 1.0
     override val numSteps: Double? = null // Infinite pattern has no defined step count
 
@@ -43,7 +50,12 @@ class AtomicInfinitePattern(val data: SprudelVoiceData) : SprudelPattern {
 
                 result.add(
                     // clone() so each emitted event owns its data (single-owner invariant; backs ply/echo).
-                    SprudelPatternEvent(part = timeSpan, whole = timeSpan, data = data.clone())
+                    SprudelPatternEvent(
+                        part = timeSpan,
+                        whole = timeSpan,
+                        data = data.clone(),
+                        sourceLocations = sourceLocations,
+                    )
                 )
             }
         }

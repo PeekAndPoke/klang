@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._bindSqueeze
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.AtomicInfinitePattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.withSteps
@@ -35,7 +36,7 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     val result = pattern._bindSqueeze { event ->
         // pure(x) -> infinite pattern of the event's data
-        val infiniteAtom = AtomicInfinitePattern(event.data)
+        val infiniteAtom = AtomicInfinitePattern(event.data, event.sourceLocations)
 
         // To support "Patterned Ply" (Tidal style) where the factor pattern is aligned with the cycle,
         // we must project the global factor pattern into the event's local timeframe.
@@ -105,6 +106,17 @@ fun ply(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
 fun PatternMapperFn.ply(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.ply(n, callInfo) }
 
+/**
+ * Prepends the factor argument's location to every event, so the factor highlights with each copy.
+ *
+ * `ply(n)` gets this from `fast`; `plyWith` and `plyForEach` read their factor as a plain Int and add it here.
+ */
+private fun SprudelPattern.withFactorLocation(factorArg: SprudelDslArg<Any?>): SprudelPattern {
+    val location = factorArg.location ?: return this
+
+    return mapEvents { it.prependLocation(location) }
+}
+
 // -- plyWith() --------------------------------------------------------------------------------------------------------
 
 /**
@@ -146,14 +158,14 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
 
         // Create factor number of patterns, applying func 0, 1, 2, ... (factor-1) times
         val patterns = (0 until factor).map { i ->
-            val atomPattern = AtomicInfinitePattern(event.data)
+            val atomPattern = AtomicInfinitePattern(event.data, event.sourceLocations)
             applyFunctionNTimes(i, func, atomPattern)
         }
 
         // Concatenate all patterns - SequencePattern squashes them into one cycle
         // _bindSqueeze will squeeze this into the event's timespan
         if (patterns.size == 1) patterns.first() else SequencePattern(patterns)
-    }
+    }.withFactorLocation(factorArg)
 
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
@@ -272,7 +284,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
         }
 
         // Start with the original value, then add transformed versions for i = 1 to factor-1
-        val atomPattern = AtomicInfinitePattern(event.data)
+        val atomPattern = AtomicInfinitePattern(event.data, event.sourceLocations)
 
         val patterns = buildList {
             // First pattern is the original
@@ -286,7 +298,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
         // Concatenate all patterns - SequencePattern squashes them into one cycle
         // _bindSqueeze will squeeze this into the event's timespan
         if (patterns.size == 1) patterns.first() else SequencePattern(patterns)
-    }
+    }.withFactorLocation(factorArg)
 
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
