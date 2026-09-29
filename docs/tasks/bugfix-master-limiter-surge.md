@@ -1,6 +1,6 @@
 # Master limiter: the mix surges back after deep limiting
 
-Status: **open, sound.** Carried 2026-09-27 out of the master limiter lookahead task (archived as
+Status: **open, sound; re-measured 2026-09-29 (it still shows, on every snare hit), next: by ear.** Carried 2026-09-27 out of the master limiter lookahead task (archived as
 `docs/tasks-archive/2026-09/20260927-master-limiter-lookahead.md`, section "REOPENED 2026-08-18"; the
 full measurements and the limiter's design live there). Reported by ear by the maintainer, measured
 2026-08-18, not fixed.
@@ -35,6 +35,35 @@ drove the limiter with `MasterFx.gain`, which is retired; use the `gain` stage o
 - The cost number: mean level at identical peak (the dual release's reason to exist).
 
 If the surge no longer shows at a realistic drive, record the measurement and close this.
+
+## Re-measured 2026-09-29: it still shows, on every snare hit
+
+Commit `12f889cb`, the committed Der Schmetterling (its master is `master(Katalyst(k => k.reverb(0.2, 7, 3500).gain(3.5)))`,
+no authored limiter, so the house limiter does all the limiting), JVM offline render, 258 cycles at 32.5 rpm
+(478 s), clock seed pinned. The method above: each drive against one 12.04 dB lower; the reference renders are clean
+(the 0.875 reference peaks at -2.78 dBFS, below the knee) and deterministic (two references against each other give
+0.00 dB in every frame). Event: a local minimum below -4 dB with 250 ms of suppression either side; the reopen is the
+highest gain within the next 250 ms minus that minimum.
+
+| drive | median gain | frames above 3 dB of reduction | closures deeper than 4 dB | reopen at least 3 dB | deepest |
+|---|---|---|---|---|---|
+| 3.5, as written | +0.00 dB | 1.92 % | 405 | 405 | -9.34 dB |
+| 2.2, the August reference | +0.00 dB | 0.61 % | 80 | 80 | -5.76 dB |
+| 3.5 minus 3.3 dB | +0.00 dB | 0.92 % | 186 | 186 | -6.42 dB |
+
+- **Every event is a snare hit**: 396 on the backbeat, 9 in the snare fills; almost none while the snare is muted
+  (cycles 128 to 160). The worst event: -9.7 dB, back to -3 dB in 12 ms and -0.5 dB in 38 ms, so the whole mix ducks
+  by about 9 dB for 20 to 40 ms under each snare crack. Reopen within 250 ms at 3.5: median +6.7 dB, max +9.3 dB
+  (target: under 3 dB).
+- Against 2026-08-18 (14 events): similar dives, larger recovery, and a different character. The August events were
+  rare coinciding onsets; these come from the snare (the metal snare of 2026-09-28) reaching about +8 dBFS before the
+  limiter on every hit.
+- Cost baseline for any fix: as written, peak -0.49 dBFS, mean -17.71 dBFS RMS; 3.3 dB less drive costs 3.0 dB of mean
+  level at practically the same peak. The dual release's own share could not be computed without an engine change.
+- **Judgement before any fix: listen first.** If the snare's crack masks the fast reopen, nothing needs fixing; if it
+  does not, the likely fix is upstream (the snare's level, "check upstream before animating a component"). The
+  depth-aware release below would stretch every snare into a 100 to 200 ms duck of the whole mix, which could pump
+  more, not less. The listening pair: `tmp/listening/01-limiter-snare-*` (prepared 2026-09-29, not in git).
 
 ## The fix direction
 
