@@ -23,10 +23,14 @@ import * from "sprudel"
 //
 // Guitars only, and only one guitar: the instrument of Der Schmetterling, its rig stages and its makeGuitar, played
 // through four rigs picked from its menu. A clean arpeggio is spun one thread at a time, a second guitar answers, a
-// palm-muted heartbeat starts under the skin, volume swells stretch it from inside, it holds its breath, and the high
-// gain rig splits it open. What flies out at the end is the Schmetterling's own lead, and the last chord is major.
+// heartbeat starts under the skin, volume swells stretch it from inside, it holds its breath, and the high gain rig
+// splits it open. What flies out at the end is the Schmetterling's own lead, and the last chord is major.
 //
-// Form, in cycles of 3 s: intro 8 | answer 8 | build 8 | break 8 | coda 4 | last chord 2  = 38
+// How it is built, bottom up:
+//   notes  the harmony and the melodies, as patterns without scale or timing
+//   lines  one guitarist playing one way, a function from notes to sound
+//   parts  lines played together; a part starts on its own first cycle
+//   song   arrange(): which part, for how many cycles (3 s each), in which order
 
 let feel  = 20   // analog drift of the guitars, as in Der Schmetterling
 let drunk =  1   // two guitarists, sober this time, mostly
@@ -125,114 +129,193 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
 let clean  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab1x12)
 let bright = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
-let muted  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
+let deep   = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
 let heavy  = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
 
-// Arp: the cocoon. Dm(add9), Bbmaj7(#11), Gm9, Asus. It is spun one thread at a time  -------------
-export arp_pat = `<[0 4 7 8 9 8 7 4] [-2 2 4 8 9 8 4 2] [-4 0 2 4 5 4 2 0] [-3 1 4 7 8 7 4 1]>`
+// Notes  -----------------------------------------------------------------------------------------------------------
+// Scale degrees in D minor, 0 is D3. No scale here: the song sets it once. A line moves its notes to its own octave.
 
-export arp = n(arp_pat).scale("d3:minor")
-  .mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!17 [1 1 1 1 0 0 0 0] 1!12 0!2>")
-  .ply("<1!20 2!12 1!6>")
+// The cocoon: Dm(add9), Bbmaj7(#11), Gm9, Asus. One chord per cycle, four cycles a round.
+export cocoonArp   = `<[0 4 7 8 9 8 7 4] [-2 2 4 8 9 8 4 2] [-4 0 2 4 5 4 2 0] [-3 1 4 7 8 7 4 1]>`
+export cocoonRoots = `<0 5 3 4>`
+export cocoonPower = `<[0,4] [-2,2] [-4,0] [-3,1]>`
+export cocoonSwell = `<[4,7,9] [4,8,9] [2,5,7] [1,4,8]>`
+
+// The lift: the break climbs Bb, C, Dm, three cycles, then lands.
+export liftArp   = `<[-2 2 4 8 9 8 4 2] [-1 3 6 8 10 8 6 3] [0 4 7 8 9 8 7 4]>`
+export liftRoots = `<5 6 0>`
+export liftPower = `<[-2,2] [-1,3] [0,4]>`
+
+// The melody, in two phrases of one round each. The second fits the cocoon and the lift alike.
+export melodyOne = `<[4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]>`
+export melodyTwo = `<[7@4 6 4 3 4] [8@4 ~ 7 8 9] [9@3 8 7@2 5 4] [4@6 ~@2]>`
+
+// Out of the cocoon flies the Schmetterling's own lead.
+export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
+
+// Lines  -----------------------------------------------------------------------------------------------------------
+// One guitarist, one way of playing. Each line sets its own level; a part may set another.
+
+// Spin: the clean arpeggio, notes ringing over each other.
+export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 2.5).clip(4)
+  .oscp("decay", 1.5).clip(4)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
-  .gain("<0.25!8 0.21!8 0.20 0.21 0.22 0.23 0.24 0.25 0.26 0.27 0.16!8 0.22!6>").pan(0.4)
-  .mute("<0!28 1!4 0!6>")
+  .gain(0.22).pan(0.4)
   .orbit(1).reverb(wet = 0.2, size = 4)
 
-// The lift: the second half of the break climbs Bb, C, Dm and stays there
-export arpLift = n(`<[-2 2 4 8 9 8 4 2] [-1 3 6 8 10 8 6 3] [0 4 7 8 9 8 7 4] [0 4 7 9 11 9 7 4]>`).scale("d3:minor")
-  .ply(2)
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 2.5).clip(4)
-  .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
-  .gain(0.16).pan(0.4)
-  .mute("<1!28 0!4 1!6>")
-  .orbit(1).reverb(wet = 0.2, size = 4)
-
-// Answer: a slow melody on the bright rig  --------------------------------------------------------
-export answer_pat = `<
-  [4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]
-  [7@4 6 4 3 4] [8@4 ~ 7 8 9] [9@3 8 7@2 5 4] [4@6 ~@2]
->`
-
-export answer = n(answer_pat).scale("d4:minor")
+// Sing: the melody on the bright rig, an octave up.
+export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.08)
   .oscp("decay", 3.0).clip(1.5)
-  .gain("<0.14!16 0.12!8 0.14!14>").pan(0.65)
-  .mute("<1!8 0!16 1!14>")
+  .gain(0.14).pan(0.65)
   .orbit(2).reverb(wet = 0.3, size = 5)
 
-// Swell: volume-knob swells, the thing inside stretching  ----------------------------------------
-export swell_pat = `<[4,7,9] [4,8,9] [2,5,7] [1,4,8]>`
-
-export swell = n(swell_pat).scale("d4:minor")
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.12)
-  .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
-  .gain(0.06).pan(0.3).superimpose(x => x.pan(0.7).late(0.02))
-  .mute("<1!16 0!8 1!14>")
-  .orbit(7).reverb(wet = 0.5, size = 6)
-
-// Pulse: palm mutes, 3-3-2, the heartbeat under the skin  ---------------------------------------
-// One root per cycle, the whole song: Dm Bb Gm A, and in the lift Bb C Dm Dm
-export roots = `<0 5 3 4  0 5 3 4  0 5 3 4  0 5 3 4  0 5 3 4  0 5 3 4  0 5 3 4  5 6 0 0  0 5 3 4  0 0>`
-
-export pulseSoft = n(roots).struct("x ~ ~ x ~ ~ x ~").scale("d2:minor")
-  .sound(muted).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 0.12).clip(1)
-  .velocity("1.0 0.8 0.9")
-  .gain("<0.45!24 0.8!8 0.45!6>").pan(0.5)
-  .mute("<1!12 0!11 [0 1] 0!8 1!6>")
-  .orbit(3)
-
-export pulseHeavy = n(roots).struct("<[x x ~ x x ~ x x]!31 [x ~!7] [x x ~ x x ~ x x]!6>").scale("d2:minor")
-  .sound(heavy).adsrOff().unison(voices = 19, spread = 0.10)
-  .oscp("decay", "<0.15!31 3.0 0.15!6>").clip("<1!31 8 1!6>")
-  .velocity("1.0 0.75 0.9 0.75 0.95 0.75")
-  .gain(1.2).pan(0.5)
-  .mute("<1!24 0!8 1!6>")
-  .orbit(4)
-
-// Wings: the break, the cocoon splits. Tremolo-picked power chords, hard left and right  -------
-export wings_pat = `<[0,4] [-2,2] [-4,0] [-3,1] [-2,2] [-1,3] [0,4] [0,4]>`
-
-export wings = n(wings_pat).struct("<[x!16]!7 [x ~!15]>").scale("d3:minor")
-  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
-  .oscp("decay", "<0.4!7 3.5>").clip("<1!7 16>")
-  .velocity("1.0 0.85 0.9 0.85")
-  .gain(0.8)
-  .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
-  .mute("<1!24 0!8 1!6>")
-  .orbit(5).reverb(wet = 0.15, size = 3)
-
-// Flight: the answer melody an octave up, over the wings  ----------------------------------------
-export flight = n(answer_pat).scale("d5:minor")
+// Soar: the melody two octaves up, wider, over the wings.
+export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.10)
   .oscp("decay", 3.0).clip(1.5)
   .gain(0.50).pan(0.5)
-  .mute("<1!24 0!8 1!6>")
   .orbit(6).reverb(wet = 0.25, size = 5)
 
-// Motif: out of the cocoon flies the Schmetterling's own lead  -----------------------------------
-export motif = n(`<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`).scale("d5:minor")
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.08)
-  .oscp("decay", 2.0).clip(2)
-  .gain(0.26).pan(0.6)
-  .mute("<1!32 0!4 1!2>")
-  .orbit(2).reverb(wet = 0.3, size = 5)
+// Swell: volume-knob swells, the thing inside stretching. Doubled right, a little late.
+export swell = chords => n(chords.add(7))
+  .sound(bright).adsrOff().unison(voices = 11, spread = 0.12)
+  .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
+  .gain(0.06).pan(0.3).superimpose(x => x.pan(0.7).late(0.02))
+  .orbit(7).reverb(wet = 0.5, size = 6)
 
-// Strum: the last chord is D major. It rings  ---------------------------------------------------
-export strum = n("<[0 4 7 9 11 ~@27] ~>").scale("d3:major")
+// Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
+export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
+  .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
+  .oscp("decay", 2.0).clip(2)
+  .velocity("1.0 0.8 0.9")
+  .gain(0.325).pan(0.5)
+  .orbit(3)
+
+// Chug: the heavy rig, palm-muted on the root, an octave down.
+export chug = roots => n(roots.add(-7)).struct("x x ~ x x ~ x x")
+  .sound(heavy).adsrOff().unison(voices = 19, spread = 0.10)
+  .oscp("decay", 0.15).clip(1)
+  .velocity("1.0 0.75 0.9 0.75 0.95 0.75")
+  .gain(1.2).pan(0.5)
+  .orbit(4)
+
+// Wings: tremolo-picked power chords on the heavy rig, hard left and right.
+export wings = chords => n(chords).ply(16)
+  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
+  .oscp("decay", 0.4).clip(1)
+  .velocity("1.0 0.85 0.9 0.85")
+  .gain(0.8)
+  .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
+  .orbit(5).reverb(wet = 0.15, size = 3)
+
+// Strike: one heavy chord, let ring. It shares the wings' orbit and room.
+export strike = chords => n(chords)
+  .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
+  .oscp("decay", 3.5).clip(1)
+  .gain(0.8)
+  .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
+  .orbit(5).reverb(wet = 0.15, size = 3)
+
+// Strum: the clean rig, one slow strum, let ring.
+export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06)
   .oscp("decay", 6.0).clip(60)
-  .gain(0.3).pan(0.45)
-  .mute("<1!36 0!2>")
+  .gain(0.20).pan(0.45)
   .orbit(8).reverb(wet = 0.3, size = 6)
 
-// Song  ------------------------------------------------------------------------------------------------
+// Parts  -----------------------------------------------------------------------------------------------------------
+// Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
+
+// The cocoon is spun one thread at a time, over two rounds.
+let spinning = stack(
+  spin(cocoonArp).gain(0.25).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+)
+
+// A second guitar answers.
+let answering = stack(
+  spin(cocoonArp).gain(0.21),
+  sing(melodyOne),
+)
+
+// The heartbeat starts.
+let quickening = stack(
+  spin(cocoonArp).gain(0.21),
+  sing(melodyTwo),
+  beat(cocoonRoots),
+)
+
+// Swells stretch it from inside, the arpeggio grows.
+let stretching = stack(
+  spin(cocoonArp).gain("<0.20 0.21 0.22 0.23>"),
+  sing(melodyOne).gain(0.12),
+  swell(cocoonSwell),
+  beat(cocoonRoots),
+)
+
+// Still growing, and in the last half cycle the arpeggio and the heartbeat hold their breath.
+let breath = "<1!3 [1 0]>"
+
+let holdingBreath = stack(
+  spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>").mask(breath),
+  sing(melodyTwo).gain(0.12),
+  swell(cocoonSwell),
+  beat(cocoonRoots).mask(breath),
+)
+
+// The high gain rig splits it open. The arpeggio doubles its pace underneath.
+let breakingOpen = stack(
+  spin(cocoonArp).ply(2).gain(0.16),
+  soar(melodyOne),
+  wings(cocoonPower),
+  chug(cocoonRoots),
+  beat(cocoonRoots).gain(0.7),
+)
+
+// The lift: Bb, C, Dm.
+let lifting = stack(
+  spin(liftArp).ply(2).gain(0.20).oscp("decay", 2.5),
+  soar(melodyTwo),
+  wings(liftPower),
+  chug(liftRoots),
+  beat(liftRoots).gain(0.7),
+)
+
+// It lands on one heavy chord with the low D under it, and the melody holds its A.
+let landing = stack(
+  spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("decay", 2.5),
+  soar("[4@6 ~@2]"),
+  strike("[-7,0,4]"),
+  beat("0").gain(0.7),
+)
+
+// The cocoon again, empty now, and the butterfly flies off.
+let flyingOff = stack(
+  spin(cocoonArp),
+  sing(schmetterlingLead.add(7)).oscp("decay", 2.0).clip(2).gain(0.26).pan(0.6),
+)
+
+// The last chord is D major: this part brings its own scale, and the first scale on a note wins.
+let lastChord = stack(
+  strum("<[0 4 7 9 11 ~@27] ~>").scale("d3:major"),
+)
+
+// Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
-  stack(arp, arpLift, answer, swell, pulseSoft, pulseHeavy, wings, flight, motif, strum)
+  arrange(
+    [8, spinning],
+    [4, answering],
+    [4, quickening],
+    [4, stretching],
+    [4, holdingBreath],
+    [4, breakingOpen],
+    [3, lifting],
+    [1, landing],
+    [4, flyingOff],
+    [2, lastChord],
+  )
+    .scale("d3:minor")
     .analog(feel)
     .late(berlin.range(0.0, 0.002).mul(drunk).seg(8)),
   master(Katalyst(k => k
@@ -243,5 +326,6 @@ export song = stack(
 )
 
 // Written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
+// Fine-tuned and arranged with the maintainer
     """,
 )
