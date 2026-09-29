@@ -1,5 +1,19 @@
 # Analog drift: is the pitch/filter ratio inverted?
 
+> **CLOSED 2026-09-29, decided by the maintainer after listening.** Pairs `10` to `12` (`tmp/listening/`, today's
+> constants against the three steps of section 5, on a held supersaw chord and a resonant saw pad at `analog(10)`):
+> pair 10, "i personally like the 'before' variant better, feels less artificial"; pair 11, the chord's "before" is
+> better and the pad "hard to tell"; pair 12, "hard to tell". The pad could not show the hypothesis: even step c moved
+> the cutoff by at most a quarter semitone. The hardware fact behind the question, checked: a VCO is held to a few
+> cents because the ear hears pitch errors easily, while filter cutoff varies by several percent between voices and
+> units, which the ear barely notices. So the hypothesis ("lower the pitch drift") is not supported; Klang's filter
+> drift was simply far smaller than hardware's.
+>
+> **Decision:** "keep the pitch drift as is and change the filter drift to be 2x of the pitch drift by default"
+> (`FILTER_DRIFT_RELATIVE_TO_OSC` 0.25 to 2.0, `audio_bridge/.../constants/FilterHumanizationDefaults.kt`). The
+> maintainer listens to the built-in songs on the next build. Section 4's engine-level fields were not built: the
+> ratio is a constant, as before. The text below is the record as it stood.
+
 > **2026-09-27:** the listening question stands, but the Pipeline DSL and `StageDsl.Filter` named below retired in
 > phase 3 step 9. The filter drift, frozen offset and drive per `analog` are the constants in
 > `audio_bridge/.../constants/FilterHumanizationDefaults.kt`, read by the Ignitor filter nodes; the "where it lives"

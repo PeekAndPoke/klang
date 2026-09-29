@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -22,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.bandpass
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import kotlin.math.abs
 import kotlin.random.Random
 
 /**
@@ -504,5 +506,20 @@ class IgnitorFilterKnobsSpec : StringSpec({
         context.voiceElapsedFrames += blockFrames
 
         withClue("next block, it moved") { lane.blockDriftMultiplier(context) shouldNotBe first }
+    }
+    "the filter drift is twice the pitch drift (maintainer, 2026-09-29)" {
+        // A contract, not the constant restated: the drift's trajectory does not depend on `analog`, only its
+        // scale does, so a pitch lane at the same analog on the same stream must move exactly half as far.
+        val analog = 3.0
+        val lane = buildFilterHumanization(analog, sampleRate, blockFrames, seed())!!
+        // Skip the tolerance draw `buildFilterHumanization` takes before its drift lane.
+        val pitch = AnalogDrift(analog, analogDriftStepRate(sampleRate, blockFrames), seed().also { it.nextDouble() })
+        val context = ctx(seed())
+
+        repeat(2000) {
+            val p = pitch.nextMultiplier() - 1.0
+            (lane.blockDriftMultiplier(context) - 1.0) shouldBe (2.0 * p plusOrMinus (abs(p) * 1e-9 + 1e-15))
+            context.voiceElapsedFrames += blockFrames
+        }
     }
 })

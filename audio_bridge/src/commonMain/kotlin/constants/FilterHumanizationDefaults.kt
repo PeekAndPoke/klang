@@ -12,7 +12,7 @@ package io.peekandpoke.klang.audio_bridge.constants
 // These live in `audio_bridge` because they were **wire defaults**, the defaults
 // of the Pipeline DSL's filter stage, until that DSL retired (phase 3 step 9).
 // The engine (`audio_be`) reads them from here. They once drifted apart while they
-// were duplicated, see `docs/tasks/audio-bridge-constants.md` §1.
+// were duplicated, see `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §1.
 //
 // Engine-internal tuning with no DSL field (the oscillator drift depths in
 // `AnalogDriftCoeffs`) deliberately stays in `audio_be`. The rule is: a constant belongs here iff it is a wire default.
@@ -21,12 +21,11 @@ package io.peekandpoke.klang.audio_bridge.constants
 // bit-identical to the textbook filter, and the saturated branch is skipped entirely.
 //
 // The old "1 = mild / 3 = Memorymoog / 10 = broken VCO" ladder that used to head this
-// block was written for the pre-2026-08-11 values and overstated today's by 2-10x (cutoff
-// offset 5x, drive 2x, drift 10x); at
+// block was written for the pre-2026-08-11 values and overstated today's (cutoff offset 5x,
+// drive 2x; the drift 1.25x since it was raised to 2.0 on 2026-09-29); at
 // the current cutoff offset, `analog = 10` is ±3.5 cents, which is not a broken VCO.
-// Deliberately not replaced with a new ladder: the values are mid-retune (see
-// docs/tasks/audio-bridge-constants.md §6) and a fresh set of adjectives would go stale
-// the same way. Per-constant magnitudes are given below and are derived, not guessed.
+// Deliberately not replaced with a new ladder: a fresh set of adjectives would go stale the
+// same way (the retune record: docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md §6). Per-constant magnitudes are given below and are derived, not guessed.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -62,7 +61,7 @@ const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.0002
  *
  * The effect is strongly Q-dependent AND level-dependent (`tCfb` is driven by the integrator
  * state), so a single adjective per `analog` value cannot be honest. See
- * `docs/tasks/audio-bridge-constants.md` §6.2 for the measured table.
+ * `docs/tasks-archive/2026-08/20260811-audio-bridge-constants.md` §6.2 for the measured table.
  *
  * Consumer: `IgnitorFilters` (`Ignitor.svf`'s saturated branches). The strip's `SvfLPF` / `SvfHPF`
  * classes that also read it retired in phase 3 step 9.
@@ -76,12 +75,13 @@ const val FILTER_DRIVE_PER_ANALOG: Double = 0.25
  * trajectory scaled relative to oscillator pitch drift).
  *
  * The oscillator side runs at `ANALOG_FAST_PEAK_CENTS + ANALOG_SLOW_PEAK_CENTS`
- * = 1.0 cent per unit `analog`, so this constant *is* the FILTER-to-pitch drift
- * ratio: at 0.25 the filter wanders a quarter as much as pitch; above 1.0 it
- * wanders more. Whether that is the right way round is an open tuning question
- * — real hardware arguably wanders more in cutoff than in pitch. See
- * `docs/tasks/audio-bridge-constants.md` §6.
+ * = 1.0 cent per unit `analog`, so this constant *is* the filter-to-pitch drift
+ * ratio: at 2.0 the cutoff wanders twice as far as the pitch, 2 cents per unit `analog`.
+ *
+ * Raised from 0.25 to 2.0 by the maintainer on 2026-09-29, keeping the pitch drift as it was:
+ * analog hardware varies its filter cutoff far more than its pitch, and the ear hears a pitch
+ * drift far more easily than a cutoff drift, so at a quarter of the pitch drift it was inaudible.
  *
  * Consumer: `FilterHumanization` (the Ignitor filters' drift lane).
  */
-const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 0.25
+const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 2.0

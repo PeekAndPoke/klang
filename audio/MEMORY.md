@@ -1,5 +1,17 @@
 # Klang Audio — Memory
 
+## Filter drift is twice the pitch drift (2026-09-29, decided by ear)
+
+`FILTER_DRIFT_RELATIVE_TO_OSC` went from 0.25 to 2.0 (`audio_bridge/.../constants/FilterHumanizationDefaults.kt`); the
+pitch drift constants are unchanged. The maintainer preferred today's pitch drift in listening pairs that lowered it
+("feels less artificial"), and the filter drift had been too small to hear (a quarter cent per unit `analog`). Real
+hardware holds pitch tightly and lets the cutoff vary by percents. Record:
+`docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md`. The voice baselines with an `analog` row and a
+filter were regenerated from the tree with this change (the no-filter analog rows did not move). A relation spec pins
+the decision (`IgnitorFilterKnobsSpec`, "the filter drift is twice the pitch drift"). The drift is still subtle
+(about 1 % of cutoff at `analog(10)`); the knob for larger voice-to-voice filter differences is
+`FILTER_CUTOFF_OFFSET_PER_ANALOG`, untouched.
+
 ## The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12, 2026-09-28)
 
 Plan and decisions (a) to (j): `docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md` (archived 2026-09-28).

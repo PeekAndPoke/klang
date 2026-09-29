@@ -69,14 +69,14 @@ even when they are valuable.
 Every surface addition above lands on **both doors** (script stdlib + Kotlin extensions) in the same
 deliverable. Nothing ships one-door.
 
-## Layer 2.5: lock the sound before tutorials (9)
+## Layer 2.5: lock the sound before tutorials (9 rows, 1 decided 2026-09-29)
 
 All in [`by-ear/`](by-ear/). These are non-delegable and they gate the tutorial phase, because a
 tutorial ear-checked against a sound that later gets retuned has to be redone.
 
 | # | Round | Note |
 |---|---|---|
-| 22 | [`by-ear/analog-drift-ratio-tuning.md`](by-ear/analog-drift-ratio-tuning.md) | **Do this one first.** It could invert the whole analog character, so it must precede anything else that gets ear-checked |
+| ~~22~~ | [`20260929-analog-drift-ratio-tuning.md`](../tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md) | ✅ **DECIDED 2026-09-29 by ear:** pitch drift stays, filter drift becomes 2x the pitch drift (it was a quarter). The maintainer checks the built-in songs on the next build |
 | 23 | W10 tremolo shapes (`9cb896ff`, committed unheard) | [`by-ear/README.md`](by-ear/README.md) §1. The oldest debt, and the most new sound |
 | 24 | Mini-notation tweaks verdict | [`by-ear/README.md`](by-ear/README.md) §2. Could still send the design back |
 | 25 | [`by-ear/c3-depth-migration-flags.md`](by-ear/c3-depth-migration-flags.md) | 5 ranked song sites |

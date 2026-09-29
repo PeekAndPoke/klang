@@ -74,10 +74,10 @@ private val BASELINE: Map<String, String> = mapOf(
     "48000 | notch env 12" to "12d66ae63e8be019",
     "48000 | lpfCurves linear, scurve, invsquare (env 24, every stage curved)" to "cb35ec47c1466fda",
     "48000 | lpf env 24 q 3 passes 3, a step envelope: the sweep forwarded to every stage of the cascade" to "6b3fc5052bcbb5ba",
-    "48000 | analog 2, lpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "f0fd107cb0f4fe1d",
-    "48000 | analog 2, hpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "00c4d43581c8910c",
+    "48000 | analog 2, lpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "1bbb2b87fa01da96",
+    "48000 | analog 2, hpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "9f5b559819d8f2b3",
     "48000 | analog 2, no filter: the oscillator drift alone" to "8a684f01eec74ef2",
-    "48000 | analog 2, hpf and lpf: the draw order (section 8)" to "f325acfb5012acea",  // diverged from the strip at HEAD: the section 8 draw order
+    "48000 | analog 2, hpf and lpf: the draw order (section 8)" to "f3d38ce79a1a0022",  // diverged from the strip at HEAD: the section 8 draw order
     "48000 | tremolo depth 0.5 sync 4" to "d9e91547714977e6",
     "48000 | tremolo square, skew 0.3, phase 0.25" to "330b08a87dd4b05b",
     "48000 | adsr 0.005 / 0.2 / 0.5 / 0.2 (whole frame counts at 48 kHz, 220.5 attack frames at 44.1 kHz)" to "5810bc6fc071e108",
@@ -111,10 +111,10 @@ private val BASELINE: Map<String, String> = mapOf(
     "44100 | notch env 12" to "95b628b648f53c17",
     "44100 | lpfCurves linear, scurve, invsquare (env 24, every stage curved)" to "4354f5ec3725e491",
     "44100 | lpf env 24 q 3 passes 3, a step envelope: the sweep forwarded to every stage of the cascade" to "46fc2d797d74a482",
-    "44100 | analog 2, lpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "6a107adfa4a816dc",
-    "44100 | analog 2, hpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "50ce6e4e5c81eff9",
+    "44100 | analog 2, lpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "2b25a590ef749c8b",
+    "44100 | analog 2, hpf env 24 q 3, a step envelope: the sweep through the saturated branch with the drift" to "8722f2180e81356d",
     "44100 | analog 2, no filter: the oscillator drift alone" to "4921a694bfc181bd",
-    "44100 | analog 2, hpf and lpf: the draw order (section 8)" to "c8c42a67f4750378",  // diverged from the strip at HEAD: the section 8 draw order
+    "44100 | analog 2, hpf and lpf: the draw order (section 8)" to "4f180fdba4438854",  // diverged from the strip at HEAD: the section 8 draw order
     "44100 | tremolo depth 0.5 sync 4" to "296e4068d9f0886b",
     "44100 | tremolo square, skew 0.3, phase 0.25" to "5ff510304a9cd59b",
     "44100 | adsr 0.005 / 0.2 / 0.5 / 0.2 (whole frame counts at 48 kHz, 220.5 attack frames at 44.1 kHz)" to "5e6aa4a90443c7f2",
