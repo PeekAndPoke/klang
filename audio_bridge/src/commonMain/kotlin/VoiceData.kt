@@ -99,7 +99,7 @@ data class VoiceData(
     // Routing
     val cylinder: Int?,
 
-    // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
+    // Panning (0.0 = Left, 0.5 = Center, 1.0 = Right; the engine defaults an unset pan to 0.5)
     val pan: Double?,
 
     // Choke group: a new voice in the same cut group ends the ones still sounding.
