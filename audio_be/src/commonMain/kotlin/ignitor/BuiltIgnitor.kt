@@ -41,9 +41,9 @@ data class BuiltIgnitor(
     /**
      * True when the SIGNAL SPINE of this subtree carries a stage that can silence the voice's own
      * output for a stretch and then bring it back: today, any BUILT tremolo node (one the gate did
-     * not remove). A square tremolo at full depth is exact silence for half a cycle, a skewed one
-     * for longer, and the silence culler, which ends a voice whose release stays under the floor for
-     * `VOICE_CULL_SECONDS`, would kill the voice at its first off-half. The voice factory ORs this
+     * not remove). A square tremolo at full depth is silence for about half a cycle, and the silence
+     * culler, which ends a voice whose release stays under the floor for `VOICE_CULL_SECONDS`, would
+     * kill the voice at its first off-half. The voice factory ORs this
      * into its cull-never decision, the rule the strip's tremolo always had (depth above 0, whatever
      * the shape).
      *

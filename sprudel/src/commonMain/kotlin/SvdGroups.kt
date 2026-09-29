@@ -113,8 +113,6 @@ data class SvdPhaser(
 data class SvdTremolo(
     var tremoloSync: Double? = null,
     var tremoloDepth: Double? = null,
-    var tremoloSkew: Double? = null,
-    var tremoloPhase: Double? = null,
     var tremoloShape: String? = null,
 )
 
@@ -246,8 +244,6 @@ fun mergeSvdTremolo(base: SvdTremolo?, over: SvdTremolo?): SvdTremolo? {
     return SvdTremolo(
         tremoloSync = over.tremoloSync ?: base.tremoloSync,
         tremoloDepth = over.tremoloDepth ?: base.tremoloDepth,
-        tremoloSkew = over.tremoloSkew ?: base.tremoloSkew,
-        tremoloPhase = over.tremoloPhase ?: base.tremoloPhase,
         tremoloShape = over.tremoloShape ?: base.tremoloShape,
     )
 }

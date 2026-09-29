@@ -282,15 +282,13 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Coarse" { check(IgnitorDsl.Sine().coarse(4.0)) }
     "Phaser" { check(IgnitorDsl.Sine().phaser(wet = 0.4, rate = 0.5).copy(floor = IgnitorDsl.Constant(0.25))) }
     "Tremolo" { check(IgnitorDsl.Sine().tremolo(5.0, 0.5)) }
-    "Tremolo (shape, skew and phase non-default, one a slot)" {
+    "Tremolo (shape non-default, the depth a slot)" {
         check(
             IgnitorDsl.Tremolo(
                 inner = IgnitorDsl.Sine(),
                 rate = IgnitorDsl.Constant(3.0),
-                depth = IgnitorDsl.Constant(0.8),
+                depth = IgnitorDsl.Param("t.depth", 0.8),
                 shape = IgnitorDsl.Constant(2.0),
-                skew = IgnitorDsl.Param("t.skew", 0.3),
-                phase = IgnitorDsl.Constant(0.25),
             )
         )
     }

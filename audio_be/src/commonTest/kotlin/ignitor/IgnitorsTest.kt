@@ -1251,4 +1251,13 @@ class ExcitersTest : StringSpec({
         val buf = generate(Ignitors.sine().shape("fold"), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
     }
+
+    "the unison saw and ramp stay finite at a NaN frequency (the flyback NaN-guard)" {
+        // A NaN frequency used to make the flyback NaN and every sample NaN; the wrap scrubs the phase to 0 meanwhile.
+        val saw = generate(Ignitors.superSaw(freq = ConstantIgnitor(Double.NaN), rng = Random(1)), blockFrames = 512)
+        val ramp = generate(Ignitors.superRamp(freq = ConstantIgnitor(Double.NaN), rng = Random(1)), blockFrames = 512)
+
+        saw.all { it.isFinite() } shouldBe true
+        ramp.all { it.isFinite() } shouldBe true
+    }
 })

@@ -663,16 +663,6 @@ data class SprudelVoiceData(
         set(v) {
             if (v != null || tremolo != null) tremoloOrNew().tremoloDepth = v
         }
-    var tremoloSkew: Double?
-        get() = tremolo?.tremoloSkew
-        set(v) {
-            if (v != null || tremolo != null) tremoloOrNew().tremoloSkew = v
-        }
-    var tremoloPhase: Double?
-        get() = tremolo?.tremoloPhase
-        set(v) {
-            if (v != null || tremolo != null) tremoloOrNew().tremoloPhase = v
-        }
     var tremoloShape: String?
         get() = tremolo?.tremoloShape
         set(v) {

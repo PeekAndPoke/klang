@@ -34,8 +34,6 @@ data class DoorFields(
     val tremoloDepth: Double? = null,
     val tremoloSync: Double? = null,
     val tremoloShape: String? = null,
-    val tremoloSkew: Double? = null,
-    val tremoloPhase: Double? = null,
     val begin: Double? = null,
     val end: Double? = null,
     val speed: Double? = null,
@@ -146,8 +144,6 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     put(s.tremolo.depth, doors.tremoloDepth)
     put(s.tremolo.sync, doors.tremoloSync)
     put(s.tremolo.shape, doors.tremoloShape?.let { LfoShapes.indexOf(it) })
-    put(s.tremolo.skew, doors.tremoloSkew)
-    put(s.tremolo.phase, doors.tremoloPhase)
 
     doors.adsr?.let { adsr ->
         put(s.adsr.attack, adsr.attack)

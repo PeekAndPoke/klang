@@ -97,7 +97,7 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Engines / primitives / math
 
-- `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`, `LfoShape.kt`,
+- `StereoBuffer.kt`, `AudioSample.kt`, `Oversampler.kt`, `ShapingFuncs.kt`, `DistortionShape.kt`,
   `DspUtil.kt`, `AdsrCurveMath.kt`, `AudioAnalyzer.kt`, `IndexCommon.kt`.
 
 ## Platform entrypoints (thin pumps — not shared)

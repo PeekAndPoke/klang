@@ -130,8 +130,9 @@ class VoiceSchedulerCullingSpec : StringSpec({
     // ── A tremolo INSIDE the tree (phase 3 step 3b, `BuiltIgnitor.gatesOutput`) ────────────────────
 
     /**
-     * A sustained note whose own ignitor carries a SQUARE tremolo at full depth, 4 Hz: exact silence
-     * from 125 ms to 250 ms, and the gate ends at 100 ms, so that first off-half lies in the release.
+     * A sustained note whose own ignitor carries a SQUARE tremolo at full depth, 4 Hz: the square
+     * oscillator falls over its 16 ms edge from 125 ms and is exact silence from about 141 ms to 250 ms,
+     * and the gate ends at 100 ms, so that first off-half lies in the release.
      * The strip has no tremolo here; only the build can see this one.
      */
     fun treeTremolo(cull: Double?) = ScheduledVoice(

@@ -122,7 +122,7 @@ fun IgnitorDsl.childNodes(): List<IgnitorDsl> {
         is IgnitorDsl.SuperTri -> listOf(freq, voices, spread, analog, analogSpread)
         is IgnitorDsl.Tanh -> listOf(inner)
         is IgnitorDsl.Times -> listOf(left, right)
-        is IgnitorDsl.Tremolo -> listOf(inner, rate, depth, shape, skew, phase)
+        is IgnitorDsl.Tremolo -> listOf(inner, rate, depth, shape)
         is IgnitorDsl.Triangle -> listOf(freq, analog)
         is IgnitorDsl.Unipolar -> listOf(inner)
         is IgnitorDsl.Variants -> children
@@ -305,7 +305,7 @@ fun IgnitorDsl.withChildNodes(new: List<IgnitorDsl>): IgnitorDsl {
         is IgnitorDsl.SuperTri -> copy(freq = new[0], voices = new[1], spread = new[2], analog = new[3], analogSpread = new[4])
         is IgnitorDsl.Tanh -> copy(inner = new[0])
         is IgnitorDsl.Times -> copy(left = new[0], right = new[1])
-        is IgnitorDsl.Tremolo -> copy(inner = new[0], rate = new[1], depth = new[2], shape = new[3], skew = new[4], phase = new[5])
+        is IgnitorDsl.Tremolo -> copy(inner = new[0], rate = new[1], depth = new[2], shape = new[3])
         is IgnitorDsl.Triangle -> copy(freq = new[0], analog = new[1])
         is IgnitorDsl.Unipolar -> copy(inner = new[0])
         is IgnitorDsl.Variants -> copy(children = new)

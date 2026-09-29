@@ -153,7 +153,7 @@ The resonator MORPH (`ResonatorBank.morphTo`, the `MORPH` flags on the body and 
 `KatalystFilterSwap.MAX_BANKS` with its outgoing pool and drop rule, both gone 2026-09-20: the
 maintainer listened and rejected the morph (travelling a bank's resonances is an audible filter
 sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one parking slot holding a
-config, latest wins, at `BANK_CROSSFADE_SECONDS`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
+config, latest wins, at `BANK_CROSSFADE_SECONDS`. The tremolo's own LFO and its two shape knobs (gone 2026-09-29, `docs/tasks/tremolo-as-composition.md`: the tremolo is composed from the oscillators at voice build, the maintainer chose it by ear): `TremoloIgnitor`, `Ignitor.tremolo(...)`, `TremoloCore`, `LfoShape` (the `LfoShapes` name vocabulary stays), and `skew` / `phase` on every tremolo door with the slot keys `tremolo.skew` / `tremolo.phase`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
 channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
 `velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
 `docs/plans/signal-flow-redesign.md` section 6).

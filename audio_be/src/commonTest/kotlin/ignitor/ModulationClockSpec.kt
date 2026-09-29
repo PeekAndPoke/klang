@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.LfoShapes
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -196,10 +197,11 @@ class ModulationClockSpec : StringSpec({
         val u = renderSegments(ungated, List(8) { blockFrames })
         val input = renderSegments(RampProbe(), List(8) { blockFrames })
 
-        // Reference: dry inside the gap, the free-running tremolo everywhere else. The gap's
-        // BULK phase advance (phaseInc x length) reassociates the float sum vs the reference's
-        // per-sample accumulation, so the match is to ~4e-15, not bit-exact; the stale-phase
-        // mutant this row exists for diverges at O(0.05).
+        // Reference: dry inside the gap, the free-running tremolo everywhere else. The LFO is an
+        // oscillator that renders every block whatever the depth, so it cannot fall behind; the
+        // gated side maps through `range`'s signal-bound path and the ungated side through its
+        // constant-bound path, which round differently, so the match is to ~1e-15, not bit-exact.
+        // A stale-phase LFO would diverge at O(0.05).
         var m = 0.0
         for (i in g.indices) {
             val expected = if (i in 256 until 512) input[i] else u[i]
@@ -229,7 +231,11 @@ class ModulationClockSpec : StringSpec({
     }
 })
 
-/** Named access to the Ignitor-door tremolo builder, so the rows read clearly. */
+/**
+ * The tremolo as the DSL runtime composes it (the sine LFO's gain multiplied into the signal), with Ignitor-level knobs,
+ * so the rows can drive the depth and the rate with probes the DSL cannot spell.
+ */
 private object TremoloDoor {
-    fun tremolo(upstream: Ignitor, rate: Ignitor, depth: Ignitor): Ignitor = upstream.tremolo(rate, depth)
+    fun tremolo(upstream: Ignitor, rate: Ignitor, depth: Ignitor): Ignitor =
+        upstream * tremoloGain(rate, depth, LfoShapes.SINE_INDEX, sampleRate = 44100)
 }

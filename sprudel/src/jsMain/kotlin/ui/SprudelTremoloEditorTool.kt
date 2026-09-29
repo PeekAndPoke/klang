@@ -49,11 +49,11 @@ import kotlin.math.sin
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param tremolo(depth, sync, shape, skew, phase) call.
+ * [KlangUiToolEmbeddable] for the per-param tremolo(depth, sync, shape) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits depth plus the optional
- *   sync-rate/shape/skew/phase params of the host call and commits the full argument list.
+ *   sync-rate/shape params of the host call and commits the full argument list.
  *   The shape is a STRING param and commits as a quoted string literal; unset optionals stay
  *   omitted (null slots).
  * - Scalar fallback (embedded / sequence atom): edits a single depth value.
@@ -136,17 +136,9 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
     private val parsedShape
         get() = canonicalShape(parseStr(call?.args?.getOrNull(2)))
 
-    private val parsedSkew
-        get() = parseNumOrNull(call?.args?.getOrNull(3))
-
-    private val parsedPhase
-        get() = parseNumOrNull(call?.args?.getOrNull(4))
-
     private var depth by value(parsedDepth)
     private var rate by value(parsedRate)
     private var shape by value(parsedShape)
-    private var skew by value(parsedSkew)
-    private var phase by value(parsedPhase)
 
     // Slot bookkeeping: an untouched arg that fails the parse (pattern, variable, expression)
     // must never be overwritten, and untouched absent slots stay absent (engine defaults apply).
@@ -154,8 +146,6 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         parseNumOrNull(call?.args?.getOrNull(0)) != null,
         parseNumOrNull(call?.args?.getOrNull(1)) != null,
         canonicalShape(parseStr(call?.args?.getOrNull(2))) != null,
-        parseNumOrNull(call?.args?.getOrNull(3)) != null,
-        parseNumOrNull(call?.args?.getOrNull(4)) != null,
     )
     private val dirty = mutableSetOf<Int>()
     private var hasCommitted = false
@@ -169,7 +159,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
     private fun buildValue(): String =
         if (call != null) {
-            "${depth.fmt()}, ${rate?.fmt() ?: "-"}, ${shape ?: "-"}, ${skew?.fmt() ?: "-"}, ${phase?.fmt() ?: "-"}"
+            "${depth.fmt()}, ${rate?.fmt() ?: "-"}, ${shape ?: "-"}"
         } else {
             depth.fmt()
         }
@@ -190,13 +180,11 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         val c = call
         if (c != null) {
             val texts = c.args.toMutableList()
-            while (texts.size < 5) texts.add(null)
+            while (texts.size < 3) texts.add(null)
             put(texts, 0, depth.fmt())
             put(texts, 1, rate?.fmt())
             // shape is a STRING param — commits as a quoted string literal
             put(texts, 2, shape?.let { "\"$it\"" })
-            put(texts, 3, skew?.fmt())
-            put(texts, 4, phase?.fmt())
             c.onCommitCall(texts)
         } else {
             props.toolCtx.onCommit(depth.fmt())
@@ -236,8 +224,6 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
         depth = parsedDepth
         rate = parsedRate
         shape = parsedShape
-        skew = parsedSkew
-        phase = parsedPhase
         formCtrl.resetAllFields()
         commitValue()
         resetCounter++
@@ -289,7 +275,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
                 }
             }
 
-            // Shape buttons + skew/phase (whole-call mode only)
+            // Shape buttons (whole-call mode only)
             if (call != null) {
                 div {
                     css {
@@ -310,13 +296,6 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
                             }
                             +s
                         }
-                    }
-                }
-
-                ui.form {
-                    ui.two.stackable.fields {
-                        nullableField("skew", "Skew", 0.01, skew, subField = "skew") { skew = it; dirty += 3; liveUpdate() }
-                        nullableField("phase", "Phase", 0.01, phase, subField = "phase") { phase = it; dirty += 4; liveUpdate() }
                     }
                 }
             }
@@ -377,7 +356,6 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
         val clampedDepth = depth.coerceIn(0.0, 1.0)
         val clampedRate = (rate ?: 4.0).coerceIn(0.5, 32.0)
-        val clampedPhase = (phase ?: 0.0)
         val goldHex = laf.gold
 
         val numPoints = drawW.toInt()
@@ -387,19 +365,14 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
                 val t = i.toDouble() / numPoints  // 0..1 (one cycle)
 
                 // Generate LFO waveform based on shape
-                val lfoPhase = (t * clampedRate + clampedPhase) % 1.0
-                // Matches the engine's LfoShape: sine, triangle and square all spend the
-                // first half of the cycle high (sine and triangle enter it at the midpoint
-                // rising, the square already at its top), sawtooth rises and ramp mirrors it.
-                // NOT yet drawn: skew, which the editor commits but the preview ignores.
+                val lfoPhase = (t * clampedRate) % 1.0
+                // Matches the engine's LFO, the oscillator of that shape: the sine starts at the
+                // midpoint rising, the triangle at its lowest point, the square rises into its high
+                // half, the sawtooth rises and the ramp mirrors it. NOT drawn: the 16 ms soft edges.
                 val lfoRaw = when (shape) {
                     "square" -> if (lfoPhase < 0.5) 1.0 else -1.0
 
-                    "triangle" -> when {
-                        lfoPhase < 0.25 -> 4.0 * lfoPhase
-                        lfoPhase < 0.75 -> 2.0 - 4.0 * lfoPhase
-                        else -> 4.0 * lfoPhase - 4.0
-                    }
+                    "triangle" -> if (lfoPhase < 0.5) 4.0 * lfoPhase - 1.0 else 3.0 - 4.0 * lfoPhase
 
                     "sawtooth" -> 2.0 * lfoPhase - 1.0
 

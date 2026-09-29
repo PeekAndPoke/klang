@@ -206,7 +206,7 @@ closed set of names. The Kotlin side owns the set; KlangScript sees a string; In
 | ADSR curves (`adsrCurves(...)`, the filter and pitch curve doors) | a public `enum class AdsrCurve` | `audio_bridge/src/commonMain/kotlin/AdsrDef.kt`, names read by `AdsrCurves.curveOf` (`AdsrCurves.kt`) |
 | distort shapes (`distort(amount, shape)`, `shape(...)`) | a name catalogue: `DistortionShapes.names` plus `aliases`, the POSITION is the wire index; the backend's `internal enum class DistortionShape` mirrors it, pinned by a spec | `audio_bridge/src/commonMain/kotlin/DistortionShapes.kt` |
 | body materials (`body(wet, material)`) | a name catalogue, `BodyMaterials` | `audio_bridge/src/commonMain/kotlin/BodyMaterials.kt` |
-| vowels, LFO/tremolo shapes, and similar | a catalogue or an enum; the LFO one is `internal` in `audio_be` (`LfoShape.kt`), so it would need an `audio_bridge` catalogue first | to be listed when the task starts |
+| vowels, LFO/tremolo shapes, and similar | the tremolo shapes are the `LfoShapes` catalogue in `audio_bridge` (since 2026-09-29 the tremolo composes the oscillators; the backend enum `LfoShape` is gone) | to be listed when the task starts |
 
 **Ideas, not decided:**
 

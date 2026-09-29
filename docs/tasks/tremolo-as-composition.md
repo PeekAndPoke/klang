@@ -1,6 +1,8 @@
 # The tremolo becomes a composition of the oscillators
 
-Status: **decided 2026-09-29 by the maintainer after listening, ready to build.** V1 by the sorting rule
+Status: **BUILT 2026-09-29 on branch `tremolo-composition`** (review: 4 rounds, the last clean). Open: the maintainer's
+verdict on the triangle and square start points (listening pairs 80 to 83), then archive.
+Decided 2026-09-29 by the maintainer after listening. V1 by the sorting rule
 ([`_v1-scope.md`](_v1-scope.md)): it changes the surface a tutorial teaches (two knobs go) and how three shapes
 sound (their clicks go).
 
@@ -64,6 +66,18 @@ the voice is BUILT (`IgnitorBuildCache.sampleRate`). So:
   `GraalSprudelPattern`. The compiler finds the rest.
 - **Negative depth**: today a depth at or below 0 bypasses; the gate keeps that, so `range(1 - depth, 1)` only ever
   sees a positive depth.
+
+## As built (2026-09-29)
+
+- `tremoloGain` (`IgnitorDslRuntime.kt`) floors EVERY depth: `range(1 - max(depth, 0), 1)`. Three review rounds each
+  found another spelling of a depth at or below 0 that still boosted (a moving signal, block-constant arithmetic,
+  `Variants` / `OptimizerHint` dissolving to a bare leaf); the unconditional floor closes the class by construction,
+  and a block-constant depth folds to one value per block, so the baselines did not move.
+- Found on the way and fixed: a saw or ramp at a NaN frequency emitted NaN every sample (a NaN flyback), in the single
+  and the unison oscillator; a NaN guard now substitutes `shapeMax`.
+- Above about 31.25 Hz the 16 ms edge no longer fits, and square, sawtooth and ramp all become the same symmetric
+  triangle (stated in the `TREMOLO_EDGE_SECONDS` KDoc). The sine LFO takes 3 rng draws at its first block, even at
+  analog 0 (accepted).
 
 ## Guards (mandatory tier, every new row mutation-checked)
 

@@ -227,14 +227,6 @@ object KlangScriptTremoloSlots {
     /** The LFO shape as its index in the shape list, default `sine`. Mirrors sprudel's `tremolo(shape = ...)`. */
     @KlangScript.Property
     val shape: IgnitorDsl = IgnitorDsl.Slots.tremolo.shape
-
-    /** Skew, -1 to 1, default 0. Mirrors sprudel's `tremolo.skew`. */
-    @KlangScript.Property
-    val skew: IgnitorDsl = IgnitorDsl.Slots.tremolo.skew
-
-    /** Start phase in cycles, default 0. Mirrors sprudel's `tremolo.phase`. */
-    @KlangScript.Property
-    val phase: IgnitorDsl = IgnitorDsl.Slots.tremolo.phase
 }
 
 /** `OscSlot.adsr`: the amplitude envelope's slots. */

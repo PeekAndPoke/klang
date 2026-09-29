@@ -392,12 +392,11 @@ object KlangScriptOscExtensions {
     ).configuredBy("phaser", configure).node
 
     /**
-     * Applies amplitude tremolo: an LFO at [rate] Hz pulls the level down by up to [depth] (0 to 1).
-     * The LFO's shape, skew and start phase are knobs on the [TremoloBuilder]:
-     * `.tremolo(4, 0.8, x => x.shape("square").skew(0.3).phase(0.25))`. Rate first, like every
-     * Ignitor LFO door; the pattern door is `tremolo(depth, sync, shape, skew, phase)`.
+     * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
+     * (0 to 1). The LFO's shape is a knob on the [TremoloBuilder]: `.tremolo(4, 0.8, x => x.shape("square"))`.
+     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, sync, shape)`.
      *
-     * @param configure receives the [TremoloBuilder] (knobs: `shape`, `skew`, `phase`) and returns it.
+     * @param configure receives the [TremoloBuilder] (knob: `shape`) and returns it.
      */
     @KlangScript.Method
     fun tremolo(

@@ -20,8 +20,11 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.optimize
+import io.peekandpoke.klang.audio_bridge.tremolo as ignitorTremolo
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.tremolo
 import kotlin.random.Random
 
 /**
@@ -32,8 +35,8 @@ import kotlin.random.Random
  * spec runs on the JVM and on JS.
  *
  * The rows are ENGAGEMENT rows: each renders something other than its BASELINE, the same bag without
- * the row's own knob (a `q` row against the cutoff alone, a `tremolo.skew` row against the tremolo
- * without skew), so each row shows ITS slot engaged and not a companion's. The bit comparison between
+ * the row's own knob (a `q` row against the cutoff alone, a `tremolo.shape` row against the sine
+ * tremolo), so each row shows ITS slot engaged and not a companion's. The bit comparison between
  * the doors inside each row cannot fail independently of the tree-equality row, since both doors build
  * one tree and render it with one seed; it is kept as the render-level statement of the parity. The tree-level half of the parity (same tree, same
  * slot objects) is `KlangScriptClassicDoorParitySpec` in klangscript-libs.
@@ -84,7 +87,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val kotlin: IgnitorDsl = IgnitorDsl.Sawtooth().classic()
 
     /** A row: the slot it engages ([knob], or null for a combination), and the bag that writes it. */
-    class Row(val knob: String?, val bag: Map<String, Double>) {
+    class Row(val knob: String?, val bag: Map<String, Double>, val label: String? = knob) {
         /** What the row is compared against: the bag WITHOUT its own knob, so the row shows ITS knob engaged. */
         val baseline: Map<String, Double> get() = if (knob == null) emptyMap() else bag - knob
     }
@@ -129,9 +132,11 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("analog", mapOf("analog" to 2.0, "lpf.freq" to 900.0)))
         add(Row("tremolo.depth", mapOf("tremolo.depth" to 0.5)))
         add(Row("tremolo.sync", trem))
-        add(Row("tremolo.shape", trem + ("tremolo.shape" to LfoShapes.indexOf("square"))))
-        add(Row("tremolo.skew", trem + ("tremolo.skew" to 0.4)))
-        add(Row("tremolo.phase", trem + ("tremolo.phase" to 0.3)))
+
+        for (shape in LfoShapes.names - "sine") {
+            add(Row("tremolo.shape", trem + ("tremolo.shape" to LfoShapes.indexOf(shape)), label = "tremolo.shape $shape"))
+        }
+
         add(Row("adsr.attack", mapOf("adsr.attack" to 0.05)))
         add(Row("adsr.decay", mapOf("adsr.decay" to 0.02, "adsr.sustain" to 0.5)))
         add(Row("adsr.sustain", mapOf("adsr.sustain" to 0.5)))
@@ -166,7 +171,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     }
 
     for (row in rows) {
-        val what = row.knob ?: "a combination of ${row.bag.keys.joinToString()}"
+        val what = row.label ?: "a combination of ${row.bag.keys.joinToString()}"
 
         "ENGAGEMENT: $what changes the render, on both doors, in the same raw bits" {
             val k = render(kotlin, row.bag)
@@ -183,6 +188,25 @@ class ClassicDoorRenderParitySpec : StringSpec({
             val mismatch = s.indices.firstOrNull { s[it].toRawBits() != k[it].toRawBits() } ?: -1
 
             withClue("first mismatching frame, script against Kotlin") { mismatch shouldBe -1 }
+        }
+    }
+
+    // The tremolo across the SPRUDEL door and the IGNITOR door (2026-09-29, the tremolo as a composition): sprudel's
+    // `tremolo(depth, sync, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
+    // places the same node with constants in front of a `classic()` whose own tremolo stays unset. Both render one
+    // saw through one tremolo into the default envelope, so the renders agree in raw bits, at every shape.
+    for (shape in LfoShapes.names) {
+        "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
+            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().oscParams ?: emptyMap()
+            val viaSprudel = render(kotlin, bag)
+            val viaIgnitor = render(IgnitorDsl.Sawtooth().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
+            val bare = render(kotlin, emptyMap())
+
+            withClue("engagement: the tremolo moved the render") { viaSprudel.toList() shouldNotBe bare.toList() }
+
+            val mismatch = viaSprudel.indices.firstOrNull { viaSprudel[it].toRawBits() != viaIgnitor[it].toRawBits() } ?: -1
+
+            withClue("first mismatching frame, sprudel against Ignitor") { mismatch shouldBe -1 }
         }
     }
 })

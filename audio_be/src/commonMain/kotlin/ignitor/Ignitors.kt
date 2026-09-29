@@ -526,7 +526,13 @@ object Ignitors {
             if (kind == WaveKind.SAW) {
                 if (dt != lastDt) {
                     lastDt = dt
-                    voice.setSawShape((flankSamples * dt).coerceAtMost(shapeMax))
+
+                    val rf = (flankSamples * dt).coerceAtMost(shapeMax)
+
+                    // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
+                    // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
+                    // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
+                    voice.setSawShape(if (rf != rf) shapeMax else rf)
                 }
 
                 renderHoisted(buffer, off, end, dt, pm, safeWrap)
@@ -1504,7 +1510,12 @@ object Ignitors {
         phasePools = phasePools, orbit = orbit,
     ) {
         override fun configureShape(vs: WaveVoiceState, dt: Double) {
-            vs.setSawShape((resetSamples * dt).coerceAtMost(shapeMax))
+            val rf = (resetSamples * dt).coerceAtMost(shapeMax)
+
+            // NaN-guard: a NaN frequency made the flyback NaN and every sample NaN (the trapezoid's fall
+            // branch). The phase is scrubbed to 0 by the wrap meanwhile, so any finite shape holds -1: a voice at a NaN
+            // frequency now carries a held -1 (DC through its envelope) where it used to be NaN, scrubbed to silence.
+            vs.setSawShape(if (rf != rf) shapeMax else rf)
         }
     }
 

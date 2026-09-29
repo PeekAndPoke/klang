@@ -9,12 +9,12 @@ walk (2026-09-23); opened as a file 2026-09-28 when the phase 3 record was archi
 One concept, two spellings:
 
 - the Ignitor door is `tremolo(rate, depth, configure)`, rate first like every Ignitor LFO door (`phaser`,
-  `vibrato`), with `shape`, `skew` and `phase` on the builder;
-- sprudel's door is `tremolo(depth, sync, shape, skew, phase)` (`sprudel/.../lang/lang_effects_modulation.kt`), depth
+  `vibrato`), with `shape` on the builder;
+- sprudel's door is `tremolo(depth, sync, shape)` (`sprudel/.../lang/lang_effects_modulation.kt`), depth
   first, and it calls the rate `sync`.
 
 `sync` is an LFO rate in Hz, the same meaning and scale as the Ignitor's `rate` (`docs/tasks/sprudel-ui-tools.md`
-notes the same; `TremoloCore` is the one law since phase 3 step 3b).
+notes the same; since 2026-09-29 both feed the frequency of the LFO oscillator, `docs/tasks/tremolo-as-composition.md`).
 
 ## Why it is open
 

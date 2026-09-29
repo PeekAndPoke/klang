@@ -122,7 +122,7 @@ class ClassicSlotParamsSpec : StringSpec({
                 .bpf(901, 1.3, 13, 0.031, 0.032, 0.033, 0.034).bpfCurves("cube", "scurve", "invsquare")
                 .notch(1501, 1.4, 14, 0.041, 0.042, 0.043, 0.044).notchCurves("scurve", "invsquare", "exponential")
                 .adsr(0.051, 0.052, 0.53, 0.054).adsrCurves("invsquare", "exponential", "linear").adsrOff()
-                .crush(4.1, 2).coarse(3.1, 4).distort(0.31, "tube", 8).tremolo(0.61, 4.1, "square", 0.62, 0.63)
+                .crush(4.1, 2).coarse(3.1, 4).distort(0.31, "tube", 8).tremolo(0.61, 4.1, "square")
                 .begin(0.11).end(0.91).speed(2.1).loop()
         )
 
@@ -144,7 +144,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "crush.amount" to 4.1, "crush.oversample" to 2.0,
             "coarse.amount" to 3.1, "coarse.oversample" to 4.0,
             "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
-            "tremolo.depth" to 0.61, "tremolo.sync" to 4.1, "tremolo.shape" to 2.0, "tremolo.skew" to 0.62, "tremolo.phase" to 0.63,
+            "tremolo.depth" to 0.61, "tremolo.sync" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,
         )
 
