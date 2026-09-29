@@ -76,7 +76,7 @@ tutorial ear-checked against a sound that later gets retuned has to be redone.
 
 | # | Round | Note |
 |---|---|---|
-| ~~22~~ | [`20260929-analog-drift-ratio-tuning.md`](../tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md) | ✅ **DECIDED 2026-09-29 by ear:** pitch drift stays, filter drift becomes 2x the pitch drift (it was a quarter). The maintainer checks the built-in songs on the next build |
+| ~~22~~ | [`20260929-analog-drift-ratio-tuning.md`](../tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md) | ✅ **DECIDED 2026-09-29 by ear:** pitch drift stays, filter drift becomes 2x the pitch drift (it was a quarter). Confirmed on the built-in songs the same day: "things sound good with the 2x" |
 | 23 | W10 tremolo shapes (`9cb896ff`, committed unheard) | [`by-ear/README.md`](by-ear/README.md) §1. The oldest debt, and the most new sound |
 | 24 | Mini-notation tweaks verdict | [`by-ear/README.md`](by-ear/README.md) §2. Could still send the design back |
 | 25 | [`by-ear/c3-depth-migration-flags.md`](by-ear/c3-depth-migration-flags.md) | 5 ranked song sites |

@@ -11,7 +11,8 @@
 >
 > **Decision:** "keep the pitch drift as is and change the filter drift to be 2x of the pitch drift by default"
 > (`FILTER_DRIFT_RELATIVE_TO_OSC` 0.25 to 2.0, `audio_bridge/.../constants/FilterHumanizationDefaults.kt`). The
-> maintainer listens to the built-in songs on the next build. Section 4's engine-level fields were not built: the
+> maintainer listened to the built-in songs on the next build and CONFIRMED it the same day: "things sound good with
+> the 2x, so we keep it like this". Section 4's engine-level fields were not built: the
 > ratio is a constant, as before. The text below is the record as it stood.
 
 > **2026-09-27:** the listening question stands, but the Pipeline DSL and `StageDsl.Filter` named below retired in
