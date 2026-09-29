@@ -13,6 +13,15 @@ lives in [`future/cut-group-semantics.md`](future/cut-group-semantics.md).
 
 ## 1. Parity specs pinned to a clock production no longer produces
 
+> **DONE 2026-09-29.** All seven negative-clock rows re-pinned to `voiceElapsedFrames = 0` (the production clock of
+> a mid-block onset), their comments corrected, `IgnitorDslOptimizerRenderSpec`'s helper advancing the clock by the
+> frames each window rendered, and a not-silence floor on each onset row (each shown red by a mutation: a silent saw,
+> a silent sine, a zeroed input). None of the rows has an envelope, so the old clock was output-inert rather than
+> clamping anything; the fix corrects the contract the specs teach. **Follow-up found in review (confirmed by
+> mutation):** the other parity rows of `EqCoreSpec` (`assertChainParity`) and the 10 `assertDslParity` call sites of
+> `EqIgnitorSpec` have no silence floor and stay green on silence (a zeroed input, a silent saw). They compare two
+> implementations, so a floor there is cheap; not done yet.
+
 Since `IgniteRenderer` gained `+ ctx.offset` (2026-08-27), a voice's first block lands on
 `voiceElapsedFrames == 0`. These specs still set `voiceElapsedFrames = -offset` for their
 mid-block-onset rows, and most say in a comment that this is the production shape:

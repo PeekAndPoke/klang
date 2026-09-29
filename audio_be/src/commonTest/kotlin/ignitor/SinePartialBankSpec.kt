@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -300,20 +301,26 @@ class SinePartialBankSpec : StringSpec({
         val offset = 37
         val length = 64
         val sentinel = 123.456
-        fun windowCtx() = ctx().apply { updateOffsetAndLength(offset, length); voiceElapsedFrames = -offset }
+        // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
+        // `offset`, the voice's first frame (never negative).
+        fun windowCtx() = ctx().apply { updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
         val bank = Ignitors.sinePartials(harmonics = const(1.0))
         val ref = sum(partial(1.0, 1.0, 440.0), partial(2.0, 0.5, 440.0))
         val a = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val b = AudioBuffer(blockFrames).apply { fill(sentinel) }
         bank.generate(a, 440.0, windowCtx())
         ref.generate(b, 440.0, windowCtx())
+        var windowPeak = 0.0
         for (i in 0 until blockFrames) {
             if (i in offset until offset + length) {
+                windowPeak = maxOf(windowPeak, abs(a[i]))
                 a[i] shouldBe (b[i] plusOrMinus 1e-12)
             } else {
                 a[i] shouldBe sentinel
             }
         }
+        // Not-silence floor: two silent windows would compare equal whatever the loops do.
+        windowPeak shouldBeGreaterThan 0.1
     }
 
     "a non-finite fundamental gain reads as 0: the overtones play, no NaN reaches the buffer" {

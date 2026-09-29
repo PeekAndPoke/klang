@@ -10,8 +10,10 @@ import io.peekandpoke.klang.audio_be.SAFE_MIN
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import kotlin.math.abs
 
 /**
  * Bit-parity guards for the constant-fold in the binary combinators' `generate()` — Plus/Times
@@ -60,9 +62,10 @@ class ConstantFoldParitySpec : StringSpec({
     /**
      * Renders ONE sub-block window (`offset=37, length=64`) as the FIRST call on fresh signals
      * and asserts bit parity inside the window and untouched sentinels outside it. Matches the
-     * production mid-block-onset ctx shape: `voiceElapsedFrames == -offset` (Voice.kt computes
-     * `blockStart - startFrame` for a voice starting inside the block, never 0); the fold
-     * decision reads neither field, but the spec should reproduce reality, not an idealization.
+     * production mid-block-onset ctx shape: `voiceElapsedFrames == 0` at buffer index `offset`
+     * (IgniteRenderer computes `blockStart + offset - startFrame`, the voice's first frame); the
+     * fold decision reads neither field, but the spec should reproduce reality, not an
+     * idealization. A not-silence floor keeps the parity from comparing two silent windows.
      */
     fun assertSubBlockParity(folded: Ignitor, reference: Ignitor, freqHz: Double = 220.0) {
         val offset = 37
@@ -70,16 +73,19 @@ class ConstantFoldParitySpec : StringSpec({
         val sentinel = 123.456
         val bufF = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val bufR = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        folded.generate(bufF, freqHz, ctx(offset, length).apply { voiceElapsedFrames = -offset })
-        reference.generate(bufR, freqHz, ctx(offset, length).apply { voiceElapsedFrames = -offset })
+        folded.generate(bufF, freqHz, ctx(offset, length))
+        reference.generate(bufR, freqHz, ctx(offset, length))
+        var windowPeak = 0.0
         for (i in 0 until blockFrames) {
             if (i in offset until offset + length) {
+                windowPeak = maxOf(windowPeak, abs(bufF[i]))
                 bufF[i].toRawBits() shouldBe bufR[i].toRawBits()
             } else {
                 bufF[i] shouldBe sentinel
                 bufR[i] shouldBe sentinel
             }
         }
+        windowPeak shouldBeGreaterThan 0.01
     }
 
     // ── times ─────────────────────────────────────────────────────────────────────

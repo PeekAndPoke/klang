@@ -73,11 +73,14 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         voiceElapsedFrames = 0
     }
 
-    /** Production mid-block onset: the voice clock starts NEGATIVE by the start offset. */
+    /**
+     * Production mid-block onset: IgniteRenderer puts the voice clock at 0 on buffer index
+     * [offset], the voice's first frame (never negative).
+     */
     fun onsetCtx(random: Random, offset: Int, length: Int): IgniteContext =
         ctx(random).apply {
             this.updateOffsetAndLength(offset, length)
-            voiceElapsedFrames = -offset
+            voiceElapsedFrames = 0
         }
 
     val seed = 0x5EED
@@ -211,8 +214,10 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
                     }
                 }
 
-                ca.voiceElapsedFrames += blockFrames
-                cb.voiceElapsedFrames += blockFrames
+                // The clock advances by the frames this window rendered: the voice clock always
+                // equals the frames rendered so far, as in production.
+                ca.voiceElapsedFrames += curLength
+                cb.voiceElapsedFrames += curLength
             }
         }
 
@@ -479,6 +484,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             // chain oracle.
             offset = 37,
             length = 64,
+            minPeak = 0.1,
         )
     }
 
@@ -827,6 +833,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             freqs = listOf(220.0),
             offset = 37,
             length = 64,
+            minPeak = 0.1,
         )
     }
 

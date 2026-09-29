@@ -624,18 +624,24 @@ class EqIgnitorSpec : StringSpec({
         val sentinel = 123.456
         val bufA = AudioBuffer(blockFrames).apply { fill(sentinel) }
         val bufB = AudioBuffer(blockFrames).apply { fill(sentinel) }
-        val ca = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = -offset }
-        val cb = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = -offset }
+        // Production mid-block onset: IgniteRenderer puts the clock at 0 on buffer index
+        // `offset`, the voice's first frame (never negative).
+        val ca = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
+        val cb = ctx().apply { this.updateOffsetAndLength(offset, length); voiceElapsedFrames = 0 }
         a.generate(bufA, 220.0, ca)
         b.generate(bufB, 220.0, cb)
+        var windowPeak = 0.0
         for (i in 0 until blockFrames) {
             if (i in offset until offset + length) {
+                windowPeak = maxOf(windowPeak, abs(bufA[i]))
                 bufA[i].toRawBits() shouldBe bufB[i].toRawBits()
             } else {
                 bufA[i] shouldBe sentinel
                 bufB[i] shouldBe sentinel
             }
         }
+        // Not-silence floor: two silent windows would compare equal whatever the loops do.
+        windowPeak shouldBeGreaterThan 0.1
     }
 
     "static/dynamic classification is node-type-based per section" {
