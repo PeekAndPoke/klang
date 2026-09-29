@@ -156,6 +156,10 @@ Tracked in the order they bite. See the conversation record for the reasoning.
    not planned; if it is built it removes `lpf`/`hpf`/`bpf`/`notch`, a shape change, so it lands before the
    tutorials or not in V1. Its engine half (every filter feature as an EQ section) changes no surface.
 
+9. **The maintainer wants to talk about "the EngineDSL"** (queued 2026-09-29, after the tremolo decision). No code
+   carries that name any more: the June design (`../tasks-archive/2026-06/20260630-engine-dsl-design-record.md`) became
+   the Ignitor, Pipeline (retired) and Katalyst DSLs; only the funding docs still quote it.
+
 ~~C6 chunk walkthrough~~ — moot, C6 shipped 2026-08-31.
 
 ## Settled, recorded so they are not re-opened
