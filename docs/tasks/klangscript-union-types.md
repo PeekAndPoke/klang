@@ -224,6 +224,11 @@ closed set of names. The Kotlin side owns the set; KlangScript sees a string; In
 - **Sprudel pattern strings.** On sprudel doors the string is often mini-notation (`distort(0.5, "<soft hard>")`), not a
   single literal. The check has to parse the mini-notation and test each atom against the set, and completion has to
   work inside the pattern string. That is the harder half, and worth its own step.
+- **NOT SETTLED (maintainer, 2026-09-29): validating inside mini-notation.** The mini-notation parser would need a
+  way to be told which values are acceptable for the door it feeds; the same would let `note("a1 x1")` report `x1`
+  as not a valid note. That means one layer of abstraction somewhere (a validate callback or similar), and how such
+  a layer feeds IntelliSense (completion and diagnostics inside a pattern string) is an open question. Not to be
+  designed now; any design of this section must not assume it is solved.
 - **House rule check:** "Wire types over enums" allows an enum for a closed, parameter-less set, which these are; the
   wire keeps carrying what it carries today (the curve enum, the shape index).
 
