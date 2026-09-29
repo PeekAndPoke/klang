@@ -142,7 +142,11 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
 [ ] cross-links to related posts resolve (relative paths)
 [ ] code quotes are verbatim from the tree, with the file named in prose
 [ ] status: draft — flipping to published is the author's call, not the writer's
+[ ] site rebuilt:          python3 console/blog/build.py  (then --check exits 0; commit the output)
 ```
+
+The site build (`console/blog/README.md`) renders every post to `src/jsMain/resources/blog/`, marks drafts, and
+fails on missing front matter, broken links or anchors, and HTML other than the anchors and the figure block.
 
 ## 9. Where material comes from
 

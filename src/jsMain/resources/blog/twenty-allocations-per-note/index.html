@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Twenty Allocations per Note · Klang blog</title>
+<meta name="description" content="A pattern in Klangmotor&#x27;s sequencing language is a chain of modifiers, gain, note, filters, effects, and every modifier in the chain copied the event&#x27;s voice data, a data class of a hundred and five fields, on the way through: on the order of twenty allocations per voice. The fix made the object mutable with a single owner, cloned exactly once where a leaf pattern emits it, and converted 113 setters to mutate in place, with a differential golden of a frozen song standing guard, which caught the one aliasing bug that mattered. The copy that remained cost 820 nanoseconds on V8, and none of the hand-written routes we tried took it lower; a native copy via Object.assign was 22 times slower. What made it smaller was grouping the fields, so that a leaf&#x27;s empty clusters are one null each.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-06">2026-06-06</time><ul class="tags"><li>series-fairphone</li><li>sprudel</li><li>patterns</li><li>allocation</li><li>kotlin-js</li><li>v8</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="twenty-allocations-per-note">Twenty Allocations per Note</h1>
+<p><em>Every pattern modifier copied a 105-field voice object; making it mutable under a single-owner invariant, guarded by a golden of 2,822 events, cut the copies to one per event, and the one that remained is a story about V8.</em></p>
+<p>This post is not about the audio engine. It is about the layer above it, the pattern language that decides which notes sound when and with what settings, and about the object that carries those settings from a pattern's leaf to the engine's door. That object is a Kotlin data class with a hundred and five flat fields, one per knob a pattern can set, and in the first days of June every modifier in a pattern chain took it, called <code>copy</code> with one field changed, and passed the copy on:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/** Default modifier for patterns that populates VoiceData.value */
+val voiceValueModifier = voiceModifier {
+    val result = (it?.asDoubleOrNull() ?: it)?.asVoiceValue()
+
+    copy(value = result)
+}
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/ea4c2d4b0480832fc3b8cbbd99917710d688505c/sprudel/src/commonMain/kotlin/lang/lang_helpers.kt#L91-L96">lang_helpers.kt at ea4c2d4b</a>, the one modifier the sweep deliberately left copy-based, because it only ever runs on a fresh instance</em></p>
+<p>A voice in Der Schmetterling passes through gain, note, scale, sound, unison, envelope, filters, distortion, pan and a reverb on its way out, and each of those was an allocation of a hundred-and-five-field object, on the order of twenty per voice, for every event of every cycle, on the page's main thread, in JavaScript, with the garbage collector keeping the score.</p>
+<p><img src="copy-chain.png" alt="the chain before and after" loading="lazy" /></p>
+<p><em>Fig. 1: A pattern chain as a list of modifiers. Before, every modifier returned a copy; after, the leaf clones once when it emits an event and every modifier mutates that clone and returns it.</em></p>
+<h2 id="an-invariant-and-a-golden-to-hold-it">An invariant, and a golden to hold it</h2>
+<p>The maintainer's proposal was the obvious one and the dangerous one: make the fields mutable and mutate in place. It is sound only under a strict invariant, which the task record states in one sentence: every query terminates at a leaf pattern that emits a fresh instance, and no pattern ever passes the same instance to two consumers or back into a stored source. An audit found the invariant achievable with a bounded fix. Only three leaf patterns handed out a stored, shared instance; everything downstream, the fan-outs, the joins, the time shifts, either re-queried and got fresh leaf events or built fresh data. Fixing the three leaves to clone per emission made the invariant hold engine-wide.</p>
+<p>Aliasing bugs are silent, one voice's gain bleeding into the next event, so before a single field was made mutable a differential golden was built: a frozen copy of Der Schmetterling with its random seed pinned, queried cycle by cycle the way playback queries it, every event's wire-format data and tick-exact timing serialized and compared byte for byte against a committed file, 2,822 events, plus targeted patterns for the constructs the song lacks. Three runs produced identical output. Then the fields flipped to <code>var</code>, the leaves gained their clone, and all 113 copy-based setters became in-place setters through one helper:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+ * Creates a voice modifier that **mutates the receiver in place** and returns it, instead of
+ * allocating via `copy(...)`.
+ *
+ * Safe because every [SprudelVoiceData] reaching a modifier is a single-owner clone — the leaf
+ * emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission, so
+ * no instance is ever shared between events. This kills the per-event copy/GC churn that dominated
+ * query cost. See `docs/tasks/mutable-voicedata-optimization.md`.
+ */
+fun voiceSetter(set: SprudelVoiceData.(Any?) -&gt; Unit): VoiceModifierFn = { value -&gt; this.set(value); this }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/e9fa560c2cc9442182c585b5403f5f8907204fd7/sprudel/src/commonMain/kotlin/lang/lang_helpers.kt#L123-L132">lang_helpers.kt at e9fa560c</a>, the last commit of the conversion</em></p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">private val gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/lang/lang_dynamics.kt#L22-L28">lang_dynamics.kt at v0.1.0</a></em></p>
+<p>The golden earned its keep on the first sweep. A helper that parsed pattern text built its atoms from a shared empty singleton, and an in-place modifier corrupted the singleton, so that a guitar's envelope curve bled into the drums. The first fix cloned the singleton; the hardening removed it, since a shared mutable default is exactly what the invariant forbids, and a second hardening the same day took away the constructor defaults the first had introduced, so that the only full-field constructions left, the clone, the merge and a factory, fail to compile if a field is ever added and silently dropped from the clone. The class KDoc carries the contract:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
+ * place down the modifier chain (via [io.peekandpoke.klang.sprudel.lang.voiceSetter]) instead of
+ * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
+ * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
+ * reused or handed to more than one consumer** (use [clone]). The leaf emitters (`AtomicPattern`,
+ * `AtomicInfinitePattern`) clone on emission so every queried event owns its
+ * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
+ * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
+ */
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/SprudelVoiceData.kt#L18-L35">SprudelVoiceData.kt at v0.1.0</a></em></p>
+<h2 id="the-copy-that-would-not-go-lower">The copy that would not go lower</h2>
+<p>With one clone per event, the profile moved to that clone: about a quarter of the query path. Three things were tried on it, and two of them are the interesting part. A hand-written clone as an explicit constructor call with a hundred and five arguments was no faster than the generated <code>copy</code>, which is the same call. A native copy on the JavaScript side, <code>Object.assign</code> onto an object created with the right prototype, one own-property copy instead of a hundred and five field reads, was measured at 18,390 nanoseconds against 820 for <code>copy</code>, twenty-two times slower. V8 optimizes the constructor-based copy, whose result has the same hidden class as every other instance <a href="#bynens2018">[2]</a>; an object built by create-and-assign falls into dictionary mode <a href="#bruni2017">[1]</a>, and everything that touches it afterward pays. The record filed it under rejected, do not retry, and the benchmark that measured it stayed in the repository as a warning with the number in its KDoc.</p>
+<p><img src="copy-ns.png" alt="the copy costs" loading="lazy" /></p>
+<p><em>Fig. 2: Nanoseconds per clone of one voice object on node, log scale: the flat object's copy, the rejected native copy, and today's grouped object at three fill levels. The June numbers are the record's; the grouped ones are from a run today.</em></p>
+<p>So 820 nanoseconds was the floor for a hundred-and-five-field object, and the record drew the only conclusion available: the remaining wins are fewer copies or a smaller object. The smaller object is what shipped, the next afternoon: the optional fields grouped into sub-objects, one per cluster, envelope, filters, pitch modulation, distortion, phaser, delay, reverb, sample and so on, each created lazily on the first write and mutated in place afterward. A leaf's data is mostly empty, and with grouping a leaf's thirty-five empty envelope and filter fields are five null references instead. The record had recommended immutable groups with copy-on-write; what shipped kept the mutation model and grouped underneath it:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * **Why grouped:** the per-event leaf clone copies the whole [SprudelVoiceData]. A flat ~105-field class
+ * copies all fields even though a leaf&#x27;s data is mostly null. Grouping the optional clusters means a null
+ * cluster is a single null reference (one slot, not cloned) instead of N null fields. [SprudelVoiceData.clone]
+ * deep-copies only the non-null groups; setters lazily create a group on first write and then mutate it in
+ * place (zero-copy), preserving the single-owner mutation model.
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/SvdGroups.kt#L10-L25">SvdGroups.kt at v0.1.0</a></em></p>
+<h2 id="results">Results</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>clone of one voice object, node</th>
+<th style="text-align:right">ns per operation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flat, 105 fields, <code>copy()</code> (June 6)</td>
+<td style="text-align:right">about 820</td>
+</tr>
+<tr>
+<td>flat, native <code>Object.assign</code> copy (rejected)</td>
+<td style="text-align:right">18,390</td>
+</tr>
+<tr>
+<td>grouped, a leaf with no groups set (today)</td>
+<td style="text-align:right">78</td>
+</tr>
+<tr>
+<td>grouped, a typical voice, four groups (today)</td>
+<td style="text-align:right">180</td>
+</tr>
+<tr>
+<td>grouped, every group set (today)</td>
+<td style="text-align:right">541</td>
+</tr>
+</tbody>
+</table></div>
+<p>The leaf clone is the hot one, since it runs once per emitted event, and it is ten times cheaper than the flat object's copy was; the project's whitepaper records the grouped leaf at 47 nanoseconds, a run on a different day, and the shape of the result is the same. The typical voice, with an envelope, two filters and a distortion set, clones in a fifth of the old floor, and only an object with something in every one of its fifteen groups approaches it. On the JVM the same three clones are 110, 54 and 84 nanoseconds. Neither number exists in a benchmark file from June; the June numbers are the record's prose, and today's are in a file of their own.</p>
+<h2 id="what-transferred">What transferred</h2>
+<p>Mutability was workable here under an invariant we could state in one sentence and hold with one golden, and the golden had to exist before the first field changed, because the failure it guards against is silent. The dead end taught us more than the win: an optimization that looks like a native fast path can be a slow path in disguise on a JIT that has opinions about how an object was built, and the only way to know is to measure it, which is why the rejected number lives in a KDoc and not only in a task record. And when a copy is at its floor, the lever is not a faster copy but a smaller thing to copy, which is a lesson <a href="../loop-shape-beats-pass-count/">the engine side of this series</a> keeps finding in its own shape: the cost is in what a loop carries, not in how many times it runs.</p>
+<h2 id="references">References</h2>
+<ol>
+<li><a id="bruni2017"></a>Bruni, C. (2017). Fast properties in V8. <em>V8 blog</em>. <a href="https://v8.dev/blog/fast-properties">https://v8.dev/blog/fast-properties</a></li>
+<li><a id="bynens2018"></a>Bynens, M., &amp; Meurer, B. (2018). JavaScript engine fundamentals: Shapes and Inline Caches. <a href="https://mathiasbynens.be/notes/shapes-ics">https://mathiasbynens.be/notes/shapes-ics</a></li>
+</ol>
+<p><em>Sources inside the repository: <code>docs/tasks-archive/2026-06/20260607-mutable-voicedata-optimization.md</code> (the proposal, the audit, phases 0 to 3, the rejected list), <code>sprudel/MEMORY.md</code>, <code>src/jsMain/resources/klang-whitepaper.html</code> (the 820 to 47 line), the commits <code>c303c333</code> through <code>e9fa560c</code>, <code>sprudel/src/commonMain/kotlin/lang/lang_helpers.kt</code> at ea4c2d4b and v0.1.0, <code>lang/lang_dynamics.kt</code>, <code>SprudelVoiceData.kt</code>, <code>SvdGroups.kt</code>, <code>pattern/AtomicPattern.kt</code> at v0.1.0, <code>sprudel/src/jvmTest/kotlin/golden/MutableVoiceDataGoldenSpec.kt</code>, <code>audio_benchmark/src/commonMain/kotlin/VoiceDataCopyBenchmark.kt</code> and <code>docs/benchmarks/2026-09-16_voicedata-copy.md</code> (today's numbers).</em></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

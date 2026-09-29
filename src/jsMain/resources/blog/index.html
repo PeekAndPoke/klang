@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Klang blog</title>
+<meta name="description" content="Notes from building Klang: what we measured, what we tried, and what we kept.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="index">
+<header class="bar">
+<nav>
+<a class="home" href="./">Klang blog</a>
+<a href="../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="intro">
+<h1>Klang blog</h1>
+<p>Notes from building Klang: what we measured, what we tried, and what we kept.</p>
+<p class="count">25 posts, newest first. A post marked Draft is still being written.</p>
+</div>
+<ul class="cards">
+<li class="card">
+  <img class="hero" src="the-score-so-far/song-axis.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-16">2026-09-16</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>performance</li><li>benchmark</li><li>ledger</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-score-so-far/">The Score So Far</a></h2>
+    <p class="subtitle">Fourteen optimizations in one table, the song&#x27;s work and the engine&#x27;s cost pulled apart on two axes, and what the phone said with the song&#x27;s weight written next to it</p>
+    <p class="summary">The closing ledger of the series. Every optimization since May with its number, its platform and what it cost in sound, in one table; then the two things the live song&#x27;s real-time factor mixes, pulled apart. On one engine, every snapshot of Der Schmetterling&#x27;s text: its work went from 112 passes per block in July to 402 in September, three and a half times, while its real-time factor on that one engine rose by a quarter, because the passes the rigs added are cheap ones. On fixed work, the frozen July song in every run that rendered it: the engine&#x27;s day-to-day spread is wider than its movement, on the JVM, where the problem was not. The phone&#x27;s timeline with the song&#x27;s work underneath it says what &quot;barely&quot; meant on September 15. And what is still open, with what the next hundred passes will cost at today&#x27;s price.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="zombies/cull-off-on.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>voices</li><li>culling</li><li>scheduler</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="zombies/">Zombies</a></h2>
+    <p class="subtitle">A voice that has decayed to silence keeps rendering its whole chain until its scheduled end; stopping it early moved the mix by 28 dB</p>
+    <p class="summary">Every voice in Klangmotor rendered its full chain, oscillator, filters, envelope, sends, until its scheduled lifetime ran out, long after it had decayed to nothing. The sample hats of Der Schmetterling, with a two-second release, were silent for 85 percent of their life. Silence culling measures the voice&#x27;s own output and stops the rendering once a release has stayed under -100 dBFS for 50 ms. The first build removed the voice from the scheduler at that moment, and a null-diff render of the song came back 28 dB off, because the orbit&#x27;s owner changed hands in a different order. The fix is the zombie: the voice renders nothing and keeps its slot. Drums 53 percent cheaper, the song 17 to 19 percent, the guitars nothing.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-promise-is-a-margin/parity-oracle.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>optimizer</li><li>ignitor</li><li>numerics</li><li>testing</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-promise-is-a-margin/">The Promise Is a Margin</a></h2>
+    <p class="subtitle">The graph optimizer promised bit-identity, which forbade moving a multiply; it now promises a margin with no musical meaning, and a harness that holds every rule to it</p>
+    <p class="summary">Klangmotor&#x27;s graph optimizer rewrites an instrument&#x27;s node tree before it renders. Its first rule fused adjacent filters, and its promise was that not one bit of the output changed, a promise that made folding arithmetic impossible. The maintainer replaced it with a margin, one part in a trillion of the block&#x27;s loudest sample, and the first deliverable under the new promise was not a rule but the harness that would hold every rule to it. Then the Affine node, the rule that folds constant arithmetic into it, and division, subtraction and negation after it. Seven review rounds, one lesson they kept finding, a fuzz seed that moved the definition of the margin, and a measurement that says the folds changed nothing.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="measure-before-you-build/rig-ablation.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>dsp</li><li>benchmark</li><li>optimizer</li><li>oversampling</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="measure-before-you-build/">Measure Before You Build</a></h2>
+    <p class="subtitle">Six benchmark rows said no to two planned optimizations and pointed at a third nobody had planned</p>
+    <p class="summary">The plan said to fold the guitar&#x27;s level knobs into its equalizer and its drives into its shapers. Before touching ten loop variants, we built the guitar rig as a benchmark row and deleted the nodes outright, which is the ceiling of any fold. The ceiling was four percent. The same rows put two thirds of the rig&#x27;s cost in the shapers&#x27; oversampling, and the decimator rewrite that followed took the guitar voice from 53 to 44 microseconds a block, bit for bit the same sound.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="eleven-digits-of-sine/ns-per-call.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>dsp</li><li>polynomial</li><li>minimax</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="eleven-digits-of-sine/">Eleven Digits of Sine</a></h2>
+    <p class="subtitle">Three transcendentals left the per-sample loops for polynomials, and the one that barely paid says as much as the two that did</p>
+    <p class="summary">An eight-partial sine bank calls the library sine 384,000 times a second per voice, every envelope in Klangmotor calls the library exponential once per sample, and every vibrato calls pow. On V8, the engine that runs the browser&#x27;s audio worklet, none of these is cheap. A degree-11 minimax sine on the folded half period, a table-and-polynomial 2^x with its ends pinned exact, and e^x through 2^x replaced all three, with errors in the eleventh digit and the sine bit-identical across JVM and JS. Per call the sine got nearly four times faster; the exponential on the JVM barely moved, and a fourth polynomial, the logarithm, was measured and not built.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="drift-for-free/rig-before-after.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>dsp</li><li>analog-drift</li><li>block-rate</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="drift-for-free/">Drift for Free</a></h2>
+    <p class="subtitle">A pitch wander with a fifty-millisecond time constant was being recomputed forty-eight thousand times a second</p>
+    <p class="summary">The analog drift that keeps Klangmotor&#x27;s oscillators from sounding like a plastic pipe was stepped once per sample, twenty lanes per guitar note, for a modulation whose fastest layer moves in fifty milliseconds. Stepping every lane once per 128-frame block and ramping the multiplier across the block made the drift cost nothing measurable, took a tenth off the rhythm guitars and the marimba and a sixth off the drum, and turned the Fairphone from &quot;barely&quot; to &quot;smooth&quot; the same evening. Not bit-identical, judged by ear, and with a spectrum that says why the ear was right.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="off-the-end-of-the-instrument/productivity-index-scale.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-10">2026-09-10</time><ul class="tags"><li>meta</li><li>estimation</li><li>cocomo</li><li>metrics</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="off-the-end-of-the-instrument/">Off the End of the Instrument</a></h2>
+    <p class="subtitle">Four cost models, 161,364 lines, and the 49% we threw away</p>
+    <p class="summary">Someone asked what Klangmotor is worth and whether a company would have built it. We ran four software cost models over the tree, measured what the models cannot see, and found the project sitting five times past the end of the Putnam scale. The models converge on a replacement cost of a few million. They also all miss.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="loop-shape-beats-pass-count/tree-vs-bank.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-07">2026-09-07</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>oscillators</li><li>kotlin-js</li><li>v8</li><li>analog-drift</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="loop-shape-beats-pass-count/">Loop Shape Beats Pass Count</a></h2>
+    <p class="subtitle">Twenty-one block passes were cheaper than one loop, twice, and both times the fix was where a value lived</p>
+    <p class="summary">A seven-harmonic bass in Der Schmetterling was written as seven added partials, each a sine, a multiply and an add: twenty-one passes over every block. The native partial bank that replaced it was slower in its first form, because its loop kept every partial&#x27;s phase in an array, and faster rewritten so that one partial&#x27;s phase lives in a register for a whole block. Three days later the same lesson came back in a different coat: one shared container for the analog drift lanes cost a drifting supersaw 16 percent on V8 and nothing on the JVM, because it read four per-block values inside the sample loop. And today&#x27;s numbers add the part the first day did not know: on V8 the twenty-one-pass tree still beats the bank.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="seven-megabytes-of-silence/orbit-bytes.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-04">2026-09-04</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>memory</li><li>allocation</li><li>warmup</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="seven-megabytes-of-silence/">Seven Megabytes of Silence</a></h2>
+    <p class="subtitle">Every orbit allocated a ten-second delay ring at its first touch, on the audio thread, for delays no song ever asked for; the fix is a shelf, a ladder, and a warmup that runs every path before the first note</p>
+    <p class="summary">The first play of Der Schmetterling stuttered on the Fairphone because each of its eight orbits zero-filled a 7.68 MB delay ring inside a callback of under three milliseconds, one after another, for a song with no delay in it. This is the post in the series with no microsecond in it: bytes and a stall, measured by a hand on a phone, four times in one day. Rings became lazy and class-sized, grow by migration with their contents kept, return to a shelf that is stocked by return and not by guessing, and fail as null instead of killing the render thread. Then the stall moved twice, from allocation to construction to cold code, and a warmup vocabulary that executes every node kind in silence is what finally let the first run play.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="eleven-loops-one-pass/loop-shapes-bakeoff.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-20">2026-08-20</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>filters</li><li>optimizer</li><li>kotlin-js</li><li>v8</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="eleven-loops-one-pass/">Eleven Loops, One Pass</a></h2>
+    <p class="subtitle">A guitar&#x27;s tone chain ran as eleven nodes, each a loop and a scratch buffer; the fused equalizer runs it as one, and the loop shape inside that one was decided by the platform that matters</p>
+    <p class="summary">The guitars of Der Schmetterling were nearly all of the song&#x27;s cost, and their tone chain, two parallel bandpass boosts, a notch, a tracking highpass and two lowpasses, ran as about eleven separate nodes, each a full loop over the block with its own scratch traffic. EqCore renders a list of filter sections in one pass. Its inner loop was chosen in a three-way bake-off on both platforms, where the JVM and V8 disagreed and V8 decided. The wire node, the authoring surface and the optimizer rule that fuses any adjacent chain bit for bit followed within two days, and on August 20 the phone ran the song at about 75 percent CPU, the plan&#x27;s opening goal.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-phone-that-does-not-get-faster/phone-timeline.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-19">2026-08-19</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>performance</li><li>benchmark</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-phone-that-does-not-get-faster/">The Phone That Does Not Get Faster</a></h2>
+    <p class="subtitle">A 2021 Fairphone, a song that keeps growing, and the one number that tells them apart</p>
+    <p class="summary">Klangmotor renders its songs in a browser&#x27;s audio thread, and the slowest place it has to work is a Fairphone 4 from 2021. The phone stays the same while the songs get heavier, so every added stage has to be paid for inside the engine. This opens a series about how that bill was paid: what the phone said at each step, why the number everyone reaches for lies, and the ledger we built so the next round can be measured against the last one.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="half-a-song/ladder-rungs.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-19">2026-08-19</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>ignitor</li><li>constant-folding</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="half-a-song/">Half a Song</a></h2>
+    <p class="subtitle">A one-line override, a fold ladder in two nodes, and fifteen missing overrides: a five percent desktop win that was run-or-not-run on the phone</p>
+    <p class="summary">Every arithmetic node in a Klangmotor instrument graph rendered both of its operands into buffers before combining them, even when one operand was a parameter that could not change within the block. The fix came in three commits on August 19: a memoizing wrapper that had been hiding every composite constant behind a null, a fold ladder in the multiply and add nodes that reads a block-constant operand as one number, and the fifteen node kinds whose missing override killed folding for everything above them. On the desktop the guitar&#x27;s tone chain got nine percent cheaper and the guitar voice five. On the Fairphone, half of Der Schmetterling ran again. This is the first appearance of the graph optimizer idea in the series: a fold is what you do when you know something at build time that the render loop does not.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-fundamental-lottery/spectrogram-before-after.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-12">2026-08-12</time><ul class="tags"><li>engine</li><li>dsp</li><li>supersaw</li><li>sound-design</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-fundamental-lottery/">The Fundamental Lottery</a></h2>
+    <p class="subtitle">Why every supersaw note was a dice roll, and how we rigged the game</p>
+    <p class="summary">Some notes had bass. Some didn&#x27;t. The hunt for a randomly hollow guitar took us from spectrograms through Rayleigh statistics to a self-refreshing pool of phase configurations, and fixed every super-oscillator in the engine at once.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="one-annotation-six-artifacts/pipeline.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-12">2026-08-12</time><ul class="tags"><li>klangscript</li><li>ksp</li><li>codegen</li><li>developer-experience</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="one-annotation-six-artifacts/">One Annotation, Six Artifacts</a></h2>
+    <p class="subtitle">How KlangScript&#x27;s KSP processor turns a KDoc comment into a language surface</p>
+    <p class="summary">Every function a KlangScript song can call is explicitly registered from Kotlin, and the registration, the type signatures, the autocomplete, the hover docs, the visual editor bindings, and the playable documentation examples are all generated from one annotated function and its KDoc. A closer look at the compile-time pipeline the white paper only waves at.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-limiter-that-couldnt-see/kick-peaks.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-11">2026-08-11</time><ul class="tags"><li>engine</li><li>dsp</li><li>limiter</li><li>mastering</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-limiter-that-couldnt-see/">The Limiter That Couldn&#x27;t See</a></h2>
+    <p class="subtitle">How a master limiter cracked every big transient, and what it took to give it eyes</p>
+    <p class="summary">Every loud kick left the master stage as a hard-clipped burst: the limiter enforced its ceiling with a clip, not with gain. Adding lookahead alone warned it earlier without making its gain any faster. The fix is a construction borrowed from a 2022 Signalsmith article: moving-minimum, release, two box filters, and a delay, plus a dual release we kept for an unexpected reason.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-same-word/two-tails.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-03">2026-08-03</time><ul class="tags"><li>dsl</li><li>design</li><li>parameter-parity</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-same-word/">The Same Word Must Mean the Same Thing</a></h2>
+    <p class="subtitle">An order-of-magnitude bug, and the DSL design principle it bought us</p>
+    <p class="summary">The same reverb size value produced a one-second reverb tail on an orbit and a twelve-and-a-half-second tail on the master bus. The fix took an afternoon; the principle it crystallized is now a standing rule for every parameter that appears on more than one surface, and it includes a rule for the exceptions.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-body-that-played-a-thousand-times/song-ab.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-07-04">2026-07-04</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>orbits</li><li>resonators</li><li>superimpose</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-body-that-played-a-thousand-times/">The Body That Played a Thousand Times</a></h2>
+    <p class="subtitle">The first whole-song measurement found a guitar body resonator running once per voice under a nested superimpose; moving it to the orbit cut the busiest block by three quarters</p>
+    <p class="summary">On July 3 the song benchmark was built and pointed at Der Schmetterling for the first time. One guitar, with a nested superimpose, scheduled 1,088 voices and was about half the song&#x27;s cost, and every one of those voices ran its own eight-band body resonator. A body is a property of the instrument, not of a note, so body and vowel moved from the per-voice filter chain to the orbit bus, once on the summed mix, with the first voice to sound configuring it through a lease and a crossfade covering a live rebuild. The frozen song&#x27;s median cost fell by a fifth and its busiest block by three quarters, and the measurement that found the problem is the harness the series measures songs with from here on.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="killing-the-plastic-pipe/drift-pitch.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-30">2026-06-30</time><ul class="tags"><li>engine</li><li>dsp</li><li>sound-design</li><li>analog-drift</li><li>supersaw</li><li>body</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="killing-the-plastic-pipe/">Killing the Plastic Pipe</a></h2>
+    <p class="subtitle">A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that does not ring on its own</p>
+    <p class="summary">By spring 2026 the engine was correct, fast, and cold. Every note was perfect, and perfection was the tell. This is the story of Q2&#x27;s warmth hunt: a two-timescale Ornstein-Uhlenbeck drift generator (with an inline xorshift32 and a hard-won lesson about seeding), a supersaw rebuilt around an analog flyback, and a passive body resonator measured straight from the engine.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="sixty-seven-microseconds-to-385-nanoseconds/codec-ns.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-07">2026-06-07</time><ul class="tags"><li>series-fairphone</li><li>wire</li><li>worklet</li><li>ksp</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="sixty-seven-microseconds-to-385-nanoseconds/">Sixty-Seven Microseconds to 385 Nanoseconds</a></h2>
+    <p class="subtitle">The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced</p>
+    <p class="summary">A scheduled voice crosses from the page to the audio worklet through a message port, and on the far side, on the audio thread, it was decoded by kotlinx serialization&#x27;s dynamic decoder at sixty-four to sixty-seven microseconds per voice. ProtoBuf was tried and was slower on Kotlin/JS. A hand-rolled decoder that simply reads the fields it knows are there ran in 398 nanoseconds, and a KSP processor that generates that decoder for every wire type made it 385: 174 times faster, the encode ten times. Because both ends of the wire are one build, the codec can trust its input, and a structural hash of the schema, stamped on every message, catches the one case where they are not.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="twenty-allocations-per-note/copy-ns.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-06">2026-06-06</time><ul class="tags"><li>series-fairphone</li><li>sprudel</li><li>patterns</li><li>allocation</li><li>kotlin-js</li><li>v8</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="twenty-allocations-per-note/">Twenty Allocations per Note</a></h2>
+    <p class="subtitle">Every pattern modifier copied a 105-field voice object; making it mutable under a single-owner invariant, guarded by a golden of 2,822 events, cut the copies to one per event, and the one that remained is a story about V8</p>
+    <p class="summary">A pattern in Klangmotor&#x27;s sequencing language is a chain of modifiers, gain, note, filters, effects, and every modifier in the chain copied the event&#x27;s voice data, a data class of a hundred and five fields, on the way through: on the order of twenty allocations per voice. The fix made the object mutable with a single owner, cloned exactly once where a leaf pattern emits it, and converted 113 setters to mutate in place, with a differential golden of a frozen song standing guard, which caught the one aliasing bug that mattered. The copy that remained cost 820 nanoseconds on V8, and none of the hand-written routes we tried took it lower; a native copy via Object.assign was 22 times slower. What made it smaller was grouping the fields, so that a leaf&#x27;s empty clusters are one null each.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="one-engine-for-five-waves/per-voice.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-05">2026-06-05</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>oscillators</li><li>unison</li><li>control-rate</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="one-engine-for-five-waves/">One Engine for Five Waves</a></h2>
+    <p class="subtitle">Three hand-rolled unison oscillators and two shape functions became one of each, and a control-rate read stopped rendering a whole buffer to take one sample from it</p>
+    <p class="summary">In early June the super oscillators were five oscillators across four classes that had grown apart: saw and ramp on one shared engine, sine, square and triangle each hand-rolled with its own voice bookkeeping, a flat gain and one drift walk for the whole stack. Two shape functions drew the same trapezoid differently. One day of consolidation left one shape function, one unison engine with three small subclasses, and a member on the node interface that lets a block-constant parameter be read as a number instead of rendered into a scratch buffer and sampled. The supersquare went from about 8.2 to 5.0 microseconds per voice, the supersine from 18.7 to 15.7, and the code the rest of the series optimizes is the code this day made.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-triplet-that-never-drifted/transplant-ns.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-05-29">2026-05-29</time><ul class="tags"><li>series-fairphone</li><li>sprudel</li><li>timing</li><li>fixed-point</li><li>rational</li><li>kotlin-js</li><li>bigint</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-triplet-that-never-drifted/">The Triplet That Never Drifted</a></h2>
+    <p class="subtitle">Musical time went through five representations in five months, from a Double to a fixed point to two rationals to a fixed point again, and the last one made a third exact and a plus under six nanoseconds</p>
+    <p class="summary">A pattern language needs a third of a cycle to land on the third forever, and a Double cannot promise that. Between January and May the sequencer&#x27;s notion of time was rebuilt four times: a 32.32 fixed point in a Long, in which three thirds are one step short of one; a numerator and denominator pair with a gcd after every operation; the same pair split per platform, with BigInt on JavaScript, where every plus cost 92 nanoseconds; and CycleTime, an integer count of ticks held in a Double with 110,100,480 ticks to the cycle, chosen so that halves to the twentieth power, thirds, fifths and sevenths are all exact. No timing of the change was recorded in May, so this post transplants all three classes into one benchmark today: on node a plus fell from 92 nanoseconds to under six, a sequence step from 186 to five.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="growing-our-own-brain/oracle.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-03-21">2026-03-21</time><ul class="tags"><li>sprudel</li><li>klangscript</li><li>differential-testing</li><li>language</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="growing-our-own-brain/">Growing Our Own Brain</a></h2>
+    <p class="subtitle">Replacing a language runtime while every song depends on its exact behavior</p>
+    <p class="summary">Klang ran on borrowed Strudel-JS through a GraalVM bridge. Q1 2026 replaced it with our own interpreter and pattern engine, verified by compiling every pattern twice and diffing the event streams against the original, which stayed in the tree as an oracle. On 2026-03-21 the fork got its own name: sprudel.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="the-position-that-survived/spans.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-01-20">2026-01-20</time><ul class="tags"><li>klangscript</li><li>sprudel</li><li>editor</li><li>live-coding</li><li>source-locations</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="the-position-that-survived/">The Position That Survived</a></h2>
+    <p class="subtitle">How a source location rides from the parser through the pattern engine to a glowing rectangle in the editor</p>
+    <p class="summary">Live coding needs the editor to show what is playing right now, which means every runtime event must know which characters of source text it came from, across an interpreter, a mini-notation parser, a pattern engine, and an audio-worklet wire. Klang&#x27;s answer: locations ride the values themselves. Even a constant defined as &quot;let feel = 1.0&quot; lights up when it plays.</p>
+  </div>
+</li>
+<li class="card">
+  <img class="hero" src="first-sound/architecture.png" alt="" loading="lazy">
+  <div class="card-body">
+    <div class="meta"><span class="draft-tag">Draft</span><time datetime="2025-12-20">2025-12-20</time><ul class="tags"><li>origins</li><li>architecture</li><li>kotlin-multiplatform</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+    <h2><a href="first-sound/">First Sound</a></h2>
+    <p class="subtitle">One synthesizer, two worlds, and a borrowed brain: how klang began</p>
+    <p class="summary">Klang started with a bet: one audio engine that runs the same on the JVM and in the browser, driven by a pattern language borrowed, for a time, from Strudel via GraalVM. This is the story of the first quarter, the first sine wave, and the three scars that shaped what came after.</p>
+  </div>
+</li>
+</ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One Annotation, Six Artifacts · Klang blog</title>
+<meta name="description" content="Every function a KlangScript song can call is explicitly registered from Kotlin, and the registration, the type signatures, the autocomplete, the hover docs, the visual editor bindings, and the playable documentation examples are all generated from one annotated function and its KDoc. A closer look at the compile-time pipeline the white paper only waves at.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-12">2026-08-12</time><ul class="tags"><li>klangscript</li><li>ksp</li><li>codegen</li><li>developer-experience</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="one-annotation-six-artifacts">One Annotation, Six Artifacts</h1>
+<p><em>How KlangScript's KSP processor turns a KDoc comment into a language surface.</em></p>
+<p>The <a href="../../klang-whitepaper.html">white paper</a> tells the general KlangScript story: JavaScript-shaped
+syntax, Kotlin-shaped standard library, a hand-written interpreter with no <code>eval</code> and no host-interop hole
+<a href="#whitepaper">[1]</a>. This post is the closer look at one sentence of it:</p>
+<blockquote>
+<p><em>&quot;You annotate a Kotlin function or object with <code>@Function</code> / <code>@Method</code> /
+<code>@Object</code>, and the processor generates the stdlib registration, the type
+signatures, the completion data, and the hover documentation, all from
+one source.&quot;</em></p>
+</blockquote>
+<p>That sentence undersells it. By our count it's six artifacts, and the sixth one plays music.</p>
+<h2 id="1-the-problem-a-language-surface-is-five-things-pretending-to-be-one">1. The problem: a language surface is five things pretending to be one</h2>
+<p>A scripting language embedded in an engine is never just an interpreter. Every function a script can call exists in
+several places at once: the <strong>runtime binding</strong> (what actually executes), the <strong>type signature</strong> (what the analyzer
+believes), the <strong>completion entry</strong> (what the editor offers), the <strong>documentation</strong> (what the human reads), and, in
+klang's case, the <strong>visual editor binding</strong> (which UI widget edits which parameter).</p>
+<p>Maintain those five by hand and they drift apart. The doc says one thing, the completion suggests
+another, the runtime accepts a third. Every divergence is a small lie to the user, and klang had already learned what
+vocabulary lies cost (see
+<a href="../the-same-word/">The Same Word Must Mean the Same Thing</a>).</p>
+<p>There's a security angle too. KlangScript's sandbox rule is <em>everything a script can reach is explicitly registered from
+Kotlin</em>: no reflection, no interop escape hatch. That's the right boundary for running strangers'
+songs, but it means the registration layer can't be waved away: it is the language surface, function by function.</p>
+<h2 id="2-what-usually-gets-tried">2. What usually gets tried</h2>
+<p><strong>Hand-maintained registries</strong>: the default, and the divergence machine described above. Adding a function means
+touching four files, and the fourth gets forgotten.</p>
+<p><strong>Runtime reflection</strong>: let the host language introspect itself. Ruled out twice over: reflection is precisely the
+sandbox hole the design forbids, and on Kotlin/JS it's also a performance tax the audio-adjacent runtime can't pay.</p>
+<p><strong>Separate doc toolchains</strong>: generate docs from source with one tool, completion from another config, registration by
+hand. Three sources of truth is not fewer than two.</p>
+<p>The direction that works is the one compilers took decades ago: <strong>make the declaration the single source and generate
+everything else at compile time.</strong> Kotlin's hook for that is KSP, the compile-time symbol processor, and klang leans
+on it hard.</p>
+<h2 id="3-the-pipeline">3. The pipeline</h2>
+<p><img src="pipeline.png" alt="The KSP pipeline" loading="lazy" /></p>
+<p><em>Fig. 1: one annotated function in, six artifacts out, at compile time.</em></p>
+<p>Here is a real registered function, exactly as it lives in the tree: the
+<code>body()</code> resonator (the star of
+<a href="../killing-the-plastic-pipe/">Killing the Plastic Pipe</a>):</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+ * The resonant body: the material, its mix and its dry floor.
+ *
+ * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
+ * through it. One body per [orbit bus](/manuals/lexikon/orbit-bus), so ALL of it, `material`
+ * included, is set once for everyone by the orbit&#x27;s owning voice.
+ * ...
+ * ```KlangScript(Playable)
+ * note(&quot;c3 e3&quot;).s(&quot;saw&quot;).body(0.7, &quot;wood&quot;)                                 // a wooden box around the tone
+ * ```
+ * ...
+ * @param wet How much of the orbit runs through the body, 0 to 1.
+ * @param material Material name. See the list above.
+ * @param floor Minimum dry share kept in the mix, 0 to 1.
+ * @param-tool material SprudelBodyEditor, SprudelBodySequenceEditor
+ *
+ * @scope orbit
+ * @category effects
+ * @tags body, wet, material, floor
+ */
+@KlangScript.Function
+fun SprudelPattern.body(
+    wet: PatternLike? = null,
+    material: PatternLike? = null,
+    floor: PatternLike? = null,
+    callInfo: CallInfo? = null
+): SprudelPattern {
+...
+</code></pre></div>
+<p>One function, one comment. (That trailing <code>callInfo: CallInfo?</code> never reaches the script, by the way: the processor
+recognizes the type and injects call-site information itself, so the script-facing signature is just
+<code>body(wet, material, floor)</code>. Even the parameter list is curated in translation.)</p>
+<p>The processor (<code>klangscript-ksp</code>) walks every symbol carrying <code>@Library</code>, <code>@Object</code>, <code>@TypeExtensions</code>, <code>@Function</code>,
+<code>@Method</code>, <code>@Property</code> or <code>@Constant</code>, parses the KDoc (description,
+<code>@param</code> docs, fenced code samples, and a small custom tag vocabulary) and emits Kotlin source into the build. What
+comes out:</p>
+<ol>
+<li><strong>Runtime registration.</strong> Typed dispatch code, including arity-overload resolution and named-argument support, so
+the interpreter calls the function without reflection. Default parameter values are extracted and baked in as
+literals.</li>
+<li><strong>Type signatures.</strong> Fed to the expression type inferrer, which is what makes <em>chained</em> completion work: inside
+the configure lambda of <code>Osc.supersaw(x =&gt; ...)</code> the analyzer knows <code>x</code> is the supersaw's builder and offers
+<code>.spreadPower()</code> and <code>.phasePool()</code> on it, and the call itself is an oscillator, so <code>.lowpass()</code> resolves on it as
+on any other. (The type map has one intentional hole:
+<code>Long</code> is excluded, because it boxes on Kotlin/JS. Even the codegen bows to the audio thread.)</li>
+<li><strong>Completion data.</strong> Names, parameters, defaults, <code>@category</code> for grouping, <code>@tags</code> for search, <code>@alias</code> for
+alternative names.</li>
+<li><strong>Hover documentation</strong> in the editor: the KDoc description and per-param docs, at the call site.</li>
+<li><strong>Visual editor bindings.</strong> <code>@param-tool material SprudelBodyEditor, SprudelBodySequenceEditor</code> binds that parameter to its visual editing tools in the studio UI; the
+doc comment wires the GUI.</li>
+<li><strong>Documentation pages with playable examples.</strong> Fenced blocks tagged <code>KlangScript(Playable)</code> in the KDoc are
+extracted as typed samples and rendered in the docs UI with <strong>play/stop controls</strong>, and blocks tagged
+<code>KlangScript(Executable)</code> get a run button and an output panel. The examples in the manual are not screenshots of
+music; they are music.</li>
+</ol>
+<h2 id="4-why-compile-time-is-the-point">4. Why compile time is the point</h2>
+<p>Everything above could be built at runtime with enough reflection and registry code. Doing it in KSP buys three
+properties that matter here specifically:</p>
+<ul>
+<li><strong>The sandbox stays sealed.</strong> Generated code is ordinary, explicit Kotlin; the interpreter dispatches through it like
+hand-written bindings. No reflection at runtime means no reflection <em>capability</em> at runtime.</li>
+<li><strong>Kotlin/JS stays fast.</strong> Registration cost is paid at build time; the browser loads plain functions. The same
+reasoning that rebuilt the worklet wire codec as KSP-generated (67 µs → 385 ns per decode) applies to the language
+surface.</li>
+<li><strong>Divergence becomes a compile error, not a doc bug.</strong> Rename a parameter and the registration, signature, completion
+and docs all change in the same commit, because they are the same artifact.</li>
+</ul>
+<h2 id="5-the-payoff-felt">5. The payoff, felt</h2>
+<p>The practical effect is that klang's DSL grows at conversation speed. When the unison phase pool shipped, its combined <code>.phasePool(on, kMin, kMax, drawTries, ...)</code> call appeared in autocomplete with named parameters, typed against the supersaw, documented
+on hover, the day the function was written, because there was nothing else to write. One function, one comment; the
+language surface follows.</p>
+<p>The habit it builds is the quiet win: since the KDoc <em>is</em> the manual, the completion, and the UI wiring, there is real
+pressure to write it well, and one place to fix it when it's wrong. Documentation that generates behavior has a harder
+time rotting; when it does, the build says so.</p>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li><a id="whitepaper"></a><em>Klangmotor: A White Paper</em>, §03
+&quot;KlangScript: the language you type&quot; (2026).
+<a href="../../klang-whitepaper.html">docs/whitepaper</a></li>
+</ol>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Phone That Does Not Get Faster · Klang blog</title>
+<meta name="description" content="Klangmotor renders its songs in a browser&#x27;s audio thread, and the slowest place it has to work is a Fairphone 4 from 2021. The phone stays the same while the songs get heavier, so every added stage has to be paid for inside the engine. This opens a series about how that bill was paid: what the phone said at each step, why the number everyone reaches for lies, and the ledger we built so the next round can be measured against the last one.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-19">2026-08-19</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>performance</li><li>benchmark</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="the-phone-that-does-not-get-faster">The Phone That Does Not Get Faster</h1>
+<p><em>A 2021 Fairphone, a song that keeps growing, and the one number that tells them apart.</em></p>
+<p>Every performance target that mattered for Klangmotor has had the same shape: <strong>Der Schmetterling runs on the Fairphone 4.</strong> Not &quot;the engine is fast&quot;, not &quot;the benchmark improved&quot;. A named song, on a named phone, in a browser tab, without a stutter.</p>
+<p>This post is the first of a series about how that sentence was kept true through a summer in which the song got heavier every week. Each later post takes one optimization: what the phone said before it, why this one and not another, what it changed, and what it cost in sound. This one sets the table. It says what the phone is, what we measure, and why the obvious measurement would have told us the optimizations went the wrong way.</p>
+<h2 id="the-phone">The phone</h2>
+<p>The Fairphone 4 shipped in October 2021 on a Snapdragon 750G <a href="#gsmarena-fp4">[1]</a> <a href="#wiki-fp4">[2]</a>: two Cortex-A77 cores at 2.2 GHz and six Cortex-A55 cores at 1.8 GHz, on an 8 nm process, with 6 or 8 GB of RAM. The A55 is ARM's small core. Its level-one cache is a configurable 32 to 128 KB and its level-two 64 to 256 KB <a href="#wiki-a55">[3]</a>, and Qualcomm does not publish which end of that range the 750G uses. The A77 has 128 KB of L1 and 256 to 512 KB of L2 <a href="#wiki-a77">[4]</a>.</p>
+<p>The desktop the benchmarks in this series run on is an AMD Ryzen 9 PRO 7940HS: eight Zen 4 cores boosting to 5.2 GHz, 1 MB of L2 per core and 16 MB of L3 <a href="#notebookcheck-7940hs">[5]</a>. It is not a fair fight, and that is the point. A song that fits the desktop with room to spare can still fall off the phone, and the phone is where a listener might actually press play.</p>
+<p>Klangmotor renders inside the browser's AudioWorklet: one thread, a block of 128 frames every 2.67 milliseconds at 48 kHz, and no second chance. In Chrome on Android that thread runs on V8, the same engine as Node.js <a href="#nodejs-v8">[6]</a>, which is why the node numbers in this series are the ones that count and the JVM numbers are the ones that are convenient.</p>
+<p>We chose the phone for one reason. It does not change. The desktop gets a new JIT, a new kernel, a warmer afternoon; the songs get another guitar stage; the phone from 2021 stays what it was. A fixed target turns &quot;fast enough&quot; from a feeling into a measurement.</p>
+<h2 id="the-number">The number</h2>
+<p>Everything below is measured in <strong>RTF</strong>, the real-time factor: the time it took to render a stretch of audio divided by the length of that audio. A 128-frame block is 2.67 ms of sound. If the engine renders it in 0.27 ms, the RTF is 0.1, a tenth of the time available. Below 1.0 is faster than real time. At 1.0 the audio thread misses its deadline and the sound breaks up.</p>
+<p>Two RTFs matter for a song. The <strong>median RTF</strong> is the steady-state average, the share of a core the song takes. The <strong>peak RTF</strong> is the single busiest block, and the peak is what makes a phone stutter: a song can sit at a comfortable median and still drop out on the block where every drum and guitar note starts at once. The song benchmark skips the first 0.35 seconds before it looks for the peak, because the one-time allocations at the start of a song are a different problem, told in the post about the resource warehouse.</p>
+<p>The desktop measures RTF on the JVM because that is where the tooling lives. The phone runs on V8. The gap between the two is not a constant, but it is not wild either.</p>
+<p><img src="jvm-vs-node.png" alt="node against the JVM, 33 ignitor rows" loading="lazy" /></p>
+<p><em>Fig. 1: The same 33 oscillator rows, rendered on the JVM and on node on one machine, as the ratio of render times. The median is 1.92; the white and pink noise rows and the reverb chain sit above 2.1, the bare plucked strings below 1.6, until oversampling pushes a pluck to 2.09. Source: the benchmark comparison of 2026-08-19.</em></p>
+<p>A JVM number multiplied by two is a fair first guess at node. The phone is another multiple on top, and that one we have never measured precisely: on the device we have a CPU gauge and our ears, which is why the timeline below is written in words rather than numbers.</p>
+<h2 id="what-the-phone-said">What the phone said</h2>
+<p><img src="phone-timeline.png" alt="the phone's timeline" loading="lazy" /></p>
+<p><em>Fig. 2: Der Schmetterling on the Fairphone 4, the six times between August 19 and September 15 that the phone changed its answer. Red is a stall, green a run. The gray line beside each is what had changed in the engine, or in the song.</em></p>
+<p>Six answers, three cycles of the same story. On August 19 the song stalled; with block-constant arithmetic folded out of the guitar chain it played half way, then stalled at the lead's entry. A day later, with the guitar's filter tail fused from about eleven nodes down to five, it played at about 75% CPU, and the plan that had set the goal marked it met.</p>
+<p>Two weeks later the song's first run killed the playback again, and it took four deployments on September 4 to find out why. The day before, the suspect had been the delay rings: 7.68 MB per orbit, zero-filled on the audio thread at the first note that touched it, about 63 MB for a song that uses eight orbits. The resource warehouse made those lazy and right-sized, and the first run still died. What was left was the first frame building eight cylinders and four reverb networks at once, about a megabyte of objects and a great deal of cold code, which weighs more on a phone than on a desktop. A warmup that builds every node kind in silence before the first note fixed that, and the first run played.</p>
+<p>Then, on September 15, the song could barely run again. Nothing in the engine had regressed. The guitars had been rebuilt over the intervening days into five-stage rigs, pickup to cabinet, with oversampled distortion in all five stages, three of them at four times the rate, and the phone that had been fine with a filtered supersaw was not fine with that. The same evening the analog drift, the wander we had spent a spring putting into every oscillator (<a href="../killing-the-plastic-pipe/">Killing the Plastic Pipe</a>), stopped stepping every lane per sample, and with culling and polynomial transcendentals already in, the song was smooth.</p>
+<p>That third cycle is the reason this series exists. The engine got faster all summer, and the phone was in trouble anyway, because the song got heavier faster.</p>
+<h2 id="the-number-that-lies">The number that lies</h2>
+<p>Here is what the obvious chart looks like. On the desktop, on August 19, the live Der Schmetterling rendered at a median RTF of 0.0752. On September 15, with culling, the polynomial math and the block-rate drift landed, the live song rendered at 0.0791. Plotted as one line, the summer's work made the song five percent slower.</p>
+<p>The line is true and the conclusion is false, because two things moved at once. We know this because the song benchmark also renders a frozen copy of Der Schmetterling as it was on July 3, the same text every time, door renames aside. That frozen song went from 0.0870 to 0.0756 over the same period on the same machine: thirteen percent faster on identical work. The live song ate the whole gain and a little more, in the shape of the guitar rigs.</p>
+<p>So the live song's RTF over time is not a score. It is the difference between two scores, an engine getting quicker and a song getting heavier, and it says nothing about either on its own. Every result in this series is therefore stated on <strong>fixed work</strong>: the same voice, the same chain, the same frozen instrument, before and after. Where a live-song number appears, the song's version stands next to it.</p>
+<h2 id="the-honest-scoreboard">The honest scoreboard</h2>
+<p>Fixed work needs two things: pieces that do not move, and a measure of how much they ask.</p>
+<p>The pieces are the six instruments of Der Schmetterling, each rendered solo on a frozen copy of the song text, so that the engine is the only thing that can move a piece's number between two runs. When an instrument changes for real, it gets a new dated snapshot and the old one stays.</p>
+<p>The measure is a census of the graph each note renders. Klangmotor builds a voice from a tree of nodes, an oscillator, filters, a distortion stage, an envelope, and after the graph optimizer has had its say, that tree is what the engine walks once per 128-frame block. The census counts three things per note from that optimized tree: how many <strong>passes over the block</strong> it takes (a fused equalizer of four sections is four, a unison stack of nineteen voices is nineteen), how many <strong>buffer reads and writes per sample</strong> those passes move (an in-place pass is two, a pass over two signals three, a shaper oversampled four times moves the block around several times over), and how many <strong>bytes of state</strong> a note holds between blocks. The counts are a model read off the runtime's own lowering, pinned by hand-counted graphs, and their job is to hold the denominator still.</p>
+<p>With those, the score for one piece is its render time per sample per pass, and for one engine change it is the ratio of that number before and after on the same piece. We call the table that collects these rows the ledger. It is appended to, never edited, by one command after every optimization round, and a piece's history reads down one column.</p>
+<p><img src="ledger-first-reading.png" alt="the ledger's first reading" loading="lazy" /></p>
+<p><em>Fig. 3: The ledger's first reading: the six frozen pieces on the engine of September 10 and of September 16, the same machine, medians of three runs each. The September round is culling, the polynomial sine and exponentials, the analog drift stepped per block, the arithmetic folds and the polyphase decimator. The older engine predates the ledger, so its rows were measured by carrying the frozen pieces into a checkout of that tag.</em></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>piece</th>
+<th style="text-align:right">passes per note</th>
+<th style="text-align:right">before (3 runs)</th>
+<th style="text-align:right">after (3 runs)</th>
+<th style="text-align:right">change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>guitar, melody rig</td>
+<td style="text-align:right">48</td>
+<td style="text-align:right">0.0196 (0.0186 to 0.0202)</td>
+<td style="text-align:right">0.0161 (0.0154 to 0.0165)</td>
+<td style="text-align:right">-18%</td>
+</tr>
+<tr>
+<td>guitars, rhythm rig</td>
+<td style="text-align:right">57</td>
+<td style="text-align:right">0.0435 (0.0411 to 0.0453)</td>
+<td style="text-align:right">0.0375 (0.0356 to 0.0385)</td>
+<td style="text-align:right">-14%</td>
+</tr>
+<tr>
+<td>marimba</td>
+<td style="text-align:right">18</td>
+<td style="text-align:right">0.0339 (0.0301 to 0.0377)</td>
+<td style="text-align:right">0.0290 (0.0244 to 0.0345)</td>
+<td style="text-align:right">-14%</td>
+</tr>
+<tr>
+<td>Orchestertrommel</td>
+<td style="text-align:right">24</td>
+<td style="text-align:right">0.0604 (0.0551 to 0.0613)</td>
+<td style="text-align:right">0.0337 (0.0336 to 0.0359)</td>
+<td style="text-align:right">-44%</td>
+</tr>
+<tr>
+<td>bass</td>
+<td style="text-align:right">7</td>
+<td style="text-align:right">0.0101 (0.0094 to 0.0106)</td>
+<td style="text-align:right">0.0045 (0.0045 to 0.0059)</td>
+<td style="text-align:right">-55%</td>
+</tr>
+<tr>
+<td>drums (samples)</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">0.0397 (0.0362 to 0.0479)</td>
+<td style="text-align:right">0.0173 (0.0171 to 0.0183)</td>
+<td style="text-align:right">-57%</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three things in that table are worth a second look, and each is a later post.</p>
+<p>The rhythm guitar note is 57 passes, and nineteen of them are the unison stack's voices before a single filter has run; the pitch envelope, the pluck burst, the envelope and the five-stage rig are the other 38, and the whole note moves 303 buffer samples per input sample, most of them in the three shapers that run at four times the rate. Where the time goes is a different question from where the passes are: a census of the same guitar the day before the September round, with one stage at a time swapped for its plain version, put the rig at 30% of the guitar's cost, the analog drift at 19%, the string extras at 6%, and the supersaw stack with the envelope and the per-node overhead at the remaining 45%. The string is at least as expensive as the amplifier, and the amplifier's cost is its oversampling, not its filters.</p>
+<p>The drums halved their RTF while their cost per voice went <strong>up</strong>. Before, 24 voices were active per block; after, six were rendering. Culling had stopped the silent tails, and the voices left were the ones doing the work. Per-voice cost is not the score either; per-pass cost is.</p>
+<p>And the marimba's three runs span forty percent, because one of them caught a pause with a peak RTF of 1.2, a garbage collection or a compilation, and reads nineteen percent above the median. The median absorbs it and the spread reports it. Every number in this series comes with its spread, and a number without a spread is a number we have not measured three times.</p>
+<h2 id="the-rules-for-the-rest-of-the-series">The rules for the rest of the series</h2>
+<ul>
+<li>Same machine, same harness version, same session for an A/B, and the platform named. Node is the deployment platform; the JVM is the convenience.</li>
+<li>Fixed work only. A live-song number never stands alone.</li>
+<li>Medians of three runs, with the spread. The peak block reported next to the median.</li>
+<li>The harness itself is suspect. On September 7 we found the ignitor benchmark had been rendering every voice twice per block, so every absolute microsecond it printed before that day is double the truth. Ratios within one run survived; absolutes did not. The posts say which side of that day their numbers come from.</li>
+<li>Bit-identical is the default claim for an optimization. Where a change is only within a margin, or only by ear, the post says so, and says what guarded it.</li>
+</ul>
+<p>What the phone cannot tell us in numbers, it tells us in the currency that counts here: whether the song plays. The rest of the series is about how many times we had to earn that again.</p>
+<h2 id="references">References</h2>
+<ol>
+<li><a id="gsmarena-fp4"></a>GSMArena. Fairphone 4 full specifications. <a href="https://m.gsmarena.com/fairphone_4-11136.php">https://m.gsmarena.com/fairphone_4-11136.php</a></li>
+<li><a id="wiki-fp4"></a>Wikipedia. Fairphone 4. <a href="https://en.wikipedia.org/wiki/Fairphone_4">https://en.wikipedia.org/wiki/Fairphone_4</a></li>
+<li><a id="wiki-a55"></a>Wikipedia. ARM Cortex-A55, citing ARM's Technical Reference Manual. <a href="https://en.wikipedia.org/wiki/ARM_Cortex-A55">https://en.wikipedia.org/wiki/ARM_Cortex-A55</a></li>
+<li><a id="wiki-a77"></a>Wikipedia. ARM Cortex-A77, citing ARM's Technical Reference Manual. <a href="https://en.wikipedia.org/wiki/ARM_Cortex-A77">https://en.wikipedia.org/wiki/ARM_Cortex-A77</a></li>
+<li><a id="notebookcheck-7940hs"></a>Notebookcheck. AMD Ryzen 9 PRO 7940HS processor benchmarks and specs. <a href="https://www.notebookcheck.net/AMD-Ryzen-9-PRO-7940HS-Processor-Benchmarks-and-Specs.725627.0.html">https://www.notebookcheck.net/AMD-Ryzen-9-PRO-7940HS-Processor-Benchmarks-and-Specs.725627.0.html</a></li>
+<li><a id="nodejs-v8"></a>Node.js documentation. The V8 JavaScript engine. <a href="https://nodejs.org/learn/getting-started/the-v8-javascript-engine">https://nodejs.org/learn/getting-started/the-v8-javascript-engine</a></li>
+</ol>
+<p><em>Sources inside the repository: <code>docs/plans/unified-eq.md</code> (the on-device notes of August 19 and 20), <code>docs/tasks-archive/2026-09/20260927-resource-warehouse.md</code> (the four measurements of September 4), <code>docs/tasks-archive/2026-09/20260916-ignitor-optimizer-arithmetic-folds.md</code> (September 15), <code>docs/benchmarks/2026-08-19_121412_song_jvm.md</code> and <code>docs/benchmarks/2026-09-15_203953_song_jvm.md</code> (the frozen and live song), <code>docs/benchmarks/2026-08-19_202119_compare.md</code> (Fig. 1), <code>docs/benchmarks/ledger.md</code> (Fig. 3).</em></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

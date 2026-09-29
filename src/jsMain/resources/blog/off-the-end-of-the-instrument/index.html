@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Off the End of the Instrument · Klang blog</title>
+<meta name="description" content="Someone asked what Klangmotor is worth and whether a company would have built it. We ran four software cost models over the tree, measured what the models cannot see, and found the project sitting five times past the end of the Putnam scale. The models converge on a replacement cost of a few million. They also all miss.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-10">2026-09-10</time><ul class="tags"><li>meta</li><li>estimation</li><li>cocomo</li><li>metrics</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="off-the-end-of-the-instrument">Off the End of the Instrument</h1>
+<p><em>Four cost models, 161,364 lines, and the 49% we threw away.</em></p>
+<p>The question arrived in the middle of something else: <strong>how much is this worth, and would a company have built it?</strong></p>
+<p>The reflex is to reach for lines of code. We did, and the first number was wrong.</p>
+<h2 id="the-first-number-was-wrong-three-ways">The first number was wrong three ways</h2>
+<p>The working figure in the room was &quot;over 430,000 lines of Kotlin.&quot; Running <code>cloc</code> over the tree with the build directories excluded gives something else:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hand-written Kotlin, code only</td>
+<td><strong>161,364</strong></td>
+</tr>
+<tr>
+<td>Hand-written Kotlin, raw lines</td>
+<td>253,896</td>
+</tr>
+<tr>
+<td>KSP-generated Kotlin, in <code>build/</code></td>
+<td>59,000 (126,408 raw)</td>
+</tr>
+<tr>
+<td>Markdown docs</td>
+<td>67,115</td>
+</tr>
+<tr>
+<td>Everything <code>.kt</code> raw, including generated</td>
+<td>380,304</td>
+</tr>
+</tbody>
+</table></div>
+<p>The 430k is reachable, but only by counting things that should not count. 59,000 of those lines are KSP output: eight files, generated by the annotation processors on every build, costing zero human effort. Another 92,532 are blank lines and comments. Count the generated code and you are valuing the compiler; count the blanks and you are valuing the return key.</p>
+<p>161,364 is the figure we use, and it splits <strong>73,632 main / 84,473 test</strong>. There is more test code than production code in this engine.</p>
+<p>That is the first thing the models cannot see, and it will not be the last.</p>
+<h2 id="four-models-run-properly">Four models, run properly</h2>
+<p>The calibration point that matters: first commit <strong>2025-12-20</strong>, this post <strong>2026-09-10</strong>. Eight point seven months, essentially one person, 1,903 commits.</p>
+<h3 id="cocomo-81">COCOMO 81</h3>
+<p>Boehm's original model <a href="#boehm1981">[1]</a>, and still the one under the hood when someone says &quot;this open-source project would have cost $X&quot;: Wheeler's <em>More Than a Gigabuck</em> <a href="#wheeler2001">[6]</a> used exactly this to price Red Hat 7.1 at a billion dollars. Basic organic mode is <code>PM = 2.4 x KSLOC^1.05</code>:</p>
+<ul>
+<li><strong>499 person-months = 41.6 person-years</strong>, 26.5 months, 18.8 people.</li>
+</ul>
+<p>Its honest failure mode: it is calibrated on 63 projects from the 1970s, and organic mode assumes a small team in a familiar domain. Semi-detached mode on the same input says 74.2 person-years, embedded says 133.8. The mode selection swings the answer by 3x before any data enters.</p>
+<h3 id="cocomo-ii">COCOMO II</h3>
+<p>The 2000 recalibration <a href="#boehm2000">[2]</a> replaced the fixed exponent with five scale factors and seventeen effort multipliers, which is its point: it can be told what kind of project this is. Set for the project as it was run, as well as we could rate it ourselves: team cohesion and site at their top ratings because it is one person, analyst and programmer capability and language experience rated very high (a self-rating, so read it as one), complexity high for real-time DSP plus a parser plus code generation, documentation high:</p>
+<div class="code"><pre><code>E = 0.91 + 0.01 x sum(SF) = 1.0168      prod(EM) = 0.374
+PM = 2.94 x 161.364^1.0168 x 0.374 = 193
+</code></pre></div>
+<ul>
+<li><strong>193 person-months = 16.1 person-years</strong>, 17.9 months, ~11 people.</li>
+</ul>
+<p>Run the same size with every multiplier left at nominal (an ordinary team) and it says <strong>43.1 person-years</strong>. The 27 person-year gap between those two rows is the model's estimate of what staffing choices are worth, and it is large.</p>
+<h3 id="function-points-by-backfiring">Function points, by backfiring</h3>
+<p>Convert lines to function points at a published ratio, then price the function points <a href="#jones1995">[4]</a>. Kotlin has no published ratio; Java sits near 53 logical statements per function point, and Kotlin is meaningfully terser, so 40 is a defensible guess:</p>
+<ul>
+<li><strong>4,034 function points</strong>, 202-336 person-months, schedule 27.7 months, <strong>about EUR 3.2M</strong> at EUR 800 per function point.</li>
+</ul>
+<p>Its honest failure mode is the loudest of the four: backfiring ratios are not the same from vendor to vendor, and the technique has been argued to be &quot;more wishful thinking than science&quot; <a href="#dekkers2000">[5]</a>. We include it because it lands in the same place as the others, not because the method deserves trust on its own.</p>
+<h3 id="putnam-slim">Putnam SLIM</h3>
+<p>The one that earns this post its title. Putnam's software equation <a href="#putnam1978">[3]</a> relates size, effort and time through a productivity index <code>E</code>, and it does something the COCOMO family does not: effort scales with the <strong>fourth power</strong> of schedule compression.</p>
+<p>At <code>E = 12,000</code> (complex real-time) the model says:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Schedule</th>
+<th>Effort</th>
+<th>Staff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.0 years</td>
+<td>4.8 PY</td>
+<td>1.6</td>
+</tr>
+<tr>
+<td>2.5 years</td>
+<td>10.0 PY</td>
+<td>4.0</td>
+</tr>
+<tr>
+<td>2.0 years</td>
+<td>24.3 PY</td>
+<td>12.2</td>
+</tr>
+<tr>
+<td>1.5 years</td>
+<td>76.8 PY</td>
+<td>51.2</td>
+</tr>
+<tr>
+<td>1.0 years</td>
+<td><strong>389 PY</strong></td>
+<td>389</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row is not a prediction, it is a wall. Putnam's model has an <strong>impossible zone</strong>: below roughly 0.75 times the nominal schedule, no amount of headcount buys time. The 1.0-year row is the model's way of saying <em>this cannot be done in a year at any staffing level</em>.</p>
+<p>Klangmotor reached this state in 0.725 years.</p>
+<p>So we ran the equation backwards, solving for the productivity index the actual project implies: 161,364 lines, 0.725 years, 0.725 person-years:</p>
+<div class="code"><pre><code>E = 149,721
+</code></pre></div>
+<p>The SLIM productivity index tops out around 30,000 for the best-instrumented environments. The project does not score on the scale at all: the implied value sits about five times past its end. The needle is not in the red; it is off the instrument, lying on the bench.</p>
+<p><img src="productivity-index-scale.png" alt="the Putnam productivity index scale, with the measured value past its end" loading="lazy" /></p>
+<p><em>Fig. 1: the Putnam productivity index, printed to its real range, with the measured value where it falls.</em></p>
+<h2 id="what-the-models-cannot-see">What the models cannot see</h2>
+<p>Every model above prices the <strong>surviving artifact</strong>. None of them can see work that was deleted, and this project deletes a great deal on purpose.</p>
+<p>Measuring that turned out to have a trap in it. The first pass used <code>git log --numstat --no-renames</code> and reported 1,124,208 lines of gross churn, including an entire 155,371-line module called <code>strudel</code> that appeared to have been written and thrown away in full. It had not been. It had been <strong>renamed</strong> to <code>sprudel</code>, and <code>--no-renames</code> faithfully reported a rename as a complete deletion plus a complete re-addition. The real numbers, with rename and copy detection on:</p>
+<div class="code"><pre><code>git log --numstat -M -C --format=&#x27;%H&#x27; -- &#x27;*.kt&#x27;
+  +492,569   -241,098   net 251,471
+</code></pre></div>
+<p><strong>Two lines were written for every line that survives. 49% of all Kotlin ever committed to this repository has since been deleted.</strong></p>
+<p>That is not sloppiness, it is policy. The project's own rules require it: <em>a replaced surface is removed, not deprecated</em>, and <em>one word per concept end to end</em>. The register in <code>CLAUDE.md</code> carries a &quot;Retired, do not restore or cite&quot; section that is, read a certain way, a catalogue of deliberate discard: whole modules, families of doors, a DSL or two, most with the date it went. A company shipping the same features would more likely have deprecated than removed, and ended up with a larger codebase.</p>
+<h3 id="charging-for-it-without-double-charging">Charging for it, without double-charging</h3>
+<p>COCOMO II has the right lever already: <strong>REVL</strong>, requirements evolution and volatility, which inflates size by the percentage of code discarded. The temptation is to plug in the full 96% implied by the deletion count. That would be wrong: COCOMO's calibration data comes from real projects that also churned, so the baseline already contains ordinary rework. Only the deliberate architectural retirement is genuinely extra, which puts REVL near 30%:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>REVL</th>
+<th>Effective KSLOC</th>
+<th>COCOMO 81</th>
+<th>COCOMO II tuned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0% (naive)</td>
+<td>161.4</td>
+<td>41.6 PY</td>
+<td>16.1 PY</td>
+</tr>
+<tr>
+<td><strong>30% (deliberate retirement)</strong></td>
+<td><strong>209.8</strong></td>
+<td><strong>54.8 PY</strong></td>
+<td><strong>21.0 PY</strong></td>
+</tr>
+<tr>
+<td>96% (every deletion)</td>
+<td>316.3</td>
+<td>84.4 PY</td>
+<td>31.9 PY</td>
+</tr>
+</tbody>
+</table></div>
+<p>Churn moves the central estimate from 16.1 to <strong>21.0 person-years</strong>, about +30%. Priced out:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Rate</th>
+<th>Replacement cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>German senior, fully loaded EUR 130k</td>
+<td><strong>EUR 2.7M</strong></td>
+</tr>
+<tr>
+<td>EU agency, EUR 1,000/day</td>
+<td>EUR 4.6M</td>
+</tr>
+<tr>
+<td>US senior, fully loaded USD 300k</td>
+<td>USD 6.3M</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three independent models converging on EUR 2.5-4M is the strongest single result here. Convergence is worth more than any one model's precision.</p>
+<h2 id="the-gap-is-the-answer">The gap is the answer</h2>
+<p>Set the realized throughput against the model's own baseline. COCOMO 81 organic implies roughly <strong>15 lines per person-day</strong>. Over 183 working days this project delivered <strong>1,374 net lines per day</strong>, having written 2,692.</p>
+<p>That is <strong>89 times</strong> the baseline.</p>
+<p>A number that large is not a productivity claim, it is a category error being made visible. The models describe something else: teams, with coordination overhead, stakeholder requirements churn, handoffs, and the communication cost that Brooks priced decades ago. Removing all of that, and adding a machine that types, does not make you 89x better than a developer. It makes the comparison meaningless in the direction nobody calibrated for.</p>
+<p>So: <strong>would a company have built it?</strong></p>
+<p>Our guess is no, and not for lack of ability. At the first roadmap review three line items would probably go: <em>write our own scripting language</em> becomes &quot;use Lua&quot;, <em>write our own DSP engine</em> becomes &quot;wrap Web Audio&quot;, <em>write our own UI framework</em> becomes &quot;use React&quot;. Then the test suite would get cut below 1:1, the 67,115 lines of design docs would not get written, and the scope would shrink to a third. What ships in nine months with four people is a smaller and different thing, and a reasonable one; it is just not this one.</p>
+<p>And per Putnam, this state was not reachable in 8.7 months at any headcount: the interval is inside the model's impossible zone.</p>
+<h2 id="what-it-is-actually-worth">What it is actually worth</h2>
+<p>Replacement cost and market value are different numbers, and only one of them is large.</p>
+<p><strong>Replacement cost: EUR 2.5-4M.</strong> That is what it would cost to rebuild this state conventionally, and it is well supported.</p>
+<p><strong>Market value today: far less.</strong> Pre-alpha, no users, no revenue, a niche market, AGPL. A discounted cash flow is zero because there is no cash flow. Value follows users, and there are none yet.</p>
+<p>There is also a deflationary catch worth naming plainly, because it is the most uncomfortable thing this exercise turned up. An asset's value is capped by what a competitor pays to reproduce it, and this project just demonstrated that the reproduction cost is 8.7 solo months. The code is not the moat.</p>
+<p>What is scarce is the 67,115 lines of design record and the judgment that produced the 49% deletion rate. Knowing which half to throw away is the expensive part, and it does not appear in any of the four models, because it has a line count of approximately zero. The project guideline that says <em>won't-implement is a first-class outcome</em> describes work that produces <strong>negative</strong> lines.</p>
+<p>Four models, and the thing they all miss is the same thing: taste has no SLOC.</p>
+<h2 id="references">References</h2>
+<p><a id="boehm1981"></a>[1] Boehm, B. W. (1981). <em>Software Engineering Economics</em>. Prentice-Hall, Englewood Cliffs, NJ. <a href="https://archive.org/details/softwareengineer0000boeh">archive.org</a></p>
+<p><a id="boehm2000"></a>[2] Boehm, B. W., Abts, C., Brown, A. W., Chulani, S., Clark, B. K., Horowitz, E., Madachy, R., Reifer, D. J., &amp; Steece, B. (2000). <em>Software Cost Estimation with COCOMO II</em>. Prentice Hall. Constants quoted from the <a href="https://www.cs.montana.edu/courses/spring2004/352/public/cocomo/modelman.pdf">COCOMO II Model Definition Manual</a>.</p>
+<p><a id="putnam1978"></a>[3] Putnam, L. H. (1978). A General Empirical Solution to the Macro Software Sizing and Estimating Problem. <em>IEEE Transactions on Software Engineering</em>, SE-4(4), 345-361. <a href="https://dl.acm.org/doi/10.1109/TSE.1978.231521">doi:10.1109/TSE.1978.231521</a></p>
+<p><a id="jones1995"></a>[4] Jones, C. (1995). Backfiring: Converting Lines-of-Code to Function Points. <em>Computer</em>, 28(11), 87-88. <a href="https://dl.acm.org/doi/abs/10.1109/2.471193">doi:10.1109/2.471193</a></p>
+<p><a id="dekkers2000"></a>[5] Dekkers, C., &amp; Gunter, I. A. (2000). <em>Using &quot;Backfiring&quot; to Accurately Size Software: More Wishful Thinking than Science</em>. <a href="https://www.researchgate.net/publication/240382664_Using''Backfiring''to_accurately_size_software_More_Wishful_Thinking_than_Science">researchgate.net</a></p>
+<p><a id="wheeler2001"></a>[6] Wheeler, D. A. (2001, updated 2002). <em>More Than a Gigabuck: Estimating GNU/Linux's Size</em>. <a href="https://dwheeler.com/sloc/redhat71-v1/redhat71sloc.html">dwheeler.com</a></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

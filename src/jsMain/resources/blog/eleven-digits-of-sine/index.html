@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eleven Digits of Sine · Klang blog</title>
+<meta name="description" content="An eight-partial sine bank calls the library sine 384,000 times a second per voice, every envelope in Klangmotor calls the library exponential once per sample, and every vibrato calls pow. On V8, the engine that runs the browser&#x27;s audio worklet, none of these is cheap. A degree-11 minimax sine on the folded half period, a table-and-polynomial 2^x with its ends pinned exact, and e^x through 2^x replaced all three, with errors in the eleventh digit and the sine bit-identical across JVM and JS. Per call the sine got nearly four times faster; the exponential on the JVM barely moved, and a fourth polynomial, the logarithm, was measured and not built.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-09-15">2026-09-15</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>dsp</li><li>polynomial</li><li>minimax</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="eleven-digits-of-sine">Eleven Digits of Sine</h1>
+<p><em>Three transcendentals left the per-sample loops for polynomials, and the one that barely paid says as much as the two that did.</em></p>
+<p>A sine oscillator in Klangmotor is a phase accumulator and one call to <code>kotlin.math.sin</code> per sample. The Orchestertrommel of Der Schmetterling is a bank of eight such partials, which is 384,000 sine calls a second for one drum hit, and on September 15 the bank alone measured 0.027 RTF (real-time factor, render time over audio time; the series opener defines it), nearly half of the whole drum's 0.059. Every voice in the engine also pays one <code>exp</code> per sample, because the exponential curve has been the default envelope shape on every stage since August 24. Every vibrato and pitch envelope pays a <code>pow</code>. Three functions, four commits in one afternoon: the sine twice, the oscillators and then the modulators, and the commit that brought <code>e^x</code> also refitted <code>2^x</code> with its ends pinned so that <code>e^x</code> would be exact where it mattered. This is the post about them, and about the one that did not pay.</p>
+<h2 id="what-a-library-function-costs">What a library function costs</h2>
+<p><code>sin</code>, <code>pow</code> and <code>exp</code> are correct for the whole real line, and that is what a caller pays for. A library sine reduces any argument to a small range before it evaluates anything, with enough care that a phase of ten million is handled as well as a phase of one. An oscillator never asks for that: its phase is wrapped to <code>[0, 2π)</code> every sample by the engine's phase wrap. A pitch path asks <code>pow</code> for <code>2^x</code> with <code>x</code> within an octave or two of zero, never for <code>7.3^x</code>. An envelope asks <code>exp</code> for arguments between zero and a small constant times one.</p>
+<p>On the JVM, <code>Math.sin</code> and <code>Math.exp</code> are intrinsics, which is the reason the song benchmarks, which run on the JVM, could not see most of what follows. On V8, the engine under the browser's audio worklet, they are library calls, and V8 is where <a href="../the-phone-that-does-not-get-faster/">the Fairphone of the opening post</a> runs. So the measurement that matters is per call, on node, and the engine's <code>audio_benchmark</code> module grew a harness for exactly this, with a note in its KDoc about why:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+ * The per-sample transcendentals the engine replaced with polynomials on 2026-09-15, each against
+ * the library function it replaced, on the argument sweep its callers produce: a wrapped phase
+ * for the sine, a pitch ratio&#x27;s octaves for `2^x`, an envelope curve&#x27;s `k · x` for `e^x`. Prints
+ * ns per call per platform; the point is the JS number, where `Math.sin`, `Math.pow` and
+ * `Math.exp` are not intrinsics and the song benchmarks (JVM only) cannot see the difference.
+ */
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_benchmark/src/commonMain/kotlin/MathBenchmark.kt#L58-L64">MathBenchmark.kt at v0.3.13</a></em></p>
+<p><img src="ns-per-call.png" alt="nanoseconds per call, library against polynomial" loading="lazy" /></p>
+<p><em>Fig. 1: Median nanoseconds per call, the library function against its polynomial, on the argument sweep the callers produce. JVM and node 24, one Ryzen 9 PRO 7940HS, September 15. The sine is nearly four times faster on both; the exponential on the JVM is the bar that did not move.</em></p>
+<h2 id="the-sine">The sine</h2>
+<p>The method is the oldest in the book, literally: Cecil Hastings' <em>Approximations for Digital Computers</em> <a href="#hastings1955">[1]</a> laid out in 1955 how to fit a short polynomial to a function on a small interval so that the largest error over the interval is as small as it can be, the minimax criterion, and how a symmetry fold shrinks the interval first. For the sine, the fold is a half period: <code>sin(π - x) = sin(x)</code> maps <code>[0, 2π)</code> onto <code>[-π/2, π/2]</code>, and on that interval an odd polynomial of degree 11, six coefficients, is enough for eleven digits. The coefficients were fitted for Klang, least squares with a Remez-style reweighting <a href="#remez1934">[3]</a> toward the equal-ripple optimum, and no third-party code was used, as the credits file records.</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(&quot;NOTHING_TO_INLINE&quot;)
+inline fun fastSin(phase: Double): Double {
+    // [0, 2π) -&gt; x in [-π, π) with sin(phase) = -sin(x), then fold to [-π/2, π/2]: sin(π - x) = sin(x).
+    var x = phase - PI
+
+    if (x &gt; HALF_PI) {
+        x = PI - x
+    } else if (x &lt; -HALF_PI) {
+        x = -PI - x
+    }
+
+    val x2 = x * x
+
+    return -x * (SIN_S1 + x2 * (SIN_S3 + x2 * (SIN_S5 + x2 * (SIN_S7 + x2 * (SIN_S9 + x2 * SIN_S11)))))
+}
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/DspUtil.kt#L25-L77">DspUtil.kt at v0.3.13</a></em></p>
+<p>Two compares, one subtract, six multiply-adds. The largest error over the period is 1.3e-11, which is -217 dB, and the specification asserts a bound of 1e-10 against a dense sweep rather than trusting the fit. It is pure arithmetic in a fixed order, so the function gives the same bits on the JVM and in the browser, which <code>Math.sin</code> does not promise; a whole voice still does not, since <code>pow</code>, <code>ln</code> and <code>cos</code> upstream of the phase, in the partial gains, the detune and the drift seed, are still the platform's.</p>
+<p><img src="fastsin-error.png" alt="the polynomial's error over one period" loading="lazy" /></p>
+<p><em>Fig. 2: The error of the polynomial over one period, computed in Python from the six coefficients and the fold copied out of DspUtil.kt, against a correctly rounded library sine. Ripples of equal height all the way across, the signature of a minimax fit, and the same pattern in each quarter period, which is the fold at work; the two narrow spikes at a quarter and three quarters of the period are the fold's seam, where the error curve meets its own mirror image. Not a measurement of the engine; a check of its polynomial.</em></p>
+<p>A lookup table was the alternative, and it lost on each count we checked: with linear interpolation it costs the same number of operations, its accuracy at 4096 entries is 3e-7, four decades worse, it competes with the audio buffers for cache, and on Kotlin/JS every read is bounds-checked.</p>
+<h3 id="a-faster-function-is-a-stricter-function">A faster function is a stricter function</h3>
+<p>The fold is exact for one more quarter period on either side of the wrapped range, and beyond that the polynomial diverges fast: -75 dB off at <code>3π</code>, past full scale at <code>4π</code>. The library sine had quietly tolerated any phase, and the review of the first commit found where that tolerance had been leaned on. The wave-engine unison stacks and the single-voice wave oscillator wrapped with a one-subtract fast modulo that is unsafe once the increment is a whole period or more, which a frequency past the sample rate, a spread typed in cents, or the analog drift riding near the edge could produce. With the library sine this aliased; with the polynomial the sine stack produced 1.8e34 and the trapezoids parked on a plateau. Those three sites now hoist a block-constant flag that chooses the full wrap when the increment can exceed the fast one, and the in-range path is bit-identical to before. The second sine commit swapped the modulators, the FM operator, both vibratos, both tremolos and the grain window, and each of them had to learn to wrap per sample first, since the FM modulator wrapped only at block end and the vibratos never wrapped a negative rate.</p>
+<p>So the polynomial did not make the engine faster and leave everything else alone: it made explicit a contract that the library function had been silently covering.</p>
+<h2 id="the-exponentials">The exponentials</h2>
+<p><code>2^x</code> is what a pitch path computes: semitones over twelve is octaves, and two to that power is the frequency ratio. Cody and Waite's <em>Software Manual for the Elementary Functions</em> <a href="#codywaite1980">[2]</a> gives the range reduction that every serious implementation uses: split <code>x</code> into an integer <code>n</code> and a fraction <code>f</code> in <code>[0, 1)</code>, evaluate <code>2^f</code> by a polynomial, and scale by <code>2^n</code>, which is exact. The table of powers of two is built by doubling, never by <code>pow</code>, so its bits are not a platform's business:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@PublishedApi
+internal val EXP2_POW_TABLE: DoubleArray = DoubleArray(2 * EXP2_TABLE_HALF).also { table -&gt;
+    var v = 1.0
+
+    repeat(EXP2_TABLE_HALF) { v *= 0.5 }
+
+    for (i in table.indices) {
+        table[i] = v
+        v *= 2.0
+    }
+}
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/DspUtil.kt#L85-L154">DspUtil.kt at v0.3.13</a></em></p>
+<p>The polynomial for the fraction is written as <code>1 + f + f·(f - 1)·r(f)</code>, with <code>r</code> of degree 5. That form came with the fourth commit, and it is there because <code>p(0) = 1</code> and <code>p(1) = 2</code> hold exactly in floating point, whatever <code>r</code> does. So <code>fastExp2</code> of an integer is that power of two bit for bit, a sweeping pitch has no step at an octave boundary, and, once <code>e^x</code> is built on top, <code>fastExp(0)</code> is exactly 1, which is what lets an envelope start at exactly zero and its release end there.</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(&quot;NOTHING_TO_INLINE&quot;)
+inline fun fastExp2(x: Double): Double {
+    if (!(x &gt; -EXP2_TABLE_HALF.toDouble() &amp;&amp; x &lt; EXP2_TABLE_HALF.toDouble())) { // NaN-guard (NaN ≠ NaN), and ±Inf
+        return 2.0.pow(x)
+    }
+
+    val n = floor(x)
+    val f = x - n
+    val r = EXP2_R0 + f * (EXP2_R1 + f * (EXP2_R2 + f * (EXP2_R3 + f * (EXP2_R4 + f * EXP2_R5))))
+    val p = 1.0 + f * (1.0 + (f - 1.0) * r)
+
+    // A pitch path&#x27;s argument is within an octave of 0 almost always (a vibrato depth, a pitch
+    // envelope inside ±12 semitones): those two octaves skip the table, whose read on Kotlin/JS
+    // goes through the lazy-init accessor of a top-level val.
+    val scale = if (n == 0.0) 1.0 else if (n == -1.0) 0.5 else EXP2_POW_TABLE[n.toInt() + EXP2_TABLE_HALF]
+
+    return p * scale
+}
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/DspUtil.kt#L85-L154">DspUtil.kt at v0.3.13</a></em></p>
+<p>The polynomial's relative error is 4.7e-11 and the bound asserted across <code>(-32, 32)</code> is 1e-10; outside that range, and for NaN and the infinities, the function is <code>pow</code> itself, the guard written as <code>!(inside)</code> so that NaN takes the fallback. The two octaves around zero skip the table because on Kotlin/JS a top-level array is read through a lazy-init accessor, and a vibrato lives in those two octaves. The vibrato renderer's loop shows the swap, and the per-sample wrap the sine demanded:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">            for (i in 0 until ctx.length) {
+                val idx = ctx.offset + i
+                // Equal temperament: symmetric, never negative
+                buf[idx] *= 2.0.pow(sin(phase) * depthSemitones / 12.0)
+                phase += phaseInc
+            }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.12/audio_be/src/commonMain/kotlin/voices/strip/pitch/VibratoRenderer.kt#L24-L50">VibratoRenderer.kt at v0.3.12</a></em></p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">            for (i in 0 until ctx.length) {
+                val idx = off + i
+                // Equal temperament: symmetric, never negative
+                buf[idx] *= fastExp2(fastSin(phase) * depthOctaves)
+                phase += phaseInc
+                phase = if (safeWrap) phase.wrapPhase(TWO_PI) else phase.smallNumFastMod(TWO_PI)
+            }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/voices/strip/pitch/VibratoRenderer.kt#L27-L58">VibratoRenderer.kt at v0.3.13</a></em></p>
+<p><code>e^x</code> is then one multiply away, <code>e^x = 2^(x · log2 e)</code>:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(&quot;NOTHING_TO_INLINE&quot;)
+inline fun fastExp(x: Double): Double = fastExp2(x * LOG2_E)
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/DspUtil.kt#L156-L174">DspUtil.kt at v0.3.13</a></em></p>
+<p>It went into the envelopes' exponential curve, the compressor's two dB-to-linear gain paths, the <code>exp()</code> ignitor and the two exponential waveshapers. The envelope curve is a one-line change whose weight is that it runs once per sample for every voice that is sounding:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">internal inline fun adsrExpShape(x: Double): Double = (exp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.12/audio_be/src/commonMain/kotlin/AdsrCurveMath.kt#L30-L44">AdsrCurveMath.kt at v0.3.12</a></em></p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">internal inline fun adsrExpShape(x: Double): Double = (fastExp(ADSR_EXP_K * x) - 1.0) * ADSR_EXP_NORM
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/AdsrCurveMath.kt#L36-L49">AdsrCurveMath.kt at v0.3.13</a></em></p>
+<h2 id="results">Results</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>function</th>
+<th style="text-align:right">JVM, library</th>
+<th style="text-align:right">JVM, polynomial</th>
+<th style="text-align:right">node 24, library</th>
+<th style="text-align:right">node 24, polynomial</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sin</td>
+<td style="text-align:right">6.1</td>
+<td style="text-align:right">1.7</td>
+<td style="text-align:right">7.2</td>
+<td style="text-align:right">1.8</td>
+</tr>
+<tr>
+<td>2^x</td>
+<td style="text-align:right">8.9</td>
+<td style="text-align:right">2.7</td>
+<td style="text-align:right">12.1</td>
+<td style="text-align:right">3.8</td>
+</tr>
+<tr>
+<td>e^x</td>
+<td style="text-align:right">3.7</td>
+<td style="text-align:right">3.5</td>
+<td style="text-align:right">7.1</td>
+<td style="text-align:right">4.5</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nanoseconds per call, medians. The sine and <code>2^x</code> are three to four times faster on both platforms. <code>e^x</code> on the JVM went from 3.7 to 3.5, because the JVM's <code>exp</code> is an intrinsic and there was almost nothing to win; on node it went from 7.1 to 4.5. The exponential costs more than <code>2^x</code> on both platforms for a reason the code comment above names: an envelope's <code>k · x</code> spans octaves 0 to 4, and only octaves 0 and -1 skip the table.</p>
+<p><img src="voices-before-after.png" alt="the voices before and after each swap" loading="lazy" /></p>
+<p><em>Fig. 3: The benchmark voices, and the drum part, that pay a sine, a 2^x or an e^x per sample, before and after each swap, JVM, median RTF on a log scale. Each pair is two back-to-back runs, the library function in one and the polynomial in the other: the modulator sine (FM bell, the vibrato-and-tremolo pad, the unison lead), the 2^x in the pitch paths (the Orchestertrommel), the e^x in the envelopes and the compressor (pink noise, the hats, the bass). Between the two 2^x runs the cases without a pitch path moved by up to 14 percent, so the small pairs are inside the noise.</em></p>
+<p>The rig runs of that afternoon have the oscillator sine taking the Orchestertrommel from 0.055 to 0.042 RTF, the marimba from 0.030 to 0.025 and the bass from 0.011 to 0.0085, and the live song from 0.112 to 0.100 in an A/B against the library sine in the same run. The 16-bit render of the song was identical before and after that commit, which is the -217 dB in practice: eleven digits is more than a 16-bit bus can carry. The modulator sine took a third off the pad and a sixth off the FM bell and the lead. The <code>2^x</code> took five and a half percent off the drum, and the engine's own note on that commit says as much: <code>pow</code> was a twentieth of a pitch-enveloped voice. The <code>e^x</code> took two percent off the live song on the JVM, 0.1096 to 0.1073, which is the intrinsic again.</p>
+<h2 id="the-one-not-built">The one not built</h2>
+<p>With <code>e^x</code> in place the question was whether <code>ln</code> should follow, since the compressor converts to decibels per sample with a logarithm. The rig suite gained a whole-song row without compressors, and the measurement said the song's nine compressor instances together are 2.6 percent of it, with the logarithm at most half of that. A polynomial logarithm without bit extraction, which the engine's no-<code>Long</code> rule forbids, needs a compare ladder for the exponent, a divide and an odd series, about 40 cycles against a 60-cycle library <code>ln</code> on the JVM and near parity on V8. Under one percent of the song, for a function of real complexity. It was not built, and the reasoning is recorded next to the three that were.</p>
+<h2 id="what-transferred">What transferred</h2>
+<p>Generality is what a library function charges for, and an audio loop rarely needs it: a phase is wrapped, a pitch ratio is near one, an envelope argument is bounded. The savings come from the range the caller already guarantees, and the price is that the guarantee becomes a contract the code must actually keep, which is where the review earned its afternoon. Pin the ends of a polynomial when a downstream identity depends on them; an envelope whose start is not exactly zero is a small step at every note-on. And measure per call on the platform that matters, since a JVM song benchmark cannot see a V8 library call, and the two platforms disagreed by a factor of two on the very function whose JVM number said &quot;leave it&quot;.</p>
+<h2 id="references">References</h2>
+<ol>
+<li><a id="hastings1955"></a>Hastings, C., Jr., assisted by Hayward, J. T., &amp; Wong, J. P., Jr. (1955). <em>Approximations for Digital Computers</em>. Princeton University Press. <a href="https://press.princeton.edu/books/hardcover/9780691653105/approximations-for-digital-computers">https://press.princeton.edu/books/hardcover/9780691653105/approximations-for-digital-computers</a></li>
+<li><a id="codywaite1980"></a>Cody, W. J., Jr., &amp; Waite, W. (1980). <em>Software Manual for the Elementary Functions</em>. Prentice-Hall. <a href="https://search.worldcat.org/title/software-manual-for-the-elementary-functions/oclc/6250863">https://search.worldcat.org/title/software-manual-for-the-elementary-functions/oclc/6250863</a></li>
+<li><a id="remez1934"></a>Remez, E. Y. (1934). Sur la détermination des polynômes d'approximation de degré donnée. <em>Communications de la Société Mathématique de Kharkov</em>, 10, 41-63. <a href="https://en.wikipedia.org/wiki/Remez_algorithm">https://en.wikipedia.org/wiki/Remez_algorithm</a></li>
+</ol>
+<p><em>Sources inside the repository: <code>audio/ref/memory-history.md</code> (the three entries of 2026-09-15 on the sine, the 2^x and the e^x), the commits <code>80915245</code>, <code>2aaaf62b</code>, <code>65b1842d</code> and <code>b9565f67</code>, <code>docs/benchmarks/2026-09-15_135441_song_jvm.md</code> and <code>_135839_</code> (the rig with the library sine and with the polynomial), <code>_141658_</code> and <code>_141813_</code> (the live song with and without the oscillator sine), <code>_153754_</code> and <code>_153812_</code> (the modulator sine), <code>_150939_</code> and <code>_150806_</code> (the 2^x), <code>_163229_</code>, <code>_163405_</code>, <code>_163346_</code> and <code>_163520_</code> (the e^x), <code>_171710_</code> (the song without compressors), <code>audio_be/src/commonMain/kotlin/DspUtil.kt</code> at v0.3.13, <code>FastSinSpec.kt</code>, <code>FastExp2Spec.kt</code>, <code>FastExpSpec.kt</code>, <code>audio_benchmark/src/commonMain/kotlin/MathBenchmark.kt</code>, <code>CREDITS.MD</code> lines 69 to 78.</em></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Growing Our Own Brain · Klang blog</title>
+<meta name="description" content="Klang ran on borrowed Strudel-JS through a GraalVM bridge. Q1 2026 replaced it with our own interpreter and pattern engine, verified by compiling every pattern twice and diffing the event streams against the original, which stayed in the tree as an oracle. On 2026-03-21 the fork got its own name: sprudel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-03-21">2026-03-21</time><ul class="tags"><li>sprudel</li><li>klangscript</li><li>differential-testing</li><li>language</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="growing-our-own-brain">Growing Our Own Brain</h1>
+<p><em>Replacing a language runtime while every song depends on its exact behavior.</em></p>
+<h2 id="1-the-problem">1. The problem</h2>
+<p>By January 2026 klang made real music, but its brain was rented. Pattern evaluation ran on <code>@strudel/core</code>, real
+Strudel, through a GraalVM polyglot bridge on the JVM, and directly as JavaScript in the browser. Three pressures made
+that untenable:</p>
+<ol>
+<li><strong>Two worlds, one brain missing.</strong> The GraalVM bridge was JVM-only. A Kotlin-native pattern engine could run in
+<code>commonMain</code>: one implementation, both platforms, like the audio engine already did.</li>
+<li><strong>The bridge taxed every note.</strong> Every pattern query crossed a polyglot boundary on its way to the audio engine.</li>
+<li><strong>We wanted our own direction.</strong> Extending a language through a bridge means extending someone else's language. New
+pattern functions, our own DSL conventions, an interpreter we could put an IDE on: all of it wanted ownership.</li>
+</ol>
+<p>But the risk was real and specific: a pattern language's value <em>is</em> its exact semantics. <code>&quot;bd [sd sd] &lt;hh oh&gt;&quot;</code> means
+one precise arrangement of events in time, including every edge case of cycle boundaries, alternation, and fractional
+timing. Reimplement it 99% right and every existing song plays 1% wrong, and nobody can say where.</p>
+<h2 id="2-prior-approaches-and-why-they-werent-enough">2. Prior approaches, and why they weren't enough</h2>
+<p><strong>Clean-room reimplementation from the docs</strong> fails silently: documentation describes intent; songs depend on behavior.
+The gap between the two is exactly where the bugs live.</p>
+<p><strong>Porting the original's test suite</strong> covers what the tests cover. Strudel's suite is good, but no suite written <em>for</em>
+an implementation exercises the edges a <em>re</em>-implementation gets wrong; the two codebases disagree in places neither
+author thought to test.</p>
+<p>The classic answer is <strong>differential testing</strong>, McKeeman's technique of running the same input through two
+implementations and comparing outputs
+<a href="#mckeeman1998">[1]</a>, best known from compiler fuzzing. Our situation was the textbook setup wearing headphones: a
+reference implementation exists, it is executable, and its output (a stream of timed events) is exactly comparable.</p>
+<h2 id="3-the-method-keep-the-old-brain-as-an-oracle">3. The method: keep the old brain as an oracle</h2>
+<p>So the old brain wasn't removed; it was <strong>demoted to an oracle</strong>. The verification harness compiles every pattern
+twice, once with the new Kotlin engine and once with real Strudel running in GraalVM's JS engine, and diffs the resulting
+event streams.</p>
+<p><img src="oracle.png" alt="The oracle setup" loading="lazy" /></p>
+<p><em>Fig. 1: every pattern runs through both brains; the streams must agree.</em></p>
+<p>The diff is graded, not binary (the comparison verdicts in the harness are
+<code>EXACT</code>, <code>CLOSE</code>, <code>DIFFERENT</code>, <code>IGNORED</code>, and <code>RECOVERED</code>), because two correct implementations still differ in float
+dust, and a naive equality check would drown real divergences in noise. Which surfaced the deeper problem almost
+immediately:</p>
+<p><strong>Floating-point time drifts.</strong> Cycle arithmetic (thirds of a cycle, sevenths, nested alternations) accumulates error
+differently in every implementation. Two mathematically identical patterns diverge in the 15th decimal, then a boundary
+comparison flips, and an event lands in the wrong cycle. The fix was to make time <em>exact</em>: first a <code>Rational</code> type,
+later hardened into a fixed-point <code>CycleTime</code> value class (the JS BigInt hot path made pure rationals too slow). Time in
+sprudel is not a <code>Double</code>, and that single decision closed a whole family of oracle disagreements. The full story of
+that type, five representations in five months, has <a href="../the-triplet-that-never-drifted/">its own post</a>.</p>
+<p>The hardest campaign the oracle forced was the <strong>part/whole refactor</strong>. Strudel events carry both the <em>part</em> (the
+fragment active in the queried span) and the <em>whole</em> (the full event it belongs to), and getting their interaction right
+across <code>struct</code>, masks, and cycle boundaries is where a reimplementation quietly rots. The oracle turned &quot;quietly&quot; into
+a red diff, case by case, until the semantics matched.</p>
+<p>Meanwhile the language itself grew underneath: <strong>KlangScript</strong>, a JavaScript-ish interpreter written in Kotlin (parser
+then on <code>better-parse</code>; since replaced by a hand-rolled recursive-descent one for Kotlin/JS production builds), with a
+Kotlin-interop registration layer that a KSP processor eventually made nearly
+boilerplate-free. The pattern engine became a library <em>inside</em>
+that language rather than a runtime beside it.</p>
+<h2 id="4-the-declaration">4. The declaration</h2>
+<p>On <strong>2026-03-21</strong> the fork got its own name: <strong>strudel → sprudel</strong>. Partly housekeeping (the implementations had
+genuinely diverged; new functions existed that upstream didn't have) and partly a statement of direction:
+compatible in spirit and largely in syntax, but its own language from here.</p>
+<p>The oracle outlived the independence it certified. <code>JsCompatTests</code> is still in the tree today, lazily constructing its
+GraalVM context, politely skipping itself on non-GraalVM runtimes: a safety line back to the original, run whenever
+pattern semantics change. Independence didn't mean burning the bridge; it meant not needing it.</p>
+<h2 id="5-what-it-bought-in-hindsight">5. What it bought, in hindsight</h2>
+<p>Every quarter since has cashed checks this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
+because the interpreter is ours. Sound definitions, oscillators, and eventually whole instruments became <em>language
+objects</em> because the language could be extended freely. The browser dropped its last dependency on Strudel-JS. And the
+verification habit (do not trust a reimplementation without an executable oracle, grade the diff, make time exact)
+became the house style for every risky migration after.</p>
+<p>The borrowed brain served for one quarter. The oracle it left behind still serves today.</p>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li><a id="mckeeman1998"></a>McKeeman, W. M. (1998). <em>Differential Testing for Software.</em> Digital Technical Journal, 10
+(1), 100-107.
+<a href="https://www.semanticscholar.org/paper/Differential-Testing-for-Software-McKeeman/fc881e8d0432ea8e4dd5fda4979243cac5e4b9e3">semanticscholar.org</a></li>
+</ol>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

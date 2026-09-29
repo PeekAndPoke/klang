@@ -1,6 +1,8 @@
 # Blog: render the Markdown posts to static HTML for deployment
 
-Status: **queued 2026-09-29 by the maintainer, to start after the whitepaper rewrite.**
+Status: **DONE 2026-09-30.** `console/blog/build.py` (see `console/blog/README.md`); output in
+`src/jsMain/resources/blog/`. Built by a worker, one review round (clean: 5 MINOR and 3 NIT, all applied), every
+guard fault-injected. Queued 2026-09-29 by the maintainer, after the whitepaper rewrite.
 
 ## The ask (maintainer, 2026-09-29)
 
@@ -34,7 +36,7 @@ itself."
   (the figure frame) passed through; relative links between posts (`../<dir>/index.md`) rewritten to the rendered
   pages; the `references` front matter rendered as the reference list anchors the text points to (`#whitepaper` and
   friends); the body's repeated H1 and subtitle not duplicated by the template.
-- **The look**: the site's own (the `hud.css` palette and faces), readable prose width, light and dark; a post page
+- **The look**: the site's own (the `hud.css` palette and faces), readable prose width, dark only like the whitepaper (decided 2026-09-30); a post page
   links back to the index. The template carries the one small listener that sizes interactive figure frames
   (`message` events of type `klang-figure-height`, see the `visualizer` agent).
 - **Idempotent and reviewable**: re-running with no post changed produces byte-identical files; the output is

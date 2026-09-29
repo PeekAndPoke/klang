@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Position That Survived · Klang blog</title>
+<meta name="description" content="Live coding needs the editor to show what is playing right now, which means every runtime event must know which characters of source text it came from, across an interpreter, a mini-notation parser, a pattern engine, and an audio-worklet wire. Klang&#x27;s answer: locations ride the values themselves. Even a constant defined as &quot;let feel = 1.0&quot; lights up when it plays.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-01-20">2026-01-20</time><ul class="tags"><li>klangscript</li><li>sprudel</li><li>editor</li><li>live-coding</li><li>source-locations</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="the-position-that-survived">The Position That Survived</h1>
+<p><em>How a source location rides from the parser through the pattern engine to a
+glowing rectangle in the editor.</em></p>
+<h2 id="1-the-problem-the-editor-must-know-what-is-playing">1. The problem: the editor must know what is playing</h2>
+<p>Live coding has one UI feature that separates &quot;text editor next to a synth&quot;
+from an <em>instrument</em>: while the music runs, the code lights up. The atom
+that just triggered flashes; you see your pattern breathe. For that to work,
+every runtime event (thousands per minute) must know <strong>which characters of
+the source text it came from.</strong></p>
+<p>That is a provenance problem, and it is harder than it looks, because the
+distance between a character and a sound is long: a string literal is parsed
+by a <em>second</em> parser (mini-notation), the result is transformed by pattern
+combinators, evaluated into events, scheduled into voices, and shipped
+across a wire to an audio worklet, and the answer has to come <em>back</em> from
+that pipeline to the exact columns of the exact line. Lose the thread at any
+step and the light shows nothing, or worse, the wrong thing.</p>
+<p>And there is a subtler version of the problem. Consider:</p>
+<div class="code" data-lang="javascript"><pre><code class="language-javascript">let feel = 1.0
+
+note(&quot;c3 [e3 g3]&quot;).gain(feel)
+</code></pre></div>
+<p>When those notes play, klang highlights the atoms <code>c3</code>, <code>e3</code>, <code>g3</code>, <em>and
+the literal <code>1.0</code> two lines up.</em> The value participated, so its birthplace
+lights up. That is the feature this post explains.</p>
+<p><img src="spans.png" alt="What lights up" loading="lazy" /></p>
+<p><em>Fig. 1: illustration of the editor's highlight behavior: the atoms flash on their beats, and the <code>feel</code> literal glows whenever a note that used it plays. The location traveled with the value.</em></p>
+<h2 id="2-prior-art">2. Prior art</h2>
+<p><strong>Compilers</strong> solved provenance long ago (DWARF debug info, line tables,
+JavaScript source maps), but those map <em>code to code</em> for a debugger
+stepping through it. They answer &quot;what line is this instruction from,&quot; not
+&quot;light up the third atom inside a string literal, 200 times a minute,
+without touching the DOM per event.&quot;</p>
+<p><strong>Live-coding systems</strong> are the real ancestors. Strudel, the JavaScript
+pattern language klang <a href="../growing-our-own-brain/">began life borrowing</a>,
+highlights active mini-notation atoms in its REPL (<a href="https://strudel.cc">strudel.cc</a>), and TidalCycles
+editors do related tricks. The standard mechanism: the mini-notation parser
+records each atom's offsets, events carry them, the editor draws. It works,
+and it defines the baseline.</p>
+<p>The baseline has a boundary, though: it lights up <em>pattern syntax</em>. A value that arrives through a variable or a function argument has usually lost its ancestry by the time it reaches an event; highlighting
+stops at the quotation marks.</p>
+<h2 id="3-the-thread-locations-ride-the-values">3. The thread: locations ride the values</h2>
+<p>Klang's design decision, made early (2026-01-20, when source-location
+tracking landed): <strong>provenance is a property of values, not of syntax.</strong></p>
+<p><img src="position-pipeline.png" alt="The pipeline" loading="lazy" /></p>
+<p><em>Fig. 2: the span's journey. Forward: parser → values → patterns → events →
+voices → highlight overlay. Backward: <code>AstIndex</code> maps editor positions to
+nodes for hover docs and tools.</em></p>
+<p>Step by step:</p>
+<ol>
+<li><strong>The parser stamps every AST node</strong> with its span. Standard.</li>
+<li><strong>The interpreter stamps every value.</strong> <code>NumberValue</code> and <code>StringValue</code>
+carry an optional <code>location</code>, the span of the literal they were born
+from. The detail that makes this safe: <strong>equality deliberately ignores
+the location.</strong> Two <code>1.0</code>s from different lines are still equal;
+provenance is a passenger, not a participant in semantics. A value
+assigned to <code>feel</code>, passed through a call, returned from a helper:
+the location just rides along, because it is <em>in</em> the value.
+(One honest boundary: arithmetic severs the thread. <code>feel * 2</code> is a
+<em>new</em> value with no birthplace. The rule covers pass-through, not
+computation.)</li>
+<li><strong>The KSP registration layer forwards call-site context.</strong> Every
+registered DSL function <a href="../one-annotation-six-artifacts/">can receive a <code>CallInfo</code></a>:
+the call's own span, the receiver's span, and <strong>per-parameter spans
+read straight off the argument values</strong>. When <code>.gain(feel)</code> executes,
+the engine knows the argument's birthplace is <code>1.0</code> on line 1. No
+special-casing of variables anywhere: the value knew.</li>
+<li><strong>The mini-notation parser composes spans.</strong> <code>&quot;c3 [e3 g3]&quot;</code> is a string,
+but the <code>StringValue</code> knows where the string sits in the source, and
+the mini-notation parser knows each atom's offset <em>inside</em> the string.
+Literal-span + in-string-offset = an exact span per atom. An
+integration test pins this to the column: <code>sound(&quot;bd hh sd oh&quot;)</code> must
+yield four events whose spans point at columns 8, 11, 14, 17.</li>
+<li><strong>Events carry a <em>chain</em>, not a single span.</strong> A pattern event's
+<code>sourceLocations</code> is a <code>SourceLocationChain</code>; transformations
+<strong>prepend and append, and do not overwrite.</strong> An atom wrapped in <code>struct()</code>
+inside a <code>superimpose()</code> keeps every ancestor; the editor draws the whole chain (atom, string literal, call site), deduped, filtered to the current file, and capped, innermost first. Transformations
+add context; they are not allowed to orphan an event.</li>
+<li><strong>Voice events cross the wire with their spans</strong>, and the editor's
+highlight overlay draws them.</li>
+</ol>
+<h2 id="4-the-last-meter-drawing-without-paying">4. The last meter: drawing without paying</h2>
+<p>The display end has its own engineering story, because &quot;highlight thousands
+of events&quot; is the kind of feature that falls over under load. The
+first implementation was one DOM <code>&lt;mark&gt;</code> per event with a CSS <code>@keyframes</code>
+pulse animating <code>border-color</code>: paint-bound properties that forced a
+re-rasterization of every active mark, every frame. Weak GPUs choked. (No before/after frame numbers were recorded in the heat of that rewrite, a rare unmeasured claim in this series; the qualitative story below is from the component's own documentation.)</p>
+<p>The current <code>CodeMirrorHighlightBuffer</code> is a single transparent WebGL
+canvas over the editor: each highlight is a pooled quad, one ticker handles
+scheduling and fade, only <code>x/y/alpha</code> change per frame, and the ticker
+stops when nothing plays, so an idle editor costs <strong>zero</strong>
+<code>requestAnimationFrame</code>. The CodeMirror state itself is not touched. The
+same discipline that rules the audio thread (no per-event allocation, no
+per-frame paint) turned out to be what the <em>visual</em> thread needed too.</p>
+<h2 id="5-the-same-thread-backwards">5. The same thread, backwards</h2>
+<p>Provenance also runs in reverse. <code>AstIndex</code> maps an editor position to the
+AST node at that position, the infrastructure behind hover documentation,
+context menus, and the visual parameter tools. Click on <code>body(0.7, &quot;wood&quot;)</code> and
+the editor knows which call you are in and which argument you are touching;
+the <a href="../one-annotation-six-artifacts/">same generated metadata</a>
+that registered the function supplies the docs and the editing widget.
+Forward, positions explain the music; backward, they explain the code.</p>
+<h2 id="6-lessons">6. Lessons</h2>
+<ol>
+<li><strong>Attach provenance to values, not syntax.</strong> Everything else follows:
+variables, arguments, helper returns, with no case analysis and no &quot;highlight
+only works inside pattern strings.&quot; The one rule that keeps it honest:
+location must not affect equality or behavior. It is a passenger.</li>
+<li><strong>Chains beat single spans.</strong> Transformations are additive; the moment
+one is allowed to <em>replace</em> a location, some pipeline five steps later
+is pointing at the wrong code.</li>
+<li><strong>Compose parsers' coordinate systems explicitly.</strong> The mini-notation
+parser does not know about files; it knows offsets in a string. The
+string knows where it lives. Keep both, add them, and pin it with a test
+that asserts actual line and column numbers.</li>
+<li><strong>The display path is a hot path.</strong> A provenance system that works but
+renders through per-event DOM mutation just moves the failure from
+&quot;wrong highlight&quot; to &quot;dropped frames.&quot; The glow has a frame budget too.</li>
+</ol>
+<p>The feature reads as a gimmick until the first time you watch a stranger's
+song play with the code on screen, the music explaining itself, atom by
+atom, constant by constant. Then it reads as the whole point.</p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

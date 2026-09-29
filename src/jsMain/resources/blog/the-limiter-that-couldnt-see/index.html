@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Limiter That Couldn&#x27;t See · Klang blog</title>
+<meta name="description" content="Every loud kick left the master stage as a hard-clipped burst: the limiter enforced its ceiling with a clip, not with gain. Adding lookahead alone warned it earlier without making its gain any faster. The fix is a construction borrowed from a 2022 Signalsmith article: moving-minimum, release, two box filters, and a delay, plus a dual release we kept for an unexpected reason.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-08-11">2026-08-11</time><ul class="tags"><li>engine</li><li>dsp</li><li>limiter</li><li>mastering</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="the-limiter-that-couldnt-see">The Limiter That Couldn't See</h1>
+<p><em>How a master limiter cracked every big transient, and what it took to give it eyes.</em></p>
+<h2 id="1-the-problem-the-knock">1. The problem: the knock</h2>
+<p>Users described it as a <em>knock</em>, a dry crack riding on top of every big kick, worse the louder the mix ran. The master
+stage had a limiter, and the limiter had a ceiling, and the ceiling was being enforced. Just not by the limiter.</p>
+<p>Klang's compressor was feed-forward with <strong>zero lookahead</strong>: the detector saw each sample at the same instant the gain
+stage did. Against a fast transient that is too late. Measured on the real <code>Compressor</code> with the master stage's
+own constants, a 55 Hz kick at +18 dB over the ceiling passed through with the gain <em>still at exactly 0.00 dB one
+millisecond in</em>: the detector's smoothed envelope had not yet crossed threshold. The ceiling was enforced by the hard
+clip that sits after the limiter as a last resort:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>kick peak in</th>
+<th>peak out (pre-clip)</th>
+<th>hard-clipped for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 dBFS</td>
+<td>−0.33 dBFS</td>
+<td>0 ms</td>
+</tr>
+<tr>
+<td>+6 dBFS</td>
+<td><strong>+5.67 dBFS</strong></td>
+<td><strong>3.99 ms</strong></td>
+</tr>
+<tr>
+<td>+12 dBFS</td>
+<td><strong>+11.67 dBFS</strong></td>
+<td><strong>5.22 ms</strong></td>
+</tr>
+<tr>
+<td>+18 dBFS</td>
+<td><strong>+17.67 dBFS</strong></td>
+<td><strong>5.90 ms</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Every loud transient was a 2 to 6 ms square-edged burst, and the window <em>grew</em>
+with the amount of limiting, which is exactly what &quot;it knocks when it has to limit a lot&quot; had been telling us.</p>
+<p><img src="kick-peaks.png" alt="Measured kick peaks before and after" loading="lazy" /></p>
+<p><em>Fig. 1: the same kick test before and after. The &quot;before&quot; bars aren't a limiter failing gracefully; they're a clip
+doing the limiter's job.</em></p>
+<h2 id="2-the-obvious-fix-doesnt-work">2. The obvious fix doesn't work</h2>
+<p>&quot;Add lookahead&quot; sounds like one parameter. It is not. Delaying the signal so the detector sees the future is not enough
+by itself: the gain still moves through the same too-slow attack. Measured, +12 dB kick, 1 ms one-pole attack:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>lookahead</th>
+<th>delay only</th>
+<th>+ running-max detector</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 (today)</td>
+<td>+11.67 dBFS</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>1.5 ms</td>
+<td>+11.67</td>
+<td>+10.16, still clips</td>
+</tr>
+<tr>
+<td>3.0 ms</td>
+<td>+4.86</td>
+<td>+1.57, still clips</td>
+</tr>
+<tr>
+<td>5.0 ms</td>
+<td>+3.64</td>
+<td>0.00, still clips</td>
+</tr>
+</tbody>
+</table></div>
+<p>(The ceiling sits at −0.35 dBFS, so a 0.00 dBFS peak is still a clip.)</p>
+<p>A one-pole with τ = 1 ms needs several τ to settle; it cannot reach full reduction inside any sane window regardless of
+how early it is warned. Three things must change <em>together</em>: a delay line, a detector that looks across the whole
+window, and an attack shape that completes inside it. And even then our first prototype had a hole: two peaks arriving
+0.2 to 0.5 ms apart restarted the attack ramp mid-flight, and the second one clipped.</p>
+<h2 id="3-prior-art-the-problem-is-solved-credit-where-due">3. Prior art: the problem is solved, credit where due</h2>
+<p>The construction that handles all of it (any number of peaks in the window, no special cases) comes from Geraint
+Luff's <em>Designing a straightforward limiter</em> <a href="#luff2022">[1]</a>:</p>
+<ol>
+<li>compute the per-sample <strong>required gain</strong> from the <em>undelayed</em> signal;</li>
+<li>take a <strong>moving minimum</strong> over the lookahead window; this is what makes the gain start falling <em>before</em> the peak,
+for every peak in the window;</li>
+<li>a <strong>release stage</strong>: instant down, one-pole up;</li>
+<li><strong>smooth</strong> with two cascaded box filters (C¹ by construction, so no corners for the ear to find);</li>
+<li><strong>delay the signal</strong> by the window and apply.</li>
+</ol>
+<p><img src="gain-construction.png" alt="Gain trajectories, simulated" loading="lazy" /></p>
+<p><em>Fig. 2: the two constructions against the same −12 dB demand (simulation). The one-pole is still near 0 dB when the
+peak hits; the min-hold gain is settled at −12 dB before the delayed peak emerges.</em></p>
+<p>Two details cost us real debugging and deserve the ink:</p>
+<p><strong>The budget arithmetic overlaps; it does not add.</strong> An early revision budgeted <code>lookahead = window + smoothing</code>.
+That was wrong, and it clipped. Every term entering the smoother must already respect the gain required at the sample
+emerging from the delay, which forces <code>L ≥ D + 1</code> and bounds the smoothing <em>inside</em> the window, in <strong>taps, not
+milliseconds</strong> (ceil-rounding drifts by a sample, and one sample is a click). Luff's article states the equivalent
+insight; our prototype independently found the failure before we found the article.</p>
+<p><strong>The release goes <em>before</em> the smoother.</strong> The tempting arrangement (smooth first, then <code>min</code> with a one-pole
+release) is C¹ everywhere except the crossover between the two paths, where the gain slope drops about 40× in one
+sample. That corner is the same artifact class the two-box cascade exists to prevent; putting release before the boxes
+keeps the entire trajectory C¹ and the safety proof one line: <code>release ≤ held</code> pointwise, so <code>box(release) ≤ box(held) ≤ required</code>.</p>
+<h2 id="4-results-and-the-pump-we-decided-to-keep-paying-for">4. Results, and the pump we decided to keep paying for</h2>
+<p>With 5 ms of lookahead and the construction above, the +12 dB kick exits at <strong>−0.37 dBFS with zero samples clipped</strong>
+(the old path: +11.67 dBFS, 5.22 ms of clipping). The knock was gone, confirmed by ear the same day. One honest
+boundary: at ratio 20:1 the residual above threshold is <code>overshoot/ratio</code>, so around +20 dB over ceiling the &quot;brickwall&quot;
+admits up to a full decibel and the hard clip quietly returns as the true last resort. That bound is arithmetic, not a
+bug, and it is documented rather than hidden.</p>
+<p>Then the by-ear pass found the <em>next</em> problem: with clean catches came a <strong>pump</strong>: the bed stayed ducked between kicks,
+swelling continuously on dense material. Measured at realistic drive, the mix was still 1.25 dB down 100 ms after each
+kick. The fix was a <strong>dual release</strong>: a slow one-pole (100 ms) that absorbs sustained reduction, times a fast branch
+(release/10) that handles the residual, instant down, quick up.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>release design</th>
+<th>recovery to −0.5 dB</th>
+<th>beat-rate gain mod</th>
+<th>mean GR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>single 100 ms</td>
+<td>187.1 ms</td>
+<td>0.97 dB</td>
+<td>−0.76 dB</td>
+</tr>
+<tr>
+<td><strong>dual 100/10 ms</strong></td>
+<td><strong>23.5 ms</strong></td>
+<td><strong>0.37 dB</strong></td>
+<td>−0.24 dB</td>
+</tr>
+</tbody>
+</table></div>
+<p><img src="dual-release.png" alt="Release recovery, simulated" loading="lazy" /></p>
+<p><em>Fig. 3: why the bed stayed ducked between kicks: a single exponential release crawls in its last dB. The dual
+release snaps back and sits at zero. (simulation).</em></p>
+<p>And here is the honest part: when we A/B'd it level-matched on material built to be maximally unkind, the audible
+pump difference was <em>&quot;really subtle.&quot;</em> <strong>The dual release shipped anyway, for the loudness.</strong> At an identical output
+ceiling the mean level rose from −1.59 dB to −0.55 dB, because the mix simply spends less time ducked. Same peak, one dB
+louder, one extra divide per sample on a single instance. We came for the artifact and stayed for the headroom.</p>
+<h2 id="5-what-the-peak-meter-never-told-us">5. What the peak meter never told us</h2>
+<p>The lesson that outlived the feature: <strong>output peak told us very little about a limiter's quality</strong>, because every
+broken variant we built had a defensible peak number at some setting. The measurements that did catch things:
+non-fundamental energy on a sustained low sine (catches release misbehavior the peak can't see), the <strong>gain trajectory
+itself as a signal</strong> (max |Δgain| per sample; the C⁰ corner shows up there and nowhere else), and a ramp-length
+invariance sweep (a correct construction must produce the <em>same</em> peak at any smoothing length; any difference is a shape
+bug). The invariance sweep now guards the suite alongside the dual-release test (&quot;the bed recovers between kicks&quot;), both
+mutation-checked: collapsing the dual release back to a single branch turns the suite red. The other two remain
+development-harness measurements for now, with the gain-trajectory probe first on the wishlist.</p>
+<p>One asymmetry is deliberate and spec-pinned: <strong>only the house limiter has lookahead by default.</strong> An authored limiter
+with latency would delay its orbit or its playback against every other one, so the authored <code>limiter()</code> stage of a
+Katalyst chain (the effect chain a song declares for a bus) <em>defaults</em> to zero lookahead, and a test asserts the
+divergence as a relation, authored less than house, so nobody &quot;fixes&quot; it. It is a default, not a wall: the knobs are
+there (<code>master(Katalyst(k =&gt; k.limiter(lookahead = 0.005, attack = 0.005)))</code>, both in seconds) for anyone who wants
+the clean catches on an authored chain and accepts the latency that comes with them (capped at 50 ms, since lookahead
+is the one parameter that sizes a buffer on the audio thread).</p>
+<p>The limiter can see now. What it watches over is the same song, one decibel more of it.</p>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li><a id="luff2022"></a>Luff, G. (2022). <em>Designing a straightforward limiter.</em> Signalsmith Audio.
+<a href="https://signalsmith-audio.co.uk/writing/2022/limiter/">signalsmith-audio.co.uk/writing/2022/limiter</a>:
+the moving-minimum, smoothing, delay construction, and the insight that the smoothing budget lives inside the
+lookahead window.</li>
+</ol>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

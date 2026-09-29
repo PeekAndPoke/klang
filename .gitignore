@@ -50,6 +50,9 @@ node_modules
 /cache
 /tmp
 
+### Python ###
+__pycache__/
+
 ### Generated build metadata ###
 src/jsMain/resources/version.json
 

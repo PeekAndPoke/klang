@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Killing the Plastic Pipe · Klang blog</title>
+<meta name="description" content="By spring 2026 the engine was correct, fast, and cold. Every note was perfect, and perfection was the tell. This is the story of Q2&#x27;s warmth hunt: a two-timescale Ornstein-Uhlenbeck drift generator (with an inline xorshift32 and a hard-won lesson about seeding), a supersaw rebuilt around an analog flyback, and a passive body resonator measured straight from the engine.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-30">2026-06-30</time><ul class="tags"><li>engine</li><li>dsp</li><li>sound-design</li><li>analog-drift</li><li>supersaw</li><li>body</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="killing-the-plastic-pipe">Killing the Plastic Pipe</h1>
+<p><em>A quarter spent hunting warmth: drift, a supersaw rebuilt, and a body that does not ring on its own.</em></p>
+<h2 id="1-the-problem-perfection-is-the-tell">1. The problem: perfection is the tell</h2>
+<p>By spring 2026 klang's engine was correct and fast, and it sounded like a <strong>plastic pipe</strong>, our in-house name for a
+specific coldness. A held note was a held note: the same waveform, the same pitch, to the last digit, for as long as you
+cared to sustain it. No physical oscillator does that. A real oscillator (a string, a reed, a 1970s VCO) is a physical
+system bathed in noise: its pitch breathes, its filters wander, no two notes are twins.</p>
+<p>The ear is a change detector. Feed it mathematical perfection and it does not hear &quot;pure&quot;; it hears &quot;dead&quot;. The whole
+quarter became a hunt for the right imperfection, and &quot;right&quot; turned out to be a statistics problem as much as a taste
+problem.</p>
+<h2 id="2-what-usually-gets-tried">2. What usually gets tried</h2>
+<p>The standard remedies, each with a known failure mode:</p>
+<p><strong>Vibrato via LFO.</strong> Periodic, and the ear catches periodicity quickly. A sine-shaped wobble reads as an <em>effect</em>,
+applied; drift must read as a <em>property</em>, inherent.</p>
+<p><strong>Static per-note detune.</strong> Draw a random offset at note-on and hold it. Cheap, common, and wrong twice: within a note
+nothing moves (still dead), and across notes it reads as bad intonation rather than life. A melody where every note is
+differently mistuned is a badly fretted guitar, not a warm one. (We re-learned this one the hard way; see the seeding
+lesson below.)</p>
+<p><strong>Perlin-style noise modulation.</strong> Better, and widely used. But Perlin is a <em>lattice</em> construction: smooth by design
+between grid points, with statistical regularities the ear can find on long notes. The physical quantity being
+imitated, component noise integrated by an oscillator, has a different, well-known character: it is well approximated
+by <em>filtered white noise</em>, and there is a standard process for that.</p>
+<h2 id="3-the-drift-two-timescales-of-ornstein-uhlenbeck">3. The drift: two timescales of Ornstein-Uhlenbeck</h2>
+<p>Klang's answer lives in <code>AnalogDrift.kt</code>, and it is small enough to read in one sitting. The model: real VCO pitch
+instability has (at least) two distinct characters, so the generator layers two smoothed-noise processes:</p>
+<ul>
+<li>a <strong>fast jitter</strong>, about 50 ms time constant, ±0.2 cents per unit <code>analog</code>:
+the constant micro-wobble of a live oscillator;</li>
+<li>a <strong>slow drift</strong>, an Ornstein-Uhlenbeck layer with a correlation time of several seconds, ±0.8 cents per unit: the
+lazy, breathing wander that makes a sustained note feel alive.</li>
+</ul>
+<p>Both are white noise pushed through one-pole dynamics, closer to the physics of component noise than a lattice field.
+The step, verbatim:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">fun nextMultiplier(): Double {
+    // xorshift32 — inline, no Random dispatch
+    var s = rngState
+    s = s xor (s shl 13)
+    s = s xor (s ushr 17)
+    s = s xor (s shl 5)
+    rngState = s
+    val x = s * ANALOG_INT_INV // uniform ≈ [-1, 1]
+
+    val newYFast = yFast + alphaFast * (x - yFast)
+    val newYSlow = ySlow + alphaSlow * (x - ySlow) - betaSlow * ySlow
+    yFast = newYFast
+    ySlow = newYSlow
+
+    return 1.0 + newYFast * scaleFast + newYSlow * scaleSlow
+}
+</code></pre></div>
+<p>Three details worth the ink:</p>
+<p><strong>The RNG is inlined on purpose.</strong> That xorshift32 is three shifts and three xors: no <code>Random.nextDouble()</code> dispatch,
+no allocation, no permutation tables. Total cost per step: those six bit ops plus six multiplies and seven adds, about
+20 ops, zero calls. A lane steps once per 128-frame block and the oscillator ramps the multiplier across the block's
+samples, one add per sample on the browser's audio thread (how it got there is
+<a href="../drift-for-free/">its own post</a>); anything fancier would be paying rent it does not need to.</p>
+<p><strong>One noise source feeds both layers.</strong> The same uniform draw drives the fast one-pole and the slow OU update: two
+filters, two personalities, one stream.</p>
+<p><strong>The seeding is the actual lesson.</strong> The fast layer is seeded from its steady-state distribution; it settles within 50
+ms, so starting it &quot;warm&quot;
+is harmless and the micro-shimmer is present from the first sample. The slow layer is seeded <strong>at center,
+deliberately</strong>. The first version seeded it at steady state too, and that was the static-detune failure all over again:
+a short note does not live long enough for a process that slow to move, so each note simply <em>stuck</em> at its randomly
+seeded offset, per-note random detune, reading as wandering intonation on every melodic line. Seeding at center means
+<strong>every note attacks in tune, and the drift is something that happens to notes that live long enough to earn it.</strong> The
+imperfection has to respect the music's clock.</p>
+<p><img src="drift-pitch.png" alt="Measured pitch track, drift off vs on" loading="lazy" /></p>
+<p><em>Fig. 1: measured from the engine: one held E3, pitch-tracked. Drift off:
+sd 0.03 cents, the plastic pipe. Drift on (<code>analog = 15</code>): ±9 cents of slow breathing with fast shimmer riding on it,
+and note how it starts near center, in tune, before wandering.</em></p>
+<h2 id="4-the-supersaw-rebuilt-around-the-same-philosophy">4. The supersaw, rebuilt around the same philosophy</h2>
+<p>The same quarter rebuilt the supersaw, the JP-8000-style detuned stack whose anatomy Szabó
+documented <a href="#szabo2010">[1]</a>, and every change followed the same rule: <em>imperfection where the ear wants life,
+precision where it wants pitch.</em></p>
+<ul>
+<li><strong>Analog flyback instead of PolyBLEP.</strong> The band-limited-step approach was dropped for a shaped flyback modeled on an
+analog sawtooth's reset: it softens high notes the way analog hardware does, instead of ringing the way textbook
+anti-aliasing does.</li>
+<li><strong>The tuning anchor is a weighted centroid.</strong> With per-voice detunes and gains in play, the <em>perceived</em> pitch is the
+gain-weighted mean of the stack, so that mean is computed and subtracted, and the note's perceived pitch stays where
+it was written whatever the ensemble around it is doing.</li>
+<li><strong>Jitter the gains, not the detunes.</strong> Randomizing per-voice <em>amplitude</em>
+gives the ensemble life without touching intonation.</li>
+<li><strong>And the center voice is exempt.</strong> Full gain jitter on the voice that carries the fundamental made some notes attack
+weak, so the center got a scaled-down share. Precision at the center, chaos at the edges.</li>
+</ul>
+<p>That last item deserves a flag: it was the first time the project noticed that <em>the center voice of a unison stack is
+special</em>, that randomness applied uniformly across an ensemble can randomly delete the one component the ear anchors
+on. Pulling that thread properly, two months later, led to
+the <a href="../the-fundamental-lottery/">fundamental lottery</a>
+and the phase pool. Q2 treated the symptom; Q3 found the disease.</p>
+<h2 id="5-the-body-a-resonator-that-does-not-ring-on-its-own">5. The body: a resonator that does not ring on its own</h2>
+<p>The third front was resonance. Synth notes stop at the oscillator; acoustic notes pass through a <em>body</em> (wood, air, a
+cavity) that boosts some bands and swallows others. Klang's
+<code>body()</code> models that: a parallel bank of band-pass &quot;modes&quot; over a floor, with one constraint chosen on purpose.
+<strong>It is passive in the way that matters:</strong> it adds nothing that was not played into it and does not self-oscillate; its
+modal peaks stay within about 3 dB while the valleys and rolloff carve away far more than the peaks add.</p>
+<p><img src="body-response.png" alt="Measured body response" loading="lazy" /></p>
+<p><em>Fig. 2: measured from the engine: white noise through <code>body(material = &quot;spruce&quot;)</code>
+versus dry, spectrum ratio. Eight modal peaks between 100 Hz and 2.2 kHz, none more than about 3 dB above unity, valleys
+carved between them, and a high-frequency rolloff. Peaks modest, valleys deep: far more carved than added.</em></p>
+<p>The passivity constraint is audible as <em>trustworthiness</em>: a passive body can be pushed hard without blooming or ringing
+on its own, and materials (<code>spruce</code>, <code>maple</code>, <code>mahogany</code>, …) become characters rather than effects.
+<code>vowel()</code> was reworked on the same chassis the same quarter.</p>
+<h2 id="6-what-the-quarter-taught">6. What the quarter taught</h2>
+<p>The plastic pipe died of a hundred cuts: drift, flyback, jitter, body, plus by-ear tuning rounds that no changelog
+fully records. But the transferable lessons are three:</p>
+<ol>
+<li><strong>Warmth is controlled imperfection, and the <em>statistics</em> of the imperfection matter.</strong> The ear distinguishes
+filtered-white from lattice noise, periodic from aperiodic, moving from stuck. Choose the process to match the
+physics being imitated, not just the smoothness.</li>
+<li><strong>Imperfection must respect the music's clock.</strong> The seeding lesson:
+a slow process seeded at steady state turns short notes into random detune. When a note starts, it starts in
+tune; life accrues with duration.</li>
+<li><strong>Precision and chaos are not opposites; they are assigned seats.</strong>
+Centroid-anchored tuning under jittered gains; a stable center voice inside a randomized ensemble; a passive body
+under a living oscillator. Deciding <em>where</em> each lives is the actual sound design.</li>
+</ol>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li><a id="szabo2010"></a>Szabó, A. (2010). <em>How to Emulate the Super Saw.</em>
+B.Sc. thesis.
+<a href="https://www.adamszabo.com/internet/adam_szabo_how_to_emulate_the_super_saw.pdf">PDF</a></li>
+</ol>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

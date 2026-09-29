@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Body That Played a Thousand Times · Klang blog</title>
+<meta name="description" content="On July 3 the song benchmark was built and pointed at Der Schmetterling for the first time. One guitar, with a nested superimpose, scheduled 1,088 voices and was about half the song&#x27;s cost, and every one of those voices ran its own eight-band body resonator. A body is a property of the instrument, not of a note, so body and vowel moved from the per-voice filter chain to the orbit bus, once on the summed mix, with the first voice to sound configuring it through a lease and a crossfade covering a live rebuild. The frozen song&#x27;s median cost fell by a fifth and its busiest block by three quarters, and the measurement that found the problem is the harness the series measures songs with from here on.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-07-04">2026-07-04</time><ul class="tags"><li>series-fairphone</li><li>engine</li><li>orbits</li><li>resonators</li><li>superimpose</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="the-body-that-played-a-thousand-times">The Body That Played a Thousand Times</h1>
+<p><em>The first whole-song measurement found a guitar body resonator running once per voice under a nested superimpose; moving it to the orbit cut the busiest block by three quarters.</em></p>
+<p>Until July 3 the engine had been measured one effect at a time, on hand-made voices. That day a song-level benchmark was written that compiles real song text, schedules every voice the way playback does, drives the offline render graph and times every block, and its first subject was Der Schmetterling, whose busiest block in the browser sat around half of real time. The first thing the new harness did was rank the voices in isolation:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>voice</th>
+<th style="text-align:right">onsets</th>
+<th style="text-align:right">median RTF</th>
+<th style="text-align:right">peak RTF</th>
+<th style="text-align:right">share of the song</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GTR2, supersaw, nested superimpose</td>
+<td style="text-align:right">1088</td>
+<td style="text-align:right">0.0514</td>
+<td style="text-align:right">0.222</td>
+<td style="text-align:right">about 52%</td>
+</tr>
+<tr>
+<td>GTR1, supersaw, unison 9</td>
+<td style="text-align:right">544</td>
+<td style="text-align:right">0.0292</td>
+<td style="text-align:right">0.057</td>
+<td style="text-align:right">about 30%</td>
+</tr>
+<tr>
+<td>LEAD, superramp, unison 5</td>
+<td style="text-align:right">192</td>
+<td style="text-align:right">0.0182</td>
+<td style="text-align:right">0.052</td>
+<td style="text-align:right">about 18%</td>
+</tr>
+<tr>
+<td>bass, drums, hats, pink noise</td>
+<td style="text-align:right">16 to 68 each</td>
+<td style="text-align:right">under 0.003</td>
+<td style="text-align:right"></td>
+<td style="text-align:right">about 2% each</td>
+</tr>
+</tbody>
+</table></div>
+<p>The three super-synth voices were the song's cost, and one of them was half of it. GTR2 had a superimpose inside a superimpose, and each superimpose copies the voice, so every note scheduled eight voices, 1,088 across the benchmark's eight cycles, and every copy re-ran the whole per-voice chain. Here is the tail of the instrument, in today's spelling (the pedal left out), the nested copy on the second-to-last line and the body on the last:</p>
+<div class="code" data-lang="javascript"><pre><code class="language-javascript">    .coarse(2).pan(0.3).superimpose(
+      x =&gt; x.pan(0.7),
+      x =&gt; x.gain(0.0675).hpf(220).lpf(3400).scaleTranspose(&quot;&lt;4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]&gt;&quot;)
+           .pan(0.2).superimpose(pan(0.8))
+    ).superimpose(hpf(3500).lpf(6200).gain(0.015)).mute(&quot;&lt;0!128 1!16 0!16&gt;&quot;).body(wet = 0.30, material = &quot;wood&quot;)
+</code></pre></div>
+<p><em>Adapted from <a href="https://github.com/PeekAndPoke/klang/blob/ba7fab68/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt#L47-L58">DerSchmetterling.kt at ba7fab68</a>, the last edit of the song on July 3</em></p>
+<h2 id="what-the-body-cost-and-where">What the body cost, and where</h2>
+<p>The body is a bank of eight state-variable bandpass filters in parallel, a caricature of a guitar's top plate, and at the time it was a filter in the voice's own chain, built right next to the lowpass and the notch:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">            // Formant&#x27;s bands are vowel-specific — per-voice offset would smear vowel character. Skip.
+            is FilterDef.Formant -&gt; LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
+            // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
+            is FilterDef.Body -&gt; LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/af1c08dc/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L353-L359">VoiceFactory.kt at af1c08dc</a>, the commit before the move</em></p>
+<p>On GTR1 that was 544 scheduled voices with eight filters each, on the order of 4,300 filter passes for one instrument, and the harness's ladder priced the body at 0.0066 of median RTF on that guitar, the most expensive single effect in the song, ahead of the analog drift. The analysis then asked the question that decided the design: does a superimpose multiply the body? A two-by-two experiment, a voice with and without the body, with and without a superimpose that doubles it, said yes and more than yes. The body cost 0.0018 alone and 0.0027 once the superimpose had doubled the voices, and the two together cost more than the sum of each, an interaction of about 0.0009. The expensive thing in the song was not any single effect. It was a per-voice effect placed under a superimpose stack, paid once per copy.</p>
+<h2 id="a-body-is-not-a-note">A body is not a note</h2>
+<p>The decision, the maintainer's, was that body and vowel are timbre resonators, properties of the instrument, and that the orbit, the bus a voice is mixed into, is the grouping unit for that: they become orbit-level effects only, run once on the summed mix, and voices that need independent resonance go on different orbits. That turns the cost from a function of the voice count into a function of the orbit count, for the guitars from about 544 instances to one.</p>
+<p><img src="voice-vs-orbit.png" alt="the body per voice and per orbit" loading="lazy" /></p>
+<p><em>Fig. 1: Before, every voice on the orbit carried its own body, so a nested superimpose ran hundreds of them; after, the orbit bus runs one on the mix, and the voice that sounded first configures it.</em></p>
+<p>The voice factory of that day pulled the two definitions out of the voice's filter list before it baked the filters, and routed them to the orbit through the voice (<a href="https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L93-L112">VoiceFactory.kt at v0.1.2</a>); everything else stayed per voice.</p>
+<p>Two things had to be invented for the orbit to own an effect. The first is who configures it. All the voices on an orbit share one set of bus effects, and without arbitration the configuration would flip to whichever voice rendered last every block, which in the worst case rebuilds a filter bank on the audio thread every block. The answer is a lease:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * All voices on an orbit share one set of bus effects (body, vowel, reverb, delay, phaser, compressor).
+ * Without arbitration the config flip-flops last-writer-wins every block; worst case (two voices, different
+ * settings) it thrashes an effect — e.g. rebuilding a filter bank on the audio thread every block. This
+ * lease makes the FIRST voice to sound the orbit&#x27;s **owner**: while that voice is alive its settings stick
+ * and other voices are ignored. Put voices that need independent bus settings on different orbits.
+ *
+ * **Liveness by absence, not by a death signal.** A live, started voice re-offers itself EVERY block (its
+ * `SendRenderer` → `Cylinder.updateFromVoice` runs every block it renders). So the owner &quot;checks in&quot; each
+ * block. If it misses a block — for ANY reason: natural end, cut/choke, or playback cleanup — the lease
+ * lapses and the next offering voice takes over. No per-removal-path hooks needed.
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/cylinders/katalyst/VoiceLease.kt#L1-L63">VoiceLease.kt at v0.1.2</a></em></p>
+<p>That lease is the mechanism <a href="../zombies/">a later post in this series</a> meets from the other side, when removing a silent voice early changed which voice owned an orbit. The second invention came the next day: a live change of material or mix rebuilds the bank, and a rebuild on a sounding orbit clicks, so a crossfade of about twelve milliseconds swaps the old bank for the new one. With it came a library of materials, their resonances anchored in the acoustics literature <a href="#fletcher1998">[1]</a>, and a user-settable dry floor. The plan of the day before had already accepted the sound change, to be validated by ear: the body now resonates the summed, already distorted, panned mix, and a body of a sum is not the sum of the bodies.</p>
+<p>The design had a cost, and the record lists it as a table of conflicts: an orbit can hold one body now, so seven builtin songs had to be re-orbited. Sakura had wood, glass and tube all on the default orbit; Seltsamere Dinge's melody and its glass superimpose collided; Der Schmetterling's two guitars, both wood on one orbit, would have shared a body, and the commit that moved the resonator also moved the second guitar to an orbit of its own.</p>
+<h2 id="results">Results</h2>
+<p><img src="body-interaction.png" alt="the interaction before and after" loading="lazy" /></p>
+<p><em>Fig. 2: The two-by-two, before and after: the body's marginal cost on a voice with and without a superimpose that doubles it. Before, the body under the superimpose cost half again as much; after, it costs the same either way, since the orbit runs it once regardless of how many voices feed the bus. JVM, from the July files, which ran 512-frame blocks. The two panels are separate runs, so read the shape within each panel, not the heights across them.</em></p>
+<p><img src="song-ab.png" alt="the frozen song before and after" loading="lazy" /></p>
+<p><em>Fig. 3: The frozen Der Schmetterling, same machine, same day: median and peak RTF with the body per voice and per orbit. The busiest block, the section where the lead, both guitars, the bass and the drums all sound, fell from 94 percent of real time to 26.</em></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>metric</th>
+<th style="text-align:right">body per voice</th>
+<th style="text-align:right">body per orbit</th>
+<th style="text-align:right">change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>median RTF</td>
+<td style="text-align:right">0.10228</td>
+<td style="text-align:right">0.08265</td>
+<td style="text-align:right">-19%</td>
+</tr>
+<tr>
+<td>peak RTF, the busiest block</td>
+<td style="text-align:right">0.936</td>
+<td style="text-align:right">0.256</td>
+<td style="text-align:right">-73%</td>
+</tr>
+</tbody>
+</table></div>
+<p>The peak is the number that matters for a phone, since a phone drops out on its worst block and not on its average, and the peak fell by a factor of 3.7 on a change that touched no oscillator, no distortion and no drum. The within-run two-by-two after the move shows the mechanism: the body's cost is flat against the superimpose count, 0.0030 without and 0.0028 with, where before it had been multiplicative. The analog drift still multiplied, because it is per voice by nature, and that is <a href="../drift-for-free/">a later post's</a> problem. Today the body is still among the most expensive single effects the engine has, 4.9 microseconds per block on the JVM, where it edges out the reverb, and 7.9 on node, where the reverb at 10.6 costs more; it is simply paid once.</p>
+<h2 id="what-transferred">What transferred</h2>
+<p>The cheapest per-voice work is the work moved out of the voice, and the question to ask of every effect is whose property it is: a note's, or the instrument's. A superimpose is a voice multiplier, and anything under it is multiplied, so the interaction, not the effect, is what a ladder has to measure. The harness that found this was written that morning, and the series has measured songs with it since, which is the other result of July 3: before the measurement there was an opinion that the guitars were expensive, and after it there was a table with a row that said which one, by how much, and why.</p>
+<h2 id="references">References</h2>
+<ol>
+<li><a id="fletcher1998"></a>Fletcher, N. H., &amp; Rossing, T. D. (1998). <em>The Physics of Musical Instruments</em> (2nd ed.). Springer. <a href="https://doi.org/10.1007/978-0-387-21603-4">https://doi.org/10.1007/978-0-387-21603-4</a></li>
+</ol>
+<p><em>Sources inside the repository: <code>docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md</code> (the ranking, the ladders, the two-by-two, the conclusions), <code>docs/benchmarks/2026-07-04_233042_song_jvm.md</code> (the two-by-two after the move), <code>docs/tasks-archive/2026-07/20260703-body-vowel-orbit-katalyst.md</code> (the decision and the A/B result), <code>docs/tasks-archive/2026-07/20260704-body-vowel-materials-floor-crossfade.md</code>, <code>audio/MEMORY.md</code> (the two entries of 2026-07-03 and 2026-07-04), the commits <code>af1c08dc</code>, <code>ba7fab68</code>, <code>eb6428ff</code> and <code>e17d1113</code>, <code>docs/benchmarks/2026-09-16_135425_jvm.md</code> and <code>_nodejs.md</code> (today's Body and Vowel rows), <code>audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt</code> at af1c08dc and v0.1.2, <code>cylinders/katalyst/KatalystBodyEffect.kt</code>, <code>VoiceLease.kt</code> at v0.1.2, <code>KatalystFilterSwap.kt</code> at v0.1.3, <code>src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt</code> at ba7fab68.</em></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>

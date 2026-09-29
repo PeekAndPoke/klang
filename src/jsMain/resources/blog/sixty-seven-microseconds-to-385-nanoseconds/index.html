@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sixty-Seven Microseconds to 385 Nanoseconds · Klang blog</title>
+<meta name="description" content="A scheduled voice crosses from the page to the audio worklet through a message port, and on the far side, on the audio thread, it was decoded by kotlinx serialization&#x27;s dynamic decoder at sixty-four to sixty-seven microseconds per voice. ProtoBuf was tried and was slower on Kotlin/JS. A hand-rolled decoder that simply reads the fields it knows are there ran in 398 nanoseconds, and a KSP processor that generates that decoder for every wire type made it 385: 174 times faster, the encode ten times. Because both ends of the wire are one build, the codec can trust its input, and a structural hash of the schema, stamped on every message, catches the one case where they are not.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Look of the blog pages. build.py inlines this file into every page.
+   Tokens: the whitepaper's (src/jsMain/resources/klang-whitepaper.html), which are the UI palette of
+   KlangLookAndFeel, shared with console/dev-status/hud.css. Dark only, like the whitepaper. */
+:root {
+    color-scheme: dark;
+    --void: #12131C;      /* menuBackground */
+    --paper: #191C22;     /* appBackground */
+    --surface: #21252B;   /* panelBackground */
+    --surface-2: #2C313A; /* cardBackground */
+    --ink: #D7DADF;       /* textPrimary */
+    --muted: #ABB2BF;     /* textSecondary */
+    --faint: #5C6370;     /* textTertiary */
+    --rule: #353A42;      /* overlayBackground */
+    --rule-soft: #2C313A;
+    --spark: #D19A66;     /* warning */
+    --signal: #56B6C2;    /* excellent */
+    --gold: #E8B84B;
+    --code-bg: #12131C;   /* menuBackground */
+
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 44rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; overflow-x: clip; }
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 1rem;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--spark); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+
+/* ---- top bar ------------------------------------------------------------------------------------ */
+.bar {
+    background: var(--void);
+    border-bottom: 1px solid var(--rule);
+}
+.bar nav {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0.7rem 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.bar a { color: var(--muted); text-decoration: none; }
+.bar a:hover, .bar a:focus-visible { color: var(--signal); }
+.bar .home { color: var(--ink); margin-right: auto; }
+
+main {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 2.2rem 16px 5rem;
+}
+
+/* ---- meta line and the draft tag ---------------------------------------------------------------- */
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.9rem;
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.meta time { color: var(--ink); }
+.meta .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0; padding: 0; }
+.meta .tags li { border: 1px solid var(--rule); padding: 0 0.4rem; margin: 0; color: var(--muted); }
+.draft-tag {
+    font-family: var(--f-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--void);
+    background: var(--gold);
+    padding: 0.05rem 0.5rem;
+}
+
+/* ---- post prose ------------------------------------------------------------------------------------ */
+.prose { margin-top: 1.4rem; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    scroll-margin-top: 1.5rem;
+}
+.prose h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.prose h1 + p {
+    font-size: 1.18rem;
+    line-height: 1.45;
+    color: var(--muted);
+    margin-bottom: 2.4rem;
+}
+.prose h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    margin: 2.8rem 0 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; margin: 2rem 0 0.7rem; }
+.prose h4 {
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.8rem 0 0.6rem;
+}
+.prose p { margin: 0 0 1.05rem; }
+.prose ul, .prose ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose li::marker { color: var(--faint); }
+.prose img { display: block; max-width: 100%; height: auto; margin: 1.6rem 0 0.4rem; }
+.prose p:has(> img:only-child) + p > em:only-child {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+.prose blockquote {
+    margin: 1.4rem 0;
+    padding: 0.2rem 0 0.2rem 1rem;
+    border-left: 2px solid var(--signal);
+    color: var(--muted);
+}
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.4rem 0; }
+.prose code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.34em;
+    word-break: break-word;
+}
+
+/* ---- code blocks, as in the whitepaper ------------------------------------------------------------ */
+.code {
+    background:
+        repeating-linear-gradient(to bottom, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #161822, var(--code-bg));
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+    box-shadow: inset 3px 0 12px -6px rgba(86, 182, 194, .55);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    overflow-x: auto;
+    padding: 1.15rem 1.15rem 1.05rem;
+    margin: 1.5rem 0;
+    position: relative;
+    color: var(--ink);
+}
+.code::before {
+    content: "";
+    position: absolute;
+    left: -2px;
+    top: -1px;
+    width: 2.2rem;
+    border-top: 2px solid var(--signal);
+    pointer-events: none;
+}
+.code[data-lang]::after {
+    content: attr(data-lang);
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-family: var(--f-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    background: var(--surface-2);
+    border-left: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.2rem 0.6rem 0.24rem;
+    pointer-events: none;
+}
+.code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
+.prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+
+/* ---- tables ---------------------------------------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th {
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--ink);
+    white-space: nowrap;
+}
+td { padding: 0.42rem 0.9rem 0.42rem 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+/* ---- interactive figures: a self-contained file in a frame, sized by its klang-figure-height message */
+figure { margin: 1.5rem 0; }
+.klang-figure { margin: 1.8rem 0; }
+.klang-figure iframe { display: block; width: 100%; height: 420px; border: 0; background: transparent; }
+figcaption {
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+}
+
+.post-foot {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ---- index -------------------------------------------------------------------------------------------- */
+.intro h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    margin: 0 0 0.7rem;
+}
+.intro p { color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin: 0 0 0.5rem; }
+.intro .count { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--faint); }
+.index main, .index .bar nav { max-width: 70rem; }
+.intro { max-width: var(--measure); }
+.cards {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1.4rem;
+}
+.card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 2px solid var(--signal);
+}
+.card:hover, .card:focus-within { border-color: var(--signal); }
+.card .hero {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    object-fit: contain;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+.card-body { padding: 1rem 1.15rem 1.1rem; }
+.card h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.6rem 0 0.3rem;
+    text-wrap: balance;
+}
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a::after { content: ""; position: absolute; inset: 0; }
+.card h2 a:focus-visible { outline: none; }
+.card:focus-within { outline: 2px solid var(--spark); outline-offset: 3px; }
+.card .subtitle { color: var(--muted); font-style: italic; margin: 0 0 0.6rem; line-height: 1.45; }
+.card .summary {
+    font-size: 0.92rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+@media (max-width: 34rem) {
+    html { font-size: 106.25%; }
+    main { padding-top: 1.5rem; }
+    .prose h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body class="post">
+<header class="bar">
+<nav>
+<a class="home" href="../">Klang blog</a>
+<a href="../">All posts</a>
+<a href="../../klang-whitepaper.html">White paper</a>
+</nav>
+</header>
+<main>
+<div class="meta"><span class="draft-tag">Draft</span><time datetime="2026-06-07">2026-06-07</time><ul class="tags"><li>series-fairphone</li><li>wire</li><li>worklet</li><li>ksp</li><li>kotlin-js</li><li>klang</li></ul><span class="authors">by peekandpoke, claude</span></div>
+<article class="prose">
+<h1 id="sixty-seven-microseconds-to-385-nanoseconds">Sixty-Seven Microseconds to 385 Nanoseconds</h1>
+<p><em>The worklet decoded every scheduled voice with a generic serializer on the audio thread; a generated codec that trusts its input replaced it, and a schema hash guards the one case where trust would be misplaced.</em></p>
+<p>In the browser, Klangmotor's engine runs inside an audio worklet <a href="#w3c-webaudio">[1]</a>, on the thread that has to hand the sound card a 128-frame block every few milliseconds, under three at any common sample rate, and cannot afford to wait. It is the same thread <a href="../the-phone-that-does-not-get-faster/">the rest of this series</a> measures on the phone, and the engine it feeds had just been <a href="../one-engine-for-five-waves/">consolidated</a> two days earlier. Everything the engine is told, a voice to schedule, an instrument to register, a sample's chunks, arrives on that thread through a message port as a JavaScript object, and until June 7 the first thing the worklet did with a scheduled voice was decode it:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    private fun decodeScheduledVoice(obj: dynamic): ScheduledVoice {
+        return codec.decodeFromDynamic(ScheduledVoice.serializer(), obj)
+    }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/c35bd16c316c7dd227d4b888f63db373a9177bc0/audio_be/src/jsMain/kotlin/WorkletContract.kt#L211-L217">WorkletContract.kt at c35bd16c</a>, the commit before the codec</em></p>
+<p>That one line is kotlinx serialization's dynamic decoder, and a microbenchmark of it on node put a single voice at 64,309 nanoseconds, on the audio thread. The encode on the page side was another 4,994, and the structured clone <a href="#mdn-structured-clone">[2]</a> that the message port performs another 4,907. The decoder is slow for a good reason: it is defensive. It matches names to indices, keeps a seen-bitmask, tolerates unknown keys, dispatches on a discriminator for the sealed filter and envelope definitions, and constructs with defaults, all because it cannot know what it is given.</p>
+<p><img src="codec-ns.png" alt="four codecs" loading="lazy" /></p>
+<p><em>Fig. 1: One scheduled voice across the wire on node, nanoseconds per operation, log scale: the kotlinx decoder as the task record's closing line re-measured it, 67,001 and 4,904 (the first baseline table read 64,309 and 4,994), the ProtoBuf spike (the only number recorded was its encode), the hand-rolled proof, and the generated codec. The decode is the bar that runs on the audio thread.</em></p>
+<h2 id="trust-the-input">Trust the input</h2>
+<p>The first idea was a binary format, and it was tried and rejected in a spike that was never committed: kotlinx's ProtoBuf encoding on Kotlin/JS was slower than the dynamic one, fifty microseconds to encode. The idea that worked was to notice what the defensive decoder did not know and the project did: both ends of the wire are the same bundle. The page and the worklet are compiled together, from the same types, and a decoder that trusts that can read the fields it knows are there and construct the object directly. A hand-rolled proof of that, written in the microbenchmark, round-tripped equal to the kotlinx result and decoded in 398 nanoseconds.</p>
+<p>Hand-rolling it for every type on the wire was not the plan. The wire has sealed command and feedback envelopes, the scheduled voice with its voice data, filter and envelope definitions, sample requests and chunks, and the instrument graph type with more than sixty subtypes and unbounded recursion. So the codec is generated. A source-retention annotation marks the protocol's roots:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+ * Marks a type as part of the audio-worklet wire protocol.
+ *
+ * The `:audio-wire-codec-ksp` processor generates a fast &quot;trust the input&quot; JS-object encode/decode for each
+ * annotated type (plus its transitive graph), which `WorkletContract` uses instead of kotlinx
+ * `encodeToDynamic` / `decodeFromDynamic`. Annotate the protocol ROOTS (the `KlangCommLink.Cmd` /
+ * `KlangCommLink.Feedback` sealed types, `ScheduledVoice`); the processor walks referenced types from there.
+ *
+ * `SOURCE` retention — purely a compile-time marker for the processor, never present at runtime.
+ * See `docs/tasks/worklet-codec-ksp.md`.
+ */
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.CLASS)
+annotation class WireFormat
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/audio_bridge/src/commonMain/kotlin/WireFormat.kt#L1-L21">WireFormat.kt at v0.1.0</a></em></p>
+<p>The processor walks every root's transitive type graph and emits, for each class, an encode that assigns one property per constructor parameter and a decode that reads one property per parameter and calls the constructor. The decode half:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        sb.appendLine(&quot;fun ${decName(decl)}(o: dynamic): $qn = $qn(&quot;)
+        for (p in params) {
+            val n = p.name!!.asString()
+            sb.appendLine(&quot;    $n = ${decExpr(&quot;o.$n&quot;, p.type.resolve())},&quot;)
+        }
+        sb.appendLine(&quot;)&quot;)
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/audio-wire-codec-ksp/src/main/kotlin/WireCodecProcessor.kt#L266-L287">WireCodecProcessor.kt at v0.1.0</a></em></p>
+<p>Sealed types got a small integer tag and a <code>when</code>; enums travel as ordinals; lists as arrays with the element codec applied per item; a sample's PCM array passes through untouched. A shape the processor cannot handle is not skipped, it fails the build, so the codec covers a type completely or the build breaks. The generated file lands in the bridge module's JavaScript source set, because the codec uses <code>dynamic</code> and exists only there. The result, in the task record's closing line: decode 67,001 to 385 nanoseconds per operation, 174 times, encode 4,904 to 478, ten times, round-trips equal to the original.</p>
+<p><img src="wire-path.png" alt="the wire path" loading="lazy" /></p>
+<p><em>Fig. 2: The wire from the page to the worklet. The page encodes, the message port clones, the worklet decodes on the audio thread, and the schema hash rides the envelope from the encode to the decode.</em></p>
+<h2 id="the-one-case-where-trust-is-misplaced">The one case where trust is misplaced</h2>
+<p>Trusting the input assumes the page and the worklet are the same build, and that holds for one bundle. But the worklet module is fetched by URL, and a browser can cache it on its own, so a stale worklet can meet a fresh page after a deploy. The guard is derived, not maintained: while the processor walks the type graph it folds a structural hash of every type's fields, subtype lists and enum entries into one integer, so that any change to the wire changes the hash without anyone remembering to bump a version. The encode stamps it on the envelope, once per message, and the decode checks it first:</p>
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    private fun requireSchema(data: dynamic) {
+        val v: Int? = data[PROP_VERSION]
+        if (v != WIRE_SCHEMA_HASH) {
+            error(
+                &quot;Worklet wire-schema mismatch: message has v=$v, this build expects $WIRE_SCHEMA_HASH. &quot; +
+                        &quot;Frontend and audio worklet are different builds (stale cached worklet?) — reload.&quot;
+            )
+        }
+    }
+</code></pre></div>
+<p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/audio_be/src/jsMain/kotlin/WorkletContract.kt#L1-L71">WorkletContract.kt at v0.1.0</a></em></p>
+<p>Four days later the codec found a bug of its own. The sealed type tag traveled under the key <code>t</code>, and the instrument graph has a node, the linear interpolation, with a field named <code>t</code>: the tag overwrote the field, and a graph with an interpolation in it was silently corrupted on the wire. The generated codec's own first tag was a positional ordinal under that key, and it had carried the collision since June 7, untested. The fix made both reserved keys non-identifiers, <code>#t</code> for the tag and <code>#v</code> for the schema hash, so that no Kotlin field can ever share a name with them, turned the ordinal into a stable string wire name, and added a round-trip case for the interpolation node to guard it. The same session took kotlinx serialization off the wire types entirely, and off the pattern library that had been holding them, a larger removal than planned, which the maintainer opted into once the premise that the annotations were vestigial turned out to be wrong.</p>
+<h2 id="results">Results</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>operation</th>
+<th style="text-align:right">kotlinx, June 7</th>
+<th style="text-align:right">generated, June 7</th>
+<th style="text-align:right">generated, today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode, the worklet, audio thread</td>
+<td style="text-align:right">67,001</td>
+<td style="text-align:right">385</td>
+<td style="text-align:right">562</td>
+</tr>
+<tr>
+<td>encode, the page</td>
+<td style="text-align:right">4,904</td>
+<td style="text-align:right">478</td>
+<td style="text-align:right">848</td>
+</tr>
+<tr>
+<td>structured clone, the message port</td>
+<td style="text-align:right">4,907</td>
+<td style="text-align:right"></td>
+<td style="text-align:right">11,757</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nanoseconds per scheduled voice on node. The decode fell by a factor of 174 on the day, and the audio thread's per-voice cost with it, from a number a hundred voices could push over the block budget to one they cannot. Today's column is the same benchmark on the same platform three months later, and every number in it is larger: the voice data had gone from 72 fields to 82 by then, and the clone has more than doubled, which is more than the field count alone accounts for. The shape of the result is unchanged, with the decode now a twentieth of the clone that the browser performs on the main thread, where in June it was a thirteenth. That clone is the part the project does not own, and the task record already names the only lever left there, positional arrays instead of keyed objects, to be measured before it is adopted.</p>
+<h2 id="what-transferred">What transferred</h2>
+<p>A generic serializer pays for generality the same way a library sine does, and the project owns both ends of this wire, so the generality was not buying anything here. Generating the specific code is what made trusting the input affordable at the size of this protocol, and it is the same move <a href="../one-annotation-six-artifacts/">an annotation and a processor</a> make elsewhere in the project. A version guard that a human must bump is a guard that will one day not be bumped; a hash folded from the schema by the same processor that emits the codec needs no one to remember it. And the collision between the type tag and a field named <code>t</code> is the reminder that a trusting codec trusts its own keys too, so the keys it reserves must be ones no field can have.</p>
+<h2 id="references">References</h2>
+<ol>
+<li><a id="w3c-webaudio"></a>W3C (2024). <em>Web Audio API 1.1</em>, First Public Working Draft, section AudioWorklet. <a href="https://www.w3.org/TR/webaudio/#AudioWorklet">https://www.w3.org/TR/webaudio/#AudioWorklet</a></li>
+<li><a id="mdn-structured-clone"></a>MDN Web Docs. The structured clone algorithm. <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm">https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm</a></li>
+</ol>
+<p><em>Sources inside the repository: <code>docs/tasks-archive/2026-06/20260607-worklet-codec-ksp.md</code> (the baseline table, the design, the closing measurement), <code>docs/tasks-archive/2026-06/20260611-wireformat-enhancements.md</code> (the <code>#t</code> collision and the removal of kotlinx from the wire), <code>docs/history/2026-Q2.md</code>, the commits <code>096e5e7d</code>, <code>59e85839</code>, <code>27903cf2</code>, <code>17e41ea2</code> and <code>b7b31bbf</code>, <code>audio_bridge/src/commonMain/kotlin/WireFormat.kt</code>, <code>audio-wire-codec-ksp/src/main/kotlin/WireCodecProcessor.kt</code>, <code>audio_be/src/jsMain/kotlin/WorkletContract.kt</code> at v0.1.0 and at c35bd16c, <code>audio_benchmark/src/jsMain/kotlin/WorkletSerializationBenchmark.kt</code> and <code>docs/benchmarks/2026-09-16_worklet-serialization_nodejs.md</code> (today's numbers, node 24).</em></p>
+</article>
+<footer class="post-foot"><a href="../">Back to all posts</a></footer>
+</main>
+<script>
+// Interactive figures size their own frame: each posts
+// { type: "klang-figure-height", height } to this page.
+window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'klang-figure-height' || typeof d.height !== 'number') return;
+    var frames = document.querySelectorAll('.klang-figure iframe');
+    for (var i = 0; i < frames.length; i++) {
+        if (frames[i].contentWindow === e.source) {
+            frames[i].style.height = Math.min(Math.ceil(d.height), 3000) + 'px';
+        }
+    }
+});
+</script>
+</body>
+</html>
