@@ -165,7 +165,7 @@ export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 0.8).clip(3)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
-  .gain(0.22).pan(0.25)                            // the arp guitarist stands left
+  .gain(0.22).pan(0.35)                            // the arp guitarist stands a little left of the centre
   .orbit(1).reverb(wet = 0.2, size = 4)
 
 // Sing: the melody on the bright rig, an octave up.
@@ -174,7 +174,7 @@ export sing = notes => n(notes.add(7))
   .oscp("decay", 3.0).clip(1.5)
   .hpf(250)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3500)                                       // the crunch fizz on held notes covers the arp's picks
-  .gain(0.14).pan(0.75)                            // the melody guitarist stands right
+  .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
   .orbit(2).reverb(wet = 0.3, size = 5)
 
 // Soar: the melody two octaves up, wider, over the wings.
@@ -186,12 +186,12 @@ export soar = notes => n(notes.add(14))
   .gain(0.50).pan(0.5)
   .orbit(6).reverb(wet = 0.25, size = 5)
 
-// Swell: volume-knob swells, the thing inside stretching. Doubled right, a little late.
+// Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
   .lpf(3000)
-  .gain(0.06).pan(0.3).superimpose(x => x.pan(0.7).late(0.02))
+  .gain(0.06).pan(0.15).superimpose(x => x.pan(0.25).late(0.02)) // on the left, when they enter
   .orbit(7).reverb(wet = 0.5, size = 6)
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -199,7 +199,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
   .oscp("decay", 2.0).clip(2)
   .velocity("1.0 0.8 0.9")
-  .gain(0.30).pan(0.5)
+  .gain(0.30).pan(0.4)                             // near the centre, a little left, across from the melody
   .orbit(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
@@ -244,9 +244,10 @@ export strum = notes => n(notes)
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
 
-// The cocoon is spun one thread at a time, over two rounds.
+// The cocoon is spun one thread at a time, over two rounds. It starts in the middle and drifts slowly to its place,
+// a little left, to make room for the answer.
 let spinning = stack(
-  spin(cocoonArp).gain(0.25).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).gain(0.25).pan("<0.5 0.5 0.48 0.46 0.43 0.41 0.38 0.36>").mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
