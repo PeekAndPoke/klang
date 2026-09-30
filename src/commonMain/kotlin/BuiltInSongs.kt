@@ -56,8 +56,9 @@ object BuiltInSongs {
         strangerThings,
         sakura,
         derSchmetterling,
-        tetris,
+        kokon,
         soundOfTheSea,
+        tetris,
         tetrisRemix,
         greensleeves,
         aTruthWorthLyingFor,
@@ -66,6 +67,5 @@ object BuiltInSongs {
         irishLament,
         smallTownBoy,
         drunkenSailor,
-        kokon,
     )
 }

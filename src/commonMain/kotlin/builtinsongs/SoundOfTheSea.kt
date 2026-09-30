@@ -23,9 +23,9 @@ internal val soundOfTheSeaSong = Song(
 
           import * from  "stdlib"
            import * from "sprudel"
-            let wind       = 0.080
-             let water      = 0.080
-              let waves      = 0.110
+            let wind       = 0.120
+             let water      = 0.120
+              let waves      = 0.165
                let windSpiel  = 3.250
 
                  stack( //   Lean back and relax... let the waves carry you away
