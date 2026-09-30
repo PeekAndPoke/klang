@@ -290,6 +290,34 @@ with limiter defaults, so it works on an orbit too.
 | `accelerate(semitones)` |         | Pitch ramp during playback (SEMITONES over the event; 12 = one octave) | `s("cr").accelerate(24)`                        |
 | `vibrato(rate, depth)`                                                 | `vib`      | Vibrato LFO rate in Hz and depth in semitones; readers `vibrato.rate`, `.depth`                                                                        | `note("c4").s("saw").vibrato(5, 0.5)`                                                                |
 
+#### Scale degrees: two things that are easy to get wrong
+
+Both measured by rendering a sine and reading its frequency (2026-09-30, Kokon).
+
+**`add` on an `n(...)` pattern does not move the pitch.** `add` changes the raw event value, not the scale
+degree that `n` set. Add to the notes *before* they reach `n`:
+
+```javascript
+n("0").add(7).scale("d3:minor")        // still D3: the add is silently ignored
+n("0".add(7)).scale("d3:minor")        // D4: add on the string, then n
+n("0").scale("d3:minor").transpose(12) // D4 too, but only AFTER the scale (a transpose before it is ignored as well)
+```
+
+So a line that plays its notes an octave up is `notes => n(notes.add(7))`; this works for a mini-notation
+string and for a pattern alike, chords included (`"<[4,7,9]>".add(7)`).
+
+**The first `.scale()` on a note wins.** A note's scale degree is resolved once; a later `.scale()` is inert
+for pitch. This lets a song set its key once at the top and a single part bring its own:
+
+```javascript
+let lastChord = strum("<[0 4 7 9 11 ~@27] ~>").scale("d3:major") // the Picardy third: F# is in d3:major only
+
+arrange([32, everythingElse], [2, lastChord]).scale("d3:minor")  // inert for lastChord, it has its scale already
+```
+
+It is also why a pattern meant to be imported (a Klangbuch part) carries no scale: the importer's `.scale()`
+would be ignored.
+
 #### `:soundIndex:gain` suffix (universal variant picker)
 
 A `name:soundIndex[:gain]` suffix on `note()`, `s()` / `sound()`, and
@@ -441,7 +469,7 @@ Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `f
 
 | Function     | Description          | Example                    |
 |--------------|----------------------|----------------------------|
-| `add(n)`     | Add to values        | `n("0 2").add(5)`          |
+| `add(n)`     | Add to values (on scale degrees add before `n`, see Tonal & Pitch) | `n("0 2".add(5))` |
 | `sub(n)`     | Subtract             | `n("7 5").sub(2)`          |
 | `mul(n)`     | Multiply             | `gain(0.5).mul(2)`         |
 | `div(n)`     | Divide               | `pure(1/8).div(cps)`       |
@@ -648,6 +676,61 @@ let chorus = stack(
 arrange([8, verse], [8, chorus], [8, verse], [8, chorus])
   .reverb(wet = 0.15, size = 4)
 ```
+
+### Arranging a song: notes, lines, parts, arrange
+
+For a whole song, prefer parts in an `arrange()` over switching voices on and off with `mute("<1!24 0!8 ...>")`
+masks. The masks read as numbers, and every voice keeps its own period: a 4-cycle arpeggio, an 8-cycle melody
+and a 38-entry mask drift apart, and a last chord that rings on stretches the song past voices that have
+already restarted.
+
+**What `arrange` does:** each segment is queried at its own local time, so **every part starts on its own
+cycle 0**. A 4-cycle chord pattern in a part of 4 or 8 cycles always starts on its first chord, whatever
+came before. The whole arrangement loops after the sum of the durations, as one piece. A 3-cycle part simply
+plays the first three cycles of its patterns; a note that starts in a part keeps ringing past the part's end.
+
+Build it bottom up. An excerpt from Kokon (`builtinsongs/Kokon.kt`, where the rigs `clean`, `bright`, `deep`
+and the other parts are defined):
+
+```javascript
+// Notes: harmony and melodies, scale degrees without scale or timing
+let cocoonArp   = `<[0 4 7 8 9 8 7 4] [-2 2 4 8 9 8 4 2] [-4 0 2 4 5 4 2 0] [-3 1 4 7 8 7 4 1]>`
+let cocoonRoots = `<0 5 3 4>`
+let melodyOne   = `<[4@4 3 2 1 2] [1@4 ~ 0 1 2] [4@3 5 4@2 2 0] [1@6 ~@2]>`
+
+// Lines: one player, one way of playing, a function from notes to sound. The line picks its octave
+// and its default level.
+let spin = notes => n(notes).sound(clean).clip(4).gain(0.22).orbit(1)
+let sing = notes => n(notes.add(7)).sound(bright).clip(1.5).gain(0.14).orbit(2)
+let beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~").sound(deep).gain(0.325).orbit(3)
+
+// Parts: lines played together. A part may set a line's level for this moment.
+let answering  = stack(spin(cocoonArp).gain(0.21), sing(melodyOne))
+let quickening = stack(spin(cocoonArp).gain(0.21), sing(melodyTwo), beat(cocoonRoots))
+
+// Song: which part, for how long, in which order. The key is set once.
+arrange(
+  [8, spinning],
+  [4, answering],
+  [4, quickening],
+  [4, breakingOpen],
+  [3, lifting],
+  [1, landing],
+).scale("d3:minor")
+```
+
+- Repeating or stretching a part is a number: `[8, breakingOpen]` plays it twice.
+- A part that is one round of the progression (here 4 cycles) keeps every part aligned to the harmony.
+- A different harmony is a different notes pattern into the same line (`wings(cocoonPower)`,
+  `wings(liftPower)`); a different way of playing is a different line (`wings` tremolo-picks, `strike` hits
+  once and lets ring).
+- Something that belongs to one moment (a crescendo, a held breath) goes on the line inside that part:
+  `spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>")`, `beat(cocoonRoots).mask("<1!3 [1 0]>")`. The pattern is
+  local to the part, so a 4-entry `<...>` covers its 4 cycles.
+- Song-wide things (`scale`, `analog`, humanising `late(berlin...)`) go on the `arrange(...)` once, and the
+  `master(...)` sits next to it in a `stack`.
+- Checking by render: a loop is round when a render longer than the song shows cycle N (the song's length)
+  matching cycle 0.
 
 ### Timed layer entry with filterWhen
 
