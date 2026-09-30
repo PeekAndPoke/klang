@@ -127,7 +127,9 @@ Fixed-size circular buffer delay with feedback and multi-tap mixing.
 
 ### Reverb
 
-Freeverb-style algorithmic reverb (no impulse-response path).
+Freeverb-style algorithmic reverb (no impulse-response path). Both sides' combs are fed `(L + R) / 2`, one room
+for both ears (`Reverb.CROSS_FEED`, 2026-09-30). How long each `size` rings, measured and from the design:
+the table in `.claude/skills/klang-music-writing/ref/sprudel-reference.md` ("Reverb size: how long the room rings").
 
 | Slot             | Meaning                                        |
 |-------------|------------------------------------------------|

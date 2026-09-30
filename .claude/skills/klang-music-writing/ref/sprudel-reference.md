@@ -415,6 +415,37 @@ at the cutoff). Same third slot on the ignitor door.
 | `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
 | `body(wet, material, floor)`                                           |            | Resonant body: wet FIRST (a mix 0..1), then the material name (no reader), dry floor; readers `body.wet`, `.floor`. A material alone is named: `body(material = "wood")`; `"none"` is off | `note("c3").s("saw").body(0.7, "wood")`                                                              |
 
+#### Reverb size: how long the room rings
+
+Measured 2026-09-30 (offline renders at 48 kHz, a 20 ms saw note on C4, decay time read from the tail by Schroeder
+integration, the -5 to -35 dB slope extrapolated to 60 dB). The orbit and the master reverb are the same unit and
+measure the same (checked at sizes 3 and 7).
+
+| size | a note fades in (measured) | the lowest frequencies ring (from the design) | feels like |
+|------|----------------------------|-----------------------------------------------|------------|
+| 0    | off (the reverb switches off below 0.1) | | dry |
+| 1    | 0.69 s | 0.8 s | a small room |
+| 2    | 0.74 s | 0.9 s | a small room |
+| 3    | 0.95 s | 1.1 s | a room |
+| 4    | 1.01 s | 1.2 s | a room |
+| 5    | 1.23 s | 1.5 s | a studio, the default |
+| 6    | 1.54 s | 1.8 s | a chamber |
+| 7    | 2.07 s | 2.3 s | a concert hall (about 2 s) |
+| 8    | 2.84 s | 3.3 s | a big hall |
+| 9    | 4.60 s | 5.2 s | a cathedral |
+| 10   | 11.1 s | 12.7 s | an endless wash, the longest there is |
+
+- **Two columns, two questions.** "A note fades in" is what you hear: the whole note's energy down 60 dB. "The
+  lowest frequencies ring" is worked out from the design (comb feedback `0.7 + 0.028 · size`, longest comb 37 ms):
+  the lows ring longest, the highs die sooner. The "3 is about 1 s, 5 about 1.4 s, 10 about 12.5 s" in the door
+  docs is this second column.
+- **`lowpass` changes the colour of the tail, not its length**: from no `lowpass` to 2000 Hz the measured fade
+  moves by 2 % or less (3 % at size 10). A darker room, not a shorter one.
+- **The room answers late at every size.** There is no pre-delay and no early reflections: the tail starts
+  about 25 to 37 ms after the note, whatever the size. A bigger `size` rings longer, it does not sound further away.
+- **One room for both ears**: both sides of the reverb are fed `(L + R) / 2` (since 2026-09-30), so a voice panned
+  hard left rings in both ears. Its room is centred, not on its side.
+
 Distortion shapes: `soft` (default/tanh), `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`
 
 ### FM Synthesis (via pattern params)
