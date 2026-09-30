@@ -123,12 +123,12 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.2, db =  4.0)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
-    .band(freq =  100, q = 0.7, db = -3.0)         // mud:   reduce the mud
+    .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(100, 0.707, x => x.passes(2))          // the low end
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = x => x
@@ -158,7 +158,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pAttack     = Osc.param("attack",       0.005, "Attack")
   let pDecay      = Osc.param("decay",        1.000, "Decay")
   let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.030, "Release")
+  let pRelease    = Osc.param("release",      0.035, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -254,13 +254,13 @@ let marimba = (() => {
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
-  .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.4)
-  .hpf(1100, 0.7).lpf(7500, 1.5)
+  .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.7)
+  .hpf(750, 0.7).lpf(7500, 1.5)
   .pan(perlin.range(0.2, 0.4)).superimpose(pan(perlin.range(0.8, 0.6))) // . solo()
   .clip(1.2)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e5:minor!16>").gain("<1.00!48 0.45!16 1.00!48 0.45!16>").gain(mul(0.3))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e5:minor!16>").gain("<1.00!48 0.45!16 1.00!48 0.45!16>").gain(mul(0.20))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
@@ -353,6 +353,7 @@ let granCassa = (() => {
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.40, "tube", 2)
+    .mul(0.1)
     .classic()
 })()
 
@@ -360,12 +361,12 @@ let granCassa = (() => {
 export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [0 0 ~ 2 2 ~ -2 ~]>`
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
-  .velocity("1.0 0.7 0.8 0.7").body(material = "membrane", wet = 0.4).notch(100, 0.7)
-  .hpf(50).lpf("3200".add(perlin.range(-200, 200).slow(16).early(8)))
+  .velocity("1.0 0.8 0.9 0.8").body(material = "membrane", wet = 0.4).notch(120, 0.7)
+  .hpf(70).lpf("3200".add(perlin.range(-200, 200).slow(16).early(8)))
   .pan(sine.range(0.4, 0.6).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.10)
+  .scale("e2:minor").gain(0.70)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
@@ -442,8 +443,8 @@ export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin.range(0.0
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
 export clap_pat = `<[rim rim ~ ~  ~ ~ ~ rim] [rim rim ~ ~  rim ~ ~ rim] [rim [rim!2]  rim [rim!2]]>`
-export clap_shape = x => x.gain(0.12).pan(0.3).superimpose(pan(0.7)) // . mute()
-  .hpf("600".add(perlin.range(0, 100).slow(4))).lpf("6500").adsr(perlin.range(0.008, 0.010), 0.2, 0.80, 2.1)
+export clap_shape = x => x.gain(0.10).pan(0.3).superimpose(pan(0.7)) // . mute()
+  .hpf("800".add(perlin.range(0, 100).slow(4))).lpf("6500").adsr(perlin.range(0.008, 0.010), 0.2, 0.80, 2.1)
 export clap_arrange = x => x.orbit(9).mute("<0!128 1!32>")
 export clap = sound(clap_pat).apply(clap_shape).tag("clap")
 
