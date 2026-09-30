@@ -22,15 +22,23 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  * sample, lowpasses it into its store `store = out (1 - d) + store d + 1e-18` and writes `in + store · feedback`,
  * with `feedback = 0.28 size + 0.7` and `d = 0.4 damp` (damp 0.5 unset, `1 - lowpass / nyquist` set). An allpass
  * outputs `-in + buffered` and writes `in + 0.5 buffered + 1e-18`. The wet is `0.015` times the chain's output,
- * added onto what the output buffer holds.
+ * added onto what the output buffer holds. Each side's combs are fed `own + 0.5 (other - own)`: one room for both
+ * ears (2026-09-30, `docs/tasks-archive/2026-09/20260930-stereo-reverb.md`).
  *
  * Bit for bit: the oracle keeps each comb's and allpass's arithmetic in the order the design states it, which is
- * the order the network runs it; the stereo channels are independent, so the oracle runs them one after the other.
+ * the order the network runs it; past the feed the two channels share nothing, so the oracle runs them one after
+ * the other.
  */
 class ReverbNetworkLawSpec : StringSpec({
 
     val block = 128
     val frames = 4096
+
+    /** The share of the other side each side's combs hear; written here, not read from the production constant. */
+    val crossFeed = 0.5
+
+    /** One side's comb feed: its own input, a step of [share] towards the other side's. */
+    fun feed(own: DoubleArray, other: DoubleArray, share: Double) = DoubleArray(own.size) { own[it] + share * (other[it] - own[it]) }
 
     fun freeverb(input: DoubleArray, sampleRate: Int, size: Double, lowpass: Double?, right: Boolean): DoubleArray {
         val scale = sampleRate / 44100.0
@@ -119,8 +127,8 @@ class ReverbNetworkLawSpec : StringSpec({
                     at += block
                 }
 
-                val refL = freeverb(inL, sampleRate, size, lowpass, right = false).map { dry + it }
-                val refR = freeverb(inR, sampleRate, size, lowpass, right = true).map { dry + it }
+                val refL = freeverb(feed(inL, inR, crossFeed), sampleRate, size, lowpass, right = false).map { dry + it }
+                val refR = freeverb(feed(inR, inL, crossFeed), sampleRate, size, lowpass, right = true).map { dry + it }
 
                 withClue("dry $dry, $sampleRate Hz, size $size, lowpass $lowpass: the tail is there (a late sample is wet)") {
                     outL[frames - 1] shouldNotBe dry
@@ -133,6 +141,52 @@ class ReverbNetworkLawSpec : StringSpec({
                     (0 until frames).firstOrNull { outR[it].toRawBits() != refR[it].toRawBits() } shouldBe null
                 }
             }
+        }
+    }
+
+    "an input with equal sides renders exactly the two separate rooms it did before the cross-feed, bit for bit" {
+        // The identity the cross-feed promises centred songs: equal inputs feed each side its own input, so the
+        // network must render the oracle with NO cross-feed. (A voice at pan 0.5 is equal to one ulp only: the
+        // engine's cos and sin of pi/4 differ there.) A burst with both signs, past two comb revolutions.
+        val sampleRate = 48000
+        val input = DoubleArray(frames).also {
+            it[0] = 0.8
+
+            for (i in 900 until 960) {
+                it[i] = if (i % 3 == 0) 0.4 else -0.25
+            }
+        }
+        val reverb = Reverb(sampleRate).apply { size = 0.6 }
+        val inBuf = StereoBuffer(block)
+        val outBuf = StereoBuffer(block)
+        val outL = DoubleArray(frames)
+        val outR = DoubleArray(frames)
+        var at = 0
+
+        while (at < frames) {
+            input.copyInto(inBuf.left, 0, at, at + block)
+            input.copyInto(inBuf.right, 0, at, at + block)
+            outBuf.left.fill(0.0)
+            outBuf.right.fill(0.0)
+
+            reverb.process(inBuf, outBuf, block)
+
+            outBuf.left.copyInto(outL, at)
+            outBuf.right.copyInto(outR, at)
+            at += block
+        }
+
+        val refL = freeverb(input, sampleRate, 0.6, null, right = false)
+        val refR = freeverb(input, sampleRate, 0.6, null, right = true)
+
+        withClue("the tail is there") {
+            outL[frames - 1] shouldNotBe 0.0
+        }
+        withClue("left: first mismatching frame") {
+            (0 until frames).firstOrNull { outL[it].toRawBits() != refL[it].toRawBits() } shouldBe null
+        }
+        withClue("right: first mismatching frame") {
+            (0 until frames).firstOrNull { outR[it].toRawBits() != refR[it].toRawBits() } shouldBe null
         }
     }
 })

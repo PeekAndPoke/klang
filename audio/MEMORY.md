@@ -32,6 +32,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Bus**: each orbit (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
   reverb, phaser, compressor, gain; duck in a cross-orbit pass), knobs from the lease holder's
   `VoiceData.katalystParams`. Laws: `audio/ref/katalyst.md`; the classes: `audio/ref/effects-mixing.md`.
+- **Reverb**: one room for both ears: each side's combs are fed `(L + R) / 2` (`Reverb.CROSS_FEED` 0.5, by ear
+  2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
+  no early reflections (`docs/tasks/future/reverb-models.md`).
 - **Master**: the same Katalyst chain at the output (`MasterBus`, `master(Katalyst(k => ...))`, off with
   `master(Katalyst())`). The Master DSL is retired.
 - **House stage**: `MasterStage`: DC blockers, the limiter (-1 dB, 20:1, 5 ms lookahead, always on, not
@@ -144,7 +147,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 - **Scheduled or designed**: `docs/tasks/oversampling-regions.md`, `docs/tasks/master-dsl-followups.md`,
   `docs/tasks/katalyst-master-configure-doors.md`, `docs/tasks/pluck-release-tail.md`,
   `docs/tasks/voice-takeover.md` (blocked on a design decision), `docs/tasks/playback-layer-decomposition.md`.
-- **Katalyst, future**: `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
+- **Katalyst, future**: `reverb-models.md` (with `room-reverb.md`), `one-chain-host.md`, `delay-ceiling-edges.md`, `transition-times.md`,
   `ducking-unfinished.md`, `general-eq-core.md`, `flanger-chorus.md`, `idea-master-saturation.md` (all in
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
@@ -162,6 +165,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): [record](../docs/tasks-archive/2026-09/20260930-stereo-reverb.md)
 - 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks/tremolo-as-composition.md)
 - 2026-09-29 Filter drift is twice the pitch drift, by ear: [record](../docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md)
 - 2026-09-28 The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12): [record](../docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)

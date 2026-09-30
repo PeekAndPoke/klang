@@ -18,6 +18,7 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import kotlin.math.abs
 
 /**
  * The Active-state tail question answered from a content ceiling (`TailCeiling`) instead of by scanning
@@ -188,6 +189,36 @@ class ClosedFormTailSpec : StringSpec({
             fx.reverb!!.hasTail() shouldBe false
         }
         blocks shouldBeGreaterThan 100 // a real decay was held (~0.7 s minimum tail ≈ 240 blocks)
+    }
+
+    "a hard-left reverb: the right ear gets a room, and the ceiling still holds both sides' combs" {
+        // The cross-feed fills the right combs from the left input; the ceiling reads the feed's peak, so it must
+        // still cover them. The mix is also the output (insert style), so after a block its right side is the wet.
+        val fx = reverbEffect(size = 0.5)
+        val ctx = ctx()
+        var rightWetPeak = 0.0
+
+        repeat(40) {
+            ctx.mixBuffer.left.fill(0.5)
+            ctx.mixBuffer.right.fill(0.0)
+            fx.process(ctx)
+            rightWetPeak = maxOf(rightWetPeak, ctx.mixBuffer.right.maxOf { abs(it) })
+        }
+        withClue("a room in the right ear from a left-only source") {
+            (rightWetPeak > 1e-3) shouldBe true
+        }
+        fx.hasTail() shouldBe true
+
+        var blocks = 0
+        while (fx.hasTail()) {
+            fx.feed(ctx, 0.0)
+            blocks++
+            (blocks < 20000) shouldBe true
+        }
+        withClue("both sides' combs must be below the threshold when the closed form says silent") {
+            fx.reverb!!.hasTail() shouldBe false
+        }
+        blocks shouldBeGreaterThan 100
     }
 
     // ── A whole chain ────────────────────────────────────────────────────────────────────────────

@@ -42,6 +42,12 @@ import kotlin.math.ln
  * - **Stereo decorrelation**: right channel uses the same tunings + a fixed
  *   23-sample spread on every delay line, producing a wide centred image
  *   even from a mono input.
+ * - **One room for both ears**: each side's combs are fed from its own input
+ *   plus a share ([CROSS_FEED]) of the other side's, so a panned source's room
+ *   reaches the far ear too. Without it the two channels were two separate
+ *   rooms, and a hard-panned source left the far ear with no room at all. An
+ *   input with equal sides feeds exactly what it did before, bit for bit (the
+ *   engine's centre pan differs by one ulp, so a centred voice matches to ~1e-16).
  * - **Gain staging**: `FIXED_GAIN = 0.015` normalises the sum of 8 resonant
  *   combs to keep internal levels bounded.
  * - **Denormal protection**: each comb LPF state and allpass buffer write
@@ -349,6 +355,14 @@ class Reverb(
             val inpL = if (abs(rawL) <= Double.MAX_VALUE) rawL else 0.0
             val inpR = if (abs(rawR) <= Double.MAX_VALUE) rawR else 0.0
 
+            // Each side's room hears the other side too ([CROSS_FEED]). Written as a step towards the other
+            // side, so an input with equal sides (inpL == inpR) feeds exactly what it did before, bit for bit.
+            // One step for both sides: IEEE subtraction and multiplication are sign-symmetric, so
+            // `inpR - CROSS_FEED * d` is bit for bit `inpR + CROSS_FEED * (inpL - inpR)`.
+            val step = CROSS_FEED * (inpR - inpL)
+            val feedL = inpL + step
+            val feedR = inpR - step
+
             var sumL = 0.0
             var sumR = 0.0
 
@@ -372,7 +386,7 @@ class Reverb(
 
                 val outSampleL = bufL[posL]
                 combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping) + ANTI_DENORMAL
-                bufL[posL] = inpL + (combStoreL[c] * feedback)
+                bufL[posL] = feedL + (combStoreL[c] * feedback)
 
                 sumL += outSampleL
 
@@ -388,7 +402,7 @@ class Reverb(
 
                 val outSampleR = bufR[posR]
                 combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping) + ANTI_DENORMAL
-                bufR[posR] = inpR + (combStoreR[c] * feedback)
+                bufR[posR] = feedR + (combStoreR[c] * feedback)
 
                 sumR += outSampleR
 
@@ -511,6 +525,17 @@ class Reverb(
 
         /** Allpass coefficient — Jezar Freeverb fixed value. */
         private const val ALL_PASS_FEEDBACK: Double = 0.5
+
+        /**
+         * The share of the other side's input each side's combs are fed with: `feedL = inL + CROSS_FEED · (inR - inL)`.
+         * 0 is two separate rooms, 0.5 one room fed from both sides alike (the original Freeverb feeds `L + R`). An
+         * input with equal sides feeds the same at every value. A panned source's room spreads to the far side and,
+         * the two tanks being decorrelated, loses in total from 0 dB (centred) up to `10 · log10((1 - k)² + k²)` dB for
+         * a hard pan: at most 3 dB, at 0.5. Chosen by ear at 0.5, one room, the classic mono-in design (maintainer,
+         * 2026-09-30, on Der Schmetterling and Kokon; docs/tasks-archive/2026-09/20260930-stereo-reverb.md). The lean
+         * towards the source's side belongs in early reflections, which this network does not have.
+         */
+        private const val CROSS_FEED: Double = 0.5
 
         /** Right-channel decorrelation: every delay line is +N samples vs left. Scaled by sample rate. */
         private const val STEREO_SPREAD_44K1: Int = 23

@@ -111,21 +111,42 @@ class ReverbStabilitySpec : StringSpec({
         val fresh = Reverb(sampleRate)
         fresh.combPeakAbs() shouldBe 0.0
 
-        // A one-sample impulse writes exactly 1.0 into cell 0 of every LEFT comb (the feedback
-        // contribution at that instant is the ~1e-18 anti-denormal bias, below double precision).
-        val left = Reverb(sampleRate)
-        val input = StereoBuffer(blockFrames)
-        val output = StereoBuffer(blockFrames)
-        input.left[0] = 1.0
-        left.process(input, output, blockFrames)
-        left.combPeakAbs() shouldBe 1.0
+        // Both sides' combs are fed the same `(L + R) / 2` (the cross-feed at 0.5), so the channels
+        // are told apart by their lengths: at 44.1 kHz the left combs are 1116..1617 samples, the
+        // right ones 23 longer (1139..1640). An impulse on the left feeds every comb 0.5.
+        fun Reverb.run(impulses: Map<Int, Double>, samples: Int) {
+            val input = StereoBuffer(blockFrames)
+            val output = StereoBuffer(blockFrames)
+            var at = 0
 
-        // Right-only NEGATIVE content is seen too: both channels share the countdown, and the
-        // scan measures magnitude.
+            while (at < samples) {
+                val n = minOf(blockFrames, samples - at)
+                input.clear()
+
+                for ((t, v) in impulses) {
+                    if (t >= at && t < at + n) {
+                        input.left[t - at] = v
+                    }
+                }
+                process(input, output, n)
+                at += n
+            }
+        }
+
+        // The loudest cell on the RIGHT, and negative: after 1630 samples every left comb has
+        // recirculated its first sample (fed back decayed, below 0.5), the longest right comb (1640)
+        // has not, so its untouched -0.5 is the peak. A left-only scan would miss it. The
+        // anti-denormal bias in the write sits below double precision next to 0.5.
         val right = Reverb(sampleRate)
-        input.clear()
-        input.right[0] = -1.0
-        right.process(input, output, blockFrames)
-        right.combPeakAbs() shouldBe 1.0
+        right.run(mapOf(0 to -1.0), samples = 1630)
+        right.combPeakAbs() shouldBe 0.5
+
+        // The loudest cell on the LEFT: a second impulse at sample 1116, exactly when the shortest
+        // left comb's first sample comes round, writes the new 0.5 plus that returning sample fed
+        // back. No right comb has come round yet, so the right side holds 0.5 at most: a
+        // right-only scan would read 0.5.
+        val left = Reverb(sampleRate)
+        left.run(mapOf(0 to 1.0, 1116 to 1.0), samples = 1117)
+        (left.combPeakAbs() > 0.6) shouldBe true
     }
 })

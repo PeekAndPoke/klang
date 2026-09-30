@@ -1,9 +1,10 @@
 # A room reverb: the room's size in its timing
 
 Status: **future, new class of reverb, not started.** Raised by the maintainer 2026-09-30 while
-designing [`../stereo-reverb.md`](../stereo-reverb.md): "when on the left channel there is a sound
+designing [`../../tasks-archive/2026-09/20260930-stereo-reverb.md`](../../tasks-archive/2026-09/20260930-stereo-reverb.md): "when on the left channel there is a sound
 and the room is big, should the reverb on the right channel be delayed depending on the room size?"
-Parked on purpose: it needs heavy tuning by ear.
+Parked on purpose: it needs heavy tuning by ear. One of the models in
+[`reverb-models.md`](reverb-models.md) (the umbrella since 2026-09-30).
 
 ## The physics
 
@@ -21,7 +22,8 @@ Two delays tell the ear where a sound is and how big the room is:
 No pre-delay and no early reflections. The tail comes out of the combs after one revolution of the
 shortest comb, about 25 to 37 ms at every `size` (tunings 1116 to 1617 samples at 44.1 kHz), in both
 ears alike. `size` sets the comb feedback, so it changes how long the room rings, not how big it
-sounds at the start. A small room and a hall answer at the same moment.
+sounds at the start. A small room and a hall answer at the same moment. (Since 2026-09-30 both sides'
+combs are fed `(L + R) / 2`: one room for both ears, no lean towards the source.)
 
 ## Shape of the idea
 
