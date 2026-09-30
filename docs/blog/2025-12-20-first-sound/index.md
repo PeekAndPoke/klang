@@ -36,7 +36,10 @@ A synthesizer needs something to play. Rather than design a pattern language fir
 through GraalVM's polyglot JS engine, let it do what it does best (turn pattern code into a stream of timed "haps"),
 and feed those events into our own voice generation and audio backend.
 
-![Architecture, December 2025](architecture.png)
+<figure class="klang-figure">
+  <iframe src="architecture-explorer.html" title="The architecture of December 2025: open a box to see what it was" loading="lazy"></iframe>
+  <figcaption>Hover, focus or click a box to read what it was in December 2025. The gold numbers mark the three scars of section 3, the dashed boxes what was parked in section 4.</figcaption>
+</figure>
 
 *Fig. 1: the first architecture. The borrowed brain up top; everything below it ours, in Kotlin common code, fanning
 out to two output worlds.*
@@ -62,17 +65,20 @@ afternoon. A DSL's vocabulary is API surface, and it can lie to you.
 
 **The worklet stutter.** Sending sample banks to the browser's
 `AudioWorkletProcessor` as big blocks stuttered the audio thread: the serialization cost landed exactly where no cost
-may land. The fix was custom **chunked serialization** in the worklet contract: slice the transfer, keep the audio
-callback free. It was the first round of a fight the project has kept fighting since (everything that crosses onto the
-audio thread pays rent), and the same wire would later be rebuilt end-to-end for a ~174× decode speedup.
+may land. Our first guess was the size of the blocks, so we sliced the transfer into chunks; the commit message of
+that day says the slicing "does not really help". The expensive part was kotlinx.serialization on the float arrays.
+The fix was a **hand-written serialization** in the worklet contract that puts the arrays on the message as plain
+fields (the chunks stayed, and the transfer went through without a stutter). It was the first round of a fight the
+project has kept fighting since (everything that crosses onto the audio thread pays rent), and the same wire would
+later be rebuilt end-to-end for a ~174× decode speedup.
 
 **The per-sample callback.** The very first oscillator draft asked the engine for audio one sample at a time, a
-callback per sample to produce a sine or a saw. It was *suuuuper* slow, and no micro-optimization inside the callback
-could save it: the cost was the call itself, times 48,000, times every voice. The rewrite made **block-based processing
-the rule**: every generator and filter fills a buffer per call, and the hot path has stayed block-based since.
-Of the three scars this one cut deepest architecturally: the Ignitor interface, the voice's render chain, the worklet
-contract, the whole engine is shaped like a chain of buffer-fillers because of that first slow sine. And it paid a
-dividend nobody planned: once every sound-maker was a self-contained fill-this-buffer unit, sound-makers became
+callback per sample to produce a sine or a saw. The diary of that day puts it plainly, "bad performance though", and no
+micro-optimization inside the callback could save it: the cost was the call itself, times 48,000, times every voice.
+The rewrite made **block-based processing the rule**: every generator and filter fills a buffer per call, and the hot
+path has stayed block-based since. Of the three scars this one cut deepest architecturally: the Ignitor interface,
+the voice's render chain, the worklet contract, the whole engine is shaped like a chain of buffer-fillers because of
+that first slow sine. And it paid a dividend nobody planned: once every sound-maker was a self-contained fill-this-buffer unit, sound-makers became
 *composable*: plus, times, filters, envelopes as combinators over buffer-fillers. The Ignitor DSL, the way klang
 authors instruments today, exists by happy accident of that performance fix. The shape you choose for speed becomes the
 shape you think in.
@@ -81,8 +87,8 @@ shape you think in.
 
 Two things were tried, hurt, and consciously postponed rather than fought:
 **Wasm** (the KotlinJS worklet path worked; the Wasm toolchain of late 2025 did not; parked, not abandoned) and any
-thought of *replacing* the borrowed brain. The GraalVM bridge was JVM-only (the browser still ran real Strudel-JS
-directly), and that asymmetry was tolerable for a prototype but not an end state.
+thought of *replacing* the borrowed brain. The GraalVM bridge was JVM-only (the browser demo played events that the
+JVM had recorded as JSON), and that asymmetry was tolerable for a prototype but not an end state.
 
 Which is where the next chapter picks up: within weeks of first sound, the project began growing a brain of its
 own: an interpreter, a pattern engine, and a way to prove they behaved like the original. That story (the

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Position That Survived · Klang blog</title>
-<meta name="description" content="Live coding needs the editor to show what is playing right now, which means every runtime event must know which characters of source text it came from, across an interpreter, a mini-notation parser, a pattern engine, and an audio-worklet wire. Klang&#x27;s answer: locations ride the values themselves. Even a constant defined as &quot;let feel = 1.0&quot; lights up when it plays.">
+<meta name="description" content="Live coding needs the editor to show what is playing right now, which means every runtime event must know which characters of source text it came from, across an interpreter, a mini-notation parser, a pattern engine, and the scheduler that turns events into voices. Klang&#x27;s answer: locations ride the values themselves. Even a constant defined as &quot;let feel = 1.0&quot; lights up when it plays.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
@@ -344,10 +344,11 @@ the source text it came from.</strong></p>
 <p>That is a provenance problem, and it is harder than it looks, because the
 distance between a character and a sound is long: a string literal is parsed
 by a <em>second</em> parser (mini-notation), the result is transformed by pattern
-combinators, evaluated into events, scheduled into voices, and shipped
-across a wire to an audio worklet, and the answer has to come <em>back</em> from
-that pipeline to the exact columns of the exact line. Lose the thread at any
-step and the light shows nothing, or worse, the wrong thing.</p>
+combinators, evaluated into events, and scheduled into voices for an audio
+worklet. Meanwhile the editor has to light the exact columns of the exact
+line as that sound starts, so the span has to ride along with the event all
+the way to the scheduler. Lose the thread at any step and the light shows
+nothing, or worse, the wrong thing.</p>
 <p>And there is a subtler version of the problem. Consider:</p>
 <div class="code" data-lang="javascript"><pre><code class="language-javascript">let feel = 1.0
 
@@ -374,11 +375,15 @@ and it defines the baseline.</p>
 stops at the quotation marks.</p>
 <h2 id="3-the-thread-locations-ride-the-values">3. The thread: locations ride the values</h2>
 <p>Klang's design decision, made early (2026-01-20, when source-location
-tracking landed): <strong>provenance is a property of values, not of syntax.</strong></p>
-<p><img src="position-pipeline.png" alt="The pipeline" loading="lazy" /></p>
-<p><em>Fig. 2: the span's journey. Forward: parser → values → patterns → events →
-voices → highlight overlay. Backward: <code>AstIndex</code> maps editor positions to
-nodes for hover docs and tools.</em></p>
+tracking landed): <strong>provenance is a property of values, not of syntax.</strong>
+The <code>1.0</code> literal itself joined the highlights a little later: its span entered
+the event's chain on 2026-01-21, and the editor drew the chain from 2026-01-23.
+The figure below follows one span forward, from the parser to the highlight in
+the editor; the way back, from an editor position to a node, is section 5.</p>
+<figure class="klang-figure">
+  <iframe src="span-trace.html" title="Where a source span travels: scrub the playhead, point at a span, an event or a step" loading="lazy"></iframe>
+  <figcaption>Drag the playhead or press play (silent), then point at a span in the code, an event in the lanes or a step on the right: whatever is linked to it lights up in the other views. A click pins it. Switch the argument to feel * 2 to see the thread break.</figcaption>
+</figure>
 <p>Step by step:</p>
 <ol>
 <li><strong>The parser stamps every AST node</strong> with its span. Standard.</li>
@@ -392,12 +397,15 @@ the location just rides along, because it is <em>in</em> the value.
 (One honest boundary: arithmetic severs the thread. <code>feel * 2</code> is a
 <em>new</em> value with no birthplace. The rule covers pass-through, not
 computation.)</li>
-<li><strong>The KSP registration layer forwards call-site context.</strong> Every
-registered DSL function <a href="../one-annotation-six-artifacts/">can receive a <code>CallInfo</code></a>:
+<li><strong>The registration layer forwards call-site context.</strong> Every
+registered DSL function can receive a <code>CallInfo</code>:
 the call's own span, the receiver's span, and <strong>per-parameter spans
 read straight off the argument values</strong>. When <code>.gain(feel)</code> executes,
 the engine knows the argument's birthplace is <code>1.0</code> on line 1. No
-special-casing of variables anywhere: the value knew.</li>
+special-casing of variables anywhere: the value knew. (In January the
+registration was a loop over the DSL registry in <code>KlangScriptStrudelLib.kt</code>;
+the KSP processor that <a href="../one-annotation-six-artifacts/">generates it today</a>
+arrived in March.)</li>
 <li><strong>The mini-notation parser composes spans.</strong> <code>&quot;c3 [e3 g3]&quot;</code> is a string,
 but the <code>StringValue</code> knows where the string sits in the source, and
 the mini-notation parser knows each atom's offset <em>inside</em> the string.
@@ -407,10 +415,19 @@ yield four events whose spans point at columns 8, 11, 14, 17.</li>
 <li><strong>Events carry a <em>chain</em>, not a single span.</strong> A pattern event's
 <code>sourceLocations</code> is a <code>SourceLocationChain</code>; transformations
 <strong>prepend and append, and do not overwrite.</strong> An atom wrapped in <code>struct()</code>
-inside a <code>superimpose()</code> keeps every ancestor; the editor draws the whole chain (atom, string literal, call site), deduped, filtered to the current file, and capped, innermost first. Transformations
-add context; they are not allowed to orphan an event.</li>
-<li><strong>Voice events cross the wire with their spans</strong>, and the editor's
-highlight overlay draws them.</li>
+inside a <code>superimpose()</code> keeps every ancestor. The first transformation
+that adds to the chain is the control: <code>gain(feel)</code> puts the span of the
+<code>1.0</code> literal in front of the atom's own, so on 23 January an event's chain
+held the control literal and the atom, and the editor drew the last five
+entries. The string literal and the call site were the intent written in the
+chain's KDoc; nothing put them in yet. (Today the editor draws the chain
+innermost first, deduped, filtered to the current file, and capped.)
+Transformations add context; they are not allowed to orphan an event.</li>
+<li><strong>Voice events carry their spans to the editor, but not over the
+wire.</strong> <code>sourceLocations</code> is <code>@Transient</code>, so the audio worklet never
+sees a span. When the playback turns events into voices, it also fires an
+in-page callback (<code>onVoiceScheduled</code>) with each event's times and chain,
+and the editor draws the highlight 25 ms ahead of the sound.</li>
 </ol>
 <h2 id="4-the-last-meter-drawing-without-paying">4. The last meter: drawing without paying</h2>
 <p>The display end has its own engineering story, because &quot;highlight thousands
@@ -418,7 +435,8 @@ of events&quot; is the kind of feature that falls over under load. The
 first implementation was one DOM <code>&lt;mark&gt;</code> per event with a CSS <code>@keyframes</code>
 pulse animating <code>border-color</code>: paint-bound properties that forced a
 re-rasterization of every active mark, every frame. Weak GPUs choked. (No before/after frame numbers were recorded in the heat of that rewrite, a rare unmeasured claim in this series; the qualitative story below is from the component's own documentation.)</p>
-<p>The current <code>CodeMirrorHighlightBuffer</code> is a single transparent WebGL
+<p>The current <code>CodeMirrorHighlightBuffer</code>, rewritten in June (months after
+the story above), is a single transparent WebGL
 canvas over the editor: each highlight is a pooled quad, one ticker handles
 scheduling and fade, only <code>x/y/alpha</code> change per frame, and the ticker
 stops when nothing plays, so an idle editor costs <strong>zero</strong>
@@ -426,7 +444,8 @@ stops when nothing plays, so an idle editor costs <strong>zero</strong>
 same discipline that rules the audio thread (no per-event allocation, no
 per-frame paint) turned out to be what the <em>visual</em> thread needed too.</p>
 <h2 id="5-the-same-thread-backwards">5. The same thread, backwards</h2>
-<p>Provenance also runs in reverse. <code>AstIndex</code> maps an editor position to the
+<p>Provenance also runs in reverse, a later step: <code>AstIndex</code>, added in March,
+maps an editor position to the
 AST node at that position, the infrastructure behind hover documentation,
 context menus, and the visual parameter tools. Click on <code>body(0.7, &quot;wood&quot;)</code> and
 the editor knows which call you are in and which argument you are touching;

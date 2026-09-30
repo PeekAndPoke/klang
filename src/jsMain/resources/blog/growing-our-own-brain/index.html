@@ -336,8 +336,8 @@ figcaption {
 <p><em>Replacing a language runtime while every song depends on its exact behavior.</em></p>
 <h2 id="1-the-problem">1. The problem</h2>
 <p>By January 2026 klang made real music, but its brain was rented. Pattern evaluation ran on <code>@strudel/core</code>, real
-Strudel, through a GraalVM polyglot bridge on the JVM, and directly as JavaScript in the browser. Three pressures made
-that untenable:</p>
+Strudel, through a GraalVM polyglot bridge on the JVM. The browser never ran it: until the first Kotlin patterns played
+there on 2026-01-04, it could only replay events the JVM had recorded as JSON. Three pressures made that untenable:</p>
 <ol>
 <li><strong>Two worlds, one brain missing.</strong> The GraalVM bridge was JVM-only. A Kotlin-native pattern engine could run in
 <code>commonMain</code>: one implementation, both platforms, like the audio engine already did.</li>
@@ -366,8 +366,9 @@ event streams.</p>
 <p><em>Fig. 1: every pattern runs through both brains; the streams must agree.</em></p>
 <p>The diff is graded, not binary (the comparison verdicts in the harness are
 <code>EXACT</code>, <code>CLOSE</code>, <code>DIFFERENT</code>, <code>IGNORED</code>, and <code>RECOVERED</code>), because two correct implementations still differ in float
-dust, and a naive equality check would drown real divergences in noise. Which surfaced the deeper problem almost
-immediately:</p>
+dust, and a naive equality check would drown real divergences in noise. Two rules cover every case, an ignored pattern
+id and a recovered default gain (Strudel writes 1.0 where we leave it unset), and a few cases add their own. The
+grading surfaced the deeper problem almost immediately:</p>
 <p><strong>Floating-point time drifts.</strong> Cycle arithmetic (thirds of a cycle, sevenths, nested alternations) accumulates error
 differently in every implementation. Two mathematically identical patterns diverge in the 15th decimal, then a boundary
 comparison flips, and an event lands in the wrong cycle. The fix was to make time <em>exact</em>: first a <code>Rational</code> type,
@@ -378,6 +379,10 @@ that type, five representations in five months, has <a href="../the-triplet-that
 fragment active in the queried span) and the <em>whole</em> (the full event it belongs to), and getting their interaction right
 across <code>struct</code>, masks, and cycle boundaries is where a reimplementation quietly rots. The oracle turned &quot;quietly&quot; into
 a red diff, case by case, until the semantics matched.</p>
+<figure class="klang-figure">
+  <iframe src="oracle-cases.html" title="The oracle suite, case by case: filter the cases, sort the list, drag the timeline" loading="lazy"></iframe>
+  <figcaption>Fig. 2: the oracle's suite on 2026-03-21, one cell per case. 509 cases are compared against Strudel and 133 are skipped. Red rims mark the cases named in the failure record of 2026-02-01, when the part/whole refactor left 103 of 2476 tests red. The files do not keep how each case fared; drag the timeline, filter the cases, sort the list.</figcaption>
+</figure>
 <p>Meanwhile the language itself grew underneath: <strong>KlangScript</strong>, a JavaScript-ish interpreter written in Kotlin (parser
 then on <code>better-parse</code>; since replaced by a hand-rolled recursive-descent one for Kotlin/JS production builds), with a
 Kotlin-interop registration layer that a KSP processor eventually made nearly
@@ -393,9 +398,9 @@ pattern semantics change. Independence didn't mean burning the bridge; it meant 
 <h2 id="5-what-it-bought-in-hindsight">5. What it bought, in hindsight</h2>
 <p>Every quarter since has cashed checks this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
 because the interpreter is ours. Sound definitions, oscillators, and eventually whole instruments became <em>language
-objects</em> because the language could be extended freely. The browser dropped its last dependency on Strudel-JS. And the
-verification habit (do not trust a reimplementation without an executable oracle, grade the diff, make time exact)
-became the house style for every risky migration after.</p>
+objects</em> because the language could be extended freely. The browser runs the same pattern engine as the JVM, one
+implementation in <code>commonMain</code>. And the verification habit (do not trust a reimplementation without an executable
+oracle, grade the diff, make time exact) became the house style for every risky migration after.</p>
 <p>The borrowed brain served for one quarter. The oracle it left behind still serves today.</p>
 <hr />
 <h2 id="references">References</h2>

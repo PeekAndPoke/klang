@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Sound: the architecture of December 2025</title>
+<!--
+  Figure for docs/blog/2025-12-20-first-sound/index.md. One file, no build step.
+  Every box exists twice: as a <g class="node" data-node="..."> in the drawing and as an <li class="item"
+  data-node="..."> in the list below it. The list is the source: the inspector, the phone view and the no-script
+  view all read it, so a change to a box goes into both places with the same data-node.
+  The state drawn is commit 4c0b8763 (2025-12-31); every number in it comes from that tree or from git log.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    :root {
+        color-scheme: dark;
+        --void: #12131C;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --spark-bg: #362820;
+        --signal: #56B6C2;
+        --signal-bg: #1A2A30;
+        --gold: #E8B84B;
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        margin: 0;
+        padding: 2px 2px 4px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    :focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+    figure.fig { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    code { font-family: var(--f-mono); font-size: 0.92em; color: var(--ink); }
+
+    /* ---------- the dot: a scar number ---------- */
+    .dot {
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--gold);
+        color: var(--void);
+        font: 700 10px/1 var(--f-display);
+        font-style: normal;
+    }
+    .dot.ghost { background: transparent; border: 1px dashed var(--faint); color: var(--muted); }
+
+    /* ---------- the toolbar: lenses and worlds ---------- */
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; }
+    .toolbar .grp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .lab { font: 400 11px/1 var(--f-mono); color: var(--muted); margin-right: 2px; }
+    .chip, .seg {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: 400 11.5px/1.2 var(--f-mono);
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid var(--rule);
+        border-radius: 0;
+        padding: 4px 8px;
+        cursor: pointer;
+        transition: border-color .12s, background-color .12s, color .12s;
+    }
+    .chip:hover, .seg:hover { border-color: var(--muted); color: var(--ink); }
+    .chip[aria-pressed="true"] { border-color: var(--gold); color: var(--ink); background: rgba(232, 184, 75, 0.1); }
+    .segs { display: inline-flex; }
+    .segs .seg + .seg { border-left: 0; }
+    .seg[aria-pressed="true"] { border-color: var(--spark); color: var(--ink); background: var(--spark-bg); }
+    .segs .seg[aria-pressed="true"] + .seg { border-left: 1px solid var(--spark); }
+    .no-js .toolbar, .no-js .insp { display: none; }
+
+    /* ---------- the drawing ---------- */
+    .stage { min-width: 0; }
+    svg.draw { display: block; width: 100%; height: auto; max-width: 880px; margin: 0 auto; overflow: visible; }
+    .draw text { font-family: var(--f-mono); fill: var(--muted); }
+    .draw .hd { font-size: 10.5px; letter-spacing: 0.04em; }
+    .draw .hl { fill: none; stroke: var(--rule); stroke-width: 1; }
+    .draw .band > rect:first-child { fill: none; stroke: var(--rule); stroke-width: 1; }
+    .draw .band .tab { fill: var(--paper); stroke: none; }
+    .draw .band text { font-size: 10.5px; }
+
+    .edge path { fill: none; stroke: var(--faint); stroke-width: 1.3; marker-end: url(#ah); transition: stroke .12s; }
+    .edge.line path, .edge.runs path, .edge.guide path { marker-end: none; }
+    .edge.dashed path { stroke-dasharray: 4 3; }
+    .edge.runs path { stroke-dasharray: 4 3; }
+    .edge.dotted path { stroke-dasharray: 1.5 3.2; stroke-linecap: round; }
+    .edge.guide path { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 1 4; }
+    .edge text { font-size: 10px; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+    .edge.on path { stroke: var(--spark); stroke-width: 1.8; }
+    .edge.on:not(.line):not(.runs):not(.guide) path { marker-end: url(#ah-on); }
+    .edge.on text { fill: var(--spark); }
+    #ah path { fill: var(--faint); }
+    #ah-on path { fill: var(--spark); }
+
+    .node { cursor: pointer; outline: none; transition: opacity .15s; }
+    .node .box { fill: var(--surface-2); stroke: var(--rule); stroke-width: 1; transition: fill .12s, stroke .12s; }
+    .node.borrowed .box { fill: var(--signal-bg); stroke: var(--signal); }
+    .node.cell .box { fill: var(--surface); }
+    .node.chip .box { fill: var(--surface); stroke: var(--muted); }
+    .node.ghost .box, .node.pill .box { fill: var(--paper); stroke: var(--faint); stroke-dasharray: 4 3; }
+    .node .acc { fill: none; stroke: var(--spark); stroke-width: 2; opacity: 0; transition: opacity .12s; }
+    .node .t { font-family: var(--f-display); font-weight: 700; font-size: 12.5px; fill: var(--ink); }
+    .node .s { font-size: 10.5px; fill: var(--muted); }
+    .node .c { font-size: 10px; fill: var(--ink); }
+    .node.ghost .t, .node.ghost .s, .node.pill .c { fill: var(--muted); }
+    .node:hover .box, .node.hov .box { stroke: var(--spark); }
+    .node:hover .acc, .node.hov .acc, .node.sel .acc { opacity: 1; }
+    .node.sel .box { fill: var(--spark-bg); stroke: var(--spark); stroke-width: 1.5; }
+    .node:focus-visible .box { stroke: var(--spark); stroke-width: 2.2; }
+    .node.lit .box { stroke: var(--gold); stroke-width: 1.6; }
+    .node.lit.sel .box, .node.lit:hover .box { stroke: var(--spark); }
+    .node.dim, .edge.dim { opacity: 0.22; }
+    .draw .bd circle { fill: var(--gold); stroke: var(--paper); stroke-width: 1.5; }
+    .draw .bd text { font: 700 10px var(--f-display); fill: var(--void); }
+
+    .legend { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font: 400 11px/1.4 var(--f-mono); color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { display: inline-block; width: 16px; height: 9px; border: 1px solid var(--rule); background: var(--surface-2); }
+    .sw.borrowed { background: var(--signal-bg); border-color: var(--signal); }
+    .sw.ghost { background: transparent; border: 1px dashed var(--faint); }
+    .sw.guide { width: 18px; height: 0; border: 0; border-top: 1px dotted var(--faint); background: none; }
+    .sw.runs { width: 18px; height: 0; border: 0; border-top: 1px dashed var(--faint); background: none; }
+
+    /* ---------- the inspector ---------- */
+    .insp {
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-left: 2px solid var(--signal);
+        padding: 9px 12px 8px;
+        min-width: 0;
+    }
+    .insp.pinned { border-left-color: var(--spark); }
+    .insp.probe { position: absolute; left: 2px; top: 0; visibility: hidden; pointer-events: none; }
+    .insp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; margin: 0 0 6px; }
+    .insp h3 { font: 700 15px/1.2 var(--f-display); letter-spacing: -0.005em; margin: 0; }
+    .tags { display: flex; flex-wrap: wrap; gap: 4px; font: 400 10.5px/16px var(--f-mono); }
+    .tag { border: 1px solid var(--rule); padding: 0 6px; color: var(--muted); }
+    .tag.borrowed { border-color: var(--signal); color: var(--signal); }
+    .tag.parked { border-style: dashed; }
+    .tag.scar { border-color: var(--gold); color: var(--gold); }
+    .insp-body { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 2px 18px; }
+    .insp p, .story p { margin: 0 0 6px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+    .scar, .park {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        border-left: 2px solid var(--gold);
+        padding-left: 8px;
+        color: var(--ink);
+    }
+    p.scar .dot { margin-top: 2px; }
+    p.park { border-left-style: dashed; border-left-color: var(--faint); display: block; }
+    .facts { margin: 0; font: 400 11px/1.4 var(--f-mono); color: var(--muted); }
+    .facts > div { display: grid; grid-template-columns: 5.4em minmax(0, 1fr); gap: 0 8px; margin: 0 0 3px; }
+    .facts dt { color: var(--muted); opacity: 0.8; }
+    .facts dd { margin: 0; overflow-wrap: break-word; color: var(--ink); }
+    .teasers { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+    .tz { appearance: none; display: flex; align-items: baseline; gap: 8px; background: none; border: 0; border-radius: 0; padding: 2px 0; font: 400 11.5px/1.35 var(--f-mono); color: var(--muted); cursor: pointer; text-align: left; }
+    .tz .dot { align-self: center; }
+    .tz b { font-weight: 400; color: var(--ink); white-space: nowrap; }
+    .tz span { min-width: 0; }
+    .tz:hover b { color: var(--gold); }
+    .touch-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 0; }
+    .touch-chips button { font: 400 11px/1.2 var(--f-mono); padding: 2px 6px; }
+
+    /* ---------- the flow list: the no-JS and the phone view ---------- */
+    .flow h3.bh { font: 400 11px/1.3 var(--f-mono); color: var(--muted); margin: 10px 0 4px; }
+    .flow ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+    .item details { background: var(--surface-2); border: 1px solid var(--rule); transition: border-color .12s; }
+    .item.borrowed details { background: var(--signal-bg); border-color: var(--signal); }
+    .item.ghost details { background: var(--paper); border-style: dashed; border-color: var(--faint); }
+    .item summary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 6px 8px 6px 26px;
+        cursor: pointer;
+        list-style: none;
+        position: relative;
+    }
+    .item summary::-webkit-details-marker { display: none; }
+    .item summary::before {
+        content: "";
+        position: absolute;
+        left: 10px;
+        top: 13px;
+        width: 6px;
+        height: 6px;
+        border-right: 1.5px solid var(--muted);
+        border-bottom: 1.5px solid var(--muted);
+        transform: rotate(-45deg);
+        transition: transform .12s;
+    }
+    .item details[open] summary::before { transform: rotate(45deg); top: 11px; }
+    .item summary b { font: 700 13.5px/1.25 var(--f-display); }
+    .item .sub { font: 400 11px/1.3 var(--f-mono); color: var(--muted); }
+    .item .dots { display: inline-flex; gap: 3px; }
+    .item .dots:empty { display: none; }
+    .wtag { margin-left: auto; font: 400 10px/15px var(--f-mono); padding: 0 5px; border: 1px solid var(--rule); color: var(--muted); }
+    .item .body { padding: 0 10px 6px 26px; }
+    .item .body p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.42; color: var(--muted); }
+    .item.dim { opacity: 0.3; }
+    .item.lit details { border-color: var(--gold); }
+    .item summary:hover { background: rgba(255, 255, 255, 0.03); }
+
+    .stories { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .story h4 { display: flex; align-items: center; gap: 8px; font: 700 14px/1.2 var(--f-display); margin: 0 0 4px; }
+    .story .touch { font: 400 11px/1.4 var(--f-mono); color: var(--muted); }
+
+    /* ---------- which view shows ---------- */
+    .only-narrow { display: none; }
+    @media (min-width: 700px) {
+        .js .flow, .js .stories { display: none; }
+    }
+    @media (max-width: 699px) {
+        svg.draw, .legend.for-draw { display: none; }
+        .only-wide { display: none; }
+        .only-narrow { display: inline; }
+        .insp-body { grid-template-columns: minmax(0, 1fr); }
+        .no-js .stories { display: flex; }
+        .js .stories { display: none; }
+    }
+</style>
+</head>
+<body>
+<figure class="fig" id="fig" aria-label="The architecture of December 2025, read from the code of 2025-12-31. Strudel's pattern engine ran on GraalVM and gave events to shared Kotlin code, which reached a desktop audio line on the JVM and an AudioWorklet in the browser. Every box opens to say what it was then, and marks the three scars and the parked items it touched.">
+<div class="toolbar" role="group" aria-label="Lenses and worlds"><div class="grp"><span class="lab" id="lens-lab">Lens</span><button type="button" class="chip" data-lens="s1" aria-pressed="false"><i class="dot">1</i>n() is not note()</button><button type="button" class="chip" data-lens="s2" aria-pressed="false"><i class="dot">2</i>worklet stutter</button><button type="button" class="chip" data-lens="s3" aria-pressed="false"><i class="dot">3</i>per-sample callback</button><button type="button" class="chip" data-lens="park" aria-pressed="false"><i class="dot ghost">P</i>parked</button></div><div class="grp right"><span class="lab" id="world-lab">Show</span><span class="segs" role="group" aria-labelledby="world-lab"><button type="button" class="seg" data-world="both" aria-pressed="true">both</button><button type="button" class="seg" data-world="jvm" aria-pressed="false">JVM</button><button type="button" class="seg" data-world="browser" aria-pressed="false">browser</button></span></div></div>
+<div class="stage">
+<svg class="draw" viewBox="0 0 760 507" role="group" aria-label="The architecture of December 2025. Three columns: JVM only, shared commonMain, browser only. Pattern code and recorded events feed Strudel events, the fetcher sends voices over a control ring and hears back over a feedback ring, and the same scheduler, voices, orbits and renderer run inside a JVM backend and a browser AudioWorklet." xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" viewBox="0 0 8 8" refX="7.4" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0.4L8 4L0 7.6z"/></marker><marker id="ah-on" viewBox="0 0 8 8" refX="7.4" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0.4L8 4L0 7.6z"/></marker></defs>
+<text class="hd" x="110" y="11" text-anchor="middle">JVM only</text>
+<path class="hl" d="M12 17H208"/>
+<text class="hd" x="380" y="11" text-anchor="middle">commonMain, shared</text>
+<path class="hl" d="M242 17H518"/>
+<text class="hd" x="650" y="11" text-anchor="middle">browser only</text>
+<path class="hl" d="M552 17H748"/>
+<g class="band" data-band="strudel"><rect x="2" y="26" width="756" height="120"/>
+<rect class="tab" x="12" y="19" width="132" height="14"/><text x="17" y="29.5">:strudel and the app</text></g>
+<g class="band" data-band="klang"><rect x="2" y="154" width="756" height="122"/>
+<rect class="tab" x="12" y="147" width="132" height="14"/><text x="17" y="157.5">:klang and :audio_fe</text></g>
+<g class="band" data-band="bridge"><rect x="2" y="284" width="756" height="56"/>
+<rect class="tab" x="12" y="277" width="89" height="14"/><text x="17" y="287.5">:audio_bridge</text></g>
+<g class="band" data-band="be"><rect x="2" y="348" width="756" height="155"/>
+<rect class="tab" x="12" y="341" width="65" height="14"/><text x="17" y="351.5">:audio_be</text></g>
+<g class="edge guide" data-ends="" data-world="common" aria-hidden="true">
+<path d="M12 188H748"/>
+</g>
+<g class="edge guide" data-ends="" data-world="common" aria-hidden="true">
+<path d="M12 248H748"/>
+</g>
+<g class="edge solid" data-ends="code graal" data-world="jvm" aria-hidden="true">
+<path d="M40 78V100"/>
+<text x="47" y="93" text-anchor="start">string</text>
+</g>
+<g class="edge solid" data-ends="graal events" data-world="jvm" aria-hidden="true">
+<path d="M208 119H242"/>
+<text x="225" y="114" text-anchor="middle">haps</text>
+</g>
+<g class="edge solid" data-ends="json static" data-world="browser" aria-hidden="true">
+<path d="M580 78V100"/>
+<text x="587" y="93" text-anchor="start">parse</text>
+</g>
+<g class="edge solid" data-ends="static events" data-world="browser" aria-hidden="true">
+<path d="M552 119H518"/>
+<text x="535" y="114" text-anchor="middle">events</text>
+</g>
+<g class="edge dashed" data-ends="brain events" data-world="common" aria-hidden="true">
+<path d="M311 78V100"/>
+</g>
+<g class="edge dotted" data-ends="tones events" data-world="common" aria-hidden="true">
+<path d="M453 78V100"/>
+<text x="460" y="93" text-anchor="start">Hz</text>
+</g>
+<g class="edge solid" data-ends="events fetcher" data-world="common" aria-hidden="true">
+<path d="M254 138V228"/>
+<text x="262" y="166" text-anchor="start">toScheduledVoice</text>
+</g>
+<g class="edge solid" data-ends="fetcher samples" data-world="common" aria-hidden="true">
+<path d="M360 228V206"/>
+<text x="367" y="221" text-anchor="start">request</text>
+</g>
+<g class="edge solid" data-ends="samples fetcher" data-world="common" aria-hidden="true">
+<path d="M470 206V228"/>
+<text x="477" y="221" text-anchor="start">pcm</text>
+</g>
+<g class="edge solid" data-ends="fetcher ctl" data-world="common" aria-hidden="true">
+<path d="M300 268V300"/>
+<text x="307" y="288" text-anchor="start">Cmd</text>
+</g>
+<g class="edge dashed" data-ends="fb fetcher" data-world="common" aria-hidden="true">
+<path d="M460 300V268"/>
+<text x="467" y="288" text-anchor="start">Feedback</text>
+</g>
+<g class="edge solid" data-ends="ctl hostjvm" data-world="jvm" aria-hidden="true">
+<path d="M90 332V364"/>
+</g>
+<g class="edge dashed" data-ends="fb hostjvm" data-world="jvm" aria-hidden="true">
+<path d="M124 364V332"/>
+</g>
+<g class="edge solid" data-ends="ctl jsbackend" data-world="browser" aria-hidden="true">
+<path d="M596 332V364"/>
+</g>
+<g class="edge dashed" data-ends="fb jsbackend" data-world="browser" aria-hidden="true">
+<path d="M630 364V332"/>
+</g>
+<g class="edge line" data-ends="jsbackend contract" data-world="browser" aria-hidden="true">
+<path d="M690 396V401"/>
+</g>
+<g class="edge solid" data-ends="contract worklet" data-world="browser" aria-hidden="true">
+<path d="M690 417V426"/>
+</g>
+<g class="edge runs" data-ends="wasm worklet" data-world="browser" aria-hidden="true">
+<path d="M588 417V426"/>
+</g>
+<g class="edge runs" data-ends="hostjvm voices" data-world="jvm" aria-hidden="true">
+<path d="M208 411H242"/>
+<text x="225" y="406" text-anchor="middle">runs</text>
+</g>
+<g class="edge runs" data-ends="worklet voices" data-world="browser" aria-hidden="true">
+<path d="M518 444H552"/>
+<text x="535" y="439" text-anchor="middle">runs</text>
+</g>
+<g class="edge solid" data-ends="sched voices" data-world="common" aria-hidden="true">
+<path d="M380 392V397"/>
+</g>
+<g class="edge solid" data-ends="voices orbits" data-world="common" aria-hidden="true">
+<path d="M380 425V430"/>
+</g>
+<g class="edge solid" data-ends="orbits renderer" data-world="common" aria-hidden="true">
+<path d="M380 458V467"/>
+</g>
+<g class="edge solid" data-ends="hostjvm outjvm" data-world="jvm" aria-hidden="true">
+<path d="M110 458V467"/>
+</g>
+<g class="edge solid" data-ends="worklet outjs" data-world="browser" aria-hidden="true">
+<path d="M650 458V467"/>
+</g>
+<g class="node normal" data-node="code" data-world="jvm" data-lens="" aria-label="pattern code. a string of Strudel code. app, JVM only.">
+<path class="box" d="M12 42H208V72L202 78H12Z"/>
+<path class="acc" d="M12 42h16"/>
+<text class="t" x="21" y="57.5">pattern code</text>
+<text class="s" x="21" y="71.0">a string of Strudel code</text>
+</g>
+<g class="node ghost" data-node="brain" data-world="common" data-lens="park" aria-label="own brain. parked, a note only. strudel, commonMain. Parked.">
+<path class="box" d="M242 42H380V72L374 78H242Z"/>
+<path class="acc" d="M242 42h16"/>
+<text class="t" x="251" y="57.5">own brain</text>
+<text class="s" x="251" y="71.0">parked, a note only</text>
+</g>
+<g class="node normal" data-node="tones" data-world="common" data-lens="s1" aria-label="Tones. :tones, note to Hz. tones, commonMain. Scar 1.">
+<path class="box" d="M388 42H518V72L512 78H388Z"/>
+<path class="acc" d="M388 42h16"/>
+<text class="t" x="397" y="57.5">Tones</text>
+<text class="s" x="397" y="71.0">:tones, note to Hz</text>
+<g class="bd" transform="translate(506 42)"><circle r="7.5"/><text y="3.4" text-anchor="middle">1</text></g>
+</g>
+<g class="node normal" data-node="json" data-world="browser" data-lens="park" aria-label="recorded events. JSON strings, patterns.kt. app, browser only. Parked.">
+<path class="box" d="M552 42H748V72L742 78H552Z"/>
+<path class="acc" d="M552 42h16"/>
+<text class="t" x="561" y="57.5">recorded events</text>
+<text class="s" x="561" y="71.0">JSON strings, patterns.kt</text>
+</g>
+<g class="node borrowed" data-node="graal" data-world="jvm" data-lens="s1 park" aria-label="Graal JS bridge. @strudel/core 1.2.5, JVM only. strudel, JVM only. Scar 1. Parked.">
+<path class="box" d="M12 100H208V132L202 138H12Z"/>
+<path class="acc" d="M12 100h16"/>
+<text class="t" x="21" y="116.5">Graal JS bridge</text>
+<text class="s" x="21" y="130.0">@strudel/core 1.2.5, JVM only</text>
+<g class="bd" transform="translate(196 100)"><circle r="7.5"/><text y="3.4" text-anchor="middle">1</text></g>
+</g>
+<g class="node normal" data-node="events" data-world="common" data-lens="s1" aria-label="StrudelPattern. queryArc() gives StrudelPatternEvents. strudel, commonMain. Scar 1.">
+<path class="box" d="M242 100H518V132L512 138H242Z"/>
+<path class="acc" d="M242 100h16"/>
+<text class="t" x="251" y="116.5">StrudelPattern</text>
+<text class="s" x="251" y="130.0">queryArc() gives StrudelPatternEvents</text>
+<g class="bd" transform="translate(506 100)"><circle r="7.5"/><text y="3.4" text-anchor="middle">1</text></g>
+</g>
+<g class="node normal" data-node="static" data-world="browser" data-lens="park" aria-label="Static pattern. loops a recording. strudel, browser only. Parked.">
+<path class="box" d="M552 100H748V132L742 138H552Z"/>
+<path class="acc" d="M552 100h16"/>
+<text class="t" x="561" y="116.5">Static pattern</text>
+<text class="s" x="561" y="130.0">loops a recording</text>
+</g>
+<g class="node normal" data-node="decjvm" data-world="jvm" data-lens="" aria-label="SimpleAudioDecoder. + DiskUrlCache, JVM. audio_fe, JVM only.">
+<path class="box" d="M12 170H208V200L202 206H12Z"/>
+<path class="acc" d="M12 170h16"/>
+<text class="t" x="21" y="185.5">SimpleAudioDecoder</text>
+<text class="s" x="21" y="199.0">+ DiskUrlCache, JVM</text>
+</g>
+<g class="node normal" data-node="samples" data-world="common" data-lens="s1" aria-label="Samples. 7 sources, index, pitch pick. audio_fe, commonMain. Scar 1.">
+<path class="box" d="M310 170H518V200L512 206H310Z"/>
+<path class="acc" d="M310 170h16"/>
+<text class="t" x="319" y="185.5">Samples</text>
+<text class="s" x="319" y="199.0">7 sources, index, pitch pick</text>
+<g class="bd" transform="translate(506 170)"><circle r="7.5"/><text y="3.4" text-anchor="middle">1</text></g>
+</g>
+<g class="node normal" data-node="decjs" data-world="browser" data-lens="s2" aria-label="BrowserAudioDecoder. decodeAudioData, no cache. audio_fe, browser only. Scar 2.">
+<path class="box" d="M552 170H748V200L742 206H552Z"/>
+<path class="acc" d="M552 170h16"/>
+<text class="t" x="561" y="185.5">BrowserAudioDecoder</text>
+<text class="s" x="561" y="199.0">decodeAudioData, no cache</text>
+<g class="bd" transform="translate(736 170)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node normal" data-node="playerjvm" data-world="jvm" data-lens="" aria-label="klangPlayer() actual. IO dispatcher, rate probe. klang, JVM only.">
+<path class="box" d="M12 228H208V262L202 268H12Z"/>
+<path class="acc" d="M12 228h16"/>
+<text class="t" x="21" y="245.5">klangPlayer() actual</text>
+<text class="s" x="21" y="259.0">IO dispatcher, rate probe</text>
+</g>
+<g class="node normal" data-node="fetcher" data-world="common" data-lens="" aria-label="KlangPlayer · KlangEventFetcher. look-ahead 1.0 s, loop 16 ms. klang, commonMain.">
+<path class="box" d="M242 228H518V262L512 268H242Z"/>
+<path class="acc" d="M242 228h16"/>
+<text class="t" x="251" y="245.5">KlangPlayer · KlangEventFetcher</text>
+<text class="s" x="251" y="259.0">look-ahead 1.0 s, loop 16 ms</text>
+</g>
+<g class="node normal" data-node="playerjs" data-world="browser" data-lens="" aria-label="klangPlayer() actual. AudioContext rate probe. klang, browser only.">
+<path class="box" d="M552 228H748V262L742 268H552Z"/>
+<path class="acc" d="M552 228h16"/>
+<text class="t" x="561" y="245.5">klangPlayer() actual</text>
+<text class="s" x="561" y="259.0">AudioContext rate probe</text>
+</g>
+<g class="node cell" data-node="lockjvm" data-world="jvm" data-lens="" aria-label="KlangLock. ReentrantLock. audio_bridge, JVM only.">
+<rect class="box" x="12" y="300" width="230" height="32"/>
+<path class="acc" d="M12 300h16"/>
+<text class="t" x="21" y="314.0">KlangLock</text>
+<text class="s" x="21" y="327.0">ReentrantLock</text>
+</g>
+<g class="node cell" data-node="ctl" data-world="common" data-lens="s2" aria-label="control ▼. ScheduleVoice, Sample. audio_bridge, commonMain. Scar 2.">
+<rect class="box" x="242" y="300" width="138" height="32"/>
+<path class="acc" d="M242 300h16"/>
+<text class="t" x="251" y="314.0">control ▼</text>
+<text class="s" x="251" y="327.0">ScheduleVoice, Sample</text>
+<g class="bd" transform="translate(368 300)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node cell" data-node="fb" data-world="common" data-lens="" aria-label="feedback ▲. cursor, RequestSample. audio_bridge, commonMain.">
+<rect class="box" x="380" y="300" width="138" height="32"/>
+<path class="acc" d="M380 300h16"/>
+<text class="t" x="389" y="314.0">feedback ▲</text>
+<text class="s" x="389" y="327.0">cursor, RequestSample</text>
+</g>
+<g class="node cell" data-node="lockjs" data-world="browser" data-lens="" aria-label="KlangLock. a no-op, one thread. audio_bridge, browser only.">
+<rect class="box" x="518" y="300" width="230" height="32"/>
+<path class="acc" d="M518 300h16"/>
+<text class="t" x="527" y="314.0">KlangLock</text>
+<text class="s" x="527" y="327.0">a no-op, one thread</text>
+</g>
+<g class="node normal" data-node="hostjvm" data-world="jvm" data-lens="" aria-label="JvmAudioBackend. one loop on Dispatchers.IO; drain, render 512 frames, write; 16 orbits, 250 ms line buffer. audio_be, JVM only.">
+<path class="box" d="M12 364H208V452L202 458H12Z"/>
+<path class="acc" d="M12 364h16"/>
+<text class="t" x="21" y="381">JvmAudioBackend</text>
+<text class="s" x="21" y="398">one loop on Dispatchers.IO</text>
+<text class="s" x="21" y="412">drain, render 512 frames, write</text>
+<text class="s" x="21" y="426">16 orbits, 250 ms line buffer</text>
+</g>
+<g class="node row" data-node="sched" data-world="common" data-lens="s2 s3" aria-label="VoiceScheduler. min-heap by startFrame. audio_be, commonMain. Scar 2, 3.">
+<path class="box" d="M242 364H518V387L513 392H242Z"/>
+<path class="acc" d="M242 364h16"/>
+<text class="t" x="251" y="382.5">VoiceScheduler</text>
+<text class="s" x="502" y="382.0" text-anchor="end">min-heap by startFrame</text>
+<g class="bd" transform="translate(506 364)"><circle r="7.5"/><text y="3.4" text-anchor="middle">3</text></g>
+<g class="bd" transform="translate(489 364)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node row" data-node="voices" data-world="common" data-lens="s3" aria-label="Voice · OscFn. fills a buffer per call. audio_be, commonMain. Scar 3.">
+<path class="box" d="M242 397H518V420L513 425H242Z"/>
+<path class="acc" d="M242 397h16"/>
+<text class="t" x="251" y="415.5">Voice · OscFn</text>
+<text class="s" x="502" y="415.0" text-anchor="end">fills a buffer per call</text>
+<g class="bd" transform="translate(506 397)"><circle r="7.5"/><text y="3.4" text-anchor="middle">3</text></g>
+</g>
+<g class="node row" data-node="orbits" data-world="common" data-lens="s3" aria-label="Orbits. 16 buses: delay, reverb. audio_be, commonMain. Scar 3.">
+<path class="box" d="M242 430H518V453L513 458H242Z"/>
+<path class="acc" d="M242 430h16"/>
+<text class="t" x="251" y="448.5">Orbits</text>
+<text class="s" x="502" y="448.0" text-anchor="end">16 buses: delay, reverb</text>
+<g class="bd" transform="translate(506 430)"><circle r="7.5"/><text y="3.4" text-anchor="middle">3</text></g>
+</g>
+<g class="node row" data-node="renderer" data-world="common" data-lens="s3" aria-label="KlangAudioRenderer. tanh limiter, PCM16. audio_be, commonMain. Scar 3.">
+<path class="box" d="M242 467H518V490L513 495H242Z"/>
+<path class="acc" d="M242 467h16"/>
+<text class="t" x="251" y="485.5">KlangAudioRenderer</text>
+<text class="s" x="502" y="485.0" text-anchor="end">tanh limiter, PCM16</text>
+<g class="bd" transform="translate(506 467)"><circle r="7.5"/><text y="3.4" text-anchor="middle">3</text></g>
+</g>
+<g class="node normal" data-node="jsbackend" data-world="browser" data-lens="s2" aria-label="JsAudioBackend. main thread, 1 chunk a frame. audio_be, browser only. Scar 2.">
+<path class="box" d="M552 364H748V390L742 396H552Z"/>
+<path class="acc" d="M552 364h16"/>
+<text class="t" x="561" y="377.5">JsAudioBackend</text>
+<text class="s" x="561" y="391.0">main thread, 1 chunk a frame</text>
+<g class="bd" transform="translate(736 364)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node chip" data-node="contract" data-world="browser" data-lens="s2" aria-label="WorkletContract. postMessage codec. audio_be, browser only. Scar 2.">
+<rect class="box" x="634" y="401" width="112" height="16" rx="8"/>
+<text class="c" x="693.0" y="412.4" text-anchor="middle">WorkletContract</text>
+<g class="bd" transform="translate(633 409.0)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node normal" data-node="worklet" data-world="browser" data-lens="s2" aria-label="KlangAudioWorklet. audio thread, 128 frames. audio_be, browser only. Scar 2.">
+<path class="box" d="M552 426H748V452L742 458H552Z"/>
+<path class="acc" d="M552 426h16"/>
+<text class="t" x="561" y="439.5">KlangAudioWorklet</text>
+<text class="s" x="561" y="453.0">audio thread, 128 frames</text>
+<g class="bd" transform="translate(736 426)"><circle r="7.5"/><text y="3.4" text-anchor="middle">2</text></g>
+</g>
+<g class="node pill" data-node="wasm" data-world="browser" data-lens="park" aria-label="Wasm: parked. a stub and a target, 2025-12-26. audio_be, browser only. Parked.">
+<rect class="box" x="552" y="401" width="72" height="16" rx="7"/>
+<text class="c" x="588.0" y="412.3" text-anchor="middle">Wasm: parked</text>
+</g>
+<g class="node normal" data-node="outjvm" data-world="jvm" data-lens="" aria-label="SourceDataLine. javax.sound, 16-bit stereo. audio_be, JVM only.">
+<path class="box" d="M12 467H208V490L203 495H12Z"/>
+<path class="acc" d="M12 467h16"/>
+<text class="t" x="21" y="478.5">SourceDataLine</text>
+<text class="s" x="21" y="492.0">javax.sound, 16-bit stereo</text>
+</g>
+<g class="node normal" data-node="outjs" data-world="browser" data-lens="" aria-label="AudioContext. destination of the node. audio_be, browser only.">
+<path class="box" d="M552 467H748V490L743 495H552Z"/>
+<path class="acc" d="M552 467h16"/>
+<text class="t" x="561" y="478.5">AudioContext</text>
+<text class="s" x="561" y="492.0">destination of the node</text>
+</g>
+</svg>
+<p class="legend for-draw"><span><i class="sw borrowed"></i>borrowed from Strudel</span><span><i class="sw ghost"></i>parked</span><span><i class="dot">1</i>a scar</span><span><i class="sw guide"></i>the platform part of the box in the middle</span><span><i class="sw runs"></i>runs the same code</span></p>
+</div>
+<div class="insp" id="insp" role="region" aria-live="polite" aria-label="About the selected box"></div>
+<section class="flow" aria-label="Every box of the drawing, one by one">
+<h3 class="bh">:strudel and the app</h3><ol>
+<li class="item" data-node="code" data-world="jvm" data-module="app" data-lens=""><details><summary><span class="dots"></span><b>pattern code</b> <span class="sub">a string of Strudel code</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what">A pattern is a Kotlin string of Strudel code, such as <code>sound("bd hh sd oh").gain(0.8)</code>. The test patterns sat in one object, and its first entry played when the desktop app started.</p><dl class="facts"><div><dt>file</dt><dd>src/<wbr>commonMain/<wbr>kotlin/<wbr>TestPatterns.kt, 435 lines; <code>active</code>, line 434</dd></div><div><dt>compiled</dt><dd>src/<wbr>jvmMain/<wbr>kotlin/<wbr>Main.kt, <code>strudel.compile(pattern)</code></dd></div></dl></div></details></li>
+<li class="item ghost" data-node="brain" data-world="common" data-module="strudel" data-lens="park"><details><summary><span class="dots"></span><b>own brain</b> <span class="sub">parked, a note only</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">The seam was there: <code>StrudelPattern</code> had two implementations, and a third could answer the same <code>queryArc</code>. In December it stayed a thought, which is why the box is dashed.</p><p class="park">Parked: any thought of replacing the borrowed brain (section 4 of the post).</p><dl class="facts"><div><dt>seam</dt><dd>strudel/<wbr>.../<wbr>StrudelPattern.kt, <code>interface StrudelPattern</code></dd></div><div><dt>trace</dt><dd>History.md@4c0b8763, line 17: a diary note of 2025-12-28 about a "strudel-parsr"</dd></div></dl></div></details></li>
+<li class="item" data-node="tones" data-world="common" data-module="tones" data-lens="s1"><details><summary><span class="dots"><i class="dot">1</i></span><b>Tones</b> <span class="sub">:tones, note to Hz</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">Note names to Hz, and scale degrees to notes. Strudel hands <code>n()</code> values over as tiny MIDI numbers, so <code>resolveFreq</code> reads anything at or below MIDI 30 as a scale degree. A heuristic, and a comment in the source says so.</p><p class="scar"><i class="dot">1</i><span>The fight began here, at 05:08 on 2025-12-22 (1f2e244f: "trying to figure out correct notes when scale context is given"). The code moved into <code>:tones</code> on 2025-12-28 (1530889a).</span></p><dl class="facts"><div><dt>file</dt><dd>tones/<wbr>src/<wbr>commonMain/<wbr>kotlin/<wbr>Tones.kt, 93 lines; <code>resolveFreq</code> 57, the cut 68</dd></div><div><dt>used by</dt><dd>GraalStrudelPattern.kt:64, SampleIndexLoader.kt:109</dd></div></dl></div></details></li>
+<li class="item borrowed" data-node="graal" data-world="jvm" data-module="strudel" data-lens="s1 park"><details><summary><span class="dots"><i class="dot">1</i></span><b>Graal JS bridge</b> <span class="sub">@strudel/core 1.2.5, JVM only</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what">GraalVM's polyglot JS engine loads an esbuild bundle of <code>@strudel/core</code>, <code>mini</code> and <code>tonal</code> (all 1.2.5). <code>compile(code)</code> returns a promise, <code>queryPattern</code> returns haps, and <code>GraalStrudelPattern</code> copies each hap into a <code>StrudelPatternEvent</code>.</p><p class="scar"><i class="dot">1</i><span>After the <code>n()</code> afternoon the bridge entry lost 30 lines, mostly commented-out experiments (2cb6c640). The diary: "the js bridge got way simpler in the process".</span></p><p class="park">JVM only: the bundle sits in <code>src/jvmMain/resources</code>.</p><dl class="facts"><div><dt>kotlin</dt><dd>strudel/<wbr>.../<wbr>graal/<wbr>: GraalStrudelCompiler.kt 146 lines, GraalStrudelPattern.kt 224</dd></div><div><dt>js</dt><dd>strudel/<wbr>jsbridge/<wbr>strudel-entry.mjs, 66 lines; package.json:14-16</dd></div></dl></div></details></li>
+<li class="item" data-node="events" data-world="common" data-module="strudel" data-lens="s1"><details><summary><span class="dots"><i class="dot">1</i></span><b>StrudelPattern</b> <span class="sub">queryArc() gives StrudelPatternEvents</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">The seam every pattern plugs into: <code>queryArc(from, to)</code> returns <code>StrudelPatternEvent</code>s, with <code>begin</code>, <code>end</code> and <code>dur</code> in cycles and a <code>VoiceData</code> of 34 fields.</p><p class="scar"><i class="dot">1</i><span><code>VoiceData</code> keeps the words apart: <code>note</code> and <code>freqHz</code> are pitch, <code>sound</code> and <code>soundIndex</code> the pick in a bank (<code>GraalStrudelPattern.kt:59</code> and <code>:81</code>).</span></p><dl class="facts"><div><dt>files</dt><dd>strudel/<wbr>src/<wbr>commonMain/<wbr>kotlin/<wbr>: StrudelPattern.kt, StrudelPatternEvent.kt, StrudelEventSource.kt</dd></div><div><dt>VoiceData</dt><dd>audio_bridge/<wbr>.../<wbr>VoiceData.kt, 84 lines</dd></div></dl></div></details></li>
+<li class="item" data-node="json" data-world="browser" data-module="app" data-lens="park"><details><summary><span class="dots"></span><b>recorded events</b> <span class="sub">JSON strings, patterns.kt</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">In the repository of 2025-12-31 the browser demo did not run Strudel. <code>js_main.kt</code> plays a recording: JSON events (<code>tetrisJson</code>, <code>strangerThingsJson</code>) in the shape of what the JVM's <code>makeStatic(0.0, 8.0).toJson()</code> prints.</p><p class="park">The asymmetry of section 4: the bridge reached only the JVM, so the browser demo played what the JVM could record.</p><dl class="facts"><div><dt>file</dt><dd>src/<wbr>jsMain/<wbr>kotlin/<wbr>patterns.kt, lines 3 and 175</dd></div><div><dt>picked</dt><dd>js_main.kt:60-62, <code>strangerThingsJson</code></dd></div><div><dt>recorded</dt><dd>src/<wbr>jvmMain/<wbr>kotlin/<wbr>Main.kt:63</dd></div></dl></div></details></li>
+<li class="item" data-node="static" data-world="browser" data-module="strudel" data-lens="park"><details><summary><span class="dots"></span><b>Static pattern</b> <span class="sub">loops a recording</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what"><code>StrudelPattern.Static</code> holds events and answers <code>queryArc</code> by wrapping the window around the recording's length (the last end, rounded up to whole cycles), so an 8-cycle recording repeats.</p><p class="park">The other half of the asymmetry in section 4.</p><dl class="facts"><div><dt>file</dt><dd>strudel/<wbr>.../<wbr>StrudelPattern.kt:14-47; <code>fromJson</code> 24, <code>totalCycles</code> 27, <code>queryArc</code> 29</dd></div></dl></div></details></li>
+</ol>
+<h3 class="bh">:klang and :audio_fe</h3><ol>
+<li class="item" data-node="playerjvm" data-world="jvm" data-module="klang" data-lens=""><details><summary><span class="dots"></span><b>klangPlayer() actual</b> <span class="sub">IO dispatcher, rate probe</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what">The JVM <code>actual</code> of <code>klangPlayer()</code>: asks javax.sound which 16-bit stereo rate it supports closest to 48,000 Hz, then builds the player with <code>JvmAudioBackend</code>, the fetcher on <code>Dispatchers.Default</code> and the audio loop on <code>Dispatchers.IO</code>.</p><dl class="facts"><div><dt>file</dt><dd>klang/<wbr>src/<wbr>jvmMain/<wbr>kotlin/<wbr>index_jvm.kt, 58 lines; dispatchers 32-33, rates 42</dd></div></dl></div></details></li>
+<li class="item" data-node="fetcher" data-world="common" data-module="klang" data-lens=""><details><summary><span class="dots"></span><b>KlangPlayer · KlangEventFetcher</b> <span class="sub">look-ahead 1.0 s, loop 16 ms</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what"><code>KlangPlayer</code> wires a fetcher and a backend around one <code>KlangCommLink</code>. About 60 times a second the fetcher asks the source for a cycle at a time until it is 1.0 s ahead of the audio, sends each event as a <code>ScheduledVoice</code>, and loads the samples of the next 8 cycles in advance.</p><dl class="facts"><div><dt>player</dt><dd>klang/<wbr>.../<wbr>KlangPlayer.kt, 97 lines: 48,000 Hz, block 512, 0.5 cycles per second (32-38)</dd></div><div><dt>fetcher</dt><dd>audio_fe/<wbr>.../<wbr>KlangEventFetcher.kt, 153 lines: 16 ms (58), 1 cycle (30), 8 cycles (26)</dd></div><div><dt>demos</dt><dd>0.7 cycles per second (js_main.kt:57)</dd></div></dl></div></details></li>
+<li class="item" data-node="playerjs" data-world="browser" data-module="klang" data-lens=""><details><summary><span class="dots"></span><b>klangPlayer() actual</b> <span class="sub">AudioContext rate probe</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">The browser <code>actual</code>: opens a throw-away <code>AudioContext</code> at 48,000 Hz to learn the rate the browser really gives, with two fallbacks, and builds the player with <code>JsAudioBackend</code>. Both dispatchers are <code>Dispatchers.Default</code>: the page has one main thread.</p><dl class="facts"><div><dt>file</dt><dd>klang/<wbr>src/<wbr>jsMain/<wbr>kotlin/<wbr>index_js.kt, 60 lines; <code>AudioContext</code> 38, fallbacks 49 and 56</dd></div></dl></div></details></li>
+<li class="item" data-node="decjvm" data-world="jvm" data-module="audio_fe" data-lens=""><details><summary><span class="dots"></span><b>SimpleAudioDecoder</b> <span class="sub">+ DiskUrlCache, JVM</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what">On the JVM, sample files come over Ktor, through an in-memory cache laid over a <code>DiskUrlCache</code> (<code>cache/index</code>, <code>cache/samples</code>), and are decoded by <code>SimpleAudioDecoder</code>.</p><dl class="facts"><div><dt>wiring</dt><dd>audio_fe/<wbr>src/<wbr>jvmMain/<wbr>kotlin/<wbr>samples.kt:17 and 25</dd></div><div><dt>files</dt><dd>decoders/<wbr>: Wav 147, Generic 75, Simple 36 lines; cache/<wbr>DiskUrlCache.kt 85</dd></div></dl></div></details></li>
+<li class="item" data-node="samples" data-world="common" data-module="audio_fe" data-lens="s1"><details><summary><span class="dots"><i class="dot">1</i></span><b>Samples</b> <span class="sub">7 sources, index, pitch pick</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">Seven sources (six JSON sample maps, one General MIDI soundfont) become an index of banks, sounds and aliases. <code>provide()</code> picks the file: without a note, <code>n</code> indexes into the sound's list; with one, the first sample at or above that pitch wins.</p><p class="scar"><i class="dot">1</i><span>Here <code>n()</code> and <code>note()</code> part for good: the index branch runs when <code>request.note</code> is null, the pitch branch otherwise (<code>SampleIndexLoader.kt:116-137</code>).</span></p><dl class="facts"><div><dt>files</dt><dd>audio_fe/<wbr>.../<wbr>samples/<wbr>: SampleCatalogue.kt 98 lines (<code>default</code> 53), Samples.kt 185, SampleIndexLoader.kt 342</dd></div><div><dt>credit</dt><dd>five of the seven are felixroos/<wbr>dough-samples, with thanks (History.md, 2025-12-23)</dd></div></dl></div></details></li>
+<li class="item" data-node="decjs" data-world="browser" data-module="audio_fe" data-lens="s2"><details><summary><span class="dots"><i class="dot">2</i></span><b>BrowserAudioDecoder</b> <span class="sub">decodeAudioData, no cache</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">The browser decodes with <code>decodeAudioData</code> on a throw-away <code>OfflineAudioContext</code> and hands channel 0 over with <code>unsafeCast</code>, so nothing is copied per sample. There is no cache layer of ours here.</p><p class="scar"><i class="dot">2</i><span>First round, 2025-12-27: "working but stuttering when loading and decoding new samples" (87a12d24, 18:02). Its diff swapped a per-sample copy for <code>unsafeCast</code>; "no more stuttering" came eight minutes later (fdc55139).</span></p><dl class="facts"><div><dt>files</dt><dd>audio_fe/<wbr>src/<wbr>jsMain/<wbr>kotlin/<wbr>: BrowserAudioDecoder.kt 57 lines, samples.kt 21</dd></div></dl></div></details></li>
+</ol>
+<h3 class="bh">:audio_bridge</h3><ol>
+<li class="item" data-node="lockjvm" data-world="jvm" data-module="audio_bridge" data-lens=""><details><summary><span class="dots"></span><b>KlangLock</b> <span class="sub">ReentrantLock</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what"><code>KlangLock</code> is an <code>expect class</code> that guards the two ring buffers. On the JVM it wraps a <code>ReentrantLock</code>, because the fetcher and the audio loop run on different dispatchers.</p><dl class="facts"><div><dt>actual</dt><dd>audio_bridge/<wbr>src/<wbr>jvmMain/<wbr>kotlin/<wbr>infra/<wbr>KlangLock.kt, 15 lines</dd></div><div><dt>expect</dt><dd>audio_bridge/<wbr>src/<wbr>commonMain/<wbr>kotlin/<wbr>infra/<wbr>KlangLock.kt, 19 lines</dd></div></dl></div></details></li>
+<li class="item" data-node="ctl" data-world="common" data-module="audio_bridge" data-lens="s2"><details><summary><span class="dots"><i class="dot">2</i></span><b>control ▼</b> <span class="sub">ScheduleVoice, Sample</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">Frontend to backend: <code>Cmd.ScheduleVoice</code> carries a <code>ScheduledVoice</code> (<code>VoiceData</code> plus start, end and gate-end frames); <code>Cmd.Sample</code> carries PCM as <code>NotFound</code>, <code>Complete</code> or <code>Chunk</code>. The ring has 8192 slots.</p><p class="scar"><i class="dot">2</i><span><code>Complete.toChunks()</code> slices PCM into <code>Chunk</code>s (<code>totalSize</code>, <code>chunkOffset</code>, <code>isLastChunk</code>). The stutter fix took <code>@Serializable</code> off <code>Cmd</code> (1908dfbb).</span></p><dl class="facts"><div><dt>file</dt><dd>audio_bridge/<wbr>.../<wbr>infra/<wbr>KlangCommLink.kt, 123 lines: capacity 8192 (8), <code>toChunks</code> (38)</dd></div><div><dt>rough edge</dt><dd><code>send</code> returns false when the ring is full; the fetcher ignored it (KlangEventFetcher.kt:105)</dd></div></dl></div></details></li>
+<li class="item" data-node="fb" data-world="common" data-module="audio_bridge" data-lens=""><details><summary><span class="dots"></span><b>feedback ▲</b> <span class="sub">cursor, RequestSample</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">Backend to frontend. <code>UpdateCursorFrame(frame)</code> tells the fetcher where the audio is, which is how it knows how far ahead it is. <code>RequestSample(req)</code> asks for a sample the scheduler does not have yet; the fetcher then loads it and answers with <code>Sample.Complete</code>.</p><dl class="facts"><div><dt>file</dt><dd>KlangCommLink.kt:79-90 (<code>Feedback</code>)</dd></div><div><dt>read by</dt><dd><code>processFeedbackEvents</code>, KlangEventFetcher.kt:117</dd></div></dl></div></details></li>
+<li class="item" data-node="lockjs" data-world="browser" data-module="audio_bridge" data-lens=""><details><summary><span class="dots"></span><b>KlangLock</b> <span class="sub">a no-op, one thread</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">In the browser the lock does nothing ("No-op in single-threaded JS environment", says the comment). The audio thread has its own <code>KlangCommLink</code> inside the worklet, and the two sides talk by messages, not by shared buffers.</p><dl class="facts"><div><dt>actual</dt><dd>audio_bridge/<wbr>src/<wbr>jsMain/<wbr>kotlin/<wbr>infra/<wbr>KlangLock.kt, 12 lines</dd></div><div><dt>worklet side</dt><dd>KlangAudioWorklet.kt:24, <code>val commLink = KlangCommLink()</code></dd></div></dl></div></details></li>
+</ol>
+<h3 class="bh">:audio_be</h3><ol>
+<li class="item" data-node="hostjvm" data-world="jvm" data-module="audio_be" data-lens=""><details><summary><span class="dots"></span><b>JvmAudioBackend</b> <span class="sub">one loop on Dispatchers.IO</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what">One loop on <code>Dispatchers.IO</code>: drain the control ring into the scheduler, render a block of 512 frames, advance the cursor, report it as <code>UpdateCursorFrame</code>, and write the bytes to a <code>SourceDataLine</code>. The write blocks when the 250 ms line buffer is full, which paces the loop.</p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>src/<wbr>jvmMain/<wbr>kotlin/<wbr>JvmAudioBackend.kt, 103 lines</dd></div><div><dt>lines</dt><dd><code>maxOrbits = 16</code> 23; line buffer 54; <code>renderBlock</code> call 79; block size 512 from KlangPlayer.kt:34</dd></div></dl></div></details></li>
+<li class="item" data-node="sched" data-world="common" data-module="audio_be" data-lens="s2 s3"><details><summary><span class="dots"><i class="dot">2</i><i class="dot">3</i></span><b>VoiceScheduler</b> <span class="sub">min-heap by startFrame</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">Holds scheduled voices in a <code>KlangMinHeap</code> by start frame and promotes them to an active list block by block. It also owns the samples, one entry per request, and asks for a missing one with <code>RequestSample</code>.</p><p class="scar"><i class="dot">2</i><span><code>Partial</code> entries fill chunk by chunk with <code>copyInto</code> at <code>chunkOffset</code> and become <code>Complete</code> on the last chunk (<code>addSample</code>, line 95).</span></p><p class="scar"><i class="dot">3</i><span><code>process(cursorFrame)</code> renders a block per call, and so does each voice.</span></p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>.../<wbr>voices/<wbr>VoiceScheduler.kt, 367 lines: heap 57, <code>addSample</code> 95, <code>promoteScheduled</code> 202</dd></div></dl></div></details></li>
+<li class="item" data-node="voices" data-world="common" data-module="audio_be" data-lens="s3"><details><summary><span class="dots"><i class="dot">3</i></span><b>Voice · OscFn</b> <span class="sub">fills a buffer per call</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">A <code>Voice</code> is a <code>SynthVoice</code> or a <code>SampleVoice</code>. Each renders a block: the oscillator or the sample resampler fills a buffer, the filters run over it, and <code>mixToOrbit</code> applies envelope, pan, the effects and the sends.</p><p class="scar"><i class="dot">3</i><span>The first draft was <code>typealias OscFn = (frequency: Double) -&gt; Double</code>, a call per sample (42800d3c, 2025-12-21 23:50). Three hours later: <code>process(buffer, offset, length, phase, phaseInc)</code> (b7b9f5c7). The diary: "bad performance though".</span></p><dl class="facts"><div><dt>generators</dt><dd>sine, saw, square, triangle, zawtooth, supersaw, pulze, impulse, five noises (Oscillators.kt, 611 lines; <code>OscFn</code>, line 8)</dd></div><div><dt>voices</dt><dd>SynthVoice.kt:41 <code>osc.process</code>; common.kt:9 <code>mixToOrbit</code></dd></div></dl></div></details></li>
+<li class="item" data-node="orbits" data-world="common" data-module="audio_be" data-lens="s3"><details><summary><span class="dots"><i class="dot">3</i></span><b>Orbits</b> <span class="sub">16 buses: delay, reverb</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">An orbit is Strudel's word for an effect bus, and the word stayed. Up to 16 of them, each with a stereo mix buffer, a delay send into a <code>DelayLine</code> of up to 10 s and a reverb send into a Freeverb-style <code>Reverb</code> (8 combs, 4 all-passes per channel).</p><p class="scar"><i class="dot">3</i><span>Delay and reverb take a whole block per call too: <code>process(input, output, length)</code>.</span></p><dl class="facts"><div><dt>files</dt><dd>audio_be/<wbr>.../<wbr>orbits/<wbr>Orbits.kt 69 lines, Orbit.kt 74; effects/<wbr>DelayLine.kt 58, Reverb.kt 88</dd></div><div><dt>rough edge</dt><dd>a TODO in Reverb.kt:5: room and size were far stronger than in Strudel</dd></div></dl></div></details></li>
+<li class="item" data-node="renderer" data-world="common" data-module="audio_be" data-lens="s3"><details><summary><span class="dots"><i class="dot">3</i></span><b>KlangAudioRenderer</b> <span class="sub">tanh limiter, PCM16</span><span class="wtag common">commonMain</span></summary><div class="body"><p class="what">One <code>renderBlock</code> per block: clear, <code>voices.process</code>, <code>orbits.processAndMix</code>, then a <code>tanh</code> limiter and an interleave to 16-bit little-endian stereo bytes. The JVM backend and the worklet call the same function; the worklet turns the bytes back into floats.</p><p class="scar"><i class="dot">3</i><span>Block by block is the shape: 512 frames on the JVM (10.7 ms at 48,000 Hz), 128 in the worklet (2.7 ms).</span></p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>.../<wbr>KlangAudioRenderer.kt, 53 lines; <code>tanh</code> at 41</dd></div><div><dt>worklet</dt><dd>KlangAudioWorklet.kt:87-137, bytes back to <code>Float32Array</code></dd></div></dl></div></details></li>
+<li class="item" data-node="jsbackend" data-world="browser" data-module="audio_be" data-lens="s2"><details><summary><span class="dots"><i class="dot">2</i></span><b>JsAudioBackend</b> <span class="sub">main thread, 1 chunk a frame</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">Runs on the main thread. Makes the <code>AudioContext</code> and an <code>AudioWorkletNode</code>, and on every animation frame drains the control ring and posts commands to the worklet. A <code>Sample.Complete</code> is cut into chunks of 32 × 1024 samples, and one chunk goes out per frame.</p><p class="scar"><i class="dot">2</i><span>Second round, 2025-12-28: chunking (1a5ec9f3) "does not really help" (98582145, 18:25); the diary says the chunk size was not the issue.</span></p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>src/<wbr>jsMain/<wbr>kotlin/<wbr>JsAudioBackend.kt, 115 lines: <code>addModule</code> 40, <code>toChunks(32 * 1024)</code> 84</dd></div><div><dt>wrinkle</dt><dd><code>toChunks</code> counts samples, although its parameter is named <code>chunkSizeBytes</code></dd></div></dl></div></details></li>
+<li class="item" data-node="contract" data-world="browser" data-module="audio_be" data-lens="s2"><details><summary><span class="dots"><i class="dot">2</i></span><b>WorkletContract</b> <span class="sub">postMessage codec</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">The edge between the two threads, a hand-written codec: each <code>Cmd</code> becomes a plain JS object with a <code>type</code> such as <code>schedule-voice</code> or <code>sample-chunk</code>, and float arrays travel as plain fields. Only small types (<code>ScheduledVoice</code>, <code>SampleRequest</code>, <code>Feedback</code>) still use kotlinx.serialization.</p><p class="scar"><i class="dot">2</i><span>The fix of 2025-12-28 22:52 (1908dfbb, "fixed JS stuttering") added 99 lines here. The diary blames kotlinx.serialization on <code>FloatArray</code>; afterwards: "no more stutter when sending 32 kb blocks!"</span></p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>.../<wbr>worklet/<wbr>WorkletContract.kt, 136 lines</dd></div><div><dt>lines</dt><dd>floats as plain fields 57-76; kotlinx on small types 34, 114, 122</dd></div></dl></div></details></li>
+<li class="item" data-node="worklet" data-world="browser" data-module="audio_be" data-lens="s2"><details><summary><span class="dots"><i class="dot">2</i></span><b>KlangAudioWorklet</b> <span class="sub">audio thread, 128 frames</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">An <code>AudioWorkletProcessor</code> written in Kotlin/JS (the module targets es2015, so Kotlin emits real classes). It builds its own <code>Orbits</code>, <code>VoiceScheduler</code> and <code>KlangAudioRenderer</code>, reads the block size from the output (128 frames, 2.7 ms at 48,000 Hz), renders in <code>process()</code> and sends <code>UpdateCursorFrame</code>.</p><p class="scar"><i class="dot">2</i><span>Receives <code>Sample.Chunk</code>s in <code>port.onmessage</code> and hands them to <code>VoiceScheduler.addSample</code> (lines 72-80).</span></p><dl class="facts"><div><dt>file</dt><dd>audio_be/<wbr>.../<wbr>worklet/<wbr>KlangAudioWorklet.kt, 137 lines; block size at 63</dd></div><div><dt>target</dt><dd>audio_be/<wbr>build.gradle.kts:28-31 (<code>es2015</code>)</dd></div><div><dt>history</dt><dd>History.md, 2025-12-26: "KotlinJS compiler bugs ... hacky workarounds"</dd></div></dl></div></details></li>
+<li class="item ghost" data-node="wasm" data-world="browser" data-module="audio_be" data-lens="park"><details><summary><span class="dots"></span><b>Wasm: parked</b> <span class="sub">a stub and a target, 2025-12-26</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">A stub and a target, tried on 2025-12-26: <code>AudioProcessingWasm.kt</code> (a 440 Hz sine), a JS glue file and a <code>wasmJs</code> block. On 2025-12-28 the block was commented out. The diary: "will try again later, once the JS backend works".</p><p class="park">Parked, not abandoned (section 4 of the post). It would have replaced the Kotlin/JS worklet.</p><dl class="facts"><div><dt>stub</dt><dd>audio_be/<wbr>src/<wbr>wasmJsMain/<wbr>: AudioProcessingWasm.kt 54 lines, glue 43 (bfeab82a)</dd></div><div><dt>target</dt><dd>audio_be/<wbr>build.gradle.kts:35-39, commented out in 2fcd94f3</dd></div></dl></div></details></li>
+<li class="item" data-node="outjvm" data-world="jvm" data-module="audio_be" data-lens=""><details><summary><span class="dots"></span><b>SourceDataLine</b> <span class="sub">javax.sound, 16-bit stereo</span><span class="wtag jvm">JVM only</span></summary><div class="body"><p class="what"><code>AudioSystem.getSourceDataLine</code> with <code>AudioFormat(rate, 16, 2, true, false)</code>: 16-bit, stereo, signed, little endian. The line opens with a buffer of 250 ms, <code>sampleRate * 250 / 1000</code> frames of 4 bytes.</p><dl class="facts"><div><dt>lines</dt><dd>JvmAudioBackend.kt:49-59</dd></div></dl></div></details></li>
+<li class="item" data-node="outjs" data-world="browser" data-module="audio_be" data-lens=""><details><summary><span class="dots"></span><b>AudioContext</b> <span class="sub">destination of the node</span><span class="wtag browser">browser only</span></summary><div class="body"><p class="what">The worklet node is connected to <code>ctx.destination</code>, and the two channels of its output carry the floats the worklet wrote.</p><dl class="facts"><div><dt>lines</dt><dd>JsAudioBackend.kt:43-44; KlangAudioWorklet.kt, output channels 0 and 1</dd></div></dl></div></details></li>
+</ol>
+</section>
+<section class="stories" aria-label="The three scars and what was parked">
+<div class="story" data-lens="s1"><h4><i class="dot">1</i>Scar 1: n() is not note()</h4><p>Hours went into a bug that did not exist: <code>n</code> selects within a sound bank, and <code>note</code> sets pitch. We had used <code>note()</code> and expected it to behave like <code>n()</code>. It cost an afternoon (2025-12-22, 17:10 to 18:34: 6f862e8a, 2cb6c640, 65333abc; the diary entry is dated the 23rd) and left a simpler bridge. The two words stay apart in four boxes: the bridge, the event, the tone math and the sample pick.</p><p class="touch">Boxes: Tones, Graal JS bridge, StrudelPattern, Samples.</p></div>
+<div class="story" data-lens="s2"><h4><i class="dot">2</i>Scar 2: the worklet stutter</h4><p>Samples reaching the audio thread made it stutter over two days. 2025-12-27: decoding (87a12d24, fdc55139). 2025-12-28, afternoon: chunking, which "does not really help" (98582145). 2025-12-28, 22:52: a hand-written codec for the float arrays (1908dfbb). The lit boxes are the path a sample travels, from the decoder to the scheduler.</p><p class="touch">Boxes: BrowserAudioDecoder, control ▼, VoiceScheduler, JsAudioBackend, WorkletContract, KlangAudioWorklet.</p></div>
+<div class="story" data-lens="s3"><h4><i class="dot">3</i>Scar 3: the per-sample callback</h4><p>The first oscillator draft called a function per sample (42800d3c, 2025-12-21 23:50). The diary of 2025-12-22 says "bad performance though". About three hours later every generator filled a buffer per call (b7b9f5c7, 03:08), and the boxes below the bus have been shaped like that since: scheduler, voices, orbits, renderer.</p><p class="touch">Boxes: VoiceScheduler, Voice · OscFn, Orbits, KlangAudioRenderer.</p></div>
+<div class="story" data-lens="park"><h4>Parked: Wasm and the borrowed brain</h4><p>Two things were tried, hurt and postponed. Wasm: a stub, a target, then the target commented out (2025-12-26 to 2025-12-28). The borrowed brain: replacing it stayed a note, and because the bridge was JVM-only, the browser demo played recordings.</p><p class="touch">Boxes: own brain, recorded events, Graal JS bridge, Static pattern, Wasm: parked.</p></div>
+</section>
+<template id="intro">
+    <div data-title="December 2025, read from the code">
+        <p><span class="only-wide">Hover or focus a box to read what it was then. Click or press Enter to keep it open, Esc to let go; the arrow keys move between boxes. </span><span class="only-narrow">Tap a row to read what it was then. </span>The gold numbers are the post's three scars and the dashed outlines what was parked.</p>
+        <ul class="teasers">
+            <li><button type="button" class="tz" data-lens="s1"><i class="dot">1</i><b>n() is not note()</b><span>an afternoon lost, a simpler bridge</span></button></li>
+            <li><button type="button" class="tz" data-lens="s2"><i class="dot">2</i><b>worklet stutter</b><span>decoding, chunking, then a codec</span></button></li>
+            <li><button type="button" class="tz" data-lens="s3"><i class="dot">3</i><b>per-sample callback</b><span>a call per sample, then a buffer</span></button></li>
+            <li><button type="button" class="tz" data-lens="park"><i class="dot ghost">P</i><b>parked</b><span>Wasm, and replacing the brain</span></button></li>
+        </ul>
+        <dl class="facts">
+            <div><dt>drawn from</dt><dd>commit 4c0b8763, 2025-12-31 15:57, plus History.md of that day</dd></div>
+            <div><dt>modules</dt><dd>six in settings.gradle.kts:6-17, and the demo app in src/</dd></div>
+            <div><dt>pace</dt><dd>115 commits in 12 days</dd></div>
+        </dl>
+    </div>
+</template>
+</figure>
+<script>
+(function () {
+    "use strict";
+    var root = document.documentElement;
+    root.className = root.className.replace("no-js", "js");
+
+    function $(s, r) { return (r || document).querySelector(s); }
+    function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+    var WORLD = { jvm: "JVM only", common: "commonMain", browser: "browser only" };
+
+    var svgNodes = $$(".draw .node");
+    var svgEdges = $$(".draw .edge");
+    var items = $$(".flow .item");
+    var insp = $("#insp");
+    var wide = window.matchMedia("(min-width: 700px)");
+
+    // ---- the data is the flow list in the page: one source for the drawing, the list and the inspector
+    var meta = {};
+    items.forEach(function (li) {
+        var id = li.getAttribute("data-node");
+        meta[id] = {
+            id: id,
+            li: li,
+            world: li.getAttribute("data-world"),
+            module: li.getAttribute("data-module"),
+            lens: li.getAttribute("data-lens").split(" ").filter(Boolean),
+            title: $("b", li).textContent,
+            borrowed: li.classList.contains("borrowed"),
+            ghost: li.classList.contains("ghost")
+        };
+    });
+    var stories = {};
+    $$(".stories .story").forEach(function (s) { stories[s.getAttribute("data-lens")] = s; });
+
+    var state = { sel: null, hover: null, lens: null, world: "both" };
+
+    // ---- building the inspector
+    function tag(text, cls) {
+        var t = document.createElement("span");
+        t.className = "tag" + (cls ? " " + cls : "");
+        t.textContent = text;
+        return t;
+    }
+
+    function specFor(id) {
+        var m = meta[id];
+        var tags = [tag(":" + m.module), tag(WORLD[m.world])];
+        if (m.borrowed) { tags.push(tag("borrowed", "borrowed")); }
+        m.lens.forEach(function (l) {
+            if (l === "park") { tags.push(tag(m.ghost ? "parked" : "touches a parked item", "parked")); } else { tags.push(tag("scar " + l.slice(1), "scar")); }
+        });
+        var body = document.createElement("div");
+        body.className = "insp-body";
+        var a = document.createElement("div");
+        a.innerHTML = $(".body", m.li).innerHTML;
+        var facts = $(".facts", a);
+        if (facts) { body.appendChild(a); body.appendChild(facts); } else { body.appendChild(a); }
+        return { title: m.title, tags: tags, body: body, pinned: state.sel === id };
+    }
+
+    function specForLens(l) {
+        var s = stories[l];
+        var body = document.createElement("div");
+        body.className = "insp-body";
+        var a = document.createElement("div");
+        a.innerHTML = "<p>" + $("p", s).innerHTML + "</p>";
+        var chips = document.createElement("div");
+        chips.className = "touch-chips";
+        Object.keys(meta).forEach(function (id) {
+            if (meta[id].lens.indexOf(l) < 0) { return; }
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "chip";
+            b.textContent = meta[id].title;
+            b.addEventListener("click", function () { state.sel = id; render(); });
+            chips.appendChild(b);
+        });
+        a.appendChild(chips);
+        body.appendChild(a);
+        return { title: $("h4", s).textContent.replace(/^\d/, ""), tags: [], body: body, pinned: false, dot: $(".dot", s) ? $(".dot", s).textContent : "" };
+    }
+
+    function specIntro() {
+        var src = $("#intro").content.firstElementChild;
+        var body = document.createElement("div");
+        body.className = "insp-body";
+        var a = document.createElement("div");
+        a.appendChild($("p", src).cloneNode(true));
+        var tz = $(".teasers", src).cloneNode(true);
+        $$(".tz", tz).forEach(function (b) {
+            b.addEventListener("click", function () { state.lens = b.getAttribute("data-lens"); render(); });
+        });
+        a.appendChild(tz);
+        var b2 = document.createElement("div");
+        b2.appendChild($(".facts", src).cloneNode(true));
+        body.appendChild(a);
+        body.appendChild(b2);
+        return { title: src.getAttribute("data-title"), tags: [], body: body, pinned: false };
+    }
+
+    function fill(el, spec) {
+        el.textContent = "";
+        el.classList.toggle("pinned", !!spec.pinned);
+        var head = document.createElement("div");
+        head.className = "insp-head";
+        if (spec.dot) {
+            var d = document.createElement("i");
+            d.className = "dot";
+            d.textContent = spec.dot;
+            head.appendChild(d);
+        }
+        var h = document.createElement("h3");
+        h.textContent = spec.title;
+        head.appendChild(h);
+        var tg = document.createElement("span");
+        tg.className = "tags";
+        spec.tags.forEach(function (t) { tg.appendChild(t); });
+        head.appendChild(tg);
+        el.appendChild(head);
+        el.appendChild(spec.body);
+    }
+
+    // The inspector keeps the height of the tallest entry, so that the frame does not jump while you read.
+    function measure() {
+        var probe = document.createElement("div");
+        probe.className = "insp probe";
+        probe.style.width = insp.getBoundingClientRect().width + "px";
+        document.body.appendChild(probe);
+        var max = 0;
+        function take(spec) {
+            fill(probe, spec);
+            max = Math.max(max, probe.getBoundingClientRect().height);
+        }
+        take(specIntro());
+        Object.keys(stories).forEach(function (l) { take(specForLens(l)); });
+        if (wide.matches) { Object.keys(meta).forEach(function (id) { take(specFor(id)); }); }
+        document.body.removeChild(probe);
+        insp.style.minHeight = Math.ceil(max) + "px";
+        report();
+    }
+
+    // ---- state to view
+    function inWorld(w) { return state.world === "both" || w === "common" || w === state.world; }
+    function inLens(list) { return !state.lens || list.indexOf(state.lens) >= 0; }
+
+    function render() {
+        var cur = state.hover || state.sel;
+        svgNodes.forEach(function (n) {
+            var id = n.getAttribute("data-node");
+            var m = meta[id];
+            var lit = !!state.lens && inLens(m.lens);
+            n.classList.toggle("dim", !(inLens(m.lens) && inWorld(m.world)));
+            n.classList.toggle("lit", lit);
+            n.classList.toggle("sel", state.sel === id);
+            n.classList.toggle("hov", state.hover === id);
+            n.setAttribute("aria-pressed", state.sel === id ? "true" : "false");
+        });
+        svgEdges.forEach(function (e) {
+            var ends = e.getAttribute("data-ends").split(" ").filter(Boolean);
+            e.classList.toggle("on", !!cur && ends.indexOf(cur) >= 0);
+            var dim = ends.some(function (id) { return !(inLens(meta[id].lens) && inWorld(meta[id].world)); });
+            if (!ends.length) { dim = false; }
+            e.classList.toggle("dim", dim);
+        });
+        items.forEach(function (li) {
+            var m = meta[li.getAttribute("data-node")];
+            li.classList.toggle("dim", !(inLens(m.lens) && inWorld(m.world)));
+            li.classList.toggle("lit", !!state.lens && inLens(m.lens));
+        });
+        $$(".toolbar .chip").forEach(function (b) { b.setAttribute("aria-pressed", state.lens === b.getAttribute("data-lens") ? "true" : "false"); });
+        $$(".toolbar .seg").forEach(function (b) { b.setAttribute("aria-pressed", state.world === b.getAttribute("data-world") ? "true" : "false"); });
+
+        var show = wide.matches ? cur : null;
+        if (show) { fill(insp, specFor(show)); }
+        else if (state.lens) { fill(insp, specForLens(state.lens)); }
+        else { fill(insp, specIntro()); }
+    }
+
+    // ---- events
+    // Without this script the boxes are plain drawing; with it they are buttons with one tab stop and arrow keys.
+    function rove(on) { svgNodes.forEach(function (m) { m.setAttribute("tabindex", m === on ? "0" : "-1"); }); }
+    svgNodes.forEach(function (n, i) {
+        n.setAttribute("role", "button");
+        n.setAttribute("aria-pressed", "false");
+        n.setAttribute("tabindex", i === 0 ? "0" : "-1");
+    });
+    svgNodes.forEach(function (n) {
+        var id = n.getAttribute("data-node");
+        n.addEventListener("mouseenter", function () { state.hover = id; render(); });
+        n.addEventListener("mouseleave", function () { state.hover = null; render(); });
+        n.addEventListener("focus", function () { rove(n); state.hover = id; render(); });
+        n.addEventListener("blur", function () { state.hover = null; render(); });
+        n.addEventListener("click", function (ev) { ev.stopPropagation(); state.sel = state.sel === id ? null : id; render(); });
+        n.addEventListener("keydown", function (ev) {
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); state.sel = state.sel === id ? null : id; render(); return; }
+            var dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[ev.key];
+            if (!dir) { return; }
+            ev.preventDefault();
+            var next = neighbor(n, dir);
+            if (next) { next.focus(); }
+        });
+    });
+    $(".draw").addEventListener("click", function () { if (state.sel) { state.sel = null; render(); } });
+
+    // Arrow keys: the nearest box in that direction, preferring boxes that overlap this one across the direction.
+    function rect(n) {
+        var b = $(".box", n).getBBox();
+        return { x: b.x, y: b.y, w: b.width, h: b.height };
+    }
+    function neighbor(from, dir) {
+        var a = rect(from);
+        var best = null, bestScore = 1e9;
+        svgNodes.forEach(function (n) {
+            if (n === from) { return; }
+            var b = rect(n);
+            var gap = dir[0] > 0 ? b.x - (a.x + a.w) : dir[0] < 0 ? a.x - (b.x + b.w) : dir[1] > 0 ? b.y - (a.y + a.h) : a.y - (b.y + b.h);
+            if (gap < -2) { return; }
+            var overlap = dir[0] !== 0
+                ? Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+                : Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+            var off = dir[0] !== 0
+                ? Math.abs((a.y + a.h / 2) - (b.y + b.h / 2))
+                : Math.abs((a.x + a.w / 2) - (b.x + b.w / 2));
+            var score = gap + (overlap > 0 ? 0 : 400) + 0.3 * off;
+            if (score < bestScore) { bestScore = score; best = n; }
+        });
+        return best;
+    }
+
+    $$(".toolbar .chip").forEach(function (b) {
+        b.addEventListener("click", function () {
+            var l = b.getAttribute("data-lens");
+            state.lens = state.lens === l ? null : l;
+            render();
+        });
+    });
+    $$(".toolbar .seg").forEach(function (b) {
+        b.addEventListener("click", function () { state.world = b.getAttribute("data-world"); render(); });
+    });
+    document.addEventListener("keydown", function (ev) {
+        if (ev.key !== "Escape") { return; }
+        if (state.sel) { state.sel = null; } else if (state.lens) { state.lens = null; }
+        render();
+    });
+
+    // ---- size: report the content height to the host page, on load and on every size change
+    var last = 0;
+    function report() {
+        var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+        if (h && h !== last) {
+            last = h;
+            try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no host */ }
+        }
+    }
+    var timer = 0;
+    window.addEventListener("resize", function () { window.clearTimeout(timer); timer = window.setTimeout(function () { measure(); render(); }, 80); });
+    window.addEventListener("load", function () { measure(); render(); });
+    if (wide.addEventListener) { wide.addEventListener("change", function () { measure(); render(); }); }
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(document.body); }
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { measure(); render(); }); }
+    render();
+    measure();
+})();
+</script>
+</body>
+</html>

@@ -7,8 +7,9 @@ tags: [klangscript, sprudel, editor, live-coding, source-locations, klang]
 summary: >
   Live coding needs the editor to show what is playing right now, which means
   every runtime event must know which characters of source text it came from,
-  across an interpreter, a mini-notation parser, a pattern engine, and an
-  audio-worklet wire. Klang's answer: locations ride the values themselves.
+  across an interpreter, a mini-notation parser, a pattern engine, and the
+  scheduler that turns events into voices. Klang's answer: locations ride the
+  values themselves.
   Even a constant defined as "let feel = 1.0" lights up when it plays.
 authors: [peekandpoke, claude]
 hero: spans.png
@@ -31,10 +32,11 @@ the source text it came from.**
 That is a provenance problem, and it is harder than it looks, because the
 distance between a character and a sound is long: a string literal is parsed
 by a *second* parser (mini-notation), the result is transformed by pattern
-combinators, evaluated into events, scheduled into voices, and shipped
-across a wire to an audio worklet, and the answer has to come *back* from
-that pipeline to the exact columns of the exact line. Lose the thread at any
-step and the light shows nothing, or worse, the wrong thing.
+combinators, evaluated into events, and scheduled into voices for an audio
+worklet. Meanwhile the editor has to light the exact columns of the exact
+line as that sound starts, so the span has to ride along with the event all
+the way to the scheduler. Lose the thread at any step and the light shows
+nothing, or worse, the wrong thing.
 
 And there is a subtler version of the problem. Consider:
 
@@ -74,12 +76,15 @@ stops at the quotation marks.
 
 Klang's design decision, made early (2026-01-20, when source-location
 tracking landed): **provenance is a property of values, not of syntax.**
+The `1.0` literal itself joined the highlights a little later: its span entered
+the event's chain on 2026-01-21, and the editor drew the chain from 2026-01-23.
+The figure below follows one span forward, from the parser to the highlight in
+the editor; the way back, from an editor position to a node, is section 5.
 
-![The pipeline](position-pipeline.png)
-
-*Fig. 2: the span's journey. Forward: parser → values → patterns → events →
-voices → highlight overlay. Backward: `AstIndex` maps editor positions to
-nodes for hover docs and tools.*
+<figure class="klang-figure">
+  <iframe src="span-trace.html" title="Where a source span travels: scrub the playhead, point at a span, an event or a step" loading="lazy"></iframe>
+  <figcaption>Drag the playhead or press play (silent), then point at a span in the code, an event in the lanes or a step on the right: whatever is linked to it lights up in the other views. A click pins it. Switch the argument to feel * 2 to see the thread break.</figcaption>
+</figure>
 
 Step by step:
 
@@ -94,12 +99,15 @@ Step by step:
    (One honest boundary: arithmetic severs the thread. `feel * 2` is a
    *new* value with no birthplace. The rule covers pass-through, not
    computation.)
-3. **The KSP registration layer forwards call-site context.** Every
-   registered DSL function [can receive a `CallInfo`](../2026-08-12-one-annotation-six-artifacts/index.md):
+3. **The registration layer forwards call-site context.** Every
+   registered DSL function can receive a `CallInfo`:
    the call's own span, the receiver's span, and **per-parameter spans
    read straight off the argument values**. When `.gain(feel)` executes,
    the engine knows the argument's birthplace is `1.0` on line 1. No
-   special-casing of variables anywhere: the value knew.
+   special-casing of variables anywhere: the value knew. (In January the
+   registration was a loop over the DSL registry in `KlangScriptStrudelLib.kt`;
+   the KSP processor that [generates it today](../2026-08-12-one-annotation-six-artifacts/index.md)
+   arrived in March.)
 4. **The mini-notation parser composes spans.** `"c3 [e3 g3]"` is a string,
    but the `StringValue` knows where the string sits in the source, and
    the mini-notation parser knows each atom's offset *inside* the string.
@@ -109,10 +117,19 @@ Step by step:
 5. **Events carry a *chain*, not a single span.** A pattern event's
    `sourceLocations` is a `SourceLocationChain`; transformations
    **prepend and append, and do not overwrite.** An atom wrapped in `struct()`
-   inside a `superimpose()` keeps every ancestor; the editor draws the whole chain (atom, string literal, call site), deduped, filtered to the current file, and capped, innermost first. Transformations
-   add context; they are not allowed to orphan an event.
-6. **Voice events cross the wire with their spans**, and the editor's
-   highlight overlay draws them.
+   inside a `superimpose()` keeps every ancestor. The first transformation
+   that adds to the chain is the control: `gain(feel)` puts the span of the
+   `1.0` literal in front of the atom's own, so on 23 January an event's chain
+   held the control literal and the atom, and the editor drew the last five
+   entries. The string literal and the call site were the intent written in the
+   chain's KDoc; nothing put them in yet. (Today the editor draws the chain
+   innermost first, deduped, filtered to the current file, and capped.)
+   Transformations add context; they are not allowed to orphan an event.
+6. **Voice events carry their spans to the editor, but not over the
+   wire.** `sourceLocations` is `@Transient`, so the audio worklet never
+   sees a span. When the playback turns events into voices, it also fires an
+   in-page callback (`onVoiceScheduled`) with each event's times and chain,
+   and the editor draws the highlight 25 ms ahead of the sound.
 
 ## 4. The last meter: drawing without paying
 
@@ -122,7 +139,8 @@ first implementation was one DOM `<mark>` per event with a CSS `@keyframes`
 pulse animating `border-color`: paint-bound properties that forced a
 re-rasterization of every active mark, every frame. Weak GPUs choked. (No before/after frame numbers were recorded in the heat of that rewrite, a rare unmeasured claim in this series; the qualitative story below is from the component's own documentation.)
 
-The current `CodeMirrorHighlightBuffer` is a single transparent WebGL
+The current `CodeMirrorHighlightBuffer`, rewritten in June (months after
+the story above), is a single transparent WebGL
 canvas over the editor: each highlight is a pooled quad, one ticker handles
 scheduling and fade, only `x/y/alpha` change per frame, and the ticker
 stops when nothing plays, so an idle editor costs **zero**
@@ -132,7 +150,8 @@ per-frame paint) turned out to be what the *visual* thread needed too.
 
 ## 5. The same thread, backwards
 
-Provenance also runs in reverse. `AstIndex` maps an editor position to the
+Provenance also runs in reverse, a later step: `AstIndex`, added in March,
+maps an editor position to the
 AST node at that position, the infrastructure behind hover documentation,
 context menus, and the visual parameter tools. Click on `body(0.7, "wood")` and
 the editor knows which call you are in and which argument you are touching;

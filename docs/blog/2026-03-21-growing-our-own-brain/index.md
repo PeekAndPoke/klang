@@ -26,8 +26,8 @@ references:
 ## 1. The problem
 
 By January 2026 klang made real music, but its brain was rented. Pattern evaluation ran on `@strudel/core`, real
-Strudel, through a GraalVM polyglot bridge on the JVM, and directly as JavaScript in the browser. Three pressures made
-that untenable:
+Strudel, through a GraalVM polyglot bridge on the JVM. The browser never ran it: until the first Kotlin patterns played
+there on 2026-01-04, it could only replay events the JVM had recorded as JSON. Three pressures made that untenable:
 
 1. **Two worlds, one brain missing.** The GraalVM bridge was JVM-only. A Kotlin-native pattern engine could run in
    `commonMain`: one implementation, both platforms, like the audio engine already did.
@@ -65,8 +65,9 @@ event streams.
 
 The diff is graded, not binary (the comparison verdicts in the harness are
 `EXACT`, `CLOSE`, `DIFFERENT`, `IGNORED`, and `RECOVERED`), because two correct implementations still differ in float
-dust, and a naive equality check would drown real divergences in noise. Which surfaced the deeper problem almost
-immediately:
+dust, and a naive equality check would drown real divergences in noise. Two rules cover every case, an ignored pattern
+id and a recovered default gain (Strudel writes 1.0 where we leave it unset), and a few cases add their own. The
+grading surfaced the deeper problem almost immediately:
 
 **Floating-point time drifts.** Cycle arithmetic (thirds of a cycle, sevenths, nested alternations) accumulates error
 differently in every implementation. Two mathematically identical patterns diverge in the 15th decimal, then a boundary
@@ -79,6 +80,11 @@ The hardest campaign the oracle forced was the **part/whole refactor**. Strudel 
 fragment active in the queried span) and the *whole* (the full event it belongs to), and getting their interaction right
 across `struct`, masks, and cycle boundaries is where a reimplementation quietly rots. The oracle turned "quietly" into
 a red diff, case by case, until the semantics matched.
+
+<figure class="klang-figure">
+  <iframe src="oracle-cases.html" title="The oracle suite, case by case: filter the cases, sort the list, drag the timeline" loading="lazy"></iframe>
+  <figcaption>Fig. 2: the oracle's suite on 2026-03-21, one cell per case. 509 cases are compared against Strudel and 133 are skipped. Red rims mark the cases named in the failure record of 2026-02-01, when the part/whole refactor left 103 of 2476 tests red. The files do not keep how each case fared; drag the timeline, filter the cases, sort the list.</figcaption>
+</figure>
 
 Meanwhile the language itself grew underneath: **KlangScript**, a JavaScript-ish interpreter written in Kotlin (parser
 then on `better-parse`; since replaced by a hand-rolled recursive-descent one for Kotlin/JS production builds), with a
@@ -100,9 +106,9 @@ pattern semantics change. Independence didn't mean burning the bridge; it meant 
 
 Every quarter since has cashed checks this one wrote. The IDE features, intellisense, and named parameters of Q2 exist
 because the interpreter is ours. Sound definitions, oscillators, and eventually whole instruments became *language
-objects* because the language could be extended freely. The browser dropped its last dependency on Strudel-JS. And the
-verification habit (do not trust a reimplementation without an executable oracle, grade the diff, make time exact)
-became the house style for every risky migration after.
+objects* because the language could be extended freely. The browser runs the same pattern engine as the JVM, one
+implementation in `commonMain`. And the verification habit (do not trust a reimplementation without an executable
+oracle, grade the diff, make time exact) became the house style for every risky migration after.
 
 The borrowed brain served for one quarter. The oracle it left behind still serves today.
 

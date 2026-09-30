@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where a source span travels</title>
+<script>document.documentElement.className = "js";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+    /* Tokens copied from the blog page (console/blog/blog.css): the Klang UI palette, dark only. */
+    :root {
+        color-scheme: dark;
+        --void: #12131C;
+        --paper: #191C22;
+        --surface: #21252B;
+        --surface-2: #2C313A;
+        --ink: #D7DADF;
+        --muted: #ABB2BF;
+        --faint: #5C6370;
+        --rule: #353A42;
+        --spark: #D19A66;
+        --signal: #56B6C2;
+        --gold: #E8B84B;
+        --code-bg: #12131C;
+        --code-str: #98C379;
+        --dim: color-mix(in srgb, var(--muted) 55%, var(--faint));   /* small print between muted and faint */
+
+        --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+        --f-mono: "Share Tech Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+        --lh: 62px;       /* lane header column */
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    .fig { max-width: 880px; margin: 0 auto; padding: 2px 0 4px; }
+
+    /* ---------- transport and the one-line readout ---------- */
+    .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 8px; }
+    .no-js .tp, .no-js .time, .no-js .var { display: none; }
+    .tp { display: flex; gap: 4px; }
+    .btn {
+        width: 30px; height: 26px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: var(--surface); border: 1px solid var(--rule); cursor: pointer;
+    }
+    .btn:hover { border-color: var(--gold); }
+    .btn[aria-pressed="true"] { border-color: var(--gold); background: rgba(232, 184, 75, .12); }
+    .btn svg { width: 12px; height: 12px; fill: var(--ink); display: block; }
+    .time { color: var(--gold); white-space: nowrap; min-width: 15em; }
+    .info { flex: 1 1 280px; min-height: 2.9em; display: flex; align-items: center; color: var(--muted); line-height: 1.45; }
+    .info > div { min-width: 0; }
+    .info b { color: var(--ink); font-weight: 400; }
+
+    /* ---------- layout ---------- */
+    .grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 10px 18px; align-items: start; }
+    .left { grid-column: 1; grid-row: 1; }
+    .stages { grid-column: 2; grid-row: 1 / span 2; }
+    .foot { grid-column: 1; grid-row: 2; }
+    @media (max-width: 719px) {
+        .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+        .left, .stages, .foot { grid-column: 1; grid-row: auto; }
+        .info { min-height: 4.4em; }
+    }
+
+    /* ---------- the editor ---------- */
+    .ed {
+        background: var(--code-bg);
+        border: 1px solid var(--rule);
+        border-left: 2px solid var(--signal);
+        padding: 6px 8px 4px 0;
+    }
+    .ln { display: flex; font-size: clamp(11.5px, 3.7vw, 13.5px); line-height: 21px; }
+    .no { flex: none; width: 30px; padding-right: 10px; text-align: right; color: var(--faint); }
+    .tx { white-space: pre; font-variant-ligatures: none; min-width: 0; }
+    .kw { color: var(--muted); }
+    .st-str { color: var(--code-str); }
+    .var { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 5px 0 2px 30px; color: var(--dim); font-size: 11.5px; }
+    .chipbtn {
+        padding: 0 7px; line-height: 20px; background: var(--surface); border: 1px solid var(--rule);
+        color: var(--muted); cursor: pointer; font-size: 12px;
+    }
+    .chipbtn:hover { border-color: var(--gold); color: var(--ink); }
+    .chipbtn[aria-checked="true"] { border-color: var(--gold); background: rgba(232, 184, 75, .12); color: var(--ink); }
+
+    /* ---------- a span, wherever it shows up ---------- */
+    [data-span] { border-radius: 2px; }
+    [data-span].lit {
+        background: rgb(209 154 102 / calc(var(--a, 0) * .3));
+        box-shadow: 0 0 0 1.5px rgb(209 154 102 / var(--a, 0));
+    }
+    [data-span].lk { outline: 1.5px solid var(--signal); outline-offset: 1.5px; }
+    [data-span].pin { outline: 1.5px solid var(--gold); outline-offset: 1.5px; }
+    .sp { cursor: default; }
+    .sp:focus-visible { outline-offset: 1.5px; }
+
+    /* ---------- lanes ---------- */
+    .lanes { display: flex; margin-top: 10px; }
+    .lhs { flex: none; width: var(--lh); display: flex; flex-direction: column; gap: 3px; padding-top: 28px; }
+    .lhd { height: 38px; display: flex; flex-direction: column; justify-content: center; line-height: 1.25; color: var(--ink); font-size: 11.5px; }
+    .lhd small { color: var(--dim); font-size: 10px; }
+    .tracks { position: relative; flex: 1 1 auto; min-width: 0; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+    .ruler { position: relative; height: 28px; margin-bottom: 3px; border-bottom: 1px solid var(--rule);
+        background: repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px 12.5%) bottom / 100% 5px no-repeat; }
+    .rl { position: absolute; font-size: 9.5px; line-height: 12px; color: var(--muted); white-space: nowrap; transform: translateX(-50%); }
+    .rl.c { top: 1px; } .rl.s { top: 13px; color: var(--dim); }
+    .rl.first { transform: none; } .rl.last { transform: translateX(-100%); }
+    .lane {
+        position: relative; height: 38px; margin-bottom: 3px; background: var(--surface); border: 1px solid #2a2e36;
+        background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.045) 0 1px, transparent 1px 12.5%);
+    }
+    .clip {
+        position: absolute; top: 2px; bottom: 2px; padding: 1px 4px; overflow: hidden; white-space: nowrap;
+        background: var(--surface-2); border: 1px solid #3c424c; color: var(--muted);
+        font-size: 10.5px; line-height: 15px;
+    }
+    .clip b { display: block; font-weight: 400; font-size: 12.5px; line-height: 16px; color: var(--ink); }
+    .clip.on { background: rgb(209 154 102 / .2); border-color: var(--spark); }
+    .clip.lk { box-shadow: inset 0 0 0 1.5px var(--signal); }
+    .clip.ctl { border-style: dashed; }
+    .clip.ctl[data-span].lit { background: rgb(209 154 102 / calc(var(--a, 0) * .12)); box-shadow: inset 0 0 0 1px rgb(209 154 102 / var(--a, 0)); }
+    .clip.ctl.none { background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,255,.04) 5px 10px); color: var(--faint); }
+    .chain { display: inline-flex; gap: 2px; align-items: center; }
+    .chip { padding: 0 2px; white-space: nowrap; }
+    .smp { position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: var(--faint); transform: rotate(45deg); pointer-events: none; z-index: 2; border: 1px solid var(--paper); }
+    .gd { position: absolute; top: 31px; bottom: 0; width: 0; border-left: 1px dotted var(--faint); pointer-events: none; opacity: .8; }
+    .ph { position: absolute; top: 0; bottom: 0; width: 0; left: 0; pointer-events: none; z-index: 5; }
+    .ph::after { content: ""; position: absolute; top: 14px; bottom: 0; left: -.75px; width: 1.5px; background: var(--gold); }
+    .ph .hd {
+        position: absolute; top: 0; left: -7px; width: 14px; height: 17px; background: var(--gold); pointer-events: auto; cursor: grab;
+        clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+    }
+    .ph .hd:focus-visible { outline: none; background: #fff3c6; }
+    .tracks.drag, .tracks.drag * { cursor: grabbing; }
+    .no-js .ph .hd { pointer-events: none; }
+
+    /* ---------- the pipeline ---------- */
+    .stages { list-style: none; margin: 0; padding: 0; }
+    .sg { position: relative; padding: 4px 6px 6px 33px; border: 1px solid transparent; margin-bottom: 1px; cursor: default; }
+    .sg::before {
+        content: attr(data-n); position: absolute; left: 4px; top: 5px; width: 19px; height: 19px;
+        border: 1px solid var(--faint); border-radius: 50%; background: var(--paper);
+        font-size: 11px; line-height: 17px; text-align: center; color: var(--muted);
+    }
+    .sg::after { content: ""; position: absolute; left: 13.5px; top: 26px; bottom: -8px; width: 1px; background: var(--rule); }
+    .sg:last-child::after { display: none; }
+    .sg.lk { background: rgba(86, 182, 194, .08); border-color: rgba(86, 182, 194, .55); }
+    .sg.lk::before { border-color: var(--signal); color: var(--signal); }
+    .sg.pin { border-color: var(--gold); }
+    .sg.act::before { border-color: var(--spark); color: var(--spark); }
+    .sh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 7px; font-family: var(--f-display); font-size: 13px; line-height: 20px; }
+    .sh b { font-weight: 600; color: var(--ink); }
+    .sh span { color: var(--muted); }
+    .sh time { margin-left: auto; font-family: var(--f-mono); font-size: 10.5px; color: var(--dim); }
+    .sd { font-size: 11.5px; line-height: 17px; color: var(--muted); overflow-wrap: anywhere; }
+    .sd .l { display: block; }
+    .sd .n { color: var(--dim); }
+    .sd .x { color: var(--spark); }
+
+    /* ---------- legend and footnote ---------- */
+    .key { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+    .key span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { width: 15px; height: 10px; display: inline-block; }
+    .sw.on { background: rgb(209 154 102 / .3); box-shadow: 0 0 0 1.5px var(--spark); margin: 0 1.5px; }
+    .sw.lk { outline: 1.5px solid var(--signal); outline-offset: 0; margin: 0 1.5px; }
+    .sw.pin { outline: 1.5px solid var(--gold); margin: 0 1.5px; }
+    .foot { margin: 0; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+    .foot a { color: var(--faint); }
+    .no-js .key .js-only { display: none; }
+</style>
+</head>
+<body>
+<div class="fig" id="fig">
+
+<div class="bar">
+    <div class="tp" role="group" aria-label="Transport (silent)">
+        <button class="btn" id="b-start" type="button" aria-label="Back to the start"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1h2v10H1zM11 1v10L4 6z"/></svg></button>
+        <button class="btn" id="b-play" type="button" aria-label="Play" aria-pressed="false"><svg viewBox="0 0 12 12" aria-hidden="true"><path id="i-play" d="M2 1l9 5-9 5z"/></svg></button>
+        <button class="btn" id="b-next" type="button" aria-label="Jump to the next event"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M9 1h2v10H9zM1 1v10l7-5z"/></svg></button>
+    </div>
+    <div class="time" id="time" aria-hidden="true">t0 + 0.00 s, cycle 0.00</div>
+    <div class="info" id="info"><!--S:info--><div>sounding <b>c3</b>. The editor draws 2 marks: <b>1.0</b> 1:12-15 and <b>c3</b> 3:7-9.</div><!--/S:info--></div>
+</div>
+
+<div class="grid">
+<div class="left">
+
+    <div class="ed" id="ed" role="group" aria-label="The code of the post, with the spans that are drawn right now lit">
+        <!--S:code-->
+        <div class="ln"><span class="no" aria-hidden="true">1</span><span class="tx"><span class="kw">let</span> feel = <span class="sp lit" data-span="lit" aria-label="1.0, span 1:12-15" style="--a: 0.896;">1.0</span></span></div>
+        <div class="ln"><span class="no" aria-hidden="true">2</span><span class="tx"></span></div>
+        <div class="ln"><span class="no" aria-hidden="true">3</span><span class="tx">note(<span class="sp st-str" data-span="str" aria-label="&quot;c3 [e3 g3]&quot;, span 3:6-18">"<span class="sp lit" data-span="a0" aria-label="c3, span 3:7-9" style="--a: 0.896;">c3</span> [<span class="sp" data-span="a1" aria-label="e3, span 3:11-13">e3</span> <span class="sp" data-span="a2" aria-label="g3, span 3:14-16">g3</span>]"</span>).gain(<span class="sp" data-span="arg" aria-label="feel, span 3:25-29">feel</span>)</span></div>
+        <!--/S:code-->
+        <div class="var" role="radiogroup" aria-label="The argument of gain on line 3">
+            <span>gain argument:</span>
+            <button class="chipbtn" type="button" role="radio" aria-checked="true" data-v="feel">feel</button>
+            <button class="chipbtn" type="button" role="radio" aria-checked="false" data-v="calc">feel * 2</button>
+        </div>
+    </div>
+
+    <div class="lanes">
+        <div class="lhs" aria-hidden="true">
+            <div class="lhd">note()<small>source</small></div>
+            <div class="lhd">gain()<small>control</small></div>
+            <div class="lhd">plays<small>result</small></div>
+        </div>
+        <div class="tracks" id="tracks">
+            <!--S:tracks-->
+            <div class="ruler" id="ruler" aria-hidden="true"><span class="rl c first" style="left:0%">0</span><span class="rl s first" style="left:0%">0</span><span class="rl c " style="left:25%">1/4</span><span class="rl s " style="left:25%">.5 s</span><span class="rl c " style="left:50%">1/2</span><span class="rl s " style="left:50%">1 s</span><span class="rl c " style="left:75%">3/4</span><span class="rl s " style="left:75%">1.5 s</span><span class="rl c last" style="left:100%">1</span><span class="rl s last" style="left:100%">2 s</span></div>
+            <div class="lane" aria-hidden="true"><div class="clip on" data-ev="0" style="left:0%;width:calc(50% - 2px);margin-left:1px"><b>c3</b><span class="chip lit" data-span="a0" style="--a: 0.896;">3:7-9</span></div><div class="clip" data-ev="1" style="left:50%;width:calc(25% - 2px);margin-left:1px"><b>e3</b><span class="chip" data-span="a1">3:11-13</span></div><div class="clip" data-ev="2" style="left:75%;width:calc(25% - 2px);margin-left:1px"><b>g3</b><span class="chip" data-span="a2">3:14-16</span></div></div>
+            <div class="lane" aria-hidden="true"><div class="clip ctl lit" data-span="lit" style="left: 0px; width: calc(100% - 2px); margin-left: 1px; --a: 0.896;"><b>1.0</b><span>span 1:12-15</span></div><i class="smp" style="left:0%"></i><i class="smp" style="left:50%"></i><i class="smp" style="left:75%"></i></div>
+            <div class="lane" aria-hidden="true"><div class="clip on" data-ev="0" style="left:0%;width:calc(50% - 2px);margin-left:1px"><b>c3</b><span class="chain"><span class="chip lit" data-span="lit" style="--a: 0.896;">1.0</span><span>›</span><span class="chip lit" data-span="a0" style="--a: 0.896;">c3</span></span></div><div class="clip" data-ev="1" style="left:50%;width:calc(25% - 2px);margin-left:1px"><b>e3</b><span class="chain"><span class="chip lit" data-span="lit" style="--a: 0.896;">1.0</span><span>›</span><span class="chip" data-span="a1">e3</span></span></div><div class="clip" data-ev="2" style="left:75%;width:calc(25% - 2px);margin-left:1px"><b>g3</b><span class="chain"><span class="chip lit" data-span="lit" style="--a: 0.896;">1.0</span><span>›</span><span class="chip" data-span="a2">g3</span></span></div></div>
+            <i class="gd" style="left:0%"></i>
+            <i class="gd" style="left:50%"></i>
+            <i class="gd" style="left:75%"></i>
+            <!--/S:tracks-->
+            <div class="ph" id="ph"><div class="hd" id="hd"></div></div>
+        </div>
+    </div>
+
+    <div class="key" aria-hidden="true">
+        <span><i class="sw on"></i>drawn in the editor now</span>
+        <span class="js-only"><i class="sw lk"></i>linked to what you point at</span>
+        <span class="js-only"><i class="sw pin"></i>pinned by a click, Esc lets go</span>
+    </div>
+</div>
+
+<ol class="stages" id="stages" aria-label="The six steps a span passes through, with the values for the event in focus">
+    <!--S:stages-->
+    <li class="sg" data-stage="1" data-n="1" title="Ast.kt, KlangScriptParser.kt: every node had a start position since 6 Jan (b920542e); the end column, which makes it a span, came on 20 Jan (18151fd9)"><div class="sh"><b>parser</b><span>stamps every AST node</span><time>20 Jan</time></div><div class="sd"><span class="l">NumberLiteral <span class="chip lit" data-span="lit" style="--a: 0.896;">1:12-15</span>  StringLiteral <span class="chip" data-span="str">3:6-18</span></span><span class="l">Identifier <span class="chip" data-span="arg">3:25-29</span></span></div></li>
+    <li class="sg" data-stage="2" data-n="2" title="Interpreter.kt, RuntimeValue.kt: NumberValue and StringValue carry a location (commit 4d868175)"><div class="sh"><b>interpreter</b><span>stamps every value</span><time>19 Jan</time></div><div class="sd"><span class="l">StringValue("c3 [e3 g3]", loc <span class="chip" data-span="str">3:6-18</span>)</span><span class="l">feel → NumberValue(1.0, loc <span class="chip lit" data-span="lit" style="--a: 0.896;">1:12-15</span>)</span></div></li>
+    <li class="sg" data-stage="3" data-n="3" title="CallInfo.kt, KlangScriptExtensionBuilder.kt: paramLocations are read off the argument values (commit adeaf167)"><div class="sh"><b>call info</b><span>arguments report spans</span><time>20 Jan</time></div><div class="sd"><span class="l">note(…) paramLocations [<span class="chip" data-span="str">3:6-18</span>]</span><span class="l">.gain(…) paramLocations [<span class="chip lit" data-span="lit" style="--a: 0.896;">1:12-15</span>]</span></div></li>
+    <li class="sg" data-stage="4" data-n="4" title="MiniNotationParser.kt, Token.toLocation: base.startColumn + column, plus the token length (offsets 19 Jan, 99899127; end columns 20 Jan, 18151fd9)"><div class="sh"><b>mini-notation</b><span>string span + offset</span><time>19 Jan</time></div><div class="sd"><span class="l"><span class="chip" data-span="str">3:6-18</span> + col 1 → <span class="chip lit" data-span="a0" style="--a: 0.896;">3:7-9</span></span><span class="l n">start 6 + 1 = 7, end 7 + 2 = 9</span></div></li>
+    <li class="sg" data-stage="5" data-n="5" title="StrudelPatternEvent.kt, ControlPattern.kt: prependLocation(control.innermost) (commit 009e29d0)"><div class="sh"><b>events</b><span>prepend, not overwrite</span><time>21 Jan</time></div><div class="sd"><span class="l">sourceLocations [<span class="chip lit" data-span="lit" style="--a: 0.896;">1:12-15</span>, <span class="chip lit" data-span="a0" style="--a: 0.896;">3:7-9</span>]</span><span class="l n">ControlPattern prepends the control's span</span></div></li>
+    <li class="sg act" data-stage="6" data-n="6" title="StrudelPlayback.kt, DashboardPage.kt, CodeMirrorComp.kt: ScheduledVoiceEvent, then takeLast(5) of the chain, addHighlight (commit ed102dd1)"><div class="sh"><b>editor</b><span>a timer draws each mark</span><time>23 Jan</time></div><div class="sd"><span class="l">ScheduledVoiceEvent start t0&nbsp;+&nbsp;0.0&nbsp;s, end t0&nbsp;+&nbsp;1.0&nbsp;s</span><span class="l"><span class="call lit" data-span="lit" style="--a: 0.896;">addHighlight(line = 1, column = 12, length = 3)</span></span><span class="l"><span class="call lit" data-span="a0" style="--a: 0.896;">addHighlight(line = 3, column = 7, length = 2)</span></span></div></li>
+    <!--/S:stages-->
+</ol>
+<p class="foot">State of the code on 23 Jan 2026 (commit ed102dd1). Lines and columns are counted by hand from the snippet, since no test pins this exact program. The tempo is the playback default, 0.5 cycles per second. The tag on each step is the day it first worked, from git. The 0.3 s pulse and the 25 ms head start are the editor's own; the colors are the page's. Later, so not drawn: the WebGL overlay (section 4) and AstIndex, the same thread backwards (17 Mar 2026, section 5).</p>
+</div>
+
+
+
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    // ---- real numbers (see the report for file and line) -----------------------------------------------------------
+    var CPS = 0.5;          // StrudelPlayback.Options.cyclesPerSecond default
+    var CYC = 1 / CPS;      // seconds per cycle
+    var LEAD = 0.025;       // DashboardPage.scheduleHighlight: "few ms early", 25 ms
+    var PULSE = 0.3;        // index.html: animation: pulse 0.3s ease-out
+    var MIN_HOLD = 0.25;    // DashboardPage.scheduleHighlight: maxOf(250.0, ...)
+    var LINE1 = "let feel = 1.0";
+    var STR = "c3 [e3 g3]";
+    var ARGS = { feel: "feel", calc: "feel * 2" };
+
+    var root = document.getElementById("fig");
+    var elInfo = document.getElementById("info");
+    var elEd = document.getElementById("ed");
+    var elTracks = document.getElementById("tracks");
+    var elStages = document.getElementById("stages");
+    var elTime = document.getElementById("time");
+    var elPh = document.getElementById("ph");
+    var elHd = document.getElementById("hd");
+    var bPlay = document.getElementById("b-play");
+    elHd.setAttribute("role", "slider");
+    elHd.setAttribute("tabindex", "0");
+    elHd.setAttribute("aria-label", "Playhead, one cycle of the pattern");
+    elHd.setAttribute("aria-valuemin", "0");
+    elHd.setAttribute("aria-valuemax", "1");
+
+    // ---- the model: spans, events, chains ------------------------------------------------------------------------
+    function parseAtoms(s) {
+        var pos = 0, out = [];
+        function seq() {
+            var items = [];
+            while (pos < s.length) {
+                var ch = s.charAt(pos);
+                if (ch === " ") { pos++; continue; }
+                if (ch === "]") { break; }
+                if (ch === "[") {
+                    pos++;
+                    var sub = seq();
+                    if (s.charAt(pos) === "]") { pos++; }
+                    items.push({ group: sub });
+                    continue;
+                }
+                var st = pos;
+                while (pos < s.length && " []".indexOf(s.charAt(pos)) < 0) { pos++; }
+                items.push({ text: s.slice(st, pos), inCol: st + 1 });
+            }
+            return items;
+        }
+        function place(items, b, e) {
+            var w = (e - b) / items.length;
+            items.forEach(function (it, i) {
+                var bb = b + i * w, ee = bb + w;
+                if (it.group) { place(it.group, bb, ee); } else { it.b = bb; it.e = ee; out.push(it); }
+            });
+        }
+        place(seq(), 0, 1);
+        return out;
+    }
+
+    function buildModel(v) {
+        var arg = ARGS[v];
+        var l3 = 'note("' + STR + '").gain(' + arg + ")";
+        var spans = {};
+        function sp(id, line, c0, len, text, node) {
+            spans[id] = { id: id, line: line, c0: c0, c1: c0 + len, text: text, node: node, label: line + ":" + c0 + "-" + (c0 + len) };
+        }
+        sp("lit", 1, LINE1.indexOf("1.0") + 1, 3, "1.0", "NumberLiteral");
+        var q = l3.indexOf('"') + 1;                       // column of the opening quote: 6
+        sp("str", 3, q, STR.length + 2, '"' + STR + '"', "StringLiteral");
+        sp("arg", 3, l3.indexOf(".gain(") + 7, arg.length, arg, v === "feel" ? "Identifier" : "BinaryOperation");
+        var atoms = parseAtoms(STR);
+        var events = atoms.map(function (x, i) {
+            sp("a" + i, 3, q + x.inCol, x.text.length, x.text, "atom");
+            return { i: i, name: x.text, atom: "a" + i, inCol: x.inCol, b: x.b, e: x.e, q: q };
+        });
+        var ctrlSpan = v === "feel" ? "lit" : null;
+        events.forEach(function (ev) { ev.chain = ctrlSpan ? [ctrlSpan, ev.atom] : [ev.atom]; });
+        return { v: v, lines: [LINE1, "", l3], spans: spans, events: events, ctrlSpan: ctrlSpan, arg: arg };
+    }
+
+    var M = buildModel("feel");
+    var state = { t: 0, playing: false, dragging: false, hover: null, pin: null };
+
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    function secs(x) { return (x * CYC).toFixed(1); }
+    function t0s(x) { return "t0&nbsp;+&nbsp;" + secs(x) + "&nbsp;s"; }
+
+    // ---- builders (the static markup in this file is what these make at t = 0) ------------------------------------
+    function spanTok(id, inner, extra) {
+        var s = M.spans[id];
+        return '<span class="sp' + (extra ? " " + extra : "") + '" data-span="' + id + '" tabindex="0" role="button" aria-pressed="false" aria-label="' +
+            esc(s.text) + ", span " + s.label + '">' + inner + "</span>";
+    }
+    function buildCode() {
+        var events = M.events, out = "", cursor = 0;
+        events.forEach(function (ev) {
+            var idx = STR.indexOf(ev.name, cursor);
+            out += esc(STR.slice(cursor, idx)) + spanTok(ev.atom, esc(ev.name));
+            cursor = idx + ev.name.length;
+        });
+        out += esc(STR.slice(cursor));
+        var strTok = spanTok("str", '"' + out + '"', "st-str");
+        var line3 = 'note(' + strTok + ").gain(" + spanTok("arg", esc(M.arg)) + ")";
+        var line1 = '<span class="kw">let</span> feel = ' + spanTok("lit", "1.0");
+        function ln(n, html) { return '<div class="ln"><span class="no" aria-hidden="true">' + n + '</span><span class="tx">' + html + "</span></div>"; }
+        return ln(1, line1) + ln(2, "") + ln(3, line3);
+    }
+
+    function pct(x) { return (x * 100) + "%"; }
+    function buildTracks() {
+        var h = "";
+        // ruler
+        var labs = [["0", "0", "first"], ["1/4", ".5 s", ""], ["1/2", "1 s", ""], ["3/4", "1.5 s", ""], ["1", "2 s", "last"]];
+        h += '<div class="ruler" id="ruler" aria-hidden="true">';
+        labs.forEach(function (l, i) {
+            var left = pct(i / 4);
+            h += '<span class="rl c ' + l[2] + '" style="left:' + left + '">' + l[0] + '</span>';
+            h += '<span class="rl s ' + l[2] + '" style="left:' + left + '">' + l[1] + '</span>';
+        });
+        h += "</div>";
+        // lane 1: the notes
+        h += '<div class="lane" aria-hidden="true">';
+        M.events.forEach(function (ev) {
+            h += '<div class="clip" data-ev="' + ev.i + '" style="left:' + pct(ev.b) + ";width:calc(" + pct(ev.e - ev.b) + ' - 2px);margin-left:1px"><b>' + esc(ev.name) +
+                '</b><span class="chip" data-span="' + ev.atom + '">' + M.spans[ev.atom].label + "</span></div>";
+        });
+        h += "</div>";
+        // lane 2: the control
+        h += '<div class="lane" aria-hidden="true">';
+        if (M.ctrlSpan) {
+            h += '<div class="clip ctl" data-span="lit" style="left:0;width:calc(100% - 2px);margin-left:1px"><b>1.0</b><span>span ' + M.spans.lit.label + "</span></div>";
+        } else {
+            h += '<div class="clip ctl none" style="left:0;width:calc(100% - 2px);margin-left:1px"><b>2.0</b><span>no span</span></div>';
+        }
+        M.events.forEach(function (ev) { h += '<i class="smp" style="left:' + pct(ev.b) + '"></i>'; });
+        h += "</div>";
+        // lane 3: what plays
+        h += '<div class="lane" aria-hidden="true">';
+        M.events.forEach(function (ev) {
+            var chain = ev.chain.map(function (id) { return '<span class="chip" data-span="' + id + '">' + esc(M.spans[id].text) + "</span>"; }).join("<span>&rsaquo;</span>");
+            h += '<div class="clip" data-ev="' + ev.i + '" style="left:' + pct(ev.b) + ";width:calc(" + pct(ev.e - ev.b) + ' - 2px);margin-left:1px"><b>' + esc(ev.name) +
+                '</b><span class="chain">' + chain + "</span></div>";
+        });
+        h += "</div>";
+        M.events.forEach(function (ev) { h += '<i class="gd" style="left:' + pct(ev.b) + '"></i>'; });
+        return h;
+    }
+
+    function chip(id) { return '<span class="chip" data-span="' + id + '">' + M.spans[id].label + "</span>"; }
+    function buildStages(fi) {
+        var ev = M.events[fi], feel = M.v === "feel", sp = M.spans;
+        var chainHtml = ev.chain.map(chip).join(", ");
+        var rows = [
+            { n: 1, name: "parser", gloss: "stamps every AST node", date: "20 Jan", tip: "Ast.kt, KlangScriptParser.kt: every node had a start position since 6 Jan (b920542e); the end column, which makes it a span, came on 20 Jan (18151fd9)",
+              d: '<span class="l">NumberLiteral ' + chip("lit") + "  StringLiteral " + chip("str") + "</span>" +
+                 '<span class="l">' + sp.arg.node + " " + chip("arg") + "</span>" },
+            { n: 2, name: "interpreter", gloss: "stamps every value", date: "19 Jan", tip: "Interpreter.kt, RuntimeValue.kt: NumberValue and StringValue carry a location (commit 4d868175)",
+              d: '<span class="l">StringValue("' + esc(STR) + '", loc ' + chip("str") + ")</span>" +
+                 (feel ? '<span class="l">feel &rarr; NumberValue(1.0, loc ' + chip("lit") + ")</span>"
+                       : '<span class="l">feel * 2 &rarr; NumberValue(2.0, loc <span class="x">null</span>)</span><span class="l n">arithmetic builds a new value</span>') },
+            { n: 3, name: "call info", gloss: "arguments report spans", date: "20 Jan", tip: "CallInfo.kt, KlangScriptExtensionBuilder.kt: paramLocations are read off the argument values (commit adeaf167)",
+              d: '<span class="l">note(&hellip;) paramLocations [' + chip("str") + "]</span>" +
+                 '<span class="l">.gain(&hellip;) paramLocations [' + (feel ? chip("lit") : '<span class="x">null</span>') + "]</span>" },
+            { n: 4, name: "mini-notation", gloss: "string span + offset", date: "19 Jan", tip: "MiniNotationParser.kt, Token.toLocation: base.startColumn + column, plus the token length (offsets 19 Jan, 99899127; end columns 20 Jan, 18151fd9)",
+              d: '<span class="l">' + chip("str") + " + col " + ev.inCol + " &rarr; " + chip(ev.atom) + "</span>" +
+                 '<span class="l n">start ' + ev.q + " + " + ev.inCol + " = " + (ev.q + ev.inCol) + ", end " + (ev.q + ev.inCol) + " + " + ev.name.length + " = " + (ev.q + ev.inCol + ev.name.length) + "</span>" },
+            { n: 5, name: "events", gloss: "prepend, not overwrite", date: "21 Jan", tip: "StrudelPatternEvent.kt, ControlPattern.kt: prependLocation(control.innermost) (commit 009e29d0)",
+              d: '<span class="l">sourceLocations [' + chainHtml + "]</span>" +
+                 '<span class="l n">' + (feel ? "ControlPattern prepends the control's span" : "the control carries no span, nothing to prepend") + "</span>" },
+            { n: 6, name: "editor", gloss: "a timer draws each mark", date: "23 Jan", tip: "StrudelPlayback.kt, DashboardPage.kt, CodeMirrorComp.kt: ScheduledVoiceEvent, then takeLast(5) of the chain, addHighlight (commit ed102dd1)",
+              d: '<span class="l">ScheduledVoiceEvent start ' + t0s(ev.b) + ", end " + t0s(ev.e) + "</span>" +
+                 ev.chain.map(function (id) {
+                     var s = sp[id];
+                     return '<span class="l"><span class="call" data-span="' + id + '">addHighlight(line = ' + s.line + ", column = " + s.c0 + ", length = " + (s.c1 - s.c0) + ")</span></span>";
+                 }).join("") }
+        ];
+        return rows.map(function (r) {
+            return '<li class="sg" data-stage="' + r.n + '" data-n="' + r.n + '" tabindex="0" title="' + esc(r.tip) + '"><div class="sh"><b>' + r.name + "</b><span>" + r.gloss +
+                "</span><time>" + r.date + '</time></div><div class="sd">' + r.d + "</div></li>";
+        }).join("");
+    }
+
+    // ---- element registry --------------------------------------------------------------------------------------------
+    var els = { span: {}, ev: {}, stage: {} };
+    function collect() {
+        els = { span: {}, ev: {}, stage: {} };
+        Array.prototype.forEach.call(root.querySelectorAll("[data-span]"), function (e) { (els.span[e.getAttribute("data-span")] = els.span[e.getAttribute("data-span")] || []).push(e); });
+        Array.prototype.forEach.call(root.querySelectorAll("[data-ev]"), function (e) { (els.ev[e.getAttribute("data-ev")] = els.ev[e.getAttribute("data-ev")] || []).push(e); });
+        Array.prototype.forEach.call(root.querySelectorAll("[data-stage]"), function (e) { (els.stage[e.getAttribute("data-stage")] = els.stage[e.getAttribute("data-stage")] || []).push(e); });
+    }
+
+    // ---- time, pulses, links ---------------------------------------------------------------------------------------
+    function soundingIdx(t) {
+        for (var i = 0; i < M.events.length; i++) { if (t >= M.events[i].b && t < M.events[i].e) { return i; } }
+        return 0;
+    }
+    function pulse(dt) {
+        if (dt >= PULSE) { return 0.35; }
+        var x = dt / PULSE;
+        return 0.35 + 0.65 * (1 - x) * (1 - x);
+    }
+    function intensity(id, tSec) {
+        var best = 0;
+        M.events.forEach(function (ev) {
+            if (ev.chain.indexOf(id) < 0) { return; }
+            for (var k = -1; k <= 1; k++) {
+                var b = ev.b * CYC + k * CYC, e = ev.e * CYC + k * CYC;
+                var start = b - LEAD, stop = Math.max(e, start + MIN_HOLD);
+                if (tSec >= start && tSec < stop) { best = Math.max(best, pulse(tSec - start)); }
+            }
+        });
+        return best;
+    }
+
+    function stageSpans(k, fi) {
+        var all = {};
+        var chain = fi == null ? null : M.events[fi].chain;
+        var u = function (list) { list.forEach(function (x) { all[x] = 1; }); };
+        if (k === 1) { u(["str", "lit", "arg"]); }
+        if (k === 2) { u(["str", "lit", "arg"]); }
+        if (k === 3) { u(M.ctrlSpan ? ["str", "arg", "lit"] : ["str", "arg"]); }
+        if (k === 4) { u(["str"].concat(M.events.map(function (e) { return e.atom; }))); }
+        if (k === 5 || k === 6) {
+            if (chain) { u(chain); } else { M.events.forEach(function (e) { u(e.chain); }); }
+        }
+        return all;
+    }
+    function stagesOf(spanSet) {
+        var res = {};
+        for (var k = 1; k <= 6; k++) {
+            var ss = stageSpans(k, null);
+            for (var id in spanSet) { if (ss[id]) { res[k] = 1; } }
+        }
+        return res;
+    }
+    function eventsCarrying(spanSet) {
+        var res = {};
+        M.events.forEach(function (ev) { ev.chain.forEach(function (id) { if (spanSet[id]) { res[ev.i] = 1; } }); });
+        return res;
+    }
+
+    function computeLink(src, idx) {
+        var L = { spans: {}, evs: {}, stages: {}, focus: idx };
+        if (!src) { return L; }
+        var allEv = {};
+        M.events.forEach(function (e) { allEv[e.i] = 1; });
+        if (src.kind === "span") {
+            var id = src.id;
+            L.spans[id] = 1;
+            if (id === "arg" && M.ctrlSpan) { L.spans[M.ctrlSpan] = 1; }
+            var carried = eventsCarrying(L.spans);
+            var isAtom = /^a\d$/.test(id);
+            if (id === "str" || id === "arg") { L.evs = allEv; } else { L.evs = carried; }
+            if (isAtom) { L.focus = +id.slice(1); }
+            L.stages = stagesOf(L.spans);
+        } else if (src.kind === "stage") {
+            var ss = stageSpans(src.id, idx);
+            L.spans = ss;
+            L.evs = src.id === 4 ? allEv : eventsCarrying(ss);
+            L.stages[src.id] = 1;
+        } else if (src.kind === "ev") {
+            L.focus = src.id;
+            M.events[src.id].chain.forEach(function (id) { L.spans[id] = 1; });
+            L.evs[src.id] = 1;
+            L.stages = stagesOf(L.spans);
+            L.stages[5] = 1; L.stages[6] = 1;
+        }
+        return L;
+    }
+
+    var STAGE_FACTS = {
+        1: "step 1, <b>parser</b>: every node of the tree carries its span, first for error messages.",
+        2: "step 2, <b>interpreter</b>: a literal becomes a value that keeps its span; a lookup hands the same value back.",
+        3: "step 3, <b>call info</b>: each call gets the spans of its arguments, read off the values.",
+        4: "step 4, <b>mini-notation</b>: the string's span plus the offset inside it is the span of each atom.",
+        5: "step 5, <b>events</b>: an event carries a chain of spans; the control's span is put in front of the atom's, nothing is replaced.",
+        6: "step 6, <b>editor</b>: one timer per mark, 25 ms early; the pulse lasts 0.3 s."
+    };
+    function facts(src, L, idx) {
+        var ev = M.events[idx], sp = M.spans;
+        var order = Object.keys(L.stages).map(Number).sort();
+        var n = Object.keys(L.evs).length;
+        if (!src) {
+            return "sounding <b>" + esc(ev.name) + "</b>. The editor draws " + ev.chain.length + (ev.chain.length === 1 ? " mark: " : " marks: ") +
+                ev.chain.map(function (id) { return "<b>" + esc(sp[id].text) + "</b> " + sp[id].label; }).join(" and ") + ".";
+        }
+        var lead = (state.pin && !state.hover) ? "pinned. " : "";
+        if (src.kind === "span") {
+            var s = sp[src.id];
+            var head = "<b>" + esc(s.text) + "</b> " + s.label + ". ";
+            if (src.id === "arg") {
+                return lead + head + (M.ctrlSpan ? "Its value was born at <b>1.0</b> " + sp.lit.label + " and carries that span with it."
+                                                 : "A new value with no birthplace: nothing rides, so <b>1.0</b> does not light.");
+            }
+            if (src.id === "str") { return lead + head + "The base of the " + M.events.length + " atoms; it is not in the chain itself."; }
+            return lead + head + "Steps " + order.join(", ") + ". Rides " + n + (n === 1 ? " event." : " events.");
+        }
+        if (src.kind === "stage") {
+            return lead + STAGE_FACTS[src.id];
+        }
+        var fe = M.events[L.focus];
+        return lead + "<b>" + esc(fe.name) + "</b> event at t0 + " + secs(fe.b) + " s, chain " + fe.chain.map(function (id) { return sp[id].label; }).join(" &rsaquo; ") + ".";
+    }
+
+    // ---- painting ---------------------------------------------------------------------------------------------------
+    var cache = { focus: -1, variant: "", info: "", idx: -1 };
+    function setCls(list, cls, on) { (list || []).forEach(function (e) { e.classList.toggle(cls, on); }); }
+    function pinnedMatch(kind, id) { return state.pin && state.pin.kind === kind && String(state.pin.id) === String(id); }
+
+    function paint() {
+        var tSec = state.t * CYC;
+        var idx = soundingIdx(state.t);
+        var src = state.hover || state.pin;
+        var L = computeLink(src, idx);
+
+        if (cache.focus !== L.focus || cache.variant !== M.v) {
+            elStages.innerHTML = buildStages(L.focus);
+            collect();
+            cache.focus = L.focus; cache.variant = M.v;
+        }
+
+        // pulses (orange), by span id
+        var litCount = 0, anyLit = false;
+        Object.keys(M.spans).forEach(function (id) {
+            var a = intensity(id, tSec);
+            var on = a > 0;
+            if (on && M.events.some(function (e) { return e.chain.indexOf(id) >= 0; })) { litCount++; anyLit = true; }
+            (els.span[id] || []).forEach(function (e) {
+                e.classList.toggle("lit", on);
+                if (on) { e.style.setProperty("--a", a.toFixed(3)); }
+            });
+        });
+
+        // clips sounding now
+        M.events.forEach(function (ev) { setCls(els.ev[ev.i], "on", ev.i === idx); });
+
+        // links (teal), pin (gold)
+        Object.keys(els.span).forEach(function (id) { setCls(els.span[id], "lk", !!L.spans[id]); setCls(els.span[id], "pin", pinnedMatch("span", id)); });
+        Object.keys(els.ev).forEach(function (i) { setCls(els.ev[i], "lk", !!L.evs[i]); });
+        Object.keys(els.stage).forEach(function (k) {
+            setCls(els.stage[k], "lk", !!L.stages[k]);
+            setCls(els.stage[k], "pin", pinnedMatch("stage", k));
+            setCls(els.stage[k], "act", +k === 6 && anyLit);
+        });
+        // tokens in the editor keep aria-pressed in step with the pin
+        Object.keys(M.spans).forEach(function (id) {
+            (els.span[id] || []).forEach(function (e) { if (e.getAttribute("role") === "button") { e.setAttribute("aria-pressed", pinnedMatch("span", id) ? "true" : "false"); } });
+        });
+
+        // playhead, time, slider
+        elPh.style.left = (state.t * 100) + "%";
+        elTime.textContent = "t0 + " + tSec.toFixed(2) + " s, cycle " + state.t.toFixed(2);
+        elHd.setAttribute("aria-valuenow", state.t.toFixed(3));
+        var info = facts(src, L, idx);
+        elHd.setAttribute("aria-valuetext", "cycle " + state.t.toFixed(2) + ", " + M.events[idx].name + " sounding");
+        if (info !== cache.info) { elInfo.innerHTML = "<div>" + info + "</div>"; cache.info = info; }
+    }
+
+    // ---- rebuild after a variant change ---------------------------------------------------------------------------
+    function rebuild(v) {
+        M = buildModel(v);
+        elEd.querySelectorAll(".ln").forEach(function (n) { n.parentNode.removeChild(n); });
+        var tmp = document.createElement("div");
+        tmp.innerHTML = buildCode();
+        while (tmp.firstChild) { elEd.insertBefore(tmp.firstChild, elEd.querySelector(".var")); }
+        elTracks.querySelectorAll(".ruler, .lane, .gd").forEach(function (n) { n.parentNode.removeChild(n); });
+        tmp = document.createElement("div");
+        tmp.innerHTML = buildTracks();
+        while (tmp.firstChild) { elTracks.insertBefore(tmp.firstChild, elPh); }
+        if (state.pin && state.pin.kind === "span" && !M.spans[state.pin.id]) { state.pin = null; }
+        cache.focus = -1;
+        Array.prototype.forEach.call(document.querySelectorAll(".chipbtn"), function (b) { b.setAttribute("aria-checked", b.getAttribute("data-v") === v ? "true" : "false"); });
+        collect();
+        paint();
+        rehover();
+    }
+
+    // ---- pointing -------------------------------------------------------------------------------------------------
+    function resolve(node) {
+        if (!node || !node.closest) { return null; }
+        var s = node.closest("[data-span]");
+        if (s && root.contains(s)) { return { kind: "span", id: s.getAttribute("data-span") }; }
+        var g = node.closest("[data-stage]");
+        if (g) { return { kind: "stage", id: +g.getAttribute("data-stage") }; }
+        var c = node.closest("[data-ev]");
+        if (c) { return { kind: "ev", id: +c.getAttribute("data-ev") }; }
+        return null;
+    }
+    function same(a, b) { return (!a && !b) || (a && b && a.kind === b.kind && String(a.id) === String(b.id)); }
+    function setHover(h) { if (same(h, state.hover)) { return; } state.hover = h; paint(); }
+
+    var lastPt = null;
+    function rehover() {
+        if (!lastPt || state.dragging) { return; }
+        var el = document.elementFromPoint(lastPt.x, lastPt.y);
+        setHover(resolve(el));
+    }
+    root.addEventListener("pointerover", function (e) {
+        if (state.dragging || e.pointerType === "touch") { return; }
+        lastPt = { x: e.clientX, y: e.clientY };
+        setHover(resolve(e.target));
+    });
+    root.addEventListener("pointermove", function (e) { lastPt = { x: e.clientX, y: e.clientY }; });
+    document.documentElement.addEventListener("pointerleave", function () { lastPt = null; if (!state.dragging) { setHover(null); } });
+    root.addEventListener("focusin", function (e) {
+        var r = resolve(e.target);
+        if (r && (r.kind !== "ev") && e.target.getAttribute("tabindex") === "0") { setHover(r); }
+    });
+    root.addEventListener("focusout", function () { setHover(null); });
+
+    function firstEventOf(id) {
+        for (var i = 0; i < M.events.length; i++) { if (M.events[i].chain.indexOf(id) >= 0) { return M.events[i]; } }
+        return null;
+    }
+    function togglePin(r) {
+        if (same(r, state.pin)) { state.pin = null; paint(); return; }
+        state.pin = r;
+        if (r.kind === "span") {
+            var ev = firstEventOf(r.id);
+            if (ev) { state.t = Math.min(0.9999, ev.b + 0.004); }
+        }
+        paint();
+    }
+    root.addEventListener("click", function (e) {
+        if (state.justDragged) { return; }
+        var t = e.target;
+        if (t.closest && (t.closest(".tracks") || t.closest(".btn") || t.closest(".chipbtn"))) { return; }
+        var r = resolve(t);
+        if (r && r.kind !== "ev") { togglePin(r); }
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { state.pin = null; paint(); return; }
+        var t = e.target;
+        if (!root.contains(t)) { return; }
+        if ((e.key === "Enter" || e.key === " ") && t.getAttribute && t.getAttribute("tabindex") === "0" && t !== elHd) {
+            e.preventDefault();
+            var r = resolve(t);
+            if (r && r.kind !== "ev") { togglePin(r); }
+        }
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll(".chipbtn"), function (b) {
+        b.addEventListener("click", function () { rebuild(b.getAttribute("data-v")); });
+    });
+
+    // ---- the playhead: scrub, play, keys ----------------------------------------------------------------------------
+    function clampT(x) { return Math.max(0, Math.min(0.9999, x)); }
+    function tAt(e) {
+        var r = elTracks.getBoundingClientRect();
+        return clampT((e.clientX - r.left) / r.width);
+    }
+    var wasPlaying = false;
+    elTracks.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0 && e.pointerType === "mouse") { return; }
+        state.dragging = true; state.justDragged = false; elTracks.classList.add("drag");
+        wasPlaying = state.playing; state.playing = false;
+        try { elTracks.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        state.hover = null;
+        state.t = tAt(e);
+        paint();
+    });
+    elTracks.addEventListener("pointermove", function (e) {
+        if (!state.dragging) { return; }
+        state.justDragged = true;
+        state.t = tAt(e);
+        paint();
+    });
+    function endDrag() {
+        if (!state.dragging) { return; }
+        state.dragging = false; elTracks.classList.remove("drag");
+        state.playing = wasPlaying;
+        if (state.playing) { last = null; requestAnimationFrame(tick); }
+        setTimeout(function () { state.justDragged = false; }, 0);
+        rehover();
+    }
+    elTracks.addEventListener("pointerup", endDrag);
+    elTracks.addEventListener("pointercancel", endDrag);
+
+    var last = null;
+    function tick(ts) {
+        if (!state.playing) { return; }
+        if (last != null) { state.t = (state.t + (ts - last) / 1000 * CPS) % 1; }
+        last = ts;
+        paint();
+        requestAnimationFrame(tick);
+    }
+    function setPlaying(on) {
+        state.playing = on;
+        bPlay.setAttribute("aria-pressed", on ? "true" : "false");
+        bPlay.setAttribute("aria-label", on ? "Pause" : "Play");
+        document.getElementById("i-play").setAttribute("d", on ? "M2 1h3v10H2zM7 1h3v10H7z" : "M2 1l9 5-9 5z");
+        if (on) { last = null; requestAnimationFrame(tick); }
+    }
+    bPlay.addEventListener("click", function () { setPlaying(!state.playing); });
+    document.getElementById("b-start").addEventListener("click", function () { state.t = 0; paint(); });
+    function nextEvent(dir) {
+        var bs = M.events.map(function (e) { return e.b; });
+        var cur = state.t, pick;
+        if (dir > 0) { pick = bs.filter(function (b) { return b > cur + 1e-6; })[0]; if (pick == null) { pick = bs[0]; } }
+        else { var p = bs.filter(function (b) { return b < cur - 1e-3; }); pick = p.length ? p[p.length - 1] : bs[bs.length - 1]; }
+        state.t = clampT(pick + 0.004);
+        paint();
+    }
+    document.getElementById("b-next").addEventListener("click", function () { nextEvent(1); });
+    elHd.addEventListener("keydown", function (e) {
+        var step = e.shiftKey ? 0.125 : 1 / 32, handled = true;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") { state.t = clampT(state.t + step); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { state.t = clampT(state.t - step); }
+        else if (e.key === "Home") { state.t = 0; }
+        else if (e.key === "End") { state.t = 0.9999; }
+        else if (e.key === "PageDown") { nextEvent(1); return; }
+        else if (e.key === "PageUp") { nextEvent(-1); return; }
+        else if (e.key === " ") { setPlaying(!state.playing); }
+        else { handled = false; }
+        if (handled) { e.preventDefault(); paint(); }
+    });
+
+    // a link can open at a time: figure.html#t=0.6
+    (function () {
+        var m = /[#&]t=([0-9.]+)/.exec(location.hash || "");
+        if (m) { state.t = clampT(parseFloat(m[1])); }
+    })();
+
+    // ---- first paint ---------------------------------------------------------------------------------------------------
+    elEd.querySelectorAll(".ln").forEach(function (n) { n.parentNode.removeChild(n); });
+    (function () {
+        var tmp = document.createElement("div");
+        tmp.innerHTML = buildCode();
+        while (tmp.firstChild) { elEd.insertBefore(tmp.firstChild, elEd.querySelector(".var")); }
+        elTracks.querySelectorAll(".ruler, .lane, .gd").forEach(function (n) { n.parentNode.removeChild(n); });
+        tmp = document.createElement("div");
+        tmp.innerHTML = buildTracks();
+        while (tmp.firstChild) { elTracks.insertBefore(tmp.firstChild, elPh); }
+    })();
+    collect();
+    paint();
+
+    // ---- height reporting --------------------------------------------------------------------------------------------------
+    function report() {
+        var h = Math.ceil(root.getBoundingClientRect().height) + 6;
+        try { window.parent.postMessage({ type: "klang-figure-height", height: h }, "*"); } catch (e) { /* no parent */ }
+    }
+    window.addEventListener("load", report);
+    window.addEventListener("resize", report);
+    if (window.ResizeObserver) { new ResizeObserver(report).observe(root); }
+    report();
+})();
+</script>
+</body>
+</html>
