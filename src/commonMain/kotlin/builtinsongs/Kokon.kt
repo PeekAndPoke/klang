@@ -346,9 +346,8 @@ export song = stack(
     .late(berlin.range(0.0, 0.002).mul(drunk).seg(8)),
   master(Katalyst(k => k
     .reverb(0.25, 7, 4500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.5).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
-    .gain(1.3).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
-    .gain(1.2)
+    .gain(1.4)                                     // the house level, -14 LUFS
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
 )
 

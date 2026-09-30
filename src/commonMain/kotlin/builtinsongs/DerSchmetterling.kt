@@ -453,7 +453,7 @@ export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[~ sd] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.22).pan(0.625)
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.14).pan(0.625)
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
@@ -495,12 +495,11 @@ export song_body = stack(
       guitar2.apply(guitar2_arrange) // .solo() .mute()
       , // Guitar 3
       guitar3.apply(guitar3_arrange) // .solo() .mute()
-    ).reverb(wet = 0.15, size = 3.0)
-      .compressor(-21, 3, 6, 0.005, 0.12) // . solo()
+    ).reverb(wet = 0.15, size = 3.0) // . solo()
     , // Bass
-    bass.apply(bass_arrange).compressor(-15, 3, 6, 0.005, 0.12) // .solo() // .mute()
+    bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
-    trommel.apply(trommel_arrange).reverb(wet = 0.20, size = 6.0).compressor(-21, 3, 6, 0.005, 0.12) // .solo() .mute()
+    trommel.apply(trommel_arrange).reverb(wet = 0.20, size = 6.0) // .solo() .mute()
   ).analog(feel).transpose(transposition)
   , // Drums
   stack(
@@ -510,7 +509,6 @@ export song_body = stack(
     clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
   ).analog(feel / 2).reverb(wet = 0.30, size = 4.0) //. solo() //  .mute()
-    .compressor(-27, 4, 6, 0.005, 0.12)
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>")
 
 export song = stack(
@@ -518,12 +516,13 @@ export song = stack(
   countin.apply(countin_arrange)
   , // Song body
   song_body.apply(song_arrange)
-  , // Master
-  master(Katalyst(k =>
-    k.reverb(0.2, 7, 3500)
-     .gain(1.8).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
-     .gain(1.5).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
-     .gain(1.3)
+  , // Master: the hall, the house level (-14 LUFS), and a ceiling that only trims the peaks. No glue compressor: it
+    // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
+    // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
+  master(Katalyst(k => k
+    .reverb(0.2, 7, 3500)
+    .gain(4.5)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
 
