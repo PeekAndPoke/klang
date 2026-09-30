@@ -37,7 +37,7 @@ let drunk =  1   // two guitarists, sober this time, mostly
 
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
 let pickupNeck = x => x
-  .lowpass(3500, 1.4)
+  .lowpass(3400, 1.4)
   .notch(freq = Osc.freq().mul(4), q = 2.0)
   .mul(1.2)
 
@@ -84,8 +84,8 @@ let powerPushPull = x => x
   .mul(1.6)
 
 let powerClassA = x => x
-  .distort(0.25, "asym", 2)
-  .mul(1.3)
+  .distort(0.20, "asym", 2)
+  .mul(1.4)
 
 let cab4x12 = x => x
   .eq(e => e
@@ -99,7 +99,7 @@ let cab4x12 = x => x
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
   .eq(e => e.band(freq = 3200, q = 1.0, db = 3.0))
-  .lowpass(6500, 0.707, x => x.passes(2))
+  .lowpass(6500, 0.707, x => x.passes(3))
 
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
 let makeGuitar = (pickup, pedal, preamp, power, cab) => {
@@ -190,7 +190,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
   .oscp("decay", 2.0).clip(2)
   .velocity("1.0 0.8 0.9")
-  .gain(0.325).pan(0.5)
+  .gain(0.30).pan(0.5)
   .orbit(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
@@ -328,13 +328,18 @@ export song = stack(
     .analog(feel)
     .late(berlin.range(0.0, 0.002).mul(drunk).seg(8)),
   master(Katalyst(k => k
-    .gain(1.6).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
-    .gain(1.5).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
-    .gain(1.3)
+    .gain(1.5).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
+    .gain(1.3).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
+    .gain(1.2)
   ))
 )
 
+
+
 // Written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
-// Fine-tuned and arranged with the maintainer
+// Fine-tuned and arranged with peekandpoke
+
+    
+    
     """,
 )
