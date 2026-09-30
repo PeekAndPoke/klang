@@ -499,13 +499,11 @@ export song = stack(
   , // Master
   master(Katalyst(k =>
     k.reverb(0.2, 7, 3500)
-     .gain(2.0).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
-     .gain(1.8).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
+     .gain(1.8).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
+     .gain(1.5).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
      .gain(1.3)
-
   ))
 )
-
 
 
 
