@@ -215,7 +215,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
   .velocity("1.0 0.85 0.9 0.85")
-  .gain(0.8)
+  .gain(0.7)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5).reverb(wet = 0.15, size = 3)
 
@@ -253,7 +253,7 @@ let spinning = stack(
 // A second guitar answers.
 let answering = stack(
   spin(cocoonArp).gain(0.21),
-  sing(melodyOne),
+  sing(melodyOne).gain(0.25),
 )
 
 // The heartbeat starts.
@@ -358,5 +358,6 @@ export song = stack(
 
     
     
+
     """,
 )
