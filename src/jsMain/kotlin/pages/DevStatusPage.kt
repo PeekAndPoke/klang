@@ -47,8 +47,9 @@ fun Tag.DevStatusPage() = comp {
 
 /**
  * Where Klang stands: cards for the static pages next to the SPA (the topic map, the mission log,
- * the white paper). The pages live in `src/jsMain/resources`, built by `console/dev-status/build.py`,
- * their preview images by `console/dev-status/previews.sh`.
+ * the white paper, the blog). The pages live in `src/jsMain/resources`, built by
+ * `console/dev-status/build.py` and `console/blog/build.py`, their preview images by
+ * `console/dev-status/previews.sh`.
  */
 class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
 
@@ -88,6 +89,14 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
             description = "How Klangmotor works: the pattern language, the scripting language, the audio engine " +
                     "and the wire between them. What exists, and where it might go.",
             image = "/images/dev-status/whitepaper.jpg",
+        ),
+        Entry(
+            path = "/blog/index.html",
+            title = "Blog",
+            kind = "Posts",
+            description = "Longer stories from building Klang: a bug or a measurement, what we tried, and what " +
+                    "we learned along the way. Still drafts, written as we go.",
+            image = "/images/dev-status/blog.jpg",
         ),
     )
 

@@ -19,9 +19,13 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
 
-for page in topic-map mission-log whitepaper; do
+# image name = page file under src/jsMain/resources
+for entry in topic-map=klang-topic-map.html mission-log=klang-mission-log.html \
+  whitepaper=klang-whitepaper.html blog=blog/index.html; do
+  page="${entry%%=*}"
+  file="${entry#*=}"
   "$CHROME" --headless=new --disable-gpu --no-sandbox --hide-scrollbars --virtual-time-budget=6000 \
-    --window-size=1600,900 --screenshot="$TMP/$page.png" "file://$PAGES/klang-$page.html" >/dev/null 2>&1
+    --window-size=1600,900 --screenshot="$TMP/$page.png" "file://$PAGES/$file" >/dev/null 2>&1
   convert "$TMP/$page.png" -resize 800x450 -strip -quality 82 "$OUT/$page.jpg"
   echo "wrote src/jsMain/resources/images/dev-status/$page.jpg ($(( $(stat -c %s "$OUT/$page.jpg") / 1024 )) KB)"
 done
