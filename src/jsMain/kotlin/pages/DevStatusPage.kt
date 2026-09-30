@@ -46,8 +46,8 @@ fun Tag.DevStatusPage() = comp {
 }
 
 /**
- * Where Klang stands: cards for the static pages next to the SPA (the topic map, the mission log,
- * the white paper, the blog). The pages live in `src/jsMain/resources`, built by
+ * Where Klang stands: cards for the static pages next to the SPA (the blog, the topic map,
+ * the mission log, the white paper). The pages live in `src/jsMain/resources`, built by
  * `console/dev-status/build.py` and `console/blog/build.py`, their preview images by
  * `console/dev-status/previews.sh`.
  */
@@ -66,6 +66,14 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
     )
 
     private val entries = listOf(
+        Entry(
+            path = "/blog/index.html",
+            title = "Blog",
+            kind = "Posts",
+            description = "Longer stories from building Klang: a bug or a measurement, what we tried, and what " +
+                    "we learned along the way. Still drafts, written as we go.",
+            image = "/images/dev-status/blog.jpg",
+        ),
         Entry(
             path = "/klang-topic-map.html",
             title = "Topic map",
@@ -90,14 +98,6 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
                     "and the wire between them. What exists, and where it might go.",
             image = "/images/dev-status/whitepaper.jpg",
         ),
-        Entry(
-            path = "/blog/index.html",
-            title = "Blog",
-            kind = "Posts",
-            description = "Longer stories from building Klang: a bug or a measurement, what we tried, and what " +
-                    "we learned along the way. Still drafts, written as we go.",
-            image = "/images/dev-status/blog.jpg",
-        ),
     )
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,7 +116,7 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            ui.three.stackable.cards {
+            ui.two.stackable.cards {
                 entries.forEach { renderCard(it) }
             }
         }
