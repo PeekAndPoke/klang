@@ -126,6 +126,12 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
   last, and an older post's figures are never restyled to a newer design, so the posts keep the history of how the
   app's design was found (`.claude/agents/visualizer.md`). The shared page template (`console/blog/`) is the site, not
   the experiment.
+- **Code references are real links** (maintainer, 2026-09-30): wherever a post names a file, a commit or a file at a
+  revision (in the text or in an appendix of sources), it is a link to GitHub at that revision:
+  `https://github.com/PeekAndPoke/klang/blob/<commit-or-tag>/<path>` for a file (add `#L10-L20` for lines),
+  `https://github.com/PeekAndPoke/klang/commit/<hash>` for a commit. A post is history, so it links the revision it
+  talks about, not `main`. A plain relative link into the repository becomes a `main` link at build time; use it only
+  when the post really means today's file.
 - Heading links rely on auto-slugs (`## References` → `#references`).
 - **Code blocks that contain markdown fences** (KDoc with sample blocks) need a **4-backtick outer fence**. Never put
   backtick runs inside a shorter inline code span — rephrase instead.
