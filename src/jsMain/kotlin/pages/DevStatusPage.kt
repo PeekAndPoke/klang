@@ -75,12 +75,12 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
             image = "/images/dev-status/blog.jpg",
         ),
         Entry(
-            path = "/klang-topic-map.html",
-            title = "Topic map",
-            kind = "Graph",
-            description = "Every open task and plan as a zoomable graph: grouped by area, marked by its real " +
-                    "state, linked the way the docs link each other. The archive of finished work sits behind a toggle.",
-            image = "/images/dev-status/topic-map.jpg",
+            path = "/klang-whitepaper.html",
+            title = "White paper",
+            kind = "Document",
+            description = "How Klangmotor works: the pattern language, the scripting language, the audio engine " +
+                    "and the wire between them. What exists, and where it might go.",
+            image = "/images/dev-status/whitepaper.jpg",
         ),
         Entry(
             path = "/klang-mission-log.html",
@@ -91,12 +91,12 @@ class DevStatusPage(ctx: NoProps) : PureComponent(ctx) {
             image = "/images/dev-status/mission-log.jpg",
         ),
         Entry(
-            path = "/klang-whitepaper.html",
-            title = "White paper",
-            kind = "Document",
-            description = "How Klangmotor works: the pattern language, the scripting language, the audio engine " +
-                    "and the wire between them. What exists, and where it might go.",
-            image = "/images/dev-status/whitepaper.jpg",
+            path = "/klang-topic-map.html",
+            title = "Topic map",
+            kind = "Graph",
+            description = "Every open task and plan as a zoomable graph: grouped by area, marked by its real " +
+                    "state, linked the way the docs link each other. The archive of finished work sits behind a toggle.",
+            image = "/images/dev-status/topic-map.jpg",
         ),
     )
 
