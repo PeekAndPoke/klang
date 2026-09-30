@@ -166,7 +166,7 @@ export spin = notes => n(notes)
   .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 0.8).clip(3)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
   .gain(0.22).pan(0.35)                            // the arp guitarist stands a little left of the centre
-  .orbit(1).reverb(wet = 0.2, size = 4)
+  .orbit(1)
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
@@ -175,7 +175,7 @@ export sing = notes => n(notes.add(7))
   .hpf(250)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3500)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
-  .orbit(2).reverb(wet = 0.3, size = 5)
+  .orbit(2)
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
@@ -184,7 +184,7 @@ export soar = notes => n(notes.add(14))
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
   .lpf(4000)                                       // less fizz, the wall keeps its own
   .gain(0.50).pan(0.5)
-  .orbit(6).reverb(wet = 0.25, size = 5)
+  .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
@@ -192,7 +192,7 @@ export swell = chords => n(chords.add(7))
   .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
   .lpf(3000)
   .gain(0.06).pan(0.15).superimpose(x => x.pan(0.25).late(0.02)) // on the left, when they enter
-  .orbit(7).reverb(wet = 0.5, size = 6)
+  .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
@@ -217,7 +217,7 @@ export wings = chords => n(chords).ply(16)
   .velocity("1.0 0.85 0.9 0.85")
   .gain(0.7)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
-  .orbit(5).reverb(wet = 0.15, size = 3)
+  .orbit(5)
 
 // Strike: one heavy chord, let ring. It shares the wings' orbit and room.
 export strike = chords => n(chords)
@@ -225,21 +225,21 @@ export strike = chords => n(chords)
   .oscp("decay", 3.5).clip(1)
   .gain(0.8)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
-  .orbit(5).reverb(wet = 0.15, size = 3)
+  .orbit(5)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 1.2).clip(2)
   .gain(0.35).pan(0.75)
-  .orbit(10).reverb(wet = 0.3, size = 5)
+  .orbit(10)
 
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .oscp("decay", 0.30).oscp("sustain", 0.50).oscp("release", 2.5).clip(40)
   .gain(0.20).pan(0.45)
-  .orbit(8).reverb(wet = 0.3, size = 6)
+  .orbit(8)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -345,6 +345,7 @@ export song = stack(
     .analog(feel)
     .late(berlin.range(0.0, 0.002).mul(drunk).seg(8)),
   master(Katalyst(k => k
+    .reverb(0.25, 7, 4500)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.5).limiter(threshold = -8.0, ratio = 2.0, attack = 0.015, release = 0.25)
     .gain(1.3).limiter(threshold = -4.0, ratio = 4.0, attack = 0.008, release = 0.15)
     .gain(1.2)
