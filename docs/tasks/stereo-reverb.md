@@ -80,3 +80,18 @@ parity, `/dsl-design`), and taste is also what you do not do.
   and 1.0), Der Schmetterling (guitars 0.10 and 0.90), and one mostly centred song to confirm nothing
   moves.
 - If the hard pans now work in Kokon, decide with the maintainer whether Kokon goes back to them.
+
+## Decisions and follow-ups (2026-09-30)
+
+- **No cross-feed knob in this task (leaning, agreed in discussion).** A knob whose zero end
+  recreates two separate rooms would bring the bug back for anyone who turns it down "for width".
+  If a song ever needs a narrower or wider room, the door is a `width` on the output side (Freeverb's
+  `wet1` / `wet2`, 0 a mono-ish room, 1 the full natural room) with the input always blended the
+  natural amount; neither end then splits the room.
+- **Size-dependent timing** (a far-side room that answers later in a big room: pre-delay and early
+  reflections) is a new class of reverb: [`future/room-reverb.md`](future/room-reverb.md). This task
+  only fixes "two rooms", not "how big is the room".
+- **Kokon, after this task: one room.** Kokon gives almost every line its own room (arp size 4,
+  melody 5, swells 6, wings 3, last chord 6), which may be a second cause of the strange feeling: a
+  band plays in one room. Parked by the maintainer: move to a master reverb as the shared room, with
+  a slight dedicated reverb only on the lines that need their own depth. A/B by ear.
