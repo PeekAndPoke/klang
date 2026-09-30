@@ -31,6 +31,18 @@ What every figure is:
 - **Silent**: no sound. A figure that plays audio would be DSP outside the engine ("the engine is the horse"); sound
   belongs to the app's playable examples, which the text can link to.
 
+**The figures are also a design lab for the main app** (maintainer, 2026-09-30): "I currently see the figures as
+design work for how the main UI might look. Nothing is settled yet, so there is room for experimentation." Some figures
+may become the blueprint for the app's own UI, which is heading toward a full DAW. So:
+
+- **Dense is a virtue.** The maintainer likes that the whitepaper figures use the available space tightly: "When the
+  main UI becomes a full DAW we will need exactly this: using every pixel we have." Pack information, keep controls
+  close to what they change, avoid empty panels and oversized padding; readable, never cramped.
+- **Experiment.** Try interaction ideas a DAW could use (direct manipulation on the drawing, linked highlights between
+  views, scrubbing, compact readouts), and say in your report which ones you think could carry over to the app.
+- The page's look still wins for a published figure; the experiment is in layout and interaction, not in a new
+  palette.
+
 How you work, in two passes: a working version first (the mechanism right, the interaction right), then a refine pass
 (the look matches the page, the labels read well, the edge cases: empty data, extreme slider ends, small screens).
 

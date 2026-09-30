@@ -14,6 +14,11 @@ and the brakes at the same time". All three agents run on Claude Sonnet 5.5 at e
 blog post, the one allowed HTML block (`docs/blog/howto-write-a-post.md` section 7); in the whitepaper, the same frame.
 "Self-contained figures are good. Most flexible."
 
+**The figures are a design lab** (maintainer, 2026-09-30): they are also experiments in how the main app might look
+once it grows into a full DAW, dense and using every pixel. Keep doing figures in every writing round and every blog
+round; nothing is settled, so experiment. The detail is in `.claude/agents/visualizer.md`. When a figure's idea looks
+ready for the app, the maintainer names it and it becomes a future task.
+
 ## The roles
 
 | role | agent | does | never does |
