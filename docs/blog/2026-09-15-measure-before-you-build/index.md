@@ -134,7 +134,7 @@ For a 4x stage that is six pushes and three of those walks per input sample, bef
 
 Write down which stream samples output *m* reads, and the ring disappears. After pushing samples 2m and 2m+1 the center of the window is 2m-6, and the four symmetric pairs sit at odd offsets from it, so:
 
-```
+```text
 y[m] = 0.5 · s[2m-6] + k1 · (s[2m-5] + s[2m-7]) + k3 · (s[2m-3] + s[2m-9])
                      + k5 · (s[2m-1] + s[2m-11]) + k7 · (s[2m+1] + s[2m-13])
 ```

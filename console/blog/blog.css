@@ -20,6 +20,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -203,6 +205,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }

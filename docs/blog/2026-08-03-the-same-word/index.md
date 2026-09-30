@@ -23,7 +23,7 @@ status: draft
 While wiring klang's new master stage (the `master(...)` chain that rides the pattern like any voice), reverb landed
 on both buses. Same effect, same parameter name, same value. The two doors, as they read today:
 
-```javascript
+```klangscript
 // per-orbit:
 pattern.reverb(0.5, 8)                                // wet 0.5, size 8
 

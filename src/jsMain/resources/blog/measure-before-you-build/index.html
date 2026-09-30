@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -343,15 +348,15 @@ figcaption {
 <h2 id="delete-before-you-fold">Delete before you fold</h2>
 <p>The trick is a benchmark row. A fold can, at its very best, make a node cost nothing. Deleting the node outright makes it cost nothing for certain, and costs nothing to try. So the ceiling of &quot;fold the level knobs into the equalizer&quot; is measured by a voice with the level knobs removed, and the ceiling of &quot;fold the drives into the shapers&quot; by a voice with the drives removed, and both are one line each in the benchmark's case list.</p>
 <p>The rhythm rig of Der Schmetterling went into the ignitor benchmark as an inline tree, built the way the song builds it, with two switches:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        private fun guitarRig(muls: Boolean, drives: Boolean, oversample: Boolean = true): IgnitorDsl {
-            fun IgnitorDsl.level(gain: Double): IgnitorDsl = if (muls) mul(IgnitorDsl.Constant(gain)) else this
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">private</span> <span class="kw">fun</span> guitarRig(muls: Boolean, drives: Boolean, oversample: Boolean = <span class="kw">true</span>): IgnitorDsl {
+            <span class="kw">fun</span> IgnitorDsl.level(gain: Double): IgnitorDsl = <span class="kw">if</span> (muls) mul(IgnitorDsl.Constant(gain)) <span class="kw">else</span> <span class="kw">this</span>
 
-            fun IgnitorDsl.newEq(): IgnitorDsl.Eq = IgnitorDsl.Eq(inner = this)
+            <span class="kw">fun</span> IgnitorDsl.newEq(): IgnitorDsl.Eq = IgnitorDsl.Eq(inner = <span class="kw">this</span>)
 
-            fun IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
-                val driven = if (drives) IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)) else this
+            <span class="kw">fun</span> IgnitorDsl.distortion(amount: Double, shape: String, os: Int): IgnitorDsl {
+                <span class="kw">val</span> driven = <span class="kw">if</span> (drives) IgnitorDsl.Drive(inner = <span class="kw">this</span>, amount = IgnitorDsl.Constant(amount)) <span class="kw">else</span> <span class="kw">this</span>
 
-                return IgnitorDsl.Shape(inner = driven, shape = shape, oversample = if (oversample) os else 0)
+                <span class="kw">return</span> IgnitorDsl.Shape(inner = driven, shape = shape, oversample = <span class="kw">if</span> (oversample) os <span class="kw">else</span> 0)
             }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_benchmark/src/commonMain/kotlin/IgnitorBenchmark.kt#L375-L422">IgnitorBenchmark.kt at v0.3.14</a></em></p>
@@ -402,48 +407,48 @@ figcaption {
 <p>The rig adds 34.5 µs to the string on node. The two planned folds could recover, at the outside, one to two of them: under four percent of the voice, inside the spread of three runs. Both steps went into the record as won't-implement, with the table attached. A multiply pass over 128 doubles is nothing next to what the same table shows in its last row: with every shaper at 1x the rig costs 13 µs instead of 34.5. Oversampling was 63 percent of the guitar's amplifier.</p>
 <h2 id="what-a-shaper-at-4x-does">What a shaper at 4x does</h2>
 <p>A distortion stage in Klangmotor is a waveshaper wrapped in an oversampler, so that the harmonics the shaper creates above half the sample rate fold back into the audible band as little as possible. At 4x the stage upsamples the block by linear interpolation from 128 to 512 samples, runs the shaper on the 512, and decimates back in two half-band stages of 2x each, a 15-tap FIR per stage. It is a cheap-and-cheerful anti-aliasing design, documented as such, and its filter is the standard half-band FIR: every even tap but the center is zero, so an output costs one center multiply and four symmetric multiply-adds <a href="#crochiere1983">[1]</a>. The arithmetic is small. What the old decimator did around it was not. Each stage kept a fifteen-slot ring buffer; every input sample was pushed into the ring, and every output was read by walking eight indices around the ring with a wrap test on each step:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    private fun decimate2x(state: HalfBandState, work: AudioBuffer, currentLen: Int): Int {
-        // currentLen is always even (factor is a power of 2). Unrolled by 2:
-        // push the even sample (no output), then push the odd sample and emit.
-        val outLen = currentLen ushr 1
-        var outIdx = 0
-        var i = 0
-        while (i &lt; currentLen) {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">private</span> <span class="kw">fun</span> decimate2x(state: HalfBandState, work: AudioBuffer, currentLen: Int): Int {
+        <span class="cm">// currentLen is always even (factor is a power of 2). Unrolled by 2:</span>
+        <span class="cm">// push the even sample (no output), then push the odd sample and emit.</span>
+        <span class="kw">val</span> outLen = currentLen ushr 1
+        <span class="kw">var</span> outIdx = 0
+        <span class="kw">var</span> i = 0
+        <span class="kw">while</span> (i &lt; currentLen) {
             state.push(work[i])
             state.push(work[i + 1])
             work[outIdx] = state.output()
             outIdx++
             i += 2
         }
-        return outLen
+        <span class="kw">return</span> outLen
     }
 </code></pre></div>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        fun output(): Double {
-            // The most recent push wrote to `delay[pos-1]` (and incremented
-            // pos). Center of a 15-tap window ending there is `pos-1-7`,
-            // i.e. 7 positions behind the most recent push.
-            var centerIdx = pos - HALF_LEN - 1
-            if (centerIdx &lt; 0) centerIdx += TAPS
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">fun</span> output(): Double {
+            <span class="cm">// The most recent push wrote to `delay[pos-1]` (and incremented</span>
+            <span class="cm">// pos). Center of a 15-tap window ending there is `pos-1-7`,</span>
+            <span class="cm">// i.e. 7 positions behind the most recent push.</span>
+            <span class="kw">var</span> centerIdx = pos - HALF_LEN - 1
+            <span class="kw">if</span> (centerIdx &lt; 0) centerIdx += TAPS
 
-            var sum = CENTER_TAP * delay[centerIdx]
+            <span class="kw">var</span> sum = CENTER_TAP * delay[centerIdx]
 
-            // Non-zero symmetric pairs at odd offsets from center: ±1, ±3, ±5, ±7.
-            // Branch-free wrap (single conditional add/subtract) — avoids `% TAPS`
-            // since TAPS=15 isn&#x27;t a power of two.
-            var idxPlus = centerIdx + 1
-            if (idxPlus &gt;= TAPS) idxPlus -= TAPS
-            var idxMinus = centerIdx - 1
-            if (idxMinus &lt; 0) idxMinus += TAPS
+            <span class="cm">// Non-zero symmetric pairs at odd offsets from center: ±1, ±3, ±5, ±7.</span>
+            <span class="cm">// Branch-free wrap (single conditional add/subtract) — avoids `% TAPS`</span>
+            <span class="cm">// since TAPS=15 isn&#x27;t a power of two.</span>
+            <span class="kw">var</span> idxPlus = centerIdx + 1
+            <span class="kw">if</span> (idxPlus &gt;= TAPS) idxPlus -= TAPS
+            <span class="kw">var</span> idxMinus = centerIdx - 1
+            <span class="kw">if</span> (idxMinus &lt; 0) idxMinus += TAPS
 
-            for (k in KERNEL.indices) {
+            <span class="kw">for</span> (k <span class="kw">in</span> KERNEL.indices) {
                 sum += KERNEL[k] * (delay[idxPlus] + delay[idxMinus])
                 idxPlus += 2
-                if (idxPlus &gt;= TAPS) idxPlus -= TAPS
+                <span class="kw">if</span> (idxPlus &gt;= TAPS) idxPlus -= TAPS
                 idxMinus -= 2
-                if (idxMinus &lt; 0) idxMinus += TAPS
+                <span class="kw">if</span> (idxMinus &lt; 0) idxMinus += TAPS
             }
 
-            return sum
+            <span class="kw">return</span> sum
         }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/Oversampler.kt#L148-L206">Oversampler.kt at v0.3.13</a></em></p>
@@ -457,34 +462,34 @@ figcaption {
 <p><img src="decimator-reads.png" alt="the ring read and the indexed read" loading="lazy" /></p>
 <p><em>Fig. 2: The two ways of reading one output's nine taps. Left, the ring at v0.3.13: two pushes and eight wrapping index steps per output. Right, the same taps at v0.3.14 as offsets from 2m, reaching thirteen samples back into the previous block's history. A construction from the two versions of the code, not a measurement.</em></p>
 <p>The one subtlety is the in-place write. Output <em>m</em> overwrites <code>work[m]</code>, and a later output reads down to <code>work[2m'-13]</code>. That read is still ahead of every write once <code>2m' - 13 &gt;= m'</code>, that is from output 13 on. The first thirteen outputs read from a prefix view instead, the history followed by the first 26 samples of the block, copied before anything is overwritten. The code is longer than the ring's, and every line of it is bookkeeping around the same nine multiplies:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        val preOut = if (outLen &lt; PRE_OUT) outLen else PRE_OUT
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">val</span> preOut = <span class="kw">if</span> (outLen &lt; PRE_OUT) outLen <span class="kw">else</span> PRE_OUT
 
-        for (m in 0 until preOut) {
+        <span class="kw">for</span> (m <span class="kw">in</span> 0 until preOut) {
             work[m] = tap(pre, HIST + 2 * m)
         }
 
-        for (m in preOut until outLen) {
+        <span class="kw">for</span> (m <span class="kw">in</span> preOut until outLen) {
             work[m] = tap(work, 2 * m)
         }
 </code></pre></div>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    /** The FIR at `base = 2m` in [src]; the summation order is the one the ring version had. */
-    @Suppress(&quot;NOTHING_TO_INLINE&quot;)
-    private inline fun tap(src: DoubleArray, base: Int): Double {
-        var sum = CENTER_TAP * src[base - 6]
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="cm">/** The FIR at `base = 2m` in [src]; the summation order is the one the ring version had. */</span>
+    @Suppress(<span class="st">&quot;NOTHING_TO_INLINE&quot;</span>)
+    <span class="kw">private</span> <span class="kw">inline</span> <span class="kw">fun</span> tap(src: DoubleArray, base: Int): Double {
+        <span class="kw">var</span> sum = CENTER_TAP * src[base - 6]
 
         sum += K1 * (src[base - 5] + src[base - 7])
         sum += K3 * (src[base - 3] + src[base - 9])
         sum += K5 * (src[base - 1] + src[base - 11])
         sum += K7 * (src[base + 1] + src[base - 13])
 
-        return sum
+        <span class="kw">return</span> sum
     }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_be/src/commonMain/kotlin/Oversampler.kt#L154-L234">Oversampler.kt at v0.3.14</a></em></p>
 <p>The summation order is the ring's, term for term, which is what makes the claim in the next section possible.</p>
 <h2 id="bit-for-bit">Bit for bit</h2>
 <p>The oversampler's decimator is the kind of change the engine's rules are strictest about: a filter with state, on the hot path, whose output feeds the rest of the voice. So the old ring was not deleted. It moved into a test as the oracle, unchanged in its arithmetic, and the new pass is held to it sample for sample over a sequence of block lengths chosen to cross every boundary the prefix view has:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    val lengths = listOf(1, 3, 5, 6, 7, 12, 13, 14, 25, 26, 27, 28, 29, 64, 128, 2, 0, 128, 128, 9, 128)
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">val</span> lengths = listOf(1, 3, 5, 6, 7, 12, 13, 14, 25, 26, 27, 28, 29, 64, 128, 2, 0, 128, 128, 9, 128)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_be/src/commonTest/kotlin/OversamplerDecimatorParitySpec.kt#L15-L70">OversamplerDecimatorParitySpec.kt at v0.3.14</a></em></p>
 <p>Blocks shorter than the history, shorter than the prefix, ending inside the in-place region, and empty. The comparison is <code>Double.equals</code>, which keeps <code>-0.0</code> and <code>0.0</code> apart where <code>==</code> would not; the claim is the same bits, not the same value. And the test was made to fail on purpose five times before it was trusted: a history one sample short, the in-place boundary one output early, a tap one index off, the short-block shift dropped, the history taken from the wrong end. Each went red.</p>

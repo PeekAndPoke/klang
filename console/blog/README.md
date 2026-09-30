@@ -15,7 +15,9 @@ A post whose `status` is not `published` carries a DRAFT tag on its card and on 
 like the rest. The post contract (front matter, the allowed HTML, links) is `docs/blog/howto-write-a-post.md`.
 
 The pages share `blog.css` (the whitepaper's tokens, which are the palette of `KlangLookAndFeel`, the Chakra Petch
-and Share Tech Mono faces), inlined into each page by the build. The templates are `post.template.html` and
+and Share Tech Mono faces), inlined into each page by the build. Code blocks are coloured by the build as the
+whitepaper colours its code by hand: keywords (`--spark`), strings (`--code-str`), comments (`--code-cm`), one small
+regex per language in `build.py` (`HIGHLIGHT`), no highlighting library. A `text` block stays plain and unlabelled. The templates are `post.template.html` and
 `index.template.html`. The fonts come from Google Fonts; nothing else is loaded from outside.
 
 ## Rebuild
@@ -53,6 +55,9 @@ The build prints every problem with its file and line and writes nothing when:
   heading id (GitHub's rule: `## References` is `#references`) nor an `<a id>` on the target page, a site-absolute
   path, a path out of the repository;
 - a `references` entry in the front matter has no `<a id>` anchor in the body;
+- a code block has no language, is indented instead of fenced, or carries a tag the build does not know (it knows
+  `kotlin`, `klangscript`, `sh`, `html`, `text`), or is tagged `javascript` in a post that is not named in
+  `JAVASCRIPT_POSTS` (the posts hold KlangScript, which only looks like JavaScript);
 - a draft's page or index card was rendered without its DRAFT tag.
 
 ## How links are rewritten

@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,13 +340,13 @@ figcaption {
 <h1 id="half-a-song">Half a Song</h1>
 <p><em>A one-line override, a fold ladder in two nodes, and fifteen missing overrides: a five percent desktop win that was run-or-not-run on the phone.</em></p>
 <p>An instrument in Klangmotor is a tree of nodes, and on August 19 every node still rendered the way the first one had: a whole 128-frame block into a buffer, for each of its inputs, and then a loop combining them. A multiply took its left operand into the output buffer, rendered its right operand into a scratch buffer, and multiplied the two:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">private class TimesIgnitor(private val a: Ignitor, private val b: Ignitor) : Ignitor {
-    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="kw">private</span> <span class="kw">class</span> TimesIgnitor(<span class="kw">private</span> <span class="kw">val</span> a: Ignitor, <span class="kw">private</span> <span class="kw">val</span> b: Ignitor) : Ignitor {
+    <span class="kw">override</span> <span class="kw">fun</span> generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         a.generate(buffer, freqHz, ctx)
         ctx.scratchBuffers.use { tmp -&gt;
             b.generate(tmp, freqHz, ctx)
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
+            <span class="kw">val</span> end = ctx.offset + ctx.length
+            <span class="kw">for</span> (i <span class="kw">in</span> ctx.offset until end) {
                 buffer[i] = safeOut(buffer[i] * tmp[i])
             }
         }
@@ -355,7 +360,7 @@ figcaption {
 <p>The unified-EQ plan of that day had a bolder goal, fusing the chain's filters into one pass, and its first deliverable was a measurement of untouched code with a checkpoint written into it: if the tone chain measured under 15 percent of the guitar's cost, stop and re-scope. It measured 22 percent. The honest ceiling of a fused equalizer came out at three to five percent of the song, and the measured CPU lived in the bare signal, 78 percent of the voice: the unison stack, the oversampled distortion and the analog drift. The checkpoint escalated, the maintainer decided to continue the plan for reasons that were not performance, and the same review that produced the escalation listed two free wins to take regardless. The first of them is this post.</p>
 <h2 id="the-null-that-hid-every-composite">The null that hid every composite</h2>
 <p>The engine already had a way to read a block-constant node as one number instead of a buffer: an optional override that returns the node's scalar value or null. Constants, parameters and the note frequency implemented it, and so did the pointwise arithmetic over them. What nobody had noticed is that the builder wraps every non-leaf node in a memoizing wrapper, so that a subtree shared by two consumers renders once per block, and the wrapper inherited the default: null. A composite constant such as the note frequency times a tracking parameter reported that it varied within the block, and the highpass reading it as its cutoff rendered a scratch buffer every block to take one sample out of it. The first commit is one override, pure delegation:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    /**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="cm">/**
      * Pure delegation. Every node that reports non-null here is stateless (Constant/Param/Freq
      * leaves and pointwise combinators over them), so bypassing the block cache for the scalar
      * read has no side effects and equals the cached buffer&#x27;s samples bit-for-bit. Without this
@@ -363,36 +368,36 @@ figcaption {
      * (Variants and the pitch-mod nodes dissolve instead of being wrapped) reported `null` and
      * forced composite constant subtrees (e.g. `Times(Freq, Param)`) onto the scratch-render
      * fallback in [Ignitor.blockStartValue].
-     */
-    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? =
+     */</span>
+    <span class="kw">override</span> <span class="kw">fun</span> controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? =
         inner.controlRateValueOrNull(freqHz, ctx)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.1.5/audio_be/src/commonMain/kotlin/ignitor/MemoizingIgnitor.kt#L10-L84">MemoizingIgnitor.kt at v0.3.1.5</a></em></p>
 <h2 id="the-fold">The fold</h2>
 <p>The second commit made the multiply and the add consult that scalar before rendering. A block-constant operand is not rendered at all; the other side renders into the output and one in-place loop applies the constant. Both constant, one fill. The ladder in the multiply:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        if (aConst &amp;&amp; bConst) {
-            val ka = a.controlRateValueOrNull(freqHz, ctx)
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
-            if (ka != null &amp;&amp; kb != null) {
-                // Both constant: one multiply, one safeOut, one fill — bit-identical to the
-                // per-sample paths, which compute the same op on the same operands per index.
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">if</span> (aConst &amp;&amp; bConst) {
+            <span class="kw">val</span> ka = a.controlRateValueOrNull(freqHz, ctx)
+            <span class="kw">val</span> kb = b.controlRateValueOrNull(freqHz, ctx)
+            <span class="kw">if</span> (ka != <span class="kw">null</span> &amp;&amp; kb != <span class="kw">null</span>) {
+                <span class="cm">// Both constant: one multiply, one safeOut, one fill — bit-identical to the</span>
+                <span class="cm">// per-sample paths, which compute the same op on the same operands per index.</span>
                 buffer.fill(safeOut(ka * kb), ctx.offset, ctx.offset + ctx.length)
-                return
+                <span class="kw">return</span>
             }
         }
 
-        if (bConst) {
-            val kb = b.controlRateValueOrNull(freqHz, ctx)
-            if (kb != null) {
+        <span class="kw">if</span> (bConst) {
+            <span class="kw">val</span> kb = b.controlRateValueOrNull(freqHz, ctx)
+            <span class="kw">if</span> (kb != <span class="kw">null</span>) {
                 a.generate(buffer, freqHz, ctx)
                 mulConstInPlace(buffer, ctx, kb)
-                return
+                <span class="kw">return</span>
             }
         }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.1.5/audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt#L212-L267">Ignitor.kt at v0.3.1.5</a></em></p>
 <p>Bit-identical by construction: the fold arm copies its own operation's loop, the multiply keeps its clamp everywhere and the add stays bare, and a scratch buffer full of one value multiplied per index is the same IEEE operation on the same operands as the constant multiplied in place. The gate is a structural flag computed once at construction, because on the JVM the nullable scalar is a boxed value and asking for it per block on the common non-folding path would have cost more than it saved. A flag that says constant while the scalar comes back null is a contract breach, and the policy for it is silent fall-through to the always-correct scratch path, never a throw on the render thread. The contract itself went into the interface, because the scalar now fed the audio path and not only the control reads:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">     * CONTRACT (load-bearing since the constant-fold in `plus`/`times` consumes this on the
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">     * CONTRACT (load-bearing since the constant-fold in `plus`/`times` consumes this on the
      * AUDIO path, not just for control-rate reads): an override MUST
      *  1. be pure — no state advanced, no side effects, no `ctx` mutation; callable any number
      *     of times per block, including zero;
@@ -400,7 +405,7 @@ figcaption {
      *     `[offset, offset+length)` of the same block.
      * A node that is merely *slowly varying* must return `null` — a non-null value here turns
      * `x * node` into a stepped per-block multiply with no spec failing loudly.
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.1.5/audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt#L36-L85">Ignitor.kt at v0.3.1.5</a></em></p>
 <p>The third commit took the same ladder through every combinator, subtract, divide, modulo, minimum, maximum and power, each with its own guards copied exactly and its non-commutative sides handled separately, added partial folds for the ternary nodes whose bounds are almost always constant, since a clamp between minus one and one had been two scratch renders per block, and wrote the missing override into fifteen node kinds: square root, sign, tanh, floor, ceiling, round, fraction, reciprocal, square, the two polarity converters, modulo, interpolation, range and select. One missing override anywhere in a parameter subtree returned null and killed folding for the whole subtree above it. The select node's override resolves all three of its children before it answers, deliberately not short-circuiting on the condition, because an untaken branch with stateful nodes must keep advancing exactly as the render does.</p>
 <h2 id="what-it-cost-to-review">What it cost to review</h2>

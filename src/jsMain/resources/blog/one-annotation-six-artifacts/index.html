@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -372,7 +377,7 @@ on it hard.</p>
 <p>Here is a real registered function, exactly as it lives in the tree: the
 <code>body()</code> resonator (the star of
 <a href="../killing-the-plastic-pipe/">Killing the Plastic Pipe</a>):</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * The resonant body: the material, its mix and its dry floor.
  *
  * Runs the orbit through a resonating body, the way a guitar top or a drum shell colours what passes
@@ -391,13 +396,13 @@ on it hard.</p>
  * @scope orbit
  * @category effects
  * @tags body, wet, material, floor
- */
+ */</span>
 @KlangScript.Function
-fun SprudelPattern.body(
-    wet: PatternLike? = null,
-    material: PatternLike? = null,
-    floor: PatternLike? = null,
-    callInfo: CallInfo? = null
+<span class="kw">fun</span> SprudelPattern.body(
+    wet: PatternLike? = <span class="kw">null</span>,
+    material: PatternLike? = <span class="kw">null</span>,
+    floor: PatternLike? = <span class="kw">null</span>,
+    callInfo: CallInfo? = <span class="kw">null</span>
 ): SprudelPattern {
 ...
 </code></pre></div>

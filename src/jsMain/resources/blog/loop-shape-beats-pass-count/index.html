@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,7 +340,7 @@ figcaption {
 <h1 id="loop-shape-beats-pass-count">Loop Shape Beats Pass Count</h1>
 <p><em>Twenty-one block passes were cheaper than one loop, twice, and both times the fix was where a value lived.</em></p>
 <p>The bass of Der Schmetterling plays a low E that most speakers cannot reproduce, so it carries its own harmonics: the ear rebuilds a 41 Hz fundamental from partials at 82 to 328 Hz, a trick many small speakers' DSP uses, done at the source where the pitch is known. Until September 7 that stack was written by hand:</p>
-<div class="code" data-lang="javascript"><pre><code class="language-javascript">  let harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
+<div class="code" data-lang="klangscript"><pre><code class="language-klangscript">  <span class="kw">let</span> harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
     .add(Osc.sine(freq = Osc.freq().mul(3)).mul(1/3))
     .add(Osc.sine(freq = Osc.freq().mul(4)).mul(1/4))
     .add(Osc.sine(freq = Osc.freq().mul(5)).mul(1/5))
@@ -350,16 +355,16 @@ figcaption {
 <p><img src="three-shapes.png" alt="the three shapes" loading="lazy" /></p>
 <p><em>Fig. 1: The seven-harmonic voice in its three shapes on September 7, JVM, microseconds per block. The sample-major bank was never committed; it was measured, rejected and rewritten the same day. That day's harness rendered every voice twice, which was found and fixed the same evening, so the bars are relative to each other and about double the real cost.</em></p>
 <p>The rewrite turned the loops inside out, the loop interchange the compiler literature describes <a href="#allen1984">[2]</a>: for each partial, one tight loop over the samples, with the phase in a local variable and the buffer accumulated once per partial. That is the shape the engine's unison stacks already had, and it brought the bank to 22 microseconds, under the tree at last:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        private fun renderPartial(
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">private</span> <span class="kw">fun</span> renderPartial(
             buffer: AudioBuffer, off: Int, end: Int, first: Boolean,
             phaseIn: Double, d: Double, g: Double,
             pm: DoubleArray?, sharedDev: DoubleArray?, wShared: Double, own: AnalogDrift?, wOwn: Double,
         ): Double {
-            var ph = phaseIn
+            <span class="kw">var</span> ph = phaseIn
 
-            for (i in off until end) {
-                val s = g * sin(ph)
-                buffer[i] = if (first) s else buffer[i] + s
+            <span class="kw">for</span> (i <span class="kw">in</span> off until end) {
+                <span class="kw">val</span> s = g * sin(ph)
+                buffer[i] = <span class="kw">if</span> (first) s <span class="kw">else</span> buffer[i] + s
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.8.2/audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt#L316-L356">Ignitors.kt at v0.3.8.2</a></em></p>
 <p><img src="loop-shapes.png" alt="the two loop orders" loading="lazy" /></p>
@@ -412,32 +417,32 @@ figcaption {
 <p><img src="driftlanes-node.png" alt="DriftLanes on node" loading="lazy" /></p>
 <p><em>Fig. 4: Each drift row divided by a plain drifting sine from its own run, on node: the engine before the change twice (the dashed lines mark that spread), the first cut, the build with the values hoisted twice, and today. The plain sine has no lanes, so it carries the machine and V8's state and nothing else, which is why the ratio is the number to read and not the microseconds. Today's engine also carries <a href="../eleven-digits-of-sine/">the polynomial sine</a> and the per-block drift, which is where the last drop comes from, not from this change.</em></p>
 <p>The fix has the same shape as the bank's: hoist every per-block value into a local before the sample loop, and blend through one inline function whose inputs are all locals, so that on Kotlin/JS the expansion reads no object property per sample:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(&quot;NOTHING_TO_INLINE&quot;)
-internal inline fun driftStep(
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(<span class="st">&quot;NOTHING_TO_INLINE&quot;</span>)
+<span class="kw">internal</span> <span class="kw">inline</span> <span class="kw">fun</span> driftStep(
     own: AnalogDrift?,
     shared: DoubleArray?,
     wShared: Double,
     wOwn: Double,
     i: Int,
 ): Double {
-    if (shared == null) {
-        return if (own != null) own.nextMultiplier() else 1.0
+    <span class="kw">if</span> (shared == <span class="kw">null</span>) {
+        <span class="kw">return</span> <span class="kw">if</span> (own != <span class="kw">null</span>) own.nextMultiplier() <span class="kw">else</span> 1.0
     }
 
-    if (own == null) {
-        return 1.0 + shared[i]
+    <span class="kw">if</span> (own == <span class="kw">null</span>) {
+        <span class="kw">return</span> 1.0 + shared[i]
     }
 
-    return 1.0 + wShared * shared[i] + wOwn * (own.nextMultiplier() - 1.0)
+    <span class="kw">return</span> 1.0 + wShared * shared[i] + wOwn * (own.nextMultiplier() - 1.0)
 }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.11/audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt#L188-L214">DriftLanes.kt at v0.3.11</a></em></p>
 <p>The container's KDoc ends with the instruction to its callers, and with the number that made it an instruction:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * **How a hot loop uses it.** Hoist [ownLane], [sharedWalk] and the two weights into locals ONCE
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * **How a hot loop uses it.** Hoist [ownLane], [sharedWalk] and the two weights into locals ONCE
  * per voice, before its sample loop, and call [driftStep] with them. Everything they carry is
  * constant for the block, and a loop that read them off the container per sample paid for it: on
  * Kotlin/JS that cost a drifting 8-voice supersaw about 16 percent (Node, 2026-09-10).
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.11/audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt#L11-L63">DriftLanes.kt at v0.3.11</a></em></p>
 <p>Two more things the day recorded. The endpoints of the blend are exact rather than a limit: at spread 1 only a voice's own lane advances, at spread 0 only the shared one, which makes spread 0 measurably cheaper, on the JVM a supersaw of eight voices at 5.34 against 6.90 microseconds per block. And node's run-to-run variance is wide enough, two runs of one identical engine differed by 28 percent on a row, that a claim of this kind needs a control row that the change cannot touch and a ratio, not a raw number. Every drift number in this post is such a ratio, or a pair from one run.</p>
 <h2 id="what-transferred">What transferred</h2>

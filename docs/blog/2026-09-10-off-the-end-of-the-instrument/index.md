@@ -75,7 +75,7 @@ Its honest failure mode: it is calibrated on 63 projects from the 1970s, and org
 
 The 2000 recalibration [[2]](#boehm2000) replaced the fixed exponent with five scale factors and seventeen effort multipliers, which is its point: it can be told what kind of project this is. Set for the project as it was run, as well as we could rate it ourselves: team cohesion and site at their top ratings because it is one person, analyst and programmer capability and language experience rated very high (a self-rating, so read it as one), complexity high for real-time DSP plus a parser plus code generation, documentation high:
 
-```
+```text
 E = 0.91 + 0.01 x sum(SF) = 1.0168      prod(EM) = 0.374
 PM = 2.94 x 161.364^1.0168 x 0.374 = 193
 ```
@@ -112,7 +112,7 @@ Klangmotor reached this state in 0.725 years.
 
 So we ran the equation backwards, solving for the productivity index the actual project implies: 161,364 lines, 0.725 years, 0.725 person-years:
 
-```
+```text
 E = 149,721
 ```
 
@@ -128,7 +128,7 @@ Every model above prices the **surviving artifact**. None of them can see work t
 
 Measuring that turned out to have a trap in it. The first pass used `git log --numstat --no-renames` and reported 1,124,208 lines of gross churn, including an entire 155,371-line module called `strudel` that appeared to have been written and thrown away in full. It had not been. It had been **renamed** to `sprudel`, and `--no-renames` faithfully reported a rename as a complete deletion plus a complete re-addition. The real numbers, with rename and copy detection on:
 
-```
+```sh
 git log --numstat -M -C --format='%H' -- '*.kt'
   +492,569   -241,098   net 251,471
 ```

@@ -31,7 +31,7 @@ references:
 
 The bass of Der Schmetterling plays a low E that most speakers cannot reproduce, so it carries its own harmonics: the ear rebuilds a 41 Hz fundamental from partials at 82 to 328 Hz, a trick many small speakers' DSP uses, done at the source where the pitch is known. Until September 7 that stack was written by hand:
 
-```javascript
+```klangscript
   let harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
     .add(Osc.sine(freq = Osc.freq().mul(3)).mul(1/3))
     .add(Osc.sine(freq = Osc.freq().mul(4)).mul(1/4))

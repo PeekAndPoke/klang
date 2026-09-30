@@ -133,6 +133,13 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
   talks about, not `main`. A plain relative link into the repository becomes a `main` link at build time; use it only
   when the post really means today's file.
 - Heading links rely on auto-slugs (`## References` → `#references`).
+- **Every code block names its language** (maintainer, 2026-09-30): `klangscript` for songs, patterns and `Osc.*`
+  instruments (never `javascript`: KlangScript only looks like it), `kotlin` for Kotlin, `sh` for a command, `html`
+  for quoted HTML, `text` for formulas, output and diagrams. The site colours `kotlin`, `klangscript`, `sh` and `html`
+  in the whitepaper's palette (keywords, strings, comments); `text` stays plain and carries no label. The build
+  refuses an untagged or indented block, an unknown tag, and `javascript` (a post that quotes real JavaScript on
+  purpose is named in `JAVASCRIPT_POSTS` in `console/blog/build.py`). GitHub shows `klangscript` uncoloured; that is
+  fine.
 - **Code blocks that contain markdown fences** (KDoc with sample blocks) need a **4-backtick outer fence**. Never put
   backtick runs inside a shorter inline code span — rephrase instead.
 - When quoting a declaration, include enough to be real: annotation + full signature + `...` as the body. A KDoc
@@ -156,7 +163,8 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
 ```
 
 The site build (`console/blog/README.md`) renders every post to `src/jsMain/resources/blog/`, marks drafts, and
-fails on missing front matter, broken links or anchors, and HTML other than the anchors and the figure block.
+fails on missing front matter, broken links or anchors, HTML other than the anchors and the figure block, and a code
+block without its language.
 
 ## 9. Where material comes from
 

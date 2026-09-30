@@ -78,7 +78,7 @@ octave); the low riff takes the lottery at full odds, note after note after note
 
 The statistics are textbook: the magnitude of a random phasor sum follows a Rayleigh law,
 
-```
+```text
 P(K < k) = 1 − exp(−k² · N_eff)        N_eff = (Σg)² / Σg²
 ```
 
@@ -119,7 +119,7 @@ Why did synthesis never import that trick? Because selecting among candidates re
 a sound seems to require rendering it. That assumption is false for the fundamental. For any harmonic waveform, the
 ensemble's fundamental is available in closed form, not just at note-on but for all time:
 
-```
+```text
 A₁(t) ∝ | Σₙ gₙ · e^{ i·2π·(φₙ + Δₙ·t) } |
 ```
 
@@ -160,7 +160,7 @@ The full mechanism, as shipped:
 
 The DSL surface is one call on the oscillator's builder:
 
-```javascript
+```klangscript
 Osc.supersaw(x => x.voices(11).spread(0.07).phasePool())        // on, family defaults
 // or, tuned:
 Osc.supersaw(x => x.voices(11).spread(0.07)

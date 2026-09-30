@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -341,22 +346,22 @@ figcaption {
 <p>Six decisions were agreed with the maintainer on August 19, and the work followed them. An equalizer is a list of sections, the way every parametric EQ is. The tree is built exactly as authored, and a pure, separately testable pass rewrites it, so the chained syntax stays the syntax and old songs fuse for free. Bit-identity is a hard requirement: whatever the pass rewrites must render the same samples, to the bit, as the unrewritten graph, on both platforms, including the sub-block renders where a voice starts mid-block. The core is layered for reuse, a frequency-agnostic <code>EqCore</code> in the filters package with no dependency on the ignitor package, so that a future native port inherits one thing. Constant folding in the binary combinators, as the extra that came first. And the smallest possible pieces, each tested, review-looped and measured, even when that means touching the same code multiple times.</p>
 <h2 id="one-loop-three-shapes">One loop, three shapes</h2>
 <p><code>EqCore</code> holds arrays of coefficients and state, one slot per section, each section a trapezoidal state-variable filter in Andrew Simper's formulation <a href="#simper2013">[1]</a>, and renders the list in one call. The question was the loop. Three shapes were on the ballot: sample-major, one loop over the samples with a per-sample dispatch on the section type; section-major, one specialized loop per section with the state in arrays; and section-major with the two state words snapshotted into locals for the duration of one section's loop and written back after it. The third is what shipped:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        val n = sectionCount
-        val end = offset + length
-        for (s in 0 until n) {
-            val ca1 = a1[s]
-            val ca2 = a2[s]
-            val ca3 = a3[s]
-            val ck = k[s]
-            var s1 = ic1[s]
-            var s2 = ic2[s]
-            when (type[s]) {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">val</span> n = sectionCount
+        <span class="kw">val</span> end = offset + length
+        <span class="kw">for</span> (s <span class="kw">in</span> 0 until n) {
+            <span class="kw">val</span> ca1 = a1[s]
+            <span class="kw">val</span> ca2 = a2[s]
+            <span class="kw">val</span> ca3 = a3[s]
+            <span class="kw">val</span> ck = k[s]
+            <span class="kw">var</span> s1 = ic1[s]
+            <span class="kw">var</span> s2 = ic2[s]
+            <span class="kw">when</span> (type[s]) {
                 LOWPASS -&gt; {
-                    for (i in offset until end) {
-                        val v0 = buffer[i]
-                        val v3 = v0 - s2
-                        val v1 = ca1 * s1 + ca2 * v3
-                        val v2 = s2 + ca2 * s1 + ca3 * v3
+                    <span class="kw">for</span> (i <span class="kw">in</span> offset until end) {
+                        <span class="kw">val</span> v0 = buffer[i]
+                        <span class="kw">val</span> v3 = v0 - s2
+                        <span class="kw">val</span> v1 = ca1 * s1 + ca2 * v3
+                        <span class="kw">val</span> v2 = s2 + ca2 * s1 + ca3 * v3
                         s1 = (2.0 * v1 - s1).flushDenormal()
                         s2 = (2.0 * v2 - s2).flushDenormal()
                         buffer[i] = v2
@@ -379,24 +384,24 @@ figcaption {
 <p>The desktop measured 33 percent less CPU on the same change. The note is careful about what had fused: the tail was five nodes, down from eleven, not one.</p>
 <h2 id="the-rule">The rule</h2>
 <p>The optimizer landed on August 21, without the song being edited again. Its rule, stated by the maintainer and enforced literally: nothing ever moves, only direct neighbors fuse.</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    return when {
-        // Continue an Eq that this filter sits directly on top of. Guarded on the ORIGINAL
-        // inner: if that Eq is shared, appending would fork it and duplicate every section.
-        inner is IgnitorDsl.Eq &amp;&amp; refCounts.isExclusivelyOwned(originalInner) -&gt;
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">return</span> <span class="kw">when</span> {
+        <span class="cm">// Continue an Eq that this filter sits directly on top of. Guarded on the ORIGINAL</span>
+        <span class="cm">// inner: if that Eq is shared, appending would fork it and duplicate every section.</span>
+        inner <span class="kw">is</span> IgnitorDsl.Eq &amp;&amp; refCounts.isExclusivelyOwned(originalInner) -&gt;
             inner.copy(sections = inner.sections + section)
 
-        // Otherwise start a fresh Eq. A single filter converting to a one-section Eq is a
-        // measured win on the deployment platform (Node 0.44 vs 0.74 us/block) and a wash on
-        // the JVM, so standalone conversion is ON. See the D2a bake-off record in the plan.
-        else -&gt; IgnitorDsl.Eq(inner = inner, sections = listOf(section))
+        <span class="cm">// Otherwise start a fresh Eq. A single filter converting to a one-section Eq is a</span>
+        <span class="cm">// measured win on the deployment platform (Node 0.44 vs 0.74 us/block) and a wash on</span>
+        <span class="cm">// the JVM, so standalone conversion is ON. See the D2a bake-off record in the plan.</span>
+        <span class="kw">else</span> -&gt; IgnitorDsl.Eq(inner = inner, sections = listOf(section))
     }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.2/audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt#L184-L225">IgnitorDslOptimizer.kt at v0.3.2</a></em></p>
 <p>The walk is post-order, so a run of adjacent filters folds into one node one filter at a time as the walk unwinds. The guards are the rest of the rule: a filter with a non-zero <code>analog</code> never fuses, because that switches the filter to its saturating branch, which is character the core does not implement; a one-pole never fuses, because there is no one-pole section and substituting a state-variable filter would change the sound; and a node that is shared with another chain never fuses, because absorbing it would compute it twice. A gain multiply between two filters is a wall too, since <code>k · lowpass(x)</code> and <code>lowpass(k · x)</code> do not produce the same bits. Under that rule the song's tail became one node, and the rule table pins it:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        val eq = authored.optimize().shouldBeInstanceOf&lt;IgnitorDsl.Eq&gt;()
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">val</span> eq = authored.optimize().shouldBeInstanceOf&lt;IgnitorDsl.Eq&gt;()
         eq.inner.shouldBeInstanceOf&lt;IgnitorDsl.Sawtooth&gt;()
-        eq.sections.map { it::class.simpleName } shouldBe listOf(
-            &quot;RawTap&quot;, &quot;RawTap&quot;, &quot;Notch&quot;, &quot;Highpass&quot;, &quot;Lowpass&quot;, &quot;Lowpass&quot;,
+        eq.sections.map { it::<span class="kw">class</span>.simpleName } shouldBe listOf(
+            <span class="st">&quot;RawTap&quot;</span>, <span class="st">&quot;RawTap&quot;</span>, <span class="st">&quot;Notch&quot;</span>, <span class="st">&quot;Highpass&quot;</span>, <span class="st">&quot;Lowpass&quot;</span>, <span class="st">&quot;Lowpass&quot;</span>,
         )
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.2/audio_bridge/src/commonTest/kotlin/IgnitorDslOptimizerSpec.kt#L63-L88">IgnitorDslOptimizerSpec.kt at v0.3.2</a></em></p>

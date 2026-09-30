@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,9 +340,9 @@ figcaption {
 <h1 id="twenty-allocations-per-note">Twenty Allocations per Note</h1>
 <p><em>Every pattern modifier copied a 105-field voice object; making it mutable under a single-owner invariant, guarded by a golden of 2,822 events, cut the copies to one per event, and the one that remained is a story about V8.</em></p>
 <p>This post is not about the audio engine. It is about the layer above it, the pattern language that decides which notes sound when and with what settings, and about the object that carries those settings from a pattern's leaf to the engine's door. That object is a Kotlin data class with a hundred and five flat fields, one per knob a pattern can set, and in the first days of June every modifier in a pattern chain took it, called <code>copy</code> with one field changed, and passed the copy on:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/** Default modifier for patterns that populates VoiceData.value */
-val voiceValueModifier = voiceModifier {
-    val result = (it?.asDoubleOrNull() ?: it)?.asVoiceValue()
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/** Default modifier for patterns that populates VoiceData.value */</span>
+<span class="kw">val</span> voiceValueModifier = voiceModifier {
+    <span class="kw">val</span> result = (it?.asDoubleOrNull() ?: it)?.asVoiceValue()
 
     copy(value = result)
 }
@@ -349,7 +354,7 @@ val voiceValueModifier = voiceModifier {
 <h2 id="an-invariant-and-a-golden-to-hold-it">An invariant, and a golden to hold it</h2>
 <p>The maintainer's proposal was the obvious one and the dangerous one: make the fields mutable and mutate in place. It is sound only under a strict invariant, which the task record states in one sentence: every query terminates at a leaf pattern that emits a fresh instance, and no pattern ever passes the same instance to two consumers or back into a stored source. An audit found the invariant achievable with a bounded fix. Only three leaf patterns handed out a stored, shared instance; everything downstream, the fan-outs, the joins, the time shifts, either re-queried and got fresh leaf events or built fresh data. Fixing the three leaves to clone per emission made the invariant hold engine-wide.</p>
 <p>Aliasing bugs are silent, one voice's gain bleeding into the next event, so before a single field was made mutable a differential golden was built: a frozen copy of Der Schmetterling with its random seed pinned, queried cycle by cycle the way playback queries it, every event's wire-format data and tick-exact timing serialized and compared byte for byte against a committed file, 2,822 events, plus targeted patterns for the constructs the song lacks. Three runs produced identical output. Then the fields flipped to <code>var</code>, the leaves gained their clone, and all 113 copy-based setters became in-place setters through one helper:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * Creates a voice modifier that **mutates the receiver in place** and returns it, instead of
  * allocating via `copy(...)`.
  *
@@ -357,15 +362,15 @@ val voiceValueModifier = voiceModifier {
  * emitters (`AtomicPattern`, `AtomicInfinitePattern`, `StaticSprudelPattern`) clone on emission, so
  * no instance is ever shared between events. This kills the per-event copy/GC churn that dominated
  * query cost. See `docs/tasks/mutable-voicedata-optimization.md`.
- */
-fun voiceSetter(set: SprudelVoiceData.(Any?) -&gt; Unit): VoiceModifierFn = { value -&gt; this.set(value); this }
+ */</span>
+<span class="kw">fun</span> voiceSetter(set: SprudelVoiceData.(Any?) -&gt; Unit): VoiceModifierFn = { value -&gt; <span class="kw">this</span>.set(value); <span class="kw">this</span> }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/e9fa560c2cc9442182c585b5403f5f8907204fd7/sprudel/src/commonMain/kotlin/lang/lang_helpers.kt#L123-L132">lang_helpers.kt at e9fa560c</a>, the last commit of the conversion</em></p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">private val gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="kw">private</span> <span class="kw">val</span> gainMutation = voiceSetter { gain = it?.asDoubleOrNull() }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/lang/lang_dynamics.kt#L22-L28">lang_dynamics.kt at v0.1.0</a></em></p>
 <p>The golden earned its keep on the first sweep. A helper that parsed pattern text built its atoms from a shared empty singleton, and an in-place modifier corrupted the singleton, so that a guitar's envelope curve bled into the drums. The first fix cloned the singleton; the hardening removed it, since a shared mutable default is exactly what the invariant forbids, and a second hardening the same day took away the constructor defaults the first had introduced, so that the only full-field constructions left, the clone, the merge and a factory, fail to compile if a field is ever added and silently dropped from the clone. The class KDoc carries the contract:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * **All properties are `var` by design — for performance.** The pattern engine mutates voice data in
  * place down the modifier chain (via [io.peekandpoke.klang.sprudel.lang.voiceSetter]) instead of
  * allocating a fresh copy per modifier, which is what previously dominated query cost. The trade-off:
  * an instance is NOT safe to share — **the caller is responsible for cloning when a value might be
@@ -373,7 +378,7 @@ fun voiceSetter(set: SprudelVoiceData.(Any?) -&gt; Unit): VoiceModifierFn = { va
  * `AtomicInfinitePattern`) clone on emission so every queried event owns its
  * data; mutate freely from there. There is intentionally no shared `empty` singleton — construct a
  * fresh one with `SprudelVoiceData()`. See `docs/tasks/mutable-voicedata-optimization.md`.
- */
+ */</span>
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/SprudelVoiceData.kt#L18-L35">SprudelVoiceData.kt at v0.1.0</a></em></p>
 <h2 id="the-copy-that-would-not-go-lower">The copy that would not go lower</h2>
@@ -381,12 +386,12 @@ fun voiceSetter(set: SprudelVoiceData.(Any?) -&gt; Unit): VoiceModifierFn = { va
 <p><img src="copy-ns.png" alt="the copy costs" loading="lazy" /></p>
 <p><em>Fig. 2: Nanoseconds per clone of one voice object on node, log scale: the flat object's copy, the rejected native copy, and today's grouped object at three fill levels. The June numbers are the record's; the grouped ones are from a run today.</em></p>
 <p>So 820 nanoseconds was the floor for a hundred-and-five-field object, and the record drew the only conclusion available: the remaining wins are fewer copies or a smaller object. The smaller object is what shipped, the next afternoon: the optional fields grouped into sub-objects, one per cluster, envelope, filters, pitch modulation, distortion, phaser, delay, reverb, sample and so on, each created lazily on the first write and mutated in place afterward. A leaf's data is mostly empty, and with grouping a leaf's thirty-five empty envelope and filter fields are five null references instead. The record had recommended immutable groups with copy-on-write; what shipped kept the mutation model and grouped underneath it:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * **Why grouped:** the per-event leaf clone copies the whole [SprudelVoiceData]. A flat ~105-field class
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * **Why grouped:** the per-event leaf clone copies the whole [SprudelVoiceData]. A flat ~105-field class
  * copies all fields even though a leaf&#x27;s data is mostly null. Grouping the optional clusters means a null
  * cluster is a single null reference (one slot, not cloned) instead of N null fields. [SprudelVoiceData.clone]
  * deep-copies only the non-null groups; setters lazily create a group on first write and then mutate it in
  * place (zero-copy), preserving the single-owner mutation model.
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/sprudel/src/commonMain/kotlin/SvdGroups.kt#L10-L25">SvdGroups.kt at v0.1.0</a></em></p>
 <h2 id="results">Results</h2>
 <div class="tablewrap"><table>

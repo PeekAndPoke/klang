@@ -40,7 +40,7 @@ nothing, or worse, the wrong thing.
 
 And there is a subtler version of the problem. Consider:
 
-```javascript
+```klangscript
 let feel = 1.0
 
 note("c3 [e3 g3]").gain(feel)

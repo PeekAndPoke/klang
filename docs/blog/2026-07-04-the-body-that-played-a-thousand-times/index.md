@@ -37,7 +37,7 @@ Until July 3 the engine had been measured one effect at a time, on hand-made voi
 
 The three super-synth voices were the song's cost, and one of them was half of it. GTR2 had a superimpose inside a superimpose, and each superimpose copies the voice, so every note scheduled eight voices, 1,088 across the benchmark's eight cycles, and every copy re-ran the whole per-voice chain. Here is the tail of the instrument, in today's spelling (the pedal left out), the nested copy on the second-to-last line and the body on the last:
 
-```javascript
+```klangscript
     .coarse(2).pan(0.3).superimpose(
       x => x.pan(0.7),
       x => x.gain(0.0675).hpf(220).lpf(3400).scaleTranspose("<4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]>")

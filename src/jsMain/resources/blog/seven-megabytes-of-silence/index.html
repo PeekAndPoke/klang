@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,7 +340,7 @@ figcaption {
 <h1 id="seven-megabytes-of-silence">Seven Megabytes of Silence</h1>
 <p><em>Every orbit allocated a ten-second delay ring at its first touch, on the audio thread, for delays no song ever asked for; the fix is a shelf, a ladder, and a warmup that runs every path before the first note.</em></p>
 <p>Most posts in this series end in a table of microseconds. This one has none, because the problem was never how fast the engine rendered a block. It was what happened in the block where an orbit was touched for the first time. An orbit in Klangmotor is a bus with its own effects, a delay and a reverb among them, and until September 3 an orbit's constructor allocated the delay's ring unconditionally:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    val delay = KatalystDelayEffect(
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">val</span> delay = KatalystDelayEffect(
         delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate),
         blockFrames = blockFrames,
     )
@@ -347,16 +352,16 @@ figcaption {
 <p>Der Schmetterling touches eight orbits, the count-in alone on one of them for two cycles and the band on the other seven in the frame it enters, so a first play zero-filled about 63 MB on the audio thread, two 480,000-element arrays at a time, inside callbacks that have under three milliseconds each. That was the stutter <a href="../the-phone-that-does-not-get-faster/">the phone</a> had on every first run. And the delays the songs actually use, every one in the corpus, are written as an eighth to a quarter of a cycle, between a quarter and half a second. The ring was twenty to forty times larger than anything ever asked of it, allocated for orbits that had no delay at all. The plan's sentence for it: the ring is not a cost to manage, it is a mis-sizing to remove.</p>
 <h2 id="the-ladder-and-the-shelf">The ladder and the shelf</h2>
 <p>The decisions, agreed with the maintainer on September 3, read like a warehouse because that is what the component is called. No delay configured, no ring. A ring is allocated at the first configuration of a delay time and sized to a class: powers of two from half a second, no ceiling.</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    fun classFrames(minFrames: Int): Int {
-        var frames = baseFrames
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">fun</span> classFrames(minFrames: Int): Int {
+        <span class="kw">var</span> frames = baseFrames
 
-        while (frames &lt; minFrames &amp;&amp; frames &lt;= Int.MAX_VALUE / 2) {
+        <span class="kw">while</span> (frames &lt; minFrames &amp;&amp; frames &lt;= Int.MAX_VALUE / 2) {
             frames *= 2
         }
 
-        // Past Int range on the ladder (12 hours at 48 kHz) — hand the request through as is; the
-        // allocation will fail and report null, which is the right answer for a 24 GB ring.
-        return if (frames &lt; minFrames) minFrames else frames
+        <span class="cm">// Past Int range on the ladder (12 hours at 48 kHz) — hand the request through as is; the</span>
+        <span class="cm">// allocation will fail and report null, which is the right answer for a 24 GB ring.</span>
+        <span class="kw">return</span> <span class="kw">if</span> (frames &lt; minFrames) minFrames <span class="kw">else</span> frames
     }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/warehouse/SizedBuffers.kt#L117-L131">SizedBuffers.kt at v0.3.7</a></em></p>
@@ -367,30 +372,30 @@ figcaption {
 <p>Two of the arrows in that figure were review findings. The third round's major, found by both reviewers: the teardown zeroed every ring and network twice, and the warmup's cleanup retired sixteen orbits inside one render callback, about 19 MB of stores on the phone this exists for; the plan's own claim that clearing at return was away from any onset was false at every return site. Clearing became deferred housekeeping, one bounded slice per block, with a return costing nothing where it happens. The fourth round's major, also found by both: the best fit was unbounded, so a quarter-second delay could be handed an idle 32-second ring and a dirty 24 MB master ring could be zeroed inside an onset block, the stall relocated from the return to the rent. The fit is bounded at one class above the need, which is exactly the maintainer's example of a two-second request taking an idle four.</p>
 <h2 id="null-instead-of-dead">Null instead of dead</h2>
 <p>Before the warehouse an allocation failure was fatal on both platforms: an uncaught throw inside the worklet's process call ends the processor permanently, and the JVM's out-of-memory error kills the render thread. A live coder who typed a delay of six thousand seconds lost the set until a reload. The warehouse is the only allocation site for what it owns, so it is the only catch site:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        fun allocateOrNull(frames: Int): StereoBuffer? = try {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">fun</span> allocateOrNull(frames: Int): StereoBuffer? = <span class="kw">try</span> {
             StereoBuffer(frames)
-        } catch (e: Throwable) {
-            null
+        } <span class="kw">catch</span> (e: Throwable) {
+            <span class="kw">null</span>
         }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/warehouse/SizedBuffers.kt#L341-L350">SizedBuffers.kt at v0.3.7</a></em></p>
 <p>The rent returns a nullable ring, and the maintainer's point about that choice was the reason for it: the compiler tells us every place that needs a null check. The rule that an audio callback never allocates is as old as audio callbacks <a href="#bencina2011">[1]</a>; the warehouse is the deterministic allocator that rule recommends instead, with the one difference that its failure is a value. A grow that fails keeps the ring it has and clamps the time to it; a first allocation that fails takes an oversized idle ring if the shelf has one, and otherwise leaves the effect dry on that orbit, since a device that cannot find 385 KB is moments from killing the tab anyway:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    fun configure(timeSeconds: Double, feedback: Double, cap: Double) {
-        if (timeSeconds &gt;= MIN_ACTIVE_DELAY_SECONDS) {
-            // No ring and none to be had: the orbit stays dry rather than the worklet dying.
-            val line = ensureRing(timeSeconds) ?: return
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">fun</span> configure(timeSeconds: Double, feedback: Double, cap: Double) {
+        <span class="kw">if</span> (timeSeconds &gt;= MIN_ACTIVE_DELAY_SECONDS) {
+            <span class="cm">// No ring and none to be had: the orbit stays dry rather than the worklet dying.</span>
+            <span class="kw">val</span> line = ensureRing(timeSeconds) ?: <span class="kw">return</span>
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/cylinders/katalyst/KatalystDelayEffect.kt#L186-L198">KatalystDelayEffect.kt at v0.3.7</a></em></p>
 <p>Every refusal is counted and rides the diagnostics feed to the frontend, so the interface can say that a delay time was reduced for lack of memory instead of the set going quiet. The house rule against exceptions in hot paths is not broken by this: a catch around one large allocation, once per ring, is not a per-sample throw, and on the JVM catching the out-of-memory error at a single big-allocation site is a sound pattern for it, since the allocation that failed never happened and the heap is as it was.</p>
 <h2 id="the-stall-that-moved">The stall that moved</h2>
 <p>The plan is a diary of two days, and the four device notes across it and its follow-up task are the honest part. All four are dated September 4. With the lazy rings, the migration, the shelved master rings, the lazy reverb networks and the return path built, the first run of Der Schmetterling still killed the playback. Its first frame built eight orbits and four reverb networks at once, and compiled the reverb, the effect constructors and every instrument graph the song uses, because the warmup had only ever played a sine and a sample on one orbit. About a megabyte of bytes; the object graphs and the just-in-time compiler weigh as much on a phone. So orbits joined the warehouse too, and the warmup was rebuilt to render sixteen orbits, each starting in its own block so that no frame builds more than one, each with a delay, a room and a filter, and to hand all sixteen back to the shelves before it reports ready, about 90 milliseconds after start.</p>
 <p>The second measurement: better, not perfect. The count-in was fine; when the other voices came in there was a spike, then hiccups that stabilized, and a second run was clean. That is the signature of cold code, not of resources. The song's instruments are custom graphs composed of node kinds the warmup had never executed, and each kind's first blocks compiled on the audio thread. The fix is a vocabulary:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * The ignitor VOCABULARY the warmup plays: synthetic graphs that together touch every `IgnitorDsl`
  * node kind, so the first note of a song&#x27;s own instrument does not JIT that kind in a live frame.
  * ...
- */
-object WarmupVocabulary {
+ */</span>
+<span class="kw">object</span> WarmupVocabulary {
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.7/audio_be/src/commonMain/kotlin/WarmupVocabulary.kt#L62-L79">WarmupVocabulary.kt at v0.3.7</a></em></p>
 <p>Six synthetic graphs, waves, supers, noises, math, filters and effects, finite by construction, registered on the warmup playback exactly as a song registers its own instruments and rotated over the sixteen orbits. A specification enumerates the sealed hierarchy of node kinds by reflection and fails when a kind exists that no graph executes and no reason excludes. The third measurement was &quot;a bit better, still a massive spike when all voices set in&quot;, and the fourth, after the vocabulary was made to run the optimized form of each graph and a filter chain with a non-zero analog amount, the saturating branch the song's guitar actually takes and which the optimizer had fused away in the warmup: the warmup works, the first run plays. What remains visible is the warmup's own spike to 100 percent on the headroom gauge before the song starts, sixteen wet orbits compiling every graph on first execution, the cold work deliberately paid in silence. The maintainer's verdict: fine to see it.</p>

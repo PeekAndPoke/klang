@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,30 +340,30 @@ figcaption {
 <h1 id="the-promise-is-a-margin">The Promise Is a Margin</h1>
 <p><em>The graph optimizer promised bit-identity, which forbade moving a multiply; it now promises a margin with no musical meaning, and a harness that holds every rule to it.</em></p>
 <p>An instrument in Klangmotor is a tree of nodes, oscillators and filters and arithmetic, that the author writes as a chain of calls and the engine renders once per voice per block. Since August 21 a pass rewrites that tree before it is rendered, and the first thing it did was fuse runs of adjacent filters into one multi-section node. Its promise, written into its KDoc, was absolute:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * That is stricter than it needs to be mathematically, and deliberately so. A gain multiply
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * That is stricter than it needs to be mathematically, and deliberately so. A gain multiply
  * commutes with a linear filter on paper, but `k * lowpass(x)` and `lowpass(k * x)` do not
  * produce the same BITS, and bit-identity is a hard requirement here. So the pass never
  * reorders, never hoists, and never crosses a node it does not recognise. A chain like
  * `sine().bandpass().distort().lowpass()` yields two independent one-section Eqs, because the
  * distort between them is a wall.
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt#L12-L46">IgnitorDslOptimizer.kt at v0.3.13</a></em></p>
 <p>Bit-identity is an easy promise to test and a hard one to optimize under. Every level knob in a guitar rig is a multiply between two filters, and under that promise every one of them is a wall. On September 15, with <a href="../the-phone-that-does-not-get-faster/">the phone</a> barely running the song and its guitars carrying seven such walls per note, the maintainer replaced the promise: the optimized graph may differ from the authored one by a margin that has no musical meaning. This post is about what the change of promise cost, which was more than a constant.</p>
 <h2 id="step-zero-the-harness-before-the-rule">Step zero: the harness before the rule</h2>
 <p>The new promise is one constant and its KDoc:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * The margin an optimized graph may differ from its authored graph by, per sample, relative to
  * the block&#x27;s scale (its loudest sample, at most full scale): rounding, not sound. NaN must stay NaN and an
  * infinity an infinity. Relative to the block and not to the sample itself since 2026-09-15: a
  * fold that is inexact by an ulp (a divide as a multiply by the reciprocal) passes through a
  * filter and lands next to a zero crossing, where the sample is tiny and the deviation is not,
  * though it is still -240 dB below the loudest sample of that block.
- */
-const val OPTIMIZER_PARITY: Double = 1e-12
+ */</span>
+<span class="kw">const</span> <span class="kw">val</span> OPTIMIZER_PARITY: Double = 1e-12
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt#L56-L64">IgnitorDslOptimizer.kt at v0.3.14</a></em></p>
 <p>The last sentence of that KDoc was not there on the first day, and the first one said &quot;relative to the larger magnitude&quot;; the section on the fuzz seed tells how that changed. The first commit under the new promise added no rule. It put four corpora under the promise, three of them rendering a tree and its optimized twin through the real engine with same-seeded random streams and holding every sample to the margin: the existing rule table, a tree-in, tree-out specification that pins the shapes and, more importantly, the shapes that must not fold; the render-parity specification, now comparing within the margin instead of by bits, on the shapes people write plus the engine's whole warmup vocabulary; a new song corpus that compiles every builtin song and renders every distinct instrument in it both ways; and a new fuzz. The fuzz, a thousand graphs then and fifteen hundred now, composes graphs nobody wrote from sources, block-constant and modulated arithmetic, filters, shapers, envelopes, shared subtrees and the kill switch, with constants drawn from a generator that is mostly ordinary and sometimes not:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        return when (pick) {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">return</span> <span class="kw">when</span> (pick) {
             0 -&gt; 0.0
             1 -&gt; -0.0
             2 -&gt; 1e300
@@ -366,19 +371,19 @@ const val OPTIMIZER_PARITY: Double = 1e-12
             4 -&gt; Double.NaN
             5 -&gt; 1e-12
             6 -&gt; -1e9
-            else -&gt; (r.nextDouble() * 4.0 - 2.0)
+            <span class="kw">else</span> -&gt; (r.nextDouble() * 4.0 - 2.0)
         }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_be/src/jvmTest/kotlin/ignitor/IgnitorDslOptimizerFuzzSpec.kt#L81-L99">IgnitorDslOptimizerFuzzSpec.kt at v0.3.14</a></em></p>
 <p>Every generated tree is also held to the pass's laws: optimizing twice is the same as once, the work never grows, the parameters survive in first-occurrence order, and the registry must have swallowed no failure over the run. A failure prints its seed, which reproduces the tree. All of this was green on the shipped rules, which still rendered bit-exact, and it was mutation-checked before it was trusted: a fused coefficient one percent off is red in the render rows and the fuzz.</p>
 <h2 id="the-node-and-the-rule">The node and the rule</h2>
 <p>The node the folds build is one pass of <code>mul · (x + pre) + add</code>:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    @WireName(&quot;affine&quot;)
-    data class Affine(
-        val inner: IgnitorDsl,
-        val pre: IgnitorDsl = Constant(-0.0),
-        val mul: IgnitorDsl,
-        val add: IgnitorDsl = Constant(-0.0),
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    @WireName(<span class="st">&quot;affine&quot;</span>)
+    <span class="kw">data</span> <span class="kw">class</span> Affine(
+        <span class="kw">val</span> inner: IgnitorDsl,
+        <span class="kw">val</span> pre: IgnitorDsl = Constant(-0.0),
+        <span class="kw">val</span> mul: IgnitorDsl,
+        <span class="kw">val</span> add: IgnitorDsl = Constant(-0.0),
     ) : IgnitorDsl {
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt#L863-L899">IgnitorDsl.kt at v0.3.14</a></em></p>
@@ -395,25 +400,25 @@ const val OPTIMIZER_PARITY: Double = 1e-12
 <li>a shared node is never absorbed, and a parameter on the left of a multiply stays where it was written, because first-occurrence order of parameters is a contract the UI keys on.</li>
 </ul>
 <p>The composition condition is the part worth reading in the source, because its comment says why each clause is there:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                val product = m * factor
-                val growing = abs(m) &gt;= 1.0 &amp;&amp; abs(factor) &gt;= 1.0
-                val attenuating = abs(m) &lt;= 1.0 &amp;&amp; abs(product) &lt;= 1.0 &amp;&amp; signal.inner.isClamped()
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                <span class="kw">val</span> product = m * factor
+                <span class="kw">val</span> growing = abs(m) &gt;= 1.0 &amp;&amp; abs(factor) &gt;= 1.0
+                <span class="kw">val</span> attenuating = abs(m) &lt;= 1.0 &amp;&amp; abs(product) &lt;= 1.0 &amp;&amp; signal.inner.isClamped()
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt#L526-L583">IgnitorDslOptimizer.kt at v0.3.14</a></em></p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                val zeroFactor = m == 0.0 || factor == 0.0
-                val normal = product.isFinite() &amp;&amp; ((product == 0.0 &amp;&amp; zeroFactor) || abs(product) &gt;= 2.2250738585072014e-308)
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                <span class="kw">val</span> zeroFactor = m == 0.0 || factor == 0.0
+                <span class="kw">val</span> normal = product.isFinite() &amp;&amp; ((product == 0.0 &amp;&amp; zeroFactor) || abs(product) &gt;= 2.2250738585072014e-308)
 
-                if ((growing || attenuating || flip) &amp;&amp; normal) {
-                    return signal.copy(mul = IgnitorDsl.Constant(product))
+                <span class="kw">if</span> ((growing || attenuating || flip) &amp;&amp; normal) {
+                    <span class="kw">return</span> signal.copy(mul = IgnitorDsl.Constant(product))
                 }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_bridge/src/commonMain/kotlin/IgnitorDslOptimizer.kt#L526-L583">IgnitorDslOptimizer.kt at v0.3.14</a></em></p>
 <p>The condition is on <code>x · product</code>, not on the product: two multiplies of 100 and 0.01 compose to 1 on paper, and on a sample of 1e14 the chain clamps at its ceiling after the first while the fold never does.</p>
 <h2 id="division-subtraction-negation-and-the-zero">Division, subtraction, negation, and the zero</h2>
 <p>The maintainer's instructions for the last step were three sentences: fully support <code>div()</code> and <code>minus()</code> in the current form; <code>neg()</code> is an alias of <code>mul(-1)</code> and should not have a dedicated node at all; <code>div(0)</code> results in a constant zero no matter what the graph before it is. The last one is an engine rule before it is an optimizer rule, and it reads as one line in the divide node:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    /** The guarded quotient: zero for a zero divisor, else `safeOut(a / safeDiv(b))`. */
-    @Suppress(&quot;NOTHING_TO_INLINE&quot;)
-    private inline fun divide(a: Double, b: Double): Double = if (b == 0.0) 0.0 else safeOut(a / safeDiv(b))
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="cm">/** The guarded quotient: zero for a zero divisor, else `safeOut(a / safeDiv(b))`. */</span>
+    @Suppress(<span class="st">&quot;NOTHING_TO_INLINE&quot;</span>)
+    <span class="kw">private</span> <span class="kw">inline</span> <span class="kw">fun</span> divide(a: Double, b: Double): Double = <span class="kw">if</span> (b == 0.0) 0.0 <span class="kw">else</span> safeOut(a / safeDiv(b))
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt#L448-L537">Ignitor.kt at v0.3.14</a></em></p>
 <p>Before it, a zero divisor was substituted with the engine's smallest safe magnitude and the quotient clamped at the largest, which is a loud way to say &quot;undefined&quot;. Now a block-constant zero or infinite divisor is a dead branch: nothing upstream renders and the block is filled with zero. The fold of <code>x / k</code> is a multiply by the expression <code>1 / k</code>, evaluated once per block through the runtime's own guard; <code>x - k</code> fills the add with a bare negation; <code>-x</code> is a multiply by minus one and composes with a literal it follows.</p>
@@ -423,10 +428,10 @@ const val OPTIMIZER_PARITY: Double = 1e-12
 <p><img src="parity-oracle.png" alt="the parity oracle, per sample and per block" loading="lazy" /></p>
 <p><em>Fig. 2: A simulation in doubles, not the engine: one block of an authored chain against its fold, differing by rounding only, with the phase chosen so that one sample lands two millionths from a zero crossing. Relative to each sample, that one point reads as a failure by a factor of twenty; relative to the block's loudest sample, the engine's oracle, every point sits at rounding.</em></p>
 <p>The oracle is now relative to the block's scale, its loudest finite sample on either side, and capped at full scale, so that one saturated sample cannot buy the musical samples next to it a tolerance of a thousand:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    fun withinParity(a: Double, b: Double, scale: Double = 0.0): Boolean = when {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">fun</span> withinParity(a: Double, b: Double, scale: Double = 0.0): Boolean = <span class="kw">when</span> {
         a.isNaN() || b.isNaN() -&gt; a.isNaN() &amp;&amp; b.isNaN()
         a.isInfinite() || b.isInfinite() -&gt; a == b
-        else -&gt; abs(a - b) &lt;= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), scale, 1e-300)
+        <span class="kw">else</span> -&gt; abs(a - b) &lt;= OPTIMIZER_PARITY * maxOf(abs(a), abs(b), scale, 1e-300)
     }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.14/audio_be/src/commonTest/kotlin/ignitor/IgnitorDslOptimizerRenderSpec.kt#L91-L101">IgnitorDslOptimizerRenderSpec.kt at v0.3.14</a></em></p>

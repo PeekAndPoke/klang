@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -365,21 +370,21 @@ lazy, breathing wander that makes a sustained note feel alive.</li>
 </ul>
 <p>Both are white noise pushed through one-pole dynamics, closer to the physics of component noise than a lattice field.
 The step, verbatim:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">fun nextMultiplier(): Double {
-    // xorshift32 — inline, no Random dispatch
-    var s = rngState
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="kw">fun</span> nextMultiplier(): Double {
+    <span class="cm">// xorshift32 — inline, no Random dispatch</span>
+    <span class="kw">var</span> s = rngState
     s = s xor (s shl 13)
     s = s xor (s ushr 17)
     s = s xor (s shl 5)
     rngState = s
-    val x = s * ANALOG_INT_INV // uniform ≈ [-1, 1]
+    <span class="kw">val</span> x = s * ANALOG_INT_INV <span class="cm">// uniform ≈ [-1, 1]</span>
 
-    val newYFast = yFast + alphaFast * (x - yFast)
-    val newYSlow = ySlow + alphaSlow * (x - ySlow) - betaSlow * ySlow
+    <span class="kw">val</span> newYFast = yFast + alphaFast * (x - yFast)
+    <span class="kw">val</span> newYSlow = ySlow + alphaSlow * (x - ySlow) - betaSlow * ySlow
     yFast = newYFast
     ySlow = newYSlow
 
-    return 1.0 + newYFast * scaleFast + newYSlow * scaleSlow
+    <span class="kw">return</span> 1.0 + newYFast * scaleFast + newYSlow * scaleSlow
 }
 </code></pre></div>
 <p>Three details worth the ink:</p>

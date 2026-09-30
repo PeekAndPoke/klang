@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -339,27 +344,27 @@ figcaption {
 <p>The idea had been written down on July 4, during the orbit-body work, as a small task: measure the voice's real output rather than inferring silence from the envelope, and let a patch declare how early culling may fire through a per-voice fraction of its lifetime. The floor was -80 dB, the window three blocks. It waited two months in the task list, ranked as a nice-to-have, until <a href="../the-phone-that-does-not-get-faster/">the phone</a> made every slice of the song's cost interesting.</p>
 <p>The technique is older than the engine. SuperCollider's DetectSilence unit generator <a href="#sc-detectsilence">[1]</a> watches a signal and evaluates its done action, usually freeing the synth, once the signal has stayed under an amplitude for a time, and its documentation carries the same caveat this post is about to reach: if the input starts silent it waits for the first sound before it begins to watch, so that a synth is not freed for being late.</p>
 <p>Two of its decisions did not survive contact with the maintainer. There is no lifetime fraction: culling happens only in the release phase, once the gate has ended, because the gate is the held part of the note and a note may be silent there on purpose, a slow attack, a gated tremolo, sparse crackle. The release has been told to stop, which is the real &quot;the sound has started ending&quot; signal, and it needs no knob. And a voice that has not sounded yet is not culled, whatever its phase: a pitched-down sample with leading silence is not silent, it is late. What remains per voice is the window, <code>cull(seconds)</code>, with <code>noCull()</code> as the off switch, and the floor became the same constant the orbits use to decide that a bus has gone quiet, so that a culled voice is by definition below what keeps its orbit alive:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">const val VOICE_CULL_FLOOR: Double = ORBIT_SILENCE_FLOOR
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="kw">const</span> <span class="kw">val</span> VOICE_CULL_FLOOR: Double = ORBIT_SILENCE_FLOOR
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_bridge/src/commonMain/kotlin/constants/VoiceCullingDefaults.kt#L1-L50">VoiceCullingDefaults.kt at v0.3.13</a></em></p>
 <p>That constant is 1e-5, which is -100 dBFS, and the default window is 50 ms.</p>
 <h2 id="the-decision">The decision</h2>
 <p>The measurement is one extra pass over the voice's output in the send stage, run only on the blocks that will read it: before the voice has been heard, and then in its release. It takes the block's peak magnitude, multiplies by the voice's gain, and stops before the solo and mute multiplier, so a voice that is merely faded out by a solo is not taken for a dead one. The decision sits in the voice's render method, after the chain has rendered:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        if (measure) {
-            val silent = blockCtx.voiceOutputPeak &lt; VOICE_CULL_FLOOR
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">if</span> (measure) {
+            <span class="kw">val</span> silent = blockCtx.voiceOutputPeak &lt; VOICE_CULL_FLOOR
 
-            if (!silent) {
-                heard = true
+            <span class="kw">if</span> (!silent) {
+                heard = <span class="kw">true</span>
             }
 
-            if (heard &amp;&amp; ctx.blockStart &gt;= gateEndFrame) {
-                if (silent) {
+            <span class="kw">if</span> (heard &amp;&amp; ctx.blockStart &gt;= gateEndFrame) {
+                <span class="kw">if</span> (silent) {
                     silentFrames += length
 
-                    if (silentFrames &gt;= cullWindowFrames) {
-                        culled = true
+                    <span class="kw">if</span> (silentFrames &gt;= cullWindowFrames) {
+                        culled = <span class="kw">true</span>
                     }
-                } else {
+                } <span class="kw">else</span> {
                     silentFrames = 0
                 }
             }
@@ -368,11 +373,11 @@ figcaption {
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/audio_be/src/commonMain/kotlin/voices/Voice.kt#L225-L265">Voice.kt at v0.3.13</a></em></p>
 <p>The window counts frames, not blocks, so it has the same length at any block size and the cut lands within one block of the same frame. An audible block inside the release resets the count, which is what protects a tail that dips and comes back, up to the width of the window. A release that goes silent for longer than that and then returns is the author's call: the doors are one line each on the pattern, and a voice with a tremolo is excluded by the factory unless the author sets the window themselves, since a square tremolo at full depth is exact silence for half of every cycle.</p>
 <div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@KlangScript.Function
-fun SprudelPattern.cull(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    applyCull(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
+<span class="kw">fun</span> SprudelPattern.cull(seconds: PatternLike? = <span class="kw">null</span>, callInfo: CallInfo? = <span class="kw">null</span>): SprudelPattern =
+    applyCull(<span class="kw">this</span>, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 </code></pre></div>
 <div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@KlangScript.Function
-fun SprudelPattern.noCull(callInfo: CallInfo? = null): SprudelPattern = this.cull(VOICE_CULL_NEVER, callInfo)
+<span class="kw">fun</span> SprudelPattern.noCull(callInfo: CallInfo? = <span class="kw">null</span>): SprudelPattern = <span class="kw">this</span>.cull(VOICE_CULL_NEVER, callInfo)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.3.13/sprudel/src/commonMain/kotlin/lang/lang_dynamics_cull.kt#L1-L135">lang_dynamics_cull.kt at v0.3.13</a></em></p>
 <p><img src="voice-timeline.png" alt="one voice's life under culling" loading="lazy" /></p>
@@ -381,7 +386,7 @@ fun SprudelPattern.noCull(callInfo: CallInfo? = null): SprudelPattern = this.cul
 <p>The first build did the obvious thing. When the window elapsed, the voice's render method returned false, which is how a voice reports its natural end, and the scheduler swap-removed it from the active list. The benchmark numbers were what they should be. Then the deterministic null-diff of the song, the same render with culling on and off, subtracted sample by sample, came back with a mix change of -28 dB RMS. Culling removes only output under -100 dBFS by construction; a 28 dB change is not a tail going missing. Something else had moved.</p>
 <p>What had moved was ownership. An orbit, the bus a voice is mixed into, is leased to the first voice that renders into it, and that voice's bus configuration applies while it holds the lease. When an owner dies the lease passes to whichever voice renders first after it, and that order is the order of the active list. Swap-removing a culled hat from the middle of the list reordered the voices after it, and on Der Schmetterling that changed which of the third guitar and the bass owned orbit 3 when its owner ended, at -32 dBFS in the diff. The number is not large in absolute terms, but it is a different mix, and it would have been a different mix on every orbit whose voices carry different bus settings.</p>
 <p>So a culled voice is a zombie. It renders nothing, and it keeps its slot in the active list and renews its orbit lease until its scheduled end frame, where it expires like any other voice:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    /**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="cm">/**
      * True once this voice&#x27;s release has stayed under [VOICE_CULL_FLOOR] for the whole cull window.
      * From then on [render] runs no stage: the voice is a ZOMBIE that only renews its orbit lease
      * and keeps its slot in the scheduler&#x27;s active list until its scheduled [endFrame], where it
@@ -392,15 +397,15 @@ fun SprudelPattern.noCull(callInfo: CallInfo? = null): SprudelPattern = this.cul
      * -32 dBFS). The zombie&#x27;s per-block cost is the lease renewal, and as the owner the bus config
      * re-application that comes with it, exactly what a sounding tail paid; the stages it skips are
      * the win.
-     */
-    var culled: Boolean = false
-        private set
+     */</span>
+    <span class="kw">var</span> culled: Boolean = <span class="kw">false</span>
+        <span class="kw">private</span> set
 </code></pre></div>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        // A culled voice renews its orbit lease and nothing else (see [culled]).
-        if (culled) {
-            ctx.cylinders.getOrInit(cylinderId, this, ctx.blockStart)
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="cm">// A culled voice renews its orbit lease and nothing else (see [culled]).</span>
+        <span class="kw">if</span> (culled) {
+            ctx.cylinders.getOrInit(cylinderId, <span class="kw">this</span>, ctx.blockStart)
 
-            return true
+            <span class="kw">return</span> <span class="kw">true</span>
         }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.4.0/audio_be/src/commonMain/kotlin/voices/Voice.kt#L108-L121">Voice.kt at v0.4.0</a>, <a href="https://github.com/PeekAndPoke/klang/blob/v0.4.0/audio_be/src/commonMain/kotlin/voices/Voice.kt#L214-L219">and the early return</a></em></p>

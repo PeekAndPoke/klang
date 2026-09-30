@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -335,11 +340,11 @@ figcaption {
 <h1 id="one-engine-for-five-waves">One Engine for Five Waves</h1>
 <p><em>Three hand-rolled unison oscillators and two shape functions became one of each, and a control-rate read stopped rendering a whole buffer to take one sample from it.</em></p>
 <p>This is the earliest post in the series about the engine itself, and it is about consolidation rather than a trick. In the first days of June the super oscillators, the detuned stacks behind every wide sound in the songs, were five oscillators in four classes, with five histories. The saw and the ramp had already been merged onto one shared engine. The sine, the square and the triangle each carried their own copy of the voice bookkeeping, their own arrays of phases and detunes, a flat gain of one over the voice count, and a single analog drift walk shared by every voice in the stack. Here is the supersine's inner loop for the drifting case, which the square and the triangle repeated with their own waveform:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseInc = detunes[n]
-                                for (i in ctx.offset until end) {
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                            <span class="cm">// Voices 1..v: accumulate</span>
+                            <span class="kw">for</span> (n <span class="kw">in</span> 1 until v) {
+                                <span class="kw">var</span> p = phases[n]
+                                <span class="kw">val</span> baseInc = detunes[n]
+                                <span class="kw">for</span> (i <span class="kw">in</span> ctx.offset until end) {
                                     buffer[i] = (buffer[i] + sin(p) * voiceGain)
                                     p += baseInc * d.nextMultiplier()
                                     p = p.wrapPhase(TWO_PI)
@@ -351,19 +356,19 @@ figcaption {
 <p>Two shape functions drew the waveforms: one for the saw with its finite flyback, one for the pulse family as a trapezoid with a high plateau, a fall, a low plateau and a rise. And every parameter the three hand-rolled stacks read once per block, the voice count, the spread, the drift amount, they read by rendering the parameter's node into a scratch buffer of 128 samples and taking the first one.</p>
 <h2 id="one-shape">One shape</h2>
 <p>The saw and the trapezoid are the same shape. A saw is a trapezoid with empty plateaus; a triangle is one with a rise to the middle and a fall to the end; a square is one with short flanks around the plateaus; a raw edge is a flank of zero length. So one function draws all of them, in four segments, with the slopes precomputed by the caller so that the loop is multiply-only:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(&quot;NOTHING_TO_INLINE&quot;)
-internal inline fun waveTrapezoid(
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Suppress(<span class="st">&quot;NOTHING_TO_INLINE&quot;</span>)
+<span class="kw">internal</span> <span class="kw">inline</span> <span class="kw">fun</span> waveTrapezoid(
     p: Double,
     riseEnd: Double,
     highEnd: Double,
     fallEnd: Double,
     riseSlope: Double,
     fallSlope: Double,
-): Double = when {
-    p &lt; riseEnd -&gt; -1.0 + p * riseSlope                   // rise −1 → +1
-    p &lt; highEnd -&gt; 1.0                                    // high plateau
-    p &lt; fallEnd -&gt; 1.0 - (p - highEnd) * fallSlope        // fall +1 → −1
-    else -&gt; -1.0                                          // low plateau
+): Double = <span class="kw">when</span> {
+    p &lt; riseEnd -&gt; -1.0 + p * riseSlope                   <span class="cm">// rise −1 → +1</span>
+    p &lt; highEnd -&gt; 1.0                                    <span class="cm">// high plateau</span>
+    p &lt; fallEnd -&gt; 1.0 - (p - highEnd) * fallSlope        <span class="cm">// fall +1 → −1</span>
+    <span class="kw">else</span> -&gt; -1.0                                          <span class="cm">// low plateau</span>
 }
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/audio_be/src/commonMain/kotlin/DspUtil.kt#L86-L111">DspUtil.kt at v0.1.0</a></em></p>
@@ -375,7 +380,7 @@ internal inline fun waveTrapezoid(
 <p>The consolidation was declared a sound change on purpose: the supersquare, the supertri and the supersine now sound like members of the supersaw family, center-dominant, drifting per voice, tuned on the note. The supersaw and superramp output is byte-identical, since their render loop moved into a method unchanged, the supertri's per-voice shape is byte-identical to the old triangle formula, and each variant got its own tuning constants, seeded to the supersaw's values so that the sound of the day was the supersaw's and could diverge later by editing a constant.</p>
 <h2 id="one-number-instead-of-a-buffer">One number instead of a buffer</h2>
 <p>The third change is the one the rest of the series leans on. Three concrete leaf kinds, the constant, the named parameter and the note frequency, were already special-cased by hand in the parameter reader, each helper repeating the same type checks, and anything composite, a parameter times the note frequency, was read by rendering it and taking the first sample. The interface gained a member that says what a node is:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    /**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="cm">/**
      * The block-constant scalar value of this signal, or `null` if it varies within the block.
      *
      * Block-constant leaves ([ConstantIgnitor], [ParamIgnitor], [FreqIgnitor]) and pure pointwise
@@ -383,8 +388,8 @@ internal inline fun waveTrapezoid(
      * else (oscillators, filters, envelopes, LFOs) returns `null` (the default). Lets control-rate readers
      * take the scalar directly instead of rendering a scratch buffer, and lets the pulse `duty` path pick
      * the bake-once render over per-sample PWM.
-     */
-    fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? = null
+     */</span>
+    <span class="kw">fun</span> controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double? = <span class="kw">null</span>
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.0/audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt#L41-L50">Ignitor.kt at v0.1.0</a></em></p>
 <p>The leaves answer with their value, thirteen pointwise combinators fold over block-constant children, mirroring their own per-sample arithmetic and safety clamps, and everything stateful answers null, in which case the reader falls back to the scratch render that advances the node by a block as before. The readers that changed that day were the frequency and drift reads, the detune amount, the three spread reads in the stacks and the pulse's duty, which picks a bake-once shape over per-sample pulse-width modulation when the duty is a number. Eleven weeks later <a href="../half-a-song/">the same member</a> became the gate of the constant folds in the arithmetic nodes, and the null that a memoizing wrapper answered by default turned out to have hidden every composite constant in the meantime; the next day <a href="../eleven-loops-one-pass/">the tree rewriter</a> built on the same distinction between what is known per block and what is not.</p>

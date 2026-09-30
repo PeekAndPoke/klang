@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -336,15 +341,15 @@ figcaption {
 <p><em>Musical time went through five representations in five months, from a Double to a fixed point to two rationals to a fixed point again, and the last one made a third exact and a plus under six nanoseconds.</em></p>
 <p>This is the oldest post in the series and one of two whose optimization lives above the engine, in the pattern language, and it is as much about correctness as about speed, because in a sequencer the two are the same problem. A pattern divides a cycle into steps, a step into steps again, shifts them by fractions, stretches them by fractions, and asks, cycle after cycle, which events begin inside a window. A triplet inside a cycle must land exactly on the third, forever. Until January 8 the position of an event was a Double:</p>
 <div class="code" data-lang="kotlin"><pre><code class="language-kotlin">@Serializable
-data class StrudelPatternEvent(
-    /** The begin of the note (in cycles) */
-    val begin: Double,
-    /** The end of the note (in cycles) */
-    val end: Double,
-    /** The duration of the note (in cycles) */
-    val dur: Double,
-    /** The voice data */
-    val data: VoiceData,
+<span class="kw">data</span> <span class="kw">class</span> StrudelPatternEvent(
+    <span class="cm">/** The begin of the note (in cycles) */</span>
+    <span class="kw">val</span> begin: Double,
+    <span class="cm">/** The end of the note (in cycles) */</span>
+    <span class="kw">val</span> end: Double,
+    <span class="cm">/** The duration of the note (in cycles) */</span>
+    <span class="kw">val</span> dur: Double,
+    <span class="cm">/** The voice data */</span>
+    <span class="kw">val</span> data: VoiceData,
 )
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/c0620dea0e88a3e027df31031ea153528dbb8b74/strudel/src/commonMain/kotlin/StrudelPatternEvent.kt#L9-L19">StrudelPatternEvent.kt at c0620dea</a>, the last commit before the first Rational file was added</em></p>
@@ -353,83 +358,83 @@ data class StrudelPatternEvent(
 <p><em>Fig. 1: The five representations of a cycle position, in order, with what broke on each and drove the next. Dates are the commits that introduced each; the numbers on the last edge are from the transplant benchmark of Fig. 2.</em></p>
 <h2 id="five-representations-in-five-months">Five representations in five months</h2>
 <p>The first replacement, for about an hour that morning, really was a numerator and a denominator; by the afternoon it had been replaced by a 32.32 fixed point in a Long that kept the file's name, a value class with a private field of bits, thirty-two of them for the fraction:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * Rational number representation using 32.32 Fixed Point arithmetic.
  *
  * This implementation is a `value class`, meaning it is inlined to a primitive [Long] at runtime,
  * resulting in zero heap allocations for arithmetic operations.
  *
  * It uses 32 bits for the fractional part, providing a resolution of ~2.3e-10.
- */
-@Serializable(with = RationalSerializer::class)
+ */</span>
+@Serializable(with = RationalSerializer::<span class="kw">class</span>)
 @JvmInline
-value class Rational private constructor(private val bits: Long) : Comparable&lt;Rational&gt; {
+<span class="kw">value</span> <span class="kw">class</span> Rational <span class="kw">private</span> <span class="kw">constructor</span>(<span class="kw">private</span> <span class="kw">val</span> bits: Long) : Comparable&lt;Rational&gt; {
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/302cf72d586498f211b5fe3bdb72e660ae7c5a31/strudel/src/commonMain/kotlin/math/Rational.kt#L14-L24">Rational.kt at 302cf72d</a>, January 8</em></p>
 <p>A fixed point makes drift disappear for every fraction whose denominator is a power of two, which is most of music, and rounds everything else to the nearest step. A third is not a step. Its nearest step is 1,431,655,765 of the 4,294,967,296 in a cycle, and three of those are 4,294,967,295: three thirds are one step short of one, and a sequence of three triplet steps ends one step before the cycle boundary it was supposed to meet. Five days later the diary records a full rational implementation tried and abandoned within the day, the commit log shows the file that held it added and deleted in the same evening, and the sequencer got a guard instead:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                val takeIt = intersectEnd &gt; intersectStart &amp;&amp;
-                        // IMPORTANT: Protection against floating point precision issues
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">                <span class="kw">val</span> takeIt = intersectEnd &gt; intersectStart &amp;&amp;
+                        <span class="cm">// IMPORTANT: Protection against floating point precision issues</span>
                         (innerTo - innerFrom &gt; MIN_QUERY_LENGTH)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/54beec477e5b3b56f75c72286057a878a0e6d580/strudel/src/commonMain/kotlin/pattern/SequencePattern.kt#L67-L69">SequencePattern.kt at 54beec47</a>, January 13; the length is a ten-millionth of a cycle</em></p>
 <p>The guard held for three weeks. On February 5 the class became what its name said, a numerator and a denominator in two Longs, reduced by a gcd after every operation, and the KDoc names the model:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * Rational number representation using numerator and denominator.
  *
  * This implementation replaces the Fixed Point 32.32 arithmetic with exact rational arithmetic,
  * similar to Fraction.js. It stores values as [numerator] and [denominator].
- */
+ */</span>
 @ConsistentCopyVisibility
-@Serializable(with = RationalStringSerializer::class)
-data class Rational private constructor(val numerator: Long, val denominator: Long) : Comparable&lt;Rational&gt; {
+@Serializable(with = RationalStringSerializer::<span class="kw">class</span>)
+<span class="kw">data</span> <span class="kw">class</span> Rational <span class="kw">private</span> <span class="kw">constructor</span>(<span class="kw">val</span> numerator: Long, <span class="kw">val</span> denominator: Long) : Comparable&lt;Rational&gt; {
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/7ed31a91b445e125434386651e66cc1146994971/strudel/src/commonMain/kotlin/math/Rational.kt#L14-L23">Rational.kt at 7ed31a91</a>, February 5</em></p>
 <p>That was correct, and on the JVM it was fine. In the browser it was not, and the reason is the type. JavaScript has no 64-bit integer, so Kotlin/JS emulates a Long with an object holding two 32-bit halves, and every add, multiply and compare on a numerator allocated one; the project's own style rule bans the type for that reason. The quarter's history file records the response as &quot;removing <code>Long</code> everywhere (JS pain)&quot;, and on March 16 the class split into an expect declaration and two actuals, Long on the JVM and, on JavaScript, the native BigInt that the platform does have <a href="#mdnbigint">[2]</a>:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">/**
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm">/**
  * Rational number representation using numerator and denominator.
  *
  * Platform implementations:
  * - JVM: Long-based numerator/denominator
  * - JS: Native BigInt-based to avoid Kotlin/JS Long boxing overhead
- */
-@Suppress(&quot;EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING&quot;, &quot;unused&quot;)
-@Serializable(with = RationalStringSerializer::class)
-expect class Rational : Comparable&lt;Rational&gt; {
+ */</span>
+@Suppress(<span class="st">&quot;EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING&quot;</span>, <span class="st">&quot;unused&quot;</span>)
+@Serializable(with = RationalStringSerializer::<span class="kw">class</span>)
+<span class="kw">expect</span> <span class="kw">class</span> Rational : Comparable&lt;Rational&gt; {
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/09c6e8d90a9d5e59e6ba7d5b0c26d3a71b3a0ef5/strudel/src/commonMain/kotlin/math/Rational.kt#L11-L20">Rational.kt at 09c6e8d9</a>, March 16</em></p>
 <h2 id="every-plus-is-a-gcd">Every plus is a gcd</h2>
 <p>Here is what a plus cost on that path, in its final form, from the last commit before the class was deleted. It is careful code: the sign is precomputed, a coprime-denominator fast path skips the reduction, and the reduction that remains is against the small gcd of the denominators rather than the product. Every line of it is a BigInt operation:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        val g = gcd(d, other.d)
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">        <span class="kw">val</span> g = gcd(d, other.d)
 
-        // Coprime denominators (g == 1) — includes every &quot;add an integer/cycle offset&quot; case.
-        // Proof: gcd(num, den) = gcd(num, g) = gcd(num, 1) = 1, so the result is already reduced.
-        // Skip the divisions and the second gcd entirely. Common on the hot path.
-        if (bigIntEq(g, BI_ONE)) {
-            val num = bigIntAdd(bigIntMul(n, other.d), bigIntMul(other.n, d))
-            val den = bigIntMul(d, other.d)
-            val resultSgn = if (sgn == other.sgn) sgn else bigIntSign(num)
-            return ofFinite(num, den, resultSgn)
+        <span class="cm">// Coprime denominators (g == 1) — includes every &quot;add an integer/cycle offset&quot; case.</span>
+        <span class="cm">// Proof: gcd(num, den) = gcd(num, g) = gcd(num, 1) = 1, so the result is already reduced.</span>
+        <span class="cm">// Skip the divisions and the second gcd entirely. Common on the hot path.</span>
+        <span class="kw">if</span> (bigIntEq(g, BI_ONE)) {
+            <span class="kw">val</span> num = bigIntAdd(bigIntMul(n, other.d), bigIntMul(other.n, d))
+            <span class="kw">val</span> den = bigIntMul(d, other.d)
+            <span class="kw">val</span> resultSgn = <span class="kw">if</span> (sgn == other.sgn) sgn <span class="kw">else</span> bigIntSign(num)
+            <span class="kw">return</span> ofFinite(num, den, resultSgn)
         }
 
-        val otherDOverG = bigIntDiv(other.d, g)
-        val dOverG = bigIntDiv(d, g)
-        val num = bigIntAdd(bigIntMul(n, otherDOverG), bigIntMul(other.n, dOverG))
-        val den = bigIntMul(d, otherDOverG)
+        <span class="kw">val</span> otherDOverG = bigIntDiv(other.d, g)
+        <span class="kw">val</span> dOverG = bigIntDiv(d, g)
+        <span class="kw">val</span> num = bigIntAdd(bigIntMul(n, otherDOverG), bigIntMul(other.n, dOverG))
+        <span class="kw">val</span> den = bigIntMul(d, otherDOverG)
 
-        // Smart reduction: inputs are reduced, so gcd(num, den) = gcd(num, g) (much smaller).
-        val g2 = gcd(num, g)
+        <span class="cm">// Smart reduction: inputs are reduced, so gcd(num, den) = gcd(num, g) (much smaller).</span>
+        <span class="kw">val</span> g2 = gcd(num, g)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/e57b2cf02ac74973c84e0605b1d0f3630a9232d6/common/src/jsMain/kotlin/math/Rational.kt#L248-L285">Rational.kt (jsMain) at e57b2cf0</a>, the plus of the BigInt actual, the commit before its deletion</em></p>
 <p>A query walks a sequence by adding step widths, compares every event against the window's edges, maps outer time into a step by a subtraction, a division and an addition, and does this for every step of every pattern in the chain for every cycle. The whitepaper of August called the result a performance disaster on JavaScript, where every gcd and every plus hit BigInt in the hot path. Nobody wrote the number down at the time; it is measured below.</p>
 <h2 id="a-cycle-in-110100480-ticks">A cycle in 110,100,480 ticks</h2>
 <p>The way out was the way in, a fixed point, with two things changed. The first is the base. The January class had a power of two for its step, which is why a third was not a step. The May class picks the number of ticks in a cycle to be divisible by everything music divides by; on May 29 it landed with 2^13 halvings, and the next day settled on the constant it has kept since:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    companion object {
-        /** Ticks per cycle: 2^20 · 3 · 5 · 7. Highly composite → exact tuplets + fine dyadic grid. */
-        const val T: Double = 110100480.0
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">    <span class="kw">companion</span> <span class="kw">object</span> {
+        <span class="cm">/** Ticks per cycle: 2^20 · 3 · 5 · 7. Highly composite → exact tuplets + fine dyadic grid. */</span>
+        <span class="kw">const</span> <span class="kw">val</span> T: Double = 110100480.0
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/5c7d211957fc9719c80d0cb0aa838e9c9f9f09f5/common/src/commonMain/kotlin/math/CycleTime.kt#L116-L118">CycleTime.kt at v0.1.0</a></em></p>
 <p>A third of a cycle is 36,700,160 ticks, exactly, and three of them are the cycle. So are a fifth, a seventh, a sixth, a twelfth, a fifteenth, a hundred-and-fifth, and every half of a half down to the twentieth halving. What is not exact is rounded to the nearest tick, and the class says which: ninths, twenty-fifths, elevenths, and halvings finer than one 1,048,576th of a cycle. The second change is the container. The whitepaper says the class is an Int under the hood; the code says a Double, and the code is right, for the reason the KDoc gives:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * Stored as a [Double] holding an exact integer. This is safe because:
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * Stored as a [Double] holding an exact integer. This is safe because:
  * - IEEE-754 represents every integer up to 2^53 exactly, and our tick counts stay around 10^10
  *   even for marathon sessions (T ≈ 8.6e5 × ~1e4 cycles), far below 2^53 ≈ 9e15.
  * - Therefore `+`, `-`, unary minus, and `times(Int)` are **bit-exact with no rounding**.
@@ -439,19 +444,19 @@ expect class Rational : Comparable&lt;Rational&gt; {
  *
  * As a [JvmInline] value class this compiles to a bare `number` on JS (no boxing — unlike `Long`) and
  * a primitive `double` on JVM, so the abstraction is zero-cost on the hot path.
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/5c7d211957fc9719c80d0cb0aa838e9c9f9f09f5/common/src/commonMain/kotlin/math/CycleTime.kt#L33-L42">CycleTime.kt at v0.1.0</a>; the arithmetic follows at <a href="https://github.com/PeekAndPoke/klang/blob/5c7d211957fc9719c80d0cb0aa838e9c9f9f09f5/common/src/commonMain/kotlin/math/CycleTime.kt#L55-L64">L55-L64</a></em></p>
 <p>An Int would overflow in nineteen cycles; a Long is the type the whole project bans; a Double holding an integer is a JavaScript number, adds and compares as a machine double, and stays exact for about eighty million cycles, which is 2^53 divided by the tick count. A plus is a plus of two doubles. A compare is a compare. There is no gcd because there is no denominator: the whole grid shares one.</p>
 <h2 id="what-exact-time-fixed">What exact time fixed</h2>
 <p>The day after the class landed, a test was written that scans every alternation length from one upward over many cycles, and it exists because exact time exposed a bug that inexact time had hidden. Structural operators select which item plays in which cycle by dividing, and a division that rounds picks the wrong item at some cycle for any length that does not divide the tick count. The whitepaper kept the story in a box until August:</p>
-<div class="code" data-lang="html"><pre><code class="language-html">                &lt;span class=&quot;lab&quot;&gt;A bug worth the war story&lt;/span&gt;
-                &lt;p&gt;
-                    Structural operators like &lt;code&gt;seq(N)…slow(N)&lt;/code&gt; were silently mis-selecting and
+<div class="code" data-lang="html"><pre><code class="language-html">                <span class="kw">&lt;span</span> class=<span class="st">&quot;lab&quot;</span><span class="kw">&gt;</span>A bug worth the war story<span class="kw">&lt;/span&gt;</span>
+                <span class="kw">&lt;p&gt;</span>
+                    Structural operators like <span class="kw">&lt;code&gt;</span>seq(N)…slow(N)<span class="kw">&lt;/code&gt;</span> were silently mis-selecting and
                     dropping events whenever N did not divide the tick constant. Once time was exact,
-                    &lt;code&gt;arrange&lt;/code&gt; and &lt;code&gt;&amp;lt;…&amp;gt;&lt;/code&gt; alternation could be fixed to exact
+                    <span class="kw">&lt;code&gt;</span>arrange<span class="kw">&lt;/code&gt;</span> and <span class="kw">&lt;code&gt;</span>&amp;lt;…&amp;gt;<span class="kw">&lt;/code&gt;</span> alternation could be fixed to exact
                     integer-cycle selection. There is now a dedicated spec guarding it, because it is exactly
                     the kind of thing that quietly comes back.
-                &lt;/p&gt;
+                <span class="kw">&lt;/p&gt;</span>
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/5332d52d62fcf7c568ad192aab672e105f7beb13/docs/whitepaper/klang-whitepaper.html#L1169-L1178">klang-whitepaper.html at 5332d52d</a>, the last version of the box before the section was cut on August 29</em></p>
 <p>The spec's own description is the precise version: an alternation of N items compiles to a sequence of N slowed by N, at output cycle c the active item must be c mod N, and for N that does not divide T the slowing rounds, so the floored step selection may pick the wrong item at some cycle. The fix was to select by integer cycle index rather than by a rounded division, and the guard scans lengths and cycles and asserts that no length ever fails, by the raw query and by the sampler that the control path uses. A second guard came in June for the other family of boundary bugs, a shift by two thousandths of a cycle that re-emitted a step straddling a cycle boundary in both adjacent cycles; that one was a clipping bug in the time-shift pattern, but the test that pins it down asserts onset times to a billionth of a cycle across a twelve-cycle window, which is an assertion one can only write once time is exact.</p>

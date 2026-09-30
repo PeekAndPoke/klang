@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -377,19 +382,19 @@ figcaption {
 </tbody>
 </table></div>
 <p>The three super-synth voices were the song's cost, and one of them was half of it. GTR2 had a superimpose inside a superimpose, and each superimpose copies the voice, so every note scheduled eight voices, 1,088 across the benchmark's eight cycles, and every copy re-ran the whole per-voice chain. Here is the tail of the instrument, in today's spelling (the pedal left out), the nested copy on the second-to-last line and the body on the last:</p>
-<div class="code" data-lang="javascript"><pre><code class="language-javascript">    .coarse(2).pan(0.3).superimpose(
+<div class="code" data-lang="klangscript"><pre><code class="language-klangscript">    .coarse(2).pan(0.3).superimpose(
       x =&gt; x.pan(0.7),
-      x =&gt; x.gain(0.0675).hpf(220).lpf(3400).scaleTranspose(&quot;&lt;4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]&gt;&quot;)
+      x =&gt; x.gain(0.0675).hpf(220).lpf(3400).scaleTranspose(<span class="st">&quot;&lt;4!7 [2 [3 4@3]]!1 4!7 [-7 -3] 4!7 [2 [3 4@3]]!1 4!7 [-3 [2 4@3]]&gt;&quot;</span>)
            .pan(0.2).superimpose(pan(0.8))
-    ).superimpose(hpf(3500).lpf(6200).gain(0.015)).mute(&quot;&lt;0!128 1!16 0!16&gt;&quot;).body(wet = 0.30, material = &quot;wood&quot;)
+    ).superimpose(hpf(3500).lpf(6200).gain(0.015)).mute(<span class="st">&quot;&lt;0!128 1!16 0!16&gt;&quot;</span>).body(wet = 0.30, material = <span class="st">&quot;wood&quot;</span>)
 </code></pre></div>
 <p><em>Adapted from <a href="https://github.com/PeekAndPoke/klang/blob/ba7fab68/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt#L47-L58">DerSchmetterling.kt at ba7fab68</a>, the last edit of the song on July 3</em></p>
 <h2 id="what-the-body-cost-and-where">What the body cost, and where</h2>
 <p>The body is a bank of eight state-variable bandpass filters in parallel, a caricature of a guitar's top plate, and at the time it was a filter in the voice's own chain, built right next to the lowpass and the notch:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">            // Formant&#x27;s bands are vowel-specific — per-voice offset would smear vowel character. Skip.
-            is FilterDef.Formant -&gt; LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
-            // Body modes are fixed resonances — per-voice offset would smear the body character. Skip.
-            is FilterDef.Body -&gt; LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin">            <span class="cm">// Formant&#x27;s bands are vowel-specific — per-voice offset would smear vowel character. Skip.</span>
+            <span class="kw">is</span> FilterDef.Formant -&gt; LowPassHighPassFilters.createFormant(bands, mix, sampleRateDouble)
+            <span class="cm">// Body modes are fixed resonances — per-voice offset would smear the body character. Skip.</span>
+            <span class="kw">is</span> FilterDef.Body -&gt; LowPassHighPassFilters.createBody(bands, mix, sampleRateDouble)
 </code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/af1c08dc/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L353-L359">VoiceFactory.kt at af1c08dc</a>, the commit before the move</em></p>
 <p>On GTR1 that was 544 scheduled voices with eight filters each, on the order of 4,300 filter passes for one instrument, and the harness's ladder priced the body at 0.0066 of median RTF on that guitar, the most expensive single effect in the song, ahead of the analog drift. The analysis then asked the question that decided the design: does a superimpose multiply the body? A two-by-two experiment, a voice with and without the body, with and without a superimpose that doubles it, said yes and more than yes. The body cost 0.0018 alone and 0.0027 once the superimpose had doubled the voices, and the two together cost more than the sum of each, an interaction of about 0.0009. The expensive thing in the song was not any single effect. It was a per-voice effect placed under a superimpose stack, paid once per copy.</p>
@@ -399,7 +404,7 @@ figcaption {
 <p><em>Fig. 1: Before, every voice on the orbit carried its own body, so a nested superimpose ran hundreds of them; after, the orbit bus runs one on the mix, and the voice that sounded first configures it.</em></p>
 <p>The voice factory of that day pulled the two definitions out of the voice's filter list before it baked the filters, and routed them to the orbit through the voice (<a href="https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt#L93-L112">VoiceFactory.kt at v0.1.2</a>); everything else stayed per voice.</p>
 <p>Two things had to be invented for the orbit to own an effect. The first is who configures it. All the voices on an orbit share one set of bus effects, and without arbitration the configuration would flip to whichever voice rendered last every block, which in the worst case rebuilds a filter bank on the audio thread every block. The answer is a lease:</p>
-<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"> * All voices on an orbit share one set of bus effects (body, vowel, reverb, delay, phaser, compressor).
+<div class="code" data-lang="kotlin"><pre><code class="language-kotlin"><span class="cm"> * All voices on an orbit share one set of bus effects (body, vowel, reverb, delay, phaser, compressor).
  * Without arbitration the config flip-flops last-writer-wins every block; worst case (two voices, different
  * settings) it thrashes an effect — e.g. rebuilding a filter bank on the audio thread every block. This
  * lease makes the FIRST voice to sound the orbit&#x27;s **owner**: while that voice is alive its settings stick
@@ -409,7 +414,7 @@ figcaption {
  * `SendRenderer` → `Cylinder.updateFromVoice` runs every block it renders). So the owner &quot;checks in&quot; each
  * block. If it misses a block — for ANY reason: natural end, cut/choke, or playback cleanup — the lease
  * lapses and the next offering voice takes over. No per-removal-path hooks needed.
-</code></pre></div>
+</span></code></pre></div>
 <p><em><a href="https://github.com/PeekAndPoke/klang/blob/v0.1.2/audio_be/src/commonMain/kotlin/cylinders/katalyst/VoiceLease.kt#L1-L63">VoiceLease.kt at v0.1.2</a></em></p>
 <p>That lease is the mechanism <a href="../zombies/">a later post in this series</a> meets from the other side, when removing a silent voice early changed which voice owned an orbit. The second invention came the next day: a live change of material or mix rebuilds the bank, and a rebuild on a sounding orbit clicks, so a crossfade of about twelve milliseconds swaps the old bank for the new one. With it came a library of materials, their resonances anchored in the acoustics literature <a href="#fletcher1998">[1]</a>, and a user-settable dry floor. The plan of the day before had already accepted the sound change, to be validated by ear: the body now resonates the summed, already distorted, panned mix, and a body of a sum is not the sum of the bodies.</p>
 <p>The design had a cost, and the record lists it as a table of conflicts: an orbit can hold one body now, so seven builtin songs had to be re-orbited. Sakura had wood, glass and tube all on the default orbit; Seltsamere Dinge's melody and its glass superimpose collided; Der Schmetterling's two guitars, both wood on one orbit, would have shared a body, and the commit that moved the resonator also moved the second guitar to an orbit of its own.</p>

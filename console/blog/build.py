@@ -97,23 +97,100 @@ def inline_text(token):
     return ''.join(parts)
 
 
+# ---- code highlighting ----------------------------------------------------------------------------
+# Three token kinds, as the whitepaper colours its code by hand: kw (keyword), st (string), cm (comment).
+# Deliberately small: one regex per language, no parsing; a Kotlin string sees one level of ${...}, no deeper.
+
+def words(names):
+    return r'\b(?:' + '|'.join(names.split()) + r')\b'
+
+
+C_COMMENTS = r'//[^\n]*|/\*.*?(?:\*/|\Z)'
+QUOTED = r'"(?:\\.|[^"\\\n])*"?|\'(?:\\.|[^\'\\\n])*\'?'
+KOTLIN_QUOTED = r'"(?:\\.|\$\{[^}\n]*\}|[^"\\\n])*"?|\'(?:\\.|[^\'\\\n])*\'?'
+HIGHLIGHT = {
+    'kotlin': re.compile(
+        rf'(?P<cm>{C_COMMENTS})|(?P<st>"""(?:.*?)(?:"""|\Z)|{KOTLIN_QUOTED})'
+        r'|(?P<kw>' + words('as break catch class constructor continue do else false finally for fun if import in '
+                            'interface is null object package return super this throw true try typealias val var '
+                            'when while')
+        # soft keywords count only in front of another word: `data class`, `private val`, not `val data:` or
+        # `inner is Eq`
+        + '|' + words('abstract actual annotation by companion const crossinline data enum expect external final '
+                      'infix inline inner internal lateinit noinline open operator override private protected '
+                      'public reified sealed suspend tailrec value vararg')
+        + r'(?=[ \t]+(?!(?:as|in|is)\b)[A-Za-z_]))', re.S),
+    # the keyword table of klangscript/src/commonMain/kotlin/parser/KlangScriptParser.kt
+    'klangscript': re.compile(
+        # its "..." and '...' may span lines, like its backtick strings
+        rf'(?P<cm>{C_COMMENTS})|(?P<st>"(?:\\.|[^"\\])*"?|\'(?:\\.|[^\'\\])*\'?|`(?:\\.|[^`\\])*`?)'
+        r'|(?P<kw>' + words('as break const continue do else export false for from if import in let null return '
+                            'true while') + ')', re.S),
+    'sh': re.compile(
+        rf'(?P<cm>(?:^|(?<=\s))#[^\n]*)|(?P<st>"(?:\\.|[^"\\\n])*"?|\'[^\'\n]*\'?)'
+        r'|(?P<kw>' + words('case do done elif else esac export fi for function if in local return then while')
+        + ')', re.M),
+    'html': re.compile(r'(?P<cm><!--.*?(?:-->|\Z))|(?P<st>"[^"\n]*")|(?P<kw></?[A-Za-z][\w-]*>?|/?>)', re.S),
+}
+# Tags that render as plain text: `text` for formulas, output and diagrams, carrying no label.
+PLAIN = {'text'}
+# Post folders that quote real JavaScript on purpose. Everything else tagged javascript is KlangScript.
+JAVASCRIPT_POSTS = frozenset()
+
+
+def highlight(content, lang):
+    rx = HIGHLIGHT.get(lang)
+    if rx is None:
+        return esc(content)
+    parts, pos = [], 0
+    if lang == 'kotlin' and content.lstrip().startswith('*'):
+        # a KDoc quoted without its opening /** is a comment up to its */
+        end = content.find('*/')
+        pos = len(content) if end < 0 else end + 2
+        parts.append(f'<span class="cm">{esc(content[:pos])}</span>')
+    for m in rx.finditer(content, pos):
+        parts.append(esc(content[pos:m.start()]))
+        parts.append(f'<span class="{m.lastgroup}">{esc(m.group())}</span>')
+        pos = m.end()
+    parts.append(esc(content[pos:]))
+    return ''.join(parts)
+
+
+def check_code_block(post, token, where, errors):
+    if token.type == 'code_block':
+        errors.add(where, 'indented code block: use a fenced block with its language (```kotlin, ```klangscript, '
+                          '```sh, ```html, ```text)')
+        return
+    lang = fence_lang(token)
+    if not lang:
+        errors.add(where, 'code block without a language: tag it kotlin, klangscript, sh, html or text')
+    elif lang == 'javascript':
+        if post['folder'] not in JAVASCRIPT_POSTS:
+            errors.add(where, 'code block tagged javascript: the posts hold KlangScript, tag it klangscript (a post '
+                              'that quotes real JavaScript is named in JAVASCRIPT_POSTS in console/blog/build.py)')
+    elif lang not in HIGHLIGHT and lang not in PLAIN:
+        errors.add(where, f'code block tagged "{lang}", which the build does not know: use kotlin, klangscript, sh, '
+                          f'html or text')
+
+
 # ---- markdown ---------------------------------------------------------------------------------------
 
+def fence_lang(token):
+    return token.info.strip().split()[0] if token.info.strip() else ''
+
+
 def code_block(content, lang):
-    body = esc(content)
-    if lang:
+    if lang and lang not in PLAIN:
         return (f'<div class="code" data-lang="{esc(lang)}"><pre><code class="language-{esc(lang)}">'
-                f'{body}</code></pre></div>\n')
-    return f'<div class="code"><pre><code>{body}</code></pre></div>\n'
+                f'{highlight(content, lang)}</code></pre></div>\n')
+    return f'<div class="code"><pre><code>{esc(content)}</code></pre></div>\n'
 
 
 def make_md():
     md = MarkdownIt('commonmark', {'html': True}).enable(['table', 'strikethrough'])
 
     def fence(self, tokens, idx, options, env):
-        t = tokens[idx]
-        lang = t.info.strip().split()[0] if t.info.strip() else ''
-        return code_block(t.content, lang)
+        return code_block(tokens[idx].content, fence_lang(tokens[idx]))
 
     def indented(self, tokens, idx, options, env):
         return code_block(tokens[idx].content, '')
@@ -285,6 +362,9 @@ def render_post(post, md, posts_by_folder, errors, pending):
                                   'of howto-write-a-post.md section 7: ' + t.content.strip().split('\n')[0][:80])
             for a in re.findall(r'<a id="([^"]+)"></a>', t.content):
                 ids.add(a)
+            continue
+        if t.type in ('fence', 'code_block'):
+            check_code_block(post, t, where, errors)
             continue
         if t.type == 'heading_open':
             hid = slugify(inline_text(tokens[i + 1]), heading_ids)

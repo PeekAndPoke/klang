@@ -27,6 +27,8 @@
     --signal: #56B6C2;    /* excellent */
     --gold: #E8B84B;
     --code-bg: #12131C;   /* menuBackground */
+    --code-str: #98C379;  /* good */
+    --code-cm: #5C6370;
 
     --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
     --f-body: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
@@ -210,6 +212,9 @@ main {
 }
 .code pre { margin: 0; font-family: var(--f-mono); font-size: 0.775rem; line-height: 1.62; tab-size: 2; }
 .prose .code code { background: none; border: 0; padding: 0; font-size: inherit; word-break: normal; }
+.code .kw { color: var(--spark); text-shadow: 0 0 8px rgba(209, 154, 102, .25); }
+.code .st { color: var(--code-str); }
+.code .cm { color: var(--code-cm); font-style: italic; }
 
 /* ---- tables ---------------------------------------------------------------------------------------- */
 .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
@@ -350,9 +355,9 @@ line as that sound starts, so the span has to ride along with the event all
 the way to the scheduler. Lose the thread at any step and the light shows
 nothing, or worse, the wrong thing.</p>
 <p>And there is a subtler version of the problem. Consider:</p>
-<div class="code" data-lang="javascript"><pre><code class="language-javascript">let feel = 1.0
+<div class="code" data-lang="klangscript"><pre><code class="language-klangscript"><span class="kw">let</span> feel = 1.0
 
-note(&quot;c3 [e3 g3]&quot;).gain(feel)
+note(<span class="st">&quot;c3 [e3 g3]&quot;</span>).gain(feel)
 </code></pre></div>
 <p>When those notes play, klang highlights the atoms <code>c3</code>, <code>e3</code>, <code>g3</code>, <em>and
 the literal <code>1.0</code> two lines up.</em> The value participated, so its birthplace
