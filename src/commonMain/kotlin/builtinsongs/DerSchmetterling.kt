@@ -352,7 +352,7 @@ let granCassa = (() => {
   let beater = Osc.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(2200).mul(10.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.40, "tube", 2)
+    .distort(0.50, "tube", 2)
     .mul(0.1)
     .classic()
 })()
@@ -366,7 +366,7 @@ export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .pan(sine.range(0.4, 0.6).slow(16))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.70)
+  .scale("e2:minor").gain(0.90)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0005, 0.0010).mul(drunk))
 
