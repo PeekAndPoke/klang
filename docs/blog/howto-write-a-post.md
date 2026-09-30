@@ -122,6 +122,10 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
   its height to the page (the site template holds the one small listener that sizes the frame). The repo browser does
   not show the frame (GitHub filters iframes), so the caption must still make sense there, and the text must never
   depend on the reader having used the figure. The chosen generator must pass this HTML block through.
+- **Figures are a design lab** (maintainer, 2026-09-30): each post may try a different layout or interaction than the
+  last, and an older post's figures are never restyled to a newer design, so the posts keep the history of how the
+  app's design was found (`.claude/agents/visualizer.md`). The shared page template (`console/blog/`) is the site, not
+  the experiment.
 - Heading links rely on auto-slugs (`## References` → `#references`).
 - **Code blocks that contain markdown fences** (KDoc with sample blocks) need a **4-backtick outer fence**. Never put
   backtick runs inside a shorter inline code span — rephrase instead.

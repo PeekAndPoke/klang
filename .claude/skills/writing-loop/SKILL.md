@@ -16,7 +16,9 @@ blog post, the one allowed HTML block (`docs/blog/howto-write-a-post.md` section
 
 **The figures are a design lab** (maintainer, 2026-09-30): they are also experiments in how the main app might look
 once it grows into a full DAW, dense and using every pixel. Keep doing figures in every writing round and every blog
-round; nothing is settled, so experiment. The detail is in `.claude/agents/visualizer.md`. When a figure's idea looks
+round; nothing is settled, so experiment. Each blog post may vary from the last, and an older post's figures are
+never restyled to a newer design: the posts keep the history of how the design was found. The detail is in
+`.claude/agents/visualizer.md`. When a figure's idea looks
 ready for the app, the maintainer names it and it becomes a future task.
 
 ## The roles

@@ -42,6 +42,11 @@ may become the blueprint for the app's own UI, which is heading toward a full DA
   views, scrubbing, compact readouts), and say in your report which ones you think could carry over to the app.
 - The page's look still wins for a published figure; the experiment is in layout and interaction, not in a new
   palette.
+- **Vary from post to post** (maintainer, 2026-09-30): each blog post may try something different from the last, a
+  variation on earlier attempts; the maintainer judges whether it goes the right way. Look at the figures of the
+  most recent posts first and build on or depart from them on purpose; say which in your report.
+- **Never restyle an older post's figures** to match a newer design. They stay as they were, so the posts keep a
+  history of how the design was found. Fix only a factual error or a broken figure in an older post.
 
 How you work, in two passes: a working version first (the mechanism right, the interaction right), then a refine pass
 (the look matches the page, the labels read well, the edge cases: empty data, extreme slider ends, small screens).
