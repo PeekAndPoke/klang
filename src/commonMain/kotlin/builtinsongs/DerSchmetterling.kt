@@ -398,7 +398,7 @@ let metalKick = (() => {
 // 15 ms, and 9 to 23 dB on top above 4 kHz in the first 3 ms. Three tells:
 //   - the crack: the stick on the batter head, broadband noise above 1.5 kHz
 //   - the body: the head at snareHz (played with .freq), a fifth up at the hit and settling, a deeper sine at 0.75 times
-//     it, the thud (noise from 140 to 350 Hz) and the shell (noise around 800 Hz), and the two membrane modes at 1.59 and
+//     it, the thud (a cluster of sines from 140 to 700 Hz) and the shell (noise around 800 Hz), and the two membrane modes at 1.59 and
 //     2.14 times the head. A lone sine sat in one third-octave band and sounded thin, a "pick" (2026-09-28); the "sd"
 //     sample spread its body over 160 to 250 Hz and had 5 to 10 dB more between 400 Hz and 1 kHz
 //   - the wires: noise that buzzes at the head's frequency, because the wires slap the bottom head on every cycle; they
@@ -408,10 +408,28 @@ let metalKick = (() => {
 let metalSnare = (() => {
   let crack = Osc.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
   // the body: the head, pushed a fifth up by the hit, a deeper sine under it, the thud of the stick driving the whole drum
-  // (noise, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
+  // (a dense cluster, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
   let head  = Osc.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(3.0)
   let deep  = Osc.sine(Osc.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(2.5)
-  let thud  = Osc.pinknoise().bandpass(230, 1.0).highpass(140, 0.707, x => x.passes(2)).adsr(0.0005, 0.050, 0.0, 0.02).mul(40)
+  // The thud: 13 inharmonic sines from 138 to 712 Hz, a little over two semitones apart, weighted to the spectrum of the
+  // pink noise band it replaces (2026-09-30). The noise band was about 230 Hz wide and 50 ms long, so every hit rolled
+  // new dice: 6 dB of hit-to-hit loudness, 7.5 dB of peak. The cluster is the same on every hit. The flipped signs are the
+  // start phases: all positive, the sines rise together and the hit spikes 20 dB over its level; this pattern, the
+  // calmest of all 8192, leaves 12 dB, less than the noise had.
+  let thud  = Osc.sine(Osc.freq().mul(0.6571)).mul(0.520)
+    .plus(Osc.sine(Osc.freq().mul(0.7571)).mul(0.676))
+    .plus(Osc.sine(Osc.freq().mul(0.8714)).mul(-0.652))
+    .plus(Osc.sine(Osc.freq().mul(0.9476)).mul(0.826))
+    .plus(Osc.sine(Osc.freq().mul(1.0857)).mul(0.938))
+    .plus(Osc.sine(Osc.freq().mul(1.2524)).mul(-1.000))
+    .plus(Osc.sine(Osc.freq().mul(1.4333)).mul(0.839))
+    .plus(Osc.sine(Osc.freq().mul(1.6524)).mul(0.746))
+    .plus(Osc.sine(Osc.freq().mul(1.8952)).mul(-0.692))
+    .plus(Osc.sine(Osc.freq().mul(2.1952)).mul(-0.591))
+    .plus(Osc.sine(Osc.freq().mul(2.5333)).mul(0.494))
+    .plus(Osc.sine(Osc.freq().mul(2.9381)).mul(0.474))
+    .plus(Osc.sine(Osc.freq().mul(3.3905)).mul(-0.358))
+    .adsr(0.0005, 0.050, 0.0, 0.02).mul(1.245)
   let shell = Osc.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
   let m2    = Osc.sine(Osc.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
   let m3    = Osc.sine(Osc.freq().mul(2.14)).adsr(0.0005, 0.020, 0.0, 0.02).mul(0.8)
@@ -420,8 +438,11 @@ let metalSnare = (() => {
 
   let drum = head.plus(deep).plus(thud).plus(shell).plus(m2).plus(m3).plus(wires)
 
+  // The preamp: every part peaks in the same millisecond, so the hit stood 25 dB over the snare's loudness and every
+  // master limiter worked on the snare alone. A soft clip rounds that first peak and leaves the body as it was: 6 dB less
+  // peak at the same loudness (2026-09-30).
   return drum.plus(crack)
-    .mul(0.32)                                     // level: as loud as the thin snare before it, at the same gain
+    .mul(0.3).shape("soft", 2).mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
     .classic()
 })()
 
