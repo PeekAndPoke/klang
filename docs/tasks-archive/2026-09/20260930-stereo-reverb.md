@@ -4,7 +4,7 @@
 > sides, the classic mono-in design, chosen by ear. Archived. The follow-ups live on in
 > [`future/reverb-models.md`](../../tasks/future/reverb-models.md) (the umbrella, with
 > [`future/room-reverb.md`](../../tasks/future/room-reverb.md)) and
-> [`future/kokon-one-room.md`](../../tasks/future/kokon-one-room.md). Found while mixing Kokon, maintainer asked for the
+> [`20260930-kokon-one-room.md`](20260930-kokon-one-room.md) (done the same day). Found while mixing Kokon, maintainer asked for the
 > task the same day. Changes the sound of every song that pans a voice through a reverb, so it lands
 > before the tutorial phase locks the sound (`_v1-scope.md` Layer 2.5).
 

@@ -68,6 +68,6 @@ Convolution is both a model and the measuring stick for the others, so it likely
   (`/dsl-design`, `audio/ref/off-values.md`).
 - **The warehouse**: `ReverbUnits` pools one class today; several models need a pool per model or one
   unit that switches.
-- **One room per song**: a shared room on the master with slight rooms per line (Kokon's parked
-  one-room mix) may matter as much as the model. Decide the song-level story with the models.
+- **One room per song**: a shared room on the master with slight rooms per line (Kokon's one-room
+  mix, done 2026-09-30: [`20260930-kokon-one-room.md`](../../tasks-archive/2026-09/20260930-kokon-one-room.md)) may matter as much as the model. Decide the song-level story with the models.
 - **Tuning by ear before the tutorials lock the sound**, or explicitly after V1.
