@@ -356,6 +356,10 @@ export song = stack(
 
 // Written by Claude (Opus 5.5) on the guitar of Der Schmetterling, which the maintainer and Claude built stage by stage.
 // Fine-tuned and arranged with peekandpoke
+//
+// Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
+// by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
+// Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
 
     
     
