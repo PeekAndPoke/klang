@@ -87,6 +87,7 @@ let powerClassA = x => x
   .distort(0.20, "asym", 2)
   .mul(1.4)
 
+
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 1.2, db =  3.0)
@@ -156,32 +157,40 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 // Lines  -----------------------------------------------------------------------------------------------------------
 // One guitarist, one way of playing. Each line sets its own level; a part may set another.
 
-// Spin: the clean arpeggio, notes ringing over each other.
+// A plucked string drops after the pick, then rings and fades. The clean lines pick a little softer (pregain), so the
+// amp squeezes the drop less and each note stands out from the one still ringing.
+
+// Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 1.5).clip(4)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
+  .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 0.8).clip(3)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
-  .gain(0.22).pan(0.4)
+  .gain(0.22).pan(0.25)                            // the arp guitarist stands left
   .orbit(1).reverb(wet = 0.2, size = 4)
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.08)
+  .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.5)
-  .gain(0.14).pan(0.65)
+  .hpf(250)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
+  .lpf(3500)                                       // the crunch fizz on held notes covers the arp's picks
+  .gain(0.14).pan(0.75)                            // the melody guitarist stands right
   .orbit(2).reverb(wet = 0.3, size = 5)
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
-  .sound(bright).adsrOff().unison(voices = 15, spread = 0.10)
+  .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .oscp("decay", 3.0).clip(1.5)
+  .hpf(400)                                        // two octaves up, nothing of the melody lives below
+  .lpf(4000)                                       // less fizz, the wall keeps its own
   .gain(0.50).pan(0.5)
   .orbit(6).reverb(wet = 0.25, size = 5)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled right, a little late.
 export swell = chords => n(chords.add(7))
-  .sound(bright).adsrOff().unison(voices = 11, spread = 0.12)
+  .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
+  .lpf(3000)
   .gain(0.06).pan(0.3).superimpose(x => x.pan(0.7).late(0.02))
   .orbit(7).reverb(wet = 0.5, size = 6)
 
@@ -218,10 +227,17 @@ export strike = chords => n(chords)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5).reverb(wet = 0.15, size = 3)
 
+// Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
+export chime = notes => n(notes.add(14))
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
+  .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 1.2).clip(2)
+  .gain(0.35).pan(0.75)
+  .orbit(10).reverb(wet = 0.3, size = 5)
+
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 6.0).clip(60)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
+  .oscp("decay", 0.30).oscp("sustain", 0.50).oscp("release", 2.5).clip(40)
   .gain(0.20).pan(0.45)
   .orbit(8).reverb(wet = 0.3, size = 6)
 
@@ -264,18 +280,18 @@ let holdingBreath = stack(
   beat(cocoonRoots).mask(breath),
 )
 
-// The high gain rig splits it open. The arpeggio doubles its pace underneath.
+// The high gain rig splits it open: the melody against the wall. The arpeggio waits for its own part.
 let breakingOpen = stack(
-  spin(cocoonArp).ply(2).gain(0.16),
   soar(melodyOne),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).gain(0.7),
 )
 
-// The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading.
+// The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
+// in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.45),
+  spin(cocoonArp.add(7)).ply(2).gain(0.57).pan(0.5),
   wings(cocoonPower),
   chug(cocoonRoots),
   beat(cocoonRoots).gain(0.7),
@@ -283,7 +299,7 @@ let unravelling = stack(
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  spin(liftArp).ply(2).gain(0.20).oscp("decay", 2.5),
+  spin(liftArp).ply(2).gain(0.20).oscp("sustain", 0.6),
   soar(melodyTwo),
   wings(liftPower),
   chug(liftRoots),
@@ -292,7 +308,7 @@ let lifting = stack(
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("decay", 2.5),
+  spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("sustain", 0.6),
   soar("[4@6 ~@2]"),
   strike("[-7,0,4]"),
   beat("0").gain(0.7),
@@ -301,7 +317,7 @@ let landing = stack(
 // The cocoon again, empty now, and the butterfly flies off.
 let flyingOff = stack(
   spin(cocoonArp),
-  sing(schmetterlingLead.add(7)).oscp("decay", 2.0).clip(2).gain(0.26).pan(0.6),
+  chime(schmetterlingLead),
 )
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
