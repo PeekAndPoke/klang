@@ -163,7 +163,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
-    .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
+    .phasePool(on = 1, kMin = 0.80, kMax = 0.95, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
     .spreadPower(6.0).sideAtten(0.3).gainJitter(0.05).centerJitter(0.20)
     // analog settings
@@ -172,10 +172,10 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
  
   let signal = saw.mul(Osc.slot.pregain)
     // Simulate plucked string
-    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
+    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.07, 0, 0))
     //.lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
+    .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
@@ -184,6 +184,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // the power amp, then let the snare cut through
   let amped = power(toned)
+    .distort(0.05, "softsat")
     .eq(e => e
       .band(freq = snareHz, q = 1.5, db = -1)           // notch the snare
     )
@@ -191,7 +192,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.14)
+    .mul(0.15)
     .classic()
 }
 
@@ -250,22 +251,22 @@ let marimba = (() => {
   let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(2.0)                     // yarn head: a thump, not a click                    
  
   return f1.plus(f4).plus(f10).plus(mallet)
-    .distort(0.2, "soft")
+    .distort(0.3, "softsat")
     .eq(e => e
-      .band(freq = Osc.freq(), q = 30.0, db =  3) // the resonator tube 
+      .band(freq = Osc.freq(), q = 30.0, db =  6) // the resonator tube 
     )
-    .adsr(0.010, 1.0, 0.0, 0.5).mul(0.3)
+    .adsr(0.010, 1.0, 0.0, 0.5).mul(0.1)
     .classic()
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
-  .velocity(guitarDyna).body(material = "wood", wet = 0.4)
-  .hpf(600, 0.7).lpf(8500, 1.5)
+  .velocity(guitarDyna).body(material = "glass", wet = 0.4)
+  .hpf(400, 0.7).lpf(8000, 1.5)
   .pan(sine.range(0.2, 0.3)).superimpose(pan(sine.range(0.8, 0.7))) // . solo()
   .clip(1.0)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<1.00!48 0.50!16>").gain(mul(0.06))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<1.00!48 0.55!16>").gain(mul(0.11))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
@@ -458,18 +459,18 @@ export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[~ sd] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.14).pan(0.625)
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.13).pan(0.625)
 export snare_arrange = x => x.orbit(7).mute("<0!128 1!32>").late(berlin.range(0.0010, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.22).pan(0.35)
+export hats_shape = x => x.gain(0.20).pan(0.35)
   .hpf(1200).lpf(freq = "14500".add(perlin.mul(50).fast(4)), q = 0.5).adsr(perlin.range(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<pink ~ pink ~ pink ~ pink>*8`
-export shaker_shape = x => x.gain(0.11).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
+export shaker_shape = x => x.gain(0.10).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
   .hpf(freq = 6000, q = 0.7) //  . solo()
   .pan(0.35).adsr(0.010, 0.08, 0.0, 0.01)
 export shaker_arrange = x => x.orbit(10).late(berlin.range(0.0010, 0.0020).mul(drunk))
