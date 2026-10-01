@@ -150,3 +150,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`ref/memory-history.md#lessons-learned`).
 - 2026-09-29: this file restructured; the old status line, feature list and dated entries are in
   `ref/memory-history.md` (`#current-status`, `#completed-features`).
+- 2026-10-01: `beats(n, base = 4)`, a tempo-following duration in seconds
+  (`docs/tasks-archive/2026-10/20261001-sprudel-beats-helper.md`).
