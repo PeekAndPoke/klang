@@ -75,7 +75,8 @@ internal class StructurePattern(
             }
 
             if (keep) {
-                result.add(sourceEvent)
+                // The mask atom that let the event through lights up too, the way struct's does
+                result.add(sourceEvent.prependLocations(otherEvent?.sourceLocations))
             }
         }
         return result
