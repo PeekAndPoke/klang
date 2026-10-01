@@ -72,12 +72,12 @@ let preampCrunch = x => x
   .mul(1.9)
 
 let preampHighGain = x => x
-  .highpass(120)
-  .distort(0.45, "tube", 4).highpass(100)
-  .distort(0.50, "softsat", 4).highpass(100)
-  .distort(0.50, "soft", 4)
-  .lowpass(6800)
-  .mul(0.25)
+  .highpass(120)                                   // tight: no bass into the gain stages
+  .distort(0.40, "tube", 4).highpass(110)
+  .distort(0.45, "softsat", 4).highpass(100)
+  .distort(0.70, "soft", 4)
+  .lowpass(7500)                                   // the fizz
+  .mul(0.25)                                       // volume
 
 let powerPushPull = x => x
   .distort(0.25, "soft", 2)
@@ -90,7 +90,7 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.8)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.2, db =  3.5)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
@@ -120,7 +120,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   let signal = saw.mul(Osc.slot.pregain)
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
-    .plus(Osc.crackle(1.25).highpass(1200).adsr(0.001, 0.1, 0.0, 0.05).mul(1.5))
+    .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
   return cab(power(preamp(pedal(pickup(signal))))).mul(0.14).classic()

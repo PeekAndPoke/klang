@@ -96,8 +96,8 @@ let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
   .distort(0.45, "softsat", 4).highpass(100)
-  .distort(0.80, "soft", 4)
- // .lowpass(7500)                                   // the fizz
+  .distort(0.70, "soft", 4)
+  .lowpass(7500)                                   // the fizz
   .mul(0.25)                                       // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
@@ -175,7 +175,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
     //.lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Osc.crackle(1.25).highpass(1200).adsr(0.001, 0.1, 0.0, 0.05).mul(1.5))
+    .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
