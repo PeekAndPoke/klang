@@ -152,3 +152,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   `ref/memory-history.md` (`#current-status`, `#completed-features`).
 - 2026-10-01: `beats(n, base = 4)`, a tempo-following duration in seconds
   (`docs/tasks-archive/2026-10/20261001-sprudel-beats-helper.md`).
+- 2026-10-01: `beatRate(n, base = 4)`, the rate twin of `beats`, one cycle every n beats in Hz
+  (`docs/tasks-archive/2026-10/20261001-sprudel-beat-rate-helper.md`).

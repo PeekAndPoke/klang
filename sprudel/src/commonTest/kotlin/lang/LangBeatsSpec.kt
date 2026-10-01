@@ -16,7 +16,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
- * `beats(n)`: the length of n beats in seconds, read against the tempo of each query.
+ * `beats(n)`: the length of n beats in seconds, and `beatRate(n)`, one cycle every n beats in Hz, both read
+ * against the tempo of each query.
  * At the default cps 0.5 (120 bpm) one beat is 0.5 s.
  */
 class LangBeatsSpec : StringSpec({
@@ -109,6 +110,100 @@ class LangBeatsSpec : StringSpec({
 
                         atDefault[0].data.katalystParams?.get("delay.time") shouldBe 0.25
                         atDouble[0].data.katalystParams?.get("delay.time") shouldBe 0.125
+                    }
+                }
+            }
+        }
+    }
+
+    // -- beatRate --------------------------------------------------------------------------------------------------
+
+    "beatRate dsl interface" {
+        dslInterfaceTests(
+            "beatRate" to beatRate(0.5),
+            "script beatRate" to SprudelPattern.compile("beatRate(0.5)"),
+            "script beatRate named, base by default" to SprudelPattern.compile("beatRate(n = 0.5)"),
+        ) { _, events ->
+            events shouldHaveSize 1
+            events[0].data.value?.asDouble shouldBe 4.0
+        }
+    }
+
+    "beatRate follows a tempo change between two queries of the same pattern" {
+        val p = beatRate(1)
+
+        p.queryArcContextual(0.0, 1.0, ctxAtCps(0.5))[0].data.value?.asDouble shouldBe 2.0
+        p.queryArcContextual(1.0, 2.0, ctxAtCps(1.0))[0].data.value?.asDouble shouldBe 4.0
+        p.queryArcContextual(2.0, 3.0, ctxAtCps(0.25))[0].data.value?.asDouble shouldBe 1.0
+    }
+
+    "beatRate with a base counts that many beats to the cycle" {
+        dslInterfaceTests(
+            "beatRate" to beatRate(1, base = 3),
+            "script beatRate" to SprudelPattern.compile("beatRate(1, 3)"),
+            "script beatRate named" to SprudelPattern.compile("beatRate(n = 1, base = 3)"),
+        ) { _, events ->
+            events shouldHaveSize 1
+            events[0].data.value?.asDouble!! shouldBe (1.5 plusOrMinus 1e-12)
+        }
+
+        beatRate(1, base = 0).queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe 2.0
+    }
+
+    "beatRate with a pattern keeps its rhythm and its rests" {
+        dslInterfaceTests(
+            "beatRate" to beatRate("<0.5 1>"),
+            "script beatRate" to SprudelPattern.compile("beatRate(\"<0.5 1>\")"),
+        ) { cycle, events ->
+            events shouldHaveSize 1
+            events[0].data.value?.asDouble shouldBe if (cycle.toInt() % 2 == 0) 4.0 else 2.0
+        }
+
+        val p = beatRate("<0.5 ~>")
+
+        p.queryArc(0.0, 1.0) shouldHaveSize 1
+        p.queryArc(1.0, 2.0) shouldHaveSize 0
+    }
+
+    "beatRate(0) is not a finite rate, and the tremolo slot drops it" {
+        beatRate(0).queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe Double.POSITIVE_INFINITY
+
+        val wire = note("c3").tremolo(0.6, beatRate(0)).queryArc(0.0, 1.0)[0].data.toVoiceData()
+
+        wire.oscParams?.containsKey("tremolo.sync") shouldBe false
+        wire.oscParams?.get("tremolo.depth") shouldBe 0.6
+    }
+
+    "beatRate is one over beats" {
+        listOf(0.25, 0.5, 0.75, 1.0, 3.0).forEach { n ->
+            listOf(0.3, 0.5, 1.1).forEach { cps ->
+                withClue("n $n, cps $cps") {
+                    val ctx = ctxAtCps(cps)
+                    val rate = beatRate(n, base = 3).queryArcContextual(0.0, 1.0, ctx)[0].data.value?.asDouble!!
+                    val seconds = beats(n, base = 3).queryArcContextual(0.0, 1.0, ctx)[0].data.value?.asDouble!!
+
+                    rate * seconds shouldBe (1.0 plusOrMinus 1e-12)
+                }
+            }
+        }
+    }
+
+    "beatRate as a tremolo rate writes Hz at the playing tempo" {
+        val subjects = listOf(
+            "kotlin" to note("c3").tremolo(0.6, beatRate(0.5)),
+            "script" to SprudelPattern.compile("note(\"c3\").tremolo(0.6, beatRate(0.5))")!!,
+        )
+
+        assertSoftly {
+            subjects.forEach { (name, p) ->
+                repeat(12) { cycle ->
+                    withClue("$name, cycle $cycle") {
+                        val from = cycle.toDouble()
+                        val atDefault = p.queryArc(from, from + 1).filter { it.isOnset }
+                        val atDouble = p.queryArcContextual(from, from + 1, ctxAtCps(1.0)).filter { it.isOnset }
+
+                        atDefault[0].data.tremoloSync shouldBe 4.0
+                        atDouble[0].data.tremoloSync shouldBe 8.0
                     }
                 }
             }

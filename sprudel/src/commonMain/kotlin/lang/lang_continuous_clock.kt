@@ -90,15 +90,23 @@ val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
 @KlangScript.Constant
 val bpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 * DEFAULT_BEATS_PER_CYCLE }
 
-// -- beats() ----------------------------------------------------------------------------------------------------------
+// -- beats() and beatRate() ------------------------------------------------------------------------------------------
 
-/** Four beats to a cycle: the 4/4 that [bpm] assumes and [beats] takes when no base is given. */
+/** Four beats to a cycle: the 4/4 that [bpm] assumes and [beats] / [beatRate] take when no base is given. */
 private const val DEFAULT_BEATS_PER_CYCLE = 4.0
 
 /** The length of one beat in seconds at the tempo of this query, with [base] beats to a cycle. */
 private fun QueryContext.secondsPerBeat(base: Double): Double = 1.0 / (getCps() * base)
 
-private fun applyBeats(args: List<SprudelDslArg<Any?>>, base: Number): SprudelPattern {
+/**
+ * The one implementation behind [beats] and [beatRate]: the length of `n` beats in seconds at the tempo of
+ * each query, handed to [fromSeconds] (the identity for [beats], one over it for [beatRate]).
+ */
+private fun applyBeatClock(
+    args: List<SprudelDslArg<Any?>>,
+    base: Number,
+    fromSeconds: (Double) -> Double,
+): SprudelPattern {
     val nArg = args.firstOrNull() ?: return silence
     val staticN = (nArg.value as? Number)?.toDouble()
     // Coerced, not asserted: a base of 0 or less, or a non-finite one, counts in fours
@@ -106,7 +114,7 @@ private fun applyBeats(args: List<SprudelDslArg<Any?>>, base: Number): SprudelPa
 
     // A number is a signal, like cps
     if (staticN != null) {
-        return ContinuousPattern { _, _, ctx -> staticN * ctx.secondsPerBeat(beatsPerCycle) }
+        return ContinuousPattern { _, _, ctx -> fromSeconds(staticN * ctx.secondsPerBeat(beatsPerCycle)) }
     }
 
     // A pattern keeps its own rhythm; each of its values is read against the tempo of the query
@@ -119,7 +127,7 @@ private fun applyBeats(args: List<SprudelDslArg<Any?>>, base: Number): SprudelPa
             val secondsPerBeat = beatData.value?.asDouble
 
             if (n != null && secondsPerBeat != null) {
-                nData.copy(value = (n * secondsPerBeat).asVoiceValue())
+                nData.copy(value = fromSeconds(n * secondsPerBeat).asVoiceValue())
             } else {
                 nData
             }
@@ -137,8 +145,8 @@ private fun applyBeats(args: List<SprudelDslArg<Any?>>, base: Number): SprudelPa
  * `beats(1)` is 0.5 s and `beats(0.5)` is 0.25 s, an eighth note. In a waltz, `beats(1, 3)` is a third of
  * a cycle.
  *
- * It is a duration, not a rate: a door that takes Hz (the tremolo's `sync`) needs `pure(1).div(beats(n))` for one
- * wobble every `n` beats.
+ * It is a duration, not a rate: a door that takes Hz (`vibrato`'s and `phaser`'s `rate`, the tremolo's `sync`)
+ * takes [beatRate].
  *
  * A number gives a signal. A pattern keeps its own rhythm, and each of its values becomes seconds.
  * Write fractions as decimals in a string: in mini-notation `"1/8"` means slow down by 8, not one eighth.
@@ -163,7 +171,42 @@ private fun applyBeats(args: List<SprudelDslArg<Any?>>, base: Number): SprudelPa
  */
 @KlangScript.Function
 fun beats(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): SprudelPattern =
-    applyBeats(listOf(n).asSprudelDslArgs(callInfo), base)
+    applyBeatClock(listOf(n).asSprudelDslArgs(callInfo), base) { seconds -> seconds }
+
+/**
+ * One cycle every `n` beats, in Hz, at the tempo that is playing right now.
+ *
+ * The rate twin of [beats]: the LFO doors take a rate in Hz (`vibrato`'s and `phaser`'s `rate`, the tremolo's
+ * `sync`), and `beatRate` turns a musical length into that rate, following every tempo change while playing.
+ * It takes the same argument as [beats], so `delay(0.3, beats(0.5))` and `tremolo(0.6, beatRate(0.5))` both
+ * mean "every half beat". It is exactly `pure(1).div(beats(n, base))`: at cps 0.5 (120 bpm) `beatRate(1)`
+ * is 2 Hz and `beatRate(0.5)` is 4 Hz. `base` is how many beats make a cycle, 4 unless you say otherwise.
+ *
+ * A number gives a signal. A pattern keeps its own rhythm, and each of its values becomes Hz.
+ * `beatRate(0)` is not a finite rate, and no door turns it into one: the tremolo and the vibrato stand still,
+ * and the phaser keeps the rate it had.
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("saw").tremolo(0.6, beatRate(0.5))          // one wobble every half beat, at any tempo
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3 e3").s("saw").vibrato(beatRate(1), 0.3)   // one vibrato cycle per beat
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3").s("saw").tremolo(0.6, beatRate(1, 3))         // three beats to the cycle: a wobble per beat
+ * ```
+ *
+ * @param n How many beats one cycle of the LFO lasts; a number or a pattern.
+ * @param base How many beats make one cycle, default 4. A value of 0 or less counts in fours.
+ * @return One cycle every `n` beats, in Hz, following the tempo.
+ * @category continuous
+ * @tags beatRate, beats, tempo, bpm, cps, rate, hz, lfo, continuous
+ */
+@KlangScript.Function
+fun beatRate(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): SprudelPattern =
+    applyBeatClock(listOf(n).asSprudelDslArgs(callInfo), base) { seconds -> 1.0 / seconds }
 
 // -- Time of Day Functions --------------------------------------------------------------------------------------------
 
