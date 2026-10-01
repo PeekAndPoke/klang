@@ -22,7 +22,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
+let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -185,8 +185,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the power amp, then let the snare cut through
   let amped = power(toned)
     .eq(e => e
-      .band(freq = snareHz,    q =  1.5, db = -2)           // notch the snare
-      .band(freq = Osc.freq(), q = 30.0, db =  2)           // ressonance
+      .band(freq = snareHz, q = 1.5, db = -1)           // notch the snare
     )
 
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
@@ -317,7 +316,7 @@ export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff(
   .clip(guitarClip.fast(2)).pan(0.95).body(material = "maple", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.140).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.142).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
