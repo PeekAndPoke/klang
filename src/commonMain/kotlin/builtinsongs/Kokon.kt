@@ -290,7 +290,7 @@ export spin = notes => n(notes)
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
-  .oscp("decay", 3.0).clip(1.1)
+  .oscp("decay", 3.0).clip(1.05)
   .tremolo(sync = 4, depth = perlin.range(0.275, 0.325))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
@@ -302,8 +302,8 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .oscp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4200)                                       // less fizz, the wall keeps its own
-  .gain(0.50).pan(0.5)
+  .lpf(4500)                                       // less fizz, the wall keeps its own
+  .gain(0.42).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -387,8 +387,8 @@ export hats = pat => sound(pat).n(0)
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.96 0.97 0.96")
   .oscp("sub", 0.95).oscp("harmonics", 1.00)
-  .adsr(0.003, 0.3, 0.5, 0.030).hpf(30).notch(freq = snareHz, q = 1.0)
-  .clip(0.85)
+  .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
+  .clip(0.80)
   .gain(1.4).pan(0.5)
   .orbit(15)
 
@@ -417,7 +417,7 @@ let answering = stack(
 let quickening = stack(
   spin(cocoonArp).gain(0.23).lpf(3900),
   sing(melodyTwo).gain(0.25),
-  beat(cocoonRoots).gain(saw.range(0.0, 0.3).slow(4)),
+  beat(cocoonRoots).gain(saw.range(0.0, 0.25).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
@@ -425,7 +425,7 @@ let stretching = stack(
   spin(cocoonArp).gain("<0.23 0.24 0.25 0.26>").lpf(3800).ply(2),
   sing(melodyOne).gain(0.25).ply(2),
   swell(cocoonSwell),
-  beat(cocoonRoots),
+  beat(cocoonRoots).gain(0.25),
 )
 
 // Still growing, and in the last half cycle the arpeggio and the heartbeat hold their breath.
@@ -433,7 +433,7 @@ let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
   spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>").lpf(3800).ply(2),
-  sing(melodyTwo).gain(0.25).ply(4),
+  sing(melodyTwo).gain(0.25).struct("x!32"),
   swell(cocoonSwell),
   beat(cocoonRoots).mask(breath),
 )
@@ -468,7 +468,7 @@ let lifting = stack(
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("sustain", 0.6),
   soar("[4@6 ~@2]"),
-  strike("[-7,0,4]"),
+  strike("[-7,0,4]").accelerate("-0.1".sub(perlin.range(0.0, 0.05))),
   beat("0").gain(0.7),
 )
 
