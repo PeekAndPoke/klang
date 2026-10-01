@@ -266,8 +266,8 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
-  .oscp("decay", 0.50).oscp("sustain", 0.45).oscp("release", 0.8).clip(2)
+  .sound(clean).adsrOff().unison(voices = 7, spread = 0.05).pregain(0.7)
+  .oscp("decay", 1.00).oscp("sustain", 0.25).oscp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
   .gain(0.22).pan(0.5)                             // the arp guitarist stands dead centre
   .orbit(1)
@@ -277,8 +277,8 @@ export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.2)
   .vibrato(cps.div(10), perlin.range(0.05, 0.075))
-  .hpf(250)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
-  .lpf(3200)                                       // the crunch fizz on held notes covers the arp's picks
+  .hpf(300)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
+  .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
   .orbit(2)
 
@@ -295,8 +295,8 @@ export soar = notes => n(notes.add(14))
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
-  .lpf(4000)
-  .gain(0.06).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
+  .lpf(3700)
+  .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -320,7 +320,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
   .velocity("1.0 0.85 0.9 0.85")
-  .gain(0.7)
+  .gain(0.6)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
 
@@ -393,20 +393,20 @@ let spinning = stack(
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.21),
+  spin(cocoonArp).gain(0.23),
   sing(melodyOne).gain(0.25),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.21),
+  spin(cocoonArp).gain(0.23),
   sing(melodyTwo).gain(0.25),
   beat(cocoonRoots).gain(saw.range(0.0, 0.3).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.20 0.21 0.22 0.23>"),
+  spin(cocoonArp).gain("<0.23 0.24 0.25 0.26>"),
   sing(melodyOne).gain(0.25),
   swell(cocoonSwell),
   beat(cocoonRoots),
@@ -534,5 +534,6 @@ export song = stack(
 
 
     
+
     """,
 )
