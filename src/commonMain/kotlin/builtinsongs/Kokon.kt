@@ -102,6 +102,12 @@ let cab1x12 = x => x
   .eq(e => e.band(freq = 3200, q = 1.0, db = 3.0))
   .lowpass(6500, 0.707, x => x.passes(3))
 
+// Drums and bass (from Der Schmetterling)  -------------------------------------------------------
+// The band of Der Schmetterling joins for the second run of the heavy block: its metal kick, its metal snare, its
+// bass guitar and its Orchestertrommel, copied (the reasoning behind every part is in Der Schmetterling). Only the
+// tuning follows D minor: the kick ends on A1 and the snare's head sits on A3, the fifth.
+let snareHz = 210
+
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
 let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pVoices     = OscSlot.voices
@@ -123,21 +129,30 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
-  return cab(power(preamp(pedal(pickup(signal))))).mul(0.14).classic()
+   // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
+  let toned = preamp(pedal(pickup(signal)))
+
+  // the power amp, then let the snare cut through
+  let amped = power(toned)
+    .eq(e => e
+      .band(freq = snareHz,    q =  1.5, db = -2)           // notch the snare
+      .band(freq = Osc.freq(), q = 30.0, db =  2)           // ressonance
+    )
+
+  // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
+  // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
+  return cab(amped)
+    .mul(0.14)
+    .classic()
 }
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
 let clean  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab1x12)
 let bright = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
+  .eq(x => x.band(Osc.freq(), 10.0, Osc.constant(6).adsr(1.0, 0.1, 1.0, 0.1)))  // slight feedback
 let deep   = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
 let heavy  = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
-
-// Drums and bass (from Der Schmetterling)  -------------------------------------------------------
-// The band of Der Schmetterling joins for the second run of the heavy block: its metal kick, its metal snare, its
-// bass guitar and its Orchestertrommel, copied (the reasoning behind every part is in Der Schmetterling). Only the
-// tuning follows D minor: the kick ends on A1 and the snare's head sits on A3, the fifth.
-let snareHz = 220
 
 let metalKick = (() => {
   let thump = Osc.sine()
@@ -241,10 +256,11 @@ let bass = (() => {
 // Scale degrees in D minor, 0 is D3. No scale here: the song sets it once. A line moves its notes to its own octave.
 
 // The cocoon: Dm(add9), Bbmaj7(#11), Gm9, Asus. One chord per cycle, four cycles a round.
-export cocoonArp   = `<[0 4 7 8 9 8 7 4] [-2 2 4 8 9 8 4 2] [-4 0 2 4 5 4 2 0] [-3 1 4 7 8 7 4 1]>`
-export cocoonRoots = `<0 5 3 4>`
-export cocoonPower = `<[0,4] [-2,2] [-4,0] [-3,1]>`
-export cocoonSwell = `<[4,7,9] [4,8,9] [2,5,7] [1,4,8]>`
+export cocoonArp    = `<[0 4 7 8 9 8 7 4] [-2 2 4 8 9 8 4 2] [-4 0 2 4 5 4 2 0] [-3 1 4 7 8 7 4 1]>`
+export cocoonRoots  = `<0 5 3 4>`
+export cocoonPower  = `<[0, 4] [-2, 2] [-4,0] [-3,1]>`
+export cocoonPower2 = `<[0,-3] [-2,-5] [-4,0] [-3,1]>`
+export cocoonSwell  = `<[4,7,9] [4,8,9] [2,5,7] [1,4,8]>`
 
 // The lift: the break climbs Bb, C, Dm, three cycles, then lands.
 export liftArp   = `<[-2 2 4 8 9 8 4 2] [-1 3 6 8 10 8 6 3] [0 4 7 8 9 8 7 4]>`
@@ -276,7 +292,7 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.2)
-  .vibrato(cps.div(10), perlin.range(0.05, 0.075))
+  .vibrato(5, perlin.range(0.00, 0.01))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -353,7 +369,7 @@ let drumRoom = x => x.reverb(wet = 0.2, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96")
-  .gain(1.2).pan(0.5)
+  .gain(1.5).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
@@ -373,7 +389,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .oscp("sub", 0.95).oscp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.020).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.85)
-  .gain(1.2).pan(0.5)
+  .gain(1.3).pan(0.5)
   .orbit(15)
 
 export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
@@ -434,7 +450,7 @@ let breakingOpen = stack(
 // in the centre between the wings.
 let unravelling = stack(
   spin(cocoonArp.add(7)).ply(2).gain(0.57).pan(0.5),
-  wings(cocoonPower),
+  wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).gain(0.7).pan(0.5),
 )
@@ -482,7 +498,7 @@ let fullKit  = (roots, kicks) => stack(
   bassGuitar(roots, kicks),
   snare("~ ~ sd ~"), 
   hats("[cr oh oh oh]"), 
-  trommel(roots, "[~ [x x x ~] ~ [x x ~ ~]]")
+  trommel(roots, "[~ [~ x x ~] ~ [x x ~ ~]]")
 )
 let kit = fullKit
 
@@ -492,7 +508,7 @@ let crash = hats("cr").gain(1.0)
 // the lift and sixteenths on its last cycle. The landing is one hit, let ring.
 let heavyDrums = arrange(
   [4, kit(cocoonRoots, "x")],
-  [4, kit(cocoonRoots, "<[x x] [x x] [x!4] [x!4]>")],
+  [4, kit(cocoonRoots, "<[x x] [x x] [x!2 ~!6] [x!3 ~!5]>")],
   [3, kit(liftRoots, "<[x!8] [x!8] [x!16]>")],
   [1, stack(crash, kick("x"), bassGuitar("0", "x"), trommel("0", "x"))],
 )
@@ -528,6 +544,7 @@ export song = stack(
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
+
 
 
 

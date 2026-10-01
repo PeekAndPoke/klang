@@ -158,7 +158,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pAttack     = Osc.param("attack",       0.005, "Attack")
   let pDecay      = Osc.param("decay",        1.000, "Decay")
   let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.040, "Release")
+  let pRelease    = Osc.param("release",      0.030, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -184,7 +184,10 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // the power amp, then let the snare cut through
   let amped = power(toned)
-    .eq(e => e.band(freq = snareHz, q = 3.0, db = -1))
+    .eq(e => e
+      .band(freq = snareHz,    q =  1.5, db = -2)           // notch the snare
+      .band(freq = Osc.freq(), q = 30.0, db =  2)           // ressonance
+    )
 
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
@@ -244,23 +247,26 @@ let marimba = (() => {
   let ring = Osc.constant(400).div(Osc.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
   let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.5)
   let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
-  let f10 = Osc.saw(Osc.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
-  let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(2.0)                     // yarn head: a thump, not a click
-  let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(8.0)                        // the resonator tube
+  let f10 = Osc.sine(Osc.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.25)
+  let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(2.0)                     // yarn head: a thump, not a click                    
  
-  return f1.plus(f4).plus(f10).plus(mallet).plus(tube).distort(0.5, "softsat")
-    .adsr(0.010, 1.0, 0.0, 0.4).mul(0.3)
+  return f1.plus(f4).plus(f10).plus(mallet)
+    .distort(0.2, "soft")
+    .eq(e => e
+      .band(freq = Osc.freq(), q = 30.0, db =  3) // the resonator tube 
+    )
+    .adsr(0.010, 1.0, 0.0, 0.5).mul(0.3)
     .classic()
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
-  .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.7)
-  .hpf(800, 0.7).lpf(8500, 1.5)
-  .pan(perlin.range(0.2, 0.4)).superimpose(pan(perlin.range(0.8, 0.6))) // . solo()
-  .clip(1.2)
+  .velocity(guitarDyna).body(material = "wood", wet = 0.4)
+  .hpf(600, 0.7).lpf(8500, 1.5)
+  .pan(sine.range(0.2, 0.3)).superimpose(pan(sine.range(0.8, 0.7))) // . solo()
+  .clip(1.0)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e5:minor!16>").gain("<1.00!48 0.50!16 1.00!48 0.50!16>").gain(mul(0.18))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<1.00!48 0.50!16>").gain(mul(0.06))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
@@ -279,7 +285,7 @@ export guitar1_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitarMelody).ad
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.170)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.165)  // .mute()
   .late(berlin.range(0.0002, 0.0006).mul(drunk).seg(4))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -340,11 +346,11 @@ let granCassa = (() => {
  
   let ring = Osc.constant(140).div(Osc.freq()).mul(0.85)   // seconds: 2.0 s at 70 Hz
  
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
+  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Osc.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
-    .pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
+    .pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
  
   let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.20, 0.0, 0.20).mul(0.55)
   let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.12, 0.0, 0.10).mul(0.30)
@@ -463,12 +469,6 @@ export hats_shape = x => x.gain(0.22).pan(0.35)
 export hats_arrange = x => x.orbit(8).mute("<0!128 1!32>").late(berlin.range(0.0015, 0.0025).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.85 0.93 0.85>*4".sub(berlin.range(0.0, 0.05).slow(4))).tag("hats")
 
-export clap_pat = `<[rim rim ~ ~  ~ ~ ~ rim] [rim rim ~ ~  rim ~ ~ rim] [rim [rim!2]  rim [rim!2]]>`
-export clap_shape = x => x.gain(0.09).pan(0.3).superimpose(pan(0.7)) // . mute()
-  .hpf("800".add(perlin.range(0, 100).slow(4))).lpf("6500").adsr(perlin.range(0.008, 0.010), 0.2, 0.80, 2.1)
-export clap_arrange = x => x.orbit(9).mute("<0!128 1!32>")
-export clap = sound(clap_pat).apply(clap_shape).tag("clap")
-
 export shaker_pat = `<pink ~ pink ~ pink ~ pink>*8`
 export shaker_shape = x => x.gain(0.11).velocity("<1.0 0.90 0.95 0.90>*16") //  . mute()
   .hpf(freq = 6000, q = 0.7) //  . solo()
@@ -506,7 +506,6 @@ export song_body = stack(
     kick.apply(kick_arrange),     // .solo() .mute()
     snare.apply(snare_arrange),   // .solo() .mute()
     hats.apply(hats_arrange),     // .solo() .mute()
-    clap.apply(clap_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
   ).analog(feel / 2).reverb(wet = 0.30, size = 4.0) //. solo() //  .mute()
 ).seed(timeOfDay.mul(60*60*60*24)).shuffle("<1!80 2!48 1!112 2!32>")
