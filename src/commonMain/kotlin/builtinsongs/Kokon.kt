@@ -90,12 +90,12 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.6)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.6, db =  6.8)         // roar:  low mids
+    .band(freq =  120, q = 1.2, db =  3.8)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(100, 0.707, x => x.passes(2))          // the low end
+  .highpass(105, 0.707, x => x.passes(2))          // the low end
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -277,7 +277,7 @@ export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.2)
   .vibrato(cps.div(10), perlin.range(0.05, 0.075))
-  .hpf(300)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
+  .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
   .orbit(2)
@@ -294,7 +294,7 @@ export soar = notes => n(notes.add(14))
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
-  .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
+  .oscp("attack", 1.6).oscp("decay", 1.8).clip(1)
   .lpf(3700)
   .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
@@ -320,7 +320,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
   .velocity("1.0 0.85 0.9 0.85")
-  .gain(0.6)
+  .gain(0.7)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
 
@@ -353,7 +353,7 @@ let drumRoom = x => x.reverb(wet = 0.2, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96")
-  .gain(1.3).pan(0.5)
+  .gain(1.2).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
@@ -373,7 +373,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .oscp("sub", 0.95).oscp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.020).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.85)
-  .gain(1.8).pan(0.5)
+  .gain(1.2).pan(0.5)
   .orbit(15)
 
 export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
@@ -388,25 +388,25 @@ export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).gain(0.25).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).gain(0.25).lpf(3800).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.23),
+  spin(cocoonArp).gain(0.23).lpf(3800),
   sing(melodyOne).gain(0.25),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.23),
+  spin(cocoonArp).gain(0.23).lpf(3800),
   sing(melodyTwo).gain(0.25),
   beat(cocoonRoots).gain(saw.range(0.0, 0.3).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.23 0.24 0.25 0.26>"),
+  spin(cocoonArp).gain("<0.23 0.24 0.25 0.26>").lpf(3800),
   sing(melodyOne).gain(0.25),
   swell(cocoonSwell),
   beat(cocoonRoots),
@@ -416,7 +416,7 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>").mask(breath),
+  spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>").lpf(3800).mask(breath),
   sing(melodyTwo).gain(0.25),
   swell(cocoonSwell),
   beat(cocoonRoots).mask(breath),
@@ -427,7 +427,7 @@ let breakingOpen = stack(
   soar(melodyOne),
   wings(cocoonPower),
   chug(cocoonRoots),
-  beat(cocoonRoots).gain(0.7),
+  beat(cocoonRoots).gain(0.7).pan(0.5),
 )
 
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
@@ -436,7 +436,7 @@ let unravelling = stack(
   spin(cocoonArp.add(7)).ply(2).gain(0.57).pan(0.5),
   wings(cocoonPower),
   chug(cocoonRoots),
-  beat(cocoonRoots).gain(0.7),
+  beat(cocoonRoots).gain(0.7).pan(0.5),
 )
 
 // The lift: Bb, C, Dm.
@@ -445,7 +445,7 @@ let lifting = stack(
   soar(melodyTwo),
   wings(liftPower),
   chug(liftRoots),
-  beat(liftRoots).gain(0.7),
+  beat(liftRoots).gain(0.7).pan(0.5),
 )
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
@@ -533,7 +533,7 @@ export song = stack(
 
 
 
-    
+
 
     """,
 )
