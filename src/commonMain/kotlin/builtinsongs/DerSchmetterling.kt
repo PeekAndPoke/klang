@@ -123,9 +123,9 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  4.0)         // thump: closed-back box resonance
-    .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 1.2, db =  3.6)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.6, db =  6.8)         // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2))          // the low end
@@ -255,7 +255,7 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.7)
-  .hpf(750, 0.7).lpf(7500, 1.5)
+  .hpf(800, 0.7).lpf(7500, 1.5)
   .pan(perlin.range(0.2, 0.4)).superimpose(pan(perlin.range(0.8, 0.6))) // . solo()
   .clip(1.2)
 
@@ -366,7 +366,7 @@ export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .pan(sine.range(0.4, 0.6).slow(5))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.90)
+  .scale("e2:minor").gain(0.85)
   .mute("<1!96 0!32>")                             // the second half of the song only
   .late(berlin.range(0.0025, 0.0035).mul(drunk))
 
@@ -520,7 +520,7 @@ export song = stack(
     // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
-    .reverb(0.2, 7, 3500)
+    .reverb(0.2, 5, 3500)
     .gain(4.5)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))

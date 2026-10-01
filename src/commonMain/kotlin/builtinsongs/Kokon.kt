@@ -87,15 +87,14 @@ let powerClassA = x => x
   .distort(0.20, "asym", 2)
   .mul(1.4)
 
-
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.0)
-    .band(freq =  380, q = 0.6, db =  7.0)
-    .band(freq = 2700, q = 1.7, db =  4.0)
-    .band(freq =  100, q = 0.7, db = -3.0)
+    .band(freq =  120, q = 1.2, db =  3.6)         // thump: closed-back box resonance
+    .band(freq =  380, q = 0.6, db =  6.8)         // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))
+  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .highpass(100, 0.707, x => x.passes(2))          // the low end
 
 let cab1x12 = x => x
   .highpass(120, 0.707, x => x.passes(2))
@@ -163,7 +162,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
-  .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 0.8).clip(3)
+  .oscp("decay", 0.50).oscp("sustain", 0.45).oscp("release", 0.8).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
   .gain(0.22).pan(0.35)                            // the arp guitarist stands a little left of the centre
   .orbit(1)
@@ -171,9 +170,10 @@ export spin = notes => n(notes)
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
-  .oscp("decay", 3.0).clip(1.5)
+  .oscp("decay", 3.0).clip(1.2)
+  .vibrato(cps.div(10), perlin.range(0.05, 0.075))
   .hpf(250)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
-  .lpf(3500)                                       // the crunch fizz on held notes covers the arp's picks
+  .lpf(3600)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
   .orbit(2)
 
@@ -190,7 +190,7 @@ export soar = notes => n(notes.add(14))
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 2.0).clip(1)
-  .lpf(3000)
+  .lpf(4000)
   .gain(0.06).pan(0.15).superimpose(x => x.pan(0.25).late(0.02)) // on the left, when they enter
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
@@ -260,7 +260,7 @@ let answering = stack(
 let quickening = stack(
   spin(cocoonArp).gain(0.21),
   sing(melodyTwo),
-  beat(cocoonRoots),
+  beat(cocoonRoots).gain(saw.range(0.0, 0.3).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
@@ -360,8 +360,9 @@ export song = stack(
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
 
-    
-    
+
+
+
 
     """,
 )
