@@ -158,7 +158,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pAttack     = Osc.param("attack",       0.005, "Attack")
   let pDecay      = Osc.param("decay",        1.000, "Decay")
   let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.035, "Release")
+  let pRelease    = Osc.param("release",      0.040, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -230,7 +230,7 @@ let bass = (() => {
 export guitarDyna = "0.98 0.90!7 0.95 0.92!7".sub(perlin.range(0.00, 0.05))
 export guitarClip = "<0.92!31 0.81 0.92!31 0.80 0.92!30 0.75 0.79>".sub(perlin.range(0.0, 0.02))
   .mul("<0.985!32 [1.1 0.99!7]!32 0.975!32 [1.1 0.99!7]!32>")
-export guitarDecay = "<0.425!16 0.460!16 0.425!16 0.470!16>"
+export guitarDecay = "<0.425!16 0.440!16 0.425!16 0.440!16>"
 
 // Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
 export lead_pat =
@@ -255,12 +255,12 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "wood", wet = 0.4).notch(2700, 0.7)
-  .hpf(800, 0.7).lpf(7500, 1.5)
+  .hpf(800, 0.7).lpf(8500, 1.5)
   .pan(perlin.range(0.2, 0.4)).superimpose(pan(perlin.range(0.8, 0.6))) // . solo()
   .clip(1.2)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e5:minor!16>").gain("<1.00!48 0.45!16 1.00!48 0.45!16>").gain(mul(0.20))
+  .scale("<e4:minor!48 e5:minor!16 e4:minor!48 e5:minor!16>").gain("<1.00!48 0.50!16 1.00!48 0.50!16>").gain(mul(0.18))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
