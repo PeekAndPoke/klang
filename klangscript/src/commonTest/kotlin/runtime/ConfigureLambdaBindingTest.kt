@@ -129,6 +129,17 @@ class ConfigureLambdaBindingTest : StringSpec({
         err.message shouldBe "expected Double, got a function"
     }
 
+    "a non-function on a function-typed slot is a type error at the call site" {
+        // The mirror of the row above (review 2026-10-02): a number, a boolean or an array passed through unconverted
+        // and failed inside the native, a ClassCastException on the JVM and a silently wrong value on JS.
+        shouldThrow<KlangScriptTypeError> { engine().execute("door(440, 5)") }.message shouldBe
+                "expected a function, got a number"
+        shouldThrow<KlangScriptTypeError> { engine().execute("door(440, true)") }.message shouldBe
+                "expected a function, got a boolean"
+        shouldThrow<KlangScriptTypeError> { engine().execute("door(440, [1, 2])") }.message shouldBe
+                "expected a function, got an array"
+    }
+
     "a lambda on a function-typed slot stays there" {
         str("pick(x => x)") shouldBe "a"
     }

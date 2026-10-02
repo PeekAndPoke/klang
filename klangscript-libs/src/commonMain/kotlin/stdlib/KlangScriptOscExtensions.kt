@@ -525,6 +525,31 @@ object KlangScriptOscExtensions {
     // ── Analog Drift ────────────────────────────────────────────────────────
 
 
+    // ── Composition ──────────────────────────────────────────────────────────
+
+    /**
+     * Runs this signal through the stages, in the order written: `x.through(a, b, c)` is `c(b(a(x)))`.
+     * A stage is any function from a signal to a signal, so a signal chain is written as the list it is,
+     * with any number of stages; a rig is a stage too. With no stage, `through()` returns the signal as it is.
+     *
+     * ```KlangScript
+     * let pedal = x => x.distort(0.4, "soft")
+     * let cab   = x => x.highpass(100).lowpass(5000)
+     * let rig   = x => x.through(pedal, cab)
+     * let guitar = Osc.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * ```
+     *
+     * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+     * It builds what the Kotlin `IgnitorDsl.through(...)` builds, and checks every stage on the way: a stage that is
+     * null, returns nothing or returns something other than a signal is a script error naming the stage; a stage that is
+     * not a function at all is refused at the call ("expected a function, got a number").
+     *
+     * @param stages functions from a signal to a signal, applied first to last.
+     */
+    @KlangScript.Method
+    fun through(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+        runThroughStages("Osc through", self, stages, returns = "signal") { it is IgnitorDsl }
+
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
     /**

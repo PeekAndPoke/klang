@@ -104,3 +104,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-09/20260908-klangscript-number-methods.md`).
 - 2026-09-10: `analogSpread` on the super family (`docs/tasks-archive/2026-09/20260910-drift-lanes-analog-spread.md`).
 - 2026-09-29: this file restructured; the old status, phases and dated entries are in `ref/memory-history.md`.
+- 2026-10-02: a non-callable value on a function-typed native parameter is a type error ("expected a function, got
+  a number"), found while building `through` (`docs/tasks-archive/2026-10/20261002-through-signal-chains.md`).

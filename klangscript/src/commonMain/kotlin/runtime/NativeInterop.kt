@@ -129,6 +129,8 @@ fun sourceLocationOf(value: Any?): SourceLocation? = when (value) {
 fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? = null): T {
     // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
 
+    requireCallableForFunctionSlot(cls, loc)
+
     val result = when (this) {
         // Special conversion logic for numeric values
         is NumberValue -> when (cls) {
@@ -218,6 +220,34 @@ private fun requireFunctionTarget(cls: KClass<*>, loc: SourceLocation?) {
     }
     throw KlangScriptTypeError(
         message = "expected ${cls.simpleName ?: "a value"}, got a function",
+        operation = "argument conversion",
+        location = loc,
+    )
+}
+
+/**
+ * The mirror of [requireFunctionTarget]: a function slot (`FunctionN`) takes only a callable value. Without this guard
+ * a number, a boolean, an array or an object on a `(A) -> B` slot passed through unconverted and failed later, as a
+ * cast error deep inside the native on the JVM and as a silent wrong value on JS (found on `Osc.saw().through(pedal,
+ * 0.5)`, review 2026-10-02), instead of a script-level type error at the call site.
+ */
+private fun RuntimeValue.requireCallableForFunctionSlot(cls: KClass<*>, loc: SourceLocation?) {
+    if (cls !in ParamSpec.FUNCTION_CLASSES || isCallableValue()) {
+        return
+    }
+    val got = when (this) {
+        is NumberValue -> "a number"
+        is StringValue -> "a string"
+        is BooleanValue -> "a boolean"
+        is ArrayValue -> "an array"
+        is ObjectValue -> "an object"
+        is NullValue -> "null"
+        is NativeObjectValue<*> -> kClass.simpleName ?: "a native object"
+        is BoundNativeMethod -> "the method '$methodName' itself; call it inside a lambda (`x => ...`)"
+        else -> this::class.simpleName ?: "a value"
+    }
+    throw KlangScriptTypeError(
+        message = "expected a function, got $got",
         operation = "argument conversion",
         location = loc,
     )

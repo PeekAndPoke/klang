@@ -2281,6 +2281,19 @@ fun IgnitorDsl.sq() = IgnitorDsl.Sq(inner = this)
 fun IgnitorDsl.select(whenTrue: IgnitorDsl, whenFalse: IgnitorDsl) =
     IgnitorDsl.Select(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
 
+// Composition
+
+/**
+ * Runs this signal through [stages], in the order written: `x.through(a, b, c)` is `c(b(a(x)))`, the same
+ * node as the nested calls. A stage is any function from a signal to a signal (a pickup, a pedal, an amp,
+ * a cab), so a signal chain is written as the list it is, with no fixed number of slots. With no stage,
+ * `through()` returns the signal as it is.
+ *
+ * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
+ */
+fun IgnitorDsl.through(vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
+    stages.fold(this) { signal, stage -> stage(signal) }
+
 // Frequency
 
 /** Shifts pitch by the given number of [semitones]. */

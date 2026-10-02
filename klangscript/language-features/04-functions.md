@@ -166,6 +166,11 @@ note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern
 Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
 ```
 
+The conversion is strict both ways (`NativeInterop.convertToKotlin`): a lambda on a non-function slot is a type
+error ("expected Double, got a function"), and since 2026-10-02 so is a non-callable value on a function-typed slot
+("expected a function, got a number"); before, a number, a boolean, an array or an object passed through unconverted
+and failed inside the native.
+
 A door that wants the trailing-lambda rule must give every EARLIER optional parameter a literal
 default (number, string, boolean, null): the rule runs on the spec-aware call path, which needs
 a default thunk for each skipped slot, and KSP only emits thunks for literals. The KSP processor

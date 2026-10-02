@@ -458,6 +458,23 @@ one): `x => x.adsr(0.001, 0.04, 0, 0, e => e.curves("linear", "linear", "linear"
 | `.mul(factor)`  | Scale amplitude                    |
 | `.div(divisor)` | Divide amplitude                   |
 
+### Composition: `.through(...)`
+
+`x.through(a, b, c)` runs the signal through functions of a signal, in the order written: it is exactly
+`c(b(a(x)))`, the same node as the nested calls, with any number of stages (`through()` with none is `x` itself). A rig is
+then a value, and a rig is a stage too:
+
+```javascript
+let pedal  = x => x.distort(0.4, "soft")
+let cab    = x => x.highpass(100).lowpass(5000)
+let rig    = x => x.through(pedal, cab)
+let guitar = Osc.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+```
+
+Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`, an alias of `layer`, which runs
+each function on the pattern and STACKS the results. The Katalyst builder has the same door:
+`Katalyst(k => k.through(hall, ceiling))`.
+
 ---
 
 ## Parameter System

@@ -56,7 +56,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 /**
  * Builder for a [KatalystDsl] chain, handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `eq`,
- * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers).
+ * `gain`, each appending a stage (`limiter` appends a compressor with limiter numbers), and `through`,
+ * which runs the builder through functions of stages in order.
  */
 data class KatalystBuilder(val node: KatalystDsl) {
     internal fun plus(stage: KatalystStageDsl): KatalystBuilder = copy(node = KatalystDsl(node.stages + stage))
@@ -456,6 +457,29 @@ fun KatalystBuilder.eq(configure: ((EqBuilder) -> EqBuilder)? = null): KatalystB
 @KlangScript.Function
 fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
     plus(KatalystStageDsl.Gain(gain = gain.toIgnitorDsl()))
+
+/**
+ * Runs the chain through [stages], in the order written: `k.through(a, b, c)` is `c(b(a(k)))`, the same
+ * chain as the nested calls. A stage is any function from a builder to a builder, so a group of stages
+ * (a room, a bus, a mastering block) becomes a value and a chain is written as the list it is.
+ * With no stage, `through()` returns the chain as it is.
+ *
+ * ```KlangScript
+ * let hall    = k => k.reverb(0.25, 7, 4500)
+ * let ceiling = k => k.gain(1.4).limiter(threshold = -3.0, lookahead = 0.005)
+ * Katalyst(k => k.through(hall, ceiling))
+ * ```
+ *
+ * Serial, one stage into the next, as `Osc`'s `through`. Not sprudel's `apply(f, g)`, which stacks the
+ * results side by side. Every stage is checked on the way: a stage that is null, returns nothing or returns
+ * something other than the builder is a script error naming the stage; a stage that is not a function at all is
+ * refused at the call ("expected a function, got a number").
+ *
+ * @param stages functions from a builder to a builder, applied first to last.
+ */
+@KlangScript.Function
+fun KatalystBuilder.through(vararg stages: (KatalystBuilder) -> KatalystBuilder): KatalystBuilder =
+    runThroughStages("Katalyst through", this, stages, returns = "builder") { it is KatalystBuilder }
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 

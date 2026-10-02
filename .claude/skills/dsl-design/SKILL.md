@@ -319,3 +319,9 @@ Run this on every DSL diff (the `/review-loop` reviewer cites the item number):
 
 12. The value handed to `setOrDefault` is what this call named, never a field an earlier fill
     wrote (§4).
+
+13. A door that calls script lambdas (a `configure`, the stages of `through`) checks what each one
+    returns, as `configuredBy` and `runThroughStages` do: null (a block body without `return`) and the
+    wrong type are script errors naming the door, never a cast deep inside. The error rows run on JS
+    too: a null check on a value of a non-null declared type can be compiled away there and not on
+    the JVM (`through`, 2026-10-02).
