@@ -74,8 +74,8 @@ let preampCrunch = x => x
 let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
-  .distort(0.45, "softsat", 4).highpass(100)
-  .distort(0.70, "soft", 4)
+  .distort(0.55, "softsat", 4).highpass(100)
+  .distort(0.65, "soft", 4)
   .lowpass(7500)                                   // the fizz
   .mul(0.25)                                       // volume
 
@@ -90,11 +90,11 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.5)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.2, db =  3.2)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(4980, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))          // the low end
 
 let cab1x12 = x => x
@@ -119,8 +119,8 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pRelease    = Osc.param("release",      0.030, "Release")
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
-    .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
-    .spreadPower(6.0).sideAtten(0.3).gainJitter(0.05).centerJitter(0.20)
+    .phasePool(on = 1, kMin = 0.75, kMax = 0.90, warmup = 0, selection = "normal")
+    .spreadPower(8.0).sideAtten(0.3).gainJitter(0.10).centerJitter(0.10)
     .analog(pAnalog).analogSpread(0.5)
   )
 
@@ -149,7 +149,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
 let clean  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab1x12)
 let bright = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
-  .eq(x => x.band(Osc.freq(), 50.0, Osc.constant(6).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
+  .eq(x => x.band(Osc.freq(), 30.0, Osc.constant(3).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
 let deep   = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
 let heavy  = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
 
@@ -291,7 +291,7 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.05)
-  .tremolo(sync = 4, depth = perlin.range(0.30, 0.35))
+  .tremolo(sync = 4, depth = perlin.range(0.30, 0.35)).accelerate(perlin.range(0.01, 0.02).slow(8).seg(8))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -334,8 +334,8 @@ export chug = roots => n(roots.add(-7)).struct("x x ~ x x ~ x x")
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
-  .velocity("1.0 0.85 0.9 0.85")
-  .gain(0.7)
+  .velocity("1.0 0.90 0.93 0.90")
+  .gain(0.65)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
 
@@ -525,7 +525,6 @@ export song = stack(
     [12, stack(heavyBlock, heavyDrums)],
     [8, flyingOff],
     [4, lastChord],
-    [1, silence],
   )
     .scale("d3:minor")
     .analog(feel)

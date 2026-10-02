@@ -21,8 +21,8 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   20    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -2    // -2 .. D | 0 .. E | 2 .. F#
+let feel          =   15    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let transposition =   -3    // -2 .. D | 0 .. E | 2 .. F#
 let drunk         =    2    // How many beers did each band member have?
 let snareHz       =  210    // Where does the snare cut through?
 
@@ -95,8 +95,8 @@ let preampCrunch = x => x
 let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
-  .distort(0.45, "softsat", 4).highpass(100)
-  .distort(0.70, "soft", 4)
+  .distort(0.55, "softsat", 4).highpass(100)
+  .distort(0.65, "soft", 4)
   .lowpass(7500)                                   // the fizz
   .mul(0.25)                                       // volume
 
@@ -127,7 +127,7 @@ let cab4x12 = x => x
     .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
-  .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
+  .lowpass(4980, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2))          // the low end
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
@@ -158,14 +158,14 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   let pAttack     = Osc.param("attack",       0.005, "Attack")
   let pDecay      = Osc.param("decay",        1.000, "Decay")
   let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.030, "Release")
+  let pRelease    = Osc.param("release",      0.035, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.80, kMax = 0.95, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
-    .spreadPower(6.0).sideAtten(0.3).gainJitter(0.05).centerJitter(0.20)
+    .spreadPower(8.0).sideAtten(0.3).gainJitter(0.10).centerJitter(0.10)
     // analog settings
     .analog(pAnalog).analogSpread(0.5)
   )
@@ -184,7 +184,6 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // the power amp, then let the snare cut through
   let amped = power(toned)
-    .distort(0.05, "softsat")
     .eq(e => e
       .band(freq = snareHz, q = 1.5, db = -1)           // notch the snare
     )
@@ -192,7 +191,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.15)
+    .mul(0.16)
     .classic()
 }
 
