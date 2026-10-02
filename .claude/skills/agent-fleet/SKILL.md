@@ -130,6 +130,11 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   Check what already landed on disk first; partial work may survive.
 - **No two workers edit the same file.** Klang fan-outs are usually review/analysis, so this rarely binds; when it
   would, either partition by file or use `isolation: "worktree"`.
+- **Stage by explicit path, never by directory** (guardrail, 2026-10-02). The working tree is shared with the
+  maintainer and other sessions: `git add -A docs/tasks` once swept another session's new task file and its uncommitted
+  skill edits into a coordinator's commit. Name each file you changed; before committing, read `git diff --cached
+  --stat` and check every line of it is yours. Never `git restore --staged .` to undo: it also clears other people's
+  staging (an intent-to-add mark was lost that way); unstage your own paths one by one.
 
 ## Rules of thumb
 
