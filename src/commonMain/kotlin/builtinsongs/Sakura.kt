@@ -86,7 +86,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2
     <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(perlin.range(0.3, 0.7).slow(8)).pan(0.33) // classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal
+  `).orbit(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.30).pan(0.33) // classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal
     .lpf(perlin.range(3800, 4000).slow(2)).body(material = "rosewood")
     .filterWhen(x => x >= wait * 2) // . solo()
 
