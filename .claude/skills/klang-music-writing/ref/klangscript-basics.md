@@ -101,14 +101,21 @@ import { sin, cos } from "stdlib"   // named imports
 
 ## Built-in Methods
 
-**Array:** `length()`, `push()`, `pop()`, `slice()`, `concat()`, `join()`, `reverse()`, `indexOf()`, `includes()`,
-`map()`, `filter()`, `reduce()`, `forEach()`, `find()`, `some()`, `every()`, `flat()`, `flatMap()`
+Read from the stdlib 2026-10-02 (`klangscript-libs/.../stdlib/KlangScriptArrayExtensions.kt`, `...StringExtensions.kt`,
+`KlangScriptMath.kt`). Arrays follow Kotlin, not JavaScript (`add`, not `push`).
+
+**Array:** `size()`, `first()`, `last()`, `add()`, `removeAt()`, `removeLast()`, `removeFirst()`, `reversed()`,
+`drop()`, `take()`, `subList()`, `joinToString()`, `indexOf()`, `contains()`, `isEmpty()`, `isNotEmpty()`.
+No higher-order methods yet (`map`, `filter`, `reduce`, `forEach`): use a `for` loop.
 
 **String:** `length()`, `charAt()`, `substring()`, `indexOf()`, `split()`, `toUpperCase()`, `toLowerCase()`, `trim()`,
-`startsWith()`, `endsWith()`, `replace()`, `slice()`, `repeat()`
+`startsWith()`, `endsWith()`, `replace()`, `slice()`, `concat()`, `repeat()`
 
-**Math:** `Math.floor()`, `Math.ceil()`, `Math.round()`, `Math.abs()`, `Math.min()`, `Math.max()`, `Math.random()`,
-`Math.sin()`, `Math.cos()`, `Math.PI`
+**Math:** `Math.sqrt()`, `Math.pow()`, `Math.abs()`, `Math.floor()`, `Math.ceil()`, `Math.round()`, `Math.sin()`,
+`Math.cos()`, `Math.tan()`, `Math.min()`, `Math.max()`. No `Math.random()` and no `Math.PI` yet.
+
+**Functions** take a fixed list of named parameters: no rest parameters (`...args`) and no spread. A script
+function that should take any number of things takes an array.
 
 ## What KlangScript Does NOT Have
 
