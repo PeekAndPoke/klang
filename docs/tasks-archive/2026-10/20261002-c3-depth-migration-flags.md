@@ -1,5 +1,12 @@
 # C3 semitone-depth migration, maintainer flag list (2026-08-24)
 
+Status: **DONE 2026-10-02 (maintainer, by ear).** Item 1, the lament's hit stab, had lost its opening to C3 together
+with D3 (2026-09-25, exponential modulation curves): fixed in the song with `.lpfCurves(attack = "invsquare")`, chosen
+from four renders (`ed37b5c4`). Item 2, Sound of the Sea's waves, rendered as today's song against the original: "the
+today version is fine". Items 3 to 5 closed with them (the shallower, faster sweeps). The open decision below is moot:
+`lpe` itself was retired on 2026-09-07 (the depth is `lpf(env = ...)`), so a stale linear-era value cannot arrive
+through the old door any more.
+
 ## Needs ears, ranked (mid-sweep trajectories changed even where endpoints are exact)
 
 The old law was Hz-linear (fast at the bottom of the sweep, slow at the top); the new law is

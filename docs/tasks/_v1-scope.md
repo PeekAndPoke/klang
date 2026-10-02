@@ -81,7 +81,7 @@ tutorial ear-checked against a sound that later gets retuned has to be redone.
 | ~~22~~ | [`20260929-analog-drift-ratio-tuning.md`](../tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md) | ✅ **DECIDED 2026-09-29 by ear:** pitch drift stays, filter drift becomes 2x the pitch drift (it was a quarter). Confirmed on the built-in songs the same day: "things sound good with the 2x" |
 | 23 | W10 tremolo shapes (`9cb896ff`, committed unheard) | [`by-ear/README.md`](by-ear/README.md) §1. The oldest debt, and the most new sound |
 | 24 | Mini-notation tweaks verdict | [`by-ear/README.md`](by-ear/README.md) §2. Could still send the design back |
-| 25 | [`by-ear/c3-depth-migration-flags.md`](by-ear/c3-depth-migration-flags.md) | 5 ranked song sites |
+| 25 | [`c3-depth-migration-flags.md`](../tasks-archive/2026-10/20261002-c3-depth-migration-flags.md) | **DONE 2026-10-02** by ear: the lament stab fixed, the rest fine |
 | 26 | Body resonator material tables | [`by-ear/README.md`](by-ear/README.md) §3 |
 | 27 | Der Schmetterling re-voicing | [`by-ear/README.md`](by-ear/README.md) §4. Uncommitted; chosen before the master-opening fix landed |
 | 28 | [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) | Added 2026-09-28. One listen at the end of phase 3, then retire or regenerate the two voice baselines |
