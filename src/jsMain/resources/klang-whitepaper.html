@@ -458,6 +458,109 @@
     }
 
     /* ---------------------------------------------------------------
+       APP SCREENSHOT: a still picture of the app with numbered pins on it.
+       The pins sit at percentages of the image, so they stay on target at any width;
+       the caption below the picture says what each number points at
+       --------------------------------------------------------------- */
+    .app-shot {
+        margin: 1.8rem 0;
+    }
+
+    .app-shot-frame {
+        position: relative;
+        border: 1px solid var(--rule);
+        background: var(--code-bg);
+        line-height: 0;
+    }
+
+    .app-shot-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .app-shot .pin {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.4rem;
+        height: 1.4rem;
+        border: 1.5px solid var(--gold);
+        border-radius: 50%;
+        background: var(--code-bg);
+        box-shadow: 0 0 0 2px rgba(18, 19, 28, .6), 0 0 10px rgba(232, 184, 75, .35);
+        color: var(--gold);
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    /* centres, in percent of the picture (app-editor.jpg, 1920 x 1197), each on an empty spot beside its
+       target: 1 on a blank code line between two groups of lit spans, 2 in the strip left of the Update
+       button, 3 at the right end of the selected song's row */
+    .app-shot .pin-1 {
+        left: 46.9%;
+        top: 64.3%;
+    }
+
+    .app-shot .pin-2 {
+        left: 30.7%;
+        top: 2.7%;
+    }
+
+    .app-shot .pin-3 {
+        left: 14.4%;
+        top: 14.3%;
+    }
+
+    .app-shot figcaption ol {
+        list-style: none;
+        counter-reset: pin;
+        margin: 0.55rem 0 0;
+        padding: 0;
+    }
+
+    .app-shot figcaption li {
+        counter-increment: pin;
+        position: relative;
+        margin: 0.3rem 0 0;
+        padding-left: 1.9rem;
+    }
+
+    .app-shot figcaption li::before {
+        content: counter(pin);
+        position: absolute;
+        left: 0;
+        top: 0.02rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.2rem;
+        height: 1.2rem;
+        border: 1px solid var(--gold);
+        border-radius: 50%;
+        background: var(--code-bg);
+        color: var(--gold);
+        font-size: 0.66rem;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0;
+    }
+
+    @media (max-width: 52rem) {
+        .app-shot .pin {
+            width: 1.05rem;
+            height: 1.05rem;
+            border-width: 1px;
+            font-size: 0.62rem;
+        }
+    }
+
+    /* ---------------------------------------------------------------
        TABLES
        --------------------------------------------------------------- */
     .tablewrap {
@@ -1032,15 +1135,27 @@
             </div>
 
             <p>
-                There are no accounts and no server: songs you write live in your browser's storage.
+                There are no accounts and no server: songs you write live in your browser's storage. Here is
+                the editor, with one of the built-in songs playing.
             </p>
 
-            <!-- FIGURE: a screenshot of the app, taken by the maintainer: a built-in song playing in the editor
-                 (Die Kirschblüte suits it), showing the code, the playback highlight, the Play / Update / Stop
-                 buttons with the RPM field and the cycle counter, and the sidebar with the songs and the Midi
-                 Playground. Three short annotations point at what to look at. A picture of the tool, not an
-                 interactive figure; the capture has to come from the maintainer. It sits after the table above,
-                 so the words of the table can be found in the picture. -->
+            <figure class="app-shot">
+                <div class="app-shot-frame">
+                    <img src="whitepaper/app-editor.jpg" width="1920" height="1197" loading="lazy"
+                         alt="The Klang app with the built-in song Kokon playing at cycle 10. Above the code are the Update and Stop buttons, the cycle counter and the RPM tempo field. Many numbers and names in the code have a box around them: the playback highlight. At the left is the list of built-in songs, with Kokon selected.">
+                    <span class="pin pin-1" aria-hidden="true">1</span>
+                    <span class="pin pin-2" aria-hidden="true">2</span>
+                    <span class="pin pin-3" aria-hidden="true">3</span>
+                </div>
+                <figcaption>
+                    The editor with the built-in song <em>Kokon</em> playing, at cycle 10.
+                    <ol>
+                        <li>The playback highlight: the boxed bits of code are the ones playing right now.</li>
+                        <li>The transport: Update (Play, until a song runs), Stop, the cycle counter and the tempo field, RPM, in cycles per minute.</li>
+                        <li>The song list: Kokon is playing, and <em>Die Kirschblüte</em>, the one we suggest first, is just below it.</li>
+                    </ol>
+                </figcaption>
+            </figure>
         </div>
     </section>
 
