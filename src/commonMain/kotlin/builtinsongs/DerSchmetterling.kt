@@ -267,7 +267,7 @@ export lead_shape = x => x.sound(marimba).adsrOff()
   .clip(0.95)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e4:minor!16>").gain("<0.50!48 1.00!16>").gain(mul(0.33))
+  .scale("<e5:minor!48 e4:minor!16>").gain("<0.50!48 1.00!16>").gain(mul(0.31))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
@@ -359,22 +359,22 @@ let granCassa = (() => {
   let beater = Osc.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(2200).mul(10.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.50, "tube", 2)
+    .distort(0.50, "softsat", 2)
     .mul(0.1)
     .classic()
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
-export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [0 0 ~ 2 2 ~ -2 ~]>`
+export trommel_pat = `<[0 ~ 0 0 ~ ~ 0 ~] [0 ~ 0 -2 -2 ~ -1 ~] [0 ~ ~ 0 ~ ~ 2 ~] [0 0 ~ 2 2 ~ 1 ~]>`
 
 export trommel_shape = x => x.sound(granCassa).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8").body(material = "membrane", wet = 0.4).notch(100, 1.2)
-  .hpf(55).lpf("4500".add(perlin.range(-200, 200).slow(16).early(8)))
+  .hpf(550).lpf("2000".add(perlin.range(-200, 200).slow(16).early(8)))
   .pan(sine.range(0.4, 0.6).slow(5))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e2:minor").gain(0.70)
-  .mute("<1!96 0!32 1!32>")                          
+  .scale("e4:minor").gain(0.25)
+  .mute("<1!32 0!32>")                          
   .late(berlin.range(0.0025, 0.0035).mul(drunk))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
