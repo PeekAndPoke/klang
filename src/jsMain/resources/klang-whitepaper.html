@@ -776,7 +776,7 @@
                 <span>Pre-Alpha</span>
                 <span>Kotlin Multiplatform</span>
                 <span>AGPL-3.0</span>
-                <span>Last modified: 2026-09-30</span>
+                <span>Last modified: 2026-10-02</span>
             </p>
 
             <h1>Klangmotor</h1>
@@ -862,20 +862,19 @@
                 <li><span class="n">10</span><a href="#s10">How we design</a></li>
                 <li><span class="n">11</span><a href="#s11">Free software</a></li>
             </ol>
-            <div class="toc-part"><a href="#part2">Part II · Where the journey might go</a></div>
+            <div class="toc-part"><a href="#part2">Part II · Where we stand</a></div>
             <ol class="one">
-                <li><span class="n">12</span><a href="#s12">Sharing songs between servers</a></li>
+                <li><span class="n">12</span><a href="#s12">What's rough</a></li>
             </ol>
-            <div class="toc-part"><a href="#part3">Part III · Where we stand, and how to join</a></div>
+            <div class="toc-part"><a href="#part3">Part III · Where it might go, and how to join</a></div>
             <ol class="one">
-                <li><span class="n">13</span><a href="#s13">What's rough</a></li>
+                <li><span class="n">13</span><a href="#s13">Sharing songs between servers</a></li>
                 <li><span class="n">14</span><a href="#s14">An invitation</a></li>
             </ol>
             <div class="toc-part">Appendices</div>
             <ol class="one">
                 <li><span class="n">A</span><a href="#appA">Credits and lineage</a></li>
                 <li><span class="n">B</span><a href="#appB">About the codebase</a></li>
-                <li><span class="n">C</span><a href="#appC">The server API, sketched</a></li>
             </ol>
         </div>
     </section>
@@ -1175,14 +1174,13 @@
                 <code>leadPattern</code> is the Tetris melody, a string of mini-notation (<a href="#s4">§4</a>) that the original song
                 exports. <code>supersquare</code> is a synthesizer sound, a square wave played by several detuned
                 copies at once, and <code>lpf(1600)</code> is a low-pass filter that cuts the frequencies above
-                1600 Hz. <code>feel</code> is a plain number; the comment says what its two ends mean, and <a href="#s12">§12</a>
-                imagines songs publishing a number like it as a knob.
+                1600 Hz. <code>feel</code> is a plain number, and the comment says what its two ends mean.
             </p>
 
             <p>
-                Part II builds on that module system. Today an import can point at a library registered in the
-                app, which is how the built-in songs are found. What does not exist yet is an import that points
-                at another server; <a href="#s12">§12</a> sketches it.
+                Today an import can point at a library registered in the app, which is how the built-in songs
+                are found. What does not exist yet is an import that points at another server;
+                <a href="#s13">§13</a> sketches it.
             </p>
         </div>
     </section>
@@ -2470,11 +2468,11 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 </li>
                 <li>
                     <b>The protocol records; it does not score.</b> This one belongs to the sharing idea in
-                    Part II, which we imagine without likes, play counts or rankings (<a href="#s12">§12</a>).
+                    Part III, which we imagine without likes, play counts or rankings (<a href="#s13">§13</a>).
                 </li>
                 <li>
                     <b>Sound before platform.</b> The engine and the sound come first, and anything shaped like a
-                    platform comes later (<a href="#s13">§13</a>).
+                    platform comes later (<a href="#s12">§12</a>).
                 </li>
             </ul>
         </div>
@@ -2507,269 +2505,15 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
     <!-- ============================ PART II ============================ -->
     <div class="part" id="part2">
         <span class="part-no">Part II</span>
-        <h2>Where the journey might go</h2>
+        <h2>Where we stand</h2>
         <p>
-            Nothing in this part is built. It is a set of ideas, marked as such where they appear, with one open
-            question under all of them: should any of it exist? There are no accounts and no server today (<a href="#s1">§1</a>),
-            which is why this part reads as design rather than as a roadmap.
+            A plain account of what is rough today, before we look ahead.
         </p>
     </div>
 
     <!-- ---------------------------- §12 ---------------------------- -->
     <section id="s12">
-        <div class="rail"><span class="num">12</span><span class="tag lang">Sharing</span></div>
-        <div class="body">
-            <h3>Sharing songs between servers <span class="pill sketch">Idea, not built</span></h3>
-
-            <p>
-                This is the part we most want argued with, so here it is in full, apart from the wire-level detail
-                in <a href="#appC">Appendix C</a>. It is an idea, not built: everything below says what we would like
-                to build, and why.
-            </p>
-
-            <p>
-                <b>The observation.</b> Most music genres sit on a corpus. Sample-based music
-                could not exist without one: producers do not start from a blank page, they start
-                from the breaks. Live coders open empty editors. There is no canon, no "Amen break" of
-                patterns.
-            </p>
-
-            <p>
-                Klang's medium is <em>text</em>, not audio, so lineage could be exact rather than anecdotal: if you
-                make something good from other people's parts, that ancestry can be machine-readable, a citation
-                chain rather than a rumor. A rendered audio file does not carry its parts with it.
-            </p>
-
-            <h4>The shape</h4>
-
-            <p>KlangScript already has imports (<a href="#s3">§3</a>). The idea is to let them cross servers:</p>
-
-            <figure>
-                <div class="code" data-lang="KlangScript"><pre><span
-                        class="cm">// today: a library registered in the app (the import from <a href="#s3">§3</a>)</span>
-<span class="kw">import</span> { leadPattern } <span class="kw">from</span> <span
-                            class="st">"peekandpoke/tetris"</span>
-
-<span class="cm">// the idea: named by server, pinned to a version, and able to hop across several servers</span>
-<span class="kw">import</span> { bass } <span class="kw">from</span> <span class="st">"klang.art:peekandpoke/super-song@v1.0"</span></pre>
-                </div>
-                <figcaption>The identifier <em>is</em> the fetch address, the way it is with Go modules, so the
-                    naming needs no central registry. <code>super-song</code> is a made-up song.
-                </figcaption>
-            </figure>
-
-            <p>
-                Put plainly, this looks less like a distributed filesystem and more like a <b>federated package
-                registry</b>, which is a much better understood problem. The design cornerstones so far:
-            </p>
-
-            <div class="tablewrap">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Cornerstone</th>
-                        <th>Consequence</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td><b>Immutable tags</b></td>
-                        <td>Republishing <code>@v1.0</code> would be an error, permanently. Registries know why: npm's
-                            left-pad episode is the famous case of a published version disappearing, and Go modules
-                            enforce immutability through their checksum database.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><b>Content addressing</b></td>
-                        <td>Every file and blob would be referenced by hash, and a tag would resolve to a manifest of
-                            hashes, so content could come from anywhere and be verified locally.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><b>Flatten at tag time</b></td>
-                        <td>Tagging would resolve the full transitive closure (everything the song imports, directly or
-                            not) into the manifest, like a lockfile. An importer would need one conversation to learn
-                            everything it must fetch, so hops would not cascade at import time.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><b><code>@latest</code> is edit-time only</b></td>
-                        <td>Publishing would pin everything: a song that sounded right yesterday should not change
-                            because an imported part did. Resolution would be pull with a short TTL, the Go
-                            module-proxy model, with no webhooks and no subscription registry.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><b>Everything cacheable is immutable</b></td>
-                        <td>Cache invalidation, the hard CDN problem, would not arise. That is what makes "everyone
-                            runs an instance" plausible: a hobbyist box could survive a popular song, because the
-                            CDN's edge takes the traffic and the origin serves each blob once.
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <p>
-                The server API that follows from these would be tiny: five endpoints, immutable
-                and therefore HTTP-cacheable as they are, except the discovery document and the resolve endpoint,
-                which answer with a short TTL, and the list of versions, which grows with every tag. <a href="#appC">Appendix C</a> lists them.
-            </p>
-
-            <h4>Licensing as a mechanism</h4>
-
-            <p>
-                Every published asset would carry a mandatory license from a small lattice (CC0, CC BY and
-                CC BY-SA, say), chosen at publish and stored in the manifest. Three things would fall out of that:
-            </p>
-
-            <ul>
-                <li>
-                    <b>The license would gate importability.</b> Under a license that permits redistribution, the
-                    import button would exist. Under all rights reserved, a song could be streamed but not
-                    imported.
-                </li>
-                <li>
-                    <b>Restrictions would accumulate, checkably.</b> A combined work must satisfy all input licenses
-                    at once, so at tag time the server would compute the effective constraints of the closure and
-                    refuse an incompatible publish. Creative Commons already publishes a compatibility chart; a
-                    small lattice would make it machine-checkable.
-                </li>
-                <li>
-                    <b>Attribution could be generated.</b> The pinned closure <em>would be</em> the credits roll,
-                    produced from what the song actually imports rather than self-reported.
-                </li>
-            </ul>
-
-            <figure>
-                <div class="code" data-lang="Sketch"><pre>Credits for peekandpoke/super-song@v1.0 <span class="cm">(CC BY-SA)</span>
-  deep-bass@v2.1        by ada    CC BY-SA    <span class="cm">from server B</span>
-    sub-sample@v1.0     by ben    CC0         <span class="cm">from server C</span></pre>
-                </div>
-                <figcaption>A credits roll as a manifest could print it. Every name here is made up.</figcaption>
-            </figure>
-
-            <p>
-                Because the credits would come from the imports themselves, every import would appear in them,
-                and that attribution graph would be a citation network in the scientific sense.
-            </p>
-
-            <div class="note open">
-                <span class="lab">The decision underneath</span>
-                <p>
-                    <b>The protocol records; it does not score.</b> No likes, no play counts, no follower
-                    counts, no leaderboards, no computed reputation, no algorithmic feed. Discovery would work the
-                    way it works for papers: love something, open its credits, follow the reference to whoever
-                    made that bass, browse their catalog. Pull, not push. A server's catalog would be a library,
-                    not a feed.
-                </p>
-                <p>
-                    There is a second reason beyond taste. Any in-system honor mechanism recurses: citations reward
-                    the roots (samples, presets), finished songs are sink nodes (few things import them), and
-                    answering with curation-as-citation (mixtapes and set lists as citations) only moves the question
-                    to who honors the curator. The only end to that regress we can find is outside the system:
-                    people. Having no scores has a side effect we like: there is nothing for a ring of accounts to
-                    game, and a viral wave that lands here finds a credits page that nothing inside amplifies
-                    further. We cannot stop a wave, but we can avoid building something that feeds one.
-                </p>
-                <p>
-                    Play counts would also fit the design badly: with edge caches, origins do not see most
-                    fetches, so counting would need the player to report back on what people play, and we would
-                    rather not build that.
-                </p>
-            </div>
-
-            <h4>One consequence that surprised us</h4>
-
-            <p>
-                Klang songs have no end: patterns cycle for as long as they play. A mixtape, in this design, is a
-                hand-made set list, and an entry in it cannot just reference a song; it has to specify a
-                <b>cycle window</b>: <code>super-song@v1.0 [cycles 128..192)</code>.
-            </p>
-
-            <p>
-                Which means making a mixtape is a form of authorship. Choosing which cycles are <em>the</em>
-                cycles is the DJ picking the break; the format asks for a decision. And because playback
-                re-performs the song live through the engine, with some randomness in it (the unison sources and
-                the analog drift, <a href="#s7">§7</a>) that makes each pass a little different, a mixtape is closer to sheet music
-                than to tape. Add author-exposed parameters (a song could publish a number like the
-                <code>feel</code> in <a href="#s3">§3</a>, from 0 to 100, with a default and a meaning) and an entry becomes
-                <code>(song@version, cycleWindow, overrides)</code>: score, window, and interpretation.
-            </p>
-
-            <figure class="klang-figure">
-                <iframe src="whitepaper/fig-mixtape-entry.html" title="Sketch: a mixtape entry as score, window and interpretation, with a draggable cycle window and a feel slider" loading="lazy" style="height: 720px"></iframe>
-                <figcaption>A sketch of a mixtape entry, with made-up values. Drag the window's edges and the feel slider to see the entry change.</figcaption>
-            </figure>
-
-            <h4>Anyone could run a node</h4>
-
-            <p>
-                The idea is that a Klang server is something you install, the way you install a Mastodon or
-                Matrix instance. You would run one, it would host your songs and your samples, and it would become a
-                node in the network. Your imports would resolve through it, and it would keep a durable copy of
-                everything your songs depend on.
-            </p>
-
-            <p>That last part matters:</p>
-
-            <ul>
-                <li>
-                    <b>A dead server would be survivable.</b> On cross-server import, your home server would vendor
-                    the pinned closure: keep a durable copy, rather than an evictable cache. Every song would then be
-                    self-sufficient where it lives. A dead server would take its own songs with it, and the news of
-                    their new versions, but nothing downstream. The license gate is what would make that lawful,
-                    which is why the two designs belong together.
-                </li>
-                <li>
-                    <b>Liability would sit with the operators</b>, the e-mail and Mastodon model. Each operator
-                    would gatekeep their own accounts and answer for what they host. A bad server could die here or
-                    there and the network would shrug.
-                </li>
-                <li>
-                    <b>Policy would be the operator's liability dial.</b> Instance settings (bring-your-own samples
-                    on or off, open or invite-only registration, quotas, a minimum license floor) would live in the
-                    discovery document (<a href="#appC">Appendix C</a>). Curated-samples-only would keep exposure
-                    low; enabling uploads would be an accepted moderation burden. Risk appetite would become a
-                    config file, and clients would adapt their UI from it.
-                </li>
-            </ul>
-
-            <p>
-                Here is the first of those points played out on three made-up servers:
-            </p>
-
-            <figure class="klang-figure">
-                <iframe src="whitepaper/fig-federation.html" title="Sketch: three servers, license gates on the imports, and which items stay self-sufficient when a server is switched off" loading="lazy" style="height: 600px"></iframe>
-                <figcaption>A sketch of three servers, the same made-up ones as in the credits roll above. Switch a server off to see which items keep playing where they live, and compare with imports that are only fetched from the origin.</figcaption>
-            </figure>
-
-            <div class="note">
-                <span class="lab">Still open</span>
-                <p>
-                    Identity and migration (server-in-name couples you to your home server, the email problem).
-                    Private and unlisted songs. The exact license set. Whether non-commercial licenses are offered
-                    at all: they split a commons into two incompatible pools and discourage the remixing this is
-                    meant to encourage, and the current lean is to leave them out. A lawyer's pass over the
-                    operator-liability and vendoring model. And whether any of it should be built before there is
-                    evidence that anyone wants to remix anything.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- ============================ PART III ============================ -->
-    <div class="part" id="part3">
-        <span class="part-no">Part III</span>
-        <h2>Where we stand, and how to join</h2>
-        <p>
-            Two short sections: what is rough today, and the ways we would welcome company.
-        </p>
-    </div>
-
-    <!-- ---------------------------- §13 ---------------------------- -->
-    <section id="s13">
-        <div class="rail"><span class="num">13</span><span class="tag">Honest</span></div>
+        <div class="rail"><span class="num">12</span><span class="tag">Honest</span></div>
         <div class="body">
             <h3>What's rough</h3>
 
@@ -2815,7 +2559,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     <code>docs/tasks/future/high-performance-audio-backend.md</code>.
                 </li>
                 <li>
-                    <b>Everything in Part II is unbuilt.</b> It is a set of ideas, not a feature list (<a href="#s12">§12</a>).
+                    <b>The sharing idea is unbuilt.</b> It is an idea to argue with, not a feature list (<a href="#s13">§13</a>).
                 </li>
             </ul>
 
@@ -2839,6 +2583,131 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
         </div>
     </section>
 
+    <!-- ============================ PART III ============================ -->
+    <div class="part" id="part3">
+        <span class="part-no">Part III</span>
+        <h2>Where it might go, and how to join</h2>
+        <p>
+            An idea we have not built and would like argued with, and then the ways we would welcome company.
+        </p>
+    </div>
+
+    <!-- ---------------------------- §13 ---------------------------- -->
+    <section id="s13">
+        <div class="rail"><span class="num">13</span><span class="tag lang">Sharing</span></div>
+        <div class="body">
+            <h3>Sharing songs between servers <span class="pill sketch">Idea, not built</span></h3>
+
+            <p>
+                This is an idea, not built, and the part of this paper we most want argued with. There are no
+                accounts and no server today (<a href="#s1">§1</a>), so what follows is design, not a roadmap. The
+                longer version, with the wire-level detail, is planned as a later blog post.
+            </p>
+
+            <p>
+                <b>The observation.</b> Most music genres sit on a corpus. Sample-based music could not exist
+                without one: producers do not start from a blank page, they start from the breaks. Live coders open
+                empty editors, and there is no "Amen break" of patterns. Klang's medium is <em>text</em>, not audio,
+                so lineage could be exact rather than anecdotal: the ancestry of a song made from other
+                people's parts can be machine-readable, a citation chain rather than a rumor.
+            </p>
+
+            <h4>The shape</h4>
+
+            <p>
+                KlangScript already has imports (<a href="#s3">§3</a>). The idea is to let them cross servers, and to
+                make every published song an immutable, tagged version:
+            </p>
+
+            <figure>
+                <div class="code" data-lang="KlangScript"><pre><span
+                        class="cm">// today: a library registered in the app (the import from <a href="#s3">§3</a>)</span>
+<span class="kw">import</span> { leadPattern } <span class="kw">from</span> <span
+                            class="st">"peekandpoke/tetris"</span>
+
+<span class="cm">// the idea: named by server and pinned to a version</span>
+<span class="kw">import</span> { bass } <span class="kw">from</span> <span class="st">"klang.art:peekandpoke/super-song@v1.0"</span></pre>
+                </div>
+                <figcaption>The identifier <em>is</em> the fetch address, the way it is with Go modules, so the
+                    naming needs no central registry. <code>super-song</code> is a made-up song.
+                </figcaption>
+            </figure>
+
+            <p>
+                Put plainly, this looks less like a distributed filesystem and more like a <b>federated package
+                registry</b>, which is a much better understood problem. Republishing <code>@v1.0</code> would be an
+                error, permanently: Go modules enforce that, and npm's left-pad episode is the famous case of a
+                published version disappearing. Publishing would also pin the <b>closure</b>, everything the song
+                imports, directly or not, the way a lockfile does, so a song that sounded right yesterday should
+                not change because an imported part did.
+            </p>
+
+            <h4>The license as the gate</h4>
+
+            <p>
+                Every published song and sample would carry a mandatory license from a small set (CC0, CC BY and
+                CC BY-SA, say), chosen at publish. Under a license that permits redistribution the import button
+                would exist; under all rights reserved, a song could be streamed but not imported. A combined work
+                must satisfy all of its input licenses at once, so at tag time the server would compute the
+                effective constraints of the closure and refuse an incompatible publish.
+            </p>
+
+            <p>
+                Credits would follow the imports. The pinned closure <em>would be</em> the credits roll, produced
+                from what the song actually imports rather than self-reported:
+            </p>
+
+            <figure>
+                <div class="code" data-lang="Sketch"><pre>Credits for peekandpoke/super-song@v1.0 <span class="cm">(CC BY-SA)</span>
+  deep-bass@v2.1        by ada    CC BY-SA    <span class="cm">from server B</span>
+    sub-sample@v1.0     by ben    CC0         <span class="cm">from server C</span></pre>
+                </div>
+                <figcaption>A credits roll as a manifest could print it. Every name here is made up.</figcaption>
+            </figure>
+
+            <p>
+                Because every import would appear, that attribution graph would be a citation network in the
+                scientific sense. And we would stop at recording: <b>the protocol records; it does not score.</b> No
+                likes, play counts, follower counts or rankings. Discovery would work the way it does for papers:
+                love something, open its credits, follow the reference to whoever made that bass. A side effect we
+                like is that there is nothing for a ring of accounts to game.
+            </p>
+
+            <h4>Anyone could run a node</h4>
+
+            <p>
+                A Klang server would be something you install, the way you install a Mastodon or Matrix instance. It
+                would host your songs and samples and be a node in the network. On a cross-server import your home
+                server would <b>vendor the pinned closure</b>: keep a durable copy of everything the song depends
+                on, rather than an evictable cache. Every song would then be self-sufficient where it lives. A dead
+                server would take its own songs with it, and the news of their new versions, but nothing
+                downstream. The license gate is what would make that lawful, which is why the two designs belong
+                together. Liability would sit with the operators, the e-mail and Mastodon model: each answers for
+                what it hosts, and a bad server could die here or there and the network would shrug.
+            </p>
+
+            <p>
+                Here is the durable copy played out on three made-up servers:
+            </p>
+
+            <figure class="klang-figure">
+                <iframe src="whitepaper/fig-federation.html" title="Sketch: three servers, license gates on the imports, and which items stay self-sufficient when a server is switched off" loading="lazy" style="height: 600px"></iframe>
+                <figcaption>A sketch of three servers, the same made-up ones as in the credits roll above. Switch a server off to see which items keep playing where they live, and compare with imports that are only fetched from the origin.</figcaption>
+            </figure>
+
+            <div class="note">
+                <span class="lab">Still open</span>
+                <p>
+                    Identity and migration (server-in-name couples you to your home server, the email problem).
+                    Private and unlisted songs. The exact license set, and whether non-commercial licenses are
+                    offered at all: they split a commons into two incompatible pools, and the current lean is to
+                    leave them out. A lawyer's pass over the operator-liability and vendoring model. And whether any
+                    of it should be built before there is evidence that anyone wants to remix anything.
+                </p>
+            </div>
+        </div>
+    </section>
+
     <!-- ---------------------------- §14 ---------------------------- -->
     <section id="s14">
         <div class="rail"><span class="num">14</span><span class="tag">Join in</span></div>
@@ -2858,7 +2727,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     Second most useful: what surprised you by working.
                 </li>
                 <li>
-                    <b>Write a short song.</b> The built-in corpus, more than a dozen songs, is small, and <a href="#s12">§12</a>
+                    <b>Write a short song.</b> The built-in corpus, more than a dozen songs, is small, and <a href="#s13">§13</a>
                     dreams of a canon. Every good thirty-cycle piece adds to it and stress-tests the language in
                     ways no test suite can.
                 </li>
@@ -2879,7 +2748,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     balance its orbits, stage its master chain, and leave it sounding like a record.
                 </li>
                 <li>
-                    <b>Calibrate by ear.</b> The body and vowel resonators (<a href="#s7">§7</a>, <a href="#s13">§13</a>) need exactly the
+                    <b>Calibrate by ear.</b> The body and vowel resonators (<a href="#s7">§7</a>, <a href="#s12">§12</a>) need exactly the
                     contribution code review cannot give: someone with ears playing real material through
                     them and saying "the mahogany gets boxy above c5". Bring taste, not patches.
                 </li>
@@ -2888,12 +2757,12 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     launch, whatever launch turns out to mean, with no licensing shadow over the default catalog.
                 </li>
                 <li>
-                    <b>Argue with <a href="#s12">§12</a>.</b> If it is ever built, we would freeze v1 the way Go froze Go 1, so that every
-                    exposed field becomes a long-term commitment. The cheapest moment to find the design mistake is before
+                    <b>Argue with <a href="#s13">§13</a>.</b> If it is ever built, we would freeze the first version of the protocol the way
+                    Go froze Go 1, so that every exposed field becomes a long-term commitment. The cheapest moment to find the design mistake is before
                     that, which is now. Tell us whether it is a good idea or a beautifully designed mistake.
                 </li>
                 <li>
-                    <b>Hardcore: plan the Zig backend.</b> The roughly 10× gap in <a href="#s13">§13</a> has a parked
+                    <b>Hardcore: plan the Zig backend.</b> The roughly 10× gap in <a href="#s12">§12</a> has a parked
                     answer, sketched in <code>docs/plans/future/zig-motor-one-engine.md</code>. The code is for later;
                     the planning can start now. If systems programming at audio rates is your idea of fun, this is the one.
                 </li>
@@ -2921,7 +2790,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
             <h3>What this stands on</h3>
 
             <p>
-                <a href="#s12">§12</a> imagines credits as part of the protocol, an attribution graph generated from imports.
+                <a href="#s13">§13</a> imagines credits as part of the protocol, an attribution graph generated from imports.
                 Until then we keep the habit by hand. What follows is
                 <code>CREDITS.MD</code>, condensed; every layer of Klang has an ancestry, and it is a
                 pleasure to name it.
@@ -3127,158 +2996,11 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
         </div>
     </section>
 
-    <!-- ============================ APPENDIX C ============================ -->
-    <div class="part" id="appendixC">
-        <span class="part-no">Appendix C</span>
-        <h2>The server API, sketched</h2>
-    </div>
-
-    <section id="appC">
-        <div class="rail"><span class="num">C</span><span class="tag lang">Sketch</span></div>
-        <div class="body">
-            <h3>What a node serves <span class="pill sketch">Sketch, not built</span></h3>
-
-            <p>
-                This is the wire-level detail behind <a href="#s12">§12</a>. It is a sketch of the shape: nothing
-                here is built, and the example values are illustrations.
-            </p>
-
-            <p>
-                In the sketch, a node serves five HTTP endpoints, one of them a well-known discovery document. That
-                would be the whole surface an operator has to keep running, and the whole surface a third-party
-                implementation has to reproduce. <a href="#s12">§12</a> covers why it is shaped this way; here is
-                the shape.
-            </p>
-
-            <div class="tablewrap">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Endpoint</th>
-                        <th>Answers</th>
-                        <th>Caching</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td><code>/.well-known/klang</code></td>
-                        <td>Which API versions, which capabilities, which operator policies. The one path that
-                            carries no version prefix, so a client has a fixed place to start (RFC 8615, the way
-                            Matrix does it).
-                        </td>
-                        <td>Short TTL</td>
-                    </tr>
-                    <tr>
-                        <td><code>/v1/resolve(name, "latest")</code></td>
-                        <td>What <code>@latest</code> means right now. Edit-time convenience only, since publishing
-                            pins everything.
-                        </td>
-                        <td>Short TTL, ETag</td>
-                    </tr>
-                    <tr>
-                        <td><code>/v1/versions(name)</code></td>
-                        <td>Every tag ever published under a name; also servable as an Atom feed.</td>
-                        <td>Immutable per entry</td>
-                    </tr>
-                    <tr>
-                        <td><code>/v1/manifest(name, version)</code></td>
-                        <td><code>schemaVersion</code>, the file list, the pinned transitive closure with hashes,
-                            the license, and <code>requires</code>. One request tells an importer everything it
-                            must fetch.
-                        </td>
-                        <td>Immutable</td>
-                    </tr>
-                    <tr>
-                        <td><code>/v1/blob(hash)</code></td>
-                        <td>Bytes. Song files and samples alike, addressed by content hash and verified by whoever
-                            fetched them, so a CDN, a mirror or another node can serve them.
-                        </td>
-                        <td>Immutable</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <p>
-                Two version axes: protocol version in the URL, capability requirements in the manifest.
-                Manifests are meant to evolve additively (new fields only, and readers ignore what they do not
-                know), so a manifest tagged in 2027 can stay byte-identical in 2035.
-            </p>
-
-            <h4>The discovery document</h4>
-
-            <p>
-                In the sketch, the discovery document is where the operator's dial lives. It reports two
-                kinds of "what does this server do" side by side, <em>capabilities</em> (what the software
-                speaks) and <em>policies</em> (what this operator permits), and clients can build their UI from it:
-            </p>
-
-            <figure>
-                <div class="code" data-lang="JSON"><pre><span class="cm">// GET /.well-known/klang  (an illustration: every value here is made up)</span>
-{
-  <span class="st">"software"</span>:     { <span class="st">"name"</span>: <span class="st">"example-node"</span>, <span class="st">"version"</span>: <span class="st">"0.1.0"</span> },
-  <span class="st">"apiVersions"</span>:  [<span class="st">"v1"</span>],
-  <span class="st">"baseUrl"</span>:      <span class="st">"https://example.org/v1"</span>,
-
-  <span class="cm">// what the software speaks: asked by feature, not by version number</span>
-  <span class="st">"capabilities"</span>: [<span class="st">"resolve"</span>, <span class="st">"manifest"</span>, <span class="st">"blob"</span>, <span class="st">"versions"</span>],
-
-  <span class="cm">// what this operator permits: the liability dial, as a config file</span>
-  <span class="st">"policies"</span>: {
-    <span class="st">"registration"</span>: <span class="st">"invite"</span>,
-    <span class="st">"byoSamples"</span>:   <span class="kw">false</span>,        <span class="cm">// so: no upload button in the client</span>
-    <span class="st">"maxBlobBytes"</span>: 33554432,
-    <span class="st">"licenseFloor"</span>: <span class="st">"cc-by-sa"</span>
-  }
-}</pre>
-                </div>
-                <figcaption>Feature detection, not version sniffing. A client asks "does this server do X?" rather than
-                    "is this server new enough?", which is meant to let URL versions stay rare, coarse epochs while
-                    everything else evolves by adding fields.
-                </figcaption>
-            </figure>
-
-            <p>
-                The manifest's <code>requires</code> block is the mirror image, on the content side: a song
-                states what it needs (a backend, one day a specific plugin) so that "can I play this?",
-                "can I import this?" and "can this song live on this server?" are one operation: match a
-                manifest against a server's capabilities, policies and license floor. All three could be answered
-                before a byte of audio is fetched.
-            </p>
-
-            <h4>Old versions, and a narrow v1</h4>
-
-            <p>
-                <b>The idea is that old versions stay supported while instances still speak them.</b> In a
-                federation every server is also a client of every other server, and the network would contain
-                unattended instances that never upgraded. The oldest API version still in use is the one everybody
-                can speak. Immutability makes that cheap: old responses are static bytes. The intended enforcement is a public
-                conformance suite with golden wire fixtures (recorded requests and responses that every
-                implementation has to reproduce), runnable by any third-party implementation.
-            </p>
-
-            <p>
-                That sets a hard constraint on the design: a five-endpoint API that has to be right the first
-                time is a better problem to have than a large one that has to be right the first time. The
-                idea is to ship v1 <em>narrower</em> than feels comfortable: with additive evolution, saying
-                yes later stays possible, while unsaying is not.
-            </p>
-
-            <h4>The reference instance</h4>
-
-            <p>
-                The project has registered the name <code>klang.art</code>, and it is the natural candidate for a
-                first, reference instance. It would have no special protocol status; it would simply be the
-                first one.
-            </p>
-        </div>
-    </section>
-
     <footer class="colophon-end">
         <p>
             <b>Klangmotor</b> · Copyright © 2025-2026 The Klangmotor Authors.<br/>
             Licensed under the GNU Affero General Public License v3. The <code>tones</code> module: MIT.<br/>
-            Built in Kotlin Multiplatform. Pre-alpha. Last modified 2026-09-30.<br/>
+            Built in Kotlin Multiplatform. Pre-alpha. Last modified 2026-10-02.<br/>
             Demo: <a href="https://klang.finzo.de">klang.finzo.de</a> ·
             Repo: <a href="https://github.com/PeekAndPoke/klang">github.com/PeekAndPoke/klang</a>
         </p>
