@@ -113,6 +113,10 @@ this one is pure sound.
 
 ### 6. Soundfonts: every `gm_` instrument sounds different now — three changes, one listening pass
 
+> **HEARD 2026-10-02 (maintainer, pairs 50 to 53, JVM renders, fixes 1 and 2):** violin, accordion and nylon guitar
+> ok; church organ "probably ok, the loop is not clean but I think it is the sample itself" (noted in
+> `../future/soundfont-variant-curation.md`). Pairs deleted.
+
 Landed 2026-09-02/03. No shipped song uses a `gm_` soundfont, so nothing released moved, but
 everything a tutorial might reach for did. **Nothing below was audible in the browser until
 2026-09-03's third fix** — the worklet dropped every sample's metadata on reassembly, so no

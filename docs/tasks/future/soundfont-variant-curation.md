@@ -18,6 +18,8 @@ Measured 2026-09-03 against the decoded audio (autocorrelation over the loop reg
 | `gm_violin` | Aspirin | −0.65 to −0.96 st flat | 150–210 ms loops |
 | `gm_violin` `.n(2)` | FluidR3_GM | (not yet measured) | 170–190 ms loops on all 14 zones |
 
+| `gm_church_organ` | (variant 0, not measured) | (not measured) | heard 2026-10-02 (maintainer): "the loop is not clean, but I think it is the sample itself"; measure its loop region when curating |
+
 A declared root that is a semitone off cannot be corrected by the engine: `2^((note − root)/12)` is
 the right formula and it is being fed a wrong root. Only the data can fix it.
 
