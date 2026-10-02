@@ -166,7 +166,7 @@ One line per step, newest first. A link to the archived task record where one ex
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
 - 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): [record](../docs/tasks-archive/2026-09/20260930-stereo-reverb.md)
-- 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks/tremolo-as-composition.md)
+- 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md)
 - 2026-09-29 Filter drift is twice the pitch drift, by ear: [record](../docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md)
 - 2026-09-28 The master is a Katalyst at the output; the Master DSL retires (phase 3 step 12): [record](../docs/tasks-archive/2026-09/20260928-phase3-step12-master-as-katalyst.md)
 - 2026-09-27 The voice strip and the Pipeline DSL retire; every voice is its tree (step 9): [entry](ref/memory-history.md#the-voice-strip-and-the-pipeline-dsl-retire-every-voice-is-its-tree-phase-3-step-9-2026-09-27)

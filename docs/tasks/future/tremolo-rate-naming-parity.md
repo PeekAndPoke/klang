@@ -14,7 +14,7 @@ One concept, two spellings:
   first, and it calls the rate `sync`.
 
 `sync` is an LFO rate in Hz, the same meaning and scale as the Ignitor's `rate` (`docs/tasks/sprudel-ui-tools.md`
-notes the same; since 2026-09-29 both feed the frequency of the LFO oscillator, `docs/tasks/tremolo-as-composition.md`).
+notes the same; since 2026-09-29 both feed the frequency of the LFO oscillator, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`).
 
 ## Why it is open
 

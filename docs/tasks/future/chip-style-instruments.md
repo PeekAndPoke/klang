@@ -37,7 +37,7 @@ let mySaw    = (freq) => Osc.saw(freq, x => x.resetSamples(0).analog(0))        
    nodes; `Ignitors.zawtooth` / `zamp` / `rawPulze`) are saw, ramp and square with their edge knob at 0. Fold them
    into the knobs (`Osc.saw(x => x.resetSamples(0))` and so on), removed rather than deprecated, IF a render shows the
    folded form is bit-identical (or the difference is stated and heard). Their built-in sound names (`s("zawtooth")`
-   and friends, if registered) map onto the knob form. The same move as `docs/tasks/tremolo-as-composition.md`.
+   and friends, if registered) map onto the knob form. The same move as `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`.
 2. **The gaps, for a design round** (each only if a chip really needs it; composition first):
    - hard sync (one oscillator restarting another's cycle; the C64 SID's signature),
    - the NES noise channel's short mode (a shift-register noise that repeats and sounds pitched),

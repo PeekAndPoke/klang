@@ -10,11 +10,12 @@ through sine partials and a phase offset would be even better."
 
 ## Why (the consumers)
 
-1. **The tremolo's start points.** Since `docs/tasks/tremolo-as-composition.md` the tremolo is an oscillator, and the
+1. **The tremolo's start points.** Since `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md` the tremolo is an oscillator, and the
    oscillator's phase decides where a note starts in the tremolo cycle (listening pairs 80 to 83: the triangle now
    starts at its lowest point, the square low). The door's own `phase` knob was dropped on 2026-09-29; the knob moves
-   one level down, where every composition gets it. The tremolo then uses one constant per shape, the maintainer's
-   choice by ear.
+   one level down, where every composition gets it. Verdict 2026-10-02 (pairs 80 to 83): the oscillators' own start
+   points are accepted for all shapes, so the tremolo uses phase 0 and its sound does not change; the knob makes
+   another start point one constant away if a song ever wants it.
 2. **Der Schmetterling's snare thud** (`metalSnare`, commit `20d74bb8`): 13 sines at fixed ratios, whose start phases
    today can only be 0 or a half cycle (a flipped sign). The song comment records the search: all 8192 sign patterns,
    the calmest leaving a 12 dB crest. With free start phases the known answer is the Schroeder phases

@@ -29,7 +29,8 @@ Created 2026-08-31.
 
 ### 1. W10 tremolo shapes — committed unheard
 
-> **HEARD 2026-09-29 (pairs 20 to 23 and 70 to 78 in the listening folder).** Sine and triangle differ audibly and
+> **HEARD 2026-09-29 (pairs 20 to 23 and 70 to 78 in the listening folder); the composed tremolo's start points
+> (pairs 80 to 83) HEARD 2026-10-02: all four accepted.** Sine and triangle differ audibly and
 > both are kept. Square, sawtooth and ramp CLICK in today's tremolo ("not useful"): the LFO jumps instantly. Composed
 > from the existing oscillators instead (`Osc.square/saw/ramp(...).range(1 - depth, 1)` multiplied into the voice,
 > with the oscillators' own soft edges, `flankSamples` / `resetSamples`), the clicks are gone (70, 71: "fine"); the
@@ -37,7 +38,7 @@ Created 2026-08-31.
 > still thumps on the sawtooth, **16 ms for all** (74 to 78). Direction (maintainer): keep the `.tremolo()` doors,
 > remove the `TremoloIgnitor` and its own LFO (`LfoShape`), and model the tremolo by composition, "the dsp surface
 > would shrink". Decided the same day: `skew` and `phase` are dropped. The build task:
-> [`../tremolo-as-composition.md`](../tremolo-as-composition.md).
+> [`../../tasks-archive/2026-10/20261002-tremolo-as-composition.md`](../../tasks-archive/2026-10/20261002-tremolo-as-composition.md).
 
 **Commit `9cb896ff`.** Recorded only in the W10 row of `docs/plans/block-framing-invariance.md` and
 in the BUILD-LOCK. The oldest debt in this folder and the one with the most new sound in it.

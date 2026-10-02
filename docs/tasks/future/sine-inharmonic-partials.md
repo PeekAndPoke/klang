@@ -31,7 +31,7 @@ let thud  = Osc.sine(Osc.freq().mul(0.6571)).mul(0.520)
 - **The start phase.** Choosing each partial's sign was worth 8 dB of onset peak (all positive: the hit
   spiked 20 dB over its level; the calmest of the 8192 sign patterns: 12 dB). Free phases could do more.
   The oscillator start-phase knob was declined for the tremolo "until a real use appears, and then on the
-  oscillators" (`docs/tasks/tremolo-as-composition.md`); this is the first use.
+  oscillators" (`docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`); this is the first use.
 
 ## Shape of the idea
 

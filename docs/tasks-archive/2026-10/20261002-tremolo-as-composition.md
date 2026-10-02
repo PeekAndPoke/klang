@@ -1,7 +1,9 @@
 # The tremolo becomes a composition of the oscillators
 
-Status: **BUILT 2026-09-29 on branch `tremolo-composition`** (review: 4 rounds, the last clean). Open: the maintainer's
-verdict on the triangle and square start points (listening pairs 80 to 83), then archive.
+Status: **DONE 2026-10-02.** Built 2026-09-29 (review: 4 rounds, the last clean), merged to main. The maintainer's
+verdict on the start points (pairs 80 to 83, 2026-10-02): all four accepted. "When played solo it sounds better when
+it starts at low volume"; the pluck's lower onset is expected; the square pluck shows no real difference. A `phase`
+knob on the oscillators is queued separately (`docs/tasks/oscillator-phase-knob.md`).
 Decided 2026-09-29 by the maintainer after listening. V1 by the sorting rule
 ([`_v1-scope.md`](_v1-scope.md)): it changes the surface a tutorial teaches (two knobs go) and how three shapes
 sound (their clicks go).
