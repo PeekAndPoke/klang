@@ -50,20 +50,50 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
 ## To decide before implementing
 
 - **With the other banks.** Today the banks are siblings: each is a series on the sine's own frequency,
-  and they are summed raw, so a partial two banks share is there twice (decided 2026-09-07). Options for
-  `partials`:
-  1. a sibling like the others: every ratio is relative to the sine's frequency, summed raw;
-  2. a multiplier: every inharmonic partial carries the harmonic series too (partials of partials);
-  3. exclusive: `partials` and the integer banks cannot be combined.
-  Option 1 is the rule the banks already follow; option 2 is a different instrument (a stack of complex
-  tones) and may belong in a helper instead.
+  and they are summed raw, so a partial two banks share is there twice (decided 2026-09-07; the plan's
+  words: "two banks never have to pick a winner"). The maintainer's observation (2026-10-02): the existing
+  banks are special cases of `partials`, each a generator of (ratio, gain) pairs:
+
+  | bank | ratios | gains |
+  |---|---|---|
+  | `harmonics(n, r)` | 2, 3, ..., n + 1 | `m ^ -r` |
+  | `octaves(n, r)` | 2, 4, 8, ... | `m ^ -r` |
+  | `suboctaves(n, r)` | 1/2, 1/4, 1/8, ... | `m ^ -r` |
+  | `fundamental(g)` | 1 | `g` |
+  | `partials(ratios, gains)` | any | any |
+  | `noiseBand(...)` ([`sine-noise-band.md`](sine-noise-band.md)) | a geometric grid | a colour law |
+
+  So what does `Osc.sine(x => x.harmonics(7).partials(...))` play? The maintainer's two options:
+  1. **the last bank wins**: every bank sets the one partial list, so the `partials` replace the
+     harmonics;
+  2. **the sine supports all of them, summed**.
+
+  Recommendation (Claude, for the maintainer to decide): option 2 in meaning, option 1's simplicity
+  inside. Option 2 is the rule already decided for the banks; "last one wins" stays true within one knob
+  (`harmonics(3).harmonics(7)` is `harmonics(7)`), but different banks are different knobs, and option 1
+  would change what `harmonics(7).octaves(3)` plays today (no song combines banks yet, so nothing
+  breaks). Inside the engine the sine can render ONE list, the concatenation of every bank's pairs, in
+  one pass. The catch: bank knobs are signals read every block (a count or a rolloff can move), an
+  explicit list is fixed at build, so the concatenation grows per block (the growth-only arrays already
+  allow it), and the integer-ratio fast path (`docs/plans/sine-partial-banks.md` 5.3) applies to the
+  integer banks' part only.
+
+  Not on the table any more: partials of partials (every inharmonic partial carrying the harmonic
+  series), a different instrument, better as a helper.
 - **What `fundamental` means** when the cluster has no partial at ratio 1 (the thud has none).
 - **Lists as knob values.** Every bank knob today is a signal read once per block; a list of ratios is
   new on the wire and on both doors (two doors, parameter parity, `/dsl-design`). Fixed at build time, or
   modulatable?
 - **The phase knob.** Per partial here, and for the plain oscillators (the tremolo note): one word, one
-  scale (turns or radians) on every surface.
+  scale (turns or radians) on every surface. For a noise band, a sign per partial is enough: alternating
+  signs come within 1.8 dB of the best pattern, and free (Schroeder) phases gained nothing in the study
+  ([`sine-noise-band.md`](sine-noise-band.md)).
 - **Drift.** How `analog` and `analogSpread` act on inharmonic partials (the banks drift as one
   oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
-- **Evidence first.** Only worth building if the allocation measurement shows the hand-rolled tree costs
-  something on the phone, or a second instrument wants a cluster (a gong, a bell, a tom).
+- **Decided 2026-10-02: it gets built** ("we will build the `Osc.sine(x => x.partials())` in any case",
+  the maintainer). The allocation measurement still belongs in the record, as the before and after.
+
+## Follow-ups
+
+- [`sine-noise-band.md`](sine-noise-band.md): a noise band as one more generator of partials, with the
+  maths for the grid, the colour and the signs.
