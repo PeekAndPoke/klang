@@ -588,7 +588,7 @@ object SongBenchmarkCases {
     /**
      * The song's arrangement without its two-cycle count-in: the band's gate (`late(2).filterWhen(t >= 2)`)
      * goes, and the count-in's own gate (`filterWhen(t < 2)`) becomes never, so the band plays from cycle 0
-     * and the count-in's orbit config (no compressor, its own room) never claims the hats' orbit.
+     * and the count-in's orbit config (its own room) never claims the orbit it shares with the lead (orbit 0).
      */
     private val ungateSong: (String) -> String = { src ->
         swap("filterWhen(t => t < 2)", "filterWhen(t => t < 0)")(swap("x => x.late(2).filterWhen(t => t >= 2)", "x => x")(src))
@@ -604,15 +604,24 @@ object SongBenchmarkCases {
     }
 
     private const val RHYTHM_RIG =
-        "let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)"
+        "let rhythmRig = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)"
 
+    /** The rhythm rig with five of its stages replaced; the snare cut between the power amp and the cab stays. */
     private fun rhythmRig(pickup: String, pedal: String, preamp: String, power: String, cab: String): String =
-        "let guitar       = makeGuitar($pickup, $pedal, $preamp, $power, $cab)"
+        "let rhythmRig = x => x.through($pickup, $pedal, $preamp, $power, snareCut, $cab)"
 
     private const val BAND = ".analog(feel).transpose(transposition)"
     private const val RHYTHM = "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange))$BAND"
     private const val LEAD = "lead.apply(lead_arrange)$BAND"
     private const val TROMMEL = "trommel.apply(trommel_arrange)$BAND"
+
+    /** The live song's drums (the clap left the song 2026-10-01). */
+    private const val DRUMS_LIVE =
+        "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)"
+
+    /** The drums of the frozen 2026-09-16 text, which still has the clap: kept so the frozen rows compare with their own history. */
+    private const val DRUMS_FROZEN =
+        "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)"
 
     fun rig(): List<SongBenchmark.Case> = listOf(
         // each part solo
@@ -621,10 +630,7 @@ object SongBenchmarkCases {
         liveCase("lead (marimba)", "part", LEAD),
         liveCase("trommel", "part", TROMMEL),
         liveCase("bass", "part", "bass.apply(bass_arrange)$BAND"),
-        liveCase(
-            "drums (samples)", "part",
-            "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)",
-        ),
+        liveCase("drums (samples)", "part", DRUMS_LIVE),
         // the rhythm rig, one stage at a time back to stock
         liveCase("rhythm: full rig", "rig", RHYTHM),
         liveCase("rhythm: pickup stock", "rig", RHYTHM, swap(RHYTHM_RIG, rhythmRig("pickupStock", "pedalScreamer", "preampHighGain", "powerPushPull", "cab4x12"))),
@@ -642,8 +648,8 @@ object SongBenchmarkCases {
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
-            swap("    .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))\n", "")(
-                swap("    .plus(Osc.crackle(1.25).highpass(1200).adsr(0.001, 0.1, 0.0, 0.05).mul(1.5))\n", "")(it),
+            swap(Regex("""    \.pitchEnvelope\(0\.5, x => x\.adsr\([^)]*\)\)\n"""), "")(
+                swap(Regex("""    \.plus\(Osc\.crackle\([^\n]*\n"""), "")(it),
             )
         },
         // the marimba, one component at a time
@@ -655,17 +661,11 @@ object SongBenchmarkCases {
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
         liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
-        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n \n  let ring = Osc.constant(150)", "let pAnalog = 0\n \n  let ring = Osc.constant(150)")),
+        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n \n  let ring = Osc.constant(", "let pAnalog = 0\n \n  let ring = Osc.constant(")),
 
-        // the whole song, and the whole song without its orbit compressors (four calls, one
-        // compressor per orbit they cover, ten instances; the master limiter stays): what the
-        // compressor's per-sample ln and exp cost across the mix. The song's arrangement holds two
-        // count-in cycles before the band; both cases drop that gate and the count-in itself, so
-        // all eight rendered cycles play the band and nothing else.
+        // the whole song. Its arrangement holds two count-in cycles before the band; the case drops that gate and
+        // the count-in itself, so all eight rendered cycles play the band and nothing else.
         liveCase("song: full", "song", "song", ungateSong),
-        liveCase("song: no compressors", "song", "song") {
-            swapAll(Regex("""\.compressor\([^)]*\)"""), "", expected = 4)(ungateSong(it))
-        },
     )
 
     /**
@@ -675,17 +675,18 @@ object SongBenchmarkCases {
      * song has moved since the snapshot). Rows are appended to `docs/benchmarks/ledger.md`.
      */
     fun ledger(): List<SongBenchmark.Case> {
+        // name, the expression on the frozen text, the expression on the live text
         val pieces = listOf(
-            "guitar melody (rig)" to "guitar1.apply(guitar1_arrange)$BAND",
-            "guitars rhythm (rig)" to RHYTHM,
-            "marimba" to LEAD,
-            "trommel" to TROMMEL,
-            "bass" to "bass.apply(bass_arrange)$BAND",
-            "drums (samples)" to "stack(kick.apply(kick_arrange), snare.apply(snare_arrange), hats.apply(hats_arrange), clap.apply(clap_arrange), shaker.apply(shaker_arrange)).analog(feel / 2)",
+            Triple("guitar melody (rig)", "guitar1.apply(guitar1_arrange)$BAND", "guitar1.apply(guitar1_arrange)$BAND"),
+            Triple("guitars rhythm (rig)", RHYTHM, RHYTHM),
+            Triple("marimba", LEAD, LEAD),
+            Triple("trommel", TROMMEL, TROMMEL),
+            Triple("bass", "bass.apply(bass_arrange)$BAND", "bass.apply(bass_arrange)$BAND"),
+            Triple("drums (samples)", DRUMS_FROZEN, DRUMS_LIVE),
         )
         val frozen = ungated(FrozenPieces.derSchmetterling_2026_09_16)
 
-        return pieces.map { (name, expr) ->
+        return pieces.map { (name, expr, _) ->
             SongBenchmark.Case(
                 name = "$name @ frozen 2026-09-16",
                 group = "ledger",
@@ -693,7 +694,7 @@ object SongBenchmarkCases {
                 cycles = 8,
                 code = frozen + "\n\n" + expr + "\n",
             )
-        } + pieces.map { (name, expr) ->
+        } + pieces.map { (name, _, expr) ->
             SongBenchmark.Case(
                 name = "$name @ live",
                 group = "ledger-live",

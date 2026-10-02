@@ -146,8 +146,15 @@ let cabCombo = x => x
   )
   .lowpass(3800, 0.707, x => x.passes(2))          // early roll-off
 
+// Let the snare cut through: a stage of its own, between the power amp and the cab.
+let snareCut = x => x
+  .eq(e => e
+    .band(freq = snareHz, q = 1.5, db = -1)          // notch the snare
+  )
+
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
-let makeGuitar = (pickup, pedal, preamp, power, cab) => {
+// The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
+let makeGuitar = (rig) => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = OscSlot.voices
@@ -179,23 +186,15 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
-  // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
-  let toned = preamp(pedal(pickup(signal)))
-
-  // the power amp, then let the snare cut through
-  let amped = power(toned)
-    .eq(e => e
-      .band(freq = snareHz, q = 1.5, db = -1)           // notch the snare
-    )
-
-  // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
-  // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
-  return cab(amped)
+  // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
+  // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
+  // synthetic (2026-09-14)
+  return rig(signal)
     .mul(0.17)
     .classic()
 }
 
-// The rigs. A/B one stage at a time:
+// The rigs: the signal path after the string, stage by stage. A/B one stage at a time:
 //   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
 //   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
 //   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
@@ -203,8 +202,11 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
 // Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let guitar       = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
-let guitarMelody = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
+let rhythmRig = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
+let melodyRig = x => x.through(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
+
+let guitar       = makeGuitar(rhythmRig)
+let guitarMelody = makeGuitar(melodyRig)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {

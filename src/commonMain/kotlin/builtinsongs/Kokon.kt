@@ -109,7 +109,14 @@ let cab1x12 = x => x
 let snareHz = 210
 
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
-let makeGuitar = (pickup, pedal, preamp, power, cab) => {
+// Let the snare cut through: a stage of its own, between the power amp and the cab.
+let snareCut = x => x
+  .eq(e => e
+    .band(freq = snareHz, q = 1.5, db = -2)          // notch the snare
+  )
+
+// The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
+let makeGuitar = (rig) => {
   let pVoices     = OscSlot.voices
   let pSpread     = OscSlot.spread
   let pAnalog     = OscSlot.analog
@@ -129,29 +136,26 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
-   // the string into the pickup, the pedal and the preamp's gain stages, then the tone stack
-  let toned = preamp(pedal(pickup(signal)))
-
-  // the power amp, then let the snare cut through
-  let amped = power(toned)
-    .eq(e => e
-      .band(freq = snareHz, q = 1.5, db = -2)           // notch the snare
-    )
-
-  // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
-  // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
-  return cab(amped)
+  // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
+  // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
+  // synthetic (2026-09-14)
+  return rig(signal)
     .mul(0.14)
     .classic()
 }
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-let clean  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab1x12)
-let bright = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
+let cleanRig  = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab1x12)
+let brightRig = x => x.through(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, snareCut, cab4x12)
+let deepRig   = x => x.through(pickupNeck,      pedalStock,    preampClean,    powerClassA,   snareCut, cab4x12)
+let heavyRig  = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12)
+
+let clean  = makeGuitar(cleanRig)
+let bright = makeGuitar(brightRig)
   .eq(x => x.band(Osc.freq(), 30.0, Osc.constant(3).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
-let deep   = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
-let heavy  = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
+let deep   = makeGuitar(deepRig)
+let heavy  = makeGuitar(heavyRig)
 
 let metalKick = (() => {
   let thump = Osc.sine()

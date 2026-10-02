@@ -1,6 +1,6 @@
 # `through()`: a signal chain written as the list it is
 
-Status: **DONE 2026-10-02.** Opened the same day by the maintainer. Small DSL door on two DSLs, no engine or wire change.
+Status: **DONE 2026-10-02** (step 5 on 2026-10-03). Opened 2026-10-02 by the maintainer. Small DSL door on two DSLs, no engine or wire change.
 
 ## Why
 
@@ -63,8 +63,7 @@ A rig becomes a value (`let cleanRig = x => x.through(...)`), which is also the 
    used as a stage. Mutation-checked (light tier, surface tests): one reversed fold, one dropped stage.
 3. The references: `ignitor-reference.md` and the Katalyst part of `sprudel-reference.md`, with the `apply` contrast.
 4. Review: one coding reviewer (no DSP, no wire), loop until clean.
-5. Follow-up, not this task: `makeGuitar` in Der Schmetterling and Kokon takes one rig built with `through`, by ear
-   and byte-identical renders.
+5. `makeGuitar` in Der Schmetterling and Kokon takes one rig built with `through`, by byte-identical renders.
 
 ## What we built (2026-10-02)
 
@@ -84,4 +83,13 @@ on `opus` (round 2 clean, at high effort).
 - Mutation checks, all red: reversed folds on both DSLs, the script door ignoring its stages, a dropped last stage,
   the language guard removed, each stage check removed (the null-stage one on JVM and JS). One mutant did not compile
   and was replaced by one that does; a mutant that does not compile proves nothing.
-- Open, not part of this task: step 5 (`makeGuitar` taking one rig built with `through`).
+- Step 5, done 2026-10-03: `makeGuitar` in Der Schmetterling and Kokon takes ONE rig, the signal path after the
+  string written with `through` (`let rhythmRig = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain,
+  powerPushPull, snareCut, cab4x12)`); the snare cut that sat welded between the power amp and the cab is a stage of its
+  own (`snareCut`). Both songs render byte-identical to before (full renders, Der Schmetterling 162 cycles with a fixed
+  seed, Kokon 60 cycles, on the same build). The rig-ablation benchmark (`src/jvmMain/kotlin/SongBenchmarkCases.kt`)
+  follows the new rig line; on the way it caught up with the live song where it had fallen behind: the string extras
+  are matched without their envelope and burst values (the pitch envelope keeps its amount `0.5`, which tells it from
+  the drums' envelopes), the Trommel's analog anchor without its ring constant, the drums lost the clap (the frozen ledger
+  rows keep it), and the "song: no compressors" row is gone with the compressors. `SongBenchmarkCasesCompileSpec`
+  green.
