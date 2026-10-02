@@ -199,7 +199,12 @@ let crunchlead = Osc.square()
 
 ## Bells & Mallet Percussion
 
-### Glockenspiel
+### Glockenspiel, harmonic (the "90s ringtone")
+
+The upper sines sit exactly on harmonics: `detune(19.02)` is 3.000 times the note (an octave and a fifth),
+`detune(27.86)` 4.999 times (two octaves and a major third), `detune(31.02)` 6.000 times. So it is not inharmonic,
+whatever the name suggests; by ear (maintainer, 2026-10-02, listening pair 84): "sounds like a Nokia ringtone from the
+90s". Kept as its own instrument.
 
 ```javascript
 let glock = Osc.sine().mul(0.5)
@@ -215,6 +220,21 @@ let glock = Osc.sine().mul(0.5)
         .lowpass(Osc.constant(8000).plus(
             Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)
         ))
+        .adsr(0.001, 1.5, 0.0, 0.3)
+```
+
+### Glockenspiel, metal bar
+
+The partials of a struck free metal bar: 2.756 and 5.404 times the fundamental (`detune(17.55)`, `detune(29.21)`),
+inharmonic for real. By ear (maintainer, 2026-10-02, pair 84): "more metallic". Heard as written here, with two upper
+partials; the bar's next mode, 8.933 times (`detune(37.89)`), is the natural third if one is wanted, not yet heard.
+
+```javascript
+let glockBar = Osc.sine().mul(0.5)
+        .plus(Osc.sine().detune(17.55).mul(0.3))
+        .plus(Osc.sine().detune(29.21).mul(0.15))
+        .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
+        .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
         .adsr(0.001, 1.5, 0.0, 0.3)
 ```
 

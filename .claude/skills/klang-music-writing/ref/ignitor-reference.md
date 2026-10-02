@@ -716,7 +716,9 @@ let crunchlead = Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3).c
 
 ### Bells & Mallet Percussion
 
-**Glockenspiel** — Detuned sine partials + noise transient
+**Glockenspiel, harmonic** (a 90s-ringtone bell): sines on the 3rd, 5th and 6th harmonics + noise transient. For a
+metal bar use the bar's inharmonic ratios 2.756 and 5.404 (`detune(17.55)`, `detune(29.21)`); both in
+`docs/instrument-prototypes.md`, chosen by ear 2026-10-02.
 
 ```javascript
 let glock = Osc.sine().mul(0.5)
