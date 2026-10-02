@@ -104,8 +104,8 @@ let cab1x12 = x => x
 
 // Drums and bass (from Der Schmetterling)  -------------------------------------------------------
 // The band of Der Schmetterling joins for the second run of the heavy block: its metal kick, its metal snare, its
-// bass guitar and its Orchestertrommel, copied (the reasoning behind every part is in Der Schmetterling). Only the
-// tuning follows D minor: the kick ends on A1 and the snare's head sits on A3, the fifth.
+// bass guitar, copied (the reasoning behind every part is in Der Schmetterling). Only the tuning follows D minor: 
+// the kick ends on A1 and the snare's head sits on A3, the fifth.
 let snareHz = 210
 
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
@@ -207,28 +207,6 @@ let metalSnare = (() => {
     .classic()
 })()
 
-let granCassa = (() => {
-  let pAnalog = OscSlot.analog
- 
-  let ring = Osc.constant(140).div(Osc.freq()).mul(0.85)   // seconds: 2.0 s at 70 Hz
- 
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
-  // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
-  // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Osc.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
-    .pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
- 
-  let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.20, 0.0, 0.20).mul(0.55)
-  let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.12, 0.0, 0.10).mul(0.30)
-  // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Osc.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(2200).mul(10.00)    
- 
-  return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .distort(0.50, "tube", 2)
-    .mul(0.1)
-    .classic()
-})()
-
 let bass = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
@@ -285,7 +263,7 @@ export spin = notes => n(notes)
   .oscp("decay", 1.00).oscp("sustain", 0.25).oscp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
   .gain(0.22).pan(0.5)                             // the arp guitarist stands dead centre
-  .orbit(1)
+  .orbit(1).body(wet = 0.1, material = "oak")
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
@@ -295,7 +273,7 @@ export sing = notes => n(notes.add(7))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
-  .orbit(2)
+  .orbit(2).body(wet = 0.2, material = "rosewood")
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
@@ -311,7 +289,7 @@ export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 1.8).clip(1)
   .lpf(3500)
-  .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
+  .gain(0.09).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -334,8 +312,8 @@ export chug = roots => n(roots.add(-7)).struct("x x ~ x x ~ x x")
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
-  .velocity("1.0 0.90 0.93 0.90")
-  .gain(0.65)
+  .velocity("1.0 0.93 0.97 0.93")
+  .gain(0.60)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
 
@@ -367,20 +345,21 @@ export strum = notes => n(notes)
 let drumRoom = x => x.reverb(wet = 0.2, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
-  .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96")
-  .gain(1.3).pan(0.5)
+  .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
+  .gain(1.2).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.5).pan(0.55)
-  .delay(0.25, pure(1/16).div(cps), 0.8)
+  .gain(0.45).pan(0.55)
+  .lpf(freq = 12500, q = 0.5)
+  .delay(0.33, pure(1/16).div(cps), 0.85)
   .orbit(12).apply(drumRoom)
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
-  .hpf(800).lpf(freq = 15000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(1.0).pan(0.4)                            
+  .hpf(800).lpf(freq = 13500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
+  .gain(0.9).pan(0.4)                            
   .orbit(11).apply(drumRoom)
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
@@ -389,14 +368,8 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .oscp("sub", 0.95).oscp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.80)
-  .gain(1.4).pan(0.5)
+  .gain(1.3).pan(0.5)
   .orbit(15)
-
-export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
-  .sound(granCassa).adsrOff().velocity("1.0 0.8 0.9")
-  .body(material = "membrane", wet = 0.4).notch(100, 1.2).hpf(55).lpf(4500)
-  .gain(2.0).pan(0.45)
-  .orbit(14).apply(drumRoom)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -404,26 +377,26 @@ export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).gain(0.25).lpf(3800).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).gain(0.28).lpf(3800).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.25).lpf(3600),
-  sing(melodyOne).gain(0.27),
+  spin(cocoonArp).gain(0.28).lpf(3800),
+  sing(melodyOne).gain(0.28),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.25).lpf(3650),
-  sing(melodyTwo).gain(0.27),
+  spin(cocoonArp).gain(0.28).lpf(3800),
+  sing(melodyTwo).gain(0.28),
   beat(cocoonRoots).gain(saw.range(0.0, 0.25).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.25 0.26 0.27 0.28>").lpf(3700).ply(2),
-  sing(melodyOne).gain(0.28).ply(2),
+  spin(cocoonArp).gain("<0.28 0.29 0.30 0.31>").lpf(3800).ply(2),
+  sing(melodyOne).gain("<0.28 0.29 0.30 0.31>").ply(2),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.25),
 )
@@ -432,8 +405,8 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp).gain("<0.26 0.27 0.28 0.29>").lpf(3700).ply(2),
-  sing(melodyTwo).gain(0.30).struct("x!32"),
+  spin(cocoonArp).gain("<0.30 0.31 0.32 0.33>").lpf(3800).ply(2),
+  sing(melodyTwo).gain("<0.30 0.31 0.32 0.33>").struct("x!32"),
   swell(cocoonSwell),
   beat(cocoonRoots).mask(breath),
 )
@@ -452,7 +425,7 @@ let unravelling = stack(
   spin(cocoonArp.add(7)).ply(2).gain(0.57).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
-  beat(cocoonRoots).gain(0.7).pan(0.5),
+  beat(cocoonRoots).gain(0.5).pan(0.5),
 )
 
 // The lift: Bb, C, Dm.
@@ -461,14 +434,14 @@ let lifting = stack(
   soar(melodyTwo),
   wings(liftPower),
   chug(liftRoots),
-  beat(liftRoots).gain(0.7).pan(0.5),
+  beat(liftRoots).gain(0.5).pan(0.5),
 )
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("sustain", 0.6),
   soar("[4@6 ~@2]"),
-  strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.15, 0.15))),
+  strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.20, 0.20))),
   beat("0").gain(0.7),
 )
 
@@ -498,8 +471,8 @@ let fullKit  = (roots, kicks) => stack(
   bassGuitar(roots, kicks),
   snare("~ ~ sd ~"), 
   hats("[cr oh oh oh]"), 
-  trommel(roots, "[[~ ~ x x] [~ x x ~] [~ ~ x x] [~ x x ~]]")
 )
+
 let kit = fullKit
 
 let crash = hats("cr").gain(1.0)
@@ -508,9 +481,9 @@ let crash = hats("cr").gain(1.0)
 // the lift and sixteenths on its last cycle. The landing is one hit, let ring.
 let heavyDrums = arrange(
   [4, kit(cocoonRoots, "x")],
-  [4, kit(cocoonRoots, "<[x [~ x]] [x [~ x]] [x!2 ~!5 [x x]] [[x x] [~ [~ x@3]]]>")],
+  [4, kit(cocoonRoots, "<[x [~ x]] [x [~ x]] [x!2 ~!5 [x x]] [[x x] [~ [~ x x@2]]]>")],
   [3, kit(liftRoots, "<[x!7 [x!2]] [x!7 ~] [x!16]>")],
-  [1, stack(crash, kick("x"), bassGuitar("0", "x"), trommel("0", "x"))],
+  [1, stack(crash, kick("x"), bassGuitar("0", "x"))],
 )
 
 // Song  ------------------------------------------------------------------------------------------------------------
@@ -531,7 +504,7 @@ export song = stack(
     .late(berlin.range(0.0, 0.002).mul(drunk).seg(8))
   , master(Katalyst(k => k
     .reverb(0.25, 7, 4500)                         // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.02)                                    // the house level, -14 LUFS
+    .gain(1.15)                                    // the house level, -14 LUFS
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
 )
