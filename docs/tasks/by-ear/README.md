@@ -154,6 +154,9 @@ soundfont-variant-curation.md`.
 **2026-09-07, `docs/tasks/sprudel-arithmetic-continuous-controls.md`.** Two sprudel fixes, one
 listening pass, and nothing here is new sound by design: it is what the songs already SAY.
 
+> **CLOSED 2026-10-02 (maintainer): "I know that it works now"**, heard in the songs since the fix; pairs 30 to 33
+> deleted.
+
 1. `segment(n)` answered a point query with the first slice of the cycle. Every setter samples its
    control at the note onset, so every `.seg()` control inside a setter held ONE value per cycle
    (or per `slow()` span). Now the slice under the note is read.
