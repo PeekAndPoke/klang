@@ -134,7 +134,11 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   maintainer and other sessions: `git add -A docs/tasks` once swept another session's new task file and its uncommitted
   skill edits into a coordinator's commit. Name each file you changed; before committing, read `git diff --cached
   --stat` and check every line of it is yours. Never `git restore --staged .` to undo: it also clears other people's
-  staging (an intent-to-add mark was lost that way); unstage your own paths one by one.
+  staging (an intent-to-add mark was lost that way); unstage your own paths one by one. Commit with the paths named
+  (`git commit -- <paths>`), so a file someone else stages in the meantime stays out. And never undo with
+  `git reset HEAD~1` while others commit: the same day, another session committed in the three seconds between a
+  commit and its reset, and the reset took back THEIR commit (restored from the reflog). Fix a commit with a follow-up
+  commit; look at `git log` first if anything must be rewound.
 
 ## Rules of thumb
 
