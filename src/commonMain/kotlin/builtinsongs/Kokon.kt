@@ -33,7 +33,7 @@ import * from "sprudel"
 //   parts  lines played together; a part starts on its own first cycle
 //   song   arrange(): which part, for how many cycles (3 s each), in which order
 
-let feel  = 20   // analog drift of the guitars, as in Der Schmetterling
+let feel  = 15   // analog drift of the guitars, as in Der Schmetterling
 let drunk =  1   // two guitarists, sober this time, mostly
 
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
@@ -75,8 +75,8 @@ let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
   .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "soft", 4)
-  .lowpass(7500)                                   // the fizz
+  .distort(0.65, "hard", 4)
+  .lowpass(6800)                                   // the fizz
   .mul(0.25)                                       // volume
 
 let powerPushPull = x => x
@@ -120,7 +120,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
     .phasePool(on = 1, kMin = 0.75, kMax = 0.90, warmup = 0, selection = "normal")
-    .spreadPower(8.0).sideAtten(0.3).gainJitter(0.10).centerJitter(0.10)
+    .spreadPower(8.0).sideAtten(0.5).gainJitter(0.10).centerJitter(0.10)
     .analog(pAnalog).analogSpread(0.5)
   )
 
@@ -258,7 +258,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 // amp squeezes the drop less and each note stands out from the one still ringing.
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
-export spin = notes => n(notes)
+export spin = notes => n(notes) 
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.05).pregain(0.7)
   .oscp("decay", 1.00).oscp("sustain", 0.25).oscp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
@@ -287,9 +287,9 @@ export soar = notes => n(notes.add(14))
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
-  .oscp("attack", 2.0).oscp("decay", 1.0).clip(1)
+  .oscp("attack", 2.5).oscp("decay", 0.3).clip(1)
   .lpf(3500)
-  .gain(0.09).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
+  .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -358,7 +358,7 @@ export snare = pat => sound(pat)
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
-  .hpf(800).lpf(freq = 13500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
+  .hpf(800).lpf(freq = 13000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.85).pan(0.4)                            
   .orbit(11).apply(drumRoom)
 
@@ -377,35 +377,35 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).gain(0.28).lpf(3800).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).gain(0.28).lpf(3500).unison(voices = 5, spread = 0.02).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.28).lpf(3800),
+  spin(cocoonArp).gain(0.28).lpf(3500).unison(voices = 5, spread = 0.02),
   sing(melodyOne).gain(0.28),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.28).lpf(3800),
+  spin(cocoonArp).gain(0.28).lpf(3500).unison(voices = 5, spread = 0.02),
   sing(melodyTwo).gain(0.28),
-  beat(cocoonRoots).gain(saw.range(0.0, 0.25).slow(4)),
+  beat(cocoonRoots).gain(saw.range(0.0, 0.25).slow(4)).lpf(1500),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.28 0.29 0.30 0.31>").lpf(3800).ply(2),
+  spin(cocoonArp).gain("<0.28 0.29 0.30 0.31>").lpf(3500).unison(voices = 5, spread = 0.02).ply(2),
   sing(melodyOne).gain("<0.28 0.29 0.30 0.31>").ply(2),
   swell(cocoonSwell),
-  beat(cocoonRoots).gain(0.25),
+  beat(cocoonRoots).gain(0.25).lpf(1500),
 )
 
 // Still growing, and in the last half cycle the arpeggio and the heartbeat hold their breath.
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp).gain("<0.30 0.31 0.32 0.33>").lpf(3800).ply(2),
+  spin(cocoonArp).gain("<0.30 0.31 0.32 0.33>").lpf(3500).unison(voices = 5, spread = 0.02).ply(2),
   sing(melodyTwo).gain("<0.30 0.31 0.32 0.33>").struct("x!32"),
   swell(cocoonSwell),
   beat(cocoonRoots).mask(breath),
