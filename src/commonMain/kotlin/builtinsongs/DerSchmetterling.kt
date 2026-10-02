@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.2, db =  3.2)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.2)         // thump: closed-back box resonance
     .band(freq =  380, q = 0.6, db =  7.0)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  4.0)         // bark:  the upper-mid speaker peak
   )
@@ -191,7 +191,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
   // the cabinet. No note-following highpass after it: the preamp tightens the bass at a fixed frequency, and a filter
   // that moves with every note gave every note the same shape, which the ear reads as synthetic (2026-09-14)
   return cab(amped)
-    .mul(0.16)
+    .mul(0.15)
     .classic()
 }
 
@@ -316,7 +316,7 @@ export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff(
   .clip(guitarClip.fast(2)).pan(0.95).body(material = "maple", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
-  .scale("<e2:minor>").gain(0.142).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.143).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin.range(0.0000, 0.0004).mul(drunk).seg(4))
 
 export guitar3 = n(guitar3_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar3_shape).tag("guitar3")
