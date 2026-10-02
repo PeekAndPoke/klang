@@ -100,6 +100,7 @@ let hitStab = chord("Dm").voicing()
     .sound("superpulse").unison(voices = 8, spread = 0.25).distort(0.3)
     .adsr(0.005, 0.3, 0.5, 10.0)
     .lpf(freq = 80, q = 1.2, env = 71.2, attack = 2.5, decay = 0.5, sustain = 0.5, release = 10.0)
+    .lpfCurves(attack = "invsquare") // opens fast, then slowly: the original sweep, before depth became semitones
     .pan(0.2).superimpose(pan(0.8), transpose(-12).pan(0.5), transpose(-24).pan(0.5), pan(0.5).transpose(12).velocity(0.8))
     .gain(0.32 * 0.3)
     .orbit(3).reverb(wet = 0.4, size = 5)
