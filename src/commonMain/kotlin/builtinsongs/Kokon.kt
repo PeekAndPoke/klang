@@ -287,7 +287,7 @@ export soar = notes => n(notes.add(14))
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
-  .oscp("attack", 1.6).oscp("decay", 1.8).clip(1)
+  .oscp("attack", 2.0).oscp("decay", 1.0).clip(1)
   .lpf(3500)
   .gain(0.09).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
@@ -301,7 +301,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .orbit(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
-export chug = roots => n(roots.add(-7)).struct("x x ~ x x ~ x x")
+export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
   .sound(heavy).adsrOff().unison(voices = 19, spread = 0.10)
   .oscp("decay", 0.15).clip(1)
   .velocity("1.0 0.75 0.9 0.75 0.95 0.75")
@@ -352,14 +352,14 @@ export kick = pat => sound("bd").struct(pat)
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.55)
-  .lpf(freq = 12500, q = 0.5)
-  .delay(0.33, pure(1/16).div(cps), 0.85)
-  .orbit(12).apply(drumRoom)
+  .lpf(freq = 11500, q = 0.5)
+  .delay(0.33, pure(1/16).div(cps), 0.80) // Snare needs it own orbit for the dalay!
+  .orbit(12).apply(drumRoom) 
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
   .hpf(800).lpf(freq = 13500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(0.9).pan(0.4)                            
+  .gain(0.85).pan(0.4)                            
   .orbit(11).apply(drumRoom)
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
