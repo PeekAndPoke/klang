@@ -149,7 +149,7 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
 let clean  = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab1x12)
 let bright = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   powerPushPull, cab4x12)
-  .eq(x => x.band(Osc.freq(), 50.0, Osc.constant(3).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
+  .eq(x => x.band(Osc.freq(), 50.0, Osc.constant(6).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
 let deep   = makeGuitar(pickupNeck,      pedalStock,    preampClean,    powerClassA,   cab4x12)
 let heavy  = makeGuitar(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, cab4x12)
 
@@ -291,7 +291,7 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.05)
-  .tremolo(sync = 4, depth = perlin.range(0.275, 0.325))
+  .tremolo(sync = 4, depth = perlin.range(0.30, 0.35))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
@@ -311,7 +311,7 @@ export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
   .oscp("attack", 1.6).oscp("decay", 1.8).clip(1)
   .lpf(3500)
-  .gain(0.09).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
+  .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -357,7 +357,7 @@ export chime = notes => n(notes.add(14))
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
-  .oscp("decay", 0.30).oscp("sustain", 0.50).oscp("release", 2.5).clip(40)
+  .oscp("decay", 0.30).oscp("sustain", 0.50).oscp("release", 5.0).clip(40)
   .gain(0.20).pan(0.45)
   .orbit(8)
 
@@ -374,7 +374,7 @@ export kick = pat => sound("bd").struct(pat)
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.5).pan(0.55)
-  .delay(0.25, pure(1/16).div(cps), 0.7)
+  .delay(0.25, pure(1/16).div(cps), 0.8)
   .orbit(12).apply(drumRoom)
 
 export hats = pat => sound(pat).n(0)
@@ -394,8 +394,8 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 
 export trommel = (roots, pat) => n(roots.add(-7)).struct(pat)
   .sound(granCassa).adsrOff().velocity("1.0 0.8 0.9")
-  .body(material = "membrane", wet = 0.4).notch(100, 1.2).hpf(55).lpf(3200)
-  .gain(2.75).pan(0.45)
+  .body(material = "membrane", wet = 0.4).notch(100, 1.2).hpf(55).lpf(4500)
+  .gain(2.0).pan(0.45)
   .orbit(14).apply(drumRoom)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -409,21 +409,21 @@ let spinning = stack(
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.23).lpf(3800),
-  sing(melodyOne).gain(0.25),
+  spin(cocoonArp).gain(0.25).lpf(3600),
+  sing(melodyOne).gain(0.27),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.23).lpf(3900),
-  sing(melodyTwo).gain(0.25),
+  spin(cocoonArp).gain(0.25).lpf(3650),
+  sing(melodyTwo).gain(0.27),
   beat(cocoonRoots).gain(saw.range(0.0, 0.25).slow(4)),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.23 0.24 0.25 0.26>").lpf(3800).ply(2),
-  sing(melodyOne).gain(0.25).ply(2),
+  spin(cocoonArp).gain("<0.25 0.26 0.27 0.28>").lpf(3700).ply(2),
+  sing(melodyOne).gain(0.28).ply(2),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.25),
 )
@@ -432,8 +432,8 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp).gain("<0.24 0.25 0.26 0.27>").lpf(3800).ply(2),
-  sing(melodyTwo).gain(0.25).struct("x!32"),
+  spin(cocoonArp).gain("<0.26 0.27 0.28 0.29>").lpf(3700).ply(2),
+  sing(melodyTwo).gain(0.30).struct("x!32"),
   swell(cocoonSwell),
   beat(cocoonRoots).mask(breath),
 )
@@ -468,7 +468,7 @@ let lifting = stack(
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("sustain", 0.6),
   soar("[4@6 ~@2]"),
-  strike("[-7,0,4]").accelerate("-0.1".sub(perlin.range(0.0, 0.05))),
+  strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.15, 0.15))),
   beat("0").gain(0.7),
 )
 
@@ -480,7 +480,7 @@ let flyingOff = stack(
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~>").scale("d3:major"),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").clip(16),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
@@ -498,7 +498,7 @@ let fullKit  = (roots, kicks) => stack(
   bassGuitar(roots, kicks),
   snare("~ ~ sd ~"), 
   hats("[cr oh oh oh]"), 
-  trommel(roots, "[~ [~ x x ~] ~ [x x ~ ~]]")
+  trommel(roots, "[[~ ~ x x] [~ x x ~] [~ ~ x x] [~ x x ~]]")
 )
 let kit = fullKit
 
@@ -508,7 +508,7 @@ let crash = hats("cr").gain(1.0)
 // the lift and sixteenths on its last cycle. The landing is one hit, let ring.
 let heavyDrums = arrange(
   [4, kit(cocoonRoots, "x")],
-  [4, kit(cocoonRoots, "<[x [~ x]] [x [~ x]] [x!2 ~!5 [x x]] [[x x] [~ x]]>")],
+  [4, kit(cocoonRoots, "<[x [~ x]] [x [~ x]] [x!2 ~!5 [x x]] [[x x] [~ [~ x@3]]]>")],
   [3, kit(liftRoots, "<[x!7 [x!2]] [x!7 ~] [x!16]>")],
   [1, stack(crash, kick("x"), bassGuitar("0", "x"), trommel("0", "x"))],
 )
@@ -523,8 +523,8 @@ export song = stack(
     [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [4, flyingOff],
-    [2, lastChord],
+    [8, flyingOff],
+    [4, lastChord],
     [1, silence],
   )
     .scale("d3:minor")

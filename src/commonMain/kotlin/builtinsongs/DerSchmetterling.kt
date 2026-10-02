@@ -266,7 +266,7 @@ export lead_shape = x => x.sound(marimba).adsrOff()
   .clip(1.0)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<1.00!48 0.55!16>").gain(mul(0.11))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<1.00!48 0.55!16>").gain(mul(0.10))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
