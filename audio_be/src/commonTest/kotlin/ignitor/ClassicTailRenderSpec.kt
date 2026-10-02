@@ -25,8 +25,8 @@ import kotlin.random.Random
  * What an UNWRITTEN `classic()` builds, through the gate (phase 3 step 5): every stage whose slot the
  * note does not write is not built, so the tail is the envelope alone, at the voice envelope's
  * defaults and the strip's de-click. And the envelope's own switch: `adsr.on = 0` builds nothing at all
- * but keeps the voice's lifetime. The whole-voice fingerprints, frozen when the strip retired, are
- * `ClassicVoiceBaselineSpec`'s.
+ * but keeps the voice's lifetime. The whole-voice fingerprints frozen when the strip retired were retired in turn at
+ * the phase 3 end checkpoint (2026-10-02); every built-in's own render is fingerprinted in `BuiltInVoiceMatrixSpec`.
  */
 class ClassicTailRenderSpec : StringSpec({
 

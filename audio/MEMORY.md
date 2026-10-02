@@ -139,8 +139,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 ## Open threads
 
-- **By ear** (`docs/tasks/by-ear/README.md`): `phase3-end-checkpoint.md` (retire or regenerate
-  `ClassicVoiceBaselineSpec` and `BuiltInVoiceMatrixSpec`, the strip's frozen sound), `chain-swap-request-during-drain.md`,
+- **By ear** (`docs/tasks/by-ear/README.md`): `chain-swap-request-during-drain.md`,
   `duck-orbit-switch-click.md`, and the owed rounds listed there.
 - **Open, correctness**: `docs/tasks/audit-audio-backend-leftovers.md`,
   `docs/tasks/bugfix-ignitor-non-finite-pitch-amount.md`, `docs/tasks/svf-coefficient-cache-never-engages.md`.

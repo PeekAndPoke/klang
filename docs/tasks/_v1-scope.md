@@ -84,7 +84,7 @@ tutorial ear-checked against a sound that later gets retuned has to be redone.
 | 25 | [`c3-depth-migration-flags.md`](../tasks-archive/2026-10/20261002-c3-depth-migration-flags.md) | **DONE 2026-10-02** by ear: the lament stab fixed, the rest fine |
 | 26 | Body resonator material tables | [`by-ear/README.md`](by-ear/README.md) §3 |
 | 27 | Der Schmetterling re-voicing | [`by-ear/README.md`](by-ear/README.md) §4. Uncommitted; chosen before the master-opening fix landed |
-| 28 | [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) | Added 2026-09-28. One listen at the end of phase 3, then retire or regenerate the two voice baselines |
+| 28 | [`phase3-end-checkpoint.md`](../tasks-archive/2026-10/20261002-phase3-end-checkpoint.md) | **DONE 2026-10-02**: no separate listen; `ClassicVoiceBaselineSpec` retired, `BuiltInVoiceMatrixSpec` is today's baseline |
 | 29 | [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md) | Added 2026-09-28. Phase 3 step 12 decision (g): a second chain edit waits for the old chain's ring-out |
 | 30 | [`by-ear/duck-orbit-switch-click.md`](by-ear/duck-orbit-switch-click.md) | Added 2026-09-28. Katalyst step 5c, measured: moving a ducker's sidechain to a sounding orbit steps the reduction. Leave, blend, or dip |
 

@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurves
  * Until step 9 these rows were `ClassicStripParitySpec`, which also rendered each slot row through the old voice
  * strip. Its per-row loop went with the test consolidation (2026-09-27): the authored-equals-built-in compare could
  * not fail once both were one tree on one path, and each slot's engagement is `ClassicDoorRenderParitySpec`'s (sprudel).
- * The rows' raw-bits fingerprints are `ClassicVoiceBaselineSpec`'s (JVM only: Kotlin/JS math rounds differently, and
- * a whole-number double prints differently in a row's title). The render is [ClassicVoiceRig]'s.
+ * The rows' raw-bits fingerprints (`ClassicVoiceBaselineSpec`, JVM only) were retired at the phase 3 end checkpoint
+ * (2026-10-02): the hand-built oracles here hold the laws. The render is [ClassicVoiceRig]'s.
  */
 class ClassicVoiceContractSpec : StringSpec({
 

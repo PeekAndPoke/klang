@@ -24,25 +24,23 @@ import io.peekandpoke.klang.audio_bridge.endsInClassic
 import kotlin.random.Random
 
 /**
- * **Every built-in sound, untouched and with `analog 2, lpf 1200`: a BASELINE** (signal-flow plan section 12),
- * frozen when the voice strip retired (phase 3 step 9, 2026-09-27). Each built-in name renders one note through the
- * real `VoiceFactory`, the row's settings sent as `classic()`'s slots.
+ * **Every built-in sound, untouched and with `analog 2, lpf 1200`: the BASELINE of the instruments' sound.** Each
+ * built-in name renders one note through the real `VoiceFactory`, the row's settings sent as `classic()`'s slots,
+ * and the render's raw bits are pinned ([rawBitsHash]). It is the one wide guard against an accidental change to
+ * any built-in's sound.
  *
- * Until step 9 this spec rendered each row a second time with the name's SOURCE registered as an authored
- * instrument, so the voice strip ran after it, and compared the two (phase 3 step 6): every row bit-identical,
- * except the recorded cost of section 8 of `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (`perlin`, `berlin` and `crackle`
- * draw from the voice's stream when CONSTRUCTED, so with `analog > 0` and one filter the tree's filter draw comes
- * after theirs). Before the strip was deleted, every row's built-in render was fingerprinted on the tree that still
- * had it ([rawBitsHash]); those fingerprints are pinned here, regenerated at a listening checkpoint when a change
- * is meant to move a row, never hand-edited, never derived from the tree under test.
+ * History: frozen when the voice strip retired (phase 3 step 9, 2026-09-27), as "the strip's sound" through the
+ * migration; every row was then bit-identical to the strip except four, the recorded cost of section 8 of
+ * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` (`perlin`, `berlin` and `crackle` draw from the
+ * voice's stream when CONSTRUCTED, so with `analog > 0` and one filter the tree's filter draw comes after theirs;
+ * the `analog 2, lpf 1200` row keeps that draw order guarded). At the phase 3 end checkpoint (2026-10-02, the
+ * maintainer) it became the baseline of today's tree: the pins were confirmed unchanged that day, and
+ * `ClassicVoiceBaselineSpec`, the deep table of `saw` through every slot, was retired (its job done; the stage laws
+ * are their own specs').
  *
- * Trimmed by the test consolidation (2026-09-28) to the two rows only this spec guards: `untouched`, the one
- * bit-level fingerprint of each built-in's SOURCE, and `analog 2, lpf 1200`, the section 8 draw-order record. The
- * per-stage rows it dropped ran the same `classic()` chain once per name; the stage laws are their own specs', the
- * whole-voice bits of the stages, on `saw`, `ClassicVoiceBaselineSpec`'s.
- *
- * `ClassicVoiceBaselineSpec` is the deep table (one source, the slots, both rates); this one is wide (every
- * built-in, one rate). JVM only, like the fingerprints of that table.
+ * When a change is MEANT to move a row (a sound decision, heard), regenerate the pins from the printed
+ * `MATRIX-BASELINE` lines and say so in the commit; never hand-edit one, never derive them from the tree under test
+ * in the spec itself. JVM only (Kotlin/JS math rounds differently).
  */
 class BuiltInVoiceMatrixSpec : StringSpec({
 

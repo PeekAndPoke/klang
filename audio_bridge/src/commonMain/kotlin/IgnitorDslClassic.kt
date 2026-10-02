@@ -223,7 +223,7 @@ class SampleSlots internal constructor() {
  * tree with `classic()` below its root (`a.classic().plus(b.classic())`) gets the doors per branch.
  *
  * Per stage, what each node is and how it relates to the retired strip (proven bit-identical row by row
- * before the strip was deleted; the frozen fingerprints live in `ClassicVoiceBaselineSpec`):
+ * before the strip was deleted; their frozen fingerprints were retired at the phase 3 end checkpoint, 2026-10-02):
  *  - the crush renders the strip's own `floor` quantizer, one shared law (decision D1, landed in step 4).
  *    It has no oversampler, so `crush(oversample = ...)` does nothing (tracked in
  *    `docs/tasks/oversampling-regions.md`);

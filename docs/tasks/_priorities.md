@@ -138,9 +138,9 @@ The release-defining set, regardless of when they're sequenced:
     measure the win via `runSongBenchmark`.
 22. **Phase 3 follow-ups** (opened 2026-09-28 when the phase 3 record was archived as
     [`20260928-builtin-instruments.md`](../tasks-archive/2026-09/20260928-builtin-instruments.md)):
-    - **By ear, owed:** [`by-ear/phase3-end-checkpoint.md`](by-ear/phase3-end-checkpoint.md) (retire or regenerate
-      the two voice baselines) and [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)
-      (step 12 decision (g)).
+    - **By ear, owed:** [`by-ear/chain-swap-request-during-drain.md`](by-ear/chain-swap-request-during-drain.md)
+      (step 12 decision (g)). The phase 3 end checkpoint is done (2026-10-02,
+      [archived](../tasks-archive/2026-10/20261002-phase3-end-checkpoint.md)).
     - **NICE, deferred by the maintainer:** [`future/editor-voice-door-diagnostics.md`](future/editor-voice-door-diagnostics.md)
       (step 11: warn on doors an instrument does not hear, a string in a wet slot).
     - **NICE, a naming decision:** [`future/tremolo-rate-naming-parity.md`](future/tremolo-rate-naming-parity.md)

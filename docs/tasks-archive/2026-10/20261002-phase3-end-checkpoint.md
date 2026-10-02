@@ -1,6 +1,9 @@
 # The phase 3 end checkpoint: retire or regenerate the two voice baselines
 
-Status: **owed, by ear.** Opened 2026-09-28 when the phase 3 record was archived
+Status: **DONE 2026-10-02 (maintainer, option a).** No separate listen: the earlier checkpoints are sufficient, and
+the maintainer has heard today's songs daily since phase 3. `ClassicVoiceBaselineSpec` RETIRED (its job done);
+`BuiltInVoiceMatrixSpec` kept as the baseline of today's tree (its pins confirmed unchanged that day, the KDoc
+rewritten, mutation-checked: a saw reset of 1.5 turns exactly the saw and ramp rows red). Opened 2026-09-28 when the phase 3 record was archived
 (`docs/tasks-archive/2026-09/20260928-builtin-instruments.md`). The decision it closes is the test consolidation's
 (`docs/tasks-archive/2026-09/20260928-test-consolidation.md` section 4: "trimmed now, retired or regenerated at the
 phase 3 end listening checkpoint").
