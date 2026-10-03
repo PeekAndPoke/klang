@@ -188,7 +188,7 @@ class WarmupRunner(
                         freqHz = 220.0 + 20.0 * orbit,
                         cylinder = orbit,
                         // The envelope and the lowpass as `classic()`'s slots, for the built-ins and the sample.
-                        oscParams = WARMUP_CLASSIC_SLOTS,
+                        ignitorParams = WARMUP_CLASSIC_SLOTS,
                         katalystParams = mapOf(
                             "delay.wet" to 0.5,
                             "delay.time" to 0.3,

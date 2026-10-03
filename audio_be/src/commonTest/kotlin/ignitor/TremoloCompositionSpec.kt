@@ -78,7 +78,7 @@ class TremoloCompositionSpec : StringSpec({
     }
 
     fun build(dsl: IgnitorDsl, sampleRate: Int, params: Map<String, Double>? = null): Ignitor =
-        dsl.buildExciter(oscParams = params, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
+        dsl.buildExciter(ignitorParams = params, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
 
     fun renderNode(
         dsl: IgnitorDsl,

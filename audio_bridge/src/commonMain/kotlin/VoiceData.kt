@@ -37,12 +37,12 @@ data class VoiceData(
 
     // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]), the sample's "begin"/"end"/"speed"/"loop",
     // the oscillators' own ("density", "voices", "spread") and raw oscp() writes. sprudel's "panSpread" is unread.
-    val oscParams: Map<String, Double>?,
+    val ignitorParams: Map<String, Double>?,
 
     /**
      * The orbit bus slots this voice writes, keyed `<stage>.<knob>` exactly as [KatalystDsl.classic]
-     * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.orbit"`). The [oscParams] shape, the
-     * other host: `oscParams` is the voice's own instrument, this is the orbit's chain.
+     * names them (`"reverb.size"`, `"compressor.ratio"`, `"duck.orbit"`). The [ignitorParams] shape, the
+     * other host: `ignitorParams` is the voice's own instrument, this is the orbit's chain.
      *
      * **Applied by the orbit's OWNER voice**, the one holding the cylinder's lease: a declared
      * chain's [IgnitorDsl.Param] knobs resolve to `katalystParams[name]` and fall back to the
@@ -180,7 +180,7 @@ data class VoiceData(
             bank = null,
             sound = null,
             soundIndex = null,
-            oscParams = null,
+            ignitorParams = null,
             katalystParams = null,
             accelerate = null,
             vibrato = null,

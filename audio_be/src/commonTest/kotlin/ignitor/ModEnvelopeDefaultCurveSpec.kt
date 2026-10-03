@@ -103,7 +103,7 @@ class ModEnvelopeDefaultCurveSpec : StringSpec({
     }
 
     fun renderDsl(dsl: IgnitorDsl): List<Long> {
-        val ig = dsl.buildExciter(oscParams = null, random = Random(3), freqHz = 220.0).ignitor
+        val ig = dsl.buildExciter(ignitorParams = null, random = Random(3), freqHz = 220.0).ignitor
 
         return renderRuntime(ig, 220.0).map { it.toRawBits() }
     }

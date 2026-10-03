@@ -40,16 +40,16 @@ class ClassicSlotParamsSpec : StringSpec({
 
     fun wire(p: SprudelPattern?) = (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
 
-    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).oscParams ?: emptyMap()
+    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).ignitorParams ?: emptyMap()
 
     "no voice door written: the wire bag is the event's own bag, and no bag at all without one" {
-        wire(note("c")).oscParams shouldBe null
+        wire(note("c")).ignitorParams shouldBe null
         slots(note("c").oscp("voices", 3)) shouldBe mapOf("voices" to 3.0)
     }
 
     "only a FINITE value is written: a non-finite door value leaves the slot unset" {
         createSprudelVoiceData { crush = Double.NaN; release = Double.POSITIVE_INFINITY; cutoff = 800.0; resonance = Double.NaN }
-            .toVoiceData().oscParams shouldBe mapOf("lpf.freq" to 800.0)
+            .toVoiceData().ignitorParams shouldBe mapOf("lpf.freq" to 800.0)
     }
 
     "the typed door wins over an oscp of the same key, in either order" {

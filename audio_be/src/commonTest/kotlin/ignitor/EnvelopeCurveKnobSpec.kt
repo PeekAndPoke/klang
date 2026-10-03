@@ -67,7 +67,7 @@ class EnvelopeCurveKnobSpec : StringSpec({
     }
 
     fun renderDsl(dsl: IgnitorDsl, params: Map<String, Double>? = null): List<Long> =
-        render(dsl.buildExciter(oscParams = params, random = Random(3), freqHz = freqHz).ignitor)
+        render(dsl.buildExciter(ignitorParams = params, random = Random(3), freqHz = freqHz).ignitor)
 
     // ── The chain `adsr` ──────────────────────────────────────────────────────────────────────
 

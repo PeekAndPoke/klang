@@ -293,7 +293,7 @@ private fun expandPasses(
             // of that row guards the other invariant, that a non-literal q goes through `times`
             // on both doors.
             //
-            // Where a non-finite q comes from, since 2026-09-19: NOT from `oscParams`. The
+            // Where a non-finite q comes from, since 2026-09-19: NOT from `ignitorParams`. The
             // `IgnitorDsl.Param` leaf reads a non-finite OVERRIDE as unset and falls back to
             // the slot's default (`IgnitorDslRuntime`). Two routes keep this pair live: an
             // authored `IgnitorDsl.Param` whose DEFAULT is non-finite (a default is the

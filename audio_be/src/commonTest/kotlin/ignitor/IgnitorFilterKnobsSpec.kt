@@ -69,7 +69,7 @@ class IgnitorFilterKnobsSpec : StringSpec({
 
     fun build(dsl: IgnitorDsl, params: Map<String, Double>? = null, rng: Random = seed()): Ignitor =
         dsl.buildExciter(
-            oscParams = params, random = rng, freqHz = freqHz,
+            ignitorParams = params, random = rng, freqHz = freqHz,
             sampleRate = sampleRate, blockFrames = blockFrames,
         ).ignitor
 

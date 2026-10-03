@@ -354,7 +354,7 @@ class IgnitorRegistryTest : StringSpec({
         val registry = IgnitorRegistry().apply { registerDefaults() }
 
         fun rootOf(bag: Map<String, Double>): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", oscParams = bag)
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "saw", ignitorParams = bag)
             val root = registry.createExciter("saw", data, freqHz = 220.0)?.ignitor ?: error("no exciter")
 
             return (root as MemoizingIgnitor).inner

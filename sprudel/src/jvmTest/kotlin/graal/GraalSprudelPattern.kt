@@ -116,8 +116,8 @@ class GraalSprudelPattern(
         val soundIndex = value.safeGetMember("n").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
-        // Get Oscillator parameters → build oscParams map
-        val oscParams = buildMap {
+        // Get Oscillator parameters → build ignitorParams map
+        val ignitorParams = buildMap {
             value.safeGetMember("density").safeNumberOrNull()?.let { put("density", it) }
             value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
@@ -331,7 +331,7 @@ class GraalSprudelPattern(
                 it.sound = sound?.let(SoundValue::Named)
                 it.soundIndex = soundIndex
                 // Oscillator parameters
-                it.oscParams = oscParams?.let { params -> paramBagOf(params) }
+                it.ignitorParams = ignitorParams?.let { params -> paramBagOf(params) }
                 // ADSR (flat fields)
                 it.attack = attack
                 it.decay = decay

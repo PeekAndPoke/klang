@@ -39,7 +39,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
     // cutoff tolerance AND the filter-modulator drift — every voice-stream consumer family.
     fun noteData(): VoiceData = VoiceData.empty.copy(
         sound = "supersaw",
-        oscParams = mapOf("analog" to 3.0),
+        ignitorParams = mapOf("analog" to 3.0),
     ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = 2000.0, q = 1.0))))
 
     val sampleSound = "seedtest"
@@ -143,7 +143,7 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
             )
             rig.schedule(
                 0.0,
-                VoiceData.empty.copy(sound = sampleSound, oscParams = mapOf("analog" to 3.0)),
+                VoiceData.empty.copy(sound = sampleSound, ignitorParams = mapOf("analog" to 3.0)),
             )
             return rig.render(blocks = 20)
         }

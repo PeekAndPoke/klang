@@ -150,7 +150,7 @@ object ClassicVoiceRig {
         sampleRate: Int,
         sound: String = "saw",
         voice: VoiceData.() -> VoiceData = { this },
-    ): DoubleArray = render(base.copy(sound = sound, oscParams = bag.takeIf { it.isNotEmpty() }).voice(), sampleRate)
+    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = bag.takeIf { it.isNotEmpty() }).voice(), sampleRate)
 
     fun firstMismatch(a: DoubleArray, b: DoubleArray): Int = a.indices.firstOrNull { a[it].toRawBits() != b[it].toRawBits() } ?: -1
 

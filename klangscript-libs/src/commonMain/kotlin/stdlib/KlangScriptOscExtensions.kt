@@ -25,7 +25,7 @@ typealias IgnitorDslLike = Any
 
 /**
  * Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not
- * overridable by oscParams). Anything else is a script-level type error naming what arrived, so a
+ * overridable by ignitorParams). Anything else is a script-level type error naming what arrived, so a
  * lambda that landed on a sound slot (`Osc.whitenoise(x => ...)`, which has no `configure`) reads
  * as "got a function", not as an internal error.
  */

@@ -36,7 +36,7 @@ internal const val CRUSH_OVERSAMPLE_KEY = "crush.oversample"
 internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
 
 /**
- * The wire's slot bag of this event: the event's own `oscParams` plus every typed voice door written under
+ * The wire's slot bag of this event: the event's own `ignitorParams` plus every typed voice door written under
  * its slot (`<door>.<param>`, the names read from the `Param` objects of [IgnitorDsl.Slots], never retyped).
  *
  * The rules (they moved here from the backend with the translation):
@@ -61,11 +61,11 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
         distortion == null && tremolo == null && sample == null
     ) {
-        return oscParams?.toMap()
+        return ignitorParams?.toMap()
     }
 
     val k = ClassicSlotKeys
-    val bag = ClassicSlotParams(oscParams)
+    val bag = ClassicSlotParams(ignitorParams)
 
     distortion?.let { d ->
         bag.put(k.crushAmount, d.crush)

@@ -30,8 +30,8 @@ import io.peekandpoke.klang.audio_bridge.plus
  */
 class IgnitorTailSpec : StringSpec({
 
-    fun tailOf(dsl: IgnitorDsl, oscParams: Map<String, Double>? = null, freqHz: Double = 440.0): Double? =
-        dsl.buildExciter(oscParams, freqHz = freqHz).releaseTailSec
+    fun tailOf(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null, freqHz: Double = 440.0): Double? =
+        dsl.buildExciter(ignitorParams, freqHz = freqHz).releaseTailSec
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
@@ -59,13 +59,13 @@ class IgnitorTailSpec : StringSpec({
         // via .oscp("release", …) was delivered as the voice's own ~0.05 s. The override is folded
         // into ParamIgnitor at build time, so it reaches the tail with no second lookup rule.
         val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("rel", 0.013))
-        tailOf(dsl, oscParams = mapOf("rel" to 1.5)) shouldBe 1.5
+        tailOf(dsl, ignitorParams = mapOf("rel" to 1.5)) shouldBe 1.5
     }
 
     "an oscp override under a different param name works the same" {
         // The name is never hardcoded; it is read off the node.
         val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("damping", 0.02))
-        tailOf(dsl, oscParams = mapOf("damping" to 0.9)) shouldBe 0.9
+        tailOf(dsl, ignitorParams = mapOf("damping" to 0.9)) shouldBe 0.9
     }
 
     // ── Expressions: the old hardcoded `else -> 0.3` guess ────────────────────
@@ -191,14 +191,14 @@ class IgnitorTailSpec : StringSpec({
         registry.createExciter("pad", data, 440.0)?.releaseTailSec shouldBe 1.1
 
         // The onepole wrap replaces the ignitor; it must not drop the finding with it.
-        val withOnepole = data.copy(oscParams = mapOf("onepole" to 900.0))
+        val withOnepole = data.copy(ignitorParams = mapOf("onepole" to 900.0))
         registry.createExciter("pad", withOnepole, 440.0)?.releaseTailSec shouldBe 1.1
     }
     // ── endsInEnvelope: the root is a BUILT amplitude envelope (phase 3 step 6) ──────────────────
 
     "endsInEnvelope: classic()'s envelope when it is on; switched off it hands on what is below it; not for a bare source, not under a later stage" {
-        fun ends(dsl: IgnitorDsl, oscParams: Map<String, Double>? = null): Boolean =
-            dsl.buildExciter(oscParams, freqHz = 440.0).endsInEnvelope
+        fun ends(dsl: IgnitorDsl, ignitorParams: Map<String, Double>? = null): Boolean =
+            dsl.buildExciter(ignitorParams, freqHz = 440.0).endsInEnvelope
 
         ends(IgnitorDsl.Sine().classic()) shouldBe true
         ends(IgnitorDsl.Sine().classic(), mapOf("adsr.on" to 0.0)) shouldBe false

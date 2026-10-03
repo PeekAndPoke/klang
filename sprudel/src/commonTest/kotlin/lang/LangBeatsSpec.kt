@@ -170,8 +170,8 @@ class LangBeatsSpec : StringSpec({
 
         val wire = note("c3").tremolo(0.6, beatRate(0)).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
-        wire.oscParams?.containsKey("tremolo.rate") shouldBe false
-        wire.oscParams?.get("tremolo.depth") shouldBe 0.6
+        wire.ignitorParams?.containsKey("tremolo.rate") shouldBe false
+        wire.ignitorParams?.get("tremolo.depth") shouldBe 0.6
     }
 
     "beatRate is one over beats" {

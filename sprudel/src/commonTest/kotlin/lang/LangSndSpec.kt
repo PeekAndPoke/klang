@@ -157,7 +157,7 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "pulze"
-                events[0].data.oscParams?.get("duty") shouldBe 0.25
+                events[0].data.ignitorParams?.get("duty") shouldBe 0.25
             }
         }
     }
@@ -181,7 +181,7 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "dust"
-                events[0].data.oscParams?.get("density") shouldBe 0.3
+                events[0].data.ignitorParams?.get("density") shouldBe 0.3
             }
         }
     }
@@ -193,12 +193,12 @@ class LangSndSpec : StringSpec({
         events[0].data.soundName shouldBe "dust"
     }
 
-    "sndDust(density, tail) sets both oscParams" {
+    "sndDust(density, tail) sets both ignitorParams" {
         val events = note("c3").sndDust(0.3, 4).queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {
-            events[0].data.oscParams?.get("density") shouldBe 0.3
-            events[0].data.oscParams?.get("tail") shouldBe 4.0
+            events[0].data.ignitorParams?.get("density") shouldBe 0.3
+            events[0].data.ignitorParams?.get("tail") shouldBe 4.0
         }
     }
 
@@ -207,7 +207,7 @@ class LangSndSpec : StringSpec({
         events.shouldNotBeEmpty()
         assertSoftly {
             events[0].data.soundName shouldBe "whitenoise"
-            events[0].data.oscParams?.get("color") shouldBe -0.5
+            events[0].data.ignitorParams?.get("color") shouldBe -0.5
         }
     }
 
@@ -216,7 +216,7 @@ class LangSndSpec : StringSpec({
         events.shouldNotBeEmpty()
         assertSoftly {
             events[0].data.soundName shouldBe "brownnoise"
-            events[0].data.oscParams?.get("depth") shouldBe 0.5
+            events[0].data.ignitorParams?.get("depth") shouldBe 0.5
         }
     }
 
@@ -232,7 +232,7 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "crackle"
-                events[0].data.oscParams?.get("chaos") shouldBe 0.5
+                events[0].data.ignitorParams?.get("chaos") shouldBe 0.5
             }
         }
     }
@@ -258,8 +258,8 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "supersaw"
-                events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("spread") shouldBe 0.3
+                events[0].data.ignitorParams?.get("voices") shouldBe 7.0
+                events[0].data.ignitorParams?.get("spread") shouldBe 0.3
             }
         }
     }
@@ -283,8 +283,8 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "supersine"
-                events[0].data.oscParams?.get("voices") shouldBe 5.0
-                events[0].data.oscParams?.get("spread") shouldBe 0.2
+                events[0].data.ignitorParams?.get("voices") shouldBe 5.0
+                events[0].data.ignitorParams?.get("spread") shouldBe 0.2
             }
         }
     }
@@ -308,8 +308,8 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "supersquare"
-                events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("spread") shouldBe 0.3
+                events[0].data.ignitorParams?.get("voices") shouldBe 7.0
+                events[0].data.ignitorParams?.get("spread") shouldBe 0.3
             }
         }
     }
@@ -333,8 +333,8 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "supertri"
-                events[0].data.oscParams?.get("voices") shouldBe 5.0
-                events[0].data.oscParams?.get("spread") shouldBe 0.2
+                events[0].data.ignitorParams?.get("voices") shouldBe 5.0
+                events[0].data.ignitorParams?.get("spread") shouldBe 0.2
             }
         }
     }
@@ -358,8 +358,8 @@ class LangSndSpec : StringSpec({
             events.shouldNotBeEmpty()
             assertSoftly {
                 events[0].data.soundName shouldBe "superramp"
-                events[0].data.oscParams?.get("voices") shouldBe 7.0
-                events[0].data.oscParams?.get("spread") shouldBe 0.3
+                events[0].data.ignitorParams?.get("voices") shouldBe 7.0
+                events[0].data.ignitorParams?.get("spread") shouldBe 0.3
             }
         }
     }

@@ -39,7 +39,7 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.paramBagOf
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.putKatalystParam
-import io.peekandpoke.klang.sprudel.putOscParam
+import io.peekandpoke.klang.sprudel.putIgnitorParam
 
 /**
  * The orbit chain's param state on the pattern side (Katalyst step 5a): the `.katp` door, the bus
@@ -108,7 +108,7 @@ class LangKatalystParamSpec : StringSpec({
         val p = note("c3").katp("room", 5).oscp("room", 7)
 
         slot(p, "room") shouldBe 5.0
-        p.queryArc(0.0, 1.0).first().data.oscParams?.get("room") shouldBe 7.0
+        p.queryArc(0.0, 1.0).first().data.ignitorParams?.get("room") shouldBe 7.0
     }
 
     // ── The bus doors as aliases ─────────────────────────────────────────────────────────────────
@@ -606,7 +606,7 @@ class LangKatalystParamSpec : StringSpec({
         }
     }
 
-    "merge is last-writer-wins per key, like oscParams" {
+    "merge is last-writer-wins per key, like ignitorParams" {
         val base = createSprudelVoiceData { katalystParams = paramBagOf("reverb.size" to 3.0, "room" to 1.0) }
         val other = createSprudelVoiceData { katalystParams = paramBagOf("room" to 9.0, "delay.time" to 0.5) }
 
@@ -623,16 +623,16 @@ class LangKatalystParamSpec : StringSpec({
         val wire = data.toVoiceData()
 
         wire.katalystParams shouldNotBeSameInstanceAs data.katalystParams
-        wire.oscParams shouldNotBeSameInstanceAs data.oscParams
+        wire.ignitorParams shouldNotBeSameInstanceAs data.ignitorParams
 
         // Why it has to be a copy: the backend keeps `Voice.katalystParams` for the whole life of
         // the voice and its chain gates the re-resolve on the map's IDENTITY, so a write sprudel
         // made afterwards would move an orbit's settings with nothing to notice it.
         data.putKatalystParam("room", 9.0)
-        data.putOscParam("analog", 9.0)
+        data.putIgnitorParam("analog", 9.0)
 
         wire.katalystParams shouldBe mapOf("room" to 2.0)
-        wire.oscParams shouldBe mapOf("analog" to 4.0)
+        wire.ignitorParams shouldBe mapOf("analog" to 4.0)
     }
 
     "toVoiceData carries the map to the wire" {

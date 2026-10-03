@@ -30,7 +30,7 @@ class LangPitchParamNamesSpec : StringSpec({
         firstData(SprudelPattern.compile("""note("c").vibrato(depth = 0.5)""")).vibratoMod shouldBe 0.5
         firstData(SprudelPattern.compile("""note("c").accelerate(semitones = 12)""")).accelerate shouldBe 12.0
         firstData(SprudelPattern.compile("""note("c").lpf(freq = 800, env = 24)""")).lpenv shouldBe 24.0
-        firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).oscParams?.get("onepole") shouldBe 3743.0
+        firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).ignitorParams?.get("onepole") shouldBe 3743.0
     }
 
     "ignitor doors: semitone params on the nodes, freq on onepole" {

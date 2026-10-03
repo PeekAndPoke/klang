@@ -902,10 +902,10 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Super oscillator DSL — oscParams override voices
+    // Super oscillator DSL — ignitorParams override voices
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - oscParams override voices changes output" {
+    "supersaw DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSaw(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -914,7 +914,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "supersine DSL - oscParams override voices changes output" {
+    "supersine DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSine(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -923,7 +923,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "supersquare DSL - oscParams override voices changes output" {
+    "supersquare DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperSquare(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -932,7 +932,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "supertri DSL - oscParams override voices changes output" {
+    "supertri DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperTri(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -941,7 +941,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "superramp DSL - oscParams override voices changes output" {
+    "superramp DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperRamp(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -950,7 +950,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "superpluck DSL - oscParams override voices changes output" {
+    "superpluck DSL - ignitorParams override voices changes output" {
         val dsl = IgnitorDsl.SuperPluck(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
@@ -960,10 +960,10 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Super oscillator DSL — voices=1 via oscParams
+    // Super oscillator DSL — voices=1 via ignitorParams
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - oscParams voices=1 produces single-voice output" {
+    "supersaw DSL - ignitorParams voices=1 produces single-voice output" {
         val dsl = IgnitorDsl.SuperSaw()
         val buf = generate(dsl.toExciter(mapOf("voices" to 1.0)), freqHz = 440.0)
         buf.any { it != 0.0 } shouldBe true
@@ -972,10 +972,10 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Super oscillator DSL — absent oscParams uses data class default
+    // Super oscillator DSL — absent ignitorParams uses data class default
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - absent oscParams uses default voices" {
+    "supersaw DSL - absent ignitorParams uses default voices" {
         val dsl = IgnitorDsl.SuperSaw(voices = IgnitorDsl.Param("voices", 5.0))
         val bufNull = generate(dsl.toExciter(null), freqHz = 440.0)
         val bufEmpty = generate(dsl.toExciter(emptyMap()), freqHz = 440.0)
@@ -989,10 +989,10 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Super oscillator DSL — multiple oscParams together
+    // Super oscillator DSL — multiple ignitorParams together
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - multiple oscParams applied together" {
+    "supersaw DSL - multiple ignitorParams applied together" {
         val dsl = IgnitorDsl.SuperSaw()
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "spread" to 0.5)), freqHz = 440.0)
@@ -1003,10 +1003,10 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Other DSL oscParams overrides
+    // Other DSL ignitorParams overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw DSL - oscParams override spread" {
+    "supersaw DSL - ignitorParams override spread" {
         val dsl = IgnitorDsl.SuperSaw(spread = IgnitorDsl.Param("spread", 0.1))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("spread" to 0.5)), freqHz = 440.0)
@@ -1015,7 +1015,7 @@ class ExcitersTest : StringSpec({
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
-    "dust DSL - oscParams override density" {
+    "dust DSL - ignitorParams override density" {
         val dsl = IgnitorDsl.Dust(density = IgnitorDsl.Param("density", 0.01))
         val sigOverride = dsl.toExciter(mapOf("density" to 0.99))
         val sigDefault = dsl.toExciter()
@@ -1031,7 +1031,7 @@ class ExcitersTest : StringSpec({
     // Constant vs Param behavior
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "Constant is not overridden by oscParams" {
+    "Constant is not overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(880.0))
         val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam tries to override
         val buf = generate(sig, freqHz = 220.0)  // voice freq is 220
@@ -1041,7 +1041,7 @@ class ExcitersTest : StringSpec({
         crossings shouldBeInRange 170..185
     }
 
-    "Param is overridden by oscParams" {
+    "Param is overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Param("freq", 880.0))
         val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam overrides
         val buf = generate(sig, freqHz = 220.0)

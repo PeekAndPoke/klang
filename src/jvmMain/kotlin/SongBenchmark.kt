@@ -192,10 +192,10 @@ class SongBenchmark(
 
         // Register inline oscillators (same as KlangOfflineRenderer).
         rawEvents.asSequence()
-            .mapNotNull { it.sound as? SoundValue.Osc }
+            .mapNotNull { it.sound as? SoundValue.Dsl }
             .forEach { sv ->
-                val name = sv.osc.uniqueId()
-                if (!ignitorRegistry.contains(name)) ignitorRegistry.register(name, sv.osc)
+                val name = sv.ignitor.uniqueId()
+                if (!ignitorRegistry.contains(name)) ignitorRegistry.register(name, sv.ignitor)
             }
 
         data class Ev(val start: Double, val dur: Double, val data: VoiceData)
@@ -269,7 +269,7 @@ class SongBenchmark(
             .coerceAtMost(numBlocks - 1)
 
         // The work columns: after each measured block, the rendering voices are summed through the
-        // census of their OPTIMIZED graphs, resolved with each voice's oscParams (the unison count
+        // census of their OPTIMIZED graphs, resolved with each voice's ignitorParams (the unison count
         // lives there) and its sound index (the variant that plays); a sample voice counts as one
         // pass that writes the block. The pass's render time is the SUM of the per-block timings, so
         // the census, which sits between two blocks, costs the numbers nothing; it allocates, which
@@ -300,7 +300,7 @@ class SongBenchmark(
 
                 for (data in rendering) {
                     val sound = data.sound ?: IgnitorRegistry.DEFAULT_SOUND
-                    val params = data.oscParams ?: emptyMap()
+                    val params = data.ignitorParams ?: emptyMap()
                     val index = data.soundIndex ?: 0
                     val census = censusByVoice.getOrPut("$sound|$index|$params") {
                         ignitorRegistry.optimized(sound)?.let { GraphCensus.of(it, blockFrames, params, index) } ?: sampleVoice

@@ -437,7 +437,7 @@ object KlangScriptOsc {
     // ── Constant ────────────────────────────────────────────────────────────
 
     /**
-     * Creates a fixed constant value that cannot be overridden by oscParams.
+     * Creates a fixed constant value that cannot be overridden by ignitorParams.
      *
      * Use when you want an explicit, locked value in the signal graph.
      *

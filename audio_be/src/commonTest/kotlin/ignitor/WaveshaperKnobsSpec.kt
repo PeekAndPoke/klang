@@ -80,7 +80,7 @@ class WaveshaperKnobsSpec : StringSpec({
     /** [dsl] through the DSL runtime, ONE `Random` for the build and the render, as a voice has. */
     fun render(dsl: IgnitorDsl, params: Map<String, Double>? = null): DoubleArray {
         val rng = seed()
-        val ignitor = dsl.buildExciter(oscParams = params, random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz, sampleRate = sampleRate).ignitor
 
         return renderBuilt(ignitor, rng)
     }
@@ -272,7 +272,7 @@ class WaveshaperKnobsSpec : StringSpec({
 
     "gatesOutput: a built tremolo on the spine reports it; a gated one, a parameter-position one and none do not" {
         fun IgnitorDsl.gates(params: Map<String, Double>? = null): Boolean =
-            buildExciter(oscParams = params, random = seed(), freqHz = freqHz, sampleRate = sampleRate).gatesOutput
+            buildExciter(ignitorParams = params, random = seed(), freqHz = freqHz, sampleRate = sampleRate).gatesOutput
 
         val source = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq)
 

@@ -73,7 +73,7 @@ internal class InlineDslRegistrar(
          * that sweep, which is how the sweep came to exist in two places in the first place.
          *
          * An ignitor name that is already taken is left alone: the built-in sounds are seeded in
-         * the same registry, and a synthetic `osc-N` must never shadow one.
+         * the same registry, and a synthetic `ignitor-N` must never shadow one.
          */
         fun intoRegistries(
             ignitors: IgnitorRegistry,
@@ -110,8 +110,8 @@ internal class InlineDslRegistrar(
     fun announceAll(events: List<KlangPatternEvent>) {
         events.asSequence()
             .map { it.sound }
-            .filterIsInstance<SoundValue.Osc>()
-            .forEach { ignitors.registerOrLookup(it.osc) }
+            .filterIsInstance<SoundValue.Dsl>()
+            .forEach { ignitors.registerOrLookup(it.ignitor) }
 
         // Both positions carry the same chain type into the ONE registry: an output chain
         // (`master(...)`) and an orbit chain (`katalyst(...)`) are announced alike, and a chain

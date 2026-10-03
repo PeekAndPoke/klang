@@ -44,7 +44,7 @@ class LangDefaultQSpec : StringSpec({
     }
 
     "a bare filter sends no q: the classic() slot default builds it" {
-        note("c").lpf(800).queryArc(0.0, 1.0).first().data.toVoiceData().oscParams?.containsKey("lpf.q") shouldBe false
+        note("c").lpf(800).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.containsKey("lpf.q") shouldBe false
         slotQ shouldBe listOf(q, q, q, q)
     }
 

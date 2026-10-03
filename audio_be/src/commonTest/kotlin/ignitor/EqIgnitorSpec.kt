@@ -31,7 +31,7 @@ import kotlin.random.Random
  * this is the graph the optimizer will replace, wired for real). EqCore's own bit-identity is
  * proven at the core level (EqCoreSpec); this spec pins the ADAPTER: param resolution through
  * [Ignitors.readParam] (incl. the tracking-HP `Freq`-backed cutoff across voice frequencies),
- * oscParams overrides reaching section params, the per-section static/dynamic coefficient
+ * ignitorParams overrides reaching section params, the per-section static/dynamic coefficient
  * cache classification, the adapter-owned 0 dB bell skip, and the production sub-block shape.
  *
  * NaN compares as NaN (payload bits are outside every layer's contract — see EqCoreSpec).
@@ -90,12 +90,12 @@ class EqIgnitorSpec : StringSpec({
     fun assertDslParity(
         chained: IgnitorDsl,
         fused: IgnitorDsl,
-        oscParams: Map<String, Double>? = null,
+        ignitorParams: Map<String, Double>? = null,
         freqs: List<Double> = listOf(220.0),
     ) {
         for (f in freqs) {
-            val a = chained.toExciter(oscParams)
-            val b = fused.toExciter(oscParams)
+            val a = chained.toExciter(ignitorParams)
+            val b = fused.toExciter(ignitorParams)
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
             val ca = ctx()
@@ -581,9 +581,9 @@ class EqIgnitorSpec : StringSpec({
         assertDslParity(without, with)
     }
 
-    "oscParams override reaches section params" {
+    "ignitorParams override reaches section params" {
         // A Param-backed bell db overridden at play time must land exactly like a Constant
-        // of the same value — the oscParams plumbing goes through the same buildIgnitor leaf
+        // of the same value — the ignitorParams plumbing goes through the same buildIgnitor leaf
         // path as every other param.
         val overridden = IgnitorDsl.Eq(
             inner = IgnitorDsl.Sawtooth(),
@@ -593,7 +593,7 @@ class EqIgnitorSpec : StringSpec({
             inner = IgnitorDsl.Sawtooth(),
             sections = listOf(EqSection.Bell(c(850.0), c(0.9), c(6.0))),
         )
-        assertDslParity(explicit, overridden, oscParams = mapOf("belldb" to 6.0))
+        assertDslParity(explicit, overridden, ignitorParams = mapOf("belldb" to 6.0))
     }
 
     "an Eq with zero sections is bit-transparent" {

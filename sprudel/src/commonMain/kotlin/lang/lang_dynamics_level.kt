@@ -14,7 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putOscParam
+import io.peekandpoke.klang.sprudel.putIgnitorParam
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
@@ -130,11 +130,11 @@ fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- pregain() --------------------------------------------------------------------------------------------------------
 
-private val pregainMutation = voiceSetter { putOscParam("pregain", it?.asDoubleOrNull()) }
+private val pregainMutation = voiceSetter { putIgnitorParam("pregain", it?.asDoubleOrNull()) }
 
 private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("pregain") }, update = pregainMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("pregain") }, update = pregainMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, pregainMutation)
@@ -231,7 +231,7 @@ fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pregain")
-object pregain : FieldAccessor({ it.oscParams?.get("pregain") }) {
+object pregain : FieldAccessor({ it.ignitorParams?.get("pregain") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets how hard each event is played into its instrument.

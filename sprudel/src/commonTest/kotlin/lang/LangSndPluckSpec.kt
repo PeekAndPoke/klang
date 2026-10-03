@@ -19,7 +19,7 @@ class LangSndPluckSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.soundName shouldBe "pluck"
-        events[0].data.oscParams?.get("decay") shouldBe null
+        events[0].data.ignitorParams?.get("decay") shouldBe null
     }
 
     // -- single param ------------------------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ class LangSndPluckSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.soundName shouldBe "pluck"
-        events[0].data.oscParams?.get("decay") shouldBe 0.99
-        events[0].data.oscParams?.get("brightness") shouldBe null
+        events[0].data.ignitorParams?.get("decay") shouldBe 0.99
+        events[0].data.ignitorParams?.get("brightness") shouldBe null
     }
 })

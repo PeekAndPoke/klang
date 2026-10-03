@@ -192,14 +192,14 @@ class IgnitorBenchmark(
         private fun voice(
             sound: String,
             freqHz: Double = 440.0,
-            oscParams: Map<String, Double>? = null,
+            ignitorParams: Map<String, Double>? = null,
             reverb: Double? = null,
             reverbSize: Double? = null,
             doors: SprudelVoiceData.() -> Unit = {},
         ): VoiceData = createSprudelVoiceData().also { d ->
             d.sound = SoundValue.Named(sound)
             d.freqHz = freqHz
-            d.oscParams = oscParams?.let { paramBagOf(it) }
+            d.ignitorParams = ignitorParams?.let { paramBagOf(it) }
             d.katalystParams = if (reverb == null && reverbSize == null) {
                 null
             } else {
@@ -232,34 +232,34 @@ class IgnitorBenchmark(
                 Case("pulze", voiceData = voice("pulze")),
 
                 // ── Analog drift: one lane per voice, what a lane costs per sample ──
-                Case("sine+analog", voiceData = voice("sine", oscParams = mapOf("analog" to 5.0))),
-                Case("supersaw_8v+analog", voiceData = voice("supersaw", oscParams = mapOf("voices" to 8.0, "analog" to 5.0))),
-                Case("sine-harmonics7+analog", voiceData = voice("sine-harmonics7", oscParams = mapOf("analog" to 5.0)),
+                Case("sine+analog", voiceData = voice("sine", ignitorParams = mapOf("analog" to 5.0))),
+                Case("supersaw_8v+analog", voiceData = voice("supersaw", ignitorParams = mapOf("voices" to 8.0, "analog" to 5.0))),
+                Case("sine-harmonics7+analog", voiceData = voice("sine-harmonics7", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("sine-harmonics7" to IgnitorDsl.Sine(harmonics = IgnitorDsl.Constant(7.0)))),
 
                 // The other end of `analogSpread`: one shared walk instead of a lane per voice or
                 // partial. Must come out CHEAPER than the rows above, the own lanes are skipped.
                 Case(
                     "supersaw_8v+analog+spread0",
-                    voiceData = voice("supersaw-spread0", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    voiceData = voice("supersaw-spread0", ignitorParams = mapOf("voices" to 8.0, "analog" to 5.0)),
                     sounds = mapOf("supersaw-spread0" to IgnitorDsl.SuperSaw(analogSpread = IgnitorDsl.Constant(0.0))),
                 ),
                 // Both pluck rows are inline nodes, so the pair differs in the knob and nothing else.
                 Case(
                     "superpluck+analog",
-                    voiceData = voice("superpluck-drift", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    voiceData = voice("superpluck-drift", ignitorParams = mapOf("voices" to 8.0, "analog" to 5.0)),
                     sounds = mapOf("superpluck-drift" to IgnitorDsl.SuperPluck()),
                 ),
                 Case(
                     "superpluck+analog+spread0",
-                    voiceData = voice("superpluck-drift-spread0", oscParams = mapOf("voices" to 8.0, "analog" to 5.0)),
+                    voiceData = voice("superpluck-drift-spread0", ignitorParams = mapOf("voices" to 8.0, "analog" to 5.0)),
                     sounds = mapOf(
                         "superpluck-drift-spread0" to IgnitorDsl.SuperPluck(analogSpread = IgnitorDsl.Constant(0.0)),
                     ),
                 ),
                 Case(
                     "sine-harmonics7+analog+spread0",
-                    voiceData = voice("sine-harmonics7-spread0", oscParams = mapOf("analog" to 5.0)),
+                    voiceData = voice("sine-harmonics7-spread0", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf(
                         "sine-harmonics7-spread0" to IgnitorDsl.Sine(
                             harmonics = IgnitorDsl.Constant(7.0),
@@ -269,11 +269,11 @@ class IgnitorBenchmark(
                 ),
 
                 // ── Super oscillators (8 internal voices) ─────────────────────
-                Case("supersaw", voiceData = voice("supersaw", oscParams = super8v)),
-                Case("supersine", voiceData = voice("supersine", oscParams = super8v)),
-                Case("supersquare", voiceData = voice("supersquare", oscParams = super8v)),
-                Case("supertri", voiceData = voice("supertri", oscParams = super8v)),
-                Case("superramp", voiceData = voice("superramp", oscParams = super8v)),
+                Case("supersaw", voiceData = voice("supersaw", ignitorParams = super8v)),
+                Case("supersine", voiceData = voice("supersine", ignitorParams = super8v)),
+                Case("supersquare", voiceData = voice("supersquare", ignitorParams = super8v)),
+                Case("supertri", voiceData = voice("supertri", ignitorParams = super8v)),
+                Case("superramp", voiceData = voice("superramp", ignitorParams = super8v)),
 
                 // ── Sine partial banks vs the hand-rolled tree they replace ───
                 Case(
@@ -299,7 +299,7 @@ class IgnitorBenchmark(
 
                 // ── Physical models ───────────────────────────────────────────
                 Case("pluck", voiceData = voice("pluck")),
-                Case("superpluck", voiceData = voice("superpluck", oscParams = super8v)),
+                Case("superpluck", voiceData = voice("superpluck", ignitorParams = super8v)),
 
                 // ── Noise ─────────────────────────────────────────────────────
                 Case("whitenoise", voiceData = voice("whitenoise")),
@@ -308,13 +308,13 @@ class IgnitorBenchmark(
                 Case("dust", voiceData = voice("dust")),
 
                 // ── Scaling (supersaw at various internal voice counts) ───────
-                Case("supersaw_1v", voiceData = voice("supersaw", oscParams = mapOf("voices" to 1.0))),
-                Case("supersaw_4v", voiceData = voice("supersaw", oscParams = mapOf("voices" to 4.0))),
-                Case("supersaw_8v", voiceData = voice("supersaw", oscParams = mapOf("voices" to 8.0))),
-                Case("supersaw_16v", voiceData = voice("supersaw", oscParams = mapOf("voices" to 16.0))),
+                Case("supersaw_1v", voiceData = voice("supersaw", ignitorParams = mapOf("voices" to 1.0))),
+                Case("supersaw_4v", voiceData = voice("supersaw", ignitorParams = mapOf("voices" to 4.0))),
+                Case("supersaw_8v", voiceData = voice("supersaw", ignitorParams = mapOf("voices" to 8.0))),
+                Case("supersaw_16v", voiceData = voice("supersaw", ignitorParams = mapOf("voices" to 16.0))),
 
                 // ── Compositions ──────────────────────────────────────────────
-                Case("supersaw+lpf+adsr", voiceData = voice("supersaw", oscParams = super8v, doors = lpf1k)),
+                Case("supersaw+lpf+adsr", voiceData = voice("supersaw", ignitorParams = super8v, doors = lpf1k)),
                 // The lowpass's filter envelope (`classic()`'s swept SVF since phase 3 step 6): one
                 // envelope that keeps moving for the whole run (a 100 s decay), and one that sits
                 // at its sustain, where both block ends read the same cutoff.
@@ -332,7 +332,7 @@ class IgnitorBenchmark(
                 ),
                 Case(
                     "supersaw+lpf+adsr+reverb",
-                    voiceData = voice("supersaw", oscParams = super8v, reverb = 0.5, reverbSize = 0.5, doors = lpf1k)
+                    voiceData = voice("supersaw", ignitorParams = super8v, reverb = 0.5, reverbSize = 0.5, doors = lpf1k)
                 ),
                 Case("pluck+distort", voiceData = voice("pluck") { distort = 0.5; distortShape = "soft" }),
                 Case(
@@ -361,18 +361,18 @@ class IgnitorBenchmark(
                 // every gain stage. The three ablations delete those nodes outright, which is the ceiling of what
                 // folding them into their neighbours (Affine into Eq gain, Affine into Shape input gain) can buy.
                 // They are cost rows, not sound rows: without the drives the shapers see a quieter signal.
-                Case("guitar-rig-string-only", voiceData = voice("guitar-rig-string-only", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig-string-only", voiceData = voice("guitar-rig-string-only", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-string-only" to guitarString())),
-                Case("guitar-rig", voiceData = voice("guitar-rig", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig", voiceData = voice("guitar-rig", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig" to guitarRig(muls = true, drives = true))),
-                Case("guitar-rig-no-mul", voiceData = voice("guitar-rig-no-mul", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig-no-mul", voiceData = voice("guitar-rig-no-mul", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-mul" to guitarRig(muls = false, drives = true))),
-                Case("guitar-rig-no-drive", voiceData = voice("guitar-rig-no-drive", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig-no-drive", voiceData = voice("guitar-rig-no-drive", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-drive" to guitarRig(muls = true, drives = false))),
-                Case("guitar-rig-no-mul-no-drive", voiceData = voice("guitar-rig-no-mul-no-drive", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig-no-mul-no-drive", voiceData = voice("guitar-rig-no-mul-no-drive", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-mul-no-drive" to guitarRig(muls = false, drives = false))),
                 // Where the rest of the rig's cost sits: the same rig with every shaper at oversample 0.
-                Case("guitar-rig-no-oversample", voiceData = voice("guitar-rig-no-oversample", oscParams = mapOf("analog" to 5.0)),
+                Case("guitar-rig-no-oversample", voiceData = voice("guitar-rig-no-oversample", ignitorParams = mapOf("analog" to 5.0)),
                     sounds = mapOf("guitar-rig-no-oversample" to guitarRig(muls = true, drives = true, oversample = false))),
             )
         }

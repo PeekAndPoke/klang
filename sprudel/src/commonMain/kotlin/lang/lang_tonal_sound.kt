@@ -25,7 +25,7 @@ private val soundMutation = voiceSetter {
 
     // An inline ignitor DSL value bypasses the "name:index" string parse and is stored as-is.
     if (it is IgnitorDsl) {
-        sound = SoundValue.Osc(it)
+        sound = SoundValue.Dsl(it)
         value = null
         return@voiceSetter
     }
@@ -43,10 +43,10 @@ private val soundMutation = voiceSetter {
 
 private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // An inline ignitor DSL bypasses the mini-notation parse: stamp every source
-    // event with SoundValue.Osc(dsl). Replaces any previously-set sound.
+    // event with SoundValue.Dsl(dsl). Replaces any previously-set sound.
     val singleArg = args.singleOrNull()?.value
     if (singleArg is IgnitorDsl) {
-        return source.reinterpretVoice { vd -> vd.copy(sound = SoundValue.Osc(singleArg), value = null) }
+        return source.reinterpretVoice { vd -> vd.copy(sound = SoundValue.Dsl(singleArg), value = null) }
     }
 
     return if (args.isEmpty()) {

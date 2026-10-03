@@ -26,7 +26,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * Without opting in, custom sounds ignore sprudel modulation (the data-class
  * defaults are sealed `Constant(0.0)`). Opting in wires the named slot to
- * `oscParams[ name ]` lookup at voice-trigger time.
+ * `ignitorParams[ name ]` lookup at voice-trigger time.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("OscSlot")

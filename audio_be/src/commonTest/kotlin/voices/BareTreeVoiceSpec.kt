@@ -115,7 +115,7 @@ class BareTreeVoiceSpec : StringSpec({
         val doors = render(
             base.copy(
                 sound = "bare",
-                oscParams = mapOf("lpf.freq" to 300.0, "adsr.attack" to 0.1, "adsr.release" to 0.5, "onepole" to 200.0),
+                ignitorParams = mapOf("lpf.freq" to 300.0, "adsr.attack" to 0.1, "adsr.release" to 0.5, "onepole" to 200.0),
             ),
         )
 
@@ -179,7 +179,7 @@ class BareTreeVoiceSpec : StringSpec({
 
     "classic() below the root: the doors reach each branch, and the sum still ends on the teardown fade" {
         val plain = render(base.copy(sound = "branches"))
-        val doors = render(base.copy(sound = "branches", oscParams = mapOf("adsr.attack" to 0.05)))
+        val doors = render(base.copy(sound = "branches", ignitorParams = mapOf("adsr.attack" to 0.05)))
         val lastFrame = gateFrame + (0.05 * sampleRate).toInt() - 1
 
         withClue("engaged: the envelope slot reaches the branches") { firstMismatch(plain, doors) shouldNotBe -1 }

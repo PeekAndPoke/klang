@@ -241,7 +241,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
+        voiceData.ignitorParams shouldBe mapOf("adsr.attack" to 0.01, "adsr.decay" to 0.1, "adsr.sustain" to 0.7, "adsr.release" to 0.3)
     }
 
     "toVoiceData() sends the LPF fields as the lpf.* slots" {
@@ -252,7 +252,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
+        voiceData.ignitorParams shouldBe mapOf("lpf.freq" to 1000.0, "lpf.q" to 1.5)
     }
 
     "toVoiceData() sends the HPF fields as the hpf.* slots" {
@@ -263,7 +263,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
+        voiceData.ignitorParams shouldBe mapOf("hpf.freq" to 500.0, "hpf.q" to 2.0)
     }
 
     "toVoiceData() sends the BPF fields as the bpf.* slots (no passes)" {
@@ -274,7 +274,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
+        voiceData.ignitorParams shouldBe mapOf("bpf.freq" to 750.0, "bpf.q" to 1.2)
     }
 
     "toVoiceData() sends the Notch fields as the notch.* slots (no passes)" {
@@ -285,7 +285,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("notch.freq" to 600.0, "notch.q" to 0.8)
+        voiceData.ignitorParams shouldBe mapOf("notch.freq" to 600.0, "notch.q" to 0.8)
     }
 
     "toVoiceData() sends every filter kind under its own slots, each with its own resonance" {
@@ -300,7 +300,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf(
+        voiceData.ignitorParams shouldBe mapOf(
             "hpf.freq" to 500.0, "hpf.q" to 2.0,
             "bpf.freq" to 750.0, "bpf.q" to 1.2,
             "lpf.freq" to 1000.0, "lpf.q" to 1.5,
@@ -318,7 +318,7 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams shouldBe mapOf("lpf.freq" to 1000.0, "hpf.freq" to 500.0, "bpf.freq" to 750.0, "notch.freq" to 600.0)
+        voiceData.ignitorParams shouldBe mapOf("lpf.freq" to 1000.0, "hpf.freq" to 500.0, "bpf.freq" to 750.0, "notch.freq" to 600.0)
         voiceData.katalystParams shouldBe null
     }
 
@@ -330,8 +330,8 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.oscParams?.get("lpf.freq") shouldBe 1000.0
-        voiceData.oscParams?.containsKey("lpf.q") shouldBe false // the classic() slot default, 0.707 (LangDefaultQSpec)
+        voiceData.ignitorParams?.get("lpf.freq") shouldBe 1000.0
+        voiceData.ignitorParams?.containsKey("lpf.q") shouldBe false // the classic() slot default, 0.707 (LangDefaultQSpec)
     }
 
     "toVoiceData() maps all basic fields correctly" {
@@ -344,7 +344,7 @@ class SprudelVoiceDataSpec : StringSpec({
             bank = "MPC60"
             sound = SoundValue.Named("bd")
             soundIndex = 2
-            oscParams = paramBagOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
+            ignitorParams = paramBagOf("density" to 0.5, "panSpread" to 0.3, "spread" to 0.1, "voices" to 3.0)
             accelerate = 0.05
             vibrato = 0.2
             vibratoMod = 0.4
@@ -373,16 +373,16 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.bank shouldBe "MPC60"
         voiceData.sound shouldBe "bd"
         voiceData.soundIndex shouldBe 2
-        voiceData.oscParams?.get("density") shouldBe 0.5
-        voiceData.oscParams?.get("panSpread") shouldBe 0.3
-        voiceData.oscParams?.get("spread") shouldBe 0.1
-        voiceData.oscParams?.get("voices") shouldBe 3.0
+        voiceData.ignitorParams?.get("density") shouldBe 0.5
+        voiceData.ignitorParams?.get("panSpread") shouldBe 0.3
+        voiceData.ignitorParams?.get("spread") shouldBe 0.1
+        voiceData.ignitorParams?.get("voices") shouldBe 3.0
         voiceData.accelerate shouldBe 0.05
         voiceData.vibrato shouldBe 0.2
         voiceData.vibratoMod shouldBe 0.4
-        voiceData.oscParams?.get("distort.amount") shouldBe 0.3
-        voiceData.oscParams?.get("coarse.amount") shouldBe 1.0
-        voiceData.oscParams?.get("crush.amount") shouldBe 4.0
+        voiceData.ignitorParams?.get("distort.amount") shouldBe 0.3
+        voiceData.ignitorParams?.get("coarse.amount") shouldBe 1.0
+        voiceData.ignitorParams?.get("crush.amount") shouldBe 4.0
         voiceData.cylinder shouldBe 1
         voiceData.pan shouldBe 0.5
         voiceData.katalystParams?.get("delay.wet") shouldBe 0.3
@@ -390,10 +390,10 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.katalystParams?.get("delay.feedback") shouldBe 0.5
         voiceData.katalystParams?.get("reverb.wet") shouldBe 0.7
         voiceData.katalystParams?.get("reverb.size") shouldBe 5.0
-        voiceData.oscParams?.get("begin") shouldBe 0.0
-        voiceData.oscParams?.get("end") shouldBe 1.0
-        voiceData.oscParams?.get("speed") shouldBe 1.0
-        voiceData.oscParams?.get("loop") shouldBe 1.0
+        voiceData.ignitorParams?.get("begin") shouldBe 0.0
+        voiceData.ignitorParams?.get("end") shouldBe 1.0
+        voiceData.ignitorParams?.get("speed") shouldBe 1.0
+        voiceData.ignitorParams?.get("loop") shouldBe 1.0
         voiceData.cut shouldBe 1
     }
 
@@ -468,7 +468,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         note = "note$seed"; freqHz = b + 1; scale = "scale$seed"; chord = "chord$seed"
         gain = b + 2; legato = b + 3; velocity = b + 4
         bank = "bank$seed"; sound = SoundValue.Named("snd$seed"); soundIndex = seed + 6
-        oscParams = paramBagOf("k$seed" to b + 7)
+        ignitorParams = paramBagOf("k$seed" to b + 7)
         katalystParams = paramBagOf("reverb.size" to b + 7.5, "room$seed" to b + 7.6)
         attack = b + 8; decay = b + 9; sustain = b + 10; release = b + 11
         // Seed-picked like the pitch and filter curves, so a merge row sees each amplitude curve differ per side.

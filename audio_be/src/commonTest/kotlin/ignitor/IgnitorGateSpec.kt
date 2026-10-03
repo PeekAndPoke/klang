@@ -99,7 +99,7 @@ class IgnitorGateSpec : StringSpec({
     }
 
     fun build(dsl: IgnitorDsl, params: Map<String, Double>? = null, rng: Random = seed()): Ignitor =
-        dsl.buildExciter(oscParams = params, random = rng, freqHz = freqHz).ignitor
+        dsl.buildExciter(ignitorParams = params, random = rng, freqHz = freqHz).ignitor
 
     /**
      * [blocks] blocks of [dsl], built with [params] and rendered end to end.
@@ -490,7 +490,7 @@ class IgnitorGateSpec : StringSpec({
                 inner = saw, releaseSec = IgnitorDsl.Param("release", 0.1), on = IgnitorDsl.Constant(0.0),
             )
 
-            slotted.buildExciter(oscParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
+            slotted.buildExciter(ignitorParams = mapOf("release" to 3.0), random = seed(), freqHz = freqHz)
                 .releaseTailSec shouldBe 3.0
         }
 

@@ -15,35 +15,35 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putOscParam
+import io.peekandpoke.klang.sprudel.putIgnitorParam
 
 // -- unison ----------------------------------------------------------------------------------------------------------
 
-private val unisonVoicesMutation = voiceSetter { putOscParam("voices", it?.asDoubleOrNull()) }
+private val unisonVoicesMutation = voiceSetter { putIgnitorParam("voices", it?.asDoubleOrNull()) }
 
 private fun applyUnisonVoices(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("voices") }, update = unisonVoicesMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("voices") }, update = unisonVoicesMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, unisonVoicesMutation)
 }
 
-private val unisonSpreadMutation = voiceSetter { putOscParam("spread", it?.asDoubleOrNull()) }
+private val unisonSpreadMutation = voiceSetter { putIgnitorParam("spread", it?.asDoubleOrNull()) }
 
 private fun applyUnisonSpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("spread") }, update = unisonSpreadMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("spread") }, update = unisonSpreadMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, unisonSpreadMutation)
 }
 
-private val unisonPanMutation = voiceSetter { putOscParam("panSpread", it?.asDoubleOrNull()) }
+private val unisonPanMutation = voiceSetter { putIgnitorParam("panSpread", it?.asDoubleOrNull()) }
 
 private fun applyUnisonPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("panSpread") }, update = unisonPanMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("panSpread") }, update = unisonPanMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, unisonPanMutation)
@@ -116,15 +116,15 @@ object unison {
 
     /** The voices slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val voices: FieldAccessor = FieldAccessor { it.oscParams?.get("voices") }
+    val voices: FieldAccessor = FieldAccessor { it.ignitorParams?.get("voices") }
 
     /** The spread slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val spread: FieldAccessor = FieldAccessor { it.oscParams?.get("spread") }
+    val spread: FieldAccessor = FieldAccessor { it.ignitorParams?.get("spread") }
 
     /** The pan slot of each event, as a value other setters can read. */
     @KlangScript.Property
-    val pan: FieldAccessor = FieldAccessor { it.oscParams?.get("panSpread") }
+    val pan: FieldAccessor = FieldAccessor { it.ignitorParams?.get("panSpread") }
 
     /** The setter, see [SprudelPattern.unison]. */
     @KlangScript.Invoke
@@ -169,11 +169,11 @@ fun PatternMapperFn.uni(voices: PatternLike? = null, spread: PatternLike? = null
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
-private val densityMutation = voiceSetter { putOscParam("density", it?.asDoubleOrNull()) }
+private val densityMutation = voiceSetter { putIgnitorParam("density", it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("density") }, update = densityMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("density") }, update = densityMutation)
     }
 
     return source._liftOrReinterpretStringField(args, densityMutation)
@@ -243,7 +243,7 @@ fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("density")
-object density : FieldAccessor({ it.oscParams?.get("density") }) {
+object density : FieldAccessor({ it.ignitorParams?.get("density") }) {
 
     /**
      * Parses this string as a pattern and sets the oscillator or noise density.

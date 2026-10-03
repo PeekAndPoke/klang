@@ -158,8 +158,8 @@ class SampleInstrumentSpec : StringSpec({
         Triple("tremolo", base, DoorFields(tremoloDepth = 0.7, tremoloRate = 6.0, tremoloShape = "square")),
         Triple("adsr", base, DoorFields(adsr = DoorAdsr(attack = 0.03, decay = 0.05, sustain = 0.4, release = 0.1))),
         Triple("adsrOff (the teardown fade)", base, DoorFields(adsr = DoorAdsr(on = false))),
-        Triple("onepole", base.copy(oscParams = mapOf("onepole" to 400.0)), DoorFields()),
-        Triple("pregain into distort", base.copy(oscParams = mapOf("pregain" to 1.7)), DoorFields(distort = 0.3)),
+        Triple("onepole", base.copy(ignitorParams = mapOf("onepole" to 400.0)), DoorFields()),
+        Triple("pregain into distort", base.copy(ignitorParams = mapOf("pregain" to 1.7)), DoorFields(distort = 0.3)),
     )
 
     for (sampleRate in listOf(48000, 44100)) {
@@ -240,7 +240,7 @@ class SampleInstrumentSpec : StringSpec({
         val long = DoorFields(adsr = DoorAdsr(release = 1.0))
         val depthSlot = (IgnitorDsl.Slots.tremolo.depth as IgnitorDsl.Param).name
         val (plain, _) = render(base.copy(sound = "probe"), sampleRate, pcm, doors = long)
-        val (tremolo, _) = render(base.copy(sound = "probe", oscParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
+        val (tremolo, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(depthSlot to 0.8)), sampleRate, pcm, doors = long)
 
         withClue("engaged: the silent release culls a voice without the tremolo") { plain.culled shouldBe true }
         withClue("the tree's tremolo marks the voice never-cull") { tremolo.culled shouldBe false }
@@ -255,7 +255,7 @@ class SampleInstrumentSpec : StringSpec({
             meta = SampleMetadata(anchor = 0.0, loop = null, adsr = AdsrDef.Std(release = 0.2)),
         )
         val releaseSlot = (IgnitorDsl.Slots.adsr.release as IgnitorDsl.Param).name
-        val (voice, _) = render(base.copy(sound = "probe", oscParams = mapOf(releaseSlot to Double.NaN)), sampleRate, pcm)
+        val (voice, _) = render(base.copy(sound = "probe", ignitorParams = mapOf(releaseSlot to Double.NaN)), sampleRate, pcm)
 
         voice.endFrame shouldBe gateEnd(sampleRate, pcm) + 0.2 * sampleRate
     }

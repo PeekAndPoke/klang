@@ -134,7 +134,7 @@ sealed interface IgnitorDsl {
      * where the tree places it. Reach for `Slots.<name>` rather than retyping a name and a default
      * here, so one default serves every instrument; a name of your own is what this door is for.
      *
-     * @param name parameter name — used for discovery, UI display, and oscParams override matching
+     * @param name parameter name — used for discovery, UI display, and ignitorParams override matching
      * @param default constant value when no modulator is wired in
      * @param description human-readable description for UI tooltips and auto-generated docs
      */
@@ -150,7 +150,7 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * A fixed constant value that cannot be overridden by oscParams.
+     * A fixed constant value that cannot be overridden by ignitorParams.
      *
      * Use when the user explicitly sets a value (e.g. `Osc.sine(5)` = 5 Hz).
      * Unlike [Param], this is not discoverable and not overridable at play time.

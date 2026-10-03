@@ -79,14 +79,14 @@ class OnepoleParitySpec : StringSpec({
             register("rawsine", IgnitorDsl.OnePoleLowpass(IgnitorDsl.Sine(), IgnitorDsl.Slots.onepole))
         }
         fun exciter(params: Map<String, Double>?): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", oscParams = params)
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", ignitorParams = params)
             return registry.createExciter("rawsine", data, freqHz = 220.0, random = Random(7))
                 ?.ignitor ?: error("no exciter")
         }
-        val viaOscParam = render(exciter(mapOf("onepole" to 800.0)))
+        val viaIgnitorParam = render(exciter(mapOf("onepole" to 800.0)))
         val manual = render(exciter(null).onePoleLowpass(800.0))
         for (i in 0 until frames) {
-            viaOscParam[i].toRawBits() shouldBe manual[i].toRawBits()
+            viaIgnitorParam[i].toRawBits() shouldBe manual[i].toRawBits()
         }
     }
 
@@ -95,7 +95,7 @@ class OnepoleParitySpec : StringSpec({
         // made it `classic()`'s first stage, the same place). A wrap around the whole tree would put it AFTER the
         // envelope, which the anti-vacuous side shows is a different signal.
         val registry = IgnitorRegistry().apply { registerDefaults() }
-        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = mapOf("onepole" to 800.0))
+        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", ignitorParams = mapOf("onepole" to 800.0))
         val viaRegistry = render(
             registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))?.ignitor ?: error("no exciter"),
         )

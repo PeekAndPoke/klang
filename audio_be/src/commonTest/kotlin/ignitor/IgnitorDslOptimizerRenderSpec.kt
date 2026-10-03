@@ -135,7 +135,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         length: Int = blockFrames,
         // null: this row does not care whether the pass rewrote the tree (a corpus row)
         expectFused: Boolean? = true,
-        oscParams: Map<String, Double>? = null,
+        ignitorParams: Map<String, Double>? = null,
         minPeak: Double = 0.0,
     ) {
         val optimized = authored.optimize()
@@ -154,8 +154,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
             // future rule that shifts a draw across the build/generate boundary.
             val rngA = Random(seed)
             val rngB = Random(seed)
-            val a = authored.toExciter(oscParams, random = rngA)
-            val b = optimized.toExciter(oscParams, random = rngB)
+            val a = authored.toExciter(ignitorParams, random = rngA)
+            val b = optimized.toExciter(ignitorParams, random = rngB)
             val sentinel = -12345.0
             val bufA = AudioBuffer(blockFrames)
             val bufB = AudioBuffer(blockFrames)
@@ -230,8 +230,8 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // Control-rate semantics survive: a parameter consumer reads a block-constant tree as one
         // scalar per block and never renders it, so the optimized twin must be block-constant too,
         // with the same value.
-        val a = authored.toExciter(oscParams, random = Random(seed))
-        val b = optimized.toExciter(oscParams, random = Random(seed))
+        val a = authored.toExciter(ignitorParams, random = Random(seed))
+        val b = optimized.toExciter(ignitorParams, random = Random(seed))
 
         withClue("block-constant survives the pass") { b.isBlockConstant shouldBe a.isBlockConstant }
 
@@ -298,7 +298,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // the 0.7071 fallback to the 0.1 floor for NaN and -Inf, and to the 200 ceiling for
         // +Inf, since safeOut CLAMPS an infinity to a finite SAFE_MAX rather than scrubbing
         // it), so that pair is a decision, not a test result.
-        // The poison is the slot's AUTHORED DEFAULT and not an `oscParams` override, since
+        // The poison is the slot's AUTHORED DEFAULT and not an `ignitorParams` override, since
         // 2026-09-19: the `Param` leaf reads a non-finite OVERRIDE as unset and falls back to the
         // default (`IgnitorDslRuntime`), so a bag delivery would arrive here as a finite 1.2 and
         // all six iterations would run one ordinary resonant filter. The default is not scrubbed,
@@ -328,7 +328,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // The engagement control the row above cannot carry, for the reason its own comment gives:
         // it is a door-VS-door comparison, so anything that moves both doors together passes by
         // construction, and a guard that replaced the q with a finite number moves both. That is
-        // exactly what happened on 2026-09-19 while the value still came through `oscParams`: all
+        // exactly what happened on 2026-09-19 while the value still came through `ignitorParams`: all
         // six iterations ran q = 1.2 and the row guarded nothing.
         //
         // One-sided: the AUTHORED door alone. "Differs from a finite q" would NOT be enough, and
@@ -671,7 +671,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
     }
 
     "R2: a Param level and a Freq-tracking coefficient fold and render within the margin" {
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Param("level", 0.6)), oscParams = mapOf("level" to 0.6), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Param("level", 0.6)), ignitorParams = mapOf("level" to 0.6), minPeak = 0.1)
         assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().mul(IgnitorDsl.Freq.mul(IgnitorDsl.Constant(0.001))), minPeak = 0.1)
     }
 
@@ -688,7 +688,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // a Param subtrahend at NaN, at an infinity and beyond SAFE_MAX: the subtract is bare on
         // both sides (a Neg coefficient would scrub the NaN and clamp the rest).
         //
-        // The value is the slot's AUTHORED DEFAULT and not an `oscParams` override, since
+        // The value is the slot's AUTHORED DEFAULT and not an `ignitorParams` override, since
         // 2026-09-19: the `Param` leaf reads a non-finite OVERRIDE as unset and falls back to the
         // default (`IgnitorDslRuntime`), so a bag delivery would arrive here as 0.0 and this loop
         // would run three identical finite iterations under three non-finite names. The default is
@@ -705,7 +705,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // The engagement control the loop above cannot carry. A parity row compares two sides of
         // ONE value, so anything that neuters that value on BOTH sides leaves it green and empty:
         // that is exactly what happened on 2026-09-19 while the values still came through
-        // `oscParams`, where the new leaf guard replaced all three with the slot's 0.0 default and
+        // `ignitorParams`, where the new leaf guard replaced all three with the slot's 0.0 default and
         // three non-finite names ran one finite case. This row reads the AUTHORED side alone and
         // asserts the value is still in the render.
         fun firstSample(off: Double): Double {
@@ -738,20 +738,20 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // that to the zero crossings, which is why the margin is relative to the block's scale
         assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Constant(3.0)).lowpass(1000.0), minPeak = 0.1)
         assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().plus(IgnitorDsl.Constant(0.5)).div(IgnitorDsl.Constant(4.0)), minPeak = 0.1)
-        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)), oscParams = mapOf("d" to 4.0), minPeak = 0.1)
+        assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().div(IgnitorDsl.Param("d", 4.0)), ignitorParams = mapOf("d" to 4.0), minPeak = 0.1)
         assertOptimizeIsInaudible(IgnitorDsl.Sawtooth().lowpass(1000.0).div(IgnitorDsl.Constant(0.0)))
         // a literal zero divisor over a node that draws at BUILD time (the supersaw's phase pool),
         // with a second such node after it: the subtree is built on both sides, so the second
         // pool draws the same phases authored and optimized
         assertOptimizeIsInaudible(
             IgnitorDsl.SuperSaw(phasePool = 1.0).div(IgnitorDsl.Constant(0.0)).plus(IgnitorDsl.SuperSaw(phasePool = 1.0)),
-            oscParams = mapOf("voices" to 7.0),
+            ignitorParams = mapOf("voices" to 7.0),
             minPeak = 0.1,
         )
     }
 
     "R2: a Param divisor at an infinity is a dead branch on both sides too (its reciprocal is a zero multiplier)" {
-        // The infinity is the slot's AUTHORED DEFAULT, not an `oscParams` override: since
+        // The infinity is the slot's AUTHORED DEFAULT, not an `ignitorParams` override: since
         // 2026-09-19 the `Param` leaf reads a non-finite override as unset and would hand this row
         // a divisor of 1.0, turning the dead branch it is named for into an ordinary divide. The
         // default is not scrubbed (it is the instrument's declaration), and a `Param` is
@@ -806,7 +806,7 @@ class IgnitorDslOptimizerRenderSpec : StringSpec({
         // stream position and the two renders would differ grossly, not by rounding.
         assertOptimizeIsInaudible(
             IgnitorDsl.WhiteNoise().div(IgnitorDsl.Param("p", 0.0)).plus(IgnitorDsl.WhiteNoise()),
-            oscParams = mapOf("p" to 0.0),
+            ignitorParams = mapOf("p" to 0.0),
             minPeak = 0.1,
         )
     }

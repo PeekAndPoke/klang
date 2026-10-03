@@ -29,8 +29,8 @@ class LangDutySpec : StringSpec({
             "script chained duty(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(duty("$ctrl").duty("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.oscParams?.get("duty") shouldBe 0.25
-            events[1].data.oscParams?.get("duty") shouldBe 0.75
+            events[0].data.ignitorParams?.get("duty") shouldBe 0.25
+            events[1].data.ignitorParams?.get("duty") shouldBe 0.75
         }
     }
 

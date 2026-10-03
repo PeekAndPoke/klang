@@ -360,7 +360,7 @@ fun Ignitor.svf(
  * NaN and -Inf, the 200 ceiling for +Inf (safeOut clamps an infinity to a finite SAFE_MAX). Same
  * program, two filters.
  *
- * Where a non-finite q still comes from, since 2026-09-19: NOT from `oscParams`, whose values the
+ * Where a non-finite q still comes from, since 2026-09-19: NOT from `ignitorParams`, whose values the
  * `IgnitorDsl.Param` leaf reads as unset when they are non-finite (`IgnitorDslRuntime`). Two live
  * routes remain, which is why this is not dead code (both verified by a caller search and a
  * render on 2026-09-19):

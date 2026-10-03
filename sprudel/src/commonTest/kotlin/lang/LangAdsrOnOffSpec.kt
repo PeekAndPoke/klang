@@ -27,7 +27,7 @@ class LangAdsrOnOffSpec : StringSpec({
     // The envelope crosses the wire as the `adsr.*` slots (phase 3 step 8); read back here into a [WireAdsr] so each
     // row states the knob it is about.
     fun wireAdsr(code: String): WireAdsr {
-        val slots = SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().oscParams
+        val slots = SprudelPattern.compile(code)!!.queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams
 
         return WireAdsr(
             attack = slots?.get("adsr.attack"),

@@ -81,12 +81,12 @@ class OptimizerSongParitySpec : StringSpec({
         scratchBuffers = ScratchBuffers(blockFrames), random = random,
     )
 
-    fun assertParity(clue: String, authored: IgnitorDsl, oscParams: Map<String, Double>?) {
+    fun assertParity(clue: String, authored: IgnitorDsl, ignitorParams: Map<String, Double>?) {
         val optimized = authored.optimize()
         val rngA = Random(11)
         val rngB = Random(11)
-        val a = authored.toExciter(oscParams, random = rngA)
-        val b = optimized.toExciter(oscParams, random = rngB)
+        val a = authored.toExciter(ignitorParams, random = rngA)
+        val b = optimized.toExciter(ignitorParams, random = rngB)
         val ca = ctx(rngA)
         val cb = ctx(rngB)
         val bufA = AudioBuffer(blockFrames)
@@ -124,15 +124,15 @@ class OptimizerSongParitySpec : StringSpec({
             val seen = mutableListOf<IgnitorDsl>()
 
             for (event in pattern.queryArc(0.0, 8.0)) {
-                val sound = event.data.sound as? SoundValue.Osc ?: continue
+                val sound = event.data.sound as? SoundValue.Dsl ?: continue
 
-                if (seen.any { it == sound.osc }) {
+                if (seen.any { it == sound.ignitor }) {
                     continue
                 }
 
-                seen.add(sound.osc)
+                seen.add(sound.ignitor)
                 graphs++
-                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.osc, event.data.oscParams?.toMap())
+                assertParity("${song.title}, orbit ${event.data.cylinder}:", sound.ignitor, event.data.ignitorParams?.toMap())
             }
         }
 

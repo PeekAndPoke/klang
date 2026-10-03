@@ -171,7 +171,7 @@ internal fun SprudelVoiceData.mutableParts(): List<Pair<String, Any?>> = listOf(
     "adsr" to adsr, "lpf" to lpf, "hpf" to hpf, "bpf" to bpf, "notch" to notch,
     "pitchMod" to pitchMod, "pitchEnv" to pitchEnv, "fm" to fm, "distortion" to distortion,
     "phaser" to phaser, "tremolo" to tremolo, "sample" to sample, "bodyFx" to bodyFx, "vowelFx" to vowelFx,
-    "oscParams" to oscParams, "katalystParams" to katalystParams,
+    "ignitorParams" to ignitorParams, "katalystParams" to katalystParams,
 )
 
 /** Writes one sentinel through every group and bag, in place (the flat setters write into an existing group). */
@@ -179,6 +179,6 @@ internal fun SprudelVoiceData.writeEveryPart() {
     attack = -1.0; cutoff = -2.0; hcutoff = -3.0; bandf = -4.0; notchf = -5.0
     accelerate = -6.0; pAttack = -7.0; fmh = -8.0; distort = -9.0; phaserRate = -10.0
     tremoloRate = -11.0; begin = -12.0; body = "sentinel"; vowel = "sentinel"
-    putOscParam("sentinel", -13.0)
+    putIgnitorParam("sentinel", -13.0)
     putKatalystParam("sentinel", -14.0)
 }

@@ -17,8 +17,8 @@ class LangOscparamSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 1
-            events[0].data.oscParams?.get("key1") shouldBe 0.3
-            events[0].data.oscParams?.get("key2") shouldBe 0.7
+            events[0].data.ignitorParams?.get("key1") shouldBe 0.3
+            events[0].data.ignitorParams?.get("key2") shouldBe 0.7
         }
     }
 
@@ -28,7 +28,7 @@ class LangOscparamSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 1
-            events[0].data.oscParams?.get("custom") shouldBe null
+            events[0].data.ignitorParams?.get("custom") shouldBe null
         }
     }
 })

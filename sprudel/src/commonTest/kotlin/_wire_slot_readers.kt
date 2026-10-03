@@ -41,7 +41,7 @@ sealed interface WireFilter {
  * writing a wrong key fails here instead of agreeing with itself.
  */
 fun VoiceData.wireFilters(): List<WireFilter> {
-    val slots = oscParams ?: emptyMap()
+    val slots = ignitorParams ?: emptyMap()
 
     fun curve(door: String, stage: String): AdsrCurve? =
         slots["${door}Curves.$stage"]?.let { AdsrCurve.entries[it.toInt()] }

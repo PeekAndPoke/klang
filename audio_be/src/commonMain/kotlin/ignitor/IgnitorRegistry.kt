@@ -172,7 +172,7 @@ class IgnitorRegistry(
         // The slot bag is the voice's own: a producer writes `classic()`'s slots there (sprudel's `toVoiceData`,
         // phase 3 step 8).
         return dsl.buildExciter(
-            data.oscParams,
+            data.ignitorParams,
             soundIndex = data.soundIndex ?: 0,
             phasePools = phasePools,
             orbit = data.cylinder ?: 0,
