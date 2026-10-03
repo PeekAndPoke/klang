@@ -268,7 +268,7 @@ sealed interface IgnitorDsl {
         /** The lowpass stage: `lpf.freq`, `lpf.q`, `lpf.passes`, `lpf.env` and its four stages. */
         val lpf: PassFilterSlots = PassFilterSlots("lpf")
 
-        /** The tremolo stage: `tremolo.depth`, `tremolo.sync`, `tremolo.shape`. */
+        /** The tremolo stage: `tremolo.depth`, `tremolo.rate`, `tremolo.shape`. */
         val tremolo: TremoloSlots = TremoloSlots()
 
         /** The amplitude envelope: `adsr.attack`, `adsr.decay`, `adsr.sustain`, `adsr.release`, `adsr.on`. */

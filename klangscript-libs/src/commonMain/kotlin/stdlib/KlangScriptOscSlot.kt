@@ -140,7 +140,7 @@ object KlangScriptOscSlot {
     @KlangScript.Property
     val lpf: KlangScriptLpfSlots = KlangScriptLpfSlots
 
-    /** The tremolo stage's slots: `depth`, `sync`, `shape`. */
+    /** The tremolo stage's slots: `depth`, `rate`, `shape`. */
     @KlangScript.Property
     val tremolo: KlangScriptTremoloSlots = KlangScriptTremoloSlots
 

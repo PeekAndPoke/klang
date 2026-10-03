@@ -174,7 +174,7 @@ class AuthoredClassicSpec : StringSpec({
             ),
             crush = 6.0,
             tremoloDepth = 0.4,
-            tremoloSync = 5.0,
+            tremoloRate = 5.0,
             adsr = DoorAdsr(attack = 0.01, decay = 0.2, sustain = 0.6, release = 0.1),
         )
         val classic = render(base.copy(sound = "shortclassic"), doors)

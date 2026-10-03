@@ -486,7 +486,7 @@ private fun populatedVoiceData(seed: Int): SprudelVoiceData {
         distort = b + 26; distortShape = "ds$seed"; distortOversample = seed + 27
         coarse = b + 28; coarseOversample = seed + 29; crush = b + 30; crushOversample = seed + 31
         phaserRate = b + 32; phaserDepth = b + 33; phaserCenter = b + 34; phaserSweep = b + 35; phaserFloor = b + 35.5
-        tremoloSync = b + 36; tremoloDepth = b + 37
+        tremoloRate = b + 36; tremoloDepth = b + 37
         tremoloShape = "ts$seed"
         cutoff = b + 43; resonance = b + 44; hcutoff = b + 45; hresonance = b + 46; lpPasses = b + 46.2; hpPasses = b + 46.4
         bandf = b + 47; bandq = b + 48; notchf = b + 49; nresonance = b + 50

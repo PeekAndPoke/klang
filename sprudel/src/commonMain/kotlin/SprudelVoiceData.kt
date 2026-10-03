@@ -653,10 +653,10 @@ data class SprudelVoiceData(
             if (v != null || phaser != null) phaserOrNew().phaserFloor = v
         }
 
-    var tremoloSync: Double?
-        get() = tremolo?.tremoloSync
+    var tremoloRate: Double?
+        get() = tremolo?.tremoloRate
         set(v) {
-            if (v != null || tremolo != null) tremoloOrNew().tremoloSync = v
+            if (v != null || tremolo != null) tremoloOrNew().tremoloRate = v
         }
     var tremoloDepth: Double?
         get() = tremolo?.tremoloDepth

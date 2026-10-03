@@ -64,7 +64,7 @@ fun runVoiceDataCopyBenchmark() {
         fmh = 2.0; fmEnv = 0.5                                                     // fm
         distort = 0.3; coarse = 2.0; crush = 8.0                                   // distortion
         phaserRate = 0.5; phaserDepth = 0.6                                        // phaser
-        tremoloSync = 4.0; tremoloDepth = 0.4                                      // tremolo
+        tremoloRate = 4.0; tremoloDepth = 0.4                                      // tremolo
         katalystParams = paramBagOf(                                               // bus slots
             "duck.depth" to 0.5, "duck.attack" to 0.05,
             "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4,

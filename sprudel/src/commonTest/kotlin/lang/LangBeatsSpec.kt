@@ -170,7 +170,7 @@ class LangBeatsSpec : StringSpec({
 
         val wire = note("c3").tremolo(0.6, beatRate(0)).queryArc(0.0, 1.0)[0].data.toVoiceData()
 
-        wire.oscParams?.containsKey("tremolo.sync") shouldBe false
+        wire.oscParams?.containsKey("tremolo.rate") shouldBe false
         wire.oscParams?.get("tremolo.depth") shouldBe 0.6
     }
 
@@ -202,8 +202,8 @@ class LangBeatsSpec : StringSpec({
                         val atDefault = p.queryArc(from, from + 1).filter { it.isOnset }
                         val atDouble = p.queryArcContextual(from, from + 1, ctxAtCps(1.0)).filter { it.isOnset }
 
-                        atDefault[0].data.tremoloSync shouldBe 4.0
-                        atDouble[0].data.tremoloSync shouldBe 8.0
+                        atDefault[0].data.tremoloRate shouldBe 4.0
+                        atDouble[0].data.tremoloRate shouldBe 8.0
                     }
                 }
             }

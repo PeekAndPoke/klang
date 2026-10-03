@@ -49,11 +49,11 @@ import kotlin.math.sin
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
 /**
- * [KlangUiToolEmbeddable] for the per-param tremolo(depth, sync, shape) call.
+ * [KlangUiToolEmbeddable] for the per-param tremolo(depth, rate, shape) call.
  *
  * Two modes (C0.3 two-tool-tier design):
  * - Whole-call modal: when [KlangUiToolContext.call] is present, edits depth plus the optional
- *   sync-rate/shape params of the host call and commits the full argument list.
+ *   rate/shape params of the host call and commits the full argument list.
  *   The shape is a STRING param and commits as a quoted string literal; unset optionals stay
  *   omitted (null slots).
  * - Scalar fallback (embedded / sequence atom): edits a single depth value.
@@ -270,7 +270,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
                         }
                     }
                     if (call != null) {
-                        nullableField("rate", "Rate (cycles)", 0.5, rate, subField = "sync") { rate = it; dirty += 1; liveUpdate() }
+                        nullableField("rate", "Rate (Hz)", 0.5, rate, subField = "rate") { rate = it; dirty += 1; liveUpdate() }
                     }
                 }
             }
@@ -362,7 +362,7 @@ private class SprudelTremoloEditorComp(ctx: Ctx<Props>) : Component<SprudelTremo
 
         val points = buildString {
             for (i in 0 until numPoints) {
-                val t = i.toDouble() / numPoints  // 0..1 (one cycle)
+                val t = i.toDouble() / numPoints  // 0..1 (one second)
 
                 // Generate LFO waveform based on shape
                 val lfoPhase = (t * clampedRate) % 1.0

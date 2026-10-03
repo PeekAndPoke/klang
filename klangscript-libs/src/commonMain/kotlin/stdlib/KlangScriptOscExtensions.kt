@@ -394,7 +394,7 @@ object KlangScriptOscExtensions {
     /**
      * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
      * (0 to 1). The LFO's shape is a knob on the [TremoloBuilder]: `.tremolo(4, 0.8, x => x.shape("square"))`.
-     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, sync, shape)`.
+     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, rate, shape)`.
      *
      * @param configure receives the [TremoloBuilder] (knob: `shape`) and returns it.
      */

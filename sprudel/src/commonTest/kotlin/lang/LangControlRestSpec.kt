@@ -99,7 +99,7 @@ class LangControlRestSpec : StringSpec({
             "phaser", t("wet", "0.3", "0.6"), t("rate", "0.5", "1"), t("center", "1000", "2000"),
             t("sweep", "500", "1000"), t("floor", "0.3", "0.6"),
         ),
-        compound("tremolo", t("depth", "0.3", "0.6"), t("sync", "2", "4")),
+        compound("tremolo", t("depth", "0.3", "0.6"), t("rate", "2", "4")),
         // Filters
         compound("lpf", *filterSlots(passes = true)),
         compound("lowpass", *filterSlots(passes = true)),

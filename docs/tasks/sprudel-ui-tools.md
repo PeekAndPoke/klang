@@ -26,8 +26,8 @@ The named-argument bug itself is fixed (2026-09-26, `ffa490e4`: a named argument
   `attack .. release` slots of `lpf`/`hpf` (4..7) and `bpf`/`notch` (3..6). `SprudelNotchQEditor` and
   `SprudelNotchFreq*` are unwired the same way. Bind them by `paramNames.indexOf("attack")` or retire them.
 - **The phaser editor has no `floor` control** (it edits wet, rate, center, sweep).
-- **The tremolo `sync` slot is an LFO rate in Hz** (the tremolo's oscillator `freq` since 2026-09-29, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`; `lang_effects_modulation.kt`
-  `@param sync`); any tool or doc that presents it as cycles per cycle is wrong.
+- **The tremolo `rate` slot is an LFO rate in Hz** (the tremolo's oscillator `freq` since 2026-09-29, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`; `lang_effects_modulation.kt`
+  `@param rate`; called `sync` until 2026-10-03). The tremolo tool's label said "Rate (cycles)" until then; it says "Rate (Hz)" now.
 
 ## Summary
 

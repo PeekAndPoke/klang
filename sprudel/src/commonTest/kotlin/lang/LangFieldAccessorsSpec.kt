@@ -84,7 +84,7 @@ class LangFieldAccessorsSpec : StringSpec({
         row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))""", { it.phaserSweep }, 1000.0, s("bd sd").phaser(sweep = 2000).phaser(sweep = mul(0.5))),
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))""", { it.phaserFloor }, 0.5, s("bd sd").phaser(floor = 0.2).phaser(floor = add(0.3))),
         row("tremolo.depth", """s("bd sd").tremolo(0.5).tremolo(mul(0.5))""", { it.tremoloDepth }, 0.25, s("bd sd").tremolo(0.5).tremolo(mul(0.5))),
-        row("tremolo.sync", """s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))""", { it.tremoloSync }, 8.0, s("bd sd").tremolo(sync = 4).tremolo(sync = mul(2))),
+        row("tremolo.rate", """s("bd sd").tremolo(rate = 4).tremolo(rate = mul(2))""", { it.tremoloRate }, 8.0, s("bd sd").tremolo(rate = 4).tremolo(rate = mul(2))),
     )
 
     // The children of a compound read their slot bare. Slots apply in declaration order within one
@@ -103,13 +103,13 @@ class LangFieldAccessorsSpec : StringSpec({
         row("delay.time", """s("bd sd").delay(time = 0.25).reverb(size = delay.time)""", { it.katalystParams?.get("reverb.size") }, 0.25, s("bd sd").delay(time = 0.25).reverb(size = delay.time)),
         row("delay.feedback", """s("bd sd").delay(feedback = 0.4).pan(delay.feedback)""", { it.pan }, 0.4, s("bd sd").delay(feedback = 0.4).pan(delay.feedback)),
         row("delay.cap", """s("bd sd").delay(cap = 0.5).pan(delay.cap)""", { it.pan }, 0.5, s("bd sd").delay(cap = 0.5).pan(delay.cap)),
-        row("phaser.rate", """s("bd sd").phaser(rate = 0.5).tremolo(sync = phaser.rate)""", { it.tremoloSync }, 0.5, s("bd sd").phaser(rate = 0.5).tremolo(sync = phaser.rate)),
+        row("phaser.rate", """s("bd sd").phaser(rate = 0.5).tremolo(rate = phaser.rate)""", { it.tremoloRate }, 0.5, s("bd sd").phaser(rate = 0.5).tremolo(rate = phaser.rate)),
         row("phaser.wet", """s("bd sd").phaser(wet = 0.5).pan(phaser.wet)""", { it.pan }, 0.5, s("bd sd").phaser(wet = 0.5).pan(phaser.wet)),
         row("phaser.center", """s("bd sd").phaser(center = 1000).lpf(phaser.center)""", { it.cutoff }, 1000.0, s("bd sd").phaser(center = 1000).lpf(phaser.center)),
         row("phaser.sweep", """s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)""", { it.phaserCenter }, 2000.0, s("bd sd").phaser(sweep = 2000).phaser(center = phaser.sweep)),
         row("phaser.floor", """s("bd sd").phaser(floor = 0.2).pan(phaser.floor)""", { it.pan }, 0.2, s("bd sd").phaser(floor = 0.2).pan(phaser.floor)),
         row("tremolo.depth", """s("bd sd").tremolo(0.5).pan(tremolo.depth)""", { it.pan }, 0.5, s("bd sd").tremolo(0.5).pan(tremolo.depth)),
-        row("tremolo.sync", """s("bd sd").tremolo(sync = 4).phaser(rate = tremolo.sync)""", { it.phaserRate }, 4.0, s("bd sd").tremolo(sync = 4).phaser(rate = tremolo.sync)),
+        row("tremolo.rate", """s("bd sd").tremolo(rate = 4).phaser(rate = tremolo.rate)""", { it.phaserRate }, 4.0, s("bd sd").tremolo(rate = 4).phaser(rate = tremolo.rate)),
     )
 
     // Every alias is a constant of the canonical object: it sets the canonical field and reads it bare.
@@ -551,9 +551,9 @@ class LangFieldAccessorsSpec : StringSpec({
                 it.phaserCenter shouldBe 2000.0
                 it.phaserSweep shouldBe 2000.0
             },
-            Case("tremolo(sync = mul(2))", s("bd sd").tremolo(0.5, 4, "sine").tremolo(sync = mul(2)), """s("bd sd").tremolo(0.5, 4, "sine").tremolo(sync = mul(2))""") {
+            Case("tremolo(rate = mul(2))", s("bd sd").tremolo(0.5, 4, "sine").tremolo(rate = mul(2)), """s("bd sd").tremolo(0.5, 4, "sine").tremolo(rate = mul(2))""") {
                 it.tremoloDepth shouldBe 0.5
-                it.tremoloSync shouldBe 8.0
+                it.tremoloRate shouldBe 8.0
                 it.tremoloShape shouldBe "sine"
             },
             Case("distort(oversample = mul(2))", s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2)), """s("bd sd").distort(0.5, "soft", 2).distort(oversample = mul(2))""") {
@@ -970,7 +970,7 @@ class LangFieldAccessorsSpec : StringSpec({
             Case("phaser.sweep", s("bd sd").phaser(sweep = "0.1 0.5"), """s("bd sd").phaser(sweep = "0.1 0.5")""") { it.phaserSweep },
             Case("phaser.floor", s("bd sd").phaser(floor = "0.1 0.5"), """s("bd sd").phaser(floor = "0.1 0.5")""") { it.phaserFloor },
             Case("tremolo.depth", s("bd sd").tremolo(depth = "0.1 0.5"), """s("bd sd").tremolo(depth = "0.1 0.5")""") { it.tremoloDepth },
-            Case("tremolo.sync", s("bd sd").tremolo(sync = "0.1 0.5"), """s("bd sd").tremolo(sync = "0.1 0.5")""") { it.tremoloSync },
+            Case("tremolo.rate", s("bd sd").tremolo(rate = "0.1 0.5"), """s("bd sd").tremolo(rate = "0.1 0.5")""") { it.tremoloRate },
             Case("distort.amount", s("bd sd").distort(amount = "0.1 0.5"), """s("bd sd").distort(amount = "0.1 0.5")""") { it.distort },
             Case("crush.amount", s("bd sd").crush(amount = "0.1 0.5"), """s("bd sd").crush(amount = "0.1 0.5")""") { it.crush },
             Case("coarse.amount", s("bd sd").coarse(amount = "0.1 0.5"), """s("bd sd").coarse(amount = "0.1 0.5")""") { it.coarse },

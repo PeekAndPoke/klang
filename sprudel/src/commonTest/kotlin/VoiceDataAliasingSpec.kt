@@ -178,7 +178,7 @@ internal fun SprudelVoiceData.mutableParts(): List<Pair<String, Any?>> = listOf(
 internal fun SprudelVoiceData.writeEveryPart() {
     attack = -1.0; cutoff = -2.0; hcutoff = -3.0; bandf = -4.0; notchf = -5.0
     accelerate = -6.0; pAttack = -7.0; fmh = -8.0; distort = -9.0; phaserRate = -10.0
-    tremoloSync = -11.0; begin = -12.0; body = "sentinel"; vowel = "sentinel"
+    tremoloRate = -11.0; begin = -12.0; body = "sentinel"; vowel = "sentinel"
     putOscParam("sentinel", -13.0)
     putKatalystParam("sentinel", -14.0)
 }

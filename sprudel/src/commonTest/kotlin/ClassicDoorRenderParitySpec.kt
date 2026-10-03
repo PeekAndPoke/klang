@@ -116,7 +116,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("${door}Curves.release", env + ("${door}Curves.release" to AdsrCurves.indexOf(AdsrCurve.InvSquare))))
     }
 
-    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 5.0)
+    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 5.0)
 
     val rows: List<Row> = buildList {
         add(Row("onepole", mapOf("onepole" to 900.0)))
@@ -131,7 +131,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         addAll(filterRows("lpf", hasPasses = true))
         add(Row("analog", mapOf("analog" to 2.0, "lpf.freq" to 900.0)))
         add(Row("tremolo.depth", mapOf("tremolo.depth" to 0.5)))
-        add(Row("tremolo.sync", trem))
+        add(Row("tremolo.rate", trem))
 
         for (shape in LfoShapes.names - "sine") {
             add(Row("tremolo.shape", trem + ("tremolo.shape" to LfoShapes.indexOf(shape)), label = "tremolo.shape $shape"))
@@ -151,7 +151,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
                 mapOf(
                     "crush.amount" to 6.0, "hpf.freq" to 150.0, "bpf.freq" to 1200.0, "bpf.q" to 0.5, "notch.freq" to 3000.0,
                     "lpf.freq" to 2500.0, "lpf.env" to 12.0, "lpf.decay" to 0.2, "lpf.sustain" to 0.2,
-                    "tremolo.depth" to 0.3, "tremolo.sync" to 6.0, "adsr.attack" to 0.01, "adsr.sustain" to 0.7,
+                    "tremolo.depth" to 0.3, "tremolo.rate" to 6.0, "adsr.attack" to 0.01, "adsr.sustain" to 0.7,
                 ),
             ),
         )
@@ -192,7 +192,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     }
 
     // The tremolo across the SPRUDEL door and the IGNITOR door (2026-09-29, the tremolo as a composition): sprudel's
-    // `tremolo(depth, sync, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
+    // `tremolo(depth, rate, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
     // places the same node with constants in front of a `classic()` whose own tremolo stays unset. Both render one
     // saw through one tremolo into the default envelope, so the renders agree in raw bits, at every shape.
     for (shape in LfoShapes.names) {

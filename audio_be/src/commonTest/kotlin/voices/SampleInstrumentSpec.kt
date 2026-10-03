@@ -155,7 +155,7 @@ class SampleInstrumentSpec : StringSpec({
         Triple("bandpass", base, DoorFields(filters = listOf(DoorFilter.BandPass(300.0, 2.0)))),
         Triple("notch", base, DoorFields(filters = listOf(DoorFilter.Notch(220.0, 1.0)))),
         Triple("lowpass with its envelope", base, DoorFields(filters = listOf(DoorFilter.LowPass(150.0, 1.5, envelope = env)))),
-        Triple("tremolo", base, DoorFields(tremoloDepth = 0.7, tremoloSync = 6.0, tremoloShape = "square")),
+        Triple("tremolo", base, DoorFields(tremoloDepth = 0.7, tremoloRate = 6.0, tremoloShape = "square")),
         Triple("adsr", base, DoorFields(adsr = DoorAdsr(attack = 0.03, decay = 0.05, sustain = 0.4, release = 0.1))),
         Triple("adsrOff (the teardown fade)", base, DoorFields(adsr = DoorAdsr(on = false))),
         Triple("onepole", base.copy(oscParams = mapOf("onepole" to 400.0)), DoorFields()),

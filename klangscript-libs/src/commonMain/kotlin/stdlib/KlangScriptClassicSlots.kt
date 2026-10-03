@@ -220,9 +220,9 @@ object KlangScriptTremoloSlots {
     @KlangScript.Property
     val depth: IgnitorDsl = IgnitorDsl.Slots.tremolo.depth
 
-    /** The LFO rate in Hz, default 0. Mirrors sprudel's `tremolo.sync`. */
+    /** The LFO rate in Hz, default 0. Mirrors sprudel's `tremolo.rate`. */
     @KlangScript.Property
-    val sync: IgnitorDsl = IgnitorDsl.Slots.tremolo.sync
+    val rate: IgnitorDsl = IgnitorDsl.Slots.tremolo.rate
 
     /** The LFO shape as its index in the shape list, default `sine`. Mirrors sprudel's `tremolo(shape = ...)`. */
     @KlangScript.Property

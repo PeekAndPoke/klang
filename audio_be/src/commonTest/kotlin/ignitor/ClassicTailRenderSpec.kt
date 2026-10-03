@@ -92,7 +92,7 @@ class ClassicTailRenderSpec : StringSpec({
             tail.buildExciter(oscParams = bag, random = Random(7), freqHz = 220.0).gatesOutput
 
         gates(emptyMap()) shouldBe false
-        gates(mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0)) shouldBe true
+        gates(mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0)) shouldBe true
     }
 
     "an unset or non-finite adsr.on is ON: the envelope is built by default" {

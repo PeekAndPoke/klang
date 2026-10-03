@@ -68,7 +68,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             distort = 0.3; distortShape = "tube"; distortOversample = 4; coarse = 2.0; coarseOversample = 2; crush = 8.0; crushOversample =
             2
             phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
-            tremoloSync = 4.0; tremoloDepth = 0.4; tremoloShape = "sine"
+            tremoloRate = 4.0; tremoloDepth = 0.4; tremoloShape = "sine"
             cylinder = 1; pan = 0.3
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1
             solo = 1.0; cull = 0.2

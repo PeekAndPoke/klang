@@ -154,3 +154,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261001-sprudel-beats-helper.md`).
 - 2026-10-01: `beatRate(n, base = 4)`, the rate twin of `beats`, one cycle every n beats in Hz
   (`docs/tasks-archive/2026-10/20261001-sprudel-beat-rate-helper.md`).
+- 2026-10-03: the tremolo's `sync` is `rate` on every surface, the slot key `tremolo.rate`
+  (`docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`).

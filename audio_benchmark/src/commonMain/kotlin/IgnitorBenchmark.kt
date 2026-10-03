@@ -352,7 +352,7 @@ class IgnitorBenchmark(
                 Case("square+fm", voiceData = voice("square") { fmh = 2.0; fmEnv = 200.0 }),
                 Case(
                     "sine+vibrato+tremolo",
-                    voiceData = voice("sine") { vibrato = 6.0; vibratoMod = 0.3; tremoloSync = 4.0; tremoloDepth = 0.5 }
+                    voiceData = voice("sine") { vibrato = 6.0; vibratoMod = 0.3; tremoloRate = 4.0; tremoloDepth = 0.5 }
                 ),
 
                 // ── A guitar rig, and what its level knobs and drive stages cost ──

@@ -270,7 +270,7 @@ export spin = notes => n(notes)
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
   .oscp("decay", 3.0).clip(1.05)
-  .tremolo(sync = 4, depth = perlin.range(0.30, 0.35)).accelerate(perlin.range(0.01, 0.02).slow(8).seg(8))
+  .tremolo(rate = 4, depth = perlin.range(0.30, 0.35)).accelerate(perlin.range(0.01, 0.02).slow(8).seg(8))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
   .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right

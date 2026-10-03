@@ -145,7 +145,7 @@ private fun applyBeatClock(
  * `beats(1)` is 0.5 s and `beats(0.5)` is 0.25 s, an eighth note. In a waltz, `beats(1, 3)` is a third of
  * a cycle.
  *
- * It is a duration, not a rate: a door that takes Hz (`vibrato`'s and `phaser`'s `rate`, the tremolo's `sync`)
+ * It is a duration, not a rate: a door that takes Hz (the `rate` of `tremolo`, `vibrato` and `phaser`)
  * takes [beatRate].
  *
  * A number gives a signal. A pattern keeps its own rhythm, and each of its values becomes seconds.
@@ -176,8 +176,8 @@ fun beats(n: PatternLike, base: Number = 4, callInfo: CallInfo? = null): Sprudel
 /**
  * One cycle every `n` beats, in Hz, at the tempo that is playing right now.
  *
- * The rate twin of [beats]: the LFO doors take a rate in Hz (`vibrato`'s and `phaser`'s `rate`, the tremolo's
- * `sync`), and `beatRate` turns a musical length into that rate, following every tempo change while playing.
+ * The rate twin of [beats]: the LFO doors take a rate in Hz (the `rate` of `tremolo`, `vibrato` and
+ * `phaser`), and `beatRate` turns a musical length into that rate, following every tempo change while playing.
  * It takes the same argument as [beats], so `delay(0.3, beats(0.5))` and `tremolo(0.6, beatRate(0.5))` both
  * mean "every half beat". It is exactly `pure(1).div(beats(n, base))`: at cps 0.5 (120 bpm) `beatRate(1)`
  * is 2 Hz and `beatRate(0.5)` is 4 Hz. `base` is how many beats make a cycle, 4 unless you say otherwise.

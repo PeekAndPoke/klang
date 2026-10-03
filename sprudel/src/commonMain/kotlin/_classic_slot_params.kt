@@ -84,7 +84,7 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
 
     tremolo?.let { t ->
         bag.put(k.tremoloDepth, t.tremoloDepth)
-        bag.put(k.tremoloSync, t.tremoloSync)
+        bag.put(k.tremoloRate, t.tremoloRate)
         bag.put(k.tremoloShape, t.tremoloShape?.let { LfoShapes.indexOf(it) })
     }
 
@@ -157,7 +157,7 @@ private object ClassicSlotKeys {
     val lpf = pass(s.lpf, s.lpfCurves)
 
     val tremoloDepth = name(s.tremolo.depth)
-    val tremoloSync = name(s.tremolo.sync)
+    val tremoloRate = name(s.tremolo.rate)
     val tremoloShape = name(s.tremolo.shape)
 
     val adsrAttack = name(s.adsr.attack)

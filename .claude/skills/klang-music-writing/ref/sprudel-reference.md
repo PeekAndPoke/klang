@@ -408,8 +408,8 @@ at the cutoff). Same third slot on the ignitor door.
 | `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.amount`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
 | `phaser(wet, rate, center, sweep, floor)`                                   |          | Phaser: wet FIRST (additive by default), then the LFO rate in Hz, center Hz, sweep range Hz, floor. A bare `phaser()` reads the pattern's values as `wet` | `note("c3").phaser(wet = 0.5, rate = 1, center = 1000)`      |
 | `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
-| `tremolo(depth, sync, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge)            | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
-| `tremolo.depth` / `tremolo.sync`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.sync)`                     |
+| `tremolo(depth, rate, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`rate`, `beatRate(n)` follows the tempo), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge)            | `note("c3").tremolo(depth = 0.5, rate = 4, shape = "sine")`  |
+| `tremolo.depth` / `tremolo.rate`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.rate)`                     |
 | `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
 | `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
 | `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
@@ -531,6 +531,14 @@ Top-level signals that produce continuous values. Use `.range(min, max)` to scal
 
 `time` (cycle counter), `cps` (cycles/sec), `rpm` (CPS*60), `bpm` (CPS*240)
 
+Tempo-following lengths and rates (both follow every rpm change; `base` = beats per cycle, default 4):
+
+- `beats(n, base = 4)`: the length of n beats in SECONDS, for time params (`delay.time`, envelope stages).
+  `beats(0.5)` is an eighth note. Not for `late`/`early`, which take cycles.
+- `beatRate(n, base = 4)`: one cycle every n beats in HZ, for rate params (`tremolo`, `vibrato`, `phaser`).
+  `beatRate(0.5)` wobbles every half beat. Exactly `pure(1).div(beats(n))`.
+- In mini-notation `"1/8"` is NOT a fraction (`/` slows down): write `"0.125"` or use `beats`.
+
 ### Range Mapping
 
 | Function                  | Input | Description                      |
@@ -551,8 +559,9 @@ note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
 // Random panning
 s("hh*8").pan(rand)
 
-// Tempo-synced delay
-s("sd").delay(wet = 0.5, time = pure(1/8).div(cps))
+// Tempo-synced delay (an eighth note) and tremolo (every half beat)
+s("sd").delay(wet = 0.5, time = beats(0.5))
+note("c3").s("saw").tremolo(depth = 0.6, rate = beatRate(0.5))
 
 // Organic modulation
 note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
@@ -780,7 +789,7 @@ stack(
 
 ```javascript
 note("c4 ~ e4 ~").sound("pluck")
-  .delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.4)
+  .delay(wet = 0.3, time = beats(0.5), feedback = 0.4)   // an eighth note at any tempo
 ```
 
 ---
@@ -803,7 +812,7 @@ stack(
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
     .lpf(attack = 0.01, decay = 0.1, sustain = 0.2, release = 0.1) // filter envelope
-    .tremolo(depth = 0.33, sync = 8, shape = "sine") // 8 Hz tremolo
+    .tremolo(depth = 0.33, rate = 8, shape = "sine") // 8 Hz tremolo
     .analog(1)                   // warm analog drift
 
   // Bass: pluck + triangle layered

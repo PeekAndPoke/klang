@@ -151,7 +151,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
 - **Voice and instruments, future**: `pitch-pipeline-into-the-tree.md`, `svf-resonator-class-collapse.md`,
-  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`, `tremolo-rate-naming-parity.md`,
+  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,

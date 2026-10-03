@@ -85,7 +85,7 @@ class FreqAccessorIntelSpec : StringSpec({
             "reverb" to listOf("wet", "size", "lowpass"),
             "delay" to listOf("wet", "time", "feedback", "cap"),
             "phaser" to listOf("wet", "rate", "center", "sweep", "floor"),
-            "tremolo" to listOf("depth", "sync"),
+            "tremolo" to listOf("depth", "rate"),
             "lpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "hpf" to listOf("freq", "q", "passes", "env", "attack", "decay", "sustain", "release"),
             "bpf" to listOf("freq", "q", "env", "attack", "decay", "sustain", "release"),

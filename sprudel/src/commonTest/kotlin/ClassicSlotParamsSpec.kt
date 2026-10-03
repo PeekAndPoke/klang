@@ -97,7 +97,7 @@ class ClassicSlotParamsSpec : StringSpec({
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
         slots(note("c").distort(0.3, "tube"))["distort.shape"] shouldBe 10.0
         slots(note("c").distort(0.3, "no-such-shape"))["distort.shape"] shouldBe 0.0
-        slots(note("c").tremolo(0.5, 4, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0, "tremolo.shape" to 2.0)
+        slots(note("c").tremolo(0.5, 4, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0, "tremolo.shape" to 2.0)
         slots(note("c").adsrCurves("linear", "square", "scurve")) shouldBe mapOf(
             "adsrCurves.attack" to 0.0, "adsrCurves.decay" to 1.0, "adsrCurves.release" to 3.0,
         )
@@ -144,7 +144,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "crush.amount" to 4.1, "crush.oversample" to 2.0,
             "coarse.amount" to 3.1, "coarse.oversample" to 4.0,
             "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
-            "tremolo.depth" to 0.61, "tremolo.sync" to 4.1, "tremolo.shape" to 2.0,
+            "tremolo.depth" to 0.61, "tremolo.rate" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,
         )
 
