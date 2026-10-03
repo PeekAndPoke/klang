@@ -315,7 +315,7 @@ private fun expandPasses(
  *
  * Refuses when `analog` is anything but a literal zero: a non-zero analog switches the lowpass and
  * highpass taps of `Ignitor.svf` to their state-dependent saturating branch, which is deliberate nonlinear character that
- * `EqCore` does not implement. A Param-backed analog is refused too, because an osc-param could
+ * `EqCore` does not implement. A Param-backed analog is refused too, because an Ignitor slot could
  * turn saturation on per note and the decision is made here, once, at registration.
  *
  * Refuses on the same grounds when the filter carries a CUTOFF ENVELOPE (`env` anything but a
@@ -394,7 +394,7 @@ private fun IgnitorDsl.filterInner(): IgnitorDsl? = when (this) {
  * True only for a structural literal zero.
  *
  * Structural on purpose: a `Param` that happens to default to 0.0 can be overridden per note via
- * `oscparam`, so it is not a compile-time zero and must not fuse.
+ * `ignitorParam`, so it is not a compile-time zero and must not fuse.
  */
 private fun IgnitorDsl.isLiteralZero(): Boolean = this is IgnitorDsl.Constant && value == 0.0
 

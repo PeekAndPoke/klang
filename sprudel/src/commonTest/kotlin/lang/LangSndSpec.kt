@@ -202,7 +202,7 @@ class LangSndSpec : StringSpec({
         }
     }
 
-    "sndNoise(\"color\") compound string sets the spectral-tilt oscParam" {
+    "sndNoise(\"color\") compound string sets the spectral-tilt Ignitor slot" {
         val events = note("c3").sndNoise("-0.5").queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {
@@ -211,7 +211,7 @@ class LangSndSpec : StringSpec({
         }
     }
 
-    "sndBrown(\"depth\") compound string sets the white-leak oscParam" {
+    "sndBrown(\"depth\") compound string sets the white-leak Ignitor slot" {
         val events = note("c3").sndBrown(0.5).queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
         assertSoftly {

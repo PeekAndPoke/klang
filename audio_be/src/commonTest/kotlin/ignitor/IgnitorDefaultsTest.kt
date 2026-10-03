@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * Tests that predefined oscillators from registerDefaults() respond correctly to ignitorParams.
  *
  * These tests must pass both BEFORE and AFTER the refactoring of IgnitorDsl defaults
- * from Param to Constant. They verify the contract between sprudel's oscParam() and
+ * from Param to Constant. They verify the contract between sprudel's ignitorParam() and
  * the registered oscillator definitions.
  */
 class IgnitorDefaultsTest : StringSpec({
@@ -108,42 +108,42 @@ class IgnitorDefaultsTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Super oscillator oscParam overrides
+    // Super oscillator ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "supersaw responds to oscParam 'voices'" {
+    "supersaw responds to ignitorParam 'voices'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("voices" to 3.0))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "supersaw responds to oscParam 'detune'" {
+    "supersaw responds to ignitorParam 'detune'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("spread" to 0.8))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "supersaw responds to oscParam 'analog'" {
+    "supersaw responds to ignitorParam 'analog'" {
         val bufDefault = createAndGenerate("supersaw")
         val bufOverride = createAndGenerate("supersaw", ignitorParams = mapOf("analog" to 0.5))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Simple oscillator oscParam overrides
+    // Simple oscillator ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "sine responds to oscParam 'analog'" {
+    "sine responds to ignitorParam 'analog'" {
         val bufDefault = createAndGenerate("sine")
         val bufOverride = createAndGenerate("sine", ignitorParams = mapOf("analog" to 0.5))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Dust/Crackle oscParam overrides
+    // Dust/Crackle ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "dust responds to oscParam 'density'" {
+    "dust responds to ignitorParam 'density'" {
         val bufLow = createAndGenerate("dust", ignitorParams = mapOf("density" to 0.05), freqHz = 0.0)
         val bufHigh = createAndGenerate("dust", ignitorParams = mapOf("density" to 0.9), freqHz = 0.0)
         val countLow = bufLow.count { it > 0.0 }
@@ -152,28 +152,28 @@ class IgnitorDefaultsTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Pluck oscParam overrides
+    // Pluck ignitorParam overrides
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "pluck responds to oscParam 'decay'" {
+    "pluck responds to ignitorParam 'decay'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("decay" to 0.9))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "pluck responds to oscParam 'brightness'" {
+    "pluck responds to ignitorParam 'brightness'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("brightness" to 0.9))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "pluck responds to oscParam 'pickPosition'" {
+    "pluck responds to ignitorParam 'pickPosition'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("pickPosition" to 0.1))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
     }
 
-    "pluck responds to oscParam 'stiffness'" {
+    "pluck responds to ignitorParam 'stiffness'" {
         val bufDefault = createAndGenerate("pluck")
         val bufOverride = createAndGenerate("pluck", ignitorParams = mapOf("stiffness" to 0.8))
         buffersDiffer(bufDefault, bufOverride) shouldBe true
@@ -219,7 +219,7 @@ class IgnitorDefaultsTest : StringSpec({
         knob.default shouldBe (IgnitorDsl.EqSection.Bell().q as IgnitorDsl.Constant).value
     }
 
-    "eqdemo bell responds to the eqdb oscparam override" {
+    "eqdemo bell responds to the eqdb ignitorParam override" {
         val flat = createAndGenerate("eqdemo")
         val boosted = createAndGenerate("eqdemo", ignitorParams = mapOf("eqdb" to 9.0))
         var differs = false

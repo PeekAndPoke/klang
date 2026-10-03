@@ -119,10 +119,10 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: getVariantsForReceiver(Ignitor) returns Ignitor methods" {
         val reg = stdlibRegistry()
-        val oscMembers = reg.getVariantsForReceiver(KlangType("Ignitor"))
-        oscMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
+        val ignitorMembers = reg.getVariantsForReceiver(KlangType("Ignitor"))
+        ignitorMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
         // Each returned symbol has at least one variant whose owner/receiver is Ignitor.
-        oscMembers.all { symbol ->
+        ignitorMembers.all { symbol ->
             symbol.variants.any { v ->
                 when (v) {
                     is KlangCallable -> v.receiver?.simpleName == "Ignitor"
@@ -171,8 +171,8 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: Ignitor symbol's type carries the KlangScriptIgnitor FQCN" {
         val reg = stdlibRegistry()
-        val osc = reg.get("Ignitor")!!
-        val prop = osc.variants.filterIsInstance<KlangProperty>().first()
+        val ignitor = reg.get("Ignitor")!!
+        val prop = ignitor.variants.filterIsInstance<KlangProperty>().first()
         prop.type.simpleName shouldBe "Ignitor"
         prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"
     }

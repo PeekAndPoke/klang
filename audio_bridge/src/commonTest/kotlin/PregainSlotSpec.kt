@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldNotBe
  * and the one structural promise the helper makes.
  *
  * **Why the helper needs a spec at all.** `x.pregain()` is offered as a shorter spelling of
- * `x.mul(OscSlot.pregain)`, and "shorter spelling" is a claim about the TREE, not about the
+ * `x.mul(Ignitor.slot.pregain)`, and "shorter spelling" is a claim about the TREE, not about the
  * sound: the two must be the same node with the same operand order, or the build cache, the
  * optimizer's refcounts and the process-wide identity map (`uniqueId`) would see two instruments
  * where the author wrote one, register both and crossfade one against the other. Swapping the

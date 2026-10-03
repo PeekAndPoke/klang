@@ -13,13 +13,14 @@ import io.kotest.matchers.string.shouldNotContain
 
 class NameSuggestionsSpec : StringSpec({
 
-    val patternish = listOf("oscp", "oscparam", "gain", "lpf", "lpq", "rev", "note", "sound")
+    val patternish = listOf("ignp", "ignitorParam", "gain", "lpf", "lpq", "rev", "note", "sound")
 
     "suggests the transposed neighbour — the case this exists for" {
-        // `.ocsp` for `.oscp` cost a full debugging session. Plain Levenshtein scores it 2 and
+        // A transposed door name cost a full debugging session on 2026-08-22; the row spells today's door,
+        // `.ingp` for `.ignp`. Plain Levenshtein scores it 2 and
         // would be filtered out at the 4-letter threshold of 1, so this row also guards the
         // choice of osaDistance over levenshtein.
-        suggestNames("ocsp", patternish) shouldContain "'oscp'"
+        suggestNames("ingp", patternish) shouldContain "'ignp'"
     }
 
     "suggests for the ordinary typos too" {
@@ -59,7 +60,7 @@ class NameSuggestionsSpec : StringSpec({
     "ranks NEAREST first, not merely alphabetically" {
         // The previous version used three candidates all at distance 1 and length 3, so only the
         // alphabetical tiebreak fired and deleting the distance comparator left it green. This
-        // is the property that makes `oscp` beat `oscparam`.
+        // is the property that makes `ignp` beat `ignitorParam`.
         // Both candidates must be INSIDE the threshold, at DIFFERENT distances — otherwise the
         // filter does the work and the ordering is never exercised. ("gian" vs "grain" cannot
         // show this: that pair is 2 edits and a 4-char name only admits 1.)

@@ -42,10 +42,10 @@ internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
  * The rules (they moved here from the backend with the translation):
  *  - only a field that is SET and FINITE is written; an unset one stays unset, so the slot's default and the
  *    filter envelope's slot-layer depth fill (the engine's `filterEnvDef`) decide;
- *  - a typed door WINS over an `oscp` of the same key on the same event, whatever the order: the door's value
+ *  - a typed door WINS over an `ignp` of the same key on the same event, whatever the order: the door's value
  *    is written after the event's own bag is copied;
  *  - a filter is written only when its cutoff is set; its `q` and `passes` ([coercePasses]) only when set, so
- *    an explicit `oscp` of either is never overwritten by a fill (the slot defaults, 0.707 and 1, are the
+ *    an explicit `ignp` of either is never overwritten by a fill (the slot defaults, 0.707 and 1, are the
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a

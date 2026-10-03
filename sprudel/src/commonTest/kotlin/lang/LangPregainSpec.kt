@@ -13,9 +13,9 @@ import io.kotest.matchers.shouldBe
  * The `pregain` door: how hard an event is played INTO its instrument (the signal-flow plan,
  * section 6, spot A).
  *
- * It is exactly `oscparam("pregain", x)` and nothing else, which is the property most of these
+ * It is exactly `ignitorParam("pregain", x)` and nothing else, which is the property most of these
  * rows are about: it writes ONE key of the ignitorParams bag, it leaves `gain` alone, and a
- * hand-written `oscp("pregain", x)` is the same event. What the slot then DOES is the
+ * hand-written `ignp("pregain", x)` is the same event. What the slot then DOES is the
  * instrument's business and is guarded in audio_be (`PregainSlotRenderSpec`,
  * `VoicePregainWireSpec`); nothing here can hear anything.
  */
@@ -43,9 +43,9 @@ class LangPregainSpec : StringSpec({
         }
     }
 
-    "pregain IS oscparam(\"pregain\", ...): the same slot, written the long way" {
+    "pregain IS ignitorParam(\"pregain\", ...): the same slot, written the long way" {
         val door = note("c3 e3").pregain("1 0.5").queryArc(0.0, 1.0)
-        val raw = note("c3 e3").oscp("pregain", "1 0.5").queryArc(0.0, 1.0)
+        val raw = note("c3 e3").ignp("pregain", "1 0.5").queryArc(0.0, 1.0)
 
         door.map { it.data.ignitorParams?.get("pregain") } shouldBe listOf(1.0, 0.5)
         door.map { it.data.ignitorParams } shouldBe raw.map { it.data.ignitorParams }

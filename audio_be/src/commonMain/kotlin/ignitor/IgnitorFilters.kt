@@ -369,7 +369,7 @@ fun Ignitor.svf(
  *    declaration and is deliberately not scrubbed; `IgnitorDslOptimizerRenderSpec`'s C5 rows drive
  *    exactly this.
  *  - ARITHMETIC in a q expression. `Plus` and `Minus` are clamp-free by contract (see
- *    `PlusIgnitor`), so two finite operands can overflow: `Osc.param("a", 1e308).plus(...)` as a q
+ *    `PlusIgnitor`), so two finite operands can overflow: `Ignitor.param("a", 1e308).plus(...)` as a q
  *    renders sample for sample what a `+Infinity` q renders.
  *
  * A [ParamIgnitor] that engine code constructs directly (the `Double` overloads of [svf] and its

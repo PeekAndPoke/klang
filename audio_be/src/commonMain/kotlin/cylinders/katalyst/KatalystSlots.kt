@@ -75,7 +75,7 @@ internal object KatalystSlots {
      *
      * **Two probes at two frequencies, and the answers must agree** (decided with the maintainer,
      * 2026-09-17): a bus has no note, so a knob whose value DEPENDS on one is not a bus knob at
-     * all. `Osc.freq()` answers 440 and 660, `Osc.freq().mul(2)` answers 880 and 1320, and both
+     * all. `Ignitor.freq()` answers 440 and 660, `Ignitor.freq().mul(2)` answers 880 and 1320, and both
      * therefore take their constant instead of an invented number. A pitch-free fold
      * (`0.1 * 3`, or `1 / 0`, which the engine's `Div` maps to a finite 0.0) answers the same on
      * both probes and is the author's value, zero included: nothing here may second-guess a 0.0,
@@ -91,7 +91,7 @@ internal object KatalystSlots {
      *
      * The try/catch is the audio-thread guard, not a diagnostic: [resolve] runs at chain-install
      * time inside the render callback, where an escaping exception takes the worklet with it. A
-     * hand-built tree can still throw at build time (an empty `Osc.variants()` does), and the
+     * hand-built tree can still throw at build time (an empty `Ignitor.variants()` does), and the
      * house answer to "the engine cannot read this knob" is the knob's default, not a dead voice.
      *
      * The build itself allocates, which is why this is a chain-build path only.

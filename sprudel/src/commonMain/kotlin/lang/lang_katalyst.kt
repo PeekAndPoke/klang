@@ -169,7 +169,7 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * Writes one **orbit chain slot**, [per orbit](/manuals/lexikon/orbit-bus), by its `<stage>.<knob>`
  * name.
  *
- * Direct access to a declared chain's named knobs, the orbit twin of [oscparam]: `oscp` fills the
+ * Direct access to a declared chain's named knobs, the orbit twin of [ignitorParam]: `ignp` fills the
  * voice's own instrument, `katp` the chain its orbit runs. The vocabulary is what the chain
  * declares, which for a chain built from `k.classic()` is every classic knob: `body.material`,
  * `body.wet`, `body.floor`, `vowel.vowel`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`,

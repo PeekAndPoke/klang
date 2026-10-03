@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  * supplied (the normal DSL path always supplies one explicitly, but the
  * default is needed for direct Kotlin callers).
  *
- * For overridable parameter slots (sprudel oscParam compatibility) see
+ * For overridable parameter slots (sprudel ignitorParam compatibility) see
  * [ParamIgnitor], which carries a name used for `ignitorParams[name]` lookup
  * at build time (in `IgnitorDslRuntime.buildIgnitor`).
  */

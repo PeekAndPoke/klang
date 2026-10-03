@@ -24,7 +24,7 @@ import kotlin.math.abs
  * - **Shared source**: a single DSL node referenced multiple times produces identical samples
  *   at every read site (so `let s = ...; s + s` equals `s.mul(2)`).
  * - **Independent constructions**: two distinct DSL instances produce independent Ignitors
- *   (so `Osc.whiteNoise() + Osc.whiteNoise()` is NOT `2·whiteNoise()`).
+ *   (so `Ignitor.whitenoise() + Ignitor.whitenoise()` is NOT `2·whitenoise()`).
  * - **Mix linearity** (once the mix param is standardised): `effect(mix = r)` is bit-identical
  *   to `dry·(1-r) + wet·r`.
  *

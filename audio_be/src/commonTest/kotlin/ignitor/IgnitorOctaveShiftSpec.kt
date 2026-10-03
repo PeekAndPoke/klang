@@ -19,7 +19,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
  * probe here is [FreqIgnitor], whose whole job is to report the frequency handed to it.
  *
  * Not to be confused with the klangscript `octaveUp`/`octaveDown` at
- * `KlangScriptOscExtensions.kt`, which build an `IgnitorDsl.Detune` node on the DSL side.
+ * `KlangScriptIgnitorExtensions.kt`, which build an `IgnitorDsl.Detune` node on the DSL side.
  */
 class IgnitorOctaveShiftSpec : StringSpec({
 

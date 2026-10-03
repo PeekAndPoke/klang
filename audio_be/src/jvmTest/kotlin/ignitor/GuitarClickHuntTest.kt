@@ -53,9 +53,9 @@ class GuitarClickHuntTest : StringSpec({
     val blockFrames = 256
 
     // Settings from the rhythm-pattern call site (TestTextPatterns.kt:228)
-    val drive = 10.0          // .oscparam("drive", drive)  with let drive = 10
-    val brightness = 3500.0   // .oscparam("brightness", 3500)
-    val spread = 0.02         // .oscp("spread", 0.02)
+    val drive = 10.0          // .ignitorParam("drive", drive)  with let drive = 10
+    val brightness = 3500.0   // .ignitorParam("brightness", 3500)
+    val spread = 0.02         // .ignp("spread", 0.02)
     val analog = 0.5          // default of the "analog" param in supersaw core
 
     fun coreSupersaw(): IgnitorDsl = IgnitorDsl.SuperSaw(
@@ -711,7 +711,7 @@ private fun IgnitorDsl.plusDsl(other: IgnitorDsl): IgnitorDsl = IgnitorDsl.Plus(
 private fun IgnitorDsl.lowpassMod(cutoff: IgnitorDsl, q: Double): IgnitorDsl =
     IgnitorDsl.Lowpass(inner = this, freq = cutoff, q = IgnitorDsl.Constant(q))
 
-/** Mirrors `Osc.distort(amount, "chebyshev", 8)` — `factorToStages(8) = 3` (8x oversample). */
+/** Mirrors the script door `.distort(amount, "chebyshev", 8)` on a tree — `factorToStages(8) = 3` (8x oversample). */
 private fun IgnitorDsl.distortChebyshev8(driveAmount: Double): IgnitorDsl =
     IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(driveAmount)).shape("chebyshev", oversample = 8)
 

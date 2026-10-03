@@ -66,7 +66,7 @@ class MidiConnector(
          */
         data class AllNotesOff(val liveIds: List<Int>, val reason: Reason) : Event
 
-        /** Everything else on the control-change channel; v1 maps these onto oscparams. */
+        /** Everything else on the control-change channel; v1 maps these onto Ignitor slots. */
         data class ControlChange(
             val channel: Int,
             val cc: Int,

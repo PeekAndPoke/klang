@@ -205,7 +205,7 @@ class AnalyzedAst(
     /**
      * Find the inferred type of the expression ending at or just before [offset].
      *
-     * Used for dot-completion: when the user types a dot after `Osc.sine()`, the cursor
+     * Used for dot-completion: when the user types a dot after `Ignitor.sine()`, the cursor
      * is right after `)` which may fall outside the CallExpression's exclusive end range.
      *
      * Strategy:

@@ -108,7 +108,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
     )
     val doors = nodeType.keys.toList()
 
-    fun script(door: String, args: String): IgnitorDsl = ks("Osc.saw().$door($args)").also {
+    fun script(door: String, args: String): IgnitorDsl = ks("Ignitor.saw().$door($args)").also {
         withClue("$door builds its own node") { nodeType.getValue(door).isInstance(it) shouldBe true }
     }
 
@@ -117,7 +117,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
             val passes = if (door == "lowpass" || door == "highpass") ".passes(2)" else ""
             val s = script(
                 door,
-                """Osc.param("cut", 800), 1.2, x => x$passes.analog(4).humanize(1).env(24)""" +
+                """Ignitor.param("cut", 800), 1.2, x => x$passes.analog(4).humanize(1).env(24)""" +
                     """.adsr(0.005, 0.3, 0.2, 0.05, e => e.curves("exp", "square", "cube"))""",
             )
             val k = kotlinDoor(
@@ -185,7 +185,7 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         // envelope off, the rule of section 4 of the dsl-design skill).
         for (door in doors) {
             withClue(door) {
-                shouldThrowAny { ks("""Osc.saw().$door(800, x => x.adsrCurves("exp", "exp", "exp"))""") }
+                shouldThrowAny { ks("""Ignitor.saw().$door(800, x => x.adsrCurves("exp", "exp", "exp"))""") }
                     .message shouldContain "has no method 'adsrCurves'"
             }
         }
@@ -243,18 +243,18 @@ class KlangScriptFilterDoorParitySpec : StringSpec({
         }
 
         for (door in listOf("bandpass", "notch")) {
-            withClue("$door offers no passes") { shouldThrowAny { ks("Osc.saw().$door(800, x => x.passes(2))") } }
+            withClue("$door offers no passes") { shouldThrowAny { ks("Ignitor.saw().$door(800, x => x.passes(2))") } }
         }
     }
 
     "the third positional argument is the lambda: the old lowpass/lpf positional trap is gone" {
         for (door in doors) {
-            withClue(door) { shouldThrowAny { ks("Osc.saw().$door(800, 1.2, 2)") } }
+            withClue(door) { shouldThrowAny { ks("Ignitor.saw().$door(800, 1.2, 2)") } }
         }
     }
 
     "onepole: a modulated freq works from Kotlin (it was Double-only)" {
-        val script = ks("""Osc.saw().onepole(Osc.param("cut", 800))""") as IgnitorDsl.OnePoleLowpass
+        val script = ks("""Ignitor.saw().onepole(Ignitor.param("cut", 800))""") as IgnitorDsl.OnePoleLowpass
         val kotlin = IgnitorDsl.Sawtooth().onepole(modulated)
         script.freq shouldBe kotlin.freq
     }

@@ -18,13 +18,13 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 
 /**
- * The two doors of the `pregain` slot: `OscSlot.pregain` / `.pregain()` in KlangScript and
+ * The two doors of the `pregain` slot: `Ignitor.slot.pregain` / `.pregain()` in KlangScript and
  * `IgnitorDsl.Slots.pregain` / `.pregain()` from Kotlin (the dual-surface rule, `/dsl-design`
  * section 3).
  *
  * The claim under test is stronger than "both compile": both must build the SAME node, so an
  * instrument written in a song and the same instrument written in Kotlin are one entry in the
- * identity map. And `.pregain()` must be the same tree as the spelled-out `.mul(OscSlot.pregain)`
+ * identity map. And `.pregain()` must be the same tree as the spelled-out `.mul(Ignitor.slot.pregain)`
  * on either door, because that equivalence is what the helper's KDoc promises on both.
  */
 class KlangScriptPregainDoorParitySpec : StringSpec({
@@ -36,14 +36,14 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
         return engine.execute(code).toObjectOrNull<IgnitorDsl>()!!
     }
 
-    "OscSlot.pregain is the canonical slot, on both spellings of the script door" {
-        ks("OscSlot.pregain") shouldBe IgnitorDsl.Slots.pregain
-        ks("Osc.slot.pregain") shouldBe IgnitorDsl.Slots.pregain
-        ks("OscSlot.pregain") shouldBe IgnitorDsl.Param("pregain", 1.0)
+    "Ignitor.slot.pregain is the canonical slot, on both names of the script object" {
+        ks("Ignitor.slot.pregain") shouldBe IgnitorDsl.Slots.pregain
+        ks("Ign.slot.pregain") shouldBe IgnitorDsl.Slots.pregain
+        ks("Ignitor.slot.pregain") shouldBe IgnitorDsl.Param("pregain", 1.0)
     }
 
     "the script helper builds the Kotlin helper's tree, node for node" {
-        val script = ks("Osc.saw().pregain()")
+        val script = ks("Ignitor.saw().pregain()")
         val kotlin = IgnitorDsl.Sawtooth().pregain()
 
         script shouldBe kotlin
@@ -56,9 +56,9 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
     }
 
     "on each door the helper equals the spelled-out mul, and the doors agree with each other" {
-        ks("Osc.saw().pregain()") shouldBe ks("Osc.saw().mul(OscSlot.pregain)")
+        ks("Ignitor.saw().pregain()") shouldBe ks("Ignitor.saw().mul(Ignitor.slot.pregain)")
         IgnitorDsl.Sawtooth().pregain() shouldBe IgnitorDsl.Sawtooth().mul(IgnitorDsl.Slots.pregain)
-        ks("Osc.saw().mul(OscSlot.pregain)") shouldBe IgnitorDsl.Sawtooth().mul(IgnitorDsl.Slots.pregain)
+        ks("Ignitor.saw().mul(Ignitor.slot.pregain)") shouldBe IgnitorDsl.Sawtooth().mul(IgnitorDsl.Slots.pregain)
     }
 
     "a whole driven instrument is the same tree on both doors" {
@@ -66,7 +66,7 @@ class KlangScriptPregainDoorParitySpec : StringSpec({
         // front of the nonlinearity, not at the end. The drive is the examples' `0.5` and not
         // `2.0`, where the shaper saturates and the slot is inaudible: a tree comparison passes at
         // either, but a spec is where a reader copies an instrument from.
-        val script = ks("Osc.saw().pregain().distort(0.5)")
+        val script = ks("Ignitor.saw().pregain().distort(0.5)")
         val kotlin = IgnitorDsl.Sawtooth().pregain().distort(0.5)
 
         script shouldBe kotlin

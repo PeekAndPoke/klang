@@ -36,7 +36,7 @@ class IgnitorRegistry(
          * ```
          *
          * The `pregain` slot sits on the source, where the player's touch enters, in front of every
-         * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Osc -> pregain -> classic").
+         * nonlinearity (`docs/plans/signal-flow-redesign.md` sections 5 and 6: "Ignitor -> pregain -> classic").
          * Unwritten it is 1.0, and the gate folds a unity `mul` over a signal away at build, so it costs
          * nothing until a pattern writes `pregain(x)`. Then `classic()`: the pattern's `onepole`, then crush
          * ... adsr, the retired voice strip's order. Every built-in sound ([registerDefaults]) and the sample
@@ -168,7 +168,7 @@ class IgnitorRegistry(
 
         // The tree renders as registered: nothing is hung around it (the registry's `onepole` wrap for an
         // instrument that did not end in `classic()` retired with the voice strip, phase 3 step 9; the pattern's
-        // `onepole` reaches `classic()`'s first stage, or a tree that places `OscSlot.onepole` itself).
+        // `onepole` reaches `classic()`'s first stage, or a tree that places `Ignitor.slot.onepole` itself).
         // The slot bag is the voice's own: a producer writes `classic()`'s slots there (sprudel's `toVoiceData`,
         // phase 3 step 8).
         return dsl.buildExciter(

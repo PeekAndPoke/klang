@@ -22,7 +22,7 @@ import * from "sprudel"
 // ── Wüstensturm — a Sandstorm homage ────────────────────────────────
 // B minor, ~136 BPM (rpm 34). A gated supersaw lead hammering straight
 // 16th-note stabs over a driving four-on-the-floor trance beat. The whole
-// kit is a custom Osc ignitor, so it renders offline too.
+// kit is a custom Ignitor, so it renders offline too.
 
 // ── Instruments (custom ignitors) ───────────────────────────────────
 // THE "du-du-du" — the real Sandstorm lead recipe (per Darude/JS16 + JP-8080):
@@ -30,8 +30,8 @@ import * from "sprudel"
 // top, a resonant lowpass, then HEAVY distortion — the actual signature
 // (originally a Cubase distortion plugin overdriving a cheap mixer preamp).
 // Long decay + zero sustain; the 16th "gate" comes from mono-style legato.
-let lead = Osc.saw().mul(0.5)
-    .plus(Osc.square().detune(31).mul(0.5))
+let lead = Ign.saw().mul(0.5)
+    .plus(Ign.square().detune(31).mul(0.5))
     .lowpass(4200, 2.5)
     .distort(1.0, "soft", 4)
     .adsr(0.001, 0.7, 0.0, 0.04)
@@ -39,23 +39,23 @@ let lead = Osc.saw().mul(0.5)
 
 // The fizzy supersaw PAD = the actual JP-8080 "Sandstorm" boot preset the track
 // is named after — bright + wide, sits under the lead as syncopated stabs.
-let pad = Osc.supersaw(x => x.voices(9).spread(0.3).analog(0.25))
-    .lowpass(Osc.sine(0.1).plus(1).times(1500).plus(2200))
+let pad = Ign.supersaw(x => x.voices(9).spread(0.3).analog(0.25))
+    .lowpass(Ign.sine(0.1).plus(1).times(1500).plus(2200))
     .adsr(0.008, 0.25, 0.3, 0.2)
     .classic()
 
 // Rolling saw bass — fast filter env (sidechain pump added at pattern level)
-let bass = Osc.saw()
-    .lowpass(Osc.constant(400).plus(Osc.constant(2200).adsr(0.002, 0.08, 0.0, 0.04)))
+let bass = Ign.saw()
+    .lowpass(Ign.constant(400).plus(Ign.constant(2200).adsr(0.002, 0.08, 0.0, 0.04)))
     .adsr(0.004, 0.09, 0.0, 0.04)
     .classic()
 
 // Synth kit
-let kick = Osc.sine().pitchEnvelope(48, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.001, 0.22, 0.0, 0.02).classic()
-let hat  = Osc.whitenoise().highpass(8000).adsr(0.001, 0.035, 0.0, 0.02).classic()
-let ohat = Osc.whitenoise().highpass(7000).adsr(0.001, 0.12, 0.05, 0.10).classic()
-let clap = Osc.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04).classic()
-let riser = Osc.pinknoise().highpass(300).classic()
+let kick = Ign.sine().pitchEnvelope(48, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.001, 0.22, 0.0, 0.02).classic()
+let hat  = Ign.whitenoise().highpass(8000).adsr(0.001, 0.035, 0.0, 0.02).classic()
+let ohat = Ign.whitenoise().highpass(7000).adsr(0.001, 0.12, 0.05, 0.10).classic()
+let clap = Ign.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04).classic()
+let riser = Ign.pinknoise().highpass(300).classic()
 
 // ── Patterns ────────────────────────────────────────────────────────
 let kickPat = note("a1*4").sound(kick).gain(0.95).orbit(0)

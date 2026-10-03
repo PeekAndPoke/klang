@@ -21,7 +21,7 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 /**
  * `classic()` on both doors (phase 3 step 5): the script `x.classic()` and the Kotlin
  * `IgnitorDsl.classic()` build the SAME tree, and every classic slot the script reaches as
- * `OscSlot.<group>.<param>` (and `Osc.slot.<group>.<param>`) is the SAME object as the Kotlin
+ * `Ignitor.slot.<group>.<param>` is the SAME object as the Kotlin
  * `IgnitorDsl.Slots.<group>.<param>`. The render half of the parity, every slot written through the bag,
  * is `ClassicDoorRenderParitySpec` in sprudel, the module that has both the script engine and the renderer.
  */
@@ -63,20 +63,20 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
     )
 
     "the script door builds the Kotlin door's tree, on a bare source" {
-        ks("Osc.saw().classic()") shouldBe IgnitorDsl.Sawtooth().classic()
-        ks("Osc.sine().classic()") shouldBe IgnitorDsl.Sine().classic()
+        ks("Ignitor.saw().classic()") shouldBe IgnitorDsl.Sawtooth().classic()
+        ks("Ignitor.sine().classic()") shouldBe IgnitorDsl.Sine().classic()
     }
 
     "the script door builds the Kotlin door's tree, on an authored instrument" {
-        ks("Osc.saw().distort(0.4, \"tube\").lowpass(2500, 1.2).classic()") shouldBe
+        ks("Ignitor.saw().distort(0.4, \"tube\").lowpass(2500, 1.2).classic()") shouldBe
             IgnitorDsl.Sawtooth().distort(0.4, "tube").lowpass(2500.0, 1.2).classic()
     }
 
-    "every OscSlot group property is the Kotlin slot object itself, and it names itself <group>.<param>" {
+    "every Ignitor.slot group property is the Kotlin slot object itself, and it names itself <group>.<param>" {
         for ((path, kotlin) in slots) {
-            withClue("OscSlot.$path") {
-                ks("OscSlot.$path") shouldBeSameInstanceAs kotlin
-                ks("Osc.slot.$path") shouldBeSameInstanceAs kotlin
+            withClue("Ignitor.slot.$path") {
+                ks("Ignitor.slot.$path") shouldBeSameInstanceAs kotlin
+                ks("Ign.slot.$path") shouldBeSameInstanceAs kotlin
                 (kotlin as IgnitorDsl.Param).name shouldBe path
             }
         }
@@ -89,7 +89,7 @@ class KlangScriptClassicDoorParitySpec : StringSpec({
     }
 
     "a script tail of its own places the same slots, so the same doors fill it" {
-        ks("Osc.saw().highpass(OscSlot.hpf.freq, OscSlot.hpf.q).lowpass(OscSlot.lpf.freq)") shouldBe
+        ks("Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).lowpass(Ignitor.slot.lpf.freq)") shouldBe
             IgnitorDsl.Sawtooth().highpass(s.hpf.freq, s.hpf.q).lowpass(s.lpf.freq)
     }
 })

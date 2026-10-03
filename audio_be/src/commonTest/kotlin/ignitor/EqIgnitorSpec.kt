@@ -477,7 +477,7 @@ class EqIgnitorSpec : StringSpec({
         // params in the right slots, or a wrong order / a Bell-instead-of-RawTap would leave
         // every parity row above green. NOTE this is not the song's literal shape — the serial
         // tail is appended as SECTIONS here, whereas a song chains .notch()/.lowpass() as
-        // separate nodes after the Eq (that shape is pinned by StdLibOscTest instead).
+        // separate nodes after the Eq (that shape is pinned by StdLibIgnitorTest instead).
         val sharedLegacy = IgnitorDsl.Sawtooth()
         val legacy = IgnitorDsl.Plus(
             IgnitorDsl.Plus(
@@ -672,7 +672,7 @@ class EqIgnitorSpec : StringSpec({
         ).isStatic shouldBe false
 
         // The staged cascade q as the optimizer will fold it (an affine of voice-constants) stays
-        // static; an affine over Freq stays dynamic. Without the arm every oscparam-driven
+        // static; an affine over Freq stays dynamic. Without the arm every ignitorParam-driven
         // cascade would re-derive its tan() per block once step 2 lands.
         EqIgnitor.Section(
             EqCore.LOWPASS,
@@ -686,7 +686,7 @@ class EqIgnitorSpec : StringSpec({
         ).isStatic shouldBe false
     }
 
-    "C5 production path: an oscparam-driven passes cascade configures ONCE per voice" {
+    "C5 production path: an ignitorParam-driven passes cascade configures ONCE per voice" {
         // The row the first version of this guard should have been: built through
         // optimize() + toExciter(), the way IgnitorRegistry.register does it, instead of
         // hand-assembling a node shape the runtime never produces. The optimizer stages the

@@ -120,8 +120,8 @@ class AnalyzedAstTest : StringSpec({
 
     // ── Simple method calls ────────────────────────────────────────────────
 
-    "call: Osc.sine() returns IgnitorDsl" {
-        val a = analyze("Osc.sine()")
+    "call: Ignitor.sine() returns IgnitorDsl" {
+        val a = analyze("Ignitor.sine()")
         a.typeOf(a.topExpr())?.simpleName shouldBe "IgnitorDsl"
     }
 
@@ -132,21 +132,21 @@ class AnalyzedAstTest : StringSpec({
 
     // ── Method chains ──────────────────────────────────────────────────────
 
-    "chain: Osc.sine().lowpass(1000) — outer is IgnitorDsl" {
-        val a = analyze("Osc.sine().lowpass(1000)")
+    "chain: Ignitor.sine().lowpass(1000) — outer is IgnitorDsl" {
+        val a = analyze("Ignitor.sine().lowpass(1000)")
         a.typeOf(a.topExpr())?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "chain: Osc.sine().lowpass(1000) — inner Osc.sine() is also IgnitorDsl" {
-        val a = analyze("Osc.sine().lowpass(1000)")
+    "chain: Ignitor.sine().lowpass(1000) — inner Ignitor.sine() is also IgnitorDsl" {
+        val a = analyze("Ignitor.sine().lowpass(1000)")
         val outerCall = a.topExpr() as CallExpression
         val memberAccess = outerCall.callee as MemberAccess
         val innerCall = memberAccess.obj
         a.typeOf(innerCall)?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "chain: Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns IgnitorDsl" {
-        val a = analyze("Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)")
+    "chain: Ignitor.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns IgnitorDsl" {
+        val a = analyze("Ignitor.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)")
         a.typeOf(a.topExpr())?.simpleName shouldBe "IgnitorDsl"
     }
 
@@ -157,18 +157,18 @@ class AnalyzedAstTest : StringSpec({
         a.typeOf(a.topExpr()).shouldBeNull()
     }
 
-    "unknown: Osc.unknownMethod() returns null" {
-        val a = analyze("Osc.unknownMethod()")
+    "unknown: Ignitor.unknownMethod() returns null" {
+        val a = analyze("Ignitor.unknownMethod()")
         a.typeOf(a.topExpr()).shouldBeNull()
     }
 
-    "chain break: Osc.sine().unknownMethod().lowpass(1000) — outer is null" {
-        val a = analyze("Osc.sine().unknownMethod().lowpass(1000)")
+    "chain break: Ignitor.sine().unknownMethod().lowpass(1000) — outer is null" {
+        val a = analyze("Ignitor.sine().unknownMethod().lowpass(1000)")
         a.typeOf(a.topExpr()).shouldBeNull()
     }
 
-    "chain break: inner Osc.sine() is still IgnitorDsl even when chain breaks later" {
-        val code = "Osc.sine().unknownMethod().lowpass(1000)"
+    "chain break: inner Ignitor.sine() is still IgnitorDsl even when chain breaks later" {
+        val code = "Ignitor.sine().unknownMethod().lowpass(1000)"
         val a = analyze(code)
 
         val outer = a.topExpr() as CallExpression
@@ -188,7 +188,7 @@ class AnalyzedAstTest : StringSpec({
     }
 
     "getTypeAt: multi-line — number literal on line 1" {
-        val code = "let x = 42\nOsc.sine()"
+        val code = "let x = 42\nIgnitor.sine()"
         val a = analyze(code)
         a.getTypeAt(1, 9)?.simpleName shouldBe "Number"
     }
@@ -256,8 +256,8 @@ class AnalyzedAstTest : StringSpec({
         a.typeOf(init)?.simpleName shouldBe "Number"
     }
 
-    "declaration: const y = Osc.sine() — initializer has type IgnitorDsl" {
-        val a = analyze("const y = Osc.sine()")
+    "declaration: const y = Ignitor.sine() — initializer has type IgnitorDsl" {
+        val a = analyze("const y = Ignitor.sine()")
         val decl = a.ast.statements.first() as ConstDeclaration
         a.typeOf(decl.initializer)?.simpleName shouldBe "IgnitorDsl"
     }
@@ -277,14 +277,14 @@ class AnalyzedAstTest : StringSpec({
     // ── Diagnostics structure ──────────────────────────────────────────────
 
     "diagnostics: initially empty for valid code" {
-        val a = analyze("Osc.sine().lowpass(1000)")
+        val a = analyze("Ignitor.sine().lowpass(1000)")
         a.diagnostics.shouldBeEmpty()
     }
 
     // ── Multiple statements ────────────────────────────────────────────────
 
     "multi-statement: all expressions are typed" {
-        val code = "42\n\"hello\"\nOsc.sine()"
+        val code = "42\n\"hello\"\nIgnitor.sine()"
         val a = analyze(code)
 
         val stmts = a.ast.statements
@@ -502,7 +502,7 @@ class AnalyzedAstTest : StringSpec({
 
     "empty registry: all types resolve to null for identifiers and calls" {
         val emptyReg = KlangDocsRegistry()
-        val a = AnalyzedAst.build("Osc.sine()", emptyReg)
+        val a = AnalyzedAst.build("Ignitor.sine()", emptyReg)
         // With no symbols registered, nothing can be resolved
         a.typeOf(a.topExpr()).shouldBeNull()
     }
@@ -534,23 +534,23 @@ class AnalyzedAstTest : StringSpec({
         return a.getExpressionTypeEndingAt(dotInsertionOffset - 1)?.simpleName
     }
 
-    "completion sim: Osc.sine().| — should infer IgnitorDsl" {
-        val staleCode = "Osc.sine()"
+    "completion sim: Ignitor.sine().| — should infer IgnitorDsl" {
+        val staleCode = "Ignitor.sine()"
         val dotOffset = staleCode.length
         simulateDotCompletion(staleCode, dotOffset) shouldBe "IgnitorDsl"
     }
 
-    "completion sim: Osc.sine().lowpass(1000).| — should infer IgnitorDsl" {
-        val staleCode = "Osc.sine().lowpass(1000)"
+    "completion sim: Ignitor.sine().lowpass(1000).| — should infer IgnitorDsl" {
+        val staleCode = "Ignitor.sine().lowpass(1000)"
         val dotOffset = staleCode.length
         simulateDotCompletion(staleCode, dotOffset) shouldBe "IgnitorDsl"
     }
 
-    "completion sim: Osc.sine(Osc.sine().| ) — dot inside arg list" {
-        // Stale code: let w = Osc.sine(Osc.sine())
-        // User inserts dot after the inner Osc.sine(), BEFORE the closing ) of the outer call
-        val staleCode = """let w = Osc.sine(Osc.sine())"""
-        val innerSineCloseIdx = staleCode.lastIndexOf("Osc.sine()") + "Osc.sine()".length
+    "completion sim: Ignitor.sine(Ignitor.sine().| ) — dot inside arg list" {
+        // Stale code: let w = Ignitor.sine(Ignitor.sine())
+        // User inserts dot after the inner Ignitor.sine(), BEFORE the closing ) of the outer call
+        val staleCode = """let w = Ignitor.sine(Ignitor.sine())"""
+        val innerSineCloseIdx = staleCode.lastIndexOf("Ignitor.sine()") + "Ignitor.sine()".length
         simulateDotCompletion(staleCode, innerSineCloseIdx) shouldBe "IgnitorDsl"
     }
 
@@ -637,20 +637,20 @@ class AnalyzedAstTest : StringSpec({
         return provider.memberCompletions(receiverType, prefix).map { it.name }
     }
 
-    // ── Test: Osc.sine().| inside an enclosing call — dot only, no prefix ────────
+    // ── Test: Ignitor.sine().| inside an enclosing call — dot only, no prefix ────────
 
-    "real-world: Osc.sine(Osc.sine().| ) — stale AST, should infer IgnitorDsl" {
-        // When user types "." after the inner Osc.sine(), the code doesn't parse.
+    "real-world: Ignitor.sine(Ignitor.sine().| ) — stale AST, should infer IgnitorDsl" {
+        // When user types "." after the inner Ignitor.sine(), the code doesn't parse.
         // Stale AST is from the parseable version (without the dot).
-        val staleCode = """let a = Osc.sine(Osc.sine())"""
+        val staleCode = """let a = Ignitor.sine(Ignitor.sine())"""
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(staleCode, registry)
 
-        // The dot is inserted after the inner Osc.sine() in the editor.
+        // The dot is inserted after the inner Ignitor.sine() in the editor.
         // In stale text, that's right after its closing ')'.
-        val sineEnd = staleCode.lastIndexOf("Osc.sine()") + "Osc.sine()".length
+        val sineEnd = staleCode.lastIndexOf("Ignitor.sine()") + "Ignitor.sine()".length
 
-        // getExpressionTypeEndingAt should find Osc.sine() → IgnitorDsl
+        // getExpressionTypeEndingAt should find Ignitor.sine() → IgnitorDsl
         val receiverType = a.getExpressionTypeEndingAt(sineEnd - 1)
         receiverType?.simpleName shouldBe "IgnitorDsl"
 
@@ -666,16 +666,16 @@ class AnalyzedAstTest : StringSpec({
         names.contains("gain") shouldBe false
     }
 
-    // ── Test: Osc.sine().ad| inside a 2-arg call — parseable, prefix "ad" ──
+    // ── Test: Ignitor.sine().ad| inside a 2-arg call — parseable, prefix "ad" ──
     //
     // The enclosing call uses `placeholder("aa", …)` purely as a 2-arg vehicle for the
-    // inner `Osc.sine().ad` expression. The analyzer's inference (which is what these
+    // inner `Ignitor.sine().ad` expression. The analyzer's inference (which is what these
     // tests exercise) does not depend on the called function being type-compatible
     // with its IgnitorDsl second argument — only on the parser accepting the syntax.
 
-    "real-world: placeholder('aa', Osc.sine().ad| ) — fresh parse, prefix 'ad'" {
+    "real-world: placeholder('aa', Ignitor.sine().ad| ) — fresh parse, prefix 'ad'" {
         // This code IS parseable: .ad is a valid MemberAccess
-        val code = """let a = placeholder("aa", Osc.sine().ad)"""
+        val code = """let a = placeholder("aa", Ignitor.sine().ad)"""
         val registry = multiLibRegistry()
 
         val dotOffset = code.indexOf(".ad")
@@ -688,8 +688,8 @@ class AnalyzedAstTest : StringSpec({
         suggestions.all { it.startsWith("ad", ignoreCase = true) } shouldBe true
     }
 
-    "real-world: Osc.sine().ad| — CompletionProvider returns stdlib adsr, NOT sprudel" {
-        val code = """let a = placeholder("aa", Osc.sine().ad)"""
+    "real-world: Ignitor.sine().ad| — CompletionProvider returns stdlib adsr, NOT sprudel" {
+        val code = """let a = placeholder("aa", Ignitor.sine().ad)"""
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(code, registry)
 
@@ -699,7 +699,7 @@ class AnalyzedAstTest : StringSpec({
         val secondArg = callExpr.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
-        // The receiver of .ad is Osc.sine() → IgnitorDsl
+        // The receiver of .ad is Ignitor.sine() → IgnitorDsl
         val receiver = secondArg.obj as CallExpression
         a.typeOf(receiver)?.simpleName shouldBe "IgnitorDsl"
 
@@ -711,12 +711,12 @@ class AnalyzedAstTest : StringSpec({
         adsrSuggestion.detail.contains("sprudel") shouldBe false
     }
 
-    "real-world: FULL code with imports — Osc.sine().ad| inside a 2-arg call" {
+    "real-world: FULL code with imports — Ignitor.sine().ad| inside a 2-arg call" {
         // EXACT code from the user's bug report, including import statements
         val code = """import * from "stdlib"
 import * from "sprudel"
 
-let a = placeholder("aa", Osc.sine().ad)"""
+let a = placeholder("aa", Ignitor.sine().ad)"""
 
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(code, registry)
@@ -727,7 +727,7 @@ let a = placeholder("aa", Osc.sine().ad)"""
         val secondArg = callExpr.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
-        // Receiver of .ad is Osc.sine() → must be IgnitorDsl
+        // Receiver of .ad is Ignitor.sine() → must be IgnitorDsl
         val receiver = secondArg.obj as CallExpression
         a.typeOf(receiver)?.simpleName shouldBe "IgnitorDsl"
 
@@ -743,27 +743,27 @@ let a = placeholder("aa", Osc.sine().ad)"""
         suggestions.first { it.name == "adsr" }.detail.contains("stdlib") shouldBe true
     }
 
-    "real-world: FULL code with imports — Osc.sine().| stale AST" {
+    "real-world: FULL code with imports — Ignitor.sine().| stale AST" {
         // The dot-only case: code doesn't parse, stale AST from version without the dot
         val staleCode = """import * from "stdlib"
 import * from "sprudel"
 
-let a = placeholder("aa", Osc.sine())"""
+let a = placeholder("aa", Ignitor.sine())"""
 
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(staleCode, registry)
 
-        val sineEnd = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
+        val sineEnd = staleCode.indexOf("Ignitor.sine()") + "Ignitor.sine()".length
         val receiverType = a.getExpressionTypeEndingAt(sineEnd - 1)
         receiverType?.simpleName shouldBe "IgnitorDsl"
     }
 
     "parse check: which intermediate editor states parse?" {
         val codes = mapOf(
-            """let a = placeholder("aa", Osc.sine())""" to true,
-            """let a = placeholder("aa", Osc.sine().)""" to false,
-            """let a = placeholder("aa", Osc.sine().a)""" to true,
-            """let a = placeholder("aa", Osc.sine().ad)""" to true,
+            """let a = placeholder("aa", Ignitor.sine())""" to true,
+            """let a = placeholder("aa", Ignitor.sine().)""" to false,
+            """let a = placeholder("aa", Ignitor.sine().a)""" to true,
+            """let a = placeholder("aa", Ignitor.sine().ad)""" to true,
         )
         for ((code, shouldParse) in codes) {
             val parsed = try {
@@ -779,10 +779,10 @@ let a = placeholder("aa", Osc.sine())"""
     // ── Local-binding type tracking (let / const / export / arrow params) ─
 
     "let binding: identifier type resolves to initializer's inferred type" {
-        // `signal` should resolve to IgnitorDsl (return type of Osc.sine())
+        // `signal` should resolve to IgnitorDsl (return type of Ignitor.sine())
         val a = analyze(
             """
-            let signal = Osc.sine()
+            let signal = Ignitor.sine()
             signal
             """.trimIndent()
         )
@@ -793,7 +793,7 @@ let a = placeholder("aa", Osc.sine())"""
     "const binding: identifier type resolves to initializer's inferred type" {
         val a = analyze(
             """
-            const sig = Osc.sine()
+            const sig = Ignitor.sine()
             sig
             """.trimIndent()
         )
@@ -806,7 +806,7 @@ let a = placeholder("aa", Osc.sine())"""
         // so the popup picks the IgnitorDsl.distort variant, not the sprudel ones.
         val a = analyze(
             """
-            let signal = Osc.sine()
+            let signal = Ignitor.sine()
             signal.lowpass(1000).distort(0.5)
             """.trimIndent()
         )
@@ -833,7 +833,7 @@ let a = placeholder("aa", Osc.sine())"""
             )
         )
         val code = """
-            let signal = Osc.sine()
+            let signal = Ignitor.sine()
             signal
         """.trimIndent()
         val analyzed = AnalyzedAst.build(code, reg)
@@ -873,7 +873,7 @@ let a = placeholder("aa", Osc.sine())"""
     "scope leaving: binding in arrow body doesn't leak outside" {
         val code = """
             let f = () => {
-              let inner = Osc.sine()
+              let inner = Ignitor.sine()
             }
             inner
         """.trimIndent()
@@ -885,7 +885,7 @@ let a = placeholder("aa", Osc.sine())"""
 
     "symbolAt: hovering a local identifier returns a Local-origin symbol" {
         val code = """
-            let signal = Osc.sine()
+            let signal = Ignitor.sine()
             signal
         """.trimIndent()
         val a = analyze(code)
@@ -899,7 +899,7 @@ let a = placeholder("aa", Osc.sine())"""
 
     "symbolAt: hovering `.distort` on a chain rooted at a local resolves IgnitorDsl variant" {
         val code = """
-            let signal = Osc.sine()
+            let signal = Ignitor.sine()
             signal.lowpass(1000).distort(0.5)
         """.trimIndent()
         val a = analyze(code)
@@ -935,7 +935,7 @@ let a = placeholder("aa", Osc.sine())"""
 
     /**
      * A hand-built registry standing in for the builder-typed DSL doors of
-     * `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: `Osc.supersaw(freq?, configure?)` whose
+     * `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`: `Ignitor.supersaw(freq?, configure?)` whose
      * `configure` is `((OscSuperSawBuilder) -> OscSuperSawBuilder)?`, the builder's
      * `.voices()`, and a sprudel-like `superimpose(vararg transforms: PatternMapperFn)`.
      */
@@ -952,14 +952,14 @@ let a = placeholder("aa", Osc.sine())"""
         )
         registerAll(listOf(
             KlangSymbol(
-                name = "Osc", category = "osc", origin = KlangSymbol.Origin.Library("test"),
-                variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc", fqcn = "test.Osc"))),
+                name = "Ignitor", category = "ignitor", origin = KlangSymbol.Origin.Library("test"),
+                variants = listOf(KlangProperty(name = "Ignitor", type = KlangType("Ignitor", fqcn = "test.Ignitor"))),
             ),
             KlangSymbol(
-                name = "supersaw", category = "osc", origin = KlangSymbol.Origin.Library("test"),
+                name = "supersaw", category = "ignitor", origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
-                        name = "supersaw", receiver = KlangType("Osc", fqcn = "test.Osc"),
+                        name = "supersaw", receiver = KlangType("Ignitor", fqcn = "test.Ignitor"),
                         params = listOf(
                             KlangParam(name = "freq", type = KlangType("Number"), isOptional = true),
                             KlangParam(name = "configure", type = configureType, isOptional = true),
@@ -969,7 +969,7 @@ let a = placeholder("aa", Osc.sine())"""
                 ),
             ),
             KlangSymbol(
-                name = "voices", category = "osc", origin = KlangSymbol.Origin.Library("test"),
+                name = "voices", category = "ignitor", origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "voices", receiver = builder,
@@ -1036,7 +1036,7 @@ let a = placeholder("aa", Osc.sine())"""
     }
 
     "configure lambda: a sole positional lambda floats to `configure` and its param is the builder" {
-        val a = analyzeBuilders("Osc.supersaw(x => x.voices(9))")
+        val a = analyzeBuilders("Ignitor.supersaw(x => x.voices(9))")
         val (x, body) = a.firstLambdaParts()
         a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
         a.typeOf(body)?.simpleName shouldBe "OscSuperSawBuilder"
@@ -1044,26 +1044,26 @@ let a = placeholder("aa", Osc.sine())"""
     }
 
     "configure lambda: explicit positional freq then lambda" {
-        val a = analyzeBuilders("Osc.supersaw(440, x => x.voices(9))")
+        val a = analyzeBuilders("Ignitor.supersaw(440, x => x.voices(9))")
         val (x, _) = a.firstLambdaParts()
         a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
     }
 
     "configure lambda: named `configure =` types the param too" {
-        val a = analyzeBuilders("Osc.supersaw(configure = x => x.voices(9))")
+        val a = analyzeBuilders("Ignitor.supersaw(configure = x => x.voices(9))")
         val (x, _) = a.firstLambdaParts()
         a.typeOf(x)?.simpleName shouldBe "OscSuperSawBuilder"
     }
 
     "configure lambda: completion receiver before the dot inside the lambda is the builder" {
-        val code = "Osc.supersaw(x => x.voices(9))"
+        val code = "Ignitor.supersaw(x => x.voices(9))"
         val a = analyzeBuilders(code)
         val dot = code.indexOf("x.voices") + 1
         a.receiverTypeBeforeDot(dot)?.simpleName shouldBe "OscSuperSawBuilder"
     }
 
     "configure lambda: hovering the param inside the lambda shows a typed PARAM local" {
-        val code = "Osc.supersaw(x => x.voices(9))"
+        val code = "Ignitor.supersaw(x => x.voices(9))"
         val a = analyzeBuilders(code)
         val symbol = a.symbolAt(code.indexOf("x.voices"))
         symbol.shouldNotBeNull()
@@ -1072,7 +1072,7 @@ let a = placeholder("aa", Osc.sine())"""
     }
 
     "configure lambda: a second lambda param beyond the declared arity is bound but untyped" {
-        val code = "Osc.supersaw((x, y) => y.voices(9))"
+        val code = "Ignitor.supersaw((x, y) => y.voices(9))"
         val a = analyzeBuilders(code)
         val (y, body) = a.firstLambdaParts()
         a.typeOf(y).shouldBeNull()
@@ -1121,7 +1121,7 @@ let a = placeholder("aa", Osc.sine())"""
 
     "a lambda that is not the last argument is not floated by the analyzer either" {
         // Mirrors ArgAlignment: the lambda lands on `freq` (Number), so x is untyped.
-        val a = analyzeBuilders("Osc.supersaw(x => x.voices(9), 440)")
+        val a = analyzeBuilders("Ignitor.supersaw(x => x.voices(9), 440)")
         val (x, _) = a.firstLambdaParts()
         a.typeOf(x).shouldBeNull()
     }
@@ -1134,8 +1134,8 @@ let a = placeholder("aa", Osc.sine())"""
         a.typeOf(a.topExpr())?.simpleName shouldBe "String"
     }
 
-    "real stdlib: Osc.supersaw(x => x.voices(9)).lowpass(800) types x as the builder and the result as IgnitorDsl" {
-        val code = "Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)"
+    "real stdlib: Ignitor.supersaw(x => x.voices(9)).lowpass(800) types x as the builder and the result as IgnitorDsl" {
+        val code = "Ignitor.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)"
         val a = analyze(code)
         a.receiverTypeBeforeDot(code.indexOf("x.voices") + 1)?.simpleName shouldBe "OscSuperSawBuilder"
         a.receiverTypeBeforeDot(code.indexOf(".spread") )?.simpleName shouldBe "OscSuperSawBuilder"
@@ -1157,7 +1157,7 @@ let a = placeholder("aa", Osc.sine())"""
     }
 
     "function type renders structurally in the callable signature" {
-        val supersaw = builderRegistry().getCallable("supersaw", KlangType("Osc", fqcn = "test.Osc"))
+        val supersaw = builderRegistry().getCallable("supersaw", KlangType("Ignitor", fqcn = "test.Ignitor"))
         supersaw.shouldNotBeNull()
         supersaw.params[1].type.render() shouldBe "((OscSuperSawBuilder) -> OscSuperSawBuilder)?"
     }

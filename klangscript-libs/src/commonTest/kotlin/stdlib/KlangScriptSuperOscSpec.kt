@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the five unison stack doors, `Osc.supersaw`, `supersine`, `supersquare`,
+ * Dual-language equivalence for the five unison stack doors, `Ignitor.supersaw`, `supersine`, `supersquare`,
  * `supertri` and `superramp`, and their five builder classes (`OscSuperSawBuilder` and its four siblings).
  *
  * The builders are five classes with the same knobs, so every row runs over every door. Each case is KlangScript
@@ -47,13 +47,13 @@ class KlangScriptSuperOscSpec : StringSpec({
     )
 
     "every calling form and every knob: script == the default node with the knob's own field written" {
-        // The arguments inside `Osc.<door>(...)`, and the fields they must write.
+        // The arguments inside `Ignitor.<door>(...)`, and the fields they must write.
         val cases = listOf(
             // freq is the door's first parameter, not a knob
             "220" to SuperKnobs(freq = c(220.0)),
             "x => x.voices(9)" to SuperKnobs(voices = c(9.0)),
-            // voices accepts an Osc graph (control-rate)
-            "x => x.voices(Osc.sine(0.5))" to SuperKnobs(voices = IgnitorDsl.Sine(freq = c(0.5))),
+            // voices accepts an Ignitor graph (control-rate)
+            "x => x.voices(Ignitor.sine(0.5))" to SuperKnobs(voices = IgnitorDsl.Sine(freq = c(0.5))),
             "x => x.spread(0.3)" to SuperKnobs(spread = c(0.3)),
             "x => x.analog(5.0)" to SuperKnobs(analog = c(5.0)),
             // 0: the voices drift on ONE shared lane instead of their own
@@ -98,16 +98,16 @@ class KlangScriptSuperOscSpec : StringSpec({
         for (door in doors) {
             val default = door.kotlin()
 
-            withClue("Osc.${door.name}(): script == Kotlin door, all defaults") {
-                ks("Osc.${door.name}()") shouldBe default
+            withClue("Ignitor.${door.name}(): script == Kotlin door, all defaults") {
+                ks("Ignitor.${door.name}()") shouldBe default
             }
 
             for ((args, knobs) in cases) {
                 val expected = knobs.onto(default)
 
-                withClue("Osc.${door.name}($args)") {
+                withClue("Ignitor.${door.name}($args)") {
                     expected shouldNotBe default
-                    ks("Osc.${door.name}($args)") shouldBe expected
+                    ks("Ignitor.${door.name}($args)") shouldBe expected
                 }
             }
         }
@@ -116,7 +116,7 @@ class KlangScriptSuperOscSpec : StringSpec({
     "the Kotlin door takes the same lambda" {
         for (door in doors) {
             withClue(door.name) {
-                ks("Osc.${door.name}(x => x.voices(11).spread(0.12))") shouldBe door.kotlinConfigured()
+                ks("Ignitor.${door.name}(x => x.voices(11).spread(0.12))") shouldBe door.kotlinConfigured()
                 door.kotlinConfigured() shouldBe SuperKnobs(voices = c(11.0), spread = c(0.12)).onto(door.kotlin())
             }
         }
@@ -125,7 +125,7 @@ class KlangScriptSuperOscSpec : StringSpec({
     "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
         for (door in doors) {
             withClue(door.name) {
-                val dsl = ks("Osc.${door.name}(x => x.spreadPower(1.5)).lowpass(2000)")
+                val dsl = ks("Ignitor.${door.name}(x => x.spreadPower(1.5)).lowpass(2000)")
                 dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
                 dsl.inner shouldBe SuperKnobs(spreadPower = 1.5).onto(door.kotlin())
             }
@@ -135,11 +135,11 @@ class KlangScriptSuperOscSpec : StringSpec({
     "a lambda that returns nothing, or something else, is a script-level type error naming the door" {
         for (door in doors) {
             withClue(door.name) {
-                val err = shouldThrow<KlangScriptTypeError> { ks("Osc.${door.name}(x => { x.voices(3) })") }
+                val err = shouldThrow<KlangScriptTypeError> { ks("Ignitor.${door.name}(x => { x.voices(3) })") }
                 err.message shouldBe "the configure lambda of Ignitor.${door.name} returned nothing; " +
                         "return the builder it received (`x => x.analog(3)`)"
 
-                shouldThrow<KlangScriptTypeError> { ks("Osc.${door.name}(x => 5)") }
+                shouldThrow<KlangScriptTypeError> { ks("Ignitor.${door.name}(x => 5)") }
             }
         }
     }

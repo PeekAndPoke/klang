@@ -53,25 +53,25 @@ class LangAdsrCurveDefaultSpec : StringSpec({
         val exp = AdsrCurves.knob(AdsrCurve.Exponential)
 
         // no call at all -> the node's default knob, exp
-        val plain = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3)""") as IgnitorDsl.Adsr
+        val plain = eval("""Ignitor.saw().adsr(0.01, 0.1, 0.7, 0.3)""") as IgnitorDsl.Adsr
         plain.attackCurve shouldBe exp
         plain.decayCurve shouldBe exp
         plain.releaseCurve shouldBe exp
 
         // bare curves() -> Exponential on every stage
-        val bare = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves())""") as IgnitorDsl.Adsr
+        val bare = eval("""Ignitor.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves())""") as IgnitorDsl.Adsr
         bare.attackCurve shouldBe exp
         bare.decayCurve shouldBe exp
         bare.releaseCurve shouldBe exp
 
         // an unrecognized name coerces to the default, not to Square, on ALL three stages
-        val typo = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("sqare", "sqare", "sqare"))""") as IgnitorDsl.Adsr
+        val typo = eval("""Ignitor.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("sqare", "sqare", "sqare"))""") as IgnitorDsl.Adsr
         typo.attackCurve shouldBe exp
         typo.decayCurve shouldBe exp
         typo.releaseCurve shouldBe exp
 
         // explicit names still win
-        val explicit = eval("""Osc.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("square", "cube", "linear"))""") as IgnitorDsl.Adsr
+        val explicit = eval("""Ignitor.saw().adsr(0.01, 0.1, 0.7, 0.3, e => e.curves("square", "cube", "linear"))""") as IgnitorDsl.Adsr
         explicit.attackCurve shouldBe AdsrCurves.knob(AdsrCurve.Square)
         explicit.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Cube)
         explicit.releaseCurve shouldBe AdsrCurves.knob(AdsrCurve.Linear)

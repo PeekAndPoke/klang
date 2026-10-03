@@ -27,7 +27,7 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
  */
 class KlangScriptThroughDoorParitySpec : StringSpec({
 
-    fun osc(code: String): IgnitorDsl {
+    fun ignitor(code: String): IgnitorDsl {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         return engine.execute(code).toObjectOrNull<IgnitorDsl>()!!
@@ -41,44 +41,44 @@ class KlangScriptThroughDoorParitySpec : StringSpec({
 
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
-    // ── Osc ──────────────────────────────────────────────────────────────────────────────────────
+    // ── Ignitor ──────────────────────────────────────────────────────────────────────────────────────
 
-    "Osc: the script door runs the stages first to last, as the nested calls" {
-        val saw = osc("Osc.saw()")
+    "Ignitor: the script door runs the stages first to last, as the nested calls" {
+        val saw = ignitor("Ignitor.saw()")
         val expected = IgnitorDsl.Plus(left = IgnitorDsl.Times(left = saw, right = c(2.0)), right = c(3.0))
 
-        osc("Osc.saw().through(x => x.mul(2), x => x.plus(3))") shouldBe expected
-        osc("Osc.saw().mul(2).plus(3)") shouldBe expected
+        ignitor("Ignitor.saw().through(x => x.mul(2), x => x.plus(3))") shouldBe expected
+        ignitor("Ignitor.saw().mul(2).plus(3)") shouldBe expected
         // the other order is another tree: the order is the stages', not commutative by accident
-        osc("Osc.saw().through(x => x.plus(3), x => x.mul(2))") shouldNotBe expected
+        ignitor("Ignitor.saw().through(x => x.plus(3), x => x.mul(2))") shouldNotBe expected
     }
 
-    "Osc: the Kotlin door builds the same node as the script door" {
-        val saw = osc("Osc.saw()")
+    "Ignitor: the Kotlin door builds the same node as the script door" {
+        val saw = ignitor("Ignitor.saw()")
         val kotlin = saw.through(
             { IgnitorDsl.Times(left = it, right = c(2.0)) },
             { IgnitorDsl.Plus(left = it, right = c(3.0)) },
         )
 
-        kotlin shouldBe osc("Osc.saw().through(x => x.mul(2), x => x.plus(3))")
+        kotlin shouldBe ignitor("Ignitor.saw().through(x => x.mul(2), x => x.plus(3))")
     }
 
-    "Osc: with no stage, through() is the signal itself, on both doors" {
-        val saw = osc("Osc.saw()")
+    "Ignitor: with no stage, through() is the signal itself, on both doors" {
+        val saw = ignitor("Ignitor.saw()")
 
-        osc("Osc.saw().through()") shouldBe saw
+        ignitor("Ignitor.saw().through()") shouldBe saw
         saw.through() shouldBe saw
     }
 
-    "Osc: a rig stored in a let is a stage, and rigs nest" {
-        osc(
+    "Ignitor: a rig stored in a let is a stage, and rigs nest" {
+        ignitor(
             """
             let pedal = x => x.mul(2)
             let cab   = x => x.plus(3)
             let rig   = x => x.through(pedal, cab)
-            Osc.saw().through(rig, x => x.mul(4))
+            Ignitor.saw().through(rig, x => x.mul(4))
             """.trimIndent()
-        ) shouldBe osc("Osc.saw().mul(2).plus(3).mul(4)")
+        ) shouldBe ignitor("Ignitor.saw().mul(2).plus(3).mul(4)")
     }
 
     // ── Katalyst ─────────────────────────────────────────────────────────────────────────────────
@@ -121,21 +121,21 @@ class KlangScriptThroughDoorParitySpec : StringSpec({
     fun errorOf(block: () -> Unit): String = shouldThrowAny { block() }.message ?: ""
 
     "a stage that returns nothing (a block body without return) is named, on both DSLs" {
-        errorOf { osc("Osc.saw().through(x => x.mul(2), x => { x.plus(3) })") } shouldContain
+        errorOf { ignitor("Ignitor.saw().through(x => x.mul(2), x => { x.plus(3) })") } shouldContain
                 "stage 2 of Ignitor through returned nothing"
         errorOf { katalyst("Katalyst(k => k.through(k => { k.gain(1.4) }))") } shouldContain
                 "stage 1 of Katalyst through returned nothing"
     }
 
     "a stage that returns something else is named, on both DSLs" {
-        errorOf { osc("Osc.saw().through(x => 3)") } shouldContain "stage 1 of Ignitor through must return signal"
+        errorOf { ignitor("Ignitor.saw().through(x => 3)") } shouldContain "stage 1 of Ignitor through must return signal"
         errorOf { katalyst("Katalyst(k => k.through(k => k.gain(1.4), k => 3))") } shouldContain
                 "stage 2 of Katalyst through must return builder"
     }
 
     "a stage that is not a function is a script error, on both DSLs" {
-        errorOf { osc("Osc.saw().through(x => x, 0.5)") } shouldContain "expected a function, got a number"
+        errorOf { ignitor("Ignitor.saw().through(x => x, 0.5)") } shouldContain "expected a function, got a number"
         errorOf { katalyst("Katalyst(k => k.through(true))") } shouldContain "expected a function, got a boolean"
-        errorOf { osc("Osc.saw().through(null)") } shouldContain "stage 1 of Ignitor through is null"
+        errorOf { ignitor("Ignitor.saw().through(null)") } shouldContain "stage 1 of Ignitor through is null"
     }
 })

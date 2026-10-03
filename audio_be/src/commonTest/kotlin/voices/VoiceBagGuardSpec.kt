@@ -27,7 +27,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * The oscillator parameter bag has THREE raw reads across two readers, and all of them are guarded
+ * The Ignitor slot bag has THREE raw reads across two readers, and all of them are guarded
  * here. The rule they follow is the one every wire number follows (`/dsl-design` section 4) and the
  * one the `Param` leaf already applied to every slot (`IgnitorDslRuntime`): a non-finite value was
  * never set, so it reads as unset. The bag is an open `Map<String, Double>` that any frontend may
@@ -60,7 +60,7 @@ import kotlin.random.Random
  *   sample of the voice was NaN from frame 0 (measured: all 1024 frames of the render below), and
  *   nothing in `Voice` or `Cylinder` scrubs it, so the NaN reached the ORBIT MIX and stayed in the
  *   orbit's send chain for the rest of the playback:
- *   `note("c3").oscp("analog", "Infinity").lpf(2000)` silenced an orbit. That is exactly the failure
+ *   `note("c3").ignp("analog", "Infinity").lpf(2000)` silenced an orbit. That is exactly the failure
  *   the `gain` guard's comment in `VoiceFactory` describes for its own reader.
  * - **`-Infinity`** passed `<= 0.0` and failed `> 0.0`, so it was already safe. Its row states the
  *   rule rather than closing a defect.

@@ -139,12 +139,12 @@ class CallInfoTest : StringSpec({
         assertCallInfoPresent("""seq("0 1").stretchBy("2")""")
     }
 
-    "oscparam passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").oscparam("analog", "0.5")""")
+    "ignitorParam passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").ignitorParam("analog", "0.5")""")
     }
 
-    "oscp passes CallInfo from KlangScript" {
-        assertCallInfoPresent("""seq("0 1").oscp("analog", "0.5")""")
+    "ignp passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").ignp("analog", "0.5")""")
     }
 
     "analog passes CallInfo from KlangScript" {

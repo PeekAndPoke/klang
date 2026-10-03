@@ -1442,8 +1442,8 @@ class Interpreter(
             }
 
             // Method not found - lead with the nearest name, THEN a truncated list. Dumping all
-            // ~400 names unranked (the old behaviour) buries the one that matters: `.ocsp` for
-            // `.oscp` is a single transposition and was invisible in the middle of the dump.
+            // ~400 names unranked (the old behaviour) buries the one that matters: a single
+            // adjacent transposition in a door name (2026-08-22) was invisible in the middle of the dump.
             val availableMethods = engine.getExtensionMethodNames(objValue)
             val suggestion = suggestNames(memberAccess.property, availableMethods) +
                     formatAvailableNames(availableMethods)

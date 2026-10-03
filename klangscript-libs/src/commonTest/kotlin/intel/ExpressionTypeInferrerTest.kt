@@ -33,11 +33,11 @@ import io.peekandpoke.klang.script.types.KlangType
 class ExpressionTypeInferrerTest : StringSpec({
 
     fun registry(): KlangDocsRegistry = KlangDocsRegistry().apply {
-        // Object: Osc (property with type "Osc")
+        // Object: Ignitor (property with type "Ignitor")
         register(
             KlangSymbol(
-                name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
-                variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
+                name = "Ignitor", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
+                variants = listOf(KlangProperty(name = "Ignitor", type = KlangType("Ignitor")))
             )
         )
         // Object: Math
@@ -47,14 +47,14 @@ class ExpressionTypeInferrerTest : StringSpec({
                 variants = listOf(KlangProperty(name = "Math", type = KlangType("Math")))
             )
         )
-        // Osc.sine() -> IgnitorDsl
+        // Ignitor.sine() -> IgnitorDsl
         register(
             KlangSymbol(
                 name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "sine",
-                        receiver = KlangType("Osc"),
+                        receiver = KlangType("Ignitor"),
                         params = emptyList(),
                         returnType = KlangType("IgnitorDsl"),
                     )
@@ -158,9 +158,9 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Identifiers ─────────────────────────────────────────────────────
 
-    "Identifier Osc infers type Osc" {
+    "Identifier Ignitor infers type Ignitor" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(Identifier("Osc"))?.simpleName shouldBe "Osc"
+        inferrer.inferType(Identifier("Ignitor"))?.simpleName shouldBe "Ignitor"
     }
 
     "Identifier Math infers type Math" {
@@ -186,10 +186,10 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Method calls ────────────────────────────────────────────────────
 
-    "Osc.sine() infers IgnitorDsl" {
+    "Ignitor.sine() infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
         val call = CallExpression(
-            callee = MemberAccess(obj = Identifier("Osc"), property = "sine"),
+            callee = MemberAccess(obj = Identifier("Ignitor"), property = "sine"),
             arguments = emptyList(),
         )
         inferrer.inferType(call)?.simpleName shouldBe "IgnitorDsl"
@@ -206,12 +206,12 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Call chains ─────────────────────────────────────────────────────
 
-    "Osc.sine().lowpass(1000) infers IgnitorDsl" {
+    "Ignitor.sine().lowpass(1000) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
         val chain = CallExpression(
             callee = MemberAccess(
                 obj = CallExpression(
-                    callee = MemberAccess(obj = Identifier("Osc"), property = "sine"),
+                    callee = MemberAccess(obj = Identifier("Ignitor"), property = "sine"),
                     arguments = emptyList(),
                 ),
                 property = "lowpass",
@@ -238,10 +238,10 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Unknown method on known type returns null ───────────────────────
 
-    "Osc.unknownMethod() infers null" {
+    "Ignitor.unknownMethod() infers null" {
         val inferrer = ExpressionTypeInferrer(registry())
         val call = CallExpression(
-            callee = MemberAccess(obj = Identifier("Osc"), property = "unknownMethod"),
+            callee = MemberAccess(obj = Identifier("Ignitor"), property = "unknownMethod"),
             arguments = emptyList(),
         )
         inferrer.inferType(call) shouldBe null
@@ -258,13 +258,13 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     "Chain breaks at unknown method and returns null" {
         val inferrer = ExpressionTypeInferrer(registry())
-        // Osc.sine().unknownMethod().lowpass(1000) — unknownMethod breaks the chain
+        // Ignitor.sine().unknownMethod().lowpass(1000) — unknownMethod breaks the chain
         val chain = CallExpression(
             callee = MemberAccess(
                 obj = CallExpression(
                     callee = MemberAccess(
                         obj = CallExpression(
-                            callee = MemberAccess(obj = Identifier("Osc"), property = "sine"),
+                            callee = MemberAccess(obj = Identifier("Ignitor"), property = "sine"),
                             arguments = emptyList(),
                         ),
                         property = "unknownMethod",
@@ -306,8 +306,8 @@ class ExpressionTypeInferrerTest : StringSpec({
         val reg = KlangDocsRegistry().apply {
             register(
                 KlangSymbol(
-                    name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
-                    variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
+                    name = "Ignitor", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
+                    variants = listOf(KlangProperty(name = "Ignitor", type = KlangType("Ignitor")))
                 )
             )
             register(
@@ -316,7 +316,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                     variants = listOf(
                         KlangProperty(
                             name = "sampleRate",
-                            owner = KlangType("Osc"),
+                            owner = KlangType("Ignitor"),
                             type = KlangType("Number"),
                         )
                     )
@@ -324,7 +324,7 @@ class ExpressionTypeInferrerTest : StringSpec({
             )
         }
         val inferrer = ExpressionTypeInferrer(reg)
-        // Osc.sampleRate should resolve to Number via property lookup
-        inferrer.inferType(MemberAccess(obj = Identifier("Osc"), property = "sampleRate"))?.simpleName shouldBe "Number"
+        // Ignitor.sampleRate should resolve to Number via property lookup
+        inferrer.inferType(MemberAccess(obj = Identifier("Ignitor"), property = "sampleRate"))?.simpleName shouldBe "Number"
     }
 })

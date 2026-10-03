@@ -52,8 +52,8 @@ let wind = s("brown!4")
   .clip(1.2).adsr("0.2:0.1:0.0:0.2")
   .pan(perlin.range(0.3, 0.7).slow(5))
 
-let lute = Osc.pluck().highpass(90).lowpass(3200).classic()
-let bass = Osc.triangle().plus(Osc.sine().mul(0.5)).lowpass(400).adsr(0.01, 0.4, 0.5, 0.3).classic()
+let lute = Ign.pluck().highpass(90).lowpass(3200).classic()
+let bass = Ign.triangle().plus(Ign.sine().mul(0.5)).lowpass(400).adsr(0.01, 0.4, 0.5, 0.3).classic()
 
 let verse = (x) => x >= 4 && x < 36
 let secondTime = (x) => x >= 20 && x < 36

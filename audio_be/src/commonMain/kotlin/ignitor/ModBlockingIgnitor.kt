@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 
 /**
  * Shields an ABSOLUTE-frequency source from pitch modulation — the counterpart to
- * [ModApplyingIgnitor], and the reason `Osc.sine(800)` no longer wobbles inside a vibrato'd patch.
+ * [ModApplyingIgnitor], and the reason `Ignitor.sine(800)` no longer wobbles inside a vibrato'd patch.
  *
  * Ledger W13, "musical vs absolute frequency, part 2". An oscillator reads `ctx.phaseMod` and
  * scales its phase increment by it no matter where its frequency came from, so before this a

@@ -41,9 +41,10 @@ object KlangStdLib {
         outputHandler: (ConsoleLevel, List<String>) -> Unit = defaultOutputHandler,
     ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
-            // The script names this library offers. The natives below reach a script through the
-            // engine's native environment, not through this list. `Osc` is scaffolding of the
-            // Ignitor/Katalyst rename, removed in C5.
+            // Today this list governs nothing: the natives below reach a script through the engine's native
+            // environment, and the exported map comes out empty, so `import { Math } from "stdlib"` fails for
+            // every name (docs/tasks/stdlib-export-block.md). `Osc` is scaffolding of the Ignitor/Katalyst
+            // rename, removed in C5.
             source(
                 """
                 export {

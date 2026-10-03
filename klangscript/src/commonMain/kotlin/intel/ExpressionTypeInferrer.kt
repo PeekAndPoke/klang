@@ -28,11 +28,11 @@ import io.peekandpoke.klang.script.types.KlangType
  * [TypeScope] tracking script-local bindings.
  *
  * Used by hover docs and code completion to determine the receiver type in call chains
- * like `Osc.sine().lowpass(1000)` and chains rooted at locals like `signal.distort(...)`.
+ * like `Ignitor.sine().lowpass(1000)` and chains rooted at locals like `signal.distort(...)`.
  *
  * Lookup order for identifiers:
  *  1. Lexical [TypeScope] — local `let` / `const` / `export` / arrow-param bindings.
- *  2. Docs registry — globals like `Osc`, `Math`.
+ *  2. Docs registry — globals like `Ignitor`, `Math`.
  *
  * Returns `null` for any expression whose type cannot be inferred — callers must
  * fall back to name-only behavior in that case.
@@ -62,7 +62,7 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
         if (scope != null && scope.contains(id.name)) {
             return scope.resolve(id.name)?.type
         }
-        // 2. Registry global (e.g. `Osc`, `Math` — registered as KlangProperty).
+        // 2. Registry global (e.g. `Ignitor`, `Math` — registered as KlangProperty).
         val symbol = registry.get(id.name) ?: return null
         val prop = symbol.variants.filterIsInstance<KlangProperty>().firstOrNull()
         return prop?.type
@@ -107,7 +107,7 @@ class ExpressionTypeInferrer(private val registry: KlangDocsRegistry) {
             }
 
             is MemberAccess -> {
-                // Method call: Osc.sine(), pattern.gain(0.5), signal.lowpass(...); or a callable
+                // Method call: Ignitor.sine(), pattern.gain(0.5), signal.lowpass(...); or a callable
                 // object reached through a member (`Foo.Bar(...)`).
                 val objType = inferType(callee.obj, scope) ?: return null
                 registry.getCallable(callee.property, objType)

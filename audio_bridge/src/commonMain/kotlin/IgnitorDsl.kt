@@ -90,9 +90,9 @@ import io.peekandpoke.klang.audio_bridge.constants.SUPERTRI_WARMUP
  * Process-local counter used to stamp each noise-source DSL instance with a unique
  * [IgnitorDsl.WhiteNoise.uid] / [IgnitorDsl.BrownNoise.uid] / [IgnitorDsl.PinkNoise.uid].
  *
- * Two calls to `Osc.whitenoise()` produce two different DSL objects with different uids —
+ * Two calls to `Ignitor.whitenoise()` produce two different DSL objects with different uids —
  * and therefore two independent Ignitors under the identity-caching `toExciter`. Binding to
- * a variable and re-using it keeps a single instance, so `let s = Osc.whitenoise(); s + s`
+ * a variable and re-using it keeps a single instance, so `let s = Ignitor.whitenoise(); s + s`
  * still collapses to one shared stream summed with itself.
  *
  * DSL construction is single-threaded in practice (the audio bridge is built from the UI
@@ -152,7 +152,7 @@ sealed interface IgnitorDsl {
     /**
      * A fixed constant value that cannot be overridden by ignitorParams.
      *
-     * Use when the user explicitly sets a value (e.g. `Osc.sine(5)` = 5 Hz).
+     * Use when the user explicitly sets a value (e.g. `Ignitor.sine(5)` = 5 Hz).
      * Unlike [Param], this is not discoverable and not overridable at play time.
      */
     @WireName("const")
@@ -172,7 +172,7 @@ sealed interface IgnitorDsl {
     }
 
     /**
-     * Canonical open parameter slots that mirror sprudel's `oscp(name, value)` calls.
+     * Canonical open parameter slots that mirror sprudel's `ignp(name, value)` calls.
      *
      * Use these when defining a custom sound that should respond to sprudel modulation
      * (e.g. `note("c").analog(0.3)`). Each slot is a `Param(name, default)` singleton with
@@ -181,7 +181,7 @@ sealed interface IgnitorDsl {
      * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; custom sounds
      * opt in explicitly:
      * ```
-     * let mypad = Osc.sine(x => x.analog(OscSlot.analog))
+     * let mypad = Ignitor.sine(x => x.analog(Ignitor.slot.analog))
      * note("c").sound(mypad)
      * ```
      */
@@ -364,7 +364,7 @@ sealed interface IgnitorDsl {
 
     /**
      * Square wave oscillator (fixed 50% duty). NOTE: the `square` / `sqr` / `pulse` *sound names* are
-     * registered to [Pulze] (one pulse oscillator with a `duty` osc-param); this type is retained as a
+     * registered to [Pulze] (one pulse oscillator with a `duty` Ignitor slot); this type is retained as a
      * plain 50%-duty pulse used internally (presets, generic test fixtures).
      */
     @WireName("square")
@@ -398,9 +398,9 @@ sealed interface IgnitorDsl {
      * toward pink/brown (one-pole LP); `>0` brightens toward blue/violet (complementary HP). Range −1..1.
      *
      * [uid] is an instance-discriminator used by the runtime identity cache: each call to
-     * `Osc.whitenoise()` creates a fresh [WhiteNoise] with a unique uid, so two such calls
+     * `Ignitor.whitenoise()` creates a fresh [WhiteNoise] with a unique uid, so two such calls
      * yield two independent noise streams when composed (`a + b`). Binding to a variable and
-     * re-using it (`let s = Osc.whitenoise(); s + s`) keeps a single instance and sums the
+     * re-using it (`let s = Ignitor.whitenoise(); s + s`) keeps a single instance and sums the
      * same stream twice.
      */
     @WireName("white-noise")
@@ -1363,8 +1363,8 @@ sealed interface IgnitorDsl {
          * `FilterDef.envelope` was resolved at note-on too. **A non-leaf EXPRESSION here is not
          * "modulated", it is UNREADABLE at build**, and the consequence differs per knob: a stage
          * knob falls back to its constant, but this DEPTH falls back to `0`, which switches the
-         * whole envelope OFF with no warning. `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))`
-         * renders a static filter. Write a slot (`OscSlot.lpf.env`) or a constant.
+         * whole envelope OFF with no warning. `lowpass(800, x => x.env(Ignitor.param("e", 24).max(36)))`
+         * renders a static filter. Write a slot (`Ignitor.slot.lpf.env`) or a constant.
          *
          * **Which envelope this is (decision D3).** The law is the engine's one envelope law, and an
          * unshaped stage (curve knob at its default) takes `MOD_ENV_CURVE`, the house Exponential
@@ -1770,7 +1770,7 @@ sealed interface IgnitorDsl {
          * De-click smoothing on the final gain, in seconds (`Slots.declickSeconds`, default `0` = off:
          * this per-ignitor envelope is intentionally not de-clicked). `>0` runs a one-pole low-pass on
          * the gain that rounds the C1 corners at segment joins (attack to decay peak, gate-off, cutoff),
-         * killing the low-note "plop" the same way the amp VCA does. `oscParam`-addressable / patternable.
+         * killing the low-note "plop" the same way the amp VCA does. `ignitorParam`-addressable / patternable.
          */
         val declickSeconds: IgnitorDsl = Slots.declickSeconds,
         /**
@@ -1824,7 +1824,7 @@ sealed interface IgnitorDsl {
         /** The frequency the FM machinery runs on: the modulator is driven at `freq x ratio`
          *  and the index is `depth / freq`. Defaults to [Freq] (the note), which makes FM
          *  transpose under `detune` like any note-pitched oscillator; authored absolute
-         *  (`Constant(...)`) the patch is immune, like `Osc.sine(5)` — the same
+         *  (`Constant(...)`) the patch is immune, like `Ignitor.sine(5)` — the same
          *  musical/absolute separation every oscillator has (D13's Fm special case retired).
          *  DELIBERATELY not exposed on the `fm(...)` builder or the script door (maintainer
          *  decision 2026-08-30): a hidden internal of the pitch machinery, raw-door-only —
@@ -2187,7 +2187,7 @@ fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = ot
  *
  * Exactly `mul(IgnitorDsl.Slots.pregain)`, written out as a call to [mul] so the two spellings
  * can never drift apart: same node, same operand order, same content id. The script door's
- * `.pregain()` builds the same node from `OscSlot.pregain`, which is this same singleton.
+ * `.pregain()` builds the same node from `Ignitor.slot.pregain`, which is this same singleton.
  *
  * No parameter: the slot IS the parameter, and a pattern moves it with `pregain(x)`. Put it in
  * front of the nonlinearity it should drive, once (see [IgnitorDsl.Slots.pregain] for why once).

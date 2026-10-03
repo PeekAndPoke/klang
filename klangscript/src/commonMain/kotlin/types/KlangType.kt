@@ -8,12 +8,12 @@ package io.peekandpoke.klang.script.types
 /**
  * Represents a type in the KlangScript type documentation system.
  *
- * @param simpleName The script-facing display name (e.g., "Osc", "OscSlot", "String").
+ * @param simpleName The script-facing display name (e.g., "Ignitor", "KlangScriptIgnitorSlots", "String").
  *   For `@KlangScript.Object`-bound classes this is the script name, not the Kotlin
  *   simple class name; for primitives / `RuntimeValue` subtypes this is the canonical
  *   script display name (e.g. `"Number"`, `"String"`).
  * @param fqcn The fully-qualified Kotlin class name of the underlying type, when
- *   known (e.g. `"io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"`). Null
+ *   known (e.g. `"io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorSlots"`). Null
  *   for primitives and types that don't map to a single Kotlin declaration (e.g.
  *   unions). Cross-module references use this as the canonical identity key.
  * @param isTypeAlias Whether this type is an alias for another type

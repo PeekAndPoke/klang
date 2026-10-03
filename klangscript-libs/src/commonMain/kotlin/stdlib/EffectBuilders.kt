@@ -358,7 +358,7 @@ fun EqBuilder.band(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707, db: IgnitorD
  * pure WIDTH control: the boost at [freq] is `1 + gain` for ANY q. The default `tap(freq)` is
  * NOT silent: `1 + 1 = 2`, a lift of about 6 dB, where the default `band(freq)` is transparent.
  *
- * Give [gain] a number or an osc-param, not a moving signal: it is re-read only once per block,
+ * Give [gain] a number or an Ignitor slot, not a moving signal: it is re-read only once per block,
  * so a swept tap gain steps instead of gliding. For that, use the chained
  * `signal.add(signal.bandpass(...).mul(lfo))` form, which is smooth.
  */

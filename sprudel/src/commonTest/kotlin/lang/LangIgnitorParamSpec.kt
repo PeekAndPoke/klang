@@ -9,10 +9,10 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
-class LangOscparamSpec : StringSpec({
+class LangIgnitorParamSpec : StringSpec({
 
-    "oscparam() with multiple keys on same pattern" {
-        val p = note("c3").oscparam("key1", "0.3").oscparam("key2", "0.7")
+    "ignitorParam() with multiple keys on same pattern" {
+        val p = note("c3").ignitorParam("key1", "0.3").ignitorParam("key2", "0.7")
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -22,7 +22,7 @@ class LangOscparamSpec : StringSpec({
         }
     }
 
-    "oscparam() default is null when not set" {
+    "ignitorParam() default is null when not set" {
         val p = s("supersaw")
         val events = p.queryArc(0.0, 1.0)
 

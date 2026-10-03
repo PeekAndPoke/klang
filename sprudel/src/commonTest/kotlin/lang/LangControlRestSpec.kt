@@ -121,8 +121,8 @@ class LangControlRestSpec : StringSpec({
             single("analog", "amount", "1", "2"),
             single("duty", "amount", "0.3", "0.6"),
             single("onepole", "freq", "1000", "2000"),
-            Row("oscparam(key = \"analog\", ", "value", "1", "2"),
-            Row("oscp(key = \"analog\", ", "value", "1", "2"),
+            Row("ignitorParam(slot = \"analog\", ", "value", "1", "2"),
+            Row("ignp(slot = \"analog\", ", "value", "1", "2"),
         ),
         listOf("sndPink", "sndRamp", "sndSaw", "sndSine", "sndSquare", "sndTriangle", "sndZamp").map {
             Row(it, "params", "1", "1", fresh = true)

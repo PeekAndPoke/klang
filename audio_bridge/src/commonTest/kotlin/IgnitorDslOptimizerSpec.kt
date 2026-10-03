@@ -155,7 +155,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a Param-backed analog never fuses even when it defaults to zero" {
-        // oscparam("analog", 3) could switch saturation on per note; the decision is made once,
+        // ignitorParam("analog", 3) could switch saturation on per note; the decision is made once,
         // here, so only a structural literal zero is safe.
         val dsl = IgnitorDsl.Lowpass(
             inner = IgnitorDsl.Sine(),
@@ -204,7 +204,7 @@ class IgnitorDslOptimizerSpec : StringSpec({
     }
 
     "a Param-backed env never fuses even when it defaults to zero" {
-        // Same argument as the analog row above: `oscp("lpenv", 24)` could switch the sweep on
+        // Same argument as the analog row above: `ignp("lpenv", 24)` could switch the sweep on
         // per note, and the decision is made once, here.
         IgnitorDsl.Lowpass(IgnitorDsl.Sine(), c(2000.0), c(0.707), env = IgnitorDsl.Param("lpenv", 0.0))
             .optimize()

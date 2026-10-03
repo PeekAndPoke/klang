@@ -140,7 +140,7 @@ object KlangScript {
     /**
      * Registers a property on an [Object] or [TypeExtensions] class. The annotated
      * Kotlin `val` becomes accessible in KlangScript as a no-parens member access
-     * — e.g. `Osc.slot.analog` evaluates the val directly rather than producing
+     * — e.g. `Ignitor.slot.analog` evaluates the val directly rather than producing
      * a bound method.
      *
      * **Scope**: must be declared inside an [Object] or [TypeExtensions] class.

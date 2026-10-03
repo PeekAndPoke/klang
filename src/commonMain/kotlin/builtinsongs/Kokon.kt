@@ -39,7 +39,7 @@ let drunk =  1   // two guitarists, sober this time, mostly
 // Rig stages (from Der Schmetterling)  ------------------------------------------------------------
 let pickupNeck = x => x
   .lowpass(3400, 1.4)
-  .notch(freq = Osc.freq().mul(4), q = 2.0)
+  .notch(freq = Ign.freq().mul(4), q = 2.0)
   .mul(1.2)
 
 let pickupSingle = x => x
@@ -114,23 +114,23 @@ let snareCut = x => x
 
 // The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
 let makeGuitar = (rig) => {
-  let pVoices     = OscSlot.voices
-  let pSpread     = OscSlot.spread
-  let pAnalog     = OscSlot.analog
-  let pAttack     = Osc.param("attack",       0.005, "Attack")
-  let pDecay      = Osc.param("decay",        1.000, "Decay")
-  let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.030, "Release")
+  let pVoices     = Ign.slot.voices
+  let pSpread     = Ign.slot.spread
+  let pAnalog     = Ign.slot.analog
+  let pAttack     = Ign.param("attack",       0.005, "Attack")
+  let pDecay      = Ign.param("decay",        1.000, "Decay")
+  let pSustain    = Ign.param("sustain",      0.000, "sustain")
+  let pRelease    = Ign.param("release",      0.030, "Release")
 
-  let saw = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
+  let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
     .phasePool(on = 1, kMin = 0.75, kMax = 0.90, warmup = 0, selection = "normal")
     .spreadPower(8.0).sideAtten(0.5).gainJitter(0.10).centerJitter(0.10)
     .analog(pAnalog).analogSpread(0.5)
   )
 
-  let signal = saw.mul(Osc.slot.pregain)
+  let signal = saw.mul(Ign.slot.pregain)
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.05, 0, 0))
-    .plus(Osc.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
+    .plus(Ign.crackle(1.0).highpass(1200).adsr(0.003, 0.1, 0.0, 0.05).mul(1.0))
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
 
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
@@ -150,17 +150,17 @@ let heavyRig  = x => x.through(pickupHumbucker, pedalScreamer, preampHighGain, p
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)
-  .eq(x => x.band(Osc.freq(), 30.0, Osc.constant(3).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
+  .eq(x => x.band(Ign.freq(), 30.0, Ign.constant(3).adsr(1.0, 1.0, 0.0, 0.1)))  // slight feedback
 let deep   = makeGuitar(deepRig)
 let heavy  = makeGuitar(heavyRig)
 
 let metalKick = (() => {
-  let thump = Osc.sine()
+  let thump = Ign.sine()
     .pitchEnvelope(36, x => x.adsr(0.0003, 0.025, 0, 0))
     .adsr(0.0005, 0.22, 0.0, 0.05)
     .distort(0.5, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Osc.whitenoise().bandpass(3500, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(2.8)
+  let crack = Ign.whitenoise().bandpass(3500, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(2.8)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -168,34 +168,34 @@ let metalKick = (() => {
 })()
 
 let metalSnare = (() => {
-  let crack = Osc.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
+  let crack = Ign.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
   // the body: the head, pushed a fifth up by the hit, a deeper sine under it, the thud of the stick driving the whole drum
   // (a dense cluster, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
-  let head  = Osc.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(3.0)
-  let deep  = Osc.sine(Osc.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(2.5)
+  let head  = Ign.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(3.0)
+  let deep  = Ign.sine(Ign.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(2.5)
   // The thud: 13 inharmonic sines from 138 to 712 Hz, a little over two semitones apart, weighted to the spectrum of the
   // pink noise band it replaces (2026-09-30). The noise band was about 230 Hz wide and 50 ms long, so every hit rolled
   // new dice: 6 dB of hit-to-hit loudness, 7.5 dB of peak. The cluster is the same on every hit. The flipped signs are the
   // start phases: all positive, the sines rise together and the hit spikes 20 dB over its level; this pattern, the
   // calmest of all 8192, leaves 12 dB, less than the noise had.
-  let thud  = Osc.sine(Osc.freq().mul(0.6571)).mul(0.520)
-    .plus(Osc.sine(Osc.freq().mul(0.7571)).mul(0.676))
-    .plus(Osc.sine(Osc.freq().mul(0.8714)).mul(-0.652))
-    .plus(Osc.sine(Osc.freq().mul(0.9476)).mul(0.826))
-    .plus(Osc.sine(Osc.freq().mul(1.0857)).mul(0.938))
-    .plus(Osc.sine(Osc.freq().mul(1.2524)).mul(-1.000))
-    .plus(Osc.sine(Osc.freq().mul(1.4333)).mul(0.839))
-    .plus(Osc.sine(Osc.freq().mul(1.6524)).mul(0.746))
-    .plus(Osc.sine(Osc.freq().mul(1.8952)).mul(-0.692))
-    .plus(Osc.sine(Osc.freq().mul(2.1952)).mul(-0.591))
-    .plus(Osc.sine(Osc.freq().mul(2.5333)).mul(0.494))
-    .plus(Osc.sine(Osc.freq().mul(2.9381)).mul(0.474))
-    .plus(Osc.sine(Osc.freq().mul(3.3905)).mul(-0.358))
+  let thud  = Ign.sine(Ign.freq().mul(0.6571)).mul(0.520)
+    .plus(Ign.sine(Ign.freq().mul(0.7571)).mul(0.676))
+    .plus(Ign.sine(Ign.freq().mul(0.8714)).mul(-0.652))
+    .plus(Ign.sine(Ign.freq().mul(0.9476)).mul(0.826))
+    .plus(Ign.sine(Ign.freq().mul(1.0857)).mul(0.938))
+    .plus(Ign.sine(Ign.freq().mul(1.2524)).mul(-1.000))
+    .plus(Ign.sine(Ign.freq().mul(1.4333)).mul(0.839))
+    .plus(Ign.sine(Ign.freq().mul(1.6524)).mul(0.746))
+    .plus(Ign.sine(Ign.freq().mul(1.8952)).mul(-0.692))
+    .plus(Ign.sine(Ign.freq().mul(2.1952)).mul(-0.591))
+    .plus(Ign.sine(Ign.freq().mul(2.5333)).mul(0.494))
+    .plus(Ign.sine(Ign.freq().mul(2.9381)).mul(0.474))
+    .plus(Ign.sine(Ign.freq().mul(3.3905)).mul(-0.358))
     .adsr(0.0005, 0.050, 0.0, 0.02).mul(1.245)
-  let shell = Osc.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
-  let m2    = Osc.sine(Osc.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
-  let m3    = Osc.sine(Osc.freq().mul(2.14)).adsr(0.0005, 0.020, 0.0, 0.02).mul(0.8)
-  let wires = Osc.whitenoise().times(Osc.sine().mul(0.8).plus(1.0))   // the buzz: noise that rises and falls with the head
+  let shell = Ign.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
+  let m2    = Ign.sine(Ign.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
+  let m3    = Ign.sine(Ign.freq().mul(2.14)).adsr(0.0005, 0.020, 0.0, 0.02).mul(0.8)
+  let wires = Ign.whitenoise().times(Ign.sine().mul(0.8).plus(1.0))   // the buzz: noise that rises and falls with the head
     .bandpass(6000, 0.6).adsr(0.004, 0.11, 0.0, 0.03).mul(1.2)
 
   let drum = head.plus(deep).plus(thud).plus(shell).plus(m2).plus(m3).plus(wires)
@@ -211,18 +211,18 @@ let metalSnare = (() => {
 let bass = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
-  let pAnalog  = OscSlot.analog
-  let pSub     = Osc.param("sub",         1.00, "Sub Volume")
-  let pHarm    = Osc.param("harmonics",   1.00, "Harmonics Volume")
+  let pAnalog  = Ign.slot.analog
+  let pSub     = Ign.param("sub",         1.00, "Sub Volume")
+  let pHarm    = Ign.param("harmonics",   1.00, "Harmonics Volume")
   // ----------------------------------------------------------------------------------------------
 
   // Sub: a bare sine. No filter: a sine has no harmonics to remove. This is the weight,
   // and it lives at 36 to 70 Hz where nothing else in the mix is.
-  let sub = Osc.sine(x => x.analog(pAnalog)).mul(pSub)
+  let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Osc.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -261,7 +261,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 4 3]>`
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes) 
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.05).pregain(0.7)
-  .oscp("decay", 1.00).oscp("sustain", 0.25).oscp("release", 0.8).clip(2.0)
+  .ignp("decay", 1.00).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8")
   .gain(0.22).pan(0.5)                             // the arp guitarist stands dead centre
   .orbit(1).body(wet = 0.1, material = "oak")
@@ -269,7 +269,7 @@ export spin = notes => n(notes)
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.04) // a narrow chorus: a held note stays one note
-  .oscp("decay", 3.0).clip(1.05)
+  .ignp("decay", 3.0).clip(1.05)
   .tremolo(rate = 4, depth = perlin.range(0.30, 0.35)).accelerate(perlin.range(0.01, 0.02).slow(8).seg(8))
   .hpf(200)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(3800)                                       // the crunch fizz on held notes covers the arp's picks
@@ -279,7 +279,7 @@ export sing = notes => n(notes.add(7))
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
-  .oscp("decay", 3.0).clip(1.5)
+  .ignp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
   .lpf(4500)                                       // less fizz, the wall keeps its own
   .gain(0.42).pan(0.5)
@@ -288,7 +288,7 @@ export soar = notes => n(notes.add(14))
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
-  .oscp("attack", 1.2).oscp("decay", 1.5).clip(1)
+  .ignp("attack", 1.2).ignp("decay", 1.5).clip(1)
   .lpf(3500)
   .gain(0.10).pan(0.05).superimpose(x => x.pan(0.95).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
@@ -296,7 +296,7 @@ export swell = chords => n(chords.add(7))
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 2.0).clip(2).hpf(120)
+  .ignp("decay", 2.0).clip(2).hpf(120)
   .velocity("1.0 0.8 0.9")
   .gain(0.30).pan(0.3)                             // on the left, across from the melody on the right
   .orbit(3)
@@ -304,7 +304,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
   .sound(heavy).adsrOff().unison(voices = 19, spread = 0.10)
-  .oscp("decay", 0.15).clip(1)
+  .ignp("decay", 0.15).clip(1)
   .velocity("1.0 0.75 0.9 0.75 0.95 0.75")
   .gain(1.2).pan(0.5)
   .orbit(4)
@@ -312,7 +312,7 @@ export chug = roots => n(roots.add(-7)).struct("x x@2  x x@2  x x")
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
-  .oscp("decay", 0.4).clip(1)
+  .ignp("decay", 0.4).clip(1)
   .velocity("1.0 0.93 0.97 0.93")
   .gain(0.58)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
@@ -321,7 +321,7 @@ export wings = chords => n(chords).ply(16)
 // Strike: one heavy chord, let ring. It shares the wings' orbit and room.
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
-  .oscp("decay", 3.5).clip(1)
+  .ignp("decay", 3.5).clip(1)
   .gain(0.8)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
@@ -329,14 +329,14 @@ export strike = chords => n(chords)
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
-  .oscp("decay", 0.30).oscp("sustain", 0.45).oscp("release", 1.2).clip(2)
+  .ignp("decay", 0.30).ignp("sustain", 0.45).ignp("release", 1.2).clip(2)
   .gain(0.35).pan(0.75)
   .orbit(10)
 
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
-  .oscp("decay", 0.30).oscp("sustain", 0.50).oscp("release", 5.0).clip(40)
+  .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
   .gain(0.20).pan(0.45)
   .orbit(8)
 
@@ -366,7 +366,7 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.96 0.97 0.96")
-  .oscp("sub", 0.95).oscp("harmonics", 1.00)
+  .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.80)
   .gain(1.15).pan(0.5)
@@ -431,7 +431,7 @@ let unravelling = stack(
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  spin(liftArp).ply(2).gain(0.20).oscp("sustain", 0.6),
+  spin(liftArp).ply(2).gain(0.20).ignp("sustain", 0.6),
   soar(melodyTwo),
   wings(liftPower),
   chug(liftRoots),
@@ -440,7 +440,7 @@ let lifting = stack(
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).oscp("sustain", 0.6),
+  spin("[0 4 7 9 11 9 7 4]").ply(2).gain(0.20).ignp("sustain", 0.6),
   soar("[4@6 ~@2]"),
   strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.20, 0.20))),
   beat("0").gain(0.7),

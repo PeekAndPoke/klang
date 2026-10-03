@@ -38,7 +38,7 @@ private fun applyCull(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * lead-in or a sample with leading silence is safe; reverb and delay tails live on
  * the orbit and keep ringing. A RELEASE that goes silent and comes back is cut at its first
  * gap: a voice with a `tremolo` is therefore never culled unless you set this door, and a sparse
- * source inside an ignitor (`Osc.dust`, `Osc.crackle`) ringing through its release wants a wider
+ * source inside an ignitor (`Ignitor.dust`, `Ignitor.crackle`) ringing through its release wants a wider
  * window or [noCull].
  *
  * Every voice is culled with a 50 ms window by default; this door changes the window, [noCull]
@@ -109,7 +109,7 @@ fun PatternMapperFn.cull(seconds: PatternLike? = null, callInfo: CallInfo? = nul
  * silent or not, the way every voice did before culling existed.
  *
  * The one reason to reach for it is a sound whose release goes silent and then comes back (a
- * sparse `Osc.dust` still ringing, a gate inside the ignitor), which the 50 ms window would cut.
+ * sparse `Ignitor.dust` still ringing, a gate inside the ignitor), which the 50 ms window would cut.
  * `cull(seconds)` widens the window instead of removing it. A voice with a `tremolo` gets this
  * automatically.
  *

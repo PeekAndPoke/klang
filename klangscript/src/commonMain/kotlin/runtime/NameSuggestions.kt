@@ -11,13 +11,13 @@ import io.peekandpoke.klang.common.strings.osaDistance
  * Builds the "Did you mean ...?" tail for a name that was not found.
  *
  * A misspelled name is the single most common authoring mistake, and the cost of a bad message
- * is real: `.ocsp` for `.oscp` (one adjacent transposition) cost a full debugging session,
+ * is real: a single adjacent transposition in a door name (2026-08-22) cost a full debugging session,
  * because the error dumped all ~400 available method names unranked and the right one was
  * invisible in the middle of it.
  *
  * Ranks with [osaDistance], NOT plain Levenshtein: a transposition is ONE edit there and two
  * under Levenshtein, and at the tight thresholds short names need, the plain version cannot
- * suggest `oscp` for `ocsp` at all. That was measured, not assumed — the first version of this
+ * suggest `ignp` for `ingp` at all. That was measured, not assumed — the first version of this
  * helper used Levenshtein and failed the very case it was written for.
  *
  * Returns an empty string when nothing is close enough, so callers can append it unconditionally.

@@ -17,12 +17,12 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Integration tests for the Osc DSL in KlangScript.
+ * Integration tests for the Ignitor DSL in KlangScript.
  *
  * Validates that KlangScript code builds correct IgnitorDsl trees
  * through the full engine pipeline (parse → interpret → native interop).
  */
-class StdLibOscTest : StringSpec({
+class StdLibIgnitorTest : StringSpec({
 
     fun evalIgnitorDsl(code: String): IgnitorDsl {
         val engine = klangScript()
@@ -38,14 +38,14 @@ class StdLibOscTest : StringSpec({
     // Factory methods
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "Osc.sine() returns IgnitorDsl.Sine" {
-        val dsl = evalIgnitorDsl("Osc.sine()")
+    "Ignitor.sine() returns IgnitorDsl.Sine" {
+        val dsl = evalIgnitorDsl("Ignitor.sine()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
     // ── The chain adsr's builder (step 3c): curves and declick live in its lambda ──
-    "Osc.saw().adsr(..., e => e.declick(0.001)) sets the declickSeconds knob on the Adsr node" {
-        val dsl = evalIgnitorDsl("Osc.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
+    "Ignitor.saw().adsr(..., e => e.declick(0.001)) sets the declickSeconds knob on the Adsr node" {
+        val dsl = evalIgnitorDsl("Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2, e => e.declick(0.001))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
         dsl.declickSeconds shouldBe IgnitorDsl.Constant(0.001)
         dsl.inner shouldBe IgnitorDsl.Sawtooth()
@@ -55,68 +55,68 @@ class StdLibOscTest : StringSpec({
         // They modified the preceding adsr, or WRAPPED a second envelope around anything else; the
         // builder replaced them (maintainer, 2026-09-25). Directly after adsr and anywhere else.
         for (code in listOf(
-            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).adsrCurves("lin", "lin", "lin")""",
-            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).declickSeconds(0.001)""",
-            """Osc.saw().adsr(0.01, 0.1, 0.5, 0.2).expK(4.0)""",
-            """Osc.saw().lowpass(800).adsrCurves("lin", "lin", "lin")""",
-            """Osc.saw().declickSeconds(0.001)""",
+            """Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2).adsrCurves("lin", "lin", "lin")""",
+            """Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2).declickSeconds(0.001)""",
+            """Ignitor.saw().adsr(0.01, 0.1, 0.5, 0.2).expK(4.0)""",
+            """Ignitor.saw().lowpass(800).adsrCurves("lin", "lin", "lin")""",
+            """Ignitor.saw().declickSeconds(0.001)""",
         )) {
             val error = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl(code) }
             error.message shouldContain "has no method"
         }
     }
 
-    "Osc.sine(5) returns Sine with Constant freq" {
-        val dsl = evalIgnitorDsl("Osc.sine(5)")
+    "Ignitor.sine(5) returns Sine with Constant freq" {
+        val dsl = evalIgnitorDsl("Ignitor.sine(5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.freq.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.freq as IgnitorDsl.Constant).value shouldBe 5.0
     }
 
-    "Osc.sine() with no args uses Freq for freq (= voice frequency)" {
-        val dsl = evalIgnitorDsl("Osc.sine()")
+    "Ignitor.sine() with no args uses Freq for freq (= voice frequency)" {
+        val dsl = evalIgnitorDsl("Ignitor.sine()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.freq shouldBe IgnitorDsl.Freq
     }
 
-    "Osc.freq() returns IgnitorDsl.Freq" {
-        val dsl = evalIgnitorDsl("Osc.freq()")
+    "Ignitor.freq() returns IgnitorDsl.Freq" {
+        val dsl = evalIgnitorDsl("Ignitor.freq()")
         dsl shouldBe IgnitorDsl.Freq
     }
 
-    "Osc.sine(Osc.freq().div(2)) produces Sine with halved Freq" {
-        val dsl = evalIgnitorDsl("Osc.sine(Osc.freq().div(2))")
+    "Ignitor.sine(Ignitor.freq().div(2)) produces Sine with halved Freq" {
+        val dsl = evalIgnitorDsl("Ignitor.sine(Ignitor.freq().div(2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.freq shouldBe IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
     }
 
-    "Osc.sine(Osc.freq().mul(2)) produces Sine with doubled Freq" {
-        val dsl = evalIgnitorDsl("Osc.sine(Osc.freq().mul(2))")
+    "Ignitor.sine(Ignitor.freq().mul(2)) produces Sine with doubled Freq" {
+        val dsl = evalIgnitorDsl("Ignitor.sine(Ignitor.freq().mul(2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.freq shouldBe IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
     }
 
-    "Osc.saw() returns Sawtooth" {
-        evalIgnitorDsl("Osc.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+    "Ignitor.saw() returns Sawtooth" {
+        evalIgnitorDsl("Ignitor.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }
 
-    "Osc.square() returns Pulze (square/pulse/pulze are one pulse oscillator)" {
-        evalIgnitorDsl("Osc.square()").shouldBeInstanceOf<IgnitorDsl.Pulze>()
+    "Ignitor.square() returns Pulze (square/pulse/pulze are one pulse oscillator)" {
+        evalIgnitorDsl("Ignitor.square()").shouldBeInstanceOf<IgnitorDsl.Pulze>()
     }
 
-    "Osc.supersaw() returns SuperSaw" {
-        evalIgnitorDsl("Osc.supersaw()").shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+    "Ignitor.supersaw() returns SuperSaw" {
+        evalIgnitorDsl("Ignitor.supersaw()").shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
     }
 
-    "Osc.supersaw(10) returns SuperSaw with Constant freq" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(10)")
+    "Ignitor.supersaw(10) returns SuperSaw with Constant freq" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw(10)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.freq as IgnitorDsl.Constant).value shouldBe 10.0
     }
 
-    "Osc.supersaw() has correct defaults" {
-        val dsl = evalIgnitorDsl("Osc.supersaw()")
+    "Ignitor.supersaw() has correct defaults" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw()")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Freq
         // Defaults come from IgnitorDsl.Slots (overridable Params), matching the backend `.sound("supersaw")`.
@@ -125,8 +125,8 @@ class StdLibOscTest : StringSpec({
         dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
-    "Osc.supersaw(440) backward compat — freq only" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(440)")
+    "Ignitor.supersaw(440) backward compat — freq only" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw(440)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.freq shouldBe IgnitorDsl.Constant(440.0)
         dsl.voices shouldBe IgnitorDsl.Slots.voices
@@ -134,122 +134,122 @@ class StdLibOscTest : StringSpec({
         dsl.analog shouldBe IgnitorDsl.Slots.analog
     }
 
-    "Osc.supersaw with voices=1 — degenerate single voice" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(1))")
+    "Ignitor.supersaw with voices=1 — degenerate single voice" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw(x => x.voices(1))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(1.0)
     }
 
     // Knobs live on the builder handed to the configure lambda.
-    "Osc.supersaw with all params" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(4).spread(0.1).analog(0.3))")
+    "Ignitor.supersaw with all params" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw(x => x.voices(4).spread(0.1).analog(0.3))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.1)
         dsl.analog shouldBe IgnitorDsl.Constant(0.3)
     }
 
-    "Osc.supersaw voices accepts IgnitorDsl" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(x => x.voices(Osc.sine(0.5)))")
+    "Ignitor.supersaw voices accepts IgnitorDsl" {
+        val dsl = evalIgnitorDsl("Ignitor.supersaw(x => x.voices(Ignitor.sine(0.5)))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    "Osc.supersine with voices and detune" {
-        val dsl = evalIgnitorDsl("Osc.supersine(x => x.voices(6).spread(0.15))")
+    "Ignitor.supersine with voices and detune" {
+        val dsl = evalIgnitorDsl("Ignitor.supersine(x => x.voices(6).spread(0.15))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
         dsl.voices shouldBe IgnitorDsl.Constant(6.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.15)
     }
 
-    "Osc.supersquare with voices and analog" {
-        val dsl = evalIgnitorDsl("Osc.supersquare(x => x.voices(3).spread(0.2).analog(0.2))")
+    "Ignitor.supersquare with voices and analog" {
+        val dsl = evalIgnitorDsl("Ignitor.supersquare(x => x.voices(3).spread(0.2).analog(0.2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
         dsl.voices shouldBe IgnitorDsl.Constant(3.0)
         dsl.analog shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    "Osc.supertri with voices" {
-        val dsl = evalIgnitorDsl("Osc.supertri(x => x.voices(12))")
+    "Ignitor.supertri with voices" {
+        val dsl = evalIgnitorDsl("Ignitor.supertri(x => x.voices(12))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperTri>()
         dsl.voices shouldBe IgnitorDsl.Constant(12.0)
     }
 
-    "Osc.superramp with all params" {
-        val dsl = evalIgnitorDsl("Osc.superramp(x => x.voices(5).spread(0.4).analog(0.1))")
+    "Ignitor.superramp with all params" {
+        val dsl = evalIgnitorDsl("Ignitor.superramp(x => x.voices(5).spread(0.4).analog(0.1))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         dsl.voices shouldBe IgnitorDsl.Constant(5.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.4)
         dsl.analog shouldBe IgnitorDsl.Constant(0.1)
     }
 
-    "Osc.superpluck with voices and detune" {
-        val dsl = evalIgnitorDsl("Osc.superpluck(x => x.voices(4).spread(0.05))")
+    "Ignitor.superpluck with voices and detune" {
+        val dsl = evalIgnitorDsl("Ignitor.superpluck(x => x.voices(4).spread(0.05))")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
         dsl.spread shouldBe IgnitorDsl.Constant(0.05)
     }
 
-    "Osc.whitenoise() returns WhiteNoise with flat color (0.0)" {
-        val dsl = evalIgnitorDsl("Osc.whitenoise()")
+    "Ignitor.whitenoise() returns WhiteNoise with flat color (0.0)" {
+        val dsl = evalIgnitorDsl("Ignitor.whitenoise()")
         dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
         // KlangScript bakes the literal default → Constant(0.0) (the engine bypasses the tilt at 0)
         dsl.color shouldBe IgnitorDsl.Constant(0.0)
     }
 
-    "Osc.whitenoise(color = -0.5) sets the spectral-tilt knob" {
-        val dsl = evalIgnitorDsl("Osc.whitenoise(-0.5)")
+    "Ignitor.whitenoise(color = -0.5) sets the spectral-tilt knob" {
+        val dsl = evalIgnitorDsl("Ignitor.whitenoise(-0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
         dsl.color shouldBe IgnitorDsl.Constant(-0.5)
     }
 
-    "Osc.perlin() returns PerlinNoise" {
-        evalIgnitorDsl("Osc.perlin()").shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
+    "Ignitor.perlin() returns PerlinNoise" {
+        evalIgnitorDsl("Ignitor.perlin()").shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
     }
 
-    "Osc.perlin(3) returns PerlinNoise with Constant rate" {
-        val dsl = evalIgnitorDsl("Osc.perlin(3)")
+    "Ignitor.perlin(3) returns PerlinNoise with Constant rate" {
+        val dsl = evalIgnitorDsl("Ignitor.perlin(3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
         dsl.rate.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.rate as IgnitorDsl.Constant).value shouldBe 3.0
     }
 
-    "Osc.dust(0.5) returns Dust with Constant density" {
-        val dsl = evalIgnitorDsl("Osc.dust(0.5)")
+    "Ignitor.dust(0.5) returns Dust with Constant density" {
+        val dsl = evalIgnitorDsl("Ignitor.dust(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
         dsl.density.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.density as IgnitorDsl.Constant).value shouldBe 0.5
     }
 
-    "Osc.dust(tail = 4, bipolar = 1) sets the heavy-tail + bipolar knobs (named args)" {
-        val dsl = evalIgnitorDsl("Osc.dust(0.5, 4, 1)")
+    "Ignitor.dust(tail = 4, bipolar = 1) sets the heavy-tail + bipolar knobs (named args)" {
+        val dsl = evalIgnitorDsl("Ignitor.dust(0.5, 4, 1)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Dust>()
         dsl.tail shouldBe IgnitorDsl.Constant(4.0)
         dsl.bipolar shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    "Osc.brownnoise(depth = 0.3) sets the white-leak knob" {
-        val dsl = evalIgnitorDsl("Osc.brownnoise(0.3)")
+    "Ignitor.brownnoise(depth = 0.3) sets the white-leak knob" {
+        val dsl = evalIgnitorDsl("Ignitor.brownnoise(0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.BrownNoise>()
         dsl.depth shouldBe IgnitorDsl.Constant(0.3)
     }
 
-    "Osc.pluck() returns Pluck" {
-        evalIgnitorDsl("Osc.pluck()").shouldBeInstanceOf<IgnitorDsl.Pluck>()
+    "Ignitor.pluck() returns Pluck" {
+        evalIgnitorDsl("Ignitor.pluck()").shouldBeInstanceOf<IgnitorDsl.Pluck>()
     }
 
-    "Osc.silence() returns Silence" {
-        evalIgnitorDsl("Osc.silence()") shouldBe IgnitorDsl.Silence
+    "Ignitor.silence() returns Silence" {
+        evalIgnitorDsl("Ignitor.silence()") shouldBe IgnitorDsl.Silence
     }
 
-    "Osc.constant(42) returns Constant" {
-        val dsl = evalIgnitorDsl("Osc.constant(42)")
+    "Ignitor.constant(42) returns Constant" {
+        val dsl = evalIgnitorDsl("Ignitor.constant(42)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Constant>()
         dsl.value shouldBe 42.0
     }
 
-    "Osc.param creates named Param" {
-        val dsl = evalIgnitorDsl("""Osc.param("cutoff", 1000, "Filter cutoff")""")
+    "Ignitor.param creates named Param" {
+        val dsl = evalIgnitorDsl("""Ignitor.param("cutoff", 1000, "Filter cutoff")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Param>()
         dsl.name shouldBe "cutoff"
         dsl.default shouldBe 1000.0
@@ -261,7 +261,7 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "lowpass chaining with default q" {
-        val dsl = evalIgnitorDsl("Osc.sine().lowpass(2000)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().lowpass(2000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.freq.shouldBeInstanceOf<IgnitorDsl.Constant>()
@@ -269,26 +269,26 @@ class StdLibOscTest : StringSpec({
     }
 
     "lowpass chaining with explicit q" {
-        val dsl = evalIgnitorDsl("Osc.sine().lowpass(2000, 2.0)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().lowpass(2000, 2.0)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         dsl.q.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.q as IgnitorDsl.Constant).value shouldBe 2.0
     }
 
     "lowpass with IgnitorDsl cutoff (audio-rate modulation)" {
-        val dsl = evalIgnitorDsl("Osc.sine().lowpass(Osc.perlin())")
+        val dsl = evalIgnitorDsl("Ignitor.sine().lowpass(Ignitor.perlin())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         dsl.freq.shouldBeInstanceOf<IgnitorDsl.PerlinNoise>()
     }
 
     "adsr chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().adsr(0.01, 0.1, 0.5, 0.3)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().adsr(0.01, 0.1, 0.5, 0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
     "distort chaining produces Shape(Drive(...))" {
-        val dsl = evalIgnitorDsl("Osc.saw().distort(0.5)")
+        val dsl = evalIgnitorDsl("Ignitor.saw().distort(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
         val drive = dsl.inner
@@ -297,7 +297,7 @@ class StdLibOscTest : StringSpec({
     }
 
     "distort with oversample factor" {
-        val dsl = evalIgnitorDsl("""Osc.saw().distort(0.8, "exp", 4)""")
+        val dsl = evalIgnitorDsl("""Ignitor.saw().distort(0.8, "exp", 4)""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("exp"))
         dsl.oversample shouldBe IgnitorDsl.Constant(4.0)
@@ -305,17 +305,17 @@ class StdLibOscTest : StringSpec({
     }
 
     "detune chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().detune(7)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().detune(7)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Detune>()
     }
 
     "tremolo chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().tremolo(5, 0.5)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().tremolo(5, 0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Tremolo>()
     }
 
     "vibrato chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().vibrato(5, 0.02)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().vibrato(5, 0.02)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Vibrato>()
     }
 
@@ -324,35 +324,35 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "plus combines two ignitors" {
-        val dsl = evalIgnitorDsl("Osc.sine().plus(Osc.saw())")
+        val dsl = evalIgnitorDsl("Ignitor.sine().plus(Ignitor.saw())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }
 
     "plus with number creates Constant" {
-        val dsl = evalIgnitorDsl("Osc.sine().plus(1)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().plus(1)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.right as IgnitorDsl.Constant).value shouldBe 1.0
     }
 
     "mul with number creates Constant (lowers to Times)" {
-        val dsl = evalIgnitorDsl("Osc.sine().mul(0.5)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().mul(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Times>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.right as IgnitorDsl.Constant).value shouldBe 0.5
     }
 
     "div with number creates Constant" {
-        val dsl = evalIgnitorDsl("Osc.sine().div(2)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().div(2)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Div>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.right as IgnitorDsl.Constant).value shouldBe 2.0
     }
 
     "minus creates Minus(left, right)" {
-        val dsl = evalIgnitorDsl("Osc.sine().minus(Osc.saw())")
+        val dsl = evalIgnitorDsl("Ignitor.sine().minus(Ignitor.saw())")
         dsl.shouldBeInstanceOf<IgnitorDsl.Minus>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
@@ -367,7 +367,7 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "max caps, so it builds IgnitorDsl.Min" {
-        val dsl = evalIgnitorDsl("Osc.sine().max(0.8)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().max(0.8)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Min>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
@@ -375,7 +375,7 @@ class StdLibOscTest : StringSpec({
     }
 
     "min floors, so it builds IgnitorDsl.Max" {
-        val dsl = evalIgnitorDsl("Osc.sine().min(0)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().min(0)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Max>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
@@ -383,12 +383,12 @@ class StdLibOscTest : StringSpec({
     }
 
     "min and max keep the receiver on the left" {
-        val capped = evalIgnitorDsl("Osc.saw().max(Osc.sine())")
+        val capped = evalIgnitorDsl("Ignitor.saw().max(Ignitor.sine())")
         capped.shouldBeInstanceOf<IgnitorDsl.Min>()
         capped.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
         capped.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
 
-        val floored = evalIgnitorDsl("Osc.saw().min(Osc.sine())")
+        val floored = evalIgnitorDsl("Ignitor.saw().min(Ignitor.sine())")
         floored.shouldBeInstanceOf<IgnitorDsl.Max>()
         floored.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
         floored.right.shouldBeInstanceOf<IgnitorDsl.Sine>()
@@ -401,7 +401,7 @@ class StdLibOscTest : StringSpec({
     "complex composition — supersaw with LFO-modulated lowpass and envelope" {
         val dsl = evalIgnitorDsl(
             """
-            Osc.supersaw().lowpass(Osc.sine(5).plus(1).times(1000).plus(1000)).adsr(0.01, 0.3, 0.5, 0.5)
+            Ignitor.supersaw().lowpass(Ignitor.sine(5).plus(1).times(1000).plus(1000)).adsr(0.01, 0.3, 0.5, 0.5)
         """.trimIndent()
         )
         dsl.shouldBeInstanceOf<IgnitorDsl.Adsr>()
@@ -413,8 +413,8 @@ class StdLibOscTest : StringSpec({
     "variable assignment and reuse" {
         val dsl = evalIgnitorDsl(
             """
-            let lfo = Osc.sine(5).plus(1).times(500).plus(500)
-            Osc.saw().lowpass(lfo)
+            let lfo = Ignitor.sine(5).plus(1).times(500).plus(500)
+            Ignitor.saw().lowpass(lfo)
         """.trimIndent()
         )
         dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
@@ -428,7 +428,7 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "analog sets drift on oscillator" {
-        val dsl = evalIgnitorDsl("Osc.sine(x => x.analog(0.3))")
+        val dsl = evalIgnitorDsl("Ignitor.sine(x => x.analog(0.3))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.analog.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.analog as IgnitorDsl.Constant).value shouldBe 0.3
@@ -438,17 +438,17 @@ class StdLibOscTest : StringSpec({
         // `analog` used to be one `when` over 17 oscillator types with `else -> self`, so
         // asking a noise source or a wrapper for drift silently returned it unchanged; the
         // knob did nothing and said nothing. It now lives on each oscillator's BUILDER
-        // (`Osc.sine(x => x.analog(3))`), so no sound has an `.analog()` any more and an
+        // (`Ignitor.sine(x => x.analog(3))`), so no sound has an `.analog()` any more and an
         // unsupported receiver is a type error.
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         shouldThrow<KlangScriptTypeError> {
-            engine.execute("Osc.whitenoise().analog(0.5)")
+            engine.execute("Ignitor.whitenoise().analog(0.5)")
         }
         // ...and a wrapper is equally unsupported: drift belongs to the oscillator, and by
         // the time a filter has wrapped it there is no oscillator left to configure.
         shouldThrow<KlangScriptTypeError> {
-            engine.execute("Osc.sine().onepole(600).analog(2)")
+            engine.execute("Ignitor.sine().onepole(600).analog(2)")
         }
     }
 
@@ -457,65 +457,65 @@ class StdLibOscTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "drive chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().drive(0.5)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().drive(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Drive>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
     "shape chaining" {
-        val dsl = evalIgnitorDsl("""Osc.sine().shape("hard")""")
+        val dsl = evalIgnitorDsl("""Ignitor.sine().shape("hard")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("hard"))
     }
 
     "shape with default curve" {
-        val dsl = evalIgnitorDsl("Osc.sine().shape()")
+        val dsl = evalIgnitorDsl("Ignitor.sine().shape()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("soft"))
         dsl.oversample shouldBe IgnitorDsl.Constant(0.0)
     }
 
     "shape with oversample factor" {
-        val dsl = evalIgnitorDsl("""Osc.sine().shape("hard", 2)""")
+        val dsl = evalIgnitorDsl("""Ignitor.sine().shape("hard", 2)""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("hard"))
         dsl.oversample shouldBe IgnitorDsl.Constant(2.0)
     }
 
     "bandpass chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().bandpass(1000)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().bandpass(1000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Bandpass>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
     "bandpass with explicit Q" {
-        val dsl = evalIgnitorDsl("Osc.sine().bandpass(1000, 5.0)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().bandpass(1000, 5.0)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Bandpass>()
     }
 
     "notch chaining" {
-        val dsl = evalIgnitorDsl("Osc.sine().notch(1000)")
+        val dsl = evalIgnitorDsl("Ignitor.sine().notch(1000)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Notch>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
     "eq wraps the inner into an empty Eq" {
-        val dsl = evalIgnitorDsl("Osc.sine().eq()")
+        val dsl = evalIgnitorDsl("Ignitor.sine().eq()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.sections shouldBe emptyList()
     }
 
     "eq is idempotent, and a second eq(...) continues the first" {
-        val dsl = evalIgnitorDsl("Osc.sine().eq().eq(e => e.band(1200))")
+        val dsl = evalIgnitorDsl("Ignitor.sine().eq().eq(e => e.band(1200))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.sections.size shouldBe 1
     }
 
     "band on the EqBuilder adds a bell with defaults" {
-        val dsl = evalIgnitorDsl("Osc.sine().eq(e => e.band(1200))")
+        val dsl = evalIgnitorDsl("Ignitor.sine().eq(e => e.band(1200))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.sections.size shouldBe 1
@@ -527,14 +527,14 @@ class StdLibOscTest : StringSpec({
 
     "band and tap exist only on the EqBuilder, not on a sound or on the Eq node" {
         // TYPE and the method name matter: a bare shouldThrow<Exception> would also pass
-        val onSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Osc.sine().band(1200)") }
+        val onSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Ignitor.sine().band(1200)") }
         onSound.message shouldContain "has no method 'band'"
-        val tapOnSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Osc.sine().tap(850)") }
+        val tapOnSound = shouldThrow<KlangScriptTypeError> { evalIgnitorDsl("Ignitor.sine().tap(850)") }
         tapOnSound.message shouldContain "has no method 'tap'"
     }
 
     "band appends to an existing Eq in list order" {
-        val dsl = evalIgnitorDsl("Osc.sine().eq(e => e.band(300, 1.0, 6).band(2500))")
+        val dsl = evalIgnitorDsl("Ignitor.sine().eq(e => e.band(300, 1.0, 6).band(2500))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         dsl.sections.size shouldBe 2
         val first = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
@@ -547,14 +547,14 @@ class StdLibOscTest : StringSpec({
     "band with all-named args skips q" {
         // The escape from the positional trap (band(1200, 6) sets q, not gain). Knob defaults are
         // literals, so a named subset binds.
-        val dsl = evalIgnitorDsl("Osc.saw().eq(e => e.band(freq = 1200, db = 6))")
+        val dsl = evalIgnitorDsl("Ignitor.saw().eq(e => e.band(freq = 1200, db = 6))")
         val bell = (dsl as IgnitorDsl.Eq).sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
         (bell.q as IgnitorDsl.Constant).value shouldBe 0.707
         (bell.db as IgnitorDsl.Constant).value shouldBe 6.0
     }
 
     "base filters chain AFTER the eq lambda (the shape the songs ship)" {
-        val dsl = evalIgnitorDsl("Osc.saw().eq(e => e.tap(850, 0.707, 1.7)).notch(210, 2.5).lowpass(5250)")
+        val dsl = evalIgnitorDsl("Ignitor.saw().eq(e => e.tap(850, 0.707, 1.7)).notch(210, 2.5).lowpass(5250)")
         val lowpass = dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
         val notch = lowpass.inner.shouldBeInstanceOf<IgnitorDsl.Notch>()
         val eq = notch.inner.shouldBeInstanceOf<IgnitorDsl.Eq>()
@@ -562,7 +562,7 @@ class StdLibOscTest : StringSpec({
     }
 
     "tap adds a RawTap section with defaults" {
-        val dsl = evalIgnitorDsl("Osc.saw().eq(e => e.tap(850))")
+        val dsl = evalIgnitorDsl("Ignitor.saw().eq(e => e.tap(850))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         val tap = dsl.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
         (tap.freq as IgnitorDsl.Constant).value shouldBe 850.0
@@ -571,7 +571,7 @@ class StdLibOscTest : StringSpec({
     }
 
     "tap and band mix in one section list, in written order" {
-        val dsl = evalIgnitorDsl("Osc.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0).band(4000, 0.7, -3))")
+        val dsl = evalIgnitorDsl("Ignitor.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0).band(4000, 0.7, -3))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         dsl.sections.size shouldBe 3
         dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.RawTap>()
@@ -581,14 +581,14 @@ class StdLibOscTest : StringSpec({
     }
 
     "band accepts an IgnitorDsl freq (note tracking)" {
-        val dsl = evalIgnitorDsl("Osc.saw().eq(e => e.band(Osc.freq().mul(2)))")
+        val dsl = evalIgnitorDsl("Ignitor.saw().eq(e => e.band(Ignitor.freq().mul(2)))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Eq>()
         val bell = dsl.sections[0].shouldBeInstanceOf<IgnitorDsl.EqSection.Bell>()
         bell.freq.shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
     "drive + shape chain" {
-        val dsl = evalIgnitorDsl("""Osc.saw().drive(0.3).shape("fold")""")
+        val dsl = evalIgnitorDsl("""Ignitor.saw().drive(0.3).shape("fold")""")
         dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("fold"))
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()

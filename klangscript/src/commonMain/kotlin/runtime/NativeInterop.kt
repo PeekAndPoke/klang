@@ -228,7 +228,7 @@ private fun requireFunctionTarget(cls: KClass<*>, loc: SourceLocation?) {
 /**
  * The mirror of [requireFunctionTarget]: a function slot (`FunctionN`) takes only a callable value. Without this guard
  * a number, a boolean, an array or an object on a `(A) -> B` slot passed through unconverted and failed later, as a
- * cast error deep inside the native on the JVM and as a silent wrong value on JS (found on `Osc.saw().through(pedal,
+ * cast error deep inside the native on the JVM and as a silent wrong value on JS (found on `Ignitor.saw().through(pedal,
  * 0.5)`, review 2026-10-02), instead of a script-level type error at the call site.
  */
 private fun RuntimeValue.requireCallableForFunctionSlot(cls: KClass<*>, loc: SourceLocation?) {

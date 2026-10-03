@@ -1033,9 +1033,9 @@ class ExcitersTest : StringSpec({
 
     "Constant is not overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(880.0))
-        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam tries to override
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // ignitorParam tries to override
         val buf = generate(sig, freqHz = 220.0)  // voice freq is 220
-        // Should use 880 Hz (Constant), not 440 (oscParam) or 220 (voice)
+        // Should use 880 Hz (Constant), not 440 (ignitorParam) or 220 (voice)
         val crossings = buf.zeroCrossings()
         // 880Hz over 100ms ≈ 88 cycles, ~176 zero crossings
         crossings shouldBeInRange 170..185
@@ -1043,9 +1043,9 @@ class ExcitersTest : StringSpec({
 
     "Param is overridden by ignitorParams" {
         val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Param("freq", 880.0))
-        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam overrides
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // ignitorParam overrides
         val buf = generate(sig, freqHz = 220.0)
-        // Should use 440 Hz (oscParam override), not 880 (default) or 220 (voice)
+        // Should use 440 Hz (ignitorParam override), not 880 (default) or 220 (voice)
         val crossings = buf.zeroCrossings()
         // 440Hz over 100ms ≈ 44 cycles, ~88 zero crossings
         crossings shouldBeInRange 84..92

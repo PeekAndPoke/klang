@@ -33,9 +33,15 @@ object KlangScriptIgnitor {
     override fun toString(): String = "[Ignitor object]"
 
     /**
-     * Canonical open parameter slots: `Ignitor.slot.analog`, `Ignitor.slot.voices`, `Ignitor.slot.lpf.freq`, etc.
-     * The only script path to [KlangScriptIgnitorSlots]; the Kotlin door is `IgnitorDsl.Slots`, the same objects.
+     * The canonical open slots of a custom sound: `Ignitor.slot.analog`, `Ignitor.slot.voices`,
+     * `Ignitor.slot.lpf.freq` and the rest. Each is the same `IgnitorDsl.Param(name, default)` the built-in sounds
+     * use, so a custom sound that hands one to a knob opts in to sprudel's modulation of it (the `analog`, `voices`,
+     * `spread`, ... knobs on the oscillator builders). Without opting in, a custom sound ignores it. For
+     * example, `Ignitor.sine(x => x.analog(Ignitor.slot.analog))` is a sine whose drift follows sprudel's
+     * `analog`. `Ign.slot` is the same.
      */
+    // The script path to KlangScriptIgnitorSlots; the Kotlin door is IgnitorDsl.Slots, the same objects.
+    // (A member property's docs carry no samples in KSP, so the example is prose.)
     @KlangScript.Property
     val slot: KlangScriptIgnitorSlots = KlangScriptIgnitorSlots
 

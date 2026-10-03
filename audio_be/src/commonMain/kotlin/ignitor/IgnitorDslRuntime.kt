@@ -128,7 +128,7 @@ internal class IgnitorBuildCache(
      *  without threading a parameter through every recursive call. */
     val random: Random = Random,
     /** The note's base frequency. Build-time control-rate reads need it ([FreqIgnitor] answers with
-     *  it), which is how a pitch-relative release such as `Osc.freq().recip().mul(200)` resolves for
+     *  it), which is how a pitch-relative release such as `Ignitor.freq().recip().mul(200)` resolves for
      *  voice lifetime. Carried here like [soundIndex] rather than threaded through every arm. */
     val freqHz: Double = 0.0,
     /** The backend's sample rate; read only by a `humanize` filter's drift lane. See
@@ -182,8 +182,8 @@ internal class IgnitorBuildCache(
 
     /**
      * True when the subtree contains a consumer of the MUSICAL frequency — the [IgnitorDsl.Freq]
-     * leaf. Every note-pitched consumer defaults its freq param to that leaf (`Osc.sine()` is
-     * caught while `Osc.sine(5)`'s `Constant(5.0)` is not — and since `Fm.freq` joined that
+     * leaf. Every note-pitched consumer defaults its freq param to that leaf (`Ignitor.sine()` is
+     * caught while `Ignitor.sine(5)`'s `Constant(5.0)` is not — and since `Fm.freq` joined that
      * convention there is NO special case left: the house rule is that runtime code never
      * consumes the freq argument except to forward it, so freq-dependence is always visible
      * structurally; see `IgnitorDslWalk`'s KDoc).
@@ -248,7 +248,7 @@ internal class DetuneContext
 /** The one Variants pick rule, shared by the build dispatch and the D13 fold predicate so the
  *  two can never judge different subtrees (review round 1). */
 private fun IgnitorDsl.Variants.pick(soundIndex: Int): IgnitorDsl {
-    require(children.isNotEmpty()) { "Osc.variants(...) must have at least one child" }
+    require(children.isNotEmpty()) { "Ignitor.variants(...) must have at least one child" }
     return children[soundIndex.mod(children.size)]
 }
 
@@ -262,7 +262,7 @@ internal fun IgnitorDsl.buildIgnitor(
     cache: IgnitorBuildCache,
     accumulatedMod: Ignitor? = null,
 ): BuiltIgnitor {
-    // ── Leaves: direct return, no cache. Note the ignitorParams lookup: an `.oscp(...)` override is
+    // ── Leaves: direct return, no cache. Note the ignitorParams lookup: an `.ignp(...)` override is
     //    folded into the leaf HERE, so any later read of this node (including the build-time
     //    release read in the Adsr arm) sees the overridden value with no second lookup rule. ──
     //
@@ -526,9 +526,9 @@ private fun IgnitorDsl.gatedOffAtUnity(ignitorParams: Map<String, Double>?, cach
  * can emit a non-finite sample from finite input owes a substitution at its own read, the way the
  * envelope now does. The FEEDBACK sources do not obey it and must not be made to: `Pluck` and
  * `SuperPluck` write `delayLine[writePos] = filtered * decayVal` with `decay` read raw off
- * `Slots.decay`, so `oscp("decay", 10)` diverges geometrically to an infinity and the fractional
+ * `Slots.decay`, so `ignp("decay", 10)` diverges geometrically to an infinity and the fractional
  * read turns it into NaN. That divergence is authored character and the Motor stays raw, so the
- * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").oscp("decay", 10)`
+ * rule is "a new node owes it", not "every node has it". `note("c3").sound("pluck").ignp("decay", 10)`
  * is unguarded with or without this fold; what the fold contributes is that the built-ins' unity
  * `pregain` (placed on every built-in's source since phase 3 step 6) does not MASK it by scrubbing
  * the NaN to silence on its way out.
@@ -576,7 +576,7 @@ private fun IgnitorDsl.gatedOffWhenUnset(ignitorParams: Map<String, Double>?, ca
  *
  * **The DEPTH's fallback is 0, and that is a sharper edge than the other four.** A stage knob
  * that cannot be read falls back to a usable time; a depth that cannot be read falls back to the
- * OFF value, so `lowpass(800, x => x.env(Osc.param("e", 24).max(36)))` renders a static filter with no
+ * OFF value, so `lowpass(800, x => x.env(Ignitor.param("e", 24).max(36)))` renders a static filter with no
  * warning at all. It is the honest answer here (an unreadable depth is not a depth) and the
  * alternative, substituting 7 semitones for an expression the author wrote, would invent a sweep
  * nobody asked for. Both filter-node KDocs say it out loud; the editor diagnostic of step 11 is
@@ -636,10 +636,10 @@ private fun filterEnvDef(
  * What does NOT switch it on, each pinned by a row of `FilterSlotLayerFillSpec`:
  *  - a WRITTEN depth, an explicit 0 included: an explicit value is never overwritten by a fill (the
  *    retired strip kept `lpf(env = 0)` static too);
- *  - an AUTHORED depth default, 0 included: `Osc.param("e", 0)` is the author saying "no sweep", and an
+ *  - an AUTHORED depth default, 0 included: `Ignitor.param("e", 0)` is the author saying "no sweep", and an
  *    authored default is never filled (round 1 of step 5's review found the first cut filling it);
  *  - an authored stage default alone: a stage `Param` whose default is a real number but that the bag
- *    did not write (`Osc.param("fa", 0.02)`) is not "written";
+ *    did not write (`Ignitor.param("fa", 0.02)`) is not "written";
  *  - a non-finite value in the bag: it reads as unset, as it does at the `Param` leaf;
  *  - a CONSTANT depth: a door-filled or an authored constant is an explicit value, never a question.
  *
@@ -892,7 +892,7 @@ private fun IgnitorDsl.buildRaw(
      * oscillator's OWN freq slot rather than of a whole subtree — that per-source question is
      * exactly what W13 flagged as missing. A detuned arm still answers yes (its freq is the `Freq`
      * leaf, forked under a detune context), so vibrato keeps moving detuned voices; a hand-rolled
-     * `Osc.sine(5)` LFO answers no, and so does a fixed-pitch body resonance.
+     * `Ignitor.sine(5)` LFO answers no, and so does a fixed-pitch body resonance.
      *
      * Every pitched source arm below goes through here. A new oscillator that calls the bare
      * [applyMod] instead silently reopens W13 — [ModBlockingIgnitor]'s KDoc is the forcing note.
@@ -1069,7 +1069,7 @@ private fun IgnitorDsl.buildRaw(
         // GATE ROW `mul`: a factor of EXACTLY 1.0 over a SIGNAL is not built, and the signal is
         // returned (unset is deliberately NOT off here, and a control-rate survivor never folds;
         // see `gatedOffAtUnity` and `survivesUnityFold`). This is the row that folds a placed
-        // `.mul(OscSlot.pregain)` away at unity, which identity demands rather than merely allows:
+        // `.mul(Ignitor.slot.pregain)` away at unity, which identity demands rather than merely allows:
         // the built-ins carried no pregain until phase 3 step 6 placed it on their sources, so
         // KEEPING a unity multiply would be the change, not removing it. (A registered tree renders
         // optimized, where a bare `x.mul(k)` is the `Affine` arm below.) The right side is asked
@@ -1158,7 +1158,7 @@ private fun IgnitorDsl.buildRaw(
             // two honest instances (the overlay: the instrument transposed) instead of one
             // instance double-advanced at two freqs per window. The runtime wrapper is
             // unchanged: multiplying the freq ARGUMENT is what scopes detune to musical
-            // frequencies (Freq-derived pitches move; an `Osc.sine(5)` LFO ignores the
+            // frequencies (Freq-derived pitches move; an `Ignitor.sine(5)` LFO ignores the
             // argument and stays put).
             if (cache.usesMusicalFreq(inner)) {
                 val outer = cache.detuneContext
@@ -1330,8 +1330,8 @@ private fun IgnitorDsl.buildRaw(
             val release = releaseSec.noMod()
 
             // This node's own tail. controlRateValueOrNull folds Constant/Param leaves AND pointwise
-            // expressions over them, so `pRel.mul(2)` and `Osc.freq().recip().mul(200)` resolve
-            // exactly, and an `.oscp("release", ...)` override is already baked into the ParamIgnitor
+            // expressions over them, so `pRel.mul(2)` and `Ignitor.freq().recip().mul(200)` resolve
+            // exactly, and an `.ignp("release", ...)` override is already baked into the ParamIgnitor
             // (see the Param leaf in buildIgnitor). null = the release time is itself modulated, so
             // no static answer exists: contribute nothing rather than guess.
             //
@@ -1372,7 +1372,7 @@ private fun IgnitorDsl.buildRaw(
 
         // GATE ROW `distort`: at or below 0.0, or unset. Neither authoring door builds this node
         // (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at `IgnitorDsl.kt` and the
-        // script one at `KlangScriptOscExtensions`); `classic()` does (its distort stage, phase 3
+        // script one at `KlangScriptIgnitorExtensions`); `classic()` does (its distort stage, phase 3
         // step 5, the one node that switches drive AND shape off as a unit), and `WarmupVocabulary`
         // at 0.3. Gating it aligns that node with the `Drive` row below and with the strip, which
         // added no distort stage for an amount at or below 0.
@@ -1465,7 +1465,7 @@ private fun IgnitorDsl.buildRaw(
         // `1 - depth` to 1 and multiplied into the inner signal. Build order is rng draw order: inner,
         // rate, depth; the shape is read once, leaf-only, and builds nothing. At render, the SINE LFO takes
         // three draws off the voice's stream at its first block (its drift lane is constructed even at
-        // analog 0), after the inner signal's, as a hand-built `Osc.sine` does; so a noise under a sine
+        // analog 0), after the inner signal's, as a hand-built `Ignitor.sine` does; so a noise under a sine
         // tremolo draws different dice than it would without one. A BUILT tremolo reports that it gates its
         // own output (see `BuiltIgnitor`).
         is IgnitorDsl.Tremolo -> if (depth.gatedOff(ignitorParams, cache) { it <= 0.0 }) {

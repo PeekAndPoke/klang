@@ -516,8 +516,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         }
     }
 
-    "a knob takes an Osc.param slot as readily as a number" {
-        ks("""Katalyst(k => k.reverb(wet = Osc.param("room", 0.2)))""") shouldBe
+    "a knob takes an Ignitor.param slot as readily as a number" {
+        ks("""Katalyst(k => k.reverb(wet = Ignitor.param("room", 0.2)))""") shouldBe
                 KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Param("room", 0.2)))
     }
 
@@ -530,8 +530,8 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                     it.reverb(size = KlangScriptKatalyst.param("room", 5.0, "the tail"))
                 }
 
-        // Same node type as `Osc.param`, and that is the point: one slot vocabulary, two
-        // namespaces that never cross (`oscp` fills the voice's, `katp` the orbit's).
+        // Same node type as `Ignitor.param`, and that is the point: one slot vocabulary, two
+        // namespaces that never cross (`ignp` fills the voice's, `katp` the orbit's).
         KlangScriptKatalyst.param("room", 5.0) shouldBe KlangScriptIgnitor.param("room", 5.0)
     }
 

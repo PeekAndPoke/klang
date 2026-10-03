@@ -137,8 +137,8 @@ object KlangScriptKatalyst {
 
 /**
  * The short name of [KlangScriptKatalyst]: the same object under a second name, so `Kat(k => ...)` is
- * `Katalyst(k => ...)` and `Kat.classic()` is `Katalyst.classic()`, for every member. Songs use it;
- * the docs spell `Katalyst` out.
+ * `Katalyst(k => ...)` and `Kat.classic()` is `Katalyst.classic()`, for every member: the short form for songs
+ * and live coding, while the docs spell `Katalyst` out.
  *
  * ```KlangScript
  * note("c3 e3 g3").s("supersaw").katalyst(Kat(k => k.reverb(0.2, 4).gain(1.2)))

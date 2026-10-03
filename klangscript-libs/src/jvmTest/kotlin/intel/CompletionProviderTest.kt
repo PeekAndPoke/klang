@@ -121,14 +121,16 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
         names shouldContainExactlyInAnyOrder listOf(
-            "Ignitor", "Ign", "Osc", "OscSlot", "Math", "Object", "PI", "E", "Katalyst", "Kat",
+            "Ignitor", "Ign", "Math", "Object", "PI", "E", "Katalyst", "Kat",
+            "Osc", "OscSlot", // scaffolding of the Ignitor/Katalyst rename, removed in C5 with these two names
         )
     }
 
     "top-level: filtered prefix" {
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("O").map { it.name }
-        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Object")
+        // "Osc" and "OscSlot": scaffolding of the Ignitor/Katalyst rename, removed in C5 with these two names
+        names shouldContainExactlyInAnyOrder listOf("Object", "Osc", "OscSlot")
     }
 
     "top-level: case-insensitive prefix" {
@@ -169,8 +171,8 @@ class CompletionProviderTest : StringSpec({
 
     "top-level: suggestions have correct kind for properties" {
         val provider = CompletionProvider(stdlibRegistry())
-        val osc = provider.topLevelCompletions("").first { it.name == "Ignitor" }
-        osc.kind shouldBe CompletionSuggestion.Kind.PROPERTY
+        val ignitor = provider.topLevelCompletions("").first { it.name == "Ignitor" }
+        ignitor.kind shouldBe CompletionSuggestion.Kind.PROPERTY
     }
 
     "top-level: suggestions have correct kind for functions" {
@@ -356,9 +358,9 @@ class CompletionProviderTest : StringSpec({
     "multi-lib: extension methods don't leak across receivers" {
         val provider = CompletionProvider(multiLibRegistry())
         // Ignitor should NOT see Pattern methods (gain, pan from sprudel)
-        val oscNames = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
-        oscNames shouldNotContain "gain"
-        oscNames shouldNotContain "pan"
+        val ignitorNames = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
+        ignitorNames shouldNotContain "gain"
+        ignitorNames shouldNotContain "pan"
 
         // Pattern should NOT see Ignitor methods (sine, saw from stdlib)
         val patternNames = provider.memberCompletions(KlangType("Pattern"), "").map { it.name }

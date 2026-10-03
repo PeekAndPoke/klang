@@ -29,7 +29,7 @@ import kotlin.random.Random
 
 /**
  * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 9):
- * one voice per row, the script `Osc.saw().classic()` against the Kotlin `IgnitorDsl.Sawtooth().classic()`,
+ * one voice per row, the script `Ignitor.saw().classic()` against the Kotlin `IgnitorDsl.Sawtooth().classic()`,
  * with the slots written through the bag, every slot in turn and a few in combination, compared in RAW
  * BITS. Here because sprudel is the module that has both the script engine and the renderer, so the
  * spec runs on the JVM and on JS.
@@ -81,7 +81,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val script: IgnitorDsl by lazy {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
-        engine.execute("Osc.saw().classic()").toObjectOrNull<IgnitorDsl>()!!
+        engine.execute("Ignitor.saw().classic()").toObjectOrNull<IgnitorDsl>()!!
     }
 
     val kotlin: IgnitorDsl = IgnitorDsl.Sawtooth().classic()

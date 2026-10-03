@@ -26,7 +26,7 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  *
  * Each knob of the voice doors listed in [knobs] is one entry: level and routing (`gain`, `pregain`,
  * `pan`, `velocity`, `orbit`, `cylinder`, `density`, `accelerate`), the oscillator knobs (`analog`,
- * `duty`, `onepole`, `oscparam`, `oscp`, `sndPluck`, `sndSuperPluck`), `adsr` and `adsrOn`, `unison`,
+ * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), `adsr` and `adsrOn`, `unison`,
  * the bus doors (`compressor`, `duck`, `reverb`, `delay`, `phaser`, `body`, `vowel`), `tremolo`,
  * `distort`, `crush`, `coarse`, the four filters, `fm`, `vibrato` and `penv`, and the aliases' heads.
  * Each row runs the entries through the calling forms the module supports, and asserts the VALUE the
@@ -86,7 +86,7 @@ class LangDoorFormsSpec : StringSpec({
     )
 
     fun katSlot(key: String): (SprudelVoiceData) -> Double? = { it.katalystParams?.get(key) }
-    fun oscSlot(key: String): (SprudelVoiceData) -> Double? = { it.ignitorParams?.get(key) }
+    fun ignitorSlot(key: String): (SprudelVoiceData) -> Double? = { it.ignitorParams?.get(key) }
 
     fun k(
         name: String,
@@ -107,7 +107,7 @@ class LangDoorFormsSpec : StringSpec({
     val knobs = listOf(
         // -- level, routing, voice ------------------------------------------------------------------------------------
         k("gain", "gain(%s)", { it.gain }, { p, c -> p.gain(c) }, { s, c -> s.gain(c) }, { c -> gain(c) }, { m, c -> m.gain(c) }, head = true),
-        k("pregain", "pregain(%s)", oscSlot("pregain"), { p, c -> p.pregain(c) }, { s, c -> s.pregain(c) }, { c -> pregain(c) }, { m, c -> m.pregain(c) }, head = true),
+        k("pregain", "pregain(%s)", ignitorSlot("pregain"), { p, c -> p.pregain(c) }, { s, c -> s.pregain(c) }, { c -> pregain(c) }, { m, c -> m.pregain(c) }, head = true),
         k("pan", "pan(%s)", { it.pan }, { p, c -> p.pan(c) }, { s, c -> s.pan(c) }, { c -> pan(c) }, { m, c -> m.pan(c) },
             ctrl = "-0.5 1", expected = listOf(-0.5, 1.0), head = true),
         k("velocity", "velocity(%s)", { it.velocity }, { p, c -> p.velocity(c) }, { s, c -> s.velocity(c) }, { c -> velocity(c) }, { m, c -> m.velocity(c) }, head = true),
@@ -118,15 +118,15 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "1 2", expected = listOf(1, 2), head = true, continuous = listOf(0, 1, 0, 0)),
         k("cylinder", "cylinder(%s)", { it.cylinder }, { p, c -> p.cylinder(c) }, { s, c -> s.cylinder(c) }, { c -> cylinder(c) }, { m, c -> m.cylinder(c) },
             ctrl = "1 2", expected = listOf(1, 2), head = true, continuous = listOf(0, 1, 0, 0)),
-        k("density", "density(%s)", oscSlot("density"), { p, c -> p.density(c) }, { s, c -> s.density(c) }, { c -> density(c) }, { m, c -> m.density(c) }, head = true),
-        k("d", "d(%s)", oscSlot("density"), { p, c -> p.d(c) }, { s, c -> s.d(c) }, { c -> d(c) }, { m, c -> m.d(c) }, head = true),
+        k("density", "density(%s)", ignitorSlot("density"), { p, c -> p.density(c) }, { s, c -> s.density(c) }, { c -> density(c) }, { m, c -> m.density(c) }, head = true),
+        k("d", "d(%s)", ignitorSlot("density"), { p, c -> p.d(c) }, { s, c -> s.d(c) }, { c -> d(c) }, { m, c -> m.d(c) }, head = true),
         k("accelerate", "accelerate(%s)", { it.accelerate }, { p, c -> p.accelerate(c) }, { s, c -> s.accelerate(c) }, { c -> accelerate(c) }, { m, c -> m.accelerate(c) },
             ctrl = "-0.5 0.75", expected = listOf(-0.5, 0.75), head = true),
-        k("oscparam", "oscparam(\"mykey\", %s)", oscSlot("mykey"), { p, c -> p.oscparam("mykey", c!!) }, { s, c -> s.oscparam("mykey", c!!) }, { c -> oscparam("mykey", c!!) }, { m, c -> m.oscparam("mykey", c!!) }),
-        k("oscp", "oscp(\"mykey\", %s)", oscSlot("mykey"), { p, c -> p.oscp("mykey", c!!) }, { s, c -> s.oscp("mykey", c!!) }, { c -> oscp("mykey", c!!) }, { m, c -> m.oscp("mykey", c!!) }),
-        k("analog", "analog(%s)", oscSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
-        k("duty", "duty(%s)", oscSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
-        k("onepole", "onepole(%s)", oscSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
+        k("ignitorParam", "ignitorParam(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignitorParam("mykey", c!!) }, { s, c -> s.ignitorParam("mykey", c!!) }, { c -> ignitorParam("mykey", c!!) }, { m, c -> m.ignitorParam("mykey", c!!) }),
+        k("ignp", "ignp(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignp("mykey", c!!) }, { s, c -> s.ignp("mykey", c!!) }, { c -> ignp("mykey", c!!) }, { m, c -> m.ignp("mykey", c!!) }),
+        k("analog", "analog(%s)", ignitorSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
+        k("duty", "duty(%s)", ignitorSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
+        k("onepole", "onepole(%s)", ignitorSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
 
         // -- adsr -----------------------------------------------------------------------------------------------------
         k("adsr.attack", "adsr(attack = %s)", { it.attack }, { p, c -> p.adsr(attack = c) }, { s, c -> s.adsr(attack = c) }, { c -> adsr(attack = c) }, { m, c -> m.adsr(attack = c) }),
@@ -137,12 +137,12 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "1 0", expected = listOf(true, false), continuous = null),
 
         // -- unison ---------------------------------------------------------------------------------------------------
-        k("unison.voices", "unison(%s)", oscSlot("voices"), { p, c -> p.unison(c) }, { s, c -> s.unison(c) }, { c -> unison(c) }, { m, c -> m.unison(c) },
+        k("unison.voices", "unison(%s)", ignitorSlot("voices"), { p, c -> p.unison(c) }, { s, c -> s.unison(c) }, { c -> unison(c) }, { m, c -> m.unison(c) },
             ctrl = "3 5", expected = listOf(3.0, 5.0), head = true),
-        k("uni", "uni(%s)", oscSlot("voices"), { p, c -> p.uni(c) }, { s, c -> s.uni(c) }, { c -> uni(c) }, { m, c -> m.uni(c) },
+        k("uni", "uni(%s)", ignitorSlot("voices"), { p, c -> p.uni(c) }, { s, c -> s.uni(c) }, { c -> uni(c) }, { m, c -> m.uni(c) },
             ctrl = "3 5", expected = listOf(3.0, 5.0), head = true),
-        k("unison.spread", "unison(spread = %s)", oscSlot("spread"), { p, c -> p.unison(spread = c) }, { s, c -> s.unison(spread = c) }, { c -> unison(spread = c) }, { m, c -> m.unison(spread = c) }),
-        k("unison.pan", "unison(pan = %s)", oscSlot("panSpread"), { p, c -> p.unison(pan = c) }, { s, c -> s.unison(pan = c) }, { c -> unison(pan = c) }, { m, c -> m.unison(pan = c) }),
+        k("unison.spread", "unison(spread = %s)", ignitorSlot("spread"), { p, c -> p.unison(spread = c) }, { s, c -> s.unison(spread = c) }, { c -> unison(spread = c) }, { m, c -> m.unison(spread = c) }),
+        k("unison.pan", "unison(pan = %s)", ignitorSlot("panSpread"), { p, c -> p.unison(pan = c) }, { s, c -> s.unison(pan = c) }, { c -> unison(pan = c) }, { m, c -> m.unison(pan = c) }),
 
         // -- compressor and duck (Katalyst slots) ----------------------------------------------------------------------
         k("compressor.threshold", "compressor(%s)", katSlot("compressor.threshold"), { p, c -> p.compressor(c) }, { s, c -> s.compressor(c) }, { c -> compressor(c) }, { m, c -> m.compressor(c) },

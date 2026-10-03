@@ -21,48 +21,48 @@ import * from "sprudel"
 
 let wait = 14
 
-let koto = Osc.pluck()
-      .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+let koto = Ign.pluck()
+      .plus(Ign.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x => x.analog(Osc.slot.analog))
+      .lowpass(Ign.constant(2800).plus(Ign.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x => x.analog(Ign.slot.analog))
       .classic()
 
-let shaku = Osc.sine().mul(0.6)
-      .plus(Osc.triangle().mul(0.25))
-      .plus(Osc.perlin(13).mul(0.05))
-      .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .lowpass(3500, 1.0, x => x.analog(Osc.slot.analog))
-      .highpass(600, x => x.analog(Osc.slot.analog))
+let shaku = Ign.sine().mul(0.6)
+      .plus(Ign.triangle().mul(0.25))
+      .plus(Ign.perlin(13).mul(0.05))
+      .plus(Ign.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
+      .lowpass(3500, 1.0, x => x.analog(Ign.slot.analog))
+      .highpass(600, x => x.analog(Ign.slot.analog))
       // NOTE: `.analog(0.2)` was here and INERT (receiver was the Lowpass wrapper). The
-      // filters above still get their own `analog = Osc.slot.analog` saturation.
-      .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
+      // filters above still get their own `analog = Ign.slot.analog` saturation.
+      .vibrato(2, Ign.perlin(1).mul(0.15).plus(0.15))
       .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
       .classic()
 
-let kick = Osc.sine()
+let kick = Ign.sine()
       .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
       .adsr(0.001, 0.2, 0.0, 0.02)
       .classic()
 
-let rim = Osc.sine(800)
-      .plus(Osc.whitenoise().highpass(4000).mul(0.3))
+let rim = Ign.sine(800)
+      .plus(Ign.whitenoise().highpass(4000).mul(0.3))
       .lowpass(3500)
       .adsr(0.001, 0.03, 0.0, 0.005)
       .classic()
 
-let brush = Osc.perlin(30).mul(0.5)
-      .plus(Osc.whitenoise().mul(0.3))
+let brush = Ign.perlin(30).mul(0.5)
+      .plus(Ign.whitenoise().mul(0.3))
       .lowpass(12000).highpass(2000)
       .adsr(0.01, 0.08, 0.0, 0.02)
       .classic()
 
-let sub = Osc.sine().lowpass(200)
+let sub = Ign.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
       .classic()
 
-let pad = Osc.supertri(x => x.voices(5).analog(5.0))
-      .lowpass(Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), 3, x => x.analog(Osc.slot.analog))
+let pad = Ign.supertri(x => x.voices(5).analog(5.0))
+      .lowpass(Ign.sine(0.3).plus(Ign.perlin().mul(0.05)).plus(3).times(800).plus(Ign.freq()), 3, x => x.analog(Ign.slot.analog))
       .adsr(1.5, 3.0, 0.6, 1.5, e => e.curves("scurve", "scurve", "scurve"))
       .classic()
 

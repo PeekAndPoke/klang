@@ -36,7 +36,7 @@ data class VoiceData(
     val soundIndex: Int?,
 
     // Voice slots: classic()'s door slots (with the flat "onepole" [Hz]), the sample's "begin"/"end"/"speed"/"loop",
-    // the oscillators' own ("density", "voices", "spread") and raw oscp() writes. sprudel's "panSpread" is unread.
+    // the oscillators' own ("density", "voices", "spread") and raw ignp() writes. sprudel's "panSpread" is unread.
     val ignitorParams: Map<String, Double>?,
 
     /**

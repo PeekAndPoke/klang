@@ -52,17 +52,17 @@ class IgnitorTailSpec : StringSpec({
         tailOf(dsl) shouldBe 0.7
     }
 
-    // ── Measurement 2: the oscp override used to be invisible to lifetime ─────
+    // ── Measurement 2: the ignp override used to be invisible to lifetime ─────
 
-    "an oscp override on the release reaches the tail" {
+    "an ignp override on the release reaches the tail" {
         // THE original bug: `maxReleaseSec` read Param DEFAULTS only, so a 1.5 s release requested
-        // via .oscp("release", …) was delivered as the voice's own ~0.05 s. The override is folded
+        // via .ignp("release", …) was delivered as the voice's own ~0.05 s. The override is folded
         // into ParamIgnitor at build time, so it reaches the tail with no second lookup rule.
         val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("rel", 0.013))
         tailOf(dsl, ignitorParams = mapOf("rel" to 1.5)) shouldBe 1.5
     }
 
-    "an oscp override under a different param name works the same" {
+    "an ignp override under a different param name works the same" {
         // The name is never hardcoded; it is read off the node.
         val dsl = IgnitorDsl.Adsr(inner = IgnitorDsl.Sine(), releaseSec = IgnitorDsl.Param("damping", 0.02))
         tailOf(dsl, ignitorParams = mapOf("damping" to 0.9)) shouldBe 0.9
