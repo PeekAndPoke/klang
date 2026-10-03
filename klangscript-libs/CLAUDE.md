@@ -19,7 +19,8 @@ script registration). Split out of `:klangscript` on 2026-09-06
 | `src/commonMain/kotlin/stdlib/KlangScriptIgnitor.kt`  | The `Ignitor` doors (oscillators, noise, super-oscillators, pluck)             |
 | `src/commonMain/kotlin/stdlib/KlangScriptIgnitorExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
 | `src/commonMain/kotlin/stdlib/KlangScriptIgnitorSlots.kt` / `KlangScriptClassicSlots.kt` | `Ignitor.slot` and its slot groups (`Ignitor.slot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
-| `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (`invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
+| `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (`invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param` (a `KatalystParam`), `Katalyst.slot`, and the short name `Kat`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
+| `src/commonMain/kotlin/stdlib/KlangScriptKatalystSlots.kt` | `Katalyst.slot` and its stage groups (`Katalyst.slot.reverb.wet`, ...): the script face of `KatalystDsl.Slots`, the knobs `classic()` places |
 | `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |
 | `src/commonMain/kotlin/stdlib/Configure.kt`     | `configuredBy`: applies a door's `configure` lambda, enforces the error contract |

@@ -15,6 +15,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.constants.BODY_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
@@ -64,22 +65,54 @@ class LangKatalystParamSpec : StringSpec({
         val ctrl = "3 6"
 
         dslInterfaceTests(
-            "pattern.katp(key, ctrl)" to
+            "pattern.katp(slot, ctrl)" to
                     seq(pat).katp("reverb.size", ctrl),
-            "script pattern.katp(key, ctrl)" to
+            "script pattern.katp(slot, ctrl)" to
                     SprudelPattern.compile("""seq("$pat").katp("reverb.size", "$ctrl")"""),
-            "string.katp(key, ctrl)" to
+            "string.katp(slot, ctrl)" to
                     pat.katp("reverb.size", ctrl),
-            "script string.katp(key, ctrl)" to
+            "script string.katp(slot, ctrl)" to
                     SprudelPattern.compile(""""$pat".katp("reverb.size", "$ctrl")"""),
-            "katp(key, ctrl)" to
+            "katp(slot, ctrl)" to
                     seq(pat).apply(katp("reverb.size", ctrl)),
-            "script katp(key, ctrl)" to
+            "script katp(slot, ctrl)" to
                     SprudelPattern.compile("""seq("$pat").apply(katp("reverb.size", "$ctrl"))"""),
-            "chained katp(key, ctrl)" to
+            "chained katp(slot, ctrl)" to
                     seq(pat).apply(gain(0.5).katp("reverb.size", ctrl)),
-            "script chained katp(key, ctrl)" to
+            "script chained katp(slot, ctrl)" to
                     SprudelPattern.compile("""seq("$pat").apply(gain(0.5).katp("reverb.size", "$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.katalystParams?.get("reverb.size") shouldBe 3.0
+            events[1].data.katalystParams?.get("reverb.size") shouldBe 6.0
+        }
+    }
+
+    "katalystParam dsl interface: the full name of katp, every form, both doors" {
+        val pat = "0 1"
+        val ctrl = "3 6"
+
+        dslInterfaceTests(
+            "pattern.katalystParam(slot, ctrl)" to
+                    seq(pat).katalystParam("reverb.size", ctrl),
+            "script pattern.katalystParam(slot, ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").katalystParam("reverb.size", "$ctrl")"""),
+            "string.katalystParam(slot, ctrl)" to
+                    pat.katalystParam("reverb.size", ctrl),
+            "script string.katalystParam(slot, ctrl)" to
+                    SprudelPattern.compile(""""$pat".katalystParam("reverb.size", "$ctrl")"""),
+            "katalystParam(slot, ctrl)" to
+                    seq(pat).apply(katalystParam("reverb.size", ctrl)),
+            "script katalystParam(slot, ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(katalystParam("reverb.size", "$ctrl"))"""),
+            "chained katalystParam(slot, ctrl)" to
+                    seq(pat).apply(gain(0.5).katalystParam("reverb.size", ctrl)),
+            "script chained katalystParam(slot, ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").apply(gain(0.5).katalystParam("reverb.size", "$ctrl"))"""),
+            "script pattern.katp(Kat.slot..., ctrl)" to
+                    SprudelPattern.compile("""seq("$pat").katp(Kat.slot.reverb.size, "$ctrl")"""),
+            "pattern.katp(KatalystDsl.Slots..., ctrl)" to
+                    seq(pat).katp(KatalystDsl.Slots.reverb.size, ctrl),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.katalystParams?.get("reverb.size") shouldBe 3.0
@@ -105,7 +138,7 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "katp: the two namespaces never cross" {
-        val p = note("c3").katp("room", 5).oscp("room", 7)
+        val p = note("c3").katp("room", 5).ignp("room", 7)
 
         slot(p, "room") shouldBe 5.0
         p.queryArc(0.0, 1.0).first().data.ignitorParams?.get("room") shouldBe 7.0
@@ -619,7 +652,7 @@ class LangKatalystParamSpec : StringSpec({
     }
 
     "toVoiceData hands the wire a COPY of both maps, not the event's own" {
-        val data = note("c3").katp("room", 2).oscp("analog", 4).queryArc(0.0, 1.0).first().data
+        val data = note("c3").katp("room", 2).ignp("analog", 4).queryArc(0.0, 1.0).first().data
         val wire = data.toVoiceData()
 
         wire.katalystParams shouldNotBeSameInstanceAs data.katalystParams

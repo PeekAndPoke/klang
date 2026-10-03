@@ -68,8 +68,11 @@ setter semantics) and `/dsl-design`. What they produce today:
 ## The bus doors and the orbit's Katalyst
 
 - The bus doors (`reverb`, `delay`, `compressor`, `duck`, `phaser`, `body`, `vowel`) write the orbit's
-  `<stage>.<knob>` slots in `katalystParams`; `.katp(name, value)` writes one directly. A bus door and its
-  `katp` slot are the same knob; the rule's home is the `katp` door's KDoc.
+  `<stage>.<knob>` slots in `katalystParams`; `.katalystParam(slot, value)` (alias `katp`) writes one directly,
+  by name or by a Katalyst param object (`Kat.slot.*`, `Kat.param(...)`); `ignitorParam` / `ignp` are the voice's
+  twin. The slot argument is resolved at the call by `katalystSlotName` / `ignitorSlotName` (`klangscript-libs`), the
+  wrong param kind, a number or a sound is a script error naming the door and the fix. A bus door and its slot are
+  the same knob; the rule's home is the `katalystParam` door's KDoc.
 - A door fills its stage's companions per param with `ParamBag.setOrDefault(name, null, CONST)`, constants
   from `audio_bridge/constants/`. The rule itself has one home, `/dsl-design` §4; do not restate it here.
 - `delay`, `reverb`, `compressor` and `duck` write the slots only, and their accessors read the slots
@@ -156,3 +159,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261001-sprudel-beat-rate-helper.md`).
 - 2026-10-03: the tremolo's `sync` is `rate` on every surface, the slot key `tremolo.rate`
   (`docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`).
+- 2026-10-03: the slot setters take a name or the param object, `katalystParam` is `katp`'s full name, wrong kinds are
+  script errors (`docs/plans/ignitor-katalyst-naming.md` section 4, step C4).

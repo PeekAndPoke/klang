@@ -242,7 +242,8 @@ internal object KatalystSlots {
  * writes nothing hears exactly what the chain says.
  *
  * **Only a knob that IS a slot listens.** An expression OVER a slot
- * (`Katalyst.param("room", 5).mul(2)`) is neither a constant nor a `Param`, so it goes through
+ * (`Ignitor.param("room", 5).mul(2)` on a chain knob through the script door, or the same built in Kotlin;
+ * `Katalyst.param(...)` itself has no arithmetic) is neither a constant nor a `Param`, so it goes through
  * [KatalystSlots.resolve]'s coercion once, here, and becomes a number for the life of the chain:
  * `katp("room", x)` never reaches it. A bus knob is block-constant by contract, and folding is what
  * that contract means; the author's way to scale a slot is on the pattern side.

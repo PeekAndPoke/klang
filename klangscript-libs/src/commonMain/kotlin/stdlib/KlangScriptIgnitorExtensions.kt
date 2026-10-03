@@ -7,6 +7,8 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -14,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -28,12 +31,108 @@ typealias IgnitorDslLike = Any
  * overridable by ignitorParams). Anything else is a script-level type error naming what arrived, so a
  * lambda that landed on a sound slot (`Ignitor.whitenoise(x => ...)`, which has no `configure`) reads
  * as "got a function", not as an internal error.
+ *
+ * A [KatalystParam] has its own message: it is the chain's slot by intent, its author drives it with `katp`, which
+ * writes the orbit's map and never reaches the voice, so in an Ignitor tree the knob would sit at its default while
+ * the song moves it. The mirror of the Katalyst knobs' refusal of a bare Ignitor
+ * param (`toKatalystKnob`, decision Q2 of `docs/plans/ignitor-katalyst-naming.md`).
  */
 fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this
     is Number -> IgnitorDsl.Constant(this.toDouble())
+    is KatalystParam -> throw KlangScriptTypeError("a Katalyst param in an Ignitor tree; use Ign.param", operation = "sound parameter")
     is Function<*> -> throw KlangScriptTypeError("expected a sound or a number, got a function", operation = "sound parameter")
     else -> throw KlangScriptTypeError("expected a sound or a number, got ${this::class.simpleName}", operation = "sound parameter")
+}
+
+/**
+ * The slot argument of `ignitorParam` / `ignp`: a slot NAME (`"lpf.freq"`) or an Ignitor param OBJECT
+ * (`Ignitor.slot.lpf.freq`, `Ignitor.param("cutoff", 800)`, `IgnitorDsl.Slots.lpf.freq`). Resolved by
+ * [ignitorSlotName] on both doors, so the script door and the Kotlin door cannot drift.
+ */
+typealias IgnitorSlotLike = Any
+
+/**
+ * The slot argument of `katalystParam` / `katp`: a slot NAME (`"reverb.wet"`) or a Katalyst param OBJECT
+ * (`Katalyst.slot.reverb.wet`, `Katalyst.param("room", 5)`, `KatalystDsl.Slots.reverb.wet`). Resolved by
+ * [katalystSlotName] on both doors.
+ */
+typealias KatalystSlotLike = Any
+
+/**
+ * The slot NAME an `ignitorParam` / `ignp` call writes: a string as it is, an Ignitor param by its name. Only the
+ * name is written; the param's default stays the tree's.
+ *
+ * Everything else is a [KlangScriptTypeError] raised at the call, naming [door] and the fix: a Katalyst param
+ * ("use [twin]"), a number (decision Q8: `ignp(42, x)` used to write the slot `"42"`), a sound or an expression over
+ * a param (`Ignitor.param("x", 1).mul(2)` is not a slot), null (a `let` never assigned), anything else. [slot] is
+ * nullable so that a script `null` reaches this message instead of the interpreter's generic conversion error.
+ *
+ * **Why a typed error and not a coercion.** The stone rule "coerce user-reachable inputs, never `require()` them"
+ * protects the Motor from VALUES out of range. This is the wrong KIND of argument: no coercion can make a Katalyst
+ * param or a sound mean the slot the author wanted, and writing it anyway would fill a map the author's knob never
+ * reads. It is
+ * the class of a configure lambda returning the wrong type (`configuredBy`, `/dsl-design` checklist 13), it never
+ * reaches the audio path, and it is a script error naming the door, never a `require()`.
+ *
+ * @param door the door the author called (`"ignp"`, `"ignitorParam"`), for the message
+ * @param twin the same door on the other host (`"katp"`, `"katalystParam"`), the fix for a Katalyst param
+ * @param location the call's source location, so the editor marks the call
+ */
+fun ignitorSlotName(slot: IgnitorSlotLike?, door: String, twin: String, location: SourceLocation? = null): String =
+    when (slot) {
+        is String -> slot
+        is IgnitorDsl.Param -> slot.name
+        is KatalystParam -> throw KlangScriptTypeError(
+            message = "a Katalyst param passed to $door; use $twin",
+            operation = door,
+            location = location,
+        )
+
+        else -> throw KlangScriptTypeError(
+            message = "$door expects a slot name or an Ignitor param, got ${describeArgument(slot)}",
+            operation = door,
+            location = location,
+        )
+    }
+
+/**
+ * The slot NAME a `katalystParam` / `katp` call writes: a string as it is, a Katalyst param by its name. The mirror
+ * of [ignitorSlotName], with the same reasons for a typed error; an Ignitor param is the wrong host ("use [twin]").
+ *
+ * @param door the door the author called (`"katp"`, `"katalystParam"`), for the message
+ * @param twin the same door on the other host (`"ignp"`, `"ignitorParam"`), the fix for an Ignitor param
+ * @param location the call's source location, so the editor marks the call
+ */
+fun katalystSlotName(slot: KatalystSlotLike?, door: String, twin: String, location: SourceLocation? = null): String =
+    when (slot) {
+        is String -> slot
+        is KatalystParam -> slot.name
+        is IgnitorDsl.Param -> throw KlangScriptTypeError(
+            message = "an Ignitor param passed to $door; use $twin",
+            operation = door,
+            location = location,
+        )
+
+        else -> throw KlangScriptTypeError(
+            message = "$door expects a slot name or a Katalyst param, got ${describeArgument(slot)}",
+            operation = door,
+            location = location,
+        )
+    }
+
+/** What a wrong argument IS, in the words a song uses, for the resolvers' and the Katalyst knobs' messages. */
+internal fun describeArgument(value: Any?): String = when (value) {
+    null -> "null"
+    is String -> "a string"
+    is Number -> "a number"
+    is Boolean -> "a boolean"
+    is IgnitorDsl -> "a sound"
+    is KatalystDsl -> "a Katalyst chain"
+    is Function<*> -> "a function"
+    is List<*> -> "an array"
+    is Map<*, *> -> "an object"
+    else -> value::class.simpleName ?: "a value"
 }
 
 /**
@@ -41,13 +140,19 @@ fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
  * a NAME through its catalogue's `indexOf`, a number or a slot as it is, and nothing at all as
  * [bare], the stage's own value. The one conversion every such door shares (Katalyst step 5a-2 for
  * `body` and `vowel`, phase 3 step 3b for `shape`, `distort` and the tremolo builder), so a name,
- * its index and a slot carrying the index are one knob on every door.
+ * its index and a slot carrying the index are one knob on every door. [knob] converts a number or a slot: the
+ * Ignitor doors' [toIgnitorDsl] by default, the Katalyst doors pass `toKatalystKnob`.
  */
-internal fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
+internal fun catalogueIndex(
+    value: IgnitorDslLike?,
+    bare: IgnitorDsl,
+    indexOf: (String) -> Double,
+    knob: (IgnitorDslLike) -> IgnitorDsl = { it.toIgnitorDsl() },
+): IgnitorDsl =
     when (value) {
         null -> bare
         is String -> IgnitorDsl.Constant(indexOf(value))
-        else -> value.toIgnitorDsl()
+        else -> knob(value)
     }
 
 /**

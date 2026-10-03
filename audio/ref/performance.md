@@ -266,7 +266,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   row's cost is gone; phase 3 step 9 (2026-09-27) took the phaser fields and
   the `filters` list (body and vowel) off too, so every orbit door now ships its
   slots only.
-  The rule's one home is the `katp` door's KDoc in
+  The rule's one home is the `katalystParam` door's KDoc in
   `sprudel/lang/lang_katalyst.kt`. Measured with
   `WorkletSerializationBenchmark` (`./gradlew :audio_benchmark:jsNodeProductionRun`,
   Node 24) on one voice.

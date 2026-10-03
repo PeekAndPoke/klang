@@ -106,7 +106,7 @@ Every orbit stage (delay, reverb, compressor, duck, phaser, body, vowel) reads i
 them (`delay.wet`, `reverb.size`, `compressor.threshold`, `duck.orbit`, `phaser.wet`, `body.material`,
 `vowel.vowel`, ...), and the orbit's OWNER voice applies them. The delay, reverb, compressor and duck
 fields left the wire in Katalyst step 5b-3 (2026-09-19); the phaser fields and the `filters` list in
-phase 3 step 9. The one rule of which chain reads which slot lives in the `katp` door's KDoc
+phase 3 step 9. The one rule of which chain reads which slot lives in the `katalystParam` door's KDoc
 (`sprudel/src/commonMain/kotlin/lang/lang_katalyst.kt`).
 
 ### Control and metadata

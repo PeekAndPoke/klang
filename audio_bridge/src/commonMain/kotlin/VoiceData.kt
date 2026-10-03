@@ -56,7 +56,7 @@ data class VoiceData(
      * `compressor(...)`, `duck(...)`, `phaser(...)`, `body(...)`, `vowel(...)`), which is what
      * makes a door and its slot the same knob.
      *
-     * Which chain reads which slot of this map is ONE rule with ONE home, the `katp` door's KDoc
+     * Which chain reads which slot of this map is ONE rule with ONE home, the `katalystParam` door's KDoc
      * in `sprudel/lang/lang_katalyst.kt`. In short: EVERY chain reads it, for every stage it
      * declares, the chain a cylinder is born with included (Katalyst step 5b-1). It is the one
      * source of an orbit stage's knobs: the delay, reverb, compressor and duck fields left the wire

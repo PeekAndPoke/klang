@@ -26,7 +26,8 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  *
  * Each knob of the voice doors listed in [knobs] is one entry: level and routing (`gain`, `pregain`,
  * `pan`, `velocity`, `orbit`, `cylinder`, `density`, `accelerate`), the oscillator knobs (`analog`,
- * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), `adsr` and `adsrOn`, `unison`,
+ * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), the orbit slot setter (`katalystParam`,
+ * `katp`), `adsr` and `adsrOn`, `unison`,
  * the bus doors (`compressor`, `duck`, `reverb`, `delay`, `phaser`, `body`, `vowel`), `tremolo`,
  * `distort`, `crush`, `coarse`, the four filters, `fm`, `vibrato` and `penv`, and the aliases' heads.
  * Each row runs the entries through the calling forms the module supports, and asserts the VALUE the
@@ -50,7 +51,7 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  * Not in the table (their forms live in their own specs, or they have no knob shape): the sample doors
  * (`begin`, `end`, `speed`, `cut`, `unit`, `loop*`, `slice`, `splice`), `sound`/`s`/`bank`, the curve
  * doors (`adsrCurves`, `lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves`, `penvCurves`), `adsrOff`,
- * `cull`/`noCull`, `katp`, `katalyst`, the `snd*` oscillators other than the two plucks, and the aliases'
+ * `cull`/`noCull`, `katalyst`, the `snd*` oscillators other than the two plucks, and the aliases'
  * named tails.
  *
  * What this spec does not own: the mapper argument, the bare accessor read, the gap, the tail-only
@@ -124,6 +125,8 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "-0.5 0.75", expected = listOf(-0.5, 0.75), head = true),
         k("ignitorParam", "ignitorParam(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignitorParam("mykey", c!!) }, { s, c -> s.ignitorParam("mykey", c!!) }, { c -> ignitorParam("mykey", c!!) }, { m, c -> m.ignitorParam("mykey", c!!) }),
         k("ignp", "ignp(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignp("mykey", c!!) }, { s, c -> s.ignp("mykey", c!!) }, { c -> ignp("mykey", c!!) }, { m, c -> m.ignp("mykey", c!!) }),
+        k("katalystParam", "katalystParam(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katalystParam("mykey", c!!) }, { s, c -> s.katalystParam("mykey", c!!) }, { c -> katalystParam("mykey", c!!) }, { m, c -> m.katalystParam("mykey", c!!) }),
+        k("katp", "katp(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katp("mykey", c!!) }, { s, c -> s.katp("mykey", c!!) }, { c -> katp("mykey", c!!) }, { m, c -> m.katp("mykey", c!!) }),
         k("analog", "analog(%s)", ignitorSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
         k("duty", "duty(%s)", ignitorSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
         k("onepole", "onepole(%s)", ignitorSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),

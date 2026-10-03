@@ -165,7 +165,7 @@ class KatalystChain internal constructor(
      * claimed the orbit's lease, and what an orbit whose owner has died falls back to.
      *
      * **This is the ONE way a bus knob reaches a stage** since step 5b-1, on a declared chain and
-     * on the chain a cylinder is born with alike. The rule and its one home are the `katp` door's
+     * on the chain a cylinder is born with alike. The rule and its one home are the `katalystParam` door's
      * KDoc in `sprudel/lang/lang_katalyst.kt`.
      *
      * Absent stages are turned OFF, so the state fully determines the orbit and nothing leaks from

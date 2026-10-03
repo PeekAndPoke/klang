@@ -59,6 +59,42 @@ import io.peekandpoke.klang.audio_bridge.constants.REVERB_WET
  */
 @WireFormat
 data class KatalystDsl(val stages: List<KatalystStageDsl>) {
+    /**
+     * The knobs of [classic], one group per stage, each a [KatalystParam] named `<stage>.<knob>`: the Kotlin door of
+     * `Katalyst.slot.reverb.wet` (the script door hands back the SAME instances). [classic] is built from these, so a
+     * handle and the chain's knob are one slot by construction, and `katp(KatalystDsl.Slots.reverb.wet, 0.3)` writes
+     * exactly what `katp("reverb.wet", 0.3)` writes. The groups and their defaults: `KatalystDslSlots.kt`; why each
+     * default is what it is: the KDoc of [classic].
+     *
+     * The 27 knobs are the whole `katp` vocabulary of the familiar chain. An authored chain names its own slots with
+     * `Katalyst.param(...)`.
+     */
+    object Slots {
+        /** The body stage: `body.material`, `body.wet`, `body.floor`. */
+        val body: KatalystBodySlots = KatalystBodySlots()
+
+        /** The vowel stage: `vowel.vowel`, `vowel.wet`, `vowel.floor`. */
+        val vowel: KatalystVowelSlots = KatalystVowelSlots()
+
+        /** The delay stage: `delay.wet`, `delay.time`, `delay.feedback`, `delay.cap`. */
+        val delay: KatalystDelaySlots = KatalystDelaySlots()
+
+        /** The reverb stage: `reverb.wet`, `reverb.size`, `reverb.lowpass`. */
+        val reverb: KatalystReverbSlots = KatalystReverbSlots()
+
+        /** The phaser stage: `phaser.rate`, `phaser.wet`, `phaser.center`, `phaser.sweep`, `phaser.floor`. */
+        val phaser: KatalystPhaserSlots = KatalystPhaserSlots()
+
+        /** The compressor stage: `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`. */
+        val compressor: KatalystCompressorSlots = KatalystCompressorSlots()
+
+        /** The group fader: `gain.gain`. */
+        val gain: KatalystGainSlots = KatalystGainSlots()
+
+        /** The duck stage: `duck.orbit`, `duck.depth`, `duck.attack`. */
+        val duck: KatalystDuckSlots = KatalystDuckSlots()
+    }
+
     companion object {
         /**
          * The historical chain, in the historical order: body, vowel, delay, reverb, phaser,
@@ -151,45 +187,45 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
         val classic: KatalystDsl = KatalystDsl(
             listOf(
                 KatalystStageDsl.Body(
-                    material = IgnitorDsl.Param(name = "body.material", default = SLOT_UNSET),
+                    material = Slots.body.material.param,
                     // Unset, not 0.0: the engine substitutes BODY_WET for an unset mix, and the
                     // stage is gated on the material, so seeding the amount switches nothing on.
-                    wet = IgnitorDsl.Param(name = "body.wet", default = SLOT_UNSET),
-                    floor = IgnitorDsl.Param(name = "body.floor", default = BODY_FLOOR),
+                    wet = Slots.body.wet.param,
+                    floor = Slots.body.floor.param,
                 ),
                 KatalystStageDsl.Vowel(
-                    vowel = IgnitorDsl.Param(name = "vowel.vowel", default = SLOT_UNSET),
+                    vowel = Slots.vowel.vowel.param,
                     // Unset for the body's reason, see the classic KDoc.
-                    wet = IgnitorDsl.Param(name = "vowel.wet", default = SLOT_UNSET),
-                    floor = IgnitorDsl.Param(name = "vowel.floor", default = VOWEL_FLOOR),
+                    wet = Slots.vowel.wet.param,
+                    floor = Slots.vowel.floor.param,
                 ),
                 KatalystStageDsl.Delay(
-                    wet = IgnitorDsl.Param(name = "delay.wet", default = 0.0),
-                    time = IgnitorDsl.Param(name = "delay.time", default = 0.0),
-                    feedback = IgnitorDsl.Param(name = "delay.feedback", default = 0.0),
-                    cap = IgnitorDsl.Param(name = "delay.cap", default = DELAY_CAP),
+                    wet = Slots.delay.wet.param,
+                    time = Slots.delay.time.param,
+                    feedback = Slots.delay.feedback.param,
+                    cap = Slots.delay.cap.param,
                 ),
                 KatalystStageDsl.Reverb(
-                    wet = IgnitorDsl.Param(name = "reverb.wet", default = 0.0),
-                    size = IgnitorDsl.Param(name = "reverb.size", default = 0.0),
-                    lowpass = IgnitorDsl.Param(name = "reverb.lowpass", default = SLOT_UNSET),
+                    wet = Slots.reverb.wet.param,
+                    size = Slots.reverb.size.param,
+                    lowpass = Slots.reverb.lowpass.param,
                 ),
                 KatalystStageDsl.Phaser(
-                    rate = IgnitorDsl.Param(name = "phaser.rate", default = PHASER_RATE_HZ),
-                    wet = IgnitorDsl.Param(name = "phaser.wet", default = 0.0),
-                    center = IgnitorDsl.Param(name = "phaser.center", default = PHASER_CENTER_HZ),
-                    sweep = IgnitorDsl.Param(name = "phaser.sweep", default = PHASER_SWEEP_HZ),
-                    floor = IgnitorDsl.Param(name = "phaser.floor", default = PHASER_FLOOR),
+                    rate = Slots.phaser.rate.param,
+                    wet = Slots.phaser.wet.param,
+                    center = Slots.phaser.center.param,
+                    sweep = Slots.phaser.sweep.param,
+                    floor = Slots.phaser.floor.param,
                 ),
                 // All five unset, not four constants and an unset threshold: the engine's gate is
                 // "any of the five set", so four finite constants would read as a compressor that
                 // is already on. See the classic KDoc.
                 KatalystStageDsl.Compressor(
-                    threshold = IgnitorDsl.Param(name = "compressor.threshold", default = SLOT_UNSET),
-                    ratio = IgnitorDsl.Param(name = "compressor.ratio", default = SLOT_UNSET),
-                    knee = IgnitorDsl.Param(name = "compressor.knee", default = SLOT_UNSET),
-                    attack = IgnitorDsl.Param(name = "compressor.attack", default = SLOT_UNSET),
-                    release = IgnitorDsl.Param(name = "compressor.release", default = SLOT_UNSET),
+                    threshold = Slots.compressor.threshold.param,
+                    ratio = Slots.compressor.ratio.param,
+                    knee = Slots.compressor.knee.param,
+                    attack = Slots.compressor.attack.param,
+                    release = Slots.compressor.release.param,
                 ),
                 // The group fader, at unity: the LAST stage the orbit's mix runs through (the
                 // duck below is declared last but runs outside the list, see [KatalystStageDsl.Duck]).
@@ -198,12 +234,12 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
                 // here so that a pattern can reach the fader with `katp("gain.gain", x)` without
                 // declaring a chain at all; there is no sprudel door for it yet.
                 KatalystStageDsl.Gain(
-                    gain = IgnitorDsl.Param(name = "gain.gain", default = 1.0),
+                    gain = Slots.gain.gain.param,
                 ),
                 KatalystStageDsl.Duck(
-                    orbit = IgnitorDsl.Param(name = "duck.orbit", default = SLOT_UNSET),
-                    depth = IgnitorDsl.Param(name = "duck.depth", default = 0.0),
-                    attack = IgnitorDsl.Param(name = "duck.attack", default = DUCK_ATTACK_SECONDS),
+                    orbit = Slots.duck.orbit.param,
+                    depth = Slots.duck.depth.param,
+                    attack = Slots.duck.attack.param,
                 ),
             )
         )
