@@ -45,9 +45,4 @@ class LangTremoloCompoundSpec : StringSpec({
         shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, rate = 4, skew = 0.3)""") }
         shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, rate = 4, phase = 0.25)""") }
     }
-
-    "sync is gone from the tremolo door (2026-10-03, the rate is called rate on every LFO door)" {
-        shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, sync = 4)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(0.5, 4).phaser(rate = tremolo.sync)""")?.queryArc(0.0, 1.0) }
-    }
 })

@@ -1,5 +1,10 @@
 # Editor tools: named arguments resolve the wrong slot
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 > **DONE 2026-09-26, archived 2026-09-27.** Commit `ffa490e4` ("editor: param tools show again, once per
 > argument, on the right variant") fixed the finding along the sketch below: `CallExpressionAtResult.argName`,
 > one resolver in `klangscript/.../intel/ArgumentBinding.kt` (`bindArgument`), `ArgFinder` using it in both

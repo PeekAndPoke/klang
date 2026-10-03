@@ -44,7 +44,9 @@ the LFO oscillator, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.
   `beatRate` (2026-10-01); it now has a short section on both, the warning that `"1/8"` is not a fraction in
   mini-notation, and its two tempo-synced delay examples use `beats(0.5)` (the same eighth note as
   `pure(1/8).div(cps)`).
-- The tests, plus a guard that `sync =` and `tremolo.sync` are refused (`LangTremoloCompoundSpec`).
+- The tests. (A guard that `sync =` and `tremolo.sync` are refused was added and then removed the same day, by
+  the maintainer: KlangScript refuses an unknown named argument and its own suite tests that; such a row only
+  restates it.)
 - Not changed: history (`docs/tasks-archive/`, the `memory-history.md` files, the retired-list in `CLAUDE.md`,
   which names the old wire field `tremoloSync`), the superseded `docs/tasks/_priorities.md`, and the Graal
   compat test's read of Strudel's own `tremolosync` field (the JS name; only the Kotlin side moved).
@@ -55,7 +57,7 @@ the LFO oscillator, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.
 
 The existing tremolo rows of `LangDoorFormsSpec`, `LangFieldAccessorsSpec`, `LangControlRestSpec`,
 `ClassicSlotParamsSpec`, `ClassicDoorRenderParitySpec`, `KlangScriptClassicDoorParitySpec` and the audio_be classic
-rigs, renamed; new: the refusal rows in `LangTremoloCompoundSpec`.
+rigs, renamed.
 
 Mutation-checked: the engine-side slot key put back to `"sync"` turns `ClassicSlotParamsSpec` red (two rows), so a
 writer/reader mismatch cannot pass silently.
@@ -71,7 +73,9 @@ or MAJOR. Four MINORs:
 2. `audio/MEMORY.md` still listed this file among the future voice tasks. Removed.
 3. The music-writing reference change goes beyond the rename. Kept, recorded above.
 4. The rules register's retired list (`CLAUDE.md`) does not name the removed `sync` surface, so nothing stops a
-   later "Strudel-compat alias". Parked for the maintainer: the register is theirs.
+   later "Strudel-compat alias". Decided by the maintainer: not in the register ("no need to pollute the main
+   files"). Instead `sprudel/README.MD` (with a pointer in `sprudel/CLAUDE.md`) says sprudel no longer mirrors
+   Strudel, and the archived records that mention `sync` carry a one-line hint.
 
 Not this change: `SongBenchmarkCasesCompileSpec` fails on a text anchor in `DerSchmetterling.kt`
 (`.plus(beater)` followed by `.distort(..., "tube", 2)`), broken by the `makeGuitar` refactor (`5cdf2c8d`).

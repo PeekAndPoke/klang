@@ -220,6 +220,9 @@ assertion IS the specification, readable one-to-one, the check is near-tautologi
   change-detector, not a guard: it fails only on intentional edits and cannot tell a good one from
   a bad one. Where a value matters, guard the BEHAVIOUR it buys (render the thing, assert the
   audible property) — and only where the stakes warrant it.
+- **No test for what a lower layer already guarantees** (maintainer, 2026-10-03). A removed parameter needs no
+  "is refused" row (`tremolo(sync = 4)` throwing): KlangScript refuses an unknown named argument, and its own suite
+  tests that. Such a row restates the language, not the change.
 - **Coverage findings are judged case by case.** Sometimes the code is expressive enough that a
   test adds nothing. A reviewer finding of the form "X is untested" must name a failure the test
   would catch that READING THE CODE cannot; otherwise it is rejected without ceremony.

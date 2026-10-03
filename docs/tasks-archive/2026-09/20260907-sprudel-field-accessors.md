@@ -1,5 +1,10 @@
 # Sprudel field accessors: a field name that reads, sets, and takes a mapper
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 > Archived 2026-09-07. Status: **COMPLETE.** Pilot on `freq`, four single-field batches, the `adsr` pilot and
 > the three compound batches E (effects), F (filters), G (the rest) are built, review-looped and committed on
 > branch `dsl-adjustments` (commits 1053f694 to 95705370). Every numeric field is an accessor, every compound is

@@ -37,8 +37,9 @@
 
 ## JS Compatibility
 
-`compat/JsCompatTests.kt` — compares Kotlin output directly against JS implementation.
-Add compat test cases when implementing any new DSL function.
+`compat/JsCompatTests.kt` compares Kotlin output directly against the JS implementation, for the core the two
+still share. Sprudel no longer mirrors Strudel (`README.MD`): a new DSL function needs no compat case, and a
+difference from Strudel is not a bug to fix.
 
 ## Door calling forms: one table
 

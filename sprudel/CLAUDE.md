@@ -2,7 +2,8 @@
 
 Klang's pattern language for live coding music. Sprudel is a sibling of the JavaScript
 [Strudel](https://strudel.cc) pattern language — sharing the same roots and many of the same ideas,
-but now taking its own direction as part of Klang.
+but now taking its own direction as part of Klang. It no longer follows or mirrors Strudel (see `README.MD`):
+a difference from Strudel is on purpose, and a Strudel name is no reason to add an alias.
 Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measure).
 
 ## Key Files

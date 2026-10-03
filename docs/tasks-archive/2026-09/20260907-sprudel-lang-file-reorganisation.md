@@ -1,5 +1,10 @@
 # Sprudel: dissolve `lang/addons/`, split `lang_*.kt` into small files
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 Opened 2026-09-07. Maintainer request: "our sprudel impl has diverged significantly from Strudel,
 so the whole addons concept does not even make sense anymore" plus "some files are enormous, which
 is not ideal for coding agents".
