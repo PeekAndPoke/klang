@@ -1,7 +1,7 @@
 # KlangScript Libs — Dispatcher
 
 The KlangScript **standard library**: everything a script sees under `import * from "stdlib"`.
-`Osc`, `Katalyst`, `OscSlot`, `Math`, `Object`, `console`, and the
+`Ignitor`, `Katalyst`, `Ignitor.slot`, `Math`, `Object`, `console`, and the
 String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is
@@ -16,9 +16,9 @@ script registration). Split out of `:klangscript` on 2026-09-06
 |---------------------------------------------------|---------------------------------------------------------------------------|
 | `src/commonMain/kotlin/index_libs.kt`             | `stdlibLib` and `klangScript()` (engine WITH the stdlib registered)        |
 | `src/commonMain/kotlin/stdlib/KlangStdLib.kt`     | Assembles the `"stdlib"` library: generated registration + console         |
-| `src/commonMain/kotlin/stdlib/KlangScriptOsc.kt`  | The `Osc` doors (oscillators, noise, super-oscillators, pluck)             |
-| `src/commonMain/kotlin/stdlib/KlangScriptOscExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
-| `src/commonMain/kotlin/stdlib/KlangScriptOscSlot.kt` / `KlangScriptClassicSlots.kt` | `OscSlot` and its slot groups (`OscSlot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
+| `src/commonMain/kotlin/stdlib/KlangScriptIgnitor.kt`  | The `Ignitor` doors (oscillators, noise, super-oscillators, pluck)             |
+| `src/commonMain/kotlin/stdlib/KlangScriptIgnitorExtensions.kt` | Base `IgnitorDsl` wrappers (`lowpass`, `adsr`, `eq`, `phaser`, ...) and `IgnitorDslLike` |
+| `src/commonMain/kotlin/stdlib/KlangScriptIgnitorSlots.kt` / `KlangScriptClassicSlots.kt` | `Ignitor.slot` and its slot groups (`Ignitor.slot.lpf.freq`, ...): the script face of `IgnitorDsl.Slots`, the slots `x.classic()` places |
 | `src/commonMain/kotlin/stdlib/KlangScriptKatalyst.kt` | `Katalyst(k => ...)` (`invoke`), `Katalyst.build`, `Katalyst.classic`, `Katalyst.param`: the chain for an orbit (`katalyst(...)`) and for the output (`master(...)`, since phase 3 step 12) |
 | `src/commonMain/kotlin/stdlib/KatalystBuilders.kt` | `KatalystBuilder` (each knob appends one stage, in written order; `limiter` is a compressor preset) and its stage builders |
 | `src/commonMain/kotlin/stdlib/IgnitorBuilders.kt` | The oscillator builders (`OscSineBuilder`, `OscSuperSawBuilder`, ...) and their knobs |

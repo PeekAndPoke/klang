@@ -133,7 +133,7 @@ figures show on the site (decided 2026-09-29: "the interactive parts have to be 
   talks about, not `main`. A plain relative link into the repository becomes a `main` link at build time; use it only
   when the post really means today's file.
 - Heading links rely on auto-slugs (`## References` → `#references`).
-- **Every code block names its language** (maintainer, 2026-09-30): `klangscript` for songs, patterns and `Osc.*`
+- **Every code block names its language** (maintainer, 2026-09-30): `klangscript` for songs, patterns and `Ignitor.*`
   instruments (never `javascript`: KlangScript only looks like it), `kotlin` for Kotlin, `sh` for a command, `html`
   for quoted HTML, `text` for formulas, output and diagrams. The site colours `kotlin`, `klangscript`, `sh` and `html`
   in the whitepaper's palette (keywords, strings, comments); `text` stays plain and carries no label. The build

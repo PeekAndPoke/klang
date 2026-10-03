@@ -136,7 +136,7 @@ cap. Ids are table indices, not trust. The only variable-size payload left is PC
 |-------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | `playbackId`                                                | small int assigned by the frontend at playback creation                                              |
 | ignitor, katalyst, master names in `Register*` and the voice | sequential int per session; the frontend keeps `uniqueId -> id`; built-ins are pre-registered entries |
-| `oscParams` keys                                            | slot index within the registered DSL tree, numbered at registration; `oscParams` becomes `[slot, value]` pairs |
+| `ignitorParams` keys                                            | slot index within the registered DSL tree, numbered at registration; `ignitorParams` becomes `[slot, value]` pairs |
 | `bank`, `sound`, `soundIndex`, `note` on the voice           | one `sampleId` per resolved recording                                                                |
 | `note`, `scale` on `VoiceData`                              | audit whether the engine reads them at all; they look like frontend leftovers                        |
 

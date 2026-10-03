@@ -23,7 +23,7 @@ Several doors accept "one of several things" and declare the parameter as an ali
 | alias | where | accepts at runtime |
 |---|---|---|
 | `PatternLike` | `sprudel/src/commonMain/kotlin/lang/lang.kt:24` | through the pattern conversion (`toListOfPatterns`, `sprudel/.../lang/lang_helpers.kt:336`): a pattern, a `SprudelPatternEvent`, a string (mini-notation), a number, a boolean, a list whose items are converted the same way, `null`; on the doors that take one, a mapper lambda or a field accessor |
-| `IgnitorDslLike` | `klangscript-libs/src/commonMain/kotlin/stdlib/KlangScriptOscExtensions.kt:18` | a number or an ignitor node |
+| `IgnitorDslLike` | `klangscript-libs/src/commonMain/kotlin/stdlib/KlangScriptIgnitorExtensions.kt:18` | a number or an ignitor node |
 
 The runtime sorts the value out by kind, and that works. The EDITOR knows nothing: KSP emits
 `KlangType(simpleName = "PatternLike", isTypeAlias = true)` and stops. Consequences a user feels:
@@ -273,8 +273,8 @@ since it needs no union metadata, only the member list the conversion already sw
 ## 6. Acceptance
 
 In the editor: `note("c").superimpose(x => x.` completes `SprudelPattern` methods; hovering a
-`PatternLike` parameter shows the expansion; `Osc.sine(freq = ` shows `Number | IgnitorDsl`.
-`note(Osc.sine())` (an ignitor node, not a `PatternLike` member) is marked in the editor before the
+`PatternLike` parameter shows the expansion; `Ignitor.sine(freq = ` shows `Number | IgnitorDsl`.
+`note(Ignitor.sine())` (an ignitor node, not a `PatternLike` member) is marked in the editor before the
 code runs, and throws with a named message if run anyway. A Kotlin caller passing an ignitor node
 to `note` gets a compile error.
 

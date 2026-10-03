@@ -155,7 +155,7 @@ native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant a
 - **Trailing-lambda rule** (`runtime/ArgAlignment`): when the LAST positional argument is a
   function, the parameter at its index is not function-typed, and exactly one function-typed
   parameter follows, the argument binds to that parameter and the skipped slots take their
-  defaults. `Osc.supersaw(x => x.voices(9))` lands the lambda in the trailing `configure`
+  defaults. `Ignitor.supersaw(x => x.voices(9))` lands the lambda in the trailing `configure`
   parameter although `freq` comes first. Only the last argument floats; two candidates are
   ambiguous (name the parameter instead).
 - **Typed parameters in the editor**: the analyzer binds the lambda's parameters with the
@@ -163,7 +163,7 @@ native (`NativeInterop.convertFunctionToKotlin`). Two rules make this pleasant a
 
 ```javascript
 note("c3").superimpose(x => x.transpose(12))              // x: SprudelPattern
-Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
+Ignitor.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)   // x: OscSuperSawBuilder (klangscript-libs)
 ```
 
 The conversion is strict both ways (`NativeInterop.convertToKotlin`): a lambda on a non-function slot is a type

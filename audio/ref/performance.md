@@ -284,7 +284,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   readings agree on is the shape: the clone dominates, and it grows with the
   payload. Step 5b takes the voice half off the wire and leaves the slots
   alone, which pays it back.
-- **`SprudelVoiceData.clone()` deep-copies both param maps** (`oscParams`,
+- **`SprudelVoiceData.clone()` deep-copies both param maps** (`ignitorParams`,
   `katalystParams`) since 2026-09-18: they are mutable and single-owner, so a
   door writes one key in place instead of allocating a map per slot, and the
   clone owns its own. `VoiceDataCopyBenchmark`

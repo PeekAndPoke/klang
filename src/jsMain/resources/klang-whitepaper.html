@@ -1754,7 +1754,7 @@
                 the stream of numbers that becomes the sound. The leaves of the graph make signals (oscillators,
                 noise, constants) and each node above them combines or reshapes what comes in: <code>.plus()</code>
                 adds two signals, <code>.mul()</code> scales one, <code>.lowpass()</code> filters, <code>.adsr()</code>
-                shapes loudness. Any numeric parameter accepts either a number or another <code>Osc</code> node,
+                shapes loudness. Any numeric parameter accepts either a number or another <code>Ignitor</code> node,
                 which is how you get audio-rate modulation (one oscillator steering another fast enough that you hear
                 it as timbre, not as movement) without a separate modulation-routing concept.
             </p>
@@ -1789,39 +1789,39 @@
 
             <figure>
                 <div class="code engine" data-lang="KlangScript"><pre><span class="cm">// Glockenspiel: two upper partials + a noise transient + a filter that closes</span>
-<span class="kw">let</span> glock = Osc.sine().mul(0.5)
+<span class="kw">let</span> glock = Ignitor.sine().mul(0.5)
     <span class="cm">// 19.02 and 27.86 semitones up: the 3rd and 5th harmonics, that is an octave</span>
     <span class="cm">// and a fifth, and two octaves and a major third, above the note</span>
-    .plus(Osc.sine().detune(19.02).mul(0.3))
-    .plus(Osc.sine().detune(27.86).mul(0.15))
-    .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
-    .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
+    .plus(Ignitor.sine().detune(19.02).mul(0.3))
+    .plus(Ignitor.sine().detune(27.86).mul(0.15))
+    .plus(Ignitor.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
+    .lowpass(Ignitor.constant(8000).plus(Ignitor.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
     .adsr(0.001, 1.5, 0.0, 0.3)
     .classic()
 
 <span class="cm">// A kick is four lines: sine, pitch drop, fast decay, the classic stages.</span>
 <span class="cm">// The drop depth is a named param, a slot the pattern can fill.</span>
-<span class="kw">let</span> kick = Osc.sine()
-    .pitchEnvelope(Osc.param(name = <span class="st">"punch"</span>, default = 24), x =&gt; x.adsr(0.001, 0.04, 0, 0))
+<span class="kw">let</span> kick = Ignitor.sine()
+    .pitchEnvelope(Ignitor.param(name = <span class="st">"punch"</span>, default = 24), x =&gt; x.adsr(0.001, 0.04, 0, 0))
     .adsr(0.001, 0.2, 0.0, 0.02)
     .classic()
 
 note(<span class="st">"c5 e5 g5 c6"</span>).sound(glock).adsrOff().gain(0.3).reverb(wet = 0.2, size = 4)
-note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().oscparam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
+note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<span class="st">"punch"</span>, <span class="st">"&lt;24 48&gt;"</span>)  <span
                             class="cm">// every other cycle drops harder</span></pre>
                 </div>
             </figure>
 
             <p>
-                <b>Slots.</b> The kick's <code>Osc.param(name = "punch", default = 24)</code> declares a slot: a
+                <b>Slots.</b> The kick's <code>Ignitor.param(name = "punch", default = 24)</code> declares a slot: a
                 named knob, with a default, that a pattern can fill per note. The pattern writes it with
-                <code>oscparam("punch", …)</code>, and since the value the pattern writes is itself a pattern,
+                <code>ignitorParam("punch", …)</code>, and since the value the pattern writes is itself a pattern,
                 <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. This is where the two languages
                 meet: the instrument declares the knob, the pattern plays it.
             </p>
 
             <p>
-                <b>Variants.</b> <code>Osc.variants(a, b, …)</code> bundles several flavors of one instrument into a
+                <b>Variants.</b> <code>Ignitor.variants(a, b, …)</code> bundles several flavors of one instrument into a
                 single sound, selected per event with the same <code>:index</code> suffix that picks sample-bank
                 variants (the variant row of the mini-notation table in <a href="#s4">§4</a>). So <code>seq("0 1 2:1 3:1").scale("C4:major")</code>,
                 played through an instrument whose two variants are an open and a palm-muted guitar, rings out on the
@@ -1879,7 +1879,7 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().oscparam(<span c
                 instrument is played: the level at which the signal meets its first nonlinearity, the first stage
                 that bends the wave, such as a distortion. Where a nonlinearity follows, <code>pregain</code> changes
                 the timbre, since such a stage adds more overtones the harder it is driven. The built-in sounds place
-                that slot in front of their classic stages (<code>Osc.saw().pregain().classic()</code>); an authored
+                that slot in front of their classic stages (<code>Ignitor.saw().pregain().classic()</code>); an authored
                 instrument places it where its own drive is, or not at all. In desk terms: pregain is the guitar's
                 volume knob and the player's touch, and gain is the channel fader with pan after it. A channel on a
                 desk has one fader, and so does the channel here.
@@ -2010,7 +2010,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                 Every synthesized source below is hand-written DSP: no wavetables, no samples underneath, no Web
                 Audio nodes doing the work. They are addressable by name from a pattern
                 (<code>.sound("supersaw")</code>) and as builders in the instrument DSL
-                (<code>Osc.supersaw()</code>).
+                (<code>Ignitor.supersaw()</code>).
             </p>
 
             <div class="note open">
@@ -2138,46 +2138,46 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
 
 <span class="kw">let</span> wait = 14
 
-<span class="kw">let</span> koto = Osc.pluck()
-      .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+<span class="kw">let</span> koto = Ignitor.pluck()
+      .plus(Ignitor.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .highpass(200)
-      .lowpass(Osc.constant(2800).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x =&gt; x.analog(Osc.slot.analog))
+      .lowpass(Ignitor.constant(2800).plus(Ignitor.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x =&gt; x.analog(Ignitor.slot.analog))
       .classic()
 
-<span class="kw">let</span> shaku = Osc.sine().mul(0.6)
-      .plus(Osc.triangle().mul(0.25))
-      .plus(Osc.perlin(13).mul(0.05))
-      .plus(Osc.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
-      .lowpass(3500, 1.0, x =&gt; x.analog(Osc.slot.analog))
-      .highpass(600, x =&gt; x.analog(Osc.slot.analog))
-      .vibrato(2, Osc.perlin(1).mul(0.15).plus(0.15))
+<span class="kw">let</span> shaku = Ignitor.sine().mul(0.6)
+      .plus(Ignitor.triangle().mul(0.25))
+      .plus(Ignitor.perlin(13).mul(0.05))
+      .plus(Ignitor.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
+      .lowpass(3500, 1.0, x =&gt; x.analog(Ignitor.slot.analog))
+      .highpass(600, x =&gt; x.analog(Ignitor.slot.analog))
+      .vibrato(2, Ignitor.perlin(1).mul(0.15).plus(0.15))
       .pitchEnvelope(1, x =&gt; x.adsr(0.02, 0.1, 0, 0))
       .adsr(0.07, 0.15, 0.8, 0.3)
       .classic()
 
-<span class="kw">let</span> kick = Osc.sine()
+<span class="kw">let</span> kick = Ignitor.sine()
       .pitchEnvelope(24, x =&gt; x.adsr(0.001, 0.04, 0, 0))
       .adsr(0.001, 0.2, 0.0, 0.02)
       .classic()
 
-<span class="kw">let</span> rim = Osc.sine(800)
-      .plus(Osc.whitenoise().highpass(4000).mul(0.3))
+<span class="kw">let</span> rim = Ignitor.sine(800)
+      .plus(Ignitor.whitenoise().highpass(4000).mul(0.3))
       .lowpass(3500)
       .adsr(0.001, 0.03, 0.0, 0.005)
       .classic()
 
-<span class="kw">let</span> brush = Osc.perlin(30).mul(0.5)
-      .plus(Osc.whitenoise().mul(0.3))
+<span class="kw">let</span> brush = Ignitor.perlin(30).mul(0.5)
+      .plus(Ignitor.whitenoise().mul(0.3))
       .lowpass(12000).highpass(2000)
       .adsr(0.01, 0.08, 0.0, 0.02)
       .classic()
 
-<span class="kw">let</span> sub = Osc.sine().lowpass(200)
+<span class="kw">let</span> sub = Ignitor.sine().lowpass(200)
       .adsr(0.005, 0.4, 0.0, 0.05)
       .classic()
 
-<span class="kw">let</span> pad = Osc.supertri(x =&gt; x.voices(5).analog(5.0))
-      .lowpass(Osc.sine(0.3).plus(Osc.perlin().mul(0.05)).plus(3).times(800).plus(Osc.freq()), 3, x =&gt; x.analog(Osc.slot.analog))
+<span class="kw">let</span> pad = Ignitor.supertri(x =&gt; x.voices(5).analog(5.0))
+      .lowpass(Ignitor.sine(0.3).plus(Ignitor.perlin().mul(0.05)).plus(3).times(800).plus(Ignitor.freq()), 3, x =&gt; x.analog(Ignitor.slot.analog))
       .adsr(1.5, 3.0, 0.6, 1.5, e =&gt; e.curves(<span class="st">"scurve"</span>, <span class="st">"scurve"</span>, <span class="st">"scurve"</span>))
       .classic()</pre>
                 </div>
@@ -2369,7 +2369,7 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     Analog drift is a slow, small wander of pitch, the way a real analog oscillator does not sit
                     perfectly still, and its amount is the peak, in cents (hundredths of a semitone).
                     <code>analog(…)</code> sets that amount on a note, and attacks land in tune and only then wander.
-                    <code>Osc.slot.analog</code> inside the instrument definitions is where an instrument receives
+                    <code>Ignitor.slot.analog</code> inside the instrument definitions is where an instrument receives
                     the amount, so its own filters drift along with its pitch.
                 </li>
                 <li>

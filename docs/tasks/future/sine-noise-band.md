@@ -71,7 +71,7 @@ extra here.
 A bank on the sine builder, next to `harmonics`, `octaves`, `suboctaves` and the future `partials`:
 
 ```javascript
-Osc.sine(x => x.fundamental(0).noiseBand(low = 140, high = 700, partials = 13))
+Ignitor.sine(x => x.fundamental(0).noiseBand(low = 140, high = 700, partials = 13))
   .bandpass(230, 1.0).highpass(140, 0.707, x => x.passes(2))
 ```
 
@@ -80,7 +80,7 @@ no randomness, the same on every note. Until the partials bank exists, the same 
 
 ## To decide before implementing
 
-- **Hz or ratios.** The thud's partials follow the note (`Osc.freq().mul(...)`, so the snare's tuning moves them).
+- **Hz or ratios.** The thud's partials follow the note (`Ignitor.freq().mul(...)`, so the snare's tuning moves them).
   A bank's partials are multiples of the sine's own frequency today; a band in absolute Hz is a different contract.
 - **The colour knob's word and scale.** `whitenoise` has `color` (a tilt from −1 to 1); read its mapping to dB per
   octave first. If it fits, the band takes the same word and scale (parameter parity, `/dsl-design` §4).

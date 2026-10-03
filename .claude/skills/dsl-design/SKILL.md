@@ -5,7 +5,7 @@ description: Use when someone asks to design a DSL surface, add a DSL door or kn
 
 ## What This Skill Does
 
-Loads the design principles every Klang DSL follows: IgnitorDsl (`Osc.*`), KatalystDsl (on an orbit and,
+Loads the design principles every Klang DSL follows: IgnitorDsl (`Ignitor.*`), KatalystDsl (on an orbit and,
 since phase 3 step 12, at the output through `master(...)`), sprudel patterns, and any DSL still to come. Apply these rules whenever
 you add, change, or review a DSL surface, on either door (KlangScript stdlib or Kotlin).
 
@@ -23,7 +23,7 @@ Every DSL value a user or a Kotlin caller holds is immutable: nodes, builders,
 leaves the receiver untouched.
 
 ```javascript
-let base = Osc.supersaw(x => x.voices(7).spread(0.15))
+let base = Ignitor.supersaw(x => x.voices(7).spread(0.15))
 let bright = base.lowpass(4000)          // base is unchanged
 let dark = base.lowpass(600)             // both share the same source tree by value
 ```
@@ -58,7 +58,7 @@ door(<construction inputs...>, configure: ((XyzBuilder) -> XyzBuilder)? = null)
 ```
 
 ```javascript
-Osc.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+Ignitor.supersaw(x => x.voices(9).spread(0.1).phasePool()).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 //           ^ inside the braces you configure the oscillator   ^ outside you process it
 master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, size): flat since 2026-09-24
 ```
@@ -71,7 +71,7 @@ master(Katalyst(k => k.reverb(0.05, 9).gain(2.5).limiter()))   // reverb(wet, si
 - **Which parameter goes where** (refined 2026-09-23 by the maintainer, walking every door of the
   Ignitor, Katalyst and Master DSLs, the last retired into the Katalyst on 2026-09-28; the per-door record is `.claude/skills/dsl-design/door-shapes.md`):
   - The effect's MUSICAL inputs stay on the door, defaulted or not: `freq` on oscillators
-    (`Osc.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
+    (`Ignitor.sine(0.5)` as an LFO is the most common modulator idiom), `lowpass(freq, q)`,
     `tremolo(rate, depth)`, `fm(modulator, ratio, depth)`. SECONDARY knobs go on the builder
     (`passes`, `analog`, `humanize`, `floor`, `cap`), even when one is the builder's only knob.
   - **`wet` is the very FIRST parameter** of every door that has one, in all four DSLs, sprudel

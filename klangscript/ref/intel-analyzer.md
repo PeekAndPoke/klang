@@ -56,7 +56,7 @@ Bindings are added on visiting:
   transforms: PatternMapperFn)` types `x` in `.superimpose(x => x.` as `SprudelPattern`).
   Positional arguments are aligned to parameters through `runtime/ArgAlignment` (the SAME
   function the interpreter uses, including the trailing-lambda rule: a sole trailing lambda
-  floats to the single trailing function-typed parameter, so `Osc.supersaw(x => ...)` types
+  floats to the single trailing function-typed parameter, so `Ignitor.supersaw(x => ...)` types
   `x` as the builder although `freq` comes first). Arguments past the declared list take the
   trailing vararg parameter's type. Named arguments bind by name. Unknown callee, mixed
   named/positional, or a bare arrow (not a call argument): type = null.

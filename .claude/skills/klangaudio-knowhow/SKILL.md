@@ -29,7 +29,7 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 | Task                                                                                                | Read                             |
 |-----------------------------------------------------------------------------------------------------|----------------------------------|
 | Understanding overall architecture, data flow, comm-link, platform backends                         | `audio/ref/architecture.md`      |
-| Working with VoiceData fields, the `oscParams` / `katalystParams` slots, scheduled voices           | `audio/ref/data-model.md`        |
+| Working with VoiceData fields, the `ignitorParams` / `katalystParams` slots, scheduled voices                                  | `audio/ref/data-model.md`        |
 | A stage's gate: which knob value turns it off (the one home of the off values)                       | `audio/ref/off-values.md`        |
 | Working on voice synthesis, `classic()`, oscillators, samples, modulation, voice lifetime           | `audio/ref/voice-synthesis.md`   |
 | Working on effects, Orbits mixing, KlangAudioRenderer pipeline                                      | `audio/ref/effects-mixing.md`    |

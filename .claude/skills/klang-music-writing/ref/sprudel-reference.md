@@ -52,13 +52,13 @@ stack(
 import * from "stdlib"
 import * from "sprudel"
 
-let koto = Osc.pluck()
-  .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
-  .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
+let koto = Ignitor.pluck()
+  .plus(Ignitor.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+  .lowpass(Ignitor.constant(5000).plus(Ignitor.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
   .highpass(200)
   .classic()
 
-let kick = Osc.sine()
+let kick = Ignitor.sine()
   .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
   .adsr(0.001, 0.2, 0.0, 0.02)
   .classic()
@@ -322,7 +322,7 @@ would be ignored.
 
 A `name:soundIndex[:gain]` suffix on `note()`, `s()` / `sound()`, and
 `seq(...).scale(...)` selects a per-event variant from a sound bundle
-(sample bank or `Osc.variants(...)`). Same syntax as strudel's sample
+(sample bank or `Ignitor.variants(...)`). Same syntax as strudel's sample
 selection — extended to ignitor variants and per-note gain.
 
 | Pattern                                  | What it does                                  |
@@ -577,7 +577,7 @@ note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
 low tom), `mt` (mid tom), `ht` (high tom), `rim` (rimshot), `ch` (closed hat)
 
 Use `:N` for sample-bank variants: `sd:3`, `bd:2`. The same `:N` suffix
-also picks ignitor flavours from `Osc.variants(...)` — see
+also picks ignitor flavours from `Ignitor.variants(...)` — see
 [Tonal & Pitch › `:soundIndex:gain` suffix](#soundindexgain-suffix-universal-variant-picker)
 for the full story.
 

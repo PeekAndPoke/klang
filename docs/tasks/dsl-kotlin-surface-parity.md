@@ -25,7 +25,7 @@ in the same deliverable.
     expressiveness does not.
   - ✅ **The filter doors are DONE (2026-08-27).** They used to be the worst offenders:
     `.lowpass()/.highpass()/.bandpass()/.notch()` had ONLY the all-`Double` form and no
-    `analog` parameter at all, so a tracking cutoff (`Osc.freq().mul(k)`, which the script
+    `analog` parameter at all, so a tracking cutoff (`Ignitor.freq().mul(k)`, which the script
     door supports and Der Schmetterling uses) was unreachable from Kotlin without hand-building
     `IgnitorDsl.Highpass(...)`. All five (those four plus `onepole`) now ship an `IgnitorDsl`
     primary plus a scalar convenience overload, the same shape `band`/`tap` already used, and
@@ -42,8 +42,8 @@ in the same deliverable.
   `tremolo` and filter doors stay flat where the script doors take a builder; the Kotlin `shape`/`distort` doors
   take a `String` and an `Int` where the script doors also take a slot; `floor` is only a builder knob, so Kotlin
   sets it with `.copy(floor = ...)`; there is no Kotlin `pitchEnvelope` door; the sample instrument has no script
-  door (no `Osc.sample()`, "not yet" at step 7) and its playback slots (`begin`, `end`, `speed`, `loop`) are
-  Kotlin-only (`IgnitorDsl.Slots.sample`). Revisit them in the audit; the `Osc.sample()` door is the one marked
+  door (no `Ignitor.sample()`, "not yet" at step 7) and its playback slots (`begin`, `end`, `speed`, `loop`) are
+  Kotlin-only (`IgnitorDsl.Slots.sample`). Revisit them in the audit; the `Ignitor.sample()` door is the one marked
   "not yet".
 
 ## Work

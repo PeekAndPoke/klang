@@ -60,7 +60,7 @@ In `klangscript/src/jvmTest/kotlin/intel/`:
 - inner `let` shadows an outer one of the same name (one entry, inner type);
 - arrow params visible inside the arrow body only;
 - a binding declared in a sibling block is not offered;
-- a local with an inferred type (`let g = Osc.saw()`) carries `IgnitorDsl` in the detail, a
+- a local with an inferred type (`let g = Ignitor.saw()`) carries `IgnitorDsl` in the detail, a
   local with an unknown type carries none;
 - stale analysis: `localsAt` on a program analysed before an insertion still returns the
   declarations above the insertion point.

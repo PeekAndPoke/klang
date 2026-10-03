@@ -21,7 +21,7 @@ data class ScheduledVoice(
 `VoiceData.kt`: nullable fields; omitting one means the engine default. Since phase 3 step 9
 (2026-09-27) every voice is an Ignitor tree, and the voice doors (the envelope, the four filters,
 crush, coarse, distort, tremolo, the sample's begin/end/speed/loop) are not typed fields: they
-travel as slot keys in `oscParams`, and the orbit stages as slot keys in `katalystParams`.
+travel as slot keys in `ignitorParams`, and the orbit stages as slot keys in `katalystParams`.
 
 ### Pitch & Tuning
 
@@ -47,9 +47,9 @@ travel as slot keys in `oscParams`, and the orbit stages as slot keys in `kataly
 | `sound`      | `String?` | Sound name within the bank, or a registered ignitor name                                                                                             |
 | `soundIndex` | `Int?`    | Variant index — for samples picks the bank entry; for ignitors dispatches `IgnitorDsl.Variants` (`children[index.mod(N)]`). Defaults to 0 when null. |
 
-### The instrument's slots: `oscParams`
+### The instrument's slots: `ignitorParams`
 
-`oscParams: Map<String, Double>?` is the voice's slot bag. The instrument's tree resolves every
+`ignitorParams: Map<String, Double>?` is the voice's slot bag. The instrument's tree resolves every
 `IgnitorDsl.Param` against it, falling back to the slot's authored default. Sprudel's
 `toVoiceData()` writes the voice doors here (`classicSlotParams` in
 `sprudel/src/commonMain/kotlin/_classic_slot_params.kt`, the one place sprudel's words meet the
@@ -60,7 +60,7 @@ engine's slot names):
   `IgnitorDsl.Slots` (`audio_bridge/.../IgnitorDsl.kt`, the stage slot groups in `IgnitorDslClassic.kt`); a tree without `classic()` reads none of them;
 - the sample instrument's playback slots, flat: `begin`, `end`, `speed`, `loop` (`Slots.sample`);
 - the oscillator's own generic slots (`density` on dust, `voices` and `spread` on the super
-  oscillators) and any raw `oscp(name, value)` write. sprudel also writes `panSpread` (`unison(pan = ...)`),
+  oscillators) and any raw `ignp(name, value)` write. sprudel also writes `panSpread` (`unison(pan = ...)`),
   which no engine stage reads yet.
 
 Every built-in sound is `source.pregain().classic()` and every sample voice runs the same shape over its

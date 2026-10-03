@@ -101,7 +101,7 @@ voices, not numbers.
 1. Target-curve preset format and where presets live (project file? per-song in the pattern?).
 2. **The knob registry:** mapping voice types → their spectral-shaping knobs (supersawHp: `hptrack`,
    `gain`, `lpf`; sample drums: `gain`, `lpf`; bass: `gain`, octave-layer gain …). Where is it maintained, and
-   can Osc definitions self-describe their knobs (Osc.param descriptions already exist — possibly derivable)?
+   can Ignitor definitions self-describe their knobs (Ignitor.param descriptions already exist — possibly derivable)?
 3. Suggestion delivery: report text only, or one-click "apply to source" edits? (Proposal: text with exact
    `.knob(value)` snippets, author pastes — keeps the author in the loop and survives pattern refactors.)
 4. Outlier-window detection rule for section-awareness (fixed threshold vs. deviation from median).

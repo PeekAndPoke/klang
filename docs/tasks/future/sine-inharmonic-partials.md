@@ -10,9 +10,9 @@ what happens if this is in conjunction with harmonics."
 The thud today (`src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`, `metalSnare`):
 
 ```javascript
-let thud  = Osc.sine(Osc.freq().mul(0.6571)).mul(0.520)
-  .plus(Osc.sine(Osc.freq().mul(0.7571)).mul(0.676))
-  .plus(Osc.sine(Osc.freq().mul(0.8714)).mul(-0.652))
+let thud  = Ignitor.sine(Ignitor.freq().mul(0.6571)).mul(0.520)
+  .plus(Ignitor.sine(Ignitor.freq().mul(0.7571)).mul(0.676))
+  .plus(Ignitor.sine(Ignitor.freq().mul(0.8714)).mul(-0.652))
   ... 13 sines in all, ratios 0.66 to 3.39 of the head, the signs are the start phases
   .adsr(0.0005, 0.050, 0.0, 0.02).mul(1.245)
 ```
@@ -35,11 +35,11 @@ let thud  = Osc.sine(Osc.freq().mul(0.6571)).mul(0.520)
 
 ## Shape of the idea
 
-A fourth bank on the `Osc.sine` builder next to `harmonics`, `octaves` and `suboctaves`
+A fourth bank on the `Ignitor.sine` builder next to `harmonics`, `octaves` and `suboctaves`
 (`docs/plans/sine-partial-banks.md`), with explicit ratios and gains, perhaps phases:
 
 ```javascript
-Osc.sine(x => x.fundamental(0).partials(
+Ignitor.sine(x => x.fundamental(0).partials(
   ratios = [0.6571, 0.7571, 0.8714, ...],
   gains  = [0.520, 0.676, -0.652, ...],
 ))
@@ -63,7 +63,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   | `partials(ratios, gains)` | any | any |
   | `noiseBand(...)` ([`sine-noise-band.md`](sine-noise-band.md)) | a geometric grid | a colour law |
 
-  So what does `Osc.sine(x => x.harmonics(7).partials(...))` play? The maintainer's two options:
+  So what does `Ignitor.sine(x => x.harmonics(7).partials(...))` play? The maintainer's two options:
   1. **the last bank wins**: every bank sets the one partial list, so the `partials` replace the
      harmonics;
   2. **the sine supports all of them, summed**.
@@ -90,7 +90,7 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   ([`sine-noise-band.md`](sine-noise-band.md)).
 - **Drift.** How `analog` and `analogSpread` act on inharmonic partials (the banks drift as one
   oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
-- **Decided 2026-10-02: it gets built** ("we will build the `Osc.sine(x => x.partials())` in any case",
+- **Decided 2026-10-02: it gets built** ("we will build the `Ignitor.sine(x => x.partials())` in any case",
   the maintainer). The allocation measurement still belongs in the record, as the before and after.
 
 ## Follow-ups

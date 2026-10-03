@@ -21,5 +21,5 @@ sound name where it earns one, and is tuned by ear.
 
 ## Covered since the spec
 
-- **Additive (sum of harmonics):** `Osc.sine()` with `harmonics`, `octaves` and `fundamental`
+- **Additive (sum of harmonics):** `Ignitor.sine()` with `harmonics`, `octaves` and `fundamental`
   (`docs/plans/sine-partial-banks.md`, shipped 2026-09-07).

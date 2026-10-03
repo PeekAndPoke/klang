@@ -349,7 +349,7 @@
             <div><i class="dd k" aria-hidden="true">K</i></div>
             <div><b>the keyboard</b>, for key 48 (the same c3) pressed at velocity 100</div>
         </div>
-        <div id="chips"><!--R:chips--><div class="grp"><h3>Filled by both (3)</h3><div class="chips"><button type="button" class="chip both" data-f="freqHz" aria-pressed="false"><span class="fn">freqHz</span><span class="fv"><i class="dd s">S</i>130.81<i class="dd k">K</i>130.81</span></button><button type="button" class="chip both" data-f="gain" aria-pressed="false"><span class="fn">gain</span><span class="fv"><i class="dd s">S</i>0.4<i class="dd k">K</i>0.787</span></button><button type="button" class="chip both" data-f="sound" aria-pressed="false"><span class="fn">sound</span><span class="fv"><i class="dd s">S</i>&quot;supersaw&quot;<i class="dd k">K</i>&quot;supersaw&quot;</span></button></div></div><div class="grp"><h3>Filled by sprudel only (6)</h3><div class="chips"><button type="button" class="chip sp" data-f="note" aria-pressed="false"><span class="fn">note</span><span class="fv"><i class="dd s">S</i>&quot;c3&quot;</span></button><button type="button" class="chip sp" data-f="oscParams" aria-pressed="false"><span class="fn">oscParams</span><span class="fv"><i class="dd s">S</i>{ lpf.freq: 800 }</span></button><button type="button" class="chip sp" data-f="katalystParams" aria-pressed="false"><span class="fn">katalystParams</span><span class="fv"><i class="dd s">S</i>{ reverb.wet: 0.3, reverb.size: 5 }</span></button><button type="button" class="chip sp" data-f="cylinder" aria-pressed="false"><span class="fn">cylinder</span><span class="fv"><i class="dd s">S</i>1</span></button><button type="button" class="chip sp" data-f="pan" aria-pressed="false"><span class="fn">pan</span><span class="fv"><i class="dd s">S</i>0.3</span></button><button type="button" class="chip sp" data-f="sourceId" aria-pressed="false"><span class="fn">sourceId</span><span class="fv"><i class="dd s">S</i>&quot;loc_…&quot;</span></button></div></div><!--/R:chips--></div>
+        <div id="chips"><!--R:chips--><div class="grp"><h3>Filled by both (3)</h3><div class="chips"><button type="button" class="chip both" data-f="freqHz" aria-pressed="false"><span class="fn">freqHz</span><span class="fv"><i class="dd s">S</i>130.81<i class="dd k">K</i>130.81</span></button><button type="button" class="chip both" data-f="gain" aria-pressed="false"><span class="fn">gain</span><span class="fv"><i class="dd s">S</i>0.4<i class="dd k">K</i>0.787</span></button><button type="button" class="chip both" data-f="sound" aria-pressed="false"><span class="fn">sound</span><span class="fv"><i class="dd s">S</i>&quot;supersaw&quot;<i class="dd k">K</i>&quot;supersaw&quot;</span></button></div></div><div class="grp"><h3>Filled by sprudel only (6)</h3><div class="chips"><button type="button" class="chip sp" data-f="note" aria-pressed="false"><span class="fn">note</span><span class="fv"><i class="dd s">S</i>&quot;c3&quot;</span></button><button type="button" class="chip sp" data-f="ignitorParams" aria-pressed="false"><span class="fn">ignitorParams</span><span class="fv"><i class="dd s">S</i>{ lpf.freq: 800 }</span></button><button type="button" class="chip sp" data-f="katalystParams" aria-pressed="false"><span class="fn">katalystParams</span><span class="fv"><i class="dd s">S</i>{ reverb.wet: 0.3, reverb.size: 5 }</span></button><button type="button" class="chip sp" data-f="cylinder" aria-pressed="false"><span class="fn">cylinder</span><span class="fv"><i class="dd s">S</i>1</span></button><button type="button" class="chip sp" data-f="pan" aria-pressed="false"><span class="fn">pan</span><span class="fv"><i class="dd s">S</i>0.3</span></button><button type="button" class="chip sp" data-f="sourceId" aria-pressed="false"><span class="fn">sourceId</span><span class="fv"><i class="dd s">S</i>&quot;loc_…&quot;</span></button></div></div><!--/R:chips--></div>
         <details class="unset" id="unset">
             <summary id="unset-sum">26 more fields, unset for this note</summary>
             <p class="unset-note">Neither sender writes these, so the engine reads its own default for each.</p>
@@ -372,7 +372,7 @@
 
     // The fields of VoiceData, in declaration order (audio_bridge/.../VoiceData.kt, constructor).
     var FIELDS = [
-        "note", "freqHz", "gain", "legato", "bank", "sound", "soundIndex", "oscParams", "katalystParams",
+        "note", "freqHz", "gain", "legato", "bank", "sound", "soundIndex", "ignitorParams", "katalystParams",
         "accelerate", "vibrato", "vibratoMod", "pAttack", "pDecay", "pSustain", "pRelease", "pEnv",
         "pAttackCurve", "pDecayCurve", "pReleaseCurve", "fmh", "fmAttack", "fmDecay", "fmSustain", "fmEnv",
         "cylinder", "pan", "cut", "solo", "sourceId", "master", "katalyst", "control", "tags", "cull"
@@ -389,7 +389,7 @@
         freqHz: { s: FREQ, k: FREQ },
         gain: { s: "0.4", k: GAIN_K },
         sound: { s: '"supersaw"', k: '"supersaw"' },
-        oscParams: { s: "{ lpf.freq: 800 }" },
+        ignitorParams: { s: "{ lpf.freq: 800 }" },
         katalystParams: { s: "{ reverb.wet: 0.3, reverb.size: 5 }" },
         cylinder: { s: "1" },
         pan: { s: "0.3" },
@@ -402,7 +402,7 @@
         freqHz: "The pitch in Hz. Sprudel works it out from the name c3. The keyboard works it out from the key number, with the same formula (key 48 is c3, 130.81 Hz).",
         gain: "The one level word on the wire, the channel fader. Sprudel sends the gain the pattern set. The keyboard sends the key velocity divided by 127.",
         sound: "Which instrument plays: an Ignitor name such as supersaw, or a sample name. The keyboard sends whichever oscillator is selected on its page; supersaw is the page's default.",
-        oscParams: "Named numbers for the instrument, its slots. Our .lpf(800) fills the slot lpf.freq.",
+        ignitorParams: "Named numbers for the instrument, its slots. Our .lpf(800) fills the slot lpf.freq.",
         katalystParams: "Named numbers for the orbit's effect chain. Our .reverb(0.3, 5) fills reverb.wet and reverb.size.",
         cylinder: "The orbit the voice is sent to. Our .orbit(1) writes 1; a voice that names none goes to orbit 0.",
         pan: "Stereo position from 0 (left) to 1 (right); unset reads as 0.5. Our .pan(0.3) sits a little left of center.",

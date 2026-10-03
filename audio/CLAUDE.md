@@ -21,7 +21,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 | File                                                   | Role                                           |
 |--------------------------------------------------------|------------------------------------------------|
-| `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `oscParams`, orbit slots in `katalystParams` |
+| `src/commonMain/kotlin/VoiceData.kt`                   | Voice event: pitch, gain, routing; door slots in `ignitorParams`, orbit slots in `katalystParams` |
 | `src/commonMain/kotlin/IgnitorDslClassic.kt`           | `classic()`, the voice chain, and its slot groups        |
 | `src/commonMain/kotlin/AdsrDef.kt`                     | `AdsrCurve`; `AdsrDef` for a sample's own envelope |
 | `src/commonMain/kotlin/FilterDef.kt`                   | The orbit resonators' band carriers (`Formant`, `Body`) |
@@ -69,7 +69,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | Topic                                                                              | File                       |
 |------------------------------------------------------------------------------------|----------------------------|
 | Architecture, data flow, comm-link protocol, platform backends                     | `ref/architecture.md`      |
-| VoiceData fields, the `oscParams` / `katalystParams` slots, AdsrDef, FilterDef, ScheduledVoice | `ref/data-model.md` |
+| VoiceData fields, the `ignitorParams` / `katalystParams` slots, AdsrDef, FilterDef, ScheduledVoice | `ref/data-model.md` |
 | Voice stages, `classic()`, the sample instrument, oscillators                      | `ref/voice-synthesis.md`   |
 | Envelope rules — voice-lifetime semantics, amp vs modulator envelopes              | `ref/voice-synthesis.md`   |
 | The gate off values: when a stage is not built (the one home)                      | `ref/off-values.md`        |

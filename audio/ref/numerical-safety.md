@@ -107,7 +107,7 @@ reads as UNSET. It is not a clamp: every finite value passes raw (the Motor stay
 voice multiplies through the tree and reaches the orbit mix, where nothing scrubs it and it latches the orbit's
 effects for the rest of the playback, so each reader substitutes at its own read, once:
 
-- **The `IgnitorDsl.Param` leaf** (`IgnitorDslRuntime`, where a slot resolves against `oscParams`): a non-finite
+- **The `IgnitorDsl.Param` leaf** (`IgnitorDslRuntime`, where a slot resolves against `ignitorParams`): a non-finite
   OVERRIDE takes the slot's authored default. It does not touch the authored default itself: an instrument that
   declares an infinite release asks for a drone. Guard: `VoicePregainWireSpec`.
 - **The raw bag read** left in `VoiceFactory` (`analog`, read once per voice). Guard: `VoiceBagGuardSpec`.

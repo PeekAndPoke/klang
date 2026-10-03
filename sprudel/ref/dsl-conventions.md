@@ -73,7 +73,7 @@ See `tag()` in `lang_structural_tag.kt` for a full four-form example, including 
   }
   ```
 
-- A slot-backed door (`pregain`, `analog`, the bus doors) reads its own slot back: `read = { it.oscParams?.get(name) }`
+- A slot-backed door (`pregain`, `analog`, the bus doors) reads its own slot back: `read = { it.ignitorParams?.get(name) }`
   (or `katalystParams`), not a typed field.
 - The accessor is ONE declaration, named exactly like the script name (maintainer decision
   2026-09-07, the Kotlin naming convention is suppressed at file level with `"ClassName"`):

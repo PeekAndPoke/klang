@@ -27,7 +27,7 @@
 > - **The blocker is unchanged and is the whole point of this task:** a compound `"a:b:c"` string is one value,
 >   so you cannot modulate one sub-param with its own control pattern. Per-param control-pattern support
 >   (the project rule "all params accept control patterns") needs the positional/named surface below.
-> - The Osc-side already models the target shape: `Osc.crackle(chaos = 1.7)`, `Osc.dust(density, tail, bipolar)`
+> - The Ignitor side already models the target shape: `Ignitor.crackle(chaos = 1.7)`, `Ignitor.dust(density, tail, bipolar)`
 >   take per-param named args today — the `snd*` sprudel surface is what lags.
 
 ## Why
@@ -46,7 +46,7 @@ problems with their current surface:
 - Defined in `sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
   `lang_synthesis_snd_super.kt`.
 - Each function: a `voiceModifier` splits the single string on `":"`, `toDoubleOrNull()`s each field, and
-  maps them onto oscParams via `withOscParams("decay" to parts[0], "brightness" to parts[1], …)`. Empty
+  maps them onto ignitorParams via `withOscParams("decay" to parts[0], "brightness" to parts[1], …)`. Empty
   args → bare `copy(sound = Named(...))`; non-empty → `_applyControlFromParams(...)` so the **composite
   string** can be a control pattern (but only as a whole).
 - **Tool-window integration is annotation-driven** (this is the part that complicates the redesign):
@@ -80,10 +80,10 @@ problems with their current surface:
     - How does the editor round-trip code that mixes literals and control patterns across the N params?
     - The single-string shorthand still needs the old composite editor — two code shapes to support.
 - **Patternability**: confirm each positional param flows through `_applyControlFromParams` independently
-  so per-param control patterns actually reach the oscParam (the plumbing today only patterns the whole
+  so per-param control patterns actually reach the ignitor slot (the plumbing today only patterns the whole
   string).
 - **Scope**: which sounds get the new surface first? (saw/supersaw family vs pluck vs the full set.)
-- **Consistency with oscParams**: positional params should map 1:1 to the ignitor oscParam names
+- **Consistency with ignitorParams**: positional params should map 1:1 to the ignitor slot names
   (`voices`, `freqSpread`, `analog`, `duty`, `decay`, …) — keep the mapping in one place.
 
 ## Related
@@ -91,5 +91,5 @@ problems with their current surface:
 - `docs/tasks/voice-takeover.md` — **blocked by this task** (Phase 2 `glide`); states the two required forms.
 - `docs/tasks/sprudel-ui-tools.md` — the editor-tool catalogue that the `@param-tool` annotations drive.
 - `docs/tasks/sprudel-dsl-named-args.md` — sprudel arg-handling conventions.
-- Oscillator oscParams + per-variant constants — `audio_be/.../ignitor/OscillatorTuning.kt`,
+- Oscillator ignitorParams + per-variant constants — `audio_be/.../ignitor/OscillatorTuning.kt`,
   `Ignitors.kt` (see `docs/tasks-archive/2026-06/20260605-oscillator-engine-unification.md`).
