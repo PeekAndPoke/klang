@@ -61,33 +61,33 @@ class EmissionHelpersTest : StringSpec({
 
     "owner reference: two imports sharing a simple name both stay qualified" {
         val imports = setOf(
-            "io.peekandpoke.klang.script.stdlib.Osc",
-            "io.peekandpoke.klang.sprudel.lang.Osc",
+            "io.peekandpoke.klang.script.stdlib.Ignitor",
+            "io.peekandpoke.klang.sprudel.lang.Ignitor",
         )
 
-        ownerReference("io.peekandpoke.klang.script.stdlib.Osc", imports, emptySet()) shouldBe
-            "io.peekandpoke.klang.script.stdlib.Osc"
+        ownerReference("io.peekandpoke.klang.script.stdlib.Ignitor", imports, emptySet()) shouldBe
+            "io.peekandpoke.klang.script.stdlib.Ignitor"
 
-        ownerReference("io.peekandpoke.klang.sprudel.lang.Osc", imports, emptySet()) shouldBe
-            "io.peekandpoke.klang.sprudel.lang.Osc"
+        ownerReference("io.peekandpoke.klang.sprudel.lang.Ignitor", imports, emptySet()) shouldBe
+            "io.peekandpoke.klang.sprudel.lang.Ignitor"
     }
 
     "owner reference: an owner the file does not import stays qualified" {
         ownerReference(
             ownerFqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptMath",
-            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.KlangScriptOsc"),
+            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"),
             localNames = emptySet(),
         ) shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
     }
 
     "owner reference: an unimported owner whose simple name IS imported, from elsewhere" {
-        // The dangerous shape: exactly one import spells `Osc`, but it is the other one. Shortening
+        // The dangerous shape: exactly one import spells `Ignitor`, but it is the other one. Shortening
         // here would compile and call into the wrong class.
         ownerReference(
-            ownerFqcn = "io.peekandpoke.klang.sprudel.lang.Osc",
-            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.Osc"),
+            ownerFqcn = "io.peekandpoke.klang.sprudel.lang.Ignitor",
+            importedFqcns = setOf("io.peekandpoke.klang.script.stdlib.Ignitor"),
             localNames = emptySet(),
-        ) shouldBe "io.peekandpoke.klang.sprudel.lang.Osc"
+        ) shouldBe "io.peekandpoke.klang.sprudel.lang.Ignitor"
     }
 
     "owner reference: a name the generated body binds itself stays qualified" {

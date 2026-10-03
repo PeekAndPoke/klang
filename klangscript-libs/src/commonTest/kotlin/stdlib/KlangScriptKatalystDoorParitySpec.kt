@@ -532,7 +532,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
 
         // Same node type as `Osc.param`, and that is the point: one slot vocabulary, two
         // namespaces that never cross (`oscp` fills the voice's, `katp` the orbit's).
-        KlangScriptKatalyst.param("room", 5.0) shouldBe KlangScriptOsc.param("room", 5.0)
+        KlangScriptKatalyst.param("room", 5.0) shouldBe KlangScriptIgnitor.param("room", 5.0)
     }
 
     "the Kotlin door takes the same lambda" {

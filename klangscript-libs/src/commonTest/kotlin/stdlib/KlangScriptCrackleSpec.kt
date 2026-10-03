@@ -27,7 +27,7 @@ class KlangScriptCrackleSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun crackle() = KlangScriptOsc.crackle() as IgnitorDsl.Crackle
+    fun crackle() = KlangScriptIgnitor.crackle() as IgnitorDsl.Crackle
 
     "Osc.crackle() — KlangScript == Kotlin builder" {
         ks("Osc.crackle()") shouldBe crackle()

@@ -34,7 +34,7 @@ class KlangScriptSuperPluckSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun node() = KlangScriptOsc.superpluck()
+    fun node() = KlangScriptIgnitor.superpluck()
 
     "Osc.superpluck(): script == Kotlin door, all defaults" {
         ks("Osc.superpluck()") shouldBe node()
@@ -98,7 +98,7 @@ class KlangScriptSuperPluckSpec : StringSpec({
 
     "the Kotlin door takes the same lambda" {
         ks("Osc.superpluck(x => x.voices(6).spread(0.15))") shouldBe
-                KlangScriptOsc.superpluck(configure = { it.voices(6).spread(0.15) })
+                KlangScriptIgnitor.superpluck(configure = { it.voices(6).spread(0.15) })
     }
 
     "named configure binds too" {
@@ -116,7 +116,7 @@ class KlangScriptSuperPluckSpec : StringSpec({
 
     "a lambda that returns nothing is a script-level type error naming the door" {
         val err = shouldThrow<KlangScriptTypeError> { ks("Osc.superpluck(x => { x.voices(3) })") }
-        err.message shouldBe "the configure lambda of Osc.superpluck returned nothing; return the builder it received (`x => x.analog(3)`)"
+        err.message shouldBe "the configure lambda of Ignitor.superpluck returned nothing; return the builder it received (`x => x.analog(3)`)"
     }
 
     "a lambda that returns something else is a script-level type error, not a cast failure" {

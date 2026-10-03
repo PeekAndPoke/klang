@@ -16,104 +16,161 @@ import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.putIgnitorParam
 
-// -- oscparam() / oscp() ----------------------------------------------------------------------------------------------
+// -- ignitorParam() / ignp() -----------------------------------------------------------------------------------------
 
-private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyIgnitorParam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.size < 2) return source
-    val key = args[0].value?.toString() ?: return source
+    val slot = args[0].value?.toString() ?: return source
     val valueArgs = args.drop(1)
-    val mutation = voiceSetter { putIgnitorParam(key, it?.asDoubleOrNull()) }
+    val mutation = voiceSetter { putIgnitorParam(slot, it?.asDoubleOrNull()) }
     return source._liftOrReinterpretStringField(valueArgs, mutation)
 }
 
 /**
- * Sets any oscillator parameter by key, [per voice](/manuals/lexikon/voice).
+ * Writes one Ignitor slot by name, [per voice](/manuals/lexikon/voice).
  *
- * Direct access to the `ignitorParams` map, for parameters that have no dedicated door of their own.
- * Keys used elsewhere in this library are `analog`, `onepole` and `density`.
+ * Direct access to the `ignitorParams` map, for slots that have no dedicated door of their own.
+ * Slots used elsewhere in this library are `analog`, `onepole` and `density`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").oscparam("analog", 4)
+ * note("c3 e3").s("supersaw").ignitorParam("analog", 4)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").oscparam("onepole", "<12000 3700>") // pattern-cycle the value
+ * note("c3 e3").ignitorParam("onepole", "<12000 3700>") // pattern-cycle the value
  * ```
  *
- * @param key The oscillator parameter name.
- * @param value The parameter value.
- * @return A new pattern with the oscillator parameter set.
- * @alias oscp
+ * @param slot The Ignitor slot name.
+ * @param value The slot value.
+ * @return A new pattern with the slot written.
+ * @alias ignp
  * @scope voice
  * @category tonal
- * @tags oscillator, parameter, osc
+ * @tags ignitor, parameter, slot
+ */
+@KlangScript.Function
+fun SprudelPattern.ignitorParam(slot: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyIgnitorParam(this, listOf(slot, value).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and writes one Ignitor slot by name.
+ *
+ * @alias ignp
+ */
+@KlangScript.Function
+fun String.ignitorParam(slot: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).ignitorParam(slot, value, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that writes one Ignitor slot by name.
+ *
+ * @alias ignp
+ */
+@KlangScript.Function
+fun ignitorParam(slot: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.ignitorParam(slot, value, callInfo) }
+
+/**
+ * Chains an Ignitor slot write onto this [PatternMapperFn].
+ *
+ * @alias ignp
+ */
+@KlangScript.Function
+fun PatternMapperFn.ignitorParam(slot: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.ignitorParam(slot, value, callInfo) }
+
+/**
+ * Alias for [ignitorParam].
+ *
+ * @alias ignitorParam
+ */
+@KlangScript.Function
+fun SprudelPattern.ignp(slot: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.ignitorParam(slot, value, callInfo)
+
+/**
+ * Alias for [ignitorParam]. Parses this string as a pattern and writes one Ignitor slot by name.
+ *
+ * @alias ignitorParam
+ */
+@KlangScript.Function
+fun String.ignp(slot: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).ignitorParam(slot, value, callInfo)
+
+/**
+ * Alias for [ignitorParam]. Creates a [PatternMapperFn] that writes one Ignitor slot by name.
+ *
+ * @alias ignitorParam
+ */
+@KlangScript.Function
+fun ignp(slot: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.ignitorParam(slot, value, callInfo) }
+
+/**
+ * Alias for [ignitorParam]. Chains an Ignitor slot write onto this [PatternMapperFn].
+ *
+ * @alias ignitorParam
+ */
+@KlangScript.Function
+fun PatternMapperFn.ignp(slot: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.ignitorParam(slot, value, callInfo) }
+
+// -- oscparam() / oscp(): scaffolding of the Ignitor/Katalyst rename, removed in C5 ----------------------------------
+//
+// One-line forwards so every song, test and doc that still says `oscparam` / `oscp` keeps working until C3 migrates
+// them (`docs/plans/ignitor-katalyst-naming.md`). Write `ignitorParam` / `ignp`.
+
+/**
+ * The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5.
+ *
+ * @scope voice
+ * @category tonal
+ * @tags ignitor, parameter, slot
  */
 @KlangScript.Function
 fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyOscparam(this, listOf(key, value).asSprudelDslArgs(callInfo))
+    this.ignitorParam(key, value, callInfo)
 
-/**
- * Parses this string as a pattern and sets an oscillator parameter.
- *
- * @alias oscp
- */
+/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
+    this.ignitorParam(key, value, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that sets an oscillator parameter.
- *
- * @alias oscp
- */
+/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.oscparam(key, value, callInfo) }
+    ignitorParam(key, value, callInfo)
 
-/**
- * Chains an oscillator-parameter-set onto this [PatternMapperFn].
- *
- * @alias oscp
- */
+/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.oscparam(key, value, callInfo) }
+    this.ignitorParam(key, value, callInfo)
 
 /**
- * Alias for [oscparam].
+ * The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5.
  *
- * @alias oscparam
+ * @scope voice
+ * @category tonal
+ * @tags ignitor, parameter, slot
  */
 @KlangScript.Function
 fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.oscparam(key, value, callInfo)
+    this.ignitorParam(key, value, callInfo)
 
-/**
- * Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter.
- *
- * @alias oscparam
- */
+/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
+    this.ignitorParam(key, value, callInfo)
 
-/**
- * Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter.
- *
- * @alias oscparam
- */
+/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.oscparam(key, value, callInfo) }
+    ignitorParam(key, value, callInfo)
 
-/**
- * Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn].
- *
- * @alias oscparam
- */
+/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
 @KlangScript.Function
 fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.oscparam(key, value, callInfo) }
+    this.ignitorParam(key, value, callInfo)
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 

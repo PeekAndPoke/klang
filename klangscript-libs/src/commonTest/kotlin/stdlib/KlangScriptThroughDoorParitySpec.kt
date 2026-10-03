@@ -122,13 +122,13 @@ class KlangScriptThroughDoorParitySpec : StringSpec({
 
     "a stage that returns nothing (a block body without return) is named, on both DSLs" {
         errorOf { osc("Osc.saw().through(x => x.mul(2), x => { x.plus(3) })") } shouldContain
-                "stage 2 of Osc through returned nothing"
+                "stage 2 of Ignitor through returned nothing"
         errorOf { katalyst("Katalyst(k => k.through(k => { k.gain(1.4) }))") } shouldContain
                 "stage 1 of Katalyst through returned nothing"
     }
 
     "a stage that returns something else is named, on both DSLs" {
-        errorOf { osc("Osc.saw().through(x => 3)") } shouldContain "stage 1 of Osc through must return signal"
+        errorOf { osc("Osc.saw().through(x => 3)") } shouldContain "stage 1 of Ignitor through must return signal"
         errorOf { katalyst("Katalyst(k => k.through(k => k.gain(1.4), k => 3))") } shouldContain
                 "stage 2 of Katalyst through must return builder"
     }
@@ -136,6 +136,6 @@ class KlangScriptThroughDoorParitySpec : StringSpec({
     "a stage that is not a function is a script error, on both DSLs" {
         errorOf { osc("Osc.saw().through(x => x, 0.5)") } shouldContain "expected a function, got a number"
         errorOf { katalyst("Katalyst(k => k.through(true))") } shouldContain "expected a function, got a boolean"
-        errorOf { osc("Osc.saw().through(null)") } shouldContain "stage 1 of Osc through is null"
+        errorOf { osc("Osc.saw().through(null)") } shouldContain "stage 1 of Ignitor through is null"
     }
 })

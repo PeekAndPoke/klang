@@ -25,10 +25,10 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * `@KlangScript.Function` extension. The door keeps the stage's musical inputs, the builder the
  * rest (`/dsl-design` section 2).
  *
- *     Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
- *     Osc.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
- *     Osc.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("square", "exp", "exp").declick(0.0005))
- *     Osc.saw().phaser(0.3, 0.5, x => x.floor(0.2))
+ *     Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
+ *     Ignitor.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
+ *     Ignitor.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("square", "exp", "exp").declick(0.0005))
+ *     Ignitor.saw().phaser(0.3, 0.5, x => x.floor(0.2))
  */
 
 // ── Envelopes ────────────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ fun FilterBuilder.humanize(on: Any = true): FilterBuilder = copy(knobs = knobs.c
  * a compound pair: naming either switches the envelope on and the other fills from
  * `audio_bridge/constants/FilterEnvelopeDefaults.kt` (the fill runs after the lambda, once). A
  * non-leaf EXPRESSION here is unreadable at build and switches the envelope OFF; write a number or
- * a slot (`OscSlot.lpf.env`).
+ * a slot (`Ignitor.slot.lpf.env`).
  */
 @KlangScript.Function
 fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(env = semitones.toIgnitorDsl()))

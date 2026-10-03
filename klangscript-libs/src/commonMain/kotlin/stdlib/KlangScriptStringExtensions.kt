@@ -249,7 +249,7 @@ internal object KlangScriptStringExtensions {
      * Reads the string as an interval name and returns its frequency ratio: 2^(semitones / 12).
      *
      * The name says what the number means, so a call site reads as intent:
-     * `.oscp("hptrack", "M3".toRatio())` is a major third above the fundamental.
+     * `.ignp("hptrack", "M3".toRatio())` is a major third above the fundamental.
      * A name is a quality and a number, `P5`, `M3`, `m7`. A descending interval carries the minus in
      * front of the number, so a fifth down is `-5P` (or `P-5`), not `-P5`.
      * On a bare number the unit goes in the method name instead, see `semitones` and `cents`.

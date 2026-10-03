@@ -37,8 +37,8 @@ class KlangScriptSawRampSpec : StringSpec({
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
     val doors = listOf(
-        SawRampDoor("saw", { KlangScriptOsc.saw() }, { KlangScriptOsc.saw(configure = { it.shapeMax(0.3) }) }),
-        SawRampDoor("ramp", { KlangScriptOsc.ramp() }, { KlangScriptOsc.ramp(configure = { it.shapeMax(0.3) }) }),
+        SawRampDoor("saw", { KlangScriptIgnitor.saw() }, { KlangScriptIgnitor.saw(configure = { it.shapeMax(0.3) }) }),
+        SawRampDoor("ramp", { KlangScriptIgnitor.ramp() }, { KlangScriptIgnitor.ramp(configure = { it.shapeMax(0.3) }) }),
     )
 
     "every calling form and every knob: script == the default node with the knob's own field written" {

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+@file:KlangScript.Library(KlangScriptLibraries.STDLIB)
+
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -36,7 +38,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * a master back off: a master reference means "change to this", so deleting a `master(...)` line
  * while live coding leaves the last chain in place.
  *
- * Sibling of `Osc` (the per-voice instrument): same shape, different host.
+ * Sibling of `Ignitor` (the per-voice instrument): same shape, different host.
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
@@ -111,8 +113,8 @@ object KlangScriptKatalyst {
      * ONCE, when the chain is built, and folds it to a number, so `katp("room", x)` never reaches
      * it. Hand the knob the slot itself and do the arithmetic on the pattern side.
      *
-     * The twin of `Osc.param` on the other host: that one fills the voice's own instrument from
-     * `oscp`, this one the orbit's chain from `katp`. The two namespaces never cross.
+     * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
+     * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross.
      *
      * @param name slot name, `<stage>.<knob>` for a classic knob or any word for an authored one
      * @param default the value the knob has while nothing writes the name
@@ -132,3 +134,18 @@ object KlangScriptKatalyst {
     @KlangScript.Invoke
     operator fun invoke(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl = build(configure)
 }
+
+/**
+ * The short name of [KlangScriptKatalyst]: the same object under a second name, so `Kat(k => ...)` is
+ * `Katalyst(k => ...)` and `Kat.classic()` is `Katalyst.classic()`, for every member. Songs use it;
+ * the docs spell `Katalyst` out.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("supersaw").katalyst(Kat(k => k.reverb(0.2, 4).gain(1.2)))
+ * ```
+ *
+ * @category object
+ * @tags katalyst, kat, alias, chain
+ */
+@KlangScript.Constant
+val Kat: KlangScriptKatalyst = KlangScriptKatalyst

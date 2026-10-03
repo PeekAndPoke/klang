@@ -41,12 +41,19 @@ object KlangStdLib {
         outputHandler: (ConsoleLevel, List<String>) -> Unit = defaultOutputHandler,
     ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
+            // The script names this library offers. The natives below reach a script through the
+            // engine's native environment, not through this list. `Osc` is scaffolding of the
+            // Ignitor/Katalyst rename, removed in C5.
             source(
                 """
                 export {
                     console,
                     Math,
                     Object,
+                    Ignitor,
+                    Ign,
+                    Katalyst,
+                    Kat,
                     Osc
                 }
                 """.trimIndent()

@@ -385,13 +385,13 @@ class KlangDocsRegistryTest : StringSpec({
         val registry = KlangDocsRegistry()
         registry.register(
             KlangSymbol(
-                name = "analog", category = "test",
+                name = "slot", category = "test",
                 variants = listOf(
                     KlangProperty(
-                        name = "analog",
+                        name = "slot",
                         // In-module emission: script-name + fqcn
-                        owner = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"),
-                        type = KlangType("IgnitorDsl"),
+                        owner = KlangType("Ignitor", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"),
+                        type = KlangType("KlangScriptIgnitorSlots"),
                     )
                 )
             )
@@ -399,10 +399,10 @@ class KlangDocsRegistryTest : StringSpec({
 
         // Cross-module emission would carry the Kotlin simpleName but matching fqcn
         val crossModuleQuery = KlangType(
-            simpleName = "KlangScriptOscSlot",
-            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
+            simpleName = "KlangScriptIgnitor",
+            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor",
         )
-        registry.getVariantsForReceiver(crossModuleQuery).map { it.name } shouldBe listOf("analog")
+        registry.getVariantsForReceiver(crossModuleQuery).map { it.name } shouldBe listOf("slot")
     }
 
     "typeMatches: FQCN mismatch overrides simpleName-equal" {
@@ -446,7 +446,7 @@ class KlangDocsRegistryTest : StringSpec({
                 variants = listOf(
                     KlangCallable(
                         name = "sine",
-                        receiver = KlangType("Osc", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"),
+                        receiver = KlangType("Ignitor", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"),
                         params = emptyList(),
                     )
                 )
@@ -454,7 +454,7 @@ class KlangDocsRegistryTest : StringSpec({
         )
 
         // Inferrer emits a KlangType without fqcn — should still match by simpleName.
-        registry.getVariantsForReceiver(KlangType("Osc")).map { it.name } shouldBe listOf("sine")
+        registry.getVariantsForReceiver(KlangType("Ignitor")).map { it.name } shouldBe listOf("sine")
     }
 
     "typeMatches: null query matches null-owner (top-level functions)" {

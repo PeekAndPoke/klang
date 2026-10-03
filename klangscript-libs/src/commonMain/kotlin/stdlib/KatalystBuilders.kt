@@ -39,13 +39,13 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * marker on a name knob), so `k.reverb()` means what it always meant and `k.reverb(0.3)` what
  * `k.reverb(r => r.wet(0.3))` meant before the door shapes of phase 3 step 3d. It is a
  * fixed value of the chain, not a slot: only a slot (`Katalyst.param(...)`, or any `Param` such as
- * `Osc.param(...)`) listens to the orbit's `katp` state.
+ * `Ignitor.param(...)`) listens to the orbit's `katp` state.
  *
  * The knobs use the same names and scales as their sprudel twins, so a number means the same on
  * an orbit and at the output. At the output nothing fills a slot (it stays at its default) and a
  * `duck` stage is inert.
  *
- * Every knob takes a number OR an `Osc.param(...)` slot (`IgnitorDslLike`, the same door the
+ * Every knob takes a number OR an `Ignitor.param(...)` slot (`IgnitorDslLike`, the same door the
  * oscillator knobs use). The chain reads its knobs once per block, so a signal-rate node on one is
  * coerced, never rejected. The one exception is the compressor's and the limiter's `lookahead`, a
  * plain number fixed when the chain is built (it sizes a delay ring).
@@ -470,7 +470,7 @@ fun KatalystBuilder.gain(gain: IgnitorDslLike = 1.0): KatalystBuilder =
  * Katalyst(k => k.through(hall, ceiling))
  * ```
  *
- * Serial, one stage into the next, as `Osc`'s `through`. Not sprudel's `apply(f, g)`, which stacks the
+ * Serial, one stage into the next, as `Ignitor`'s `through`. Not sprudel's `apply(f, g)`, which stacks the
  * results side by side. Every stage is checked on the way: a stage that is null, returns nothing or returns
  * something other than the builder is a script error naming the stage; a stage that is not a function at all is
  * refused at the call ("expected a function, got a number").

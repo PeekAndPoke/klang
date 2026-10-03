@@ -103,9 +103,9 @@ class AnalyzedAstTest : StringSpec({
 
     // ── Identifier types ───────────────────────────────────────────────────
 
-    "identifier: Osc resolves to Osc" {
-        val a = analyze("Osc")
-        a.typeOf(a.topExpr())?.simpleName shouldBe "Osc"
+    "identifier: Ignitor resolves to Ignitor" {
+        val a = analyze("Ignitor")
+        a.typeOf(a.topExpr())?.simpleName shouldBe "Ignitor"
     }
 
     "identifier: Math resolves to Math" {
@@ -182,9 +182,9 @@ class AnalyzedAstTest : StringSpec({
 
     // ── getTypeAt (1-based line/col) ───────────────────────────────────────
 
-    "getTypeAt: position on Osc identifier" {
-        val a = analyze("Osc.sine()")
-        a.getTypeAt(1, 1)?.simpleName shouldBe "Osc"
+    "getTypeAt: position on Ignitor identifier" {
+        val a = analyze("Ignitor.sine()")
+        a.getTypeAt(1, 1)?.simpleName shouldBe "Ignitor"
     }
 
     "getTypeAt: multi-line — number literal on line 1" {
@@ -193,10 +193,10 @@ class AnalyzedAstTest : StringSpec({
         a.getTypeAt(1, 9)?.simpleName shouldBe "Number"
     }
 
-    "getTypeAt: multi-line — Osc on line 2" {
-        val code = "let x = 42\nOsc.sine()"
+    "getTypeAt: multi-line — Ignitor on line 2" {
+        val code = "let x = 42\nIgnitor.sine()"
         val a = analyze(code)
-        a.getTypeAt(2, 1)?.simpleName shouldBe "Osc"
+        a.getTypeAt(2, 1)?.simpleName shouldBe "Ignitor"
     }
 
     "getTypeAt: non-expression position returns null" {
@@ -494,7 +494,7 @@ class AnalyzedAstTest : StringSpec({
     "registry: stores the registry passed to build" {
         val registry = stdlibRegistry()
         val a = AnalyzedAst.build("42", registry)
-        a.registry.get("Osc").shouldNotBeNull()
+        a.registry.get("Ignitor").shouldNotBeNull()
         a.registry.get("Math").shouldNotBeNull()
     }
 

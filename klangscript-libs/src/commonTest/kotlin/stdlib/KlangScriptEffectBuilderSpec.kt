@@ -52,7 +52,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
 
     "eq: the Kotlin door of the stdlib takes the same lambda" {
         ks("Osc.saw().eq(e => e.band(300, 1.0, -4))") shouldBe
-                KlangScriptOscExtensions.eq(saw, configure = { it.band(300.0, 1.0, -4.0) })
+                KlangScriptIgnitorExtensions.eq(saw, configure = { it.band(300.0, 1.0, -4.0) })
     }
 
     "eq: a lambda that returns nothing is a script-level type error" {

@@ -28,7 +28,7 @@ class KlangScriptPulzeSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun node() = KlangScriptOsc.square()
+    fun node() = KlangScriptIgnitor.square()
 
     "Osc.square(): script == Kotlin door, all defaults" {
         ks("Osc.square()") shouldBe node()
@@ -63,7 +63,7 @@ class KlangScriptPulzeSpec : StringSpec({
     }
 
     "the Kotlin door takes the same lambda" {
-        ks("Osc.square(x => x.fallFlank(0.5))") shouldBe KlangScriptOsc.square(configure = { it.fallFlank(0.5) })
+        ks("Osc.square(x => x.fallFlank(0.5))") shouldBe KlangScriptIgnitor.square(configure = { it.fallFlank(0.5) })
     }
 
     "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {

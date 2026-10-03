@@ -39,11 +39,11 @@ class KlangScriptSuperOscSpec : StringSpec({
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
     val doors = listOf(
-        SuperDoor("supersaw", { KlangScriptOsc.supersaw() }, { KlangScriptOsc.supersaw(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supersine", { KlangScriptOsc.supersine() }, { KlangScriptOsc.supersine(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supersquare", { KlangScriptOsc.supersquare() }, { KlangScriptOsc.supersquare(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("supertri", { KlangScriptOsc.supertri() }, { KlangScriptOsc.supertri(configure = { it.voices(11).spread(0.12) }) }),
-        SuperDoor("superramp", { KlangScriptOsc.superramp() }, { KlangScriptOsc.superramp(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("supersaw", { KlangScriptIgnitor.supersaw() }, { KlangScriptIgnitor.supersaw(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("supersine", { KlangScriptIgnitor.supersine() }, { KlangScriptIgnitor.supersine(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("supersquare", { KlangScriptIgnitor.supersquare() }, { KlangScriptIgnitor.supersquare(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("supertri", { KlangScriptIgnitor.supertri() }, { KlangScriptIgnitor.supertri(configure = { it.voices(11).spread(0.12) }) }),
+        SuperDoor("superramp", { KlangScriptIgnitor.superramp() }, { KlangScriptIgnitor.superramp(configure = { it.voices(11).spread(0.12) }) }),
     )
 
     "every calling form and every knob: script == the default node with the knob's own field written" {
@@ -136,7 +136,7 @@ class KlangScriptSuperOscSpec : StringSpec({
         for (door in doors) {
             withClue(door.name) {
                 val err = shouldThrow<KlangScriptTypeError> { ks("Osc.${door.name}(x => { x.voices(3) })") }
-                err.message shouldBe "the configure lambda of Osc.${door.name} returned nothing; " +
+                err.message shouldBe "the configure lambda of Ignitor.${door.name} returned nothing; " +
                         "return the builder it received (`x => x.analog(3)`)"
 
                 shouldThrow<KlangScriptTypeError> { ks("Osc.${door.name}(x => 5)") }

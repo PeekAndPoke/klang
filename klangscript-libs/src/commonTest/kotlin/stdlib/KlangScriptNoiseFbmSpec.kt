@@ -27,8 +27,8 @@ class KlangScriptNoiseFbmSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun perlin() = KlangScriptOsc.perlin() as IgnitorDsl.PerlinNoise
-    fun berlin() = KlangScriptOsc.berlin() as IgnitorDsl.BerlinNoise
+    fun perlin() = KlangScriptIgnitor.perlin() as IgnitorDsl.PerlinNoise
+    fun berlin() = KlangScriptIgnitor.berlin() as IgnitorDsl.BerlinNoise
 
     // --- perlin -------------------------------------------------------------
 

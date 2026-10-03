@@ -29,7 +29,7 @@ class KlangScriptSineSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun node() = KlangScriptOsc.sine() as IgnitorDsl.Sine
+    fun node() = KlangScriptIgnitor.sine() as IgnitorDsl.Sine
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
     "Osc.sine(): script == Kotlin door, all defaults, and it is the plain sine" {
@@ -108,7 +108,7 @@ class KlangScriptSineSpec : StringSpec({
 
     "the Kotlin door takes the same lambda" {
         ks("Osc.sine(x => x.harmonics(7, 0.5).fundamental(0))") shouldBe
-            KlangScriptOsc.sine(configure = { it.harmonics(7.0, 0.5).fundamental(0.0) })
+            KlangScriptIgnitor.sine(configure = { it.harmonics(7.0, 0.5).fundamental(0.0) })
     }
 
     "the even series: multiples follow the door's freq" {
