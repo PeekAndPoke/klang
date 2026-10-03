@@ -497,29 +497,5 @@ object KlangScriptIgnitor {
 @KlangScript.Constant
 val Ign: KlangScriptIgnitor = KlangScriptIgnitor
 
-/**
- * The old name of [KlangScriptIgnitor], kept while the call sites migrate.
- *
- * Scaffolding of the Ignitor/Katalyst rename, removed in C5 (`docs/plans/ignitor-katalyst-naming.md`).
- * Write `Ignitor` or `Ign`.
- *
- * @category object
- * @tags ignitor, alias
- */
-@KlangScript.Constant
-val Osc: KlangScriptIgnitor = KlangScriptIgnitor
-
-/**
- * The old global name of [KlangScriptIgnitorSlots], kept while the call sites migrate.
- *
- * Scaffolding of the Ignitor/Katalyst rename, removed in C5 (`docs/plans/ignitor-katalyst-naming.md`).
- * Write `Ignitor.slot` or `Ign.slot`.
- *
- * @category object
- * @tags ignitor, slot, alias
- */
-@KlangScript.Constant
-val OscSlot: KlangScriptIgnitorSlots = KlangScriptIgnitorSlots
-
 /** The door convention for `freq`: null means "the playing note's pitch" ([IgnitorDsl.Freq]). */
 private fun IgnitorDslLike?.orNoteFreq(): IgnitorDsl = this?.toIgnitorDsl() ?: IgnitorDsl.Freq

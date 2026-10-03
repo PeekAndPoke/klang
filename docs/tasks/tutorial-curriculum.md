@@ -242,7 +242,7 @@ stages must not carry it.
   musical defaults (`docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`) an unset slot takes size 5, time
   0.25 s, feedback 0.3, wet 0.25, and §2 ("What you leave out") teaches the default by ear instead.
   Needs a by-ear pass in the review loop.
-  (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
+  (b) `onepole` is an Ignitor slot inside the instrument, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
   (c) `gain` is applied at the voice output in SendRenderer, so it does NOT drive the
   distortion; the draft's "dropping gain feeds the distortion less" was FALSE. Until 2026-09-19

@@ -89,7 +89,7 @@ superseded 2026-09-06 by "commit completed steps"), "this file is owned by anoth
 | Script-door defaults must be safe literals; a `Slots.*` default makes KSP emit no thunk and named calls that skip it fail at runtime (the KSP guard catches floatable shapes only). | 2026-09-05 | `/dsl-design` §3 |
 | Structural cycle selection (`arrange`, `<...>`) uses exact integer-cycle selection; the N-does-not-divide-T bug class is proven. Guard: `StructuralCycleSelectionSpec`. | 2026-07 | `sprudel/MEMORY.md` Lessons |
 | Builtin songs are KlangScript inside Kotlin strings: `/` divides, `$` interpolates.                                          | 2026-09    | this line                                  |
-| `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibOscTest`, `StdLibNumberMethodsTest`. | 2026-09-10 | `/dsl-design` §5 |
+| `min`/`max` are clamps on every door: `a.max(b)` is "a, at most b". The Ignitor doors therefore build the opposite-named node (`max` builds `IgnitorDsl.Min`); the nodes and the runtime `Ignitor.min`/`max` primitives keep the mathematical meaning, and `Math.min(a, b)`/`Math.max(a, b)` still select. Do not "correct" the crossing. Guard: `StdLibIgnitorTest`, `StdLibNumberMethodsTest`. | 2026-09-10 | `/dsl-design` §5 |
 
 ### Retired, do not restore or cite
 
@@ -131,7 +131,7 @@ the registry's engine `onepole` wrap with `IgnitorRegistry.endsInClassic(name)` 
 stays); and the strip-only filter classes `SvfLPF`, `SvfHPF`, `SvfNotch`, `PassCascadeFilter`, `createLPF` / `createHPF`
 / `createBPF` / `createNotch`, `ChainAudioFilter`, `NoOpAudioFilter`, `AudioFilter.combine()` and `AudioFilter.Tunable`
 (the tree's filter is `Ignitor.svf`; `BaseSvf`, `SvfBPF` for the resonators, the OnePoles and `butterworthQLadder` stay). The typed `VoiceData` fields
-that no reader was left for (gone 2026-09-27, phase 3 step 9 (b): a voice door is a `classic()` slot in `oscParams`, an
+that no reader was left for (gone 2026-09-27, phase 3 step 9 (b): a voice door is a `classic()` slot in `ignitorParams`, an
 orbit stage a `katalystParams` slot): `scale`, `filters`, `adsr`, `distort`, `distortShape`, `distortOversample`,
 `coarse`, `coarseOversample`, `crush`, `crushOversample`, `phaser`, `phaserDepth`, `phaserCenter`, `phaserSweep`,
 `phaserFloor`, `tremoloSync`, `tremoloDepth`, `tremoloSkew`, `tremoloPhase`, `tremoloShape`, `cutoff`, `hcutoff`, `bandf`,
@@ -156,7 +156,12 @@ sweep, "an 8-bit laser shot"), and the pool was replaced by two banks and one pa
 config, latest wins, at `BANK_CROSSFADE_SECONDS`. The tremolo's own LFO and its two shape knobs (gone 2026-09-29, `docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`: the tremolo is composed from the oscillators at voice build, the maintainer chose it by ear): `TremoloIgnitor`, `Ignitor.tremolo(...)`, `TremoloCore`, `LfoShape` (the `LfoShapes` name vocabulary stays), and `skew` / `phase` on every tremolo door with the slot keys `tremolo.skew` / `tremolo.phase`. `postgain` in every form, and the wire field `velocity` (gone 2026-09-19: `gain` is the one level word, the
 channel fader applied once with pan, so a song that used both folds them by multiplication, and sprudel's
 `velocity` door stays but is multiplied into `gain` where the voice crosses the wire; see
-`docs/plans/signal-flow-redesign.md` section 6).
+`docs/plans/signal-flow-redesign.md` section 6). The old names of the Ignitor's script surface (gone 2026-10-04,
+`docs/plans/ignitor-katalyst-naming.md`: one word per concept, a full and a short name for each engine word): the
+script object `Osc` (now `Ignitor`, short `Ign`), the global `OscSlot` (now `Ignitor.slot`), the setters `oscparam` /
+`oscp` (now `ignitorParam` / `ignp`), the wire field `oscParams` (now `ignitorParams`), `SoundValue.Osc` (now
+`SoundValue.Dsl`) and the Kotlin types `KlangScriptOsc`, `KlangScriptOscSlot`, `KlangScriptOscExtensions`. The
+`Osc*Builder` types keep their names: they configure real oscillators. Guard: `RetiredIgnitorNamesSpec`.
 
 ## Available Agent
 

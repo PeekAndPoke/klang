@@ -223,8 +223,11 @@ A concept carries ONE name across the KlangScript object, the `*Dsl` type, the s
 the wire, and the backend registry/runtime. The Katalyst is the model:
 `Katalyst` object, `KatalystDsl`, `.katalyst()`, `KatalystRegistry`, no split.
 
-Known debt, capture-only, not scheduled: the script object is `Osc` but the type is `IgnitorDsl`
-and the runtime is the Ignitor. When unifying, pick one word and carry it everywhere.
+The split that was left open, a script object named apart from its type `IgnitorDsl`, is resolved (2026-10-04,
+`docs/plans/ignitor-katalyst-naming.md`): the script object, the wire field (`ignitorParams`), the setter
+(`ignitorParam`) and the runtime all say Ignitor. A second, shorter name is the house pattern, for songs: `Ign` and
+`Kat` are `@KlangScript.Constant` vals holding the same object as `Ignitor` and `Katalyst`, so every member answers
+to both (no alias factory, no third name).
 
 Also: when a surface is redesigned, REMOVE what it replaces. Two doors to the same thing
 (`MasterFx.gain()` next to `Master(m => m.gain())`, both gone since) is a finding, not backward compatibility.

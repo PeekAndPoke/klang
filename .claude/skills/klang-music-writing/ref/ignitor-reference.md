@@ -491,6 +491,21 @@ let bass = Ignitor.saw()
 note("c2").sound(bass).adsrOff().ignp("cutoff", 1200)
 ```
 
+The pattern setter is `ignitorParam(slot, value)`, `ignp` for short. `slot` is the slot's name or the param
+object itself, so a param held in a variable needs no typed name. Only the NAME is written; the default stays the
+one the instrument declared:
+
+```javascript
+let cutoff = Ignitor.param("cutoff", 800)
+let bass = Ignitor.saw().lowpass(cutoff).adsr(0.005, 0.2, 0.0, 0.05).classic()
+
+note("c2").sound(bass).adsrOff().ignp("cutoff", 1200)   // by name
+note("c2").sound(bass).adsrOff().ignp(cutoff, 1200)     // by the param object
+
+// a classic slot, by object: this is the slot lpf.freq, which the lpf door writes too
+note("c3").sound(Ignitor.saw().classic()).ignp(Ignitor.slot.lpf.freq, 1200)
+```
+
 ### `Ignitor.constant(value)` — Fixed, not overridable
 
 Use when you want an exact locked value:
@@ -556,6 +571,33 @@ plays as its bare tree: the voice doors reach it only where its own tree reads t
 teardown fade unless its own root envelope ends it. A door beats an `ignp` on the same slot (sprudel's
 `toVoiceData()` writes the door's value last). If your instrument has a long own tail (a pad's release), write the
 pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over its own slot (0.05 s by default).
+
+### Aliases and slot objects
+
+`Ign` is a second name for `Ignitor`: the same object, every member (`Ign.sine()` is `Ignitor.sine()`,
+`Ign.slot.lpf.freq` is `Ignitor.slot.lpf.freq`). `Kat` is the short name of `Katalyst` the same way (`Kat(k => ...)`,
+`Kat.slot.reverb.wet`). The songs use `Ign` (and `ignp`) and spell `Katalyst` out; this reference spells the full names.
+
+`Katalyst.slot.<stage>.<knob>` holds the knobs of the classic chain as objects, one group per stage (`body`, `vowel`,
+`delay`, `reverb`, `phaser`, `compressor`, `gain`, `duck`), and `Katalyst.param(name, default)` makes a knob of your
+own. `katalystParam(slot, value)`, `katp` for short, takes the name or the object, like `ignp`:
+
+```javascript
+let room = Katalyst.param("room", 2)
+let bus = Katalyst(k => k.reverb(0.5, room))
+
+note("c3 e3").s("saw").katalyst(bus).katp(room, "<2 9>")
+note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp(Katalyst.slot.reverb.size, "<2 8>")
+```
+
+The two kinds of param are different types, `Ignitor.param` for the instrument and `Katalyst.param` for the chain,
+and the wrong one is a script error at the call, with the fix in the message. `ignp(Katalyst.param(...), 1)` says
+`a Katalyst param passed to ignp; use katp`. An `Ignitor.param` handed to a chain knob, as in
+`Katalyst(k => k.reverb(0.5, cutoff))` with the `cutoff` of the setter example above, says
+`an Ignitor param in a Katalyst chain; use Kat.param`. A Katalyst param has no arithmetic
+(`Katalyst.param("room", 5).mul(2)` is an error). An expression over an Ignitor param on a chain knob is accepted,
+but it is folded once when the chain is built and does not listen to `katp`: hand the knob a `Katalyst.param` and
+do the arithmetic on the pattern side.
 
 ### Audio-rate Modulation
 

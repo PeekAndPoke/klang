@@ -111,8 +111,8 @@ object KlangScriptKatalyst {
      *
      * It returns a Katalyst param, not a sound: it has no arithmetic (`.mul(2)` on it is a script error), because a
      * knob listens to `katp` only when it IS the slot. An expression over any param on a chain knob (an
-     * `Ignitor.param(...).mul(2)`, say) is folded ONCE when the chain is built and does not listen: hand the knob the
-     * param itself and do the arithmetic on the pattern side.
+     * `Ignitor.param(...).mul(2)`, say) is folded ONCE when the chain is built and does not listen: hand the knob a
+     * `Katalyst.param` and do the arithmetic on the pattern side.
      *
      * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
      * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross, and the two kinds of param do

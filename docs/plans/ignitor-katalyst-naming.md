@@ -1,7 +1,18 @@
 # Ignitor and Katalyst: one name each, end to end
 
 Planned 2026-10-03 from the maintainer's decisions of the same day (brief: `tmp/reviews/naming-plan-brief.md`).
-Status: plan, nothing built. Every count below was taken with `git grep` on `main` at `38fa1d42`; a sentence
+Status: **DONE 2026-10-04** on branch `ignitor-katalyst-naming` (commits C1 `807e42d3`, C2 `52e915f0`, D1 `d8b2642f`,
+C3 `1ac2f0b0`, C4 `e9250ea4`, then C5 with D2). Verified: a corpus of 18 songs (the built-ins and the frozen texts) over
+256 cycles hashes identical in raw doubles to the baseline taken before C1, after every code step and on the final tree,
+with an engagement control (a deliberate `ignp` mutant moved exactly the 5 predicted rows); the full suite green after
+each step; `WIRE_SCHEMA_HASH` moved (779447070 to -785660449). Reviews R-A to R-E, each until a clean round. Departures
+from the plan: an Ignitor expression over a param on a Katalyst knob is documented, not refused (a tree walk would
+trip on the `Slots.analog` every oscillator carries); `console/song-snapshots.sh` migrates the old tags' syntax on
+extraction instead of letting them stop parsing; the shared `EqBuilder` carries an `onKatalyst` flag; the setter errors
+carry the call location explicitly (4.5's assumption did not hold). Found along the way, filed separately:
+`docs/tasks/stdlib-export-block.md`.
+
+The plan as written follows. Every count below was taken with `git grep` on `main` at `38fa1d42`; a sentence
 marked **UNVERIFIED** is a claim about behaviour that nobody has run yet, and the implementer confirms or refutes it
 before building on it (`/review-loop`, "a claim about what existing code DOES").
 

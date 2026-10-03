@@ -158,63 +158,6 @@ fun PatternMapperFn.ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: C
     return this.chain { p -> applyIgnitorParam(p, name, value, callInfo) }
 }
 
-// -- oscparam() / oscp(): scaffolding of the Ignitor/Katalyst rename, removed in C5 ----------------------------------
-//
-// One-line forwards so every song, test and doc that still says `oscparam` / `oscp` keeps working until C3 migrates
-// them (`docs/plans/ignitor-katalyst-naming.md`). Write `ignitorParam` / `ignp`.
-
-/**
- * The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5.
- *
- * @scope voice
- * @category tonal
- * @tags ignitor, parameter, slot
- */
-@KlangScript.Function
-fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.ignitorParam(key, value, callInfo)
-
-/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.ignitorParam(key, value, callInfo)
-
-/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    ignitorParam(key, value, callInfo)
-
-/** The old name of [ignitorParam]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.ignitorParam(key, value, callInfo)
-
-/**
- * The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5.
- *
- * @scope voice
- * @category tonal
- * @tags ignitor, parameter, slot
- */
-@KlangScript.Function
-fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.ignitorParam(key, value, callInfo)
-
-/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.ignitorParam(key, value, callInfo)
-
-/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    ignitorParam(key, value, callInfo)
-
-/** The old name of [ignp]. Scaffolding of the Ignitor/Katalyst rename, removed in C5. */
-@KlangScript.Function
-fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.ignitorParam(key, value, callInfo)
-
 // -- analog() ---------------------------------------------------------------------------------------------------------
 
 private val analogMutation = voiceSetter {

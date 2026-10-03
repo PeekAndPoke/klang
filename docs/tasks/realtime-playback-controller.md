@@ -110,7 +110,7 @@ class MidiConnector(private val nextLiveId: () -> Int) {
         /** Panic CC (120/123), device unplug, or teardown — every id the connector still holds. */
         data class AllNotesOff(val liveIds: List<Int>, val reason: Reason) : Event
 
-        /** Everything else: v1 maps these onto oscparams. */
+        /** Everything else: v1 maps these onto Ignitor slots. */
         data class ControlChange(
             val channel: Int,
             val cc: Int,

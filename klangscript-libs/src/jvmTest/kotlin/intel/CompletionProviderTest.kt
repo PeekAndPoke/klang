@@ -122,15 +122,13 @@ class CompletionProviderTest : StringSpec({
         val names = provider.topLevelCompletions("").map { it.name }
         names shouldContainExactlyInAnyOrder listOf(
             "Ignitor", "Ign", "Math", "Object", "PI", "E", "Katalyst", "Kat",
-            "Osc", "OscSlot", // scaffolding of the Ignitor/Katalyst rename, removed in C5 with these two names
         )
     }
 
     "top-level: filtered prefix" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.topLevelCompletions("O").map { it.name }
-        // "Osc" and "OscSlot": scaffolding of the Ignitor/Katalyst rename, removed in C5 with these two names
-        names shouldContainExactlyInAnyOrder listOf("Object", "Osc", "OscSlot")
+        val names = provider.topLevelCompletions("K").map { it.name }
+        names shouldContainExactlyInAnyOrder listOf("Katalyst", "Kat")
     }
 
     "top-level: case-insensitive prefix" {

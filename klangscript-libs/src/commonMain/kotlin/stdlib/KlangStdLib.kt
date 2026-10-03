@@ -43,8 +43,7 @@ object KlangStdLib {
         return klangScriptLibrary("stdlib") {
             // Today this list governs nothing: the natives below reach a script through the engine's native
             // environment, and the exported map comes out empty, so `import { Math } from "stdlib"` fails for
-            // every name (docs/tasks/stdlib-export-block.md). `Osc` is scaffolding of the Ignitor/Katalyst
-            // rename, removed in C5.
+            // every name (docs/tasks/stdlib-export-block.md).
             source(
                 """
                 export {
@@ -54,8 +53,7 @@ object KlangStdLib {
                     Ignitor,
                     Ign,
                     Katalyst,
-                    Kat,
-                    Osc
+                    Kat
                 }
                 """.trimIndent()
             )

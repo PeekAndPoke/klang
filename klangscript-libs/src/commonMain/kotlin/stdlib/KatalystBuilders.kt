@@ -49,8 +49,8 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  *
  * Every knob takes a number OR a Katalyst param (`IgnitorDslLike`, converted by [toKatalystKnob]). An
  * `Ignitor.param(...)` is a script error there; the reason is on [toKatalystKnob]. An expression over a param
- * (`Ignitor.param("room", 5).mul(2)`) is folded ONCE, when the chain is built, and never listens: hand the knob the
- * param itself and do the arithmetic on the pattern side. The chain reads its knobs once per block, so a signal-rate node on one is coerced, never rejected. The one
+ * (`Ignitor.param("room", 5).mul(2)`) is folded ONCE, when the chain is built, and never listens: hand the knob a
+ * `Katalyst.param` and do the arithmetic on the pattern side. The chain reads its knobs once per block, so a signal-rate node on one is coerced, never rejected. The one
  * exception is the compressor's and the limiter's `lookahead`, a plain number fixed when the chain is built (it
  * sizes a delay ring).
  */
@@ -69,7 +69,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * wrong KIND of argument, which no clamp can make mean what the author wanted.
  *
  * An expression over a param (`Ignitor.param("room", 5).mul(2)`) is accepted and folded once at build, so it does not
- * listen: hand the knob the param itself. (Not refused: a tree walk for a `Param` would also trip on the
+ * listen: hand the knob a `Katalyst.param`. (Not refused: a tree walk for a `Param` would also trip on the
  * `Slots.analog` default every oscillator carries, so `k.phaser(rate = Ignitor.sine(0.2))` would be refused.)
  *
  * Anything that is neither a number, a Katalyst param nor a sound (a string, a lambda, an object ...) is a type error with

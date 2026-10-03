@@ -46,7 +46,8 @@ problems with their current surface:
 - Defined in `sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt` and
   `lang_synthesis_snd_super.kt`.
 - Each function: a `voiceModifier` splits the single string on `":"`, `toDoubleOrNull()`s each field, and
-  maps them onto ignitorParams via `withOscParams("decay" to parts[0], "brightness" to parts[1], …)`. Empty
+  maps them onto the Ignitor slots through a bulk copy helper, since removed. (Today, 2026-10-04: the colon string is
+  gone; each named argument is one `ignitorParam` call, `lang_synthesis_snd_super.kt`.) Empty
   args → bare `copy(sound = Named(...))`; non-empty → `_applyControlFromParams(...)` so the **composite
   string** can be a control pattern (but only as a whole).
 - **Tool-window integration is annotation-driven** (this is the part that complicates the redesign):

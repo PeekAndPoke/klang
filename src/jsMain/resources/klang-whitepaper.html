@@ -1774,7 +1774,9 @@
                 filter closes as the note dies away. It is a sketch in the spirit of <a href="#s7">§7</a>, not a model of the
                 instrument. Both instruments end in <code>.classic()</code>, which adds the ready-made finishing
                 stages that every instrument in this paper shares; it has a subsection of its own below. The picture
-                below draws the glockenspiel's tree as a graph.
+                below draws the glockenspiel's tree as a graph. (Its boxes write <code>Ign.sine()</code>:
+                <code>Ign</code> is a shorter name for <code>Ignitor</code>, the same object, and the instruments of the
+                built-in songs use it. The listings here spell the full name out.)
             </p>
 
             <figure class="klang-figure">
@@ -1815,9 +1817,13 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
             <p>
                 <b>Slots.</b> The kick's <code>Ignitor.param(name = "punch", default = 24)</code> declares a slot: a
                 named knob, with a default, that a pattern can fill per note. The pattern writes it with
-                <code>ignitorParam("punch", …)</code>, and since the value the pattern writes is itself a pattern,
-                <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. This is where the two languages
-                meet: the instrument declares the knob, the pattern plays it.
+                <code>ignitorParam("punch", …)</code> (<code>ignp</code> for short), and since the value the pattern
+                writes is itself a pattern, <code>"&lt;24 48&gt;"</code> alternates the drop depth cycle by cycle. The
+                call takes the param itself in place of its name: declare
+                <code>let punch = Ignitor.param(name = "punch", default = 24)</code> once, hand <code>punch</code> to
+                <code>pitchEnvelope</code>, and <code>ignitorParam(punch, …)</code> writes the same slot. A misspelled
+                variable stops the script with an error, where a misspelled name is a write that nothing reads. This
+                is where the two languages meet: the instrument declares the knob, the pattern plays it.
             </p>
 
             <p>
@@ -1907,7 +1913,8 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
                 Each orbit runs one <b>Katalyst</b> chain, declared once with <code>Katalyst(k =&gt; …)</code>,
                 where the written order is the signal order. A knob written as a number stays that number; a knob
                 declared as <code>Katalyst.param(…)</code> is a slot the pattern fills with
-                <code>katp(name, value)</code>. Where a jump would be audible, an orbit knob glides to its new value
+                <code>katp</code>, by the slot's name or by the param itself (the listing below does the latter).
+                Where a jump would be audible, an orbit knob glides to its new value
                 over 50 ms rather than stepping (the resonators and the EQ, which are banks of filters, swap by a
                 20 ms crossfade instead): a safety net against clicks when two patterns take turns on one orbit, not
                 a guarantee.
@@ -1938,10 +1945,11 @@ note(<span class="st">"a1 ~ a1 ~"</span>).sound(kick).adsrOff().ignitorParam(<sp
 )
 
 <span class="cm">// A chain slot: the knob a pattern moves with katp(); it glides to a new value over 50 ms</span>
-<span class="kw">let</span> bus = Katalyst(k =&gt; k.reverb(0.5, Katalyst.param(<span class="st">"room"</span>, 5.0)))
+<span class="kw">let</span> room = Katalyst.param(<span class="st">"room"</span>, 5.0)
+<span class="kw">let</span> bus = Katalyst(k =&gt; k.reverb(0.5, room))
 
 stack(guitar1, guitar2, guitar3).katalyst(guitarBus)   <span class="cm">// three orbits, one chain</span>
-note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).katalyst(bus).katp(<span class="st">"room"</span>, <span class="st">"&lt;2 9&gt;"</span>)   <span class="cm">// a small room, then a hall</span></pre>
+note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).katalyst(bus).katp(room, <span class="st">"&lt;2 9&gt;"</span>)   <span class="cm">// a small room, then a hall</span></pre>
                 </div>
                 <figcaption>The reverb is an insert: it takes a copy of the orbit's mix at its place in the list,
                     and its output is added back on top of the dry sound, so a room written after the EQ hears the
@@ -1949,6 +1957,17 @@ note(<span class="st">"c3 e3 g3"</span>).s(<span class="st">"supersaw"</span>).k
                     orbits.
                 </figcaption>
             </figure>
+
+            <p>
+                The knobs of the classic chain are objects too: <code>Katalyst.slot.reverb.size</code> is the slot
+                <code>reverb.size</code>, so <code>katp(Katalyst.slot.reverb.size, 8)</code> writes the classic
+                chain's room size without typing the name. A <code>Katalyst.param</code> and an
+                <code>Ignitor.param</code> are different kinds of thing, because <code>ignp</code> fills the
+                instrument and <code>katp</code> fills the chain. Handing one to the other's setter, or an
+                <code>Ignitor.param</code> to a chain knob, is an error at the call that says which one to use. An
+                expression over a param on a chain knob is worked out once when the chain is built and does not listen
+                to <code>katp</code>, so hand the knob a <code>Katalyst.param</code> and do the arithmetic on the pattern side.
+            </p>
 
             <h4>The master: the same chain at the output</h4>
 

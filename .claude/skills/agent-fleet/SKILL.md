@@ -138,10 +138,16 @@ evidence-backed ceilings — they cost little and remove one variable. If future
   (`git commit -- <paths>`), so a file someone else stages in the meantime stays out. And never undo with
   `git reset HEAD~1` while others commit: the same day, another session committed in the three seconds between a
   commit and its reset, and the reset took back THEIR commit (restored from the reflog). Fix a commit with a follow-up
-  commit; look at `git log` first if anything must be rewound.
+  commit; look at `git log` first if anything must be rewound. Never `git stash` in the shared tree either: it takes back
+  everyone's uncommitted work for as long as it is stashed (a writer did it for a second on 2026-10-04; nothing was
+  lost). Compare against a commit with `git show <rev>:<path>` instead.
 
 ## Rules of thumb
 
+- **A rename or doc-sweep brief says how to treat quotations** (2026-10-04, after a sweep rewrote a maintainer's
+  quote): words inside quotation marks attributed to a person stay verbatim. To bring their names up to date, drop the
+  quotation marks and paraphrase, keeping the date. Dated records (History lines, decisions, ledger rows) keep their
+  words as well.
 - **Fan-out multiplies cost.** For large sweeps (~10+ agents), use cheap finders (`sonnet`/`haiku`)
   feeding a narrow, expensive verify stage (`opus`, high effort) — not an expensive model on every item.
 - **When unsure between tiers:** tier up for correctness-critical work, tier down for volume/coverage work.

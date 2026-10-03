@@ -198,9 +198,10 @@ Ignitor.register("supersaw", Ignitor.supersaw().classic())
   and the five decisions this phase needs from the maintainer are in
   `../tasks-archive/2026-09/20260928-builtin-instruments.md`** (the spike of 2026-09-20).
 - (Reshaped 2026-09-27, phase 3 step 8: the doors stay typed; `toVoiceData()` writes the slot keys, section 4.)
-  Every voice door becomes an alias: `.lpf(x)` is `ignp("lpf", x)`, `.pregain(x)` is
-  `ignp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
-  vocabulary from the instrument definitions.
+  Every voice door becomes an alias: `.lpf(x)` is `ignp("lpf.freq", x)`, `.pregain(x)` is
+  `ignp("pregain", x)`, and so on down the table in §2. (Since 2026-10-03 `ignp` takes the slot's name or its param
+  object, so `ignp(Ignitor.slot.lpf.freq, x)` names the same slot as the first.) The editor tools registry reads the
+  slot vocabulary from the instrument definitions.
 
 ## 6. Pregain, gain, and where velocity went (rewritten 2026-09-18 with the maintainer)
 
@@ -420,8 +421,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 - The voice's lifetime. Today the pipeline VCA's release decides when a voice ends and is culled.
   With the envelope inside the tree, the rule becomes "duration plus the tree's longest release",
   read from the tree at build. Needs its own paragraph in phase 3's task.
-- `Osc` and `oscp` are misnomers for the Ignitor concept (the known debt in `/dsl-design` §5) and get
-  renamed in their own item, after phase 3, once the slot vocabulary has settled.
+- The Ignitor's script object and setter carried misnomers (the known debt in `/dsl-design` §5); renamed in their
+  own item after phase 3, DONE 2026-10-04 (`docs/plans/ignitor-katalyst-naming.md`).
 - Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
   engine; phase 5 re-reads them once the surfaces are gone. (2026-09-28: the whitepaper is re-read; the Lexikon had
   no stale entry; the tutorials belong to their own session.)

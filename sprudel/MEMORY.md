@@ -11,13 +11,13 @@ history of a decision. Which functions exist is answered by the `lang/` files an
 ## Voice data and the wire
 
 - `SprudelVoiceData` is mutable and single-owner (see Lessons); its fields are grouped into the `Svd*`
-  classes of `SvdGroups.kt`, and `oscParams` / `katalystParams` are `ParamBag`s (`ParamBag.kt`): a door
-  writes one name in place, the bag is allocated on the first write (`oscParamsOrNew()` /
+  classes of `SvdGroups.kt`, and `ignitorParams` / `katalystParams` are `ParamBag`s (`ParamBag.kt`): a door
+  writes one name in place, the bag is allocated on the first write (`ignitorParamsOrNew()` /
   `katalystParamsOrNew()`), copied once per event by `clone()`, `merge` builds a fresh one, `mergeFrom`
   folds into the receiver's own. The class KDoc of `ParamBag` has the contract.
 - `toVoiceData()` is the one boundary. The voice doors stay TYPED on this side (the query hot loop keeps its
   one allocation, `docs/plans/signal-flow-redesign.md` §4) and are written there as `classic()` slot keys
-  into `oscParams` by `_classic_slot_params.kt`: the filters, `adsr`, distort / crush / coarse, tremolo and
+  into `ignitorParams` by `_classic_slot_params.kt`: the filters, `adsr`, distort / crush / coarse, tremolo and
   the sample's flat `begin` / `end` / `speed` / `loop`. The rules are in that file's KDoc; the key names are
   read from `IgnitorDsl.Slots`, never retyped. Guard: `ClassicSlotParamsSpec`.
 - Still typed wire fields beside the two bags: `note`, `freqHz`, `accelerate`, `vibrato`, `vibratoMod`, `sourceId`, the `penv` and
@@ -60,7 +60,7 @@ setter semantics) and `/dsl-design`. What they produce today:
 
 - `gain` is the one level word (the channel fader, applied once with pan). `velocity` / `vel` is a sprudel
   word that folds into it at the wire (above).
-- `pregain(amount)` is exactly `oscp("pregain", amount)` (`lang_dynamics_level.kt`): it writes a slot, and
+- `pregain(amount)` is exactly `ignp("pregain", amount)` (`lang_dynamics_level.kt`): it writes a slot, and
   the slot does what the instrument's tree wires it to. Every built-in synth and sample places it at the
   source, in front of `classic()`. What it does to each distortion shape is in the door's KDoc; the render
   guards are audio_be's (`PregainSlotRenderSpec`, `VoicePregainWireSpec`).
@@ -161,3 +161,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
   (`docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`).
 - 2026-10-03: the slot setters take a name or the param object, `katalystParam` is `katp`'s full name, wrong kinds are
   script errors (`docs/plans/ignitor-katalyst-naming.md` section 4, step C4).
+- 2026-10-04: the Ignitor/Katalyst naming is complete: `ignitorParam` / `ignp` and `katalystParam` / `katp`, the
+  bag `ignitorParams`, the songs spell `Ign.` and `ignp` (one `ignitorParam`), the old names guarded by `RetiredIgnitorNamesSpec`
+  (`docs/plans/ignitor-katalyst-naming.md`).

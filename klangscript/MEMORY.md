@@ -16,7 +16,7 @@ record), and put the narrative in the task record, which gets archived. The full
   named arguments (`name = value`), imports and exports including `export name = expr`. The status per
   feature is `ref/feature-catalog.md` and `language-features/NN-*.md`.
 - **Module split**: this module is the language and runtime (`klangScriptEngine()` builds a bare engine);
-  the stdlib (`Osc`, `Katalyst`, `Math`, `Object`, `console`, the value-type extensions) and `klangScript()`
+  the stdlib (`Ignitor` / `Ign`, `Katalyst` / `Kat`, `Math`, `Object`, `console`, the value-type extensions) and `klangScript()`
   live in `:klangscript-libs` (`klangscript-libs/CLAUDE.md`), which depends on this module, never the
   reverse. Tests that need the real stdlib live there too.
 - **Configure lambdas**: `runtime/ArgAlignment` holds the trailing-lambda rule for the interpreter and the
@@ -24,8 +24,8 @@ record), and put the narrative in the task record, which gets archived. The full
   `FunctionN` components) let the analyzer bind a lambda's parameters with the callee's declared types, so
   `.superimpose(x => x.` completes. Language docs: `language-features/04-functions.md` 4.10.
 - **Callable objects**: `@KlangScript.Invoke` and the `invoke` dispatch, `ref/interpreter-impl.md`.
-- **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Osc.name(freq?, configure?)` with the knobs
-  on immutable `Osc*Builder` wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
+- **Stdlib doors** (`klangscript-libs`): the oscillator doors are `Ignitor.name(freq?, configure?)` (short `Ign.name`) with the knobs
+  on immutable oscillator builder wrappers (`IgnitorBuilders.kt`); `OscSineBuilder` carries `harmonics`,
   `octaves`, `suboctaves`, `fundamental` (a gain), `analog` and `analogSpread`, and the six super builders
   carry `analogSpread` (0 to 1, 1 is a drift lane per voice). Door shapes follow `/dsl-design` §2.
 - **Number methods** on `KlangScriptNumberExtensions`: `pow abs sqrt round floor ceil min max clamp rem mod
@@ -106,3 +106,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-09-29: this file restructured; the old status, phases and dated entries are in `ref/memory-history.md`.
 - 2026-10-02: a non-callable value on a function-typed native parameter is a type error ("expected a function, got
   a number"), found while building `through` (`docs/tasks-archive/2026-10/20261002-through-signal-chains.md`).
+- 2026-10-04: the Ignitor/Katalyst naming: the stdlib object is `Ignitor` with the alias `Ign` (a
+  `@KlangScript.Constant`, the house pattern for a second name), `Katalyst` with `Kat`, `Ignitor.slot` and
+  `Katalyst.slot` hand back the Kotlin door's objects (`docs/plans/ignitor-katalyst-naming.md`).

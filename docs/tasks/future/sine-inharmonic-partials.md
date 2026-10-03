@@ -90,8 +90,8 @@ One node, growth-only arrays like the other banks, band-limited at Nyquist like 
   ([`sine-noise-band.md`](sine-noise-band.md)).
 - **Drift.** How `analog` and `analogSpread` act on inharmonic partials (the banks drift as one
   oscillator at spread 0 and each partial on its own at 1; `docs/plans/sine-partial-banks.md` section 2).
-- **Decided 2026-10-02: it gets built** ("we will build the `Ignitor.sine(x => x.partials())` in any case",
-  the maintainer). The allocation measurement still belongs in the record, as the before and after.
+- **Decided 2026-10-02: it gets built**: the maintainer decided to build the partials knob on the sine in any case (in
+  today's names it would be written `Ignitor.sine(x => x.partials())`). The allocation measurement still belongs in the record, as the before and after.
 
 ## Follow-ups
 

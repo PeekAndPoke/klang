@@ -22,8 +22,8 @@ shape = x => x.gain(0.25).sound("saw").oscp("mids", 0.0)   -> sound=Named(saw) g
 shape = x => x.gain(0.25).sound("saw").ocsp("mids", 0.0)   -> sound=null       gain=null  oscParams=null
 ```
 
-`ocsp` is a typo for `oscp`. The note still plays, at the registry's default sound, with no gain,
-no envelope, no filters, no osc params.
+`ocsp` is a transposed door name (the door is `ignp` today). The note still plays, at the registry's default sound, with no gain,
+no envelope, no filters, no Ignitor slots.
 
 ## Why it is hard to spot
 

@@ -21,7 +21,7 @@ wiring in `KlangCodePlaybackCtrl`.
 Two design notes differ from the plan below, both because measurement said so: the API shipped as
 `collectingInto(list, block)` rather than `collecting(sink, block)`, and the ranking uses the NEW
 `osaDistance` rather than the existing `levenshtein` — plain Levenshtein scores a transposition
-as 2 edits and could not suggest `oscp` for `ocsp` at all.
+as 2 edits and could not suggest a door name for its transposed spelling at all.
 
 ## KNOWN GAP: query-time transforms are not captured yet
 
@@ -44,9 +44,9 @@ Two ways out, neither free:
 2. Give the player a collector around its real query batches. Correct, but it crosses into
    `audio_engine` and the playback loop, and needs care not to allocate per query.
 
-Triggered 2026-08-21 by a real debugging session: a single transposed letter (`.ocsp` instead of
-`.oscp`) in Der Schmetterling's `lead_shape` silently discarded the entire shape function. The
-lead played with no sound, no gain, no envelope, no filters and no osc params, and every
+Triggered 2026-08-21 by a real debugging session: a single adjacent transposition in a door name (the
+door is `ignp` today) in Der Schmetterling's `lead_shape` silently discarded the entire shape function. The
+lead played with no sound, no gain, no envelope, no filters and no Ignitor slots, and every
 subsequent parameter edit appeared to do nothing. It cost a full session and was misdiagnosed as
 a `.tap()` bug. The error was in the browser console the whole time.
 
@@ -148,8 +148,8 @@ The project already has it, and already has the helper: `Environment.loadLibrary
 
 **The method-not-found path does not use it.** `Interpreter.kt:~1405` instead dumps every
 available method as a flat list, which for a `ControlPattern` is over 400 names and roughly 4 KB
-of console output with no ranking. `.ocsp` → `.oscp` is a single adjacent transposition, so the
-existing `levenshtein` helper would have put `oscp` first and ended the session in seconds.
+of console output with no ranking. The typo was a single adjacent transposition, so the
+existing `levenshtein` helper would have put the right door first and ended the session in seconds.
 
 Fix: reuse the same helper in the method-not-found branch, lead with the suggestion, and keep
 (or truncate) the full list behind it.
