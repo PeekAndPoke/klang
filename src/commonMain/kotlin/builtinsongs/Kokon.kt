@@ -75,7 +75,7 @@ let preampHighGain = x => x
   .highpass(120)                                   // tight: no bass into the gain stages
   .distort(0.40, "tube", 4).highpass(110)
   .distort(0.55, "softsat", 4).highpass(100)
-  .distort(0.65, "hard", 4)
+  .distort(0.60, "hard", 4)
   .lowpass(6800)                                   // the fizz
   .mul(0.25)                                       // volume
 
@@ -103,9 +103,6 @@ let cab1x12 = x => x
   .lowpass(6500, 0.707, x => x.passes(3))
 
 // Drums and bass (from Der Schmetterling)  -------------------------------------------------------
-// The band of Der Schmetterling joins for the second run of the heavy block: its metal kick, its metal snare, its
-// bass guitar, copied (the reasoning behind every part is in Der Schmetterling). Only the tuning follows D minor: 
-// the kick ends on A1 and the snare's head sits on A3, the fifth.
 let snareHz = 210
 
 // The guitar (from Der Schmetterling)  -----------------------------------------------------------
@@ -291,15 +288,15 @@ export soar = notes => n(notes.add(14))
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 11, spread = 0.06)
-  .oscp("attack", 2.5).oscp("decay", 0.3).clip(1)
+  .oscp("attack", 1.2).oscp("decay", 1.5).clip(1)
   .lpf(3500)
-  .gain(0.10).pan(0.1).superimpose(x => x.pan(0.9).late(0.02)) // far left and far right, the right a little late
+  .gain(0.10).pan(0.05).superimpose(x => x.pan(0.95).late(0.02)) // far left and far right, the right a little late
   .orbit(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
-  .oscp("decay", 2.0).clip(2)
+  .oscp("decay", 2.0).clip(2).hpf(120)
   .velocity("1.0 0.8 0.9")
   .gain(0.30).pan(0.3)                             // on the left, across from the melody on the right
   .orbit(3)
@@ -317,7 +314,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .oscp("decay", 0.4).clip(1)
   .velocity("1.0 0.93 0.97 0.93")
-  .gain(0.60)
+  .gain(0.58)
   .pan(0.1).superimpose(x => x.pan(0.9).late(0.004))
   .orbit(5)
 
@@ -350,12 +347,12 @@ let drumRoom = x => x.reverb(wet = 0.2, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(1.2).pan(0.5)
+  .gain(1.1).pan(0.5)
   .orbit(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.45).pan(0.55)
+  .gain(0.47).pan(0.55)
   .lpf(freq = 11500, q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.80) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom) 
@@ -372,7 +369,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .oscp("sub", 0.95).oscp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.80)
-  .gain(1.3).pan(0.5)
+  .gain(1.15).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
