@@ -659,7 +659,7 @@ object SongBenchmarkCases {
         // the drum, one component at a time
         liveCase("trommel: full", "trommel", TROMMEL),
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
-        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
+        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "[a-z]+", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
         liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n \n  let ring = Osc.constant(", "let pAnalog = 0\n \n  let ring = Osc.constant(")),
 
