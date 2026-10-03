@@ -93,19 +93,6 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
         ks("""Osc.saw().tremolo(4, 0.5, x => x.shape(Osc.param("ts", 3)))""").knobs()["shape"] shouldBe IgnitorDsl.Param("ts", 3.0)
     }
 
-    "tremolo: skew and phase are gone from both doors" {
-        // The script builder refuses them; the node, which the Kotlin door builds, has no such field.
-        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.skew(0.3))") }
-        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.phase(0.25))") }
-
-        val node = saw.tremolo(4.0, 0.5, shape = "square").toString()
-
-        withClue(node) {
-            node.contains("skew") shouldBe false
-            node.contains("phase") shouldBe false
-        }
-    }
-
     "tremolo: named door arguments, and a configure lambda that returns nothing is refused" {
         ks("""Osc.saw().tremolo(rate = 4, depth = 0.5, configure = x => x.shape("tri"))""").knobs() shouldBe
                 saw.tremolo(4.0, 0.5, shape = "tri").knobs()

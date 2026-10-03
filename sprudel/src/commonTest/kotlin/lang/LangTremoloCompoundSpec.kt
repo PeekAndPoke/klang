@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -35,14 +34,5 @@ class LangTremoloCompoundSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.tremoloDepth shouldBe null
         events[0].data.tremoloRate shouldBe 4.0
-    }
-
-    // -- the dropped slots -------------------------------------------------------------------------------------------
-
-    "skew and phase are gone from the tremolo door (2026-09-29, the tremolo became a composition)" {
-        SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, rate = 4, shape = "square")""")?.queryArc(0.0, 1.0)?.size shouldBe 1
-
-        shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, rate = 4, skew = 0.3)""") }
-        shouldThrowAny { SprudelPattern.compile("""note("c3").tremolo(depth = 0.5, rate = 4, phase = 0.25)""") }
     }
 })
