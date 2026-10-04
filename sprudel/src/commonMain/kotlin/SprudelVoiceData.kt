@@ -55,7 +55,7 @@ data class SprudelVoiceData(
     /**
      * The sound this voice references. Either a [SoundValue.Named] (sample bank entry,
      * pre-registered ignitor, etc., possibly with `name:index` form parsed into [soundIndex])
-     * or a [SoundValue.Osc] inlining an [IgnitorDsl] tree — the latter gets denormalized to
+     * or a [SoundValue.Dsl] inlining an [IgnitorDsl] tree — the latter gets denormalized to
      * a synthetic name at the wire boundary by [toVoiceData].
      */
     var sound: SoundValue?,
@@ -64,25 +64,25 @@ data class SprudelVoiceData(
 
     /**
      * Voice slots: `classic()`'s door slots (with the flat "onepole" [Hz]), the sample's "begin"/"end"/"speed"/"loop",
-     * the oscillators' own ("density", "voices", "spread") and raw `oscp()` writes. "panSpread" is written, unread.
+     * the oscillators' own ("density", "voices", "spread") and raw `ignp()` writes. "panSpread" is written, unread.
      *
      * **Mutable and single-owner, like the `Svd*` groups**, not immutable-replace: a door writes one
-     * name in place ([putOscParam]) instead of allocating a fresh bag per slot, which is what keeps a
+     * name in place ([putIgnitorParam]) instead of allocating a fresh bag per slot, which is what keeps a
      * pattern that fills a dozen slots out of the "twenty allocations per note" class the June work
      * removed. [clone] deep-copies it, which is the one allocation per event the design allows, and
      * [toVoiceData] hands the wire a COPY (see there). The contract lives on [ParamBag].
      */
-    var oscParams: ParamBag?,
+    var ignitorParams: ParamBag?,
 
     /**
      * The ORBIT's bus slots this event writes, named `<stage>.<knob>` (`"reverb.size"`,
-     * `"compressor.ratio"`, `"duck.orbit"`). Same shape and same rules as [oscParams], the other
+     * `"compressor.ratio"`, `"duck.orbit"`). Same shape and same rules as [ignitorParams], the other
      * host: that bag is the voice's own instrument, this one the chain its orbit runs. Written by
      * `.katp(name, value)` and by the bus doors as aliases (`reverb(...)`, `delay(...)`,
      * `compressor(...)`, `duck(...)` have no voice fields of their own since Katalyst step 5b-3:
      * their slots here are the only place their values live, and their accessors read them back).
      *
-     * Mutable and single-owner, and merged the same way as [oscParams], last writer wins per name.
+     * Mutable and single-owner, and merged the same way as [ignitorParams], last writer wins per name.
      * Carried to `VoiceData.katalystParams` by [toVoiceData].
      */
     var katalystParams: ParamBag?,
@@ -653,10 +653,10 @@ data class SprudelVoiceData(
             if (v != null || phaser != null) phaserOrNew().phaserFloor = v
         }
 
-    var tremoloSync: Double?
-        get() = tremolo?.tremoloSync
+    var tremoloRate: Double?
+        get() = tremolo?.tremoloRate
         set(v) {
-            if (v != null || tremolo != null) tremoloOrNew().tremoloSync = v
+            if (v != null || tremolo != null) tremoloOrNew().tremoloRate = v
         }
     var tremoloDepth: Double?
         get() = tremolo?.tremoloDepth
@@ -704,13 +704,13 @@ data class SprudelVoiceData(
     /**
      * Fresh deep-enough copy: the flat core fields are copied shallow (immutable scalars), and each
      * non-null group is `copy()`-ed so the clone owns its own groups (single-owner invariant — see the
-     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `oscParams` and `katalystParams` are
+     * leaf emitters `AtomicPattern`/`AtomicInfinitePattern`). `ignitorParams` and `katalystParams` are
      * mutable [ParamBag]s and are copied here for the same reason the groups are: the clone owns them, so
      * a door can write a name in place instead of allocating a bag per slot. As more clusters become groups,
      * add them to the deep-copy list here.
      */
     fun clone(): SprudelVoiceData = copy(
-        oscParams = oscParams?.copy(),
+        ignitorParams = ignitorParams?.copy(),
         katalystParams = katalystParams?.copy(),
         adsr = adsr?.copy(),
         lpf = lpf?.copy(),
@@ -740,7 +740,7 @@ data class SprudelVoiceData(
             bank = other.bank ?: bank,
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
-            oscParams = mergeParamBag(oscParams, other.oscParams),
+            ignitorParams = mergeParamBag(ignitorParams, other.ignitorParams),
             katalystParams = mergeParamBag(katalystParams, other.katalystParams),
             adsr = mergeSvdAdsr(adsr, other.adsr),
             pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod),
@@ -790,7 +790,7 @@ data class SprudelVoiceData(
         bank = other.bank ?: bank
         sound = other.sound ?: sound
         soundIndex = other.soundIndex ?: soundIndex
-        oscParams = mergeParamBagInto(oscParams, other.oscParams)
+        ignitorParams = mergeParamBagInto(ignitorParams, other.ignitorParams)
         katalystParams = mergeParamBagInto(katalystParams, other.katalystParams)
         adsr = mergeSvdAdsr(adsr, other.adsr)
         pitchMod = mergeSvdPitchMod(pitchMod, other.pitchMod)
@@ -868,11 +868,11 @@ data class SprudelVoiceData(
      * Converts this Sprudel-specific voice data to audio engine [VoiceData].
      *
      * The voice doors' typed fields (the envelope, the four filters, crush, coarse, distort, tremolo and the
-     * sample's begin, end, speed and loop) travel as SLOT KEYS in `oscParams`, the names the instruments read
+     * sample's begin, end, speed and loop) travel as SLOT KEYS in `ignitorParams`, the names the instruments read
      * ([classicSlotParams], phase 3 step 8). The orbit stages (vowel, body, phaser and the rest) travel as
      * `katalystParams` slots. The typed wire fields of all of them left `VoiceData` in phase 3 step 9.
      *
-     * For inline ignitors ([SoundValue.Osc]) the wire-level `sound` name is resolved via
+     * For inline ignitors ([SoundValue.Dsl]) the wire-level `sound` name is resolved via
      * the process-wide [uniqueId] map — playbacks are expected to pre-register inline
      * ignitors with their backend so that name is already known to the runtime by the
      * time voice events referencing it are scheduled.
@@ -881,7 +881,7 @@ data class SprudelVoiceData(
         val soundName: String? = when (val s = sound) {
             null -> null
             is SoundValue.Named -> s.name
-            is SoundValue.Osc -> s.osc.uniqueId()
+            is SoundValue.Dsl -> s.ignitor.uniqueId()
         }
 
         // Same denormalization for the two chain references, the output's and the orbit's.
@@ -910,12 +910,12 @@ data class SprudelVoiceData(
             // A COPY, not the event's own bag: the wire value outlives the pattern event. The
             // backend holds `Voice.katalystParams` for the whole life of the voice and its chain
             // gates the re-resolve on the map's IDENTITY, so a map sprudel could still write into
-            // would change an orbit's settings invisibly. `oscParams` follows the same rule, one
+            // would change an orbit's settings invisibly. `ignitorParams` follows the same rule, one
             // contract for both (`ParamBag.toMap`). The boundary already allocates a `VoiceData`,
             // and one copy here replaces the one-per-slot copies the doors used to make.
             // The voice doors travel as slot keys in this bag (`classicSlotParams`, phase 3 step 8); their typed
             // wire fields left in phase 3 step 9.
-            oscParams = classicSlotParams(),
+            ignitorParams = classicSlotParams(),
             katalystParams = katalystParams?.toMap(),
             accelerate = accelerate,
             vibrato = vibrato,
@@ -965,7 +965,7 @@ internal val blueprint = SprudelVoiceData(
     bank = null,
     sound = null,
     soundIndex = null,
-    oscParams = null,
+    ignitorParams = null,
     katalystParams = null,
     adsr = null,
     pitchMod = null,
@@ -1076,7 +1076,7 @@ fun SprudelVoiceData.withTweaks(names: List<String>): SprudelVoiceData = when {
 }
 
 /**
- * Merges two param bags (`oscParams`, `katalystParams`) into a FRESH one: other's values override
+ * Merges two param bags (`ignitorParams`, `katalystParams`) into a FRESH one: other's values override
  * this's values, name by name. One function for both, because the two bags differ in their HOST,
  * not in their shape.
  *
@@ -1116,28 +1116,24 @@ private fun mergeParamBagInto(target: ParamBag?, other: ParamBag?): ParamBag? {
  * then calls [ParamBag.set] / [ParamBag.setOrDefault] per slot, so a door that fills five knobs
  * allocates at most one bag. Only safe on a single-owner instance (see [SprudelVoiceData.clone]).
  */
-fun SprudelVoiceData.oscParamsOrNew(): ParamBag = oscParams ?: ParamBag().also { oscParams = it }
+fun SprudelVoiceData.ignitorParamsOrNew(): ParamBag = ignitorParams ?: ParamBag().also { ignitorParams = it }
 
-/** The orbit chain's [ParamBag], the [oscParamsOrNew] twin on the other host. */
+/** The orbit chain's [ParamBag], the [ignitorParamsOrNew] twin on the other host. */
 fun SprudelVoiceData.katalystParamsOrNew(): ParamBag = katalystParams ?: ParamBag().also { katalystParams = it }
 
 /**
- * Writes ONE oscParam on this instance, in place, and nothing at all when [value] is null: a door
+ * Writes ONE Ignitor slot on this instance, in place, and nothing at all when [value] is null: a door
  * that wrote nothing on this event must not leave an empty bag behind, because an empty bag is not
  * the same wire value as none at all.
- *
- * The copying variants (`withOscParam`, `withOscParams`, `mergeOscParamsFrom`) went with the
- * immutable-replace storage on 2026-09-18: nothing called them, and a copy helper over a mutable
- * bag is a second way to own one.
  */
-fun SprudelVoiceData.putOscParam(name: String, value: Double?) {
+fun SprudelVoiceData.putIgnitorParam(name: String, value: Double?) {
     if (value == null) return
 
-    oscParamsOrNew().set(name, value)
+    ignitorParamsOrNew().set(name, value)
 }
 
 /**
- * In-place write of ONE orbit-chain slot, the [putOscParam] twin on the other host (null is a
+ * In-place write of ONE orbit-chain slot, the [putIgnitorParam] twin on the other host (null is a
  * no-op for the same reason).
  *
  * ONE name into the bag this instance already owns. A door that fills a whole STAGE takes
@@ -1153,6 +1149,6 @@ fun SprudelVoiceData.putKatalystParam(name: String, value: Double?) {
 
 /**
  * Convenience accessor that extracts the [SoundValue.Named.name] from [SprudelVoiceData.sound],
- * or null if sound is null or a [SoundValue.Osc].
+ * or null if sound is null or a [SoundValue.Dsl].
  */
 val SprudelVoiceData.soundName: String? get() = (sound as? SoundValue.Named)?.name

@@ -177,7 +177,7 @@ class InlineDslRegistrarTest : StringSpec({
 
         reg.announceAll(
             listOf(
-                FakeEvent(sound = SoundValue.Osc(osc)),
+                FakeEvent(sound = SoundValue.Dsl(osc)),
                 FakeEvent(master = KatalystValue.Dsl(master)),
                 FakeEvent(katalyst = KatalystValue.Dsl(katalyst)),
             )
@@ -209,7 +209,7 @@ class InlineDslRegistrarTest : StringSpec({
     "announceAll ignores events that carry no inline DSL, and repeats announce nothing" {
         val (reg, sent) = newRegistrar()
         val osc = IgnitorDsl.Square(freq = IgnitorDsl.Constant(99.9))
-        val events = listOf(FakeEvent(), FakeEvent(sound = SoundValue.Osc(osc)), FakeEvent())
+        val events = listOf(FakeEvent(), FakeEvent(sound = SoundValue.Dsl(osc)), FakeEvent())
 
         reg.announceAll(events)
         reg.announceAll(events) // a cyclic playback sweeps the same window repeatedly

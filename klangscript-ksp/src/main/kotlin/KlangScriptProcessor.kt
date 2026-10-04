@@ -1202,7 +1202,7 @@ class KlangScriptProcessor(
             appendLine()
         }
 
-        // Generate object-level symbol entries (e.g., "Osc", "Math", "Object")
+        // Generate object-level symbol entries (e.g., "Ignitor", "Math", "Object")
         if (entries.objects.isNotEmpty()) {
             appendLine("private fun generated${capitalizedName}DocsObjects() = mapOf(")
             entries.objects.forEachIndexed { index, obj ->
@@ -1301,7 +1301,7 @@ class KlangScriptProcessor(
             appendLine()
         }
 
-        // Generate member-property entries (e.g., "slot" on "Osc", "analog" on "OscSlot")
+        // Generate member-property entries (e.g., "slot" on "Ignitor", "analog" on "KlangScriptIgnitorSlots")
         data class MemberPropDoc(
             val name: String,
             val ownerName: String,
@@ -1746,7 +1746,7 @@ class KlangScriptProcessor(
      * Emit a `listOf(KlangType(...), ...)` of the transitive supertypes of [declaration]
      * (or `""` when there are none), so the static type-inferrer can resolve a method
      * declared on a base type when the receiver is a narrowed subtype — e.g.
-     * `Osc.supersaw()` returns `IgnitorDsl.SuperSaw`, but `.lowpass()`/`.adsr()` are
+     * `Ignitor.supersaw()` returns `IgnitorDsl.SuperSaw`, but `.lowpass()`/`.adsr()` are
      * registered on `IgnitorDsl`. Mirrors the runtime's reflective supertype walk
      * (`Environment.getAllRegisteredSupertypes`).
      *

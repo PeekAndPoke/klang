@@ -82,7 +82,7 @@ private val libraryDocsProviders: Map<String, (KlangDocsRegistry) -> Unit> = map
  */
 private val libraryAutoImports: Map<String, List<KlangScriptLibrary>> = mapOf(
     "sprudel" to listOf(stdlibLib, sprudelLib),
-    // stdlib object examples (`OscSlot`) play their sound through sprudel, like the sprudel page.
+    // stdlib object examples (`Ignitor`, `Ign`, `Kat`) play their sound through sprudel, like the sprudel page.
     "stdlib" to listOf(stdlibLib, sprudelLib),
 )
 

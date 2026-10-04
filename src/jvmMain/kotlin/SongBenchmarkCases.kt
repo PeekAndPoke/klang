@@ -142,24 +142,24 @@ object SongBenchmarkCases {
     private val gtrFxTemplate = """
         let snareHz = 210
         let guitar = (() => {
-          let pVoices  = OscSlot.voices
-          let pSpread  = OscSlot.spread
-          let pAnalog  = OscSlot.analog
+          let pVoices  = Ign.slot.voices
+          let pSpread  = Ign.slot.spread
+          let pAnalog  = Ign.slot.analog
 
-          let pMidsHz     = Osc.param("midsHz",      850.000, "Mids frequency")
-          let pMidsQ      = Osc.param("midsQ",         0.707, "Mids Q")
-          let pMids       = Osc.param("mids",          2.000, "Mids Volume")
-          let pPresenceHz = Osc.param("presenceHz", 2500.000, "Presence frequency")
-          let pPresenceQ  = Osc.param("presenceQ",     0.700, "Presence Q")
-          let pPresence   = Osc.param("presence",      5.000, "Presence Volume")
-          let pHpTrack    = Osc.param("hptrack",       1.000, "Highpass tracking")
-          let pHpQ        = Osc.param("hpq",           0.707, "Highpass resonance")
+          let pMidsHz     = Ign.param("midsHz",      850.000, "Mids frequency")
+          let pMidsQ      = Ign.param("midsQ",         0.707, "Mids Q")
+          let pMids       = Ign.param("mids",          2.000, "Mids Volume")
+          let pPresenceHz = Ign.param("presenceHz", 2500.000, "Presence frequency")
+          let pPresenceQ  = Ign.param("presenceQ",     0.700, "Presence Q")
+          let pPresence   = Ign.param("presence",      5.000, "Presence Volume")
+          let pHpTrack    = Ign.param("hptrack",       1.000, "Highpass tracking")
+          let pHpQ        = Ign.param("hpq",           0.707, "Highpass resonance")
 
-          let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread)
+          let signal = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
             .phasePool(on = 1, kMin = 0.50, kMax = 0.90)
             .analog(pAnalog).spreadPower(1.0).sideAtten(0.1).gainJitter(0.20).centerJitter(0.20))
             .pitchEnvelope(0.3, x => x.adsr(0.001, 0.02, 0, 0))
-            .plus(Osc.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
+            .plus(Ign.whitenoise().highpass(2000).adsr(0.000, 0.05, 0.0, 0.005).mul(0.14))
             .distort(0.35, "hard", 4)
 
           // `.classic()` last (phase 3 step 10's song edit): the pattern's `adsr` and other voice doors reach the
@@ -190,7 +190,7 @@ object SongBenchmarkCases {
         "1 +mids tap (add bandpass.mul)" to ".add(signal.bandpass(pMidsHz, pMidsQ).mul(pMids))",
         "2 +presence tap (add bandpass.mul)" to ".add(signal.bandpass(pPresenceHz, pPresenceQ).mul(pPresence))",
         "3 +notch (snare room)" to ".notch(snareHz, 2.5)",
-        "4 +tracking highpass" to ".highpass(Osc.freq().mul(pHpTrack), pHpQ)",
+        "4 +tracking highpass" to ".highpass(Ign.freq().mul(pHpTrack), pHpQ)",
         "5 +double lowpass (cabinet)" to ".lowpass(5300).lowpass(5300)",
     )
 
@@ -642,26 +642,27 @@ object SongBenchmarkCases {
 
         // the string side of the same guitars: what the unison count, the analog drift and the
         // string extras (pitch envelope, crackle burst) cost, the rig untouched
-        // all three guitars share the one `unison(...)` value; guitar 1 is not rendered by RHYTHM
+        // each guitar's unison drops to 7 voices, its own spread kept (since 2026-10-04 the three guitars differ:
+        // 17, 15 and 15 voices); guitar 1 is not rendered by RHYTHM
         liveCase("rhythm: uni 7+7", "string", RHYTHM) {
-            swapAll(Regex.fromLiteral("unison(voices = 19, spread = 0.10)"), "unison(voices = 7, spread = 0.10)", expected = 3)(it)
+            swapAll(Regex("""unison\(voices = \d+, spread = ([0-9.]+)\)"""), "unison(voices = 7, spread = $1)", expected = 3)(it)
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
             swap(Regex("""    \.pitchEnvelope\(0\.5, x => x\.adsr\([^)]*\)\)\n"""), "")(
-                swap(Regex("""    \.plus\(Osc\.crackle\([^\n]*\n"""), "")(it),
+                swap(Regex("""    \.plus\(Ign\.crackle\([^\n]*\n"""), "")(it),
             )
         },
         // the marimba, one component at a time
         liveCase("marimba: full", "marimba", LEAD),
-        liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = OscSlot.analog\n  let ring = Osc.constant(400)", "let pAnalog = 0\n  let ring = Osc.constant(400)")),
+        liveCase("marimba: no analog", "marimba", LEAD, swap("let pAnalog = Ign.slot.analog\n  let ring = Ign.constant(400)", "let pAnalog = 0\n  let ring = Ign.constant(400)")),
         liveCase("marimba: no body", "marimba", LEAD, swap(Regex("""\.body\(material = "wood", wet = [0-9.]+\)"""), "")),
         // the drum, one component at a time
         liveCase("trommel: full", "trommel", TROMMEL),
         liveCase("trommel: no harmonic bank", "trommel", TROMMEL, swap(".plus(harms)", "")),
-        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "tube", 2\)"""), "$1")),
+        liveCase("trommel: no distort", "trommel", TROMMEL, swap(Regex("""(\.plus\(beater\)\s*)\.distort\([0-9.]+, "[a-z]+", 2\)"""), "$1")),
         liveCase("trommel: no body", "trommel", TROMMEL, swap(Regex("""\.body\(material = "membrane", wet = [0-9.]+\)"""), "")),
-        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = OscSlot.analog\n \n  let ring = Osc.constant(", "let pAnalog = 0\n \n  let ring = Osc.constant(")),
+        liveCase("trommel: no analog", "trommel", TROMMEL, swap("let pAnalog = Ign.slot.analog\n \n  let ring = Ign.constant(", "let pAnalog = 0\n \n  let ring = Ign.constant(")),
 
         // the whole song. Its arrangement holds two count-in cycles before the band; the case drops that gate and
         // the count-in itself, so all eight rendered cycles play the band and nothing else.

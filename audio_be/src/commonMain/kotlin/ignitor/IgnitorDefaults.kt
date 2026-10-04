@@ -30,7 +30,7 @@ fun IgnitorRegistry.registerDefaults() {
  * [registerDefaults] registers, and the list a spec renders each built-in against its own raw source from.
  *
  * Every tree opens explicit Param slots, pulled from [IgnitorDsl.Slots], for the parameters that
- * sprudel's oscParam() functions target:
+ * sprudel's ignitorParam() functions target:
  * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "spread" on super oscillators
@@ -53,12 +53,12 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     put("sawtooth", saw)
     put("saw", saw)
 
-    // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" osc-param (0.5 = square).
+    // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" Ignitor slot (0.5 = square).
     val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
     put("square", pulse)
     put("sqr", pulse)
     put("pulse", pulse)
-    // Raw pulse (pulze) — naive/aliased counterpart, same "duty" osc-param.
+    // Raw pulse (pulze) — naive/aliased counterpart, same "duty" Ignitor slot.
     val rawPulse = IgnitorDsl.RawPulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
     put("pulze", rawPulse)
 
@@ -220,7 +220,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
 
     // Sawtooth through one fused Eq: a bell (0 dB by default = bit-transparent, so the
     // sound equals a plain saw until "eqdb" moves) followed by a gentle cabinet lowpass.
-    // All knobs are osc-params — override per note via `.oscparam("eqdb", 9)` etc.
+    // All knobs are Ignitor slots — override per note via `.ignitorParam("eqdb", 9)` etc.
     put(
         "eqdemo",
         IgnitorDsl.Eq(

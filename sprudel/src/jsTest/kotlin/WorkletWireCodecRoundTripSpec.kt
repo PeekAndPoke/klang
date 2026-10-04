@@ -42,7 +42,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
         val data = createSprudelVoiceData {
             note = "c3"; freqHz = 130.81; scale = "e minor"; gain = 0.7; velocity = 0.9; legato = 0.95
             bank = "MPC60"; sound = SoundValue.Named("supersaw"); soundIndex = 2
-            oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
+            ignitorParams = paramBagOf("voices" to 7.0, "spread" to 0.3, "panSpread" to 0.4)
             // The bus knobs travel as orbit slots only since Katalyst step 5b-3: every door's worth.
             katalystParams = paramBagOf(
                 "reverb.wet" to 0.5, "reverb.size" to 6.0, "reverb.lowpass" to 8000.0,
@@ -68,19 +68,19 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             distort = 0.3; distortShape = "tube"; distortOversample = 4; coarse = 2.0; coarseOversample = 2; crush = 8.0; crushOversample =
             2
             phaserRate = 0.5; phaserDepth = 0.6; phaserCenter = 1800.0; phaserSweep = 1000.0; phaserFloor = 0.3
-            tremoloSync = 4.0; tremoloDepth = 0.4; tremoloShape = "sine"
+            tremoloRate = 4.0; tremoloDepth = 0.4; tremoloShape = "sine"
             cylinder = 1; pan = 0.3
             begin = 0.0; end = 1.0; speed = 1.0; unit = "c"; loop = true; cut = 1
             solo = 1.0; cull = 0.2
         }.toVoiceData()
 
-        // Sanity: the four voice filters and every voice door travel as `classic()` slot keys in `oscParams` (phase 3
+        // Sanity: the four voice filters and every voice door travel as `classic()` slot keys in `ignitorParams` (phase 3
         // step 8), so the map carries them through the codec too. The vowel and body fields set above cross nothing:
         // the orbit stages travel as `katalystParams` slots (the doors write them; this voice sets the fields directly).
-        data.oscParams?.get("lpf.passes") shouldBe 2.0
-        data.oscParams?.get("notch.env") shouldBe 0.4
-        data.oscParams?.get("adsr.on") shouldBe 0.0
-        data.oscParams?.get("loop") shouldBe 1.0
+        data.ignitorParams?.get("lpf.passes") shouldBe 2.0
+        data.ignitorParams?.get("notch.env") shouldBe 0.4
+        data.ignitorParams?.get("adsr.on") shouldBe 0.0
+        data.ignitorParams?.get("loop") shouldBe 1.0
 
         val original = scheduled(data)
         val decoded = roundTrip(original)
@@ -112,7 +112,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
             val decoded = roundTrip(scheduled(data))
             decoded shouldBe scheduled(data)
             // and the decoded filter is intact, as its slots
-            decoded.data.oscParams?.get("$name.env") shouldBe envDepth.getValue(name)
+            decoded.data.ignitorParams?.get("$name.env") shouldBe envDepth.getValue(name)
         }
     }
 
@@ -125,7 +125,7 @@ class WorkletWireCodecRoundTripSpec : StringSpec({
 
         val decoded = roundTrip(scheduled(data)).data
 
-        val slots = decoded.oscParams.shouldNotBeNull()
+        val slots = decoded.ignitorParams.shouldNotBeNull()
         slots["adsr.attack"] shouldBe 0.01
         slots["adsr.release"] shouldBe 0.3
         slots["lpf.freq"] shouldBe 1000.0

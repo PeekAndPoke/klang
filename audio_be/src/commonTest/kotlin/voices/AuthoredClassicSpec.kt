@@ -174,7 +174,7 @@ class AuthoredClassicSpec : StringSpec({
             ),
             crush = 6.0,
             tremoloDepth = 0.4,
-            tremoloSync = 5.0,
+            tremoloRate = 5.0,
             adsr = DoorAdsr(attack = 0.01, decay = 0.2, sustain = 0.6, release = 0.1),
         )
         val classic = render(base.copy(sound = "shortclassic"), doors)
@@ -214,7 +214,7 @@ class AuthoredClassicSpec : StringSpec({
 
     "classic() places no pregain: an authored tree that does not place the slot ignores pregain(2)" {
         val plain = render(base.copy(sound = "shortclassic"))
-        val pushed = render(base.copy(sound = "shortclassic", oscParams = mapOf("pregain" to 2.0)))
+        val pushed = render(base.copy(sound = "shortclassic", ignitorParams = mapOf("pregain" to 2.0)))
 
         withClue("classic(), first mismatch") { firstMismatch(plain.out, pushed.out) shouldBe -1 }
         withClue("the harness hears the voice") { maxAbs(plain.out, onsetFrame, gateFrame) shouldBeGreaterThan 0.1 }

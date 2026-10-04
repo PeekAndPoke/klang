@@ -427,7 +427,7 @@ fun PatternMapperFn.adsrOn(flag: PatternLike = true, callInfo: CallInfo? = null)
  * rule: `BuiltIgnitor.endsInEnvelope`).
  *
  * ```KlangScript(Playable)
- * let pluck = Osc.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08).classic()
+ * let pluck = Ignitor.saw().lowpass(2500).adsr(0.005, 0.35, 0.0, 0.08).classic()
  * note("c3 e3 g3 c4").sound(pluck).adsrOff().gain(0.4)
  * ```
  *

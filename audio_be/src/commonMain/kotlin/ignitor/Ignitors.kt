@@ -110,7 +110,7 @@ object Ignitors {
     // Shared ConstantIgnitor singletons used as factory defaults. The normal DSL
     // path (IgnitorDslRuntime.toExciter) always supplies an explicit runtime
     // ignitor, so these defaults only fire when a Kotlin caller invokes a factory
-    // without that argument. Sprudel's oscParam lookup runs at the DSL layer
+    // without that argument. Sprudel's ignitorParam lookup runs at the DSL layer
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
     private val analogDefault = ConstantIgnitor(0.0)
     private val analogSpreadDefault = ConstantIgnitor(1.0)
@@ -200,7 +200,7 @@ object Ignitors {
     /**
      * A sine carrying banks of sine partials at multiples of its own frequency, rendered in ONE
      * block pass (`docs/plans/sine-partial-banks.md`). Replaces the hand-rolled
-     * `Osc.sine().add(Osc.sine(freq * 2).mul(1/2)).add(...)` stacks: same partials, same gains,
+     * `Ignitor.sine().add(Ignitor.sine(freq * 2).mul(1/2)).add(...)` stacks: same partials, same gains,
      * one loop per partial instead of three block passes per partial.
      *
      * Partial 0 is the sine itself at gain [fundamental]. [harmonics] adds partials at `2f, 3f, ...`,
@@ -666,7 +666,7 @@ object Ignitors {
         freq, analog, WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
     )
 
-    /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an osc-param). */
+    /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an Ignitor slot). */
     fun square(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
@@ -695,7 +695,7 @@ object Ignitors {
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             // control-rate read with no buffer fill for Constant/Param color → perf-neutral default.
-            // The REAL freqHz on purpose (ledger O6): 0.0 made Osc.freq() inside noise params read
+            // The REAL freqHz on purpose (ledger O6): 0.0 made Ignitor.freq() inside noise params read
             // 0 Hz, and split the MemoizingIgnitor key for a node shared with the signal spine
             // (the shared node then ran twice per block).
             val c = color.blockStartValue(freqHz, ctx).coerceIn(-1.0, 1.0)

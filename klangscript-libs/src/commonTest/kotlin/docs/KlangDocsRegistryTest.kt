@@ -26,7 +26,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
-                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList())
+                    KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList())
                 )
             )
         )
@@ -66,15 +66,15 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sine", category = "test",
                 variants = listOf(
-                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList(), returnType = KlangType("IgnitorDsl")),
+                    KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList(), returnType = KlangType("IgnitorDsl")),
                     KlangCallable(name = "sine", receiver = null, params = emptyList(), returnType = KlangType("Pattern")),
                 )
             )
         )
 
-        val oscVariant = registry.getCallable("sine", KlangType("Osc"))
-        oscVariant shouldNotBe null
-        oscVariant!!.returnType?.simpleName shouldBe "IgnitorDsl"
+        val ignitorVariant = registry.getCallable("sine", KlangType("Ignitor"))
+        ignitorVariant shouldNotBe null
+        ignitorVariant!!.returnType?.simpleName shouldBe "IgnitorDsl"
 
         val topLevel = registry.getCallable("sine", null)
         topLevel shouldNotBe null
@@ -91,7 +91,7 @@ class KlangDocsRegistryTest : StringSpec({
         registry.register(
             KlangSymbol(
                 name = "sine", category = "test",
-                variants = listOf(KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList()))
+                variants = listOf(KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList()))
             )
         )
         registry.getCallable("sine", KlangType("Math")) shouldBe null
@@ -133,15 +133,15 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sine", category = "test",
                 variants = listOf(
-                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList()),
+                    KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList()),
                     KlangCallable(name = "sine", receiver = null, params = emptyList()),
                 )
             )
         )
 
-        val filtered = registry.getSymbolWithReceiver("sine", KlangType("Osc"))!!
+        val filtered = registry.getSymbolWithReceiver("sine", KlangType("Ignitor"))!!
         filtered.variants shouldHaveSize 1
-        (filtered.variants[0] as KlangCallable).receiver?.simpleName shouldBe "Osc"
+        (filtered.variants[0] as KlangCallable).receiver?.simpleName shouldBe "Ignitor"
     }
 
     "getSymbolWithReceiver returns all variants when receiver is null" {
@@ -150,7 +150,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sine", category = "test",
                 variants = listOf(
-                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList()),
+                    KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList()),
                     KlangCallable(name = "sine", receiver = null, params = emptyList()),
                 )
             )
@@ -165,7 +165,7 @@ class KlangDocsRegistryTest : StringSpec({
         registry.register(
             KlangSymbol(
                 name = "sine", category = "test",
-                variants = listOf(KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList()))
+                variants = listOf(KlangCallable(name = "sine", receiver = KlangType("Ignitor"), params = emptyList()))
             )
         )
 
@@ -176,7 +176,7 @@ class KlangDocsRegistryTest : StringSpec({
 
     "getSymbolWithReceiver returns null for unknown name" {
         val registry = KlangDocsRegistry()
-        registry.getSymbolWithReceiver("nonexistent", KlangType("Osc")) shouldBe null
+        registry.getSymbolWithReceiver("nonexistent", KlangType("Ignitor")) shouldBe null
     }
 
     "getSymbolWithReceiver sets library from filtered variant" {
@@ -294,7 +294,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sampleRate", category = "property",
                 variants = listOf(
-                    KlangProperty(name = "sampleRate", owner = KlangType("Osc"), type = KlangType("Number"))
+                    KlangProperty(name = "sampleRate", owner = KlangType("Ignitor"), type = KlangType("Number"))
                 )
             )
         )
@@ -302,14 +302,14 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "lowpass", category = "filter",
                 variants = listOf(
-                    KlangCallable(name = "lowpass", receiver = KlangType("Osc"), params = emptyList())
+                    KlangCallable(name = "lowpass", receiver = KlangType("Ignitor"), params = emptyList())
                 )
             )
         )
 
-        val oscMembers = registry.getVariantsForReceiver(KlangType("Osc"))
-        oscMembers shouldHaveSize 2
-        oscMembers.map { it.name }.toSet() shouldBe setOf("sampleRate", "lowpass")
+        val ignitorMembers = registry.getVariantsForReceiver(KlangType("Ignitor"))
+        ignitorMembers shouldHaveSize 2
+        ignitorMembers.map { it.name }.toSet() shouldBe setOf("sampleRate", "lowpass")
     }
 
     // ── snapshot ────────────────────────────────────────────────────────
@@ -385,13 +385,13 @@ class KlangDocsRegistryTest : StringSpec({
         val registry = KlangDocsRegistry()
         registry.register(
             KlangSymbol(
-                name = "analog", category = "test",
+                name = "slot", category = "test",
                 variants = listOf(
                     KlangProperty(
-                        name = "analog",
+                        name = "slot",
                         // In-module emission: script-name + fqcn
-                        owner = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"),
-                        type = KlangType("IgnitorDsl"),
+                        owner = KlangType("Ignitor", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"),
+                        type = KlangType("KlangScriptIgnitorSlots"),
                     )
                 )
             )
@@ -399,10 +399,10 @@ class KlangDocsRegistryTest : StringSpec({
 
         // Cross-module emission would carry the Kotlin simpleName but matching fqcn
         val crossModuleQuery = KlangType(
-            simpleName = "KlangScriptOscSlot",
-            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
+            simpleName = "KlangScriptIgnitor",
+            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor",
         )
-        registry.getVariantsForReceiver(crossModuleQuery).map { it.name } shouldBe listOf("analog")
+        registry.getVariantsForReceiver(crossModuleQuery).map { it.name } shouldBe listOf("slot")
     }
 
     "typeMatches: FQCN mismatch overrides simpleName-equal" {
@@ -446,7 +446,7 @@ class KlangDocsRegistryTest : StringSpec({
                 variants = listOf(
                     KlangCallable(
                         name = "sine",
-                        receiver = KlangType("Osc", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"),
+                        receiver = KlangType("Ignitor", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"),
                         params = emptyList(),
                     )
                 )
@@ -454,7 +454,7 @@ class KlangDocsRegistryTest : StringSpec({
         )
 
         // Inferrer emits a KlangType without fqcn — should still match by simpleName.
-        registry.getVariantsForReceiver(KlangType("Osc")).map { it.name } shouldBe listOf("sine")
+        registry.getVariantsForReceiver(KlangType("Ignitor")).map { it.name } shouldBe listOf("sine")
     }
 
     "typeMatches: null query matches null-owner (top-level functions)" {
@@ -467,7 +467,7 @@ class KlangDocsRegistryTest : StringSpec({
         )
         registry.getCallable("note", null)?.name shouldBe "note"
         // A query for a real type must not match top-level entries.
-        registry.getCallable("note", KlangType("Osc")) shouldBe null
+        registry.getCallable("note", KlangType("Ignitor")) shouldBe null
     }
 
     // ── snapshot ────────────────────────────────────────────────────────

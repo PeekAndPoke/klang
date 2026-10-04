@@ -3,8 +3,8 @@
 > **Hand-off from the DSL work, 2026-09-06.** The authoring surface changed under this plan before
 > any Ignitor/Master/Pipeline tutorial was written; teach the NEW forms only
 > (`docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`, `/dsl-design`):
-> - Oscillator knobs live in a configure lambda: `Osc.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
->   There is no `Osc.supersaw().voices(9)` and no `.analog()` on a sound any more.
+> - Oscillator knobs live in a configure lambda: `Ignitor.supersaw(x => x.voices(9).spread(0.1)).lowpass(800)`.
+>   There is no `Ignitor.supersaw().voices(9)` and no `.analog()` on a sound any more.
 > - Equalizer: `.eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))`; phaser/shimmer take `wet` FIRST
 >   on the door, `floor` on the builder: `.phaser(0.3, 0.5, x => x.floor(0.2))` (wet, rate; since
 >   2026-09-24, phase 3 step 3d, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 3b). Filters:
@@ -15,7 +15,7 @@
 >   `limiter(threshold, ratio, knee, attack, release, lookahead)` are flat. `master(Katalyst())` switches the
 >   master off (the empty chain). `Master.of`, `MasterFx` and `Master(m => ...)` are gone.
 > - Pipeline: retired with the voice strip in phase 3 step 9 (2026-09-27). An authored instrument gets the
->   pattern's voice doors by ending in `.classic()`: `Osc.saw().distort(0.4, "tube").classic()`.
+>   pattern's voice doors by ending in `.classic()`: `Ignitor.saw().distort(0.4, "tube").classic()`.
 > The song-usage counts below (line "Master: 5/14 songs ...") predate this; the mastered songs now use
 > the `Katalyst(k => ...)` form (the `Master(m => ...)` form between 2026-09-06 and 2026-09-28).
 
@@ -189,14 +189,14 @@ stages must not carry it.
 | # | Lesson | Main | Touches | Running example / Listen for |
 |---|--------|------|---------|------------------------------|
 | C1 | Caricature drums (recipes) | kick = sine + `pitchEnvelope`, hat = noise + `hpf`, snare | everything so far | Build a drum kit from raw waves, pattern-level. *Listen for: the pitch drop that makes a kick a kick.* Caricature model: 2–4 acoustic tells, tune by ear. |
-| C2 | Your first Ignitor | `Osc.*` chains: osc → filter → adsr | — | Sandsturm's lead, explained line by line; rebuild C1's kick as an Ignitor. *Listen for: detuned square joining the saw.* |
+| C2 | Your first Ignitor | `Ignitor.*` chains: osc → filter → adsr | — | Sandsturm's lead, explained line by line; rebuild C1's kick as an Ignitor. *Listen for: detuned square joining the saw.* |
 | C3 | Layered ignitors | additive `.plus()` stacks | — | IrishLament's flute/fingerpick/contrabass: many layers, flat wiring. *Listen for: the noise crackle that makes the pluck "wood".* |
-| C4 | Knobs & variants | `Osc.param`, `.oscp()`, `Osc.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
-| C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Osc.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
+| C4 | Knobs & variants | `Ignitor.param`, `.ignp()`, `Ignitor.variants` | (none) | NEEDS A NEW EXAMPLE: DialogueWithTheStars (three guitars, round-robin) left the built-in songs 2026-09-25. *Listen for: open vs. muted variant.* |
+| C5 | Living instruments | signal-arithmetic cutoffs, pitch-tracking filters, `Ignitor.slot.analog`, perlin vibrato | — | Sakura's shakuhachi & pad, dissected. *Listen for: the filter following the note's pitch.* |
 | C6 | The Master bus | `master(Katalyst(k => k.gain(2.5).limiter()))` | `compressor` | Build a quiet mix, lift and limit at the end (ATruthWorthLyingFor / StrangerThings chains). *Listen for: limiter grabbing the peaks.* |
 | C7 | Pipeline: modern vs. pedal (RETIRED 2026-09-25: the `pedal` preset is removed, and the Pipeline DSL retired in phase 3 step 9, 2026-09-27; this lesson needs replacing) | `.pipeline()` topology (VCA-last vs. VCA-first) | `distort` | ONE word swapped on the TetrisRemix dub bass. *Listen for: quiet attacks staying clean in "pedal".* |
 | C8 | Arranging a song | `arrange([bars, section])` AND `filterWhen(t => ...)` | — | The same 3 sections arranged both ways; when to use which. |
-| C9 | Live technique & remixing | mute/solo, live edits, `.oscp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
+| C9 | Live technique & remixing | mute/solo, live edits, `.ignp()` tweaks, `export`/`import` | — | Remix lesson: import Tetris' `leadPattern` like TetrisRemix does. |
 | C10 | Capstone: a song from zero | everything | — | Build a Sandsturm-lite start to finish — the "worked song". |
 
 ### Obligations register (promises earlier lessons made — the named lesson must keep them)
@@ -242,7 +242,7 @@ stages must not carry it.
   musical defaults (`docs/tasks-archive/2026-09/20260916-delay-names-and-send-defaults.md`) an unset slot takes size 5, time
   0.25 s, feedback 0.3, wet 0.25, and §2 ("What you leave out") teaches the default by ear instead.
   Needs a by-ear pass in the review loop.
-  (b) `onepole` is an OSC PARAM inside the ignitor, NOT a post-effect, so it sets what the
+  (b) `onepole` is an Ignitor slot inside the instrument, NOT a post-effect, so it sets what the
   distortion is fed; the draft's "the distortion is untouched" was plausible and FALSE.
   (c) `gain` is applied at the voice output in SendRenderer, so it does NOT drive the
   distortion; the draft's "dropping gain feeds the distortion less" was FALSE. Until 2026-09-19
@@ -286,7 +286,7 @@ stages must not carry it.
   the stack is SUM-NORMALIZED, so layer-count A/Bs are level-matched by construction; defaults
   are `voices` 8, `spread` 0.2, `analog` 0.0, so a bare `sound("supersaw")` is already eight
   layers; `spread` is in SEMITONES and `analog` is peak drift in CENTS (the sprudel KDoc claimed
-  0.0-1.0 and was WRONG, corrected at source in `lang_synthesis_oscparam.kt` the way A4's `lpe`
+  0.0-1.0 and was WRONG, corrected at source in `lang_synthesis_ignitorparam.kt` the way A4's `lpe`
   was, and eight stale `.detune(0.3)` examples on `unison`/`uni`/`voices` were repaired at the same time,
   since sprudel's `detune()` no longer exists); the slow drift layer is seeded at CENTRE, so
   drift only develops on HELD notes, which is why the lesson's drift section wears A2's pad

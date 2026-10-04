@@ -36,16 +36,16 @@ internal const val CRUSH_OVERSAMPLE_KEY = "crush.oversample"
 internal const val COARSE_OVERSAMPLE_KEY = "coarse.oversample"
 
 /**
- * The wire's slot bag of this event: the event's own `oscParams` plus every typed voice door written under
+ * The wire's slot bag of this event: the event's own `ignitorParams` plus every typed voice door written under
  * its slot (`<door>.<param>`, the names read from the `Param` objects of [IgnitorDsl.Slots], never retyped).
  *
  * The rules (they moved here from the backend with the translation):
  *  - only a field that is SET and FINITE is written; an unset one stays unset, so the slot's default and the
  *    filter envelope's slot-layer depth fill (the engine's `filterEnvDef`) decide;
- *  - a typed door WINS over an `oscp` of the same key on the same event, whatever the order: the door's value
+ *  - a typed door WINS over an `ignp` of the same key on the same event, whatever the order: the door's value
  *    is written after the event's own bag is copied;
  *  - a filter is written only when its cutoff is set; its `q` and `passes` ([coercePasses]) only when set, so
- *    an explicit `oscp` of either is never overwritten by a fill (the slot defaults, 0.707 and 1, are the
+ *    an explicit `ignp` of either is never overwritten by a fill (the slot defaults, 0.707 and 1, are the
  *    values the wire used to carry); its envelope (depth, the four stages and the three curves) only
  *    when one of the five envelope knobs is set: exactly the `FilterDef` the wire used to carry;
  *  - shapes and curves travel as their catalogue INDEX (`DistortionShapes`, `LfoShapes`, `AdsrCurves`), a
@@ -61,11 +61,11 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
     if (adsr == null && lpf == null && hpf == null && bpf == null && notch == null &&
         distortion == null && tremolo == null && sample == null
     ) {
-        return oscParams?.toMap()
+        return ignitorParams?.toMap()
     }
 
     val k = ClassicSlotKeys
-    val bag = ClassicSlotParams(oscParams)
+    val bag = ClassicSlotParams(ignitorParams)
 
     distortion?.let { d ->
         bag.put(k.crushAmount, d.crush)
@@ -84,7 +84,7 @@ internal fun SprudelVoiceData.classicSlotParams(): Map<String, Double>? {
 
     tremolo?.let { t ->
         bag.put(k.tremoloDepth, t.tremoloDepth)
-        bag.put(k.tremoloSync, t.tremoloSync)
+        bag.put(k.tremoloRate, t.tremoloRate)
         bag.put(k.tremoloShape, t.tremoloShape?.let { LfoShapes.indexOf(it) })
     }
 
@@ -157,7 +157,7 @@ private object ClassicSlotKeys {
     val lpf = pass(s.lpf, s.lpfCurves)
 
     val tremoloDepth = name(s.tremolo.depth)
-    val tremoloSync = name(s.tremolo.sync)
+    val tremoloRate = name(s.tremolo.rate)
     val tremoloShape = name(s.tremolo.shape)
 
     val adsrAttack = name(s.adsr.attack)

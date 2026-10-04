@@ -15,6 +15,6 @@ class LangAnalogSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("analog") shouldBe null
+        events[0].data.ignitorParams?.get("analog") shouldBe null
     }
 })

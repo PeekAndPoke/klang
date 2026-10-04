@@ -21,7 +21,7 @@ live on an object as well: `object Snd { object supersaw { fields } }`. Not full
 | `sndCrackle`     | `chaos`                                               |
 | `sndSuperSaw`, `sndSuperSine`, `sndSuperSquare`, `sndSuperTri`, `sndSuperRamp` | `voices, spread` |
 
-Each sets `sound(...)` plus oscillator params (`oscParams`), which is also what `unison(voices,
+Each sets `sound(...)` plus Ignitor slots (`ignitorParams`), which is also what `unison(voices,
 spread, pan)` and `analog`, `duty`, `onepole` write today.
 
 ## Questions to settle before building
@@ -31,12 +31,12 @@ spread, pan)` and `analog`, `duty`, `onepole` write today.
    supports member properties on objects (`@KlangScript.Property val supersaw = ...` holding an
    object with its own `@Invoke`); whether the analyzer resolves a call on a nested object's
    `invoke` and offers its children in completion needs a check (`FreqAccessorIntelSpec` shape).
-2. **Overlap with `unison`.** `sndSuperSaw(voices, spread)` writes the same `oscParams` keys as
+2. **Overlap with `unison`.** `sndSuperSaw(voices, spread)` writes the same `ignitorParams` keys as
    `unison(voices, spread)`. Either the sound door keeps only what is specific to the sound
    (`sound("supersaw")` + `unison(...)` for the rest) or it keeps the convenience and the two
    doors share one set of readers (`unison.voices`), never a second set.
 3. **The `params` doors.** `sndSine(params)` and friends take a single opaque slot; decide what it
-   is (a string of oscillator params?) and whether it survives as a named slot or goes. Note
+   is (a string of Ignitor slots?) and whether it survives as a named slot or goes. Note
    (2026-09-16): since a rest in a setter's control pattern leaves the event untouched, a rest in
    `params` means that event gets no sound from the door at all (`sndPink("<1 ~>")`), while
    `sndNoise(color = "<0.3 ~>")` keeps its sound. `LangControlRestSpec` pins the current behaviour

@@ -129,15 +129,15 @@ class LangSoundSpec : StringSpec({
 
     // ── Inline IgnitorDsl handoff ────────────────────────────────────
 
-    "sound(IgnitorDsl) stores SoundValue.Osc on the event data" {
+    "sound(IgnitorDsl) stores SoundValue.Dsl on the event data" {
         val osc = IgnitorDsl.Sine()
         val p = note("c").sound(osc)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
         val sound = events[0].data.sound
-        sound.shouldBeInstanceOf<SoundValue.Osc>()
-        sound.osc shouldBe osc
+        sound.shouldBeInstanceOf<SoundValue.Dsl>()
+        sound.ignitor shouldBe osc
         // .soundName extracts only Named entries, so it's null here.
         events[0].data.soundName shouldBe null
     }
@@ -147,6 +147,6 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound.shouldBeInstanceOf<SoundValue.Osc>()
+        events[0].data.sound.shouldBeInstanceOf<SoundValue.Dsl>()
     }
 })

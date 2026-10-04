@@ -37,9 +37,9 @@ class StdlibDocsInferenceTest : StringSpec({
 
     // ── Real stdlib: object identifiers ──────────────────────────────────
 
-    "real stdlib: Osc identifier infers Osc" {
+    "real stdlib: Ignitor identifier infers Ignitor" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc"))?.simpleName shouldBe "Osc"
+        inferrer.inferType(parseExpr("Ignitor"))?.simpleName shouldBe "Ignitor"
     }
 
     "real stdlib: Math identifier infers Math" {
@@ -47,22 +47,22 @@ class StdlibDocsInferenceTest : StringSpec({
         inferrer.inferType(parseExpr("Math"))?.simpleName shouldBe "Math"
     }
 
-    // ── Real stdlib: Osc method calls ───────────────────────────────────
+    // ── Real stdlib: Ignitor method calls ───────────────────────────────────
 
-    "real stdlib: Osc.sine() returns IgnitorDsl" {
+    "real stdlib: Ignitor.sine() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.saw() and Osc.supersaw() return the base IgnitorDsl (knobs live on builders)" {
+    "real stdlib: Ignitor.saw() and Ignitor.supersaw() return the base IgnitorDsl (knobs live on builders)" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "IgnitorDsl"
-        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.saw()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.supersaw()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     "real stdlib: the supersaw door's configure parameter is a typed function of the builder" {
         val reg = stdlibRegistry()
-        val supersaw = reg.getCallable("supersaw", KlangType("Osc"))!!
+        val supersaw = reg.getCallable("supersaw", KlangType("Ignitor"))!!
         val configure = supersaw.params.single { it.name == "configure" }
         configure.type.render() shouldBe "((OscSuperSawBuilder) -> OscSuperSawBuilder)?"
         configure.isOptional shouldBe true
@@ -70,29 +70,29 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: builder knobs resolve on the builder and keep its type, base wrappers do not" {
         val reg = stdlibRegistry()
-        val builder = reg.getCallable("supersaw", KlangType("Osc"))!!
+        val builder = reg.getCallable("supersaw", KlangType("Ignitor"))!!
             .params.single { it.name == "configure" }.type.functionParams!!.single()
         reg.getCallable("voices", builder)!!.returnType?.simpleName shouldBe "OscSuperSawBuilder"
         reg.getCallable("phasePool", builder)!!.returnType?.simpleName shouldBe "OscSuperSawBuilder"
         reg.getCallable("lowpass", builder) shouldBe null
     }
 
-    "real stdlib: Osc.whitenoise() returns IgnitorDsl" {
+    "real stdlib: Ignitor.whitenoise() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.whitenoise()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.whitenoise()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     // ── Real stdlib: IgnitorDsl chains ──────────────────────────────────
 
-    "real stdlib: Osc.sine().lowpass(1000) returns IgnitorDsl" {
+    "real stdlib: Ignitor.sine().lowpass(1000) returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns IgnitorDsl" {
+    "real stdlib: Ignitor.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
         inferrer.inferType(
-            parseExpr("Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)")
+            parseExpr("Ignitor.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)")
         )?.simpleName shouldBe "IgnitorDsl"
     }
 
@@ -110,23 +110,23 @@ class StdlibDocsInferenceTest : StringSpec({
 
     // ── Real stdlib: registry merge preserves all variants ──────────────
 
-    "real stdlib: registry has Osc, Math, Object object symbols" {
+    "real stdlib: registry has Ignitor, Math, Object object symbols" {
         val reg = stdlibRegistry()
-        reg.get("Osc") shouldNotBe null
+        reg.get("Ignitor") shouldNotBe null
         reg.get("Math") shouldNotBe null
         reg.get("Object") shouldNotBe null
     }
 
-    "real stdlib: getVariantsForReceiver(Osc) returns Osc methods" {
+    "real stdlib: getVariantsForReceiver(Ignitor) returns Ignitor methods" {
         val reg = stdlibRegistry()
-        val oscMembers = reg.getVariantsForReceiver(KlangType("Osc"))
-        oscMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
-        // Each returned symbol has at least one variant whose owner/receiver is Osc.
-        oscMembers.all { symbol ->
+        val ignitorMembers = reg.getVariantsForReceiver(KlangType("Ignitor"))
+        ignitorMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
+        // Each returned symbol has at least one variant whose owner/receiver is Ignitor.
+        ignitorMembers.all { symbol ->
             symbol.variants.any { v ->
                 when (v) {
-                    is KlangCallable -> v.receiver?.simpleName == "Osc"
-                    is KlangProperty -> v.owner?.simpleName == "Osc"
+                    is KlangCallable -> v.receiver?.simpleName == "Ignitor"
+                    is KlangProperty -> v.owner?.simpleName == "Ignitor"
                 }
             }
         } shouldBe true
@@ -144,9 +144,9 @@ class StdlibDocsInferenceTest : StringSpec({
         methods shouldHaveAtLeastSize 5 // sqrt, abs, floor, ceil, etc.
     }
 
-    "real stdlib: getCallable finds sine with receiver Osc" {
+    "real stdlib: getCallable finds sine with receiver Ignitor" {
         val reg = stdlibRegistry()
-        val callable = reg.getCallable("sine", KlangType("Osc"))
+        val callable = reg.getCallable("sine", KlangType("Ignitor"))
         callable shouldNotBe null
         callable!!.returnType?.simpleName shouldBe "IgnitorDsl"
     }
@@ -169,49 +169,49 @@ class StdlibDocsInferenceTest : StringSpec({
     // production stdlib symbols carry the expected FQCNs. If KSP regresses
     // (stops emitting fqcn, or emits the wrong one), these fail loudly.
 
-    "real stdlib: Osc symbol's type carries the KlangScriptOsc FQCN" {
+    "real stdlib: Ignitor symbol's type carries the KlangScriptIgnitor FQCN" {
         val reg = stdlibRegistry()
-        val osc = reg.get("Osc")!!
-        val prop = osc.variants.filterIsInstance<KlangProperty>().first()
-        prop.type.simpleName shouldBe "Osc"
-        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+        val ignitor = reg.get("Ignitor")!!
+        val prop = ignitor.variants.filterIsInstance<KlangProperty>().first()
+        prop.type.simpleName shouldBe "Ignitor"
+        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"
     }
 
-    "real stdlib: OscSlot symbol's type carries the KlangScriptOscSlot FQCN" {
+    "real stdlib: the Ign alias symbol's type is the Ignitor object, with the KlangScriptIgnitor FQCN" {
         val reg = stdlibRegistry()
-        val oscSlot = reg.get("OscSlot")!!
-        val prop = oscSlot.variants.filterIsInstance<KlangProperty>().first()
-        prop.type.simpleName shouldBe "OscSlot"
-        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+        val ign = reg.get("Ign")!!
+        val prop = ign.variants.filterIsInstance<KlangProperty>().first()
+        prop.type.simpleName shouldBe "Ignitor"
+        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"
     }
 
-    "real stdlib: Osc.slot member-property owner FQCN matches KlangScriptOsc" {
+    "real stdlib: Ignitor.slot member-property owner FQCN matches KlangScriptIgnitor" {
         val reg = stdlibRegistry()
         val slotSym = reg.get("slot")!!
         val slotProp = slotSym.variants
             .filterIsInstance<KlangProperty>()
-            .first { it.owner?.simpleName == "Osc" }
-        slotProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
-        // And its type points at OscSlot's FQCN so the inferrer can chain.
-        slotProp.type.simpleName shouldBe "OscSlot"
-        slotProp.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+            .first { it.owner?.simpleName == "Ignitor" }
+        slotProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"
+        // And its type points at KlangScriptIgnitorSlots' FQCN so the inferrer can chain.
+        slotProp.type.simpleName shouldBe "KlangScriptIgnitorSlots"
+        slotProp.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorSlots"
     }
 
-    "real stdlib: OscSlot.analog member-property owner FQCN matches KlangScriptOscSlot" {
+    "real stdlib: Ignitor.slot.analog member-property owner FQCN matches KlangScriptIgnitorSlots" {
         val reg = stdlibRegistry()
         val analogSym = reg.get("analog")!!
         val analogProp = analogSym.variants
             .filterIsInstance<KlangProperty>()
-            .first { it.owner?.simpleName == "OscSlot" }
-        analogProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+            .first { it.owner?.simpleName == "KlangScriptIgnitorSlots" }
+        analogProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorSlots"
     }
 
-    "real stdlib: Osc.sine method receiver FQCN matches KlangScriptOsc" {
+    "real stdlib: Ignitor.sine method receiver FQCN matches KlangScriptIgnitor" {
         val reg = stdlibRegistry()
-        val sine = reg.getCallable("sine", KlangType("Osc"))!!
+        val sine = reg.getCallable("sine", KlangType("Ignitor"))!!
         val sineReceiver = sine.receiver.shouldNotBeNull()
-        sineReceiver.simpleName shouldBe "Osc"
-        sineReceiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+        sineReceiver.simpleName shouldBe "Ignitor"
+        sineReceiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor"
     }
 
     "real stdlib: Math.sqrt method receiver FQCN matches KlangScriptMath" {
@@ -222,26 +222,26 @@ class StdlibDocsInferenceTest : StringSpec({
         sqrtReceiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
     }
 
-    "real stdlib: type inference of Osc.slot returns OscSlot KlangType with FQCN" {
+    "real stdlib: type inference of Ignitor.slot returns the KlangScriptIgnitorSlots KlangType with FQCN" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        val type = inferrer.inferType(parseExpr("Osc.slot"))!!
-        type.simpleName shouldBe "OscSlot"
-        type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+        val type = inferrer.inferType(parseExpr("Ignitor.slot"))!!
+        type.simpleName shouldBe "KlangScriptIgnitorSlots"
+        type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorSlots"
     }
 
-    "real stdlib: chained Osc.slot.analog resolves to IgnitorDsl" {
+    "real stdlib: chained Ignitor.slot.analog resolves to IgnitorDsl" {
         // Full chain: identifier → property access → property access.
         // Each step depends on the previous step's KlangType being correctly
         // populated, and on FQCN-aware lookup matching the next-step owner.
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        val type = inferrer.inferType(parseExpr("Osc.slot.analog"))!!
+        val type = inferrer.inferType(parseExpr("Ignitor.slot.analog"))!!
         type.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: chained Osc.slot.analog.lowpass(2000) resolves to IgnitorDsl" {
+    "real stdlib: chained Ignitor.slot.analog.lowpass(2000) resolves to IgnitorDsl" {
         // Confirms FQCN-aware lookup chains through an extension method call too.
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        val type = inferrer.inferType(parseExpr("Osc.slot.analog.lowpass(2000)"))!!
+        val type = inferrer.inferType(parseExpr("Ignitor.slot.analog.lowpass(2000)"))!!
         type.simpleName shouldBe "IgnitorDsl"
     }
 
@@ -282,7 +282,7 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: generated callables carry library=stdlib" {
         val reg = stdlibRegistry()
-        val callable = reg.getCallable("sine", KlangType("Osc"))
+        val callable = reg.getCallable("sine", KlangType("Ignitor"))
         callable shouldNotBe null
         callable!!.library shouldBe "stdlib"
     }
@@ -291,11 +291,11 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: chain breaks at unknown method" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine().unknownMethod()")) shouldBe null
+        inferrer.inferType(parseExpr("Ignitor.sine().unknownMethod()")) shouldBe null
     }
 
     "real stdlib: chain break propagates null through subsequent calls" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine().unknownMethod().lowpass(1000)")) shouldBe null
+        inferrer.inferType(parseExpr("Ignitor.sine().unknownMethod().lowpass(1000)")) shouldBe null
     }
 })

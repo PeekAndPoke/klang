@@ -9,13 +9,13 @@ package io.peekandpoke.klang.sprudel
  * The slot storage of ONE event, `<name>` to `Double`, and the one method the fill rule is
  * expressed through.
  *
- * Both of [SprudelVoiceData]'s bags are this class: `oscParams` (the voice's own instrument) and
+ * Both of [SprudelVoiceData]'s bags are this class: `ignitorParams` (the voice's own instrument) and
  * `katalystParams` (the chain its orbit runs). They differ in their HOST, never in their shape, so
  * they share one type, one contract and one set of tests.
  *
  * **Mutable and single-owner.** A door writes one name in place instead of allocating a fresh bag
  * per slot, which is what keeps a pattern that fills a dozen slots out of the "twenty allocations
- * per note" class. The bag is allocated on the first write ([SprudelVoiceData.oscParamsOrNew] and
+ * per note" class. The bag is allocated on the first write ([SprudelVoiceData.ignitorParamsOrNew] and
  * its twin), copied once per event by [SprudelVoiceData.clone], and copied once more at the wire by
  * [toMap]. Anything else would give two events one bag, and one event's write would land on the
  * other.

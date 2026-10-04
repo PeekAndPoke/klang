@@ -116,8 +116,8 @@ class GraalSprudelPattern(
         val soundIndex = value.safeGetMember("n").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
-        // Get Oscillator parameters → build oscParams map
-        val oscParams = buildMap {
+        // Get the Ignitor slots → build ignitorParams map
+        val ignitorParams = buildMap {
             value.safeGetMember("density").safeNumberOrNull()?.let { put("density", it) }
             value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
             value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
@@ -212,7 +212,7 @@ class GraalSprudelPattern(
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Tremolo
-        val tremoloSync = value.safeGetMember("tremolosync").safeNumberOrNull()
+        val tremoloRate = value.safeGetMember("tremolosync").safeNumberOrNull()
         val tremoloDepth = value.safeGetMember("tremolodepth").safeNumberOrNull()
         val tremoloShape = value.safeGetMember("tremoloshape").safeStringOrNull()
 
@@ -330,8 +330,8 @@ class GraalSprudelPattern(
                 it.bank = bank
                 it.sound = sound?.let(SoundValue::Named)
                 it.soundIndex = soundIndex
-                // Oscillator parameters
-                it.oscParams = oscParams?.let { params -> paramBagOf(params) }
+                // Ignitor slots
+                it.ignitorParams = ignitorParams?.let { params -> paramBagOf(params) }
                 // ADSR (flat fields)
                 it.attack = attack
                 it.decay = decay
@@ -367,7 +367,7 @@ class GraalSprudelPattern(
                 it.phaserCenter = phaserCenter
                 it.phaserSweep = phaserSweep
                 // Tremolo
-                it.tremoloSync = tremoloSync
+                it.tremoloRate = tremoloRate
                 it.tremoloDepth = tremoloDepth
                 it.tremoloShape = tremoloShape
                 // Ducking / Sidechain: the orbit slots, the only storage since Katalyst step 5b-3

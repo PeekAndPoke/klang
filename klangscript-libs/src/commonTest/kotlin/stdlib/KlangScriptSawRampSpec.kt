@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 
 /**
- * Dual-language equivalence for the `Osc.saw(freq, configure)` and `Osc.ramp(freq, configure)` doors and their
+ * Dual-language equivalence for the `Ignitor.saw(freq, configure)` and `Ignitor.ramp(freq, configure)` doors and their
  * builders, `OscSawBuilder` and `OscRampBuilder`: two classes with the same three knobs, so every row runs over both.
  *
  * Script source vs the Kotlin door's default node with the expected fields written by the node's own data class
@@ -37,12 +37,12 @@ class KlangScriptSawRampSpec : StringSpec({
     fun c(v: Double) = IgnitorDsl.Constant(v)
 
     val doors = listOf(
-        SawRampDoor("saw", { KlangScriptOsc.saw() }, { KlangScriptOsc.saw(configure = { it.shapeMax(0.3) }) }),
-        SawRampDoor("ramp", { KlangScriptOsc.ramp() }, { KlangScriptOsc.ramp(configure = { it.shapeMax(0.3) }) }),
+        SawRampDoor("saw", { KlangScriptIgnitor.saw() }, { KlangScriptIgnitor.saw(configure = { it.shapeMax(0.3) }) }),
+        SawRampDoor("ramp", { KlangScriptIgnitor.ramp() }, { KlangScriptIgnitor.ramp(configure = { it.shapeMax(0.3) }) }),
     )
 
     "every calling form and every knob: script == the default node with the knob's own field written" {
-        // The arguments inside `Osc.<door>(...)`, and the fields they must write.
+        // The arguments inside `Ignitor.<door>(...)`, and the fields they must write.
         val cases = listOf(
             // freq is the door's first parameter, not a knob
             "220" to SawRampKnobs(freq = c(220.0)),
@@ -61,16 +61,16 @@ class KlangScriptSawRampSpec : StringSpec({
         for (door in doors) {
             val default = door.kotlin()
 
-            withClue("Osc.${door.name}(): script == Kotlin door, all defaults") {
-                ks("Osc.${door.name}()") shouldBe default
+            withClue("Ignitor.${door.name}(): script == Kotlin door, all defaults") {
+                ks("Ignitor.${door.name}()") shouldBe default
             }
 
             for ((args, knobs) in cases) {
                 val expected = knobs.onto(default)
 
-                withClue("Osc.${door.name}($args)") {
+                withClue("Ignitor.${door.name}($args)") {
                     expected shouldNotBe default
-                    ks("Osc.${door.name}($args)") shouldBe expected
+                    ks("Ignitor.${door.name}($args)") shouldBe expected
                 }
             }
         }
@@ -79,7 +79,7 @@ class KlangScriptSawRampSpec : StringSpec({
     "the Kotlin door takes the same lambda" {
         for (door in doors) {
             withClue(door.name) {
-                ks("Osc.${door.name}(x => x.shapeMax(0.3))") shouldBe door.kotlinConfigured()
+                ks("Ignitor.${door.name}(x => x.shapeMax(0.3))") shouldBe door.kotlinConfigured()
                 door.kotlinConfigured() shouldBe SawRampKnobs(shapeMax = 0.3).onto(door.kotlin())
             }
         }
@@ -88,7 +88,7 @@ class KlangScriptSawRampSpec : StringSpec({
     "processing goes OUTSIDE the lambda: the wrapper sees the configured node" {
         for (door in doors) {
             withClue(door.name) {
-                val dsl = ks("Osc.${door.name}(x => x.shapeMax(0.3)).lowpass(2000)")
+                val dsl = ks("Ignitor.${door.name}(x => x.shapeMax(0.3)).lowpass(2000)")
                 dsl.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
                 dsl.inner shouldBe SawRampKnobs(shapeMax = 0.3).onto(door.kotlin())
             }
@@ -98,7 +98,7 @@ class KlangScriptSawRampSpec : StringSpec({
     "a lambda that returns nothing is a script-level type error" {
         for (door in doors) {
             withClue(door.name) {
-                shouldThrow<KlangScriptTypeError> { ks("Osc.${door.name}(x => { x.shapeMax(0.3) })") }
+                shouldThrow<KlangScriptTypeError> { ks("Ignitor.${door.name}(x => { x.shapeMax(0.3) })") }
             }
         }
     }

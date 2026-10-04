@@ -173,7 +173,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
         check(IgnitorDsl.Lowpass(IgnitorDsl.Square(), passes = IgnitorDsl.Param("lpf.passes", 2.0)))
     }
 
-    // An inline `sound(Osc.saw().classic())` crosses the wire; its filter slots default to SLOT_UNSET,
+    // An inline `sound(Ignitor.saw().classic())` crosses the wire; its filter slots default to SLOT_UNSET,
     // so this is the same NaN-through-the-codec question the Katalyst's classic chain answers.
     "classic(): the whole slotted tail round-trips, its unset defaults included, and keeps its name" {
         val tail = IgnitorDsl.Sawtooth().classic()

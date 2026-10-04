@@ -30,7 +30,7 @@ class LangPitchParamNamesSpec : StringSpec({
         firstData(SprudelPattern.compile("""note("c").vibrato(depth = 0.5)""")).vibratoMod shouldBe 0.5
         firstData(SprudelPattern.compile("""note("c").accelerate(semitones = 12)""")).accelerate shouldBe 12.0
         firstData(SprudelPattern.compile("""note("c").lpf(freq = 800, env = 24)""")).lpenv shouldBe 24.0
-        firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).oscParams?.get("onepole") shouldBe 3743.0
+        firstData(SprudelPattern.compile("""note("c").onepole(freq = 3743)""")).ignitorParams?.get("onepole") shouldBe 3743.0
     }
 
     "ignitor doors: semitone params on the nodes, freq on onepole" {
@@ -38,16 +38,16 @@ class LangPitchParamNamesSpec : StringSpec({
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        val vib = eval("""Osc.saw().vibrato(rate = 5, semitones = 0.5)""") as IgnitorDsl.Vibrato
+        val vib = eval("""Ignitor.saw().vibrato(rate = 5, semitones = 0.5)""") as IgnitorDsl.Vibrato
         vib.semitones shouldBe IgnitorDsl.Constant(0.5)
 
-        val pe = eval("""Osc.saw().pitchEnvelope(semitones = 24)""") as IgnitorDsl.PitchEnvelope
+        val pe = eval("""Ignitor.saw().pitchEnvelope(semitones = 24)""") as IgnitorDsl.PitchEnvelope
         pe.semitones shouldBe IgnitorDsl.Constant(24.0)
 
-        val acc = eval("""Osc.saw().accelerate(semitones = 12)""") as IgnitorDsl.Accelerate
+        val acc = eval("""Ignitor.saw().accelerate(semitones = 12)""") as IgnitorDsl.Accelerate
         acc.semitones shouldBe IgnitorDsl.Constant(12.0)
 
-        val op = eval("""Osc.saw().onepole(freq = 3743)""") as IgnitorDsl.OnePoleLowpass
+        val op = eval("""Ignitor.saw().onepole(freq = 3743)""") as IgnitorDsl.OnePoleLowpass
         op.freq shouldBe IgnitorDsl.Constant(3743.0)
     }
 })

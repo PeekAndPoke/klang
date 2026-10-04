@@ -96,7 +96,7 @@ character and must be reproduced exactly, not "fixed".
 The per-block half is BUILT (2026-09-15, inside step 4b): a block-constant zero multiplier or
 divisor is a dead branch in `Times`, `Affine`, `Div`, the scalar doors and an `EqCore` tap; a
 Param at zero costs nothing upstream per block. What stayed open is the BUILD-time half: not
-constructing the dead subtree at all when `Osc.param` values are known at voice build. Building
+constructing the dead subtree at all when `Ignitor.param` values are known at voice build. Building
 runs once per note, so this pays only where a switched-off stage has an expensive build; the
 supersaw's phase pool (candidate phase sets scored at note-on) is exactly that. Two things to
 settle first: a build-time measurement of such a voice, and the draw-order question round 2 of

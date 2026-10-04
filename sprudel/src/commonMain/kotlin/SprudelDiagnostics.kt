@@ -29,7 +29,7 @@ data class SprudelDiagnostic(
  *
  * Pattern mappers run inside `try/catch` blocks that log and return the input unchanged. That
  * catch is deliberate and stays: a bad edit mid-performance must not kill the audio. But it also
- * made mistakes invisible — a single transposed letter (`.ocsp` for `.oscp`) silently discarded
+ * made mistakes invisible — a single adjacent transposition in a door name (2026-08-22) silently discarded
  * an entire shape function, and the only trace was a stack trace in the browser console. It cost
  * a full debugging session.
  *

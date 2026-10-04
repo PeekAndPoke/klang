@@ -50,7 +50,7 @@ The release-defining set, regardless of when they're sequenced:
 2. ~~**MUST** · **Pipeline DSL finish**~~: CLOSED 2026-09-27: the Pipeline DSL retired in phase 3 step 9
    (every voice is an Ignitor tree); archived as [`20260927-engine-tuning-profile.md`](../tasks-archive/2026-09/20260927-engine-tuning-profile.md). Was:
    *(successor to the archived `engine-dsl.md`)* Phase 2 wrapper feel-knobs — **Adsr `declickSeconds`/`expK`
-   done (2026-07-04, as oscParam slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
+   done (2026-07-04, as Ignitor slots)**; filter drift/cutoffOffset/driveScale + analog-drift carriers open.
    Phase 3 engine-identity profiles (`EngineDefault`/`EngineTuning`/`.tune()`, e.g. c64/nes) lean **NICE**.
 3. ~~**MUST** · **Katalyst DSL**~~: ✅ DONE 2026-09-20, archived as [`20260928-katalyst-dsl.md`](../tasks-archive/2026-09/20260928-katalyst-dsl.md). Author per-orbit effect chains from KlangScript, the counterpart to the Ignitor DSL.
 4. ~~**SHOULD** · **Resonator swing**~~ — ❌ **WON'T IMPLEMENT** (closed 2026-08-20). Archived with the full
@@ -156,6 +156,11 @@ The release-defining set, regardless of when they're sequenced:
 
 ## Blocked / off-plan / parked
 
+- **OPEN · maintainer decisions** (from the topic walk of 2026-10-02/04, not reached): (1) Sonnet 5.5 as a third,
+  blind reviewer in round 1, as a trial; (2) `docs/blog/2026-01-20-the-position-that-survived/position-pipeline.png`,
+  unreferenced since its interactive figure replaced it: keep as history or delete; (3) `console/deploy-finzo.sh`
+  copies with `scp -r` and never deletes on the server, so a removed page or post stays online: add a delete step or
+  accept it.
 - **MUST (for commercialization) · ⚪ BLOCKED** — **Copyright audit** — [
   `../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md`](../tasks-archive/2026-09/20260927-copyright-audit-00-overview.md) + [
   `-07`](copyright-audit-07-control-vocabulary-legal-review.md)

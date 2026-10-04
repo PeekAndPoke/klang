@@ -63,7 +63,7 @@ A filter exists on both sides on purpose: the note's VCF and the bus's EQ filter
 
 ## 3. The two structural rules
 
-1. **Slots are the only per-event channel.** `gain()`, `oscp()`, `katp()` and every convenience
+1. **Slots are the only per-event channel.** `gain()`, `ignp()`, `katp()` and every convenience
    door write slots. A rest in a setter's control pattern leaves the slot untouched (the rule
    committed 2026-09-16), so `.lpf("1000 ~")` needs no skip flag: the second event has no `lpf`
    entry and the instrument's default applies.
@@ -81,7 +81,7 @@ instruments and the chains do, and the pattern only ever writes slots.
 timing        start, duration, in seconds
 instrument    sound: the name of a registered ignitor (built-in, authored, inline)
 note          freq
-slots         oscParams: the instrument's knobs, pregain among them (velocity never crosses, §6)
+slots         ignitorParams: the instrument's knobs, pregain among them (velocity never crosses, §6)
 channel       gain, pan, orbit
 bus           katalyst: chain name, katalystParams
 master        master: chain name
@@ -111,39 +111,39 @@ only in its private event type if another kind should be able to modify or forwa
 ## 5. Built-in instruments, and the end of the Pipeline DSL
 
 The saw is an oscillator; it has no lowpass. What the tutorials call `sound("saw").lpf(800)` was
-always a subtractive synth voice with a saw in it. Make that explicit: `Osc.saw()` is the
+always a subtractive synth voice with a saw in it. Make that explicit: `Ignitor.saw()` is the
 oscillator for authoring; the built-in sound behind `sound("saw")` is an instrument, written in
 the Ignitor DSL, registered once, whose stages are today's voice pipeline in today's order, every
 stage gated on its slot:
 
 (SUPERSEDED as a sketch: the built function is `IgnitorDsl.classic()` in `audio_bridge/.../IgnitorDslClassic.kt`,
-phase 3 step 5, with slots named `<door>.<param>` (`OscSlot.lpf.freq`, `OscSlot.adsr.attack`, ...); the flat
+phase 3 step 5, with slots named `<door>.<param>` (`Ignitor.slot.lpf.freq`, `Ignitor.slot.adsr.attack`, ...); the flat
 names below were retired before they shipped.)
 
 ```
 let classic = x => x
-  .mul(OscSlot.pregain)
-  .crush(OscSlot.crush).coarse(OscSlot.coarse).distort(OscSlot.distort)
-  .highpass(freq = OscSlot.hpf, ...)
-  .bandpass(freq = OscSlot.bpf, ...)
-  .notch(freq = OscSlot.notch, ...)
-  .lowpass(OscSlot.lpf, OscSlot.lpq, f => f.env(OscSlot.lpenv) ...)   // builder form since phase 3 step 3d
-  .tremolo(OscSlot.tremolo, ...)
-  .adsr(OscSlot.attack, OscSlot.decay, OscSlot.sustain, OscSlot.release)
+  .mul(Ignitor.slot.pregain)
+  .crush(Ignitor.slot.crush).coarse(Ignitor.slot.coarse).distort(Ignitor.slot.distort)
+  .highpass(freq = Ignitor.slot.hpf, ...)
+  .bandpass(freq = Ignitor.slot.bpf, ...)
+  .notch(freq = Ignitor.slot.notch, ...)
+  .lowpass(Ignitor.slot.lpf, Ignitor.slot.lpq, f => f.env(Ignitor.slot.lpenv) ...)   // builder form since phase 3 step 3d
+  .tremolo(Ignitor.slot.tremolo, ...)
+  .adsr(Ignitor.slot.attack, Ignitor.slot.decay, Ignitor.slot.sustain, Ignitor.slot.release)
 
-Osc.register("saw", Osc.saw().classic())
-Osc.register("supersaw", Osc.supersaw().classic())
+Ignitor.register("saw", Ignitor.saw().classic())
+Ignitor.register("supersaw", Ignitor.supersaw().classic())
 ```
 
 - `.classic()` is a plain function over the node type, shipped on both doors (Kotlin extension on
-  `IgnitorDsl`, KlangScript function on the Osc extensions), so an authored instrument becomes a
+  `IgnitorDsl`, KlangScript function on the Ignitor extensions), so an authored instrument becomes a
   full synth voice with one call and an author who wants another order writes their own lambda,
   as Der Schmetterling does for its amps. No builder, no new node kinds, nothing on the wire.
   (Name chosen 2026-09-17: `classic`; `modern` carried the retired preset's word.)
 - **`classic()` does not contain pregain.** Appended to an authored guitar it sits after the amp,
   so a pregain inside it would land in the wrong place for every instrument with its own
-  nonlinearity. Built-ins are `Osc.saw().mul(OscSlot.pregain).classic()` (as landed: `source.pregain().onepole(slot).classic()` in step 6; since step 10 the onepole is `classic()`'s first stage, so `source.pregain().classic()`); an author places
-  `.mul(OscSlot.pregain)` where the player's touch enters, or does not place it, and then the
+  nonlinearity. Built-ins are `Ignitor.saw().mul(Ignitor.slot.pregain).classic()` (as landed: `source.pregain().onepole(slot).classic()` in step 6; since step 10 the onepole is `classic()`'s first stage, so `source.pregain().classic()`); an author places
+  `.mul(Ignitor.slot.pregain)` where the player's touch enters, or does not place it, and then the
   instrument has no drive knob (§6: no unconsumed rule, no magic).
 - **Authored instruments and the doors: a migration, and a diagnostic.** Today the pipeline runs
   after every ignitor, so `sound(guitar).hpf(120)` works on an authored guitar; Der Schmetterling
@@ -154,7 +154,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   they use the doors, then the frozen-song guard proves identity. The trap gets a diagnostic, not
   magic: the editor knows every registered instrument's slot list (`collectParams`), so
   `sound(guitar).hpf(120)` on an instrument without an `hpf` slot is flagged inline ("guitar
-  declares no slot hpf; append .classic() or place .highpass(OscSlot.hpf) in the instrument"),
+  declares no slot hpf; append .classic() or place .highpass(Ignitor.slot.hpf) in the instrument"),
   and `.katp` is checked against the chain's slots the same way. Auto-wrapping would hide
   structure, which is the thing this plan removes.
 - **The gate moves to the node (decided 2026-09-17, the optimization phase 3 stands on).** Today
@@ -162,7 +162,7 @@ Osc.register("supersaw", Osc.supersaw().classic())
   above 1, crush and distort above 0, tremolo depth above 0), so an off stage does not exist. The
   Ignitor DSL path is not free: the literal overloads (`Ignitor.coarse(amount: Double)`) return the
   inner when the amount is off, but a node whose knob is a `Param` or `Constant`, which is what
-  `.coarse(OscSlot.coarse)` becomes, builds its `CoarseIgnitor` unconditionally and pays a scratch
+  `.coarse(Ignitor.slot.coarse)` becomes, builds its `CoarseIgnitor` unconditionally and pays a scratch
   render and a copy per block even at 0. A classic tail of ten slotted stages with nothing written
   would be ten buffer passes per voice. The rule that closes it: **at voice build, a stage whose
   gating knob is `Param` or `Constant` backed and resolves to the unset sentinel or to that stage's
@@ -198,14 +198,15 @@ Osc.register("supersaw", Osc.supersaw().classic())
   and the five decisions this phase needs from the maintainer are in
   `../tasks-archive/2026-09/20260928-builtin-instruments.md`** (the spike of 2026-09-20).
 - (Reshaped 2026-09-27, phase 3 step 8: the doors stay typed; `toVoiceData()` writes the slot keys, section 4.)
-  Every voice door becomes an alias: `.lpf(x)` is `oscp("lpf", x)`, `.pregain(x)` is
-  `oscp("pregain", x)`, and so on down the table in §2. The editor tools registry reads the slot
-  vocabulary from the instrument definitions.
+  Every voice door becomes an alias: `.lpf(x)` is `ignp("lpf.freq", x)`, `.pregain(x)` is
+  `ignp("pregain", x)`, and so on down the table in §2. (Since 2026-10-03 `ignp` takes the slot's name or its param
+  object, so `ignp(Ignitor.slot.lpf.freq, x)` names the same slot as the first.) The editor tools registry reads the
+  slot vocabulary from the instrument definitions.
 
 ## 6. Pregain, gain, and where velocity went (rewritten 2026-09-18 with the maintainer)
 
 ```
-Osc -> [A pregain] -> classic -> [B gain] -> pan, sum into the orbit -> Katalyst classic ... -> [C gain] -> master ... -> [D gain]
+Ignitor -> [A pregain] -> classic -> [B gain] -> pan, sum into the orbit -> Katalyst classic ... -> [C gain] -> master ... -> [D gain]
 ```
 
 | spot | what it is | word | owner |
@@ -230,12 +231,12 @@ they looked redundant: they were. Strudel's `gain` is our `pregain`, Strudel's `
 - **`pregain` is an ordinary slot: it does what the instrument wires it to, and nothing
   otherwise.** No unconsumed rule, no level applied behind the author's back, no analysis of the
   tree, no flag from the build. The built-ins place it explicitly:
-  `Osc.saw().mul(OscSlot.pregain).classic()`, with a helper so the line reads
-  `Osc.saw().pregain().classic()`. An authored instrument places it in front of its own
+  `Ignitor.saw().mul(Ignitor.slot.pregain).classic()`, with a helper so the line reads
+  `Ignitor.saw().pregain().classic()`. An authored instrument places it in front of its own
   nonlinearity (the Orchestertrommel: on the summed partials, before the skin's `distort`; one
   place, not one per oscillator, because the sum is linear), or not at all. On an instrument
   that never places it, `.pregain()` does nothing, and that surprises nobody: a bare sine has no
-  drive. `.pregain(x)` is `.oscp("pregain", x)`.
+  drive. `.pregain(x)` is `.ignp("pregain", x)`.
 - **`gain` is the channel, not part of the instrument.** The engine applies it to every voice,
   with pan, whatever the tree says, so it works on any instrument, wired or not. That is not
   magic: the channel was never the instrument's.
@@ -283,7 +284,7 @@ replaced it: no magic. A knob does what the tree wires, the channel is the chann
 articulation is the frontend's business.
 
 **Considered and rejected the same day:** wrapping a bare signal in `classic()` automatically
-(where is the line: is `Osc.sine().mul(0.5)` bare?); an unplaced knob acting at the output (the
+(where is the line: is `Ignitor.sine().mul(0.5)` bare?); an unplaced knob acting at the output (the
 magic above); velocity as a second backend slot; velocity folded into `pregain` (Strudel's
 position: a trap for every instrument that does not place the slot, and a sound change for
 every driven one). Still open, deliberately: a construction that makes "this instrument does not
@@ -394,7 +395,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
    migration is checked per event (old product against new wire gain, relative 1e-12) by a
    one-off fixture that is deleted with the step.
 3. **Built-in instruments**: `.classic()` on both doors, the built-ins as registered definitions,
-   the node-level gate with the build-cache key covering it, the voice doors reaching their slots (as `oscp` aliases in the first sketch; through `toVoiceData()` since step 8),
+   the node-level gate with the build-cache key covering it, the voice doors reaching their slots (as `ignp` aliases in the first sketch; through `toVoiceData()` since step 8),
    `VoiceData` cut to §4, the Pipeline DSL and the filter pipeline builder retired, the built-in
    songs' authored instruments migrated with `.classic()`, the unknown-slot diagnostic in the
    editor. Byte-identical by the gate rule for built-ins and by the migration for the songs.
@@ -420,8 +421,8 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 - The voice's lifetime. Today the pipeline VCA's release decides when a voice ends and is culled.
   With the envelope inside the tree, the rule becomes "duration plus the tree's longest release",
   read from the tree at build. Needs its own paragraph in phase 3's task.
-- `Osc` and `oscp` are misnomers for the Ignitor concept (the known debt in `/dsl-design` §5) and get
-  renamed in their own item, after phase 3, once the slot vocabulary has settled.
+- The Ignitor's script object and setter carried misnomers (the known debt in `/dsl-design` §5); renamed in their
+  own item after phase 3, DONE 2026-10-04 (`docs/plans/ignitor-katalyst-naming.md`).
 - Tutorials, the Lexikon and the whitepaper describe doors as fields and the voice pipeline as the
   engine; phase 5 re-reads them once the surfaces are gone. (2026-09-28: the whitepaper is re-read; the Lexikon had
   no stale entry; the tutorials belong to their own session.)
@@ -473,7 +474,7 @@ Each phase is its own task, review loop and commit; each ends with the guards gr
 - **Phase 3: `analog` WAS the one bag key with two readers that disagree on a non-finite value.**
   Since the leaf guard, the oscillator's `Slots.analog` reads a NaN as its default, while
   `VoiceFactory` still hands the raw value to the filter-feel scales and the sample ignitor.
-  `oscParams["onepole"]` is NaN-safe by accident and not `+Infinity`-safe. Both go away when those
+  `ignitorParams["onepole"]` is NaN-safe by accident and not `+Infinity`-safe. Both go away when those
   doors become slots; until then they are listed here so nobody concludes the bag is guarded
   everywhere. A `ParamIgnitor` that engine code constructs directly never passes the leaf either;
   no production caller does that today (checked 2026-09-19: a `FilterDef` becomes an `AudioFilter`

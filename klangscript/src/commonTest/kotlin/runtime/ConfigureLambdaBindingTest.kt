@@ -16,7 +16,7 @@ import io.peekandpoke.klang.script.klangScriptEngine
  * through the real interpreter path (`positionalArgsForNative` → `resolveByParamSpec`).
  *
  * The natives here stand in for the DSL doors of `docs/tasks-archive/2026-09/20260906-dsl-configure-lambdas.md`:
- * `door(freq = 440, configure = null)` mirrors `Osc.sine(freq, configure)`.
+ * `door(freq = 440, configure = null)` mirrors `Ignitor.sine(freq, configure)`.
  */
 class ConfigureLambdaBindingTest : StringSpec({
 

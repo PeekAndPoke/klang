@@ -144,7 +144,7 @@ class WireCodecRoundTripSpec : StringSpec({
     "ScheduledVoice round-trips a populated VoiceData (both slot maps, the pitch-curve enums, a false Boolean?)" {
         val data = VoiceData.empty.copy(
             note = "c3", freqHz = 130.81, gain = 0.7, soundIndex = 2, cull = 0.2,
-            oscParams = mapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
+            ignitorParams = mapOf("voices" to 7.0, "spread" to 0.3, "lpf.freq" to 1000.0, "adsr.on" to 0.0),
             // The second string-keyed map, the orbit's slot state: same shape, different host, and
             // a key with a dot in it (the `<stage>.<knob>` spelling every classic slot carries).
             katalystParams = mapOf("reverb.size" to 6.0, "compressor.ratio" to 8.0, "room" to 0.5),

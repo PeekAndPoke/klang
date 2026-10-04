@@ -7,6 +7,8 @@ package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -14,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.notch
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
@@ -25,15 +28,111 @@ typealias IgnitorDslLike = Any
 
 /**
  * Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not
- * overridable by oscParams). Anything else is a script-level type error naming what arrived, so a
- * lambda that landed on a sound slot (`Osc.whitenoise(x => ...)`, which has no `configure`) reads
+ * overridable by ignitorParams). Anything else is a script-level type error naming what arrived, so a
+ * lambda that landed on a sound slot (`Ignitor.whitenoise(x => ...)`, which has no `configure`) reads
  * as "got a function", not as an internal error.
+ *
+ * A [KatalystParam] has its own message: it is the chain's slot by intent, its author drives it with `katp`, which
+ * writes the orbit's map and never reaches the voice, so in an Ignitor tree the knob would sit at its default while
+ * the song moves it. The mirror of the Katalyst knobs' refusal of a bare Ignitor
+ * param (`toKatalystKnob`, decision Q2 of `docs/plans/ignitor-katalyst-naming.md`).
  */
 fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
     is IgnitorDsl -> this
     is Number -> IgnitorDsl.Constant(this.toDouble())
+    is KatalystParam -> throw KlangScriptTypeError("a Katalyst param in an Ignitor tree; use Ign.param", operation = "sound parameter")
     is Function<*> -> throw KlangScriptTypeError("expected a sound or a number, got a function", operation = "sound parameter")
     else -> throw KlangScriptTypeError("expected a sound or a number, got ${this::class.simpleName}", operation = "sound parameter")
+}
+
+/**
+ * The slot argument of `ignitorParam` / `ignp`: a slot NAME (`"lpf.freq"`) or an Ignitor param OBJECT
+ * (`Ignitor.slot.lpf.freq`, `Ignitor.param("cutoff", 800)`, `IgnitorDsl.Slots.lpf.freq`). Resolved by
+ * [ignitorSlotName] on both doors, so the script door and the Kotlin door cannot drift.
+ */
+typealias IgnitorSlotLike = Any
+
+/**
+ * The slot argument of `katalystParam` / `katp`: a slot NAME (`"reverb.wet"`) or a Katalyst param OBJECT
+ * (`Katalyst.slot.reverb.wet`, `Katalyst.param("room", 5)`, `KatalystDsl.Slots.reverb.wet`). Resolved by
+ * [katalystSlotName] on both doors.
+ */
+typealias KatalystSlotLike = Any
+
+/**
+ * The slot NAME an `ignitorParam` / `ignp` call writes: a string as it is, an Ignitor param by its name. Only the
+ * name is written; the param's default stays the tree's.
+ *
+ * Everything else is a [KlangScriptTypeError] raised at the call, naming [door] and the fix: a Katalyst param
+ * ("use [twin]"), a number (decision Q8: `ignp(42, x)` used to write the slot `"42"`), a sound or an expression over
+ * a param (`Ignitor.param("x", 1).mul(2)` is not a slot), null (a `let` never assigned), anything else. [slot] is
+ * nullable so that a script `null` reaches this message instead of the interpreter's generic conversion error.
+ *
+ * **Why a typed error and not a coercion.** The stone rule "coerce user-reachable inputs, never `require()` them"
+ * protects the Motor from VALUES out of range. This is the wrong KIND of argument: no coercion can make a Katalyst
+ * param or a sound mean the slot the author wanted, and writing it anyway would fill a map the author's knob never
+ * reads. It is
+ * the class of a configure lambda returning the wrong type (`configuredBy`, `/dsl-design` checklist 13), it never
+ * reaches the audio path, and it is a script error naming the door, never a `require()`.
+ *
+ * @param door the door the author called (`"ignp"`, `"ignitorParam"`), for the message
+ * @param twin the same door on the other host (`"katp"`, `"katalystParam"`), the fix for a Katalyst param
+ * @param location the call's source location, so the editor marks the call
+ */
+fun ignitorSlotName(slot: IgnitorSlotLike?, door: String, twin: String, location: SourceLocation? = null): String =
+    when (slot) {
+        is String -> slot
+        is IgnitorDsl.Param -> slot.name
+        is KatalystParam -> throw KlangScriptTypeError(
+            message = "a Katalyst param passed to $door; use $twin",
+            operation = door,
+            location = location,
+        )
+
+        else -> throw KlangScriptTypeError(
+            message = "$door expects a slot name or an Ignitor param, got ${describeArgument(slot)}",
+            operation = door,
+            location = location,
+        )
+    }
+
+/**
+ * The slot NAME a `katalystParam` / `katp` call writes: a string as it is, a Katalyst param by its name. The mirror
+ * of [ignitorSlotName], with the same reasons for a typed error; an Ignitor param is the wrong host ("use [twin]").
+ *
+ * @param door the door the author called (`"katp"`, `"katalystParam"`), for the message
+ * @param twin the same door on the other host (`"ignp"`, `"ignitorParam"`), the fix for an Ignitor param
+ * @param location the call's source location, so the editor marks the call
+ */
+fun katalystSlotName(slot: KatalystSlotLike?, door: String, twin: String, location: SourceLocation? = null): String =
+    when (slot) {
+        is String -> slot
+        is KatalystParam -> slot.name
+        is IgnitorDsl.Param -> throw KlangScriptTypeError(
+            message = "an Ignitor param passed to $door; use $twin",
+            operation = door,
+            location = location,
+        )
+
+        else -> throw KlangScriptTypeError(
+            message = "$door expects a slot name or a Katalyst param, got ${describeArgument(slot)}",
+            operation = door,
+            location = location,
+        )
+    }
+
+/** What a wrong argument IS, in the words a song uses, for the resolvers' and the Katalyst knobs' messages. */
+internal fun describeArgument(value: Any?): String = when (value) {
+    null -> "null"
+    is String -> "a string"
+    is Number -> "a number"
+    is Boolean -> "a boolean"
+    is IgnitorDsl -> "a sound"
+    is KatalystDsl -> "a Katalyst chain"
+    is Function<*> -> "a function"
+    is List<*> -> "an array"
+    is Map<*, *> -> "an object"
+    else -> value::class.simpleName ?: "a value"
 }
 
 /**
@@ -41,25 +140,31 @@ fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
  * a NAME through its catalogue's `indexOf`, a number or a slot as it is, and nothing at all as
  * [bare], the stage's own value. The one conversion every such door shares (Katalyst step 5a-2 for
  * `body` and `vowel`, phase 3 step 3b for `shape`, `distort` and the tremolo builder), so a name,
- * its index and a slot carrying the index are one knob on every door.
+ * its index and a slot carrying the index are one knob on every door. [knob] converts a number or a slot: the
+ * Ignitor doors' [toIgnitorDsl] by default, the Katalyst doors pass `toKatalystKnob`.
  */
-internal fun catalogueIndex(value: IgnitorDslLike?, bare: IgnitorDsl, indexOf: (String) -> Double): IgnitorDsl =
+internal fun catalogueIndex(
+    value: IgnitorDslLike?,
+    bare: IgnitorDsl,
+    indexOf: (String) -> Double,
+    knob: (IgnitorDslLike) -> IgnitorDsl = { it.toIgnitorDsl() },
+): IgnitorDsl =
     when (value) {
         null -> bare
         is String -> IgnitorDsl.Constant(indexOf(value))
-        else -> value.toIgnitorDsl()
+        else -> knob(value)
     }
 
 /**
  * Extension methods on [IgnitorDsl] for KlangScript.
  *
- * Enables chaining: `Osc.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
+ * Enables chaining: `Ignitor.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
  * Any numeric parameter also accepts an IgnitorDsl for audio-rate modulation:
- * `Osc.sine().lowpass(Osc.perlin())` — modulated cutoff.
+ * `Ignitor.sine().lowpass(Ignitor.perlin())` — modulated cutoff.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.TypeExtensions(IgnitorDsl::class)
-object KlangScriptOscExtensions {
+object KlangScriptIgnitorExtensions {
 
     // ── Filters ──────────────────────────────────────────────────────────────
 
@@ -74,9 +179,9 @@ object KlangScriptOscExtensions {
      * fills from the constants (`fillFilterEnvelope`, after the lambda).
      *
      * ```KlangScript
-     * Osc.saw().lowpass(800, 1.2, x => x.passes(2).analog(3))
-     * Osc.saw().lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))   // a pluck; q stays 0.707
-     * Osc.saw().lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))
+     * Ignitor.saw().lowpass(800, 1.2, x => x.passes(2).analog(3))
+     * Ignitor.saw().lowpass(800, x => x.env(24).adsr(0.005, 0.3, 0.2, 0.2))   // a pluck; q stays 0.707
+     * Ignitor.saw().lowpass(800, 1.2, x => x.env(24).adsr(0.01, 0.3, 0.2, 0.5, e => e.curves("lin", "exp", "exp")))
      * ```
      *
      * The cutoff envelope runs the law, the sampling and the default curve (exponential) of
@@ -194,7 +299,7 @@ object KlangScriptOscExtensions {
      * @param configure receives the [EqBuilder] (knobs: `band`, `tap`) and returns it.
      *
      * ```KlangScript
-     * Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
+     * Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
      * ```
      */
     @KlangScript.Method
@@ -235,9 +340,9 @@ object KlangScriptOscExtensions {
      * whose knobs shape the stages and de-click the gain:
      *
      * ```KlangScript
-     * Osc.saw().adsr(0.01, 0.3, 0.5, 0.2)
-     * Osc.saw().adsr(0.005, 1.0, 0.0, 0.03, e => e.curves("linear", "linear", "linear"))
-     * Osc.sine().adsr(0.001, 0.4, 0.0, 0.1, e => e.declick(0.0005))
+     * Ignitor.saw().adsr(0.01, 0.3, 0.5, 0.2)
+     * Ignitor.saw().adsr(0.005, 1.0, 0.0, 0.03, e => e.curves("linear", "linear", "linear"))
+     * Ignitor.sine().adsr(0.001, 0.4, 0.0, 0.1, e => e.declick(0.0005))
      * ```
      *
      * Unshaped stages are exponential, every amplitude envelope's default, and every exponential
@@ -267,8 +372,8 @@ object KlangScriptOscExtensions {
     /**
      * Wraps this sound in the classic synth voice: the pattern's one-pole lowpass, crush, coarse,
      * distort, highpass, bandpass, notch, lowpass, tremolo and the amplitude envelope, in that order,
-     * every one of them driven by a slot the pattern's doors fill (`OscSlot.onepole`, `OscSlot.lpf.freq`,
-     * `OscSlot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
+     * every one of them driven by a slot the pattern's doors fill (`Ignitor.slot.onepole`, `Ignitor.slot.lpf.freq`,
+     * `Ignitor.slot.adsr.attack`, ...). A stage the note does not write is not built, so an untouched
      * `classic()` costs one envelope and nothing else.
      *
      * Make it the LAST call (an `.optimizer(...)` hint after it is fine, it is not a stage). An instrument that ends
@@ -278,18 +383,18 @@ object KlangScriptOscExtensions {
      * in front (`vibrato`, `accelerate`, `penv`, `fm`), the teardown fade when the tree does not end in its own
      * envelope (`BuiltIgnitor.endsInEnvelope`), and the channel after (`gain`, `pan`); so without `classic()` the
      * doors of `classic()` reach only the slots the tree places itself. A pattern also reaches the slots by name:
-     * `oscp("lpf.freq", 1800)`.
+     * `ignp("lpf.freq", 1800)`.
      *
-     * Want another order? Write your own tail from the same `OscSlot` slots, as far as a door takes them: every
+     * Want another order? Write your own tail from the same `Ignitor.slot` slots, as far as a door takes them: every
      * filter's `freq`, `q`, `env` and envelope stages, `crush`, `coarse`, the tremolo's knobs and the envelope's
-     * stages and curves. The pattern's `onepole` is a slot too (`OscSlot.onepole`): the engine no longer hangs one
+     * stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
      * around the instrument. Three groups only `classic()` can place: `lpf.passes` / `hpf.passes` (the filter
      * builder's `passes(n)` takes a number), `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
      * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
      * switches off as a whole, so a slot on the door's distort would shape every note, written or not).
      *
      * ```KlangScript
-     * let guitar = Osc.saw().distort(0.4).classic()
+     * let guitar = Ignitor.saw().distort(0.4).classic()
      * ```
      *
      * No arguments: everything it does is a slot. It is the same function as the Kotlin
@@ -317,7 +422,7 @@ object KlangScriptOscExtensions {
      *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
      *
      * @param shape a shape NAME, converted to its index in `DistortionShapes` (an unknown name is
-     *   "soft"); or the index itself as a number; or a slot carrying it (`Osc.param("drive-shape", 10)`),
+     *   "soft"); or the index itself as a number; or a slot carrying it (`Ignitor.param("drive-shape", 10)`),
      *   the door being the only way to write one. Read once per note.
      * @param oversample the oversampling factor (2 = 2x, 4 = 4x, 8 = 8x; 0 or 1 = off; a non-power of
      *   two is floored), a number or a slot, read once per note. A stopgap until oversampling regions.
@@ -394,7 +499,7 @@ object KlangScriptOscExtensions {
     /**
      * Applies amplitude tremolo: an oscillator at [rate] Hz pulls the level down by up to [depth]
      * (0 to 1). The LFO's shape is a knob on the [TremoloBuilder]: `.tremolo(4, 0.8, x => x.shape("square"))`.
-     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, sync, shape)`.
+     * Rate first, like every Ignitor LFO door; the pattern door is `tremolo(depth, rate, shape)`.
      *
      * @param configure receives the [TremoloBuilder] (knob: `shape`) and returns it.
      */
@@ -447,7 +552,7 @@ object KlangScriptOscExtensions {
 
     /**
      * Applies FM synthesis with a modulator ignitor. The modulation index envelope is a knob on the
-     * [FmBuilder]: `.fm(Osc.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))`, the built-in `sgbell`.
+     * [FmBuilder]: `.fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.05))`, the built-in `sgbell`.
      *
      * @param configure receives the [FmBuilder] (knob: `adsr`) and returns it.
      */
@@ -536,7 +641,7 @@ object KlangScriptOscExtensions {
      * let pedal = x => x.distort(0.4, "soft")
      * let cab   = x => x.highpass(100).lowpass(5000)
      * let rig   = x => x.through(pedal, cab)
-     * let guitar = Osc.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+     * let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
      * ```
      *
      * Serial, one stage into the next. Not sprudel's `apply(f, g)`, which stacks the results side by side.
@@ -548,7 +653,7 @@ object KlangScriptOscExtensions {
      */
     @KlangScript.Method
     fun through(self: IgnitorDsl, vararg stages: (IgnitorDsl) -> IgnitorDsl): IgnitorDsl =
-        runThroughStages("Osc through", self, stages, returns = "signal") { it is IgnitorDsl }
+        runThroughStages("Ignitor through", self, stages, returns = "signal") { it is IgnitorDsl }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
@@ -609,7 +714,7 @@ object KlangScriptOscExtensions {
     /**
      * Places the `pregain` slot here: how hard the pattern plays INTO whatever follows.
      *
-     * Exactly `mul(OscSlot.pregain)`, and written as a call to [mul] so the two spellings cannot
+     * Exactly `mul(Ignitor.slot.pregain)`, and written as a call to [mul] so the two spellings cannot
      * drift into two operand orders: one tree, one content id. It takes no argument on purpose:
      * the slot IS the parameter, and the pattern moves it with `pregain(x)`.
      *
@@ -618,7 +723,7 @@ object KlangScriptOscExtensions {
      * the tone-neutral level word.
      *
      * ```KlangScript
-     * Osc.saw().pregain().distort(0.5)
+     * Ignitor.saw().pregain().distort(0.5)
      * ```
      */
     @KlangScript.Method

@@ -734,7 +734,7 @@ class KatalystSlotResolverSpec : StringSpec({
         line.feedback shouldBe DELAY_FEEDBACK
     }
 
-    "the note frequency a bus does not have: Osc.freq() resolves to the knob's constant" {
+    "the note frequency a bus does not have: Ignitor.freq() resolves to the knob's constant" {
         // The resolver reads a non-leaf knob at TWO frequencies and only believes an answer that
         // is the same on both: a knob whose value depends on a note is not a bus knob.
         //
@@ -749,7 +749,7 @@ class KatalystSlotResolverSpec : StringSpec({
     }
 
     "a frequency-DEPENDENT subtree takes the knob's constant too, not its value at one note" {
-        // `Osc.freq().mul(2)` folds at control rate, so a single probe would accept it (880.0 at 440);
+        // `Ignitor.freq().mul(2)` folds at control rate, so a single probe would accept it (880.0 at 440);
         // two probes disagree (880 vs 1320) and the knob keeps its constant. This is the row the
         // first version of the resolver got wrong: `Times` scrubs a non-finite probe to 0.0
         // through `safeOut`, so a NaN-based discriminator read it as a legitimate zero.

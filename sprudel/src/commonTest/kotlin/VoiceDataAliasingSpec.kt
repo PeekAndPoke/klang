@@ -27,7 +27,7 @@ import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.merge
 import io.peekandpoke.klang.sprudel.lang.notch
 import io.peekandpoke.klang.sprudel.lang.note
-import io.peekandpoke.klang.sprudel.lang.oscp
+import io.peekandpoke.klang.sprudel.lang.ignp
 import io.peekandpoke.klang.sprudel.lang.penv
 import io.peekandpoke.klang.sprudel.lang.phaser
 import io.peekandpoke.klang.sprudel.lang.ply
@@ -76,7 +76,7 @@ class VoiceDataAliasingSpec : StringSpec({
         .accelerate(1).vibrato(5, 0.2).penv(12, 0.01).fm(2, 1.5)
         .distort(0.3).tremolo(0.5, 4).begin(0.1)
         .vowel(0.3, "a").body(0.3, "wood").phaser(0.2, 0.5)
-        .oscp("voices", 3).reverb(0.2)
+        .ignp("voices", 3).reverb(0.2)
 
     fun source() = note("c3 e3 g3").everyGroup()
 
@@ -171,14 +171,14 @@ internal fun SprudelVoiceData.mutableParts(): List<Pair<String, Any?>> = listOf(
     "adsr" to adsr, "lpf" to lpf, "hpf" to hpf, "bpf" to bpf, "notch" to notch,
     "pitchMod" to pitchMod, "pitchEnv" to pitchEnv, "fm" to fm, "distortion" to distortion,
     "phaser" to phaser, "tremolo" to tremolo, "sample" to sample, "bodyFx" to bodyFx, "vowelFx" to vowelFx,
-    "oscParams" to oscParams, "katalystParams" to katalystParams,
+    "ignitorParams" to ignitorParams, "katalystParams" to katalystParams,
 )
 
 /** Writes one sentinel through every group and bag, in place (the flat setters write into an existing group). */
 internal fun SprudelVoiceData.writeEveryPart() {
     attack = -1.0; cutoff = -2.0; hcutoff = -3.0; bandf = -4.0; notchf = -5.0
     accelerate = -6.0; pAttack = -7.0; fmh = -8.0; distort = -9.0; phaserRate = -10.0
-    tremoloSync = -11.0; begin = -12.0; body = "sentinel"; vowel = "sentinel"
-    putOscParam("sentinel", -13.0)
+    tremoloRate = -11.0; begin = -12.0; body = "sentinel"; vowel = "sentinel"
+    putIgnitorParam("sentinel", -13.0)
     putKatalystParam("sentinel", -14.0)
 }

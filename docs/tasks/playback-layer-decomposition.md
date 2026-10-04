@@ -172,7 +172,7 @@ engine state); `createEngine()` becomes a free function (it touches none of `Pla
    have no production senders (test-only primitives — worth documenting as such).
 3. **Redundant work**: the registry sweep runs in both the sample-lookahead and schedule paths
    every tick where the windows overlap (harmless, deduped by the set, but wasted).
-4. **Dead return value**: `registerIgnitor(it.osc)`'s synthetic name is discarded; the name
+4. **Dead return value**: `registerIgnitor(it.ignitor)`'s synthetic name is discarded; the name
    actually used is re-resolved independently in `toVoiceData()`.
 5. **Style inconsistency**: `registerIgnitor` is a bound-method field while pipelines/masters get
    real methods.

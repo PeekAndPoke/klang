@@ -29,7 +29,7 @@ import kotlin.random.Random
 
 /**
  * `classic()`'s DOOR PARITY, rendered (phase 3 step 5, `docs/tasks-archive/2026-09/20260928-builtin-instruments.md` section 9):
- * one voice per row, the script `Osc.saw().classic()` against the Kotlin `IgnitorDsl.Sawtooth().classic()`,
+ * one voice per row, the script `Ignitor.saw().classic()` against the Kotlin `IgnitorDsl.Sawtooth().classic()`,
  * with the slots written through the bag, every slot in turn and a few in combination, compared in RAW
  * BITS. Here because sprudel is the module that has both the script engine and the renderer, so the
  * spec runs on the JVM and on JS.
@@ -49,7 +49,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val gateFrames = 5000
 
     fun render(dsl: IgnitorDsl, bag: Map<String, Double>): DoubleArray {
-        val ignitor = dsl.optimize().buildExciter(oscParams = bag, random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
+        val ignitor = dsl.optimize().buildExciter(ignitorParams = bag, random = Random(7), freqHz = 220.0, sampleRate = sampleRate).ignitor
         val ctx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = gateFrames,
@@ -81,7 +81,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
     val script: IgnitorDsl by lazy {
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
-        engine.execute("Osc.saw().classic()").toObjectOrNull<IgnitorDsl>()!!
+        engine.execute("Ignitor.saw().classic()").toObjectOrNull<IgnitorDsl>()!!
     }
 
     val kotlin: IgnitorDsl = IgnitorDsl.Sawtooth().classic()
@@ -116,7 +116,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         add(Row("${door}Curves.release", env + ("${door}Curves.release" to AdsrCurves.indexOf(AdsrCurve.InvSquare))))
     }
 
-    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 5.0)
+    val trem = mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 5.0)
 
     val rows: List<Row> = buildList {
         add(Row("onepole", mapOf("onepole" to 900.0)))
@@ -131,7 +131,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
         addAll(filterRows("lpf", hasPasses = true))
         add(Row("analog", mapOf("analog" to 2.0, "lpf.freq" to 900.0)))
         add(Row("tremolo.depth", mapOf("tremolo.depth" to 0.5)))
-        add(Row("tremolo.sync", trem))
+        add(Row("tremolo.rate", trem))
 
         for (shape in LfoShapes.names - "sine") {
             add(Row("tremolo.shape", trem + ("tremolo.shape" to LfoShapes.indexOf(shape)), label = "tremolo.shape $shape"))
@@ -151,7 +151,7 @@ class ClassicDoorRenderParitySpec : StringSpec({
                 mapOf(
                     "crush.amount" to 6.0, "hpf.freq" to 150.0, "bpf.freq" to 1200.0, "bpf.q" to 0.5, "notch.freq" to 3000.0,
                     "lpf.freq" to 2500.0, "lpf.env" to 12.0, "lpf.decay" to 0.2, "lpf.sustain" to 0.2,
-                    "tremolo.depth" to 0.3, "tremolo.sync" to 6.0, "adsr.attack" to 0.01, "adsr.sustain" to 0.7,
+                    "tremolo.depth" to 0.3, "tremolo.rate" to 6.0, "adsr.attack" to 0.01, "adsr.sustain" to 0.7,
                 ),
             ),
         )
@@ -192,12 +192,12 @@ class ClassicDoorRenderParitySpec : StringSpec({
     }
 
     // The tremolo across the SPRUDEL door and the IGNITOR door (2026-09-29, the tremolo as a composition): sprudel's
-    // `tremolo(depth, sync, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
+    // `tremolo(depth, rate, shape)` fills `classic()`'s tremolo slots; the Ignitor's `tremolo(rate, depth, shape)`
     // places the same node with constants in front of a `classic()` whose own tremolo stays unset. Both render one
     // saw through one tremolo into the default envelope, so the renders agree in raw bits, at every shape.
     for (shape in LfoShapes.names) {
         "DOOR PARITY: sprudel's tremolo(0.5, 5, \"$shape\") renders what the Ignitor door's tremolo(5, 0.5, \"$shape\") renders" {
-            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().oscParams ?: emptyMap()
+            val bag = note("a3").tremolo(0.5, 5, shape).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams ?: emptyMap()
             val viaSprudel = render(kotlin, bag)
             val viaIgnitor = render(IgnitorDsl.Sawtooth().ignitorTremolo(5.0, 0.5, shape).classic(), emptyMap())
             val bare = render(kotlin, emptyMap())

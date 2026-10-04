@@ -27,26 +27,26 @@ let tp = "[0 1 -2 -3 -5 -10 -3 3]/8".slow(stay) // <---- transposition ... wait 
 
 let guitar = (() => {
 
-  let pSpread     = Osc.param("spread",        0.05, "Supersaw voice detuning")
-  let pAnalog     = Osc.param("analog",        3.50, "Analog pitch drift")
-  let pVoices     = Osc.param("voices",       21,    "Number of unison voices")
+  let pSpread     = Ign.param("spread",        0.05, "Supersaw voice detuning")
+  let pAnalog     = Ign.param("analog",        3.50, "Analog pitch drift")
+  let pVoices     = Ign.param("voices",       21,    "Number of unison voices")
  
-  let pDrive      = Osc.param("drive",         1.000, "Primary distortion drive level")
-  let pBrightness = Osc.param("brightness", 5000.000, "Post-distortion lowpass cutoff in Hz")
-  let pAttack     = Osc.param("attack",        0.008, "Attack time in seconds")
-  let pSustain    = Osc.param("sustain",       0.200, "Sustain level")
+  let pDrive      = Ign.param("drive",         1.000, "Primary distortion drive level")
+  let pBrightness = Ign.param("brightness", 5000.000, "Post-distortion lowpass cutoff in Hz")
+  let pAttack     = Ign.param("attack",        0.008, "Attack time in seconds")
+  let pSustain    = Ign.param("sustain",       0.200, "Sustain level")
 
-  let signal = Osc.supersaw(x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.10)
+  let signal = Ign.supersaw(x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.10)
     // Zawtooth overtones for more grit
-    .plus(Osc.superramp(Osc.freq().mul(2), x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.06))
+    .plus(Ign.superramp(Ign.freq().mul(2), x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.06))
    
   return signal
-    .lowpass(Osc.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            // Pre-distortion: sweeping lowpass adds dynamic character
-    .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
+    .lowpass(Ign.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            // Pre-distortion: sweeping lowpass adds dynamic character
+    .plus(Ign.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
     .bandpass(700, 0.30)                                                            // Gentle mid-focus before distortion
     .distort(pDrive, "tube", 8)                                                     // Overdrive + Oversample
     .lowpass(pBrightness, 1.8, x => x.analog(pAnalog))                                             // Post-distortion: control fizz + warmth roll-off
-    .highpass(Osc.freq(), 0.7, x => x.analog(pAnalog))                                             // Cut away muddy low frequencies
+    .highpass(Ign.freq(), 0.7, x => x.analog(pAnalog))                                             // Cut away muddy low frequencies
     .coarse(2)
     .adsr(pAttack, 8.0, pSustain, 0.07, e => e.curves("exp", "exp", "exp"))         // Tight rhythm envelope
     // cabinett
@@ -61,13 +61,13 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(1).fast(4).scale("C3:chromatic").hpf(600).lpf(freq = 3100, env = 15.9, q = 1.50).clip(0.96) // .solo()
-    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6000).oscp("spread", 0.05).gain(0.120).body(material = "mahogany", wet = 0.5)
+    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6000).ignp("spread", 0.05).gain(0.120).body(material = "mahogany", wet = 0.5)
     .transpose(tp).pan(0.25).superimpose(pan(0.75)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 ---------------------------------------------------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0  8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").hpf(1200).lpf(freq = 3200, env = 15.9, q = 1.50).clip(0.96).late(0.001)  // . solo()
-    .s(guitar).adsrOff().oscp("drive", drive * 0.9).oscp("brightness", 6200).oscp("spread", 0.04).gain(0.110).body(material = "oak", wet = 0.5)
+    .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6200).ignp("spread", 0.04).gain(0.110).body(material = "oak", wet = 0.5)
     .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
@@ -75,7 +75,7 @@ stack( // Gitarre! -------------------------------------------------------------
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|10|17|17|17|17|22]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9925).hpf(110).lpf(freq = 2950, env = 14, q = 1.50).gain(0.15)
-    .s(guitar).adsrOff().oscparam("drive", drive).oscp("brightness", 6000).oscp("spread", 0.09).body(material = "cedar", wet = 0.5) //  . mute()
+    .s(guitar).adsrOff().ignitorParam("drive", drive).ignp("brightness", 6000).ignp("spread", 0.09).body(material = "cedar", wet = 0.5) //  . mute()
     .transpose(tp).pan(0.40).superimpose(pan(0.60).late(0.001)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -------------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0]                                     [[0]!3 ~                     ~!12]

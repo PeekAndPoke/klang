@@ -54,10 +54,10 @@ fun SprudelPattern.sndPluck(
     callInfo: CallInfo? = null
 ): SprudelPattern {
     var p = applySndPluck(this)
-    if (decay != null) p = p.oscparam("decay", decay, callInfo?.forParam(0, 1))
-    if (brightness != null) p = p.oscparam("brightness", brightness, callInfo?.forParam(1, 1))
-    if (pickPosition != null) p = p.oscparam("pickPosition", pickPosition, callInfo?.forParam(2, 1))
-    if (stiffness != null) p = p.oscparam("stiffness", stiffness, callInfo?.forParam(3, 1))
+    if (decay != null) p = p.ignitorParam("decay", decay, callInfo?.forParam(0, 1))
+    if (brightness != null) p = p.ignitorParam("brightness", brightness, callInfo?.forParam(1, 1))
+    if (pickPosition != null) p = p.ignitorParam("pickPosition", pickPosition, callInfo?.forParam(2, 1))
+    if (stiffness != null) p = p.ignitorParam("stiffness", stiffness, callInfo?.forParam(3, 1))
     return p
 }
 
@@ -165,12 +165,12 @@ fun SprudelPattern.sndSuperPluck(
     callInfo: CallInfo? = null
 ): SprudelPattern {
     var p = applySndSuperPluck(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
-    if (decay != null) p = p.oscparam("decay", decay, callInfo?.forParam(2, 1))
-    if (brightness != null) p = p.oscparam("brightness", brightness, callInfo?.forParam(3, 1))
-    if (pickPosition != null) p = p.oscparam("pickPosition", pickPosition, callInfo?.forParam(4, 1))
-    if (stiffness != null) p = p.oscparam("stiffness", stiffness, callInfo?.forParam(5, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
+    if (decay != null) p = p.ignitorParam("decay", decay, callInfo?.forParam(2, 1))
+    if (brightness != null) p = p.ignitorParam("brightness", brightness, callInfo?.forParam(3, 1))
+    if (pickPosition != null) p = p.ignitorParam("pickPosition", pickPosition, callInfo?.forParam(4, 1))
+    if (stiffness != null) p = p.ignitorParam("stiffness", stiffness, callInfo?.forParam(5, 1))
     return p
 }
 
@@ -264,8 +264,8 @@ private fun applySndSuperSaw(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSuperSaw(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSuperSaw(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -322,8 +322,8 @@ private fun applySndSuperSine(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSuperSine(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSuperSine(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -380,8 +380,8 @@ private fun applySndSuperSquare(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSuperSquare(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSuperSquare(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -438,8 +438,8 @@ private fun applySndSuperTri(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSuperTri(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSuperTri(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -496,8 +496,8 @@ private fun applySndSuperRamp(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndSuperRamp(voices: PatternLike? = null, spread: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndSuperRamp(this)
-    if (voices != null) p = p.oscparam("voices", voices, callInfo?.forParam(0, 1))
-    if (spread != null) p = p.oscparam("spread", spread, callInfo?.forParam(1, 1))
+    if (voices != null) p = p.ignitorParam("voices", voices, callInfo?.forParam(0, 1))
+    if (spread != null) p = p.ignitorParam("spread", spread, callInfo?.forParam(1, 1))
     return p
 }
 

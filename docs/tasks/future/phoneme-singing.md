@@ -50,8 +50,8 @@ sweep (long) or a click (short), which is the open question in `future/transitio
 - One ignitor per phoneme (about 25 consonants); consonant x vowel combinations are temporal
   (sequencing), not timbral, so no diphone explosion.
 - ONE built-in sound named `sing` ("mouth" rejected): consonants plus a neutral larynx child in a
-  single `Osc.variants` bank keyed by the enum. The larynx has no baked character (no crush); color
-  comes downstream via crush()/body()/lpf(). A future `Osc.sing(larynx = ...)` derivation could
+  single `Ignitor.variants` bank keyed by the enum. The larynx has no baked character (no crush); color
+  comes downstream via crush()/body()/lpf(). A future `Ignitor.sing(larynx = ...)` derivation could
   override slots.
 - Register knob is `singer("bass" ...)`, not `voice()` ("voice" collides with Voice/VoiceData).
   It composes with plain `vowel()` (same "bass:a" table prefix).

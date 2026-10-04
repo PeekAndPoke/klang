@@ -12,6 +12,8 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystValue
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.stdlib.KatalystSlotLike
+import io.peekandpoke.klang.script.stdlib.katalystSlotName
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -153,23 +155,33 @@ fun PatternMapperFn.katalyst(katalyst: KatalystDsl, callInfo: CallInfo? = null):
     return this.chain { p -> applyKatalyst(p, value) }
 }
 
-// -- katp() -----------------------------------------------------------------------------------------------------------
+// -- katalystParam() / katp() -----------------------------------------------------------------------------------------
 
-private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    if (args.size < 2) return source
-
-    val key = args[0].value?.toString() ?: return source
-    val valueArgs = args.drop(1)
-    val mutation = voiceSetter { putKatalystParam(key, it?.asDoubleOrNull()) }
+/**
+ * Writes the orbit chain slot [slot] (already a NAME, resolved at the call by [katalystSlotName]) with the value
+ * pattern [value]. The four forms of both names resolve the slot first and then land here, so a wrong slot argument
+ * is a script error when the door is CALLED, the mapper forms included.
+ */
+private fun applyKatalystParam(source: SprudelPattern, slot: String, value: PatternLike, callInfo: CallInfo?): SprudelPattern {
+    val valueArgs = listOf(slot, value).asSprudelDslArgs(callInfo).drop(1)
+    val mutation = voiceSetter { putKatalystParam(slot, it?.asDoubleOrNull()) }
 
     return source._liftOrReinterpretStringField(valueArgs, mutation)
 }
 
+/** The slot name of a `katalystParam` call, or the script error naming the door and the fix. */
+private fun katalystParamSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
+    katalystSlotName(slot, door = "katalystParam", twin = "ignitorParam", location = callInfo?.callLocation)
+
+/** The slot name of a `katp` call, or the script error naming the door and the fix. */
+private fun katpSlot(slot: KatalystSlotLike?, callInfo: CallInfo?): String =
+    katalystSlotName(slot, door = "katp", twin = "ignp", location = callInfo?.callLocation)
+
 /**
  * Writes one **orbit chain slot**, [per orbit](/manuals/lexikon/orbit-bus), by its `<stage>.<knob>`
- * name.
+ * name or by the Katalyst param object itself.
  *
- * Direct access to a declared chain's named knobs, the orbit twin of [oscparam]: `oscp` fills the
+ * Direct access to a declared chain's named knobs, the orbit twin of [ignitorParam]: `ignp` fills the
  * voice's own instrument, `katp` the chain its orbit runs. The vocabulary is what the chain
  * declares, which for a chain built from `k.classic()` is every classic knob: `body.material`,
  * `body.wet`, `body.floor`, `vowel.vowel`, `vowel.wet`, `vowel.floor`, `delay.wet`, `delay.time`,
@@ -179,13 +191,18 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * `duck.orbit`, `duck.depth`, `duck.attack`. An authored chain names its own with
  * `Katalyst.param("room", 5)`.
  *
+ * The slot can be the param OBJECT instead of its name: `Katalyst.slot.reverb.wet` is the classic knob
+ * `reverb.wet`, and a `Katalyst.param(...)` held in a variable is its own name. Only the NAME is written; the
+ * default stays the chain's. An Ignitor param (`Ignitor.param(...)`, `Ignitor.slot.*`) is the voice's slot, which
+ * [ignitorParam] writes; handing one to this door is a script error at the call, and so is a number or a sound.
+ *
  * `gain.gain` is the orbit's **group fader**, the last stage before the duck: one multiply of the
  * whole orbit mix, after the compressor, covering the dry signal and the delay and reverb returns
  * alike. 1 is unity and is what every orbit runs at; below 1 is quieter, above 1 louder, and a
  * move glides over 50 ms so it never steps.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").orbit(1).katp("gain.gain", 0.8)   // this orbit, a little down
+ * note("c3 e3 g3").s("supersaw").orbit(1).katalystParam("gain.gain", 0.8)   // this orbit, a little down
  * ```
  *
  * **It is a mix knob, not an articulation**, and for the ordinary reason every `katp` value is:
@@ -223,7 +240,7 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * like every other knob. Writing an index by hand here is possible and rarely what you want: the
  * names are the readable door, and a raw index moves if the catalogue grows.
  *
- * Four more things it is NOT, and they all follow from the orbit being a bus and not a note:
+ * Three more things it is NOT, and they all follow from the orbit being a bus and not a note:
  *
  *  - **No per-note snapshot.** The value is orbit state: the chain re-reads it when the owner's map
  *    changes, so a chord writes it once, not once per note.
@@ -231,9 +248,6 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  *    same orbit writes into nothing. Give it its own orbit.
  *  - **Only a SLOT moves.** A knob the chain wrote as a number (`k.reverb(size = 4)`) is
  *    fixed; write `Katalyst.param` where the chain should listen.
- *  - **A slot listens only when it IS the knob.** `Katalyst.param("room", 5).mul(2)` is an
- *    expression OVER a slot, and the bus folds it to one number when the chain is built, so
- *    `katp("room", x)` never reaches it. Put the arithmetic on the pattern side instead.
  *
  * A raw slot write is exactly one slot, unlike a compound door (`reverb(...)`, `body(...)`,
  * `compressor(...)` and the rest), which fills the companions of the stage it names: on the
@@ -241,59 +255,139 @@ private fun applyKatp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * too, because the engine gates the room on its size.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")   // small room, then a hall
+ * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katalystParam("reverb.size", "<2 8>")   // small room, then a hall
  * ```
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").katalyst(Katalyst(k => k.reverb(0.5, Katalyst.param("room", 2))))
- *   .katp("room", "<2 9>")
+ *   .katalystParam("room", "<2 9>")
  * ```
  *
- * @param key The chain slot name.
+ * ```KlangScript(Playable)
+ * let room = Katalyst.param("room", 2)
+ * note("c3 e3").s("saw").katalyst(Katalyst(k => k.reverb(0.5, room))).katalystParam(room, "<2 9>")
+ * ```
+ *
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
  * @return A new pattern with the orbit chain slot set.
+ * @alias katp
  * @scope orbit
  * @category effects
  * @tags katalyst, orbit, chain, bus, param, slot
  */
 @KlangScript.Function
-fun SprudelPattern.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyKatp(this, listOf(key, value).asSprudelDslArgs(callInfo))
+fun SprudelPattern.katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyKatalystParam(this, katalystParamSlot(slot, callInfo), value, callInfo)
 
 /**
- * Parses this string as a pattern and writes an orbit chain slot.
+ * Parses this string as a pattern and writes an orbit chain slot, by name or by the Katalyst param object.
+ *
+ * ```KlangScript(Playable)
+ * "c3 e3 g3".katalystParam("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
+ * ```
+ *
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
+ * @param value The slot value.
+ * @alias katp
+ */
+@KlangScript.Function
+fun String.katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val name = katalystParamSlot(slot, callInfo)
+    return applyKatalystParam(this.toVoiceValuePattern(callInfo?.receiverLocation), name, value, callInfo)
+}
+
+/**
+ * Creates a [PatternMapperFn] that writes an orbit chain slot, by name or by the Katalyst param object.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katalystParam("reverb.size", 8))
+ * ```
+ *
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
+ * @param value The slot value.
+ * @alias katp
+ */
+@KlangScript.Function
+fun katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = katalystParamSlot(slot, callInfo)
+    return { p -> applyKatalystParam(p, name, value, callInfo) }
+}
+
+/**
+ * Chains an orbit-chain-slot write onto this [PatternMapperFn].
+ *
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
+ * @param value The slot value.
+ * @alias katp
+ */
+@KlangScript.Function
+fun PatternMapperFn.katalystParam(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = katalystParamSlot(slot, callInfo)
+    return this.chain { p -> applyKatalystParam(p, name, value, callInfo) }
+}
+
+/**
+ * Alias for [katalystParam].
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp(Katalyst.slot.reverb.size, "<2 8>")
+ * ```
+ *
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
+ * @param value The slot value.
+ * @alias katalystParam
+ * @scope orbit
+ * @category effects
+ * @tags katp, katalyst, orbit, chain, bus, param, slot
+ */
+@KlangScript.Function
+fun SprudelPattern.katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyKatalystParam(this, katpSlot(slot, callInfo), value, callInfo)
+
+/**
+ * Alias for [katalystParam]. Parses this string as a pattern and writes an orbit chain slot.
  *
  * ```KlangScript(Playable)
  * "c3 e3 g3".katp("reverb.size", 6).reverb(wet = 0.4).s("supersaw").note()
  * ```
  *
- * @param key The chain slot name.
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
+ * @alias katalystParam
  */
 @KlangScript.Function
-fun String.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).katp(key, value, callInfo)
+fun String.katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val name = katpSlot(slot, callInfo)
+    return applyKatalystParam(this.toVoiceValuePattern(callInfo?.receiverLocation), name, value, callInfo)
+}
 
 /**
- * Creates a [PatternMapperFn] that writes an orbit chain slot.
+ * Alias for [katalystParam]. Creates a [PatternMapperFn] that writes an orbit chain slot.
  *
  * ```KlangScript(Playable)
  * note("c3 e3").s("saw").reverb(wet = 0.4).apply(katp("reverb.size", 8))
  * ```
  *
- * @param key The chain slot name.
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
+ * @alias katalystParam
  */
 @KlangScript.Function
-fun katp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.katp(key, value, callInfo) }
+fun katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = katpSlot(slot, callInfo)
+    return { p -> applyKatalystParam(p, name, value, callInfo) }
+}
 
 /**
- * Chains an orbit-chain-slot write onto this [PatternMapperFn].
+ * Alias for [katalystParam]. Chains an orbit-chain-slot write onto this [PatternMapperFn].
  *
- * @param key The chain slot name.
+ * @param slot The chain slot (required): its name, or the Katalyst param itself.
  * @param value The slot value.
+ * @alias katalystParam
  */
 @KlangScript.Function
-fun PatternMapperFn.katp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.katp(key, value, callInfo) }
+fun PatternMapperFn.katp(slot: KatalystSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = katpSlot(slot, callInfo)
+    return this.chain { p -> applyKatalystParam(p, name, value, callInfo) }
+}

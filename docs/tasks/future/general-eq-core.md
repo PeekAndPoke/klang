@@ -90,7 +90,7 @@ same plan's section 5 says that someone who wants a second lowpass writes an ins
    (say eight): `eq.0.kind`, `eq.0.freq`, `eq.0.q`, `eq.0.db`, `eq.0.env`, ... A `kind` of "off" is the stage's off
    value, so unwritten sections are not built. The pattern fills slots exactly as today; the wire needs nothing new.
    Cost: a hard limit and wide slot names; the kind is an index slot, like the body's `material`.
-2. **A list-valued slot.** The voice carries the section list as one value (`VoiceData.oscParams` gains a structured
+2. **A list-valued slot.** The voice carries the section list as one value (`VoiceData.ignitorParams` gains a structured
    entry, or a sealed `@WireName` `EqSectionData` list next to it). `classic()`'s `eq` stage is ONE node whose sections
    are resolved at voice build (note-on), the way a filter envelope's slots are resolved today. The tree's shape does
    not change, only one node's content, so the slot rule holds if "a slot may hold a list" is accepted. Cost: a list
@@ -115,18 +115,18 @@ that covers the section list), measured before it is trusted on the audio thread
   The written section order is the signal order, so the fixed `highpass -> bandpass -> notch -> lowpass` order becomes
   the author's choice (more flexible; the migration writes today's order explicitly).
 - **The instrument's own `.eq()` and the pattern's `eq` could fuse, IF fusion is decided at note-on (section 4).**
-  An authored instrument that places its own static EQ in its tree (`Osc.saw().eq(e => e.band(300, 1, 2)).classic()`)
+  An authored instrument that places its own static EQ in its tree (`Ignitor.saw().eq(e => e.band(300, 1, 2)).classic()`)
   runs it before `classic()`. Today the optimizer runs at registration on the registered tree, where `onepole`,
   `crush`, `coarse` and `distort` are always present; a stage is skipped only at voice build (the runtime returns
   the inner of a gated-off stage). So only when fusion moves to the build do the two `Eq` nodes become adjacent for a
   note that writes none of those stages, and fuse into ONE core per voice. That is the flexibility win: the
   instrument's character and the note's shaping cost one filter pass.
 - **Placing the pattern's EQ elsewhere.** An author who wants the pattern's EQ at another position, or without the
-  rest of `classic()`, places the slot group directly (`x.eq(Osc.slot.eq)`, a sketch), the way a tree can already
+  rest of `classic()`, places the slot group directly (`x.eq(Ignitor.slot.eq)`, a sketch), the way a tree can already
   place single slots. A tree without `classic()` and without that slot does not hear the pattern's `.eq()`, the same
   rule the filter doors follow today.
-- **Knobs the instrument declares** (`e.lowpass(freq = Osc.param("cut", 800))`) stay fillable from the pattern
-  (`oscp("cut", ...)`), as today.
+- **Knobs the instrument declares** (`e.lowpass(freq = Ignitor.param("cut", 800))`) stay fillable from the pattern
+  (`ignp("cut", ...)`), as today.
 - **The bus and the master** already run `EqCore` through the Katalyst `eq` (static, crossfaded on change). With the
   general core, a bus section could gain the envelope or drift too; whether a BUS wants a per-note envelope is a design
   question (a bus has no note), so keep the bus static unless a use appears.

@@ -44,7 +44,7 @@ fun runVoiceDataCopyBenchmark() {
     val voice = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
         sound = SoundValue.Named("supersaw"); soundIndex = 1
-        oscParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
+        ignitorParams = paramBagOf("voices" to 7.0, "spread" to 0.3)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0; lpattack = 0.005
         hcutoff = 1350.0; distort = 0.3; pan = 0.3
@@ -53,7 +53,7 @@ fun runVoiceDataCopyBenchmark() {
     // (The duck, delay and reverb groups left in Katalyst step 5b-3; their knobs ride the bus slots here.)
     val full = createSprudelVoiceData {
         note = "c3"; freqHz = 130.81; scale = "e3 minor"; gain = 0.7; velocity = 0.95
-        sound = SoundValue.Named("supersaw"); soundIndex = 1; oscParams = paramBagOf("voices" to 7.0)
+        sound = SoundValue.Named("supersaw"); soundIndex = 1; ignitorParams = paramBagOf("voices" to 7.0)
         attack = 0.005; decay = 3.0; sustain = 0.0; release = 0.05                 // adsr
         cutoff = 1625.0; resonance = 1.2; lpenv = 1.0                              // lpf
         hcutoff = 1350.0; hresonance = 0.8                                         // hpf
@@ -64,7 +64,7 @@ fun runVoiceDataCopyBenchmark() {
         fmh = 2.0; fmEnv = 0.5                                                     // fm
         distort = 0.3; coarse = 2.0; crush = 8.0                                   // distortion
         phaserRate = 0.5; phaserDepth = 0.6                                        // phaser
-        tremoloSync = 4.0; tremoloDepth = 0.4                                      // tremolo
+        tremoloRate = 4.0; tremoloDepth = 0.4                                      // tremolo
         katalystParams = paramBagOf(                                               // bus slots
             "duck.depth" to 0.5, "duck.attack" to 0.05,
             "delay.wet" to 0.3, "delay.time" to 0.25, "delay.feedback" to 0.4,

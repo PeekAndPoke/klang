@@ -108,8 +108,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         (0 until decFrames).any { buf[it] != law(6.0, it) } shouldBe true
     }
 
-    "the old expK oscParam is an unread key: an override renders bit-identically to none" {
-        // `oscp("expK", k)` was the one writer a user could still reach after the door went; the slot
+    "the old expK ignitorParam is an unread key: an override renders bit-identically to none" {
+        // `ignp("expK", k)` was the one writer a user could still reach after the door went; the slot
         // is gone, so the value lands in the bag and nothing reads it.
         val n = 22050
         val dsl = IgnitorDsl.Adsr(
@@ -124,8 +124,8 @@ class AdsrIgnitorKnobsSpec : StringSpec({
         for (i in 0 until n) bufOverride[i].toRawBits() shouldBe bufDefault[i].toRawBits()
     }
 
-    // ── the slot bridge: oscParam overrides reach the new params (sprudel / custom-ignitor path) ──
-    "oscParam override reaches the declickSeconds slot" {
+    // ── the slot bridge: ignitorParam overrides reach the new params (sprudel / custom-ignitor path) ──
+    "ignitorParam override reaches the declickSeconds slot" {
         val n = 22050
         val dsl = IgnitorDsl.Adsr(
             inner = IgnitorDsl.Sine(),

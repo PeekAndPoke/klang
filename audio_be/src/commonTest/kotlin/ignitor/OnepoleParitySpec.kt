@@ -21,7 +21,7 @@ import kotlin.random.Random
 /**
  * Guards the `warmth -> onepole(freq)` unification (2026-08-24):
  *
- * 1. The sprudel door (oscParam `"onepole"` in Hz, applied by [IgnitorRegistry]) and the
+ * 1. The sprudel door (ignitorParam `"onepole"` in Hz, applied by [IgnitorRegistry]) and the
  *    engine one-pole (`Ignitor.onePoleLowpass`, which the ignitor door's `onepole(freq)`
  *    reaches via `IgnitorDslRuntime`) build the SAME filter — bit-identical output.
  * 2. The migration conversion is pinned: the old `warmth(w)` coefficient was `a = 1 - w`
@@ -65,13 +65,13 @@ class OnepoleParitySpec : StringSpec({
         return out
     }
 
-    "the `onepole` slot's oscParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
+    "the `onepole` slot's ignitorParam route is bit-identical to applying onePoleLowpass(Hz) by hand" {
         // The one row that pins BOTH the wiring and the UNIT: build the same "sine" exciter
-        // twice, once through the oscParam key ("onepole" in Hz), once plain plus a manual
+        // twice, once through the ignitorParam key ("onepole" in Hz), once plain plus a manual
         // .onePoleLowpass(800.0). A changed key, a halved value, or a reinstated coefficient
         // interpretation (the old warmth semantics) all go red.
         //
-        // The sound is an AUTHORED sine that places the slot itself (`OscSlot.onepole`): the registry's wrap
+        // The sound is an AUTHORED sine that places the slot itself (`Ignitor.slot.onepole`): the registry's wrap
         // of every authored instrument retired with the voice strip (phase 3 step 9). A built-in carries the
         // slot as `classic()`'s first stage (the row below).
         val registry = IgnitorRegistry().apply {
@@ -79,23 +79,23 @@ class OnepoleParitySpec : StringSpec({
             register("rawsine", IgnitorDsl.OnePoleLowpass(IgnitorDsl.Sine(), IgnitorDsl.Slots.onepole))
         }
         fun exciter(params: Map<String, Double>?): Ignitor {
-            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", oscParams = params)
+            val data = VoiceData.empty.copy(freqHz = 220.0, sound = "rawsine", ignitorParams = params)
             return registry.createExciter("rawsine", data, freqHz = 220.0, random = Random(7))
                 ?.ignitor ?: error("no exciter")
         }
-        val viaOscParam = render(exciter(mapOf("onepole" to 800.0)))
+        val viaIgnitorParam = render(exciter(mapOf("onepole" to 800.0)))
         val manual = render(exciter(null).onePoleLowpass(800.0))
         for (i in 0 until frames) {
-            viaOscParam[i].toRawBits() shouldBe manual[i].toRawBits()
+            viaIgnitorParam[i].toRawBits() shouldBe manual[i].toRawBits()
         }
     }
 
-    "a built-in carries the oscParam onepole on its SOURCE, in front of classic()'s envelope (phase 3 step 6)" {
+    "a built-in carries the ignitorParam onepole on its SOURCE, in front of classic()'s envelope (phase 3 step 6)" {
         // Where the voice strip had it: the source, then crush ... adsr (step 6 hung it on the source, step 10
         // made it `classic()`'s first stage, the same place). A wrap around the whole tree would put it AFTER the
         // envelope, which the anti-vacuous side shows is a different signal.
         val registry = IgnitorRegistry().apply { registerDefaults() }
-        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", oscParams = mapOf("onepole" to 800.0))
+        val data = VoiceData.empty.copy(freqHz = 220.0, sound = "sine", ignitorParams = mapOf("onepole" to 800.0))
         val viaRegistry = render(
             registry.createExciter("sine", data, freqHz = 220.0, random = Random(7))?.ignitor ?: error("no exciter"),
         )

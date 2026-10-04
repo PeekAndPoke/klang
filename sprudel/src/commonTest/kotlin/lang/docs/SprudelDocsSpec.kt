@@ -15,6 +15,7 @@ import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.annotations.KlangScope
 import io.kotest.matchers.string.shouldContain as stringShouldContain
 
 class SprudelDocsSpec : StringSpec({
@@ -22,6 +23,24 @@ class SprudelDocsSpec : StringSpec({
     beforeTest {
         // Register Sprudel docs into the global registry for the assertions below.
         KlangDocsRegistry.global.registerAll(generatedSprudelDocs)
+    }
+
+    "the slot setters show their scope, category and tags under both names" {
+        // The short names are what songs write (`ignp`, `katp`), so the docs page and the completion popup must
+        // show them as fully as the long ones, the way `comp` and `uni` carry their own.
+        listOf(
+            Triple("ignitorParam", "tonal", KlangScope.VOICE),
+            Triple("ignp", "tonal", KlangScope.VOICE),
+            Triple("katalystParam", "effects", KlangScope.ORBIT),
+            Triple("katp", "effects", KlangScope.ORBIT),
+        ).forEach { (name, category, scope) ->
+            val doc = KlangDocsRegistry.global.get(name)
+
+            doc shouldNotBe null
+            doc!!.category shouldBe category
+            doc.scope shouldBe scope
+            doc.tags shouldContain "slot"
+        }
     }
 
     "seq documentation should be registered" {

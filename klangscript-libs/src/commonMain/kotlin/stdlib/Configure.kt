@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * `return`) or anything else. So the result is read as `Any?` and checked here, once, with a
  * script-level error that names the door, instead of a cast failure deep inside the native.
  *
- * @param door the script-facing door name for the error message, e.g. `"Osc.supersaw"`.
+ * @param door the script-facing door name for the error message, e.g. `"Ignitor.supersaw"`.
  */
 internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
     if (configure == null) {
@@ -50,7 +50,7 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
  *
  * [stages] is read as `Any?` on purpose, see the null check. [returns] names what a stage must return, for the
  * message; [isResult] tests it. Not `this::class.isInstance` as in
- * [configuredBy]: an Osc stage hands back another node type (a `Times`, a `Lowpass`) than the one it received.
+ * [configuredBy]: an Ignitor stage hands back another node type (a `Times`, a `Lowpass`) than the one it received.
  */
 internal fun <T : Any> runThroughStages(
     door: String,

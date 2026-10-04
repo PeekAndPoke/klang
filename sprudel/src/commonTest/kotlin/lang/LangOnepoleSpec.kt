@@ -20,7 +20,7 @@ class LangOnepoleSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("onepole") shouldBe null
+        events[0].data.ignitorParams?.get("onepole") shouldBe null
     }
 
     "apply(mul().onepole())" {
@@ -29,8 +29,8 @@ class LangOnepoleSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("onepole") shouldBe (4000.0 plusOrMinus EPSILON)  // 2000*2
-            events[1].data.oscParams?.get("onepole") shouldBe (8000.0 plusOrMinus EPSILON)  // 4000*2
+            events[0].data.ignitorParams?.get("onepole") shouldBe (4000.0 plusOrMinus EPSILON)  // 2000*2
+            events[1].data.ignitorParams?.get("onepole") shouldBe (8000.0 plusOrMinus EPSILON)  // 4000*2
         }
     }
 
@@ -40,8 +40,8 @@ class LangOnepoleSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("onepole") shouldBe (4000.0 plusOrMinus EPSILON)  // 2000*2
-            events[1].data.oscParams?.get("onepole") shouldBe (8000.0 plusOrMinus EPSILON)  // 4000*2
+            events[0].data.ignitorParams?.get("onepole") shouldBe (4000.0 plusOrMinus EPSILON)  // 2000*2
+            events[1].data.ignitorParams?.get("onepole") shouldBe (8000.0 plusOrMinus EPSILON)  // 4000*2
         }
     }
 
@@ -51,10 +51,10 @@ class LangOnepoleSpec : StringSpec({
 
         events.size shouldBe 3
         events[0].data.soundName shouldBe "sine"
-        events[0].data.oscParams?.get("onepole") shouldBe 17814.0
+        events[0].data.ignitorParams?.get("onepole") shouldBe 17814.0
         events[1].data.soundName shouldBe "triangle"
-        events[1].data.oscParams?.get("onepole") shouldBe 3700.0
+        events[1].data.ignitorParams?.get("onepole") shouldBe 3700.0
         events[2].data.soundName shouldBe "square"
-        events[2].data.oscParams?.get("onepole") shouldBe 4916.0
+        events[2].data.ignitorParams?.get("onepole") shouldBe 4916.0
     }
 })

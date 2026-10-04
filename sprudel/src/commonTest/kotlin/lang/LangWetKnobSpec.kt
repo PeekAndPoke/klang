@@ -87,11 +87,11 @@ class LangWetKnobSpec : StringSpec({
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        val p = eval("""Osc.saw().phaser(0.25, 1.0, x => x.floor(0.1))""") as IgnitorDsl.Phaser
+        val p = eval("""Ignitor.saw().phaser(0.25, 1.0, x => x.floor(0.1))""") as IgnitorDsl.Phaser
         p.wet shouldBe IgnitorDsl.Constant(0.25)
         p.floor shouldBe IgnitorDsl.Constant(0.1)
 
-        val sh = eval("""Osc.saw().shimmer(0.3)""") as IgnitorDsl.Shimmer
+        val sh = eval("""Ignitor.saw().shimmer(0.3)""") as IgnitorDsl.Shimmer
         sh.wet shouldBe IgnitorDsl.Constant(0.3)
     }
 })

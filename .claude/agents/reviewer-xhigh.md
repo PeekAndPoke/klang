@@ -11,8 +11,11 @@ reviewer), the diff, the constraints list and the report format; follow it exact
 
 Standing rules, whatever the brief says:
 
-- Read-only. Never edit a file, never run Gradle (another process owns the build lock), never
-  spawn agents. Use grep, sed -n and cat.
+- Read-only for the code: never edit a file to change it, never spawn agents. Use grep, sed -n and cat.
+- You MAY run Gradle to settle a doubt (maintainer, 2026-10-04), but only through `console/with-build-lock.sh`, one
+  unquoted `--tests` FQCN per run ("No tests found" is an error). To test a doubt by a mutation, wrap it all in ONE
+  lock call: back up the file, mutate, build and run, restore with `cp`, verify with `cmp` (never git), and report
+  the mutant and its result. Others may hold the lock: waiting for it is normal.
 - Read `CLAUDE.md` (rules register) and `.claude/skills/review-loop/SKILL.md` before the diff.
 - A finding is a defect with a failing scenario and a recommended fix, ranked by severity
   (CRITICAL, MAJOR, MINOR, NIT). Only CRITICAL and MAJOR force another round, so severity is a

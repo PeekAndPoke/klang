@@ -1,5 +1,10 @@
 # Built-in instruments, and the end of the Pipeline DSL (phase 3)
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 > **Closed 2026-09-28, archived: phase 3 is done.** Steps 1 to 10 and 12, the step 12 cleanup and the test
 > consolidation landed (section 9); step 11 was deferred by the maintainer. The step 12 plan is archived beside this
 > file (`20260928-phase3-step12-master-as-katalyst.md`). The release-note table (section 3c) stays here as the

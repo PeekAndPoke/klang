@@ -27,25 +27,25 @@ class KlangScriptNoiseFbmSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun perlin() = KlangScriptOsc.perlin() as IgnitorDsl.PerlinNoise
-    fun berlin() = KlangScriptOsc.berlin() as IgnitorDsl.BerlinNoise
+    fun perlin() = KlangScriptIgnitor.perlin() as IgnitorDsl.PerlinNoise
+    fun berlin() = KlangScriptIgnitor.berlin() as IgnitorDsl.BerlinNoise
 
     // --- perlin -------------------------------------------------------------
 
-    "Osc.perlin() — KlangScript == Kotlin builder (octaves=1 perf-neutral default)" {
-        ks("Osc.perlin()") shouldBe perlin()
+    "Ignitor.perlin() — KlangScript == Kotlin builder (octaves=1 perf-neutral default)" {
+        ks("Ignitor.perlin()") shouldBe perlin()
     }
 
-    "Osc.perlin(octaves = 4) — named arg skips the leading rate param" {
-        ks("Osc.perlin(octaves = 4)") shouldBe perlin().copy(octaves = IgnitorDsl.Constant(4.0))
+    "Ignitor.perlin(octaves = 4) — named arg skips the leading rate param" {
+        ks("Ignitor.perlin(octaves = 4)") shouldBe perlin().copy(octaves = IgnitorDsl.Constant(4.0))
     }
 
-    "Osc.perlin(persistence = 0.7) — named arg skips rate + octaves" {
-        ks("Osc.perlin(persistence = 0.7)") shouldBe perlin().copy(persistence = IgnitorDsl.Constant(0.7))
+    "Ignitor.perlin(persistence = 0.7) — named arg skips rate + octaves" {
+        ks("Ignitor.perlin(persistence = 0.7)") shouldBe perlin().copy(persistence = IgnitorDsl.Constant(0.7))
     }
 
-    "Osc.perlin(2, 4, 0.6) — positional rate/octaves/persistence" {
-        ks("Osc.perlin(2, 4, 0.6)") shouldBe perlin().copy(
+    "Ignitor.perlin(2, 4, 0.6) — positional rate/octaves/persistence" {
+        ks("Ignitor.perlin(2, 4, 0.6)") shouldBe perlin().copy(
             rate = IgnitorDsl.Constant(2.0),
             octaves = IgnitorDsl.Constant(4.0),
             persistence = IgnitorDsl.Constant(0.6),
@@ -54,12 +54,12 @@ class KlangScriptNoiseFbmSpec : StringSpec({
 
     // --- berlin -------------------------------------------------------------
 
-    "Osc.berlin() — KlangScript == Kotlin builder" {
-        ks("Osc.berlin()") shouldBe berlin()
+    "Ignitor.berlin() — KlangScript == Kotlin builder" {
+        ks("Ignitor.berlin()") shouldBe berlin()
     }
 
-    "Osc.berlin(octaves = 5, persistence = 0.4) — two named args" {
-        ks("Osc.berlin(octaves = 5, persistence = 0.4)") shouldBe berlin().copy(
+    "Ignitor.berlin(octaves = 5, persistence = 0.4) — two named args" {
+        ks("Ignitor.berlin(octaves = 5, persistence = 0.4)") shouldBe berlin().copy(
             octaves = IgnitorDsl.Constant(5.0),
             persistence = IgnitorDsl.Constant(0.4),
         )

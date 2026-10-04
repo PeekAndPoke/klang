@@ -13,7 +13,7 @@ import io.peekandpoke.klang.tones.interval.Interval
  *
  * `Interval.get("P5").ratio` is 1.4983, a perfect fifth, and `Interval.get("M3").ratio` is 1.2599.
  * Multiply a frequency by it to transpose by the interval, which is what the script door
- * `"M3".toRatio()` does at a call site like `.oscp("hptrack", "M3".toRatio())`.
+ * `"M3".toRatio()` does at a call site like `.ignp("hptrack", "M3".toRatio())`.
  *
  * The Kotlin door for the interval vocabulary of `tones`, so it inherits that vocabulary's
  * spellings: a descending interval carries the minus in front of the NUMBER, either tonal

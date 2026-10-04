@@ -25,10 +25,10 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * `@KlangScript.Function` extension. The door keeps the stage's musical inputs, the builder the
  * rest (`/dsl-design` section 2).
  *
- *     Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
- *     Osc.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
- *     Osc.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("square", "exp", "exp").declick(0.0005))
- *     Osc.saw().phaser(0.3, 0.5, x => x.floor(0.2))
+ *     Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7)).lowpass(5000)
+ *     Ignitor.saw().lowpass(800, 1.2, x => x.passes(2).env(24).adsr(0.005, 0.3, 0.2, 0.2, e => e.curves("lin", "exp", "exp")))
+ *     Ignitor.saw().adsr(0.01, 0.3, 0.5, 0.2, e => e.curves("square", "exp", "exp").declick(0.0005))
+ *     Ignitor.saw().phaser(0.3, 0.5, x => x.floor(0.2))
  */
 
 // ── Envelopes ────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ data class ModAdsrBuilder(
  * replaces an earlier one completely: the rule `adsrCurves` always had.
  */
 internal fun curveKnob(value: IgnitorDslLike?, fallback: AdsrCurve): IgnitorDsl =
-    catalogueIndex(value, IgnitorDsl.Constant(AdsrCurves.indexOf(fallback))) { AdsrCurves.indexOf(it, fallback) }
+    catalogueIndex(value, IgnitorDsl.Constant(AdsrCurves.indexOf(fallback)), indexOf = { AdsrCurves.indexOf(it, fallback) })
 
 /**
  * Shapes the amplitude envelope's stages: `"exp"` (the default, every amplitude envelope's),
@@ -194,7 +194,7 @@ fun FilterBuilder.humanize(on: Any = true): FilterBuilder = copy(knobs = knobs.c
  * a compound pair: naming either switches the envelope on and the other fills from
  * `audio_bridge/constants/FilterEnvelopeDefaults.kt` (the fill runs after the lambda, once). A
  * non-leaf EXPRESSION here is unreadable at build and switches the envelope OFF; write a number or
- * a slot (`OscSlot.lpf.env`).
+ * a slot (`Ignitor.slot.lpf.env`).
  */
 @KlangScript.Function
 fun FilterBuilder.env(semitones: IgnitorDslLike): FilterBuilder = copy(knobs = knobs.copy(env = semitones.toIgnitorDsl()))
@@ -321,8 +321,15 @@ fun FmBuilder.adsr(
 /**
  * Builder for [IgnitorDsl.Eq], handed to the `configure` lambda of `.eq(...)`. Knobs: `band`,
  * `tap`. Sections are appended in written order. Immutable: every knob returns a new builder.
+ *
+ * One builder for both hosts, so a section means the same on a voice and on an orbit. [onKatalyst] is the one
+ * difference: the Katalyst `eq` sets it, and the knobs then convert like every other chain knob
+ * ([toKatalystKnob]: a Katalyst param listens to `katp`, an Ignitor param is a script error) instead of like a tree
+ * leaf ([toIgnitorDsl]).
  */
-data class EqBuilder(val node: IgnitorDsl.Eq)
+data class EqBuilder(val node: IgnitorDsl.Eq, val onKatalyst: Boolean = false) {
+    internal fun knob(value: IgnitorDslLike): IgnitorDsl = if (onKatalyst) value.toKatalystKnob() else value.toIgnitorDsl()
+}
 
 /**
  * Adds a peaking band: [db] decibels of gain at [freq], [q] the width. Bands apply one after
@@ -344,7 +351,7 @@ data class EqBuilder(val node: IgnitorDsl.Eq)
  */
 @KlangScript.Function
 fun EqBuilder.band(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707, db: IgnitorDslLike = 0.0): EqBuilder =
-    copy(node = node.band(freq.toIgnitorDsl(), q.toIgnitorDsl(), db.toIgnitorDsl()))
+    copy(node = node.band(knob(freq), knob(q), knob(db)))
 
 /**
  * Adds a parallel resonant boost: takes the sound going INTO the equalizer, keeps only the band
@@ -358,13 +365,14 @@ fun EqBuilder.band(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707, db: IgnitorD
  * pure WIDTH control: the boost at [freq] is `1 + gain` for ANY q. The default `tap(freq)` is
  * NOT silent: `1 + 1 = 2`, a lift of about 6 dB, where the default `band(freq)` is transparent.
  *
- * Give [gain] a number or an osc-param, not a moving signal: it is re-read only once per block,
- * so a swept tap gain steps instead of gliding. For that, use the chained
+ * Give [gain] a number or a slot, not a moving signal: on a voice eq an Ignitor slot (`Ignitor.param`,
+ * `Ignitor.slot.*`), on a chain eq a Katalyst param (`Katalyst.param`, `Katalyst.slot.*`). It is re-read only once
+ * per block, so a swept tap gain steps instead of gliding. For that, use the chained
  * `signal.add(signal.bandpass(...).mul(lfo))` form, which is smooth.
  */
 @KlangScript.Function
 fun EqBuilder.tap(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707, gain: IgnitorDslLike = 1.0): EqBuilder =
-    copy(node = node.tap(freq.toIgnitorDsl(), q.toIgnitorDsl(), gain.toIgnitorDsl()))
+    copy(node = node.tap(knob(freq), knob(q), knob(gain)))
 
 // ── Phaser ───────────────────────────────────────────────────────────────────
 

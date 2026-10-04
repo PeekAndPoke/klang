@@ -13,9 +13,9 @@ import io.kotest.matchers.shouldBe
  * The `pregain` door: how hard an event is played INTO its instrument (the signal-flow plan,
  * section 6, spot A).
  *
- * It is exactly `oscparam("pregain", x)` and nothing else, which is the property most of these
- * rows are about: it writes ONE key of the oscParams bag, it leaves `gain` alone, and a
- * hand-written `oscp("pregain", x)` is the same event. What the slot then DOES is the
+ * It is exactly `ignitorParam("pregain", x)` and nothing else, which is the property most of these
+ * rows are about: it writes ONE key of the ignitorParams bag, it leaves `gain` alone, and a
+ * hand-written `ignp("pregain", x)` is the same event. What the slot then DOES is the
  * instrument's business and is guarded in audio_be (`PregainSlotRenderSpec`,
  * `VoicePregainWireSpec`); nothing here can hear anything.
  */
@@ -28,8 +28,8 @@ class LangPregainSpec : StringSpec({
         assertSoftly {
             events.size shouldBe 2
             events[0].data.gain shouldBe 0.4
-            events[0].data.oscParams?.get("pregain") shouldBe 1.0
-            events[1].data.oscParams?.get("pregain") shouldBe 0.7
+            events[0].data.ignitorParams?.get("pregain") shouldBe 1.0
+            events[1].data.ignitorParams?.get("pregain") shouldBe 0.7
         }
     }
 
@@ -38,30 +38,30 @@ class LangPregainSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("pregain") shouldBe 1.0
-            events[1].data.oscParams?.get("pregain") shouldBe 0.7
+            events[0].data.ignitorParams?.get("pregain") shouldBe 1.0
+            events[1].data.ignitorParams?.get("pregain") shouldBe 0.7
         }
     }
 
-    "pregain IS oscparam(\"pregain\", ...): the same slot, written the long way" {
+    "pregain IS ignitorParam(\"pregain\", ...): the same slot, written the long way" {
         val door = note("c3 e3").pregain("1 0.5").queryArc(0.0, 1.0)
-        val raw = note("c3 e3").oscp("pregain", "1 0.5").queryArc(0.0, 1.0)
+        val raw = note("c3 e3").ignp("pregain", "1 0.5").queryArc(0.0, 1.0)
 
-        door.map { it.data.oscParams?.get("pregain") } shouldBe listOf(1.0, 0.5)
-        door.map { it.data.oscParams } shouldBe raw.map { it.data.oscParams }
+        door.map { it.data.ignitorParams?.get("pregain") } shouldBe listOf(1.0, 0.5)
+        door.map { it.data.ignitorParams } shouldBe raw.map { it.data.ignitorParams }
     }
 
     "pregain does not touch gain, and gain does not touch pregain" {
         // The two level words are separate fields on separate hosts: `gain` is a voice field,
-        // `pregain` a slot in the oscParams bag. A door that wrote the wrong one would still
+        // `pregain` a slot in the ignitorParams bag. A door that wrote the wrong one would still
         // "work" in a render, which is why this is asserted rather than assumed.
         val events = note("c3").gain(0.4).pregain(2.0).queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 1
             events[0].data.gain shouldBe 0.4
-            events[0].data.oscParams?.get("pregain") shouldBe 2.0
-            events[0].data.oscParams?.get("gain") shouldBe null
+            events[0].data.ignitorParams?.get("pregain") shouldBe 2.0
+            events[0].data.ignitorParams?.get("gain") shouldBe null
         }
     }
 
@@ -69,8 +69,8 @@ class LangPregainSpec : StringSpec({
         val replaced = note("c3").pregain(2.0).pregain(0.5).queryArc(0.0, 1.0)
         val scaled = note("c3").pregain(2.0).pregain(mul(0.5)).queryArc(0.0, 1.0)
 
-        replaced[0].data.oscParams?.get("pregain") shouldBe 0.5
-        scaled[0].data.oscParams?.get("pregain") shouldBe 1.0
+        replaced[0].data.ignitorParams?.get("pregain") shouldBe 0.5
+        scaled[0].data.ignitorParams?.get("pregain") shouldBe 1.0
     }
 
     "a mapper on an UNSET pregain does nothing, the general mapper rule" {
@@ -79,12 +79,12 @@ class LangPregainSpec : StringSpec({
         // `gain(mul(x))` (the signal-flow plan, section 6, the note parked for the maintainer).
         val events = note("c3").pregain(mul(0.5)).queryArc(0.0, 1.0)
 
-        events[0].data.oscParams?.get("pregain") shouldBe null
+        events[0].data.ignitorParams?.get("pregain") shouldBe null
     }
 
     "unset is unset: no door, no key in the bag" {
         val events = note("c3").s("supersaw").queryArc(0.0, 1.0)
 
-        events[0].data.oscParams?.get("pregain") shouldBe null
+        events[0].data.ignitorParams?.get("pregain") shouldBe null
     }
 })

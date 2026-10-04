@@ -1,4 +1,4 @@
-# Sine partial banks: `harmonics`, `octaves` and `fundamental` on `Osc.sine()`
+# Sine partial banks: `harmonics`, `octaves` and `fundamental` on `Ignitor.sine()`
 
 **Status: SHIPPED 2026-09-07, commit `6d4056f9` (C1 to C4, two review rounds, 14 mutation
 checks red). Archive record with the closing notes:
@@ -8,7 +8,7 @@ eight files cite this path (KDocs on the wire node, the engine, the builders, th
 module memories). The three open points of section 7 were decided on 2026-09-07: band-limit at
 Nyquist (maintainer's explicit yes), raw sum, `analogSpread` default 1. Still open for the
 maintainer: the by-ear checks of section 8 and the gated 5.3 fast path. Earlier draft of the same
-day proposed two separate doors (`Osc.harmonics()`, `Osc.octaves()`); superseded by the knob form
+day proposed two separate doors (`Ignitor.harmonics()`, `Ignitor.octaves()`); superseded by the knob form
 below, decided in discussion with the maintainer.
 
 ## 1. Why this exists
@@ -18,12 +18,12 @@ Der Schmetterling's bass hand-rolls additive stacks
 saw (sines at 2f, 4f ... 64f, gain one over the multiple), now a harmonic series next to the sub:
 
 ```javascript
-let sub = Osc.sine().mul(pSub)
+let sub = Ignitor.sine().mul(pSub)
 
-let harmonics = Osc.sine(freq = Osc.freq().mul(2)).mul(1/2)
-  .add(Osc.sine(freq = Osc.freq().mul(3)).mul(1/3))
+let harmonics = Ignitor.sine(freq = Ignitor.freq().mul(2)).mul(1/2)
+  .add(Ignitor.sine(freq = Ignitor.freq().mul(3)).mul(1/3))
   ...
-  .add(Osc.sine(freq = Osc.freq().mul(8)).mul(1/8))
+  .add(Ignitor.sine(freq = Ignitor.freq().mul(8)).mul(1/8))
 
 return sub.plus(grind).plus(harmonics)
 ```
@@ -40,7 +40,7 @@ Two things are wrong with the hand-rolled form:
   `sin()` calls per sample, per voice, plus the node dispatches. A native bank is one block pass.
 - **Rigidity.** Count and rolloff are baked into the tree. A native bank reads them as signals
   once per block, like `voices` on the super oscillators, so brightness can be an envelope, an
-  LFO or an `Osc.param` ("everything is a signal").
+  LFO or an `Ignitor.param` ("everything is a signal").
 
 ## 2. The model
 
@@ -68,7 +68,7 @@ sub at f/2 with gain 1/2; `suboctaves(1, 0)` is the classic equal-level sub osci
 - `count = 0` is off and the default. `harmonics(1, 0.5)` adds one partial at 2f with gain 0.707.
 - `rolloff = 1` is the sawtooth law (a full series is a band-limited saw), `2` is triangle-soft,
   `0` is flat and buzzy. `rolloff` is the balance between the sine and its overtones, the one knob
-  to tune by ear, and it can be an `Osc.param`.
+  to tune by ear, and it can be an `Ignitor.param`.
 - `fundamental` is a gain, not a switch. `0` drops the sine and leaves the overtones alone on their
   own fader; `0.5` halves it. Decided over a boolean because the fader is what was wanted, `0` is the
   switch for free, levels are 0 to 1 doubles everywhere in the house, and no boolean sits on the wire.
@@ -85,7 +85,7 @@ sub at f/2 with gain 1/2; `suboctaves(1, 0)` is the classic equal-level sub osci
 - Several banks set at once are **summed, no deduplication**: `harmonics(7)` plus `octaves(3)`
   doubles 2f, 4f and 8f, exactly as two hand-written sines would. No special rule.
 - With `fundamental = 1` and all counts `0` the node IS today's sine, bit-identical (section 5).
-- `Osc.sine(x => x.fundamental(0))` with no bank is silence. Coerced, never an error.
+- `Ignitor.sine(x => x.fundamental(0))` with no bank is silence. Coerced, never an error.
 - **A sub-octave moves the perceived pitch.** The ear takes f/2 as the fundamental as soon as it is
   there at a comparable level, because f is its second harmonic; that is the missing-fundamental
   effect run backwards, and it is the point of a sub oscillator (weight) but it must be in the
@@ -96,21 +96,21 @@ sub at f/2 with gain 1/2; `suboctaves(1, 0)` is the classic equal-level sub osci
   minor chord (f/3 is an octave and a fifth below), so it changes the harmony, not the timbre; no
   synth, pedal or enhancer offers it beyond the sub-octave (dbx 120XP, Lowender, Logic SubBass and
   the Octaver family all go down in octaves; the Hammond 5 1/3' drawbar is 3f/2, not f/3). A bank
-  that rewrites the chord is a family of models (`/dsl-design` §9). `Osc.sine(Osc.freq().div(3))`
+  that rewrites the chord is a family of models (`/dsl-design` §9). `Ignitor.sine(Ignitor.freq().div(3))`
   is the honest spelling for the one song that wants a twelfth below.
 
 **The door's `freq` decides where the series starts and what it is.** Partials are multiples of
 the sine, not of the note:
 
 ```javascript
-Osc.sine(x => x.harmonics(7))                          // sub plus 2f .. 8f: the current bass stack
-Osc.sine(x => x.harmonics(7).fundamental(0))           // overtones only, 2f .. 8f
-Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2) // the original grind stack, 2f .. 64f, original levels
-Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))       // 2f, 4f, 6f, 8f: the EVEN series (the tube spectrum)
-Osc.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
-Osc.sine(x => x.harmonics(7).analog(3).analogSpread(0)) // drifts as ONE oscillator, spectrum stays harmonic
-Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the pattern
-Osc.sine(x => x.harmonics(8, Osc.sine(0.2).range(0.7, 2))) // breathing brightness, control rate
+Ignitor.sine(x => x.harmonics(7))                          // sub plus 2f .. 8f: the current bass stack
+Ignitor.sine(x => x.harmonics(7).fundamental(0))           // overtones only, 2f .. 8f
+Ignitor.sine(Ignitor.freq().mul(2), x => x.octaves(5)).mul(1/2) // the original grind stack, 2f .. 64f, original levels
+Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))       // 2f, 4f, 6f, 8f: the EVEN series (the tube spectrum)
+Ignitor.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
+Ignitor.sine(x => x.harmonics(7).analog(3).analogSpread(0)) // drifts as ONE oscillator, spectrum stays harmonic
+Ignitor.sine(x => x.harmonics(12, Ignitor.param("rolloff", 1))) // brightness from the pattern
+Ignitor.sine(x => x.harmonics(8, Ignitor.sine(0.2).range(0.7, 2))) // breathing brightness, control rate
 ```
 
 The even-series line goes into the door's KDoc verbatim; it is the one surprise a reader can hit.
@@ -144,7 +144,7 @@ OscSineBuilder(IgnitorDsl.Sine()).harmonics(7.0, 0.5).fundamental(0.0).node
 ```
 
 Door-parity spec in the pattern of `KlangScriptSuperSineSpec`: script == Kotlin for every knob,
-`freq` first positional, a knob accepting an `Osc` graph.
+`freq` first positional, a knob accepting an `Ignitor` graph.
 
 Nothing changes for sprudel: `sound("sine")` reaches the node; the knobs are not `Slots`
 (section 7). Sprudel addon shortcuts are out of scope.
@@ -231,7 +231,7 @@ One new ignitor in `audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt`. Per blo
    `s = analogSpread`: constant-power weights, so two independent walks sum to the same depth as
    one and the bank drifts by `analog` at every setting (round-1 review; linear weights would have
    made `s = 0.5` drift at 0.71 x `analog`). At `s = 1` exactly the shared lane is not advanced (the
-   hand-rolled sound, every `Osc.sine` in the stack owning its drift); at `s = 0` exactly only the
+   hand-rolled sound, every `Ignitor.sine` in the stack owning its drift); at `s = 0` exactly only the
    shared lane is advanced, one walk for the whole bank. The shared walk is sampled into a
    growth-only scratch array once per block so every partial's loop reads the same sequence.
    `analog = 0` skips all of it. Since 2026-09-10 this machinery is not the bank's own: it lives in
@@ -306,11 +306,11 @@ KSP), and committed on the working branch when clean.
 - `pitchEnvelope` over the bank moves every partial (a `phaseMod` case).
 
 **C2 Both doors.** The three builder methods, door-parity spec (`KlangScriptSineSpec`, pattern of
-`KlangScriptSuperSineSpec`), `StdLibOscTest` cases, the KDoc on `Osc.sine` listing the new knobs
+`KlangScriptSuperSineSpec`), `StdLibIgnitorTest` cases, the KDoc on `Ignitor.sine` listing the new knobs
 and carrying the even-series line.
 
 **C3 Song and docs.** Der Schmetterling: the seven-sine stack becomes
-`Osc.sine(x => x.harmonics(7).fundamental(0)).mul(pHarm)` next to the untouched `sub` (keeps the
+`Ignitor.sine(x => x.harmonics(7).fundamental(0)).mul(pHarm)` next to the untouched `sub` (keeps the
 independent faders the file has now), verified by the golden test and by ear. Docs: the oscillator
 table in `.claude/skills/klang-music-writing/ref/ignitor-reference.md`; the stdlib docs page picks
 the KDoc up through `generatedStdlibDocs`. `sprudel/MEMORY.md` and `audio/MEMORY.md` status lines.

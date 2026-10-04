@@ -125,7 +125,7 @@ class ClassicTailSpec : StringSpec({
                 add("${door}Curves.release" to modExp)
             }
         } + listOf(
-            "tremolo.sync" to 0.0,
+            "tremolo.rate" to 0.0,
             "tremolo.depth" to 0.0,
             "tremolo.shape" to LfoShapes.SINE_INDEX.toDouble(),
             "adsr.attack" to 0.01,

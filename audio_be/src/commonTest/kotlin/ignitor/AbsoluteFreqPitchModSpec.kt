@@ -149,7 +149,7 @@ class AbsoluteFreqPitchModSpec : StringSpec({
     }
 
     "a keytracked freq expression still counts as musical" {
-        // `Osc.freq().mul(2)` has a Freq leaf, so it is a pitch and must follow the vibrato —
+        // `Ignitor.freq().mul(2)` has a Freq leaf, so it is a pitch and must follow the vibrato —
         // the predicate is "does this freq slot derive from Freq", not "is it a bare Freq".
         val keytracked = IgnitorDsl.Sine(freq = IgnitorDsl.Times(IgnitorDsl.Freq, IgnitorDsl.Constant(2.0)))
         val plain = render(keytracked)

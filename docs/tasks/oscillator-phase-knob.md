@@ -24,7 +24,7 @@ through sine partials and a phase offset would be even better."
    before claiming: crest of the thud with the best sign pattern against Schroeder phases. See also
    `docs/tasks/future/sine-inharmonic-partials.md`, where a partials node would want per-partial phases.
 3. **Vibrato and other LFOs** (`docs/tasks/future/pitch-pipeline-into-the-tree.md`): composing the vibrato from
-   `Osc.sine` needs a defined start point, the same question as the tremolo.
+   `Ignitor.sine` needs a defined start point, the same question as the tremolo.
 4. **Stereo pairs**: two LFOs at 0 and 0.5 are an auto-pan or a stereo tremolo, composed.
 
 ## The design (proposed 2026-09-30, to be confirmed when the task starts)
@@ -37,7 +37,7 @@ through sine partials and a phase offset would be even better."
 - **Where**: the periodic oscillators only (sine, saw, ramp, square, pulze, triangle, zawtooth and friends, and the
   super oscillators, where it shifts the whole stack). The noise sources get none.
 - **Door shape**: a secondary knob, so it lives on the builder behind the configure lambda:
-  `Osc.sine(4, x => x.phase(0.25))`, on both doors with a door-parity spec (`/dsl-design` sections 2 to 4). The same
+  `Ignitor.sine(4, x => x.phase(0.25))`, on both doors with a door-parity spec (`/dsl-design` sections 2 to 4). The same
   builders `docs/tasks/future/chip-style-instruments.md` builds on.
 - **Name**: `phase` proposed (the common synth word, one word per concept; nothing in the DSL uses it since the
   tremolo's knob went); the maintainer said "phaseShift". Decide at start.

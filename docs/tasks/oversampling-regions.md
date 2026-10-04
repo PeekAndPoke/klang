@@ -6,7 +6,7 @@ fully complete** (maintainer, 2026-09-23). Not started.
 > **2026-09-27, phase 3 step 9: what changed for the oversample knobs.** The voice strip retired, and with it
 > `CrushRenderer`, `CoarseRenderer` and `DistortionRenderer` (sections 3, 4 and 7 below name them as they were).
 > The typed `VoiceData` fields `distortOversample`, `crushOversample` and `coarseOversample` are gone; the knobs
-> travel as `oscParams` slot keys written by sprudel's `toVoiceData()` (`_classic_slot_params.kt`):
+> travel as `ignitorParams` slot keys written by sprudel's `toVoiceData()` (`_classic_slot_params.kt`):
 > - `distort.oversample` is a `classic()` slot (the D7 stopgap), read once at voice build into the fused
 >   `Distort` node's oversampler (`DistortionCore`).
 > - `crush.oversample` and `coarse.oversample` are carried but READ BY NOTHING: `classic()`'s crush and coarse
@@ -36,12 +36,12 @@ three differently factored sets of effects, is the outcome this task exists to p
 
 ## 2. Decided (maintainer, 2026-09-23)
 
-- **The lambda form.** `Osc.sine().oversample(2) { it.distort().crush() }`. The region closes itself,
+- **The lambda form.** `Ignitor.sine().oversample(2) { it.distort().crush() }`. The region closes itself,
   the factor is declared once, and nothing is left for the build to pair. Rejected:
   `.oversample(2) ... .downsample()`, which can be written unclosed, closed without an opener, or opened
   at two factors in two branches of one region.
 - **Nesting composes literally, and the engine never rewrites it.**
-  `Osc.sine().oversample(2) { it.crush().oversample(2) { it.distort() } }` runs the crush at 2x and the
+  `Ignitor.sine().oversample(2) { it.crush().oversample(2) { it.distort() } }` runs the crush at 2x and the
   distort at 4x, with a second round trip inside the first. No hoisting, merging or flattening of
   regions: where a region starts and ends is sound shaping, and the author owns how it is written.
 - **The factor is read once, when the note starts.** A `Constant` or a `Param`, resolved at voice build

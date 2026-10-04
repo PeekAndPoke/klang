@@ -52,13 +52,13 @@ stack(
 import * from "stdlib"
 import * from "sprudel"
 
-let koto = Osc.pluck()
-  .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
-  .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
+let koto = Ignitor.pluck()
+  .plus(Ignitor.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+  .lowpass(Ignitor.constant(5000).plus(Ignitor.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
   .highpass(200)
   .classic()
 
-let kick = Osc.sine()
+let kick = Ignitor.sine()
   .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
   .adsr(0.001, 0.2, 0.0, 0.02)
   .classic()
@@ -322,7 +322,7 @@ would be ignored.
 
 A `name:soundIndex[:gain]` suffix on `note()`, `s()` / `sound()`, and
 `seq(...).scale(...)` selects a per-event variant from a sound bundle
-(sample bank or `Osc.variants(...)`). Same syntax as strudel's sample
+(sample bank or `Ignitor.variants(...)`). Same syntax as strudel's sample
 selection — extended to ignitor variants and per-note gain.
 
 | Pattern                                  | What it does                                  |
@@ -368,6 +368,7 @@ selection — extended to ignitor variants and per-note gain.
 |--------------------|-----------------|---------------------------------|----------------------------------------|
 | `sound(name)`      | `s`             | Set sound/instrument            | `sound("bd sd hh cp")`                 |
 | `analog(amt)`      |                 | Analog oscillator drift         | `note("c3").s("supersaw").analog(0.2)` |
+| `ignitorParam(slot, value)` | `ignp` | Write one slot of the playing instrument, per voice. `slot` is the slot's NAME or the param OBJECT itself (`Ignitor.param(...)` held in a variable, or `Ignitor.slot.*`); only the name is written, the default stays the instrument's. A Katalyst param is a script error at the call (`a Katalyst param passed to ignp; use katp`), and so is a number or a sound | `note("c2").sound(bass).ignp("cutoff", 1200)`, `.ignp(cutoff, 1200)`, `.ignp(Ignitor.slot.analog, 4)` |
 | `unison(voices, spread, pan)`                                          | `uni`      | Unison voices, detune spread in semitones, stereo spread (reserved); readers `unison.voices`, `.spread`, `.pan`                                        | `note("c3").s("supersaw").unison(5, 0.3)`                                                            |
 | `density(amt)`     | `d`             | Oscillator density (noise)      | `note("a").s("dust").density(40)`      |
 | `onepole(freq)`    |                 | One-pole lowpass in Hz (warmth) | `s("bd").distort(3).onepole(17814)`    |
@@ -408,12 +409,13 @@ at the cutoff). Same third slot on the ignitor door.
 | `coarse(amount, oversample)`                                                |          | Sample-rate reduction factor, oversample factor (carried on the wire but not read today, see `docs/tasks/oversampling-regions.md`); readers `coarse.amount`, `coarse.oversample` | `note("c3").s("saw").coarse(3)`                              |
 | `phaser(wet, rate, center, sweep, floor)`                                   |          | Phaser: wet FIRST (additive by default), then the LFO rate in Hz, center Hz, sweep range Hz, floor. A bare `phaser()` reads the pattern's values as `wet` | `note("c3").phaser(wet = 0.5, rate = 1, center = 1000)`      |
 | `phaser.wet` / `phaser.rate` / `phaser.center` / `phaser.sweep` / `phaser.floor` |          | Read a phaser slot                                                                                                                                               | `p.phaser(center = 1000).lpf(phaser.center)`                 |
-| `tremolo(depth, sync, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`sync`), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge)            | `note("c3").tremolo(depth = 0.5, sync = 4, shape = "sine")`  |
-| `tremolo.depth` / `tremolo.sync`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.sync)`                     |
+| `tremolo(depth, rate, shape)`                                               |          | Tremolo: depth 0..1 FIRST, then the LFO rate in Hz (`rate`, `beatRate(n)` follows the tempo), LFO shape name (the oscillator of that name; square, sawtooth and ramp get a 16 ms soft edge)            | `note("c3").tremolo(depth = 0.5, rate = 4, shape = "sine")`  |
+| `tremolo.depth` / `tremolo.rate`                                            |          | Read a tremolo slot (`shape` is a string, no reader)                                                                                                             | `p.tremolo(0.5, 4).phaser(rate = tremolo.rate)`                     |
 | `compressor(threshold, ratio, knee, attack, release)`                  | `comp`     | Orbit compressor; readers `compressor.threshold`, `.ratio`, `.knee`, `.attack`, `.release`                                                             | `s("bd sd hh sd").compressor(-20, 4, 6, 0.003, 0.1)`                                                 |
 | `duck(orbit, depth, attack)`                                           |            | Sidechain: the orbit that triggers, depth 0..1, recovery seconds (the duck-down is instant); readers `duck.orbit`, `.depth`, `.attack`                 | `note("c2*8").s("saw").duck(1, 0.8, 0.2)`                                                            |
 | `vowel(wet, vowel, floor)`                                             |            | Vowel formant: wet FIRST (a mix 0..1), then the vowel name (no reader), dry floor; readers `vowel.wet`, `.floor`. A vowel alone is named: `vowel(vowel = "a")`; `"none"` is off | `note("c3").s("saw").vowel(0.8, "a")`                                                                |
 | `body(wet, material, floor)`                                           |            | Resonant body: wet FIRST (a mix 0..1), then the material name (no reader), dry floor; readers `body.wet`, `.floor`. A material alone is named: `body(material = "wood")`; `"none"` is off | `note("c3").s("saw").body(0.7, "wood")`                                                              |
+| `katalystParam(slot, value)` | `katp` | Write one slot of the orbit's Katalyst chain, per orbit (the first voice to sound owns the orbit's values). `slot` is the slot's NAME (`"reverb.size"`, or the name of your own `Katalyst.param("room", 5)`) or the param OBJECT (`Katalyst.slot.reverb.size`, or a `Katalyst.param(...)` held in a variable). Writes exactly that one slot, so on the familiar chain a `katp("reverb.wet", 0.3)` alone stays silent until `reverb.size` is written too. An Ignitor param is a script error at the call (`an Ignitor param passed to katp; use ignp`) | `note("c3").s("saw").reverb(wet = 0.4).katp("reverb.size", "<2 8>")`, `.katp(Katalyst.slot.reverb.size, "<2 8>")`, `.katp(room, "<2 9>")` |
 
 #### Reverb size: how long the room rings
 
@@ -531,6 +533,14 @@ Top-level signals that produce continuous values. Use `.range(min, max)` to scal
 
 `time` (cycle counter), `cps` (cycles/sec), `rpm` (CPS*60), `bpm` (CPS*240)
 
+Tempo-following lengths and rates (both follow every rpm change; `base` = beats per cycle, default 4):
+
+- `beats(n, base = 4)`: the length of n beats in SECONDS, for time params (`delay.time`, envelope stages).
+  `beats(0.5)` is an eighth note. Not for `late`/`early`, which take cycles.
+- `beatRate(n, base = 4)`: one cycle every n beats in HZ, for rate params (`tremolo`, `vibrato`, `phaser`).
+  `beatRate(0.5)` wobbles every half beat. Exactly `pure(1).div(beats(n))`.
+- In mini-notation `"1/8"` is NOT a fraction (`/` slows down): write `"0.125"` or use `beats`.
+
 ### Range Mapping
 
 | Function                  | Input | Description                      |
@@ -551,8 +561,9 @@ note("c3").s("saw").lpf(sine.range(200, 2000).slow(4))
 // Random panning
 s("hh*8").pan(rand)
 
-// Tempo-synced delay
-s("sd").delay(wet = 0.5, time = pure(1/8).div(cps))
+// Tempo-synced delay (an eighth note) and tremolo (every half beat)
+s("sd").delay(wet = 0.5, time = beats(0.5))
+note("c3").s("saw").tremolo(depth = 0.6, rate = beatRate(0.5))
 
 // Organic modulation
 note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
@@ -568,7 +579,7 @@ note("c3").s("supersaw").unison(spread = perlin.range(0.0, 0.3).slow(16))
 low tom), `mt` (mid tom), `ht` (high tom), `rim` (rimshot), `ch` (closed hat)
 
 Use `:N` for sample-bank variants: `sd:3`, `bd:2`. The same `:N` suffix
-also picks ignitor flavours from `Osc.variants(...)` — see
+also picks ignitor flavours from `Ignitor.variants(...)` — see
 [Tonal & Pitch › `:soundIndex:gain` suffix](#soundindexgain-suffix-universal-variant-picker)
 for the full story.
 
@@ -780,7 +791,7 @@ stack(
 
 ```javascript
 note("c4 ~ e4 ~").sound("pluck")
-  .delay(wet = 0.3, time = pure(1/8).div(cps), feedback = 0.4)
+  .delay(wet = 0.3, time = beats(0.5), feedback = 0.4)   // an eighth note at any tempo
 ```
 
 ---
@@ -803,7 +814,7 @@ stack(
     .gain(0.8)
     .lpf("2000")                 // gentle lowpass
     .lpf(attack = 0.01, decay = 0.1, sustain = 0.2, release = 0.1) // filter envelope
-    .tremolo(depth = 0.33, sync = 8, shape = "sine") // 8 Hz tremolo
+    .tremolo(depth = 0.33, rate = 8, shape = "sine") // 8 Hz tremolo
     .analog(1)                   // warm analog drift
 
   // Bass: pluck + triangle layered

@@ -22,7 +22,7 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
 class BuiltInSongsSmokeTest : StringSpec({
 
     // Engine matches the Cli's `compilePattern` setup. Inline ignitors
-    // (`val foo = Osc.sine()...; .sound(foo)`) are values now — no registrar
+    // (`val foo = Ignitor.sine()...; .sound(foo)`) are values now — no registrar
     // wiring needed at compile time.
     fun engine() = klangScript {
         registerLibrary(sprudelLib)

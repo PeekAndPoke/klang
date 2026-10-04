@@ -21,8 +21,8 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  * The swallowed-error channel.
  *
  * A shape function that throws is caught on purpose (a bad edit mid-performance must not kill the
- * audio), which used to make the mistake invisible: `.ocsp` for `.oscp` discarded an entire shape
- * and left only a console stack trace. These rows pin that the error is now CAPTURED with its
+ * audio), which used to make the mistake invisible: on 2026-08-22 a transposed door name discarded an entire shape
+ * and left only a console stack trace (the rows spell today's door, `.ingp` for `.ignp`). These rows pin that the error is now CAPTURED with its
  * source location intact, and that the audio still survives.
  */
 class SprudelDiagnosticsTest : StringSpec({
@@ -41,14 +41,14 @@ class SprudelDiagnosticsTest : StringSpec({
     val broken = """
         import * from "stdlib"
         import * from "sprudel"
-        let shape = x => x.gain(0.25).sound("saw").ocsp("midsHz", 1500)
+        let shape = x => x.gain(0.25).sound("saw").ingp("midsHz", 1500)
         export song = n("c3").apply(shape)
     """.trimIndent()
 
     val good = """
         import * from "stdlib"
         import * from "sprudel"
-        let shape = x => x.gain(0.25).sound("saw").oscp("midsHz", 1500)
+        let shape = x => x.gain(0.25).sound("saw").ignp("midsHz", 1500)
         export song = n("c3").apply(shape)
     """.trimIndent()
 
@@ -57,7 +57,7 @@ class SprudelDiagnosticsTest : StringSpec({
         compileAndQuery(broken, found)
 
         found.size shouldBe 1
-        found.single().error.message.shouldNotBeNull() shouldContain "has no method 'ocsp'"
+        found.single().error.message.shouldNotBeNull() shouldContain "has no method 'ingp'"
     }
 
     "the captured error still carries its SOURCE LOCATION" {
@@ -74,7 +74,7 @@ class SprudelDiagnosticsTest : StringSpec({
         val found = mutableListOf<SprudelDiagnostic>()
         compileAndQuery(broken, found)
 
-        found.single().error.message.shouldNotBeNull() shouldContain "Did you mean 'oscp'?"
+        found.single().error.message.shouldNotBeNull() shouldContain "Did you mean 'ignp'?"
     }
 
     "the audio survives — the pattern still produces events" {
@@ -118,7 +118,7 @@ class SprudelDiagnosticsTest : StringSpec({
         val src = """
             import * from "stdlib"
             import * from "sprudel"
-            export song = s("hh*4").sometimesBy(0.9, x => x.ocsp("midsHz", 1500))
+            export song = s("hh*4").sometimesBy(0.9, x => x.ingp("midsHz", 1500))
         """.trimIndent()
 
         val atCompile = mutableListOf<SprudelDiagnostic>()

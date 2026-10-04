@@ -28,7 +28,7 @@ import io.peekandpoke.klang.sprudel.lang.lpfCurves
 import io.peekandpoke.klang.sprudel.lang.notch
 import io.peekandpoke.klang.sprudel.lang.notchCurves
 import io.peekandpoke.klang.sprudel.lang.note
-import io.peekandpoke.klang.sprudel.lang.oscp
+import io.peekandpoke.klang.sprudel.lang.ignp
 import io.peekandpoke.klang.sprudel.lang.speed
 import io.peekandpoke.klang.sprudel.lang.tremolo
 
@@ -40,23 +40,23 @@ class ClassicSlotParamsSpec : StringSpec({
 
     fun wire(p: SprudelPattern?) = (p ?: error("no pattern")).queryArc(0.0, 1.0).first().data.toVoiceData()
 
-    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).oscParams ?: emptyMap()
+    fun slots(p: SprudelPattern?): Map<String, Double> = wire(p).ignitorParams ?: emptyMap()
 
     "no voice door written: the wire bag is the event's own bag, and no bag at all without one" {
-        wire(note("c")).oscParams shouldBe null
-        slots(note("c").oscp("voices", 3)) shouldBe mapOf("voices" to 3.0)
+        wire(note("c")).ignitorParams shouldBe null
+        slots(note("c").ignp("voices", 3)) shouldBe mapOf("voices" to 3.0)
     }
 
     "only a FINITE value is written: a non-finite door value leaves the slot unset" {
         createSprudelVoiceData { crush = Double.NaN; release = Double.POSITIVE_INFINITY; cutoff = 800.0; resonance = Double.NaN }
-            .toVoiceData().oscParams shouldBe mapOf("lpf.freq" to 800.0)
+            .toVoiceData().ignitorParams shouldBe mapOf("lpf.freq" to 800.0)
     }
 
-    "the typed door wins over an oscp of the same key, in either order" {
-        slots(note("c").oscp("lpf.freq", 500).lpf(800))["lpf.freq"] shouldBe 800.0
-        slots(note("c").lpf(800).oscp("lpf.freq", 500))["lpf.freq"] shouldBe 800.0
-        withClue("an oscp of a key no door on the event wrote stays") {
-            slots(note("c").oscp("adsr.release", 0.4).lpf(800))["adsr.release"] shouldBe 0.4
+    "the typed door wins over an ignp of the same key, in either order" {
+        slots(note("c").ignp("lpf.freq", 500).lpf(800))["lpf.freq"] shouldBe 800.0
+        slots(note("c").lpf(800).ignp("lpf.freq", 500))["lpf.freq"] shouldBe 800.0
+        withClue("an ignp of a key no door on the event wrote stays") {
+            slots(note("c").ignp("adsr.release", 0.4).lpf(800))["adsr.release"] shouldBe 0.4
         }
     }
 
@@ -73,11 +73,11 @@ class ClassicSlotParamsSpec : StringSpec({
         slots(note("c").notch(1500, 2)) shouldBe mapOf("notch.freq" to 1500.0, "notch.q" to 2.0)
     }
 
-    "an explicit oscp of q or passes is never overwritten by a door that did not name it; a door that names it wins" {
-        slots(note("c").oscp("lpf.q", 4).oscp("lpf.passes", 3).lpf(800)) shouldBe
+    "an explicit ignp of q or passes is never overwritten by a door that did not name it; a door that names it wins" {
+        slots(note("c").ignp("lpf.q", 4).ignp("lpf.passes", 3).lpf(800)) shouldBe
             mapOf("lpf.q" to 4.0, "lpf.passes" to 3.0, "lpf.freq" to 800.0)
-        slots(note("c").oscp("lpf.q", 4).lpf(800, q = 2))["lpf.q"] shouldBe 2.0
-        slots(note("c").lpf(800, q = 2).oscp("lpf.q", 4))["lpf.q"] shouldBe 2.0
+        slots(note("c").ignp("lpf.q", 4).lpf(800, q = 2))["lpf.q"] shouldBe 2.0
+        slots(note("c").lpf(800, q = 2).ignp("lpf.q", 4))["lpf.q"] shouldBe 2.0
     }
 
     "the envelope travels only when one of its five knobs is set, and the curves only with it" {
@@ -97,7 +97,7 @@ class ClassicSlotParamsSpec : StringSpec({
     "names travel as their catalogue index, a flag as 1.0 or 0.0" {
         slots(note("c").distort(0.3, "tube"))["distort.shape"] shouldBe 10.0
         slots(note("c").distort(0.3, "no-such-shape"))["distort.shape"] shouldBe 0.0
-        slots(note("c").tremolo(0.5, 4, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0, "tremolo.shape" to 2.0)
+        slots(note("c").tremolo(0.5, 4, "square")) shouldBe mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0, "tremolo.shape" to 2.0)
         slots(note("c").adsrCurves("linear", "square", "scurve")) shouldBe mapOf(
             "adsrCurves.attack" to 0.0, "adsrCurves.decay" to 1.0, "adsrCurves.release" to 3.0,
         )
@@ -144,7 +144,7 @@ class ClassicSlotParamsSpec : StringSpec({
             "crush.amount" to 4.1, "crush.oversample" to 2.0,
             "coarse.amount" to 3.1, "coarse.oversample" to 4.0,
             "distort.amount" to 0.31, "distort.shape" to 10.0, "distort.oversample" to 8.0,
-            "tremolo.depth" to 0.61, "tremolo.sync" to 4.1, "tremolo.shape" to 2.0,
+            "tremolo.depth" to 0.61, "tremolo.rate" to 4.1, "tremolo.shape" to 2.0,
             "begin" to 0.11, "end" to 0.91, "speed" to 2.1, "loop" to 1.0,
         )
 

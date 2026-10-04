@@ -100,7 +100,7 @@ class VoiceFactory(
         // It matters because the readers disagree on which test a non-finite value fails: `AnalogDrift`
         // tests `analog > 0.0` (a NaN fails it, an `+Infinity` passes). What each non-finite value used to
         // render is written out once, in `VoiceBagGuardSpec`, which is the guard.
-        val analog = data.oscParams?.get("analog")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
+        val analog = data.ignitorParams?.get("analog")?.takeIf { it.isFinite() } ?: 0.0 // NaN-guard: non-finite reads as unset
 
         // Seeded-voice-rng: deal THIS voice's stream from the playback's coreRandom at the
         // TOP of creation, before any branch can bail (a `?: return null` after the
@@ -224,7 +224,7 @@ class VoiceFactory(
                 // where the playhead is built, before any tree. A non-finite value reads as UNSET, the rule of every
                 // slot, and UNSET matters here beyond its default: an unset `begin` and `end` let the sample's own
                 // loop apply, and only a set `begin` moves the start.
-                val sampleBag = data.oscParams
+                val sampleBag = data.ignitorParams
                 val sampleBegin = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.begin)
                 val sampleEnd = sampleBag.finiteSlot(IgnitorDsl.Slots.sample.end)
                 val sampleSpeed = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.speed)
@@ -316,7 +316,7 @@ class VoiceFactory(
                 // meta envelope fills the `adsr.*` slots the pattern left unset. The instrument has no variants
                 // (`n` already chose the sample), so the build takes no sound index.
                 val built = IgnitorRegistry.SAMPLE_INSTRUMENT.buildExciter(
-                    oscParams = withSampleEnvelopeDefaults(sampleBag, sample.meta.adsr),
+                    ignitorParams = withSampleEnvelopeDefaults(sampleBag, sample.meta.adsr),
                     phasePools = playbackCtx.phasePools,
                     orbit = cylinder,
                     random = voiceRandom,

@@ -46,21 +46,21 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     val saw = IgnitorDsl.Sawtooth()
 
     "eq: script lambda == Kotlin eq().band().tap()" {
-        ks("Osc.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))") shouldBe
+        ks("Ignitor.saw().eq(e => e.band(300, 1.0, -4).tap(850, 0.707, 1.7))") shouldBe
                 saw.eq().band(300.0, 1.0, -4.0).tap(850.0, 0.707, 1.7)
     }
 
     "eq: the Kotlin door of the stdlib takes the same lambda" {
-        ks("Osc.saw().eq(e => e.band(300, 1.0, -4))") shouldBe
-                KlangScriptOscExtensions.eq(saw, configure = { it.band(300.0, 1.0, -4.0) })
+        ks("Ignitor.saw().eq(e => e.band(300, 1.0, -4))") shouldBe
+                KlangScriptIgnitorExtensions.eq(saw, configure = { it.band(300.0, 1.0, -4.0) })
     }
 
     "eq: a lambda that returns nothing is a script-level type error" {
-        shouldThrow<KlangScriptTypeError> { ks("Osc.saw().eq(e => { e.band(300) })") }
+        shouldThrow<KlangScriptTypeError> { ks("Ignitor.saw().eq(e => { e.band(300) })") }
     }
 
     "phaser: wet FIRST, then rate, and the dry floor via the lambda == the Kotlin door" {
-        val dsl = ks("Osc.saw().phaser(0.25, 0.3, x => x.floor(0.1))") as IgnitorDsl.Phaser
+        val dsl = ks("Ignitor.saw().phaser(0.25, 0.3, x => x.floor(0.1))") as IgnitorDsl.Phaser
         dsl shouldBe IgnitorDsl.Phaser(
             inner = saw, rate = IgnitorDsl.Constant(0.3),
             wet = IgnitorDsl.Constant(0.25), floor = IgnitorDsl.Constant(0.1),
@@ -69,7 +69,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     }
 
     "phaser: center and sweep stay door parameters, the lambda follows them" {
-        val dsl = ks("Osc.saw().phaser(0.4, 0.3, 800, 600, x => x.floor(0.1))") as IgnitorDsl.Phaser
+        val dsl = ks("Ignitor.saw().phaser(0.4, 0.3, 800, 600, x => x.floor(0.1))") as IgnitorDsl.Phaser
         dsl shouldBe saw.phaser(0.4, 0.3, 800.0, 600.0).copy(floor = IgnitorDsl.Constant(0.1))
         dsl.floor shouldBe IgnitorDsl.Constant(0.1)
         dsl.center shouldBe IgnitorDsl.Constant(800.0)
@@ -79,37 +79,37 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     }
 
     "phaser: wet and rate are both required, and the builder no longer offers wet" {
-        shouldThrowAny { ks("Osc.saw().phaser(0.3)") }
-        shouldThrowAny { ks("Osc.saw().phaser(0.3, 0.5, x => x.wet(0.4))") }
-        shouldThrowAny { ks("Osc.saw().phaser(0.3, 0.5, x => x.dryFloor(0.4))") }
+        shouldThrowAny { ks("Ignitor.saw().phaser(0.3)") }
+        shouldThrowAny { ks("Ignitor.saw().phaser(0.3, 0.5, x => x.wet(0.4))") }
+        shouldThrowAny { ks("Ignitor.saw().phaser(0.3, 0.5, x => x.dryFloor(0.4))") }
     }
 
     "shimmer: every default, wet first with today's default, pitches default when omitted" {
-        val dsl = ks("Osc.saw().shimmer()") as IgnitorDsl.Shimmer
+        val dsl = ks("Ignitor.saw().shimmer()") as IgnitorDsl.Shimmer
         dsl shouldBe IgnitorDsl.Shimmer(inner = saw)
         dsl shouldBe saw.shimmer()
         dsl.pitches shouldBe listOf(0.0, 7.0, 12.0)
-        (ks("Osc.saw().shimmer(0.3)") as IgnitorDsl.Shimmer) shouldBe saw.shimmer(wet = 0.3)
+        (ks("Ignitor.saw().shimmer(0.3)") as IgnitorDsl.Shimmer) shouldBe saw.shimmer(wet = 0.3)
     }
 
     "shimmer: explicit pitches array still binds positionally before the lambda" {
-        val dsl = ks("Osc.saw().shimmer(0.3, 0.4, 3000, [0, 4, 7, 11], x => x.floor(0.2))") as IgnitorDsl.Shimmer
+        val dsl = ks("Ignitor.saw().shimmer(0.3, 0.4, 3000, [0, 4, 7, 11], x => x.floor(0.2))") as IgnitorDsl.Shimmer
         dsl shouldBe saw.shimmer(0.3, 0.4, 3000.0, listOf(0.0, 4.0, 7.0, 11.0)).copy(floor = IgnitorDsl.Constant(0.2))
         dsl.pitches shouldBe listOf(0.0, 4.0, 7.0, 11.0)
         dsl.wet shouldBe IgnitorDsl.Constant(0.3)
         dsl.feedback shouldBe IgnitorDsl.Constant(0.4)
         dsl.tone shouldBe IgnitorDsl.Constant(3000.0)
         dsl.floor shouldBe IgnitorDsl.Constant(0.2)
-        shouldThrowAny { ks("Osc.saw().shimmer(0.3, x => x.wet(0.4))") }
+        shouldThrowAny { ks("Ignitor.saw().shimmer(0.3, x => x.wet(0.4))") }
     }
 
     "drive: amount only, the type is gone on both doors" {
-        ks("Osc.saw().drive(0.5)") shouldBe saw.drive(0.5)
-        ks("Osc.saw().drive(0.5)") shouldBe IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Constant(0.5))
+        ks("Ignitor.saw().drive(0.5)") shouldBe saw.drive(0.5)
+        ks("Ignitor.saw().drive(0.5)") shouldBe IgnitorDsl.Drive(inner = saw, amount = IgnitorDsl.Constant(0.5))
     }
 
     "pitchEnvelope: no lambda is the node's defaults, attack 0.01, decay 0.1, sustain 0, release 0" {
-        ks("Osc.saw().pitchEnvelope(12)") shouldBe IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0))
+        ks("Ignitor.saw().pitchEnvelope(12)") shouldBe IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0))
         val n = IgnitorDsl.PitchEnvelope(inner = saw)
         n.attackSec shouldBe IgnitorDsl.Constant(0.01)
         n.decaySec shouldBe IgnitorDsl.Constant(0.1)
@@ -121,7 +121,7 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     }
 
     "pitchEnvelope: ONE adsr call with its curves lambda == the node fields" {
-        ks("""Osc.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0.2, 0.1, e => e.curves("exp", "square", "cube")))""") shouldBe
+        ks("""Ignitor.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.05, 0.2, 0.1, e => e.curves("exp", "square", "cube")))""") shouldBe
                 IgnitorDsl.PitchEnvelope(
                     inner = saw,
                     semitones = IgnitorDsl.Constant(24.0),
@@ -137,26 +137,26 @@ class KlangScriptEffectBuilderSpec : StringSpec({
 
     "pitchEnvelope: the songs' migrated form is the old three-argument node" {
         // `pitchEnvelope(24, 0.001, 0.04)` before step 3d; release and anchor were at their 0 defaults.
-        ks("Osc.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))") shouldBe IgnitorDsl.PitchEnvelope(
+        ks("Ignitor.saw().pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))") shouldBe IgnitorDsl.PitchEnvelope(
             inner = saw,
             semitones = IgnitorDsl.Constant(24.0),
             attackSec = IgnitorDsl.Constant(0.001),
             decaySec = IgnitorDsl.Constant(0.04),
         )
-        shouldThrowAny { ks("Osc.saw().pitchEnvelope(24, 0.001, 0.04)") }
+        shouldThrowAny { ks("Ignitor.saw().pitchEnvelope(24, 0.001, 0.04)") }
     }
 
     "pitchEnvelope: in curves an omitted argument and an unknown name both mean the default" {
         val default = AdsrCurves.knob(MOD_ENV_CURVE)
 
         // The second call names only the decay: it REPLACES the first call, it does not merge.
-        val later = ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("square", "cube", "scurve").curves(decay = "exp")))""")
+        val later = ks("""Ignitor.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("square", "cube", "scurve").curves(decay = "exp")))""")
             as IgnitorDsl.PitchEnvelope
         later.attackCurve shouldBe default
         later.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Exponential)
         later.releaseCurve shouldBe default
 
-        val unknown = ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("bogus", "cube", "square")))""")
+        val unknown = ks("""Ignitor.saw().pitchEnvelope(12, x => x.adsr(0.01, 0.1, 0, 0, e => e.curves("bogus", "cube", "square")))""")
             as IgnitorDsl.PitchEnvelope
         unknown.attackCurve shouldBe default
         unknown.decayCurve shouldBe AdsrCurves.knob(AdsrCurve.Cube)
@@ -164,25 +164,25 @@ class KlangScriptEffectBuilderSpec : StringSpec({
     }
 
     "pitchEnvelope: a later adsr call replaces an earlier one completely, curves included" {
-        ks("""Osc.saw().pitchEnvelope(12, x => x.adsr(0.02, 0.2, 0, 0, e => e.curves("square", "cube", "scurve")).adsr(0.01, 0.1, 0, 0))""") shouldBe
+        ks("""Ignitor.saw().pitchEnvelope(12, x => x.adsr(0.02, 0.2, 0, 0, e => e.curves("square", "cube", "scurve")).adsr(0.01, 0.1, 0, 0))""") shouldBe
                 IgnitorDsl.PitchEnvelope(inner = saw, semitones = IgnitorDsl.Constant(12.0))
     }
 
     "pitchEnvelope: the 3d(i) builder knob adsrCurves is gone (it moved into the adsr lambda as curves)" {
-        shouldThrowAny { ks("""Osc.saw().pitchEnvelope(12, x => x.adsrCurves("square", "cube", "scurve"))""") }
+        shouldThrowAny { ks("""Ignitor.saw().pitchEnvelope(12, x => x.adsrCurves("square", "cube", "scurve"))""") }
             .message shouldContain "has no method 'adsrCurves'"
     }
 
     "fm: the index envelope is ONE adsr call on the builder == the Kotlin door's env fields" {
-        ks("Osc.saw().fm(Osc.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.2))") shouldBe
+        ks("Ignitor.saw().fm(Ignitor.sine(), 1.4, 300, x => x.adsr(0.001, 0.5, 0, 0.2))") shouldBe
                 saw.fm(IgnitorDsl.Sine(), 1.4, 300.0, envAttackSec = 0.001, envDecaySec = 0.5, envSustainLevel = 0.0, envReleaseSec = 0.2)
     }
 
     "fm: without a lambda the depth is constant, the same node as the Kotlin door's defaults" {
-        ks("Osc.saw().fm(Osc.sine(), 2, 200)") shouldBe saw.fm(IgnitorDsl.Sine(), 2.0, 200.0)
+        ks("Ignitor.saw().fm(Ignitor.sine(), 2, 200)") shouldBe saw.fm(IgnitorDsl.Sine(), 2.0, 200.0)
     }
 
     "fm: the builder offers adsr only (its freq stays hidden, maintainer 2026-08-30)" {
-        shouldThrowAny { ks("Osc.saw().fm(Osc.sine(), 2, 200, x => x.freq(220))") }
+        shouldThrowAny { ks("Ignitor.saw().fm(Ignitor.sine(), 2, 200, x => x.freq(220))") }
     }
 })

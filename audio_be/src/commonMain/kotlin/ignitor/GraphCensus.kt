@@ -41,7 +41,7 @@ import io.peekandpoke.klang.audio_bridge.coercePasses
  * on hand-counted graphs. It exists for the song benchmark's `work` columns and the ledger; it
  * is never called on the render path.
  *
- * [params] are the voice's `oscParams`: a `Param` slot (the unison `voices`) is resolved through
+ * [params] are the voice's `ignitorParams`: a `Param` slot (the unison `voices`) is resolved through
  * them, then through its default, so a `unison(voices = 13)` at the pattern level counts 13.
  * [soundIndex] picks the variant of a [IgnitorDsl.Variants] the way the runtime does (the index
  * modulo the count); only that variant renders.

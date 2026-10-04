@@ -31,7 +31,7 @@ class ArgAlignmentTest : StringSpec({
     }
 
     "a sole trailing lambda floats past one non-function slot to the single function slot" {
-        // Osc.supersaw(x => ...) with params (freq, configure)
+        // Ignitor.supersaw(x => ...) with params (freq, configure)
         align(listOf(true), listOf(false, true)) shouldBe listOf(1)
     }
 

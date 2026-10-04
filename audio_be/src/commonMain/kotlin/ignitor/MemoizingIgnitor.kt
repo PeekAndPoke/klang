@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
  * Wraps an [Ignitor] so that its output is computed at most once per block.
  *
  * When the same DSL node is referenced multiple times in a signal graph (e.g.
- * `let s = Osc.sine().adsr(...); s + s.shimmer()`), each reader would otherwise
+ * `let s = Ignitor.sine().adsr(...); s + s.shimmer()`), each reader would otherwise
  * invoke the underlying generator independently. For stateful sources (phase
  * accumulators, noise seeds) this produces divergent samples — which contradicts
  * the `let` binding mental model.

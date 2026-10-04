@@ -17,7 +17,7 @@ package io.peekandpoke.klang.script.runtime
  * > function-typed, and exactly one function-typed parameter follows, the argument binds
  * > to that parameter instead. The skipped slots take their defaults.
  *
- * This is what lets `Osc.supersaw(x => x.voices(9))` land the lambda in the trailing
+ * This is what lets `Ignitor.supersaw(x => x.voices(9))` land the lambda in the trailing
  * `configure` parameter although `freq` comes first. Only the last argument floats, so
  * `f(lambda, 2)` stays a positional mismatch (and errors downstream) instead of a guess.
  * Two or more function-typed candidates mean no float: the call is ambiguous and the

@@ -44,7 +44,7 @@ class LangDefaultQSpec : StringSpec({
     }
 
     "a bare filter sends no q: the classic() slot default builds it" {
-        note("c").lpf(800).queryArc(0.0, 1.0).first().data.toVoiceData().oscParams?.containsKey("lpf.q") shouldBe false
+        note("c").lpf(800).queryArc(0.0, 1.0).first().data.toVoiceData().ignitorParams?.containsKey("lpf.q") shouldBe false
         slotQ shouldBe listOf(q, q, q, q)
     }
 
@@ -87,20 +87,20 @@ class LangDefaultQSpec : StringSpec({
         tap.q shouldBe IgnitorDsl.Constant(0.707)
     }
 
-    "KlangScript interpreter doors: Osc bandpass/notch/tap default to q = 0.707" {
+    "KlangScript interpreter doors: Ignitor bandpass/notch/tap default to q = 0.707" {
         // The guard hole that let C1 miss the script stdlib doors once: drive the actual
         // interpreter, not just sprudel compilation.
         val engine = klangScript()
         engine.execute("""import * from "stdlib"""")
         fun eval(code: String): Any? = engine.execute(code).toObjectOrNull<Any>()
 
-        val bp = eval("""Osc.saw().bandpass(1000)""") as IgnitorDsl.Bandpass
+        val bp = eval("""Ignitor.saw().bandpass(1000)""") as IgnitorDsl.Bandpass
         bp.q shouldBe IgnitorDsl.Constant(0.707)
 
-        val nt = eval("""Osc.saw().notch(1000)""") as IgnitorDsl.Notch
+        val nt = eval("""Ignitor.saw().notch(1000)""") as IgnitorDsl.Notch
         nt.q shouldBe IgnitorDsl.Constant(0.707)
 
-        val eqd = eval("""Osc.saw().eq(e => e.tap(850))""") as IgnitorDsl.Eq
+        val eqd = eval("""Ignitor.saw().eq(e => e.tap(850))""") as IgnitorDsl.Eq
         (eqd.sections.single() as IgnitorDsl.EqSection.RawTap).q shouldBe IgnitorDsl.Constant(0.707)
     }
 })

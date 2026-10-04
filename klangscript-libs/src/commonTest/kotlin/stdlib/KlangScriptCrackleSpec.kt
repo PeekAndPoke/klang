@@ -27,17 +27,17 @@ class KlangScriptCrackleSpec : StringSpec({
         return result.value.shouldBeInstanceOf<IgnitorDsl>()
     }
 
-    fun crackle() = KlangScriptOsc.crackle() as IgnitorDsl.Crackle
+    fun crackle() = KlangScriptIgnitor.crackle() as IgnitorDsl.Crackle
 
-    "Osc.crackle() — KlangScript == Kotlin builder" {
-        ks("Osc.crackle()") shouldBe crackle()
+    "Ignitor.crackle() — KlangScript == Kotlin builder" {
+        ks("Ignitor.crackle()") shouldBe crackle()
     }
 
-    "Osc.crackle(1.8) — positional chaos" {
-        ks("Osc.crackle(1.8)") shouldBe crackle().copy(chaos = IgnitorDsl.Constant(1.8))
+    "Ignitor.crackle(1.8) — positional chaos" {
+        ks("Ignitor.crackle(1.8)") shouldBe crackle().copy(chaos = IgnitorDsl.Constant(1.8))
     }
 
-    "Osc.crackle(chaos = 1.2) — named chaos" {
-        ks("Osc.crackle(chaos = 1.2)") shouldBe crackle().copy(chaos = IgnitorDsl.Constant(1.2))
+    "Ignitor.crackle(chaos = 1.2) — named chaos" {
+        ks("Ignitor.crackle(chaos = 1.2)") shouldBe crackle().copy(chaos = IgnitorDsl.Constant(1.2))
     }
 })

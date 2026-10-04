@@ -265,7 +265,7 @@ private fun applySndNoise(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndNoise(color: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndNoise(this)
-    if (color != null) p = p.oscparam("color", color, callInfo?.forParam(0, 1))
+    if (color != null) p = p.ignitorParam("color", color, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -306,7 +306,7 @@ private fun applySndBrown(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndBrown(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndBrown(this)
-    if (depth != null) p = p.oscparam("depth", depth, callInfo?.forParam(0, 1))
+    if (depth != null) p = p.ignitorParam("depth", depth, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -387,7 +387,7 @@ private fun applySndPulze(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndPulze(duty: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndPulze(this)
-    if (duty != null) p = p.oscparam("duty", duty, callInfo?.forParam(0, 1))
+    if (duty != null) p = p.ignitorParam("duty", duty, callInfo?.forParam(0, 1))
     return p
 }
 
@@ -440,8 +440,8 @@ private fun applySndDust(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndDust(density: PatternLike? = null, tail: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndDust(this)
-    if (density != null) p = p.oscparam("density", density, callInfo?.forParam(0, 1))
-    if (tail != null) p = p.oscparam("tail", tail, callInfo?.forParam(1, 1))
+    if (density != null) p = p.ignitorParam("density", density, callInfo?.forParam(0, 1))
+    if (tail != null) p = p.ignitorParam("tail", tail, callInfo?.forParam(1, 1))
     return p
 }
 
@@ -495,7 +495,7 @@ private fun applySndCrackle(source: SprudelPattern): SprudelPattern =
 @KlangScript.Function
 fun SprudelPattern.sndCrackle(chaos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern {
     var p = applySndCrackle(this)
-    if (chaos != null) p = p.oscparam("chaos", chaos, callInfo?.forParam(0, 1))
+    if (chaos != null) p = p.ignitorParam("chaos", chaos, callInfo?.forParam(0, 1))
     return p
 }
 

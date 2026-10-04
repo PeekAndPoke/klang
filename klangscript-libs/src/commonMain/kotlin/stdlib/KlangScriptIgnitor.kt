@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+@file:KlangScript.Library(KlangScriptLibraries.STDLIB)
+
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
@@ -10,14 +12,14 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * Osc object for KlangScript — builds IgnitorDsl signal graphs.
+ * `Ignitor` for KlangScript (short name `Ign`): builds IgnitorDsl signal graphs, the per-voice instrument.
  *
  * Provides factory methods for all oscillator primitives, noise sources, and super oscillators.
  * Returns [IgnitorDsl] instances that can be composed via extension methods (lowpass, adsr, mul, etc.)
  * and passed directly to `.sound()`:
  *
  * ```
- * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5).classic()
+ * let pad = Ignitor.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5).classic()
  * note("c3 e3 g3").sound(pad).adsrOff()
  * ```
  *
@@ -25,28 +27,34 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * player's ignitor registry — no explicit registration step is needed.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.Object("Osc")
-object KlangScriptOsc {
+@KlangScript.Object("Ignitor")
+object KlangScriptIgnitor {
 
-    override fun toString(): String = "[Osc object]"
+    override fun toString(): String = "[Ignitor object]"
 
     /**
-     * Canonical open parameter slots — `Osc.slot.analog`, `Osc.slot.voices`, etc.
-     * Equivalent to the top-level [KlangScriptOscSlot] object.
+     * The canonical open slots of a custom sound: `Ignitor.slot.analog`, `Ignitor.slot.voices`,
+     * `Ignitor.slot.lpf.freq` and the rest. Each is the same `IgnitorDsl.Param(name, default)` the built-in sounds
+     * use, so a custom sound that hands one to a knob opts in to sprudel's modulation of it (the `analog`, `voices`,
+     * `spread`, ... knobs on the oscillator builders). Without opting in, a custom sound ignores it. For
+     * example, `Ignitor.sine(x => x.analog(Ignitor.slot.analog))` is a sine whose drift follows sprudel's
+     * `analog`. `Ign.slot` is the same.
      */
+    // The script path to KlangScriptIgnitorSlots; the Kotlin door is IgnitorDsl.Slots, the same objects.
+    // (A member property's docs carry no samples in KSP, so the example is prose.)
     @KlangScript.Property
-    val slot: KlangScriptOscSlot = KlangScriptOscSlot
+    val slot: KlangScriptIgnitorSlots = KlangScriptIgnitorSlots
 
     // ── Oscillator Primitives ────────────────────────────────────────────────
     //
     // Every oscillator door has the same shape: `freq` first (omit it for the playing note's
-    // pitch, pass Hz for a fixed frequency, so `Osc.sine(5)` is a 5 Hz LFO), then an optional
+    // pitch, pass Hz for a fixed frequency, so `Ignitor.sine(5)` is a 5 Hz LFO), then an optional
     // `configure` lambda that receives the oscillator's BUILDER and returns it. The builder
     // carries exactly this oscillator's knobs and nothing else (see `IgnitorBuilders.kt`);
     // processing (`.lowpass()`, `.adsr()`, `.mul()`, ...) happens on the returned sound, outside
     // the lambda:
     //
-    //     Osc.saw(x => x.analog(3).resetSamples(4)).lowpass(800)
+    //     Ignitor.saw(x => x.analog(3).resetSamples(4)).lowpass(800)
 
     /** Returns the voice's note frequency (e.g. 440 Hz for A4). Usable anywhere a frequency value is needed. */
     @KlangScript.Method
@@ -58,20 +66,20 @@ object KlangScriptOsc {
      * `2f, 4f, 8f ...`, `suboctaves(count, rolloff)` at `f/2, f/4 ...`; `fundamental(gain)` levels the sine itself
      * and `analogSpread(0..1)` sets whether the partials drift as one oscillator or on their own. With no bank
      * knob set this is the plain sine it always was. The multiples follow the door's `freq`, so
-     * `Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`.
+     * `Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`.
      *
      * @param freq frequency, omit for the playing note's pitch, or pass Hz for a fixed frequency (e.g. 5 for a 5 Hz LFO).
      * @param configure receives the [OscSineBuilder] (knobs: `analog`, `fundamental`, `harmonics`, `octaves`, `suboctaves`, `analogSpread`) and returns it.
      *
      * ```KlangScript
-     * Osc.sine(x => x.analog(3)).lowpass(2000)
-     * Osc.sine(x => x.harmonics(7))                  // a bass the ear rebuilds on small speakers: f plus 2f .. 8f
-     * Osc.sine(x => x.suboctaves(1, 0))              // the classic sub oscillator, f and f/2 at equal level
+     * Ignitor.sine(x => x.analog(3)).lowpass(2000)
+     * Ignitor.sine(x => x.harmonics(7))                  // a bass the ear rebuilds on small speakers: f plus 2f .. 8f
+     * Ignitor.sine(x => x.suboctaves(1, 0))              // the classic sub oscillator, f and f/2 at equal level
      * ```
      */
     @KlangScript.Method
     fun sine(freq: IgnitorDslLike? = null, configure: ((OscSineBuilder) -> OscSineBuilder)? = null): IgnitorDsl =
-        OscSineBuilder(IgnitorDsl.Sine(freq = freq.orNoteFreq())).configuredBy("Osc.sine", configure).node
+        OscSineBuilder(IgnitorDsl.Sine(freq = freq.orNoteFreq())).configuredBy("Ignitor.sine", configure).node
 
     /**
      * Creates a sawtooth wave oscillator (analog flyback shape, no PolyBLEP, softens with pitch).
@@ -80,12 +88,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSawBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
      *
      * ```KlangScript
-     * Osc.saw(x => x.resetSamples(4.0).analog(5.0))
+     * Ignitor.saw(x => x.resetSamples(4.0).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun saw(freq: IgnitorDslLike? = null, configure: ((OscSawBuilder) -> OscSawBuilder)? = null): IgnitorDsl =
-        OscSawBuilder(IgnitorDsl.Sawtooth(freq = freq.orNoteFreq())).configuredBy("Osc.saw", configure).node
+        OscSawBuilder(IgnitorDsl.Sawtooth(freq = freq.orNoteFreq())).configuredBy("Ignitor.saw", configure).node
 
     /**
      * Creates a square wave oscillator: a variable-duty pulse whose `duty` defaults to 50%.
@@ -96,12 +104,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSquareBuilder] (knobs: `duty`, `analog`, `flankSamples`, `riseFlank`, `fallFlank`) and returns it.
      *
      * ```KlangScript
-     * Osc.square(x => x.duty(0.3).flankSamples(4.0))
+     * Ignitor.square(x => x.duty(0.3).flankSamples(4.0))
      * ```
      */
     @KlangScript.Method
     fun square(freq: IgnitorDslLike? = null, configure: ((OscSquareBuilder) -> OscSquareBuilder)? = null): IgnitorDsl =
-        OscSquareBuilder(IgnitorDsl.Pulze(freq = freq.orNoteFreq())).configuredBy("Osc.square", configure).node
+        OscSquareBuilder(IgnitorDsl.Pulze(freq = freq.orNoteFreq())).configuredBy("Ignitor.square", configure).node
 
     /**
      * Creates a triangle wave oscillator. Its flanks are fixed fully open; `analog` is the only knob.
@@ -110,12 +118,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscTriangleBuilder] (knobs: `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.triangle(x => x.analog(3))
+     * Ignitor.triangle(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
     fun triangle(freq: IgnitorDslLike? = null, configure: ((OscTriangleBuilder) -> OscTriangleBuilder)? = null): IgnitorDsl =
-        OscTriangleBuilder(IgnitorDsl.Triangle(freq = freq.orNoteFreq())).configuredBy("Osc.triangle", configure).node
+        OscTriangleBuilder(IgnitorDsl.Triangle(freq = freq.orNoteFreq())).configuredBy("Ignitor.triangle", configure).node
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
@@ -124,12 +132,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscRampBuilder] (knobs: `analog`, `resetSamples`, `shapeMax`) and returns it.
      *
      * ```KlangScript
-     * Osc.ramp(x => x.resetSamples(4.0).analog(5.0))
+     * Ignitor.ramp(x => x.resetSamples(4.0).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun ramp(freq: IgnitorDslLike? = null, configure: ((OscRampBuilder) -> OscRampBuilder)? = null): IgnitorDsl =
-        OscRampBuilder(IgnitorDsl.Ramp(freq = freq.orNoteFreq())).configuredBy("Osc.ramp", configure).node
+        OscRampBuilder(IgnitorDsl.Ramp(freq = freq.orNoteFreq())).configuredBy("Ignitor.ramp", configure).node
 
     /**
      * Creates a naive sawtooth without anti-aliasing (brighter, harsher).
@@ -138,12 +146,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscZawtoothBuilder] (knobs: `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.zawtooth(x => x.analog(3))
+     * Ignitor.zawtooth(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
     fun zawtooth(freq: IgnitorDslLike? = null, configure: ((OscZawtoothBuilder) -> OscZawtoothBuilder)? = null): IgnitorDsl =
-        OscZawtoothBuilder(IgnitorDsl.Zawtooth(freq = freq.orNoteFreq())).configuredBy("Osc.zawtooth", configure).node
+        OscZawtoothBuilder(IgnitorDsl.Zawtooth(freq = freq.orNoteFreq())).configuredBy("Ignitor.zawtooth", configure).node
 
     /**
      * Creates a raw ramp ("zamp"): a naive reverse sawtooth without anti-aliasing (the raw [ramp]).
@@ -152,12 +160,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscZampBuilder] (knobs: `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.zamp(x => x.analog(3))
+     * Ignitor.zamp(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
     fun zamp(freq: IgnitorDslLike? = null, configure: ((OscZampBuilder) -> OscZampBuilder)? = null): IgnitorDsl =
-        OscZampBuilder(IgnitorDsl.Zamp(freq = freq.orNoteFreq())).configuredBy("Osc.zamp", configure).node
+        OscZampBuilder(IgnitorDsl.Zamp(freq = freq.orNoteFreq())).configuredBy("Ignitor.zamp", configure).node
 
     /**
      * Creates an impulse (click) oscillator.
@@ -166,12 +174,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscImpulseBuilder] (knobs: `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.impulse(x => x.analog(3))
+     * Ignitor.impulse(x => x.analog(3))
      * ```
      */
     @KlangScript.Method
     fun impulse(freq: IgnitorDslLike? = null, configure: ((OscImpulseBuilder) -> OscImpulseBuilder)? = null): IgnitorDsl =
-        OscImpulseBuilder(IgnitorDsl.Impulse(freq = freq.orNoteFreq())).configuredBy("Osc.impulse", configure).node
+        OscImpulseBuilder(IgnitorDsl.Impulse(freq = freq.orNoteFreq())).configuredBy("Ignitor.impulse", configure).node
 
     /**
      * Creates a raw pulse ("pulze"): a naive, aliased pulse with variable duty cycle (the raw counterpart of [square]).
@@ -180,12 +188,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscPulzeBuilder] (knobs: `duty`, `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.pulze(x => x.duty(0.3))
+     * Ignitor.pulze(x => x.duty(0.3))
      * ```
      */
     @KlangScript.Method
     fun pulze(freq: IgnitorDslLike? = null, configure: ((OscPulzeBuilder) -> OscPulzeBuilder)? = null): IgnitorDsl =
-        OscPulzeBuilder(IgnitorDsl.RawPulze(freq = freq.orNoteFreq())).configuredBy("Osc.pulze", configure).node
+        OscPulzeBuilder(IgnitorDsl.RawPulze(freq = freq.orNoteFreq())).configuredBy("Ignitor.pulze", configure).node
 
     /** Creates a silent ignitor (zero output). */
     @KlangScript.Method
@@ -286,12 +294,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperSawBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersaw(x => x.voices(9).spread(0.1).spreadPower(1.5).analog(5.0)).lowpass(800)
+     * Ignitor.supersaw(x => x.voices(9).spread(0.1).spreadPower(1.5).analog(5.0)).lowpass(800)
      * ```
      */
     @KlangScript.Method
     fun supersaw(freq: IgnitorDslLike? = null, configure: ((OscSuperSawBuilder) -> OscSuperSawBuilder)? = null): IgnitorDsl =
-        OscSuperSawBuilder(IgnitorDsl.SuperSaw(freq = freq.orNoteFreq())).configuredBy("Osc.supersaw", configure).node
+        OscSuperSawBuilder(IgnitorDsl.SuperSaw(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersaw", configure).node
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
@@ -302,12 +310,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperSineBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersine(x => x.voices(9).spread(0.1).analog(5.0))
+     * Ignitor.supersine(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun supersine(freq: IgnitorDslLike? = null, configure: ((OscSuperSineBuilder) -> OscSuperSineBuilder)? = null): IgnitorDsl =
-        OscSuperSineBuilder(IgnitorDsl.SuperSine(freq = freq.orNoteFreq())).configuredBy("Osc.supersine", configure).node
+        OscSuperSineBuilder(IgnitorDsl.SuperSine(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersine", configure).node
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
@@ -318,12 +326,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperSquareBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supersquare(x => x.voices(9).spread(0.1).analog(5.0))
+     * Ignitor.supersquare(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun supersquare(freq: IgnitorDslLike? = null, configure: ((OscSuperSquareBuilder) -> OscSuperSquareBuilder)? = null): IgnitorDsl =
-        OscSuperSquareBuilder(IgnitorDsl.SuperSquare(freq = freq.orNoteFreq())).configuredBy("Osc.supersquare", configure).node
+        OscSuperSquareBuilder(IgnitorDsl.SuperSquare(freq = freq.orNoteFreq())).configuredBy("Ignitor.supersquare", configure).node
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
@@ -334,12 +342,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperTriBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.supertri(x => x.voices(9).spread(0.1).analog(5.0))
+     * Ignitor.supertri(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun supertri(freq: IgnitorDslLike? = null, configure: ((OscSuperTriBuilder) -> OscSuperTriBuilder)? = null): IgnitorDsl =
-        OscSuperTriBuilder(IgnitorDsl.SuperTri(freq = freq.orNoteFreq())).configuredBy("Osc.supertri", configure).node
+        OscSuperTriBuilder(IgnitorDsl.SuperTri(freq = freq.orNoteFreq())).configuredBy("Ignitor.supertri", configure).node
 
     /**
      * Creates a superramp (multiple detuned ramp oscillators, the mirror of [supersaw]).
@@ -350,12 +358,12 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperRampBuilder] (knobs: `voices`, `spread`, `analog`, `analogSpread`, `spreadPower`, `sideAtten`, `gainJitter`, `centerJitter`, `phasePool`) and returns it.
      *
      * ```KlangScript
-     * Osc.superramp(x => x.voices(9).spread(0.1).analog(5.0))
+     * Ignitor.superramp(x => x.voices(9).spread(0.1).analog(5.0))
      * ```
      */
     @KlangScript.Method
     fun superramp(freq: IgnitorDslLike? = null, configure: ((OscSuperRampBuilder) -> OscSuperRampBuilder)? = null): IgnitorDsl =
-        OscSuperRampBuilder(IgnitorDsl.SuperRamp(freq = freq.orNoteFreq())).configuredBy("Osc.superramp", configure).node
+        OscSuperRampBuilder(IgnitorDsl.SuperRamp(freq = freq.orNoteFreq())).configuredBy("Ignitor.superramp", configure).node
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
@@ -366,14 +374,14 @@ object KlangScriptOsc {
      * @param configure receives the [OscPluckBuilder] (knobs: `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`) and returns it.
      *
      * ```KlangScript
-     * Osc.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
+     * Ignitor.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
      * ```
      */
     @KlangScript.Method
     fun pluck(freq: IgnitorDslLike? = null, configure: ((OscPluckBuilder) -> OscPluckBuilder)? = null): IgnitorDsl =
         OscPluckBuilder(
             // Sealed constants, not the node's open `Slots.*` params: a custom pluck ignores sprudel's
-            // per-note modulation unless the author opts in with `OscSlot.*` (see [KlangScriptOscSlot]).
+            // per-note modulation unless the author opts in with `Ignitor.slot.*` (see [KlangScriptIgnitorSlots]).
             IgnitorDsl.Pluck(
                 freq = freq.orNoteFreq(),
                 decay = IgnitorDsl.Constant(0.996),
@@ -381,7 +389,7 @@ object KlangScriptOsc {
                 pickPosition = IgnitorDsl.Constant(0.5),
                 stiffness = IgnitorDsl.Constant(0.0),
             ),
-        ).configuredBy("Osc.pluck", configure).node
+        ).configuredBy("Ignitor.pluck", configure).node
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
@@ -390,7 +398,7 @@ object KlangScriptOsc {
      * @param configure receives the [OscSuperPluckBuilder] (knobs: `voices`, `spread`, `decay`, `brightness`, `pickPosition`, `stiffness`, `analog`, `analogSpread`) and returns it.
      *
      * ```KlangScript
-     * Osc.superpluck(x => x.voices(6).spread(0.15).decay(0.995))
+     * Ignitor.superpluck(x => x.voices(6).spread(0.15).decay(0.995))
      * ```
      */
     @KlangScript.Method
@@ -406,7 +414,7 @@ object KlangScriptOsc {
                 pickPosition = IgnitorDsl.Constant(0.5),
                 stiffness = IgnitorDsl.Constant(0.0),
             ),
-        ).configuredBy("Osc.superpluck", configure).node
+        ).configuredBy("Ignitor.superpluck", configure).node
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 
@@ -414,19 +422,19 @@ object KlangScriptOsc {
      * Creates a named parameter slot with a default value.
      *
      * Param slots are the leaf nodes of the ignitor tree — they produce a constant signal
-     * at [default] unless overridden by oscParam() at play time.
+     * at [default] unless the pattern writes the slot with `ignitorParam` at play time.
      *
-     * `OscSlot` holds the names a sprudel door already writes, so placing one of those wires that
+     * `Ignitor.slot` holds the names a sprudel door already writes, so placing one of those wires that
      * door into your instrument. The one to know is `pregain`: how hard the pattern plays INTO
      * the instrument, written by `pregain(x)`, with the default 1.0 and no meaning of its own
      * beyond where you place it. `analog`, `voices`, `spread`, `duty`, `density`, `decay`,
      * `brightness`, `pickPosition`, `stiffness` and `rate` are the others. Reach for
-     * `OscSlot.<name>` rather than retyping the name and the default here, so one default serves
+     * `Ignitor.slot.<name>` rather than retyping the name and the default here, so one default serves
      * every instrument; a name of your own is what this door is for.
      *
      * A non-finite value written into a slot reads as UNSET: the leaf falls back to [default].
      *
-     * @param name parameter name — used for oscParam() overrides and UI discovery
+     * @param name parameter name — used for `ignitorParam` overrides and UI discovery
      * @param default constant value when no override is provided
      * @param description human-readable description for documentation
      */
@@ -437,7 +445,7 @@ object KlangScriptOsc {
     // ── Constant ────────────────────────────────────────────────────────────
 
     /**
-     * Creates a fixed constant value that cannot be overridden by oscParams.
+     * Creates a fixed constant value that cannot be overridden by ignitorParams.
      *
      * Use when you want an explicit, locked value in the signal graph.
      *
@@ -463,7 +471,7 @@ object KlangScriptOsc {
      * axis can drive correlated changes throughout the tree.
      *
      * ```
-     * let combined = Osc.variants(Osc.sine(), Osc.saw()).classic()
+     * let combined = Ignitor.variants(Ignitor.sine(), Ignitor.saw()).classic()
      * note("a b c:1 d:1").sound(combined)   // a/b → sine, c:1/d:1 → saw
      * ```
      *
@@ -473,6 +481,21 @@ object KlangScriptOsc {
     fun variants(vararg children: IgnitorDsl): IgnitorDsl =
         IgnitorDsl.Variants(children.toList())
 }
+
+/**
+ * The short name of [KlangScriptIgnitor]: the same object under a second name, so `Ign.sine()` is
+ * `Ignitor.sine()` and `Ign.slot.lpf.freq` is `Ignitor.slot.lpf.freq`, for every member. Songs use it;
+ * the docs spell `Ignitor` out.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").sound(Ign.supersaw(x => x.voices(9)).lowpass(1200).classic())
+ * ```
+ *
+ * @category object
+ * @tags ignitor, ign, alias, instrument
+ */
+@KlangScript.Constant
+val Ign: KlangScriptIgnitor = KlangScriptIgnitor
 
 /** The door convention for `freq`: null means "the playing note's pitch" ([IgnitorDsl.Freq]). */
 private fun IgnitorDslLike?.orNoteFreq(): IgnitorDsl = this?.toIgnitorDsl() ?: IgnitorDsl.Freq

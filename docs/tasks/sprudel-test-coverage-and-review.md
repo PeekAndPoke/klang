@@ -37,7 +37,8 @@ untested, not dead.
 
 5 addon files cleared (per the working memory): the `snd*` addon block (`sndZamp` + a consolidated
 `PatternMapperFn.sndX` form-(d) case via `gain(1.0).sndX()`), `LangDutySpec` (new), and form-(d) cases added to
-`LangHpadsr/Bpadsr/Nfadsr/Nresonance/Nfattack/Nfdecay/Nfsustain/Nfrelease/Nfenv/Oscparam` specs; `@Suppress`
+the ten per-knob specs of the day (nine since folded into `LangDoorFormsSpec`, `1aa25a17`, 2026-09-28; the tenth is
+  `LangIgnitorParamSpec` today, renamed 2026-10-03); `@Suppress`
 on the `lang_arithmetic_numeric.kt` vestigial params (`flipSign`/`oneMinusValue`/`not`/`abs`).
 
 ## Remaining

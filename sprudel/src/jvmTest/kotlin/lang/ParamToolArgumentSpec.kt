@@ -110,7 +110,7 @@ class ParamToolArgumentSpec : StringSpec({
 
     val guitarShape = """
         export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 19, spread = 0.10)
-          .oscp("decay", guitarDecay)
+          .ignp("decay", guitarDecay)
           .clip(guitarClip.fast(2)).pan(1.0).body(material = "oak", wet = 0.3)
     """.trimIndent()
 

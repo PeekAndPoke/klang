@@ -19,7 +19,12 @@ package io.peekandpoke.klang
  * preset was removed, which would have changed the snapshot's sound. The maintainer replaced it
  * with a fresh snapshot of the live song instead, `derSchmetterling_2026_09_25` (the text committed
  * at `0cc351a2`, rpm 32.5). The old text is in git history (this file at `0cc351a2`). The migration
- * notes below describe Seltsamere Dinge and that retired text; the new snapshot has had one, below.
+ * notes below describe Seltsamere Dinge and that retired text; the new snapshot's own migrations are the 2026-09-26
+ * and 2026-10-03 notes below and the 2026-09-28 Master entry of the list.
+ *
+ * 2026-10-03, the Ignitor/Katalyst naming (`docs/plans/ignitor-katalyst-naming.md`): the script object, its slot
+ * accessor and its slot setter are spelled with their new names (`Ign.`, `Ign.slot.`, `ignp`). Syntax only; the
+ * renders are identical in raw doubles.
  *
  * 2026-09-26, `.classic()` appended to the authored instruments (maintainer decision D5, phase 3 step 10,
  * `docs/tasks-archive/2026-09/20260928-builtin-instruments.md`): the old voice strip stopped running for an instrument that ends in
@@ -50,7 +55,8 @@ package io.peekandpoke.klang
  * Dinge, because `body`'s first parameter is now `wet`; same values, the render bit-identical),
  * and the 2026-09-28 Master DSL retirement (phase 3 step 12 C5: `master(Master(m => m.` ->
  * `master(Katalyst(k => k.`, the output runs the same chain type as an orbit; same stages and values,
- * the render bit-identical).
+ * the render bit-identical), and the 2026-10-03 Ignitor/Katalyst naming (the script object, its slot accessor
+ * and its slot setter under their new names; the render bit-identical).
  *
  * 2026-09-19, the first migration whose renders are not bit-identical to older captures (the second is the
  * 2026-09-26 `.classic()` migration above):
@@ -105,7 +111,7 @@ let pickupHumbucker = x => x
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = x => x
   .lowpass(2200, 1.4)
-  .notch(freq = Osc.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
+  .notch(freq = Ign.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
   .mul(1.2)
 
 // Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
@@ -205,18 +211,18 @@ let cabCombo = x => x
 let makeGuitar = (pickup, pedal, preamp, power, cab) => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
-  let pVoices     = OscSlot.voices
-  let pSpread     = OscSlot.spread
-  let pAnalog     = OscSlot.analog
+  let pVoices     = Ign.slot.voices
+  let pSpread     = Ign.slot.spread
+  let pAnalog     = Ign.slot.analog
 
   // ADSR
-  let pAttack     = Osc.param("attack",       0.005, "Attack")
-  let pDecay      = Osc.param("decay",        1.000, "Decay")
-  let pSustain    = Osc.param("sustain",      0.000, "sustain")
-  let pRelease    = Osc.param("release",      0.030, "Release")
+  let pAttack     = Ign.param("attack",       0.005, "Attack")
+  let pDecay      = Ign.param("decay",        1.000, "Decay")
+  let pSustain    = Ign.param("sustain",      0.000, "sustain")
+  let pRelease    = Ign.param("release",      0.030, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
-  let saw = Osc.supersaw(x => x.voices(19).spread(0.10)
+  let saw = Ign.supersaw(x => x.voices(19).spread(0.10)
     // enable the phase-pool for consistent onsets and fundamentals
     .phasePool(on = 1, kMin = 0.60, kMax = 0.85, warmup = 0, selection = "normal")
     // character knobs, plain scalars on the supersaw builder
@@ -225,12 +231,12 @@ let makeGuitar = (pickup, pedal, preamp, power, cab) => {
     .analog(pAnalog).analogSpread(0.5)
   )
  
-  let signal = saw.mul(Osc.slot.pregain)
+  let signal = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.02, 0, 0))
-    //.lowpass(freq = Osc.freq().times(4).add(Osc.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
+    //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Osc.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))
+    .plus(Ign.crackle(1.25).highpass(1000).adsr(0.005, 0.1, 0.0, 0.05).mul(1.0))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
@@ -263,18 +269,18 @@ let guitarMelody = makeGuitar(pickupSingle,    pedalBoost,    preampCrunch,   po
 let bass = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
-  let pAnalog  = OscSlot.analog
-  let pSub     = Osc.param("sub",         1.00, "Sub Volume")
-  let pHarm    = Osc.param("harmonics",   1.00, "Harmonics Volume")
+  let pAnalog  = Ign.slot.analog
+  let pSub     = Ign.param("sub",         1.00, "Sub Volume")
+  let pHarm    = Ign.param("harmonics",   1.00, "Harmonics Volume")
   // ----------------------------------------------------------------------------------------------
 
   // Sub: a bare sine. No filter — a sine has no harmonics to remove. This is the weight,
   // and it lives at 36–70 Hz where nothing else in the mix is.
-  let sub = Osc.sine(x => x.analog(pAnalog)).mul(pSub)
+  let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Osc.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.1)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -295,13 +301,13 @@ export lead_pat =
 // stated at the hit and only the fundamental rings on, longer on low bars. A mallet thump, and the resonator tube
 // under the bar in which the thump rings at the fundamental. Its energy sits at 250 to 650 Hz, under the guitar wall.
 let marimba = (() => {
-  let pAnalog = OscSlot.analog
-  let ring = Osc.constant(400).div(Osc.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
-  let f1  = Osc.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.5)
-  let f4  = Osc.sine(Osc.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
-  let f10 = Osc.sine(Osc.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
-  let mallet = Osc.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(0.6)                     // yarn head: a thump, not a click
-  let tube = mallet.bandpass(Osc.freq(), 20, x => x.analog(pAnalog)).mul(3.0)                        // the resonator tube
+  let pAnalog = Ign.slot.analog
+  let ring = Ign.constant(400).div(Ign.freq())                                                            // seconds: 1.2 s on e4, 0.6 s on e5
+  let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.5)
+  let f4  = Ign.sine(Ign.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
+  let f10 = Ign.sine(Ign.freq().mul(10.1), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
+  let mallet = Ign.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(0.6)                     // yarn head: a thump, not a click
+  let tube = mallet.bandpass(Ign.freq(), 20, x => x.analog(pAnalog)).mul(3.0)                        // the resonator tube
   
   return f1.plus(f4).plus(f10).plus(mallet).plus(tube)
     .classic()
@@ -328,7 +334,7 @@ export guitar1_pat =
     [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>] [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[-3 -1 0 3] 2]]>/4`
 
 export guitar1_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitarMelody).adsrOff().unison(voices = 15, spread = 0.05) // . solo()
-  .oscp("decay", guitarDecay) //. mute()
+  .ignp("decay", guitarDecay) //. mute()
   .clip(guitarClip.fast(2)).pan(0.5).body(material = "rosewood", wet = 0.3)
 
 export guitar1_arrange = x => x.orbit(1)  // . solo()
@@ -345,7 +351,7 @@ export guitar2_pat =
     [7 11 [3 7] [6 7] [4 4 6 4]!2 [3 3 0 3] -2]>/4`
 
 export guitar2_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 13, spread = 0.05)
-  .oscp("decay", guitarDecay)
+  .ignp("decay", guitarDecay)
   .clip(guitarClip.fast(2)).pan(0.0).body(material = "oak", wet = 0.3)
 
 export guitar2_arrange = x => x.orbit(2)  // . solo()
@@ -360,7 +366,7 @@ export guitar3_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  0 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 0 -2 0] -2]!1>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna.fast(2)).sound(guitar).adsrOff().unison(voices = 11, spread = 0.05)
-  .oscp("decay", guitarDecay)
+  .ignp("decay", guitarDecay)
   .clip(guitarClip.fast(2)).pan(1.0).body(material = "rosewood", wet = 0.3)
 
 export guitar3_arrange = x => x.orbit(3) //  . solo()
@@ -375,7 +381,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2 [0 0 -1 3  7 0 -2 -1]!1 [0 0 3 [0 -1]  0 0 [0 2 3 6] 5]!1>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.43) // . mute()
-    .oscp("sub", 0.95).oscp("harmonics", 1.00)  // . solo()
+    .ignp("sub", 0.95).ignp("harmonics", 1.00)  // . solo()
     .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
@@ -389,19 +395,19 @@ export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [
 // A concert bass drum. The head drops a sixth into its pitch as the skin settles, then rings for seconds; the membrane
 // modes (1.59 and 2.14 times the fundamental) are gone within a quarter second and are the hit; a felt beater thumps.
 let granCassa = (() => {
-  let pAnalog = OscSlot.analog
+  let pAnalog = Ign.slot.analog
   
-  let ring = Osc.constant(150).div(Osc.freq()).mul(0.85)   // seconds: 2.2 s at 70 Hz
+  let ring = Ign.constant(150).div(Ign.freq()).mul(0.85)   // seconds: 2.2 s at 70 Hz
   
-  let head  = Osc.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.3)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Osc.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5))
+  let harms = Ign.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5))
     .pitchEnvelope(9, x => x.adsr(0.001, 0.10, 0, 0)).adsr(0.002, 0.45, 0.0, 0.40).mul(0.9)
   
-  let m2 = Osc.sine(Osc.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
-  let m3 = Osc.sine(Osc.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
-  let beater = Osc.whitenoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(3.00)     // wood core: a crack, the force of the hit
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.25, 0.0, 0.20).mul(0.60)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.15, 0.0, 0.10).mul(0.40)
+  let beater = Ign.whitenoise().adsr(0.0005, 0.015, 0.0, 0.015).lowpass(2000).mul(3.00)     // wood core: a crack, the force of the hit
   
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.30, "tube", 2)                                                              // the skin gives, and the hit reads as hard

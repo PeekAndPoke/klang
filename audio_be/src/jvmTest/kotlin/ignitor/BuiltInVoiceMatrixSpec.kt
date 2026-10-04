@@ -112,7 +112,7 @@ class BuiltInVoiceMatrixSpec : StringSpec({
     for ((name, _) in sources) {
         for (row in rows) {
             "$name: ${row.title}" {
-                val base = VoiceData.empty.copy(freqHz = 220.0, oscParams = row.own)
+                val base = VoiceData.empty.copy(freqHz = 220.0, ignitorParams = row.own)
                 val builtIn = render(base.copy(sound = name), row.doors)
                 val hash = builtIn.rawBitsHash()
 

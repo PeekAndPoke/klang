@@ -40,7 +40,7 @@ class IgnitorDslSpec : StringSpec({
         // already (wire ctor 1.0 vs surface 0.707), which is the reverb-size-10x bug class:
         // Kotlin code building EqSection.Bell(...) directly and a song writing .band(...)
         // would have produced two different bandwidths from identical-looking source.
-        // The Kotlin and script surfaces are pinned to each other by StdLibOscTest.
+        // The Kotlin and script surfaces are pinned to each other by StdLibIgnitorTest.
         val fromWireDefault = IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(1200.0))
         val fromSurface = IgnitorDsl.Sine().eq().band(1200.0).sections.single()
 

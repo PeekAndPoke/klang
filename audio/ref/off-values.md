@@ -41,13 +41,13 @@ when the caller is a pattern writing slots?
 
 **A cheap shape for it, proposed in the 3a review and NOT built** (step 5 decides): ask the same
 question one layer down, against the bag instead of against `null`. A knob is "written" when it is a
-`Param` whose name resolves to a finite value in `oscParams`; in `filterEnvDef`, when the resolved
+`Param` whose name resolves to a finite value in `ignitorParams`; in `filterEnvDef`, when the resolved
 depth is 0, if any of the five knobs is written, take `FILTER_ENV_DEPTH_SEMITONES` instead of
 returning `NONE`. It is the gate's existing move (the gate already reads the bag at build to decide
 whether a stage exists), it composes with the door fill rather than replacing it (a door-filled
 depth is a `Constant`, not a `Param`, so the question never arises), it costs five map lookups per
 filter per note-on and nothing per block, and an instrument that declares a real default
-(`env = Osc.param("lpenv", 24.0)`) is untouched. **The law to decide with it:** does "written" mean
+(`env = Ignitor.param("lpenv", 24.0)`) is untouched. **The law to decide with it:** does "written" mean
 finite-in-the-bag only, or also a slot whose AUTHORED default is a real number? Finite-in-the-bag is
 what sprudel's `!= null` means and is the recommendation. **DECIDED 2026-09-25 (maintainer): finite-in-the-bag only.** A
 knob is written when the note's bag holds a finite value for its slot; an authored default alone never

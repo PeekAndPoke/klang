@@ -81,7 +81,7 @@ class LangBodySpec : StringSpec({
         val voiceData = note("c3").lpf(800).body(material = "wood").queryArc(0.0, 1.0)[0].data.toVoiceData()
 
         voiceData.katalystParams?.get("body.material") shouldBe BodyMaterials.indexOf("wood")
-        voiceData.oscParams?.get("lpf.freq") shouldBe 800.0
-        voiceData.oscParams?.keys?.any { it.startsWith("body.") } shouldBe false
+        voiceData.ignitorParams?.get("lpf.freq") shouldBe 800.0
+        voiceData.ignitorParams?.keys?.any { it.startsWith("body.") } shouldBe false
     }
 })

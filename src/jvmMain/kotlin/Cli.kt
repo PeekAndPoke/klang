@@ -25,7 +25,7 @@ class KlangCli : CliktCommand(name = "klang") {
 /**
  * Creates a full KlangScript engine, executes the code, and returns the last expression as a KlangPattern.
  *
- * Inline ignitors (`note("a").sound(Osc.sine()...)`) are denormalized to synthetic names by the
+ * Inline ignitors (`note("a").sound(Ignitor.sine()...)`) are denormalized to synthetic names by the
  * offline renderer's internal ignitor registrar during render — no engine-level capture step.
  */
 private fun compilePattern(code: String): RenderWavCommand.CompileResult? {

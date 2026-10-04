@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
  * TEST ONLY. The voice-door settings a spec states in typed form: the shape `VoiceData` carried as typed fields until
- * phase 3 step 9 cut them (a voice door travels as `classic()` slot keys in `oscParams` since step 8). Specs that
+ * phase 3 step 9 cut them (a voice door travels as `classic()` slot keys in `ignitorParams` since step 8). Specs that
  * read more clearly as "a lowpass at 900 with an envelope" than as a list of slot keys state their settings here and
  * send them through [withClassicSlots], which writes the same key names, units and on/off rules as sprudel's
  * `classicSlotParams`. Three differences are deliberate and inaudible: the rig always writes `passes` (default 1.0)
@@ -32,7 +32,7 @@ data class DoorFields(
     val distortShape: String? = null,
     val distortOversample: Int? = null,
     val tremoloDepth: Double? = null,
-    val tremoloSync: Double? = null,
+    val tremoloRate: Double? = null,
     val tremoloShape: String? = null,
     val begin: Double? = null,
     val end: Double? = null,
@@ -74,12 +74,12 @@ sealed interface DoorFilter {
 
 /**
  * TEST ONLY. This voice with [doors] written into its slot bag as `classic()` slot keys. Only a set and finite value
- * is written; a door value wins over a bag entry of the same key (so set the voice's own `oscParams` BEFORE this
+ * is written; a door value wins over a bag entry of the same key (so set the voice's own `ignitorParams` BEFORE this
  * call); a filter writes its `freq`, `q` and (low/high) `passes`, and its envelope keys only when it has one; names
  * travel as their catalogue index, flags as 1.0 or 0.0.
  */
 fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
-    val out = oscParams?.toMutableMap() ?: mutableMapOf()
+    val out = ignitorParams?.toMutableMap() ?: mutableMapOf()
     val s = IgnitorDsl.Slots
 
     fun put(slot: IgnitorDsl, value: Double?) {
@@ -142,7 +142,7 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     }
 
     put(s.tremolo.depth, doors.tremoloDepth)
-    put(s.tremolo.sync, doors.tremoloSync)
+    put(s.tremolo.rate, doors.tremoloRate)
     put(s.tremolo.shape, doors.tremoloShape?.let { LfoShapes.indexOf(it) })
 
     doors.adsr?.let { adsr ->
@@ -161,5 +161,5 @@ fun VoiceData.withClassicSlots(doors: DoorFields): VoiceData {
     put(s.sample.speed, doors.speed)
     put(s.sample.loop, doors.loop?.let { if (it) 1.0 else 0.0 })
 
-    return copy(oscParams = out.takeIf { it.isNotEmpty() })
+    return copy(ignitorParams = out.takeIf { it.isNotEmpty() })
 }

@@ -63,9 +63,9 @@ class LangMergeSpec : StringSpec({
 
         assertSoftly {
             events.shouldHaveSize(2)
-            events[0].data.oscParams?.get("onepole") shouldBe (17814.0 plusOrMinus EPSILON)  // source onepole preserved
+            events[0].data.ignitorParams?.get("onepole") shouldBe (17814.0 plusOrMinus EPSILON)  // source onepole preserved
             events[0].data.soundName shouldBe "sine"                        // sound from control
-            events[1].data.oscParams?.get("onepole") shouldBe (6000.0 plusOrMinus EPSILON)
+            events[1].data.ignitorParams?.get("onepole") shouldBe (6000.0 plusOrMinus EPSILON)
             events[1].data.soundName shouldBe "supersaw"
         }
     }

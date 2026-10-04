@@ -12,7 +12,6 @@ include(
     ":klangscript-ksp",
     // Script-facing standard library + DSL builders (both doors), on top of the language
     ":klangscript-libs",
-    // Visual block editor
     // Shared UI utilities (kraft + klangscript, JS-only)
     ":klangui",
     // External JS declarations (CodeMirror, etc.)

@@ -10,6 +10,12 @@
 #   (texts before v0.3.8.2 do not parse on today's doors; the July 3 snapshot left FrozenSongs on
 #   2026-09-25 and is in git history, src/jvmMain/kotlin/FrozenSongs.kt at 0cc351a2)
 #
+# Syntax-only migration (the FrozenSongs exception: a text that no longer parses guards nothing):
+# since the Ignitor/Katalyst naming (2026-10-03, docs/plans/ignitor-katalyst-naming.md) the script
+# object, its slot accessor and its slot setter have new names; the old tags are spelled with them
+# on extraction, values untouched. The patterns use a character class so this file does not spell
+# the retired names itself (RetiredIgnitorNamesSpec).
+#
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -30,7 +36,12 @@ for t in "${TAGS[@]}"; do
     /code = """/ { inside = 1; sub(/.*code = """/, ""); if ($0 != "") print; next }
     inside { lines[n++] = $0 }
     END { last = 0; for (k = 0; k < n; k++) if (lines[k] ~ /"""/) last = k; for (k = 0; k < last; k++) print lines[k] }
-  ' > "$DIR/$(printf '%02d' $i)__${rpm}__${t} (${date}).klang"
+  ' | sed -E \
+    -e 's/\bO[s]cSlot\./Ign.slot./g' \
+    -e 's/\bO[s]c\./Ign./g' \
+    -e 's/\.o[s]cparam\(/.ignitorParam(/g' \
+    -e 's/\.o[s]cp\(/.ignp(/g' \
+    > "$DIR/$(printf '%02d' $i)__${rpm}__${t} (${date}).klang"
   i=$((i + 1))
 done
 

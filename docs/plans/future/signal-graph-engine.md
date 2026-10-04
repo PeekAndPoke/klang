@@ -13,7 +13,7 @@ Two parts:
 
 1. **Sprudel's voice chain becomes a frontend preset, attached automatically.** Sprudel's `sound()`
    resolves what the sound is. For a built-in name ("sine", "saw", "supersaw", ...) it sends the
-   Ignitor `Osc.sine().sprudel()`; for an authored instrument (`let myInst = Osc.saw()`,
+   Ignitor `Ignitor.sine().sprudel()`; for an authored instrument (`let myInst = Ignitor.saw()`,
    `note("a").sound(myInst)`) it attaches `.sprudel()` at the end when it is not there yet. A tag
    on the tree tells whether it is. `.sprudel()` is today's `classic()` chain.
 2. **The engine layout itself is sprudel-specific and should become configurable.** Cylinders,

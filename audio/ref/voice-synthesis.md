@@ -42,7 +42,7 @@ Ignitor stages in the classic subtractive order:
 onepole -> crush -> coarse -> distort -> highpass -> bandpass -> notch -> lowpass -> tremolo -> adsr
 ```
 
-Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.oscParams`, and a stage
+Every knob is a slot (`<door>.<param>`) that the pattern fills through `VoiceData.ignitorParams`, and a stage
 whose slot is at its off value is not built. Every built-in sound is `source.pregain().classic()`, every
 sample voice is the same shape over `IgnitorDsl.Sample` (`IgnitorRegistry.builtInVoice`), and an authored
 instrument gets the voice doors by ending in `.classic()`. A tree without `classic()` plays as it is: no
@@ -107,7 +107,7 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 | Sine             | `sine`                                                      | Pure sinusoid (inherently band-limited)                                                                                                                         |
 | Trapezoid shapes | `saw` `ramp` `square` `pulze` `triangle`                    | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, no PolyBLEP, softens with pitch. `pulze` duty is audio-rate (PWM)            |
 | Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
-| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `DetunedStackIgnitor` — detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` oscParams |
+| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `DetunedStackIgnitor` — detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
 | Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
 
 Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`

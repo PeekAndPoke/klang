@@ -10,13 +10,16 @@ import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.VowelBands
+import io.peekandpoke.klang.audio_bridge.band
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
@@ -499,7 +502,7 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         // takes a number or a sound, so it is a type error; an old stage lambda either lands on a
         // flat door's first parameter (a type error) or floats to `configure`, where the knob it
         // calls no longer exists.
-        val notANumber = "expected a sound or a number"
+        val notANumber = "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got"
         listOf(
             """Katalyst(k => k.body("wood"))""" to notANumber,
             """Katalyst(k => k.vowel("a"))""" to notANumber,
@@ -516,9 +519,82 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
         }
     }
 
-    "a knob takes an Osc.param slot as readily as a number" {
-        ks("""Katalyst(k => k.reverb(wet = Osc.param("room", 0.2)))""") shouldBe
-                KatalystDsl.of(KatalystStageDsl.Reverb(wet = IgnitorDsl.Param("room", 0.2)))
+    "an Ignitor param on any Katalyst knob is a script error naming the fix, on both doors (Q2)" {
+        // The voice's slot by intent (the reason's one home is `toKatalystKnob`'s KDoc): its author drives it with
+        // `ignp`, which never reaches the chain. Every door parameter of the family, both doors.
+        val message = "an Ignitor param in a Katalyst chain; use Kat.param"
+
+        doors.forEach { door ->
+            door.params.forEach { param ->
+                withClue("${door.stage}(${param.name} = Ignitor.param(...)): script") {
+                    shouldThrow<KlangScriptTypeError> {
+                        ks("""Katalyst(k => k.${door.stage}(${param.name} = Ignitor.param("s", ${param.literal})))""")
+                    }.message shouldBe message
+                }
+                withClue("${door.stage}(${param.name} = IgnitorDsl.Param): Kotlin") {
+                    shouldThrow<KlangScriptTypeError> {
+                        KlangScriptKatalyst.build { door.kotlin(it, mapOf(param.name to IgnitorDsl.Param("s", param.value))) }
+                    }.message shouldBe message
+                }
+            }
+        }
+
+        nameKnobs.forEach { knob ->
+            withClue("${knob.stage}(${knob.param} = Ign.param(...))") {
+                shouldThrow<KlangScriptTypeError> {
+                    ks("""Katalyst(k => k.${knob.stage}(${knob.param} = Ign.param("idx", 3)))""")
+                }.message shouldBe message
+                shouldThrow<KlangScriptTypeError> {
+                    KlangScriptKatalyst.build { knob.kotlin(it, IgnitorDsl.Param("idx", 3.0)) }
+                }.message shouldBe message
+            }
+        }
+
+        // The builder knobs, the gain stage, the classic slots of the voice, and the eq sections on a chain.
+        listOf(
+            """Katalyst(k => k.body(configure = b => b.floor(Ign.param("f", 0.1))))""",
+            """Katalyst(k => k.vowel(configure = v => v.floor(Ign.param("f", 0.1))))""",
+            """Katalyst(k => k.delay(configure = d => d.cap(Ign.param("c", 1))))""",
+            """Katalyst(k => k.phaser(configure = p => p.floor(Ign.param("f", 0.1))))""",
+            """Katalyst(k => k.gain(Ign.slot.pregain))""",
+            """Katalyst(k => k.reverb(wet = Ign.slot.lpf.freq))""",
+            """Katalyst(k => k.eq(e => e.band(freq = Ign.param("f", 300))))""",
+            """Katalyst(k => k.eq(e => e.tap(freq = 300, gain = Ign.param("g", 1))))""",
+        ).forEach { script ->
+            withClue(script) { shouldThrow<KlangScriptTypeError> { ks(script) }.message shouldBe message }
+        }
+    }
+
+    "a wrong value kind on a Katalyst knob says what a knob takes, on both doors" {
+        val message: (String) -> String = { got -> "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got $got" }
+
+        listOf(
+            """Katalyst(k => k.reverb(size = "room"))""" to "a string",
+            """Katalyst(k => k.gain(true))""" to "a boolean",
+            """Katalyst(k => k.delay(wet = {a: 1}))""" to "an object",
+            """Katalyst(k => k.eq(e => e.band(freq = "low")))""" to "a string",
+            """Katalyst(k => k.phaser(configure = p => p.floor("x")))""" to "a string",
+        ).forEach { (script, got) ->
+            withClue(script) { shouldThrow<KlangScriptTypeError> { ks(script) }.message shouldBe message(got) }
+        }
+
+        shouldThrow<KlangScriptTypeError> { KlangScriptKatalyst.build { it.reverb(size = "room") } }.message shouldBe
+                message("a string")
+        shouldThrow<KlangScriptTypeError> { KlangScriptKatalyst.build { it.duck(depth = listOf(1.0)) } }.message shouldBe
+                message("an array")
+    }
+
+    "a Katalyst param on an eq section of a chain is the section's slot; on a voice it is a script error" {
+        val chain = ks("""Katalyst(k => k.eq(e => e.band(freq = Kat.param("f", 300), db = Kat.slot.gain.gain)))""")
+        val section = (chain.stages.single() as KatalystStageDsl.Eq).sections.single()
+        section shouldBe IgnitorDsl.Eq(inner = IgnitorDsl.Silence)
+            .band(IgnitorDsl.Param("f", 300.0), IgnitorDsl.Constant(0.707), KatalystDsl.Slots.gain.gain.param).sections.single()
+
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+        shouldThrow<KlangScriptTypeError> {
+            engine.execute("""Ignitor.saw().eq(e => e.band(freq = Kat.param("f", 300)))""")
+        }.message shouldBe "a Katalyst param in an Ignitor tree; use Ign.param"
     }
 
     "Katalyst.param is the chain's own slot door, on both doors, with the description" {
@@ -530,9 +606,69 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                     it.reverb(size = KlangScriptKatalyst.param("room", 5.0, "the tail"))
                 }
 
-        // Same node type as `Osc.param`, and that is the point: one slot vocabulary, two
-        // namespaces that never cross (`oscp` fills the voice's, `katp` the orbit's).
-        KlangScriptKatalyst.param("room", 5.0) shouldBe KlangScriptOsc.param("room", 5.0)
+        // `k.reverb(0.5, Kat.param("room", 2))`, the short name, builds the same chain as the Kotlin door.
+        ks("""Kat(k => k.reverb(0.5, Kat.param("room", 2)))""") shouldBe
+                KlangScriptKatalyst.build { it.reverb(0.5, KlangScriptKatalyst.param("room", 2.0)) }
+    }
+
+    "Katalyst.param and Ignitor.param are distinct types: a Katalyst param is a handle over the Param, not a sound" {
+        // One slot vocabulary on the wire (the chain carries the plain Param), two namespaces that never cross
+        // (`ignp` fills the voice's, `katp` the orbit's), and since 2026-10-03 two types, so the doors can tell them
+        // apart (the plan's section 4.4).
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+        val script = engine.execute("""Katalyst.param("room", 5.0)""").shouldBeInstanceOf<NativeObjectValue<*>>().value
+
+        script shouldBe KatalystParam(IgnitorDsl.Param("room", 5.0))
+        KlangScriptKatalyst.param("room", 5.0) shouldBe KatalystParam(IgnitorDsl.Param("room", 5.0))
+        (KlangScriptKatalyst.param("room", 5.0) as Any) shouldNotBe KlangScriptIgnitor.param("room", 5.0)
+        KlangScriptKatalyst.param("room", 5.0).name shouldBe "room"
+    }
+
+    "a Katalyst param has no arithmetic: an expression over it is a script error, not a silent fold (Q3)" {
+        val err = shouldThrow<KlangScriptTypeError> { ks("""Katalyst(k => k.reverb(size = Kat.param("room", 5).mul(2)))""") }
+        err.message shouldBe "Native type 'KatalystParam' has no method 'mul'."
+    }
+
+    "a Katalyst param in an Ignitor tree is a script error naming the fix" {
+        val engine = klangScript()
+        engine.execute("""import * from "stdlib"""")
+
+        listOf(
+            """Ignitor.sine(Kat.param("f", 440))""",
+            """Ignitor.saw().lowpass(Katalyst.slot.reverb.lowpass)""",
+            """Ignitor.whitenoise(Kat.param("c", 0.5))""",
+            """Ignitor.saw().distort(amount = 0.5, shape = Kat.param("s", 1))""",
+        ).forEach { script ->
+            withClue(script) {
+                shouldThrow<KlangScriptTypeError> { engine.execute(script) }.message shouldBe
+                        "a Katalyst param in an Ignitor tree; use Ign.param"
+            }
+        }
+
+        // And the Kotlin door, through the one conversion every Ignitor knob uses.
+        shouldThrow<KlangScriptTypeError> { KlangScriptIgnitor.sine(KatalystDsl.Slots.reverb.wet) }.message shouldBe
+                "a Katalyst param in an Ignitor tree; use Ign.param"
+    }
+
+    "a wrong knob value is reported at the stage call, so the editor can point at it" {
+        // `toKatalystKnob` throws without a location; the native-call guard gives the error the location of the
+        // innermost native call, here `k.reverb(...)`, whose location is its opening parenthesis.
+        listOf(
+            "let a = 1\nlet K = Katalyst(k => k.reverb(wet = \"x\"))" to
+                    "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got",
+            "let a = 1\nlet K = Katalyst(k => k.reverb(size = Ignitor.param(\"a\", 1)))" to
+                    "an Ignitor param in a Katalyst chain; use Kat.param",
+        ).forEach { (script, reason) ->
+            withClue(script) {
+                val err = shouldThrow<KlangScriptTypeError> { ks(script) }
+                val column = script.lines()[1].indexOf("k.reverb(") + "k.reverb".length + 1
+
+                err.message shouldContain reason
+                err.location?.startLine shouldBe 2
+                err.location?.startColumn shouldBe column
+            }
+        }
     }
 
     "the Kotlin door takes the same lambda" {

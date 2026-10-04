@@ -264,7 +264,7 @@ class CylinderKatalystParamsSpec : StringSpec({
     // ── The BORN-WITH chain reads the state, for EVERY stage (step 5b-1) ────────────────────────
     //
     // The map is the one way a bus knob reaches a stage, on a declared chain and on the chain a
-    // cylinder is born with alike. The rule's one home is the `katp` door's KDoc in
+    // cylinder is born with alike. The rule's one home is the `katalystParam` door's KDoc in
     // `sprudel/lang/lang_katalyst.kt`. Until step 5b-3 a second row here said the voice's bus
     // FIELDS alone leave a stage OFF; the fields left the wire and the voice in that step, so there
     // is nothing left for that row to set.

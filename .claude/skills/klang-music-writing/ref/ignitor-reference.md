@@ -1,6 +1,6 @@
 # Klang Instrument Design Reference (Ignitor DSL)
 
-> Paste this into any LLM to design custom instruments with the Osc builder.
+> Paste this into any LLM to design custom instruments with the Ignitor builder.
 > For KlangScript syntax basics, see `klangscript-basics.md`.
 > For pattern language, see `sprudel-reference.md`.
 
@@ -21,8 +21,8 @@ import * from "sprudel"
 import * from "stdlib"
 import * from "sprudel"
 
-let myPluck = Osc.saw()
-    .lowpass(Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
+let myPluck = Ignitor.saw()
+    .lowpass(Ignitor.constant(2000).plus(Ignitor.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
     .adsr(0.005, 0.3, 0.0, 0.05)
     .classic()
 
@@ -45,9 +45,9 @@ note("c3 e3 g3 c4").sound(myPluck).adsrOff().gain(0.5)
 ### Lush pad
 
 ```javascript
-let pad = Osc.supersaw()
+let pad = Ignitor.supersaw()
     .analog(0.3)
-    .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
+    .lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
     .classic()
 
@@ -57,8 +57,8 @@ chord("<Am C F G>").voicing().sound(pad).adsrOff().gain(0.2).reverb(wet = 0.3, s
 ### FM bell
 
 ```javascript
-let bell = Osc.sine()
-    .fm(Osc.sine(), 2.3, 400)
+let bell = Ignitor.sine()
+    .fm(Ignitor.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
     .classic()
 
@@ -67,12 +67,12 @@ note("c5 e5 g5 c6").sound(bell).adsrOff().gain(0.3).reverb(wet = 0.2, size = 4)
 
 ---
 
-## The Osc Builder API
+## The Ignitor Builder API
 
-Instruments are built by composing `Osc` nodes into signal graphs, then registering them:
+Instruments are built by composing `Ignitor` nodes into signal graphs, then registering them:
 
 ```javascript
-let name = oscGraph
+let name = ignitorGraph
 // Use in patterns:
 note("c3 e3 g3").sound(name)
 // or:
@@ -85,14 +85,14 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 
 | Method                | Description                              |
 |-----------------------|------------------------------------------|
-| `Osc.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
-| `Osc.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
-| `Osc.square(freq?)`   | Square wave, anti-aliased                |
-| `Osc.triangle(freq?)` | Triangle wave                            |
-| `Osc.ramp(freq?)`     | Reverse sawtooth                         |
-| `Osc.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
-| `Osc.impulse(freq?)`  | Single-sample impulse per cycle          |
-| `Osc.pulze(freq?)`    | Variable duty-cycle pulse                |
+| `Ignitor.sine(freq?)`     | Pure sine wave; its builder adds partial banks (below) |
+| `Ignitor.saw(freq?)`      | Sawtooth, anti-aliased (PolyBLEP)        |
+| `Ignitor.square(freq?)`   | Square wave, anti-aliased                |
+| `Ignitor.triangle(freq?)` | Triangle wave                            |
+| `Ignitor.ramp(freq?)`     | Reverse sawtooth                         |
+| `Ignitor.zawtooth(freq?)` | Naive sawtooth (brighter, no anti-alias) |
+| `Ignitor.impulse(freq?)`  | Single-sample impulse per cycle          |
+| `Ignitor.pulze(freq?)`    | Variable duty-cycle pulse                |
 
 ### Super Oscillators (Unison/Detuned)
 
@@ -100,22 +100,22 @@ Multiple detuned copies for thick, lush sounds.
 
 | Method                                     | Description             |
 |--------------------------------------------|-------------------------|
-| `Osc.supersaw(freq?, configure?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?, configure?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?, configure?)` | Detuned square chorus   |
-| `Osc.supertri(freq?, configure?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?, configure?)`   | Detuned ramp chorus     |
+| `Ignitor.supersaw(freq?, configure?)`    | Detuned sawtooth chorus |
+| `Ignitor.supersine(freq?, configure?)`   | Detuned sine chorus     |
+| `Ignitor.supersquare(freq?, configure?)` | Detuned square chorus   |
+| `Ignitor.supertri(freq?, configure?)`    | Detuned triangle chorus |
+| `Ignitor.superramp(freq?, configure?)`   | Detuned ramp chorus     |
 
-**Every oscillator door is `Osc.name(freq?, configure?)`.** `freq` first (omit for the note's pitch, Hz for a
-fixed frequency, `Osc.sine(5)` is an LFO), then a `configure` lambda that receives the oscillator's BUILDER
+**Every oscillator door is `Ignitor.name(freq?, configure?)`.** `freq` first (omit for the note's pitch, Hz for a
+fixed frequency, `Ignitor.sine(5)` is an LFO), then a `configure` lambda that receives the oscillator's BUILDER
 and returns it. The builder carries exactly that oscillator's knobs; processing (`.lowpass()`, `.adsr()`,
 `.mul()`, ...) goes on the returned sound, OUTSIDE the lambda:
 
 ```javascript
-Osc.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
+Ignitor.supersaw(x => x.voices(9).spread(0.1).analog(0.2)).lowpass(800).adsr(0.01, 0.3, 0.5, 0.5)
 ```
 
-**Sine partial banks** (`Osc.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
+**Sine partial banks** (`Ignitor.sine` builder knobs; `docs/plans/sine-partial-banks.md`). The sine can carry banks
 of sine partials at multiples of ITS OWN frequency, rendered in one pass: `harmonics(count, rolloff = 1)` adds
 `count` partials at `2f, 3f, 4f ...`, `octaves(count, rolloff = 1)` at `2f, 4f, 8f ...`, `suboctaves(count,
 rolloff = 1)` at `f/2, f/4 ...`. An added partial at `m * f` or at `f / m` has gain `m ^ -rolloff` of its bank:
@@ -124,16 +124,16 @@ levels the sine itself (0 = overtones only). `analogSpread(0..1)` sets whether t
 oscillator (0) or each on its own lane (1, default) under `analog`; it is the same knob the super
 oscillators carry, over partials instead of voices. Every knob is a signal read once per block.
 Partials at or above Nyquist stay silent; there is no lower limit. Multiples follow the door's `freq`, so
-`Osc.sine(Osc.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`. A sub-octave at a
+`Ignitor.sine(Ignitor.freq().mul(2), x => x.harmonics(3))` is the even series `2f, 4f, 6f, 8f`. A sub-octave at a
 comparable level moves the perceived pitch down an octave (the missing-fundamental effect), which is the point of
-a sub oscillator. Without bank knobs `Osc.sine` is the plain sine.
+a sub oscillator. Without bank knobs `Ignitor.sine` is the plain sine.
 
 ```javascript
-Osc.sine(x => x.harmonics(7))                          // bass: f plus 2f .. 8f, the ear rebuilds 41 Hz on a phone speaker
-Osc.sine(x => x.harmonics(7).fundamental(0)).mul(0.5)  // the overtones only, on their own fader next to a sub sine
-Osc.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
-Osc.sine(Osc.freq().mul(2), x => x.octaves(5)).mul(1/2) // 2f .. 64f at 1/2 .. 1/64: an octave stack over a saw
-Osc.sine(x => x.harmonics(12, Osc.param("rolloff", 1))) // brightness from the pattern
+Ignitor.sine(x => x.harmonics(7))                          // bass: f plus 2f .. 8f, the ear rebuilds 41 Hz on a phone speaker
+Ignitor.sine(x => x.harmonics(7).fundamental(0)).mul(0.5)  // the overtones only, on their own fader next to a sub sine
+Ignitor.sine(x => x.suboctaves(1, 0))                      // the classic sub oscillator: f and f/2 at equal level
+Ignitor.sine(Ignitor.freq().mul(2), x => x.octaves(5)).mul(1/2) // 2f .. 64f at 1/2 .. 1/64: an octave stack over a saw
+Ignitor.sine(x => x.harmonics(12, Ignitor.param("rolloff", 1))) // brightness from the pattern
 ```
 
 **Builder knobs of the super oscillators** (each returns the builder): `voices(x)` (default 8), `spread(x)`
@@ -157,13 +157,13 @@ switching it on.
 // Configure only what you want, inside the lambda:
 
 // Thin 3-voice supersaw
-Osc.supersaw(x => x.voices(3).spread(0.1))
+Ignitor.supersaw(x => x.voices(3).spread(0.1))
 
 // Wide 12-voice pad with analog drift, then processing outside the lambda
-Osc.supersaw(x => x.voices(12).spread(0.3).analog(0.2)).lowpass(2000)
+Ignitor.supersaw(x => x.voices(12).spread(0.3).analog(0.2)).lowpass(2000)
 
 // Fixed frequency goes first: a 55 Hz drone
-Osc.supersaw(55, x => x.voices(7))
+Ignitor.supersaw(55, x => x.voices(7))
 
 // There is NO .voices()/.analog() on the sound itself any more; they are builder knobs (the pattern-level unison(voices, spread, pan) is a different door).
 ```
@@ -172,13 +172,13 @@ Osc.supersaw(55, x => x.voices(7))
 
 | Method                                      | Description                                                     |
 |---------------------------------------------|-----------------------------------------------------------------|
-| `Osc.whitenoise(color?)`                    | Flat spectrum; `color` tilts it (see below)                     |
-| `Osc.brownnoise(depth?)`                    | Low-frequency weighted (-6 dB/oct); `depth` = white-leak        |
-| `Osc.pinknoise()`                           | Balanced noise (-3 dB/oct) — canonical exact pink, no knobs     |
-| `Osc.perlin(rate?, octaves?, persistence?)` | Smooth organic noise; fBm via `octaves`/`persistence`           |
-| `Osc.berlin(rate?, octaves?, persistence?)` | Angular piecewise-linear noise; same fBm knobs                  |
-| `Osc.dust(density?, tail?, bipolar?)`       | Sparse random impulses (default density 0.2)                    |
-| `Osc.crackle(chaos?)`                       | Chaotic crackle (bipolar pops); `chaos` ≈1.0 sparse … 2.0 dense |
+| `Ignitor.whitenoise(color?)`                    | Flat spectrum; `color` tilts it (see below)                     |
+| `Ignitor.brownnoise(depth?)`                    | Low-frequency weighted (-6 dB/oct); `depth` = white-leak        |
+| `Ignitor.pinknoise()`                           | Balanced noise (-3 dB/oct) — canonical exact pink, no knobs     |
+| `Ignitor.perlin(rate?, octaves?, persistence?)` | Smooth organic noise; fBm via `octaves`/`persistence`           |
+| `Ignitor.berlin(rate?, octaves?, persistence?)` | Angular piecewise-linear noise; same fBm knobs                  |
+| `Ignitor.dust(density?, tail?, bipolar?)`       | Sparse random impulses (default density 0.2)                    |
+| `Ignitor.crackle(chaos?)`                       | Chaotic crackle (bipolar pops); `chaos` ≈1.0 sparse … 2.0 dense |
 
 **Noise knobs** (all default to today's behavior — a bare call is unchanged):
 
@@ -192,32 +192,32 @@ Osc.supersaw(55, x => x.voices(7))
 | `bipolar`     | `dust`            | `>0.5` = random ±sign pops; default `0` = unipolar                                         |
 | `chaos`       | `crackle`         | Drives the chaotic map: ~1.0 sparse, 1.5 = clear crackle (default), ~2.0 dense/noisy       |
 
-> ⚠ `Osc.crackle()` is a **chaotic generator** now (SuperCollider's Crackle map → bipolar pops), no longer a
-> dust alias. For the old sparse-impulse behavior, use `Osc.dust()`.
+> ⚠ `Ignitor.crackle()` is a **chaotic generator** now (SuperCollider's Crackle map → bipolar pops), no longer a
+> dust alias. For the old sparse-impulse behavior, use `Ignitor.dust()`.
 
 ### Physical Models
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Osc.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
-| `Osc.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Osc.superpluck(x => x.voices(6).decay(0.995))` |
+| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `decay` (0.996), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).decay(0.995))` |
 
 ### Utility
 
 | Method                            | Description                                     |
 |-----------------------------------|-------------------------------------------------|
-| `Osc.freq()`                      | Voice note frequency (use as param source)      |
-| `Osc.param(name, default, desc?)` | Named parameter slot (overridable at play time) |
-| `Osc.constant(value)`             | Fixed value (not overridable)                   |
-| `Osc.silence()`                   | Zero output                                     |
+| `Ignitor.freq()`                      | Voice note frequency (use as param source)      |
+| `Ignitor.param(name, default, desc?)` | Named parameter slot (overridable at play time) |
+| `Ignitor.constant(value)`             | Fixed value (not overridable)                   |
+| `Ignitor.silence()`                   | Zero output                                     |
 
 ### Dispatch / Selection
 
 | Method                    | Description                                                            |
 |---------------------------|------------------------------------------------------------------------|
-| `Osc.variants(a, b, ...)` | Bundles multiple ignitors into one. Per-event index picks which child. |
+| `Ignitor.variants(a, b, ...)` | Bundles multiple ignitors into one. Per-event index picks which child. |
 
-`Osc.variants(...)` lets a single sound expose several flavours of itself,
+`Ignitor.variants(...)` lets a single sound expose several flavours of itself,
 selected per note via the `soundIndex` field. Same dispatch mechanism that
 picks sample-bank variants (`bd:0` / `bd:1`), now applied to ignitor graphs.
 
@@ -233,10 +233,10 @@ defaults to child 0.
 
 ```javascript
 // Open vs. palm-muted guitar — same scale, two timbres
-let open  = Osc.saw().lowpass(2200).adsr(0.005, 0.3, 0.4, 0.4)
-let muted = Osc.saw().lowpass(1800).distort(0.7, "tube", 4)
+let open  = Ignitor.saw().lowpass(2200).adsr(0.005, 0.3, 0.4, 0.4)
+let muted = Ignitor.saw().lowpass(1800).distort(0.7, "tube", 4)
                      .adsr(0.002, 0.08, 0.0, 0.04)
-let guitar = Osc.variants(open, muted).classic()
+let guitar = Ignitor.variants(open, muted).classic()
 
 // Inline: c4 and d4 ring out, e4 and f4 chug
 seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).adsrOff().gain(0.3)
@@ -244,17 +244,17 @@ seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).adsrOff().gain(0.3)
 
 **Composition tips:**
 
-- `Osc.variants(a, b).lowpass(400)` wraps both variants in a shared filter —
+- `Ignitor.variants(a, b).lowpass(400)` wraps both variants in a shared filter —
   whichever variant is picked flows through the same downstream chain. Build
   the dispatch first, then attach shared post-processing.
-- Nested `Osc.variants(...)` all dispatch on the *same* `soundIndex` —
+- Nested `Ignitor.variants(...)` all dispatch on the *same* `soundIndex` —
   letting one index drive correlated changes deep in the tree.
 
 ---
 
 ## Processing Chain (Extension Methods)
 
-Chain methods onto any `Osc` node. All numeric params accept either a number or another `Osc` node for audio-rate
+Chain methods onto any `Ignitor` node. All numeric params accept either a number or another `Ignitor` node for audio-rate
 modulation.
 
 ### Filters
@@ -301,7 +301,7 @@ passes, not one. Moving the distort to the end of the chain would make it one, t
 different patch and a different sound, so make that choice by ear rather than for the saving.
 
 Two kinds of filter are never folded at all: `.onepole()`, and any filter with a
-non-zero or osc-param `analog`. On `.lowpass()/.highpass()` that analog switches on a saturating
+non-zero or Ignitor-slot `analog`. On `.lowpass()/.highpass()` that analog switches on a saturating
 character the fused EQ does not reproduce; on `.bandpass()/.notch()` it produces no sound of its
 own, and the filter stays out of the fusion for a subtler reason: reading the value each block is
 itself observable when it is an expression.
@@ -327,10 +327,10 @@ than compound. Converting a parallel tap bank into serial bands measured **+4.5 
 
 ```javascript
 // EQ bands: shaping a sound, gains in dB
-Osc.saw().eq(e => e.band(3500, 0.7, 6).band(300, 1.0, -4))      // presence lift, mud cut
+Ignitor.saw().eq(e => e.band(3500, 0.7, 6).band(300, 1.0, -4))      // presence lift, mud cut
 
 // Parallel boosts: the classic guitar mids + presence lift, gains are plain multipliers
-Osc.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0))
+Ignitor.saw().eq(e => e.tap(850, 0.707, 1.7).tap(2500, 0.7, 5.0))
 ```
 
 Use `tap()` when you are stacking resonant boosts onto a sound, `band()` when you are shaping
@@ -356,7 +356,7 @@ moves filter coefficients, so an LFO on `db` zippers exactly like an LFO on a cu
 (`.mul(...)`) for a smooth gain ride. For `.tap()` the same applies to `gain`, which is a mix
 multiplier rather than a coefficient: a moving `gain` steps per block, whereas the chained
 `signal.add(signal.bandpass(...).mul(lfo))` is smooth per sample. Keep tap gains constant or
-osc-param driven.
+Ignitor-slot driven.
 
 Since C2 of the filter unification the engine bandpass is **unity-peak**, so on a `.tap()` `q`
 is a pure WIDTH control: the boost at `freq` is `1 + gain` for ANY `q`. Tighten a tap by raising
@@ -405,11 +405,11 @@ Sprudel has only `distort()`; its voice model cannot express a node between the 
 Distort / shape curves: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
 `"rectify"`, `"exp"`, `"softsat"`, `"tube"`, `"linearfold"`, `"zerosquare"`, `"sineshaper"`, `"asym"`, `"stompbox"`.
 An unknown name is `"soft"`. The node carries the curve as its index in that list, so the door also takes the
-number, or an `Osc.param(...)` slot carrying it (read once per note).
+number, or an `Ignitor.param(...)` slot carrying it (read once per note).
 
 Oversample factor (on `.distort` / `.shape`): user-facing factor, floored to power of 2. `0` or `1` = off,
 `2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
-`"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`. Read once per note; a number or an `Osc.param(...)` slot.
+`"hard"`). Example: `Ignitor.saw().distort(0.8, "exp", 4)`. Read once per note; a number or an `Ignitor.param(...)` slot.
 
 Tremolo shapes are read once per note, the rate every block, a fixed depth every block and a moving depth
 every sample (a moving depth at or below 0 leaves the signal unchanged). A `"square"` at depth 1 is silence for about
@@ -421,7 +421,7 @@ half of each cycle, on purpose; a voice with a tremolo is not cut short by the s
 |--------------------------------|--------------------------------------------------------------------|
 | `.fm(modulator, ratio, depth, x => x.adsr(a, d, s, r)?)` | FM synthesis with modulator, frequency ratio, and modulation depth; the builder's `adsr` is the modulation-index envelope |
 
-The modulator is another `Osc` node. `ratio` sets the modulator frequency relative to the carrier. `depth` is the
+The modulator is another `Ignitor` node. `ratio` sets the modulator frequency relative to the carrier. `depth` is the
 modulation amount in Hz. Without the lambda the depth is constant; `x => x.adsr(0.001, 0.5, 0, 0.05)` is the decaying
 bell of the built-in `sgbell`.
 
@@ -468,7 +468,7 @@ then a value, and a rig is a stage too:
 let pedal  = x => x.distort(0.4, "soft")
 let cab    = x => x.highpass(100).lowpass(5000)
 let rig    = x => x.through(pedal, cab)
-let guitar = Osc.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
+let guitar = Ignitor.saw().through(rig).adsr(0.005, 0.8, 0.0, 0.05).classic()
 ```
 
 Serial, one stage into the next. Do not confuse it with sprudel's `apply(f, g)`, an alias of `layer`, which runs
@@ -479,34 +479,49 @@ each function on the pattern and STACKS the results. The Katalyst builder has th
 
 ## Parameter System
 
-### `Osc.param(name, default)` — Overridable at play time
+### `Ignitor.param(name, default)` — Overridable at play time
 
 ```javascript
-let bass = Osc.saw()
-    .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
+let bass = Ignitor.saw()
+    .lowpass(Ignitor.param("cutoff", 800, "filter cutoff"))
     .adsr(0.005, 0.2, 0.0, 0.05)
     .classic()
 
 // Override param in pattern:
-note("c2").sound(bass).adsrOff().oscp("cutoff", 1200)
+note("c2").sound(bass).adsrOff().ignp("cutoff", 1200)
 ```
 
-### `Osc.constant(value)` — Fixed, not overridable
+The pattern setter is `ignitorParam(slot, value)`, `ignp` for short. `slot` is the slot's name or the param
+object itself, so a param held in a variable needs no typed name. Only the NAME is written; the default stays the
+one the instrument declared:
+
+```javascript
+let cutoff = Ignitor.param("cutoff", 800)
+let bass = Ignitor.saw().lowpass(cutoff).adsr(0.005, 0.2, 0.0, 0.05).classic()
+
+note("c2").sound(bass).adsrOff().ignp("cutoff", 1200)   // by name
+note("c2").sound(bass).adsrOff().ignp(cutoff, 1200)     // by the param object
+
+// a classic slot, by object: this is the slot lpf.freq, which the lpf door writes too
+note("c3").sound(Ignitor.saw().classic()).ignp(Ignitor.slot.lpf.freq, 1200)
+```
+
+### `Ignitor.constant(value)` — Fixed, not overridable
 
 Use when you want an exact locked value:
 
 ```javascript
-Osc.saw().lowpass(Osc.constant(2000))  // always 2000 Hz, cannot be overridden
+Ignitor.saw().lowpass(Ignitor.constant(2000))  // always 2000 Hz, cannot be overridden
 ```
 
-### `Osc.freq()` — Voice note frequency
+### `Ignitor.freq()` — Voice note frequency
 
 Special node that outputs the voice's current note frequency:
 
 ```javascript
-Osc.sine()  // freq defaults to Osc.freq() when omitted
-Osc.sine(Osc.freq())  // equivalent to above
-Osc.sine(5)  // fixed 5 Hz (for LFO use)
+Ignitor.sine()  // freq defaults to Ignitor.freq() when omitted
+Ignitor.sine(Ignitor.freq())  // equivalent to above
+Ignitor.sine(5)  // fixed 5 Hz (for LFO use)
 ```
 
 ### `.classic()`: the pattern's voice doors on your instrument
@@ -524,22 +539,22 @@ doors fill, and a stage the note does not write is not built, so an untouched `.
 envelope (the voice defaults: `adsr(0.01, 0.1, 1.0, 0.05)`). No arguments.
 
 ```javascript
-let guitar = Osc.saw().distort(0.4, "tube").classic()
+let guitar = Ignitor.saw().distort(0.4, "tube").classic()
 // the pattern's doors reach classic()'s slots: .lpf(1800) writes lpf.freq, .adsr(release = 0.2) the envelope.
 // Do NOT add .adsrOff() here: it switches classic()'s OWN envelope off (use it only when the instrument
 // brings its own amplitude envelope, which then shapes the note instead).
 note("c3 e3 g3").sound(guitar).lpf(1800).adsr(release = 0.2)
 ```
 
-The slots it places are grouped per stage on `OscSlot` (also `Osc.slot`), named after the sprudel
-readers: `OscSlot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
-same on `hpf`; `bpf` and `notch` without `passes`), `OscSlot.crush.amount`, `OscSlot.coarse.amount`,
-`OscSlot.distort.amount|shape|oversample`, `OscSlot.tremolo.depth|sync|shape`,
-`OscSlot.adsr.attack|decay|sustain|release|on`, `OscSlot.onepole`, `OscSlot.adsrCurves.attack|decay|release`, and the filter envelope curves
-`OscSlot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
+The slots it places are grouped per stage on `Ignitor.slot`, named after the sprudel
+readers: `Ignitor.slot.lpf.freq`, `.q`, `.passes`, `.env`, `.attack`, `.decay`, `.sustain`, `.release` (the
+same on `hpf`; `bpf` and `notch` without `passes`), `Ignitor.slot.crush.amount`, `Ignitor.slot.coarse.amount`,
+`Ignitor.slot.distort.amount|shape|oversample`, `Ignitor.slot.tremolo.depth|rate|shape`,
+`Ignitor.slot.adsr.attack|decay|sustain|release|on`, `Ignitor.slot.onepole`, `Ignitor.slot.adsrCurves.attack|decay|release`, and the filter envelope curves
+`Ignitor.slot.lpfCurves|hpfCurves|bpfCurves|notchCurves.attack|decay|release` (unset = exponential).
 
 Want another order? Write your own tail from the same slots, as far as a door takes them:
-`Osc.saw().highpass(OscSlot.hpf.freq, OscSlot.hpf.q).crush(OscSlot.crush.amount).lowpass(OscSlot.lpf.freq)`.
+`Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.amount).lowpass(Ignitor.slot.lpf.freq)`.
 The doors take a slot for every filter's `freq`, `q`, `env` and envelope stages, for `crush`, `coarse`,
 the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.classic()` can place:
 - `lpf.passes` / `hpf.passes`: the filter builder's `passes(n)` takes a number, not a slot;
@@ -553,23 +568,50 @@ the tremolo's knobs and the envelope's stages and curves. Three groups ONLY `.cl
 SAMPLES are `.classic()` voices, and so is every authored instrument whose tree ENDS in `.classic()`: the pattern
 doors (`.lpf(...)`, `.adsr(...)`, `.crush(...)`) reach their slots. An authored instrument WITHOUT `.classic()`
 plays as its bare tree: the voice doors reach it only where its own tree reads the slots, it has no default envelope, and it ends on the short
-teardown fade unless its own root envelope ends it. A door beats an `oscp` on the same slot (sprudel's
+teardown fade unless its own root envelope ends it. A door beats an `ignp` on the same slot (sprudel's
 `toVoiceData()` writes the door's value last). If your instrument has a long own tail (a pad's release), write the
 pattern's `adsr(release = ...)` to match it: `classic()`'s envelope releases over its own slot (0.05 s by default).
 
+### Aliases and slot objects
+
+`Ign` is a second name for `Ignitor`: the same object, every member (`Ign.sine()` is `Ignitor.sine()`,
+`Ign.slot.lpf.freq` is `Ignitor.slot.lpf.freq`). `Kat` is the short name of `Katalyst` the same way (`Kat(k => ...)`,
+`Kat.slot.reverb.wet`). The songs use `Ign` (and `ignp`) and spell `Katalyst` out; this reference spells the full names.
+
+`Katalyst.slot.<stage>.<knob>` holds the knobs of the classic chain as objects, one group per stage (`body`, `vowel`,
+`delay`, `reverb`, `phaser`, `compressor`, `gain`, `duck`), and `Katalyst.param(name, default)` makes a knob of your
+own. `katalystParam(slot, value)`, `katp` for short, takes the name or the object, like `ignp`:
+
+```javascript
+let room = Katalyst.param("room", 2)
+let bus = Katalyst(k => k.reverb(0.5, room))
+
+note("c3 e3").s("saw").katalyst(bus).katp(room, "<2 9>")
+note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp(Katalyst.slot.reverb.size, "<2 8>")
+```
+
+The two kinds of param are different types, `Ignitor.param` for the instrument and `Katalyst.param` for the chain,
+and the wrong one is a script error at the call, with the fix in the message. `ignp(Katalyst.param(...), 1)` says
+`a Katalyst param passed to ignp; use katp`. An `Ignitor.param` handed to a chain knob, as in
+`Katalyst(k => k.reverb(0.5, cutoff))` with the `cutoff` of the setter example above, says
+`an Ignitor param in a Katalyst chain; use Kat.param`. A Katalyst param has no arithmetic
+(`Katalyst.param("room", 5).mul(2)` is an error). An expression over an Ignitor param on a chain knob is accepted,
+but it is folded once when the chain is built and does not listen to `katp`: hand the knob a `Katalyst.param` and
+do the arithmetic on the pattern side.
+
 ### Audio-rate Modulation
 
-Any parameter can accept an Osc node instead of a number:
+Any parameter can accept an Ignitor node instead of a number:
 
 ```javascript
 // Filter cutoff modulated by LFO
-Osc.saw().lowpass(Osc.sine(0.3).plus(1).times(1000).plus(500))
+Ignitor.saw().lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
 
 // Tremolo via multiplication
-Osc.saw().times(Osc.sine(4).plus(1).mul(0.5))  // 4 Hz tremolo
+Ignitor.saw().times(Ignitor.sine(4).plus(1).mul(0.5))  // 4 Hz tremolo
 
 // Vibrato via frequency modulation
-Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
+Ignitor.sine(Ignitor.freq().plus(Ignitor.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 ```
 
 ---
@@ -617,10 +659,10 @@ pattern, so the two envelopes do not multiply; the others keep `classic()`'s env
 **Flute** — Sine + triangle + breath noise + vibrato
 
 ```javascript
-let flute = Osc.sine()
-        .plus(Osc.triangle().mul(0.3))
-        .plus(Osc.perlin(12).mul(0.2).lowpass(4000).highpass(800).adsr(0.01, 0.12, 0.02, 0.01))
-        .plus(Osc.perlin(8).mul(0.05))
+let flute = Ignitor.sine()
+        .plus(Ignitor.triangle().mul(0.3))
+        .plus(Ignitor.perlin(12).mul(0.2).lowpass(4000).highpass(800).adsr(0.01, 0.12, 0.02, 0.01))
+        .plus(Ignitor.perlin(8).mul(0.05))
         .lowpass(3000).highpass(400)
         .analog(0.15).vibrato(4.5, 0.012)
         .pitchEnvelope(1.5, x => x.adsr(0.01, 0.06, 0, 0))
@@ -630,11 +672,11 @@ let flute = Osc.sine()
 **Clarinet** — Triangle (odd harmonics) + light square + breath
 
 ```javascript
-let clarinet = Osc.triangle().mul(0.7)
-        .plus(Osc.square().mul(0.15))
-        .plus(Osc.sine().mul(0.15))
-        .plus(Osc.perlin(6).mul(0.02))
-        .plus(Osc.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01))
+let clarinet = Ignitor.triangle().mul(0.7)
+        .plus(Ignitor.square().mul(0.15))
+        .plus(Ignitor.sine().mul(0.15))
+        .plus(Ignitor.perlin(6).mul(0.02))
+        .plus(Ignitor.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01))
         .lowpass(2800).highpass(150).onepole(4000)
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, x => x.adsr(0.01, 0.06, 0, 0))
@@ -644,11 +686,11 @@ let clarinet = Osc.triangle().mul(0.7)
 **Alto Saxophone** — Square + saw (reed buzz + conical bore)
 
 ```javascript
-let alto = Osc.square().mul(0.6)
-        .plus(Osc.saw().mul(0.3))
-        .plus(Osc.sine().mul(0.1))
-        .plus(Osc.perlin(10).mul(0.04))
-        .plus(Osc.perlin(15).mul(0.12).adsr(0.02, 0.15, 0.0, 0.01))
+let alto = Ignitor.square().mul(0.6)
+        .plus(Ignitor.saw().mul(0.3))
+        .plus(Ignitor.sine().mul(0.1))
+        .plus(Ignitor.perlin(10).mul(0.04))
+        .plus(Ignitor.perlin(15).mul(0.12).adsr(0.02, 0.15, 0.0, 0.01))
         .lowpass(3500).highpass(200)
         .vibrato(4.5, 0.015)
         .pitchEnvelope(-2, x => x.adsr(0.01, 0.12, 0, 0))
@@ -660,29 +702,29 @@ let alto = Osc.square().mul(0.6)
 **Acoustic Guitar** — Karplus-Strong with natural filtering
 
 ```javascript
-let acoustic = Osc.pluck().highpass(80).lowpass(4000).classic()
+let acoustic = Ignitor.pluck().highpass(80).lowpass(4000).classic()
 ```
 
 **Steel String** — Brighter attack with filter envelope
 
 ```javascript
-let steel = Osc.pluck()
-        .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)))
+let steel = Ignitor.pluck()
+        .lowpass(Ignitor.constant(5000).plus(Ignitor.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)))
         .highpass(100).classic()
 ```
 
 **12-String** — Unison pluck for chorus effect
 
 ```javascript
-let twelve = Osc.superpluck()
-        .lowpass(Osc.constant(4000).plus(Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)))
+let twelve = Ignitor.superpluck()
+        .lowpass(Ignitor.constant(4000).plus(Ignitor.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)))
         .highpass(100).classic()
 ```
 
 **Electric Distorted**
 
 ```javascript
-let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150).classic()
+let crunch = Ignitor.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150).classic()
 ```
 
 ### Synth Pads
@@ -690,9 +732,9 @@ let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150).
 **Fat Analog Pad** — Supersaw with LFO-modulated filter
 
 ```javascript
-let fatpad = Osc.supersaw()
+let fatpad = Ignitor.supersaw()
         .analog(0.3)
-        .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
+        .lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(1500))
         .adsr(0.2, 0.5, 0.7, 1.0).classic()
 ```
 
@@ -701,8 +743,8 @@ let fatpad = Osc.supersaw()
 **Plucky Bass** — Saw with fast filter envelope
 
 ```javascript
-let bass = Osc.saw()
-        .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
+let bass = Ignitor.saw()
+        .lowpass(Ignitor.param("cutoff", 800, "filter cutoff"))
         .adsr(0.005, 0.2, 0.0, 0.05).classic()
 ```
 
@@ -711,7 +753,7 @@ let bass = Osc.saw()
 **Bitcrushed Lead**
 
 ```javascript
-let crunchlead = Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3).classic()
+let crunchlead = Ignitor.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3).classic()
 ```
 
 ### Bells & Mallet Percussion
@@ -721,29 +763,29 @@ metal bar use the bar's inharmonic ratios 2.756 and 5.404 (`detune(17.55)`, `det
 `docs/instrument-prototypes.md`, chosen by ear 2026-10-02.
 
 ```javascript
-let glock = Osc.sine().mul(0.5)
-        .plus(Osc.sine().detune(19.02).mul(0.3))
-        .plus(Osc.sine().detune(27.86).mul(0.15))
-        .plus(Osc.sine().detune(31.02).mul(0.1))
-        .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
-        .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
+let glock = Ignitor.sine().mul(0.5)
+        .plus(Ignitor.sine().detune(19.02).mul(0.3))
+        .plus(Ignitor.sine().detune(27.86).mul(0.15))
+        .plus(Ignitor.sine().detune(31.02).mul(0.1))
+        .plus(Ignitor.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
+        .lowpass(Ignitor.constant(8000).plus(Ignitor.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
         .adsr(0.001, 1.5, 0.0, 0.3).classic()
 ```
 
 **FM Bell** — Inharmonic FM for metallic character
 
 ```javascript
-let bell = Osc.sine().fm(Osc.sine(), 2.3, 400)
+let bell = Ignitor.sine().fm(Ignitor.sine(), 2.3, 400)
         .adsr(0.001, 1.5, 0.0, 0.5).classic()
 ```
 
 **Marimba** — Sine with fast-decaying overtones + wood attack
 
 ```javascript
-let marimba = Osc.sine().mul(0.7)
-        .plus(Osc.sine().detune(12).mul(0.15).adsr(0.001, 0.08, 0.0, 0.02))
-        .plus(Osc.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
-        .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
+let marimba = Ignitor.sine().mul(0.7)
+        .plus(Ignitor.sine().detune(12).mul(0.15).adsr(0.001, 0.08, 0.0, 0.02))
+        .plus(Ignitor.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
+        .plus(Ignitor.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
         .lowpass(2500).onepole(3000)
         .pitchEnvelope(1, x => x.adsr(0.001, 0.04, 0, 0))
         .adsr(0.005, 0.5, 0.0, 0.08).classic()
@@ -752,10 +794,10 @@ let marimba = Osc.sine().mul(0.7)
 **Vibraphone** — Detuned sines with tremolo
 
 ```javascript
-let vibes = Osc.sine().mul(0.5)
-        .plus(Osc.sine().detune(19.02).mul(0.25))
-        .plus(Osc.sine().detune(27.86).mul(0.12))
-        .plus(Osc.whitenoise().highpass(4000).mul(0.06).adsr(0.001, 0.02, 0.0, 0.005))
+let vibes = Ignitor.sine().mul(0.5)
+        .plus(Ignitor.sine().detune(19.02).mul(0.25))
+        .plus(Ignitor.sine().detune(27.86).mul(0.12))
+        .plus(Ignitor.whitenoise().highpass(4000).mul(0.06).adsr(0.001, 0.02, 0.0, 0.005))
         .lowpass(6000)
         .tremolo(5.5, 0.3)
         .adsr(0.003, 2.0, 0.0, 0.5).classic()
@@ -764,10 +806,10 @@ let vibes = Osc.sine().mul(0.5)
 **Music Box** — Bright octave-stacked sines
 
 ```javascript
-let musicbox = Osc.sine().mul(0.6)
-        .plus(Osc.sine().detune(12).mul(0.3))
-        .plus(Osc.sine().detune(24).mul(0.1))
-        .plus(Osc.whitenoise().highpass(10000).mul(0.1).adsr(0.001, 0.01, 0.0, 0.005))
+let musicbox = Ignitor.sine().mul(0.6)
+        .plus(Ignitor.sine().detune(12).mul(0.3))
+        .plus(Ignitor.sine().detune(24).mul(0.1))
+        .plus(Ignitor.whitenoise().highpass(10000).mul(0.1).adsr(0.001, 0.01, 0.0, 0.005))
         .lowpass(6000)
         .adsr(0.001, 0.6, 0.0, 0.1).classic()
 ```
@@ -777,7 +819,7 @@ let musicbox = Osc.sine().mul(0.6)
 **Synth Kick** — Sine with pitch envelope
 
 ```javascript
-let kick = Osc.sine()
+let kick = Ignitor.sine()
         .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
         .adsr(0.001, 0.2, 0.0, 0.02).classic()
 ```
@@ -785,7 +827,7 @@ let kick = Osc.sine()
 **Hi-Hat** — Filtered white noise
 
 ```javascript
-let hat = Osc.whitenoise()
+let hat = Ignitor.whitenoise()
         .highpass(8000)
         .adsr(0.001, 0.05, 0.0, 0.01).classic()
 ```
@@ -793,8 +835,8 @@ let hat = Osc.whitenoise()
 **Rim** — Sine + noise transient
 
 ```javascript
-let rim = Osc.sine(800)
-        .plus(Osc.whitenoise().highpass(4000).mul(0.3))
+let rim = Ignitor.sine(800)
+        .plus(Ignitor.whitenoise().highpass(4000).mul(0.3))
         .lowpass(3000)
         .adsr(0.001, 0.03, 0.0, 0.005).classic()
 ```
@@ -808,13 +850,13 @@ do the heavy lifting: `bipolar` gives natural ±pops, and a high `tail` makes po
 ```javascript
 // sparse loud pops + denser quiet crackle, both heavy-tailed & bipolar, through a resonant ring,
 // over a faint pink-noise hiss bed and an optional sub-rumble
-let vinyl = Osc.dust(0.08, /* tail */ 6, /* bipolar */ 1).bandpass(2500, 4)
-        .plus(Osc.dust(0.02, /* tail */ 3, /* bipolar */ 1).bandpass(1500).mul(0.6))
-        .plus(Osc.pinknoise().highpass(3000).mul(0.03))   // hiss bed
-        .plus(Osc.brownnoise(0.005).lowpass(120).mul(0.04)).classic() // optional deep rumble
+let vinyl = Ignitor.dust(0.08, /* tail */ 6, /* bipolar */ 1).bandpass(2500, 4)
+        .plus(Ignitor.dust(0.02, /* tail */ 3, /* bipolar */ 1).bandpass(1500).mul(0.6))
+        .plus(Ignitor.pinknoise().highpass(3000).mul(0.03))   // hiss bed
+        .plus(Ignitor.brownnoise(0.005).lowpass(120).mul(0.04)).classic() // optional deep rumble
 ```
 
-For a busier, more "broken-groove" crackle, swap in `Osc.crackle(1.7)` (the chaotic generator) as the
+For a busier, more "broken-groove" crackle, swap in `Ignitor.crackle(1.7)` (the chaotic generator) as the
 pop source instead of the heavy-tailed dust.
 
 ---
@@ -840,21 +882,21 @@ pop source instead of the heavy-tailed dust.
 **Breath noise on attack** (woodwinds):
 
 ```javascript
-Osc.perlin(rate).mul(amount).adsr(fast_attack, short_decay, 0, short_release)
+Ignitor.perlin(rate).mul(amount).adsr(fast_attack, short_decay, 0, short_release)
 ```
 
 **Filter envelope** (brightness decay):
 
 ```javascript
-.lowpass(Osc.constant(base).plus(Osc.constant(sweep).adsr(attack, decay, sustain, release)))
+.lowpass(Ignitor.constant(base).plus(Ignitor.constant(sweep).adsr(attack, decay, sustain, release)))
 ```
 
 **Per-partial envelopes** (bells, mallet):
 
 ```javascript
-Osc.sine().mul(0.5)                                                // fundamental
-    .plus(Osc.sine().detune(12).mul(0.3).adsr(0.001, 0.3, 0, 0))  // octave, decays faster
-    .plus(Osc.sine().detune(19).mul(0.1).adsr(0.001, 0.1, 0, 0))  // fifth+oct, even faster
+Ignitor.sine().mul(0.5)                                                // fundamental
+    .plus(Ignitor.sine().detune(12).mul(0.3).adsr(0.001, 0.3, 0, 0))  // octave, decays faster
+    .plus(Ignitor.sine().detune(19).mul(0.1).adsr(0.001, 0.1, 0, 0))  // fifth+oct, even faster
 ```
 
 **Pitch scoop** (attack transient):
@@ -871,22 +913,22 @@ Osc.sine().mul(0.5)                                                // fundamenta
 - Brass: ~3500 Hz
 - Metal/glass: 6000-10000+ Hz
 
-**LFO modulation** (use low-frequency Osc as modulation source):
+**LFO modulation** (use low-frequency Ignitor as modulation source):
 
 ```javascript
 // Filter LFO: sine at 0.3 Hz modulating cutoff 500-2500 Hz
-.lowpass(Osc.sine(0.3).plus(1).times(1000).plus(500))
+.lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(500))
 
-// The pattern: Osc.lfo(freq).plus(1) maps -1..1 to 0..2
+// The pattern: Ignitor.lfo(freq).plus(1) maps -1..1 to 0..2
 // Then .times(range/2).plus(center) maps to your desired range
 ```
 
 **Layering oscillators** (additive synthesis):
 
 ```javascript
-Osc.sine()                      // fundamental
-    .plus(Osc.saw().mul(0.3))   // add brightness
-    .plus(Osc.perlin(8).mul(0.05))  // add organic movement
+Ignitor.sine()                      // fundamental
+    .plus(Ignitor.saw().mul(0.3))   // add brightness
+    .plus(Ignitor.perlin(8).mul(0.05))  // add organic movement
     .mul(0.5)                   // normalize level
 ```
 
@@ -899,20 +941,20 @@ import * from "stdlib"
 import * from "sprudel"
 
 // Custom instruments
-let koto = Osc.pluck()
-    .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
-    .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
+let koto = Ignitor.pluck()
+    .plus(Ignitor.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+    .lowpass(Ignitor.constant(5000).plus(Ignitor.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
     .highpass(200).classic()
 
-let pad = Osc.supersine(x => x.analog(0.3))
-    .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
+let pad = Ignitor.supersine(x => x.analog(0.3))
+    .lowpass(Ignitor.sine(0.08).plus(1).times(300).plus(800))
     .adsr(0.8, 0.5, 0.9, 2.0).classic()
 
-let kick = Osc.sine()
+let kick = Ignitor.sine()
     .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
     .adsr(0.001, 0.2, 0.0, 0.02).classic()
 
-let sub = Osc.sine().lowpass(200)
+let sub = Ignitor.sine().lowpass(200)
     .adsr(0.005, 0.3, 0.0, 0.05).classic()
 
 // Composition

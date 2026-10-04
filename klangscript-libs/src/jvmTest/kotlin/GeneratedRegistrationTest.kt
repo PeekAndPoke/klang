@@ -296,21 +296,32 @@ class GeneratedRegistrationTest : StringSpec({
 
     // ── Docs: Object-level symbols ──────────────────────────────────────
 
-    "generated docs contain object-level symbols for Osc, Math, Object" {
-        for (name in listOf("Osc", "Math", "Object")) {
+    "generated docs contain object-level symbols for Ignitor, Katalyst, Math, Object" {
+        for (name in listOf("Ignitor", "Katalyst", "Math", "Object")) {
             generatedStdlibDocs[name] shouldNotBe null
         }
     }
 
-    "generated docs for Osc object has KlangProperty variant" {
-        val doc = generatedStdlibDocs["Osc"]!!
-        doc.name shouldBe "Osc"
+    "generated docs for Ignitor object has KlangProperty variant" {
+        val doc = generatedStdlibDocs["Ignitor"]!!
+        doc.name shouldBe "Ignitor"
         doc.category shouldBe "object"
         doc.getLibrary()?.name shouldBe "stdlib"
         doc.variants shouldHaveSize 1
         val prop = doc.variants[0] as KlangProperty
-        prop.name shouldBe "Osc"
-        prop.type.simpleName shouldBe "Osc"
+        prop.name shouldBe "Ignitor"
+        prop.type.simpleName shouldBe "Ignitor"
+    }
+
+    "generated docs for the Ign and Kat aliases name the object they stand for, in the object category" {
+        for ((alias, target) in listOf("Ign" to "Ignitor", "Kat" to "Katalyst")) {
+            val doc = generatedStdlibDocs[alias]!!
+            doc.category shouldBe "object"
+            doc.getLibrary()?.name shouldBe "stdlib"
+            val prop = doc.variants.single() as KlangProperty
+            prop.name shouldBe alias
+            prop.type.simpleName shouldBe target
+        }
     }
 
     "generated docs for Math object has KlangProperty variant" {
@@ -328,7 +339,7 @@ class GeneratedRegistrationTest : StringSpec({
 
     "stdlib library docs contain object and method symbols" {
         val lib = KlangStdLib.create()
-        lib.docs.symbols["Osc"] shouldNotBe null
+        lib.docs.symbols["Ignitor"] shouldNotBe null
         lib.docs.symbols["Math"] shouldNotBe null
         lib.docs.symbols["Object"] shouldNotBe null
         lib.docs.symbols["sqrt"] shouldNotBe null

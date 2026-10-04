@@ -10,28 +10,28 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * Canonical open parameter slots for sprudel-compatible custom sounds.
+ * `Ignitor.slot`: the canonical open parameter slots for sprudel-compatible custom sounds.
  *
  * Each slot is the same `IgnitorDsl.Param(name, default)` singleton that built-in
  * sounds use, exposed for custom sounds that want to opt in to sprudel
  * modulation (the `analog`, `voices`, `spread`, ... knobs on the oscillator builders).
  *
  * ```KlangScript(Executable)
- * let pad = Osc.sine(x => x.analog(OscSlot.analog)).lowpass(2000).classic()
+ * let pad = Ignitor.sine(x => x.analog(Ignitor.slot.analog)).lowpass(2000).classic()
  * note("c").sound(pad)
  * ```
  *
- * Also accessible via `Osc.slot.analog` (member-property chain through the Osc
- * namespace).
+ * Reachable only as `Ignitor.slot` (and `Ign.slot`): registered with `@TypeExtensions` on itself,
+ * like the slot groups, so it adds no global name. The Kotlin door is `IgnitorDsl.Slots`.
  *
  * Without opting in, custom sounds ignore sprudel modulation (the data-class
  * defaults are sealed `Constant(0.0)`). Opting in wires the named slot to
- * `oscParams[ name ]` lookup at voice-trigger time.
+ * `ignitorParams[ name ]` lookup at voice-trigger time.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.Object("OscSlot")
-object KlangScriptOscSlot {
-    override fun toString(): String = "[OscSlot object]"
+@KlangScript.TypeExtensions(KlangScriptIgnitorSlots::class)
+object KlangScriptIgnitorSlots {
+    override fun toString(): String = "[Ignitor.slot]"
 
     /** Open `analog` slot (default 0.0). Mirrors sprudel `.analog(x)`. */
     @KlangScript.Property
@@ -80,11 +80,11 @@ object KlangScriptOscSlot {
      *
      * An ordinary slot, so it does what the tree wires it to and nothing otherwise: an instrument
      * that never places it ignores `pregain(x)` bit for bit. `.pregain()` is the short spelling
-     * of `.mul(OscSlot.pregain)`, and the place to put it is in front of the nonlinearity it
+     * of `.mul(Ignitor.slot.pregain)`, and the place to put it is in front of the nonlinearity it
      * should drive:
      *
      * ```
-     * Osc.saw().pregain().distort(0.5)   // play harder, get dirtier
+     * Ignitor.saw().pregain().distort(0.5)   // play harder, get dirtier
      * ```
      *
      * It changes TIMBRE only where something nonlinear follows it AND that nonlinearity still has
@@ -99,7 +99,7 @@ object KlangScriptOscSlot {
     @KlangScript.Property
     val pregain: IgnitorDsl = IgnitorDsl.Slots.pregain
 
-    // ── The slots of the classic tail, one group per stage (`OscSlot.lpf.freq`) ──
+    // ── The slots of the classic tail, one group per stage (`Ignitor.slot.lpf.freq`) ──
     //
     // What `x.classic()` places, and what a tail of your own places when it wants the pattern's
     // voice doors to reach it. Named after sprudel's readers (`lpf.freq`, `adsr.attack`); the Kotlin
@@ -112,59 +112,59 @@ object KlangScriptOscSlot {
     @KlangScript.Property
     val onepole: IgnitorDsl = IgnitorDsl.Slots.onepole
 
-    /** The crush stage's slot: `OscSlot.crush.amount`. */
+    /** The crush stage's slot: `Ignitor.slot.crush.amount`. */
     @KlangScript.Property
-    val crush: KlangScriptCrushSlots = KlangScriptCrushSlots
+    val crush: KlangScriptIgnitorCrushSlots = KlangScriptIgnitorCrushSlots
 
-    /** The coarse stage's slot: `OscSlot.coarse.amount`. */
+    /** The coarse stage's slot: `Ignitor.slot.coarse.amount`. */
     @KlangScript.Property
-    val coarse: KlangScriptCoarseSlots = KlangScriptCoarseSlots
+    val coarse: KlangScriptIgnitorCoarseSlots = KlangScriptIgnitorCoarseSlots
 
     /** The distort stage's slots: `amount`, `shape`, `oversample`. */
     @KlangScript.Property
-    val distort: KlangScriptDistortSlots = KlangScriptDistortSlots
+    val distort: KlangScriptIgnitorDistortSlots = KlangScriptIgnitorDistortSlots
 
     /** The highpass stage's slots: `freq`, `q`, `passes`, `env`, `attack`, `decay`, `sustain`, `release`. */
     @KlangScript.Property
-    val hpf: KlangScriptHpfSlots = KlangScriptHpfSlots
+    val hpf: KlangScriptIgnitorHpfSlots = KlangScriptIgnitorHpfSlots
 
     /** The bandpass stage's slots: `freq`, `q`, `env`, `attack`, `decay`, `sustain`, `release`. */
     @KlangScript.Property
-    val bpf: KlangScriptBpfSlots = KlangScriptBpfSlots
+    val bpf: KlangScriptIgnitorBpfSlots = KlangScriptIgnitorBpfSlots
 
     /** The notch stage's slots: `freq`, `q`, `env`, `attack`, `decay`, `sustain`, `release`. */
     @KlangScript.Property
-    val notch: KlangScriptNotchSlots = KlangScriptNotchSlots
+    val notch: KlangScriptIgnitorNotchSlots = KlangScriptIgnitorNotchSlots
 
     /** The lowpass stage's slots: `freq`, `q`, `passes`, `env`, `attack`, `decay`, `sustain`, `release`. */
     @KlangScript.Property
-    val lpf: KlangScriptLpfSlots = KlangScriptLpfSlots
+    val lpf: KlangScriptIgnitorLpfSlots = KlangScriptIgnitorLpfSlots
 
-    /** The tremolo stage's slots: `depth`, `sync`, `shape`. */
+    /** The tremolo stage's slots: `depth`, `rate`, `shape`. */
     @KlangScript.Property
-    val tremolo: KlangScriptTremoloSlots = KlangScriptTremoloSlots
+    val tremolo: KlangScriptIgnitorTremoloSlots = KlangScriptIgnitorTremoloSlots
 
     /** The amplitude envelope's slots: `attack`, `decay`, `sustain`, `release`, `on`. */
     @KlangScript.Property
-    val adsr: KlangScriptAdsrSlots = KlangScriptAdsrSlots
+    val adsr: KlangScriptIgnitorAdsrSlots = KlangScriptIgnitorAdsrSlots
 
     /** The amplitude envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
-    val adsrCurves: KlangScriptAdsrCurvesSlots = KlangScriptAdsrCurvesSlots
+    val adsrCurves: KlangScriptIgnitorAdsrCurvesSlots = KlangScriptIgnitorAdsrCurvesSlots
 
     /** The highpass envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
-    val hpfCurves: KlangScriptHpfCurvesSlots = KlangScriptHpfCurvesSlots
+    val hpfCurves: KlangScriptIgnitorHpfCurvesSlots = KlangScriptIgnitorHpfCurvesSlots
 
     /** The bandpass envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
-    val bpfCurves: KlangScriptBpfCurvesSlots = KlangScriptBpfCurvesSlots
+    val bpfCurves: KlangScriptIgnitorBpfCurvesSlots = KlangScriptIgnitorBpfCurvesSlots
 
     /** The notch envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
-    val notchCurves: KlangScriptNotchCurvesSlots = KlangScriptNotchCurvesSlots
+    val notchCurves: KlangScriptIgnitorNotchCurvesSlots = KlangScriptIgnitorNotchCurvesSlots
 
     /** The lowpass envelope's curve slots: `attack`, `decay`, `release`. */
     @KlangScript.Property
-    val lpfCurves: KlangScriptLpfCurvesSlots = KlangScriptLpfCurvesSlots
+    val lpfCurves: KlangScriptIgnitorLpfCurvesSlots = KlangScriptIgnitorLpfCurvesSlots
 }

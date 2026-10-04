@@ -28,7 +28,7 @@ per session, not per playback.
 
 - **Per-instrument first-note work that the vocabulary cannot reach.** A song's registered
   ignitor builds its graph on its first note (`IgnitorBuildCache` / `IgnitorDslRuntime`); the
-  song's guitar is a large graph with `Osc.param` slots, `unison(9..15)`, `phasePool`. Eight of
+  song's guitar is a large graph with `Ignitor.param` slots, `unison(9..15)`, `phasePool`. Eight of
   those in one frame, plus `superimpose` doubling voices.
 - **JIT of paths that are per-shape, not per-kind**: V8 optimises per call site and inline cache;
   a graph of the same kinds in a different shape can still deopt. The vocabulary warms kinds, not

@@ -27,7 +27,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * The oscillator parameter bag has THREE raw reads across two readers, and all of them are guarded
+ * The Ignitor slot bag has THREE raw reads across two readers, and all of them are guarded
  * here. The rule they follow is the one every wire number follows (`/dsl-design` section 4) and the
  * one the `Param` leaf already applied to every slot (`IgnitorDslRuntime`): a non-finite value was
  * never set, so it reads as unset. The bag is an open `Map<String, Double>` that any frontend may
@@ -60,7 +60,7 @@ import kotlin.random.Random
  *   sample of the voice was NaN from frame 0 (measured: all 1024 frames of the render below), and
  *   nothing in `Voice` or `Cylinder` scrubs it, so the NaN reached the ORBIT MIX and stayed in the
  *   orbit's send chain for the rest of the playback:
- *   `note("c3").oscp("analog", "Infinity").lpf(2000)` silenced an orbit. That is exactly the failure
+ *   `note("c3").ignp("analog", "Infinity").lpf(2000)` silenced an orbit. That is exactly the failure
  *   the `gain` guard's comment in `VoiceFactory` describes for its own reader.
  * - **`-Infinity`** passed `<= 0.0` and failed `> 0.0`, so it was already safe. Its row states the
  *   rule rather than closing a defect.
@@ -88,7 +88,7 @@ import kotlin.random.Random
  *
  * ## `onepole`, reached through `IgnitorRegistry.createExciter`
  *
- * The gate used to be a bare `oscParams["onepole"] > 0.0` in that function, which a NaN fails but
+ * The gate used to be a bare `ignitorParams["onepole"] > 0.0` in that function, which a NaN fails but
  * an `+Infinity` passes. So an `+Infinity` built a one-pole lowpass over the whole instrument and
  * `bilinearK` then clamped its cutoff to 1 kHz: a value that named no frequency at all rendered
  * exactly what `onepole(1000)` renders. Measured.
@@ -174,7 +174,7 @@ class VoiceBagGuardSpec : StringSpec({
         VoiceData.empty.copy(
             freqHz = 220.0,
             sound = sound,
-            oscParams = analog?.let { mapOf("analog" to it) },
+            ignitorParams = analog?.let { mapOf("analog" to it) },
         ).withClassicSlots(DoorFields(filters = listOf(DoorFilter.LowPass(freq = lowpassHz, q = 1.0)))) // a built-in reads its filter as slots (step 8)
 
     fun peakOf(buf: DoubleArray): Double = buf.maxOf { abs(it) }
@@ -300,7 +300,7 @@ class VoiceBagGuardSpec : StringSpec({
     fun sampleVoice(analog: Double?): VoiceData = VoiceData.empty.copy(
         freqHz = 440.0,
         sound = sampleSound,
-        oscParams = analog?.let { mapOf("analog" to it) },
+        ignitorParams = analog?.let { mapOf("analog" to it) },
     )
 
     fun renderSample(analog: Double?): DoubleArray = renderVoice(sampleVoice(analog)) { sampleEntry }
@@ -345,7 +345,7 @@ class VoiceBagGuardSpec : StringSpec({
         val data = VoiceData.empty.copy(
             freqHz = 220.0,
             sound = "saw",
-            oscParams = onepole?.let { mapOf("onepole" to it) },
+            ignitorParams = onepole?.let { mapOf("onepole" to it) },
         )
 
         return registry.createExciter("saw", data, freqHz = 220.0, random = Random(7))?.ignitor

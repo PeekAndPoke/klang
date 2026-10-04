@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.filters.EqCore
 /**
  * Thin per-voice adapter driving the freq-agnostic [EqCore]: resolves each section's params
  * per block via [Ignitors.readParam] — the ONLY layer where `Freq`-backed params can exist
- * (the guitar chain's tracking highpass `highpass(Osc.freq().mul(k))`); the planned
+ * (the guitar chain's tracking highpass `highpass(Ignitor.freq().mul(k))`); the planned
  * the master eq stage / Katalyst surfaces hand the core scalars directly. The upstream renders into the
  * caller's buffer and the core processes IN PLACE — no scratch pass, which is the fused
  * chain's whole win over per-node rendering.
@@ -69,7 +69,7 @@ internal class EqIgnitor(
             // A product of two voice-constants is voice-constant. Not a general
             // arithmetic-folding ambition — it is the C5 `passes` cascade: the optimizer
             // stages a modulated q as `q * Constant(ladderRel[k])`, and without this every
-            // section of an oscparam-driven cascade would re-derive its coefficients (a
+            // section of an ignitorParam-driven cascade would re-derive its coefficients (a
             // `tan`) every block for a value that cannot change after note-on.
             is TimesIgnitor -> isVoiceConstant(p.a) && isVoiceConstant(p.b)
 

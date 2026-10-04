@@ -50,25 +50,23 @@ go: [src/jsMain/resources/klang-whitepaper.html](src/jsMain/resources/klang-whit
 ```
                             ┌──────────────────┐
                             │   klang (app)    │  Main application (JS/JVM)
-                            └──┬──┬──┬──┬──┬───┘
-                               │  │  │  │  │
-          ┌────────────────────┘  │  │  │  └────────────────────┐
-          │            ┌──────────┘  │  └──────────┐            │
-          v            v             v             v            v
-   ┌────────────┐ ┌─────────┐ ┌───────────┐ ┌──────────┐ ┌────────────────┐
-   │  sprudel   │ │klangui  │ │klangblocks│ │klangsc-ui│ │ klang-notebook │
-   │            │ │         │ │           │ │          │ │                │
-   │ Pattern    │ │ Shared  │ │ Visual    │ │ Editor   │ │  Interactive   │
-   │ language   │ │ UI      │ │ block     │ │ CodeMirr │ │  notebook      │
-   └──┬──┬──────┘ └──┬──┬───┘ │ editor    │ └──┬──┬──┬─┘ └───┬──┬──┬──┬───┘
-      │  │           │  │     └──┬──┬─────┘    │  │  │       │  │  │  │
-      │  │           │  │        │  │          │  │  │       │  │  │  │
-      │  │     ┌─────┘  │    ┌───┘  │     ┌────┘  │  │       │  │  │  │
-      │  │     │     ┌──┘    │   ┌──┘     │    ┌──┘  │       │  │  │  │
-      v  v     v     v       v   v        v    v     v       v  v  v  v
+                            └──┬───┬────┬───┬──┘
+                               │   │    │   │
+          ┌────────────────────┘   │    │   └────────────────────┐
+          │                 ┌──────┘    └─────┐                  │
+          v                 v                 v                  v
+   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌───────────────┐
+   │   sprudel   │   │   klangui   │   │  klangsc-ui │   │ klang-notebook│
+   │             │   │             │   │             │   │               │
+   │ Pattern     │   │ Shared      │   │ Editor      │   │ Interactive   │
+   │ language    │   │ UI          │   │ CodeMirror  │   │ notebook      │
+   └─────┬─┬─────┘   └─────┬─┬─────┘   └─────┬─┬─────┘   └──────┬─┬──────┘
+         │ │               │ │               │ │                │ │
+         │ │               │ │               │ │                │ │
+         v v               v v               v v                v v
    ┌─────────────────────────────────────────────────────────────────────┐
    │                          klangscript-libs                           │
-   │   Standard library: Osc, Master, Pipeline, Math, Object, console    │
+   │   Standard library: Ignitor, Katalyst, Math, Object, console        │
    └──────────────────────────────────┬──────────────────────────────────┘
                                       v
    ┌─────────────────────────────────────────────────────────────────────┐
@@ -127,11 +125,10 @@ go: [src/jsMain/resources/klang-whitepaper.html](src/jsMain/resources/klang-whit
 | `klang`                   | JS/JVM    | Main application — web UI, pages, routing, audio player integration                    |
 | `sprudel`                 | Common/JS | Pattern language — Kotlin sibling of strudel.cc for live coding music (own direction)  |
 | `klangscript`             | Common    | Scripting language — hand-rolled parser, tree-walking interpreter, type system         |
-| `klangscript-libs`        | Common    | KlangScript standard library (`Osc`, `Master`, `Pipeline`, `Math`, ...) and DSL builders; both doors |
+| `klangscript-libs`        | Common    | KlangScript standard library (`Ignitor`, `Katalyst`, `Math`, ...) and DSL builders; both doors |
 | `klangscript-annotations` | Common    | KlangScript binding annotations (`@Object`, `@Method`, `@TypeExtensions`, `@Function`) |
 | `klangscript-ksp`         | JVM       | KSP processor — generates stdlib registration + completion data from the annotations   |
 | `klangscript-ui`          | JS        | CodeMirror editor with code completion, hover docs, tool badges                        |
-| `klangblocks`             | Common/JS | Visual block editor — AST-to-blocks, code generation, round-trip editing               |
 | `klangui`                 | JS        | Shared UI components — theme, hover popups, tool registry, SVG helpers                 |
 | `klangjs`                 | JS        | External JS declarations (CodeMirror bindings) — no project dependencies               |
 | `klang-notebook`          | Common/JS | Interactive notebook support — cell execution, reactive evaluation                     |

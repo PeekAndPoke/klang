@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+@file:KlangScript.Library(KlangScriptLibraries.STDLIB)
+
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystParam
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -36,7 +39,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * a master back off: a master reference means "change to this", so deleting a `master(...)` line
  * while live coding leaves the last chain in place.
  *
- * Sibling of `Osc` (the per-voice instrument): same shape, different host.
+ * Sibling of `Ignitor` (the per-voice instrument): same shape, different host.
  *
  * **The chain is the instrument.** A stage the chain does not declare does not run, however loudly
  * a voice asks for it, so `Katalyst(k => k.eq(...))` is honestly "an EQ and nothing else". Start
@@ -95,7 +98,7 @@ object KlangScriptKatalyst {
 
     /**
      * Creates a named **chain slot** with a default value: the knob a pattern can then move with
-     * `.katp("<name>", value)`.
+     * `.katp("<name>", value)`, or with `.katp(slot, value)` when the slot is held in a variable.
      *
      * A slot is read per block from the voice that holds the orbit's lease, so it is orbit state and
      * not a per-note snapshot. When nothing has written the name, the knob is [default]. Write a
@@ -106,21 +109,34 @@ object KlangScriptKatalyst {
      * note("c3 e3 g3").s("supersaw").katalyst(bus).katp("room", "<2 9>")
      * ```
      *
-     * **A slot listens only when it IS the knob.** `Katalyst.param("room", 5).mul(2)` is an
-     * expression over a slot, not a slot: the bus reads a knob that is neither a constant nor a slot
-     * ONCE, when the chain is built, and folds it to a number, so `katp("room", x)` never reaches
-     * it. Hand the knob the slot itself and do the arithmetic on the pattern side.
+     * It returns a Katalyst param, not a sound: it has no arithmetic (`.mul(2)` on it is a script error), because a
+     * knob listens to `katp` only when it IS the slot. An expression over any param on a chain knob (an
+     * `Ignitor.param(...).mul(2)`, say) is folded ONCE when the chain is built and does not listen: hand the knob a
+     * `Katalyst.param` and do the arithmetic on the pattern side.
      *
-     * The twin of `Osc.param` on the other host: that one fills the voice's own instrument from
-     * `oscp`, this one the orbit's chain from `katp`. The two namespaces never cross.
+     * The twin of `Ignitor.param` on the other host: that one fills the voice's own instrument from
+     * `ignp`, this one the orbit's chain from `katp`. The two namespaces never cross, and the two kinds of param do
+     * not either: an `Ignitor.param` on a chain knob, or this one handed to `ignp`, is a script error at the call.
      *
      * @param name slot name, `<stage>.<knob>` for a classic knob or any word for an authored one
      * @param default the value the knob has while nothing writes the name
      * @param description human-readable description for documentation
      */
     @KlangScript.Method
-    fun param(name: String, default: Double, description: String = ""): IgnitorDsl =
-        IgnitorDsl.Param(name, default, description)
+    fun param(name: String, default: Double, description: String = ""): KatalystParam =
+        KatalystParam(IgnitorDsl.Param(name, default, description))
+
+    /**
+     * The knobs of the classic chain, one group per stage: `Katalyst.slot.reverb.wet`, `Katalyst.slot.gain.gain` and
+     * the rest, each the Katalyst param named `<stage>.<knob>` that `classic()` places. Hand one to `katp` instead of
+     * typing its name. `Kat.slot` is the same; the Kotlin door is `KatalystDsl.Slots`, the same objects.
+     *
+     * ```
+     * note("c3 e3 g3").s("supersaw").reverb(wet = 0.4).katp(Katalyst.slot.reverb.size, "<2 8>")
+     * ```
+     */
+    @KlangScript.Property
+    val slot: KlangScriptKatalystSlots = KlangScriptKatalystSlots
 
     /**
      * `Katalyst(k => ...)`: the callable form of [build]. `Katalyst()` is the empty chain.
@@ -132,3 +148,18 @@ object KlangScriptKatalyst {
     @KlangScript.Invoke
     operator fun invoke(configure: ((KatalystBuilder) -> KatalystBuilder)? = null): KatalystDsl = build(configure)
 }
+
+/**
+ * The short name of [KlangScriptKatalyst]: the same object under a second name, so `Kat(k => ...)` is
+ * `Katalyst(k => ...)` and `Kat.classic()` is `Katalyst.classic()`, for every member: the short form for songs
+ * and live coding, while the docs spell `Katalyst` out.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("supersaw").katalyst(Kat(k => k.reverb(0.2, 4).gain(1.2)))
+ * ```
+ *
+ * @category object
+ * @tags katalyst, kat, alias, chain
+ */
+@KlangScript.Constant
+val Kat: KlangScriptKatalyst = KlangScriptKatalyst

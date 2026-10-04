@@ -43,7 +43,7 @@ for browser/worker).
 | `PatternMapperFn`                      | sprudel  | Mapper functions — chainable transformers               |
 | `IgnitorDsl`                           | stdlib   | Oscillator signal graph builder                         |
 | `Number`, `Boolean`, `Array`, `Object` | built-in | Primitive types                                         |
-| `Osc`, `Math`                          | stdlib   | Singleton objects                                       |
+| `Ignitor`, `Math`                      | stdlib   | Singleton objects                                       |
 
 ## Architecture
 
@@ -123,7 +123,7 @@ Skip type checking — `PatternLike` accepts almost anything.
 
 | Check                 | Example                                   | Status                                                                                                                                                                                                                                                     |
 |-----------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Variable inference    | `let x = Osc.sine(); x.lowpass(1000)`     | **DONE 2026-05-22.** `TypeMapBuilder` scope walk binds `let`/`const`/`export`/arrow-params with their inferred type; shadows registry. Wired into hover + completion via `AnalyzedAst.symbolAt` / `receiverTypeBeforeDot`. Diagnostics not yet using this. |
+| Variable inference    | `let x = Ignitor.sine(); x.lowpass(1000)`     | **DONE 2026-05-22.** `TypeMapBuilder` scope walk binds `let`/`const`/`export`/arrow-params with their inferred type; shadows registry. Wired into hover + completion via `AnalyzedAst.symbolAt` / `receiverTypeBeforeDot`. Diagnostics not yet using this. |
 | Reassignment          | `let x = note("c3"); x = 42; x.gain(0.5)` | TBD. `AssignmentExpression` is visited but doesn't rebind. Mutability semantics need a decision.                                                                                                                                                           |
 | Function return types | `const f = (x) => x.gain(0.5)`            | TBD. Arrow-function literal currently infers as null. Would need return-type inference from body.                                                                                                                                                          |
 

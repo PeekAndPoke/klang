@@ -10,120 +10,163 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.stdlib.IgnitorSlotLike
+import io.peekandpoke.klang.script.stdlib.ignitorSlotName
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putOscParam
+import io.peekandpoke.klang.sprudel.putIgnitorParam
 
-// -- oscparam() / oscp() ----------------------------------------------------------------------------------------------
+// -- ignitorParam() / ignp() -----------------------------------------------------------------------------------------
 
-private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    if (args.size < 2) return source
-    val key = args[0].value?.toString() ?: return source
-    val valueArgs = args.drop(1)
-    val mutation = voiceSetter { putOscParam(key, it?.asDoubleOrNull()) }
+/**
+ * Writes the slot [slot] (already a NAME, resolved at the call by [ignitorSlotName]) with the value pattern
+ * [value]. The four forms of both names resolve the slot first and then land here, so a wrong slot argument is a
+ * script error when the door is CALLED, the mapper forms included, not when a pattern is queried.
+ */
+private fun applyIgnitorParam(source: SprudelPattern, slot: String, value: PatternLike, callInfo: CallInfo?): SprudelPattern {
+    val valueArgs = listOf(slot, value).asSprudelDslArgs(callInfo).drop(1)
+    val mutation = voiceSetter { putIgnitorParam(slot, it?.asDoubleOrNull()) }
     return source._liftOrReinterpretStringField(valueArgs, mutation)
 }
 
+/** The slot name of an `ignitorParam` call, or the script error naming the door and the fix. */
+private fun ignitorParamSlot(slot: IgnitorSlotLike?, callInfo: CallInfo?): String =
+    ignitorSlotName(slot, door = "ignitorParam", twin = "katalystParam", location = callInfo?.callLocation)
+
+/** The slot name of an `ignp` call, or the script error naming the door and the fix. */
+private fun ignpSlot(slot: IgnitorSlotLike?, callInfo: CallInfo?): String =
+    ignitorSlotName(slot, door = "ignp", twin = "katp", location = callInfo?.callLocation)
+
 /**
- * Sets any oscillator parameter by key, [per voice](/manuals/lexikon/voice).
+ * Writes one Ignitor slot, [per voice](/manuals/lexikon/voice): by its name, or by the param object itself.
  *
- * Direct access to the `oscParams` map, for parameters that have no dedicated door of their own.
- * Keys used elsewhere in this library are `analog`, `onepole` and `density`.
+ * Direct access to the `ignitorParams` map, for slots that have no dedicated door of their own.
+ * Slots used elsewhere in this library are `analog`, `onepole` and `density`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3").s("supersaw").oscparam("analog", 4)
+ * note("c3 e3").s("supersaw").ignitorParam("analog", 4)
  * ```
  *
  * ```KlangScript(Playable)
- * note("c3 e3").oscparam("onepole", "<12000 3700>") // pattern-cycle the value
+ * note("c3 e3").ignitorParam("onepole", "<12000 3700>") // pattern-cycle the value
  * ```
  *
- * @param key The oscillator parameter name.
- * @param value The parameter value.
- * @return A new pattern with the oscillator parameter set.
- * @alias oscp
+ * The slot can be the param OBJECT instead of its name: a classic slot (`Ignitor.slot.lpf.freq`), or a param of
+ * your own instrument held in a variable. Only the NAME is written; the default stays the instrument's.
+ *
+ * ```KlangScript(Playable)
+ * let cutoff = Ignitor.param("cutoff", 800)
+ * let pad = Ignitor.saw().lowpass(cutoff).classic()
+ * note("c3 e3").sound(pad).ignitorParam(cutoff, "<400 2000>")
+ * ```
+ *
+ * A Katalyst param (`Katalyst.param(...)`, `Katalyst.slot.*`) is the orbit chain's slot, which `katalystParam`
+ * writes; handing one to this door is a script error at the call, and so is a number, a sound or an expression
+ * over a param (`Ignitor.param("x", 1).mul(2)` is not a slot).
+ *
+ * @param slot The Ignitor slot (required): its name, or the Ignitor param itself.
+ * @param value The slot value.
+ * @return A new pattern with the slot written.
+ * @alias ignp
  * @scope voice
  * @category tonal
- * @tags oscillator, parameter, osc
+ * @tags ignitor, parameter, slot
  */
 @KlangScript.Function
-fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyOscparam(this, listOf(key, value).asSprudelDslArgs(callInfo))
+fun SprudelPattern.ignitorParam(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyIgnitorParam(this, ignitorParamSlot(slot, callInfo), value, callInfo)
 
 /**
- * Parses this string as a pattern and sets an oscillator parameter.
+ * Parses this string as a pattern and writes one Ignitor slot, by name or by the param object.
  *
- * @alias oscp
+ * @alias ignp
  */
 @KlangScript.Function
-fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
+fun String.ignitorParam(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val name = ignitorParamSlot(slot, callInfo)
+    return applyIgnitorParam(this.toVoiceValuePattern(callInfo?.receiverLocation), name, value, callInfo)
+}
 
 /**
- * Creates a [PatternMapperFn] that sets an oscillator parameter.
+ * Creates a [PatternMapperFn] that writes one Ignitor slot, by name or by the param object.
  *
- * @alias oscp
+ * @alias ignp
  */
 @KlangScript.Function
-fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.oscparam(key, value, callInfo) }
+fun ignitorParam(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = ignitorParamSlot(slot, callInfo)
+    return { p -> applyIgnitorParam(p, name, value, callInfo) }
+}
 
 /**
- * Chains an oscillator-parameter-set onto this [PatternMapperFn].
+ * Chains an Ignitor slot write onto this [PatternMapperFn].
  *
- * @alias oscp
+ * @alias ignp
  */
 @KlangScript.Function
-fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.oscparam(key, value, callInfo) }
+fun PatternMapperFn.ignitorParam(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = ignitorParamSlot(slot, callInfo)
+    return this.chain { p -> applyIgnitorParam(p, name, value, callInfo) }
+}
 
 /**
- * Alias for [oscparam].
+ * Alias for [ignitorParam]: writes one Ignitor slot, by name or by the param object.
  *
- * @alias oscparam
+ * @param slot The Ignitor slot (required): its name, or the Ignitor param itself.
+ * @param value The slot value.
+ * @alias ignitorParam
+ * @scope voice
+ * @category tonal
+ * @tags ignp, ignitor, parameter, slot
  */
 @KlangScript.Function
-fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.oscparam(key, value, callInfo)
+fun SprudelPattern.ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyIgnitorParam(this, ignpSlot(slot, callInfo), value, callInfo)
 
 /**
- * Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter.
+ * Alias for [ignitorParam]. Parses this string as a pattern and writes one Ignitor slot.
  *
- * @alias oscparam
+ * @alias ignitorParam
  */
 @KlangScript.Function
-fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
+fun String.ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val name = ignpSlot(slot, callInfo)
+    return applyIgnitorParam(this.toVoiceValuePattern(callInfo?.receiverLocation), name, value, callInfo)
+}
 
 /**
- * Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter.
+ * Alias for [ignitorParam]. Creates a [PatternMapperFn] that writes one Ignitor slot.
  *
- * @alias oscparam
+ * @alias ignitorParam
  */
 @KlangScript.Function
-fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.oscparam(key, value, callInfo) }
+fun ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = ignpSlot(slot, callInfo)
+    return { p -> applyIgnitorParam(p, name, value, callInfo) }
+}
 
 /**
- * Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn].
+ * Alias for [ignitorParam]. Chains an Ignitor slot write onto this [PatternMapperFn].
  *
- * @alias oscparam
+ * @alias ignitorParam
  */
 @KlangScript.Function
-fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.oscparam(key, value, callInfo) }
+fun PatternMapperFn.ignp(slot: IgnitorSlotLike?, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn {
+    val name = ignpSlot(slot, callInfo)
+    return this.chain { p -> applyIgnitorParam(p, name, value, callInfo) }
+}
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 
 private val analogMutation = voiceSetter {
-    putOscParam("analog", it?.asDoubleOrNull())
+    putIgnitorParam("analog", it?.asDoubleOrNull())
 }
 
 private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("analog") }, update = analogMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("analog") }, update = analogMutation)
     }
 
     return source._liftOrReinterpretStringField(args, analogMutation)
@@ -199,7 +242,7 @@ fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): Spru
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("analog")
-object analog : FieldAccessor({ it.oscParams?.get("analog") }) {
+object analog : FieldAccessor({ it.ignitorParams?.get("analog") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the analog drift amount.
@@ -233,12 +276,12 @@ fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = nu
 // -- duty() -----------------------------------------------------------------------------------------------------------
 
 private val dutyMutation = voiceSetter {
-    putOscParam("duty", it?.asDoubleOrNull())
+    putIgnitorParam("duty", it?.asDoubleOrNull())
 }
 
 private fun applyDuty(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("duty") }, update = dutyMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("duty") }, update = dutyMutation)
     }
 
     return source._liftOrReinterpretStringField(args, dutyMutation)
@@ -294,7 +337,7 @@ fun String.duty(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("duty")
-object duty : FieldAccessor({ it.oscParams?.get("duty") }) {
+object duty : FieldAccessor({ it.ignitorParams?.get("duty") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the pulse duty cycle.
@@ -319,12 +362,12 @@ fun PatternMapperFn.duty(amount: PatternLike? = null, callInfo: CallInfo? = null
 // -- onepole() --------------------------------------------------------------------------------------------------------
 
 private val onepoleMutation = voiceSetter {
-    putOscParam("onepole", it?.asDoubleOrNull())
+    putIgnitorParam("onepole", it?.asDoubleOrNull())
 }
 
 private fun applyOnepole(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("onepole") }, update = onepoleMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("onepole") }, update = onepoleMutation)
     }
 
     return source._liftOrReinterpretStringField(args, onepoleMutation)
@@ -392,7 +435,7 @@ fun String.onepole(freq: PatternLike? = null, callInfo: CallInfo? = null): Sprud
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("onepole")
-object onepole : FieldAccessor({ it.oscParams?.get("onepole") }) {
+object onepole : FieldAccessor({ it.ignitorParams?.get("onepole") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets the oscillator one-pole lowpass.

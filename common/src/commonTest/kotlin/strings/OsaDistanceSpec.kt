@@ -10,15 +10,15 @@ import io.kotest.matchers.shouldBe
 
 /**
  * [osaDistance] exists for one reason: a transposition must cost ONE edit, so "did you mean" can
- * suggest `oscp` for `ocsp` at a threshold tight enough to stay useful on short names.
+ * suggest `ignp` for `ingp` at a threshold tight enough to stay useful on short names.
  */
 class OsaDistanceSpec : StringSpec({
 
     "an adjacent transposition costs ONE edit (plain Levenshtein charges two)" {
-        "ocsp".osaDistance("oscp") shouldBe 1
+        "ingp".osaDistance("ignp") shouldBe 1
         "gian".osaDistance("gain") shouldBe 1
         // The contrast that motivates this function existing at all.
-        "ocsp".levenshtein("oscp") shouldBe 2
+        "ingp".levenshtein("ignp") shouldBe 2
     }
 
     "the ordinary edits still cost one each" {
@@ -28,7 +28,7 @@ class OsaDistanceSpec : StringSpec({
     }
 
     "identical strings are distance zero" {
-        "oscp".osaDistance("oscp") shouldBe 0
+        "ignp".osaDistance("ignp") shouldBe 0
         "".osaDistance("") shouldBe 0
     }
 
@@ -38,7 +38,7 @@ class OsaDistanceSpec : StringSpec({
     }
 
     "it is symmetric" {
-        "ocsp".osaDistance("oscp") shouldBe "oscp".osaDistance("ocsp")
+        "ingp".osaDistance("ignp") shouldBe "ignp".osaDistance("ingp")
         "kitten".osaDistance("sitting") shouldBe "sitting".osaDistance("kitten")
     }
 

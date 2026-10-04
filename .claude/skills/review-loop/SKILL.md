@@ -220,6 +220,9 @@ assertion IS the specification, readable one-to-one, the check is near-tautologi
   change-detector, not a guard: it fails only on intentional edits and cannot tell a good one from
   a bad one. Where a value matters, guard the BEHAVIOUR it buys (render the thing, assert the
   audible property) — and only where the stakes warrant it.
+- **No test for what a lower layer already guarantees** (maintainer, 2026-10-03). A removed parameter needs no
+  "is refused" row (`tremolo(sync = 4)` throwing): KlangScript refuses an unknown named argument, and its own suite
+  tests that. Such a row restates the language, not the change.
 - **Coverage findings are judged case by case.** Sometimes the code is expressive enough that a
   test adds nothing. A reviewer finding of the form "X is untested" must name a failure the test
   would catch that READING THE CODE cannot; otherwise it is rejected without ceremony.
@@ -280,6 +283,8 @@ reader.
   strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
   Rewrite reads only in a call context (an argument, a `.mul(` chain) and let a reviewer grep the
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
+- **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
+  rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

@@ -78,7 +78,7 @@ class TremoloCompositionSpec : StringSpec({
     }
 
     fun build(dsl: IgnitorDsl, sampleRate: Int, params: Map<String, Double>? = null): Ignitor =
-        dsl.buildExciter(oscParams = params, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
+        dsl.buildExciter(ignitorParams = params, random = Random(7), freqHz = freqHz, sampleRate = sampleRate).ignitor
 
     fun renderNode(
         dsl: IgnitorDsl,
@@ -89,7 +89,7 @@ class TremoloCompositionSpec : StringSpec({
 
     /**
      * The oscillator of [shape] at [rate], built here the way the listening pairs built the composed tremolo:
-     * `Osc.<shape>(rate, o => ...edges... .analog(0))`. Not the engine's own mapping: a shape that maps to the
+     * `Ignitor.<shape>(rate, o => ...edges... .analog(0))`. Not the engine's own mapping: a shape that maps to the
      * wrong oscillator there, or a new shape with no oscillator, shows here.
      */
     fun oscillator(shape: String, rate: Ignitor, sampleRate: Int): Ignitor {
@@ -318,7 +318,7 @@ class TremoloCompositionSpec : StringSpec({
     }
 
     "a depth of block-constant ARITHMETIC below 0 passes the signal unchanged: only leaves are gated, so it is floored" {
-        // `Osc.freq().div(-200).plus(0.8)` at the 220 Hz note is -0.3: block-constant but not a leaf, so the gate
+        // `Ignitor.freq().div(-200).plus(0.8)` at the 220 Hz note is -0.3: block-constant but not a leaf, so the gate
         // cannot read it. Unfloored it would boost (gain 1 to 1.3). The same expression at `plus(1.5)` is 0.4 and acts.
         fun depthOf(offset: Double): IgnitorDsl =
             IgnitorDsl.Plus(IgnitorDsl.Div(IgnitorDsl.Freq, IgnitorDsl.Constant(-200.0)), IgnitorDsl.Constant(offset))

@@ -1,5 +1,10 @@
 # The tremolo becomes a composition of the oscillators
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 Status: **DONE 2026-10-02.** Built 2026-09-29 (review: 4 rounds, the last clean), merged to main. The maintainer's
 verdict on the start points (pairs 80 to 83, 2026-10-02): all four accepted. "When played solo it sounds better when
 it starts at low volume"; the pluck's lower onset is expected; the square pluck shows no real difference. A `phase`

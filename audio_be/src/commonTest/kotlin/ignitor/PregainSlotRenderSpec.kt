@@ -67,7 +67,7 @@ class PregainSlotRenderSpec : StringSpec({
 
     /** [blocks] blocks of [dsl], built with [params] and rendered end to end. */
     fun render(dsl: IgnitorDsl, params: Map<String, Double>? = null): DoubleArray {
-        val ignitor = dsl.buildExciter(oscParams = params, random = seed()).ignitor
+        val ignitor = dsl.buildExciter(ignitorParams = params, random = seed()).ignitor
         val out = DoubleArray(blockFrames * blocks)
         val buffer = AudioBuffer(blockFrames)
         val context = ctx()
@@ -179,7 +179,7 @@ class PregainSlotRenderSpec : StringSpec({
     }
 
     "the instrument the KDoc examples use really changes SHAPE, not just level, at pregain 0.4" {
-        // The doc examples claim "play harder, get dirtier" on `Osc.saw().pregain().distort(0.5)
+        // The doc examples claim "play harder, get dirtier" on `Ignitor.saw().pregain().distort(0.5)
         // .lowpass(2500)`. An example that compiles and demonstrates nothing is the documented
         // failure of the accessor sweep, and this one had exactly that shape until 2026-09-19: at
         // `distort(2)` the drive is about 250x, so pregain 1.0 and 0.4 are both hard-saturated and

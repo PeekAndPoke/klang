@@ -26,7 +26,8 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  *
  * Each knob of the voice doors listed in [knobs] is one entry: level and routing (`gain`, `pregain`,
  * `pan`, `velocity`, `orbit`, `cylinder`, `density`, `accelerate`), the oscillator knobs (`analog`,
- * `duty`, `onepole`, `oscparam`, `oscp`, `sndPluck`, `sndSuperPluck`), `adsr` and `adsrOn`, `unison`,
+ * `duty`, `onepole`, `ignitorParam`, `ignp`, `sndPluck`, `sndSuperPluck`), the orbit slot setter (`katalystParam`,
+ * `katp`), `adsr` and `adsrOn`, `unison`,
  * the bus doors (`compressor`, `duck`, `reverb`, `delay`, `phaser`, `body`, `vowel`), `tremolo`,
  * `distort`, `crush`, `coarse`, the four filters, `fm`, `vibrato` and `penv`, and the aliases' heads.
  * Each row runs the entries through the calling forms the module supports, and asserts the VALUE the
@@ -50,7 +51,7 @@ private val SINE = listOf(0.5, 1.0, 0.5, 0.0)
  * Not in the table (their forms live in their own specs, or they have no knob shape): the sample doors
  * (`begin`, `end`, `speed`, `cut`, `unit`, `loop*`, `slice`, `splice`), `sound`/`s`/`bank`, the curve
  * doors (`adsrCurves`, `lpfCurves`, `hpfCurves`, `bpfCurves`, `notchCurves`, `penvCurves`), `adsrOff`,
- * `cull`/`noCull`, `katp`, `katalyst`, the `snd*` oscillators other than the two plucks, and the aliases'
+ * `cull`/`noCull`, `katalyst`, the `snd*` oscillators other than the two plucks, and the aliases'
  * named tails.
  *
  * What this spec does not own: the mapper argument, the bare accessor read, the gap, the tail-only
@@ -86,7 +87,7 @@ class LangDoorFormsSpec : StringSpec({
     )
 
     fun katSlot(key: String): (SprudelVoiceData) -> Double? = { it.katalystParams?.get(key) }
-    fun oscSlot(key: String): (SprudelVoiceData) -> Double? = { it.oscParams?.get(key) }
+    fun ignitorSlot(key: String): (SprudelVoiceData) -> Double? = { it.ignitorParams?.get(key) }
 
     fun k(
         name: String,
@@ -107,7 +108,7 @@ class LangDoorFormsSpec : StringSpec({
     val knobs = listOf(
         // -- level, routing, voice ------------------------------------------------------------------------------------
         k("gain", "gain(%s)", { it.gain }, { p, c -> p.gain(c) }, { s, c -> s.gain(c) }, { c -> gain(c) }, { m, c -> m.gain(c) }, head = true),
-        k("pregain", "pregain(%s)", oscSlot("pregain"), { p, c -> p.pregain(c) }, { s, c -> s.pregain(c) }, { c -> pregain(c) }, { m, c -> m.pregain(c) }, head = true),
+        k("pregain", "pregain(%s)", ignitorSlot("pregain"), { p, c -> p.pregain(c) }, { s, c -> s.pregain(c) }, { c -> pregain(c) }, { m, c -> m.pregain(c) }, head = true),
         k("pan", "pan(%s)", { it.pan }, { p, c -> p.pan(c) }, { s, c -> s.pan(c) }, { c -> pan(c) }, { m, c -> m.pan(c) },
             ctrl = "-0.5 1", expected = listOf(-0.5, 1.0), head = true),
         k("velocity", "velocity(%s)", { it.velocity }, { p, c -> p.velocity(c) }, { s, c -> s.velocity(c) }, { c -> velocity(c) }, { m, c -> m.velocity(c) }, head = true),
@@ -118,15 +119,17 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "1 2", expected = listOf(1, 2), head = true, continuous = listOf(0, 1, 0, 0)),
         k("cylinder", "cylinder(%s)", { it.cylinder }, { p, c -> p.cylinder(c) }, { s, c -> s.cylinder(c) }, { c -> cylinder(c) }, { m, c -> m.cylinder(c) },
             ctrl = "1 2", expected = listOf(1, 2), head = true, continuous = listOf(0, 1, 0, 0)),
-        k("density", "density(%s)", oscSlot("density"), { p, c -> p.density(c) }, { s, c -> s.density(c) }, { c -> density(c) }, { m, c -> m.density(c) }, head = true),
-        k("d", "d(%s)", oscSlot("density"), { p, c -> p.d(c) }, { s, c -> s.d(c) }, { c -> d(c) }, { m, c -> m.d(c) }, head = true),
+        k("density", "density(%s)", ignitorSlot("density"), { p, c -> p.density(c) }, { s, c -> s.density(c) }, { c -> density(c) }, { m, c -> m.density(c) }, head = true),
+        k("d", "d(%s)", ignitorSlot("density"), { p, c -> p.d(c) }, { s, c -> s.d(c) }, { c -> d(c) }, { m, c -> m.d(c) }, head = true),
         k("accelerate", "accelerate(%s)", { it.accelerate }, { p, c -> p.accelerate(c) }, { s, c -> s.accelerate(c) }, { c -> accelerate(c) }, { m, c -> m.accelerate(c) },
             ctrl = "-0.5 0.75", expected = listOf(-0.5, 0.75), head = true),
-        k("oscparam", "oscparam(\"mykey\", %s)", oscSlot("mykey"), { p, c -> p.oscparam("mykey", c!!) }, { s, c -> s.oscparam("mykey", c!!) }, { c -> oscparam("mykey", c!!) }, { m, c -> m.oscparam("mykey", c!!) }),
-        k("oscp", "oscp(\"mykey\", %s)", oscSlot("mykey"), { p, c -> p.oscp("mykey", c!!) }, { s, c -> s.oscp("mykey", c!!) }, { c -> oscp("mykey", c!!) }, { m, c -> m.oscp("mykey", c!!) }),
-        k("analog", "analog(%s)", oscSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
-        k("duty", "duty(%s)", oscSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
-        k("onepole", "onepole(%s)", oscSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
+        k("ignitorParam", "ignitorParam(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignitorParam("mykey", c!!) }, { s, c -> s.ignitorParam("mykey", c!!) }, { c -> ignitorParam("mykey", c!!) }, { m, c -> m.ignitorParam("mykey", c!!) }),
+        k("ignp", "ignp(\"mykey\", %s)", ignitorSlot("mykey"), { p, c -> p.ignp("mykey", c!!) }, { s, c -> s.ignp("mykey", c!!) }, { c -> ignp("mykey", c!!) }, { m, c -> m.ignp("mykey", c!!) }),
+        k("katalystParam", "katalystParam(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katalystParam("mykey", c!!) }, { s, c -> s.katalystParam("mykey", c!!) }, { c -> katalystParam("mykey", c!!) }, { m, c -> m.katalystParam("mykey", c!!) }),
+        k("katp", "katp(\"mykey\", %s)", katSlot("mykey"), { p, c -> p.katp("mykey", c!!) }, { s, c -> s.katp("mykey", c!!) }, { c -> katp("mykey", c!!) }, { m, c -> m.katp("mykey", c!!) }),
+        k("analog", "analog(%s)", ignitorSlot("analog"), { p, c -> p.analog(c) }, { s, c -> s.analog(c) }, { c -> analog(c) }, { m, c -> m.analog(c) }, head = true),
+        k("duty", "duty(%s)", ignitorSlot("duty"), { p, c -> p.duty(c) }, { s, c -> s.duty(c) }, { c -> duty(c) }, { m, c -> m.duty(c) }, head = true),
+        k("onepole", "onepole(%s)", ignitorSlot("onepole"), { p, c -> p.onepole(c) }, { s, c -> s.onepole(c) }, { c -> onepole(c) }, { m, c -> m.onepole(c) }, head = true),
 
         // -- adsr -----------------------------------------------------------------------------------------------------
         k("adsr.attack", "adsr(attack = %s)", { it.attack }, { p, c -> p.adsr(attack = c) }, { s, c -> s.adsr(attack = c) }, { c -> adsr(attack = c) }, { m, c -> m.adsr(attack = c) }),
@@ -137,12 +140,12 @@ class LangDoorFormsSpec : StringSpec({
             ctrl = "1 0", expected = listOf(true, false), continuous = null),
 
         // -- unison ---------------------------------------------------------------------------------------------------
-        k("unison.voices", "unison(%s)", oscSlot("voices"), { p, c -> p.unison(c) }, { s, c -> s.unison(c) }, { c -> unison(c) }, { m, c -> m.unison(c) },
+        k("unison.voices", "unison(%s)", ignitorSlot("voices"), { p, c -> p.unison(c) }, { s, c -> s.unison(c) }, { c -> unison(c) }, { m, c -> m.unison(c) },
             ctrl = "3 5", expected = listOf(3.0, 5.0), head = true),
-        k("uni", "uni(%s)", oscSlot("voices"), { p, c -> p.uni(c) }, { s, c -> s.uni(c) }, { c -> uni(c) }, { m, c -> m.uni(c) },
+        k("uni", "uni(%s)", ignitorSlot("voices"), { p, c -> p.uni(c) }, { s, c -> s.uni(c) }, { c -> uni(c) }, { m, c -> m.uni(c) },
             ctrl = "3 5", expected = listOf(3.0, 5.0), head = true),
-        k("unison.spread", "unison(spread = %s)", oscSlot("spread"), { p, c -> p.unison(spread = c) }, { s, c -> s.unison(spread = c) }, { c -> unison(spread = c) }, { m, c -> m.unison(spread = c) }),
-        k("unison.pan", "unison(pan = %s)", oscSlot("panSpread"), { p, c -> p.unison(pan = c) }, { s, c -> s.unison(pan = c) }, { c -> unison(pan = c) }, { m, c -> m.unison(pan = c) }),
+        k("unison.spread", "unison(spread = %s)", ignitorSlot("spread"), { p, c -> p.unison(spread = c) }, { s, c -> s.unison(spread = c) }, { c -> unison(spread = c) }, { m, c -> m.unison(spread = c) }),
+        k("unison.pan", "unison(pan = %s)", ignitorSlot("panSpread"), { p, c -> p.unison(pan = c) }, { s, c -> s.unison(pan = c) }, { c -> unison(pan = c) }, { m, c -> m.unison(pan = c) }),
 
         // -- compressor and duck (Katalyst slots) ----------------------------------------------------------------------
         k("compressor.threshold", "compressor(%s)", katSlot("compressor.threshold"), { p, c -> p.compressor(c) }, { s, c -> s.compressor(c) }, { c -> compressor(c) }, { m, c -> m.compressor(c) },
@@ -196,7 +199,7 @@ class LangDoorFormsSpec : StringSpec({
 
         // -- tremolo ----------------------------------------------------------------------------------------------------
         k("tremolo.depth", "tremolo(%s)", { it.tremoloDepth }, { p, c -> p.tremolo(c) }, { s, c -> s.tremolo(c) }, { c -> tremolo(c) }, { m, c -> m.tremolo(c) }, head = true),
-        k("tremolo.sync", "tremolo(sync = %s)", { it.tremoloSync }, { p, c -> p.tremolo(sync = c) }, { s, c -> s.tremolo(sync = c) }, { c -> tremolo(sync = c) }, { m, c -> m.tremolo(sync = c) }),
+        k("tremolo.rate", "tremolo(rate = %s)", { it.tremoloRate }, { p, c -> p.tremolo(rate = c) }, { s, c -> s.tremolo(rate = c) }, { c -> tremolo(rate = c) }, { m, c -> m.tremolo(rate = c) }),
         k("tremolo.shape", "tremolo(shape = %s)", { it.tremoloShape }, { p, c -> p.tremolo(shape = c) }, { s, c -> s.tremolo(shape = c) }, { c -> tremolo(shape = c) }, { m, c -> m.tremolo(shape = c) },
             ctrl = "sine square", expected = listOf("sine", "square"), continuous = null),
 
@@ -276,26 +279,26 @@ class LangDoorFormsSpec : StringSpec({
         k("penv.sustain", "penv(sustain = %s)", { it.pSustain }, { p, c -> p.penv(sustain = c) }, { s, c -> s.penv(sustain = c) }, { c -> penv(sustain = c) }, { m, c -> m.penv(sustain = c) }),
         k("penv.release", "penv(release = %s)", { it.pRelease }, { p, c -> p.penv(release = c) }, { s, c -> s.penv(release = c) }, { c -> penv(release = c) }, { m, c -> m.penv(release = c) }),
 
-        // -- the pluck oscillators' knobs (oscParams) --------------------------------------------------------------------
-        k("sndPluck.decay", "sndPluck(decay = %s)", { it.soundName to it.oscParams?.get("decay") }, { p, c -> p.sndPluck(decay = c) }, { s, c -> s.sndPluck(decay = c) }, { c -> sndPluck(decay = c) }, { m, c -> m.sndPluck(decay = c) },
+        // -- the pluck oscillators' knobs (ignitorParams) --------------------------------------------------------------------
+        k("sndPluck.decay", "sndPluck(decay = %s)", { it.soundName to it.ignitorParams?.get("decay") }, { p, c -> p.sndPluck(decay = c) }, { s, c -> s.sndPluck(decay = c) }, { c -> sndPluck(decay = c) }, { m, c -> m.sndPluck(decay = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
-        k("sndPluck.brightness", "sndPluck(brightness = %s)", { it.soundName to it.oscParams?.get("brightness") }, { p, c -> p.sndPluck(brightness = c) }, { s, c -> s.sndPluck(brightness = c) }, { c -> sndPluck(brightness = c) }, { m, c -> m.sndPluck(brightness = c) },
+        k("sndPluck.brightness", "sndPluck(brightness = %s)", { it.soundName to it.ignitorParams?.get("brightness") }, { p, c -> p.sndPluck(brightness = c) }, { s, c -> s.sndPluck(brightness = c) }, { c -> sndPluck(brightness = c) }, { m, c -> m.sndPluck(brightness = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
-        k("sndPluck.pickPosition", "sndPluck(pickPosition = %s)", { it.soundName to it.oscParams?.get("pickPosition") }, { p, c -> p.sndPluck(pickPosition = c) }, { s, c -> s.sndPluck(pickPosition = c) }, { c -> sndPluck(pickPosition = c) }, { m, c -> m.sndPluck(pickPosition = c) },
+        k("sndPluck.pickPosition", "sndPluck(pickPosition = %s)", { it.soundName to it.ignitorParams?.get("pickPosition") }, { p, c -> p.sndPluck(pickPosition = c) }, { s, c -> s.sndPluck(pickPosition = c) }, { c -> sndPluck(pickPosition = c) }, { m, c -> m.sndPluck(pickPosition = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
-        k("sndPluck.stiffness", "sndPluck(stiffness = %s)", { it.soundName to it.oscParams?.get("stiffness") }, { p, c -> p.sndPluck(stiffness = c) }, { s, c -> s.sndPluck(stiffness = c) }, { c -> sndPluck(stiffness = c) }, { m, c -> m.sndPluck(stiffness = c) },
+        k("sndPluck.stiffness", "sndPluck(stiffness = %s)", { it.soundName to it.ignitorParams?.get("stiffness") }, { p, c -> p.sndPluck(stiffness = c) }, { s, c -> s.sndPluck(stiffness = c) }, { c -> sndPluck(stiffness = c) }, { m, c -> m.sndPluck(stiffness = c) },
             expected = listOf("pluck" to 0.5, "pluck" to 1.0), continuous = null),
-        k("sndSuperPluck.voices", "sndSuperPluck(voices = %s)", { it.soundName to it.oscParams?.get("voices") }, { p, c -> p.sndSuperPluck(voices = c) }, { s, c -> s.sndSuperPluck(voices = c) }, { c -> sndSuperPluck(voices = c) }, { m, c -> m.sndSuperPluck(voices = c) },
+        k("sndSuperPluck.voices", "sndSuperPluck(voices = %s)", { it.soundName to it.ignitorParams?.get("voices") }, { p, c -> p.sndSuperPluck(voices = c) }, { s, c -> s.sndSuperPluck(voices = c) }, { c -> sndSuperPluck(voices = c) }, { m, c -> m.sndSuperPluck(voices = c) },
             ctrl = "3 5", expected = listOf("superpluck" to 3.0, "superpluck" to 5.0), continuous = null),
-        k("sndSuperPluck.spread", "sndSuperPluck(spread = %s)", { it.soundName to it.oscParams?.get("spread") }, { p, c -> p.sndSuperPluck(spread = c) }, { s, c -> s.sndSuperPluck(spread = c) }, { c -> sndSuperPluck(spread = c) }, { m, c -> m.sndSuperPluck(spread = c) },
+        k("sndSuperPluck.spread", "sndSuperPluck(spread = %s)", { it.soundName to it.ignitorParams?.get("spread") }, { p, c -> p.sndSuperPluck(spread = c) }, { s, c -> s.sndSuperPluck(spread = c) }, { c -> sndSuperPluck(spread = c) }, { m, c -> m.sndSuperPluck(spread = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
-        k("sndSuperPluck.decay", "sndSuperPluck(decay = %s)", { it.soundName to it.oscParams?.get("decay") }, { p, c -> p.sndSuperPluck(decay = c) }, { s, c -> s.sndSuperPluck(decay = c) }, { c -> sndSuperPluck(decay = c) }, { m, c -> m.sndSuperPluck(decay = c) },
+        k("sndSuperPluck.decay", "sndSuperPluck(decay = %s)", { it.soundName to it.ignitorParams?.get("decay") }, { p, c -> p.sndSuperPluck(decay = c) }, { s, c -> s.sndSuperPluck(decay = c) }, { c -> sndSuperPluck(decay = c) }, { m, c -> m.sndSuperPluck(decay = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
-        k("sndSuperPluck.brightness", "sndSuperPluck(brightness = %s)", { it.soundName to it.oscParams?.get("brightness") }, { p, c -> p.sndSuperPluck(brightness = c) }, { s, c -> s.sndSuperPluck(brightness = c) }, { c -> sndSuperPluck(brightness = c) }, { m, c -> m.sndSuperPluck(brightness = c) },
+        k("sndSuperPluck.brightness", "sndSuperPluck(brightness = %s)", { it.soundName to it.ignitorParams?.get("brightness") }, { p, c -> p.sndSuperPluck(brightness = c) }, { s, c -> s.sndSuperPluck(brightness = c) }, { c -> sndSuperPluck(brightness = c) }, { m, c -> m.sndSuperPluck(brightness = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
-        k("sndSuperPluck.pickPosition", "sndSuperPluck(pickPosition = %s)", { it.soundName to it.oscParams?.get("pickPosition") }, { p, c -> p.sndSuperPluck(pickPosition = c) }, { s, c -> s.sndSuperPluck(pickPosition = c) }, { c -> sndSuperPluck(pickPosition = c) }, { m, c -> m.sndSuperPluck(pickPosition = c) },
+        k("sndSuperPluck.pickPosition", "sndSuperPluck(pickPosition = %s)", { it.soundName to it.ignitorParams?.get("pickPosition") }, { p, c -> p.sndSuperPluck(pickPosition = c) }, { s, c -> s.sndSuperPluck(pickPosition = c) }, { c -> sndSuperPluck(pickPosition = c) }, { m, c -> m.sndSuperPluck(pickPosition = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
-        k("sndSuperPluck.stiffness", "sndSuperPluck(stiffness = %s)", { it.soundName to it.oscParams?.get("stiffness") }, { p, c -> p.sndSuperPluck(stiffness = c) }, { s, c -> s.sndSuperPluck(stiffness = c) }, { c -> sndSuperPluck(stiffness = c) }, { m, c -> m.sndSuperPluck(stiffness = c) },
+        k("sndSuperPluck.stiffness", "sndSuperPluck(stiffness = %s)", { it.soundName to it.ignitorParams?.get("stiffness") }, { p, c -> p.sndSuperPluck(stiffness = c) }, { s, c -> s.sndSuperPluck(stiffness = c) }, { c -> sndSuperPluck(stiffness = c) }, { m, c -> m.sndSuperPluck(stiffness = c) },
             expected = listOf("superpluck" to 0.5, "superpluck" to 1.0), continuous = null),
     )
 
@@ -438,11 +441,11 @@ class LangDoorFormsSpec : StringSpec({
                 { it.comp(-20, 4, 6, 0.003, 0.1) }, { it.comp(-20, 4, 6, 0.003, 0.1) }, { comp(-20, 4, 6, 0.003, 0.1) }, { it.comp(-20, 4, 6, 0.003, 0.1) },
             ),
             Door(
-                "unison", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.oscParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
+                "unison", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
                 { it.unison(5, 0.3, 0.6) }, { it.unison(5, 0.3, 0.6) }, { unison(5, 0.3, 0.6) }, { it.unison(5, 0.3, 0.6) },
             ),
             Door(
-                "uni", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.oscParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
+                "uni", """5, 0.3, 0.6""", { listOf("voices", "spread", "panSpread").map { k -> it.ignitorParams?.get(k) } }, listOf(5.0, 0.3, 0.6),
                 { it.uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) }, { uni(5, 0.3, 0.6) }, { it.uni(5, 0.3, 0.6) },
             ),
             Door(
@@ -470,7 +473,7 @@ class LangDoorFormsSpec : StringSpec({
                 { it.vowel(0.4, "a", 0.2) }, { it.vowel(0.4, "a", 0.2) }, { vowel(0.4, "a", 0.2) }, { it.vowel(0.4, "a", 0.2) },
             ),
             Door(
-                "tremolo", """0.5, 4, "sine"""", { listOf(it.tremoloDepth, it.tremoloSync, it.tremoloShape) }, listOf(0.5, 4.0, "sine"),
+                "tremolo", """0.5, 4, "sine"""", { listOf(it.tremoloDepth, it.tremoloRate, it.tremoloShape) }, listOf(0.5, 4.0, "sine"),
                 { it.tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") }, { tremolo(0.5, 4, "sine") }, { it.tremolo(0.5, 4, "sine") },
             ),
             Door(
@@ -534,11 +537,11 @@ class LangDoorFormsSpec : StringSpec({
                 { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) }, { pamt(12, 0.01, 0.2, 0.25, 0.3) }, { it.pamt(12, 0.01, 0.2, 0.25, 0.3) },
             ),
             Door(
-                "sndPluck", """0.99, 0.8, 0.2, 0.3""", { listOf(it.soundName) + listOf("decay", "brightness", "pickPosition", "stiffness").map { k -> it.oscParams?.get(k) } }, listOf("pluck", 0.99, 0.8, 0.2, 0.3),
+                "sndPluck", """0.99, 0.8, 0.2, 0.3""", { listOf(it.soundName) + listOf("decay", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("pluck", 0.99, 0.8, 0.2, 0.3),
                 { it.sndPluck(0.99, 0.8, 0.2, 0.3) }, { it.sndPluck(0.99, 0.8, 0.2, 0.3) }, { sndPluck(0.99, 0.8, 0.2, 0.3) }, { it.sndPluck(0.99, 0.8, 0.2, 0.3) },
             ),
             Door(
-                "sndSuperPluck", """7, 0.3, 0.99, 0.8, 0.2, 0.1""", { listOf(it.soundName) + listOf("voices", "spread", "decay", "brightness", "pickPosition", "stiffness").map { k -> it.oscParams?.get(k) } }, listOf("superpluck", 7.0, 0.3, 0.99, 0.8, 0.2, 0.1),
+                "sndSuperPluck", """7, 0.3, 0.99, 0.8, 0.2, 0.1""", { listOf(it.soundName) + listOf("voices", "spread", "decay", "brightness", "pickPosition", "stiffness").map { k -> it.ignitorParams?.get(k) } }, listOf("superpluck", 7.0, 0.3, 0.99, 0.8, 0.2, 0.1),
                 { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) }, { it.sndSuperPluck(7, 0.3, 0.99, 0.8, 0.2, 0.1) },
             ),
         )

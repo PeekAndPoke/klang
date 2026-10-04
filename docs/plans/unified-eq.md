@@ -33,7 +33,7 @@ reduction (2–4× on the chain portion, larger on JS). Song: `src/commonMain/ko
 4. **Layered for reuse**: freq-agnostic `EqCore` (audio_be/filters, scalars + buffer + sampleRate;
    no Ignitor/IgniteContext/audio_bridge deps — Zig-port purity; mono, one instance per channel)
    so MasterFx.eq and the Katalyst DSL adopt the same machinery. Thin `EqIgnitor` adapter resolves
-   IgnitorDsl params per block — the only place `.highpass(freq = Osc.freq().mul(pHpTrack))` can
+   IgnitorDsl params per block — the only place `.highpass(freq = Ignitor.freq().mul(pHpTrack))` can
    exist. NOTE (round 1): coefficient *smoothing* (BaseSvf-style 32-sample ramp on cutoff change)
    is a class-surface convention the ignitor surface doesn't have — EqCore ships snap-only (parity
    with SvfIgnitor) with the API shaped so a ramp variant can be added; MasterFx.eq/Katalyst
@@ -474,7 +474,7 @@ house-consistent).
      predicate would recompute tan() for all sections every block, a pure regression silently
      attributed to the "+tracking hp" ladder rung.
 - Builder arm in `IgnitorDslRuntime.kt` after Notch (~:356).
-- Tests: `IgnitorDslRuntimeTest` arm + oscParams override; parity spec (deterministic sources —
+- Tests: `IgnitorDslRuntimeTest` arm + ignitorParams override; parity spec (deterministic sources —
   noise is unseeded): DSL chains vs hand-built Eq ULP-0 bit-equal incl. tracking-HP across several
   freqHz, sub-block render case, BELL 0 dB ≡ passthrough.
 
@@ -569,12 +569,12 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
 - KlangScript: `optimizer(self, on: Number = 1)` wraps self (included here — the switch is only
   useful if script-reachable).
 - Tests AT THIS STAGE (no rules exist yet): runtime output bit-equal with/without the marker;
-  codec round-trip (on = 0, non-default); StdLibOscTest dual-language. The "on=0 → rules don't
+  codec round-trip (on = 0, non-default); StdLibIgnitorTest dual-language. The "on=0 → rules don't
   fire / on=1 → rules fire" assertions move to D4c where rules exist.
 
 ### D4c — Rule R1: serial filter fusion + registry seam
 - **R1**: filter ∈ {Lowpass, Highpass, Bandpass, Notch} with `analog == Constant(0.0)` (a Param
-  analog NEVER fuses — oscp could enable saturation; verified: DSL and script defaults are
+  analog NEVER fuses — ignp could enable saturation; verified: DSL and script defaults are
   Constant(0.0), so the guitar chain fuses) whose ORIGINAL inner is refcount-1 and rewrites to an
   Eq → append section; or ORIGINAL inner is a refcount-1 fusible filter → new 2-section Eq.
   (No `passes` guard needed at D4c — the field does not exist until D6, and D6's same-commit
@@ -695,15 +695,14 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
   with identical names/defaults (parameter-parity rule).
 
 ### D5 (original scope) — KlangScript surface `.eq()` / `.band()`
-- `klangscript/.../stdlib/KlangScriptOscExtensions.kt`: `eq(self)` (idempotent wrap) and
+- `klangscript/.../stdlib/KlangScriptIgnitorExtensions.kt`: `eq(self)` (idempotent wrap) and
   `band(self, freq: IgnitorDslLike, q: IgnitorDslLike = 0.707, db: IgnitorDslLike = 0.0)` — all
   IgnitorDslLike (EqSection fields are IgnitorDsl); copy-onto existing Eq (the Adsr
   `declickSeconds` idiom) else wrap. NO alias: `@alias` is docs-only — a callable alias needs a
   second annotated function (the `warmth`/`onePoleLowpass` pattern); keep the surface minimal,
   no `bell()`. NO fold-in changes to existing filter methods. KDoc shows positional usage.
-- Tests: `StdLibOscTest` dual-language (band wraps / appends; eq idempotent). Update
-  `klangscript/ref/feature-catalog.md`. (A klangblocks round-trip row shipped with D5; the
-  block editor was removed 2026-08-23 and that row went with it.)
+- Tests: `StdLibIgnitorTest` dual-language (band wraps / appends; eq idempotent). Update
+  `klangscript/ref/feature-catalog.md`.
 
 ### D6 — `passes` on standalone Lowpass/Highpass
 - DSL: `val passes: Int = 1` (plain Int, structural). Builder: `repeat(passes.coerceAtLeast(1))`

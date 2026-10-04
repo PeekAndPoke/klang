@@ -30,7 +30,7 @@ fun String.levenshtein(other: String): Int {
  * Use this, not [levenshtein], for "did you mean" suggestions. Swapping two neighbouring letters
  * is the most common typing mistake there is, and plain Levenshtein scores it as two edits, which
  * pushes it past any threshold tight enough to be useful on short names. The motivating case:
- * `ocsp` for `oscp` scores 2 under Levenshtein and 1 here, so only this version can suggest it
+ * a transposed pair such as `ingp` for `ignp` scores 2 under Levenshtein and 1 here, so only this version can suggest it
  * without also suggesting unrelated names.
  *
  * "Optimal string alignment" is the restricted Damerau variant: it does not allow a substring to

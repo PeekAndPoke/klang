@@ -31,8 +31,8 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
     fun registry(): KlangDocsRegistry = KlangDocsRegistry().apply {
         register(
             KlangSymbol(
-                name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
-                variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
+                name = "Ignitor", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
+                variants = listOf(KlangProperty(name = "Ignitor", type = KlangType("Ignitor")))
             )
         )
         register(
@@ -46,7 +46,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
-                        name = "sine", receiver = KlangType("Osc"),
+                        name = "sine", receiver = KlangType("Ignitor"),
                         params = emptyList(), returnType = KlangType("IgnitorDsl")
                     )
                 )
@@ -154,9 +154,9 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── Parsed identifiers ──────────────────────────────────────────────
 
-    "parsed: Osc infers Osc" {
+    "parsed: Ignitor infers Ignitor" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc"))?.simpleName shouldBe "Osc"
+        inferrer.inferType(parseExpr("Ignitor"))?.simpleName shouldBe "Ignitor"
     }
 
     "parsed: Math infers Math" {
@@ -166,9 +166,9 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── Parsed method calls ─────────────────────────────────────────────
 
-    "parsed: Osc.sine() infers IgnitorDsl" {
+    "parsed: Ignitor.sine() infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     "parsed: Math.sqrt(16) infers Number" {
@@ -183,14 +183,14 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── Parsed call chains ──────────────────────────────────────────────
 
-    "parsed: Osc.sine().lowpass(1000) infers IgnitorDsl" {
+    "parsed: Ignitor.sine().lowpass(1000) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "parsed: Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5) infers IgnitorDsl" {
+    "parsed: Ignitor.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5)"))?.simpleName shouldBe "IgnitorDsl"
+        inferrer.inferType(parseExpr("Ignitor.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     "parsed: note(c3).gain(0.5) infers Pattern" {
@@ -200,8 +200,8 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── AstIndex integration: infer type of sub-expression at cursor ────
 
-    "AstIndex nodeAt + infer: find Osc.sine() in a chain and infer its type" {
-        val code = "Osc.sine().lowpass(1000)"
+    "AstIndex nodeAt + infer: find Ignitor.sine() in a chain and infer its type" {
+        val code = "Ignitor.sine().lowpass(1000)"
         val program = KlangScriptParser.parse(code)
         val astIndex = AstIndex.build(program, code)
         val inferrer = ExpressionTypeInferrer(registry())
@@ -211,8 +211,8 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         node shouldNotBe null
 
         // Walk up to find the MemberAccess or CallExpression
-        // At "sine", the node should be the Identifier "sine" or the MemberAccess Osc.sine
-        // The parent chain should reach CallExpression(Osc.sine(), [])
+        // At "sine", the node should be the Identifier "sine" or the MemberAccess Ignitor.sine
+        // The parent chain should reach CallExpression(Ignitor.sine(), [])
         var current: AstNode? = node
         var callExpr: CallExpression? = null
         while (current != null) {
@@ -223,18 +223,18 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             current = astIndex.parentOf(current)
         }
         callExpr shouldNotBe null
-        // This should be the inner CallExpression: Osc.sine()
+        // This should be the inner CallExpression: Ignitor.sine()
         // Infer its type
         inferrer.inferType(callExpr!!)?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "AstIndex nodeAt: infer type of node found inside Osc.sine() call" {
-        val code = "Osc.sine()"
+    "AstIndex nodeAt: infer type of node found inside Ignitor.sine() call" {
+        val code = "Ignitor.sine()"
         val program = KlangScriptParser.parse(code)
         val astIndex = AstIndex.build(program, code)
         val inferrer = ExpressionTypeInferrer(registry())
 
-        // Find the node at a position inside "Osc" (offset 1)
+        // Find the node at a position inside "Ignitor" (offset 1)
         val node = astIndex.nodeAt(1)
         node shouldNotBe null
 
@@ -401,7 +401,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
     }
 
     "AstIndex: detect MemberAccess for hover over lowpass in chain" {
-        val code = "Osc.sine().lowpass(1000)"
+        val code = "Ignitor.sine().lowpass(1000)"
         val program = KlangScriptParser.parse(code)
         val astIndex = AstIndex.build(program, code)
         val inferrer = ExpressionTypeInferrer(registry())

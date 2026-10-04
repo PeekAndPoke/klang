@@ -23,16 +23,16 @@ import * from "sprudel"
 
 // Blockflöte — more breath presence
 let blockfloete =
-    Osc.sine().mul(0.55)
-        .plus(Osc.triangle().mul(0.22))
-        .plus(Osc.saw().mul(0.03).lowpass(2500))
-        .plus(Osc.sine().detune(12).mul(0.08))
-        .plus(Osc.sine().detune(18.99).mul(0.04).adsr(0.001, 0.15, 0.01, 0.02))
-        .plus(Osc.sine().detune(24.01).mul(0.02).adsr(0.001, 0.1, 0.01, 0.01))
-        .plus(Osc.sine().detune(36.02).mul(0.01).adsr(0.001, 0.1, 0.01, 0.01))
-        .plus(Osc.pinknoise().mul(1.62).lowpass(4000).highpass(800).adsr(0.003, 0.05, 0.01, 0.005))
-        .plus(Osc.perlin(10).mul(0.035).lowpass(3500).highpass(1000))
-        .plus(Osc.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
+    Ign.sine().mul(0.55)
+        .plus(Ign.triangle().mul(0.22))
+        .plus(Ign.saw().mul(0.03).lowpass(2500))
+        .plus(Ign.sine().detune(12).mul(0.08))
+        .plus(Ign.sine().detune(18.99).mul(0.04).adsr(0.001, 0.15, 0.01, 0.02))
+        .plus(Ign.sine().detune(24.01).mul(0.02).adsr(0.001, 0.1, 0.01, 0.01))
+        .plus(Ign.sine().detune(36.02).mul(0.01).adsr(0.001, 0.1, 0.01, 0.01))
+        .plus(Ign.pinknoise().mul(1.62).lowpass(4000).highpass(800).adsr(0.003, 0.05, 0.01, 0.005))
+        .plus(Ign.perlin(10).mul(0.035).lowpass(3500).highpass(1000))
+        .plus(Ign.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
         .lowpass(3500, 0.8).highpass(300).onepole(3500)
         .vibrato(1/2, 0.1)
         // NOTE: `.analog(5)` was here and INERT (receiver was the Vibrato wrapper).
@@ -42,27 +42,27 @@ let blockfloete =
 
 // Guitar — more sustain and release
 let fingerpick =
-    Osc.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
-        .plus(Osc.sine().mul(0.12))
-        .plus(Osc.sine().detune(-12).mul(0.1))
+    Ign.pluck(x => x.decay(0.99).brightness(0.45).pickPosition(0.5))
+        .plus(Ign.sine().mul(0.12))
+        .plus(Ign.sine().detune(-12).mul(0.1))
         .lowpass(2800)
         .highpass(120)
         // NOTE: `.analog(3)` sat here and was INERT — the receiver was the Highpass
         // wrapper, and the old generic analog() silently returned it unchanged. Removed
-        // rather than moved: putting it on Osc.pluck(...) would ADD drift never heard.
+        // rather than moved: putting it on Ign.pluck(...) would ADD drift never heard.
         .adsr(0.003, 0.5, 0.5, 0.5)
         .classic()
 
 // Pizzicato contrabass
 let contrabass =
-  Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
+  Ign.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05))
     .pitchEnvelope(0.5, x => x.adsr(0.003, 0.02, 0, 0))
-    .plus(Osc.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
-    .plus(Osc.sine().detune(0.01).lowpass(200).mul(0.3).adsr(0.005, 0.6, 0.0, 0.15))
-    .plus(Osc.triangle().lowpass(1200).mul(0.15).adsr(0.005, 0.3, 0.0, 0.05))
-    .plus(Osc.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))
-    .plus(Osc.crackle(0.03).lowpass(1000).highpass(100).mul(0.008))
-    .lowpass(Osc.constant(300).plus(Osc.constant(1200).adsr(0.005, 0.2, 0.0, 0.05)))
+    .plus(Ign.pluck(x => x.decay(0.995).brightness(0.25).pickPosition(0.55).stiffness(0.05)).detune(0.05).mul(0.15))
+    .plus(Ign.sine().detune(0.01).lowpass(200).mul(0.3).adsr(0.005, 0.6, 0.0, 0.15))
+    .plus(Ign.triangle().lowpass(1200).mul(0.15).adsr(0.005, 0.3, 0.0, 0.05))
+    .plus(Ign.brownnoise().lowpass(600).mul(0.06).adsr(0.001, 0.04, 0.0, 0.01))
+    .plus(Ign.crackle(0.03).lowpass(1000).highpass(100).mul(0.008))
+    .lowpass(Ign.constant(300).plus(Ign.constant(1200).adsr(0.005, 0.2, 0.0, 0.05)))
     // NOTE: `.analog(2)` was here and INERT (receiver was the OnePoleLowpass wrapper).
     .highpass(30).onepole(600)
     .adsr(0.005, 0.5, 0.0, 0.15)

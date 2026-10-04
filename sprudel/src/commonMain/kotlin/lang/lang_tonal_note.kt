@@ -89,7 +89,7 @@ fun SprudelVoiceData.resolveNote(newIndex: Int? = null): SprudelVoiceData {
 private val noteMutation = voiceSetter { input ->
     val raw = input?.toString() ?: return@voiceSetter
     // `name:index[:gain]` form — mirrors soundMutation so `note("a:1")` works the
-    // same way as `s("bd:1")` for picking a variant via Osc.variants(...) /
+    // same way as `s("bd:1")` for picking a variant via Ignitor.variants(...) /
     // sample banks. Only split when [1] parses as an integer; otherwise leave
     // the string intact so non-numeric suffixes like "C4:minor" still resolve
     // through Tones.noteToFreq unchanged.

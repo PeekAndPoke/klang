@@ -121,14 +121,14 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
         names shouldContainExactlyInAnyOrder listOf(
-            "Osc", "OscSlot", "Math", "Object", "PI", "E", "Katalyst",
+            "Ignitor", "Ign", "Math", "Object", "PI", "E", "Katalyst", "Kat",
         )
     }
 
     "top-level: filtered prefix" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.topLevelCompletions("O").map { it.name }
-        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Object")
+        val names = provider.topLevelCompletions("K").map { it.name }
+        names shouldContainExactlyInAnyOrder listOf("Katalyst", "Kat")
     }
 
     "top-level: case-insensitive prefix" {
@@ -169,8 +169,8 @@ class CompletionProviderTest : StringSpec({
 
     "top-level: suggestions have correct kind for properties" {
         val provider = CompletionProvider(stdlibRegistry())
-        val osc = provider.topLevelCompletions("").first { it.name == "Osc" }
-        osc.kind shouldBe CompletionSuggestion.Kind.PROPERTY
+        val ignitor = provider.topLevelCompletions("").first { it.name == "Ignitor" }
+        ignitor.kind shouldBe CompletionSuggestion.Kind.PROPERTY
     }
 
     "top-level: suggestions have correct kind for functions" {
@@ -185,29 +185,29 @@ class CompletionProviderTest : StringSpec({
 
     "member: known receiver shows methods" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
+        val names = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
         names shouldHaveAtLeastSize 5
         names.toSet().containsAll(listOf("sine", "saw", "square", "triangle")) shouldBe true
     }
 
     "member: excludes other types' methods" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
+        val names = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
         names shouldNotContain "sqrt"
         names shouldNotContain "abs"
     }
 
     "member: excludes top-level symbols" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
-        names shouldNotContain "Osc"
+        val names = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
+        names shouldNotContain "Ignitor"
         names shouldNotContain "Math"
         names shouldNotContain "Object"
     }
 
     "member: prefix filters results" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("Osc"), "s").map { it.name }
+        val names = provider.memberCompletions(KlangType("Ignitor"), "s").map { it.name }
         names.all { it.startsWith("s", ignoreCase = true) } shouldBe true
         names.toSet().containsAll(listOf("sine", "saw", "square")) shouldBe true
     }
@@ -217,7 +217,7 @@ class CompletionProviderTest : StringSpec({
         provider.memberCompletions(KlangType("NonExistent"), "").shouldBeEmpty()
     }
 
-    "member: chain — IgnitorDsl methods after Osc.sine()" {
+    "member: chain — IgnitorDsl methods after Ignitor.sine()" {
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.memberCompletions(KlangType("IgnitorDsl"), "").map { it.name }
         names shouldHaveAtLeastSize 3
@@ -257,13 +257,13 @@ class CompletionProviderTest : StringSpec({
 
     "member: suggestion has correct kind FUNCTION" {
         val provider = CompletionProvider(stdlibRegistry())
-        val sine = provider.memberCompletions(KlangType("Osc"), "sine").first { it.name == "sine" }
+        val sine = provider.memberCompletions(KlangType("Ignitor"), "sine").first { it.name == "sine" }
         sine.kind shouldBe CompletionSuggestion.Kind.FUNCTION
     }
 
     "member: prefix matching nothing returns empty" {
         val provider = CompletionProvider(stdlibRegistry())
-        provider.memberCompletions(KlangType("Osc"), "xyz").shouldBeEmpty()
+        provider.memberCompletions(KlangType("Ignitor"), "xyz").shouldBeEmpty()
     }
 
     "member: Pattern methods from sprudel" {
@@ -272,30 +272,30 @@ class CompletionProviderTest : StringSpec({
         names.toSet().containsAll(listOf("gain", "pan", "adsr")) shouldBe true
     }
 
-    // ── Osc.slot chain (member-property + nested @Object) ────────────────
+    // ── Ignitor.slot chain (member-property + nested type extensions) ────
     //
-    // `Osc.slot` is an @KlangScript.Property whose type is OscSlot. Typing
-    // `Osc.slot.` should surface OscSlot's member properties (analog, voices, ...).
+    // `Ignitor.slot` is an @KlangScript.Property whose type is KlangScriptIgnitorSlots. Typing
+    // `Ignitor.slot.` should surface its member properties (analog, voices, ...).
 
-    "member: Osc shows slot property" {
+    "member: Ignitor shows slot property" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
+        val names = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
         names.contains("slot") shouldBe true
     }
 
-    "member: OscSlot shows all slot properties" {
+    "member: Ignitor.slot shows all slot properties" {
         val provider = CompletionProvider(stdlibRegistry())
-        val names = provider.memberCompletions(KlangType("OscSlot"), "").map { it.name }
+        val names = provider.memberCompletions(KlangType("KlangScriptIgnitorSlots"), "").map { it.name }
         names.toSet().containsAll(
             listOf("analog", "voices", "spread", "duty", "density", "decay", "brightness", "pickPosition", "stiffness", "rate")
         ) shouldBe true
     }
 
-    "member: OscSlot lookup by FQCN matches the same set" {
-        // The inferrer produces KlangType("OscSlot", fqcn="...KlangScriptOscSlot")
+    "member: Ignitor.slot lookup by FQCN matches the same set" {
+        // The inferrer produces KlangType("KlangScriptIgnitorSlots", fqcn="...KlangScriptIgnitorSlots")
         // — verifying FQCN-keyed lookup returns the same results as simpleName-only.
         val provider = CompletionProvider(stdlibRegistry())
-        val byFqcn = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot")
+        val byFqcn = KlangType("KlangScriptIgnitorSlots", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitorSlots")
         val names = provider.memberCompletions(byFqcn, "").map { it.name }
         names.toSet().containsAll(listOf("analog", "voices", "spread")) shouldBe true
     }
@@ -306,20 +306,20 @@ class CompletionProviderTest : StringSpec({
         // the real FQCN. FQCN-first matching must canonicalise both sides.
         val provider = CompletionProvider(stdlibRegistry())
         val crossModuleQuery = KlangType(
-            simpleName = "KlangScriptOscSlot",  // Kotlin simpleName — not the @Object script name
-            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
+            simpleName = "KlangScriptIgnitor",  // Kotlin simpleName — not the @Object script name "Ignitor"
+            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptIgnitor",
         )
         val names = provider.memberCompletions(crossModuleQuery, "").map { it.name }
-        names.toSet().containsAll(listOf("analog", "voices", "spread")) shouldBe true
+        names.toSet().containsAll(listOf("sine", "saw", "slot")) shouldBe true
     }
 
     "member: same-simpleName-different-FQCN must not bleed" {
-        // Two registered owners share the simpleName "OscSlot" but with different
+        // Two registered owners share the simpleName "KlangScriptIgnitorSlots" but with different
         // FQCNs — a query with a non-matching FQCN must miss.
         val provider = CompletionProvider(stdlibRegistry())
         val foreignFqcn = KlangType(
-            simpleName = "OscSlot",
-            fqcn = "com.example.imposter.OscSlot",
+            simpleName = "KlangScriptIgnitorSlots",
+            fqcn = "com.example.imposter.KlangScriptIgnitorSlots",
         )
         provider.memberCompletions(foreignFqcn, "").shouldBeEmpty()
     }
@@ -349,18 +349,18 @@ class CompletionProviderTest : StringSpec({
     "multi-lib: top-level from both libs visible" {
         val provider = CompletionProvider(multiLibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
-        // stdlib: Osc, Math, Object. sprudel: note, sound.
-        names.containsAll(listOf("Osc", "Math", "Object", "note", "sound")) shouldBe true
+        // stdlib: Ignitor, Math, Object. sprudel: note, sound.
+        names.containsAll(listOf("Ignitor", "Math", "Object", "note", "sound")) shouldBe true
     }
 
     "multi-lib: extension methods don't leak across receivers" {
         val provider = CompletionProvider(multiLibRegistry())
-        // Osc should NOT see Pattern methods (gain, pan from sprudel)
-        val oscNames = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
-        oscNames shouldNotContain "gain"
-        oscNames shouldNotContain "pan"
+        // Ignitor should NOT see Pattern methods (gain, pan from sprudel)
+        val ignitorNames = provider.memberCompletions(KlangType("Ignitor"), "").map { it.name }
+        ignitorNames shouldNotContain "gain"
+        ignitorNames shouldNotContain "pan"
 
-        // Pattern should NOT see Osc methods (sine, saw from stdlib)
+        // Pattern should NOT see Ignitor methods (sine, saw from stdlib)
         val patternNames = provider.memberCompletions(KlangType("Pattern"), "").map { it.name }
         patternNames shouldNotContain "sine"
         patternNames shouldNotContain "saw"
@@ -457,11 +457,11 @@ class CompletionProviderTest : StringSpec({
 
     "negative: empty registry — member returns empty" {
         val provider = CompletionProvider(emptyRegistry())
-        provider.memberCompletions(KlangType("Osc"), "").shouldBeEmpty()
+        provider.memberCompletions(KlangType("Ignitor"), "").shouldBeEmpty()
     }
 
     "negative: no methods registered for queried type" {
-        // Registry has Osc methods but we query a type that has nothing registered
+        // Registry has Ignitor methods but we query a type that has nothing registered
         val provider = CompletionProvider(stdlibRegistry())
         provider.memberCompletions(KlangType("CompletelyUnknownType"), "").shouldBeEmpty()
     }
@@ -492,7 +492,7 @@ class CompletionProviderTest : StringSpec({
     "negative: prefix uses startsWith, not contains" {
         val provider = CompletionProvider(stdlibRegistry())
         // "ine" should NOT match "sine" (startsWith, not contains)
-        provider.memberCompletions(KlangType("Osc"), "ine").shouldBeEmpty()
+        provider.memberCompletions(KlangType("Ignitor"), "ine").shouldBeEmpty()
     }
 
     "negative: member on type with zero registered variants" {
@@ -576,6 +576,6 @@ class CompletionProviderTest : StringSpec({
         names.contains("n") shouldBe true
         names.contains("s") shouldBe true
         // stdlib top-level should also be present
-        names.contains("Osc") shouldBe true
+        names.contains("Ignitor") shouldBe true
     }
 })

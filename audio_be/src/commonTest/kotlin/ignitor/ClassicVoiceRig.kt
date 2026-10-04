@@ -150,7 +150,7 @@ object ClassicVoiceRig {
         sampleRate: Int,
         sound: String = "saw",
         voice: VoiceData.() -> VoiceData = { this },
-    ): DoubleArray = render(base.copy(sound = sound, oscParams = bag.takeIf { it.isNotEmpty() }).voice(), sampleRate)
+    ): DoubleArray = render(base.copy(sound = sound, ignitorParams = bag.takeIf { it.isNotEmpty() }).voice(), sampleRate)
 
     fun firstMismatch(a: DoubleArray, b: DoubleArray): Int = a.indices.firstOrNull { a[it].toRawBits() != b[it].toRawBits() } ?: -1
 
@@ -235,10 +235,10 @@ object ClassicVoiceRig {
         ClassicRow("analog 2, hpf and lpf: the draw order (section 8)", mapOf("analog" to 2.0, "hpf.freq" to 300.0, "lpf.freq" to 1200.0)),
 
         // ── tremolo ──
-        ClassicRow("tremolo depth 0.5 sync 4", mapOf("tremolo.depth" to 0.5, "tremolo.sync" to 4.0)),
+        ClassicRow("tremolo depth 0.5 rate 4", mapOf("tremolo.depth" to 0.5, "tremolo.rate" to 4.0)),
         ClassicRow(
             "tremolo square",
-            mapOf("tremolo.depth" to 1.0, "tremolo.sync" to 3.3, "tremolo.shape" to LfoShapes.indexOf("square")),
+            mapOf("tremolo.depth" to 1.0, "tremolo.rate" to 3.3, "tremolo.shape" to LfoShapes.indexOf("square")),
         ),
 
         // ── the envelope ──
@@ -281,7 +281,7 @@ object ClassicVoiceRig {
             "coarse, hpf, lpf, tremolo and the envelope together",
             mapOf(
                 "coarse.amount" to 2.0, "hpf.freq" to 150.0, "lpf.freq" to 2500.0, "lpf.q" to 2.0,
-                "tremolo.depth" to 0.4, "tremolo.sync" to 6.0, "adsr.attack" to 0.02, "adsr.sustain" to 0.6, "adsr.release" to 0.1,
+                "tremolo.depth" to 0.4, "tremolo.rate" to 6.0, "adsr.attack" to 0.02, "adsr.sustain" to 0.6, "adsr.release" to 0.1,
             ),
         ),
         ClassicRow("crush and distort in the chain", mapOf("crush.amount" to 5.0, "distort.amount" to 0.4, "lpf.freq" to 3000.0)),

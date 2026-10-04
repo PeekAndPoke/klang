@@ -14,7 +14,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._mapNumericField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.putOscParam
+import io.peekandpoke.klang.sprudel.putIgnitorParam
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
@@ -130,11 +130,11 @@ fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 // -- pregain() --------------------------------------------------------------------------------------------------------
 
-private val pregainMutation = voiceSetter { putOscParam("pregain", it?.asDoubleOrNull()) }
+private val pregainMutation = voiceSetter { putIgnitorParam("pregain", it?.asDoubleOrNull()) }
 
 private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     args.singleMapperOrNull()?.let { mapper ->
-        return source._mapNumericField(mapper, read = { it.oscParams?.get("pregain") }, update = pregainMutation)
+        return source._mapNumericField(mapper, read = { it.ignitorParams?.get("pregain") }, update = pregainMutation)
     }
 
     return source._liftOrReinterpretNumericalField(args, pregainMutation)
@@ -145,7 +145,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * The other level word, and the only one that is not a fader. `gain` is the level the event LEAVES
  * at, after everything; `pregain` is the level the signal ARRIVES at inside the instrument, where
- * it meets whatever the instrument does to it. Exactly `oscparam("pregain", amount)`: it writes the
+ * it meets whatever the instrument does to it. Exactly `ignitorParam("pregain", amount)`: it writes the
  * `pregain` slot and nothing else.
  *
  * **It does what the instrument wires it to, and nothing otherwise.** An instrument that places the
@@ -177,7 +177,7 @@ private fun applyPregain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * "down" to mean "softer".
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * let amp = Ignitor.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3 g3 e3").sound(amp).pregain("1 0.6 1 0.4").gain(0.3)   // touch: harder notes dirtier
  * ```
  *
@@ -212,16 +212,16 @@ fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * How hard each event is played into its instrument, as a value other setters can read.
  *
  * Bare `pregain` reads what the chain has set so far, so it comes after whatever set the slot
- * (`pregain(...)`, `oscparam("pregain", ...)`). Call it, `pregain(...)`, to set the slot; a mapper
+ * (`pregain(...)`, `ignitorParam("pregain", ...)`). Call it, `pregain(...)`, to set the slot; a mapper
  * argument applies to the slot, and on an event that has none it does nothing, so set one first.
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * let amp = Ignitor.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3").sound(amp).pregain(1).pregain(mul("1 0.5")).gain(0.3)   // the second note softer in
  * ```
  *
  * ```KlangScript(Playable)
- * let amp = Osc.saw().pregain().distort(0.5).lowpass(2500).classic()
+ * let amp = Ignitor.saw().pregain().distort(0.5).lowpass(2500).classic()
  * note("c3 e3").sound(amp).pregain("1 0.5").gain(pregain.mul(0.3))      // and quieter out with it
  * ```
  *
@@ -231,7 +231,7 @@ fun String.pregain(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  */
 @KlangScript.Library("sprudel")
 @KlangScript.Object("pregain")
-object pregain : FieldAccessor({ it.oscParams?.get("pregain") }) {
+object pregain : FieldAccessor({ it.ignitorParams?.get("pregain") }) {
 
     /**
      * Creates a [PatternMapperFn] that sets how hard each event is played into its instrument.

@@ -20,7 +20,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   (`IgnitorDsl.endsInClassic()`); a tree without it plays bare: no doors, no default envelope.
 - **`classic()`** (`audio_bridge/.../IgnitorDslClassic.kt`): onepole, crush, coarse, distort, highpass,
   bandpass, notch, lowpass, tremolo, adsr. Its knobs are `<door>.<param>` slots the pattern fills through
-  `VoiceData.oscParams`; a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
+  `VoiceData.ignitorParams`; a stage at its off value is not built. Detail: `audio/ref/voice-synthesis.md`.
 - **The pitch stage stays outside the tree**: vibrato, accelerate, pitch envelope and FM in `voices/strip/pitch/`
   (moving in is `docs/tasks/future/pitch-pipeline-into-the-tree.md`).
 - **Voice lifetime** = gate end plus the tree's own release tail (`VoiceFactory.treeLifetime`, floored at 0;
@@ -151,7 +151,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   `docs/tasks/future/`). A wide rising compressor-threshold swing sits about 16 to 21 dB above its floor, a law
   decision left open (`docs/plans/knob-glide.md`).
 - **Voice and instruments, future**: `pitch-pipeline-into-the-tree.md`, `svf-resonator-class-collapse.md`,
-  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`, `tremolo-rate-naming-parity.md`,
+  `envelope-shape-followups.md`, `new-oscillators.md`, `onepole-highpass-door.md`,
   `cut-group-semantics.md`, `live-voice-modulation.md`, `soundfont-zone-selection.md`, `string-slot-readers.md`.
 - **Engine, future**: `ignitor-optimizer-open-items.md`, `optimize-affine-chain-fusion.md`,
   `optimize-constant-control-fast-path.md`, `audit-parked-decisions.md`, `worklet-clock-divergence.md`,
@@ -164,6 +164,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-10-04 The Ignitor/Katalyst naming: the wire field is `ignitorParams`, `SoundValue.Dsl` holds an inline tree,
+  Katalyst params are their own type, `KatalystDsl.Slots` builds `classic` (`docs/plans/ignitor-katalyst-naming.md`)
 - 2026-09-30 The reverb is one room for both ears (`CROSS_FEED` 0.5): [record](../docs/tasks-archive/2026-09/20260930-stereo-reverb.md)
 - 2026-09-29 The tremolo is composed from the oscillators (its own LFO removed, `skew`/`phase` gone, 16 ms edges, every depth floored at 0): [task](../docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md)
 - 2026-09-29 Filter drift is twice the pitch drift, by ear: [record](../docs/tasks-archive/2026-09/20260929-analog-drift-ratio-tuning.md)

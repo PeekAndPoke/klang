@@ -12,6 +12,7 @@ application.**
 | `application-skeleton.md` | NLnet form sections 1 to 9 as telegraph bullets with sources, `[ME]` and `[VERIFY]` marks |
 | `design-decisions-skeleton.md` | Chapters 0 to 9: decisions, iterations, evidence, rejected agent proposals |
 | `gaps.md` | Where evidence is thin, missing or contradictory, plus the urgent transcript backup |
+| `contributions-ledger.md` | What Klang contributed, each item labelled (domain transfer, design model, optimization, method, ...), with prior art, evidence and open checks (started 2026-10-04) |
 | `evidence/maintainer-messages.txt` | Every typed maintainer message, 2026-08-15 to 2026-09-24, deduplicated, UTC |
 | `evidence/maintainer-answers.md` | The maintainer's 72 answers to multiple-choice questions, with the agent's question |
 | `evidence/maintainer-quotes.md` | 125 curated quotes, IDs `[P1]` .. `[F4]`, each verified verbatim by script |

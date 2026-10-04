@@ -26,7 +26,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * `pregain` through the path a song actually takes: `VoiceData.oscParams` -> `IgnitorRegistry`
+ * `pregain` through the path a song actually takes: `VoiceData.ignitorParams` -> `IgnitorRegistry`
  * (which OPTIMIZES the registered tree) -> `VoiceFactory` -> `Voice.render` -> the orbit's mix bus.
  *
  * `PregainSlotRenderSpec` proves what the slot does to a hand-built tree. This one exists because
@@ -72,7 +72,7 @@ class VoicePregainWireSpec : StringSpec({
      * The registry is fresh per call and the phase pool is seeded, so two renders that should
      * agree draw the same numbers.
      */
-    fun renderMix(dsl: IgnitorDsl, oscParams: Map<String, Double>?, gain: Double? = null, blocks: Int = 4): DoubleArray {
+    fun renderMix(dsl: IgnitorDsl, ignitorParams: Map<String, Double>?, gain: Double? = null, blocks: Int = 4): DoubleArray {
         val registry = IgnitorRegistry().apply {
             registerDefaults()
             register("test-inst", dsl)
@@ -92,7 +92,7 @@ class VoicePregainWireSpec : StringSpec({
             data = VoiceData.empty.copy(
                 freqHz = 220.0,
                 sound = "test-inst",
-                oscParams = oscParams,
+                ignitorParams = ignitorParams,
                 gain = gain,
             ),
             startTime = 0.0,

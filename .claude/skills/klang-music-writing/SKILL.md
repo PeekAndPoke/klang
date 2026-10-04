@@ -1,7 +1,7 @@
 # Klang Music Writing — Skill Dispatcher
 
 Use when: writing music patterns, composing beats/melodies, creating instruments, sound design,
-or any task involving sprudel patterns or the Osc/Ignitor DSL.
+or any task involving sprudel patterns or the Ignitor DSL.
 
 Trigger: "write music", "create an instrument", "compose", "make a beat", "klang-music-writing",
 "sound design", "pattern", "melody", "chord progression"

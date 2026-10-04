@@ -1,5 +1,10 @@
 # Sprudel: `beats(n)`, a tempo-following duration in seconds
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 Status: **DONE 2026-10-01.** Asked for by the maintainer after `delay("1/8".div(cps))` turned out to
 be a slow-down by 8 in mini-notation, not a fraction.
 
@@ -38,7 +43,8 @@ s("bd sd sd").delay(0.3, beats(1, 3), 0.4)     // three beats to the cycle
 - **A rate twin for the LFO doors.** `beats` is a duration. `tremolo`'s `sync` is a rate in Hz, so
   `tremolo(0.6, beats(0.5))` gives 0.25 Hz at 120 bpm, not a wobble every half beat; that needs
   `pure(1).div(beats(0.5))`. A rate helper (name open) is the next step if the maintainer wants it.
-- `cycles(n)` (`n / cps`), discussed alongside, not asked for yet.
+- `cycles(n)` (`n / cps`): not built (maintainer, 2026-10-03). It is `beats(n, 1)`, one beat to the cycle, and
+  `late` / `early` take cycles already; a second name for the same thing waits until someone misses it.
 
 ## Also in this change
 

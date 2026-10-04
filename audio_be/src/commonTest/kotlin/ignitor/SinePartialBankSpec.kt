@@ -27,7 +27,7 @@ import kotlin.random.Random
  * `octaves`, `suboctaves`, `fundamental` and `analogSpread`, rendered by `Ignitors.sinePartials`.
  *
  * The contract pinned here: the bank renders the SAME partials as the hand-rolled
- * `Osc.sine().add(Osc.sine(freq * k).mul(1/k))` stacks (the golden tests build those trees from
+ * `Ignitor.sine().add(Ignitor.sine(freq * k).mul(1/k))` stacks (the golden tests build those trees from
  * the DSL and compare per sample), the literal defaults still build the plain sine, partials at
  * Nyquist are silent, knobs are read per block, and the drift lanes follow the `analogSpread`
  * blend against a test-side reference model.
@@ -88,7 +88,7 @@ class SinePartialBankSpec : StringSpec({
 
     fun sum(vararg parts: Ignitor): Ignitor = parts.reduce { acc, p -> acc + p }
 
-    /** `Osc.sine(freq = Osc.freq().mul(k)).mul(g)` as the song writes it, on the DSL. */
+    /** `Ignitor.sine(freq = Ignitor.freq().mul(k)).mul(g)` as the song writes it, on the DSL. */
     fun dslPartial(k: Double, g: Double): IgnitorDsl =
         IgnitorDsl.Sine(freq = IgnitorDsl.Freq.mul(IgnitorDsl.Constant(k))).mul(IgnitorDsl.Constant(g))
 

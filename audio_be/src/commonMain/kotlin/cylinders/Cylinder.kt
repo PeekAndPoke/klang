@@ -363,7 +363,7 @@ class Cylinder(
 
             // EVERY chain resolves EVERY knob from the owner's param state, the born-with one
             // included (step 5b-1): one way for a bus knob to reach a stage (the voice's bus
-            // fields left the wire in step 5b-3). The rule's one home is the `katp` door's KDoc in
+            // fields left the wire in step 5b-3). The rule's one home is the `katalystParam` door's KDoc in
             // `sprudel/lang/lang_katalyst.kt`.
             //
             // The state is READ THROUGH THE LEASE and never copied into this cylinder: it is the

@@ -68,14 +68,14 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
         for (name in spellings) {
             withClue(name) {
-                ks("""Osc.saw().tremolo(4, 0.5, x => x.shape("$name"))""").knobs() shouldBe
+                ks("""Ignitor.saw().tremolo(4, 0.5, x => x.shape("$name"))""").knobs() shouldBe
                         saw.tremolo(4.0, 0.5, shape = name).knobs()
             }
         }
     }
 
     "tremolo: the bare door is the sine on both doors, and the node's own default" {
-        val script = ks("Osc.saw().tremolo(4, 0.5)").knobs()
+        val script = ks("Ignitor.saw().tremolo(4, 0.5)").knobs()
 
         script shouldBe saw.tremolo(4.0, 0.5).knobs()
         script shouldBe IgnitorDsl.Tremolo(inner = saw, rate = c(4.0), depth = c(0.5)).knobs()
@@ -85,32 +85,19 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
     "tremolo: the builder's one knob writes its own field and nothing else" {
         val bare = saw.tremolo(4.0, 0.5).knobs()
 
-        ks("""Osc.saw().tremolo(4, 0.5, x => x.shape("ramp"))""").knobs() shouldBe bare + ("shape" to c(LfoShapes.indexOf("ramp")))
+        ks("""Ignitor.saw().tremolo(4, 0.5, x => x.shape("ramp"))""").knobs() shouldBe bare + ("shape" to c(LfoShapes.indexOf("ramp")))
     }
 
     "tremolo: the shape knob takes an index as a number and a slot as itself" {
-        ks("Osc.saw().tremolo(4, 0.5, x => x.shape(2))").knobs()["shape"] shouldBe c(2.0)
-        ks("""Osc.saw().tremolo(4, 0.5, x => x.shape(Osc.param("ts", 3)))""").knobs()["shape"] shouldBe IgnitorDsl.Param("ts", 3.0)
-    }
-
-    "tremolo: skew and phase are gone from both doors" {
-        // The script builder refuses them; the node, which the Kotlin door builds, has no such field.
-        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.skew(0.3))") }
-        shouldThrowAny { ks("Osc.saw().tremolo(4, 0.5, x => x.phase(0.25))") }
-
-        val node = saw.tremolo(4.0, 0.5, shape = "square").toString()
-
-        withClue(node) {
-            node.contains("skew") shouldBe false
-            node.contains("phase") shouldBe false
-        }
+        ks("Ignitor.saw().tremolo(4, 0.5, x => x.shape(2))").knobs()["shape"] shouldBe c(2.0)
+        ks("""Ignitor.saw().tremolo(4, 0.5, x => x.shape(Ignitor.param("ts", 3)))""").knobs()["shape"] shouldBe IgnitorDsl.Param("ts", 3.0)
     }
 
     "tremolo: named door arguments, and a configure lambda that returns nothing is refused" {
-        ks("""Osc.saw().tremolo(rate = 4, depth = 0.5, configure = x => x.shape("tri"))""").knobs() shouldBe
+        ks("""Ignitor.saw().tremolo(rate = 4, depth = 0.5, configure = x => x.shape("tri"))""").knobs() shouldBe
                 saw.tremolo(4.0, 0.5, shape = "tri").knobs()
 
-        shouldThrowAny { ks("""Osc.saw().tremolo(4, 0.5, x => { x.shape("tri") })""") }
+        shouldThrowAny { ks("""Ignitor.saw().tremolo(4, 0.5, x => { x.shape("tri") })""") }
     }
 
     // ── shape ────────────────────────────────────────────────────────────────────────────────────
@@ -120,8 +107,8 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
         for (name in spellings) {
             withClue(name) {
-                ks("""Osc.saw().shape("$name")""").knobs() shouldBe saw.shape(name).knobs()
-                ks("""Osc.saw().shape("$name", 4)""").knobs() shouldBe saw.shape(name, 4).knobs()
+                ks("""Ignitor.saw().shape("$name")""").knobs() shouldBe saw.shape(name).knobs()
+                ks("""Ignitor.saw().shape("$name", 4)""").knobs() shouldBe saw.shape(name, 4).knobs()
             }
         }
     }
@@ -129,14 +116,14 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
     "shape: the bare door, and a named factor with the shape omitted, default to soft on both doors" {
         // The named call skips `shape`, so it only works if the script door's default is a safe
         // literal the KSP turns into a thunk (the Slots-default guardrail).
-        ks("Osc.saw().shape()").knobs() shouldBe saw.shape().knobs()
-        ks("Osc.saw().shape(oversample = 4)").knobs() shouldBe saw.shape(oversample = 4).knobs()
-        ks("Osc.saw().shape()").knobs() shouldBe IgnitorDsl.Shape(inner = saw).knobs()
+        ks("Ignitor.saw().shape()").knobs() shouldBe saw.shape().knobs()
+        ks("Ignitor.saw().shape(oversample = 4)").knobs() shouldBe saw.shape(oversample = 4).knobs()
+        ks("Ignitor.saw().shape()").knobs() shouldBe IgnitorDsl.Shape(inner = saw).knobs()
     }
 
     "shape: the script door takes the index as a number and either knob as a slot" {
-        ks("Osc.saw().shape(10, 2)").knobs() shouldBe mapOf("shape" to c(10.0), "oversample" to c(2.0))
-        ks("""Osc.saw().shape(Osc.param("sh", 1), Osc.param("os", 4))""").knobs() shouldBe
+        ks("Ignitor.saw().shape(10, 2)").knobs() shouldBe mapOf("shape" to c(10.0), "oversample" to c(2.0))
+        ks("""Ignitor.saw().shape(Ignitor.param("sh", 1), Ignitor.param("os", 4))""").knobs() shouldBe
                 mapOf("shape" to IgnitorDsl.Param("sh", 1.0), "oversample" to IgnitorDsl.Param("os", 4.0))
     }
 
@@ -147,17 +134,17 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
         for (name in spellings) {
             withClue(name) {
-                ks("""Osc.saw().distort(0.5, "$name", 2)""").distortKnobs() shouldBe saw.distort(0.5, name, 2).distortKnobs()
-                ks("""Osc.saw().distort(0.5, "$name")""").distortKnobs() shouldBe saw.distort(0.5, name).distortKnobs()
+                ks("""Ignitor.saw().distort(0.5, "$name", 2)""").distortKnobs() shouldBe saw.distort(0.5, name, 2).distortKnobs()
+                ks("""Ignitor.saw().distort(0.5, "$name")""").distortKnobs() shouldBe saw.distort(0.5, name).distortKnobs()
             }
         }
     }
 
     "distort: the bare door and a named factor default to soft on both doors; the number and slot forms reach the node" {
-        ks("Osc.saw().distort(0.5)").distortKnobs() shouldBe saw.distort(0.5).distortKnobs()
-        ks("Osc.saw().distort(amount = 0.5, oversample = 4)").distortKnobs() shouldBe saw.distort(0.5, oversample = 4).distortKnobs()
+        ks("Ignitor.saw().distort(0.5)").distortKnobs() shouldBe saw.distort(0.5).distortKnobs()
+        ks("Ignitor.saw().distort(amount = 0.5, oversample = 4)").distortKnobs() shouldBe saw.distort(0.5, oversample = 4).distortKnobs()
 
-        ks("""Osc.saw().distort(0.5, 13, Osc.param("os", 2))""").distortKnobs() shouldBe
+        ks("""Ignitor.saw().distort(0.5, 13, Ignitor.param("os", 2))""").distortKnobs() shouldBe
                 mapOf("shape" to c(13.0), "oversample" to IgnitorDsl.Param("os", 2.0), "amount" to c(0.5))
     }
 })

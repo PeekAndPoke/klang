@@ -1,6 +1,6 @@
 # Instrument Prototypes — IgnitorDsl
 
-A collection of instrument designs built with the Osc DSL.
+A collection of instrument designs built with the Ignitor DSL.
 These are starting points — tweak parameters to taste.
 
 ## Woodwinds
@@ -8,15 +8,15 @@ These are starting points — tweak parameters to taste.
 ### Flute
 
 ```javascript
-let flute = Osc.sine(x => x.analog(0.15))
-        .plus(Osc.triangle(x => x.analog(0.15)).mul(0.3))
+let flute = Ignitor.sine(x => x.analog(0.15))
+        .plus(Ignitor.triangle(x => x.analog(0.15)).mul(0.3))
         .plus(
-            Osc.perlin(12).mul(0.2)
+            Ignitor.perlin(12).mul(0.2)
                 .lowpass(4000)
                 .highpass(800)
                 .adsr(0.01, 0.12, 0.02, 0.01)
         )
-        .plus(Osc.perlin(8).mul(0.05))
+        .plus(Ignitor.perlin(8).mul(0.05))
         .lowpass(3000)
         .highpass(400)
         .vibrato(4.5, 0.012)
@@ -27,12 +27,12 @@ let flute = Osc.sine(x => x.analog(0.15))
 ### Clarinet
 
 ```javascript
-let clarinet = Osc.triangle().mul(0.7)
-        .plus(Osc.square().mul(0.15))
-        .plus(Osc.sine().mul(0.15))
-        .plus(Osc.perlin(6).mul(0.02))
+let clarinet = Ignitor.triangle().mul(0.7)
+        .plus(Ignitor.square().mul(0.15))
+        .plus(Ignitor.sine().mul(0.15))
+        .plus(Ignitor.perlin(6).mul(0.02))
         .plus(
-            Osc.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01)
+            Ignitor.perlin(10).mul(0.08).adsr(0.02, 0.1, 0.0, 0.01)
         )
         .lowpass(2800)
         .highpass(150)
@@ -45,12 +45,12 @@ let clarinet = Osc.triangle().mul(0.7)
 ### Jazz Clarinet
 
 ```javascript
-let jazzClar = Osc.triangle().mul(0.6)
-        .plus(Osc.square().mul(0.25))
-        .plus(Osc.sine().mul(0.15))
-        .plus(Osc.perlin(8).mul(0.03))
+let jazzClar = Ignitor.triangle().mul(0.6)
+        .plus(Ignitor.square().mul(0.25))
+        .plus(Ignitor.sine().mul(0.15))
+        .plus(Ignitor.perlin(8).mul(0.03))
         .plus(
-            Osc.perlin(12).mul(0.1).adsr(0.02, 0.12, 0.0, 0.01)
+            Ignitor.perlin(12).mul(0.1).adsr(0.02, 0.12, 0.0, 0.01)
         )
         .lowpass(3500)
         .highpass(150)
@@ -62,12 +62,12 @@ let jazzClar = Osc.triangle().mul(0.6)
 ### Alto Saxophone
 
 ```javascript
-let alto = Osc.square().mul(0.6)
-        .plus(Osc.saw().mul(0.3))
-        .plus(Osc.sine().mul(0.1))
-        .plus(Osc.perlin(10).mul(0.04))
+let alto = Ignitor.square().mul(0.6)
+        .plus(Ignitor.saw().mul(0.3))
+        .plus(Ignitor.sine().mul(0.1))
+        .plus(Ignitor.perlin(10).mul(0.04))
         .plus(
-            Osc.perlin(15).mul(0.12).adsr(0.02, 0.15, 0.0, 0.01)
+            Ignitor.perlin(15).mul(0.12).adsr(0.02, 0.15, 0.0, 0.01)
         )
         .lowpass(3500)
         .highpass(200)
@@ -79,12 +79,12 @@ let alto = Osc.square().mul(0.6)
 ### Tenor Saxophone
 
 ```javascript
-let tenor = Osc.square().mul(0.5)
-        .plus(Osc.saw().mul(0.4))
-        .plus(Osc.sine().mul(0.1))
-        .plus(Osc.perlin(8).mul(0.05))
+let tenor = Ignitor.square().mul(0.5)
+        .plus(Ignitor.saw().mul(0.4))
+        .plus(Ignitor.sine().mul(0.1))
+        .plus(Ignitor.perlin(8).mul(0.05))
         .plus(
-            Osc.perlin(12).mul(0.15).adsr(0.02, 0.2, 0.0, 0.01)
+            Ignitor.perlin(12).mul(0.15).adsr(0.02, 0.2, 0.0, 0.01)
         )
         .lowpass(2500)
         .highpass(120)
@@ -96,12 +96,12 @@ let tenor = Osc.square().mul(0.5)
 ### Soprano Saxophone
 
 ```javascript
-let soprano = Osc.square().mul(0.5)
-        .plus(Osc.saw().mul(0.35))
-        .plus(Osc.sine().mul(0.15))
-        .plus(Osc.perlin(12).mul(0.03))
+let soprano = Ignitor.square().mul(0.5)
+        .plus(Ignitor.saw().mul(0.35))
+        .plus(Ignitor.sine().mul(0.15))
+        .plus(Ignitor.perlin(12).mul(0.03))
         .plus(
-            Osc.perlin(18).mul(0.1).adsr(0.01, 0.1, 0.0, 0.01)
+            Ignitor.perlin(18).mul(0.1).adsr(0.01, 0.1, 0.0, 0.01)
         )
         .lowpass(5000)
         .highpass(300)
@@ -115,7 +115,7 @@ let soprano = Osc.square().mul(0.5)
 ### Acoustic Guitar
 
 ```javascript
-let acoustic = Osc.pluck()
+let acoustic = Ignitor.pluck()
         .highpass(80)
         .lowpass(4000)
 ```
@@ -123,9 +123,9 @@ let acoustic = Osc.pluck()
 ### Steel String
 
 ```javascript
-let steel = Osc.pluck()
-        .lowpass(Osc.constant(5000).plus(
-            Osc.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)
+let steel = Ignitor.pluck()
+        .lowpass(Ignitor.constant(5000).plus(
+            Ignitor.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)
         ))
         .highpass(100)
 ```
@@ -133,7 +133,7 @@ let steel = Osc.pluck()
 ### Nylon (Classical)
 
 ```javascript
-let nylon = Osc.pluck()
+let nylon = Ignitor.pluck()
         .lowpass(2000)
         .onepole(3000)
         .highpass(80)
@@ -142,9 +142,9 @@ let nylon = Osc.pluck()
 ### 12-String
 
 ```javascript
-let twelve = Osc.superpluck()
-        .lowpass(Osc.constant(4000).plus(
-            Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
+let twelve = Ignitor.superpluck()
+        .lowpass(Ignitor.constant(4000).plus(
+            Ignitor.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
         ))
         .highpass(100)
 ```
@@ -152,7 +152,7 @@ let twelve = Osc.superpluck()
 ### Electric Clean
 
 ```javascript
-let electric = Osc.pluck()
+let electric = Ignitor.pluck()
         .lowpass(6000)
         .highpass(200)
         .phaser(0.3, 0.3)
@@ -161,7 +161,7 @@ let electric = Osc.pluck()
 ### Electric Distorted
 
 ```javascript
-let crunch = Osc.pluck()
+let crunch = Ignitor.pluck()
         .lowpass(8000)
         .distort(0.6)
         .lowpass(4000)
@@ -173,8 +173,8 @@ let crunch = Osc.pluck()
 ### Fat Analog Pad
 
 ```javascript
-let fatpad = Osc.supersaw(x => x.analog(0.3))
-        .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
+let fatpad = Ignitor.supersaw(x => x.analog(0.3))
+        .lowpass(Ignitor.sine(0.3).plus(1).times(1000).plus(1500))
         .adsr(0.2, 0.5, 0.7, 1.0)
 ```
 
@@ -183,15 +183,15 @@ let fatpad = Osc.supersaw(x => x.analog(0.3))
 ### Plucky Bass
 
 ```javascript
-let bass = Osc.saw()
-        .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
+let bass = Ignitor.saw()
+        .lowpass(Ignitor.param("cutoff", 800, "filter cutoff"))
         .adsr(0.005, 0.2, 0.0, 0.05)
 ```
 
 ### Bitcrushed Lead
 
 ```javascript
-let crunchlead = Osc.square()
+let crunchlead = Ignitor.square()
         .crush(6)
         .lowpass(3000)
         .adsr(0.01, 0.1, 0.8, 0.3)
@@ -207,18 +207,18 @@ whatever the name suggests; by ear (maintainer, 2026-10-02, listening pair 84): 
 90s". Kept as its own instrument.
 
 ```javascript
-let glock = Osc.sine().mul(0.5)
-        .plus(Osc.sine().detune(19.02).mul(0.3))
-        .plus(Osc.sine().detune(27.86).mul(0.15))
-        .plus(Osc.sine().detune(31.02).mul(0.1))
+let glock = Ignitor.sine().mul(0.5)
+        .plus(Ignitor.sine().detune(19.02).mul(0.3))
+        .plus(Ignitor.sine().detune(27.86).mul(0.15))
+        .plus(Ignitor.sine().detune(31.02).mul(0.1))
         .plus(
-            Osc.whitenoise()
+            Ignitor.whitenoise()
                 .highpass(6000)
                 .mul(0.15)
                 .adsr(0.001, 0.02, 0.0, 0.005)
         )
-        .lowpass(Osc.constant(8000).plus(
-            Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)
+        .lowpass(Ignitor.constant(8000).plus(
+            Ignitor.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)
         ))
         .adsr(0.001, 1.5, 0.0, 0.3)
 ```
@@ -230,25 +230,25 @@ inharmonic for real. By ear (maintainer, 2026-10-02, pair 84): "more metallic". 
 partials; the bar's next mode, 8.933 times (`detune(37.89)`), is the natural third if one is wanted, not yet heard.
 
 ```javascript
-let glockBar = Osc.sine().mul(0.5)
-        .plus(Osc.sine().detune(17.55).mul(0.3))
-        .plus(Osc.sine().detune(29.21).mul(0.15))
-        .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
-        .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
+let glockBar = Ignitor.sine().mul(0.5)
+        .plus(Ignitor.sine().detune(17.55).mul(0.3))
+        .plus(Ignitor.sine().detune(29.21).mul(0.15))
+        .plus(Ignitor.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
+        .lowpass(Ignitor.constant(8000).plus(Ignitor.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
         .adsr(0.001, 1.5, 0.0, 0.3)
 ```
 
 ### Celesta
 
 ```javascript
-let celesta = Osc.sine().mul(0.6)
-        .plus(Osc.sine().detune(19.02).mul(0.2))
-        .plus(Osc.sine().detune(27.86).mul(0.08))
+let celesta = Ignitor.sine().mul(0.6)
+        .plus(Ignitor.sine().detune(19.02).mul(0.2))
+        .plus(Ignitor.sine().detune(27.86).mul(0.08))
         .plus(
-            Osc.perlin(20).mul(0.05).adsr(0.005, 0.03, 0.0, 0.01)
+            Ignitor.perlin(20).mul(0.05).adsr(0.005, 0.03, 0.0, 0.01)
         )
-        .lowpass(Osc.constant(5000).plus(
-            Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
+        .lowpass(Ignitor.constant(5000).plus(
+            Ignitor.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
         ))
         .onepole(6000)
         .adsr(0.005, 1.2, 0.0, 0.4)
@@ -257,11 +257,11 @@ let celesta = Osc.sine().mul(0.6)
 ### Music Box
 
 ```javascript
-let musicbox = Osc.sine().mul(0.6)
-        .plus(Osc.sine().detune(12).mul(0.3))
-        .plus(Osc.sine().detune(24).mul(0.1))
+let musicbox = Ignitor.sine().mul(0.6)
+        .plus(Ignitor.sine().detune(12).mul(0.3))
+        .plus(Ignitor.sine().detune(24).mul(0.1))
         .plus(
-            Osc.whitenoise()
+            Ignitor.whitenoise()
                 .highpass(10000)
                 .mul(0.1)
                 .adsr(0.001, 0.01, 0.0, 0.005)
@@ -273,24 +273,24 @@ let musicbox = Osc.sine().mul(0.6)
 ### FM Bell
 
 ```javascript
-let bell = Osc.sine().fm(Osc.sine(), 2.3, 400)
+let bell = Ignitor.sine().fm(Ignitor.sine(), 2.3, 400)
         .adsr(0.001, 1.5, 0.0, 0.5)
 ```
 
 ### Marimba
 
 ```javascript
-let marimba = Osc.sine().mul(0.7)
+let marimba = Ignitor.sine().mul(0.7)
         .plus(
-            Osc.sine().detune(12).mul(0.15)
+            Ignitor.sine().detune(12).mul(0.15)
                 .adsr(0.001, 0.08, 0.0, 0.02)
         )
         .plus(
-            Osc.sine().detune(19.02).mul(0.08)
+            Ignitor.sine().detune(19.02).mul(0.08)
                 .adsr(0.001, 0.04, 0.0, 0.01)
         )
         .plus(
-            Osc.perlin(15).mul(0.12)
+            Ignitor.perlin(15).mul(0.12)
                 .lowpass(1500)
                 .highpass(200)
                 .adsr(0.001, 0.03, 0.0, 0.005)
@@ -304,13 +304,13 @@ let marimba = Osc.sine().mul(0.7)
 ### Low Marimba
 
 ```javascript
-let lowMarimba = Osc.sine().mul(0.8)
+let lowMarimba = Ignitor.sine().mul(0.8)
         .plus(
-            Osc.sine().detune(12).mul(0.1)
+            Ignitor.sine().detune(12).mul(0.1)
                 .adsr(0.001, 0.1, 0.0, 0.02)
         )
         .plus(
-            Osc.perlin(10).mul(0.1)
+            Ignitor.perlin(10).mul(0.1)
                 .lowpass(800)
                 .adsr(0.001, 0.04, 0.0, 0.005)
         )
@@ -323,11 +323,11 @@ let lowMarimba = Osc.sine().mul(0.8)
 ### Vibraphone
 
 ```javascript
-let vibes = Osc.sine().mul(0.5)
-        .plus(Osc.sine().detune(19.02).mul(0.25))
-        .plus(Osc.sine().detune(27.86).mul(0.12))
+let vibes = Ignitor.sine().mul(0.5)
+        .plus(Ignitor.sine().detune(19.02).mul(0.25))
+        .plus(Ignitor.sine().detune(27.86).mul(0.12))
         .plus(
-            Osc.whitenoise()
+            Ignitor.whitenoise()
                 .highpass(4000)
                 .mul(0.06)
                 .adsr(0.001, 0.02, 0.0, 0.005)
@@ -342,7 +342,7 @@ let vibes = Osc.sine().mul(0.5)
 ### Hi-Hat
 
 ```javascript
-let hat = Osc.whitenoise()
+let hat = Ignitor.whitenoise()
         .highpass(8000)
         .adsr(0.001, 0.05, 0.0, 0.01)
 ```
@@ -371,7 +371,7 @@ note("[c3,g3,c4,e4,g4]").s("supersaw").lpf(3000).adsr(0.4, 0.1, 1.0, 1.0).analog
 
 What makes it: the high `analog(10)` (pitch drift on each saw, and the cutoff drifting with it), the resonant
 lowpass at 700 Hz with `q = 6`, and the slow attack and long release. As an instrument, the natural shape is
-`Osc.saw()` (or a few detuned saws) with `analog`, a `lowpass(700, 6)` and `.classic()` last, so a pattern can still
+`Ignitor.saw()` (or a few detuned saws) with `analog`, a `lowpass(700, 6)` and `.classic()` last, so a pattern can still
 move the cutoff.
 
 ## Design Principles
@@ -389,8 +389,8 @@ move the cutoff.
 
 ### Common techniques
 
-- **Breath noise on attack**: `Osc.perlin(rate).mul(amount).adsr(fast attack, short decay, 0, short release)`
-- **Filter envelope**: `lowpass(Osc.constant(base).plus(Osc.constant(sweep).adsr(...)))`
+- **Breath noise on attack**: `Ignitor.perlin(rate).mul(amount).adsr(fast attack, short decay, 0, short release)`
+- **Filter envelope**: `lowpass(Ignitor.constant(base).plus(Ignitor.constant(sweep).adsr(...)))`
 - **Per-partial envelopes**: each overtone gets its own ADSR (higher partials decay faster)
 - **Pitch scoop**: `pitchEnvelope(semitones, x => x.adsr(attack, decay, 0, 0))`: negative for sax (scoop up), positive for mallet (pitch
   drop)

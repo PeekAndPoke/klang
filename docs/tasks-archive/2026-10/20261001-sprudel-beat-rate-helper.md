@@ -1,5 +1,10 @@
 # Sprudel: `beatRate(n, base = 4)`, a tempo-following rate in Hz
 
+> **Later (2026-10-03):** the sprudel tremolo's `sync` is `rate` on every surface (`tremolo(depth, rate, shape)`,
+> the reader `tremolo.rate`, the slot key `tremolo.rate`), see
+> `docs/tasks-archive/2026-10/20261003-tremolo-rate-naming-parity.md`. Sprudel no longer mirrors Strudel
+> (`sprudel/README.MD`), so Strudel's `tremolosync` is no reason to bring the old name back.
+
 Status: **DONE 2026-10-01.** The rate twin of `beats`
 (`docs/tasks-archive/2026-10/20261001-sprudel-beats-helper.md`), asked for by the maintainer the same day.
 

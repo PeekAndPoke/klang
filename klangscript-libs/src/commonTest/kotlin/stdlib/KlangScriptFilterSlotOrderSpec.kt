@@ -33,24 +33,24 @@ class KlangScriptFilterSlotOrderSpec : StringSpec({
 
     "the third slot is the lambda: a number there is refused on all four filters" {
         for (door in listOf("lowpass", "highpass", "bandpass", "notch")) {
-            shouldThrowAny { ks("""Osc.saw().$door(800, 1.8, 3)""") }
+            shouldThrowAny { ks("""Ignitor.saw().$door(800, 1.8, 3)""") }
         }
     }
 
     "passes and analog reach the node through the builder, and analog stays clean without it" {
-        val lp = ks("""Osc.saw().lowpass(800, 1.8, x => x.passes(3))""") as IgnitorDsl.Lowpass
+        val lp = ks("""Ignitor.saw().lowpass(800, 1.8, x => x.passes(3))""") as IgnitorDsl.Lowpass
         lp.passes shouldBe IgnitorDsl.Constant(3.0)
         lp.freq shouldBe IgnitorDsl.Constant(800.0)
         lp.q shouldBe IgnitorDsl.Constant(1.8)
         lp.analog shouldBe IgnitorDsl.Constant(0.0)
 
-        val hp = ks("""Osc.saw().highpass(200, 0.9, x => x.passes(2).analog(4))""") as IgnitorDsl.Highpass
+        val hp = ks("""Ignitor.saw().highpass(200, 0.9, x => x.passes(2).analog(4))""") as IgnitorDsl.Highpass
         hp.passes shouldBe IgnitorDsl.Constant(2.0)
         hp.analog shouldBe IgnitorDsl.Constant(4.0)
     }
 
     "the lambda floats past an omitted q" {
-        val lp = ks("""Osc.saw().lowpass(800, x => x.analog(4))""") as IgnitorDsl.Lowpass
+        val lp = ks("""Ignitor.saw().lowpass(800, x => x.analog(4))""") as IgnitorDsl.Lowpass
         lp.q shouldBe IgnitorDsl.Constant(0.707)
         lp.analog shouldBe IgnitorDsl.Constant(4.0)
     }
@@ -59,16 +59,16 @@ class KlangScriptFilterSlotOrderSpec : StringSpec({
         // Cross-door parity (round 3 of C5): sprudel rounds via coercePasses; an `Int` parameter
         // would TRUNCATE. `0.3 * 10` is 2.9999999999999996, so the same expression would build a
         // 24 dB/oct filter here and a 36 dB/oct one in sprudel.
-        (ks("""Osc.saw().lowpass(800, 1.0, x => x.passes(0.3 * 10))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(3.0)
-        (ks("""Osc.saw().lowpass(800, 1.0, x => x.passes(2.4))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(2.0)
-        (ks("""Osc.saw().highpass(200, 1.0, x => x.passes(2.7))""") as IgnitorDsl.Highpass).passes shouldBe IgnitorDsl.Constant(3.0)
+        (ks("""Ignitor.saw().lowpass(800, 1.0, x => x.passes(0.3 * 10))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(3.0)
+        (ks("""Ignitor.saw().lowpass(800, 1.0, x => x.passes(2.4))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(2.0)
+        (ks("""Ignitor.saw().highpass(200, 1.0, x => x.passes(2.7))""") as IgnitorDsl.Highpass).passes shouldBe IgnitorDsl.Constant(3.0)
         // ...and the same 1..16 resource ceiling, from the same single place.
-        (ks("""Osc.saw().lowpass(800, 1.0, x => x.passes(1000000))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(16.0)
-        (ks("""Osc.saw().lowpass(800, 1.0, x => x.passes(0))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(1.0)
+        (ks("""Ignitor.saw().lowpass(800, 1.0, x => x.passes(1000000))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(16.0)
+        (ks("""Ignitor.saw().lowpass(800, 1.0, x => x.passes(0))""") as IgnitorDsl.Lowpass).passes shouldBe IgnitorDsl.Constant(1.0)
     }
 
     "bare defaults: one stage, no analog" {
-        val lp = ks("""Osc.saw().lowpass(800)""") as IgnitorDsl.Lowpass
+        val lp = ks("""Ignitor.saw().lowpass(800)""") as IgnitorDsl.Lowpass
         lp.passes shouldBe IgnitorDsl.Constant(1.0)
         lp.q shouldBe IgnitorDsl.Constant(0.707)
         lp.analog shouldBe IgnitorDsl.Constant(0.0)

@@ -48,8 +48,8 @@ class LangDensitySpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(d("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.oscParams?.get("density") shouldBe 10.0
-            events[1].data.oscParams?.get("density") shouldBe 20.0
+            events[0].data.ignitorParams?.get("density") shouldBe 10.0
+            events[1].data.ignitorParams?.get("density") shouldBe 20.0
         }
     }
 
@@ -60,8 +60,8 @@ class LangDensitySpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("density") shouldBe 10.0
-            events[1].data.oscParams?.get("density") shouldBe 20.0
+            events[0].data.ignitorParams?.get("density") shouldBe 10.0
+            events[1].data.ignitorParams?.get("density") shouldBe 20.0
         }
     }
 
@@ -72,8 +72,8 @@ class LangDensitySpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("density") shouldBe 10.0
-            events[1].data.oscParams?.get("density") shouldBe 20.0
+            events[0].data.ignitorParams?.get("density") shouldBe 10.0
+            events[1].data.ignitorParams?.get("density") shouldBe 20.0
         }
     }
 
@@ -84,8 +84,8 @@ class LangDensitySpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.oscParams?.get("density") shouldBe 10.0
-            events[1].data.oscParams?.get("density") shouldBe 20.0
+            events[0].data.ignitorParams?.get("density") shouldBe 10.0
+            events[1].data.ignitorParams?.get("density") shouldBe 20.0
         }
     }
 
@@ -94,7 +94,7 @@ class LangDensitySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.oscParams?.get("density") } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.ignitorParams?.get("density") } shouldBe listOf(0.2, 0.8)
     }
 
     "d() alias sets SprudelVoiceData.density" {
@@ -102,7 +102,7 @@ class LangDensitySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.oscParams?.get("density") } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.ignitorParams?.get("density") } shouldBe listOf(0.2, 0.8)
     }
 
     "density() works as pattern extension" {
@@ -110,7 +110,7 @@ class LangDensitySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("density") shouldBe 0.5
+        events[0].data.ignitorParams?.get("density") shouldBe 0.5
     }
 
     "density() works as string extension" {
@@ -118,14 +118,14 @@ class LangDensitySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.oscParams?.get("density") shouldBe 0.5
+        events[0].data.ignitorParams?.get("density") shouldBe 0.5
     }
 
     "density() works in compiled code" {
         val p = SprudelPattern.compile("""note("c").density("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.oscParams?.get("density") shouldBe 0.5
+        events[0].data.ignitorParams?.get("density") shouldBe 0.5
     }
 
     "density() with continuous pattern sets density correctly" {
@@ -135,12 +135,12 @@ class LangDensitySpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.oscParams?.get("density") shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.ignitorParams?.get("density") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.oscParams?.get("density") shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.ignitorParams?.get("density") shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.oscParams?.get("density") shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.ignitorParams?.get("density") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.oscParams?.get("density") shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.ignitorParams?.get("density") shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

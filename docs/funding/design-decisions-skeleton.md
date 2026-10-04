@@ -93,7 +93,7 @@ Template per decision:
 ### 1.5 `min` / `max` are clamps on every door
 - Problem: `a.max(3)` read as selection surprised the maintainer [K9].
 - Decision: clamp semantics on method doors; `Math.min/max` keep selection (`ANS 2026-09-10T09:54`).
-- Evidence: [K9]; CLAUDE.md guardrail 2026-09-10 (guards `StdLibOscTest`, `StdLibNumberMethodsTest`).
+- Evidence: [K9]; CLAUDE.md guardrail 2026-09-10 (guards `StdLibIgnitorTest`, `StdLibNumberMethodsTest`).
 - Status: settled.
 
 ### 1.6 Callable objects: `@KlangScript.Invoke`
