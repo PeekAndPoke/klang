@@ -4,7 +4,7 @@
 
 ### Language Features
 
-- [x] Array indexing: `arr[0]`, `arr[1]` — `IndexAccess` AST node + interpreter + klangblocks ✅
+- [x] Array indexing: `arr[0]`, `arr[1]` — `IndexAccess` AST node + interpreter ✅
 - [x] Strict equality: `===`, `!==` ✅
 - [x] Control flow: `if/else`, `while`, `for`, `do/while`, `break`, `continue` ✅
 - [x] Template string interpolation: `` `hello ${name}` `` ✅

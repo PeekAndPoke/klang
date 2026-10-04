@@ -702,8 +702,7 @@ over-conservative optimizer, and RNG draw order all needed structural or white-b
   second annotated function (the `warmth`/`onePoleLowpass` pattern); keep the surface minimal,
   no `bell()`. NO fold-in changes to existing filter methods. KDoc shows positional usage.
 - Tests: `StdLibIgnitorTest` dual-language (band wraps / appends; eq idempotent). Update
-  `klangscript/ref/feature-catalog.md`. (A klangblocks round-trip row shipped with D5; the
-  block editor was removed 2026-08-23 and that row went with it.)
+  `klangscript/ref/feature-catalog.md`.
 
 ### D6 — `passes` on standalone Lowpass/Highpass
 - DSL: `val passes: Int = 1` (plain Int, structural). Builder: `repeat(passes.coerceAtLeast(1))`
