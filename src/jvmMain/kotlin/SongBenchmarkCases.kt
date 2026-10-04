@@ -642,9 +642,10 @@ object SongBenchmarkCases {
 
         // the string side of the same guitars: what the unison count, the analog drift and the
         // string extras (pitch envelope, crackle burst) cost, the rig untouched
-        // all three guitars share the one `unison(...)` value; guitar 1 is not rendered by RHYTHM
+        // each guitar's unison drops to 7 voices, its own spread kept (since 2026-10-04 the three guitars differ:
+        // 17, 15 and 15 voices); guitar 1 is not rendered by RHYTHM
         liveCase("rhythm: uni 7+7", "string", RHYTHM) {
-            swapAll(Regex.fromLiteral("unison(voices = 19, spread = 0.10)"), "unison(voices = 7, spread = 0.10)", expected = 3)(it)
+            swapAll(Regex("""unison\(voices = \d+, spread = ([0-9.]+)\)"""), "unison(voices = 7, spread = $1)", expected = 3)(it)
         },
         liveCase("rhythm: no analog", "string", "stack(guitar2.apply(guitar2_arrange), guitar3.apply(guitar3_arrange)).analog(0).transpose(transposition)"),
         liveCase("rhythm: no string extras", "string", RHYTHM) {
