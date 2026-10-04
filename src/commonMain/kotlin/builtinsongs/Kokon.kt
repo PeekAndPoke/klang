@@ -281,8 +281,8 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 15, spread = 0.05)
   .ignp("decay", 3.0).clip(1.5)
   .hpf(400)                                        // two octaves up, nothing of the melody lives below
-  .lpf(4500)                                       // less fizz, the wall keeps its own
-  .gain(0.41).pan(0.5)
+  .lpf(4450)                                       // less fizz, the wall keeps its own
+  .gain(0.39).pan(0.5)
   .orbit(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -314,7 +314,7 @@ export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.10)
   .ignp("decay", 0.5).clip(1)
   .velocity("1.0 0.92!2 0.96 0.90 0.92 0.94 0.96")
-  .gain(0.50).apply(
+  .gain(0.48).apply(
     x => x.pan(0.00).late(perlin.range(0.0005, 0.0013)),
     x => x.pan(1.00).late(perlin.range(0.0010, 0.0018)),
   )
@@ -368,10 +368,10 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.96 0.97 0.96")
-  .ignp("sub", 0.95).ignp("harmonics", 1.00)
+  .ignp("sub", 1.00).ignp("harmonics", 1.00)
   .adsr(0.003, 0.3, 0.5, 0.040).hpf(30).notch(freq = snareHz, q = 1.0)
   .clip(0.90)
-  .gain(1.15).pan(0.5)
+  .gain(1.3).pan(0.5)
   .orbit(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
@@ -398,8 +398,8 @@ let quickening = stack(
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02).ply(2),
-  sing(melodyOne).gain("<0.28 0.29 0.30 0.31>").ply(2).hpf(300),
+  spin(cocoonArp.ply(2)).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne.ply(2)).gain("<0.28 0.29 0.30 0.31>").hpf(300),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.18).lpf(1500),
 )
@@ -408,8 +408,8 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02).ply(2),
-  sing(melodyTwo).gain("<0.30 0.31 0.32 0.33>").struct("x!32").hpf(300),
+  spin(cocoonArp.ply(2)).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo.struct("x!32")).gain("<0.30 0.31 0.32 0.33>").hpf(300),
   swell(cocoonSwell),
   beat(cocoonRoots).gain(0.20).lpf(1500),
 )
@@ -424,7 +424,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.57).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.60).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
 )
@@ -439,9 +439,9 @@ let lifting = stack(
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.2).clip(0.8),
+  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
   soar("[4@6 ~@2]"),
-  strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.20, 0.20))),
+  strike("[-7,0,4]").accelerate("0.05".add(perlin.range(-0.20, 0.20))).ignp("release", 2.0),
   beat("0").gain(0.45),
 )
 
@@ -453,7 +453,7 @@ let flyingOff = stack(
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").clip(16),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 8.0),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
@@ -503,7 +503,7 @@ export song = stack(
     .analog(feel)
    
   , master(Katalyst(k => k
-    .reverb(0.20, 7, 4200)                         // the hall: one room for the whole band, about 2 s, warm
+    .reverb(0.20, 7, 8000)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.15)                                    // the house level, -14 LUFS
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
