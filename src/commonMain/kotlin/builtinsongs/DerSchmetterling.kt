@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 32.5,
+    rpm = 33.0,
     icon = "bug",
     code = """
 import * from "stdlib"
@@ -124,7 +124,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 1.0, db =  3.0)         // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
+    .band(freq =  400, q = 0.5, db =  7.8)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -165,7 +165,7 @@ let makeGuitar = (rig) => {
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
   let pSustain    = Ign.param("sustain",      0.000, "sustain")
-  let pRelease    = Ign.param("release",      0.035, "Release")
+  let pRelease    = Ign.param("release",      0.030, "Release")
   // --------------------------------------------------------------------------------------------------------------
 
   let saw = Ign.supersaw(x => x.voices(pVoices).spread(pSpread)
@@ -182,7 +182,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.5, x => x.adsr(0.001, 0.07, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.crackle(1.0).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.0))
+    .plus(Ign.crackle(1.1).highpass(1200).adsr(0.003, 0.05, 0.0, 0.05).mul(1.0))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("linear", "linear", "linear"))
            
@@ -261,13 +261,13 @@ let marimba = (() => {
 })()
 
 export lead_shape = x => x.sound(marimba).adsrOff()
-  .velocity(guitarDyna).body(material = "wood", wet = 0.2)
-  .hpf(600, 0.7).lpf(4500, 2.5)
-  .pan(sine.range(0.1, 0.2)).superimpose(pan(sine.range(0.9, 0.8))) // . solo()
+  .velocity(guitarDyna).body(material = "steel", wet = 0.2)
+  .hpf(600, 0.7).lpf(4500, 1.2)
+  .pan(sine.range(0.1, 0.2)).superimpose(pan(sine.range(0.8, 0.9))) // . solo()
   .clip(0.80)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
-  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.20!16>").gain(mul(0.38))
+  .scale("<e5:minor!48 e6:minor!16>").gain("<0.50!48 0.17!16>").gain(mul(0.38))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!16>")
@@ -330,14 +330,19 @@ export bass_pat =
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.40) // . mute()
     .ignp("sub", 0.90).ignp("harmonics", 1.00)  // . solo()
-    .adsr(0.003, 0.3, 0.5, 0.020).hpf(30)
+    .adsr(0.003, 0.3, 0.5, 0.015).hpf(30)
 
 export bass_arrange = x => x.orbit(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
   .pan(0.5).clip("<[0.85 0.75 0.65 0.75]>*4".sub(perlin.range(0.0, 0.05)))
   .late(berlin.range(0.0002, 0.0005).mul(drunk).seg(4))
 
-export bass = n(bass_pat).struct("<[x!2]!16 [x@2 x@2]!16 [x x@2 x]!16 [x!4]!12 [x!8]!2 [[x x] x!3]!2>").fast(2).apply(bass_shape).tag("bass")
+export bass = n(bass_pat).struct(
+  `< x x x [x x]  x x x [x x]    x x x [x x]  x x x [x x]
+    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x x]    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x x]
+    [x x@2 x]!16 
+    [x!4]!12 [x!8]!2 [[x x] x!3]!2>`
+).fast(2).apply(bass_shape).tag("bass")
 
 // Gummieimer  ------------------------------------------------------------------------------------------------------------------------------------------
 // A traditional Rubber-bucket, similar in design to a Orchestertrommel
@@ -346,16 +351,16 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(140).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(9, x => x.adsr(0.001, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(15, x => x.adsr(0.010, 0.025, 0, 0)).adsr(0.002, ring, 0.0, 2.0).mul(0.4)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(10, 1.1).fundamental(0).analog(pAnalog).analogSpread(1.0))
-    .pitchEnvelope(9, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.35, 0.0, 0.40).mul(0.9)
+    .pitchEnvelope(12, x => x.adsr(0.001, 0.05, 0, 0)).adsr(0.002, 0.35, 0.0, 0.40).mul(1.2)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.40)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.35)
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.0, 0.20).mul(0.60)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.0, 0.10).mul(0.25)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(1.00)    
+  let beater = Ign.whitenoise().adsr(0.0005, 0.035, 0.0, 0.015).lowpass(1500).mul(3.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .distort(0.40, "softsat", 2)
@@ -364,16 +369,16 @@ let gummiEimer = (() => {
 })()
 
 // A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
-export trommel_pat = `<[0 ~ 1 0 ~ ~ 2 ~] [0 ~ 0 -4 -2 ~ -1 ~] [0 ~ -1 0 ~ ~ 1 ~] [0 0 ~ 2 2 ~ 1 ~]>`
+export trommel_pat = `<[0 ~ 1 0 ~ ~ 2 ~] [0 ~ 0 -4 -2 ~ -1 ~] [0 ~ -1 0 ~ ~ ~ ~] [0 0 ~ 2 2 ~ 1 ~]>`
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
-  .velocity("1.0 0.8 0.9 0.8").body(material = "membrane", wet = 0.4).notch(100, 1.2)
-  .hpf(650).lpf("2400".add(perlin.range(-100, 100).slow(16).early(8)))
-  .pan(sine.range(0.0, 0.1).slow(8)).superimpose(pan(sine.range(1.0, 0.9).slow(8)))
+  .velocity("1.0 0.8 0.9 0.8".sub(perlin.range(0.0, 0.02))).body(material = "membrane", wet = 0.4).notch(100, 1.2)
+  .hpf(360).lpf("2400".add(perlin.range(-100, 100).slow(16).early(8)))
+  .pan(0.3).superimpose(pan(0.7))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
-  .scale("e4:minor").gain(0.125)
-  .mute("<1!64 0!32>")                          
+  .scale("e4:minor").gain(0.07)
+  .mute("<1!32 0!32 1!32>")                          
   .late(berlin.range(0.0035, 0.0045).mul(drunk))
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -454,7 +459,7 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.23).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.25).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.orbit(6).mute("<0!128 1!32>").late(berlin.range(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
@@ -519,8 +524,8 @@ export song = stack(
     // pulled the groove towards the break (6.3 LU apart without it, 4.4 at 1.4 dB of glue). The ceiling sits at -3 dB
     // because the snare's crack overshoots between the samples: true peak -1.2 dBFS, and the house limiter stays idle.
   master(Katalyst(k => k
-    .reverb(0.2, 5, 4200)
-    .gain(4.5)
+    .reverb(0.2, 5, 7000)
+    .gain(4.4)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )

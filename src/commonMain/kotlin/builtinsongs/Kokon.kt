@@ -91,7 +91,7 @@ let powerClassA = x => x
 let cab4x12 = x => x
   .eq(e => e
     .band(freq =  120, q = 1.0, db =  3.2)         // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  8.0)         // roar:  low mids
+    .band(freq =  400, q = 0.5, db =  7.8)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
   )
   .lowpass(4980, 0.707, x => x.passes(2))          // the wall: 36 dB/oct, the fizz is gone
@@ -503,7 +503,7 @@ export song = stack(
     .analog(feel)
    
   , master(Katalyst(k => k
-    .reverb(0.20, 7, 8000)                         // the hall: one room for the whole band, about 2 s, warm
+    .reverb(0.20, 7, 7000)                         // the hall: one room for the whole band, about 2 s, warm
     .gain(1.15)                                    // the house level, -14 LUFS
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   ))
