@@ -224,6 +224,82 @@ class KlangScriptInternalError(
     cause = cause,
 )
 
+/**
+ * The same error with [location] as its source location: the same subclass, every other field preserved
+ * (message, [KlangScriptRuntimeError.astNode], [KlangScriptRuntimeError.callStackTrace], the cause, and the
+ * subclass's own fields).
+ *
+ * [guardNativeCall] uses it to give an error thrown without a location inside a native call the location of
+ * that call, so the editor can point at it. It always replaces the location; the caller decides whether to
+ * (the guard never overwrites one that is already there).
+ *
+ * Only [KlangScriptInternalError] takes a cause in its constructor; the other subclasses are never built with
+ * one, so there is none to carry. The rebuilt error has a fresh platform stack trace.
+ */
+@PublishedApi
+internal fun KlangScriptRuntimeError.withLocation(location: SourceLocation): KlangScriptRuntimeError {
+    val text = message ?: ""
+
+    return when (this) {
+        is KlangScriptTypeError -> KlangScriptTypeError(
+            message = text,
+            operation = operation,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptReferenceError -> KlangScriptReferenceError(
+            symbolName = symbolName,
+            message = text,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptArgumentError -> KlangScriptArgumentError(
+            functionName = functionName,
+            message = text,
+            expected = expected,
+            actual = actual,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptImportError -> KlangScriptImportError(
+            libraryName = libraryName,
+            message = text,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptAssignmentError -> KlangScriptAssignmentError(
+            variableName = variableName,
+            message = text,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptStackOverflowError -> KlangScriptStackOverflowError(
+            message = text,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+
+        is KlangScriptInternalError -> KlangScriptInternalError(
+            message = text,
+            cause = cause,
+            location = location,
+            astNode = astNode,
+            callStackTrace = callStackTrace,
+        )
+    }
+}
+
 // ── Control Flow Exceptions (NOT errors) ─────────────────────────────────────
 
 /**

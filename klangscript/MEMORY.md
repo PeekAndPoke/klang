@@ -109,3 +109,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-04: the Ignitor/Katalyst naming: the stdlib object is `Ignitor` with the alias `Ign` (a
   `@KlangScript.Constant`, the house pattern for a second name), `Katalyst` with `Kat`, `Ignitor.slot` and
   `Katalyst.slot` hand back the Kotlin door's objects (`docs/plans/ignitor-katalyst-naming.md`).
+- 2026-10-04: error locations: a script error thrown without a location inside a native call gets the call's
+  location (`guardNativeCall`, via `KlangScriptRuntimeError.withLocation`), one with a location keeps it; so a
+  wrong Katalyst knob value marks `k.reverb(...)` (guards: `NativeCallErrorLocationSpec`, `KlangScriptKatalystDoorParitySpec`).

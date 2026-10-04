@@ -451,7 +451,10 @@ fun wrapAsRuntimeValue(value: Any?): RuntimeValue {
 }
 
 /**
- * Guard a native function call. Re-throws [KlangScriptRuntimeError]s as-is.
+ * Guard a native function call. A [KlangScriptRuntimeError] that carries a location is re-thrown as-is;
+ * one without a location gets [location], the call's own (via [withLocation]), so the editor can point at
+ * it. A location already there is never overwritten: the innermost call is the most precise, and a native
+ * that calls back into script (a configure lambda) lets the inner call's location through.
  * Wraps any other exception in a [KlangScriptInternalError] with context.
  *
  * @param functionName Name of the native function being called
@@ -468,7 +471,11 @@ inline fun guardNativeCall(
     return try {
         block()
     } catch (e: KlangScriptRuntimeError) {
-        throw e // already a proper error, re-throw as-is
+        if (e.location != null || location == null) {
+            throw e
+        }
+
+        throw e.withLocation(location)
     } catch (e: Throwable) {
         val argsDesc = args.mapIndexed { i, v -> "p${i + 1}=${v.toDisplayString()}" }.joinToString(", ")
         throw KlangScriptInternalError(

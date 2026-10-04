@@ -651,6 +651,26 @@ class KlangScriptKatalystDoorParitySpec : StringSpec({
                 "a Katalyst param in an Ignitor tree; use Ign.param"
     }
 
+    "a wrong knob value is reported at the stage call, so the editor can point at it" {
+        // `toKatalystKnob` throws without a location; the native-call guard gives the error the location of the
+        // innermost native call, here `k.reverb(...)`, whose location is its opening parenthesis.
+        listOf(
+            "let a = 1\nlet K = Katalyst(k => k.reverb(wet = \"x\"))" to
+                    "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got",
+            "let a = 1\nlet K = Katalyst(k => k.reverb(size = Ignitor.param(\"a\", 1)))" to
+                    "an Ignitor param in a Katalyst chain; use Kat.param",
+        ).forEach { (script, reason) ->
+            withClue(script) {
+                val err = shouldThrow<KlangScriptTypeError> { ks(script) }
+                val column = script.lines()[1].indexOf("k.reverb(") + "k.reverb".length + 1
+
+                err.message shouldContain reason
+                err.location?.startLine shouldBe 2
+                err.location?.startColumn shouldBe column
+            }
+        }
+    }
+
     "the Kotlin door takes the same lambda" {
         ks("Katalyst(k => k.reverb(0.2).gain(1.4))") shouldBe
                 KlangScriptKatalyst.build { it.reverb(0.2).gain(1.4) }

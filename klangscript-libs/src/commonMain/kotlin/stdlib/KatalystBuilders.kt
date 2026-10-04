@@ -74,6 +74,10 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  *
  * Anything that is neither a number, a Katalyst param nor a sound (a string, a lambda, an object ...) is a type error with
  * its own text: "a Katalyst knob takes a number, a Kat.param or a Kat.slot; got ...".
+ *
+ * Both errors are thrown without a source location (this function has no call site to give); the native-call
+ * guard (`guardNativeCall` in klangscript) gives them the location of the stage call, so the editor marks
+ * `k.reverb(...)`. Guard: `KlangScriptKatalystDoorParitySpec`, "a wrong knob value is reported at the stage call".
  */
 fun IgnitorDslLike.toKatalystKnob(): IgnitorDsl = when (this) {
     is KatalystParam -> param
