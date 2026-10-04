@@ -123,7 +123,7 @@ let cabStock = x => x.lowpass(5000).lowpass(5000)
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.0)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.1)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.8)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
   )
@@ -263,7 +263,7 @@ let marimba = (() => {
 export lead_shape = x => x.sound(marimba).adsrOff()
   .velocity(guitarDyna).body(material = "steel", wet = 0.2)
   .hpf(600, 0.7).lpf(4500, 1.2)
-  .pan(sine.range(0.1, 0.2)).superimpose(pan(sine.range(0.8, 0.9))) // . solo()
+  .pan(0.33).superimpose(pan(0.66)) // . solo()
   .clip(0.80)
 
 export lead_arrange = x => x.orbit(0) //  .mute()
@@ -338,8 +338,8 @@ export bass_arrange = x => x.orbit(4) // . mute()
   .late(berlin.range(0.0002, 0.0005).mul(drunk).seg(4))
 
 export bass = n(bass_pat).struct(
-  `< x x x [x x]  x x x [x x]    x x x [x x]  x x x [x x]
-    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x x]    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x x]
+  `< x x x [x x]  x x [x x] x    x x x [x x]  x x [x x] x
+    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x x] x] [x x]
     [x x@2 x]!16 
     [x!4]!12 [x!8]!2 [[x x] x!3]!2>`
 ).fast(2).apply(bass_shape).tag("bass")
@@ -374,7 +374,7 @@ export trommel_pat = `<[0 ~ 1 0 ~ ~ 2 ~] [0 ~ 0 -4 -2 ~ -1 ~] [0 ~ -1 0 ~ ~ ~ ~]
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() // .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin.range(0.0, 0.02))).body(material = "membrane", wet = 0.4).notch(100, 1.2)
   .hpf(360).lpf("2400".add(perlin.range(-100, 100).slow(16).early(8)))
-  .pan(0.3).superimpose(pan(0.7))
+  .pan(0.25).superimpose(pan(0.75))
 
 export trommel_arrange = x => x.orbit(5) // .solo(0.5)
   .scale("e4:minor").gain(0.07)

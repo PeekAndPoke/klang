@@ -90,7 +90,7 @@ let powerClassA = x => x
 
 let cab4x12 = x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  3.2)         // thump: closed-back box resonance
+    .band(freq =  120, q = 1.0, db =  3.0)         // thump: closed-back box resonance
     .band(freq =  400, q = 0.5, db =  7.8)         // roar:  low mids
     .band(freq = 2700, q = 1.7, db =  3.8)         // bark:  the upper-mid speaker peak
   )
