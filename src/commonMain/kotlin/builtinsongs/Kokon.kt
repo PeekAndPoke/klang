@@ -424,14 +424,14 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.60).pan(0.5),
+  spin(cocoonArp.add(7)).ply(2).gain(0.58).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
 )
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  spin(liftArp.add(7)).ply(4).gain(0.10).ignp("sustain", 0.0).clip(0.5).pan(0.0).superimpose(pan(1.0)),
+  spin(liftArp.add(7)).gain(0.15).ignp("sustain", 0.35).clip(0.66).pan(0.2).superimpose(pan(0.8)),
   soar(melodyTwo).vibrato(beatRate(0.5), saw.pow(4).mul(0.2).add(0.02).slow(4)),
   wings(liftPower),
   chug(liftRoots),
@@ -453,7 +453,7 @@ let flyingOff = stack(
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 8.0),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("d3:major").ignp("release", 6.0),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
