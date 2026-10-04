@@ -283,6 +283,8 @@ reader.
   strings, tutorial text and even a Kotlin function name (batch G, 2026-09-07: 215 prose sites).
   Rewrite reads only in a call context (an argument, a `.mul(` chain) and let a reviewer grep the
   dotted paths afterwards; the compiler cannot tell prose from code inside a string.
+- **Reviewers may run Gradle, under the lock** (maintainer, 2026-10-04): a doubt settled by a run beats a guess; the
+  rules (one lock call around mutate, build, restore; `cp` and `cmp`) are in `/agent-fleet`, "Reviewers may build".
 - **Gradle: never run two builds concurrently** — corrupts the sprudel KSP cache; recover with
   `:sprudel:clean`.
 - Single spec: `./gradlew :module:jvmTest --tests fully.qualified.SpecName` — UNQUOTED FQCN, no wildcards

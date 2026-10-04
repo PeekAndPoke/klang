@@ -109,6 +109,12 @@ reads to take the lock.
   `audio_be` read *each other's* edits and both draw wrong verdicts. Mutation campaigns are inherently serial and belong
   to a single owner.
 - If a worker genuinely must build, give exactly one worker that permission, and require the wrapper.
+- **Reviewers may build** (maintainer, 2026-10-04: "reviewers can run gradle but they need to respect the build-lock"),
+  so a doubt is settled by a run instead of a guess. Always through `console/with-build-lock.sh`, one unquoted
+  `--tests` FQCN per run. A reviewer never edits production code to fix anything; to TEST a doubt by a mutation it
+  wraps the whole critical section in ONE lock call (back up the file, mutate, build and run, restore with `cp`,
+  verify with `cmp`, never with git) and reports the mutant and its verdict. Round-1 pairs run in parallel and take
+  the lock in turn: a reviewer that waits for the lock is not stalled.
 
 ## Concurrency & fan-out safety
 
