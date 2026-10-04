@@ -112,3 +112,6 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-10-04: error locations: a script error thrown without a location inside a native call gets the call's
   location (`guardNativeCall`, via `KlangScriptRuntimeError.withLocation`), one with a location keeps it; so a
   wrong Katalyst knob value marks `k.reverb(...)` (guards: `NativeCallErrorLocationSpec`, `KlangScriptKatalystDoorParitySpec`).
+- 2026-10-04: the stdlib's `export { ... }` block deleted (it governed nothing: a native cannot be exported);
+  `import * from "stdlib"` loads every stdlib name, a selective import of it binds nothing (`StdLibScopeSpec`,
+  `docs/tasks-archive/2026-10/20261004-stdlib-export-block.md`).

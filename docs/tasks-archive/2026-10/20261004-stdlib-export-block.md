@@ -1,7 +1,14 @@
 # The stdlib `export { ... }` block governs nothing, and selective imports from "stdlib" fail
 
-Status: **found 2026-10-03** by the Ignitor/Katalyst rename (worker C2, confirmed by both reviewers of round R-B with
-the code paths below). Not started; needs a decision: delete the block, or make it work.
+Status: **DONE 2026-10-04: the block is deleted** (maintainer: "Yes remove the confusing block please"). Found
+2026-10-03 by the Ignitor/Katalyst rename (worker C2, confirmed by both reviewers of round R-B). A probe before and
+after the deletion gave identical results: without an import the stdlib names are undefined; `import * from "stdlib"`
+loads every one of them (the natives go to the engine's native environment, the parent of every script scope);
+`import { Math } from "stdlib"` fails with "Cannot import non-exported symbols"; `import * as s from "stdlib"` binds
+nothing. Even an explicit `export { Math }` cannot export a native, which is what made the list meaningless.
+`StdLibScopeSpec` pins the three behaviours (the selective-import row mutation-checked through the interpreter's
+export check). Note: the analysis below says the names are visible "listed in the block or not"; that holds once the
+library is imported, not before.
 
 ## What happens today
 

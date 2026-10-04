@@ -10,7 +10,7 @@ from the plan: an Ignitor expression over a param on a Katalyst knob is document
 trip on the `Slots.analog` every oscillator carries); `console/song-snapshots.sh` migrates the old tags' syntax on
 extraction instead of letting them stop parsing; the shared `EqBuilder` carries an `onKatalyst` flag; the setter errors
 carry the call location explicitly (4.5's assumption did not hold). Found along the way, filed separately:
-`docs/tasks/stdlib-export-block.md`.
+`docs/tasks-archive/2026-10/20261004-stdlib-export-block.md` (done 2026-10-04: the block deleted).
 
 The plan as written follows. Every count below was taken with `git grep` on `main` at `38fa1d42`; a sentence
 marked **UNVERIFIED** is a claim about behaviour that nobody has run yet, and the implementer confirms or refutes it

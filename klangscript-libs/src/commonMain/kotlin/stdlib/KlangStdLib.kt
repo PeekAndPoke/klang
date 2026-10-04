@@ -41,22 +41,10 @@ object KlangStdLib {
         outputHandler: (ConsoleLevel, List<String>) -> Unit = defaultOutputHandler,
     ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
-            // Today this list governs nothing: the natives below reach a script through the engine's native
-            // environment, and the exported map comes out empty, so `import { Math } from "stdlib"` fails for
-            // every name (docs/tasks/stdlib-export-block.md).
-            source(
-                """
-                export {
-                    console,
-                    Math,
-                    Object,
-                    Ignitor,
-                    Ign,
-                    Katalyst,
-                    Kat
-                }
-                """.trimIndent()
-            )
+            // No script source and no export list (removed 2026-10-04: it governed nothing). Importing "stdlib"
+            // (`import * from "stdlib"`, the line every song starts with) loads the natives below into the engine's
+            // native environment, the parent of every script scope, so every stdlib name is then in scope. A selective
+            // or namespace import of "stdlib" has no exports to bind (StdLibScopeSpec).
 
             // Register all annotation-generated symbols:
             // Math, Object, String/Array/Number/Boolean extensions
