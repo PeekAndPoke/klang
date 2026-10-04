@@ -32,3 +32,12 @@ step to "the tree is the whole instrument" and would let the pitch doors become 
 Decide which classic stages the pitch doors become (order against the existing `classic()` stages, and whether the
 tree's own pitch nodes and the classic ones compose as today), then move one door at a time with a render-identity
 proof per door, and cut the wire fields when the last one moves.
+
+A second step, noted 2026-10-02 (coordinator, in the conversation about reusing primitives after the tremolo): once
+the strip is gone, the tree's own `Vibrato` and `PitchEnvelope` nodes could be composed from building blocks, the
+way the tremolo was (`docs/tasks-archive/2026-10/20261002-tremolo-as-composition.md`): one pitch primitive in
+semitones (ratio `2^(x/12)`), fed by `Ignitor.sine(rate)` times the depth (analog 0) for the vibrato and by an
+envelope times the amount for the pitch envelope; then `VibratoModIgnitor` and `pitchEnvelopeModIgnitor` go, the
+doors stay. Open before building: the start phase (needs `docs/tasks/oscillator-phase-knob.md`), whether accelerate
+(progress over the note's length) needs a new building block or stays, FM last (modulator at a multiple of the note,
+depth in Hz, its own envelope), sample voices, and a listening pair wherever the composed form is not bit-identical.
