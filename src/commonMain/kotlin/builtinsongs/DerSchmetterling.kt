@@ -339,7 +339,7 @@ export bass_arrange = x => x.orbit(4) // . mute()
 
 export bass = n(bass_pat).struct(
   `< x x x [x x]  x x [x x] x    x x x [x x]  x x [x x] x
-    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x? x] x] [x [x x]]    [x x] [x [x x]] [x x] [x x]  [[x x] [x x?]] [x x] [[x x] x] [x x]
+    [x x] [x [x x]] [x x] [x x]  [[x x] [~ x]] [x x] [[x? x] x] [x [x x]]    [x x] [x x] [x [x x]] [x x]  [[x x] [x x?]] [x x] [[x x] x] [x x]
     [x x@2 x]!16
     [x!4]!12 [x!8]!2 [[x x] x!3]!2>`
 ).fast(2).apply(bass_shape).tag("bass")
