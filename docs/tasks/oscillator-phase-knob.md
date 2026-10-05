@@ -1,6 +1,15 @@
 # A `phase` knob on every periodic oscillator, `range` on the vibrato and tremolo LFOs
 
-Status: **queued 2026-09-30 by the maintainer.** Not started.
+Status: **started 2026-10-06** on branch `oscillator-phase` (on top of `signals-range`).
+
+## Decided at the start (maintainer, 2026-10-06)
+
+1. **The name is `phase`** (not `phaseShift`): `Ignitor.sine(4, x => x.phase(0.25))`.
+2. **The tremolo gets its `range` knob in this task; the vibrato's waits** for
+   `docs/tasks/future/pitch-pipeline-into-the-tree.md`. Today the vibrato is built twice (sprudel's strip
+   `VibratoRenderer` and the Ignitor's own `vibrato` node); once it is composed from `Ignitor.sine`, `range` comes with
+   it, built once.
+3. **Branch** `oscillator-phase` on top of `signals-range`, merged after it.
 
 ## The ask (maintainer, 2026-09-30)
 
