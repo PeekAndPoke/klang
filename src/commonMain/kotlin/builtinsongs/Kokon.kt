@@ -222,7 +222,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(10, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(11, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.5)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
@@ -298,7 +298,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 7, spread = 0.06)
   .ignp("decay", 2.0).clip(2).hpf(80)
   .velocity("1.0 0.9 0.85")
-  .gain(0.25).pan(0.3)                             // on the left, across from the melody on the right
+  .gain(0.25).pan(0.5)                             // on the left, across from the melody on the right
   .orbit(3)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
@@ -354,7 +354,7 @@ export kick = pat => sound("bd").struct(pat)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.48).pan(0.55)
+  .gain(0.50).pan(0.55)
   .lpf(freq = 11000, q = 0.5)
   .delay(0.33, pure(1/16).div(cps), 0.82, 16) // Snare needs it own orbit for the dalay!
   .orbit(12).apply(drumRoom).late(perlin.range(0.001, 0.0015))
@@ -380,38 +380,39 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02).mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
+  spin(cocoonArp).pan(0.3).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
+    .mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne).gain(0.28).hpf(300),
+  spin(cocoonArp).pan(0.3).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne).pan(0.7).gain(0.27).hpf(300),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo).gain(0.28).hpf(312),
-  beat(cocoonRoots).gain(saw.range(0.0, 0.22).slow(4)).lpf(1500),
+  spin(cocoonArp).pan(0.3).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo).pan(0.7).gain(0.27).hpf(312),
+  beat(cocoonRoots).pan(0.5).gain(saw.range(0.0, 0.22).slow(4)).lpf(1500),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp.ply(2)).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne.ply(2)).gain("<0.28 0.29 0.30 0.31>").hpf(325),
+  spin(cocoonArp.ply(2)).pan(0.3).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyOne.ply(2)).pan(0.7).gain("<0.28 0.29 0.30 0.31>").hpf(325),
+  beat(cocoonRoots).pan(0.5).gain(0.18).lpf(1500),
   swell(cocoonSwell),
-  beat(cocoonRoots).gain(0.18).lpf(1500),
 )
 
 // Still growing, and in the last half cycle the arpeggio and the heartbeat hold their breath.
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp.ply(2)).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo.struct("x!32")).gain("<0.30 0.31 0.32 0.33>").hpf(325),
+  spin(cocoonArp.ply(2)).pan(0.3).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
+  sing(melodyTwo.struct("x!32")).pan(0.7).gain("<0.30 0.31 0.32 0.33>").hpf(325),
+  beat(cocoonRoots).pan(0.5).gain(0.20).lpf(1500),
   swell(cocoonSwell),
-  beat(cocoonRoots).gain(0.20).lpf(1500),
 )
 
 // The high gain rig splits it open: the melody against the wall. The arpeggio waits for its own part.
@@ -419,6 +420,7 @@ let breakingOpen = stack(
   soar(melodyOne).vibrato(beatRate(0.5), 0.02),
   wings(cocoonPower),
   chug(cocoonRoots),
+  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1500),
 )
 
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
@@ -427,14 +429,16 @@ let unravelling = stack(
   spin(cocoonArp.add(7)).ply(2).gain(0.58).pan(0.5),
   wings(cocoonPower2),
   chug(cocoonRoots),
+  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1500),
 )
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  spin(liftArp.add(7)).gain(0.15).ignp("sustain", 0.35).clip(0.66).pan(0.2).superimpose(pan(0.8)),
+  spin(liftArp.ply(4)).gain(0.20).ignp("sustain", 0.0).clip(0.5).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo).vibrato(beatRate(0.5), saw.pow(4).mul(0.2).add(0.02).slow(4)),
   wings(liftPower),
-  chug(liftRoots),
+  chug(liftRoots),    
+  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1500),
 )
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
